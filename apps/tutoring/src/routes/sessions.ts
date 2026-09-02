@@ -1,41 +1,42 @@
 ﻿import { Router, Response } from "express";
 import { AuthenticatedRequest, AttendanceRecordInput, AttendanceEvaluation } from "../types/index.js";
+import { validateBody, createSessionSchema, recordAttendanceSchema } from "../middleware/validation.js";
+import { attendanceRateLimiter } from "../middleware/rateLimit.js";
 
 export const sessionsRouter = Router();
 
-// POST /api/sessions - Create a new session
-sessionsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const supabase = req.supabase!;
-  const tenantId = req.user!.tenant_id;
-  const { group_id, session_number, session_date } = req.body;
+// POST /api/sessions - Create a new session (validated with Zod)
+sessionsRouter.post(
+  "/",
+  validateBody(createSessionSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const tenantId = req.user!.tenant_id;
+    const { group_id, session_number, session_date } = req.body;
 
-  if (!group_id || session_number === undefined || !session_date) {
-    res.status(400).json({ error: "group_id, session_number, and session_date are required" });
-    return;
-  }
+    try {
+      const { data, error } = await supabase
+        .from("sessions")
+        .insert({
+          tenant_id: tenantId,
+          group_id,
+          session_number,
+          session_date,
+        })
+        .select()
+        .single();
 
-  try {
-    const { data, error } = await supabase
-      .from("sessions")
-      .insert({
-        tenant_id: tenantId,
-        group_id,
-        session_number,
-        session_date,
-      })
-      .select()
-      .single();
+      if (error) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
+        return;
+      }
 
-    if (error) {
-      res.status(400).json({ error: error.message });
-      return;
+      res.status(201).json({ session: data });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to create session" } });
     }
-
-    res.status(201).json({ session: data });
-  } catch (err: any) {
-    res.status(500).json({ error: "Failed to create session", details: err.message });
   }
-});
+);
 
 // GET /api/sessions/:id - Retrieve a session with attendance records
 sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -50,7 +51,7 @@ sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Pro
       .single();
 
     if (sessionError || !session) {
-      res.status(404).json({ error: "Session not found" });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found" } });
       return;
     }
 
@@ -60,13 +61,13 @@ sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Pro
       .eq("session_id", id);
 
     if (attError) {
-      res.status(400).json({ error: attError.message });
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: attError.message } });
       return;
     }
 
     res.json({ session, attendance });
   } catch (err: any) {
-    res.status(500).json({ error: "Failed to retrieve session", details: err.message });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve session" } });
   }
 });
 
@@ -84,65 +85,65 @@ export function evaluateNotificationDecision(
   return "none";
 }
 
-// POST /api/sessions/:id/attendance - Record attendance and compute notification decisions
-sessionsRouter.post("/:id/attendance", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const supabase = req.supabase!;
-  const tenantId = req.user!.tenant_id;
-  const { id: sessionId } = req.params;
-  const { records } = req.body as { records: AttendanceRecordInput[] };
+// POST /api/sessions/:id/attendance - Rate-limited & validated attendance recording
+sessionsRouter.post(
+  "/:id/attendance",
+  attendanceRateLimiter,
+  validateBody(recordAttendanceSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const tenantId = req.user!.tenant_id;
+    const { id: sessionId } = req.params;
+    const { records } = req.body as { records: AttendanceRecordInput[] };
 
-  if (!records || !Array.isArray(records) || records.length === 0) {
-    res.status(400).json({ error: "records array is required and must not be empty" });
-    return;
-  }
+    try {
+      // 1. Prepare rows with unique idempotency key
+      const attendanceInserts = records.map((r) => {
+        const idempotencyKey = `${tenantId}:${r.student_id}:${sessionId}`;
+        return {
+          tenant_id: tenantId,
+          session_id: sessionId,
+          student_id: r.student_id,
+          attended: r.attended,
+          comment: r.comment || null,
+          sent: false,
+          idempotency_key: idempotencyKey,
+        };
+      });
 
-  try {
-    // 1. Prepare rows with idempotency key
-    const attendanceInserts = records.map((r) => {
-      const idempotencyKey = `${tenantId}:${r.student_id}:${sessionId}`;
-      return {
-        tenant_id: tenantId,
-        session_id: sessionId,
-        student_id: r.student_id,
-        attended: r.attended,
-        comment: r.comment || null,
-        sent: false,
-        idempotency_key: idempotencyKey,
-      };
-    });
+      // 2. Upsert rows into Supabase
+      const { data: savedRows, error: saveError } = await supabase
+        .from("attendance")
+        .upsert(attendanceInserts, { onConflict: "idempotency_key" })
+        .select();
 
-    // 2. Insert or upsert attendance rows into Supabase
-    const { data: savedRows, error: saveError } = await supabase
-      .from("attendance")
-      .upsert(attendanceInserts, { onConflict: "idempotency_key" })
-      .select();
+      if (saveError) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: saveError.message } });
+        return;
+      }
 
-    if (saveError) {
-      res.status(400).json({ error: saveError.message });
-      return;
+      // 3. Compute notification decisions according to product specification
+      const evaluations: AttendanceEvaluation[] = records.map((r) => {
+        const idempotencyKey = `${tenantId}:${r.student_id}:${sessionId}`;
+        const decision = evaluateNotificationDecision(r.attended, r.comment);
+
+        return {
+          student_id: r.student_id,
+          attended: r.attended,
+          comment: r.comment || null,
+          idempotency_key: idempotencyKey,
+          decision,
+        };
+      });
+
+      res.status(200).json({
+        message: "Attendance recorded successfully",
+        count: savedRows?.length || 0,
+        attendance: savedRows,
+        notification_decisions: evaluations,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to record attendance" } });
     }
-
-    // 3. Compute notification decisions according to product specification
-    const evaluations: AttendanceEvaluation[] = records.map((r) => {
-      const idempotencyKey = `${tenantId}:${r.student_id}:${sessionId}`;
-      const decision = evaluateNotificationDecision(r.attended, r.comment);
-
-      return {
-        student_id: r.student_id,
-        attended: r.attended,
-        comment: r.comment || null,
-        idempotency_key: idempotencyKey,
-        decision,
-      };
-    });
-
-    res.status(200).json({
-      message: "Attendance recorded successfully",
-      count: savedRows?.length || 0,
-      attendance: savedRows,
-      notification_decisions: evaluations,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: "Failed to record attendance", details: err.message });
   }
-});
+);

@@ -55,10 +55,11 @@ test("DEV-WPA.1: Valid shared secret accesses whatsapp-connection endpoint", asy
   // Since this dummy tenant doesn't exist, it should authenticate and return 404 (not 401)
   assert.equal(res.status, 404);
   const json = await res.json();
-  assert.match(json.error, /WhatsApp connection not found/i);
+  assert.match(json.error.message, /WhatsApp connection not found/i);
+  assert.equal(json.error.code, "NOT_FOUND");
 });
 
-test("DEV-WPA.1: POST /internal/message-logs validates payload fields", async () => {
+test("DEV-WPA.1: POST /internal/message-logs validates payload fields via Zod", async () => {
   const res = await fetch(`${baseUrl}/internal/message-logs`, {
     method: "POST",
     headers: {
@@ -72,5 +73,6 @@ test("DEV-WPA.1: POST /internal/message-logs validates payload fields", async ()
   });
   assert.equal(res.status, 400);
   const json = await res.json();
-  assert.match(json.error, /Missing required fields/i);
+  assert.equal(json.error.code, "VALIDATION_ERROR");
+  assert.ok(json.error.details.length > 0);
 });

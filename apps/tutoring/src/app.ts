@@ -1,7 +1,13 @@
-﻿import express, { Express, Request, Response } from "express";
+﻿import express, { Express } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { authenticateUser } from "./middleware/auth.js";
 import { authenticateInternalSecret } from "./middleware/internalAuth.js";
+import { globalRateLimiter, authRateLimiter } from "./middleware/rateLimit.js";
+import { notFoundHandler, globalErrorHandler } from "./middleware/errorHandler.js";
+import { healthRouter } from "./routes/health.js";
+import { authRouter } from "./routes/auth.js";
+import { adminRouter } from "./routes/admin.js";
 import { studentsRouter } from "./routes/students.js";
 import { groupsRouter } from "./routes/groups.js";
 import { sessionsRouter } from "./routes/sessions.js";
@@ -10,21 +16,34 @@ import { internalRouter } from "./routes/internal.js";
 export function createApp(): Express {
   const app = express();
 
+  // Basic security and parsing middleware
   app.use(cors());
-  app.use(express.json());
+  app.use(cookieParser());
+  app.use(express.json({ limit: "1mb" }));
 
-  // Health check endpoint
-  app.get("/health", (_req: Request, res: Response) => {
-    res.json({ status: "healthy", timestamp: new Date().toISOString() });
-  });
+  // Health and uptime monitoring (unthrottled for monitoring agents)
+  app.use("/health", healthRouter);
 
-  // Protected User API routes (Tenant context & RLS enforcement)
+  // DEV-AUTH.3 & DEV-APISEC.1: Auth routes with strict rate limiting
+  app.use("/api/auth", authRateLimiter, authRouter);
+
+  // Global rate limiter for protected API routes
+  app.use("/api", globalRateLimiter);
+
+  // DEV-AUTH.2: Admin endpoints (strictly requires role === 'admin')
+  app.use("/api/admin", authenticateUser, adminRouter);
+
+  // Tenant-scoped User API routes (requires valid token & tenant context)
   app.use("/api/students", authenticateUser, studentsRouter);
   app.use("/api/groups", authenticateUser, groupsRouter);
   app.use("/api/sessions", authenticateUser, sessionsRouter);
 
-  // DEV-WPA.1: Protected Internal Automation routes (n8n ↔ Backend shared secret)
+  // DEV-WPA.1: Protected Internal Automation routes (shared-secret auth)
   app.use("/internal", authenticateInternalSecret, internalRouter);
+
+  // DEV-ERRM.1: Uniform 404 handler and global error handling middleware
+  app.use(notFoundHandler);
+  app.use(globalErrorHandler);
 
   return app;
 }
