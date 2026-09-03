@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="سنترلي: موقع ويب سحابي متطور لمدرسي مصر لإدارة الحصص، الحضور بالباركود، رصد الواجب، وجرد الكاش ورسائل الواتساب لأولياء الأمور.">
   <title>سنترلي | المنظومة الذكية لإدارة الحصص والمجاميع للمدرسين</title>
   
@@ -13,6 +13,7 @@
   <style>
     :root {
       --navy: #172D70;
+      --navy-light: #203B91;
       --blue: #2949BA;
       --blue-light: #4665D3;
       --pale: #E8EDFF;
@@ -26,29 +27,43 @@
       --red: #C9414D;
       --amber: #D98916;
     }
+
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      width: 100%;
       background: var(--cream);
       color: var(--ink);
       font-family: 'Cairo', sans-serif;
       line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
     }
-    .shell { max-width: 1200px; margin: auto; padding-right: 24px; padding-left: 24px; }
-    
+
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding-right: 20px;
+      padding-left: 20px;
+      width: 100%;
+    }
+
     /* Header / Nav */
     .nav {
-      height: 86px;
+      height: 80px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 20px;
+      gap: 15px;
       background: #fff;
       border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
     .brand {
-      font: 800 34px/1 'Changa', sans-serif;
+      font: 800 32px/1 'Changa', sans-serif;
       color: var(--blue);
       letter-spacing: -2px;
       text-decoration: none;
@@ -67,12 +82,12 @@
     }
     .nav nav {
       display: flex;
-      gap: 25px;
+      gap: 22px;
       margin-right: auto;
-      margin-left: 25px;
+      margin-left: 22px;
     }
     .nav nav a {
-      font-size: 13px;
+      font-size: 13.5px;
       font-weight: 600;
       color: var(--text);
       text-decoration: none;
@@ -86,31 +101,35 @@
       cursor: pointer;
       font-weight: 700;
       border-radius: 12px;
-      padding: 12px 20px;
+      padding: 12px 18px;
       font-size: 13px;
       transition: .2s;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
+      white-space: nowrap;
     }
     .nav-cta { background: var(--navy); color: #fff; }
-    .nav-cta:hover, .button:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(23, 45, 112, 0.2); }
+    .nav-cta:hover, .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px rgba(23, 45, 112, 0.2);
+    }
     .button.amber { background: var(--gold); color: var(--navy); }
-    
+
     /* Hero Section */
     .hero {
       display: grid;
       grid-template-columns: 1fr 1.15fr;
       gap: 40px;
       align-items: center;
-      padding-top: 50px;
-      padding-bottom: 70px;
+      padding-top: 45px;
+      padding-bottom: 60px;
     }
     .launch-badge {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       margin-bottom: 15px;
       background: #fff;
       border: 1px solid #e2e7f3;
@@ -119,6 +138,7 @@
       font-size: 12px;
       font-weight: 700;
       color: var(--navy);
+      width: fit-content;
     }
     .discount-pill {
       background: var(--gold);
@@ -129,7 +149,7 @@
     }
     .hero h1 {
       font-family: 'Changa', sans-serif;
-      font-size: 48px;
+      font-size: 46px;
       line-height: 1.25;
       letter-spacing: -1.5px;
       margin: 0 0 16px;
@@ -141,17 +161,18 @@
       position: relative;
     }
     .lead {
-      font-size: 15px;
-      line-height: 2;
+      font-size: 15.5px;
+      line-height: 1.95;
       color: var(--text);
-      max-width: 520px;
+      max-width: 530px;
       margin: 0;
     }
     .hero-actions {
       display: flex;
-      gap: 18px;
+      gap: 15px;
       align-items: center;
       margin-top: 25px;
+      flex-wrap: wrap;
     }
     .text-link {
       font-size: 14px;
@@ -162,8 +183,8 @@
     .trust {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 28px;
+      gap: 8px;
+      margin-top: 25px;
       font-size: 11px;
       color: var(--text);
     }
@@ -171,222 +192,214 @@
       background: #fff;
       border: 1px solid #e7ecf5;
       border-radius: 20px;
-      padding: 5px 11px;
+      padding: 5px 10px;
       font-weight: 600;
     }
 
-    /* Live Hero Mockup */
+    /* Redesigned Hero System Explainer (Clean Browser Architecture) */
     .hero-visual {
-      background: linear-gradient(145deg, #e8edff, #ffffff 65%);
-      border: 1px solid #dbe3f7;
-      border-radius: 32px;
-      padding: 38px 20px 22px;
-      box-shadow: 0 25px 50px rgba(23, 45, 112, 0.12);
-      position: relative;
-    }
-    .visual-note {
-      position: absolute;
-      right: 22px;
-      top: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-    .visual-note span {
-      background: #eaf8f0;
-      color: var(--green);
-      border: 1px solid #caebd7;
-      padding: 2px 8px;
-      border-radius: 12px;
-    }
-    .visual-note b { color: var(--navy); }
-    .app-frame {
       background: #fff;
-      border: 1px solid #e2e6f0;
-      border-radius: 18px;
-      box-shadow: 0 14px 28px rgba(25, 43, 97, 0.08);
-      display: grid;
-      grid-template-columns: 82px 1fr;
+      border: 1px solid #dce4f7;
+      border-radius: 24px;
+      box-shadow: 0 20px 45px rgba(23, 45, 112, 0.1);
       overflow: hidden;
-      min-height: 430px;
-    }
-    .mock-side {
-      background: var(--navy);
-      padding: 15px 10px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      color: #b3c5ff;
+    }
+    
+    /* Mock Browser Bar */
+    .browser-topbar {
+      background: #f1f4fa;
+      border-bottom: 1px solid #e2e7f2;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .browser-dots {
+      display: flex;
+      gap: 5px;
+    }
+    .browser-dots i {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+    .browser-address {
+      background: #fff;
+      border: 1px solid #dce2ef;
+      border-radius: 8px;
+      padding: 3px 12px;
       font-size: 11px;
-      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      direction: ltr;
+      font-family: monospace;
+      flex: 1;
+      max-width: 250px;
     }
-    .mock-logo {
-      width: 36px;
-      height: 36px;
-      background: var(--gold);
-      color: var(--navy);
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      font: 800 20px 'Changa', sans-serif;
-      margin-bottom: 8px;
+    .browser-badge {
+      margin-right: auto;
+      background: #eaf8f0;
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      border: 1px solid #caebd7;
     }
-    .mock-side span { padding: 6px 8px; border-radius: 8px; }
-    .mock-side .active { background: #3b58bd; color: #fff; font-weight: 700; }
-    .mock-main { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
-    .mock-top {
+
+    /* Inside System Explainer */
+    .system-canvas {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #fbfcfe;
+    }
+    
+    .session-live-strip {
+      background: #fff;
+      border: 1px solid #e5ebf7;
+      border-radius: 14px;
+      padding: 12px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid #f0f2f7;
-      padding-bottom: 8px;
-    }
-    .mock-top b { font-size: 13px; color: var(--navy); }
-    .mock-top small { font-size: 10px; color: #7f8ca3; display: block; }
-    .live {
-      font-style: normal;
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--green);
-      background: #eaf8f0;
-      padding: 3px 8px;
-      border-radius: 20px;
-      border: 1px solid #caebd7;
-    }
-    .stats-four {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 7px;
-    }
-    .stats-four div {
-      background: #f8f9fd;
-      border: 1px solid #edf0f7;
-      border-radius: 10px;
-      padding: 8px;
-    }
-    .stats-four small { font-size: 9px; color: #7c889f; display: block; }
-    .stats-four b { font: 700 12px 'Changa', sans-serif; color: var(--navy); }
-    .text-green { color: var(--green) !important; }
-    .text-gold { color: #b77617 !important; }
-    .text-red { color: var(--red) !important; }
-
-    /* Scan Box in Hero */
-    .scan-box {
-      background: #f5f8ff;
-      border: 1.5px solid #8ba4f3;
-      border-radius: 12px;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .scan-input-sim {
-      display: flex;
-      align-items: center;
+      flex-wrap: wrap;
       gap: 10px;
+      box-shadow: 0 4px 12px rgba(25, 45, 95, 0.03);
     }
-    .cam-icon { font-size: 18px; }
-    .scan-input-sim div { flex: 1; display: grid; }
-    .scan-input-sim b { font-size: 11px; color: var(--navy); }
-    .scan-input-sim small { font-size: 9px; color: #707f9c; }
-    .enter-badge {
-      background: var(--navy);
-      color: #fff;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font: 700 10px monospace;
+    .session-live-strip div b {
+      font-size: 13.5px;
+      color: var(--navy);
+      display: block;
     }
-    .scan-alert {
-      background: #eaf8f0;
-      border: 1px solid #caebd7;
-      color: #216d47;
+    .session-live-strip div small {
+      font-size: 10px;
+      color: #79869e;
+    }
+    .session-kpis {
+      display: flex;
+      gap: 8px;
+    }
+    .kpi-chip {
+      background: #f4f7fe;
+      border: 1px solid #e1e7f5;
       border-radius: 8px;
-      padding: 5px 8px;
+      padding: 4px 8px;
       font-size: 10px;
-      font-weight: 600;
-    }
-
-    /* Student rows in Hero */
-    .student-list-sim {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      max-height: 175px;
-      overflow-y: auto;
+      text-align: center;
     }
-    .student-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 6px 8px;
-      background: #fff;
-      border: 1px solid #edf0f7;
-      border-radius: 10px;
-    }
-    .avatar {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: #e8edff;
-      color: var(--blue);
+    .kpi-chip span { color: #7a87a0; font-size: 8.5px; }
+    .kpi-chip b { color: var(--navy); font-size: 11px; }
+
+    /* The 3 Pillars Architecture Box */
+    .pillars-grid {
       display: grid;
-      place-items: center;
-      font: 700 11px 'Changa', sans-serif;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
     }
-    .avatar.second { background: var(--gold-light); color: #ad6f14; }
-    .avatar.third { background: #ffe7e7; color: var(--red); }
-    .avatar.makeup { background: #efeaff; color: #5a3bc4; }
-    .s-info { flex: 1; display: grid; }
-    .s-info b { font-size: 11px; color: var(--navy); }
-    .s-info small { font-size: 9px; color: #78859d; }
-    .tag {
+    .pillar-card {
+      background: #fff;
+      border: 1px solid #e3e8f5;
+      border-radius: 14px;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      box-shadow: 0 4px 10px rgba(25, 45, 95, 0.02);
+    }
+    .pillar-card.highlight {
+      border-color: #8da6f7;
+      background: #f8faff;
+    }
+    .pillar-card.lock {
+      background: #fffdf9;
+      border-color: #f7e6c9;
+    }
+    .pillar-num {
+      font: 800 11px 'Changa', sans-serif;
+      color: var(--blue);
+      background: var(--pale);
+      padding: 2px 7px;
+      border-radius: 6px;
+      width: fit-content;
+    }
+    .pillar-card.lock .pillar-num {
+      background: var(--gold-light);
+      color: #a46c1a;
+    }
+    .pillar-card h4 {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .pillar-card p {
+      margin: 0;
+      font-size: 10px;
+      color: #69758c;
+      line-height: 1.6;
+    }
+    .pillar-preview {
+      background: #f7f9fd;
+      border: 1px solid #e9edf5;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 9.5px;
+      margin-top: auto;
+    }
+    .pillar-preview b { color: var(--navy); display: block; }
+    .pillar-preview small { color: var(--green); font-weight: 700; }
+    .lock-tag {
+      background: #fff3dc;
+      color: #9d6819;
       font-size: 9px;
       font-weight: 700;
-      padding: 3px 8px;
+      padding: 3px 6px;
       border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: fit-content;
     }
-    .tag.sent { background: #eaf8f0; color: var(--green); }
-    .tag.warn { background: #fff3dc; color: #9c671a; }
-    .tag.absent { background: #ffebeb; color: var(--red); }
-    .makeup-pill {
-      font-style: normal;
-      font-size: 9px;
-      background: #efeaff;
-      color: #5a3bc4;
-      padding: 1px 6px;
+
+    /* System Explainer Footer Note */
+    .system-footer-note {
+      background: #eef3ff;
+      border: 1px solid #d5e1fc;
       border-radius: 10px;
-      margin-right: 4px;
-    }
-    .floating-msg {
-      position: absolute;
-      left: -15px;
-      bottom: -15px;
-      background: var(--navy);
-      color: #fff;
-      border-radius: 14px;
-      padding: 10px 14px;
+      padding: 9px 12px;
       font-size: 11px;
-      box-shadow: 0 15px 30px rgba(23, 45, 112, 0.35);
-      border: 1px solid #36509f;
+      color: #214399;
       display: flex;
-      flex-direction: column;
-      gap: 2px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
-    .floating-msg b { color: var(--gold); }
+    .system-footer-note b { color: var(--navy); }
 
     /* Pain Section */
     .pain {
       background: var(--navy);
       color: #fff;
-      padding: 60px 0;
+      padding: 55px 0;
       margin-top: 30px;
     }
     .pain-inner {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 50px;
+      gap: 40px;
       align-items: center;
     }
     .eyebrow {
@@ -398,82 +411,85 @@
     }
     .eyebrow.dark { color: #f4c467; }
     .pain h2 {
-      font: 700 32px/1.4 'Changa', sans-serif;
+      font: 700 30px/1.4 'Changa', sans-serif;
       margin: 0;
     }
     .pain-text p {
       color: #dbe4ff;
-      line-height: 1.9;
+      line-height: 1.85;
       font-size: 14px;
-      margin: 0 0 15px;
+      margin: 0 0 14px;
     }
     .pain-badges {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
     }
     .pain-badges span {
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 5px 10px;
+      padding: 4px 10px;
       border-radius: 20px;
       font-size: 11px;
     }
 
     /* Steps Section */
-    .section { padding-top: 80px; padding-bottom: 30px; }
-    .section-heading { margin-bottom: 35px; }
-    .section-heading h2 { font: 700 34px 'Changa', sans-serif; margin: 0; color: var(--navy); }
+    .section { padding-top: 70px; padding-bottom: 30px; }
+    .section-heading { margin-bottom: 30px; }
+    .section-heading h2 { font: 700 32px 'Changa', sans-serif; margin: 0; color: var(--navy); }
     .section-heading p:last-child { margin: 6px 0 0; color: var(--text); font-size: 14px; }
     .centered { text-align: center; }
     .steps {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
+      gap: 16px;
     }
     .steps article {
       background: #fff;
       border: 1px solid var(--line);
       border-top: 3px solid var(--blue);
       border-radius: 16px;
-      padding: 22px 16px;
+      padding: 20px 15px;
       box-shadow: 0 8px 18px rgba(25, 45, 95, 0.04);
     }
-    .steps b { font: 700 32px 'Changa', sans-serif; color: var(--gold); display: block; }
-    .steps h3 { font: 700 17px 'Changa', sans-serif; margin: 8px 0 6px; color: var(--navy); }
-    .steps p { font-size: 12px; color: var(--text); line-height: 1.8; margin: 0; }
+    .steps b { font: 700 30px 'Changa', sans-serif; color: var(--gold); display: block; }
+    .steps h3 { font: 700 16px 'Changa', sans-serif; margin: 6px 0 6px; color: var(--navy); }
+    .steps p { font-size: 12px; color: var(--text); line-height: 1.75; margin: 0; }
 
     /* Core Product Detail Grid */
-    .product-detail { padding: 80px 0; background: #fff; }
+    .product-detail { padding: 70px 0; background: #fff; }
     .detail-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-top: 35px;
+      gap: 18px;
+      margin-top: 30px;
     }
     .detail-card {
       border: 1px solid #e4e8f1;
-      border-radius: 22px;
-      padding: 24px;
+      border-radius: 20px;
+      padding: 22px;
       background: #fff;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 400px;
-      box-shadow: 0 10px 24px rgba(22, 42, 94, 0.04);
+      min-height: 380px;
+      box-shadow: 0 10px 24px rgba(22, 42, 94, 0.03);
       transition: .2s;
     }
-    .detail-card:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(22, 42, 94, 0.08); }
+    .detail-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 30px rgba(22, 42, 94, 0.08);
+    }
     .detail-copy > span { font: 700 12px 'Changa', sans-serif; color: #bd7618; display: block; }
-    .detail-copy h3 { font: 700 19px 'Changa', sans-serif; margin: 6px 0 8px; color: var(--navy); }
-    .detail-copy p { font-size: 12px; line-height: 1.85; color: var(--text); margin: 0; }
+    .detail-copy h3 { font: 700 18px 'Changa', sans-serif; margin: 5px 0 8px; color: var(--navy); }
+    .detail-copy p { font-size: 12.5px; line-height: 1.8; color: var(--text); margin: 0; }
     
-    /* Screen in-app visuals inside cards */
+    /* In-App Screen Visuals */
     .screen {
-      margin-top: 18px;
+      margin-top: 16px;
       border: 1px solid #e6e9f1;
-      border-radius: 14px;
-      padding: 14px;
+      border-radius: 12px;
+      padding: 12px;
       background: #f8f9fd;
       font-size: 11px;
     }
@@ -481,21 +497,21 @@
     /* Card 1: Scanner UI */
     .scanner-ui-pro {
       display: grid;
-      grid-template-columns: 80px 1fr;
-      gap: 12px;
+      grid-template-columns: 75px 1fr;
+      gap: 10px;
       align-items: center;
       background: #f4f7ff;
       border-color: #cbd8fb;
     }
     .cam-viewfinder {
-      height: 80px;
+      height: 75px;
       border: 2px dashed var(--blue);
       border-radius: 10px;
       background: #e5ecff;
       display: grid;
       place-items: center;
       color: var(--blue);
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 700;
       position: relative;
       overflow: hidden;
@@ -548,14 +564,21 @@
       box-shadow: 0 3px 8px rgba(0,0,0,0.04);
     }
     .wa-bubble p { margin: 0; color: #32443a; font-size: 10.5px; line-height: 1.7; }
-    .wa-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; color: #728a7c; font-size: 9px; }
+    .wa-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      color: #728a7c;
+      font-size: 9px;
+    }
     .wa-meta span { color: #3a8ee6; font-weight: 700; }
 
     /* Card 3: Reports UI */
     .report-ui-pro {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 7px;
     }
     .student-track-item {
       display: flex;
@@ -588,7 +611,7 @@
       border-color: #f7e8cb;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 7px;
     }
     .recon-head { display: flex; justify-content: space-between; font-size: 10px; color: var(--navy); }
     .badge-matched { background: #eaf8f0; color: var(--green); padding: 2px 6px; border-radius: 6px; font-weight: 700; }
@@ -602,7 +625,7 @@
     .import-print-ui {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 7px;
     }
     .import-badge {
       display: flex;
@@ -638,7 +661,7 @@
       cursor: pointer;
     }
 
-    /* Card 6: Assistant UI */
+    /* Card 6: Assistant UI & PIN Protection */
     .assistant-ui-pro {
       display: flex;
       flex-direction: column;
@@ -648,59 +671,70 @@
       background: #fff;
       border: 1px solid #eef1f8;
       border-radius: 10px;
-      padding: 8px 10px;
+      padding: 9px 12px;
     }
     .asst-card-sim b { font-size: 11px; color: var(--navy); display: block; margin-bottom: 4px; }
-    .center-tags { display: flex; gap: 4px; }
-    .center-tags span { background: #e8edff; color: var(--blue); font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+    .center-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+    .center-tags span {
+      background: #e8edff;
+      color: var(--blue);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
     .pin-lock-badge {
       background: #fff3dc;
       border: 1px solid #f9dfb1;
-      border-radius: 8px;
-      padding: 8px;
+      border-radius: 10px;
+      padding: 9px 12px;
       text-align: center;
       color: #a46d1a;
       font-weight: 700;
-      font-size: 10px;
+      font-size: 10.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
     /* Savings Banner */
     .savings-banner {
-      margin-top: 45px;
+      margin-top: 40px;
       background: linear-gradient(135deg, var(--navy), #25409a);
       color: #fff;
-      border-radius: 24px;
-      padding: 30px 40px;
+      border-radius: 22px;
+      padding: 26px 30px;
       display: flex;
       justify-content: space-around;
       align-items: center;
-      box-shadow: 0 15px 35px rgba(23, 45, 112, 0.2);
+      box-shadow: 0 15px 35px rgba(23, 45, 112, 0.18);
     }
     .saving-item { text-align: center; display: grid; gap: 4px; }
-    .saving-item b { font: 700 38px/1 'Changa', sans-serif; color: var(--gold); }
-    .saving-item span { font-size: 13px; color: #d7e2ff; max-width: 220px; }
-    .saving-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.15); }
+    .saving-item b { font: 700 36px/1 'Changa', sans-serif; color: var(--gold); }
+    .saving-item span { font-size: 13px; color: #d7e2ff; max-width: 200px; }
+    .saving-divider { width: 1px; height: 45px; background: rgba(255,255,255,0.15); }
 
-    /* Teacher Poll Section (The Hook) */
-    .poll-section { padding-top: 60px; padding-bottom: 60px; }
+    /* Teacher Poll Section */
+    .poll-section { padding-top: 55px; padding-bottom: 55px; }
     .poll-box {
       background: #fff;
       border: 1.5px solid #dbe2f3;
-      border-radius: 28px;
-      padding: 40px;
-      box-shadow: 0 16px 36px rgba(20, 40, 90, 0.05);
+      border-radius: 24px;
+      padding: 35px;
+      box-shadow: 0 16px 36px rgba(20, 40, 90, 0.04);
     }
     .poll-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
-      margin-top: 25px;
+      gap: 12px;
+      margin-top: 22px;
     }
     .poll-btn {
       background: #f8fafd;
       border: 1.5px solid #e3e8f5;
-      border-radius: 18px;
-      padding: 18px;
+      border-radius: 16px;
+      padding: 16px;
       text-align: right;
       cursor: pointer;
       display: flex;
@@ -713,44 +747,44 @@
       background: #f0f4ff;
       transform: translateY(-2px);
     }
-    .poll-icon { font-size: 26px; margin-bottom: 4px; }
-    .poll-btn b { font-size: 14px; color: var(--navy); }
-    .poll-btn small { font-size: 11px; color: var(--text); line-height: 1.6; }
+    .poll-icon { font-size: 24px; margin-bottom: 2px; }
+    .poll-btn b { font-size: 13.5px; color: var(--navy); }
+    .poll-btn small { font-size: 11px; color: var(--text); line-height: 1.5; }
     
     .poll-solution {
-      margin-top: 25px;
+      margin-top: 20px;
       background: #eaf8f0;
       border: 1.5px solid #bcead0;
-      border-radius: 18px;
-      padding: 22px;
+      border-radius: 16px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 10px;
       animation: fadeIn .3s ease;
     }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
     .hidden { display: none !important; }
-    .solution-header { display: flex; align-items: center; gap: 8px; color: #1e7046; font-size: 14px; }
+    .solution-header { display: flex; align-items: center; gap: 8px; color: #1e7046; font-size: 13.5px; }
     .sol-icon { font-size: 20px; }
-    .poll-solution p { margin: 0; color: #2e5942; font-size: 13px; line-height: 1.8; }
-    .sol-cta { background: var(--green); color: #fff; width: fit-content; margin-top: 5px; }
+    .poll-solution p { margin: 0; color: #2e5942; font-size: 12.5px; line-height: 1.8; }
+    .sol-cta { background: var(--green); color: #fff; width: fit-content; margin-top: 4px; }
 
     /* Waitlist Section */
     .waitlist {
       background: linear-gradient(130deg, var(--navy), #2745a7);
       color: #fff;
-      padding: 70px 0;
-      margin-top: 60px;
+      padding: 65px 0;
+      margin-top: 50px;
     }
     .waitlist-inner {
       display: grid;
       grid-template-columns: 1fr 1.05fr;
-      gap: 60px;
+      gap: 50px;
       align-items: center;
     }
     .launch-discount {
       display: inline-block;
-      margin-bottom: 15px;
+      margin-bottom: 12px;
       padding: 6px 14px;
       background: #fff1d7;
       color: #a76913;
@@ -764,25 +798,25 @@
       border-radius: 12px;
       margin: 0 4px;
     }
-    .waitlist h2 { font: 700 38px/1.35 'Changa', sans-serif; margin: 0 0 12px; }
-    .waitlist p { font-size: 14px; line-height: 1.9; color: #dbe4ff; margin: 0 0 12px; }
+    .waitlist h2 { font: 700 36px/1.35 'Changa', sans-serif; margin: 0 0 10px; }
+    .waitlist p { font-size: 14px; line-height: 1.85; color: #dbe4ff; margin: 0 0 12px; }
     .waitlist small { font-size: 10.5px; color: #bdcaf6; }
     
     .waitlist form {
       background: #fff;
       color: var(--ink);
-      padding: 30px;
-      border-radius: 24px;
+      padding: 26px;
+      border-radius: 20px;
       box-shadow: 0 20px 45px rgba(0,0,0,0.18);
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 14px;
+      gap: 12px;
     }
     .waitlist label {
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 700;
       display: grid;
-      gap: 5px;
+      gap: 4px;
       color: var(--navy);
     }
     .full-col { grid-column: span 2; }
@@ -790,11 +824,12 @@
       font: 400 12.5px 'Cairo', sans-serif;
       border: 1.5px solid #dfe5f2;
       border-radius: 10px;
-      padding: 10px 12px;
+      padding: 9px 12px;
       outline: none;
       background: #fff;
       color: var(--ink);
       transition: .2s;
+      width: 100%;
     }
     .waitlist input:focus, .waitlist select:focus {
       border-color: var(--blue);
@@ -810,15 +845,15 @@
     .form-message.error { color: var(--red); }
 
     /* FAQ */
-    .faq { padding-bottom: 80px; }
-    .faq details { border-bottom: 1px solid var(--line); padding: 18px 0; }
+    .faq { padding-bottom: 70px; }
+    .faq details { border-bottom: 1px solid var(--line); padding: 16px 0; }
     .faq summary { font-weight: 700; font-size: 14px; cursor: pointer; color: var(--navy); }
-    .faq p { font-size: 13px; color: var(--text); margin: 10px 0 0; line-height: 1.9; }
+    .faq p { font-size: 13px; color: var(--text); margin: 8px 0 0; line-height: 1.85; }
 
     /* Footer */
     footer {
       border-top: 1px solid var(--line);
-      padding: 24px 0;
+      padding: 22px 0;
       background: #fff;
       color: #72809a;
       font-size: 12px;
@@ -828,29 +863,45 @@
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 15px;
+      gap: 12px;
     }
 
-    /* Mobile Responsiveness */
-    @media (max-width: 900px) {
-      .hero, .pain-inner, .waitlist-inner { grid-template-columns: 1fr; gap: 35px; }
+    /* ==================================================== */
+    /* RESPONSIVE DESIGN (MOBILE-FIRST OPTIMIZED)           */
+    /* ==================================================== */
+    @media (max-width: 960px) {
+      .hero, .pain-inner, .waitlist-inner { grid-template-columns: 1fr; gap: 32px; }
       .detail-grid { grid-template-columns: 1fr 1fr; }
       .steps { grid-template-columns: 1fr 1fr; }
       .poll-grid { grid-template-columns: 1fr; }
-      .nav nav { display: none; }
       .hero h1 { font-size: 38px; }
-      .savings-banner { flex-direction: column; gap: 20px; }
-      .saving-divider { width: 80px; height: 1px; }
+      .nav nav { display: none; }
+      .savings-banner { flex-direction: column; gap: 18px; padding: 22px; }
+      .saving-divider { width: 60px; height: 1px; }
+      .pillars-grid { grid-template-columns: 1fr; }
     }
+
     @media (max-width: 600px) {
+      .shell { padding-right: 15px; padding-left: 15px; }
+      .nav { height: 68px; }
+      .brand { font-size: 26px; }
+      .nav-cta { padding: 9px 13px; font-size: 11px; }
+      .hero { padding-top: 25px; padding-bottom: 35px; }
+      .hero h1 { font-size: 32px; letter-spacing: -1px; }
+      .lead { font-size: 14px; }
       .detail-grid, .steps, .waitlist form { grid-template-columns: 1fr; }
       .full-col { grid-column: span 1; }
-      .hero-visual { padding: 35px 12px 15px; }
-      .app-frame { grid-template-columns: 1fr; min-height: auto; }
-      .mock-side { display: none; }
-      .stats-four { grid-template-columns: 1fr 1fr; }
-      .floating-msg { position: static; margin-top: 10px; }
-      .poll-box { padding: 20px; }
+      .waitlist { padding: 45px 0; }
+      .waitlist h2 { font-size: 28px; }
+      .waitlist form { padding: 18px; }
+      .poll-box { padding: 18px; }
+      .section-heading h2 { font-size: 25px; }
+      .pain h2 { font-size: 24px; }
+      .system-canvas { padding: 12px; }
+      .session-live-strip { flex-direction: column; align-items: flex-start; }
+      .session-kpis { width: 100%; justify-content: space-between; }
+      .scanner-ui-pro { grid-template-columns: 1fr; }
+      .cam-viewfinder { height: 60px; }
     }
   </style>
 </head>
@@ -882,7 +933,7 @@
       <div class="hero-copy">
         <div class="launch-badge">
           <span>🚀 متاح قريباً لمدرسي مصر</span>
-          <b class="discount-pill">خصم 20% للحجز المبكر</b>
+          <b class="discount-pill">خصم 20% للحجز</b>
         </div>
         
         <h1>خلّي وقتك للتدريس.<br>وسيّب <em>سنترلي</em> يرتّب الباقي.</h1>
@@ -897,125 +948,99 @@
         </div>
         
         <div class="trust">
-          <span>🌐 موقع ويب خفيف (بدون تحميل أي تطبيق)</span>
-          <span>📱 يفتح من متصفح الموبايل أو اللابتوب</span>
+          <span>🌐 موقع ويب خفيف (بدون تحميل برامج)</span>
+          <span>📱 يفتح بسهولة من متصفح الموبايل أو اللابتوب</span>
           <span>⚡ يوفر 70% من وقت الحصة</span>
           <span>👥 يُغنيك عن استئجار مساعدين زيادة</span>
         </div>
       </div>
 
-      <!-- Left Live Mockup (Rich & Tempting Inside-App View) -->
-      <div class="hero-visual" aria-label="معاينة حية من داخل موقع سنترلي">
-        <div class="visual-note">
-          <span>حصة نشطة ومفتوحة الآن 🟢</span>
-          <b>سنتر الفيروز (الأحد 04:00 م)</b>
-        </div>
+      <!-- Left Live Mockup (Clean System Architecture Explainer) -->
+      <div class="hero-visual" aria-label="كيف يعمل موقع سنترلي">
         
-        <div class="app-frame">
-          <!-- Mini Sidebar -->
-          <aside class="mock-side">
-            <div class="mock-logo">س</div>
-            <span class="active">الحصص</span>
-            <span>الطلاب</span>
-            <span>الكويزات</span>
-            <span>التقارير</span>
-            <span>المالية</span>
-          </aside>
+        <!-- Browser Window Header -->
+        <div class="browser-topbar">
+          <div class="browser-dots">
+            <i class="dot-red"></i>
+            <i class="dot-yellow"></i>
+            <i class="dot-green"></i>
+          </div>
+          <div class="browser-address">
+            🔒 https://app.centerly.io/live
+          </div>
+          <span class="browser-badge">🟢 حصة نشطة بالسنتر</span>
+        </div>
 
-          <!-- Main Live Workspace -->
-          <div class="mock-main">
-            
-            <!-- Live Session Header -->
-            <div class="mock-top">
-              <div>
-                <b>حصة 3 ثانوي — سنتر الفيروز</b>
-                <small>اليوم 04:00 م • المساعد المسؤول: عمر جمال</small>
-              </div>
-              <i class="live">● جارية الآن</i>
+        <!-- Inside Canvas -->
+        <div class="system-canvas">
+          
+          <!-- Live Session Header Bar -->
+          <div class="session-live-strip">
+            <div>
+              <b>مجموعة 3 ثانوي — سنتر الفيروز</b>
+              <small>سعر الحصة: 60 ج • الحضور: 58 / 64 طالب</small>
             </div>
-
-            <!-- Live Financial & Attendance Bar -->
-            <div class="stats-four">
-              <div>
-                <small>الحاضرون</small>
-                <b>58 / 64</b>
+            <div class="session-kpis">
+              <div class="kpi-chip">
+                <span>الواجب</span>
+                <b style="color:var(--green)">54 كامل ✅</b>
               </div>
-              <div>
-                <small>الواجب</small>
-                <b class="text-green">54 كامل ✅</b>
-              </div>
-              <div>
-                <small>إجمالي الكاش</small>
+              <div class="kpi-chip">
+                <span>الكاش</span>
                 <b>3,840 ج</b>
               </div>
-              <div>
-                <small>صافي المستر (75%)</small>
-                <b class="text-gold">2,880 ج</b>
+              <div class="kpi-chip">
+                <span>صافي المستر</span>
+                <b style="color:#b57516">2,880 ج</b>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3 Pillars Workflow Cards -->
+          <div class="pillars-grid">
+            
+            <!-- Pillar 1 -->
+            <div class="pillar-card highlight">
+              <span class="pillar-num">1. المساعد على الباب</span>
+              <h4>مسح باركود ورصد واجب</h4>
+              <p>المساعد يفتح الكاميرا من موبايله؛ مسحة كود في ثانية مع صوت "بيب"، وراديو الواجب يرجع تلقائياً لـ "سلم كاملاً".</p>
+              <div class="pillar-preview">
+                <b>كود: #1001</b>
+                <small>✓ تم الحضور + سلم الواجب</small>
               </div>
             </div>
 
-            <!-- Rapid Scanner Box -->
-            <div class="scan-box">
-              <div class="scan-input-sim">
-                <span class="cam-icon">📷</span>
-                <div>
-                  <b>امسح بكاميرا الموبايل أو اكتب الكود...</b>
-                  <small>يدعم الباركود ويرجع تلقائياً لـ "سلم كاملاً"</small>
-                </div>
-                <span class="enter-badge">[Enter]</span>
-              </div>
-              <div class="scan-alert">
-                ✓ تم تسجيل (<b>أحمد محمود</b>) — الواجب: كامل ✅ (مجدول في طابور الواتساب)
+            <!-- Pillar 2 -->
+            <div class="pillar-card">
+              <span class="pillar-num">2. واتساب أولياء الأمور</span>
+              <h4>تقارير غياب بدون حظر</h4>
+              <p>بعد انتهاء الحصة، تُرسل رسائل غياب راقية ورسائل درجات في طابور مجمّع آمن بفواصل زمنية تحمي رقمك.</p>
+              <div class="pillar-preview">
+                <b>رسالة ولي الأمر:</b>
+                <span style="color:#3a8ee6; font-size:9px;">جاهزة بالدفعة الآمنة ✓✓</span>
               </div>
             </div>
 
-            <!-- Student Attendance Rows -->
-            <div class="student-list-sim">
-              <div class="student-row">
-                <span class="avatar">أ</span>
-                <div class="s-info">
-                  <b>أحمد محمود كمال (#1001)</b>
-                  <small>حاضر 04:02 م • سلم الواجب كاملاً ✅</small>
-                </div>
-                <span class="tag sent">جاهز بالدفعة 📋</span>
-              </div>
-
-              <div class="student-row">
-                <span class="avatar second">م</span>
-                <div class="s-info">
-                  <b>مريم إبراهيم (#1002)</b>
-                  <small>حاضر 04:05 م • الواجب ناقص ⚠️</small>
-                </div>
-                <span class="tag warn">تنبيه واجب ⚠️</span>
-              </div>
-
-              <div class="student-row makeup-row">
-                <span class="avatar makeup">ح</span>
-                <div class="s-info">
-                  <b>محمود سامي (#1099) <em class="makeup-pill">🔄 حضور تعويض</em></b>
-                  <small>مجموعة سنتر الأوائل • الواجب كامل ✅</small>
-                </div>
-                <span class="tag sent">معتمد ✓</span>
-              </div>
-
-              <div class="student-row absent-row">
-                <span class="avatar third">ع</span>
-                <div class="s-info">
-                  <b>عمر خالد (#1004)</b>
-                  <small class="text-red">غائب — لم يسجل حضوره بعد</small>
-                </div>
-                <span class="tag absent">رسالة غياب ⏳</span>
+            <!-- Pillar 3 -->
+            <div class="pillar-card lock">
+              <span class="pillar-num">3. لوحة المدرس فقط</span>
+              <h4>أرباحك وجرد الكاش</h4>
+              <p>جرد فئات الـ 200 والـ 100 والـ 50 ج، مع حساب نسبة السنتر وصافي ربحك بدقة وبدون أي عجز مالي.</p>
+              <div class="lock-tag">
+                🔒 محمية برمز PIN سري للمدرس
               </div>
             </div>
 
           </div>
+
+          <!-- Explainer Bottom Note -->
+          <div class="system-footer-note">
+            <span>🛡️ <b>عزل كامل للصلاحيات:</b> المساعد يسجل الحضور فقط، ومستحيل يشوف أرباحك أو أرقام الطلاب.</span>
+            <span style="font-weight:700;">100% Web</span>
+          </div>
+
         </div>
 
-        <!-- Floating Notification -->
-        <div class="floating-msg">
-          <span>📢 عند إغلاق الحصة:</span>
-          <b>تُرسل تقارير الحضور والغياب لأولياء الأمور دفعة واحدة في طابور آمن 🔒</b>
-        </div>
       </div>
 
     </section>
@@ -1058,7 +1083,7 @@
         <article>
           <b>١</b>
           <h3>افتح الحصة بضغطة</h3>
-          <p>اختار السنتر والمجموعة والمساعد المسؤول، وحدد سعر الحصة ونوع الحساب (نسبة % أو إيجار قاعة ثابت).</p>
+          <p>اختار السنتر والمجموعة، وحدد سعر الحصة ونوع الحساب (نسبة % أو إيجار قاعة ثابت).</p>
         </article>
 
         <article>
@@ -1083,7 +1108,7 @@
 
 
     <!-- ============================================== -->
-    <!-- CORE FEATURES WITH RICH IN-APP UI SNIPPETS     -->
+    <!-- CORE FEATURES WITH IN-APP UI SNIPPETS          -->
     <!-- ============================================== -->
     <section id="details-section" class="product-detail">
       <div class="shell">
@@ -1110,7 +1135,7 @@
               <div class="cam-info">
                 <b>كود الطالب: #1001</b>
                 <span class="tag-done">✅ سلم الواجب كاملاً</span>
-                <small class="text-green">✓ تم تسجيل الحضور بصوت بيب</small>
+                <small style="color:var(--green); font-weight:700;">✓ تم تسجيل الحضور بصوت بيب</small>
                 <em>🛡️ منع تلقائي لأي مسح مكرر</em>
               </div>
             </div>
@@ -1125,11 +1150,11 @@
             </div>
             <div class="screen whatsapp-bubble-ui">
               <div class="wa-header">
-                <span>📱 رسالة واتساب لولي أمر (يوسف سامي)</span>
+                <span>📱 رسالة واتساب لولي أمر طالب غائب</span>
                 <small>04:30 م</small>
               </div>
               <div class="wa-bubble">
-                <p>مساء الخير يا فندم، نود الاطمئنان على الطالب <b>يوسف سامي</b> لعدم حضوره حصة اليوم بسنتر الفيروز. نرجو من حضرتك التواصل معنا لتحديد موعد حصة التعويض المناسبة. خالص تمنياتنا له بالتوفيق 🌸</p>
+                <p>مساء الخير يا فندم، نود الاطمئنان على الطالب لعدم حضوره حصة اليوم بسنتر الفيروز. نرجو من حضرتك التواصل معنا لتحديد موعد حصة التعويض المناسبة. خالص تمنياتنا له بالتوفيق 🌸</p>
                 <div class="wa-meta">
                   <small>مُرسلة عبر طابور الإرسال المجمّع الآمن</small>
                   <span>✓✓</span>
@@ -1148,14 +1173,14 @@
             <div class="screen report-ui-pro">
               <div class="student-track-item danger">
                 <div>
-                  <b>عمر خالد (#1004)</b>
+                  <b>طالب متعثر (#1004)</b>
                   <small>غياب آخر حصتين + كويز 9/20</small>
                 </div>
                 <button class="btn-warn-alert">إرسال إنذار 📱</button>
               </div>
               <div class="student-track-item success">
                 <div>
-                  <b>أحمد محمود (#1001)</b>
+                  <b>طالب متميز (#1001)</b>
                   <small>حضور 100% • كويز 19/20</small>
                 </div>
                 <span class="trend-up">↗ تحسن مستمر</span>
@@ -1195,7 +1220,7 @@
               <div class="import-badge">
                 <span class="file-icon">📊</span>
                 <div>
-                  <b>شيت_طلاب_2026.xlsx</b>
+                  <b>شيت_الطلاب_الحالي.xlsx</b>
                   <small>تم استيراد 185 طالباً بنجاح ✓</small>
                 </div>
               </div>
@@ -1211,18 +1236,18 @@
             <div class="detail-copy">
               <span>06 · الإحكام والسيطرة</span>
               <h3>المساعدين والسناتر تحت سيطرتك وبـ PIN</h3>
-              <p>عيّن لكل مساعد السناتر والمجاميع الخاصة بيه، وخلي لوحة أرباحك وتفاصيل دخلك محمية برمز PIN سري لا يستطيع أي مساعد فتحه أو الاطلاع على مبالغ الحصص.</p>
+              <p>المساعد يدخل يسجل الحضور والواجب فقط، بينما التقارير المالية وكاش الحصة وأرباح المدرس محمية بكلمة سر / رمز PIN خاص بالمدرس فقط ولا يمكن لأي مساعد الاطلاع عليها نهائياً.</p>
             </div>
             <div class="screen assistant-ui-pro">
               <div class="asst-card-sim">
-                <b>عمر جمال (المساعد الرئيسي)</b>
+                <b>حساب المساعد (المسؤول عن الحضور فقط)</b>
                 <div class="center-tags">
                   <span>سنتر الفيروز</span>
                   <span>سنتر الأوائل</span>
                 </div>
               </div>
               <div class="pin-lock-badge">
-                <span>🔒 لوحة أرباح المستر محمية برمز سري (PIN)</span>
+                <span>🔒 التقارير المالية محمية بكلمة سر للمدرس فقط</span>
               </div>
             </div>
           </article>
@@ -1311,7 +1336,7 @@
         
         <div>
           <div class="launch-discount">
-            خصم إطلاق <b>20%</b> مدى الحياة لأول 50 مدرس مسجل
+            خصم إطلاق <b>20%</b> لأول 50 مدرس مسجل
           </div>
           <h2>احجز مكانك في سنترلي<br>وخد خصم الإطلاق 20%</h2>
           <p>
@@ -1347,7 +1372,7 @@
               <option value="50-150">من 50 إلى 150 طالباً</option>
               <option value="151-500" selected>من 150 إلى 500 طالب</option>
               <option value="501-1000">من 500 إلى 1,000 طالب</option>
-              <option value="+1000">أكثر من 1,000 طالب (كبار الأساتذة)</option>
+              <option value="+1000">أكثر من 1,000 طالب</option>
             </select>
           </label>
 
@@ -1367,11 +1392,6 @@
         <p class="eyebrow">إجابات واضحة</p>
         <h2>أسئلة يطرحها المدرسون قبل البدء</h2>
       </div>
-
-      <details>
-        <summary>هل سنترلي تطبيق محتاج أحمله على الموبايل أو اللابتوب؟</summary>
-        <p>لا، سنترلي هو <b>موقع ويب سحابي متطور</b>. يفتح مباشرة من متصفح جوجل كروم أو سفاري على أي موبايل أو تابلت أو لابتوب بدون ما ياخد مساحة من جهازك وبدون أي تثبيت.</p>
-      </details>
 
       <details>
         <summary>هل مناسب لأي مدرس مهما كان عدد طلابه؟</summary>
