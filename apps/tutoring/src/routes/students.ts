@@ -1,6 +1,6 @@
-﻿import { Router, Response } from "express";
+import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
-import { validateBody, createStudentSchema, updateStudentSchema } from "../middleware/validation.js";
+import { validateBody, createStudentSchema, updateStudentSchema, publicSelfRegisterSchema } from "../middleware/validation.js";
 
 export const studentsRouter = Router();
 
@@ -13,15 +13,15 @@ studentsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
   try {
     let query = supabase
       .from("students")
-      .select("id, tenant_id, name, parent_phone, student_phone, notes, created_at")
-      .order("name", { ascending: true });
+      .select("id, tenant_id, code, name, parent_phone, student_phone, notes, created_at")
+      .order("created_at", { ascending: false });
 
     if (tenantId) {
       query = query.eq("tenant_id", tenantId);
     }
 
     if (q && typeof q === "string") {
-      query = query.ilike("name", `%${q}%`);
+      query = query.or(`name.ilike.%${q}%,code.ilike.%${q}%,parent_phone.ilike.%${q}%,student_phone.ilike.%${q}%`);
     }
 
     const { data, error } = await query;
@@ -44,7 +44,7 @@ studentsRouter.post(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const supabase = req.supabase!;
     const tenantId = req.user!.tenant_id;
-    const { name, parent_phone, student_phone, notes } = req.body;
+    const { name, parent_phone, student_phone, code, notes } = req.body;
 
     if (!tenantId && req.user!.role !== "admin") {
       res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
@@ -59,6 +59,7 @@ studentsRouter.post(
           name,
           parent_phone,
           student_phone: student_phone || null,
+          code: code || null,
           notes: notes || null,
         })
         .select()
@@ -157,3 +158,47 @@ studentsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): 
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to delete student" } });
   }
 });
+
+// POST /api/students/public-register - Public Self-Registration Form
+studentsRouter.post(
+  "/public-register",
+  validateBody(publicSelfRegisterSchema),
+  async (req: any, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const { tenant_id, name, parent_phone, student_phone, group_id } = req.body;
+
+    try {
+      // 1. Insert student
+      const { data: student, error: studentError } = await supabase
+        .from("students")
+        .insert({
+          tenant_id,
+          name,
+          parent_phone,
+          student_phone,
+        })
+        .select()
+        .single();
+
+      if (studentError) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: studentError.message } });
+        return;
+      }
+
+      // 2. Enroll student into group
+      await supabase.from("group_students").insert({
+        tenant_id,
+        student_id: student.id,
+        group_id,
+      });
+
+      res.status(201).json({
+        message: "Student registered successfully",
+        student,
+        verification_message_queued: true,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Self-registration failed" } });
+    }
+  }
+);

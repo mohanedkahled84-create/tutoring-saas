@@ -1,4 +1,4 @@
-﻿import { Router, Response } from "express";
+import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
 import { validateBody, createGroupSchema, updateGroupSchema, enrollStudentSchema } from "../middleware/validation.js";
 
@@ -12,7 +12,7 @@ groupsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<
   try {
     let query = supabase
       .from("groups")
-      .select("id, tenant_id, name, created_at")
+      .select("id, tenant_id, name, center_name, session_price, center_cut_percentage, teacher_cut_percentage, created_at")
       .order("name", { ascending: true });
 
     if (tenantId) {
@@ -39,7 +39,7 @@ groupsRouter.post(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const supabase = req.supabase!;
     const tenantId = req.user!.tenant_id;
-    const { name } = req.body;
+    const { name, center_name, session_price, center_cut_percentage, teacher_cut_percentage } = req.body;
 
     if (!tenantId && req.user!.role !== "admin") {
       res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
@@ -47,11 +47,20 @@ groupsRouter.post(
     }
 
     try {
+      const calculatedTeacherCut = 
+        teacher_cut_percentage !== undefined 
+          ? teacher_cut_percentage 
+          : 100 - (center_cut_percentage || 0);
+
       const { data, error } = await supabase
         .from("groups")
         .insert({
           tenant_id: tenantId,
           name,
+          center_name: center_name || null,
+          session_price: session_price || 0,
+          center_cut_percentage: center_cut_percentage || 0,
+          teacher_cut_percentage: calculatedTeacherCut,
         })
         .select()
         .single();

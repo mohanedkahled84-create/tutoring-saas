@@ -1,4 +1,4 @@
-﻿import express, { Express } from "express";
+import express, { Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { authenticateUser } from "./middleware/auth.js";
@@ -11,6 +11,9 @@ import { adminRouter } from "./routes/admin.js";
 import { studentsRouter } from "./routes/students.js";
 import { groupsRouter } from "./routes/groups.js";
 import { sessionsRouter } from "./routes/sessions.js";
+import { templatesRouter } from "./routes/templates.js";
+import { whatsappRouter } from "./routes/whatsapp.js";
+import { publicRouter } from "./routes/public.js";
 import { internalRouter } from "./routes/internal.js";
 
 export function createApp(): Express {
@@ -27,6 +30,9 @@ export function createApp(): Express {
   // DEV-AUTH.3 & DEV-APISEC.1: Auth routes with strict rate limiting
   app.use("/api/auth", authRateLimiter, authRouter);
 
+  // Public endpoints (Self-registration from shareable links - no token needed)
+  app.use("/api/public", publicRouter);
+
   // Global rate limiter for protected API routes
   app.use("/api", globalRateLimiter);
 
@@ -37,6 +43,8 @@ export function createApp(): Express {
   app.use("/api/students", authenticateUser, studentsRouter);
   app.use("/api/groups", authenticateUser, groupsRouter);
   app.use("/api/sessions", authenticateUser, sessionsRouter);
+  app.use("/api/templates", authenticateUser, templatesRouter);
+  app.use("/api/whatsapp", authenticateUser, whatsappRouter);
 
   // DEV-WPA.1: Protected Internal Automation routes (shared-secret auth)
   app.use("/internal", authenticateInternalSecret, internalRouter);

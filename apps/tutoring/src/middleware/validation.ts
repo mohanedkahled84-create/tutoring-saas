@@ -1,4 +1,4 @@
-﻿import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import { z, ZodSchema, ZodError } from "zod";
 
 // DEV-APISEC.2: Generic request body validation middleware
@@ -38,13 +38,26 @@ export const createStudentSchema = z.object({
   name: z.string().min(1, "Name is required").max(150),
   parent_phone: z.string().min(7, "Valid parent phone number is required").max(25),
   student_phone: z.string().max(25).optional().nullable(),
+  code: z.string().max(50).optional().nullable(),
   notes: z.string().max(500).optional().nullable(),
 });
 
 export const updateStudentSchema = createStudentSchema.partial();
 
+export const publicSelfRegisterSchema = z.object({
+  tenant_id: z.string().uuid("tenant_id must be a valid UUID"),
+  name: z.string().min(1, "Name is required").max(150),
+  parent_phone: z.string().min(7, "Valid parent phone number is required").max(25),
+  student_phone: z.string().min(7, "Valid student phone number is required").max(25),
+  group_id: z.string().uuid("group_id must be a valid UUID"),
+});
+
 export const createGroupSchema = z.object({
   name: z.string().min(1, "Group name is required").max(100),
+  center_name: z.string().max(150).optional().nullable(),
+  session_price: z.number().min(0).optional().default(0),
+  center_cut_percentage: z.number().min(0).max(100).optional().default(0),
+  teacher_cut_percentage: z.number().min(0).max(100).optional().default(100),
 });
 
 export const updateGroupSchema = createGroupSchema.partial();
@@ -59,6 +72,10 @@ export const createSessionSchema = z.object({
   session_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "session_date must be in YYYY-MM-DD format"),
 });
 
+export const quickCheckinSchema = z.object({
+  code: z.string().min(1, "Student code or barcode is required"),
+});
+
 export const recordAttendanceSchema = z.object({
   records: z
     .array(
@@ -66,15 +83,54 @@ export const recordAttendanceSchema = z.object({
         student_id: z.string().uuid("student_id must be a valid UUID"),
         attended: z.boolean(),
         comment: z.string().max(500).optional().nullable(),
+        quiz_score: z.number().min(0).max(100).optional().nullable(),
+        quiz_max_score: z.number().min(0).optional().default(20),
+        checkin_time: z.string().optional().nullable(),
+        wa_status: z.enum(["pending", "queued", "sent", "failed"]).optional().default("pending"),
+        quiz_wa_status: z.enum(["pending", "queued", "sent", "failed"]).optional().default("pending"),
       })
     )
     .min(1, "At least one attendance record is required"),
 });
 
+export const bulkUpdateQuizzesSchema = z.object({
+  quizzes: z
+    .array(
+      z.object({
+        student_id: z.string().uuid("student_id must be a valid UUID"),
+        quiz_score: z.number().min(0).max(100).nullable(),
+        quiz_max_score: z.number().min(0).optional().default(20),
+      })
+    )
+    .min(1, "At least one quiz record is required"),
+});
+
+export const saveTemplateSchema = z.object({
+  template_type: z.enum([
+    "attendance_present",
+    "attendance_absent",
+    "quiz_result",
+    "quiz_absent",
+    "welcome_student",
+    "welcome_parent",
+    "custom",
+  ]),
+  variants: z.array(z.string().min(1)).min(1, "At least one variant is required"),
+  is_active: z.boolean().optional().default(true),
+});
+
 export const internalMessageLogSchema = z.object({
   tenant_id: z.string().uuid("tenant_id must be a valid UUID"),
   idempotency_key: z.string().min(1, "idempotency_key is required"),
-  message_type: z.enum(["attendance_absent", "attendance_present_comment"]),
+  message_type: z.enum([
+    "attendance_absent", 
+    "attendance_present_comment",
+    "attendance_present_checkin",
+    "quiz_result",
+    "quiz_absent_inquiry",
+    "welcome_student",
+    "welcome_parent"
+  ]),
   recipient_type: z.enum(["parent", "student", "system"]),
   recipient_phone: z.string().min(7, "recipient_phone must be valid"),
   status: z.enum(["sent", "failed", "rejected", "needs_review"]),
@@ -83,3 +139,4 @@ export const internalMessageLogSchema = z.object({
   group_id: z.string().uuid().nullable().optional(),
   session_id: z.string().uuid().nullable().optional(),
 });
+
