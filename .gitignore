@@ -1,4 +1,4 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 .pnp
 .pnp.js
@@ -31,8 +31,5 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
+# Backups
+backups/

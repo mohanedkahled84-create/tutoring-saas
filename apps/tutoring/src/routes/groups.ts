@@ -1,7 +1,8 @@
-﻿import { Router, Response } from "express";
+import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
 import { validateBody, createGroupSchema, updateGroupSchema, enrollStudentSchema } from "../middleware/validation.js";
 import { requireOwnerOrAdmin } from "../middleware/auth.js";
+import { generateBarcodeSheetPdf } from "../services/barcodePdfService.js";
 
 export const groupsRouter = Router();
 
@@ -238,3 +239,62 @@ groupsRouter.delete("/:id/students/:student_id", async (req: AuthenticatedReques
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to remove student from group" } });
   }
 });
+
+// DEV-QP.1: GET /api/groups/:id/barcode-sheet - Generate printable A4 PDF barcode sheet
+groupsRouter.get("/:id/barcode-sheet", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const supabase = req.supabase!;
+  const tenantId = req.user!.tenant_id;
+  const { id: groupId } = req.params;
+
+  try {
+    const { data: group, error: groupErr } = await supabase
+      .from("groups")
+      .select("id, name, center_name")
+      .eq("id", groupId)
+      .single();
+
+    if (groupErr || !group) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Group not found" } });
+      return;
+    }
+
+    const { data: enrollments, error: enrollErr } = await supabase
+      .from("group_students")
+      .select("student_id, students(id, name, student_code)")
+      .eq("group_id", groupId);
+
+    if (enrollErr) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: enrollErr.message } });
+      return;
+    }
+
+    const students = (enrollments || [])
+      .map((e: any) => e.students)
+      .filter(Boolean)
+      .map((s: any, idx: number) => ({
+        id: s.id,
+        name: s.name,
+        student_code: s.student_code || String(1001 + idx),
+      }));
+
+    if (students.length === 0) {
+      res.status(400).json({
+        error: { code: "NO_STUDENTS", message: "This group does not have any enrolled students yet." },
+      });
+      return;
+    }
+
+    const pdfBuffer = await generateBarcodeSheetPdf({
+      group_name: group.name,
+      students,
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="group-${groupId}-barcodes.pdf"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.end(pdfBuffer);
+  } catch (err: any) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to generate barcode sheet" } });
+  }
+});
+

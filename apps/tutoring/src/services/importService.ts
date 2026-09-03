@@ -1,4 +1,4 @@
-﻿export interface RawStudentRow {
+export interface RawStudentRow {
   name?: string;
   parent_phone?: string;
   student_phone?: string;
@@ -22,11 +22,18 @@ export interface ImportResult {
 export function normalizePhoneNumber(phone?: string | null): string {
   if (!phone) return "";
   let clean = phone.trim().replace(/[\s\-\(\)\.]/g, "");
-  // Normalize Egyptian numbers: if starts with +20, keep or convert
-  if (clean.startsWith("+20")) {
-    clean = "0" + clean.slice(3);
-  }
+  // Normalize Egyptian numbers
+  if (clean.startsWith("+20")) clean = clean.slice(3);
+  else if (clean.startsWith("0020")) clean = clean.slice(4);
+  else if (clean.startsWith("20") && clean.length === 12) clean = clean.slice(2);
+  if (!clean.startsWith("0") && clean.length === 10) clean = "0" + clean;
   return clean;
+}
+
+export function isValidEgyptianPhone(phone?: string | null): boolean {
+  if (!phone) return false;
+  const normalized = normalizePhoneNumber(phone);
+  return /^01[0125][0-9]{8}$/.test(normalized);
 }
 
 // Standard CSV string to row objects parser

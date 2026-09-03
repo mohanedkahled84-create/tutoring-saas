@@ -1,4 +1,4 @@
-﻿import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import { z, ZodSchema, ZodError } from "zod";
 
 // Generic request body validation middleware
@@ -33,11 +33,31 @@ export function validateBody(schema: ZodSchema) {
   };
 }
 
+// DEV-PV.1: Strict Egyptian Mobile Phone Validator (010, 011, 012, 015 + 8 digits = 11 digits total)
+export const egyptianPhoneRegex = /^01[0125][0-9]{8}$/;
+
+export function cleanEgyptianPhone(val: string): string {
+  if (!val) return "";
+  let clean = val.trim().replace(/[\s\-\(\)\.]/g, "");
+  if (clean.startsWith("+20")) clean = clean.slice(3);
+  else if (clean.startsWith("0020")) clean = clean.slice(4);
+  else if (clean.startsWith("20") && clean.length === 12) clean = clean.slice(2);
+  if (!clean.startsWith("0") && clean.length === 10) clean = "0" + clean;
+  return clean;
+}
+
+export const egyptianPhoneSchema = z.string().transform(cleanEgyptianPhone).pipe(
+  z.string().regex(
+    egyptianPhoneRegex,
+    "رقم الهاتف يجب أن يكون رقم محمول مصري يبدأ بـ 010 أو 011 أو 012 أو 015 ومكون من 11 رقماً"
+  )
+);
+
 // Student Schemas
 export const createStudentSchema = z.object({
   name: z.string().min(1, "Name is required").max(150),
-  parent_phone: z.string().min(7, "Valid parent phone number is required").max(25),
-  student_phone: z.string().max(25).optional().nullable(),
+  parent_phone: egyptianPhoneSchema,
+  student_phone: egyptianPhoneSchema.optional().nullable(),
   code: z.string().max(50).optional().nullable(),
   student_code: z.string().max(50).optional().nullable(),
   fee_override: z.number().positive().optional().nullable(),
@@ -45,13 +65,22 @@ export const createStudentSchema = z.object({
   notes: z.string().max(500).optional().nullable(),
 });
 
-export const updateStudentSchema = createStudentSchema.partial();
+export const updateStudentSchema = z.object({
+  name: z.string().min(1).max(150).optional(),
+  parent_phone: egyptianPhoneSchema.optional(),
+  student_phone: egyptianPhoneSchema.optional().nullable(),
+  code: z.string().max(50).optional().nullable(),
+  student_code: z.string().max(50).optional().nullable(),
+  fee_override: z.number().positive().optional().nullable(),
+  exempt: z.boolean().optional(),
+  notes: z.string().max(500).optional().nullable(),
+});
 
 export const publicSelfRegisterSchema = z.object({
   tenant_id: z.string().uuid("tenant_id must be a valid UUID"),
   name: z.string().min(1, "Name is required").max(150),
-  parent_phone: z.string().min(7, "Valid parent phone number is required").max(25),
-  student_phone: z.string().min(7, "Valid student phone number is required").max(25),
+  parent_phone: egyptianPhoneSchema,
+  student_phone: egyptianPhoneSchema.optional().nullable(),
   group_id: z.string().uuid("group_id must be a valid UUID"),
 });
 

@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
-import { parseCSV, mapRowToStudent, normalizePhoneNumber, RawStudentRow } from "../services/importService.js";
+import { parseCSV, mapRowToStudent, normalizePhoneNumber, isValidEgyptianPhone, RawStudentRow } from "../services/importService.js";
 
 export const importRouter = Router();
 
@@ -85,8 +85,21 @@ importRouter.post("/:id/students/import", async (req: AuthenticatedRequest, res:
         continue;
       }
 
-      if (!parentPhone || parentPhone.length < 7) {
-        errors.push({ row: rowNum, name, error: "رقم ولي الأمر غير صالح أو مفقود (Invalid or missing parent phone)" });
+      if (!parentPhone || !isValidEgyptianPhone(parentPhone)) {
+        errors.push({
+          row: rowNum,
+          name,
+          error: "رقم ولي الأمر غير صالح - يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ومكون من 11 رقماً",
+        });
+        continue;
+      }
+
+      if (studentPhone && !isValidEgyptianPhone(studentPhone)) {
+        errors.push({
+          row: rowNum,
+          name,
+          error: "رقم الطالب غير صالح - يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ومكون من 11 رقماً",
+        });
         continue;
       }
 

@@ -1,0 +1,45 @@
+﻿name: Automated Daily Database Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # Daily at 02:00 AM UTC
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  backup:
+    name: Execute Daily Database Backup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        working-directory: apps/tutoring
+        run: npm ci
+
+      - name: Build TypeScript
+        working-directory: apps/tutoring
+        run: npm run build
+
+      - name: Run Database Backup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/backup-db.mjs
+
+      - name: Test Backup Restoration Integrity
+        run: node scripts/test-restore.mjs
+
+      - name: Archive Backup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-daily-backup
+          path: backups/
+          retention-days: 30

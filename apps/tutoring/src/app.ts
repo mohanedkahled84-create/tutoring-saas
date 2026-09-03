@@ -13,6 +13,8 @@ import { groupsRouter } from "./routes/groups.js";
 import { sessionsRouter } from "./routes/sessions.js";
 import { riskRouter } from "./routes/risk.js";
 import { importRouter } from "./routes/import.js";
+import { billingRouter } from "./routes/billing.js";
+import { activityLogsRouter } from "./routes/activityLogs.js";
 import { templatesRouter } from "./routes/templates.js";
 import { whatsappRouter } from "./routes/whatsapp.js";
 import { publicRouter } from "./routes/public.js";
@@ -47,6 +49,8 @@ export function createApp(): Express {
   app.use("/api/groups", authenticateUser, importRouter);
   app.use("/api/sessions", authenticateUser, sessionsRouter);
   app.use("/api/at-risk", authenticateUser, riskRouter);
+  app.use("/api/billing", authenticateUser, billingRouter);
+  app.use("/api/activity-logs", authenticateUser, activityLogsRouter);
   app.use("/api/templates", authenticateUser, templatesRouter);
   app.use("/api/whatsapp", authenticateUser, whatsappRouter);
 

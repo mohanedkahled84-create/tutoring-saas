@@ -526,3 +526,229 @@ sessionsRouter.post(
   }
 );
 
+// DEV-PV.2: WhatsApp Delivery Status & Failure Visibility
+// Returns delivery outcomes for all students in the session, distinguishing sent from failed with clear human-readable error reasons.
+sessionsRouter.get(
+  "/:id/delivery-status",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const tenantId = req.user!.tenant_id;
+    const { id: sessionId } = req.params;
+
+    try {
+      const { data: attendanceRows, error: attErr } = await supabase
+        .from("attendance")
+        .select("id, student_id, attended, comment, sent, students(id, name, parent_phone, student_code)")
+        .eq("session_id", sessionId);
+
+      if (attErr) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: attErr.message } });
+        return;
+      }
+
+      const { data: messageLogs } = await supabase
+        .from("message_logs")
+        .select("id, idempotency_key, recipient_phone, status, error_detail, sent_at, created_at")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false });
+
+      const logsByStudent = new Map<string, any>();
+      if (messageLogs) {
+        for (const log of messageLogs) {
+          if (log.idempotency_key && log.idempotency_key.includes(`:${sessionId}`)) {
+            const parts = log.idempotency_key.split(":");
+            if (parts.length >= 3) {
+              const studentId = parts[1];
+              if (!logsByStudent.has(studentId)) {
+                logsByStudent.set(studentId, log);
+              }
+            }
+          }
+        }
+      }
+
+      const deliveryReports = (attendanceRows || []).map((row: any) => {
+        const student = row.students;
+        const studentId = row.student_id;
+        const log = logsByStudent.get(studentId);
+
+        let deliveryStatus = "not_sent";
+        let failureReason: string | null = null;
+
+        if (log) {
+          deliveryStatus = log.status;
+          failureReason = log.error_detail || null;
+        } else if (row.sent) {
+          deliveryStatus = "sent";
+        }
+
+        return {
+          student_id: studentId,
+          student_name: student?.name || "Unknown",
+          student_code: student?.student_code || null,
+          parent_phone: student?.parent_phone || null,
+          attended: row.attended,
+          delivery_status: deliveryStatus,
+          failure_reason: failureReason,
+          logged_at: log?.created_at || null,
+        };
+      });
+
+      const failedCount = deliveryReports.filter(
+        (r) => r.delivery_status === "failed" || r.delivery_status === "rejected"
+      ).length;
+      const sentCount = deliveryReports.filter((r) => r.delivery_status === "sent").length;
+
+      res.json({
+        session_id: sessionId,
+        total_students: deliveryReports.length,
+        sent_count: sentCount,
+        failed_count: failedCount,
+        deliveries: deliveryReports,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to fetch delivery status" } });
+    }
+  }
+);
+
+// DEV-SR.1: Session WhatsApp Receipt Generator
+// Reuses session financial-summary calculations to format a WhatsApp-ready settlement message
+// for the teacher and center, preventing disputes. Guarded by requireFinancialAccess.
+sessionsRouter.post(
+  "/:id/receipt",
+  requireFinancialAccess,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const tenantId = req.user!.tenant_id;
+    const { id: sessionId } = req.params;
+    const { recipient_phone, recipient_type = "teacher", send_via_whatsapp = true } = req.body;
+
+    try {
+      // 1. Fetch session & group info
+      const { data: session, error: sessionErr } = await supabase
+        .from("sessions")
+        .select("id, session_number, session_date, groups(id, name, center_name, price, billing_model, fixed_rent_amount)")
+        .eq("id", sessionId)
+        .single();
+
+      if (sessionErr || !session) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found" } });
+        return;
+      }
+
+      const group = (session as any).groups;
+      const basePrice = Number(group.price) || 0;
+
+      // 2. Fetch all attendance records (present & absent)
+      const { data: allAttendance, error: attErr } = await supabase
+        .from("attendance")
+        .select("id, student_id, attended, is_makeup, students(id, name, fee_override, exempt)")
+        .eq("session_id", sessionId);
+
+      if (attErr) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: attErr.message } });
+        return;
+      }
+
+      let totalRevenue = 0;
+      let presentCount = 0;
+      let absentCount = 0;
+      let exemptCount = 0;
+      let makeupCount = 0;
+
+      for (const att of allAttendance || []) {
+        if (att.attended) {
+          presentCount += 1;
+          const s = att.students as any;
+          if (att.is_makeup) makeupCount += 1;
+
+          if (s?.exempt) {
+            exemptCount += 1;
+          } else if (s?.fee_override != null) {
+            totalRevenue += Number(s.fee_override);
+          } else {
+            totalRevenue += basePrice;
+          }
+        } else {
+          absentCount += 1;
+        }
+      }
+
+      // Compute split
+      let centerShare = 0;
+      let teacherShare = totalRevenue;
+
+      if (group.billing_model === "fixed_rent" && group.fixed_rent_amount) {
+        centerShare = Math.min(Number(group.fixed_rent_amount), totalRevenue);
+        teacherShare = totalRevenue - centerShare;
+      } else if (group.billing_model === "percentage") {
+        // Default center percentage cut (20% standard or 0 if unconfigured)
+        centerShare = Math.round(totalRevenue * 0.2);
+        teacherShare = totalRevenue - centerShare;
+      }
+
+      const formattedReceipt = [
+        "🧾 *إيصال تصفية الحصة / Session Settlement Receipt*",
+        "━━━━━━━━━━━━━━━━━━━━━",
+        `🏫 *المجموعة:* ${group.name}`,
+        group.center_name ? `📍 *السنتر:* ${group.center_name}` : null,
+        `📅 *التاريخ:* ${session.session_date} | *حصة رقم:* ${session.session_number}`,
+        `👥 *إجمالي الحضور:* ${presentCount} طالب (منهم ${exemptCount} منحة / معفي)`,
+        `❌ *إجمالي الغياب:* ${absentCount} طالب`,
+        makeupCount > 0 ? `🔄 *طلاب التعويض:* ${makeupCount} طالب` : null,
+        "━━━━━━━━━━━━━━━━━━━━━",
+        `💵 *إجمالي النقدية المحصلة:* ${totalRevenue} ج.م`,
+        `🏢 *حصة السنتر:* ${centerShare} ج.م`,
+        `👨‍🏫 *صافي المعلم:* ${teacherShare} ج.م`,
+        "━━━━━━━━━━━━━━━━━━━━━",
+        `_تم الاستخراج آلياً بتاريخ ${new Date().toLocaleDateString("ar-EG")}_`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      let loggedMessageId: string | null = null;
+
+      if (send_via_whatsapp && recipient_phone) {
+        const idempotencyKey = `receipt:${tenantId}:${sessionId}:${Date.now()}`;
+        const { data: logEntry } = await supabase
+          .from("message_logs")
+          .insert({
+            tenant_id: tenantId,
+            idempotency_key: idempotencyKey,
+            message_type: "session_receipt",
+            recipient_type: recipient_type,
+            recipient_phone,
+            status: "needs_review",
+            error_detail: formattedReceipt,
+          })
+          .select("id")
+          .single();
+
+        loggedMessageId = logEntry?.id || null;
+      }
+
+      res.status(200).json({
+        message: "Session receipt generated successfully",
+        formatted_receipt: formattedReceipt,
+        summary: {
+          session_id: sessionId,
+          group_name: group.name,
+          present_count: presentCount,
+          absent_count: absentCount,
+          exempt_count: exemptCount,
+          makeup_count: makeupCount,
+          total_revenue: totalRevenue,
+          center_share: centerShare,
+          teacher_share: teacherShare,
+        },
+        logged_message_id: loggedMessageId,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to generate receipt" } });
+    }
+  }
+);
+
+
+
