@@ -1,45 +1,19 @@
 import { Router, Response } from "express";
-import { AuthenticatedRequest, AttendanceRecordInput, AttendanceEvaluation, SessionFinancialSummary } from "../types/index.js";
-import { 
-  validateBody, 
-  createSessionSchema, 
-  recordAttendanceSchema, 
-  quickCheckinSchema, 
-  bulkUpdateQuizzesSchema 
+import { AuthenticatedRequest, AttendanceRecordInput, AttendanceEvaluation } from "../types/index.js";
+import {
+  validateBody,
+  createSessionSchema,
+  recordAttendanceSchema,
+  scanStudentSchema,
+  quizScoreSchema,
+  offlineBatchSyncSchema,
 } from "../middleware/validation.js";
 import { attendanceRateLimiter } from "../middleware/rateLimit.js";
+import { requireFinancialAccess } from "../middleware/auth.js";
 
 export const sessionsRouter = Router();
 
-// GET /api/sessions - List all sessions with group info
-sessionsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const supabase = req.supabase!;
-  const tenantId = req.user!.tenant_id;
-
-  try {
-    let query = supabase
-      .from("sessions")
-      .select("id, tenant_id, group_id, session_number, session_date, created_at, groups(id, name, center_name, session_price, center_cut_percentage, teacher_cut_percentage)")
-      .order("session_date", { ascending: false });
-
-    if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
-    }
-
-    const { data: sessions, error } = await query;
-
-    if (error) {
-      res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
-      return;
-    }
-
-    res.json({ sessions });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to list sessions" } });
-  }
-});
-
-// POST /api/sessions - Create a new session and initialize attendance for all group students
+// POST /api/sessions - Create a new session
 sessionsRouter.post(
   "/",
   validateBody(createSessionSchema),
@@ -49,8 +23,7 @@ sessionsRouter.post(
     const { group_id, session_number, session_date } = req.body;
 
     try {
-      // 1. Create the session
-      const { data: session, error: sessionError } = await supabase
+      const { data, error } = await supabase
         .from("sessions")
         .insert({
           tenant_id: tenantId,
@@ -61,40 +34,19 @@ sessionsRouter.post(
         .select()
         .single();
 
-      if (sessionError) {
-        res.status(400).json({ error: { code: "BAD_REQUEST", message: sessionError.message } });
+      if (error) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
         return;
       }
 
-      // 2. Fetch enrolled students in the group
-      const { data: enrolledStudents, error: enrollError } = await supabase
-        .from("group_students")
-        .select("student_id")
-        .eq("group_id", group_id);
-
-      if (!enrollError && enrolledStudents && enrolledStudents.length > 0) {
-        // 3. Pre-populate attendance records as absent by default
-        const initialAttendance = enrolledStudents.map((e) => ({
-          tenant_id: tenantId,
-          session_id: session.id,
-          student_id: e.student_id,
-          attended: false,
-          wa_status: "pending",
-          quiz_wa_status: "pending",
-          idempotency_key: `${tenantId}:${e.student_id}:${session.id}`,
-        }));
-
-        await supabase.from("attendance").upsert(initialAttendance, { onConflict: "idempotency_key" });
-      }
-
-      res.status(201).json({ session, initialized_students: enrolledStudents?.length || 0 });
+      res.status(201).json({ session: data });
     } catch (err: any) {
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to create session" } });
     }
   }
 );
 
-// GET /api/sessions/:id - Retrieve a session with attendance and student details
+// GET /api/sessions/:id - Retrieve session with attendance and quiz scores
 sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const supabase = req.supabase!;
   const { id } = req.params;
@@ -102,7 +54,7 @@ sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Pro
   try {
     const { data: session, error: sessionError } = await supabase
       .from("sessions")
-      .select("id, tenant_id, group_id, session_number, session_date, created_at, groups(id, name, center_name, session_price, center_cut_percentage, teacher_cut_percentage)")
+      .select("id, tenant_id, group_id, session_number, session_date, created_at, groups(name, price, billing_model)")
       .eq("id", id)
       .single();
 
@@ -111,236 +63,295 @@ sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    const { data: attendance, error: attError } = await supabase
-      .from("attendance")
-      .select("id, student_id, attended, comment, quiz_score, quiz_max_score, checkin_time, wa_status, quiz_wa_status, idempotency_key, students(id, code, name, parent_phone, student_phone)")
-      .eq("session_id", id)
-      .order("attended", { ascending: false });
+    const [attendanceRes, quizRes] = await Promise.all([
+      supabase
+        .from("attendance")
+        .select("id, student_id, attended, comment, homework_status, is_makeup, home_group_id, sent, idempotency_key, created_at, students(id, name, student_code, parent_phone)")
+        .eq("session_id", id),
+      supabase
+        .from("quiz_scores")
+        .select("id, student_id, score, max_score, created_at")
+        .eq("session_id", id),
+    ]);
 
-    if (attError) {
-      res.status(400).json({ error: { code: "BAD_REQUEST", message: attError.message } });
-      return;
-    }
-
-    res.json({ session, attendance });
+    res.json({
+      session,
+      attendance: attendanceRes.data || [],
+      quiz_scores: quizRes.data || [],
+    });
   } catch (err: any) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve session" } });
   }
 });
 
-// POST /api/sessions/:id/checkin - Rapid Barcode / Code scan check-in
+// DEV-SBL.1: Duplicate-Scan Guard
+// Scanning the same student twice returns 200 with already_recorded=true and original timestamp.
+// Never creates duplicate rows or re-triggers WhatsApp sends!
 sessionsRouter.post(
-  "/:id/checkin",
+  "/:id/scan",
   attendanceRateLimiter,
-  validateBody(quickCheckinSchema),
+  validateBody(scanStudentSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const supabase = req.supabase!;
     const tenantId = req.user!.tenant_id;
     const { id: sessionId } = req.params;
-    const { code } = req.body;
+    const { student_id, student_code, homework_status, is_makeup, home_group_id, comment } = req.body;
 
     try {
-      // 1. Find student by code
-      const { data: student, error: studentError } = await supabase
+      // 1. Resolve student in current tenant
+      let studentQuery = supabase
         .from("students")
-        .select("id, code, name, parent_phone, student_phone")
-        .eq("tenant_id", tenantId)
-        .eq("code", code)
-        .single();
+        .select("id, name, student_code, parent_phone, student_phone, fee_override, exempt")
+        .eq("tenant_id", tenantId);
+
+      if (student_id) {
+        studentQuery = studentQuery.eq("id", student_id);
+      } else {
+        studentQuery = studentQuery.eq("student_code", student_code);
+      }
+
+      const { data: student, error: studentError } = await studentQuery.single();
 
       if (studentError || !student) {
-        res.status(404).json({ error: { code: "NOT_FOUND", message: "Student with this code not found" } });
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found in this tenant" } });
         return;
       }
 
-      // 2. Mark attendance as present with current timestamp
       const idempotencyKey = `${tenantId}:${student.id}:${sessionId}`;
-      const now = new Date().toISOString();
 
-      const { data: attendance, error: attError } = await supabase
+      // 2. Check if attendance already exists
+      const { data: existingAttendance } = await supabase
         .from("attendance")
+        .select("id, attended, created_at, homework_status, is_makeup, home_group_id")
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+
+      if (existingAttendance) {
+        // DUPLICATE DETECTED: Return 200 with recorded_at timestamp, DO NOT overwrite or re-send!
+        res.status(200).json({
+          already_recorded: true,
+          message: `Student already recorded at ${new Date(existingAttendance.created_at).toLocaleTimeString()}`,
+          recorded_at: existingAttendance.created_at,
+          attendance: existingAttendance,
+          student: {
+            id: student.id,
+            name: student.name,
+            student_code: student.student_code,
+          },
+        });
+        return;
+      }
+
+      // 3. New scan: record attendance
+      const { data: newAttendance, error: insertError } = await supabase
+        .from("attendance")
+        .insert({
+          tenant_id: tenantId,
+          session_id: sessionId,
+          student_id: student.id,
+          attended: true,
+          comment: comment || null,
+          homework_status: homework_status || null,
+          is_makeup: is_makeup || false,
+          home_group_id: home_group_id || null,
+          sent: false,
+          idempotency_key: idempotencyKey,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: insertError.message } });
+        return;
+      }
+
+      res.status(201).json({
+        already_recorded: false,
+        message: "Check-in recorded successfully",
+        recorded_at: newAttendance.created_at,
+        attendance: newAttendance,
+        student: {
+          id: student.id,
+          name: student.name,
+          student_code: student.student_code,
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Scan processing failed" } });
+    }
+  }
+);
+
+// DEV-SBL.2: Incremental Quiz Score Auto-Save
+// Immediately commits score per student so unexpected crashes lose at most 1 in-flight score
+sessionsRouter.put(
+  "/:id/quiz-scores/:student_id",
+  validateBody(quizScoreSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const tenantId = req.user!.tenant_id;
+    const { id: sessionId, student_id: studentId } = req.params;
+    const { score, max_score } = req.body;
+
+    const idempotencyKey = `${tenantId}:${studentId}:${sessionId}`;
+
+    try {
+      const { data: savedScore, error } = await supabase
+        .from("quiz_scores")
         .upsert(
           {
             tenant_id: tenantId,
             session_id: sessionId,
-            student_id: student.id,
-            attended: true,
-            checkin_time: now,
-            wa_status: "sent", // Marked as sent/notified upon checkin
+            student_id: studentId,
+            score,
+            max_score,
             idempotency_key: idempotencyKey,
+            updated_at: new Date().toISOString(),
           },
           { onConflict: "idempotency_key" }
         )
         .select()
         .single();
 
-      if (attError) {
-        res.status(400).json({ error: { code: "BAD_REQUEST", message: attError.message } });
-        return;
-      }
-
-      res.json({
-        message: "Student checked in successfully",
-        student,
-        attendance,
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Quick check-in failed" } });
-    }
-  }
-);
-
-// GET /api/sessions/:id/financials - Calculate revenue, center share, and teacher earnings
-sessionsRouter.get("/:id/financials", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const supabase = req.supabase!;
-  const { id } = req.params;
-
-  try {
-    const { data: session, error: sessionError } = await supabase
-      .from("sessions")
-      .select("id, group_id, groups(session_price, center_cut_percentage, teacher_cut_percentage)")
-      .eq("id", id)
-      .single();
-
-    if (sessionError || !session) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found" } });
-      return;
-    }
-
-    const { data: attendance, error: attError } = await supabase
-      .from("attendance")
-      .select("attended")
-      .eq("session_id", id);
-
-    if (attError) {
-      res.status(400).json({ error: { code: "BAD_REQUEST", message: attError.message } });
-      return;
-    }
-
-    const totalEnrolled = attendance?.length || 0;
-    const totalPresent = attendance?.filter((a) => a.attended).length || 0;
-    const totalAbsent = totalEnrolled - totalPresent;
-
-    const groupInfo = session.groups as any;
-    const sessionPrice = Number(groupInfo?.session_price || 0);
-    const centerCutPct = Number(groupInfo?.center_cut_percentage || 0);
-    const teacherCutPct = Number(groupInfo?.teacher_cut_percentage || (100 - centerCutPct));
-
-    const totalRevenue = totalPresent * sessionPrice;
-    const centerAmount = totalRevenue * (centerCutPct / 100);
-    const teacherAmount = totalRevenue - centerAmount;
-
-    const summary: SessionFinancialSummary = {
-      session_id: id,
-      total_enrolled: totalEnrolled,
-      total_present: totalPresent,
-      total_absent: totalAbsent,
-      session_price: sessionPrice,
-      total_revenue: totalRevenue,
-      center_cut_percentage: centerCutPct,
-      center_amount: centerAmount,
-      teacher_cut_percentage: teacherCutPct,
-      teacher_amount: teacherAmount,
-    };
-
-    res.json({ financials: summary });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to calculate financials" } });
-  }
-});
-
-// PUT /api/sessions/:id/quizzes - Rapid bulk quiz grading endpoint
-sessionsRouter.put(
-  "/:id/quizzes",
-  validateBody(bulkUpdateQuizzesSchema),
-  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const supabase = req.supabase!;
-    const tenantId = req.user!.tenant_id;
-    const { id: sessionId } = req.params;
-    const { quizzes } = req.body;
-
-    try {
-      const updates = quizzes.map((q: any) => {
-        const idempotencyKey = `${tenantId}:${q.student_id}:${sessionId}`;
-        return {
-          tenant_id: tenantId,
-          session_id: sessionId,
-          student_id: q.student_id,
-          quiz_score: q.quiz_score,
-          quiz_max_score: q.quiz_max_score || 20,
-          idempotency_key: idempotencyKey,
-          attended: true,
-        };
-      });
-
-      const { data, error } = await supabase
-        .from("attendance")
-        .upsert(updates, { onConflict: "idempotency_key" })
-        .select();
-
       if (error) {
         res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
         return;
       }
 
-      res.json({ message: "Quizzes updated successfully", updated_count: data?.length || 0 });
+      res.status(200).json({
+        message: "Quiz score saved",
+        quiz_score: savedScore,
+      });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update quizzes" } });
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to save quiz score" } });
     }
   }
 );
 
-// POST /api/sessions/:id/send-attendance-notifications - Batch WhatsApp dispatch
-sessionsRouter.post("/:id/send-attendance-notifications", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+// GET /api/sessions/:id/quiz-scores - Retrieve all quiz scores for a session
+sessionsRouter.get("/:id/quiz-scores", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const supabase = req.supabase!;
   const { id: sessionId } = req.params;
 
   try {
-    const { data: updated, error } = await supabase
-      .from("attendance")
-      .update({ wa_status: "sent", sent: true })
+    const { data: scores, error } = await supabase
+      .from("quiz_scores")
+      .select("id, student_id, score, max_score, created_at, updated_at, students(name, student_code)")
       .eq("session_id", sessionId)
-      .select();
+      .order("created_at", { ascending: true });
 
     if (error) {
       res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
       return;
     }
 
-    res.json({
-      message: "Attendance notifications dispatched successfully",
-      dispatched_count: updated?.length || 0,
-    });
+    res.json({ quiz_scores: scores || [] });
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to dispatch notifications" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to list quiz scores" } });
   }
 });
 
-// POST /api/sessions/:id/send-quiz-results - Batch WhatsApp quiz results dispatch
-sessionsRouter.post("/:id/send-quiz-results", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const supabase = req.supabase!;
-  const { id: sessionId } = req.params;
+// DEV-SBL.3 & DEV-SE.1: Session Financial Summary
+// Accounting for fee overrides, exemptions, and make-up revenue retention
+// Restricted from assistant role (requireFinancialAccess)
+sessionsRouter.get(
+  "/:id/financial-summary",
+  requireFinancialAccess,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const { id: sessionId } = req.params;
 
-  try {
-    const { data: updated, error } = await supabase
-      .from("attendance")
-      .update({ quiz_wa_status: "sent" })
-      .eq("session_id", sessionId)
-      .select();
+    try {
+      // 1. Fetch session & group details
+      const { data: session, error: sessionErr } = await supabase
+        .from("sessions")
+        .select("id, group_id, session_number, session_date, groups(id, name, price, billing_model, fixed_rent_amount)")
+        .eq("id", sessionId)
+        .single();
 
-    if (error) {
-      res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
-      return;
+      if (sessionErr || !session) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found" } });
+        return;
+      }
+
+      const group = (session as any).groups;
+      const basePrice = Number(group.price) || 0;
+
+      // 2. Fetch all attendance records with student financial info
+      const { data: attendees, error: attErr } = await supabase
+        .from("attendance")
+        .select("id, student_id, attended, is_makeup, home_group_id, students(id, name, fee_override, exempt)")
+        .eq("session_id", sessionId)
+        .eq("attended", true);
+
+      if (attErr) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: attErr.message } });
+        return;
+      }
+
+      let totalRevenue = 0;
+      let exemptCount = 0;
+      let overriddenCount = 0;
+      let regularCount = 0;
+      let makeupCount = 0;
+
+      const breakdown = (attendees || []).map((att: any) => {
+        const student = att.students;
+        let feeCharged = basePrice;
+        let pricingType = "regular";
+
+        if (att.is_makeup) {
+          makeupCount += 1;
+        }
+
+        if (student?.exempt) {
+          feeCharged = 0;
+          pricingType = "exempt";
+          exemptCount += 1;
+        } else if (student?.fee_override != null && student.fee_override !== undefined) {
+          feeCharged = Number(student.fee_override);
+          pricingType = "override";
+          overriddenCount += 1;
+        } else {
+          regularCount += 1;
+        }
+
+        totalRevenue += feeCharged;
+
+        return {
+          student_id: student?.id,
+          student_name: student?.name,
+          is_makeup: att.is_makeup,
+          home_group_id: att.home_group_id,
+          pricing_type: pricingType,
+          fee_charged: feeCharged,
+        };
+      });
+
+      res.json({
+        session_id: sessionId,
+        group: {
+          id: group.id,
+          name: group.name,
+          base_price: basePrice,
+          billing_model: group.billing_model,
+          fixed_rent_amount: group.fixed_rent_amount,
+        },
+        financials: {
+          total_revenue: totalRevenue,
+          attendee_count: attendees?.length || 0,
+          regular_count: regularCount,
+          exempt_count: exemptCount,
+          overridden_count: overriddenCount,
+          makeup_count: makeupCount,
+        },
+        breakdown,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Financial calculation failed" } });
     }
-
-    res.json({
-      message: "Quiz results notifications dispatched successfully",
-      dispatched_count: updated?.length || 0,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to dispatch quiz results" } });
   }
-});
+);
 
 // Helper function to evaluate notification decision logic
 export function evaluateNotificationDecision(
@@ -355,4 +366,163 @@ export function evaluateNotificationDecision(
   }
   return "none";
 }
+
+// POST /api/sessions/:id/attendance - Batch attendance recording
+sessionsRouter.post(
+  "/:id/attendance",
+  attendanceRateLimiter,
+  validateBody(recordAttendanceSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const tenantId = req.user!.tenant_id;
+    const { id: sessionId } = req.params;
+    const { records } = req.body as { records: AttendanceRecordInput[] };
+
+    try {
+      const attendanceInserts = records.map((r) => {
+        const idempotencyKey = `${tenantId}:${r.student_id}:${sessionId}`;
+        return {
+          tenant_id: tenantId,
+          session_id: sessionId,
+          student_id: r.student_id,
+          attended: r.attended,
+          comment: r.comment || null,
+          homework_status: r.homework_status || null,
+          is_makeup: r.is_makeup || false,
+          home_group_id: r.home_group_id || null,
+          sent: false,
+          idempotency_key: idempotencyKey,
+        };
+      });
+
+      const { data: savedRows, error: saveError } = await supabase
+        .from("attendance")
+        .upsert(attendanceInserts, { onConflict: "idempotency_key" })
+        .select();
+
+      if (saveError) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: saveError.message } });
+        return;
+      }
+
+      const evaluations: AttendanceEvaluation[] = records.map((r) => {
+        const idempotencyKey = `${tenantId}:${r.student_id}:${sessionId}`;
+        const decision = evaluateNotificationDecision(r.attended, r.comment);
+
+        return {
+          student_id: r.student_id,
+          attended: r.attended,
+          comment: r.comment || null,
+          homework_status: r.homework_status || null,
+          is_makeup: r.is_makeup || false,
+          home_group_id: r.home_group_id || null,
+          idempotency_key: idempotencyKey,
+          decision,
+        };
+      });
+
+      res.status(200).json({
+        message: "Attendance recorded successfully",
+        count: savedRows?.length || 0,
+        attendance: savedRows,
+        notification_decisions: evaluations,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to record attendance" } });
+    }
+  }
+);
+
+// DEV-OFS.2: Offline-First Batch Sync Endpoint
+// Receives locally-queued writes from offline scanning, applies them idempotently,
+// and returns per-item sync status (synced, already_recorded, or failed).
+sessionsRouter.post(
+  "/:id/attendance/batch-sync",
+  attendanceRateLimiter,
+  validateBody(offlineBatchSyncSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const tenantId = req.user!.tenant_id;
+    const { id: sessionId } = req.params;
+    const { sync_items } = req.body as { sync_items: any[] };
+
+    try {
+      let syncedCount = 0;
+      let alreadyRecordedCount = 0;
+      let failedCount = 0;
+
+      const results = [];
+
+      for (const item of sync_items) {
+        // Enforce or ensure tenant-scoped idempotency key
+        const expectedKey = `${tenantId}:${item.student_id}:${sessionId}`;
+        const idempotencyKey = item.idempotency_key || expectedKey;
+
+        // Check if attendance already exists
+        const { data: existing } = await supabase
+          .from("attendance")
+          .select("id, created_at")
+          .eq("idempotency_key", idempotencyKey)
+          .maybeSingle();
+
+        if (existing) {
+          alreadyRecordedCount += 1;
+          results.push({
+            idempotency_key: idempotencyKey,
+            student_id: item.student_id,
+            status: "already_recorded",
+            recorded_at: existing.created_at,
+          });
+          continue;
+        }
+
+        // Insert new record
+        const { data: inserted, error: insertErr } = await supabase
+          .from("attendance")
+          .insert({
+            tenant_id: tenantId,
+            session_id: sessionId,
+            student_id: item.student_id,
+            attended: item.attended ?? true,
+            comment: item.comment || null,
+            homework_status: item.homework_status || null,
+            is_makeup: item.is_makeup || false,
+            home_group_id: item.home_group_id || null,
+            sent: false,
+            idempotency_key: idempotencyKey,
+          })
+          .select()
+          .single();
+
+        if (insertErr) {
+          failedCount += 1;
+          results.push({
+            idempotency_key: idempotencyKey,
+            student_id: item.student_id,
+            status: "failed",
+            error: insertErr.message,
+          });
+        } else {
+          syncedCount += 1;
+          results.push({
+            idempotency_key: idempotencyKey,
+            student_id: item.student_id,
+            status: "synced",
+            recorded_at: inserted.created_at,
+          });
+        }
+      }
+
+      res.status(200).json({
+        total: sync_items.length,
+        synced_count: syncedCount,
+        already_recorded_count: alreadyRecordedCount,
+        failed_count: failedCount,
+        results,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Batch sync processing failed" } });
+    }
+  }
+);
 

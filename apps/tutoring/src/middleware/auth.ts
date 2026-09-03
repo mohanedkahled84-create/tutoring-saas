@@ -1,5 +1,5 @@
 ﻿import { Response, NextFunction } from "express";
-import { AuthenticatedRequest, UserContext } from "../types/index.js";
+import { AuthenticatedRequest, UserContext, UserRole } from "../types/index.js";
 import { supabasePublic, getScopedSupabaseClient } from "../supabase.js";
 
 // Helper to extract token from Authorization header or httpOnly cookie
@@ -53,7 +53,7 @@ export async function authenticateUser(
     const userId = authData.user.id;
     const email = authData.user.email;
 
-    // 2. Resolve role & tenant from public.users using the token-scoped client
+    // 2. Resolve role & tenant from public.users using token-scoped client
     const userClient = getScopedSupabaseClient(token);
     const { data: userRecord, error: userError } = await userClient
       .from("users")
@@ -86,7 +86,7 @@ export async function authenticateUser(
       id: userId,
       email: email || userRecord.email,
       tenant_id: userRecord.tenant_id,
-      role: userRecord.role as "admin" | "owner",
+      role: userRecord.role as UserRole,
     };
     req.token = token;
     req.supabase = userClient;
@@ -103,8 +103,8 @@ export async function authenticateUser(
   }
 }
 
-// DEV-AUTH.2: Role check on endpoints
-export function requireRole(allowedRoles: Array<"admin" | "owner">) {
+// DEV-AUTH.2 & DEV-SE.5: Role check on endpoints
+export function requireRole(allowedRoles: UserRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({
@@ -132,6 +132,25 @@ export function requireRole(allowedRoles: Array<"admin" | "owner">) {
 }
 
 export const requireAdmin = requireRole(["admin"]);
+export const requireOwnerOrAdmin = requireRole(["admin", "owner"]);
+
+// DEV-SE.5: Financial access guard - assistants must NEVER see teacher profit / revenue data
+export function requireFinancialAccess(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void {
+  if (!req.user || req.user.role === "assistant") {
+    res.status(403).json({
+      error: {
+        code: "FORBIDDEN",
+        message: "Access denied: financial records and revenue aggregates are restricted from assistant role",
+      },
+    });
+    return;
+  }
+  next();
+}
 
 // DEV-AUTH.3: Password strength validation rule
 export function validatePasswordStrength(password: string): { valid: boolean; reason?: string } {

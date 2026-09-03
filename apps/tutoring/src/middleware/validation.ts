@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from "express";
+﻿import { Request, Response, NextFunction } from "express";
 import { z, ZodSchema, ZodError } from "zod";
 
-// DEV-APISEC.2: Generic request body validation middleware
+// Generic request body validation middleware
 export function validateBody(schema: ZodSchema) {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
@@ -33,12 +33,15 @@ export function validateBody(schema: ZodSchema) {
   };
 }
 
-// Schemas for endpoints
+// Student Schemas
 export const createStudentSchema = z.object({
   name: z.string().min(1, "Name is required").max(150),
   parent_phone: z.string().min(7, "Valid parent phone number is required").max(25),
   student_phone: z.string().max(25).optional().nullable(),
   code: z.string().max(50).optional().nullable(),
+  student_code: z.string().max(50).optional().nullable(),
+  fee_override: z.number().positive().optional().nullable(),
+  exempt: z.boolean().optional().default(false),
   notes: z.string().max(500).optional().nullable(),
 });
 
@@ -52,10 +55,14 @@ export const publicSelfRegisterSchema = z.object({
   group_id: z.string().uuid("group_id must be a valid UUID"),
 });
 
+// Group Schemas
 export const createGroupSchema = z.object({
   name: z.string().min(1, "Group name is required").max(100),
   center_name: z.string().max(150).optional().nullable(),
+  price: z.number().min(0).optional().default(0),
   session_price: z.number().min(0).optional().default(0),
+  billing_model: z.enum(["percentage", "fixed_rent"]).optional().default("percentage"),
+  fixed_rent_amount: z.number().min(0).optional().nullable(),
   center_cut_percentage: z.number().min(0).max(100).optional().default(0),
   teacher_cut_percentage: z.number().min(0).max(100).optional().default(100),
 });
@@ -66,6 +73,7 @@ export const enrollStudentSchema = z.object({
   student_id: z.string().uuid("student_id must be a valid UUID"),
 });
 
+// Session & Scan Schemas
 export const createSessionSchema = z.object({
   group_id: z.string().uuid("group_id must be a valid UUID"),
   session_number: z.number().int().positive("session_number must be a positive integer"),
@@ -76,6 +84,26 @@ export const quickCheckinSchema = z.object({
   code: z.string().min(1, "Student code or barcode is required"),
 });
 
+// DEV-SBL.1: Scan schema
+export const scanStudentSchema = z.object({
+  student_id: z.string().uuid().optional(),
+  student_code: z.string().min(1).optional(),
+  homework_status: z.enum(["done", "partial", "missing"]).optional().nullable(),
+  is_makeup: z.boolean().optional().default(false),
+  home_group_id: z.string().uuid().optional().nullable(),
+  comment: z.string().max(500).optional().nullable(),
+}).refine((data) => data.student_id || data.student_code, {
+  message: "Either student_id or student_code must be provided",
+});
+
+// DEV-SBL.2: Quiz auto-save schema
+export const quizScoreSchema = z.object({
+  score: z.number().min(0, "Score cannot be negative"),
+  max_score: z.number().positive("Max score must be positive"),
+}).refine((data) => data.score <= data.max_score, {
+  message: "Score cannot exceed max_score",
+});
+
 export const recordAttendanceSchema = z.object({
   records: z
     .array(
@@ -83,11 +111,11 @@ export const recordAttendanceSchema = z.object({
         student_id: z.string().uuid("student_id must be a valid UUID"),
         attended: z.boolean(),
         comment: z.string().max(500).optional().nullable(),
+        homework_status: z.enum(["done", "partial", "missing"]).optional().nullable(),
+        is_makeup: z.boolean().optional().default(false),
+        home_group_id: z.string().uuid().optional().nullable(),
         quiz_score: z.number().min(0).max(100).optional().nullable(),
         quiz_max_score: z.number().min(0).optional().default(20),
-        checkin_time: z.string().optional().nullable(),
-        wa_status: z.enum(["pending", "queued", "sent", "failed"]).optional().default("pending"),
-        quiz_wa_status: z.enum(["pending", "queued", "sent", "failed"]).optional().default("pending"),
       })
     )
     .min(1, "At least one attendance record is required"),
@@ -122,15 +150,7 @@ export const saveTemplateSchema = z.object({
 export const internalMessageLogSchema = z.object({
   tenant_id: z.string().uuid("tenant_id must be a valid UUID"),
   idempotency_key: z.string().min(1, "idempotency_key is required"),
-  message_type: z.enum([
-    "attendance_absent", 
-    "attendance_present_comment",
-    "attendance_present_checkin",
-    "quiz_result",
-    "quiz_absent_inquiry",
-    "welcome_student",
-    "welcome_parent"
-  ]),
+  message_type: z.string().min(1),
   recipient_type: z.enum(["parent", "student", "system"]),
   recipient_phone: z.string().min(7, "recipient_phone must be valid"),
   status: z.enum(["sent", "failed", "rejected", "needs_review"]),
@@ -139,4 +159,21 @@ export const internalMessageLogSchema = z.object({
   group_id: z.string().uuid().nullable().optional(),
   session_id: z.string().uuid().nullable().optional(),
 });
-
+// DEV-OFS.1 & DEV-OFS.2: Offline-First Batch Sync Schema
+export const offlineBatchSyncSchema = z.object({
+  sync_items: z
+    .array(
+      z.object({
+        idempotency_key: z.string().min(1, "idempotency_key is required"),
+        student_id: z.string().uuid("student_id must be a valid UUID"),
+        session_id: z.string().uuid("session_id must be a valid UUID"),
+        attended: z.boolean(),
+        comment: z.string().max(500).optional().nullable(),
+        homework_status: z.enum(["done", "partial", "missing"]).optional().nullable(),
+        is_makeup: z.boolean().optional().default(false),
+        home_group_id: z.string().uuid().optional().nullable(),
+        client_timestamp: z.string().optional(),
+      })
+    )
+    .min(1, "At least one sync item is required"),
+});

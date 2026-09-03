@@ -11,6 +11,8 @@ import { adminRouter } from "./routes/admin.js";
 import { studentsRouter } from "./routes/students.js";
 import { groupsRouter } from "./routes/groups.js";
 import { sessionsRouter } from "./routes/sessions.js";
+import { riskRouter } from "./routes/risk.js";
+import { importRouter } from "./routes/import.js";
 import { templatesRouter } from "./routes/templates.js";
 import { whatsappRouter } from "./routes/whatsapp.js";
 import { publicRouter } from "./routes/public.js";
@@ -42,7 +44,9 @@ export function createApp(): Express {
   // Tenant-scoped User API routes (requires valid token & tenant context)
   app.use("/api/students", authenticateUser, studentsRouter);
   app.use("/api/groups", authenticateUser, groupsRouter);
+  app.use("/api/groups", authenticateUser, importRouter);
   app.use("/api/sessions", authenticateUser, sessionsRouter);
+  app.use("/api/at-risk", authenticateUser, riskRouter);
   app.use("/api/templates", authenticateUser, templatesRouter);
   app.use("/api/whatsapp", authenticateUser, whatsappRouter);
 

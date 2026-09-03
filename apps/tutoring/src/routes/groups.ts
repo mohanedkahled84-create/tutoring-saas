@@ -1,18 +1,29 @@
-import { Router, Response } from "express";
+﻿import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
 import { validateBody, createGroupSchema, updateGroupSchema, enrollStudentSchema } from "../middleware/validation.js";
+import { requireOwnerOrAdmin } from "../middleware/auth.js";
 
 export const groupsRouter = Router();
+
+// Helper to strip financial fields if user is assistant
+function sanitizeGroupForRole(group: any, role: string) {
+  if (role === "assistant") {
+    const { price, billing_model, fixed_rent_amount, ...safeGroup } = group;
+    return safeGroup;
+  }
+  return group;
+}
 
 // GET /api/groups - List all groups for current tenant
 groupsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const supabase = req.supabase!;
   const tenantId = req.user!.tenant_id;
+  const role = req.user!.role;
 
   try {
     let query = supabase
       .from("groups")
-      .select("id, tenant_id, name, center_name, session_price, center_cut_percentage, teacher_cut_percentage, created_at")
+      .select("id, tenant_id, name, price, billing_model, fixed_rent_amount, created_at")
       .order("name", { ascending: true });
 
     if (tenantId) {
@@ -26,20 +37,22 @@ groupsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<
       return;
     }
 
-    res.json({ groups: data });
+    const sanitized = (data || []).map((g) => sanitizeGroupForRole(g, role));
+    res.json({ groups: sanitized });
   } catch (err: any) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to list groups" } });
   }
 });
 
-// POST /api/groups - Create a new group (validated with Zod)
+// POST /api/groups - Create a new group (Owner or Admin only)
 groupsRouter.post(
   "/",
+  requireOwnerOrAdmin,
   validateBody(createGroupSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const supabase = req.supabase!;
     const tenantId = req.user!.tenant_id;
-    const { name, center_name, session_price, center_cut_percentage, teacher_cut_percentage } = req.body;
+    const { name, price, billing_model, fixed_rent_amount } = req.body;
 
     if (!tenantId && req.user!.role !== "admin") {
       res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
@@ -47,20 +60,14 @@ groupsRouter.post(
     }
 
     try {
-      const calculatedTeacherCut = 
-        teacher_cut_percentage !== undefined 
-          ? teacher_cut_percentage 
-          : 100 - (center_cut_percentage || 0);
-
       const { data, error } = await supabase
         .from("groups")
         .insert({
           tenant_id: tenantId,
           name,
-          center_name: center_name || null,
-          session_price: session_price || 0,
-          center_cut_percentage: center_cut_percentage || 0,
-          teacher_cut_percentage: calculatedTeacherCut,
+          price: price || 0,
+          billing_model: billing_model || "percentage",
+          fixed_rent_amount: fixed_rent_amount || null,
         })
         .select()
         .single();
@@ -81,11 +88,12 @@ groupsRouter.post(
 groupsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const supabase = req.supabase!;
   const { id } = req.params;
+  const role = req.user!.role;
 
   try {
     const { data: group, error: groupError } = await supabase
       .from("groups")
-      .select("id, tenant_id, name, created_at")
+      .select("id, tenant_id, name, price, billing_model, fixed_rent_amount, created_at")
       .eq("id", id)
       .single();
 
@@ -96,7 +104,7 @@ groupsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promi
 
     const { data: enrollments, error: enrollError } = await supabase
       .from("group_students")
-      .select("id, student_id, students(id, name, parent_phone, student_phone)")
+      .select("id, student_id, students(id, name, parent_phone, student_phone, student_code, fee_override, exempt)")
       .eq("group_id", id);
 
     if (enrollError) {
@@ -106,25 +114,35 @@ groupsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promi
 
     const students = (enrollments || []).map((e: any) => e.students);
 
-    res.json({ group, students });
+    res.json({
+      group: sanitizeGroupForRole(group, role),
+      students,
+    });
   } catch (err: any) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve group" } });
   }
 });
 
-// PUT /api/groups/:id - Update group name (validated with Zod)
+// PUT /api/groups/:id - Update group (Owner or Admin only)
 groupsRouter.put(
   "/:id",
+  requireOwnerOrAdmin,
   validateBody(updateGroupSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const supabase = req.supabase!;
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, price, billing_model, fixed_rent_amount } = req.body;
 
     try {
+      const updatePayload: Record<string, any> = {};
+      if (name !== undefined) updatePayload.name = name;
+      if (price !== undefined) updatePayload.price = price;
+      if (billing_model !== undefined) updatePayload.billing_model = billing_model;
+      if (fixed_rent_amount !== undefined) updatePayload.fixed_rent_amount = fixed_rent_amount;
+
       const { data, error } = await supabase
         .from("groups")
-        .update({ name })
+        .update(updatePayload)
         .eq("id", id)
         .select()
         .single();
@@ -146,8 +164,8 @@ groupsRouter.put(
   }
 );
 
-// DELETE /api/groups/:id - Delete group
-groupsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+// DELETE /api/groups/:id - Delete group (Owner or Admin only)
+groupsRouter.delete("/:id", requireOwnerOrAdmin, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const supabase = req.supabase!;
   const { id } = req.params;
 
@@ -165,7 +183,7 @@ groupsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): Pr
   }
 });
 
-// POST /api/groups/:id/students - Enroll a student in a group (validated with Zod)
+// POST /api/groups/:id/students - Enroll a student in a group
 groupsRouter.post(
   "/:id/students",
   validateBody(enrollStudentSchema),
