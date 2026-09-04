@@ -1,0 +1,41 @@
+﻿name: Security & Dependency Vulnerability Audit
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 3 * * 1' # Weekly security audit on Mondays
+
+jobs:
+  audit:
+    name: OWASP & NPM Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        working-directory: apps/tutoring
+        run: npm ci
+
+      - name: Run NPM Vulnerability Audit
+        working-directory: apps/tutoring
+        run: npm audit --audit-level=moderate
+
+      - name: Verify No Raw SQL Interpolation
+        run: |
+          echo "Scanning for raw SQL string interpolation in application code..."
+          if grep -rnE "(\`.*(SELECT|INSERT|UPDATE|DELETE).*\`|\$\{.*(SELECT|INSERT|UPDATE|DELETE))" apps/tutoring/src/; then
+            echo "ERROR: Potential unparameterized SQL interpolation detected!"
+            exit 1
+          else
+            echo "PASS: Zero unparameterized SQL interpolation found across codebase."
+          fi

@@ -10,6 +10,7 @@ import {
 } from "../middleware/validation.js";
 import { attendanceRateLimiter } from "../middleware/rateLimit.js";
 import { requireFinancialAccess } from "../middleware/auth.js";
+import { dispatchAttendanceWebhook } from "../services/webhookDispatcher.js";
 
 export const sessionsRouter = Router();
 
@@ -163,6 +164,21 @@ sessionsRouter.post(
       if (insertError) {
         res.status(400).json({ error: { code: "BAD_REQUEST", message: insertError.message } });
         return;
+      }
+
+      // DEV-WPA.3: Trigger n8n attendance webhook if scan includes a teacher comment
+      if (comment && comment.trim().length > 0 && student.parent_phone) {
+        dispatchAttendanceWebhook({
+          tenant_id: tenantId!,
+          event_type: "attendance_recorded",
+          student_id: student.id,
+          student_name: student.name,
+          session_id: sessionId,
+          attended: true,
+          comment: comment.trim(),
+          parent_phone: student.parent_phone,
+          idempotency_key: idempotencyKey,
+        }).catch(() => {});
       }
 
       res.status(201).json({
@@ -420,6 +436,36 @@ sessionsRouter.post(
           decision,
         };
       });
+
+      // DEV-WPA.3: Trigger n8n attendance webhook exactly once per idempotency_key for eligible students
+      const notifyCandidates = evaluations.filter((e) => e.decision !== "none");
+      if (notifyCandidates.length > 0) {
+        const studentIds = notifyCandidates.map((c) => c.student_id);
+        (async () => {
+          const { data: studentRows } = await supabase
+            .from("students")
+            .select("id, name, parent_phone")
+            .in("id", studentIds);
+
+          const studentMap = new Map((studentRows || []).map((s: any) => [s.id, s]));
+          for (const item of notifyCandidates) {
+            const s = studentMap.get(item.student_id);
+            if (s && s.parent_phone) {
+              dispatchAttendanceWebhook({
+                tenant_id: tenantId!,
+                event_type: "attendance_recorded",
+                student_id: item.student_id,
+                student_name: s.name,
+                session_id: sessionId,
+                attended: item.attended,
+                comment: item.comment || null,
+                parent_phone: s.parent_phone,
+                idempotency_key: item.idempotency_key,
+              }).catch(() => {});
+            }
+          }
+        })().catch(() => {});
+      }
 
       res.status(200).json({
         message: "Attendance recorded successfully",

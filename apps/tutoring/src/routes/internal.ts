@@ -1,6 +1,15 @@
-﻿import { Router, Request, Response } from "express";
+import { Router, Request, Response } from "express";
 import { getServiceSupabaseClient } from "../supabase.js";
 import { validateBody, internalMessageLogSchema } from "../middleware/validation.js";
+import {
+  calculateJitterDelay,
+  checkWarmUpLimit,
+  recordHealthError,
+  recordHealthSuccess,
+  getHealthStatus,
+  validateBusinessProfile,
+} from "../services/evolutionHardening.js";
+import { dispatchSubscriptionRenewalReminders } from "../services/subscriptionReminderService.js";
 
 export const internalRouter = Router();
 
@@ -104,3 +113,86 @@ internalRouter.post(
     }
   }
 );
+
+// DEV-EAH.1 & DEV-EAH.2: GET /internal/tenants/:tenant_id/pacing-delay
+// n8n calls this to determine randomized inter-message jitter and warm-up quota
+internalRouter.get("/tenants/:tenant_id/pacing-delay", async (req: Request, res: Response): Promise<void> => {
+  const { tenant_id } = req.params;
+  const supabase = getServiceSupabaseClient();
+
+  try {
+    const { data: conn } = await supabase
+      .from("whatsapp_connections")
+      .select("connected_at, is_legacy_exempt")
+      .eq("tenant_id", tenant_id)
+      .maybeSingle();
+
+    // Query today's message count
+    const today = new Date().toISOString().split("T")[0];
+    const { count } = await supabase
+      .from("message_logs")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenant_id)
+      .gte("created_at", `${today}T00:00:00.000Z`);
+
+    const warmUp = checkWarmUpLimit(
+      {
+        connected_at: conn?.connected_at || new Date().toISOString(),
+        is_legacy_exempt: Boolean(conn?.is_legacy_exempt),
+      },
+      count || 0
+    );
+
+    const health = getHealthStatus(tenant_id);
+    const delayMs = calculateJitterDelay();
+
+    res.json({
+      tenant_id,
+      jitter_delay_ms: delayMs,
+      warm_up: warmUp,
+      health,
+      can_send: warmUp.allowed && health.can_send,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+  }
+});
+
+// DEV-EAH.3: POST /internal/tenants/:tenant_id/health-event
+// Records connection disconnects, 429 rate limit errors, or successes from n8n
+internalRouter.post("/tenants/:tenant_id/health-event", (req: Request, res: Response): void => {
+  const { tenant_id } = req.params;
+  const { event_type, error_type } = req.body;
+
+  if (event_type === "success") {
+    recordHealthSuccess(tenant_id);
+  } else if (event_type === "error") {
+    recordHealthError(tenant_id, error_type || "disconnect");
+  }
+
+  const status = getHealthStatus(tenant_id);
+  res.json({ tenant_id, health: status });
+});
+
+// DEV-EAH.4: POST /internal/tenants/:tenant_id/validate-profile
+// Validates business profile completeness against anti-spam checklist
+internalRouter.post("/tenants/:tenant_id/validate-profile", (req: Request, res: Response): void => {
+  const result = validateBusinessProfile(req.body);
+  res.json(result);
+});
+
+// DEV-SL.4: POST /internal/subscriptions/dispatch-reminders
+// Triggered by scheduled cron or n8n to dispatch 5-day and expiry-day renewal reminders
+internalRouter.post("/subscriptions/dispatch-reminders", async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const summary = await dispatchSubscriptionRenewalReminders();
+    res.json({
+      message: "Subscription renewal reminders evaluated and dispatched successfully",
+      ...summary,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+  }
+});
+
+
