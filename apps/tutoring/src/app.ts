@@ -15,7 +15,7 @@ import { sessionsRouter } from "./features/sessions/index.js";
 import { riskRouter } from "./features/risk-watchlist/index.js";
 import { injectServices } from "./composition.js";
 import { importRouter } from "./routes/import.js";
-import { billingRouter } from "./routes/billing.js";
+import { billingRouter } from "./features/billing/index.js";
 import { activityLogsRouter } from "./features/activity-log/index.js";
 import { templatesRouter, whatsappRouter } from "./features/whatsapp-notifications/index.js";
 import { publicRouter } from "./routes/public.js";
