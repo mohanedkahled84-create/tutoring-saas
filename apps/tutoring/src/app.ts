@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { authenticateUser } from "./middleware/auth.js";
 import { authenticateInternalSecret } from "./middleware/internalAuth.js";
 import { globalRateLimiter, authRateLimiter } from "./middleware/rateLimit.js";
+import { securityHeadersMiddleware } from "./middleware/securityHeaders.js";
 import { notFoundHandler, globalErrorHandler } from "./middleware/errorHandler.js";
 import { healthRouter } from "./routes/health.js";
 import { authRouter } from "./routes/auth.js";
@@ -22,6 +23,9 @@ import { internalRouter } from "./routes/internal.js";
 
 export function createApp(): Express {
   const app = express();
+
+  // DEV-24: HTTPS enforcement & standard security headers (HSTS, CSP, X-Frame-Options)
+  app.use(securityHeadersMiddleware);
 
   // Basic security and parsing middleware
   app.use(cors());

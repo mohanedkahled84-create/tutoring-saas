@@ -1,4 +1,4 @@
-﻿import test from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { app } from "../dist/app.js";
@@ -141,3 +141,29 @@ test("DEV-ERRM.3: GET /health returns rich diagnostic health payload", async () 
   assert.ok(json.database);
   assert.ok(json.system.memory);
 });
+
+// ========================================================
+// DEV-24: HTTPS & Security Headers Tests
+// ========================================================
+
+test("DEV-HTTPS.1 & DEV-HTTPS.2: Security headers are present on API responses", async () => {
+  const res = await fetch(`${baseUrl}/health/ping`);
+  assert.equal(res.status, 200);
+
+  // HSTS
+  assert.equal(res.headers.get("strict-transport-security"), "max-age=31536000; includeSubDomains; preload");
+
+  // X-Content-Type-Options
+  assert.equal(res.headers.get("x-content-type-options"), "nosniff");
+
+  // X-Frame-Options
+  assert.equal(res.headers.get("x-frame-options"), "DENY");
+
+  // Referrer-Policy
+  assert.equal(res.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
+
+  // Content-Security-Policy
+  const csp = res.headers.get("content-security-policy");
+  assert.ok(csp && csp.includes("default-src 'self'"));
+});
+
