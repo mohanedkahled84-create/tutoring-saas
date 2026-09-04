@@ -1,7 +1,9 @@
-﻿import test from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { SessionsService } from "../dist/features/sessions/service.js";
+import { GroupsService } from "../dist/features/groups/service.js";
+import { FakeGroupsRepository } from "../dist/features/groups/repository.js";
 import { app } from "../dist/app.js";
 
 // Mock Repository for domain unit tests
@@ -206,4 +208,109 @@ test("DEV-50: POST /api/sessions/extra strictly returns 401 when unauthenticated
     }),
   });
   assert.equal(res.status, 401);
+});
+
+// ============================================================================
+// DEV-49: Class Sub-Groups (Sections) Tests
+// ============================================================================
+
+test("DEV-49: createSection creates sub-group inheriting parent attributes and full name", async () => {
+  const repo = new FakeGroupsRepository();
+  const service = new GroupsService(repo);
+
+  const parent = await service.createGroup("tenant-1", {
+    name: "ثانوية عامة - دفعة 2026",
+    price: 120,
+    billing_model: "percentage",
+    center_name: "سنتر الأوائل",
+  });
+
+  const section = await service.createSection("tenant-1", parent.id, {
+    section_name: "مجموعة أ (صباحي)",
+  });
+
+  assert.equal(section.is_section, true);
+  assert.equal(section.parent_group_id, parent.id);
+  assert.equal(section.section_name, "مجموعة أ (صباحي)");
+  assert.equal(section.name, "ثانوية عامة - دفعة 2026 - مجموعة أ (صباحي)");
+  assert.equal(section.price, 120);
+  assert.equal(section.center_name, "سنتر الأوائل");
+});
+
+test("DEV-49: createSection throws PARENT_GROUP_NOT_FOUND when parent is missing", async () => {
+  const repo = new FakeGroupsRepository();
+  const service = new GroupsService(repo);
+
+  await assert.rejects(
+    async () => {
+      await service.createSection("tenant-1", "non-existent-parent", {
+        section_name: "مجموعة أ",
+      });
+    },
+    /PARENT_GROUP_NOT_FOUND/
+  );
+});
+
+test("DEV-49: listSections filters sections and masks prices for assistant role", async () => {
+  const repo = new FakeGroupsRepository();
+  const service = new GroupsService(repo);
+
+  const parent = await service.createGroup("tenant-1", {
+    name: "لغة عربية - تانية ثانوي",
+    price: 100,
+  });
+
+  await service.createSection("tenant-1", parent.id, { section_name: "سكشن 1" });
+  await service.createSection("tenant-1", parent.id, { section_name: "سكشن 2" });
+
+  const teacherView = await service.listSections(parent.id, "teacher");
+  assert.equal(teacherView.length, 2);
+  assert.equal(teacherView[0].price, 100);
+
+  const assistantView = await service.listSections(parent.id, "assistant");
+  assert.equal(assistantView.length, 2);
+  assert.equal(assistantView[0].price, undefined);
+  assert.equal(assistantView[0].billing_model, undefined);
+});
+
+test("DEV-49: getGroupRollUp aggregates sections, students, and masks revenue for assistant", async () => {
+  const repo = new FakeGroupsRepository();
+  const service = new GroupsService(repo);
+
+  const parent = await service.createGroup("tenant-1", {
+    name: "فيزياء - تالتة ثانوي",
+    price: 150,
+  });
+
+  const sec1 = await service.createSection("tenant-1", parent.id, { section_name: "مجموعة السبت" });
+  const sec2 = await service.createSection("tenant-1", parent.id, { section_name: "مجموعة الأحد" });
+
+  await service.enrollStudent("tenant-1", sec1.id, "stu-1");
+  await service.enrollStudent("tenant-1", sec1.id, "stu-2");
+  await service.enrollStudent("tenant-1", sec2.id, "stu-3");
+
+  const reportTeacher = await service.getGroupRollUp(parent.id, "teacher");
+  assert.equal(reportTeacher.total_sections, 2);
+  assert.equal(reportTeacher.total_students_enrolled, 3);
+  assert.equal(reportTeacher.total_revenue, 450); // 3 * 150
+
+  const reportAssistant = await service.getGroupRollUp(parent.id, "assistant");
+  assert.equal(reportAssistant.total_sections, 2);
+  assert.equal(reportAssistant.total_students_enrolled, 3);
+  assert.equal(reportAssistant.total_revenue, undefined); // Masked for assistant
+});
+
+test("DEV-49: Section and roll-up endpoints strictly return 401 when unauthenticated", async () => {
+  const res1 = await fetch(`${baseUrl}/api/groups/00000000-0000-0000-0000-000000000001/sections`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ section_name: "Section A" }),
+  });
+  assert.equal(res1.status, 401);
+
+  const res2 = await fetch(`${baseUrl}/api/groups/00000000-0000-0000-0000-000000000001/sections`);
+  assert.equal(res2.status, 401);
+
+  const res3 = await fetch(`${baseUrl}/api/groups/00000000-0000-0000-0000-000000000001/roll-up`);
+  assert.equal(res3.status, 401);
 });

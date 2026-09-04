@@ -2,8 +2,10 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import {
   Group,
   CreateGroupDTO,
+  CreateSectionDTO,
   UpdateGroupDTO,
   EnrolledStudent,
+  GroupRollUpReport,
   IGroupsRepository,
 } from "./types.js";
 
@@ -139,6 +141,92 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
       throw new Error(error.message);
     }
   }
+
+  async listSections(parentGroupId: string): Promise<Group[]> {
+    const { data, error } = await this.client
+      .from("groups")
+      .select("id, tenant_id, name, price, billing_model, fixed_rent_amount, center_name, parent_group_id, is_section, section_name, created_at")
+      .eq("parent_group_id", parentGroupId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+    return (data as Group[]) || [];
+  }
+
+  async createSection(
+    tenantId: string | undefined,
+    parentGroupId: string,
+    data: CreateSectionDTO,
+    fullName: string
+  ): Promise<Group> {
+    const { data: created, error } = await this.client
+      .from("groups")
+      .insert({
+        tenant_id: tenantId,
+        parent_group_id: parentGroupId,
+        name: fullName,
+        section_name: data.section_name,
+        is_section: true,
+        price: data.price || 0,
+        billing_model: data.billing_model || "percentage",
+        fixed_rent_amount: data.fixed_rent_amount || null,
+        center_name: data.center_name || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+    return created as Group;
+  }
+
+  async getGroupRollUp(parentGroupId: string): Promise<GroupRollUpReport | null> {
+    const parent = await this.findById(parentGroupId);
+    if (!parent) return null;
+
+    const sections = await this.listSections(parentGroupId);
+    const allGroupIds = [parentGroupId, ...sections.map((s) => s.id)];
+
+    const { data: enrollments } = await this.client
+      .from("group_students")
+      .select("student_id")
+      .in("group_id", allGroupIds);
+
+    const studentIds = new Set((enrollments || []).map((e: { student_id: string }) => e.student_id));
+
+    const { data: sessions } = await this.client
+      .from("sessions")
+      .select("id")
+      .in("group_id", allGroupIds);
+
+    const sessionIds = (sessions || []).map((s: { id: string }) => s.id);
+
+    let totalAttendance = 0;
+    let totalRevenue = 0;
+    if (sessionIds.length > 0) {
+      const { data: attendance } = await this.client
+        .from("attendance")
+        .select("attended")
+        .in("session_id", sessionIds);
+
+      const attendedRecords = (attendance || []).filter((a: { attended: boolean }) => a.attended);
+      totalAttendance = attendedRecords.length;
+      totalRevenue = totalAttendance * (Number(parent.price) || 0);
+    }
+
+    return {
+      parent_group: parent,
+      sections,
+      total_sections: sections.length,
+      total_students_enrolled: studentIds.size,
+      total_sessions: sessionIds.length,
+      total_revenue: totalRevenue,
+      total_attendance: totalAttendance,
+    };
+  }
 }
 
 export class FakeGroupsRepository implements IGroupsRepository {
@@ -215,5 +303,56 @@ export class FakeGroupsRepository implements IGroupsRepository {
     this.enrollments = this.enrollments.filter(
       (e) => !(e.group_id === groupId && e.student_id === studentId)
     );
+  }
+
+  async listSections(parentGroupId: string): Promise<Group[]> {
+    return this.groups.filter((g) => g.parent_group_id === parentGroupId);
+  }
+
+  async createSection(
+    tenantId: string | undefined,
+    parentGroupId: string,
+    data: CreateSectionDTO,
+    fullName: string
+  ): Promise<Group> {
+    const newSection: Group = {
+      id: `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      tenant_id: tenantId || "tenant-1",
+      parent_group_id: parentGroupId,
+      name: fullName,
+      section_name: data.section_name,
+      is_section: true,
+      price: data.price !== undefined ? data.price : 0,
+      billing_model: data.billing_model || "percentage",
+      fixed_rent_amount: data.fixed_rent_amount || null,
+      center_name: data.center_name || null,
+      created_at: new Date().toISOString(),
+    };
+    this.groups.push(newSection);
+    return { ...newSection };
+  }
+
+  async getGroupRollUp(parentGroupId: string): Promise<GroupRollUpReport | null> {
+    const parent = await this.findById(parentGroupId);
+    if (!parent) return null;
+
+    const sections = await this.listSections(parentGroupId);
+    const allGroupIds = [parentGroupId, ...sections.map((s) => s.id)];
+
+    const enrolledStudentIds = new Set(
+      this.enrollments
+        .filter((e) => allGroupIds.includes(e.group_id))
+        .map((e) => e.student_id)
+    );
+
+    return {
+      parent_group: parent,
+      sections,
+      total_sections: sections.length,
+      total_students_enrolled: enrolledStudentIds.size,
+      total_sessions: 0,
+      total_revenue: enrolledStudentIds.size * (parent.price || 0),
+      total_attendance: enrolledStudentIds.size,
+    };
   }
 }

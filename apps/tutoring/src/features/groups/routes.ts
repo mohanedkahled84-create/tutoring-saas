@@ -4,6 +4,7 @@ import { getServices } from "../../composition.js";
 import {
   validateBody,
   createGroupSchema,
+  createSectionSchema,
   updateGroupSchema,
   enrollStudentSchema,
 } from "../../shared/middleware/validation.js";
@@ -191,6 +192,80 @@ groupsRouter.get(
         }
       }
       const message = err instanceof Error ? err.message : "Failed to generate barcode sheet";
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+    }
+  }
+);
+
+// DEV-49: POST /api/groups/:id/sections - Create a sub-group (section)
+groupsRouter.post(
+  "/:id/sections",
+  validateBody(createSectionSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id || undefined;
+    const { id: parentGroupId } = req.params;
+    const role = req.user?.role;
+
+    try {
+      const groupsService = getServices(req).groups;
+      const section = await groupsService.createSection(tenantId, parentGroupId, req.body, role);
+      res.status(201).json({ section });
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        if (err.message === "PARENT_GROUP_NOT_FOUND") {
+          res.status(404).json({ error: { code: "NOT_FOUND", message: "Parent group not found" } });
+          return;
+        }
+        if (err.message === "NO_TENANT_CONTEXT") {
+          res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+          return;
+        }
+      }
+      const message = err instanceof Error ? err.message : "Failed to create section";
+      res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+    }
+  }
+);
+
+// DEV-49: GET /api/groups/:id/sections - List sections for a parent group
+groupsRouter.get(
+  "/:id/sections",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { id: parentGroupId } = req.params;
+    const role = req.user?.role;
+
+    try {
+      const groupsService = getServices(req).groups;
+      const sections = await groupsService.listSections(parentGroupId, role);
+      res.json({ sections });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to list sections";
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+    }
+  }
+);
+
+// DEV-49: GET /api/groups/:id/roll-up - Roll-up analytics for parent group across its sections
+groupsRouter.get(
+  "/:id/roll-up",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { id: parentGroupId } = req.params;
+    const role = req.user?.role;
+
+    try {
+      const groupsService = getServices(req).groups;
+      const rollUp = await groupsService.getGroupRollUp(parentGroupId, role);
+      if (!rollUp) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Group not found" } });
+        return;
+      }
+      res.json({ roll_up: rollUp });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "GROUP_NOT_FOUND") {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Group not found" } });
+        return;
+      }
+      const message = err instanceof Error ? err.message : "Failed to generate roll-up report";
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
     }
   }

@@ -107,6 +107,15 @@ export const enrollStudentSchema = z.object({
   student_id: z.string().uuid("student_id must be a valid UUID"),
 });
 
+// DEV-49: Class Sub-Groups (Sections) Schema
+export const createSectionSchema = z.object({
+  section_name: z.string().min(1, "section_name is required").max(100),
+  price: z.number().min(0).optional(),
+  billing_model: z.enum(["percentage", "fixed_rent"]).optional(),
+  fixed_rent_amount: z.number().min(0).optional().nullable(),
+  center_name: z.string().max(150).optional().nullable(),
+});
+
 // Session & Scan Schemas
 export const createSessionSchema = z.object({
   group_id: z.string().uuid("group_id must be a valid UUID"),

@@ -1,8 +1,10 @@
 import {
   Group,
   CreateGroupDTO,
+  CreateSectionDTO,
   UpdateGroupDTO,
   EnrolledStudent,
+  GroupRollUpReport,
   IGroupsRepository,
 } from "./types.js";
 
@@ -93,6 +95,70 @@ export class GroupsService {
     return {
       groupName: group.name,
       students,
+    };
+  }
+
+  /**
+   * DEV-49: Create a named section/sub-group under an existing parent group.
+   * Inherits pricing and center details from parent unless overridden.
+   */
+  async createSection(
+    tenantId: string | undefined,
+    parentGroupId: string,
+    data: CreateSectionDTO,
+    userRole?: string
+  ): Promise<Group> {
+    if (!tenantId && userRole !== "admin") {
+      throw new Error("NO_TENANT_CONTEXT");
+    }
+
+    const parent = await this.repo.findById(parentGroupId);
+    if (!parent) {
+      throw new Error("PARENT_GROUP_NOT_FOUND");
+    }
+
+    const fullName = `${parent.name} - ${data.section_name}`;
+    const sectionData: CreateSectionDTO = {
+      section_name: data.section_name,
+      price: data.price !== undefined ? data.price : parent.price,
+      billing_model: data.billing_model || parent.billing_model,
+      fixed_rent_amount: data.fixed_rent_amount !== undefined ? data.fixed_rent_amount : parent.fixed_rent_amount,
+      center_name: data.center_name || parent.center_name,
+    };
+
+    const section = await this.repo.createSection(tenantId, parentGroupId, sectionData, fullName);
+    return sanitizeGroupForRole(section, userRole);
+  }
+
+  /**
+   * DEV-49: List all child sections under a parent group.
+   */
+  async listSections(parentGroupId: string, userRole?: string): Promise<Group[]> {
+    const sections = await this.repo.listSections(parentGroupId);
+    return sections.map((s) => sanitizeGroupForRole(s, userRole));
+  }
+
+  /**
+   * DEV-49: Aggregated roll-up report across parent group and all its sections.
+   * Calculates total students, sessions, and revenue across the entire grade.
+   */
+  async getGroupRollUp(parentGroupId: string, userRole?: string): Promise<GroupRollUpReport> {
+    const report = await this.repo.getGroupRollUp(parentGroupId);
+    if (!report) {
+      throw new Error("GROUP_NOT_FOUND");
+    }
+
+    const sanitizedParent = sanitizeGroupForRole(report.parent_group, userRole);
+    const sanitizedSections = report.sections.map((s) => sanitizeGroupForRole(s, userRole));
+
+    if (userRole === "assistant") {
+      delete report.total_revenue;
+    }
+
+    return {
+      ...report,
+      parent_group: sanitizedParent,
+      sections: sanitizedSections,
     };
   }
 }
