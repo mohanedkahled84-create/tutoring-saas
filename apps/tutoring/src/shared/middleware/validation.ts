@@ -116,6 +116,31 @@ export const createSessionSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "session_date must be in YYYY-MM-DD format"),
 });
 
+// DEV-50: Cancel, Reschedule, Extra Session Schemas
+export const cancelSessionSchema = z.object({
+  reason: z.string().max(300).optional(),
+  notify_parents: z.boolean().optional().default(true),
+});
+
+export const rescheduleSessionSchema = z.object({
+  new_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "new_date must be in YYYY-MM-DD format"),
+  new_time: z.string().max(50).optional(),
+  reason: z.string().max(300).optional(),
+  notify_parents: z.boolean().optional().default(true),
+});
+
+export const extraSessionSchema = z.object({
+  group_id: z.string().uuid("group_id must be a valid UUID"),
+  session_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "session_date must be in YYYY-MM-DD format"),
+  session_time: z.string().max(50).optional(),
+  topic: z.string().max(200).optional(),
+  notify_parents: z.boolean().optional().default(true),
+});
+
 export const quickCheckinSchema = z.object({
   code: z.string().min(1, "Student code or barcode is required"),
 });

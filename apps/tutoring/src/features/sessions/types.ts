@@ -4,6 +4,8 @@ export interface CreateSessionInput {
   session_date: string;
 }
 
+export type SessionStatus = "scheduled" | "in_progress" | "ended" | "cancelled" | "rescheduled";
+
 export interface SessionModel {
   id: string;
   tenant_id: string;
@@ -11,8 +13,13 @@ export interface SessionModel {
   session_number: number;
   session_date: string;
   created_at: string;
-  status?: "in_progress" | "ended" | "cancelled";
+  status?: SessionStatus;
   ended_at?: string | null;
+  is_extra?: boolean;
+  rescheduled_to_date?: string | null;
+  rescheduled_to_time?: string | null;
+  cancellation_reason?: string | null;
+  extra_topic?: string | null;
   groups?: {
     id?: string;
     name?: string;
@@ -21,6 +28,39 @@ export interface SessionModel {
     billing_model?: string;
     fixed_rent_amount?: number | string;
   } | null;
+}
+
+export interface CancelSessionInput {
+  reason?: string;
+  notify_parents?: boolean;
+}
+
+export interface RescheduleSessionInput {
+  new_date: string;
+  new_time?: string;
+  reason?: string;
+  notify_parents?: boolean;
+}
+
+export interface CreateExtraSessionInput {
+  group_id: string;
+  session_date: string;
+  session_time?: string;
+  topic?: string;
+  notify_parents?: boolean;
+}
+
+export interface SessionActionResult {
+  session: SessionModel;
+  action: "cancelled" | "rescheduled" | "extra";
+  notifications_dispatched: number;
+  message: string;
+  details?: {
+    cancellation_reason?: string;
+    new_date?: string;
+    new_time?: string;
+    extra_topic?: string;
+  };
 }
 
 export interface GroupFinancialData {
@@ -139,9 +179,32 @@ export interface ISessionsRepository {
   getQuizScoresForSession(sessionId: string): Promise<QuizScoreRecord[]>;
   updateSessionStatus(
     sessionId: string,
-    status: "in_progress" | "ended" | "cancelled",
+    status: SessionStatus,
     endedAt?: string | null
   ): Promise<SessionModel>;
+  cancelSession(sessionId: string, reason?: string): Promise<SessionModel>;
+  rescheduleSession(
+    sessionId: string,
+    newDate: string,
+    newTime?: string,
+    reason?: string
+  ): Promise<SessionModel>;
+  createExtraSession(
+    tenantId: string,
+    input: CreateExtraSessionInput,
+    nextSessionNumber: number
+  ): Promise<SessionModel>;
+  getStudentsForGroup(
+    groupId: string
+  ): Promise<Array<{ id: string; name: string; parent_phone: string }>>;
+  logSessionActionNotification(
+    tenantId: string,
+    idempotencyKey: string,
+    phone: string,
+    messageType: string,
+    content: string
+  ): Promise<string | null>;
+  getNextSessionNumber(groupId: string): Promise<number>;
   logReceiptMessage(
     tenantId: string,
     idempotencyKey: string,

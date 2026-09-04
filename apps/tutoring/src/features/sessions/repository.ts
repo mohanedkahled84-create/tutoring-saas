@@ -2,7 +2,9 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import {
   ISessionsRepository,
   CreateSessionInput,
+  CreateExtraSessionInput,
   SessionModel,
+  SessionStatus,
   GroupFinancialData,
   AttendeeFinancialData,
   QuizScoreRecord,
@@ -32,7 +34,7 @@ export class SupabaseSessionsRepository implements ISessionsRepository {
 
   async updateSessionStatus(
     sessionId: string,
-    status: "in_progress" | "ended" | "cancelled",
+    status: SessionStatus,
     endedAt?: string | null
   ): Promise<SessionModel> {
     const updatePayload: Record<string, unknown> = { status };
@@ -52,6 +54,130 @@ export class SupabaseSessionsRepository implements ISessionsRepository {
     }
 
     return data as unknown as SessionModel;
+  }
+
+  async cancelSession(sessionId: string, reason?: string): Promise<SessionModel> {
+    const { data, error } = await this.supabase
+      .from("sessions")
+      .update({
+        status: "cancelled",
+        cancellation_reason: reason || null,
+      })
+      .eq("id", sessionId)
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(error ? error.message : "Failed to cancel session");
+    }
+    return data as unknown as SessionModel;
+  }
+
+  async rescheduleSession(
+    sessionId: string,
+    newDate: string,
+    newTime?: string,
+    reason?: string
+  ): Promise<SessionModel> {
+    const { data, error } = await this.supabase
+      .from("sessions")
+      .update({
+        status: "rescheduled",
+        rescheduled_to_date: newDate,
+        rescheduled_to_time: newTime || null,
+        cancellation_reason: reason || null,
+      })
+      .eq("id", sessionId)
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(error ? error.message : "Failed to reschedule session");
+    }
+    return data as unknown as SessionModel;
+  }
+
+  async getNextSessionNumber(groupId: string): Promise<number> {
+    const { data, error } = await this.supabase
+      .from("sessions")
+      .select("session_number")
+      .eq("group_id", groupId)
+      .order("session_number", { ascending: false })
+      .limit(1);
+
+    if (error || !data || data.length === 0) {
+      return 1;
+    }
+    return ((data[0] as { session_number: number }).session_number || 0) + 1;
+  }
+
+  async createExtraSession(
+    tenantId: string,
+    input: CreateExtraSessionInput,
+    nextSessionNumber: number
+  ): Promise<SessionModel> {
+    const { data, error } = await this.supabase
+      .from("sessions")
+      .insert({
+        tenant_id: tenantId,
+        group_id: input.group_id,
+        session_number: nextSessionNumber,
+        session_date: input.session_date,
+        is_extra: true,
+        extra_topic: input.topic || null,
+        status: "scheduled",
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(error ? error.message : "Failed to create extra session");
+    }
+    return data as unknown as SessionModel;
+  }
+
+  async getStudentsForGroup(
+    groupId: string
+  ): Promise<Array<{ id: string; name: string; parent_phone: string }>> {
+    const { data, error } = await this.supabase
+      .from("group_students")
+      .select("student_id, students(id, name, parent_phone)")
+      .eq("group_id", groupId);
+
+    if (error || !data) {
+      return [];
+    }
+
+    return (data as unknown as Array<{ students: { id: string; name: string; parent_phone: string } }>)
+      .map((row) => row.students)
+      .filter((s) => Boolean(s && s.id));
+  }
+
+  async logSessionActionNotification(
+    tenantId: string,
+    idempotencyKey: string,
+    phone: string,
+    messageType: string,
+    content: string
+  ): Promise<string | null> {
+    const { data, error } = await this.supabase
+      .from("message_logs")
+      .insert({
+        tenant_id: tenantId,
+        idempotency_key: idempotencyKey,
+        message_type: messageType,
+        recipient_type: "parent",
+        recipient_phone: phone,
+        status: "queued",
+        error_detail: content,
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+    return data.id;
   }
 
   async getSessionWithDetails(sessionId: string): Promise<{

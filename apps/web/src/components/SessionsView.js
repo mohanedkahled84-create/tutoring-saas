@@ -7,6 +7,15 @@
 export function renderSessionsView(sessionState = {}, user = {}) {
   const isAssistant = user?.role === 'assistant';
   const isSessionEnded = sessionState.status === 'ended';
+  const isCancelled = sessionState.status === 'cancelled';
+  const isRescheduled = sessionState.status === 'rescheduled';
+  const isExtra = Boolean(sessionState.is_extra);
+
+  let statusBadge = '<span class="badge badge-success">🟢 الحصة جارية</span>';
+  if (isSessionEnded) statusBadge = '<span class="badge badge-secondary">🏁 الحصة منتهية</span>';
+  else if (isCancelled) statusBadge = '<span class="badge" style="background:#ef4444;color:#fff;">❌ ملغاة</span>';
+  else if (isRescheduled) statusBadge = '<span class="badge" style="background:#f59e0b;color:#fff;">📅 مؤجلة</span>';
+  else if (sessionState.status === 'scheduled') statusBadge = '<span class="badge badge-primary">🕒 مجدولة</span>';
 
   const group = sessionState.group || {
     id: 'grp-1',
@@ -35,31 +44,46 @@ export function renderSessionsView(sessionState = {}, user = {}) {
       <div class="card" style="margin: 0;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               <h2 class="card-title" style="margin: 0; font-size: 1.25rem;">${group.name}</h2>
-              <span class="badge ${isSessionEnded ? 'badge-secondary' : 'badge-success'}">
-                ${isSessionEnded ? '🏁 الحصة منتهية' : '🟢 الحصة جارية'}
-              </span>
+              ${statusBadge}
+              ${isExtra ? '<span class="badge" style="background:#7c3aed;color:#fff;">⭐ حصة إضافية</span>' : ''}
             </div>
             <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              حصة رقم 4 • تاريخ: ${new Date().toLocaleDateString('ar-EG')}
+              حصة رقم ${sessionState.session_number || 4} • تاريخ: ${sessionState.session_date || new Date().toLocaleDateString('ar-EG')}
+              ${sessionState.rescheduled_to_date ? ` • الموعد الجديد: ${sessionState.rescheduled_to_date}` : ''}
+              ${sessionState.cancellation_reason ? ` • سبب الإلغاء: ${sessionState.cancellation_reason}` : ''}
             </div>
           </div>
 
-          <!-- Session Flow Buttons (DEV-13) -->
+          <!-- Session Flow Buttons (DEV-13 & DEV-50) -->
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            ${!isSessionEnded ? `
+            ${!isAssistant && !isCancelled && !isRescheduled ? `
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openCancelSessionModal('${sessionState.id || ''}')" style="font-size: 0.85rem;">
+                ❌ إلغاء الحصة
+              </button>
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openRescheduleSessionModal('${sessionState.id || ''}')" style="font-size: 0.85rem;">
+                📅 تأجيل الحصة
+              </button>
+            ` : ''}
+            ${!isAssistant ? `
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openExtraSessionModal('${group.id || ''}')" style="font-size: 0.85rem;">
+                ➕ حصة إضافية
+              </button>
+            ` : ''}
+            ${!isSessionEnded && !isCancelled && !isRescheduled ? `
               <button class="btn btn-secondary" onclick="window.centrlyApp.endActiveSession()" style="font-weight: 700;">
                 ⏹ إنهاء الحصة (End Session)
               </button>
-            ` : `
+            ` : ''}
+            ${isSessionEnded ? `
               <button class="btn btn-primary" onclick="window.centrlyApp.dispatchSessionWhatsAppMessages()" style="font-weight: 700; background: #25D366; border-color: #25D366; color: #fff;">
                 💬 إرسال رسائل الواتساب للغياب والملاحظات
               </button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openReceiptModal()">
                 🧾 طباعة الإيصال والتصفية
               </button>
-            `}
+            ` : ''}
           </div>
         </div>
       </div>

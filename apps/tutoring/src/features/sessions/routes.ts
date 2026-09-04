@@ -3,6 +3,9 @@ import { AuthenticatedRequest } from "../../shared/types/index.js";
 import {
   validateBody,
   createSessionSchema,
+  cancelSessionSchema,
+  rescheduleSessionSchema,
+  extraSessionSchema,
   quizScoreSchema,
 } from "../../shared/middleware/validation.js";
 import { requireFinancialAccess } from "../../shared/middleware/auth.js";
@@ -72,6 +75,108 @@ sessionsRouter.post("/:id/end", async (req: AuthenticatedRequest, res: Response)
     });
   }
 });
+
+function requireTeacherOrAdmin(req: AuthenticatedRequest, res: Response): boolean {
+  if (req.user?.role === "assistant") {
+    res.status(403).json({
+      error: {
+        code: "FORBIDDEN",
+        message: "Assistants are not permitted to manage session scheduling",
+      },
+    });
+    return false;
+  }
+  return true;
+}
+
+// POST /api/sessions/:id/cancel - Cancel a session and notify parents
+sessionsRouter.post(
+  "/:id/cancel",
+  validateBody(cancelSessionSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (!requireTeacherOrAdmin(req, res)) return;
+
+    const tenantId = req.user?.tenant_id;
+    const { id: sessionId } = req.params;
+
+    if (!tenantId && req.user?.role !== "admin") {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+      return;
+    }
+
+    try {
+      const service = resolveSessionsService(req);
+      const result = await service.cancelSession(tenantId || "", sessionId, req.body);
+      res.status(200).json(result);
+    } catch (err: unknown) {
+      const errorMsg = (err as Error).message;
+      if (errorMsg === "SESSION_NOT_FOUND") {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found" } });
+        return;
+      }
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to cancel session", details: errorMsg },
+      });
+    }
+  }
+);
+
+// POST /api/sessions/:id/reschedule - Reschedule a session and notify parents
+sessionsRouter.post(
+  "/:id/reschedule",
+  validateBody(rescheduleSessionSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (!requireTeacherOrAdmin(req, res)) return;
+
+    const tenantId = req.user?.tenant_id;
+    const { id: sessionId } = req.params;
+
+    if (!tenantId && req.user?.role !== "admin") {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+      return;
+    }
+
+    try {
+      const service = resolveSessionsService(req);
+      const result = await service.rescheduleSession(tenantId || "", sessionId, req.body);
+      res.status(200).json(result);
+    } catch (err: unknown) {
+      const errorMsg = (err as Error).message;
+      if (errorMsg === "SESSION_NOT_FOUND") {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found" } });
+        return;
+      }
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to reschedule session", details: errorMsg },
+      });
+    }
+  }
+);
+
+// POST /api/sessions/extra - Create an extra session and notify parents
+sessionsRouter.post(
+  "/extra",
+  validateBody(extraSessionSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (!requireTeacherOrAdmin(req, res)) return;
+
+    const tenantId = req.user?.tenant_id;
+    if (!tenantId && req.user?.role !== "admin") {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+      return;
+    }
+
+    try {
+      const service = resolveSessionsService(req);
+      const result = await service.createExtraSession(tenantId || "", req.body);
+      res.status(201).json(result);
+    } catch (err: unknown) {
+      res.status(400).json({
+        error: { code: "BAD_REQUEST", message: (err as Error).message },
+      });
+    }
+  }
+);
 
 // GET /api/sessions/:id - Retrieve session with attendance and quiz scores
 sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
