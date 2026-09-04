@@ -166,4 +166,53 @@ test("DEV-HTTPS.1 & DEV-HTTPS.2: Security headers are present on API responses",
   const csp = res.headers.get("content-security-policy");
   assert.ok(csp && csp.includes("default-src 'self'"));
 });
+// ========================================================
+// DEV-60: Startup Environment Validation (Zod) Tests
+// ========================================================
 
+test("DEV-60: validateEnv passes with valid configuration", async () => {
+  const { validateEnv } = await import("../dist/config/index.js");
+  const valid = validateEnv({
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_ANON_KEY: "valid-supabase-anon-key-12345",
+    PORT: "4000",
+    NODE_ENV: "test",
+    INTERNAL_API_SECRET: "strong-secret-phrase",
+  });
+  assert.equal(valid.PORT, 4000);
+  assert.equal(valid.NODE_ENV, "test");
+  assert.equal(valid.SUPABASE_URL, "https://example.supabase.co");
+  assert.equal(valid.INTERNAL_API_SECRET, "strong-secret-phrase");
+  assert.equal(valid.FOUNDER_WHATSAPP_PHONE, "01000000000");
+  assert.equal(valid.FOUNDER_ALERT_EMAIL, "admin@centrly.app");
+});
+
+test("DEV-60: validateEnv rejects invalid SUPABASE_URL", async () => {
+  const { validateEnv } = await import("../dist/config/index.js");
+  assert.throws(
+    () => {
+      validateEnv({
+        SUPABASE_URL: "not-a-valid-url",
+        SUPABASE_ANON_KEY: "valid-supabase-anon-key-12345",
+      });
+    },
+    {
+      message: /SUPABASE_URL must be a valid URL/,
+    }
+  );
+});
+
+test("DEV-60: validateEnv rejects short SUPABASE_ANON_KEY", async () => {
+  const { validateEnv } = await import("../dist/config/index.js");
+  assert.throws(
+    () => {
+      validateEnv({
+        SUPABASE_URL: "https://example.supabase.co",
+        SUPABASE_ANON_KEY: "short",
+      });
+    },
+    {
+      message: /SUPABASE_ANON_KEY is required and must be a valid key/,
+    }
+  );
+});
