@@ -109,6 +109,37 @@ export class SupabaseAttendanceRepository implements IAttendanceRepository {
     return data as unknown as AttendanceRecord[];
   }
 
+  async getAttendanceWithStudentsForSession(
+    sessionId: string
+  ): Promise<import("./types.js").AttendanceRecordWithStudent[]> {
+    const { data, error } = await this.supabase
+      .from("attendance")
+      .select(
+        "id, tenant_id, session_id, student_id, attended, comment, homework_status, is_makeup, home_group_id, sent, wa_status, idempotency_key, created_at, students(id, name, parent_phone, student_code, student_phone, fee_override, exempt)"
+      )
+      .eq("session_id", sessionId);
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data as unknown as import("./types.js").AttendanceRecordWithStudent[];
+  }
+
+  async updateAttendanceStatus(
+    id: string,
+    updates: { sent?: boolean; wa_status?: string }
+  ): Promise<void> {
+    const { error } = await this.supabase
+      .from("attendance")
+      .update(updates)
+      .eq("id", id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
   async getMessageLogsForTenant(
     tenantId: string
   ): Promise<Array<{ idempotency_key: string; status: string; error_detail?: string | null; created_at: string }>> {

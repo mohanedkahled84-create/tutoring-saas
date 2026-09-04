@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { validateBody, saveTemplateSchema } from "../../shared/middleware/validation.js";
 import { getServices } from "../../composition.js";
-import { WhatsAppNotificationsService } from "./service.js";
+import { WhatsAppNotificationsService, getDailyQuotaStatus } from "./service.js";
 
 function resolveWhatsAppService(req: AuthenticatedRequest): WhatsAppNotificationsService {
   const services = getServices(req);
@@ -18,6 +18,16 @@ export const whatsappRouter = Router();
 const testMessageSchema = z.object({
   phone: z.string().min(7, "Valid phone number is required").max(25),
   message: z.string().optional(),
+});
+
+whatsappRouter.get("/quota", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  if (!tenantId && req.user?.role !== "admin") {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
+  const quota = getDailyQuotaStatus(tenantId || "default");
+  res.json(quota);
 });
 
 whatsappRouter.get("/status", async (req: AuthenticatedRequest, res: Response): Promise<void> => {

@@ -30,6 +30,30 @@ export class SupabaseSessionsRepository implements ISessionsRepository {
     return data as unknown as SessionModel;
   }
 
+  async updateSessionStatus(
+    sessionId: string,
+    status: "in_progress" | "ended" | "cancelled",
+    endedAt?: string | null
+  ): Promise<SessionModel> {
+    const updatePayload: Record<string, unknown> = { status };
+    if (endedAt !== undefined) {
+      updatePayload.ended_at = endedAt;
+    }
+
+    const { data, error } = await this.supabase
+      .from("sessions")
+      .update(updatePayload)
+      .eq("id", sessionId)
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(error ? error.message : "Failed to update session status");
+    }
+
+    return data as unknown as SessionModel;
+  }
+
   async getSessionWithDetails(sessionId: string): Promise<{
     session: SessionModel;
     attendance: unknown[];

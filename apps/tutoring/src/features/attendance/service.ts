@@ -13,6 +13,9 @@ import {
   SyncItemOutcome,
   DeliveryStatusReport,
   DeliveryStatusItem,
+  IWhatsAppBatchDispatcher,
+  DispatchSessionMessagesResult,
+  ResendMessageResult,
 } from "./types.js";
 
 /**
@@ -341,6 +344,193 @@ export class AttendanceService {
       sent_count: sentCount,
       failed_count: failedCount,
       deliveries: deliveryReports,
+    };
+  }
+
+  /**
+   * DEV-13 (Founder correction) & DEV-36:
+   * Explicitly dispatches batch WhatsApp notifications for an ended session.
+   * Gathers absent students and present students with teacher comments.
+   * Runs through WhatsAppNotificationsService batchSendWithPacing.
+   */
+  async dispatchSessionMessages(
+    tenantId: string,
+    sessionId: string,
+    whatsAppDispatcher: IWhatsAppBatchDispatcher,
+    options?: { pacingDelayMs?: number; dailyCap?: number }
+  ): Promise<DispatchSessionMessagesResult> {
+    const attendanceRecords = await this.repository.getAttendanceWithStudentsForSession(sessionId);
+
+    // Filter to candidates needing notifications
+    const itemsToSend: Array<{
+      attendanceId: string;
+      student_id: string;
+      student_name: string;
+      parent_phone: string;
+      session_id: string;
+      attended: boolean;
+      comment?: string | null;
+      idempotency_key: string;
+      decision: string;
+    }> = [];
+
+    const preFilteredResults: DispatchSessionMessagesResult["results"] = [];
+
+    for (const record of attendanceRecords) {
+      const student = record.students;
+      const studentName = student?.name || "طالب";
+      const parentPhone = student?.parent_phone || "";
+      const decision = evaluateNotificationDecision(record.attended, record.comment);
+
+      if (decision === "none") {
+        preFilteredResults.push({
+          student_id: record.student_id,
+          student_name: studentName,
+          phone: parentPhone,
+          decision,
+          status: "skipped",
+          reason: "Present student without teacher comment",
+        });
+        continue;
+      }
+
+      if (record.sent) {
+        preFilteredResults.push({
+          student_id: record.student_id,
+          student_name: studentName,
+          phone: parentPhone,
+          decision,
+          status: "already_sent",
+          reason: "Message was already marked sent",
+        });
+        continue;
+      }
+
+      if (!parentPhone || parentPhone.trim().length < 9) {
+        preFilteredResults.push({
+          student_id: record.student_id,
+          student_name: studentName,
+          phone: parentPhone,
+          decision,
+          status: "failed",
+          reason: "Missing or invalid parent phone number",
+        });
+        continue;
+      }
+
+      itemsToSend.push({
+        attendanceId: record.id,
+        student_id: record.student_id,
+        student_name: studentName,
+        parent_phone: parentPhone,
+        session_id: sessionId,
+        attended: record.attended,
+        comment: record.comment,
+        idempotency_key: record.idempotency_key,
+        decision,
+      });
+    }
+
+    // Call WhatsApp batch pacing engine
+    const batchResult = await whatsAppDispatcher.batchSendWithPacing(
+      tenantId,
+      itemsToSend,
+      options
+    );
+
+    // Update attendance records in DB
+    for (let i = 0; i < itemsToSend.length; i++) {
+      const item = itemsToSend[i];
+      const sendRes = batchResult.results[i];
+      if (sendRes && sendRes.status === "sent") {
+        await this.repository.updateAttendanceStatus(item.attendanceId, {
+          sent: true,
+          wa_status: "sent",
+        });
+        preFilteredResults.push({
+          student_id: item.student_id,
+          student_name: item.student_name,
+          phone: item.parent_phone,
+          decision: item.decision,
+          status: "dispatched",
+        });
+      } else {
+        await this.repository.updateAttendanceStatus(item.attendanceId, {
+          sent: false,
+          wa_status: sendRes?.status === "skipped_daily_cap" ? "queued" : "failed",
+        });
+        preFilteredResults.push({
+          student_id: item.student_id,
+          student_name: item.student_name,
+          phone: item.parent_phone,
+          decision: item.decision,
+          status: "failed",
+          reason: sendRes?.error || "Send failed",
+        });
+      }
+    }
+
+    return {
+      session_id: sessionId,
+      total_students: attendanceRecords.length,
+      eligible_count: itemsToSend.length,
+      dispatched_count: batchResult.sent_count,
+      skipped_count: preFilteredResults.filter((r) => r.status === "skipped" || r.status === "already_sent").length,
+      results: preFilteredResults,
+    };
+  }
+
+  /**
+   * DEV-ATN.3: Manual Resend Action
+   * Teacher manually resends a failed or needs_review notification for a single student.
+   * Generates a safe resend idempotency key and dispatches webhook.
+   */
+  async resendStudentMessage(
+    tenantId: string,
+    sessionId: string,
+    studentId: string,
+    whatsAppDispatcher: IWhatsAppBatchDispatcher
+  ): Promise<ResendMessageResult> {
+    const student = await this.repository.findStudent(tenantId, studentId);
+    if (!student) {
+      throw new Error("STUDENT_NOT_FOUND");
+    }
+    if (!student.parent_phone) {
+      throw new Error("MISSING_PARENT_PHONE");
+    }
+
+    const attendanceRecords = await this.repository.getAttendanceForSession(sessionId);
+    const attRecord = attendanceRecords.find((a) => a.student_id === studentId);
+    if (!attRecord) {
+      throw new Error("ATTENDANCE_NOT_FOUND");
+    }
+
+    const resendKey = `${tenantId}:${studentId}:${sessionId}:resend:${Date.now()}`;
+
+    await whatsAppDispatcher.dispatchAttendanceWebhook({
+      tenant_id: tenantId,
+      event_type: "attendance_recorded",
+      student_id: studentId,
+      student_name: student.name,
+      session_id: sessionId,
+      attended: attRecord.attended,
+      comment: attRecord.comment || null,
+      parent_phone: student.parent_phone,
+      idempotency_key: resendKey,
+    });
+
+    await this.repository.updateAttendanceStatus(attRecord.id, {
+      sent: true,
+      wa_status: "sent",
+    });
+
+    return {
+      success: true,
+      message: "Notification resent successfully",
+      student_id: studentId,
+      student_name: student.name,
+      phone: student.parent_phone,
+      resend_idempotency_key: resendKey,
     };
   }
 }

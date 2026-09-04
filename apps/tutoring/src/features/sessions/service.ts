@@ -18,6 +18,29 @@ export class SessionsService {
     return this.repository.createSession(tenantId, input);
   }
 
+  async endSession(
+    tenantId: string,
+    sessionId: string
+  ): Promise<{
+    session: SessionModel;
+    status: string;
+    ended_at: string;
+    message: string;
+  }> {
+    const sessionData = await this.repository.getSessionWithGroup(sessionId);
+    if (!sessionData) {
+      throw new Error("SESSION_NOT_FOUND");
+    }
+    const endedAt = new Date().toISOString();
+    const updated = await this.repository.updateSessionStatus(sessionId, "ended", endedAt);
+    return {
+      session: updated,
+      status: "ended",
+      ended_at: endedAt,
+      message: "Session ended successfully. Attendance finalized.",
+    };
+  }
+
   async getSessionDetails(sessionId: string): Promise<{
     session: SessionModel;
     attendance: unknown[];

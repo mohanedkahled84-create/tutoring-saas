@@ -30,8 +30,73 @@ export interface AttendanceRecord {
   is_makeup?: boolean;
   home_group_id?: string | null;
   sent?: boolean;
+  wa_status?: string;
   idempotency_key: string;
   created_at: string;
+}
+
+export interface AttendanceRecordWithStudent extends AttendanceRecord {
+  students?: StudentProfile | null;
+}
+
+export interface DispatchSessionMessagesResult {
+  session_id: string;
+  total_students: number;
+  eligible_count: number;
+  dispatched_count: number;
+  skipped_count: number;
+  results: Array<{
+    student_id: string;
+    student_name: string;
+    phone?: string | null;
+    decision: string;
+    status: "dispatched" | "skipped" | "already_sent" | "failed";
+    reason?: string;
+  }>;
+}
+
+export interface ResendMessageResult {
+  success: boolean;
+  message: string;
+  student_id: string;
+  student_name: string;
+  phone: string;
+  resend_idempotency_key: string;
+}
+
+export interface IWhatsAppBatchDispatcher {
+  batchSendWithPacing(
+    tenantId: string,
+    items: Array<{
+      student_id: string;
+      student_name: string;
+      parent_phone: string;
+      session_id: string;
+      attended: boolean;
+      comment?: string | null;
+      idempotency_key: string;
+    }>,
+    options?: { pacingDelayMs?: number; dailyCap?: number }
+  ): Promise<{
+    sent_count: number;
+    results: Array<{
+      student_id: string;
+      student_name: string;
+      status: "sent" | "failed" | "skipped_daily_cap" | "skipped_circuit_open" | "skipped_no_comment";
+      error?: string;
+    }>;
+  }>;
+  dispatchAttendanceWebhook(payload: {
+    tenant_id: string;
+    event_type: "attendance_recorded";
+    student_id: string;
+    student_name: string | null;
+    session_id: string;
+    attended: boolean;
+    comment: string | null;
+    parent_phone: string;
+    idempotency_key: string;
+  }): Promise<boolean>;
 }
 
 export interface ScanStudentResult {
@@ -113,6 +178,13 @@ export interface IAttendanceRepository {
     studentIds: string[]
   ): Promise<Array<{ id: string; name: string; parent_phone: string }>>;
   getAttendanceForSession(sessionId: string): Promise<AttendanceRecord[]>;
+  getAttendanceWithStudentsForSession(
+    sessionId: string
+  ): Promise<AttendanceRecordWithStudent[]>;
+  updateAttendanceStatus(
+    id: string,
+    updates: { sent?: boolean; wa_status?: string }
+  ): Promise<void>;
   getMessageLogsForTenant(
     tenantId: string
   ): Promise<Array<{ idempotency_key: string; status: string; error_detail?: string | null; created_at: string }>>;

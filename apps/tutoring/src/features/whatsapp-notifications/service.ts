@@ -275,4 +275,207 @@ export class WhatsAppNotificationsService {
   async getConnectionStatus(tenantId?: string): Promise<WhatsAppConnectionStatus> {
     return this.repository.getConnectionStatus(tenantId);
   }
+
+  /**
+   * DEV-36: WhatsApp Send Pacing & Batch Queue Strategy
+   * Loops through batch with 4-9s jitter delay, checks daily volume cap,
+   * checks circuit breaker, and enforces idempotency.
+   */
+  async batchSendWithPacing(
+    tenantId: string,
+    items: Array<{
+      student_id: string;
+      student_name: string;
+      parent_phone: string;
+      session_id: string;
+      attended: boolean;
+      comment?: string | null;
+      idempotency_key: string;
+    }>,
+    options?: {
+      pacingDelayMs?: number;
+      dailyCap?: number;
+    }
+  ): Promise<{
+    total: number;
+    sent_count: number;
+    skipped_count: number;
+    failed_count: number;
+    daily_quota: {
+      sent_today: number;
+      daily_limit: number;
+      remaining: number;
+      cap_reached: boolean;
+      approaching_cap: boolean;
+      warning?: string;
+    };
+    results: Array<{
+      student_id: string;
+      student_name: string;
+      status: "sent" | "failed" | "skipped_daily_cap" | "skipped_circuit_open" | "skipped_no_comment";
+      error?: string;
+      delay_applied_ms?: number;
+    }>;
+  }> {
+    const dailyCap = options?.dailyCap || DEFAULT_SAFE_DAILY_CAP;
+    const results: Array<{
+      student_id: string;
+      student_name: string;
+      status: "sent" | "failed" | "skipped_daily_cap" | "skipped_circuit_open" | "skipped_no_comment";
+      error?: string;
+      delay_applied_ms?: number;
+    }> = [];
+
+    let sentCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      // 1. Check Circuit Breaker
+      const health = getHealthStatus(tenantId);
+      if (!health.can_send) {
+        skippedCount += 1;
+        results.push({
+          student_id: item.student_id,
+          student_name: item.student_name,
+          status: "skipped_circuit_open",
+          error: `Circuit breaker is paused until ${health.paused_until || "unknown"}`,
+        });
+        continue;
+      }
+
+      // 2. Check Daily Volume Cap
+      const currentQuota = getDailyQuotaStatus(tenantId, dailyCap);
+      if (currentQuota.cap_reached) {
+        skippedCount += 1;
+        results.push({
+          student_id: item.student_id,
+          student_name: item.student_name,
+          status: "skipped_daily_cap",
+          error: `Daily volume cap of ${dailyCap} reached for tenant. Further sends halted to prevent Meta ban.`,
+        });
+        continue;
+      }
+
+      // 3. Apply Jitter Delay (if not first item and delay requested)
+      let delayApplied = 0;
+      if (i > 0) {
+        delayApplied = options?.pacingDelayMs !== undefined ? options.pacingDelayMs : calculateJitterDelay();
+        if (delayApplied > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayApplied));
+        }
+      }
+
+      // 4. Dispatch Webhook
+      try {
+        const delivered = await this.dispatchAttendanceWebhook({
+          tenant_id: tenantId,
+          event_type: "attendance_recorded",
+          student_id: item.student_id,
+          student_name: item.student_name,
+          session_id: item.session_id,
+          attended: item.attended,
+          comment: item.comment || null,
+          parent_phone: item.parent_phone,
+          idempotency_key: item.idempotency_key,
+        });
+
+        if (delivered) {
+          sentCount += 1;
+          incrementTenantDailyCount(tenantId, 1);
+          recordHealthSuccess(tenantId);
+          results.push({
+            student_id: item.student_id,
+            student_name: item.student_name,
+            status: "sent",
+            delay_applied_ms: delayApplied,
+          });
+        } else {
+          skippedCount += 1;
+          results.push({
+            student_id: item.student_id,
+            student_name: item.student_name,
+            status: "skipped_no_comment",
+            delay_applied_ms: delayApplied,
+          });
+        }
+      } catch (err: unknown) {
+        failedCount += 1;
+        recordHealthError(tenantId, "timeout");
+        results.push({
+          student_id: item.student_id,
+          student_name: item.student_name,
+          status: "failed",
+          error: (err as Error).message,
+          delay_applied_ms: delayApplied,
+        });
+      }
+    }
+
+    return {
+      total: items.length,
+      sent_count: sentCount,
+      skipped_count: skippedCount,
+      failed_count: failedCount,
+      daily_quota: getDailyQuotaStatus(tenantId, dailyCap),
+      results,
+    };
+  }
+}
+
+// Daily Volume Tracking (DEV-36)
+interface DailyQuotaRecord {
+  date: string;
+  sent_count: number;
+}
+const tenantDailyQuotaMap = new Map<string, DailyQuotaRecord>();
+export const DEFAULT_SAFE_DAILY_CAP = 500;
+const WARNING_THRESHOLD_PERCENT = 0.8; // 80% = 400 messages
+
+export function getTodayDateString(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+export function getTenantDailyCount(tenantId: string): number {
+  const today = getTodayDateString();
+  const record = tenantDailyQuotaMap.get(tenantId);
+  if (!record || record.date !== today) {
+    return 0;
+  }
+  return record.sent_count;
+}
+
+export function incrementTenantDailyCount(tenantId: string, count = 1): number {
+  const today = getTodayDateString();
+  let record = tenantDailyQuotaMap.get(tenantId);
+  if (!record || record.date !== today) {
+    record = { date: today, sent_count: 0 };
+    tenantDailyQuotaMap.set(tenantId, record);
+  }
+  record.sent_count += count;
+  return record.sent_count;
+}
+
+export function resetTenantDailyCount(tenantId: string): void {
+  tenantDailyQuotaMap.delete(tenantId);
+}
+
+export function getDailyQuotaStatus(tenantId: string, dailyCap = DEFAULT_SAFE_DAILY_CAP) {
+  const sentToday = getTenantDailyCount(tenantId);
+  const remaining = Math.max(0, dailyCap - sentToday);
+  const isCapReached = sentToday >= dailyCap;
+  const isApproachingCap = sentToday >= dailyCap * WARNING_THRESHOLD_PERCENT;
+
+  return {
+    sent_today: sentToday,
+    daily_limit: dailyCap,
+    remaining,
+    cap_reached: isCapReached,
+    approaching_cap: isApproachingCap,
+    warning: isApproachingCap
+      ? `تنبيه: اقترب حسابك من الحد اليومي الآمن (${sentToday}/${dailyCap} رسالة اليوم). يُنصح بجدولة الإرسال لتجنب حظر الرقم من واتساب.`
+      : undefined,
+  };
 }

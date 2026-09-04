@@ -9,7 +9,6 @@ import {
 import { attendanceRateLimiter } from "../../shared/middleware/rateLimit.js";
 import { getServices } from "../../composition.js";
 import { AttendanceService } from "./service.js";
-import { dispatchAttendanceWebhook } from "../whatsapp-notifications/index.js";
 
 export const attendanceRouter = Router();
 
@@ -36,21 +35,6 @@ attendanceRouter.post(
     try {
       const service = resolveAttendanceService(req);
       const result = await service.scanStudent(tenantId || "", sessionId, req.body);
-
-      // Trigger n8n attendance webhook if comment is present and student parent phone is available
-      if (result.webhookCandidate) {
-        dispatchAttendanceWebhook({
-          tenant_id: tenantId!,
-          event_type: "attendance_recorded",
-          student_id: result.webhookCandidate.studentId,
-          student_name: result.webhookCandidate.studentName,
-          session_id: sessionId,
-          attended: true,
-          comment: result.webhookCandidate.comment,
-          parent_phone: result.webhookCandidate.parentPhone,
-          idempotency_key: result.webhookCandidate.idempotencyKey,
-        }).catch(() => {});
-      }
 
       if (result.already_recorded) {
         res.status(200).json({
@@ -103,32 +87,6 @@ attendanceRouter.post(
     try {
       const service = resolveAttendanceService(req);
       const result = await service.recordBatchAttendance(tenantId || "", sessionId, records);
-
-      // Async webhook dispatch for eligible notifications
-      if (result.notificationCandidates.length > 0) {
-        (async () => {
-          const studentIds = result.notificationCandidates.map((c) => c.studentId);
-          const studentRows = await (service as unknown as { repository: { getStudentsByIds: (t: string, ids: string[]) => Promise<Array<{ id: string; name: string; parent_phone: string }>> } }).repository.getStudentsByIds(tenantId || "", studentIds);
-          const studentMap = new Map(studentRows.map((s) => [s.id, s]));
-
-          for (const item of result.notificationCandidates) {
-            const s = studentMap.get(item.studentId);
-            if (s && s.parent_phone) {
-              dispatchAttendanceWebhook({
-                tenant_id: tenantId!,
-                event_type: "attendance_recorded",
-                student_id: item.studentId,
-                student_name: s.name,
-                session_id: sessionId,
-                attended: item.attended,
-                comment: item.comment || null,
-                parent_phone: s.parent_phone,
-                idempotency_key: item.idempotencyKey,
-              }).catch(() => {});
-            }
-          }
-        })().catch(() => {});
-      }
 
       res.status(200).json({
         message: result.message,
@@ -189,6 +147,82 @@ attendanceRouter.get(
     } catch (err: unknown) {
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Failed to fetch delivery status", details: (err as Error).message },
+      });
+    }
+  }
+);
+
+// DEV-13 (Founder correction) & DEV-36: Explicit batch dispatch of WhatsApp messages
+attendanceRouter.post(
+  "/:id/send-messages",
+  attendanceRateLimiter,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id;
+    const { id: sessionId } = req.params;
+
+    if (!tenantId && req.user?.role !== "admin") {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+      return;
+    }
+
+    try {
+      const services = getServices(req);
+      const attendanceService = services.attendance as AttendanceService;
+      const whatsAppService = services.whatsapp;
+
+      const result = await attendanceService.dispatchSessionMessages(
+        tenantId || "",
+        sessionId,
+        whatsAppService
+      );
+
+      res.status(200).json(result);
+    } catch (err: unknown) {
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to dispatch session messages", details: (err as Error).message },
+      });
+    }
+  }
+);
+
+// DEV-ATN.3: Manual resend action for a specific student's message
+attendanceRouter.post(
+  "/:id/resend/:student_id",
+  attendanceRateLimiter,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id;
+    const { id: sessionId, student_id: studentId } = req.params;
+
+    if (!tenantId && req.user?.role !== "admin") {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+      return;
+    }
+
+    try {
+      const services = getServices(req);
+      const attendanceService = services.attendance as AttendanceService;
+      const whatsAppService = services.whatsapp;
+
+      const result = await attendanceService.resendStudentMessage(
+        tenantId || "",
+        sessionId,
+        studentId,
+        whatsAppService
+      );
+
+      res.status(200).json(result);
+    } catch (err: unknown) {
+      const errorMsg = (err as Error).message;
+      if (errorMsg === "STUDENT_NOT_FOUND" || errorMsg === "ATTENDANCE_NOT_FOUND") {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: errorMsg } });
+        return;
+      }
+      if (errorMsg === "MISSING_PARENT_PHONE") {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: "Student has no parent phone registered" } });
+        return;
+      }
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to resend message", details: errorMsg },
       });
     }
   }

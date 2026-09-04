@@ -11,6 +11,8 @@ export interface SessionModel {
   session_number: number;
   session_date: string;
   created_at: string;
+  status?: "in_progress" | "ended" | "cancelled";
+  ended_at?: string | null;
   groups?: {
     id?: string;
     name?: string;
@@ -135,6 +137,11 @@ export interface ISessionsRepository {
     maxScore: number
   ): Promise<QuizScoreRecord>;
   getQuizScoresForSession(sessionId: string): Promise<QuizScoreRecord[]>;
+  updateSessionStatus(
+    sessionId: string,
+    status: "in_progress" | "ended" | "cancelled",
+    endedAt?: string | null
+  ): Promise<SessionModel>;
   logReceiptMessage(
     tenantId: string,
     idempotencyKey: string,
