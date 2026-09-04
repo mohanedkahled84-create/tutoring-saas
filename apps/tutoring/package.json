@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "node --watch src/server.ts",
-    "test": "node --test tests/**/*.test.js"
+    "test": "node --test tests/**/*.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
