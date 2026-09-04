@@ -28,9 +28,14 @@ import {
   RiskWatchlistService,
   SupabaseRiskWatchlistRepository,
 } from "./features/risk-watchlist/index.js";
+import {
+  ActivityLogService,
+  SupabaseActivityLogRepository,
+} from "./features/activity-log/index.js";
 
 export interface AppServices {
   riskWatchlist: RiskWatchlistService;
+  activityLog: ActivityLogService;
   [serviceName: string]: unknown;
 }
 
@@ -41,6 +46,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
   const effectiveClient = client || supabasePublic;
   return {
     riskWatchlist: new RiskWatchlistService(new SupabaseRiskWatchlistRepository(effectiveClient)),
+    activityLog: new ActivityLogService(new SupabaseActivityLogRepository(effectiveClient)),
     _client: effectiveClient,
   };
 }

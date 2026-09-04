@@ -16,7 +16,7 @@ import { riskRouter } from "./features/risk-watchlist/index.js";
 import { injectServices } from "./composition.js";
 import { importRouter } from "./routes/import.js";
 import { billingRouter } from "./routes/billing.js";
-import { activityLogsRouter } from "./routes/activityLogs.js";
+import { activityLogsRouter } from "./features/activity-log/index.js";
 import { templatesRouter } from "./routes/templates.js";
 import { whatsappRouter } from "./routes/whatsapp.js";
 import { publicRouter } from "./routes/public.js";
