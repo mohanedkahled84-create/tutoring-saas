@@ -8,7 +8,7 @@ import {
   recordHealthSuccess,
   getHealthStatus,
   validateBusinessProfile,
-} from "../services/evolutionHardening.js";
+} from "../features/whatsapp-notifications/index.js";
 import { dispatchSubscriptionRenewalReminders } from "../services/subscriptionReminderService.js";
 
 export const internalRouter = Router();

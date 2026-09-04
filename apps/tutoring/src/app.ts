@@ -17,8 +17,7 @@ import { injectServices } from "./composition.js";
 import { importRouter } from "./routes/import.js";
 import { billingRouter } from "./routes/billing.js";
 import { activityLogsRouter } from "./features/activity-log/index.js";
-import { templatesRouter } from "./routes/templates.js";
-import { whatsappRouter } from "./routes/whatsapp.js";
+import { templatesRouter, whatsappRouter } from "./features/whatsapp-notifications/index.js";
 import { publicRouter } from "./routes/public.js";
 import { internalRouter } from "./routes/internal.js";
 

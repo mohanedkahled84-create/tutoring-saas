@@ -1,26 +1,28 @@
-﻿import { logger } from "../utils/logger.js";
+import { logger } from "../../utils/logger.js";
+import { config } from "../../config/index.js";
+import {
+  IWhatsAppNotificationsRepository,
+  JitterConfig,
+  DEFAULT_JITTER_CONFIG,
+  ConnectionWarmUpInfo,
+  WarmUpCheckResult,
+  WARMUP_SCHEDULE,
+  MAX_DAILY_VOLUME,
+  CircuitState,
+  HealthStateResult,
+  BusinessProfileData,
+  ProfileChecklistResult,
+  AttendanceWebhookPayload,
+  MessageTemplate,
+  WhatsAppConnectionStatus,
+} from "./types.js";
 
-// ============================================================================
-// DEV-EAH.1: Randomized Send Delay (Jitter)
-// Replaces fixed delays with randomized delay between 4,000ms and 9,000ms (~7-10 msgs/min)
-// ============================================================================
-export interface JitterConfig {
-  minDelayMs: number; // e.g. 4000
-  maxDelayMs: number; // e.g. 9000
-}
-
-export const DEFAULT_JITTER_CONFIG: JitterConfig = {
-  minDelayMs: 4000,
-  maxDelayMs: 9000,
-};
-
+// Anti-ban Jitter
 let lastGeneratedDelay = 0;
+export function calculateJitterDelay(jitterConfig: JitterConfig = DEFAULT_JITTER_CONFIG): number {
+  const range = jitterConfig.maxDelayMs - jitterConfig.minDelayMs;
+  let delay = jitterConfig.minDelayMs + Math.floor(Math.random() * (range + 1));
 
-export function calculateJitterDelay(config: JitterConfig = DEFAULT_JITTER_CONFIG): number {
-  const range = config.maxDelayMs - config.minDelayMs;
-  let delay = config.minDelayMs + Math.floor(Math.random() * (range + 1));
-
-  // Ensure two consecutive calls never have identical millisecond timing
   if (delay === lastGeneratedDelay) {
     delay += Math.random() > 0.5 ? 47 : -47;
   }
@@ -28,41 +30,11 @@ export function calculateJitterDelay(config: JitterConfig = DEFAULT_JITTER_CONFI
   return delay;
 }
 
-// ============================================================================
-// DEV-EAH.2: New-Number Warm-Up Protocol
-// Ramps up new WhatsApp numbers over 5-7 days. Omar Gamal is legacy exempt.
-// ============================================================================
-export const WARMUP_SCHEDULE: Record<number, number> = {
-  1: 20, // Day 1: max 20 msgs
-  2: 40, // Day 2: max 40 msgs
-  3: 80, // Day 3: max 80 msgs
-  4: 150, // Day 4: max 150 msgs
-  5: 300, // Day 5: max 300 msgs
-  6: 600, // Day 6: max 600 msgs
-};
-
-export const MAX_DAILY_VOLUME = 1200; // Normal steady-state cap
-
-export interface ConnectionWarmUpInfo {
-  connected_at: string | Date;
-  is_legacy_exempt?: boolean;
-}
-
-export interface WarmUpCheckResult {
-  allowed: boolean;
-  day_number: number;
-  daily_limit: number;
-  sent_today: number;
-  remaining: number;
-  is_warm: boolean;
-  reason?: string;
-}
-
+// Anti-ban Warm-up
 export function checkWarmUpLimit(
   connection: ConnectionWarmUpInfo,
   sentTodayCount: number
 ): WarmUpCheckResult {
-  // Omar Gamal's legacy instance has run for months -> exempt from warm-up
   if (connection.is_legacy_exempt) {
     return {
       allowed: sentTodayCount < MAX_DAILY_VOLUME,
@@ -96,12 +68,7 @@ export function checkWarmUpLimit(
   };
 }
 
-// ============================================================================
-// DEV-EAH.3: Connection Health Monitoring & Circuit Breaker
-// Pauses sending automatically on repeated disconnects or 429 rate limit errors
-// ============================================================================
-export type CircuitState = "HEALTHY" | "DEGRADED" | "CIRCUIT_OPEN_PAUSED";
-
+// Anti-ban Circuit Breaker
 interface HealthState {
   recentErrors: Array<{ type: string; timestamp: number }>;
   circuitState: CircuitState;
@@ -109,9 +76,9 @@ interface HealthState {
 }
 
 const tenantHealthMap = new Map<string, HealthState>();
-const ERROR_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const ERROR_WINDOW_MS = 15 * 60 * 1000;
 const MAX_ERRORS_BEFORE_PAUSE = 3;
-const PAUSE_DURATION_MS = 30 * 60 * 1000; // 30 minutes cooldown
+const PAUSE_DURATION_MS = 30 * 60 * 1000;
 
 export function recordHealthSuccess(tenantId: string): void {
   const state = tenantHealthMap.get(tenantId);
@@ -133,7 +100,6 @@ export function recordHealthError(
     tenantHealthMap.set(tenantId, state);
   }
 
-  // Filter out expired errors
   state.recentErrors = state.recentErrors.filter((e) => now - e.timestamp < ERROR_WINDOW_MS);
   state.recentErrors.push({ type: errorType, timestamp: now });
 
@@ -150,12 +116,7 @@ export function recordHealthError(
   return state.circuitState;
 }
 
-export function getHealthStatus(tenantId: string): {
-  circuit_state: CircuitState;
-  can_send: boolean;
-  paused_until?: string;
-  error_count: number;
-} {
+export function getHealthStatus(tenantId: string): HealthStateResult {
   const state = tenantHealthMap.get(tenantId);
   const now = Date.now();
 
@@ -165,7 +126,6 @@ export function getHealthStatus(tenantId: string): {
 
   if (state.circuitState === "CIRCUIT_OPEN_PAUSED" && state.pausedUntil) {
     if (now >= state.pausedUntil) {
-      // Cooldown expired, move to degraded half-open
       state.circuitState = "DEGRADED";
       state.recentErrors = [];
       state.pausedUntil = undefined;
@@ -186,29 +146,7 @@ export function getHealthStatus(tenantId: string): {
   };
 }
 
-// ============================================================================
-// DEV-EAH.4: Business Profile Setup Checklist
-// Validates dedicated business profile so new numbers don't appear as blank spam bots
-// ============================================================================
-export interface BusinessProfileData {
-  business_name?: string | null;
-  profile_picture_url?: string | null;
-  category?: string | null;
-  description?: string | null;
-}
-
-export interface ProfileChecklistResult {
-  is_compliant: boolean;
-  score_percentage: number;
-  checklist: {
-    has_name: boolean;
-    has_profile_picture: boolean;
-    has_category: boolean;
-    has_description: boolean;
-  };
-  missing_requirements: string[];
-}
-
+// Anti-ban Profile Checklist
 export function validateBusinessProfile(profile: BusinessProfileData): ProfileChecklistResult {
   const has_name = Boolean(profile.business_name && profile.business_name.trim().length >= 3);
   const has_profile_picture = Boolean(
@@ -239,4 +177,102 @@ export function validateBusinessProfile(profile: BusinessProfileData): ProfileCh
     },
     missing_requirements: missing,
   };
+}
+
+// In-memory cache of dispatched idempotency keys for fast deduplication
+const dispatchedKeys = new Set<string>();
+
+export class WhatsAppNotificationsService {
+  constructor(private readonly repository: IWhatsAppNotificationsRepository) {}
+
+  /**
+   * DEV-WPA.3: Triggers the n8n attendance webhook exactly once per idempotency_key.
+   */
+  async dispatchAttendanceWebhook(payload: AttendanceWebhookPayload): Promise<boolean> {
+    const { idempotency_key, attended, comment } = payload;
+
+    if (attended === true && (!comment || comment.trim() === "")) {
+      logger.info(
+        `[WhatsAppService] Skipping present student without comment: ${payload.student_name}`
+      );
+      return false;
+    }
+
+    if (dispatchedKeys.has(idempotency_key)) {
+      logger.info(
+        `[WhatsAppService] Webhook already dispatched for key (in-memory): ${idempotency_key}`
+      );
+      return false;
+    }
+
+    const alreadyInDb = await this.repository.isMessageDispatched(idempotency_key);
+    if (alreadyInDb) {
+      dispatchedKeys.add(idempotency_key);
+      logger.info(
+        `[WhatsAppService] Webhook already logged in database for key: ${idempotency_key}`
+      );
+      return false;
+    }
+
+    dispatchedKeys.add(idempotency_key);
+    const webhookUrl = process.env.N8N_ATTENDANCE_WEBHOOK_URL;
+
+    if (!webhookUrl) {
+      logger.info(
+        `[WhatsAppService] [SIMULATED] n8n webhook triggered for ${payload.student_name} (${idempotency_key})`
+      );
+      return true;
+    }
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": config.internalApiSecret,
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (!response.ok) {
+        logger.warn(
+          `[WhatsAppService] n8n returned non-200 status (${response.status}) for ${idempotency_key}`
+        );
+        return false;
+      }
+
+      logger.info(
+        `[WhatsAppService] Webhook successfully delivered to n8n for ${payload.student_name} (${idempotency_key})`
+      );
+      return true;
+    } catch (err: unknown) {
+      logger.error(
+        `[WhatsAppService] Failed to dispatch webhook to n8n for ${idempotency_key}: ${(err as Error).message}`
+      );
+      return false;
+    }
+  }
+
+  async listTemplates(tenantId?: string): Promise<MessageTemplate[]> {
+    return this.repository.getTemplates(tenantId);
+  }
+
+  async saveTemplate(
+    tenantId: string,
+    templateType: string,
+    variants: unknown,
+    isActive = true
+  ): Promise<MessageTemplate> {
+    return this.repository.upsertTemplate({
+      tenant_id: tenantId,
+      template_type: templateType,
+      variants,
+      is_active: isActive,
+    });
+  }
+
+  async getConnectionStatus(tenantId?: string): Promise<WhatsAppConnectionStatus> {
+    return this.repository.getConnectionStatus(tenantId);
+  }
 }

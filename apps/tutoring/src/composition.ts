@@ -41,12 +41,17 @@ import {
   AttendanceService,
   SupabaseAttendanceRepository,
 } from "./features/attendance/index.js";
+import {
+  WhatsAppNotificationsService,
+  SupabaseWhatsAppNotificationsRepository,
+} from "./features/whatsapp-notifications/index.js";
 
 export interface AppServices {
   riskWatchlist: RiskWatchlistService;
   activityLog: ActivityLogService;
   sessions: SessionsService;
   attendance: AttendanceService;
+  whatsapp: WhatsAppNotificationsService;
   [serviceName: string]: unknown;
 }
 
@@ -60,6 +65,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     activityLog: new ActivityLogService(new SupabaseActivityLogRepository(effectiveClient)),
     sessions: new SessionsService(new SupabaseSessionsRepository(effectiveClient)),
     attendance: new AttendanceService(new SupabaseAttendanceRepository(effectiveClient)),
+    whatsapp: new WhatsAppNotificationsService(new SupabaseWhatsAppNotificationsRepository(effectiveClient)),
     _client: effectiveClient,
   };
 }

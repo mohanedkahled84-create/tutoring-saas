@@ -9,7 +9,7 @@ import {
 import { attendanceRateLimiter } from "../../middleware/rateLimit.js";
 import { getServices } from "../../composition.js";
 import { AttendanceService } from "./service.js";
-import { dispatchAttendanceWebhook } from "../../services/webhookDispatcher.js";
+import { dispatchAttendanceWebhook } from "../whatsapp-notifications/index.js";
 
 export const attendanceRouter = Router();
 
