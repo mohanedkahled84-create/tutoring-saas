@@ -64,6 +64,10 @@ import {
   AdminOpsService,
   SupabaseAdminOpsRepository,
 } from "./features/admin-ops/index.js";
+import {
+  BusinessDashboardService,
+  SupabaseBusinessDashboardRepository,
+} from "./features/business-dashboard/index.js";
 
 export interface AppServices {
   riskWatchlist: RiskWatchlistService;
@@ -76,6 +80,7 @@ export interface AppServices {
   groups: GroupsService;
   auth: AuthService;
   adminOps: AdminOpsService;
+  businessDashboard: BusinessDashboardService;
   [serviceName: string]: unknown;
 }
 
@@ -97,6 +102,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     groups: new GroupsService(new SupabaseGroupsRepository(effectiveClient)),
     auth: new AuthService(new SupabaseAuthRepository(effectiveClient, adminClient)),
     adminOps: new AdminOpsService(new SupabaseAdminOpsRepository(adminClient)),
+    businessDashboard: new BusinessDashboardService(new SupabaseBusinessDashboardRepository(adminClient)),
     _client: effectiveClient,
   };
 }

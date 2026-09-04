@@ -10,6 +10,9 @@ import {
   dispatchCriticalErrorAlert,
   clearAlertDeduplicationCache,
 } from "../dist/features/admin-ops/criticalErrorAlert.js";
+import { BusinessDashboardService } from "../dist/features/business-dashboard/service.js";
+import { FakeBusinessDashboardRepository } from "../dist/features/business-dashboard/repository.js";
+import { renderBusinessOwnerDashboard } from "../../../apps/web/src/components/BusinessOwnerDashboard.js";
 import { app } from "../dist/app.js";
 
 // Mock Repository for domain unit tests
@@ -425,4 +428,38 @@ test("DEV-51: dispatchCriticalErrorAlert rate limits and deduplicates repeated e
   assert.equal(res4.suppressed_count, 2); // Dispatched with note about the 2 suppressed items
   assert.equal(dispatchedEmails.length, 2);
   assert.ok(dispatchedEmails[1].text.includes("2 duplicate occurrences were suppressed"));
+});
+
+// ============================================================================
+// DEV-54: Business Owner Analytics Dashboard (Cross-Tenant) Tests
+// ============================================================================
+
+test("DEV-54: BusinessDashboardService.getMetrics returns full business overview", async () => {
+  const repo = new FakeBusinessDashboardRepository();
+  const service = new BusinessDashboardService(repo);
+
+  const data = await service.getMetrics();
+  assert.ok(data.overview);
+  assert.equal(data.overview.total_tenants, 25);
+  assert.equal(data.overview.active_tenants, 15);
+  assert.equal(data.overview.mrr_egp, 4500);
+  assert.equal(data.overview.whatsapp.total_sent, 3400);
+  assert.equal(data.overview.whatsapp.estimated_cost_egp, 170);
+  assert.equal(data.subscription_breakdown.active, 15);
+  assert.equal(data.at_risk_tenants.length, 1);
+  assert.equal(data.at_risk_tenants[0].risk_factor, "trial_expiring_soon");
+});
+
+test("DEV-54: GET /api/business-dashboard/metrics strictly returns 401 when unauthenticated", async () => {
+  const res = await fetch(`${baseUrl}/api/business-dashboard/metrics`);
+  assert.equal(res.status, 401);
+});
+
+test("DEV-54: renderBusinessOwnerDashboard produces valid Arabic HTML with KPI cards", () => {
+  const html = renderBusinessOwnerDashboard();
+  assert.ok(html.includes("لوحة تحكم المؤسس"));
+  assert.ok(html.includes("الإيراد الشهري التقديري"));
+  assert.ok(html.includes("رسائل الواتساب"));
+  assert.ok(html.includes("إشارات خطر الإلغاء"));
+  assert.ok(html.includes("توزيع الاشتراكات"));
 });
