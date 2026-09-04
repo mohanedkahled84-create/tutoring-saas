@@ -1,5 +1,6 @@
 import { logger } from "../../shared/utils/logger.js";
 import { config } from "../../shared/config/index.js";
+import { dispatchCriticalErrorAlert } from "../admin-ops/criticalErrorAlert.js";
 import {
   IWhatsAppNotificationsRepository,
   JitterConfig,
@@ -109,6 +110,19 @@ export function recordHealthError(
     logger.warn(
       `[AntiBanCircuitBreaker] Tenant ${tenantId} PAUSED for 30m due to ${state.recentErrors.length} errors (${errorType})`
     );
+
+    // DEV-51: Ops Alerting - Page founder when WhatsApp circuit breaker opens
+    dispatchCriticalErrorAlert({
+      severity: "CRITICAL",
+      error_name: "WhatsAppCircuitBreakerTripped",
+      error_message: `WhatsApp Anti-Ban Circuit Breaker tripped for tenant ${tenantId} due to ${state.recentErrors.length} consecutive errors (${errorType}). Message sending paused for 30m to protect account from Meta ban.`,
+      context: {
+        tenant_id: tenantId,
+        details: { errorType, pauseDurationMinutes: 30 },
+      },
+    }).catch((err) => {
+      logger.error("[OpsAlert] Failed to dispatch circuit breaker alert:", err);
+    });
   } else if (state.recentErrors.length >= 1) {
     state.circuitState = "DEGRADED";
   }

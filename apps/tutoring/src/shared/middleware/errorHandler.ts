@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { logger } from "../utils/logger.js";
 import crypto from "node:crypto";
+import { dispatchCriticalErrorAlert } from "../../features/admin-ops/criticalErrorAlert.js";
 
 export function notFoundHandler(req: Request, res: Response): void {
   const requestId = (req.headers["x-request-id"] as string) || crypto.randomUUID();
@@ -38,7 +39,7 @@ export function globalErrorHandler(
   const message =
     typeof errObj.message === "string" ? errObj.message : "An unexpected error occurred";
 
-  // Log all 5xx or unhandled operational errors with context
+  // Log all 5xx or unhandled operational errors with context and page founder
   if (statusCode >= 500) {
     logger.error(`[UnhandledError] ${req.method} ${req.path}`, err, {
       requestId,
@@ -46,6 +47,22 @@ export function globalErrorHandler(
       url: req.originalUrl,
       ip: req.ip,
       body: req.body,
+    });
+
+    // DEV-51: Ops Alerting - Dispatch immediate email alert to founder (non-blocking)
+    dispatchCriticalErrorAlert({
+      severity: "CRITICAL",
+      error_name: (err as Error)?.name || "UnhandledError",
+      error_message: message,
+      stack: (err as Error)?.stack,
+      context: {
+        method: req.method,
+        path: req.path,
+        request_id: requestId,
+        ip: req.ip,
+      },
+    }).catch((alertErr) => {
+      logger.error("[OpsAlert] Failed to dispatch error alert:", alertErr);
     });
   } else {
     logger.warn(`[ClientError ${statusCode}] ${req.method} ${req.path}: ${message}`, {

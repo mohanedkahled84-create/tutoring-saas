@@ -50,6 +50,35 @@ export interface NewSignupAlertPayload {
   trial_ends_at?: string;
 }
 
+export type ErrorSeverity = "CRITICAL" | "WARNING" | "INFO";
+
+export interface CriticalErrorAlertPayload {
+  severity?: ErrorSeverity;
+  error_name: string;
+  error_message: string;
+  stack?: string;
+  context?: {
+    method?: string;
+    path?: string;
+    request_id?: string;
+    tenant_id?: string;
+    user_id?: string;
+    ip?: string;
+    details?: unknown;
+  };
+  occurred_at?: string;
+}
+
+export interface CriticalErrorAlertResult {
+  dispatched: boolean;
+  suppressed: boolean;
+  reason?: string;
+  fingerprint: string;
+  recipient_email: string;
+  subject: string;
+  suppressed_count?: number;
+}
+
 export interface IAdminOpsRepository {
   listAllTenants(): Promise<AdminTenantSummary[]>;
   getOverviewCounts(): Promise<AdminOverviewMetrics>;

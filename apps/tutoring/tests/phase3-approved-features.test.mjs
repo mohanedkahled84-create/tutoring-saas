@@ -4,6 +4,12 @@ import http from "node:http";
 import { SessionsService } from "../dist/features/sessions/service.js";
 import { GroupsService } from "../dist/features/groups/service.js";
 import { FakeGroupsRepository } from "../dist/features/groups/repository.js";
+import {
+  computeErrorFingerprint,
+  formatCriticalAlertEmail,
+  dispatchCriticalErrorAlert,
+  clearAlertDeduplicationCache,
+} from "../dist/features/admin-ops/criticalErrorAlert.js";
 import { app } from "../dist/app.js";
 
 // Mock Repository for domain unit tests
@@ -313,4 +319,110 @@ test("DEV-49: Section and roll-up endpoints strictly return 401 when unauthentic
 
   const res3 = await fetch(`${baseUrl}/api/groups/00000000-0000-0000-0000-000000000001/roll-up`);
   assert.equal(res3.status, 401);
+});
+
+// ============================================================================
+// DEV-51: Critical Error → Email Alert Channel (Ops Alerting) Tests
+// ============================================================================
+
+test("DEV-51: computeErrorFingerprint normalizes IDs and generates deterministic hash", () => {
+  const fp1 = computeErrorFingerprint({
+    error_name: "DatabaseTimeout",
+    error_message: "Failed to connect to tenant aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee query timed out",
+    context: { path: "/api/sessions" },
+  });
+
+  const fp2 = computeErrorFingerprint({
+    error_name: "DatabaseTimeout",
+    error_message: "Failed to connect to tenant 11111111-2222-3333-4444-555555555555 query timed out",
+    context: { path: "/api/sessions" },
+  });
+
+  assert.equal(fp1, fp2);
+});
+
+test("DEV-51: formatCriticalAlertEmail formats HTML and plain text with Cairo time", () => {
+  const { subject, html, text } = formatCriticalAlertEmail(
+    {
+      error_name: "CircuitBreakerOpen",
+      error_message: "WhatsApp sending tripped for tenant-123",
+      stack: "Error: WhatsApp timeout\n    at dispatch (service.ts:100)",
+      severity: "CRITICAL",
+      context: { path: "/api/sessions/end", method: "POST", request_id: "req-999" },
+    },
+    5
+  );
+
+  assert.ok(subject.includes("CRITICAL ALERT"));
+  assert.ok(subject.includes("CircuitBreakerOpen"));
+  assert.ok(text.includes("5 duplicate occurrences were suppressed"));
+  assert.ok(html.includes("req-999"));
+  assert.ok(html.includes("POST /api/sessions/end"));
+});
+
+test("DEV-51: dispatchCriticalErrorAlert filters INFO severity to prevent alert fatigue", async () => {
+  const result = await dispatchCriticalErrorAlert({
+    error_name: "NotFoundError",
+    error_message: "Student not found",
+    severity: "INFO",
+  });
+
+  assert.equal(result.dispatched, false);
+  assert.equal(result.suppressed, true);
+  assert.ok(result.reason.includes("INFO severity"));
+});
+
+test("DEV-51: dispatchCriticalErrorAlert rate limits and deduplicates repeated errors", async () => {
+  clearAlertDeduplicationCache();
+  let dispatchedEmails = [];
+
+  const sender = async (subject, text, html) => {
+    dispatchedEmails.push({ subject, text });
+    return true;
+  };
+
+  const payload = {
+    error_name: "DatabaseDeadlock",
+    error_message: "Deadlock detected in session write",
+    severity: "CRITICAL",
+    context: { path: "/api/sessions/sync" },
+  };
+
+  // First call -> Should dispatch
+  const res1 = await dispatchCriticalErrorAlert(payload, {
+    cooldownMs: 5000,
+    customSender: sender,
+  });
+  assert.equal(res1.dispatched, true);
+  assert.equal(res1.suppressed, false);
+  assert.equal(dispatchedEmails.length, 1);
+
+  // Second call immediately -> Should be suppressed by cooldown
+  const res2 = await dispatchCriticalErrorAlert(payload, {
+    cooldownMs: 5000,
+    customSender: sender,
+  });
+  assert.equal(res2.dispatched, false);
+  assert.equal(res2.suppressed, true);
+  assert.equal(res2.suppressed_count, 1);
+  assert.equal(dispatchedEmails.length, 1); // No new email sent
+
+  // Third call -> Still suppressed, count increases
+  const res3 = await dispatchCriticalErrorAlert(payload, {
+    cooldownMs: 5000,
+    customSender: sender,
+  });
+  assert.equal(res3.suppressed, true);
+  assert.equal(res3.suppressed_count, 2);
+
+  // After cooldown expires -> Should dispatch again mentioning suppressed count
+  const res4 = await dispatchCriticalErrorAlert(payload, {
+    cooldownMs: 0, // Expire cooldown immediately
+    customSender: sender,
+  });
+  assert.equal(res4.dispatched, true);
+  assert.equal(res4.suppressed, false);
+  assert.equal(res4.suppressed_count, 2); // Dispatched with note about the 2 suppressed items
+  assert.equal(dispatchedEmails.length, 2);
+  assert.ok(dispatchedEmails[1].text.includes("2 duplicate occurrences were suppressed"));
 });
