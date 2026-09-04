@@ -1,6 +1,11 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
-import { validateBody, createStudentSchema, updateStudentSchema, publicSelfRegisterSchema } from "../middleware/validation.js";
+import {
+  validateBody,
+  createStudentSchema,
+  updateStudentSchema,
+  publicSelfRegisterSchema,
+} from "../middleware/validation.js";
 
 export const studentsRouter = Router();
 
@@ -21,7 +26,9 @@ studentsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
     }
 
     if (q && typeof q === "string") {
-      query = query.or(`name.ilike.%${q}%,code.ilike.%${q}%,parent_phone.ilike.%${q}%,student_phone.ilike.%${q}%`);
+      query = query.or(
+        `name.ilike.%${q}%,code.ilike.%${q}%,parent_phone.ilike.%${q}%,student_phone.ilike.%${q}%`
+      );
     }
 
     const { data, error } = await query;
@@ -72,7 +79,9 @@ studentsRouter.post(
 
       res.status(201).json({ student: data });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to create student" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to create student" } });
     }
   }
 );
@@ -96,7 +105,9 @@ studentsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Pro
 
     res.json({ student: data });
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve student" } });
+    res
+      .status(500)
+      .json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve student" } });
   }
 });
 
@@ -135,7 +146,9 @@ studentsRouter.put(
 
       res.json({ student: data });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update student" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to update student" } });
     }
   }
 );
@@ -155,7 +168,9 @@ studentsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): 
 
     res.json({ message: "Student deleted successfully", id });
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to delete student" } });
+    res
+      .status(500)
+      .json({ error: { code: "INTERNAL_ERROR", message: "Failed to delete student" } });
   }
 });
 
@@ -198,7 +213,9 @@ studentsRouter.post(
         verification_message_queued: true,
       });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Self-registration failed" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Self-registration failed" } });
     }
   }
 );

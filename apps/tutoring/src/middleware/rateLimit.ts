@@ -43,7 +43,8 @@ export const attendanceRateLimiter = rateLimit({
     res.status(429).json({
       error: {
         code: "RATE_LIMITED",
-        message: "Attendance submission rate limit exceeded. Please wait a minute before submitting again.",
+        message:
+          "Attendance submission rate limit exceeded. Please wait a minute before submitting again.",
       },
     });
   },

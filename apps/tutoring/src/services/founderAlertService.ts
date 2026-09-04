@@ -46,7 +46,9 @@ export async function alertFounderOfNewSignup(payload: NewSignupPayload): Promis
       error_detail: formattedMessage,
     });
 
-    logger.info(`[FounderAlert] Logged new signup alert for founder: ${payload.teacher_name} (${payload.teacher_email})`);
+    logger.info(
+      `[FounderAlert] Logged new signup alert for founder: ${payload.teacher_name} (${payload.teacher_email})`
+    );
   } catch (err: any) {
     // Non-blocking: log error and let signup proceed normally
     logger.error("[FounderAlert] Failed to log founder signup alert (non-blocking)", err);

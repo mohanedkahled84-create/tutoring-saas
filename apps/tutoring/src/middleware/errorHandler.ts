@@ -48,7 +48,10 @@ export function globalErrorHandler(
   res.status(statusCode).json({
     error: {
       code,
-      message: statusCode >= 500 && process.env.NODE_ENV === "production" ? "Internal server error" : message,
+      message:
+        statusCode >= 500 && process.env.NODE_ENV === "production"
+          ? "Internal server error"
+          : message,
       details: err.details || undefined,
     },
     timestamp: new Date().toISOString(),

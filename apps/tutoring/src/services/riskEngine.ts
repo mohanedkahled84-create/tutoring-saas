@@ -1,4 +1,4 @@
-﻿import { SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export type RiskCategory = "absence_warning" | "grade_drop" | "homework_neglect";
 
@@ -26,7 +26,7 @@ export async function computeAtRiskWatchlist(
   groupId?: string
 ): Promise<AtRiskStudent[]> {
   // 1. Fetch students for tenant (optionally filtered by group)
-  let studentQuery = supabase
+  const studentQuery = supabase
     .from("students")
     .select("id, name, student_code, parent_phone, tenant_id")
     .eq("tenant_id", tenantId);
@@ -98,11 +98,16 @@ export async function computeAtRiskWatchlist(
     }
 
     // B. Quiz average across last 3 quiz scores
-    const studentQuizzes = (quizScores || []).filter((q) => q.student_id === student.id).slice(0, 3);
+    const studentQuizzes = (quizScores || [])
+      .filter((q) => q.student_id === student.id)
+      .slice(0, 3);
     let quizAvg: number | null = null;
 
     if (studentQuizzes.length > 0) {
-      const totalPct = studentQuizzes.reduce((sum, q) => sum + (Number(q.score) / Number(q.max_score)), 0);
+      const totalPct = studentQuizzes.reduce(
+        (sum, q) => sum + Number(q.score) / Number(q.max_score),
+        0
+      );
       quizAvg = Math.round((totalPct / studentQuizzes.length) * 100);
     }
 
@@ -127,9 +132,10 @@ export async function computeAtRiskWatchlist(
     if (riskReasons.length > 0) {
       // Primary risk priority: absence > grade drop > homework neglect
       const primaryRisk = riskReasons[0];
-      const severity = (consecutiveAbsences >= 3 || (quizAvg !== null && quizAvg < 30) || riskReasons.length >= 2)
-        ? "high"
-        : "medium";
+      const severity =
+        consecutiveAbsences >= 3 || (quizAvg !== null && quizAvg < 30) || riskReasons.length >= 2
+          ? "high"
+          : "medium";
 
       let recommendedAction = "إرسال تنبيه بالمتابعة لولي الأمر";
       if (primaryRisk === "absence_warning") {

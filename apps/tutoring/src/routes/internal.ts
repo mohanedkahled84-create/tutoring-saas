@@ -15,35 +15,40 @@ export const internalRouter = Router();
 
 // 1. GET /internal/tenants/:tenant_id/whatsapp-connection
 // n8n calls this to fetch connection details and decrypted API key before sending
-internalRouter.get("/tenants/:tenant_id/whatsapp-connection", async (req: Request, res: Response): Promise<void> => {
-  const { tenant_id } = req.params;
-  const supabase = getServiceSupabaseClient();
+internalRouter.get(
+  "/tenants/:tenant_id/whatsapp-connection",
+  async (req: Request, res: Response): Promise<void> => {
+    const { tenant_id } = req.params;
+    const supabase = getServiceSupabaseClient();
 
-  try {
-    const { data, error } = await supabase.rpc("get_tenant_whatsapp_connection", {
-      p_tenant_id: tenant_id,
-    });
+    try {
+      const { data, error } = await supabase.rpc("get_tenant_whatsapp_connection", {
+        p_tenant_id: tenant_id,
+      });
 
-    if (error) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: error.message } });
-      return;
+      if (error) {
+        res.status(500).json({ error: { code: "INTERNAL_ERROR", message: error.message } });
+        return;
+      }
+
+      if (!data) {
+        res.status(404).json({
+          error: { code: "NOT_FOUND", message: "WhatsApp connection not found for this tenant" },
+        });
+        return;
+      }
+
+      res.json({
+        provider: data.provider,
+        instance_url: data.instance_url,
+        instance_status: data.instance_status,
+        api_key: data.api_key || null,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
     }
-
-    if (!data) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "WhatsApp connection not found for this tenant" } });
-      return;
-    }
-
-    res.json({
-      provider: data.provider,
-      instance_url: data.instance_url,
-      instance_status: data.instance_status,
-      api_key: data.api_key || null,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
   }
-});
+);
 
 // 2. POST /internal/message-logs (validated with Zod)
 // n8n calls this callback after sending to log outcome and confirm delivery
@@ -116,47 +121,50 @@ internalRouter.post(
 
 // DEV-EAH.1 & DEV-EAH.2: GET /internal/tenants/:tenant_id/pacing-delay
 // n8n calls this to determine randomized inter-message jitter and warm-up quota
-internalRouter.get("/tenants/:tenant_id/pacing-delay", async (req: Request, res: Response): Promise<void> => {
-  const { tenant_id } = req.params;
-  const supabase = getServiceSupabaseClient();
+internalRouter.get(
+  "/tenants/:tenant_id/pacing-delay",
+  async (req: Request, res: Response): Promise<void> => {
+    const { tenant_id } = req.params;
+    const supabase = getServiceSupabaseClient();
 
-  try {
-    const { data: conn } = await supabase
-      .from("whatsapp_connections")
-      .select("connected_at, is_legacy_exempt")
-      .eq("tenant_id", tenant_id)
-      .maybeSingle();
+    try {
+      const { data: conn } = await supabase
+        .from("whatsapp_connections")
+        .select("connected_at, is_legacy_exempt")
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
 
-    // Query today's message count
-    const today = new Date().toISOString().split("T")[0];
-    const { count } = await supabase
-      .from("message_logs")
-      .select("*", { count: "exact", head: true })
-      .eq("tenant_id", tenant_id)
-      .gte("created_at", `${today}T00:00:00.000Z`);
+      // Query today's message count
+      const today = new Date().toISOString().split("T")[0];
+      const { count } = await supabase
+        .from("message_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", tenant_id)
+        .gte("created_at", `${today}T00:00:00.000Z`);
 
-    const warmUp = checkWarmUpLimit(
-      {
-        connected_at: conn?.connected_at || new Date().toISOString(),
-        is_legacy_exempt: Boolean(conn?.is_legacy_exempt),
-      },
-      count || 0
-    );
+      const warmUp = checkWarmUpLimit(
+        {
+          connected_at: conn?.connected_at || new Date().toISOString(),
+          is_legacy_exempt: Boolean(conn?.is_legacy_exempt),
+        },
+        count || 0
+      );
 
-    const health = getHealthStatus(tenant_id);
-    const delayMs = calculateJitterDelay();
+      const health = getHealthStatus(tenant_id);
+      const delayMs = calculateJitterDelay();
 
-    res.json({
-      tenant_id,
-      jitter_delay_ms: delayMs,
-      warm_up: warmUp,
-      health,
-      can_send: warmUp.allowed && health.can_send,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+      res.json({
+        tenant_id,
+        jitter_delay_ms: delayMs,
+        warm_up: warmUp,
+        health,
+        can_send: warmUp.allowed && health.can_send,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    }
   }
-});
+);
 
 // DEV-EAH.3: POST /internal/tenants/:tenant_id/health-event
 // Records connection disconnects, 429 rate limit errors, or successes from n8n
@@ -183,16 +191,17 @@ internalRouter.post("/tenants/:tenant_id/validate-profile", (req: Request, res: 
 
 // DEV-SL.4: POST /internal/subscriptions/dispatch-reminders
 // Triggered by scheduled cron or n8n to dispatch 5-day and expiry-day renewal reminders
-internalRouter.post("/subscriptions/dispatch-reminders", async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const summary = await dispatchSubscriptionRenewalReminders();
-    res.json({
-      message: "Subscription renewal reminders evaluated and dispatched successfully",
-      ...summary,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+internalRouter.post(
+  "/subscriptions/dispatch-reminders",
+  async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const summary = await dispatchSubscriptionRenewalReminders();
+      res.json({
+        message: "Subscription renewal reminders evaluated and dispatched successfully",
+        ...summary,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    }
   }
-});
-
-
+);

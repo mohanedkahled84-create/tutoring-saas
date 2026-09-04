@@ -27,7 +27,9 @@ templatesRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promi
 
     res.json({ templates });
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to list templates" } });
+    res
+      .status(500)
+      .json({ error: { code: "INTERNAL_ERROR", message: "Failed to list templates" } });
   }
 });
 
@@ -63,7 +65,9 @@ templatesRouter.post(
 
       res.status(200).json({ message: "Template saved successfully", template: data });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to save template" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to save template" } });
     }
   }
 );

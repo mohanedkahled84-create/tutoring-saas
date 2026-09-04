@@ -1,6 +1,11 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
-import { validateBody, createGroupSchema, updateGroupSchema, enrollStudentSchema } from "../middleware/validation.js";
+import {
+  validateBody,
+  createGroupSchema,
+  updateGroupSchema,
+  enrollStudentSchema,
+} from "../middleware/validation.js";
 import { requireOwnerOrAdmin } from "../middleware/auth.js";
 import { generateBarcodeSheetPdf } from "../services/barcodePdfService.js";
 
@@ -80,7 +85,9 @@ groupsRouter.post(
 
       res.status(201).json({ group: data });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to create group" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to create group" } });
     }
   }
 );
@@ -105,7 +112,9 @@ groupsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promi
 
     const { data: enrollments, error: enrollError } = await supabase
       .from("group_students")
-      .select("id, student_id, students(id, name, parent_phone, student_phone, student_code, fee_override, exempt)")
+      .select(
+        "id, student_id, students(id, name, parent_phone, student_phone, student_code, fee_override, exempt)"
+      )
       .eq("group_id", id);
 
     if (enrollError) {
@@ -120,7 +129,9 @@ groupsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promi
       students,
     });
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve group" } });
+    res
+      .status(500)
+      .json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve group" } });
   }
 });
 
@@ -160,29 +171,37 @@ groupsRouter.put(
 
       res.json({ group: data });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update group" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to update group" } });
     }
   }
 );
 
 // DELETE /api/groups/:id - Delete group (Owner or Admin only)
-groupsRouter.delete("/:id", requireOwnerOrAdmin, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const supabase = req.supabase!;
-  const { id } = req.params;
+groupsRouter.delete(
+  "/:id",
+  requireOwnerOrAdmin,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const { id } = req.params;
 
-  try {
-    const { error } = await supabase.from("groups").delete().eq("id", id);
+    try {
+      const { error } = await supabase.from("groups").delete().eq("id", id);
 
-    if (error) {
-      res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
-      return;
+      if (error) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
+        return;
+      }
+
+      res.json({ message: "Group deleted successfully", id });
+    } catch (err: any) {
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to delete group" } });
     }
-
-    res.json({ message: "Group deleted successfully", id });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to delete group" } });
   }
-});
+);
 
 // POST /api/groups/:id/students - Enroll a student in a group
 groupsRouter.post(
@@ -212,89 +231,103 @@ groupsRouter.post(
 
       res.status(201).json({ enrollment: data });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to enroll student" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to enroll student" } });
     }
   }
 );
 
 // DELETE /api/groups/:id/students/:student_id - Remove student from group
-groupsRouter.delete("/:id/students/:student_id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const supabase = req.supabase!;
-  const { id: groupId, student_id: studentId } = req.params;
+groupsRouter.delete(
+  "/:id/students/:student_id",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const { id: groupId, student_id: studentId } = req.params;
 
-  try {
-    const { error } = await supabase
-      .from("group_students")
-      .delete()
-      .eq("group_id", groupId)
-      .eq("student_id", studentId);
+    try {
+      const { error } = await supabase
+        .from("group_students")
+        .delete()
+        .eq("group_id", groupId)
+        .eq("student_id", studentId);
 
-    if (error) {
-      res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
-      return;
+      if (error) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
+        return;
+      }
+
+      res.json({ message: "Student removed from group successfully", groupId, studentId });
+    } catch (err: any) {
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to remove student from group" },
+      });
     }
-
-    res.json({ message: "Student removed from group successfully", groupId, studentId });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to remove student from group" } });
   }
-});
+);
 
 // DEV-QP.1: GET /api/groups/:id/barcode-sheet - Generate printable A4 PDF barcode sheet
-groupsRouter.get("/:id/barcode-sheet", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const supabase = req.supabase!;
-  const tenantId = req.user!.tenant_id;
-  const { id: groupId } = req.params;
+groupsRouter.get(
+  "/:id/barcode-sheet",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const tenantId = req.user!.tenant_id;
+    const { id: groupId } = req.params;
 
-  try {
-    const { data: group, error: groupErr } = await supabase
-      .from("groups")
-      .select("id, name, center_name")
-      .eq("id", groupId)
-      .single();
+    try {
+      const { data: group, error: groupErr } = await supabase
+        .from("groups")
+        .select("id, name, center_name")
+        .eq("id", groupId)
+        .single();
 
-    if (groupErr || !group) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Group not found" } });
-      return;
-    }
+      if (groupErr || !group) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Group not found" } });
+        return;
+      }
 
-    const { data: enrollments, error: enrollErr } = await supabase
-      .from("group_students")
-      .select("student_id, students(id, name, student_code)")
-      .eq("group_id", groupId);
+      const { data: enrollments, error: enrollErr } = await supabase
+        .from("group_students")
+        .select("student_id, students(id, name, student_code)")
+        .eq("group_id", groupId);
 
-    if (enrollErr) {
-      res.status(400).json({ error: { code: "BAD_REQUEST", message: enrollErr.message } });
-      return;
-    }
+      if (enrollErr) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: enrollErr.message } });
+        return;
+      }
 
-    const students = (enrollments || [])
-      .map((e: any) => e.students)
-      .filter(Boolean)
-      .map((s: any, idx: number) => ({
-        id: s.id,
-        name: s.name,
-        student_code: s.student_code || String(1001 + idx),
-      }));
+      const students = (enrollments || [])
+        .map((e: any) => e.students)
+        .filter(Boolean)
+        .map((s: any, idx: number) => ({
+          id: s.id,
+          name: s.name,
+          student_code: s.student_code || String(1001 + idx),
+        }));
 
-    if (students.length === 0) {
-      res.status(400).json({
-        error: { code: "NO_STUDENTS", message: "This group does not have any enrolled students yet." },
+      if (students.length === 0) {
+        res.status(400).json({
+          error: {
+            code: "NO_STUDENTS",
+            message: "This group does not have any enrolled students yet.",
+          },
+        });
+        return;
+      }
+
+      const pdfBuffer = await generateBarcodeSheetPdf({
+        group_name: group.name,
+        students,
       });
-      return;
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename="group-${groupId}-barcodes.pdf"`);
+      res.setHeader("Content-Length", pdfBuffer.length);
+      res.end(pdfBuffer);
+    } catch (err: any) {
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to generate barcode sheet" } });
     }
-
-    const pdfBuffer = await generateBarcodeSheetPdf({
-      group_name: group.name,
-      students,
-    });
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="group-${groupId}-barcodes.pdf"`);
-    res.setHeader("Content-Length", pdfBuffer.length);
-    res.end(pdfBuffer);
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to generate barcode sheet" } });
   }
-});
-
+);

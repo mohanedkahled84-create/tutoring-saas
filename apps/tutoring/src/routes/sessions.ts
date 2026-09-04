@@ -1,5 +1,9 @@
 import { Router, Response } from "express";
-import { AuthenticatedRequest, AttendanceRecordInput, AttendanceEvaluation } from "../types/index.js";
+import {
+  AuthenticatedRequest,
+  AttendanceRecordInput,
+  AttendanceEvaluation,
+} from "../types/index.js";
 import {
   validateBody,
   createSessionSchema,
@@ -42,7 +46,9 @@ sessionsRouter.post(
 
       res.status(201).json({ session: data });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to create session" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to create session" } });
     }
   }
 );
@@ -55,7 +61,9 @@ sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Pro
   try {
     const { data: session, error: sessionError } = await supabase
       .from("sessions")
-      .select("id, tenant_id, group_id, session_number, session_date, created_at, groups(name, price, billing_model)")
+      .select(
+        "id, tenant_id, group_id, session_number, session_date, created_at, groups(name, price, billing_model)"
+      )
       .eq("id", id)
       .single();
 
@@ -67,7 +75,9 @@ sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Pro
     const [attendanceRes, quizRes] = await Promise.all([
       supabase
         .from("attendance")
-        .select("id, student_id, attended, comment, homework_status, is_makeup, home_group_id, sent, idempotency_key, created_at, students(id, name, student_code, parent_phone)")
+        .select(
+          "id, student_id, attended, comment, homework_status, is_makeup, home_group_id, sent, idempotency_key, created_at, students(id, name, student_code, parent_phone)"
+        )
         .eq("session_id", id),
       supabase
         .from("quiz_scores")
@@ -81,7 +91,9 @@ sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Pro
       quiz_scores: quizRes.data || [],
     });
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve session" } });
+    res
+      .status(500)
+      .json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve session" } });
   }
 });
 
@@ -96,7 +108,8 @@ sessionsRouter.post(
     const supabase = req.supabase!;
     const tenantId = req.user!.tenant_id;
     const { id: sessionId } = req.params;
-    const { student_id, student_code, homework_status, is_makeup, home_group_id, comment } = req.body;
+    const { student_id, student_code, homework_status, is_makeup, home_group_id, comment } =
+      req.body;
 
     try {
       // 1. Resolve student in current tenant
@@ -114,7 +127,9 @@ sessionsRouter.post(
       const { data: student, error: studentError } = await studentQuery.single();
 
       if (studentError || !student) {
-        res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found in this tenant" } });
+        res
+          .status(404)
+          .json({ error: { code: "NOT_FOUND", message: "Student not found in this tenant" } });
         return;
       }
 
@@ -193,7 +208,9 @@ sessionsRouter.post(
         },
       });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Scan processing failed" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Scan processing failed" } });
     }
   }
 );
@@ -239,33 +256,42 @@ sessionsRouter.put(
         quiz_score: savedScore,
       });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to save quiz score" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to save quiz score" } });
     }
   }
 );
 
 // GET /api/sessions/:id/quiz-scores - Retrieve all quiz scores for a session
-sessionsRouter.get("/:id/quiz-scores", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const supabase = req.supabase!;
-  const { id: sessionId } = req.params;
+sessionsRouter.get(
+  "/:id/quiz-scores",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const supabase = req.supabase!;
+    const { id: sessionId } = req.params;
 
-  try {
-    const { data: scores, error } = await supabase
-      .from("quiz_scores")
-      .select("id, student_id, score, max_score, created_at, updated_at, students(name, student_code)")
-      .eq("session_id", sessionId)
-      .order("created_at", { ascending: true });
+    try {
+      const { data: scores, error } = await supabase
+        .from("quiz_scores")
+        .select(
+          "id, student_id, score, max_score, created_at, updated_at, students(name, student_code)"
+        )
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true });
 
-    if (error) {
-      res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
-      return;
+      if (error) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: error.message } });
+        return;
+      }
+
+      res.json({ quiz_scores: scores || [] });
+    } catch (err: any) {
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to list quiz scores" } });
     }
-
-    res.json({ quiz_scores: scores || [] });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to list quiz scores" } });
   }
-});
+);
 
 // DEV-SBL.3 & DEV-SE.1: Session Financial Summary
 // Accounting for fee overrides, exemptions, and make-up revenue retention
@@ -281,7 +307,9 @@ sessionsRouter.get(
       // 1. Fetch session & group details
       const { data: session, error: sessionErr } = await supabase
         .from("sessions")
-        .select("id, group_id, session_number, session_date, groups(id, name, price, billing_model, fixed_rent_amount)")
+        .select(
+          "id, group_id, session_number, session_date, groups(id, name, price, billing_model, fixed_rent_amount)"
+        )
         .eq("id", sessionId)
         .single();
 
@@ -296,7 +324,9 @@ sessionsRouter.get(
       // 2. Fetch all attendance records with student financial info
       const { data: attendees, error: attErr } = await supabase
         .from("attendance")
-        .select("id, student_id, attended, is_makeup, home_group_id, students(id, name, fee_override, exempt)")
+        .select(
+          "id, student_id, attended, is_makeup, home_group_id, students(id, name, fee_override, exempt)"
+        )
         .eq("session_id", sessionId)
         .eq("attended", true);
 
@@ -364,7 +394,9 @@ sessionsRouter.get(
         breakdown,
       });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Financial calculation failed" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Financial calculation failed" } });
     }
   }
 );
@@ -474,7 +506,9 @@ sessionsRouter.post(
         notification_decisions: evaluations,
       });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to record attendance" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to record attendance" } });
     }
   }
 );
@@ -567,7 +601,9 @@ sessionsRouter.post(
         results,
       });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Batch sync processing failed" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Batch sync processing failed" } });
     }
   }
 );
@@ -584,7 +620,9 @@ sessionsRouter.get(
     try {
       const { data: attendanceRows, error: attErr } = await supabase
         .from("attendance")
-        .select("id, student_id, attended, comment, sent, students(id, name, parent_phone, student_code)")
+        .select(
+          "id, student_id, attended, comment, sent, students(id, name, parent_phone, student_code)"
+        )
         .eq("session_id", sessionId);
 
       if (attErr) {
@@ -653,7 +691,9 @@ sessionsRouter.get(
         deliveries: deliveryReports,
       });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to fetch delivery status" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to fetch delivery status" } });
     }
   }
 );
@@ -674,7 +714,9 @@ sessionsRouter.post(
       // 1. Fetch session & group info
       const { data: session, error: sessionErr } = await supabase
         .from("sessions")
-        .select("id, session_number, session_date, groups(id, name, center_name, price, billing_model, fixed_rent_amount)")
+        .select(
+          "id, session_number, session_date, groups(id, name, center_name, price, billing_model, fixed_rent_amount)"
+        )
         .eq("id", sessionId)
         .single();
 
@@ -791,10 +833,9 @@ sessionsRouter.post(
         logged_message_id: loggedMessageId,
       });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to generate receipt" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to generate receipt" } });
     }
   }
 );
-
-
-

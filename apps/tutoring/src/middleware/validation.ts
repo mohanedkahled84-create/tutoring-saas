@@ -38,7 +38,7 @@ export const egyptianPhoneRegex = /^01[0125][0-9]{8}$/;
 
 export function cleanEgyptianPhone(val: string): string {
   if (!val) return "";
-  let clean = val.trim().replace(/[\s\-\(\)\.]/g, "");
+  let clean = val.trim().replace(/[\s\-().]/g, "");
   if (clean.startsWith("+20")) clean = clean.slice(3);
   else if (clean.startsWith("0020")) clean = clean.slice(4);
   else if (clean.startsWith("20") && clean.length === 12) clean = clean.slice(2);
@@ -46,12 +46,17 @@ export function cleanEgyptianPhone(val: string): string {
   return clean;
 }
 
-export const egyptianPhoneSchema = z.string().transform(cleanEgyptianPhone).pipe(
-  z.string().regex(
-    egyptianPhoneRegex,
-    "رقم الهاتف يجب أن يكون رقم محمول مصري يبدأ بـ 010 أو 011 أو 012 أو 015 ومكون من 11 رقماً"
-  )
-);
+export const egyptianPhoneSchema = z
+  .string()
+  .transform(cleanEgyptianPhone)
+  .pipe(
+    z
+      .string()
+      .regex(
+        egyptianPhoneRegex,
+        "رقم الهاتف يجب أن يكون رقم محمول مصري يبدأ بـ 010 أو 011 أو 012 أو 015 ومكون من 11 رقماً"
+      )
+  );
 
 // Student Schemas
 export const createStudentSchema = z.object({
@@ -106,7 +111,9 @@ export const enrollStudentSchema = z.object({
 export const createSessionSchema = z.object({
   group_id: z.string().uuid("group_id must be a valid UUID"),
   session_number: z.number().int().positive("session_number must be a positive integer"),
-  session_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "session_date must be in YYYY-MM-DD format"),
+  session_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "session_date must be in YYYY-MM-DD format"),
 });
 
 export const quickCheckinSchema = z.object({
@@ -114,24 +121,28 @@ export const quickCheckinSchema = z.object({
 });
 
 // DEV-SBL.1: Scan schema
-export const scanStudentSchema = z.object({
-  student_id: z.string().uuid().optional(),
-  student_code: z.string().min(1).optional(),
-  homework_status: z.enum(["done", "partial", "missing"]).optional().nullable(),
-  is_makeup: z.boolean().optional().default(false),
-  home_group_id: z.string().uuid().optional().nullable(),
-  comment: z.string().max(500).optional().nullable(),
-}).refine((data) => data.student_id || data.student_code, {
-  message: "Either student_id or student_code must be provided",
-});
+export const scanStudentSchema = z
+  .object({
+    student_id: z.string().uuid().optional(),
+    student_code: z.string().min(1).optional(),
+    homework_status: z.enum(["done", "partial", "missing"]).optional().nullable(),
+    is_makeup: z.boolean().optional().default(false),
+    home_group_id: z.string().uuid().optional().nullable(),
+    comment: z.string().max(500).optional().nullable(),
+  })
+  .refine((data) => data.student_id || data.student_code, {
+    message: "Either student_id or student_code must be provided",
+  });
 
 // DEV-SBL.2: Quiz auto-save schema
-export const quizScoreSchema = z.object({
-  score: z.number().min(0, "Score cannot be negative"),
-  max_score: z.number().positive("Max score must be positive"),
-}).refine((data) => data.score <= data.max_score, {
-  message: "Score cannot exceed max_score",
-});
+export const quizScoreSchema = z
+  .object({
+    score: z.number().min(0, "Score cannot be negative"),
+    max_score: z.number().positive("Max score must be positive"),
+  })
+  .refine((data) => data.score <= data.max_score, {
+    message: "Score cannot exceed max_score",
+  });
 
 export const recordAttendanceSchema = z.object({
   records: z

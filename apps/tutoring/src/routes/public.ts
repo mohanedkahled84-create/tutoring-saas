@@ -43,7 +43,9 @@ publicRouter.post(
         verification_message_queued: true,
       });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to self-register" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to self-register" } });
     }
   }
 );

@@ -4,7 +4,12 @@ import { logger } from "../utils/logger.js";
 export interface ActivityLogEntry {
   tenant_id: string;
   actor_user_id?: string | null;
-  action_type: "attendance_record" | "attendance_edit" | "session_open" | "session_close" | "quiz_score_record";
+  action_type:
+    | "attendance_record"
+    | "attendance_edit"
+    | "session_open"
+    | "session_close"
+    | "quiz_score_record";
   entity_type: "attendance" | "session" | "quiz_score";
   entity_id: string;
   before_value?: any;

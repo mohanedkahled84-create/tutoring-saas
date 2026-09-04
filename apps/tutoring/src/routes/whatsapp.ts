@@ -41,12 +41,15 @@ whatsappRouter.post(
 );
 
 // POST /api/whatsapp/disconnect - Disconnect session
-whatsappRouter.post("/disconnect", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  res.json({
-    success: true,
-    message: "WhatsApp instance disconnected. Scan QR to reconnect.",
-  });
-});
+whatsappRouter.post(
+  "/disconnect",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    res.json({
+      success: true,
+      message: "WhatsApp instance disconnected. Scan QR to reconnect.",
+    });
+  }
+);
 
 // GET /api/whatsapp/qr - Get QR pairing code
 whatsappRouter.get("/qr", async (req: AuthenticatedRequest, res: Response): Promise<void> => {

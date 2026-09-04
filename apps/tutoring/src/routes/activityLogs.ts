@@ -23,12 +23,18 @@ activityLogsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Pr
   try {
     let query = supabase
       .from("activity_logs")
-      .select("id, tenant_id, actor_user_id, action_type, entity_type, entity_id, before_value, after_value, created_at, users(email)", {
-        count: "exact",
-      })
+      .select(
+        "id, tenant_id, actor_user_id, action_type, entity_type, entity_id, before_value, after_value, created_at, users(email)",
+        {
+          count: "exact",
+        }
+      )
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
-      .range(parseInt(offset as string, 10), parseInt(offset as string, 10) + parseInt(limit as string, 10) - 1);
+      .range(
+        parseInt(offset as string, 10),
+        parseInt(offset as string, 10) + parseInt(limit as string, 10) - 1
+      );
 
     if (entity_type && typeof entity_type === "string") {
       query = query.eq("entity_type", entity_type);
@@ -58,6 +64,8 @@ activityLogsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Pr
       })),
     });
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to query activity logs" } });
+    res
+      .status(500)
+      .json({ error: { code: "INTERNAL_ERROR", message: "Failed to query activity logs" } });
   }
 });

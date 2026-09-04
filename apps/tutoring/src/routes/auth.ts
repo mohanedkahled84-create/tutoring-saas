@@ -48,7 +48,9 @@ authRouter.post("/login", async (req: Request, res: Response): Promise<void> => 
   const { email, password } = req.body;
 
   if (!email || !password) {
-    res.status(400).json({ error: { code: "BAD_REQUEST", message: "Email and password are required" } });
+    res
+      .status(400)
+      .json({ error: { code: "BAD_REQUEST", message: "Email and password are required" } });
     return;
   }
 
@@ -133,7 +135,9 @@ authRouter.post("/signup", async (req: Request, res: Response): Promise<void> =>
     });
 
     if (authErr || !authUser.user) {
-      res.status(400).json({ error: { code: "AUTH_ERROR", message: authErr?.message || "Failed to create user" } });
+      res.status(400).json({
+        error: { code: "AUTH_ERROR", message: authErr?.message || "Failed to create user" },
+      });
       return;
     }
 
@@ -153,7 +157,9 @@ authRouter.post("/signup", async (req: Request, res: Response): Promise<void> =>
       .single();
 
     if (tenantErr || !tenant) {
-      res.status(500).json({ error: { code: "TENANT_CREATION_FAILED", message: tenantErr?.message } });
+      res
+        .status(500)
+        .json({ error: { code: "TENANT_CREATION_FAILED", message: tenantErr?.message } });
       return;
     }
 
@@ -179,7 +185,12 @@ authRouter.post("/signup", async (req: Request, res: Response): Promise<void> =>
     res.status(201).json({
       message: "Signup successful. Your 14-day free trial is active.",
       user: { id: userId, email },
-      tenant: { id: tenant.id, name: tenant.name, trial_ends_at: trialEnds, subscription_status: "trial" },
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        trial_ends_at: trialEnds,
+        subscription_status: "trial",
+      },
     });
   } catch (err: any) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
@@ -204,44 +215,51 @@ authRouter.post("/forgot-password", async (req: Request, res: Response): Promise
       message: "If that email is registered, a password recovery link has been sent.",
     });
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Password reset request failed" } });
+    res
+      .status(500)
+      .json({ error: { code: "INTERNAL_ERROR", message: "Password reset request failed" } });
   }
 });
 
 // DEV-PR.1: POST /api/auth/reset-password - Complete password reset using user session/token
-authRouter.post("/reset-password", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const token = extractToken(req) || req.body.token;
-  const { password } = req.body;
+authRouter.post(
+  "/reset-password",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const token = extractToken(req) || req.body.token;
+    const { password } = req.body;
 
-  if (!token || !password) {
-    res.status(400).json({
-      error: { code: "BAD_REQUEST", message: "token and new password are required" },
-    });
-    return;
-  }
-
-  const pwdCheck = validatePasswordStrength(password);
-  if (!pwdCheck.valid) {
-    res.status(400).json({ error: { code: "WEAK_PASSWORD", message: pwdCheck.reason } });
-    return;
-  }
-
-  try {
-    const userClient = getScopedSupabaseClient(token);
-    const { data, error } = await userClient.auth.updateUser({ password });
-
-    if (error || !data.user) {
+    if (!token || !password) {
       res.status(400).json({
-        error: { code: "RESET_FAILED", message: error?.message || "Password reset failed" },
+        error: { code: "BAD_REQUEST", message: "token and new password are required" },
       });
       return;
     }
 
-    res.json({ message: "Password updated successfully. You can now login with your new password." });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    const pwdCheck = validatePasswordStrength(password);
+    if (!pwdCheck.valid) {
+      res.status(400).json({ error: { code: "WEAK_PASSWORD", message: pwdCheck.reason } });
+      return;
+    }
+
+    try {
+      const userClient = getScopedSupabaseClient(token);
+      const { data, error } = await userClient.auth.updateUser({ password });
+
+      if (error || !data.user) {
+        res.status(400).json({
+          error: { code: "RESET_FAILED", message: error?.message || "Password reset failed" },
+        });
+        return;
+      }
+
+      res.json({
+        message: "Password updated successfully. You can now login with your new password.",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    }
   }
-});
+);
 
 // POST /api/auth/validate-password - Validates password strength policy
 authRouter.post("/validate-password", (req: Request, res: Response): void => {

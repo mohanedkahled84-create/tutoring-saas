@@ -33,12 +33,12 @@ export function calculateJitterDelay(config: JitterConfig = DEFAULT_JITTER_CONFI
 // Ramps up new WhatsApp numbers over 5-7 days. Omar Gamal is legacy exempt.
 // ============================================================================
 export const WARMUP_SCHEDULE: Record<number, number> = {
-  1: 20,   // Day 1: max 20 msgs
-  2: 40,   // Day 2: max 40 msgs
-  3: 80,   // Day 3: max 80 msgs
-  4: 150,  // Day 4: max 150 msgs
-  5: 300,  // Day 5: max 300 msgs
-  6: 600,  // Day 6: max 600 msgs
+  1: 20, // Day 1: max 20 msgs
+  2: 40, // Day 2: max 40 msgs
+  3: 80, // Day 3: max 80 msgs
+  4: 150, // Day 4: max 150 msgs
+  5: 300, // Day 5: max 300 msgs
+  6: 600, // Day 6: max 600 msgs
 };
 
 export const MAX_DAILY_VOLUME = 1200; // Normal steady-state cap
@@ -121,7 +121,10 @@ export function recordHealthSuccess(tenantId: string): void {
   }
 }
 
-export function recordHealthError(tenantId: string, errorType: "disconnect" | "rate_limit_429" | "timeout"): CircuitState {
+export function recordHealthError(
+  tenantId: string,
+  errorType: "disconnect" | "rate_limit_429" | "timeout"
+): CircuitState {
   const now = Date.now();
   let state = tenantHealthMap.get(tenantId);
 
@@ -137,7 +140,9 @@ export function recordHealthError(tenantId: string, errorType: "disconnect" | "r
   if (state.recentErrors.length >= MAX_ERRORS_BEFORE_PAUSE) {
     state.circuitState = "CIRCUIT_OPEN_PAUSED";
     state.pausedUntil = now + PAUSE_DURATION_MS;
-    logger.warn(`[AntiBanCircuitBreaker] Tenant ${tenantId} PAUSED for 30m due to ${state.recentErrors.length} errors (${errorType})`);
+    logger.warn(
+      `[AntiBanCircuitBreaker] Tenant ${tenantId} PAUSED for 30m due to ${state.recentErrors.length} errors (${errorType})`
+    );
   } else if (state.recentErrors.length >= 1) {
     state.circuitState = "DEGRADED";
   }
@@ -206,7 +211,9 @@ export interface ProfileChecklistResult {
 
 export function validateBusinessProfile(profile: BusinessProfileData): ProfileChecklistResult {
   const has_name = Boolean(profile.business_name && profile.business_name.trim().length >= 3);
-  const has_profile_picture = Boolean(profile.profile_picture_url && profile.profile_picture_url.startsWith("http"));
+  const has_profile_picture = Boolean(
+    profile.profile_picture_url && profile.profile_picture_url.startsWith("http")
+  );
   const has_category = Boolean(profile.category && profile.category.trim().length > 0);
   const has_description = Boolean(profile.description && profile.description.trim().length >= 10);
 
@@ -216,7 +223,9 @@ export function validateBusinessProfile(profile: BusinessProfileData): ProfileCh
   if (!has_category) missing.push("فئة النشاط (Category, e.g. Education / مركز تعليمي)");
   if (!has_description) missing.push("وصف النشاط التجاري (Description >= 10 chars)");
 
-  const passedCount = [has_name, has_profile_picture, has_category, has_description].filter(Boolean).length;
+  const passedCount = [has_name, has_profile_picture, has_category, has_description].filter(
+    Boolean
+  ).length;
   const score = Math.round((passedCount / 4) * 100);
 
   return {

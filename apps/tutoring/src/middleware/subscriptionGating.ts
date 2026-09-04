@@ -19,7 +19,9 @@ export async function requireActiveSubscription(
   const tenantId = req.user?.tenant_id;
 
   if (!tenantId) {
-    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant organization context" } });
+    res
+      .status(403)
+      .json({ error: { code: "FORBIDDEN", message: "No active tenant organization context" } });
     return;
   }
 
@@ -69,7 +71,8 @@ export async function requireActiveSubscription(
           res.status(402).json({
             error: {
               code: "TRIAL_EXPIRED",
-              message: "Your 14-day free trial has expired. Please submit payment proof to activate your subscription.",
+              message:
+                "Your 14-day free trial has expired. Please submit payment proof to activate your subscription.",
               trial_ended_at: trialEnds.toISOString(),
               in_grace_period: now <= graceEnds,
             },
@@ -88,7 +91,8 @@ export async function requireActiveSubscription(
           res.status(402).json({
             error: {
               code: "SUBSCRIPTION_EXPIRED",
-              message: "Your subscription renewal is past due. Please submit payment proof to continue.",
+              message:
+                "Your subscription renewal is past due. Please submit payment proof to continue.",
               subscription_ended_at: subEnds.toISOString(),
             },
           });
@@ -100,6 +104,8 @@ export async function requireActiveSubscription(
     // 4. Active or pending_verification or valid trial
     next();
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to verify subscription status" } });
+    res
+      .status(500)
+      .json({ error: { code: "INTERNAL_ERROR", message: "Failed to verify subscription status" } });
   }
 }

@@ -21,7 +21,7 @@ export interface ImportResult {
 // Clean phone number: remove all non-digits except leading +
 export function normalizePhoneNumber(phone?: string | null): string {
   if (!phone) return "";
-  let clean = phone.trim().replace(/[\s\-\(\)\.]/g, "");
+  let clean = phone.trim().replace(/[\s\-().]/g, "");
   // Normalize Egyptian numbers
   if (clean.startsWith("+20")) clean = clean.slice(3);
   else if (clean.startsWith("0020")) clean = clean.slice(4);
@@ -95,15 +95,44 @@ function parseCSVLine(line: string): string[] {
 }
 
 // Flexible header detection mapping for English and Arabic columns
-export function mapRowToStudent(row: Record<string, any>, customMapping?: Record<string, string>): RawStudentRow {
+export function mapRowToStudent(
+  row: Record<string, any>,
+  customMapping?: Record<string, string>
+): RawStudentRow {
   const normalized: RawStudentRow = {};
 
   // Default header alias dictionary
   const aliasMap: Record<string, string[]> = {
     name: ["name", "student_name", "الاسم", "اسم الطالب", "طالب", "الاسم ثلاثي"],
-    parent_phone: ["parent_phone", "parent_mobile", "ولي الامر", "ولي الأمر", "موبايل ولي الأمر", "هاتف ولي الأمر", "تليفون ولي الأمر", "رقم ولي الامر"],
-    student_phone: ["student_phone", "mobile", "phone", "موبايل الطالب", "هاتف الطالب", "تليفون الطالب", "رقم الطالب"],
-    code: ["code", "student_code", "serial", "كود", "الكود", "كود الطالب", "مسلسل", "الرقم التعريفي"],
+    parent_phone: [
+      "parent_phone",
+      "parent_mobile",
+      "ولي الامر",
+      "ولي الأمر",
+      "موبايل ولي الأمر",
+      "هاتف ولي الأمر",
+      "تليفون ولي الأمر",
+      "رقم ولي الامر",
+    ],
+    student_phone: [
+      "student_phone",
+      "mobile",
+      "phone",
+      "موبايل الطالب",
+      "هاتف الطالب",
+      "تليفون الطالب",
+      "رقم الطالب",
+    ],
+    code: [
+      "code",
+      "student_code",
+      "serial",
+      "كود",
+      "الكود",
+      "كود الطالب",
+      "مسلسل",
+      "الرقم التعريفي",
+    ],
     fee_override: ["fee_override", "price", "fee", "سعر خاص", "قيمة الحصة", "مصاريف"],
     exempt: ["exempt", "معفي", "منحة", "اعفاء", "إعفاء"],
     notes: ["notes", "ملاحظات", "ملاحظة"],

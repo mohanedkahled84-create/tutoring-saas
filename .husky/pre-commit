@@ -1,0 +1,7 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "Running pre-commit quality checks (ESLint & tests)..."
+cd apps/tutoring
+npm run lint || exit 1
+npm test || exit 1

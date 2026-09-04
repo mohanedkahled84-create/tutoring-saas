@@ -37,7 +37,12 @@ export async function dispatchSubscriptionRenewalReminders(): Promise<DispatchRe
 
     if (error || !tenants) {
       logger.error("[SubscriptionReminder] Failed to query tenants for renewal reminders", error);
-      return { evaluated_tenants: 0, reminders_dispatched: 0, reminders_skipped_already_sent: 0, results: [] };
+      return {
+        evaluated_tenants: 0,
+        reminders_dispatched: 0,
+        reminders_skipped_already_sent: 0,
+        results: [],
+      };
     }
 
     for (const tenant of tenants) {
@@ -124,7 +129,9 @@ export async function dispatchSubscriptionRenewalReminders(): Promise<DispatchRe
       });
 
       if (insertErr) {
-        logger.error(`[SubscriptionReminder] Failed to log reminder for ${tenant.name}: ${insertErr.message}`);
+        logger.error(
+          `[SubscriptionReminder] Failed to log reminder for ${tenant.name}: ${insertErr.message}`
+        );
         results.push({
           tenant_id: tenant.id,
           tenant_name: tenant.name,
@@ -142,7 +149,9 @@ export async function dispatchSubscriptionRenewalReminders(): Promise<DispatchRe
           idempotency_key: idempotencyKey,
           status: "dispatched",
         });
-        logger.info(`[SubscriptionReminder] Logged ${threshold} reminder for ${tenant.name} (${idempotencyKey})`);
+        logger.info(
+          `[SubscriptionReminder] Logged ${threshold} reminder for ${tenant.name} (${idempotencyKey})`
+        );
       }
     }
 
@@ -154,6 +163,11 @@ export async function dispatchSubscriptionRenewalReminders(): Promise<DispatchRe
     };
   } catch (err: any) {
     logger.error("[SubscriptionReminder] Exception in reminder dispatcher", err);
-    return { evaluated_tenants: 0, reminders_dispatched: 0, reminders_skipped_already_sent: 0, results: [] };
+    return {
+      evaluated_tenants: 0,
+      reminders_dispatched: 0,
+      reminders_skipped_already_sent: 0,
+      results: [],
+    };
   }
 }

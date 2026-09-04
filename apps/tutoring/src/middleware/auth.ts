@@ -29,7 +29,8 @@ export async function authenticateUser(
     res.status(401).json({
       error: {
         code: "UNAUTHORIZED",
-        message: "Missing or invalid authentication token (expected Bearer header or httpOnly cookie)",
+        message:
+          "Missing or invalid authentication token (expected Bearer header or httpOnly cookie)",
       },
     });
     return;
@@ -144,7 +145,8 @@ export function requireFinancialAccess(
     res.status(403).json({
       error: {
         code: "FORBIDDEN",
-        message: "Access denied: financial records and revenue aggregates are restricted from assistant role",
+        message:
+          "Access denied: financial records and revenue aggregates are restricted from assistant role",
       },
     });
     return;
@@ -161,7 +163,10 @@ export function validatePasswordStrength(password: string): { valid: boolean; re
     return { valid: false, reason: "Password must contain at least one letter" };
   }
   if (!/[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
-    return { valid: false, reason: "Password must contain at least one digit or special character" };
+    return {
+      valid: false,
+      reason: "Password must contain at least one digit or special character",
+    };
   }
   return { valid: true };
 }

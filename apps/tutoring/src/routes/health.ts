@@ -16,7 +16,9 @@ healthRouter.get("/", async (_req: Request, res: Response): Promise<void> => {
   let dbError: string | undefined;
 
   try {
-    const { error } = await supabasePublic.from("tenants").select("count", { count: "exact", head: true });
+    const { error } = await supabasePublic
+      .from("tenants")
+      .select("count", { count: "exact", head: true });
     dbLatencyMs = Date.now() - startTime;
 
     if (error) {

@@ -37,7 +37,9 @@ riskRouter.get("/watchlist", async (req: AuthenticatedRequest, res: Response): P
       watchlist,
     });
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Risk computation failed", details: err.message } });
+    res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Risk computation failed", details: err.message },
+    });
   }
 });
 

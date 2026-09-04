@@ -21,18 +21,24 @@ const dispatchedKeys = new Set<string>();
  * DEV-WPA.3: Triggers the n8n attendance webhook exactly once per idempotency_key.
  * Operates as a non-blocking asynchronous side effect so attendance recording is never impeded.
  */
-export async function dispatchAttendanceWebhook(payload: AttendanceWebhookPayload): Promise<boolean> {
+export async function dispatchAttendanceWebhook(
+  payload: AttendanceWebhookPayload
+): Promise<boolean> {
   const { idempotency_key, attended, comment } = payload;
 
   // 1. Contract Rule: Present students with no comment do not trigger WhatsApp messages
   if (attended === true && (!comment || comment.trim() === "")) {
-    logger.info(`[WebhookDispatcher] Skipping present student without comment: ${payload.student_name}`);
+    logger.info(
+      `[WebhookDispatcher] Skipping present student without comment: ${payload.student_name}`
+    );
     return false;
   }
 
   // 2. Exactly-once check: in-memory fast path
   if (dispatchedKeys.has(idempotency_key)) {
-    logger.info(`[WebhookDispatcher] Webhook already dispatched for key (in-memory): ${idempotency_key}`);
+    logger.info(
+      `[WebhookDispatcher] Webhook already dispatched for key (in-memory): ${idempotency_key}`
+    );
     return false;
   }
 
@@ -47,11 +53,15 @@ export async function dispatchAttendanceWebhook(payload: AttendanceWebhookPayloa
 
     if (existingLog) {
       dispatchedKeys.add(idempotency_key);
-      logger.info(`[WebhookDispatcher] Webhook already logged in database for key: ${idempotency_key}`);
+      logger.info(
+        `[WebhookDispatcher] Webhook already logged in database for key: ${idempotency_key}`
+      );
       return false;
     }
   } catch (err: any) {
-    logger.warn(`[WebhookDispatcher] Database deduplication check failed, proceeding cautiously: ${err.message}`);
+    logger.warn(
+      `[WebhookDispatcher] Database deduplication check failed, proceeding cautiously: ${err.message}`
+    );
   }
 
   // Mark dispatched immediately to prevent race conditions
@@ -80,15 +90,21 @@ export async function dispatchAttendanceWebhook(payload: AttendanceWebhookPayloa
     });
 
     if (!response.ok) {
-      logger.warn(`[WebhookDispatcher] n8n returned non-200 status (${response.status}) for ${idempotency_key}`);
+      logger.warn(
+        `[WebhookDispatcher] n8n returned non-200 status (${response.status}) for ${idempotency_key}`
+      );
       return false;
     }
 
-    logger.info(`[WebhookDispatcher] Webhook successfully delivered to n8n for ${payload.student_name} (${idempotency_key})`);
+    logger.info(
+      `[WebhookDispatcher] Webhook successfully delivered to n8n for ${payload.student_name} (${idempotency_key})`
+    );
     return true;
   } catch (err: any) {
     // Non-blocking: never crash or throw to the caller
-    logger.error(`[WebhookDispatcher] Failed to dispatch webhook to n8n for ${idempotency_key}: ${err.message}`);
+    logger.error(
+      `[WebhookDispatcher] Failed to dispatch webhook to n8n for ${idempotency_key}: ${err.message}`
+    );
     return false;
   }
 }

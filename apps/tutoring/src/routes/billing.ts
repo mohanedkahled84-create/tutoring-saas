@@ -53,11 +53,14 @@ billingRouter.post(
         .eq("id", tenantId);
 
       res.status(201).json({
-        message: "Payment proof submitted successfully. Your account is pending verification by admin.",
+        message:
+          "Payment proof submitted successfully. Your account is pending verification by admin.",
         payment_proof: proof,
       });
     } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to submit payment proof" } });
+      res
+        .status(500)
+        .json({ error: { code: "INTERNAL_ERROR", message: "Failed to submit payment proof" } });
     }
   }
 );
@@ -103,6 +106,8 @@ billingRouter.get("/status", async (req: AuthenticatedRequest, res: Response): P
       payment_proofs: proofs || [],
     });
   } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to fetch billing status" } });
+    res
+      .status(500)
+      .json({ error: { code: "INTERNAL_ERROR", message: "Failed to fetch billing status" } });
   }
 });

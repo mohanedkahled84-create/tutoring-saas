@@ -1,11 +1,7 @@
 ﻿import { Request, Response, NextFunction } from "express";
 import { config } from "../config/index.js";
 
-export function authenticateInternalSecret(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function authenticateInternalSecret(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
