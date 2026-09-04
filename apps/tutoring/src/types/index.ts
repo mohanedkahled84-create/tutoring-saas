@@ -1,4 +1,4 @@
-﻿import { Request } from "express";
+import { Request } from "express";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export type UserRole = "admin" | "owner" | "assistant";
@@ -14,6 +14,7 @@ export interface AuthenticatedRequest extends Request {
   user?: UserContext;
   supabase?: SupabaseClient;
   token?: string;
+  services?: Record<string, unknown>;
 }
 
 export interface AttendanceRecordInput {
