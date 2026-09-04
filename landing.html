@@ -8,7 +8,7 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Changa:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Changa:wght@600;700;800&display=swap" rel="stylesheet">
   
   <style>
     :root {
@@ -37,12 +37,12 @@
       background: var(--cream);
       color: var(--ink);
       font-family: 'Cairo', sans-serif;
-      line-height: 1.65;
+      line-height: 1.6;
       -webkit-font-smoothing: antialiased;
     }
 
     .shell {
-      max-width: 1180px;
+      max-width: 1100px;
       margin: 0 auto;
       padding-right: 20px;
       padding-left: 20px;
@@ -51,11 +51,10 @@
 
     /* Header / Nav */
     .nav {
-      height: 80px;
+      height: 75px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 15px;
       background: #fff;
       border-bottom: 1px solid var(--line);
       position: sticky;
@@ -63,7 +62,7 @@
       z-index: 100;
     }
     .brand {
-      font: 800 32px/1 'Changa', sans-serif;
+      font: 800 30px/1 'Changa', sans-serif;
       color: var(--blue);
       letter-spacing: -2px;
       text-decoration: none;
@@ -82,9 +81,9 @@
     }
     .nav nav {
       display: flex;
-      gap: 22px;
+      gap: 24px;
       margin-right: auto;
-      margin-left: 22px;
+      margin-left: 24px;
     }
     .nav nav a {
       font-size: 13.5px;
@@ -101,7 +100,7 @@
       cursor: pointer;
       font-weight: 700;
       border-radius: 12px;
-      padding: 12px 18px;
+      padding: 11px 18px;
       font-size: 13px;
       transition: .2s;
       display: inline-flex;
@@ -113,18 +112,18 @@
     .nav-cta { background: var(--navy); color: #fff; }
     .nav-cta:hover, .button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 10px 22px rgba(23, 45, 112, 0.2);
+      box-shadow: 0 8px 20px rgba(23, 45, 112, 0.18);
     }
     .button.amber { background: var(--gold); color: var(--navy); }
 
     /* Hero Section */
     .hero {
       display: grid;
-      grid-template-columns: 1fr 1.15fr;
-      gap: 40px;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 45px;
       align-items: center;
-      padding-top: 45px;
-      padding-bottom: 60px;
+      padding-top: 50px;
+      padding-bottom: 50px;
     }
     .launch-badge {
       display: inline-flex;
@@ -132,13 +131,12 @@
       gap: 8px;
       margin-bottom: 15px;
       background: #fff;
-      border: 1px solid #e2e7f3;
+      border: 1px solid #e0e5f2;
       padding: 6px 12px;
       border-radius: 30px;
       font-size: 12px;
       font-weight: 700;
       color: var(--navy);
-      width: fit-content;
     }
     .discount-pill {
       background: var(--gold);
@@ -149,7 +147,7 @@
     }
     .hero h1 {
       font-family: 'Changa', sans-serif;
-      font-size: 46px;
+      font-size: 44px;
       line-height: 1.25;
       letter-spacing: -1.5px;
       margin: 0 0 16px;
@@ -158,13 +156,12 @@
     .hero h1 em {
       color: var(--blue);
       font-style: normal;
-      position: relative;
     }
     .lead {
-      font-size: 15.5px;
-      line-height: 1.95;
+      font-size: 16px;
+      line-height: 1.9;
       color: var(--text);
-      max-width: 530px;
+      max-width: 520px;
       margin: 0;
     }
     .hero-actions {
@@ -185,67 +182,46 @@
       flex-wrap: wrap;
       gap: 8px;
       margin-top: 25px;
-      font-size: 11px;
+      font-size: 11.5px;
       color: var(--text);
     }
     .trust span {
       background: #fff;
       border: 1px solid #e7ecf5;
       border-radius: 20px;
-      padding: 5px 10px;
+      padding: 5px 12px;
       font-weight: 600;
     }
 
-    /* Redesigned Hero System Explainer (Clean Browser Architecture) */
-    .hero-visual {
+    /* Minimalist, Clean Hero Visual (Focus on the Real Core) */
+    .hero-visual-clean {
       background: #fff;
-      border: 1px solid #dce4f7;
+      border: 1.5px solid #dbe3f5;
       border-radius: 24px;
-      box-shadow: 0 20px 45px rgba(23, 45, 112, 0.1);
-      overflow: hidden;
+      padding: 24px;
+      box-shadow: 0 18px 40px rgba(23, 45, 112, 0.08);
       display: flex;
       flex-direction: column;
+      gap: 16px;
+      max-width: 440px;
+      margin: 0 auto;
+      width: 100%;
     }
-    
-    /* Mock Browser Bar */
-    .browser-topbar {
-      background: #f1f4fa;
-      border-bottom: 1px solid #e2e7f2;
-      padding: 10px 14px;
+    .h-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      border-bottom: 1px solid #edf1f8;
+      padding-bottom: 12px;
     }
-    .browser-dots {
-      display: flex;
-      gap: 5px;
-    }
-    .browser-dots i {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-    .dot-red { background: #ff5f56; }
-    .dot-yellow { background: #ffbd2e; }
-    .dot-green { background: #27c93f; }
-    .browser-address {
-      background: #fff;
-      border: 1px solid #dce2ef;
-      border-radius: 8px;
-      padding: 3px 12px;
-      font-size: 11px;
-      color: var(--text);
+    .h-header b {
+      font-size: 14px;
+      color: var(--navy);
       display: flex;
       align-items: center;
       gap: 6px;
-      direction: ltr;
-      font-family: monospace;
-      flex: 1;
-      max-width: 250px;
     }
-    .browser-badge {
-      margin-right: auto;
+    .h-live-tag {
       background: #eaf8f0;
       color: var(--green);
       font-size: 10px;
@@ -255,471 +231,175 @@
       border: 1px solid #caebd7;
     }
 
-    /* Inside System Explainer */
-    .system-canvas {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      background: #fbfcfe;
-    }
-    
-    .session-live-strip {
-      background: #fff;
-      border: 1px solid #e5ebf7;
-      border-radius: 14px;
-      padding: 12px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      box-shadow: 0 4px 12px rgba(25, 45, 95, 0.03);
-    }
-    .session-live-strip div b {
-      font-size: 13.5px;
-      color: var(--navy);
-      display: block;
-    }
-    .session-live-strip div small {
-      font-size: 10px;
-      color: #79869e;
-    }
-    .session-kpis {
-      display: flex;
-      gap: 8px;
-    }
-    .kpi-chip {
-      background: #f4f7fe;
-      border: 1px solid #e1e7f5;
-      border-radius: 8px;
-      padding: 4px 8px;
-      font-size: 10px;
-      display: flex;
-      flex-direction: column;
-      text-align: center;
-    }
-    .kpi-chip span { color: #7a87a0; font-size: 8.5px; }
-    .kpi-chip b { color: var(--navy); font-size: 11px; }
-
-    /* The 3 Pillars Architecture Box */
-    .pillars-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-    }
-    .pillar-card {
-      background: #fff;
-      border: 1px solid #e3e8f5;
-      border-radius: 14px;
-      padding: 14px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      position: relative;
-      box-shadow: 0 4px 10px rgba(25, 45, 95, 0.02);
-    }
-    .pillar-card.highlight {
-      border-color: #8da6f7;
-      background: #f8faff;
-    }
-    .pillar-card.lock {
-      background: #fffdf9;
-      border-color: #f7e6c9;
-    }
-    .pillar-num {
-      font: 800 11px 'Changa', sans-serif;
-      color: var(--blue);
-      background: var(--pale);
-      padding: 2px 7px;
-      border-radius: 6px;
-      width: fit-content;
-    }
-    .pillar-card.lock .pillar-num {
-      background: var(--gold-light);
-      color: #a46c1a;
-    }
-    .pillar-card h4 {
-      margin: 0;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--navy);
-    }
-    .pillar-card p {
-      margin: 0;
-      font-size: 10px;
-      color: #69758c;
-      line-height: 1.6;
-    }
-    .pillar-preview {
-      background: #f7f9fd;
-      border: 1px solid #e9edf5;
-      border-radius: 8px;
-      padding: 6px 8px;
-      font-size: 9.5px;
-      margin-top: auto;
-    }
-    .pillar-preview b { color: var(--navy); display: block; }
-    .pillar-preview small { color: var(--green); font-weight: 700; }
-    .lock-tag {
-      background: #fff3dc;
-      color: #9d6819;
-      font-size: 9px;
-      font-weight: 700;
-      padding: 3px 6px;
-      border-radius: 6px;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      width: fit-content;
-    }
-
-    /* System Explainer Footer Note */
-    .system-footer-note {
-      background: #eef3ff;
-      border: 1px solid #d5e1fc;
-      border-radius: 10px;
-      padding: 9px 12px;
-      font-size: 11px;
-      color: #214399;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-    .system-footer-note b { color: var(--navy); }
-
-    /* Pain Section */
-    .pain {
-      background: var(--navy);
-      color: #fff;
-      padding: 55px 0;
-      margin-top: 30px;
-    }
-    .pain-inner {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      align-items: center;
-    }
-    .eyebrow {
-      font-family: 'Changa', sans-serif;
-      font-size: 13px;
-      color: #be781c;
-      margin: 0 0 6px;
-      font-weight: 700;
-    }
-    .eyebrow.dark { color: #f4c467; }
-    .pain h2 {
-      font: 700 30px/1.4 'Changa', sans-serif;
-      margin: 0;
-    }
-    .pain-text p {
-      color: #dbe4ff;
-      line-height: 1.85;
-      font-size: 14px;
-      margin: 0 0 14px;
-    }
-    .pain-badges {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .pain-badges span {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-    }
-
-    /* Steps Section */
-    .section { padding-top: 70px; padding-bottom: 30px; }
-    .section-heading { margin-bottom: 30px; }
-    .section-heading h2 { font: 700 32px 'Changa', sans-serif; margin: 0; color: var(--navy); }
-    .section-heading p:last-child { margin: 6px 0 0; color: var(--text); font-size: 14px; }
-    .centered { text-align: center; }
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-    }
-    .steps article {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-top: 3px solid var(--blue);
+    /* Simulated Mobile Camera Scanner */
+    .h-scanner {
+      background: #f6f8fe;
+      border: 2px dashed #9cb1f5;
       border-radius: 16px;
-      padding: 20px 15px;
-      box-shadow: 0 8px 18px rgba(25, 45, 95, 0.04);
-    }
-    .steps b { font: 700 30px 'Changa', sans-serif; color: var(--gold); display: block; }
-    .steps h3 { font: 700 16px 'Changa', sans-serif; margin: 6px 0 6px; color: var(--navy); }
-    .steps p { font-size: 12px; color: var(--text); line-height: 1.75; margin: 0; }
-
-    /* Core Product Detail Grid */
-    .product-detail { padding: 70px 0; background: #fff; }
-    .detail-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 18px;
-      margin-top: 30px;
-    }
-    .detail-card {
-      border: 1px solid #e4e8f1;
-      border-radius: 20px;
-      padding: 22px;
-      background: #fff;
+      padding: 20px 14px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      min-height: 380px;
-      box-shadow: 0 10px 24px rgba(22, 42, 94, 0.03);
-      transition: .2s;
-    }
-    .detail-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 15px 30px rgba(22, 42, 94, 0.08);
-    }
-    .detail-copy > span { font: 700 12px 'Changa', sans-serif; color: #bd7618; display: block; }
-    .detail-copy h3 { font: 700 18px 'Changa', sans-serif; margin: 5px 0 8px; color: var(--navy); }
-    .detail-copy p { font-size: 12.5px; line-height: 1.8; color: var(--text); margin: 0; }
-    
-    /* In-App Screen Visuals */
-    .screen {
-      margin-top: 16px;
-      border: 1px solid #e6e9f1;
-      border-radius: 12px;
-      padding: 12px;
-      background: #f8f9fd;
-      font-size: 11px;
-    }
-    
-    /* Card 1: Scanner UI */
-    .scanner-ui-pro {
-      display: grid;
-      grid-template-columns: 75px 1fr;
-      gap: 10px;
       align-items: center;
-      background: #f4f7ff;
-      border-color: #cbd8fb;
-    }
-    .cam-viewfinder {
-      height: 75px;
-      border: 2px dashed var(--blue);
-      border-radius: 10px;
-      background: #e5ecff;
-      display: grid;
-      place-items: center;
-      color: var(--blue);
-      font-size: 9.5px;
-      font-weight: 700;
+      text-align: center;
+      gap: 8px;
       position: relative;
       overflow: hidden;
     }
-    .scan-laser {
+    .h-laser {
       position: absolute;
       left: 0; right: 0;
       height: 2px;
       background: var(--gold);
       box-shadow: 0 0 8px var(--gold);
-      animation: laserScan 2s infinite ease-in-out;
+      animation: scanMove 2.2s infinite ease-in-out;
     }
-    @keyframes laserScan {
-      0% { top: 10%; }
-      50% { top: 85%; }
-      100% { top: 10%; }
+    @keyframes scanMove {
+      0% { top: 15%; }
+      50% { top: 80%; }
+      100% { top: 15%; }
     }
-    .cam-info { display: flex; flex-direction: column; gap: 3px; }
-    .tag-done {
-      background: #eaf8f0;
-      color: var(--green);
-      font-weight: 700;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 6px;
-      width: fit-content;
-    }
-    .cam-info em { font-style: normal; color: #b77618; font-size: 9px; }
+    .h-scanner-icon { font-size: 28px; }
+    .h-scanner b { font-size: 12.5px; color: var(--navy); }
+    .h-scanner small { font-size: 10.5px; color: #707e99; }
 
-    /* Card 2: WhatsApp Bubble */
-    .whatsapp-bubble-ui {
-      background: #eef7f2;
-      border-color: #c9e6d4;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .wa-header {
-      display: flex;
-      justify-content: space-between;
-      color: #2b6e49;
-      font-weight: 700;
-      font-size: 10px;
-    }
-    .wa-bubble {
-      background: #fff;
+    /* Scan Result Card */
+    .h-result {
+      background: #eef8f2;
+      border: 1px solid #c3e9d2;
       border-radius: 12px;
-      border-top-right-radius: 2px;
-      padding: 10px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.04);
-    }
-    .wa-bubble p { margin: 0; color: #32443a; font-size: 10.5px; line-height: 1.7; }
-    .wa-meta {
+      padding: 10px 14px;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-top: 6px;
-      color: #728a7c;
-      font-size: 9px;
-    }
-    .wa-meta span { color: #3a8ee6; font-weight: 700; }
-
-    /* Card 3: Reports UI */
-    .report-ui-pro {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-    }
-    .student-track-item {
-      display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding: 8px 10px;
-      border-radius: 10px;
-      background: #fff;
-      border: 1px solid #eef1f7;
+      gap: 10px;
     }
-    .student-track-item.danger { border-right: 4px solid var(--red); background: #fff8f8; }
-    .student-track-item.success { border-right: 4px solid var(--green); background: #f6fcf8; }
-    .student-track-item div { display: grid; }
-    .student-track-item b { font-size: 11px; color: var(--navy); }
-    .student-track-item small { font-size: 9px; color: #778399; }
-    .btn-warn-alert {
-      border: 0;
-      background: var(--red);
+    .h-result div b { font-size: 12px; color: #1e6b43; display: block; }
+    .h-result div small { font-size: 10px; color: #447b5e; }
+    .h-badge-done {
+      background: var(--green);
       color: #fff;
-      font: 700 9px 'Cairo', sans-serif;
-      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
       border-radius: 6px;
-      cursor: pointer;
+      white-space: nowrap;
     }
-    .trend-up { color: var(--green); font-weight: 700; font-size: 10px; }
 
-    /* Card 4: Cash Recon */
-    .cash-recon-ui {
+    /* Minimal Stats Strip */
+    .h-stats-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+    .h-stats-strip div {
+      background: #f8fafd;
+      border: 1px solid #e9edf6;
+      border-radius: 10px;
+      padding: 8px 4px;
+    }
+    .h-stats-strip span { font-size: 9.5px; color: #79869f; display: block; }
+    .h-stats-strip b { font-size: 12px; color: var(--navy); }
+
+    /* Safe PIN Notice */
+    .h-pin-notice {
       background: #fffdf8;
-      border-color: #f7e8cb;
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-    }
-    .recon-head { display: flex; justify-content: space-between; font-size: 10px; color: var(--navy); }
-    .badge-matched { background: #eaf8f0; color: var(--green); padding: 2px 6px; border-radius: 6px; font-weight: 700; }
-    .bills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; text-align: center; }
-    .bills-grid div { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 6px 2px; }
-    .bills-grid span { font-size: 8px; color: #888; display: block; }
-    .bills-grid b { font-size: 9px; color: var(--navy); }
-    .recon-footer { color: #b5771d; font-weight: 700; font-size: 9.5px; text-align: center; }
-
-    /* Card 5: Import UI */
-    .import-print-ui {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-    }
-    .import-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #fff;
-      border: 1px solid #eef1f8;
-      padding: 8px 10px;
-      border-radius: 10px;
-    }
-    .file-icon { font-size: 20px; }
-    .import-badge div { display: grid; }
-    .import-badge b { font-size: 10.5px; color: var(--navy); }
-    .import-badge small { font-size: 9px; color: var(--green); font-weight: 600; }
-    .print-preview {
-      background: #f7f9ff;
-      border: 1px dashed var(--blue);
-      border-radius: 10px;
-      padding: 8px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .print-preview span { font-size: 9.5px; color: var(--navy); font-weight: 700; }
-    .btn-print-sim {
-      border: 0;
-      background: var(--blue);
-      color: #fff;
-      padding: 5px;
-      border-radius: 6px;
-      font: 700 9px 'Cairo', sans-serif;
-      cursor: pointer;
-    }
-
-    /* Card 6: Assistant UI & PIN Protection */
-    .assistant-ui-pro {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .asst-card-sim {
-      background: #fff;
-      border: 1px solid #eef1f8;
+      border: 1px solid #f9e6c7;
       border-radius: 10px;
       padding: 9px 12px;
-    }
-    .asst-card-sim b { font-size: 11px; color: var(--navy); display: block; margin-bottom: 4px; }
-    .center-tags { display: flex; gap: 5px; flex-wrap: wrap; }
-    .center-tags span {
-      background: #e8edff;
-      color: var(--blue);
-      font-size: 9.5px;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 4px;
-    }
-    .pin-lock-badge {
-      background: #fff3dc;
-      border: 1px solid #f9dfb1;
-      border-radius: 10px;
-      padding: 9px 12px;
-      text-align: center;
-      color: #a46d1a;
-      font-weight: 700;
-      font-size: 10.5px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
+      font-size: 11px;
+      color: #9d6819;
+      font-weight: 700;
     }
 
-    /* Savings Banner */
-    .savings-banner {
-      margin-top: 40px;
-      background: linear-gradient(135deg, var(--navy), #25409a);
-      color: #fff;
-      border-radius: 22px;
-      padding: 26px 30px;
+    /* Combined Features Section (No Fluff, 4 Core Cards) */
+    .section { padding-top: 60px; padding-bottom: 25px; }
+    .section-heading { margin-bottom: 30px; text-align: center; }
+    .section-heading h2 { font: 700 32px 'Changa', sans-serif; margin: 0; color: var(--navy); }
+    .section-heading p { margin: 6px 0 0; color: var(--text); font-size: 14px; }
+
+    .core-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .core-card {
+      background: #fff;
+      border: 1.5px solid #e3e8f4;
+      border-radius: 20px;
+      padding: 24px;
       display: flex;
-      justify-content: space-around;
-      align-items: center;
-      box-shadow: 0 15px 35px rgba(23, 45, 112, 0.18);
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 10px 24px rgba(22, 42, 94, 0.03);
+      transition: .2s;
     }
-    .saving-item { text-align: center; display: grid; gap: 4px; }
-    .saving-item b { font: 700 36px/1 'Changa', sans-serif; color: var(--gold); }
-    .saving-item span { font-size: 13px; color: #d7e2ff; max-width: 200px; }
-    .saving-divider { width: 1px; height: 45px; background: rgba(255,255,255,0.15); }
+    .core-card:hover {
+      border-color: var(--blue);
+      transform: translateY(-3px);
+    }
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--pale);
+      color: var(--blue);
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+    }
+    .card-icon.gold { background: var(--gold-light); color: #b77617; }
+    .card-top h3 { margin: 0; font-size: 18px; font-weight: 700; color: var(--navy); }
+    .core-card p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.8;
+    }
+    
+    /* Clean Inside Snippets for Each Card */
+    .snippet {
+      background: #f8fafd;
+      border: 1px solid #eaf0f9;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 11px;
+      margin-top: auto;
+    }
+    .snippet-wa {
+      background: #eef8f2;
+      border-color: #cdecd8;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .snippet-wa small { color: #2e734c; font-weight: 700; font-size: 10px; }
+    .snippet-wa p { font-size: 11px; color: #32473c; margin: 0; line-height: 1.6; }
+    
+    .snippet-cash {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fffdf8;
+      border-color: #f7e6c9;
+    }
+    .snippet-cash b { color: var(--navy); font-size: 11.5px; }
+    .snippet-cash span { color: var(--green); font-weight: 700; font-size: 10.5px; }
 
-    /* Teacher Poll Section */
-    .poll-section { padding-top: 55px; padding-bottom: 55px; }
+    /* Teacher Poll Section (Fixed Button, Clean & Beautiful) */
+    .poll-section { padding-top: 50px; padding-bottom: 50px; }
     .poll-box {
       background: #fff;
-      border: 1.5px solid #dbe2f3;
+      border: 1.5px solid #dce4f5;
       border-radius: 24px;
       padding: 35px;
       box-shadow: 0 16px 36px rgba(20, 40, 90, 0.04);
@@ -751,35 +431,55 @@
     .poll-btn b { font-size: 13.5px; color: var(--navy); }
     .poll-btn small { font-size: 11px; color: var(--text); line-height: 1.5; }
     
+    /* Fixed Solution Card — Perfect Inside Padding, No Overflow */
     .poll-solution {
-      margin-top: 20px;
-      background: #eaf8f0;
+      margin-top: 22px;
+      background: #eef8f2;
       border: 1.5px solid #bcead0;
-      border-radius: 16px;
-      padding: 20px;
+      border-radius: 18px;
+      padding: 24px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      align-items: flex-start;
+      gap: 14px;
       animation: fadeIn .3s ease;
     }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
     .hidden { display: none !important; }
-    .solution-header { display: flex; align-items: center; gap: 8px; color: #1e7046; font-size: 13.5px; }
+    .solution-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #1e7046;
+      font-size: 14px;
+    }
     .sol-icon { font-size: 20px; }
-    .poll-solution p { margin: 0; color: #2e5942; font-size: 12.5px; line-height: 1.8; }
-    .sol-cta { background: var(--green); color: #fff; width: fit-content; margin-top: 4px; }
+    .poll-solution p {
+      margin: 0;
+      color: #2e5942;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    .sol-cta {
+      background: var(--green);
+      color: #fff;
+      display: inline-flex;
+      margin-top: 6px;
+      padding: 12px 20px;
+    }
 
     /* Waitlist Section */
     .waitlist {
       background: linear-gradient(130deg, var(--navy), #2745a7);
       color: #fff;
-      padding: 65px 0;
-      margin-top: 50px;
+      padding: 60px 0;
+      margin-top: 40px;
+      border-radius: 28px;
     }
     .waitlist-inner {
       display: grid;
       grid-template-columns: 1fr 1.05fr;
-      gap: 50px;
+      gap: 45px;
       align-items: center;
     }
     .launch-discount {
@@ -798,7 +498,7 @@
       border-radius: 12px;
       margin: 0 4px;
     }
-    .waitlist h2 { font: 700 36px/1.35 'Changa', sans-serif; margin: 0 0 10px; }
+    .waitlist h2 { font: 700 34px/1.35 'Changa', sans-serif; margin: 0 0 10px; }
     .waitlist p { font-size: 14px; line-height: 1.85; color: #dbe4ff; margin: 0 0 12px; }
     .waitlist small { font-size: 10.5px; color: #bdcaf6; }
     
@@ -813,7 +513,7 @@
       gap: 12px;
     }
     .waitlist label {
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 700;
       display: grid;
       gap: 4px;
@@ -821,10 +521,10 @@
     }
     .full-col { grid-column: span 2; }
     .waitlist input, .waitlist select {
-      font: 400 12.5px 'Cairo', sans-serif;
+      font: 400 13px 'Cairo', sans-serif;
       border: 1.5px solid #dfe5f2;
       border-radius: 10px;
-      padding: 9px 12px;
+      padding: 10px 12px;
       outline: none;
       background: #fff;
       color: var(--ink);
@@ -845,10 +545,10 @@
     .form-message.error { color: var(--red); }
 
     /* FAQ */
-    .faq { padding-bottom: 70px; }
-    .faq details { border-bottom: 1px solid var(--line); padding: 16px 0; }
+    .faq { padding-bottom: 60px; max-width: 800px; margin: 0 auto; }
+    .faq details { border-bottom: 1px solid var(--line); padding: 15px 0; }
     .faq summary { font-weight: 700; font-size: 14px; cursor: pointer; color: var(--navy); }
-    .faq p { font-size: 13px; color: var(--text); margin: 8px 0 0; line-height: 1.85; }
+    .faq p { font-size: 13px; color: var(--text); margin: 8px 0 0; line-height: 1.8; }
 
     /* Footer */
     footer {
@@ -870,38 +570,31 @@
     /* RESPONSIVE DESIGN (MOBILE-FIRST OPTIMIZED)           */
     /* ==================================================== */
     @media (max-width: 960px) {
-      .hero, .pain-inner, .waitlist-inner { grid-template-columns: 1fr; gap: 32px; }
-      .detail-grid { grid-template-columns: 1fr 1fr; }
-      .steps { grid-template-columns: 1fr 1fr; }
-      .poll-grid { grid-template-columns: 1fr; }
-      .hero h1 { font-size: 38px; }
+      .hero, .waitlist-inner { grid-template-columns: 1fr; gap: 32px; }
+      .core-grid, .poll-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 36px; }
       .nav nav { display: none; }
-      .savings-banner { flex-direction: column; gap: 18px; padding: 22px; }
-      .saving-divider { width: 60px; height: 1px; }
-      .pillars-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 600px) {
-      .shell { padding-right: 15px; padding-left: 15px; }
-      .nav { height: 68px; }
-      .brand { font-size: 26px; }
-      .nav-cta { padding: 9px 13px; font-size: 11px; }
-      .hero { padding-top: 25px; padding-bottom: 35px; }
-      .hero h1 { font-size: 32px; letter-spacing: -1px; }
+      .shell { padding-right: 14px; padding-left: 14px; }
+      .nav { height: 65px; }
+      .brand { font-size: 24px; }
+      .nav-cta { padding: 8px 12px; font-size: 11px; }
+      .hero { padding-top: 25px; padding-bottom: 25px; gap: 24px; }
+      .hero h1 { font-size: 29px; letter-spacing: -0.8px; line-height: 1.3; }
       .lead { font-size: 14px; }
-      .detail-grid, .steps, .waitlist form { grid-template-columns: 1fr; }
+      .hero-actions .button { width: 100%; text-align: center; }
+      .waitlist { padding: 35px 16px; border-radius: 18px; margin-top: 25px; }
+      .waitlist h2 { font-size: 26px; }
+      .waitlist form { grid-template-columns: 1fr; padding: 16px; gap: 10px; }
       .full-col { grid-column: span 1; }
-      .waitlist { padding: 45px 0; }
-      .waitlist h2 { font-size: 28px; }
-      .waitlist form { padding: 18px; }
-      .poll-box { padding: 18px; }
-      .section-heading h2 { font-size: 25px; }
-      .pain h2 { font-size: 24px; }
-      .system-canvas { padding: 12px; }
-      .session-live-strip { flex-direction: column; align-items: flex-start; }
-      .session-kpis { width: 100%; justify-content: space-between; }
-      .scanner-ui-pro { grid-template-columns: 1fr; }
-      .cam-viewfinder { height: 60px; }
+      .waitlist input, .waitlist select { font-size: 16px !important; }
+      .poll-box { padding: 18px; border-radius: 18px; }
+      .poll-solution { padding: 18px; }
+      .sol-cta { width: 100%; text-align: center; justify-content: center; }
+      .section-heading h2 { font-size: 24px; }
+      .hero-visual-clean { padding: 18px; }
     }
   </style>
 </head>
@@ -913,21 +606,19 @@
   <header class="nav shell">
     <a class="brand" href="#top" aria-label="سنترلي">سنتر<span>ل</span>ي</a>
     <nav>
-      <a href="#features">المميزات</a>
-      <a href="#how">كيف يعمل</a>
-      <a href="#details-section">من جوّه الموقع</a>
+      <a href="#features">المميزات الأساسية</a>
       <a href="#teacher-poll">مشاكل وحلول</a>
       <a href="#faq">أسئلة شائعة</a>
     </nav>
     <a class="nav-cta" href="#waitlist">احجز مكانك وخد خصم 20% 🚀</a>
   </header>
 
-  <main id="top">
+  <main id="top" class="shell">
 
     <!-- ============================================== -->
     <!-- HERO SECTION                                   -->
     <!-- ============================================== -->
-    <section class="hero shell">
+    <section class="hero">
       
       <!-- Right Copy -->
       <div class="hero-copy">
@@ -939,106 +630,67 @@
         <h1>خلّي وقتك للتدريس.<br>وسيّب <em>سنترلي</em> يرتّب الباقي.</h1>
         
         <p class="lead">
-          <b>موقع ويب سحابي</b> مصمم خصيصاً للمدرسين لإدارة حصصهم في السناتر؛ من مسح باركود الحضور ورصد الواجب، لجرد درج الكاش، ورسائل واتساب راقية لأولياء الأمور — كل يومك التعليمي من شاشة واحدة بدون أي تعقيد وبدون تحميل برامج.
+          <b>موقع ويب سحابي</b> للمدرسين لإدارة الحصص بالسناتر؛ مسح باركود الحضور ورصد الواجب بكاميرا الموبايل، جرد درج الكاش، ورسائل واتساب راقية لأولياء الأمور — كل يومك من شاشة واحدة بدون أي تعقيد.
         </p>
         
         <div class="hero-actions">
           <a class="button amber" href="#waitlist">احجز مكانك في الإطلاق (خصم 20%) 🚀</a>
-          <a class="text-link" href="#details-section">شوف السيستم من جوّه <b>←</b></a>
+          <a class="text-link" href="#features">شوف المميزات <b>←</b></a>
         </div>
         
         <div class="trust">
           <span>🌐 موقع ويب خفيف (بدون تحميل برامج)</span>
-          <span>📱 يفتح بسهولة من متصفح الموبايل أو اللابتوب</span>
+          <span>📱 يفتح من الموبايل أو اللابتوب</span>
           <span>⚡ يوفر 70% من وقت الحصة</span>
-          <span>👥 يُغنيك عن استئجار مساعدين زيادة</span>
+          <span>👥 يُغنيك عن مساعدين زيادة</span>
         </div>
       </div>
 
-      <!-- Left Live Mockup (Clean System Architecture Explainer) -->
-      <div class="hero-visual" aria-label="كيف يعمل موقع سنترلي">
+      <!-- Left Clean Hero Visual (Clean, Minimalist, Direct) -->
+      <div class="hero-visual-clean" aria-label="كيف يعمل موقع سنترلي">
         
-        <!-- Browser Window Header -->
-        <div class="browser-topbar">
-          <div class="browser-dots">
-            <i class="dot-red"></i>
-            <i class="dot-yellow"></i>
-            <i class="dot-green"></i>
-          </div>
-          <div class="browser-address">
-            🔒 https://app.centerly.io/live
-          </div>
-          <span class="browser-badge">🟢 حصة نشطة بالسنتر</span>
+        <!-- Header -->
+        <div class="h-header">
+          <b><span>🏢</span> سنترلي · حصة نشطة بالسنتر</b>
+          <span class="h-live-tag">🟢 شغالة الآن</span>
         </div>
 
-        <!-- Inside Canvas -->
-        <div class="system-canvas">
-          
-          <!-- Live Session Header Bar -->
-          <div class="session-live-strip">
-            <div>
-              <b>مجموعة 3 ثانوي — سنتر الفيروز</b>
-              <small>سعر الحصة: 60 ج • الحضور: 58 / 64 طالب</small>
-            </div>
-            <div class="session-kpis">
-              <div class="kpi-chip">
-                <span>الواجب</span>
-                <b style="color:var(--green)">54 كامل ✅</b>
-              </div>
-              <div class="kpi-chip">
-                <span>الكاش</span>
-                <b>3,840 ج</b>
-              </div>
-              <div class="kpi-chip">
-                <span>صافي المستر</span>
-                <b style="color:#b57516">2,880 ج</b>
-              </div>
-            </div>
+        <!-- Camera Scanner Simulation -->
+        <div class="h-scanner">
+          <div class="h-laser"></div>
+          <span class="h-scanner-icon">📷</span>
+          <b>المساعد يمسح كارت الطالب بالموبايل</b>
+          <small>مسحة سريعة في أقل من ثانية مع صوت "بيب"</small>
+        </div>
+
+        <!-- Live Scan Result -->
+        <div class="h-result">
+          <div>
+            <b>طالب: #1001</b>
+            <small>حاضر ✓ • تم توثيق الواجب</small>
           </div>
+          <span class="h-badge-done">✅ سلم كاملاً</span>
+        </div>
 
-          <!-- 3 Pillars Workflow Cards -->
-          <div class="pillars-grid">
-            
-            <!-- Pillar 1 -->
-            <div class="pillar-card highlight">
-              <span class="pillar-num">1. المساعد على الباب</span>
-              <h4>مسح باركود ورصد واجب</h4>
-              <p>المساعد يفتح الكاميرا من موبايله؛ مسحة كود في ثانية مع صوت "بيب"، وراديو الواجب يرجع تلقائياً لـ "سلم كاملاً".</p>
-              <div class="pillar-preview">
-                <b>كود: #1001</b>
-                <small>✓ تم الحضور + سلم الواجب</small>
-              </div>
-            </div>
-
-            <!-- Pillar 2 -->
-            <div class="pillar-card">
-              <span class="pillar-num">2. واتساب أولياء الأمور</span>
-              <h4>تقارير غياب بدون حظر</h4>
-              <p>بعد انتهاء الحصة، تُرسل رسائل غياب راقية ورسائل درجات في طابور مجمّع آمن بفواصل زمنية تحمي رقمك.</p>
-              <div class="pillar-preview">
-                <b>رسالة ولي الأمر:</b>
-                <span style="color:#3a8ee6; font-size:9px;">جاهزة بالدفعة الآمنة ✓✓</span>
-              </div>
-            </div>
-
-            <!-- Pillar 3 -->
-            <div class="pillar-card lock">
-              <span class="pillar-num">3. لوحة المدرس فقط</span>
-              <h4>أرباحك وجرد الكاش</h4>
-              <p>جرد فئات الـ 200 والـ 100 والـ 50 ج، مع حساب نسبة السنتر وصافي ربحك بدقة وبدون أي عجز مالي.</p>
-              <div class="lock-tag">
-                🔒 محمية برمز PIN سري للمدرس
-              </div>
-            </div>
-
+        <!-- Minimal Stats -->
+        <div class="h-stats-strip">
+          <div>
+            <span>الحضور</span>
+            <b>58 طالب</b>
           </div>
-
-          <!-- Explainer Bottom Note -->
-          <div class="system-footer-note">
-            <span>🛡️ <b>عزل كامل للصلاحيات:</b> المساعد يسجل الحضور فقط، ومستحيل يشوف أرباحك أو أرقام الطلاب.</span>
-            <span style="font-weight:700;">100% Web</span>
+          <div>
+            <span>الواجب</span>
+            <b style="color:var(--green)">54 كامل</b>
           </div>
+          <div>
+            <span>جرد الكاش</span>
+            <b style="color:var(--gold)">متطابق ✓</b>
+          </div>
+        </div>
 
+        <!-- Secure Notice -->
+        <div class="h-pin-notice">
+          🔒 التقارير المالية وأرباح الحصة محمية برمز PIN للمدرس فقط
         </div>
 
       </div>
@@ -1047,280 +699,122 @@
 
 
     <!-- ============================================== -->
-    <!-- PAIN POINT SECTION                             -->
+    <!-- CORE 4 PILLARS (NO FLUFF, NO REPETITION)       -->
     <!-- ============================================== -->
-    <section class="pain">
-      <div class="shell pain-inner">
-        <div>
-          <p class="eyebrow dark">مشهد متكرر ومجهد كل يوم</p>
-          <h2>الحصة خلصت… ولسه وراك كشوف ورقية، لخبطة فلوس، ورسايل واتساب يدوية؟</h2>
-        </div>
-        <div class="pain-text">
+    <section id="features" class="section">
+      <div class="section-heading">
+        <h2>كل ما تحتاجه لإدارة حصتك في 4 خطوات أساسية</h2>
+        <p>مصمم ليحل مشاكلك اليومية في السنتر بدون ورق ضائع أو تعقيد</p>
+      </div>
+
+      <div class="core-grid">
+
+        <!-- Card 1 -->
+        <article class="core-card">
+          <div class="card-top">
+            <div class="card-icon">📱</div>
+            <h3>1. الحضور والواجب في نفس المسحة</h3>
+          </div>
           <p>
-            سنترلي اتصمم من واقع قاعات السناتر في مصر عشان يحل مشاكلك اليومية: مش هتحتاج 3 مساعدين يقفوا على الباب يفتشوا في الكشاكيل، ولا هتقعد تحسب نسبة السنتر في ورقة تضيع منك، ولا هتشيل هم حظر رقم الواتساب.
+            المساعد يفتح الموقع بكاميرا الموبايل ويمسح كارت الطالب في ثانية. الحضور والواجب يتسجلوا فوراً مع صوت "بيب"، وراديو الواجب يرجع تلقائياً لـ "سلم كاملاً" لمنع إضاعة الوقت.
           </p>
-          <div class="pain-badges">
-            <span>❌ وداعاً لطوابير التفتيش على الباب</span>
-            <span>❌ وداعاً لعجز الكاش ونزاعات السنتر</span>
-            <span>❌ وداعاً لحظر أرقام الواتساب</span>
+          <div class="snippet">
+            <b>🛡️ ميزة أمان:</b> منع تلقائي لأي مسح مكرر لنفس الطالب في الحصة.
           </div>
-        </div>
-      </div>
-    </section>
-
-
-    <!-- ============================================== -->
-    <!-- HOW IT WORKS (4 Simple Steps)                  -->
-    <!-- ============================================== -->
-    <section id="how" class="section shell">
-      <div class="section-heading centered">
-        <p class="eyebrow">تدفق عملي وسهل للغاية</p>
-        <h2>كل حصة بتخلص في 4 خطوات بسيطة</h2>
-        <p>بدون ما تغيّر طريقتك الحالية؛ السيستم بيمشي معاك خطوة بخطوة</p>
-      </div>
-
-      <div class="steps">
-        <article>
-          <b>١</b>
-          <h3>افتح الحصة بضغطة</h3>
-          <p>اختار السنتر والمجموعة، وحدد سعر الحصة ونوع الحساب (نسبة % أو إيجار قاعة ثابت).</p>
         </article>
 
-        <article>
-          <b>٢</b>
-          <h3>سجّل الحضور والواجب سوا</h3>
-          <p>المساعد يفتح الكاميرا من موبايله ويمسح كارت الطالب في ثانية. الحضور والواجب يتسجلوا بصوت "بيب" فوري.</p>
+        <!-- Card 2 -->
+        <article class="core-card">
+          <div class="card-top">
+            <div class="card-icon gold">💬</div>
+            <h3>2. رسائل واتساب راقية بدون حظر</h3>
+          </div>
+          <p>
+            بعد انتهاء الحصة، سنترلي يفرز الغائبين ويجهز رسالة واتساب مهذبة وشيك لولي الأمر تبلغه بغياب ابنه برقي، وتُرسل كافة الرسائل في طابور مجمّع آمن لحماية رقمك من الحظر.
+          </p>
+          <div class="snippet snippet-wa">
+            <small>نص رسالة الغياب لولي الأمر:</small>
+            <p>"مساء الخير يا فندم، نود الاطمئنان على الطالب لعدم حضوره حصة اليوم. نرجو التواصل لتحديد موعد حصة التعويض المناسبة."</p>
+          </div>
         </article>
 
-        <article>
-          <b>٣</b>
-          <h3>سنترلي يجهّز الرسايل بالدفعة</h3>
-          <p>تقارير الحضور ورسائل الغياب المهذبة تتجمع في طابور آمن بفارق عشوائي لحماية رقمك من حظر Meta.</p>
+        <!-- Card 3 -->
+        <article class="core-card">
+          <div class="card-top">
+            <div class="card-icon gold">🔒</div>
+            <h3>3. جرد النقدية ودرج الكاش بـ PIN</h3>
+          </div>
+          <p>
+            شاشة جرد نقدية سريعة بعدّ ورقات الـ 200 والـ 100 والـ 50 ج لمطابقة الكاش مع السنتر. كافة التقارير المالية وأرباح المدرس محمية برمز PIN سري لا يراه المساعد إطلاقاً.
+          </p>
+          <div class="snippet snippet-cash">
+            <b>الإجمالي المتوقع: 4,800 ج</b>
+            <span>🟢 الكاش متطابق بدون عجز</span>
+          </div>
         </article>
 
-        <article>
-          <b>٤</b>
-          <h3>اجرد الكاش واقفل الحصة</h3>
-          <p>اكتب عدد ورقات الـ 200 والـ 100 والـ 50 ج، السيستم يطابق الكاش مع المتوقع ويطلع إيصال تسليم فوري للسنتر.</p>
+        <!-- Card 4 -->
+        <article class="core-card">
+          <div class="card-top">
+            <div class="card-icon">📊</div>
+            <h3>4. استيراد إكسيل وكروت باركود A4</h3>
+          </div>
+          <p>
+            ارفع شيت الإكسيل القديم مهما كان شكله؛ سنترلي يرتب الطلاب ويولد لهم أكواداً فوراً، ومعاك زر يطبع ورقة A4 عادية فيها 24 باركود تقصها بالمقص وتوزعها من أول يوم.
+          </p>
+          <div class="snippet">
+            <b>🖨️ جاهز فوري:</b> ابدأ أول حصة بدون انتظار طباعة كروت بلاستيكية مكلفة.
+          </div>
         </article>
-      </div>
-    </section>
-
-
-    <!-- ============================================== -->
-    <!-- CORE FEATURES WITH IN-APP UI SNIPPETS          -->
-    <!-- ============================================== -->
-    <section id="details-section" class="product-detail">
-      <div class="shell">
-        <div class="section-heading centered">
-          <p class="eyebrow">من جوّه موقع سنترلي</p>
-          <h2>تفاصيل حقيقية تخلي يوم الحصة أخف وأسرع فعلاً</h2>
-          <p>كل شاشة مبنية عشان تريحك كمدرس، توفر وقت مساعديك، وتمنع أي لخبطة أو تلاعب مالي</p>
-        </div>
-
-        <div class="detail-grid">
-
-          <!-- Card 1: Mobile Camera Scanner -->
-          <article class="detail-card">
-            <div class="detail-copy">
-              <span>01 · السرعة الفائقة</span>
-              <h3>الموبايل هو جهاز الحضور والواجب</h3>
-              <p>المساعد يفتح موقع سنترلي من موبايله ويضغط "فتح الكاميرا". يمسح الكارت في جزء من الثانية مع صوت "بيب" يؤكد التسجيل، وراديو الواجب يرجع تلقائياً لـ "سلم كاملاً" لمنع إضاعة الوقت.</p>
-            </div>
-            <div class="screen scanner-ui-pro">
-              <div class="cam-viewfinder">
-                <div class="scan-laser"></div>
-                <span>[ كادر المسح ]</span>
-              </div>
-              <div class="cam-info">
-                <b>كود الطالب: #1001</b>
-                <span class="tag-done">✅ سلم الواجب كاملاً</span>
-                <small style="color:var(--green); font-weight:700;">✓ تم تسجيل الحضور بصوت بيب</small>
-                <em>🛡️ منع تلقائي لأي مسح مكرر</em>
-              </div>
-            </div>
-          </article>
-
-          <!-- Card 2: Polite WhatsApp Absent Messages -->
-          <article class="detail-card">
-            <div class="detail-copy">
-              <span>02 · راحة البال</span>
-              <h3>رسائل غياب راقية ومحترمة لأولياء الأمور</h3>
-              <p>لما الحصة تنتهي، سنترلي يفرز الغائبين ويجهز رسالة واتساب مهذبة وشيك لولي الأمر تبلغه بغياب ابنه وتدعوه لتحديد ميعاد حصة التعويض برقي واحترام، بدون أي إحراج للطالب.</p>
-            </div>
-            <div class="screen whatsapp-bubble-ui">
-              <div class="wa-header">
-                <span>📱 رسالة واتساب لولي أمر طالب غائب</span>
-                <small>04:30 م</small>
-              </div>
-              <div class="wa-bubble">
-                <p>مساء الخير يا فندم، نود الاطمئنان على الطالب لعدم حضوره حصة اليوم بسنتر الفيروز. نرجو من حضرتك التواصل معنا لتحديد موعد حصة التعويض المناسبة. خالص تمنياتنا له بالتوفيق 🌸</p>
-                <div class="wa-meta">
-                  <small>مُرسلة عبر طابور الإرسال المجمّع الآمن</small>
-                  <span>✓✓</span>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <!-- Card 3: Student Reports & At-Risk Watchlist -->
-          <article class="detail-card">
-            <div class="detail-copy">
-              <span>03 · المتابعة الذكية</span>
-              <h3>شوف مين بيتحسن ومين محتاج تدخلك فوراً</h3>
-              <p>كشف تلقائي يرصد الطلاب المعرضين للهبوط أو التسرب (غياب متكرر أو درجات كويزات متراجعة) مع زر لإرسال إنذار مخصص لولي أمره قبل فوات الأوان وامتحانات آخر السنة.</p>
-            </div>
-            <div class="screen report-ui-pro">
-              <div class="student-track-item danger">
-                <div>
-                  <b>طالب متعثر (#1004)</b>
-                  <small>غياب آخر حصتين + كويز 9/20</small>
-                </div>
-                <button class="btn-warn-alert">إرسال إنذار 📱</button>
-              </div>
-              <div class="student-track-item success">
-                <div>
-                  <b>طالب متميز (#1001)</b>
-                  <small>حضور 100% • كويز 19/20</small>
-                </div>
-                <span class="trend-up">↗ تحسن مستمر</span>
-              </div>
-            </div>
-          </article>
-
-          <!-- Card 4: Cash Reconciliation & Note Counts -->
-          <article class="detail-card">
-            <div class="detail-copy">
-              <span>04 · الشفافية المالية</span>
-              <h3>جرد الكاش وعدّ الفلوس بدون عجز</h3>
-              <p>شاشة جرد نقدية ذكية تطلب من المساعد كتابة عدد ورقات فئات (200 ج، 100 ج، 50 ج). يحسب السيستم الإجمالي ويقارنه فوراً بحساب الحصة، مع إشعار فوري بأن الكاش متطابق.</p>
-            </div>
-            <div class="screen cash-recon-ui">
-              <div class="recon-head">
-                <span>الإجمالي المتوقع: <b>4,800 ج</b></span>
-                <span class="badge-matched">🟢 متطابق 100%</span>
-              </div>
-              <div class="bills-grid">
-                <div><span>فئة 200 ج</span><b>20 ورقة = 4,000ج</b></div>
-                <div><span>فئة 100 ج</span><b>6 ورقات = 600ج</b></div>
-                <div><span>فئة 50 ج</span><b>4 ورقات = 200ج</b></div>
-              </div>
-              <small class="recon-footer">صافي المستر: 3,600 ج • السنتر: 1,200 ج</small>
-            </div>
-          </article>
-
-          <!-- Card 5: 1-Click Excel Import & A4 Printable Barcodes -->
-          <article class="detail-card">
-            <div class="detail-copy">
-              <span>05 · البداية السريعة</span>
-              <h3>انقل طلابك القدام بضغطة زر واطبع فوراً</h3>
-              <p>ارفع شيت الإكسيل القديم مهما كان شكله؛ سنترلي يرتبه ويولد أكواداً لجميع الطلاب في ثوانٍ. ومعاك زر يطبع ورقة A4 عادية فيها 24 باركود تقصها بالمقص أو توزعها كاستيكر من أول يوم.</p>
-            </div>
-            <div class="screen import-print-ui">
-              <div class="import-badge">
-                <span class="file-icon">📊</span>
-                <div>
-                  <b>شيت_الطلاب_الحالي.xlsx</b>
-                  <small>تم استيراد 185 طالباً بنجاح ✓</small>
-                </div>
-              </div>
-              <div class="print-preview">
-                <span>🖨️ جاهز لطباعة كروت باركود A4 عادية</span>
-                <button class="btn-print-sim">معاينة ورقة الطباعة (24 كارت)</button>
-              </div>
-            </div>
-          </article>
-
-          <!-- Card 6: Multi-Center Assistant Management with PIN -->
-          <article class="detail-card">
-            <div class="detail-copy">
-              <span>06 · الإحكام والسيطرة</span>
-              <h3>المساعدين والسناتر تحت سيطرتك وبـ PIN</h3>
-              <p>المساعد يدخل يسجل الحضور والواجب فقط، بينما التقارير المالية وكاش الحصة وأرباح المدرس محمية بكلمة سر / رمز PIN خاص بالمدرس فقط ولا يمكن لأي مساعد الاطلاع عليها نهائياً.</p>
-            </div>
-            <div class="screen assistant-ui-pro">
-              <div class="asst-card-sim">
-                <b>حساب المساعد (المسؤول عن الحضور فقط)</b>
-                <div class="center-tags">
-                  <span>سنتر الفيروز</span>
-                  <span>سنتر الأوائل</span>
-                </div>
-              </div>
-              <div class="pin-lock-badge">
-                <span>🔒 التقارير المالية محمية بكلمة سر للمدرس فقط</span>
-              </div>
-            </div>
-          </article>
-
-        </div>
-
-        <!-- Savings Highlight Banner -->
-        <div class="savings-banner">
-          <div class="saving-item">
-            <b>70%</b>
-            <span>توفير في وقت تنظيم الحصة وبدء الشرح</span>
-          </div>
-          <div class="saving-divider"></div>
-          <div class="saving-item">
-            <b>1 مساعد فقط</b>
-            <span>يكفي لإدارة 150 طالباً على الباب بدلاً من 3</span>
-          </div>
-          <div class="saving-divider"></div>
-          <div class="saving-item">
-            <b>0 جنيه</b>
-            <span>عجز نقدية أو خلافات حسابات مع إدارات السناتر</span>
-          </div>
-        </div>
 
       </div>
     </section>
 
 
     <!-- ============================================== -->
-    <!-- INTERACTIVE TEACHER POLL (The Hook)            -->
+    <!-- INTERACTIVE TEACHER POLL (Fixed & Clean)       -->
     <!-- ============================================== -->
-    <section id="teacher-poll" class="section shell poll-section">
+    <section id="teacher-poll" class="poll-section">
       <div class="poll-box">
-        <div class="section-heading centered">
-          <p class="eyebrow">سؤال من مدرسين لمدرسين</p>
-          <h2>أنت كمدرس.. إيه أكبر مشكلة بتواجهك في إدارة السناتر والطلاب؟</h2>
-          <p>اضغط على المشكلة اللي بتعاني منها أكتر وشوف سنترلي بيحلها إزاي فوراً:</p>
+        <div class="section-heading">
+          <h2>أنت كمدرس.. إيه أكبر مشكلة بتواجهك في السنتر؟</h2>
+          <p>اضغط على المشكلة وشوف سنترلي بيحلها إزاي:</p>
         </div>
 
         <div class="poll-grid" id="poll-options">
           <button class="poll-btn" onclick="showPollSolution(1)">
             <span class="poll-icon">🤦‍♂️</span>
             <b>كذب الطلاب في تسليم الواجب</b>
-            <small>تضييع 20 دقيقة من الحصة في التفتيش والمناهدة مع الطلاب</small>
+            <small>تضييع وقت الحصة في التفتيش والمناهدة</small>
           </button>
 
           <button class="poll-btn" onclick="showPollSolution(2)">
             <span class="poll-icon">⏳</span>
             <b>زحمة طوابير الدخول والغياب</b>
-            <small>كشاكيل ضايعة وبطء تسجيل الحضور اليدوي عند الباب</small>
+            <small>كشاكيل ضايعة وبطء التسجيل اليدوي عند الباب</small>
           </button>
 
           <button class="poll-btn" onclick="showPollSolution(3)">
             <span class="poll-icon">💵</span>
             <b>عجز الكاش ولخبطة نسب السنتر</b>
-            <small>خلافات في آخر الحصة على الفلوس المحصلة وفكة الدرج</small>
+            <small>خلافات الحسابات وفكة الدرج في آخر اليوم</small>
           </button>
 
           <button class="poll-btn" onclick="showPollSolution(4)">
             <span class="poll-icon">📱</span>
             <b>إرهاق الاتصال بأولياء الأمور</b>
-            <small>مكالمات ورسائل يدوية لا تنتهي وتكرار السؤال عن الدرجات</small>
+            <small>مكالمات يدوية لا تنتهي وسؤال متكرر عن الدرجات</small>
           </button>
         </div>
 
-        <!-- Dynamic Solution Box -->
+        <!-- Dynamic Solution Box (Fixed button styling, fits naturally) -->
         <div id="poll-solution-box" class="poll-solution hidden">
           <div class="solution-header">
             <span class="sol-icon">💡</span>
             <b id="sol-title">سنترلي اتصمم من أول سطر كود علشان ينهي المشكلة دي تحديداً!</b>
           </div>
           <p id="sol-desc">
-            بضغطة واحدة، سنترلي بيخلي المساعد يمسح كود الطالب بالكاميرا ويرصد الواجب والحضور سوا، ويبعت تقرير فوري لوالده بعد الحصة بدون ما تبذل دقيقة واحدة من مجهودك.
+            بمسحة واحدة بكاميرا الموبايل، المساعد يسجل الحضور والواجب في ثانية، ويتبعت تقرير فوري لوالده بعد الحصة بدون ما تبذل دقيقة مجهود.
           </p>
           <a class="button sol-cta" href="#waitlist">احجز مكانك في سنترلي وخلّص نفسك من الصداع ده 🚀</a>
         </div>
@@ -1340,9 +834,9 @@
           </div>
           <h2>احجز مكانك في سنترلي<br>وخد خصم الإطلاق 20%</h2>
           <p>
-            سجّل بياناتك دلوقتي وهنكلمك أول ما نفتح باب التجربة. الحجز يحفظ لك أولوية الدخول، تجربة مجانية كاملة الميزات، وتدريباً مجانياً لمساعديك، بالإضافة لخصم 20% على اشتراكك.
+            سجّل بياناتك وهنكلمك أول ما نفتح التجربة. الحجز يحفظ لك أولوية الدخول، تجربة مجانية كاملة الميزات، وتدريباً مجانياً لمساعديك، بالإضافة لخصم 20% على اشتراكك.
           </p>
-          <small>🛡️ لن نرسل أي رسائل مزعجة (Spam). فقط رابط دخولك للتجربة وكود الخصم الخاص بك.</small>
+          <small>🛡️ لن نرسل أي رسائل مزعجة (Spam). فقط رابط دخولك وكود الخصم.</small>
         </div>
 
         <form id="waitlist-form" onsubmit="handleWaitlistSubmit(event)">
@@ -1363,11 +857,11 @@
 
           <label>
             المادة التعليمية *
-            <input name="subject" type="text" placeholder="مثلاً: فيزياء، كيمياء، لغة عربية..." required>
+            <input name="subject" type="text" placeholder="مثلاً: فيزياء، كيمياء، عربي..." required>
           </label>
 
           <label class="full-col">
-            عدد الطلاب التقديري في جميع مجموعاتك
+            عدد الطلاب التقديري
             <select name="studentCount">
               <option value="50-150">من 50 إلى 150 طالباً</option>
               <option value="151-500" selected>من 150 إلى 500 طالب</option>
@@ -1385,27 +879,21 @@
 
 
     <!-- ============================================== -->
-    <!-- FAQ SECTION                                    -->
+    <!-- FAQ SECTION (CONCISE & CLEAR)                  -->
     <!-- ============================================== -->
-    <section id="faq" class="section shell faq">
-      <div class="section-heading centered">
-        <p class="eyebrow">إجابات واضحة</p>
-        <h2>أسئلة يطرحها المدرسون قبل البدء</h2>
+    <section id="faq" class="section faq">
+      <div class="section-heading">
+        <h2>أسئلة سريعة</h2>
       </div>
 
       <details>
-        <summary>هل مناسب لأي مدرس مهما كان عدد طلابه؟</summary>
-        <p>نعم تماماً! سنترلي مصمم لأي مدرس يدير حصصاً ومجموعات سواء كان لديه 50 طالباً أو 3,000 طالب، ويعمل بسلاسة سواء كنت تؤجر قاعات في سناتر متعددة أو تعمل في مقرك الخاص.</p>
+        <summary>هل سنترلي مناسب لأي مدرس مهما كان عدد طلابه؟</summary>
+        <p>نعم، سنترلي مصمم لأي مدرس يدير مجموعات سواء كان لديه 50 طالباً أو آلاف الطلاب، وسواء كنت تؤجر قاعات في سناتر متعددة أو تعمل في مقرك الخاص.</p>
       </details>
 
       <details>
         <summary>معايا شيت إكسيل فيه أسماء طلابي القدام، هل لازم أدخلهم واحد واحد؟</summary>
         <p>أبداً! بضغطة زر واحدة ترفع شيت الإكسيل، وسنترلي يوزع الطلاب على مجموعاتهم ويولد كود باركود لكل طالب فوراً.</p>
-      </details>
-
-      <details>
-        <summary>كيف يحمي سنترلي رقم الواتساب الخاص بي من الحظر؟</summary>
-        <p>النظام لا يرسل الرسائل دفعة واحدة مع كل مسحة باركود، بل يجمعها في طابور آمن ويرسلها بفواصل زمنية عشوائية وصيغ Spintax متغيرة تحاكي الكتابة البشرية تماماً طبقاً لسياسات Meta.</p>
       </details>
 
       <details>
