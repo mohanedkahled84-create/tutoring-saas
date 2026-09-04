@@ -45,7 +45,7 @@ sessionsRouter.post(
       }
 
       res.status(201).json({ session: data });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to create session" } });
@@ -90,7 +90,7 @@ sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Pro
       attendance: attendanceRes.data || [],
       quiz_scores: quizRes.data || [],
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res
       .status(500)
       .json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve session" } });
@@ -207,7 +207,7 @@ sessionsRouter.post(
           student_code: student.student_code,
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Scan processing failed" } });
@@ -255,7 +255,7 @@ sessionsRouter.put(
         message: "Quiz score saved",
         quiz_score: savedScore,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to save quiz score" } });
@@ -285,7 +285,7 @@ sessionsRouter.get(
       }
 
       res.json({ quiz_scores: scores || [] });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to list quiz scores" } });
@@ -318,7 +318,18 @@ sessionsRouter.get(
         return;
       }
 
-      const group = (session as any).groups;
+      const group = (
+        session as unknown as {
+          groups: {
+            id?: string;
+            name?: string;
+            center_name?: string;
+            price?: number | string;
+            billing_model?: string;
+            fixed_rent_amount?: number;
+          };
+        }
+      ).groups;
       const basePrice = Number(group.price) || 0;
 
       // 2. Fetch all attendance records with student financial info
@@ -341,38 +352,53 @@ sessionsRouter.get(
       let regularCount = 0;
       let makeupCount = 0;
 
-      const breakdown = (attendees || []).map((att: any) => {
-        const student = att.students;
-        let feeCharged = basePrice;
-        let pricingType = "regular";
+      const rawAttendees = (attendees || []) as unknown as Array<{
+        id: string;
+        student_id: string;
+        attended: boolean;
+        is_makeup?: boolean;
+        home_group_id?: string | null;
+        students?: {
+          id: string;
+          name: string;
+          fee_override?: number | null;
+          exempt?: boolean | null;
+        } | null;
+      }>;
 
-        if (att.is_makeup) {
-          makeupCount += 1;
+      const breakdown = rawAttendees.map((att) => {
+          const student = att.students;
+          let feeCharged = basePrice;
+          let pricingType = "regular";
+
+          if (att.is_makeup) {
+            makeupCount += 1;
+          }
+
+          if (student?.exempt) {
+            feeCharged = 0;
+            pricingType = "exempt";
+            exemptCount += 1;
+          } else if (student?.fee_override != null && student.fee_override !== undefined) {
+            feeCharged = Number(student.fee_override);
+            pricingType = "override";
+            overriddenCount += 1;
+          } else {
+            regularCount += 1;
+          }
+
+          totalRevenue += feeCharged;
+
+          return {
+            student_id: student?.id,
+            student_name: student?.name,
+            is_makeup: att.is_makeup,
+            home_group_id: att.home_group_id,
+            pricing_type: pricingType,
+            fee_charged: feeCharged,
+          };
         }
-
-        if (student?.exempt) {
-          feeCharged = 0;
-          pricingType = "exempt";
-          exemptCount += 1;
-        } else if (student?.fee_override != null && student.fee_override !== undefined) {
-          feeCharged = Number(student.fee_override);
-          pricingType = "override";
-          overriddenCount += 1;
-        } else {
-          regularCount += 1;
-        }
-
-        totalRevenue += feeCharged;
-
-        return {
-          student_id: student?.id,
-          student_name: student?.name,
-          is_makeup: att.is_makeup,
-          home_group_id: att.home_group_id,
-          pricing_type: pricingType,
-          fee_charged: feeCharged,
-        };
-      });
+      );
 
       res.json({
         session_id: sessionId,
@@ -393,7 +419,7 @@ sessionsRouter.get(
         },
         breakdown,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Financial calculation failed" } });
@@ -479,7 +505,12 @@ sessionsRouter.post(
             .select("id, name, parent_phone")
             .in("id", studentIds);
 
-          const studentMap = new Map((studentRows || []).map((s: any) => [s.id, s]));
+          const studentMap = new Map(
+            (studentRows || []).map((s: { id: string; name: string; parent_phone: string }) => [
+              s.id,
+              s,
+            ])
+          );
           for (const item of notifyCandidates) {
             const s = studentMap.get(item.student_id);
             if (s && s.parent_phone) {
@@ -505,7 +536,7 @@ sessionsRouter.post(
         attendance: savedRows,
         notification_decisions: evaluations,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to record attendance" } });
@@ -524,7 +555,18 @@ sessionsRouter.post(
     const supabase = req.supabase!;
     const tenantId = req.user!.tenant_id;
     const { id: sessionId } = req.params;
-    const { sync_items } = req.body as { sync_items: any[] };
+    const { sync_items } = req.body as {
+      sync_items: Array<{
+        student_id: string;
+        attended: boolean;
+        is_makeup?: boolean;
+        client_timestamp: string;
+        idempotency_key?: string;
+        comment?: string;
+        homework_status?: string | null;
+        home_group_id?: string | null;
+      }>;
+    };
 
     try {
       let syncedCount = 0;
@@ -600,7 +642,7 @@ sessionsRouter.post(
         failed_count: failedCount,
         results,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Batch sync processing failed" } });
@@ -636,7 +678,7 @@ sessionsRouter.get(
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
 
-      const logsByStudent = new Map<string, any>();
+      const logsByStudent = new Map<string, Record<string, unknown>>();
       if (messageLogs) {
         for (const log of messageLogs) {
           if (log.idempotency_key && log.idempotency_key.includes(`:${sessionId}`)) {
@@ -651,32 +693,46 @@ sessionsRouter.get(
         }
       }
 
-      const deliveryReports = (attendanceRows || []).map((row: any) => {
-        const student = row.students;
-        const studentId = row.student_id;
-        const log = logsByStudent.get(studentId);
+      const rawAttendanceRows = (attendanceRows || []) as unknown as Array<{
+        id: string;
+        student_id: string;
+        attended: boolean;
+        sent?: boolean;
+        students?: {
+          id?: string;
+          name?: string;
+          student_code?: string;
+          parent_phone?: string;
+        } | null;
+      }>;
 
-        let deliveryStatus = "not_sent";
-        let failureReason: string | null = null;
+      const deliveryReports = rawAttendanceRows.map((row) => {
+          const student = row.students;
+          const studentId = row.student_id;
+          const log = logsByStudent.get(studentId);
 
-        if (log) {
-          deliveryStatus = log.status;
-          failureReason = log.error_detail || null;
-        } else if (row.sent) {
-          deliveryStatus = "sent";
+          let deliveryStatus = "not_sent";
+          let failureReason: string | null = null;
+
+          if (log) {
+            deliveryStatus = typeof log.status === "string" ? log.status : "not_sent";
+            failureReason = typeof log.error_detail === "string" ? log.error_detail : null;
+          } else if (row.sent) {
+            deliveryStatus = "sent";
+          }
+
+          return {
+            student_id: studentId,
+            student_name: student?.name || "Unknown",
+            student_code: student?.student_code || null,
+            parent_phone: student?.parent_phone || null,
+            attended: row.attended,
+            delivery_status: deliveryStatus,
+            failure_reason: failureReason,
+            logged_at: typeof log?.created_at === "string" ? log.created_at : null,
+          };
         }
-
-        return {
-          student_id: studentId,
-          student_name: student?.name || "Unknown",
-          student_code: student?.student_code || null,
-          parent_phone: student?.parent_phone || null,
-          attended: row.attended,
-          delivery_status: deliveryStatus,
-          failure_reason: failureReason,
-          logged_at: log?.created_at || null,
-        };
-      });
+      );
 
       const failedCount = deliveryReports.filter(
         (r) => r.delivery_status === "failed" || r.delivery_status === "rejected"
@@ -690,7 +746,7 @@ sessionsRouter.get(
         failed_count: failedCount,
         deliveries: deliveryReports,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to fetch delivery status" } });
@@ -725,7 +781,17 @@ sessionsRouter.post(
         return;
       }
 
-      const group = (session as any).groups;
+      const group = (
+        session as unknown as {
+          groups: {
+            price?: number | string;
+            name?: string;
+            center_name?: string;
+            billing_model?: string;
+            fixed_rent_amount?: number | string;
+          };
+        }
+      ).groups;
       const basePrice = Number(group.price) || 0;
 
       // 2. Fetch all attendance records (present & absent)
@@ -745,10 +811,20 @@ sessionsRouter.post(
       let exemptCount = 0;
       let makeupCount = 0;
 
-      for (const att of allAttendance || []) {
+      const rawAllAttendance = (allAttendance || []) as unknown as Array<{
+        attended: boolean;
+        is_makeup?: boolean;
+        students?: {
+          exempt?: boolean | null;
+          fee_override?: number | null;
+          name?: string;
+        } | null;
+      }>;
+
+      for (const att of rawAllAttendance) {
         if (att.attended) {
           presentCount += 1;
-          const s = att.students as any;
+          const s = att.students;
           if (att.is_makeup) makeupCount += 1;
 
           if (s?.exempt) {
@@ -832,7 +908,7 @@ sessionsRouter.post(
         },
         logged_message_id: loggedMessageId,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to generate receipt" } });

@@ -39,7 +39,7 @@ studentsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
     }
 
     res.json({ students: data });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to list students" } });
   }
 });
@@ -78,7 +78,7 @@ studentsRouter.post(
       }
 
       res.status(201).json({ student: data });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to create student" } });
@@ -104,7 +104,7 @@ studentsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Pro
     }
 
     res.json({ student: data });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res
       .status(500)
       .json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve student" } });
@@ -121,7 +121,7 @@ studentsRouter.put(
     const { name, parent_phone, student_phone, notes } = req.body;
 
     try {
-      const updatePayload: Record<string, any> = {};
+      const updatePayload: Record<string, unknown> = {};
       if (name !== undefined) updatePayload.name = name;
       if (parent_phone !== undefined) updatePayload.parent_phone = parent_phone;
       if (student_phone !== undefined) updatePayload.student_phone = student_phone;
@@ -145,7 +145,7 @@ studentsRouter.put(
       }
 
       res.json({ student: data });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to update student" } });
@@ -167,7 +167,7 @@ studentsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): 
     }
 
     res.json({ message: "Student deleted successfully", id });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res
       .status(500)
       .json({ error: { code: "INTERNAL_ERROR", message: "Failed to delete student" } });
@@ -178,7 +178,7 @@ studentsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): 
 studentsRouter.post(
   "/public-register",
   validateBody(publicSelfRegisterSchema),
-  async (req: any, res: Response): Promise<void> => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const supabase = req.supabase!;
     const { tenant_id, name, parent_phone, student_phone, group_id } = req.body;
 
@@ -212,7 +212,7 @@ studentsRouter.post(
         student,
         verification_message_queued: true,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Self-registration failed" } });

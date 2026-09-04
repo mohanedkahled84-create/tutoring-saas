@@ -1,4 +1,4 @@
-﻿import { Router, Request, Response } from "express";
+import { Router, Request, Response } from "express";
 import { supabasePublic } from "../supabase.js";
 
 export const healthRouter = Router();
@@ -27,9 +27,9 @@ healthRouter.get("/", async (_req: Request, res: Response): Promise<void> => {
     } else {
       dbStatus = "connected";
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     dbStatus = "unreachable";
-    dbError = err.message;
+    dbError = (err as Error).message;
   }
 
   const isHealthy = dbStatus === "connected";

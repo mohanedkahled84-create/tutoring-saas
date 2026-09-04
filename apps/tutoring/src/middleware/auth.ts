@@ -1,5 +1,5 @@
-﻿import { Response, NextFunction } from "express";
-import { AuthenticatedRequest, UserContext, UserRole } from "../types/index.js";
+import { Response, NextFunction } from "express";
+import { AuthenticatedRequest, UserRole } from "../types/index.js";
 import { supabasePublic, getScopedSupabaseClient } from "../supabase.js";
 
 // Helper to extract token from Authorization header or httpOnly cookie
@@ -93,12 +93,12 @@ export async function authenticateUser(
     req.supabase = userClient;
 
     next();
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({
       error: {
         code: "INTERNAL_ERROR",
         message: "Authentication verification failed",
-        details: err.message,
+        details: (err as Error).message,
       },
     });
   }

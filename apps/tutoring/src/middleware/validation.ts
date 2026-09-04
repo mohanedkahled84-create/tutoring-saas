@@ -7,7 +7,7 @@ export function validateBody(schema: ZodSchema) {
     try {
       req.body = schema.parse(req.body);
       next();
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof ZodError) {
         const details = err.issues.map((issue) => ({
           field: issue.path.join("."),

@@ -1,5 +1,4 @@
-﻿import { Request, Response, NextFunction } from "express";
-import { AppError } from "../errors/AppError.js";
+import { Request, Response, NextFunction } from "express";
 import { logger } from "../utils/logger.js";
 import crypto from "node:crypto";
 
@@ -17,15 +16,27 @@ export function notFoundHandler(req: Request, res: Response): void {
 }
 
 export function globalErrorHandler(
-  err: any,
+  err: unknown,
   req: Request,
   res: Response,
   _next: NextFunction
 ): void {
   const requestId = (req.headers["x-request-id"] as string) || crypto.randomUUID();
-  const statusCode = err.statusCode || (err.status ? parseInt(err.status, 10) : 500);
-  const code = err.code || (statusCode >= 500 ? "INTERNAL_ERROR" : "BAD_REQUEST");
-  const message = err.message || "An unexpected error occurred";
+  const errObj = (err && typeof err === "object" ? err : {}) as Record<string, unknown>;
+  const statusCode =
+    typeof errObj.statusCode === "number"
+      ? errObj.statusCode
+      : errObj.status
+        ? parseInt(String(errObj.status), 10)
+        : 500;
+  const code =
+    typeof errObj.code === "string"
+      ? errObj.code
+      : statusCode >= 500
+        ? "INTERNAL_ERROR"
+        : "BAD_REQUEST";
+  const message =
+    typeof errObj.message === "string" ? errObj.message : "An unexpected error occurred";
 
   // Log all 5xx or unhandled operational errors with context
   if (statusCode >= 500) {
@@ -40,7 +51,7 @@ export function globalErrorHandler(
     logger.warn(`[ClientError ${statusCode}] ${req.method} ${req.path}: ${message}`, {
       requestId,
       code,
-      details: err.details,
+      details: errObj.details,
     });
   }
 
@@ -52,7 +63,7 @@ export function globalErrorHandler(
         statusCode >= 500 && process.env.NODE_ENV === "production"
           ? "Internal server error"
           : message,
-      details: err.details || undefined,
+      details: errObj.details || undefined,
     },
     timestamp: new Date().toISOString(),
     path: req.path,

@@ -11,7 +11,7 @@ module.exports = {
     "plugin:@typescript-eslint/recommended",
   ],
   rules: {
-    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
     "no-console": "off",

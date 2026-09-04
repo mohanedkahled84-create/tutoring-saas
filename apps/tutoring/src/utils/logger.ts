@@ -1,15 +1,15 @@
-﻿export type LogLevel = "info" | "warn" | "error" | "debug";
+export type LogLevel = "info" | "warn" | "error" | "debug";
 
 export interface LogEntry {
   level: LogLevel;
   message: string;
   timestamp: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   stack?: string;
 }
 
 export const logger = {
-  info(message: string, context?: Record<string, any>): void {
+  info(message: string, context?: Record<string, unknown>): void {
     console.log(
       JSON.stringify({
         level: "info",
@@ -20,7 +20,7 @@ export const logger = {
     );
   },
 
-  warn(message: string, context?: Record<string, any>): void {
+  warn(message: string, context?: Record<string, unknown>): void {
     console.warn(
       JSON.stringify({
         level: "warn",
@@ -31,7 +31,7 @@ export const logger = {
     );
   },
 
-  error(message: string, err?: any, context?: Record<string, any>): void {
+  error(message: string, err?: unknown, context?: Record<string, unknown>): void {
     const entry: LogEntry = {
       level: "error",
       message,

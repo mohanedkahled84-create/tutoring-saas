@@ -1,4 +1,4 @@
-﻿import { config } from "../config/index.js";
+import { config } from "../config/index.js";
 import { getServiceSupabaseClient } from "../supabase.js";
 import { logger } from "../utils/logger.js";
 
@@ -49,7 +49,7 @@ export async function alertFounderOfNewSignup(payload: NewSignupPayload): Promis
     logger.info(
       `[FounderAlert] Logged new signup alert for founder: ${payload.teacher_name} (${payload.teacher_email})`
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Non-blocking: log error and let signup proceed normally
     logger.error("[FounderAlert] Failed to log founder signup alert (non-blocking)", err);
   }

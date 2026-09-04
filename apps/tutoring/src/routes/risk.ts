@@ -1,4 +1,4 @@
-﻿import { Router, Response } from "express";
+import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
 import { computeAtRiskWatchlist } from "../services/riskEngine.js";
 import { z } from "zod";
@@ -36,9 +36,9 @@ riskRouter.get("/watchlist", async (req: AuthenticatedRequest, res: Response): P
       high_severity_count: watchlist.filter((s) => s.severity === "high").length,
       watchlist,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "Risk computation failed", details: err.message },
+      error: { code: "INTERNAL_ERROR", message: "Risk computation failed", details: (err as Error).message },
     });
   }
 });
@@ -106,7 +106,7 @@ riskRouter.post(
           status: logEntry.status,
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to queue alert" } });
     }
   }

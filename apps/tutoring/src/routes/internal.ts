@@ -44,8 +44,8 @@ internalRouter.get(
         instance_status: data.instance_status,
         api_key: data.api_key || null,
       });
-    } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    } catch (err: unknown) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
   }
 );
@@ -113,8 +113,8 @@ internalRouter.post(
         message_log_id: logEntry.id,
         attendance_confirmed_sent: attendanceUpdated,
       });
-    } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    } catch (err: unknown) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
   }
 );
@@ -160,8 +160,8 @@ internalRouter.get(
         health,
         can_send: warmUp.allowed && health.can_send,
       });
-    } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    } catch (err: unknown) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
   }
 );
@@ -200,8 +200,8 @@ internalRouter.post(
         message: "Subscription renewal reminders evaluated and dispatched successfully",
         ...summary,
       });
-    } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    } catch (err: unknown) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
   }
 );

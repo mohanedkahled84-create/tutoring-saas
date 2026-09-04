@@ -1,4 +1,4 @@
-﻿import { Router, Response } from "express";
+import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { getServiceSupabaseClient } from "../supabase.js";
@@ -26,8 +26,8 @@ adminRouter.get("/tenants", async (_req: AuthenticatedRequest, res: Response): P
     }
 
     res.json({ tenants });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+  } catch (err: unknown) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
   }
 });
 
@@ -50,8 +50,8 @@ adminRouter.get("/overview", async (_req: AuthenticatedRequest, res: Response): 
         total_sessions: sessionCount || 0,
       },
     });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+  } catch (err: unknown) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
   }
 });
 
@@ -81,8 +81,8 @@ adminRouter.get(
       }
 
       res.json({ payment_proofs: proofs || [] });
-    } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    } catch (err: unknown) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
   }
 );
@@ -153,8 +153,8 @@ adminRouter.post(
         subscription_ends_at: newEnds.toISOString(),
         tenant: updatedTenant,
       });
-    } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    } catch (err: unknown) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
   }
 );
@@ -196,8 +196,8 @@ adminRouter.post(
         .eq("id", proof.tenant_id);
 
       res.json({ message: "Payment proof rejected and tenant marked past_due." });
-    } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    } catch (err: unknown) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
   }
 );
@@ -211,7 +211,7 @@ adminRouter.post(
     const { status, extend_days, soft_delete } = req.body;
 
     try {
-      const updatePayload: Record<string, any> = {};
+      const updatePayload: Record<string, unknown> = {};
       if (status) updatePayload.subscription_status = status;
       if (soft_delete) updatePayload.deleted_at = new Date().toISOString();
       if (soft_delete === false) updatePayload.deleted_at = null;
@@ -243,8 +243,8 @@ adminRouter.post(
       }
 
       res.json({ message: "Tenant subscription updated successfully", tenant });
-    } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    } catch (err: unknown) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
   }
 );

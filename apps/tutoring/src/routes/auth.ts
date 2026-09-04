@@ -1,4 +1,4 @@
-﻿import { Router, Request, Response } from "express";
+import { Router, Request, Response } from "express";
 import { supabasePublic, getServiceSupabaseClient, getScopedSupabaseClient } from "../supabase.js";
 import { validatePasswordStrength, extractToken } from "../middleware/auth.js";
 import { alertFounderOfNewSignup } from "../services/founderAlertService.js";
@@ -101,8 +101,8 @@ authRouter.post("/login", async (req: Request, res: Response): Promise<void> => 
       token: data.session.access_token,
       expires_in: data.session.expires_in,
     });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+  } catch (err: unknown) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
   }
 });
 
@@ -192,8 +192,8 @@ authRouter.post("/signup", async (req: Request, res: Response): Promise<void> =>
         subscription_status: "trial",
       },
     });
-  } catch (err: any) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+  } catch (err: unknown) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
   }
 });
 
@@ -214,7 +214,7 @@ authRouter.post("/forgot-password", async (req: Request, res: Response): Promise
     res.json({
       message: "If that email is registered, a password recovery link has been sent.",
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res
       .status(500)
       .json({ error: { code: "INTERNAL_ERROR", message: "Password reset request failed" } });
@@ -255,8 +255,8 @@ authRouter.post(
       res.json({
         message: "Password updated successfully. You can now login with your new password.",
       });
-    } catch (err: any) {
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: err.message } });
+    } catch (err: unknown) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
   }
 );

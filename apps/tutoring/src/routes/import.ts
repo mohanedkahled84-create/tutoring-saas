@@ -5,7 +5,6 @@ import {
   mapRowToStudent,
   normalizePhoneNumber,
   isValidEgyptianPhone,
-  RawStudentRow,
 } from "../services/importService.js";
 
 export const importRouter = Router();
@@ -37,7 +36,7 @@ importRouter.post(
     }
 
     // 2. Parse input into row array
-    let rawRows: Record<string, any>[] = [];
+    let rawRows: Record<string, unknown>[] = [];
     if (Array.isArray(directRows) && directRows.length > 0) {
       rawRows = directRows;
     } else if (typeof csv_content === "string" && csv_content.trim().length > 0) {
@@ -78,7 +77,14 @@ importRouter.post(
         }
       }
 
-      const importedStudents: any[] = [];
+      const importedStudents: Array<{
+        id: string;
+        name: string;
+        code: string;
+        parent_phone: string;
+        fee_override?: number | null;
+        exempt?: boolean | null;
+      }> = [];
       const errors: Array<{ row: number; name?: string; error: string }> = [];
 
       // 4. Process each row with row-level resilience
@@ -202,7 +208,7 @@ importRouter.post(
         errors,
         imported_students: importedStudents,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Bulk import execution failed" } });

@@ -1,4 +1,4 @@
-﻿import { getServiceSupabaseClient } from "../supabase.js";
+import { getServiceSupabaseClient } from "../supabase.js";
 import { logger } from "../utils/logger.js";
 
 export interface ReminderResult {
@@ -161,7 +161,7 @@ export async function dispatchSubscriptionRenewalReminders(): Promise<DispatchRe
       reminders_skipped_already_sent: skippedCount,
       results,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error("[SubscriptionReminder] Exception in reminder dispatcher", err);
     return {
       evaluated_tenants: 0,

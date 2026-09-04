@@ -58,9 +58,9 @@ export async function dispatchAttendanceWebhook(
       );
       return false;
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.warn(
-      `[WebhookDispatcher] Database deduplication check failed, proceeding cautiously: ${err.message}`
+      `[WebhookDispatcher] Database deduplication check failed, proceeding cautiously: ${(err as Error).message}`
     );
   }
 
@@ -100,10 +100,10 @@ export async function dispatchAttendanceWebhook(
       `[WebhookDispatcher] Webhook successfully delivered to n8n for ${payload.student_name} (${idempotency_key})`
     );
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Non-blocking: never crash or throw to the caller
     logger.error(
-      `[WebhookDispatcher] Failed to dispatch webhook to n8n for ${idempotency_key}: ${err.message}`
+      `[WebhookDispatcher] Failed to dispatch webhook to n8n for ${idempotency_key}: ${(err as Error).message}`
     );
     return false;
   }

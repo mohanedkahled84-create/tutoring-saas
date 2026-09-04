@@ -1,4 +1,4 @@
-﻿import { Router, Response } from "express";
+import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
 
 export const activityLogsRouter = Router();
@@ -52,18 +52,18 @@ activityLogsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Pr
 
     res.json({
       total: count || 0,
-      logs: (logs || []).map((l: any) => ({
+      logs: (logs || []).map((l: Record<string, unknown>) => ({
         id: l.id,
         action_type: l.action_type,
         entity_type: l.entity_type,
         entity_id: l.entity_id,
-        actor_email: l.users?.email || "Unknown",
-        before_value: l.before_value ? JSON.parse(l.before_value) : null,
-        after_value: l.after_value ? JSON.parse(l.after_value) : null,
+        actor_email: (l.users as { email?: string } | null)?.email || "Unknown",
+        before_value: typeof l.before_value === "string" ? JSON.parse(l.before_value) : null,
+        after_value: typeof l.after_value === "string" ? JSON.parse(l.after_value) : null,
         created_at: l.created_at,
       })),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res
       .status(500)
       .json({ error: { code: "INTERNAL_ERROR", message: "Failed to query activity logs" } });

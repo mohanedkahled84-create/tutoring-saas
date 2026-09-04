@@ -12,9 +12,15 @@ import { generateBarcodeSheetPdf } from "../services/barcodePdfService.js";
 export const groupsRouter = Router();
 
 // Helper to strip financial fields if user is assistant
-function sanitizeGroupForRole(group: any, role: string) {
+function sanitizeGroupForRole(
+  group: Record<string, unknown>,
+  role: string
+): Record<string, unknown> {
   if (role === "assistant") {
-    const { price, billing_model, fixed_rent_amount, ...safeGroup } = group;
+    const safeGroup = { ...group };
+    delete safeGroup.price;
+    delete safeGroup.billing_model;
+    delete safeGroup.fixed_rent_amount;
     return safeGroup;
   }
   return group;
@@ -45,7 +51,7 @@ groupsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<
 
     const sanitized = (data || []).map((g) => sanitizeGroupForRole(g, role));
     res.json({ groups: sanitized });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to list groups" } });
   }
 });
@@ -84,7 +90,7 @@ groupsRouter.post(
       }
 
       res.status(201).json({ group: data });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to create group" } });
@@ -122,13 +128,13 @@ groupsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promi
       return;
     }
 
-    const students = (enrollments || []).map((e: any) => e.students);
+    const students = (enrollments || []).map((e: { students?: unknown }) => e.students);
 
     res.json({
       group: sanitizeGroupForRole(group, role),
       students,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     res
       .status(500)
       .json({ error: { code: "INTERNAL_ERROR", message: "Failed to retrieve group" } });
@@ -146,7 +152,7 @@ groupsRouter.put(
     const { name, price, billing_model, fixed_rent_amount } = req.body;
 
     try {
-      const updatePayload: Record<string, any> = {};
+      const updatePayload: Record<string, unknown> = {};
       if (name !== undefined) updatePayload.name = name;
       if (price !== undefined) updatePayload.price = price;
       if (billing_model !== undefined) updatePayload.billing_model = billing_model;
@@ -170,7 +176,7 @@ groupsRouter.put(
       }
 
       res.json({ group: data });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to update group" } });
@@ -195,7 +201,7 @@ groupsRouter.delete(
       }
 
       res.json({ message: "Group deleted successfully", id });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to delete group" } });
@@ -230,7 +236,7 @@ groupsRouter.post(
       }
 
       res.status(201).json({ enrollment: data });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to enroll student" } });
@@ -258,7 +264,7 @@ groupsRouter.delete(
       }
 
       res.json({ message: "Student removed from group successfully", groupId, studentId });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Failed to remove student from group" },
       });
@@ -271,7 +277,6 @@ groupsRouter.get(
   "/:id/barcode-sheet",
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const supabase = req.supabase!;
-    const tenantId = req.user!.tenant_id;
     const { id: groupId } = req.params;
 
     try {
@@ -296,10 +301,14 @@ groupsRouter.get(
         return;
       }
 
-      const students = (enrollments || [])
-        .map((e: any) => e.students)
-        .filter(Boolean)
-        .map((s: any, idx: number) => ({
+      const rawEnrollments = (enrollments || []) as unknown as Array<{
+        students?: { id: string; name: string; student_code?: string } | null;
+      }>;
+
+      const students = rawEnrollments
+        .map((e) => e.students)
+        .filter((s): s is { id: string; name: string; student_code?: string } => Boolean(s))
+        .map((s, idx: number) => ({
           id: s.id,
           name: s.name,
           student_code: s.student_code || String(1001 + idx),
@@ -324,7 +333,7 @@ groupsRouter.get(
       res.setHeader("Content-Disposition", `inline; filename="group-${groupId}-barcodes.pdf"`);
       res.setHeader("Content-Length", pdfBuffer.length);
       res.end(pdfBuffer);
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to generate barcode sheet" } });

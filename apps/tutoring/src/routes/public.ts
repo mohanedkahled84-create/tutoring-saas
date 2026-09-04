@@ -42,7 +42,7 @@ publicRouter.post(
         student,
         verification_message_queued: true,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       res
         .status(500)
         .json({ error: { code: "INTERNAL_ERROR", message: "Failed to self-register" } });

@@ -7,7 +7,7 @@ export interface RawStudentRow {
   fee_override?: number | string;
   exempt?: boolean | string;
   notes?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ImportResult {
@@ -96,7 +96,7 @@ function parseCSVLine(line: string): string[] {
 
 // Flexible header detection mapping for English and Arabic columns
 export function mapRowToStudent(
-  row: Record<string, any>,
+  row: Record<string, unknown>,
   customMapping?: Record<string, string>
 ): RawStudentRow {
   const normalized: RawStudentRow = {};

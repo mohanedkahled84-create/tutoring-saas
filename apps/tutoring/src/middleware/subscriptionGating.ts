@@ -1,4 +1,4 @@
-﻿import { Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../types/index.js";
 
 // DEV-SL.2: Subscription Access Gating Middleware
@@ -103,7 +103,7 @@ export async function requireActiveSubscription(
 
     // 4. Active or pending_verification or valid trial
     next();
-  } catch (err: any) {
+  } catch (err: unknown) {
     res
       .status(500)
       .json({ error: { code: "INTERNAL_ERROR", message: "Failed to verify subscription status" } });

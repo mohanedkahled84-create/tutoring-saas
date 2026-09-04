@@ -1,4 +1,4 @@
-﻿import { SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "../utils/logger.js";
 
 export interface ActivityLogEntry {
@@ -12,8 +12,8 @@ export interface ActivityLogEntry {
     | "quiz_score_record";
   entity_type: "attendance" | "session" | "quiz_score";
   entity_id: string;
-  before_value?: any;
-  after_value?: any;
+  before_value?: unknown;
+  after_value?: unknown;
 }
 
 export async function logActivity(
@@ -34,7 +34,7 @@ export async function logActivity(
     if (error) {
       logger.warn(`[ActivityLogger] Failed to write activity log: ${error.message}`);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error("[ActivityLogger] Error logging activity", err);
   }
 }
