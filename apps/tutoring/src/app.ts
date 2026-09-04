@@ -12,7 +12,8 @@ import { adminRouter } from "./routes/admin.js";
 import { studentsRouter } from "./routes/students.js";
 import { groupsRouter } from "./routes/groups.js";
 import { sessionsRouter } from "./routes/sessions.js";
-import { riskRouter } from "./routes/risk.js";
+import { riskRouter } from "./features/risk-watchlist/index.js";
+import { injectServices } from "./composition.js";
 import { importRouter } from "./routes/import.js";
 import { billingRouter } from "./routes/billing.js";
 import { activityLogsRouter } from "./routes/activityLogs.js";
@@ -43,6 +44,9 @@ export function createApp(): Express {
 
   // Global rate limiter for protected API routes
   app.use("/api", globalRateLimiter);
+
+  // Services dependency injection middleware
+  app.use(injectServices());
 
   // DEV-AUTH.2: Admin endpoints (strictly requires role === 'admin')
   app.use("/api/admin", authenticateUser, adminRouter);
