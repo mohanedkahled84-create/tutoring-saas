@@ -21,8 +21,8 @@
 
 import { Response, NextFunction } from "express";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { AuthenticatedRequest } from "./types/index.js";
-import { supabasePublic } from "./supabase.js";
+import { AuthenticatedRequest } from "./shared/types/index.js";
+import { supabasePublic, getServiceSupabaseClient } from "./supabase.js";
 
 import {
   RiskWatchlistService,
@@ -32,7 +32,6 @@ import {
   ActivityLogService,
   SupabaseActivityLogRepository,
 } from "./features/activity-log/index.js";
-
 import {
   SessionsService,
   SupabaseSessionsRepository,
@@ -53,6 +52,18 @@ import {
   StudentsService,
   SupabaseStudentsRepository,
 } from "./features/students/index.js";
+import {
+  GroupsService,
+  SupabaseGroupsRepository,
+} from "./features/groups/index.js";
+import {
+  AuthService,
+  SupabaseAuthRepository,
+} from "./features/auth/index.js";
+import {
+  AdminOpsService,
+  SupabaseAdminOpsRepository,
+} from "./features/admin-ops/index.js";
 
 export interface AppServices {
   riskWatchlist: RiskWatchlistService;
@@ -62,6 +73,9 @@ export interface AppServices {
   whatsapp: WhatsAppNotificationsService;
   billing: BillingService;
   students: StudentsService;
+  groups: GroupsService;
+  auth: AuthService;
+  adminOps: AdminOpsService;
   [serviceName: string]: unknown;
 }
 
@@ -70,6 +84,8 @@ export interface AppServices {
  */
 export function createCompositionRoot(client?: SupabaseClient): AppServices {
   const effectiveClient = client || supabasePublic;
+  const adminClient = getServiceSupabaseClient();
+
   return {
     riskWatchlist: new RiskWatchlistService(new SupabaseRiskWatchlistRepository(effectiveClient)),
     activityLog: new ActivityLogService(new SupabaseActivityLogRepository(effectiveClient)),
@@ -78,6 +94,9 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     whatsapp: new WhatsAppNotificationsService(new SupabaseWhatsAppNotificationsRepository(effectiveClient)),
     billing: new BillingService(new SupabaseBillingRepository(effectiveClient)),
     students: new StudentsService(new SupabaseStudentsRepository(effectiveClient)),
+    groups: new GroupsService(new SupabaseGroupsRepository(effectiveClient)),
+    auth: new AuthService(new SupabaseAuthRepository(effectiveClient, adminClient)),
+    adminOps: new AdminOpsService(new SupabaseAdminOpsRepository(adminClient)),
     _client: effectiveClient,
   };
 }

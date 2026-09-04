@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { getServiceSupabaseClient } from "../supabase.js";
+import { getServiceSupabaseClient } from "../../supabase.js";
 import { validateBody, internalMessageLogSchema } from "../middleware/validation.js";
 import {
   calculateJitterDelay,
@@ -8,8 +8,8 @@ import {
   recordHealthSuccess,
   getHealthStatus,
   validateBusinessProfile,
-} from "../features/whatsapp-notifications/index.js";
-import { dispatchSubscriptionRenewalReminders } from "../features/billing/index.js";
+} from "../../features/whatsapp-notifications/index.js";
+import { dispatchSubscriptionRenewalReminders } from "../../features/billing/index.js";
 
 export const internalRouter = Router();
 

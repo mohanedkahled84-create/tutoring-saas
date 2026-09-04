@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { app } from "../dist/app.js";
-import { validatePasswordStrength, extractToken } from "../dist/middleware/auth.js";
-import { checkBruteForce, recordFailedLogin, resetLoginAttempts } from "../dist/routes/auth.js";
+import { validatePasswordStrength, extractToken } from "../dist/shared/middleware/auth.js";
+import { checkBruteForce, recordFailedLogin, resetLoginAttempts } from "../dist/features/auth/index.js";
 
 let server;
 let baseUrl;

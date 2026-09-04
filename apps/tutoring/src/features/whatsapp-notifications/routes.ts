@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { z } from "zod";
-import { AuthenticatedRequest } from "../../types/index.js";
-import { validateBody, saveTemplateSchema } from "../../middleware/validation.js";
+import { AuthenticatedRequest } from "../../shared/types/index.js";
+import { validateBody, saveTemplateSchema } from "../../shared/middleware/validation.js";
 import { getServices } from "../../composition.js";
 import { WhatsAppNotificationsService } from "./service.js";
 

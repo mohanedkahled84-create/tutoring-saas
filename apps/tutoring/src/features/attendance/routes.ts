@@ -1,12 +1,12 @@
 import { Router, Response } from "express";
-import { AuthenticatedRequest, AttendanceRecordInput } from "../../types/index.js";
+import { AuthenticatedRequest, AttendanceRecordInput } from "../../shared/types/index.js";
 import {
   validateBody,
   recordAttendanceSchema,
   scanStudentSchema,
   offlineBatchSyncSchema,
-} from "../../middleware/validation.js";
-import { attendanceRateLimiter } from "../../middleware/rateLimit.js";
+} from "../../shared/middleware/validation.js";
+import { attendanceRateLimiter } from "../../shared/middleware/rateLimit.js";
 import { getServices } from "../../composition.js";
 import { AttendanceService } from "./service.js";
 import { dispatchAttendanceWebhook } from "../whatsapp-notifications/index.js";

@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { z } from "zod";
-import { AuthenticatedRequest } from "../../types/index.js";
-import { validateBody } from "../../middleware/validation.js";
+import { AuthenticatedRequest } from "../../shared/types/index.js";
+import { validateBody } from "../../shared/middleware/validation.js";
 import { getServices } from "../../composition.js";
 import { BillingService } from "./service.js";
 

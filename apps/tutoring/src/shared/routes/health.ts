@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { supabasePublic } from "../supabase.js";
+import { supabasePublic } from "../../supabase.js";
 
 export const healthRouter = Router();
 

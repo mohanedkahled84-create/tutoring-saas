@@ -1,12 +1,12 @@
 import { Router, Response } from "express";
-import { AuthenticatedRequest } from "../../types/index.js";
+import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServices } from "../../composition.js";
 import {
   validateBody,
   createStudentSchema,
   updateStudentSchema,
   publicSelfRegisterSchema,
-} from "../../middleware/validation.js";
+} from "../../shared/middleware/validation.js";
 
 export const studentsRouter = Router();
 export const importRouter = Router();

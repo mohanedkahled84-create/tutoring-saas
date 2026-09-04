@@ -1,5 +1,5 @@
-﻿import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { config } from "./config/index.js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { config } from "./shared/config/index.js";
 
 // Anonymous / public client
 export const supabasePublic: SupabaseClient = createClient(

@@ -1,15 +1,21 @@
 import express, { Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { authenticateUser } from "./middleware/auth.js";
-import { authenticateInternalSecret } from "./middleware/internalAuth.js";
-import { globalRateLimiter, authRateLimiter } from "./middleware/rateLimit.js";
-import { securityHeadersMiddleware } from "./middleware/securityHeaders.js";
-import { notFoundHandler, globalErrorHandler } from "./middleware/errorHandler.js";
-import { healthRouter } from "./routes/health.js";
-import { authRouter } from "./routes/auth.js";
-import { adminRouter } from "./routes/admin.js";
-import { groupsRouter } from "./routes/groups.js";
+import {
+  authenticateUser,
+  authenticateInternalSecret,
+  globalRateLimiter,
+  authRateLimiter,
+  securityHeadersMiddleware,
+  notFoundHandler,
+  globalErrorHandler,
+  healthRouter,
+  publicRouter,
+  internalRouter,
+} from "./shared/index.js";
+import { authRouter } from "./features/auth/index.js";
+import { adminRouter } from "./features/admin-ops/index.js";
+import { groupsRouter } from "./features/groups/index.js";
 import { studentsRouter, importRouter } from "./features/students/index.js";
 import { sessionsRouter } from "./features/sessions/index.js";
 import { riskRouter } from "./features/risk-watchlist/index.js";
@@ -17,8 +23,6 @@ import { injectServices } from "./composition.js";
 import { billingRouter } from "./features/billing/index.js";
 import { activityLogsRouter } from "./features/activity-log/index.js";
 import { templatesRouter, whatsappRouter } from "./features/whatsapp-notifications/index.js";
-import { publicRouter } from "./routes/public.js";
-import { internalRouter } from "./routes/internal.js";
 
 export function createApp(): Express {
   const app = express();

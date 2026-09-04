@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
 import { AuthenticatedRequest, UserRole } from "../types/index.js";
-import { supabasePublic, getScopedSupabaseClient } from "../supabase.js";
+import { supabasePublic, getScopedSupabaseClient } from "../../supabase.js";
 
 // Helper to extract token from Authorization header or httpOnly cookie
 export function extractToken(req: AuthenticatedRequest): string | null {

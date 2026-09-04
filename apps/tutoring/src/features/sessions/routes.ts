@@ -1,11 +1,11 @@
 import { Router, Response } from "express";
-import { AuthenticatedRequest } from "../../types/index.js";
+import { AuthenticatedRequest } from "../../shared/types/index.js";
 import {
   validateBody,
   createSessionSchema,
   quizScoreSchema,
-} from "../../middleware/validation.js";
-import { requireFinancialAccess } from "../../middleware/auth.js";
+} from "../../shared/middleware/validation.js";
+import { requireFinancialAccess } from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
 import { SessionsService } from "./service.js";
 import { attendanceRouter } from "../attendance/routes.js";

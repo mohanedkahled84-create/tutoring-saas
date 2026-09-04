@@ -2,7 +2,7 @@ import {
   AttendanceRecordInput,
   AttendanceEvaluation,
   NotificationDecisionType,
-} from "../../types/index.js";
+} from "../../shared/types/index.js";
 import {
   IAttendanceRepository,
   ScanStudentInput,

@@ -1,8 +1,8 @@
-﻿import test from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { app } from "../dist/app.js";
-import { config } from "../dist/config/index.js";
+import { config } from "../dist/shared/config/index.js";
 
 let server;
 let baseUrl;

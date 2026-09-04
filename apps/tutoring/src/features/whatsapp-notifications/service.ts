@@ -1,5 +1,5 @@
-import { logger } from "../../utils/logger.js";
-import { config } from "../../config/index.js";
+import { logger } from "../../shared/utils/logger.js";
+import { config } from "../../shared/config/index.js";
 import {
   IWhatsAppNotificationsRepository,
   JitterConfig,

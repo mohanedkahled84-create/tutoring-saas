@@ -1,6 +1,6 @@
 import { Router, Response, Request } from "express";
 import { validateBody, publicSelfRegisterSchema } from "../middleware/validation.js";
-import { getServiceSupabaseClient } from "../supabase.js";
+import { getServiceSupabaseClient } from "../../supabase.js";
 
 export const publicRouter = Router();
 

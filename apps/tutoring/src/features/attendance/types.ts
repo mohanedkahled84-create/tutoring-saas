@@ -1,4 +1,4 @@
-import { AttendanceEvaluation } from "../../types/index.js";
+import { AttendanceEvaluation } from "../../shared/types/index.js";
 
 export interface ScanStudentInput {
   student_id?: string;
