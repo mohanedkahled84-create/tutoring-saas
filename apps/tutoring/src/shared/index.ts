@@ -9,6 +9,7 @@ export * from "./middleware/rateLimit.js";
 export * from "./middleware/securityHeaders.js";
 export * from "./middleware/errorHandler.js";
 export * from "./middleware/subscriptionGating.js";
+export * from "./middleware/featureFlags.js";
 export * from "./routes/health.js";
 export * from "./routes/internal.js";
 export * from "./routes/public.js";

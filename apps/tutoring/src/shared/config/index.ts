@@ -3,6 +3,19 @@ import { z } from "zod";
 
 dotenv.config();
 
+const booleanFlag = z
+  .union([z.boolean(), z.string()])
+  .optional()
+  .transform((val) => {
+    if (typeof val === "boolean") return val;
+    if (typeof val === "string") {
+      const lower = val.toLowerCase().trim();
+      return lower === "true" || lower === "1" || lower === "yes";
+    }
+    return false;
+  })
+  .default(false);
+
 export const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -21,6 +34,10 @@ export const envSchema = z.object({
   EVOLUTION_API_URL: z.string().url().optional().or(z.literal("")).default(""),
   EVOLUTION_API_KEY: z.string().optional().default(""),
   EVOLUTION_INSTANCE_NAME: z.string().optional().default("centrly-main"),
+  // DEV-71: Feature Flags (Default false for MVP-override / in-progress features)
+  FEATURE_BUSINESS_DASHBOARD: booleanFlag,
+  FEATURE_BEHAVIOR_TRACKING: booleanFlag,
+  FEATURE_TEACHER_CALENDAR: booleanFlag,
 });
 
 export function validateEnv(
@@ -65,4 +82,15 @@ export const config = {
   evolutionApiUrl: env.EVOLUTION_API_URL,
   evolutionApiKey: env.EVOLUTION_API_KEY,
   evolutionInstanceName: env.EVOLUTION_INSTANCE_NAME,
+  features: {
+    businessDashboard: env.FEATURE_BUSINESS_DASHBOARD,
+    behaviorTracking: env.FEATURE_BEHAVIOR_TRACKING,
+    teacherCalendar: env.FEATURE_TEACHER_CALENDAR,
+  },
 };
+
+export type FeatureFlagName = keyof typeof config.features;
+
+export function isFeatureEnabled(feature: FeatureFlagName): boolean {
+  return Boolean(config.features[feature]);
+}
