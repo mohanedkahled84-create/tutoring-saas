@@ -33,9 +33,20 @@ import {
   SupabaseActivityLogRepository,
 } from "./features/activity-log/index.js";
 
+import {
+  SessionsService,
+  SupabaseSessionsRepository,
+} from "./features/sessions/index.js";
+import {
+  AttendanceService,
+  SupabaseAttendanceRepository,
+} from "./features/attendance/index.js";
+
 export interface AppServices {
   riskWatchlist: RiskWatchlistService;
   activityLog: ActivityLogService;
+  sessions: SessionsService;
+  attendance: AttendanceService;
   [serviceName: string]: unknown;
 }
 
@@ -47,6 +58,8 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
   return {
     riskWatchlist: new RiskWatchlistService(new SupabaseRiskWatchlistRepository(effectiveClient)),
     activityLog: new ActivityLogService(new SupabaseActivityLogRepository(effectiveClient)),
+    sessions: new SessionsService(new SupabaseSessionsRepository(effectiveClient)),
+    attendance: new AttendanceService(new SupabaseAttendanceRepository(effectiveClient)),
     _client: effectiveClient,
   };
 }

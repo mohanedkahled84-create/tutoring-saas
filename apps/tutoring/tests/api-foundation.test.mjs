@@ -1,8 +1,8 @@
-﻿import test from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { app } from "../dist/app.js";
-import { evaluateNotificationDecision } from "../dist/routes/sessions.js";
+import { evaluateNotificationDecision } from "../dist/features/attendance/index.js";
 
 let server;
 let baseUrl;
