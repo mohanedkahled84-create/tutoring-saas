@@ -9,12 +9,11 @@ import { notFoundHandler, globalErrorHandler } from "./middleware/errorHandler.j
 import { healthRouter } from "./routes/health.js";
 import { authRouter } from "./routes/auth.js";
 import { adminRouter } from "./routes/admin.js";
-import { studentsRouter } from "./routes/students.js";
 import { groupsRouter } from "./routes/groups.js";
+import { studentsRouter, importRouter } from "./features/students/index.js";
 import { sessionsRouter } from "./features/sessions/index.js";
 import { riskRouter } from "./features/risk-watchlist/index.js";
 import { injectServices } from "./composition.js";
-import { importRouter } from "./routes/import.js";
 import { billingRouter } from "./features/billing/index.js";
 import { activityLogsRouter } from "./features/activity-log/index.js";
 import { templatesRouter, whatsappRouter } from "./features/whatsapp-notifications/index.js";

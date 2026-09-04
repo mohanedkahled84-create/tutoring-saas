@@ -1,9 +1,8 @@
-﻿import test from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { app } from "../dist/app.js";
-import { isValidEgyptianPhone, normalizePhoneNumber } from "../dist/services/importService.js";
-import { generateBarcodeSheetPdf } from "../dist/services/barcodePdfService.js";
+import { isValidEgyptianPhone, normalizePhoneNumber, generateBarcodeSheetPdf } from "../dist/features/students/index.js";
 
 let server;
 let baseUrl;

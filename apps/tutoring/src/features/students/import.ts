@@ -15,7 +15,14 @@ export interface ImportResult {
   imported_count: number;
   skipped_count: number;
   errors: Array<{ row: number; name?: string; error: string }>;
-  imported_students: Array<{ id: string; name: string; code: string; parent_phone: string }>;
+  imported_students: Array<{
+    id: string;
+    name: string;
+    code: string;
+    parent_phone: string;
+    fee_override?: number | null;
+    exempt?: boolean | null;
+  }>;
 }
 
 // Clean phone number: remove all non-digits except leading +
@@ -34,6 +41,33 @@ export function isValidEgyptianPhone(phone?: string | null): boolean {
   if (!phone) return false;
   const normalized = normalizePhoneNumber(phone);
   return /^01[0125][0-9]{8}$/.test(normalized);
+}
+
+// Helper to parse individual CSV line respecting quotes
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++; // skip escaped quote
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      result.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  return result;
 }
 
 // Standard CSV string to row objects parser
@@ -65,33 +99,6 @@ export function parseCSV(csvContent: string): Record<string, string>[] {
   }
 
   return rows;
-}
-
-// Helper to parse individual CSV line respecting quotes
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++; // skip escaped quote
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === "," && !inQuotes) {
-      result.push(current);
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-  result.push(current);
-  return result;
 }
 
 // Flexible header detection mapping for English and Arabic columns

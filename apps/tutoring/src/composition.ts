@@ -49,6 +49,10 @@ import {
   BillingService,
   SupabaseBillingRepository,
 } from "./features/billing/index.js";
+import {
+  StudentsService,
+  SupabaseStudentsRepository,
+} from "./features/students/index.js";
 
 export interface AppServices {
   riskWatchlist: RiskWatchlistService;
@@ -57,6 +61,7 @@ export interface AppServices {
   attendance: AttendanceService;
   whatsapp: WhatsAppNotificationsService;
   billing: BillingService;
+  students: StudentsService;
   [serviceName: string]: unknown;
 }
 
@@ -72,6 +77,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     attendance: new AttendanceService(new SupabaseAttendanceRepository(effectiveClient)),
     whatsapp: new WhatsAppNotificationsService(new SupabaseWhatsAppNotificationsRepository(effectiveClient)),
     billing: new BillingService(new SupabaseBillingRepository(effectiveClient)),
+    students: new StudentsService(new SupabaseStudentsRepository(effectiveClient)),
     _client: effectiveClient,
   };
 }

@@ -1,9 +1,10 @@
-﻿import PDFDocument from "pdfkit";
+import PDFDocument from "pdfkit";
 
 export interface StudentBarcodeItem {
   id: string;
   name: string;
-  student_code: string;
+  student_code?: string | null;
+  code?: string | null;
 }
 
 export interface BarcodeSheetOptions {
@@ -162,7 +163,7 @@ export function generateBarcodeSheetPdf(options: BarcodeSheetOptions): Promise<B
             });
 
           // Barcode vector
-          const barcodeCode = student.student_code || "1001";
+          const barcodeCode = student.student_code || student.code || "1001";
           const centerX = x + cardWidth / 2;
           const barcodeY = y + 34;
 

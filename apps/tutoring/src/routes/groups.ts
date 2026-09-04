@@ -7,7 +7,7 @@ import {
   enrollStudentSchema,
 } from "../middleware/validation.js";
 import { requireOwnerOrAdmin } from "../middleware/auth.js";
-import { generateBarcodeSheetPdf } from "../services/barcodePdfService.js";
+import { generateBarcodeSheetPdf } from "../features/students/index.js";
 
 export const groupsRouter = Router();
 
