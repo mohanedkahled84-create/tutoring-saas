@@ -1,0 +1,12 @@
+{
+  "name": "@centrly/web",
+  "version": "1.0.0",
+  "description": "Centrly Web Application - RTL Arabic-First Frontend Shell",
+  "scripts": {
+    "dev": "npx serve -s . -l 5000",
+    "build": "echo 'Static assets ready in apps/web'"
+  },
+  "keywords": ["centrly", "edtech", "arabic", "rtl"],
+  "author": "Centrly Team",
+  "license": "ISC"
+}
