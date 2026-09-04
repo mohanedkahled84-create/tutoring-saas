@@ -7,6 +7,7 @@ import {
   updateStudentSchema,
   publicSelfRegisterSchema,
 } from "../../shared/middleware/validation.js";
+import { generateParentPortalToken } from "../../shared/utils/tokens.js";
 
 export const studentsRouter = Router();
 export const importRouter = Router();
@@ -95,6 +96,27 @@ studentsRouter.put(
     }
   }
 );
+
+// DEV-34: GET /api/students/:id/parent-link - Generate signed parent portal link
+studentsRouter.get("/:id/parent-link", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  const { id: studentId } = req.params;
+
+  if (!tenantId && req.user?.role !== "admin") {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
+
+  const token = generateParentPortalToken(studentId, tenantId || "default", 30);
+  const portalUrl = `/parent-portal?token=${token}`;
+
+  res.json({
+    student_id: studentId,
+    token,
+    portal_url: portalUrl,
+    expires_in_days: 30,
+  });
+});
 
 // DELETE /api/students/:id - Delete student
 studentsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
