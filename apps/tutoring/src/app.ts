@@ -21,6 +21,7 @@ import { sessionsRouter } from "./features/sessions/index.js";
 import { riskRouter } from "./features/risk-watchlist/index.js";
 import { injectServices } from "./composition.js";
 import { billingRouter } from "./features/billing/index.js";
+import { paymentWebhookRouter } from "./features/billing/webhookRoutes.js";
 import { activityLogsRouter } from "./features/activity-log/index.js";
 import { templatesRouter, whatsappRouter } from "./features/whatsapp-notifications/index.js";
 import { settingsRouter } from "./features/auth/settingsRoutes.js";
@@ -53,7 +54,10 @@ export function createApp(): Express {
         if (!origin || configuredOrigins.includes(origin)) {
           callback(null, true);
         } else {
-          callback(new Error("CORS: Origin not allowed"));
+          const corsErr = new Error("CORS: Origin not allowed");
+          (corsErr as any).statusCode = 403;
+          (corsErr as any).code = "CORS_FORBIDDEN";
+          callback(corsErr);
         }
       },
       credentials: true,
@@ -70,6 +74,9 @@ export function createApp(): Express {
 
   // Public endpoints (Self-registration from shareable links - no token needed)
   app.use("/api/public", publicRouter);
+
+  // DEV-81 (GAP.3): Webhooks with signature verification and idempotency guard
+  app.use("/api/webhooks", paymentWebhookRouter);
 
   // Global rate limiter for protected API routes
   app.use("/api", globalRateLimiter);

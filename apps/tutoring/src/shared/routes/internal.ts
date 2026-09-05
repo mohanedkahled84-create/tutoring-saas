@@ -11,6 +11,8 @@ import {
 } from "../../features/whatsapp-notifications/index.js";
 import { dispatchSubscriptionRenewalReminders } from "../../features/billing/index.js";
 
+import { webhookIdempotency } from "../middleware/webhookIdempotency.js";
+
 export const internalRouter = Router();
 
 // 1. GET /internal/tenants/:tenant_id/whatsapp-connection
@@ -56,11 +58,12 @@ internalRouter.get(
   }
 );
 
-// 2. POST /internal/message-logs (validated with Zod)
+// 2. POST /internal/message-logs (validated with Zod & idempotent)
 // n8n calls this callback after sending to log outcome and confirm delivery
 internalRouter.post(
   "/message-logs",
   validateBody(internalMessageLogSchema),
+  webhookIdempotency({ keyExtractor: (req) => req.body?.idempotency_key }),
   async (req: Request, res: Response): Promise<void> => {
     const supabase = getServiceSupabaseClient();
     const {
@@ -77,6 +80,23 @@ internalRouter.post(
     } = req.body;
 
     try {
+      // Idempotency: verify if already stored in database
+      const { data: existingLog } = await supabase
+        .from("message_logs")
+        .select("id, status")
+        .eq("idempotency_key", idempotency_key)
+        .maybeSingle();
+
+      if (existingLog) {
+        res.status(200).json({
+          success: true,
+          idempotent_replay: true,
+          message_log_id: existingLog.id,
+          attendance_confirmed_sent: existingLog.status === "sent",
+        });
+        return;
+      }
+
       // 1. Insert audit log into message_logs
       const { data: logEntry, error: logError } = await supabase
         .from("message_logs")
