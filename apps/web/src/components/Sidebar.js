@@ -6,6 +6,7 @@ export function renderSidebar(currentRoute = 'sessions') {
     { id: 'dashboard', title: 'لوحة المدرس والأرباح', icon: '📊' },
     { id: 'groups', title: 'المجاميع والسناتر', icon: '🏢' },
     { id: 'students', title: 'دليل الطلاب والتسجيل', icon: '👥' },
+    { id: 'reports', title: 'تقارير الأداء ولوحة التميز', icon: '🏆' },
     { id: 'risk-watchlist', title: 'مؤشرات الخطر والإنذارات', icon: '⚠️' },
     { id: 'whatsapp', title: 'إعدادات الواتساب والقوالب', icon: '💬' },
     { id: 'billing', title: 'الاشتراك والباقات', icon: '💳' },

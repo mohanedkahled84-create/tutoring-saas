@@ -12,6 +12,7 @@ import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
+import { renderStudentReportsView } from './components/StudentReportsView.js';
 
 class CentrlyApp {
   constructor() {
@@ -58,6 +59,17 @@ class CentrlyApp {
       dateLabel: 'جدول الحصص الأسبوعي',
       sessions: [],
       groups: [],
+    };
+    this.reportsState = {
+      period: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
+      leaderboard: [],
+      groups: [],
+      selectedGroupId: '',
+      searchQuery: '',
+      total_students: 0,
+      average_attendance_rate: 0,
+      average_score: 0,
+      isSubmittingBulk: false,
     };
   }
 
@@ -341,6 +353,29 @@ class CentrlyApp {
           this.renderMainContent();
           break;
         }
+        case 'reports': {
+          const month = this.reportsState.period.month;
+          const year = this.reportsState.period.year;
+          const groupId = this.reportsState.selectedGroupId;
+          let url = `/reports/monthly?month=${month}&year=${year}`;
+          if (groupId) url += `&group_id=${groupId}`;
+          if (this.reportsState.searchQuery) url += `&q=${encodeURIComponent(this.reportsState.searchQuery)}`;
+
+          const [reportsRes, grpRes] = await Promise.all([
+            request(url).catch(() => null),
+            request('/groups').catch(() => []),
+          ]);
+
+          if (reportsRes) {
+            this.reportsState.leaderboard = reportsRes.leaderboard || [];
+            this.reportsState.total_students = reportsRes.total_students || 0;
+            this.reportsState.average_attendance_rate = reportsRes.average_attendance_rate || 0;
+            this.reportsState.average_score = reportsRes.average_score || 0;
+          }
+          this.reportsState.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          this.renderMainContent();
+          break;
+        }
         case 'groups': {
           const grpRes = await request('/groups').catch(() => []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -428,6 +463,8 @@ class CentrlyApp {
         return renderSessionsView(this.sessionState, this.user);
       case 'students':
         return renderStudentsView(this.students, this.groups);
+      case 'reports':
+        return renderStudentReportsView(this.reportsState);
       case 'groups':
         return renderGroupsView(this.groups, this.user);
       case 'activity-logs':
@@ -821,6 +858,65 @@ class CentrlyApp {
       alert('✓ تم نسخ رابط الدعوة بنجاح!');
     } else {
       prompt('انسخ الرابط التالي:', url);
+    }
+  }
+
+  // ==========================================================================
+  // Student Reports & Leaderboard Actions (DEV-80)
+  // ==========================================================================
+
+  async handleReportsPeriodChange(month, year) {
+    this.reportsState.period = { month: parseInt(month, 10), year: parseInt(year, 10) };
+    await this.loadRouteData('reports');
+  }
+
+  async handleReportsGroupChange(groupId) {
+    this.reportsState.selectedGroupId = groupId;
+    await this.loadRouteData('reports');
+  }
+
+  async handleReportsSearch(query) {
+    this.reportsState.searchQuery = query;
+    await this.loadRouteData('reports');
+  }
+
+  async handleBulkSendReports() {
+    if (this.reportsState.isSubmittingBulk) return;
+    if (!confirm('هل تريد إرسال تقارير الأداء الشهرية لجميع أولياء الأمور عبر طابور رسائل الواتساب؟')) return;
+
+    this.reportsState.isSubmittingBulk = true;
+    this.renderMainContent();
+
+    try {
+      const res = await request('/reports/bulk-send', {
+        method: 'POST',
+        body: JSON.stringify({
+          month: this.reportsState.period.month,
+          year: this.reportsState.period.year,
+          group_id: this.reportsState.selectedGroupId || undefined,
+        }),
+      });
+      alert(`✓ ${res.message || 'تم جدولة إرسال التقارير بنجاح'}\nإجمالي الطلاب: ${res.total_students}\nتمت الجدولة: ${res.queued_count}`);
+    } catch (err) {
+      alert(`❌ فشل جدولة إرسال التقارير الجماعية: ${err.message || 'خطأ في الخادم'}`);
+    } finally {
+      this.reportsState.isSubmittingBulk = false;
+      this.renderMainContent();
+    }
+  }
+
+  async handleSendIndividualReport(studentId, studentName) {
+    try {
+      await request(`/reports/${studentId}/send`, {
+        method: 'POST',
+        body: JSON.stringify({
+          month: this.reportsState.period.month,
+          year: this.reportsState.period.year,
+        }),
+      });
+      alert(`✓ تم إرسال التقرير الأكاديمي بنجاح لولي أمر الطالب ${studentName}`);
+    } catch (err) {
+      alert(`❌ فشل إرسال تقرير الطالب ${studentName}: ${err.message || 'خطأ في الخادم'}`);
     }
   }
 }

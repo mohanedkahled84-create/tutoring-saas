@@ -1,3 +1,5 @@
+import { renderStudentSearchBar } from "./StudentSearchBar.js";
+
 /**
  * Centrly Students Directory Component (DEV-16)
  * Student search, registration, barcode quick-print, and CSV import.
@@ -32,9 +34,15 @@ export function renderStudentsView(students = [], groups = []) {
           </div>
         </div>
 
-        <!-- Search & Filter Controls -->
-        <div style="display: flex; gap: 1rem; margin-top: 1.25rem; flex-wrap: wrap;">
-          <input type="text" id="studentSearchInput" class="form-input" placeholder="🔍 ابحث بالاسم، كود الطالب، أو رقم ولي الأمر..." style="flex: 2; min-width: 240px;" oninput="window.centrlyApp.filterStudentsTable()">
+        <!-- Search & Filter Controls with Universal StudentSearchBar -->
+        <div style="display: flex; gap: 1rem; margin-top: 1.25rem; flex-wrap: wrap; align-items: center;">
+          <div style="flex: 2; min-width: 240px;">
+            ${renderStudentSearchBar({
+              id: "studentSearchInput",
+              placeholder: "🔍 ابحث بالاسم، كود الطالب، أو رقم ولي الأمر...",
+              onInputHandler: "window.centrlyApp.filterStudentsTable()",
+            })}
+          </div>
           <select id="studentGroupFilter" class="form-select" style="flex: 1; min-width: 180px;" onchange="window.centrlyApp.filterStudentsTable()">
             <option value="">جميع المجاميع</option>
             ${(groups || []).map(g => `<option value="${g.name || g.id}">${g.name}</option>`).join('')}

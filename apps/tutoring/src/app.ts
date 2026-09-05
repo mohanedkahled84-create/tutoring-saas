@@ -28,6 +28,7 @@ import { settingsRouter } from "./features/auth/settingsRoutes.js";
 import { businessDashboardRouter } from "./features/business-dashboard/index.js";
 import { telemetryRouter } from "./features/telemetry/index.js";
 import { centersRouter } from "./features/centers/index.js";
+import { reportsRouter } from "./features/reports/index.js";
 
 export function createApp(): Express {
   const app = express();
@@ -101,6 +102,7 @@ export function createApp(): Express {
   app.use("/api/business-dashboard", authenticateUser, businessDashboardRouter);
   app.use("/api/telemetry", telemetryRouter);
   app.use("/api/centers", centersRouter);
+  app.use("/api/reports", authenticateUser, reportsRouter);
 
   // DEV-WPA.1: Protected Internal Automation routes (shared-secret auth)
   app.use("/internal", authenticateInternalSecret, internalRouter);

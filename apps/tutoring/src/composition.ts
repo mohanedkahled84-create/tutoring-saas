@@ -76,6 +76,10 @@ import {
   CentersService,
   SupabaseCentersRepository,
 } from "./features/centers/index.js";
+import {
+  ReportsService,
+  SupabaseReportsRepository,
+} from "./features/reports/index.js";
 
 export interface AppServices {
   riskWatchlist: RiskWatchlistService;
@@ -91,6 +95,7 @@ export interface AppServices {
   businessDashboard: BusinessDashboardService;
   telemetry: TelemetryService;
   centers: CentersService;
+  reports: ReportsService;
   [serviceName: string]: unknown;
 }
 
@@ -115,6 +120,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     businessDashboard: new BusinessDashboardService(new SupabaseBusinessDashboardRepository(adminClient)),
     telemetry: new TelemetryService(new SupabaseTelemetryRepository(effectiveClient)),
     centers: new CentersService(new SupabaseCentersRepository(effectiveClient, adminClient)),
+    reports: new ReportsService(new SupabaseReportsRepository(effectiveClient)),
     _client: effectiveClient,
   };
 }
