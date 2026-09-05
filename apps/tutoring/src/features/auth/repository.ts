@@ -48,7 +48,10 @@ export class SupabaseAuthRepository implements IAuthRepository {
 
     const userId = authUser.user.id;
 
-    // 2. Create Tenant with 14-day trial
+    const accountType = data.account_type === "center" ? "center" : "teacher";
+    const userRole = accountType === "center" ? "center_owner" : "owner";
+
+    // 2. Create Tenant with 14-day trial & account_type
     const { data: tenant, error: tenantErr } = await this.adminClient
       .from("tenants")
       .insert({
@@ -56,6 +59,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
         status: "active",
         subscription_status: "trial",
         trial_ends_at: trialEndsAt,
+        account_type: accountType,
       })
       .select()
       .single();
@@ -64,12 +68,12 @@ export class SupabaseAuthRepository implements IAuthRepository {
       throw new Error(tenantErr?.message || "Failed to create tenant");
     }
 
-    // 3. Create Public User record linked as tenant owner
+    // 3. Create Public User record linked as tenant owner or center owner
     const { error: userInsertErr } = await this.adminClient.from("users").insert({
       id: userId,
       tenant_id: tenant.id,
       email: data.email,
-      role: "owner",
+      role: userRole,
     });
 
     if (userInsertErr) {
@@ -77,10 +81,11 @@ export class SupabaseAuthRepository implements IAuthRepository {
     }
 
     return {
-      user: { id: userId, email: data.email },
+      user: { id: userId, email: data.email, role: userRole },
       tenant: {
         id: tenant.id,
         name: tenant.name,
+        account_type: accountType,
         trial_ends_at: trialEndsAt,
         subscription_status: "trial",
       },
@@ -119,10 +124,13 @@ export class FakeAuthRepository implements IAuthRepository {
   async createTenantWithOwner(data: SignupDTO, trialEndsAt: string): Promise<SignupResult> {
     const tenantId = `tenant-${Date.now()}`;
     const userId = `user-${Date.now()}`;
+    const accountType = data.account_type === "center" ? "center" : "teacher";
+    const userRole = accountType === "center" ? "center_owner" : "owner";
 
     const tenant = {
       id: tenantId,
       name: data.tenant_name,
+      account_type: accountType,
       trial_ends_at: trialEndsAt,
       subscription_status: "trial",
     };
@@ -133,12 +141,12 @@ export class FakeAuthRepository implements IAuthRepository {
       email: data.email,
       password: data.password,
       tenant_id: tenantId,
-      role: "owner",
+      role: userRole,
     };
     this.users.push(user);
 
     return {
-      user: { id: userId, email: data.email },
+      user: { id: userId, email: data.email, role: userRole },
       tenant,
     };
   }

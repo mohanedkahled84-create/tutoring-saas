@@ -48,6 +48,7 @@ export interface NewSignupAlertPayload {
   subject?: string;
   governorate?: string;
   trial_ends_at?: string;
+  account_type?: "teacher" | "center";
 }
 
 export type ErrorSeverity = "CRITICAL" | "WARNING" | "INFO";

@@ -49,7 +49,7 @@ authRouter.post("/login", async (req: Request, res: Response): Promise<void> => 
 
 // DEV-SA.1 & DEV-SL.1: POST /api/auth/signup - Teacher registration with 14-day trial & founder alert
 authRouter.post("/signup", async (req: Request, res: Response): Promise<void> => {
-  const { email, password, full_name, tenant_name, phone, subject, governorate } = req.body;
+  const { email, password, full_name, tenant_name, phone, subject, governorate, account_type } = req.body;
 
   if (!email || !password || !tenant_name) {
     res.status(400).json({
@@ -63,8 +63,20 @@ authRouter.post("/signup", async (req: Request, res: Response): Promise<void> =>
     const authService = services.auth;
     const adminOpsService = services.adminOps;
 
+    const normalizedAccountType: "teacher" | "center" =
+      account_type === "center" ? "center" : "teacher";
+
     const result = await authService.signup(
-      { email, password, full_name, tenant_name, phone, subject, governorate },
+      {
+        email,
+        password,
+        full_name,
+        tenant_name,
+        phone,
+        subject,
+        governorate,
+        account_type: normalizedAccountType,
+      },
       async (payload) => {
         if (adminOpsService && typeof adminOpsService.alertFounder === "function") {
           await adminOpsService.alertFounder(payload);

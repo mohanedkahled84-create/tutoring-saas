@@ -20,16 +20,19 @@ export interface SignupDTO {
   phone?: string;
   subject?: string;
   governorate?: string;
+  account_type?: "teacher" | "center";
 }
 
 export interface SignupResult {
   user: {
     id: string;
     email?: string;
+    role?: string;
   };
   tenant: {
     id: string;
     name: string;
+    account_type?: string;
     trial_ends_at: string;
     subscription_status: string;
   };

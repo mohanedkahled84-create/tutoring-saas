@@ -144,6 +144,7 @@ class CentrlyApp {
 
   async handleSignup(e) {
     e.preventDefault();
+    const accountType = document.getElementById('signupAccountType')?.value || 'teacher';
     const name = document.getElementById('signupName').value;
     const email = document.getElementById('signupEmail').value;
     const phone = document.getElementById('signupPhone').value;
@@ -154,15 +155,21 @@ class CentrlyApp {
         email,
         password,
         full_name: name,
-        tenant_name: `${name} - منظومة تعليمية`,
+        tenant_name: `${name} - ${accountType === 'center' ? 'سنتر تعليمي' : 'منظومة تعليمية'}`,
         phone,
+        account_type: accountType,
       });
       this.user = res.user;
       // Start Onboarding Flow (DEV-15)
       this.startOnboarding();
     } catch {
       // If backend mock or error, simulate successful signup for UX onboarding
-      this.user = { name, email, role: 'owner' };
+      this.user = {
+        name,
+        email,
+        role: accountType === 'center' ? 'center_owner' : 'owner',
+        account_type: accountType,
+      };
       this.startOnboarding();
     }
   }

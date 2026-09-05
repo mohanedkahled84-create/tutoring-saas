@@ -84,6 +84,7 @@ export class AuthService {
       subject?: string;
       governorate?: string;
       trial_ends_at?: string;
+      account_type?: "teacher" | "center";
     }) => Promise<void>
   ): Promise<SignupResult> {
     if (!dto.email || !dto.password || !dto.tenant_name) {
@@ -109,6 +110,7 @@ export class AuthService {
         subject: dto.subject,
         governorate: dto.governorate,
         trial_ends_at: trialEnds,
+        account_type: dto.account_type,
       }).catch(() => {});
     }
 
