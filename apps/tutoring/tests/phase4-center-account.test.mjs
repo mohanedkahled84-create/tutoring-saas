@@ -851,3 +851,73 @@ test("DEV-78: HTTP Endpoints for financials enforce authentication and financial
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+// ============================================================================
+// DEV-79: [Frontend] Center Owner Dashboard
+// ============================================================================
+
+test("DEV-79: renderCenterOwnerDashboard generates Arabic RTL dashboard with financial rollup, rooms, front-desk gate, and onboarding", async () => {
+  const { renderCenterOwnerDashboard } = await import("../../../apps/web/src/components/CenterOwnerDashboard.js");
+
+  // 1. Render default teachers tab
+  const teachersHtml = renderCenterOwnerDashboard({ activeTab: "teachers" });
+  assert.ok(teachersHtml.includes("لوحة إدارة السنتر والقاعات"));
+  assert.ok(teachersHtml.includes("إجمالي دخل السنتر"));
+  assert.ok(teachersHtml.includes("مستحقات المدرسين"));
+  assert.ok(teachersHtml.includes("صافي ربح السنتر"));
+  assert.ok(teachersHtml.includes("أ. طارق حسام"));
+  assert.ok(teachersHtml.includes("تسجيل الصرف ✅") || teachersHtml.includes("تحويل لغير مدفوع"));
+
+  // 2. Render rooms & conflict engine tab
+  const roomsHtml = renderCenterOwnerDashboard({
+    activeTab: "rooms",
+    conflictCheckResult: {
+      has_conflict: true,
+      conflicting_booking: {
+        group_name: "فيزياء 3 ثانوى",
+        teacher_name: "مستر طارق",
+        start_time: "14:00",
+        end_time: "16:00",
+      },
+      warning: {
+        message: "عدد طلاب المجموعة (40) يتجاوز سعة القاعة (30)",
+      },
+    },
+  });
+  assert.ok(roomsHtml.includes("قاعات السنتر والسعة الاستيعابية"));
+  assert.ok(roomsHtml.includes("محرك فحص تضارب الحصص"));
+  assert.ok(roomsHtml.includes("تنبيه تعارض: القاعة محجوزة بالفعل"));
+  assert.ok(roomsHtml.includes("عدد طلاب المجموعة (40) يتجاوز سعة القاعة"));
+
+  // 3. Render front desk smart gate tab
+  const frontDeskHtml = renderCenterOwnerDashboard({
+    activeTab: "front_desk",
+    frontDeskScanResult: {
+      success: true,
+      message: "✅ عمر خالد — حاضر (أحياء - قاعة 101 - مستر أحمد مصطفى)",
+      session: {
+        teacher_name: "مستر أحمد مصطفى",
+        subject: "أحياء",
+        room_name: "قاعة 101",
+        group_name: "أحياء مجموعة أ",
+        is_makeup: false,
+      },
+    },
+  });
+  assert.ok(frontDeskHtml.includes("بوابة الاستقبال الذكية (Smart Gate Mode)"));
+  assert.ok(frontDeskHtml.includes("عمر خالد — حاضر"));
+  assert.ok(frontDeskHtml.includes("أحياء مجموعة أ"));
+
+  // 4. Render onboarding tab with invite link generated
+  const onboardingHtml = renderCenterOwnerDashboard({
+    activeTab: "onboarding",
+    generatedInvite: {
+      name: "أ. محمود شاكر",
+      invite_url: "/register?invite=test-token-12345",
+    },
+  });
+  assert.ok(onboardingHtml.includes("إضافة مدرس جديد للسنتر"));
+  assert.ok(onboardingHtml.includes("إضافة مساعد جديد"));
+  assert.ok(onboardingHtml.includes("تم إنشاء رابط الدعوة بنجاح لـ (أ. محمود شاكر)"));
+  assert.ok(onboardingHtml.includes("/register?invite=test-token-12345"));
+});

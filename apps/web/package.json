@@ -1,6 +1,7 @@
 {
   "name": "@centrly/web",
   "version": "1.0.0",
+  "type": "module",
   "description": "Centrly Web Application - RTL Arabic-First Frontend Shell",
   "scripts": {
     "dev": "npx serve -s . -l 5000",

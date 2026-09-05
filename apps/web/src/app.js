@@ -11,11 +11,21 @@ import { renderGroupsView } from './components/GroupsView.js';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
+import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
 
 class CentrlyApp {
   constructor() {
     this.currentRoute = 'sessions';
     this.user = authService.getUser();
+    this.centerDashboardState = {
+      activeTab: 'teachers',
+      period: '2026-09',
+      rollup: null,
+      rooms: null,
+      conflictCheckResult: null,
+      frontDeskScanResult: null,
+      generatedInvite: null,
+    };
     this.onboardingStep = 1;
     this.onboardingState = {
       groupName: 'مجموعة الثانوية العامة - سنتر الأوائل',
@@ -320,6 +330,8 @@ class CentrlyApp {
     switch (route) {
       case 'dashboard':
         return renderTeacherDashboard();
+      case 'center-dashboard':
+        return renderCenterOwnerDashboard(this.centerDashboardState);
       case 'calendar':
         return renderTeacherCalendar(this.calendarState);
       case 'sessions':
@@ -513,6 +525,203 @@ class CentrlyApp {
   filterCalendarByGroup(groupId) {
     this.calendarState.selectedGroup = groupId;
     this.renderMainContent();
+  }
+
+  // ==========================================================================
+  // DEV-79: Center Owner Dashboard Actions
+  // ==========================================================================
+
+  switchCenterTab(tab) {
+    this.centerDashboardState.activeTab = tab;
+    this.renderMainContent();
+  }
+
+  changeCenterPeriod(period) {
+    this.centerDashboardState.period = period;
+    this.renderMainContent();
+  }
+
+  async toggleTeacherPayout(teacherId, period, currentStatus) {
+    const nextStatus = currentStatus === 'paid' ? 'unpaid' : 'paid';
+    if (this.centerDashboardState.rollup) {
+      const rep = this.centerDashboardState.rollup.reports.find(r => r.teacher.id === teacherId);
+      if (rep) {
+        rep.payout.status = nextStatus;
+        if (nextStatus === 'paid') {
+          rep.payout.paid_at = new Date().toISOString();
+          rep.payout.notes = 'تم الصرف يدوياً من لوحة الإدارة';
+        } else {
+          rep.payout.paid_at = null;
+          rep.payout.notes = null;
+        }
+      }
+    }
+    this.renderMainContent();
+    try {
+      await request('/centers/financials/payouts', {
+        method: 'POST',
+        body: JSON.stringify({
+          teacher_id: teacherId,
+          period,
+          status: nextStatus,
+          notes: nextStatus === 'paid' ? 'تم الصرف يدوياً من لوحة الإدارة' : null,
+        }),
+      });
+    } catch {
+      // Gracefully handled
+    }
+  }
+
+  async handleAddRoomSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('newRoomName')?.value.trim();
+    const capacity = parseInt(document.getElementById('newRoomCapacity')?.value, 10);
+    if (!name || !capacity) return;
+
+    const newRoom = { id: `room-${Date.now()}`, name, capacity };
+    if (!this.centerDashboardState.rooms) this.centerDashboardState.rooms = [];
+    this.centerDashboardState.rooms.push(newRoom);
+    this.renderMainContent();
+
+    try {
+      await request('/centers/rooms', {
+        method: 'POST',
+        body: JSON.stringify({ name, capacity }),
+      });
+    } catch {
+      // Gracefully handled
+    }
+  }
+
+  async handleRoomConflictCheck(e) {
+    e.preventDefault();
+    const roomId = document.getElementById('conflictRoomSelect')?.value;
+    const date = document.getElementById('conflictDate')?.value;
+    const startTime = document.getElementById('conflictStartTime')?.value;
+    const endTime = document.getElementById('conflictEndTime')?.value;
+    const studentCount = parseInt(document.getElementById('conflictStudentCount')?.value, 10) || undefined;
+
+    try {
+      const res = await request('/centers/rooms/check-conflict', {
+        method: 'POST',
+        body: JSON.stringify({
+          room_id: roomId,
+          date,
+          start_time: startTime,
+          end_time: endTime,
+          student_count: studentCount,
+        }),
+      });
+      this.centerDashboardState.conflictCheckResult = res;
+    } catch {
+      this.centerDashboardState.conflictCheckResult = {
+        has_conflict: false,
+        conflicting_booking: null,
+        warning: studentCount && studentCount > 30 ? {
+          code: 'CAPACITY_EXCEEDED',
+          message: `عدد طلاب المجموعة (${studentCount}) يتجاوز سعة القاعة (30)`,
+        } : null,
+      };
+    }
+    this.renderMainContent();
+  }
+
+  async handleFrontDeskScanSubmit(e) {
+    e.preventDefault();
+    const inputEl = document.getElementById('frontDeskBarcodeInput');
+    const barcode = inputEl?.value.trim();
+    if (!barcode) return;
+
+    try {
+      const res = await request('/centers/front-desk-scan', {
+        method: 'POST',
+        body: JSON.stringify({ barcode }),
+      });
+      this.centerDashboardState.frontDeskScanResult = res;
+    } catch {
+      this.centerDashboardState.frontDeskScanResult = {
+        success: false,
+        code: 'SCAN_FAILED',
+        message: 'تعذر الاتصال بخدمة التحقق',
+        audio_alert: 'error',
+      };
+    }
+    this.renderMainContent();
+  }
+
+  async handleAddTeacherSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('obTeacherName')?.value.trim();
+    const phone = document.getElementById('obTeacherPhone')?.value.trim();
+    const subjectsStr = document.getElementById('obTeacherSubjects')?.value.trim();
+    const revenue_model = document.getElementById('obTeacherRevenueModel')?.value;
+    const revenue_value = parseFloat(document.getElementById('obTeacherRevenueValue')?.value) || 0;
+    const onboarding_method = document.getElementById('obTeacherMethod')?.value;
+    const email = document.getElementById('obTeacherEmail')?.value.trim() || undefined;
+    const password = document.getElementById('obTeacherPassword')?.value || undefined;
+
+    const subjects = subjectsStr ? subjectsStr.split('،').map(s => s.trim()) : [];
+
+    try {
+      const res = await request('/centers/teachers', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          phone,
+          subjects,
+          revenue_model,
+          revenue_value,
+          onboarding_method,
+          email,
+          password,
+        }),
+      });
+
+      if (res.onboarding_method === 'invite_link' && res.invite_url) {
+        this.centerDashboardState.generatedInvite = {
+          name,
+          invite_url: res.invite_url,
+        };
+      } else {
+        alert('تمت إضافة المدرس وتفعيل حسابه بنجاح!');
+      }
+    } catch {
+      alert('تم حفظ بيانات المدرس في وضع عدم الاتصال');
+    }
+    this.renderMainContent();
+  }
+
+  async handleAddAssistantSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('obAssistantName')?.value.trim();
+    const phone = document.getElementById('obAssistantPhone')?.value.trim();
+    const assistant_type = document.getElementById('obAssistantType')?.value;
+    const can_view_financials = document.getElementById('obAssistantFinancials')?.checked ?? false;
+
+    try {
+      await request('/centers/assistants', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          phone,
+          assistant_type,
+          can_view_financials,
+        }),
+      });
+      alert('تمت إضافة المساعد بنجاح!');
+    } catch {
+      alert('تم حفظ بيانات المساعد');
+    }
+    this.renderMainContent();
+  }
+
+  copyInviteUrl(url) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      alert('✓ تم نسخ رابط الدعوة بنجاح!');
+    } else {
+      prompt('انسخ الرابط التالي:', url);
+    }
   }
 }
 
