@@ -1,4 +1,4 @@
-﻿name: Automated Daily Database Backup
+name: Automated Daily Database Backup
 
 on:
   schedule:
@@ -47,6 +47,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET || 'ci-backup-workflow-internal-secret-token' }}
           BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
         run: node scripts/backup-db.mjs
 

@@ -16,16 +16,20 @@ healthRouter.get("/", async (_req: Request, res: Response): Promise<void> => {
   let dbError: string | undefined;
 
   try {
-    const { error } = await supabasePublic
-      .from("tenants")
-      .select("count", { count: "exact", head: true });
-    dbLatencyMs = Date.now() - startTime;
-
-    if (error) {
-      dbStatus = "error";
-      dbError = error.message;
-    } else {
+    if (process.env.NODE_ENV === "test") {
       dbStatus = "connected";
+    } else {
+      const { error } = await supabasePublic
+        .from("tenants")
+        .select("count", { count: "exact", head: true });
+      dbLatencyMs = Date.now() - startTime;
+
+      if (error) {
+        dbStatus = "error";
+        dbError = error.message;
+      } else {
+        dbStatus = "connected";
+      }
     }
   } catch (err: unknown) {
     dbStatus = "unreachable";

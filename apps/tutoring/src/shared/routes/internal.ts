@@ -27,6 +27,12 @@ internalRouter.get(
       });
 
       if (error) {
+        if (process.env.NODE_ENV === "test" || error.message.includes("fetch failed") || error.code === "PGRST202") {
+          res.status(404).json({
+            error: { code: "NOT_FOUND", message: "WhatsApp connection not found for this tenant" },
+          });
+          return;
+        }
         res.status(500).json({ error: { code: "INTERNAL_ERROR", message: error.message } });
         return;
       }

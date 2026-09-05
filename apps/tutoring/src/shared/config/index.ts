@@ -26,8 +26,7 @@ export const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional().default(""),
   INTERNAL_API_SECRET: z
     .string()
-    .min(8, { message: "INTERNAL_API_SECRET must be at least 8 characters" })
-    .default("dev-shared-secret-change-in-production"),
+    .min(8, { message: "INTERNAL_API_SECRET is required and must be at least 8 characters" }),
   FOUNDER_WHATSAPP_PHONE: z.string().default("01000000000"),
   FOUNDER_ALERT_EMAIL: z.string().email().default("admin@centrly.app"),
   RESEND_API_KEY: z.string().optional().default(""),
@@ -44,13 +43,27 @@ export function validateEnv(
   rawEnv: Record<string, string | undefined> = process.env,
   exitOnError = false
 ) {
-  // Inject default project credentials for development/testing if missing
-  const effectiveEnv = {
-    SUPABASE_URL: "https://ofaraxqrpcdiregxjyyb.supabase.co",
-    SUPABASE_ANON_KEY:
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mYXJheHFycGNkaXJlZ3hqeXliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyOTg3MTMsImV4cCI6MjEwMzg3NDcxM30.UQ6WtcdS7zwBasNOM4FUyFOq1QMJuoYPzLqPOE767yM",
-    ...rawEnv,
-  };
+  // Safe test-only dummy fallbacks: Active ONLY when NODE_ENV is explicitly 'test' or running under test runner
+  const isTest =
+    (rawEnv.NODE_ENV || process.env.NODE_ENV) === "test" ||
+    process.execArgv.some((arg) => arg.includes("test")) ||
+    process.argv.some((arg) => arg.includes("test"));
+
+  const effectiveEnv = { ...rawEnv };
+
+  if (isTest) {
+    process.env.NODE_ENV = "test";
+    effectiveEnv.NODE_ENV = "test";
+    if (!effectiveEnv.SUPABASE_URL) {
+      effectiveEnv.SUPABASE_URL = "https://placeholder-test-project.supabase.co";
+    }
+    if (!effectiveEnv.SUPABASE_ANON_KEY) {
+      effectiveEnv.SUPABASE_ANON_KEY = "test-placeholder-anon-key-min10chars";
+    }
+    if (!effectiveEnv.INTERNAL_API_SECRET) {
+      effectiveEnv.INTERNAL_API_SECRET = "dev-shared-secret-change-in-production";
+    }
+  }
 
   const parsed = envSchema.safeParse(effectiveEnv);
   if (!parsed.success) {
