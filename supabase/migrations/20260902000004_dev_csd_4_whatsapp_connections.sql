@@ -1,4 +1,4 @@
-﻿-- DEV-CSD.4: WhatsApp Connections (with secret encryption via Supabase Vault)
+-- DEV-CSD.4: WhatsApp Connections (with secret encryption via Supabase Vault)
 -- Acceptance Criteria: any API key field uses Supabase Vault or pgsodium encryption, never plain text
 
 -- 9. whatsapp_connections

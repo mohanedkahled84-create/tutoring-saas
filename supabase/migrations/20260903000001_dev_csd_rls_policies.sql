@@ -1,4 +1,4 @@
-﻿-- DEV-RLS.1 & DEV-RLS.2: Row Level Security & Tenant Isolation Policies
+-- DEV-RLS.1 & DEV-RLS.2: Row Level Security & Tenant Isolation Policies
 -- Ensures complete isolation between tenants at the PostgreSQL engine level.
 
 -- Helper functions (Security Definer with secure search_path)

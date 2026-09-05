@@ -1,4 +1,4 @@
-﻿-- 20260905000004_dev_class_subgroups_sections.sql
+-- 20260905000004_dev_class_subgroups_sections.sql
 -- DEV-49: Class Sub-Groups (Sections) per Teacher
 
 -- 1. Extend groups table with self-referencing hierarchy for sections

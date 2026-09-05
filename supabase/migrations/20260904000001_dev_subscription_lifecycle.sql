@@ -1,4 +1,4 @@
-﻿-- DEV-39: Subscription Lifecycle — Trial, Manual Payment Verification, Renewal & Auto-Deactivation
+-- DEV-39: Subscription Lifecycle — Trial, Manual Payment Verification, Renewal & Auto-Deactivation
 
 -- 1. Extend tenants table with subscription status and lifecycle timestamps
 alter table public.tenants add column if not exists subscription_status text not null default 'trial' 

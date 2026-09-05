@@ -1,4 +1,4 @@
-﻿-- DEV-CSD.2: Sessions and Attendance
+-- DEV-CSD.2: Sessions and Attendance
 -- Acceptance Criteria: attendance.idempotency_key is unique-constrained; attendance.sent defaults false
 
 -- 6. sessions

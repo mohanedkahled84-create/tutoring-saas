@@ -1,4 +1,4 @@
-﻿-- DEV-CSD.3: Message Logs
+-- DEV-CSD.3: Message Logs
 -- Acceptance Criteria: matches the field list exactly
 
 -- 8. message_logs

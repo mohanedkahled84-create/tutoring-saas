@@ -1,4 +1,4 @@
-﻿-- DEV-44: Audit Trail / Activity Log Table & Append-Only RLS
+-- DEV-44: Audit Trail / Activity Log Table & Append-Only RLS
 
 create table if not exists public.activity_logs (
   id uuid primary key default gen_random_uuid(),

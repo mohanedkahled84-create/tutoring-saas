@@ -1,4 +1,4 @@
-﻿-- DEV-30: Schema Extension — Financial Edge Cases, Academic Tracking & Assistant Role
+-- DEV-30: Schema Extension — Financial Edge Cases, Academic Tracking & Assistant Role
 
 -- 1. Extend students with financial edge case fields & student serial code
 alter table public.students add column if not exists fee_override numeric(10, 2);

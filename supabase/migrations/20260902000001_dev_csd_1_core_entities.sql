@@ -1,4 +1,4 @@
-﻿-- DEV-CSD.1: Core Entities (Tenants, Users, Students, Groups, Group_Students)
+-- DEV-CSD.1: Core Entities (Tenants, Users, Students, Groups, Group_Students)
 -- Multi-Tenant from Day 1: Every tenant-scoped table enforces tenant_id NOT NULL FK
 
 -- 1. tenants

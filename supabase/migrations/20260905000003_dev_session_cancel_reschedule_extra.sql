@@ -1,4 +1,4 @@
-﻿-- 20260905000003_dev_session_cancel_reschedule_extra.sql
+-- 20260905000003_dev_session_cancel_reschedule_extra.sql
 -- DEV-50: Session Cancel, Reschedule, Extra Session + Auto Notification
 
 -- 1. Update session status check constraint to support scheduled, in_progress, ended, cancelled, rescheduled

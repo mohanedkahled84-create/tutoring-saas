@@ -1,4 +1,4 @@
-﻿-- DEV-WPA.1: Helper RPC function to safely retrieve tenant WhatsApp connection and decrypted Vault secret
+-- DEV-WPA.1: Helper RPC function to safely retrieve tenant WhatsApp connection and decrypted Vault secret
 create or replace function public.get_tenant_whatsapp_connection(p_tenant_id uuid)
 returns json
 language plpgsql

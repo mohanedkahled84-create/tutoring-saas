@@ -1,4 +1,4 @@
-﻿-- 20260905000005_dev_telemetry_events.sql
+-- 20260905000005_dev_telemetry_events.sql
 -- DEV-55: Website/Product Behavior Tracking Integration
 
 create table if not exists public.telemetry_events (

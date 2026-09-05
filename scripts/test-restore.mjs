@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -126,7 +126,8 @@ export async function verifyAndTestRestore(backupFilePath) {
 
       for (const file of migrationFiles) {
         const sqlPath = path.join(migrationsDir, file);
-        const sql = fs.readFileSync(sqlPath, "utf-8");
+        let sql = fs.readFileSync(sqlPath, "utf-8");
+        sql = sql.replace(/^\uFEFF/, "");
         try {
           await client.query(sql);
         } catch (migErr) {
