@@ -642,3 +642,212 @@ test("DEV-77: HTTP Endpoints for rooms and front-desk scan enforce authenticatio
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+// ============================================================================
+// DEV-78: Per-Teacher Financial Settings, Reports & Payout Status
+// ============================================================================
+
+test("DEV-78: calculateTeacherFinancials computes percentage, fixed-per-student, and fixed-total splits", async () => {
+  const { calculateTeacherFinancials } = await import("../dist/features/centers/service.js");
+
+  // Model 1: percentage (e.g. 80% to teacher, 20% to center)
+  const pct = calculateTeacherFinancials("percentage", 80, 10000, 100);
+  assert.equal(pct.total_revenue, 10000);
+  assert.equal(pct.teacher_cut, 8000);
+  assert.equal(pct.center_cut, 2000);
+
+  // Model 2: fixed_per_student (e.g. 70 EGP per student present)
+  const perStudent = calculateTeacherFinancials("fixed_per_student", 70, 10000, 100);
+  assert.equal(perStudent.total_revenue, 10000);
+  assert.equal(perStudent.teacher_cut, 7000);
+  assert.equal(perStudent.center_cut, 3000);
+
+  // Model 3: fixed_total (e.g. 6000 EGP fixed salary for the period)
+  const fixedTotal = calculateTeacherFinancials("fixed_total", 6000, 10000, 100);
+  assert.equal(fixedTotal.total_revenue, 10000);
+  assert.equal(fixedTotal.teacher_cut, 6000);
+  assert.equal(fixedTotal.center_cut, 4000);
+
+  // Model 3 edge case: total revenue lower than fixed salary (teacher cut capped at revenue)
+  const fixedCapped = calculateTeacherFinancials("fixed_total", 5000, 3000, 30);
+  assert.equal(fixedCapped.total_revenue, 3000);
+  assert.equal(fixedCapped.teacher_cut, 3000);
+  assert.equal(fixedCapped.center_cut, 0);
+});
+
+test("DEV-78: CentersService.getTeacherFinancialReport aggregates stats and merges payout status", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  const teacher = await service.addTeacher("tenant-c1", {
+    name: "مستر إبراهيم عادل",
+    phone: "01099998888",
+    subjects: ["لغة إنجليزية"],
+    revenue_model: "percentage",
+    revenue_value: 75,
+    onboarding_method: "direct_creation",
+    email: "ibrahim@example.com",
+    password: "Password123!",
+  });
+
+  const period = "2026-09";
+
+  // Mock stats for period
+  repo.sessionStatsMap.set(`tenant-c1:${teacher.member.id}:${period}`, {
+    total_revenue: 20000,
+    student_count: 200,
+    sessions_count: 8,
+  });
+
+  const report = await service.getTeacherFinancialReport("tenant-c1", teacher.member.id, period);
+  assert.equal(report.period, period);
+  assert.equal(report.summary.total_revenue, 20000);
+  assert.equal(report.summary.teacher_cut, 15000); // 75%
+  assert.equal(report.summary.center_cut, 5000);   // 25%
+  assert.equal(report.summary.student_count, 200);
+  assert.equal(report.summary.sessions_count, 8);
+  assert.equal(report.payout.status, "unpaid");
+  assert.equal(report.payout.paid_at, null);
+});
+
+test("DEV-78: CentersService.setTeacherPayoutStatus toggles paid/unpaid and persists settlement", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  const teacher = await service.addTeacher("tenant-c1", {
+    name: "د. شريف كمال",
+    phone: "01122223333",
+    subjects: ["كيمياء"],
+    revenue_model: "fixed_per_student",
+    revenue_value: 60,
+    onboarding_method: "direct_creation",
+    email: "sherif@example.com",
+    password: "Password123!",
+  });
+
+  const period = "2026-09";
+  repo.sessionStatsMap.set(`tenant-c1:${teacher.member.id}:${period}`, {
+    total_revenue: 12000,
+    student_count: 150,
+    sessions_count: 6,
+  });
+
+  // 1. Mark paid
+  const paidPayout = await service.setTeacherPayoutStatus("tenant-c1", {
+    teacher_id: teacher.member.id,
+    period,
+    status: "paid",
+    notes: "تحويل فودافون كاش",
+    paid_by: "user-owner-1",
+  });
+
+  assert.equal(paidPayout.status, "paid");
+  assert.equal(paidPayout.teacher_cut, 9000); // 150 * 60
+  assert.equal(paidPayout.center_cut, 3000);  // 12000 - 9000
+  assert.ok(paidPayout.paid_at);
+  assert.equal(paidPayout.notes, "تحويل فودافون كاش");
+
+  // Verify reflected in subsequent report
+  const updatedReport = await service.getTeacherFinancialReport("tenant-c1", teacher.member.id, period);
+  assert.equal(updatedReport.payout.status, "paid");
+  assert.equal(updatedReport.payout.notes, "تحويل فودافون كاش");
+
+  // 2. Toggle back to unpaid
+  const unpaidPayout = await service.setTeacherPayoutStatus("tenant-c1", {
+    teacher_id: teacher.member.id,
+    period,
+    status: "unpaid",
+  });
+  assert.equal(unpaidPayout.status, "unpaid");
+  assert.equal(unpaidPayout.paid_at, null);
+});
+
+test("DEV-78: CentersService.getCenterFinancialRollup sums center-wide totals across multiple teachers", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+  const tenantId = "tenant-c1";
+  const period = "2026-09";
+
+  // Teacher 1: Percentage 80% (10,000 revenue -> 8000 teacher, 2000 center) - Paid
+  const t1 = await service.addTeacher(tenantId, {
+    name: "مستر أحمد",
+    phone: "0101",
+    revenue_model: "percentage",
+    revenue_value: 80,
+    onboarding_method: "direct_creation",
+    email: "t1@example.com",
+    password: "Password123!",
+  });
+  repo.sessionStatsMap.set(`${tenantId}:${t1.member.id}:${period}`, {
+    total_revenue: 10000,
+    student_count: 100,
+    sessions_count: 4,
+  });
+  await service.setTeacherPayoutStatus(tenantId, {
+    teacher_id: t1.member.id,
+    period,
+    status: "paid",
+  });
+
+  // Teacher 2: Fixed per student 50 EGP (8,000 revenue, 100 students -> 5000 teacher, 3000 center) - Unpaid
+  const t2 = await service.addTeacher(tenantId, {
+    name: "مستر حسام",
+    phone: "0102",
+    revenue_model: "fixed_per_student",
+    revenue_value: 50,
+    onboarding_method: "direct_creation",
+    email: "t2@example.com",
+    password: "Password123!",
+  });
+  repo.sessionStatsMap.set(`${tenantId}:${t2.member.id}:${period}`, {
+    total_revenue: 8000,
+    student_count: 100,
+    sessions_count: 4,
+  });
+
+  const rollup = await service.getCenterFinancialRollup(tenantId, period);
+
+  assert.equal(rollup.period, period);
+  assert.equal(rollup.reports.length, 2);
+  assert.equal(rollup.totals.total_revenue, 18000);
+  assert.equal(rollup.totals.total_teacher_cut, 13000);
+  assert.equal(rollup.totals.total_center_cut, 5000);
+  assert.equal(rollup.totals.paid_teachers_count, 1);
+  assert.equal(rollup.totals.unpaid_teachers_count, 1);
+});
+
+test("DEV-78: HTTP Endpoints for financials enforce authentication and financial role gating", async () => {
+  const http = await import("node:http");
+  const { app } = await import("../dist/app.js");
+
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  const url = `http://localhost:${port}`;
+
+  try {
+    const resRollup = await fetch(`${url}/api/centers/financials/rollup`);
+    assert.equal(resRollup.status, 401);
+
+    const resTeacherReport = await fetch(`${url}/api/centers/financials/teachers/teacher-123`);
+    assert.equal(resTeacherReport.status, 401);
+
+    const resPayout = await fetch(`${url}/api/centers/financials/payouts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teacher_id: "teacher-123", period: "2026-09", status: "paid" }),
+    });
+    assert.equal(resPayout.status, 401);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

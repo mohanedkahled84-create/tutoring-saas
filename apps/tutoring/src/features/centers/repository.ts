@@ -11,6 +11,8 @@ import {
   RoomBookingSlot,
   EnrollmentModel,
   ActiveCenterSession,
+  TeacherPayoutModel,
+  TeacherPayoutStatus,
 } from "./types.js";
 
 export class SupabaseCentersRepository implements ICentersRepository {
@@ -253,7 +255,7 @@ export class SupabaseCentersRepository implements ICentersRepository {
       teachers?: { name?: string };
     }
 
-    return (data as unknown as SessionBookingRow[]).map((row) => ({
+    return (data as unknown as SessionBookingRow[] || []).map((row) => ({
       session_id: row.id,
       room_id: row.room_id,
       group_id: row.group_id,
@@ -332,7 +334,7 @@ export class SupabaseCentersRepository implements ICentersRepository {
       rooms?: { name?: string };
     }
 
-    return (data as unknown as ActiveSessionQueryResult[]).map((row) => ({
+    return (data as unknown as ActiveSessionQueryResult[] || []).map((row) => ({
       id: row.id,
       group_id: row.group_id,
       group_name: row.groups?.name || "مجموعة غير مسماة",
@@ -376,6 +378,131 @@ export class SupabaseCentersRepository implements ICentersRepository {
       throw new Error(error ? error.message : "Failed to record attendance");
     }
     return { id: row.id, recorded: true };
+  }
+
+  // --- DEV-78: Financials & Payouts ---
+  async getTeacherSessionStats(tenantId: string, teacherId: string, period: string): Promise<{
+    total_revenue: number;
+    student_count: number;
+    sessions_count: number;
+  }> {
+    // 1. Query sessions for teacher in period
+    const { data: sessions, error: sessErr } = await this.adminClient
+      .from("sessions")
+      .select(`
+        id,
+        group_id,
+        session_date,
+        groups ( price )
+      `)
+      .eq("tenant_id", tenantId)
+      .eq("teacher_id", teacherId)
+      .like("session_date", `${period}%`)
+      .neq("status", "cancelled");
+
+    if (sessErr || !sessions || sessions.length === 0) {
+      return { total_revenue: 0, student_count: 0, sessions_count: 0 };
+    }
+
+    const sessionIds = sessions.map((s: { id: string }) => s.id);
+
+    // 2. Query attendance for these sessions
+    const { data: attendance } = await this.adminClient
+      .from("attendance")
+      .select("session_id, status")
+      .eq("tenant_id", tenantId)
+      .in("session_id", sessionIds)
+      .in("status", ["present", "late"]);
+
+    let totalRevenue = 0;
+    const studentCount = (attendance || []).length;
+
+    // Price mapping from session
+    interface SessionWithGroupPrice {
+      id: string;
+      groups?: { price?: number | string | null } | null;
+    }
+    interface AttendanceRowItem {
+      session_id: string;
+      status: string;
+    }
+
+    const priceMap = new Map<string, number>();
+    for (const s of (sessions as unknown as SessionWithGroupPrice[])) {
+      priceMap.set(s.id, Number(s.groups?.price) || 0);
+    }
+
+    for (const att of ((attendance || []) as unknown as AttendanceRowItem[])) {
+      totalRevenue += priceMap.get(att.session_id) || 0;
+    }
+
+    return {
+      total_revenue: Math.round(totalRevenue * 100) / 100,
+      student_count: studentCount,
+      sessions_count: sessions.length,
+    };
+  }
+
+  async getTeacherPayout(tenantId: string, teacherId: string, period: string): Promise<TeacherPayoutModel | null> {
+    const { data, error } = await this.adminClient
+      .from("teacher_payouts")
+      .select()
+      .eq("tenant_id", tenantId)
+      .eq("teacher_id", teacherId)
+      .eq("period", period)
+      .single();
+
+    if (error || !data) return null;
+    return data as unknown as TeacherPayoutModel;
+  }
+
+  async listTeacherPayouts(tenantId: string, period: string): Promise<TeacherPayoutModel[]> {
+    const { data, error } = await this.adminClient
+      .from("teacher_payouts")
+      .select()
+      .eq("tenant_id", tenantId)
+      .eq("period", period);
+
+    if (error || !data) return [];
+    return data as unknown as TeacherPayoutModel[];
+  }
+
+  async saveTeacherPayout(tenantId: string, data: {
+    teacher_id: string;
+    period: string;
+    total_revenue: number;
+    teacher_cut: number;
+    center_cut: number;
+    status: TeacherPayoutStatus;
+    paid_at?: string | null;
+    paid_by?: string | null;
+    notes?: string | null;
+  }): Promise<TeacherPayoutModel> {
+    const { data: row, error } = await this.adminClient
+      .from("teacher_payouts")
+      .upsert(
+        {
+          tenant_id: tenantId,
+          teacher_id: data.teacher_id,
+          period: data.period,
+          total_revenue: data.total_revenue,
+          teacher_cut: data.teacher_cut,
+          center_cut: data.center_cut,
+          status: data.status,
+          paid_at: data.paid_at || null,
+          paid_by: data.paid_by || null,
+          notes: data.notes || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "tenant_id,teacher_id,period" }
+      )
+      .select()
+      .single();
+
+    if (error || !row) {
+      throw new Error(error ? error.message : "Failed to save teacher payout");
+    }
+    return row as unknown as TeacherPayoutModel;
   }
 
   async createAuthUserAndProfile(data: {
@@ -448,6 +575,10 @@ export class FakeCentersRepository implements ICentersRepository {
     scanned_at: string;
   }> = [];
 
+  // Fake stats map: key = `${tenantId}:${teacherId}:${period}`
+  public sessionStatsMap = new Map<string, { total_revenue: number; student_count: number; sessions_count: number }>();
+  public payouts: TeacherPayoutModel[] = [];
+
   async createTeacher(
     tenantId: string,
     data: {
@@ -511,6 +642,7 @@ export class FakeCentersRepository implements ICentersRepository {
     const assistant: AssistantModel = {
       id: `assistant-${this.assistants.length + 1}`,
       tenant_id: tenantId,
+      user_id: data.user_id || null,
       name: data.name,
       phone: data.phone,
       email: null,
@@ -541,7 +673,6 @@ export class FakeCentersRepository implements ICentersRepository {
     return this.assistants[idx];
   }
 
-  // --- Rooms Fake Implementation ---
   async createRoom(tenantId: string, data: CreateRoomInput): Promise<RoomModel> {
     const room: RoomModel = {
       id: `room-${this.rooms.length + 1}`,
@@ -567,7 +698,6 @@ export class FakeCentersRepository implements ICentersRepository {
     return this.roomBookings.filter((b) => b.room_id === roomId && b.date === date);
   }
 
-  // --- Front-Desk Fake Implementation ---
   async getStudentByBarcode(tenantId: string, barcode: string): Promise<{ id: string; name: string; barcode: string; phone?: string } | null> {
     const s = this.students.find((st) => st.tenant_id === tenantId && st.barcode === barcode);
     return s ? { id: s.id, name: s.name, barcode: s.barcode, phone: s.phone } : null;
@@ -599,6 +729,71 @@ export class FakeCentersRepository implements ICentersRepository {
     };
     this.attendanceRecords.push(rec);
     return { id: rec.id, recorded: true };
+  }
+
+  // --- DEV-78: Fake Financials & Payouts ---
+  async getTeacherSessionStats(tenantId: string, teacherId: string, period: string): Promise<{
+    total_revenue: number;
+    student_count: number;
+    sessions_count: number;
+  }> {
+    const key = `${tenantId}:${teacherId}:${period}`;
+    if (this.sessionStatsMap.has(key)) {
+      return this.sessionStatsMap.get(key)!;
+    }
+    return { total_revenue: 0, student_count: 0, sessions_count: 0 };
+  }
+
+  async getTeacherPayout(tenantId: string, teacherId: string, period: string): Promise<TeacherPayoutModel | null> {
+    return (
+      this.payouts.find(
+        (p) => p.tenant_id === tenantId && p.teacher_id === teacherId && p.period === period
+      ) || null
+    );
+  }
+
+  async listTeacherPayouts(tenantId: string, period: string): Promise<TeacherPayoutModel[]> {
+    return this.payouts.filter((p) => p.tenant_id === tenantId && p.period === period);
+  }
+
+  async saveTeacherPayout(tenantId: string, data: {
+    teacher_id: string;
+    period: string;
+    total_revenue: number;
+    teacher_cut: number;
+    center_cut: number;
+    status: TeacherPayoutStatus;
+    paid_at?: string | null;
+    paid_by?: string | null;
+    notes?: string | null;
+  }): Promise<TeacherPayoutModel> {
+    const idx = this.payouts.findIndex(
+      (p) => p.tenant_id === tenantId && p.teacher_id === data.teacher_id && p.period === data.period
+    );
+
+    const payout: TeacherPayoutModel = {
+      id: idx >= 0 ? this.payouts[idx].id : `payout-${this.payouts.length + 1}`,
+      tenant_id: tenantId,
+      teacher_id: data.teacher_id,
+      period: data.period,
+      total_revenue: data.total_revenue,
+      teacher_cut: data.teacher_cut,
+      center_cut: data.center_cut,
+      status: data.status,
+      paid_at: data.paid_at || null,
+      paid_by: data.paid_by || null,
+      notes: data.notes || null,
+      created_at: idx >= 0 ? this.payouts[idx].created_at : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (idx >= 0) {
+      this.payouts[idx] = payout;
+    } else {
+      this.payouts.push(payout);
+    }
+
+    return payout;
   }
 
   async createAuthUserAndProfile(data: {

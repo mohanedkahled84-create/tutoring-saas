@@ -1,6 +1,10 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
-import { authenticateUser, requireCenterOwnerOrAdmin } from "../../shared/middleware/auth.js";
+import {
+  authenticateUser,
+  requireCenterOwnerOrAdmin,
+  requireFinancialAccess,
+} from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
 import { CentersService } from "./service.js";
 
@@ -295,6 +299,87 @@ centersRouter.post(
       const service = resolveCentersService(req);
       const result = await service.frontDeskScan(tenantId, req.body);
       res.json(result);
+    } catch (err: unknown) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: (err as Error).message } });
+    }
+  }
+);
+
+// ============================================================================
+// DEV-78: Per-Teacher Financial Settings, Reports & Payout Status Endpoints
+// ============================================================================
+
+// GET /api/centers/financials/rollup - Center-wide financial rollup across all teachers
+centersRouter.get(
+  "/financials/rollup",
+  authenticateUser,
+  requireCenterOwnerOrAdmin,
+  requireFinancialAccess,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id;
+    const period = (req.query.period as string) || new Date().toISOString().slice(0, 7);
+
+    try {
+      const service = resolveCentersService(req);
+      const rollup = await service.getCenterFinancialRollup(tenantId || "", period);
+      res.json(rollup);
+    } catch (err: unknown) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: (err as Error).message } });
+    }
+  }
+);
+
+// GET /api/centers/financials/teachers/:teacherId - Per-teacher financial report
+centersRouter.get(
+  "/financials/teachers/:teacherId",
+  authenticateUser,
+  requireFinancialAccess,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id;
+    const { teacherId } = req.params;
+    const period = (req.query.period as string) || new Date().toISOString().slice(0, 7);
+
+    // If teacher role, verify accessing own report
+    if (req.user?.role === "teacher" && req.user.teacher_id && req.user.teacher_id !== teacherId) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Cannot view other teachers' financial reports" } });
+      return;
+    }
+
+    try {
+      const service = resolveCentersService(req);
+      const report = await service.getTeacherFinancialReport(tenantId || "", teacherId, period);
+      res.json(report);
+    } catch (err: unknown) {
+      const msg = (err as Error).message;
+      if (msg === "TEACHER_NOT_FOUND") {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Teacher not found" } });
+        return;
+      }
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: msg } });
+    }
+  }
+);
+
+// POST /api/centers/financials/payouts - Set payout status (paid / unpaid)
+centersRouter.post(
+  "/financials/payouts",
+  authenticateUser,
+  requireCenterOwnerOrAdmin,
+  requireFinancialAccess,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id;
+    if (!tenantId) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+      return;
+    }
+
+    try {
+      const service = resolveCentersService(req);
+      const result = await service.setTeacherPayoutStatus(tenantId, {
+        ...req.body,
+        paid_by: req.user?.id,
+      });
+      res.json({ success: true, payout: result });
     } catch (err: unknown) {
       res.status(400).json({ error: { code: "BAD_REQUEST", message: (err as Error).message } });
     }

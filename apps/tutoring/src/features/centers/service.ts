@@ -13,6 +13,12 @@ import {
   RoomAvailabilityResult,
   FrontDeskScanInput,
   FrontDeskScanResult,
+  TeacherRevenueModel,
+  TeacherFinancialCalculationResult,
+  TeacherFinancialReport,
+  CenterFinancialRollup,
+  SetPayoutStatusInput,
+  TeacherPayoutModel,
 } from "./types.js";
 import {
   generateInviteToken,
@@ -51,10 +57,61 @@ export function isTimeOverlapping(
 }
 
 /**
- * Centrly Centers Domain Service (DEV-76, DEV-77)
+ * DEV-78: Pure calculation function for per-teacher revenue split.
+ * Zero database imports or external side-effects (Rule 1 compliance).
+ */
+export function calculateTeacherFinancials(
+  revenueModel: TeacherRevenueModel,
+  revenueValue: number,
+  totalRevenue: number,
+  studentCount: number
+): TeacherFinancialCalculationResult {
+  const validTotal = Math.max(0, Number(totalRevenue) || 0);
+  const validCount = Math.max(0, Number(studentCount) || 0);
+  const validValue = Math.max(0, Number(revenueValue) || 0);
+
+  let rawTeacherCut = 0;
+
+  switch (revenueModel) {
+    case "percentage": {
+      // e.g. 80% of total revenue
+      rawTeacherCut = (validTotal * validValue) / 100;
+      break;
+    }
+    case "fixed_per_student": {
+      // e.g. 70 EGP per student present
+      rawTeacherCut = validCount * validValue;
+      break;
+    }
+    case "fixed_total": {
+      // e.g. agreed fixed salary per period
+      rawTeacherCut = validValue;
+      break;
+    }
+    default: {
+      rawTeacherCut = validTotal;
+      break;
+    }
+  }
+
+  // Teacher cut cannot exceed total revenue
+  const teacherCut = Math.min(validTotal, Math.round(rawTeacherCut * 100) / 100);
+  const centerCut = Math.round(Math.max(0, validTotal - teacherCut) * 100) / 100;
+
+  return {
+    total_revenue: Math.round(validTotal * 100) / 100,
+    teacher_cut: teacherCut,
+    center_cut: centerCut,
+    revenue_model: revenueModel,
+    revenue_value: validValue,
+  };
+}
+
+/**
+ * Centrly Centers Domain Service (DEV-76, DEV-77, DEV-78)
  * Strict Clean Architecture: Zero database client imports.
  * Encapsulates multi-teacher and assistant onboarding logic, hybrid invitations,
- * room booking conflict detection, and front-desk smart scanning.
+ * room booking conflict detection, front-desk smart scanning, and per-teacher financial reports.
  */
 export class CentersService {
   constructor(private readonly repository: ICentersRepository) {}
@@ -365,10 +422,6 @@ export class CentersService {
     return room;
   }
 
-  /**
-   * Pure conflict check: compares proposed time against existing room bookings.
-   * Also surfaces non-blocking capacity warning if group size > room capacity.
-   */
   async checkRoomConflict(
     tenantId: string,
     input: RoomConflictCheckInput
@@ -380,7 +433,6 @@ export class CentersService {
 
     const room = await this.getRoomById(tenantId, input.room_id);
 
-    // 1. Check capacity warning (soft warning, non-blocking)
     const warning =
       input.student_count !== undefined && input.student_count > room.capacity
         ? {
@@ -391,7 +443,6 @@ export class CentersService {
           }
         : null;
 
-    // 2. Fetch existing bookings on the requested date
     const bookings = await this.repository.getRoomBookings(tenantId, input.room_id, input.date);
 
     for (const b of bookings) {
@@ -449,7 +500,6 @@ export class CentersService {
     const barcode = input.barcode.trim();
     const student = await this.repository.getStudentByBarcode(tenantId, barcode);
 
-    // Edge case 1: Student not found
     if (!student) {
       return {
         success: false,
@@ -460,7 +510,6 @@ export class CentersService {
       };
     }
 
-    // Determine current date
     const dateStr = input.current_time
       ? input.current_time.slice(0, 10)
       : new Date().toISOString().slice(0, 10);
@@ -472,7 +521,6 @@ export class CentersService {
 
     const activeEnrollments = enrollments.filter((e) => e.status === "active");
 
-    // Edge case 2: No active enrollments
     if (activeEnrollments.length === 0) {
       return {
         success: false,
@@ -484,7 +532,6 @@ export class CentersService {
       };
     }
 
-    // Edge case 3: No active sessions currently running
     if (activeSessions.length === 0) {
       return {
         success: false,
@@ -496,7 +543,6 @@ export class CentersService {
       };
     }
 
-    // 1. Check exact group match
     const exactMatch = activeSessions.find((session) =>
       activeEnrollments.some((e) => e.group_id === session.group_id)
     );
@@ -528,7 +574,6 @@ export class CentersService {
       };
     }
 
-    // 2. Check make-up match (same teacher, different group)
     const makeupMatch = activeSessions.find(
       (session) =>
         session.teacher_id &&
@@ -562,7 +607,6 @@ export class CentersService {
       };
     }
 
-    // Edge case 4: Student enrolled in center, but not in any session running now
     return {
       success: false,
       mode: "front_desk",
@@ -571,5 +615,121 @@ export class CentersService {
       audio_alert: "warning",
       student,
     };
+  }
+
+  // ==========================================================================
+  // DEV-78: Per-Teacher Financial Settings, Reports & Payout Status
+  // ==========================================================================
+
+  async getTeacherFinancialReport(
+    tenantId: string,
+    teacherId: string,
+    period: string
+  ): Promise<TeacherFinancialReport> {
+    if (!tenantId) throw new Error("TENANT_REQUIRED");
+    if (!teacherId) throw new Error("TEACHER_ID_REQUIRED");
+    if (!period || !period.trim()) throw new Error("PERIOD_REQUIRED");
+
+    const teacher = await this.repository.getTeacherById(tenantId, teacherId);
+    if (!teacher) throw new Error("TEACHER_NOT_FOUND");
+
+    const [stats, existingPayout] = await Promise.all([
+      this.repository.getTeacherSessionStats(tenantId, teacherId, period.trim()),
+      this.repository.getTeacherPayout(tenantId, teacherId, period.trim()),
+    ]);
+
+    const calc = calculateTeacherFinancials(
+      teacher.revenue_model,
+      teacher.revenue_value,
+      stats.total_revenue,
+      stats.student_count
+    );
+
+    return {
+      teacher,
+      period: period.trim(),
+      summary: {
+        total_revenue: calc.total_revenue,
+        teacher_cut: calc.teacher_cut,
+        center_cut: calc.center_cut,
+        student_count: stats.student_count,
+        sessions_count: stats.sessions_count,
+      },
+      payout: {
+        id: existingPayout?.id,
+        status: existingPayout?.status || "unpaid",
+        paid_at: existingPayout?.paid_at || null,
+        paid_by: existingPayout?.paid_by || null,
+        notes: existingPayout?.notes || null,
+      },
+    };
+  }
+
+  async getCenterFinancialRollup(
+    tenantId: string,
+    period: string
+  ): Promise<CenterFinancialRollup> {
+    if (!tenantId) throw new Error("TENANT_REQUIRED");
+    if (!period || !period.trim()) throw new Error("PERIOD_REQUIRED");
+
+    const teachers = await this.repository.listTeachers(tenantId);
+    const reports: TeacherFinancialReport[] = [];
+
+    let totalRevenue = 0;
+    let totalTeacherCut = 0;
+    let totalCenterCut = 0;
+    let paidCount = 0;
+    let unpaidCount = 0;
+
+    for (const teacher of teachers) {
+      const report = await this.getTeacherFinancialReport(tenantId, teacher.id, period);
+      reports.push(report);
+
+      totalRevenue += report.summary.total_revenue;
+      totalTeacherCut += report.summary.teacher_cut;
+      totalCenterCut += report.summary.center_cut;
+
+      if (report.payout.status === "paid") {
+        paidCount++;
+      } else {
+        unpaidCount++;
+      }
+    }
+
+    return {
+      period: period.trim(),
+      totals: {
+        total_revenue: Math.round(totalRevenue * 100) / 100,
+        total_teacher_cut: Math.round(totalTeacherCut * 100) / 100,
+        total_center_cut: Math.round(totalCenterCut * 100) / 100,
+        paid_teachers_count: paidCount,
+        unpaid_teachers_count: unpaidCount,
+      },
+      reports,
+    };
+  }
+
+  async setTeacherPayoutStatus(
+    tenantId: string,
+    input: SetPayoutStatusInput & { paid_by?: string }
+  ): Promise<TeacherPayoutModel> {
+    if (!tenantId) throw new Error("TENANT_REQUIRED");
+    if (!input.teacher_id) throw new Error("TEACHER_ID_REQUIRED");
+    if (!input.period || !input.period.trim()) throw new Error("PERIOD_REQUIRED");
+    if (!["paid", "unpaid"].includes(input.status)) throw new Error("INVALID_PAYOUT_STATUS");
+
+    const report = await this.getTeacherFinancialReport(tenantId, input.teacher_id, input.period);
+
+    return this.repository.saveTeacherPayout(tenantId, {
+      teacher_id: input.teacher_id,
+      period: input.period.trim(),
+      total_revenue: report.summary.total_revenue,
+      teacher_cut: report.summary.teacher_cut,
+      center_cut: report.summary.center_cut,
+      status: input.status,
+      paid_at: input.status === "paid" ? new Date().toISOString() : null,
+      paid_by: input.paid_by || null,
+      notes: input.notes ? input.notes.trim() : null,
+    });
   }
 }

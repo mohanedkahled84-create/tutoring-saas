@@ -15,6 +15,8 @@ export interface UserContext {
   email?: string;
   tenant_id: string | null;
   role: UserRole;
+  teacher_id?: string | null;
+  assistant_id?: string | null;
 }
 
 export interface AuthenticatedRequest extends Request {

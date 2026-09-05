@@ -1,6 +1,7 @@
 export type TeacherRevenueModel = "percentage" | "fixed_per_student" | "fixed_total";
 export type MemberStatus = "active" | "inactive" | "invited";
 export type AssistantType = "assistant_to_center" | "assistant_to_teacher";
+export type TeacherPayoutStatus = "unpaid" | "paid";
 
 export interface TeacherModel {
   id: string;
@@ -144,6 +145,74 @@ export interface EnrollmentModel {
   joined_at: string;
 }
 
+// ============================================================================
+// DEV-78: Per-Teacher Financial & Payout Types
+// ============================================================================
+
+export interface TeacherFinancialCalculationResult {
+  total_revenue: number;
+  teacher_cut: number;
+  center_cut: number;
+  revenue_model: TeacherRevenueModel;
+  revenue_value: number;
+}
+
+export interface TeacherFinancialSummary {
+  total_revenue: number;
+  teacher_cut: number;
+  center_cut: number;
+  student_count: number;
+  sessions_count: number;
+}
+
+export interface TeacherFinancialReport {
+  teacher: TeacherModel;
+  period: string; // e.g. '2026-09'
+  summary: TeacherFinancialSummary;
+  payout: {
+    id?: string;
+    status: TeacherPayoutStatus;
+    paid_at?: string | null;
+    paid_by?: string | null;
+    notes?: string | null;
+  };
+}
+
+export interface CenterFinancialRollup {
+  period: string;
+  totals: {
+    total_revenue: number;
+    total_teacher_cut: number;
+    total_center_cut: number;
+    paid_teachers_count: number;
+    unpaid_teachers_count: number;
+  };
+  reports: TeacherFinancialReport[];
+}
+
+export interface SetPayoutStatusInput {
+  teacher_id: string;
+  period: string;
+  status: TeacherPayoutStatus;
+  notes?: string;
+}
+
+export interface TeacherPayoutModel {
+  id: string;
+  tenant_id: string;
+  teacher_id: string;
+  period: string;
+  total_revenue: number;
+  teacher_cut: number;
+  center_cut: number;
+  status: TeacherPayoutStatus;
+  paid_at?: string | null;
+  paid_by?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CreateTeacherInput {
   name: string;
   phone: string;
@@ -246,6 +315,26 @@ export interface ICentersRepository {
     is_makeup?: boolean;
     scanned_at?: string;
   }): Promise<{ id: string; recorded: boolean }>;
+
+  // DEV-78: Financials & Payouts repository methods
+  getTeacherSessionStats(tenantId: string, teacherId: string, period: string): Promise<{
+    total_revenue: number;
+    student_count: number;
+    sessions_count: number;
+  }>;
+  getTeacherPayout(tenantId: string, teacherId: string, period: string): Promise<TeacherPayoutModel | null>;
+  listTeacherPayouts(tenantId: string, period: string): Promise<TeacherPayoutModel[]>;
+  saveTeacherPayout(tenantId: string, data: {
+    teacher_id: string;
+    period: string;
+    total_revenue: number;
+    teacher_cut: number;
+    center_cut: number;
+    status: TeacherPayoutStatus;
+    paid_at?: string | null;
+    paid_by?: string | null;
+    notes?: string | null;
+  }): Promise<TeacherPayoutModel>;
 
   // Provisioning
   createAuthUserAndProfile(data: {
