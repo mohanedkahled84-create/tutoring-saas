@@ -353,4 +353,27 @@ export class SupabaseSessionsRepository implements ISessionsRepository {
 
     return data.id;
   }
+
+  async getSessionsByDateRange(
+    tenantId: string,
+    fromDate: string,
+    toDate: string
+  ): Promise<SessionModel[]> {
+    const { data, error } = await this.supabase
+      .from("sessions")
+      .select(
+        "id, tenant_id, group_id, session_number, session_date, status, is_extra, extra_topic, rescheduled_to_date, rescheduled_to_time, cancellation_reason, created_at, groups(id, name, center_name, price)"
+      )
+      .eq("tenant_id", tenantId)
+      .gte("session_date", fromDate)
+      .lte("session_date", toDate)
+      .order("session_date", { ascending: true })
+      .order("session_number", { ascending: true });
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data as unknown as SessionModel[];
+  }
 }

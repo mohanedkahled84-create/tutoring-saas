@@ -1,6 +1,7 @@
 export function renderSidebar(currentRoute = 'sessions') {
   const routes = [
     { id: 'sessions', title: 'الحصص ولوحة المساعد', icon: '⚡' },
+    { id: 'calendar', title: 'جدول الحصص والتقويم', icon: '📅' },
     { id: 'dashboard', title: 'لوحة المدرس والأرباح', icon: '📊' },
     { id: 'groups', title: 'المجاميع والسناتر', icon: '🏢' },
     { id: 'students', title: 'دليل الطلاب والتسجيل', icon: '👥' },

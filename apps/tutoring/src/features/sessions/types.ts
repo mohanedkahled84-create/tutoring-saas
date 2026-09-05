@@ -205,6 +205,11 @@ export interface ISessionsRepository {
     content: string
   ): Promise<string | null>;
   getNextSessionNumber(groupId: string): Promise<number>;
+  getSessionsByDateRange(
+    tenantId: string,
+    fromDate: string,
+    toDate: string
+  ): Promise<SessionModel[]>;
   logReceiptMessage(
     tenantId: string,
     idempotencyKey: string,
@@ -212,4 +217,9 @@ export interface ISessionsRepository {
     recipientPhone: string,
     formattedReceipt: string
   ): Promise<string | null>;
+}
+
+export interface CalendarRangeQuery {
+  from: string;
+  to: string;
 }

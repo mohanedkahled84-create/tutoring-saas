@@ -232,6 +232,17 @@ export class SessionsService {
     };
   }
 
+  /**
+   * DEV-56: Query sessions in date range for the teacher calendar.
+   */
+  async getCalendarSessions(
+    tenantId: string,
+    fromDate: string,
+    toDate: string
+  ): Promise<SessionModel[]> {
+    return this.repository.getSessionsByDateRange(tenantId, fromDate, toDate);
+  }
+
   async getSessionDetails(sessionId: string): Promise<{
     session: SessionModel;
     attendance: unknown[];

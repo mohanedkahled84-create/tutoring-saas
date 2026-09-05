@@ -9,6 +9,7 @@ import {
   quizScoreSchema,
 } from "../../shared/middleware/validation.js";
 import { requireFinancialAccess } from "../../shared/middleware/auth.js";
+import { requireFeatureFlag } from "../../shared/middleware/featureFlags.js";
 import { getServices } from "../../composition.js";
 import { SessionsService } from "./service.js";
 import { attendanceRouter } from "../attendance/routes.js";
@@ -173,6 +174,44 @@ sessionsRouter.post(
     } catch (err: unknown) {
       res.status(400).json({
         error: { code: "BAD_REQUEST", message: (err as Error).message },
+      });
+    }
+  }
+);
+
+// DEV-56: Teacher Calendar Range Query (Daily / Weekly / Monthly)
+sessionsRouter.get(
+  "/calendar",
+  requireFeatureFlag("teacherCalendar"),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id;
+    if (!tenantId && req.user?.role !== "admin") {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+      return;
+    }
+
+    const { from, to } = req.query;
+    if (!from || !to || typeof from !== "string" || typeof to !== "string") {
+      res.status(400).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Query parameters 'from' and 'to' (format YYYY-MM-DD) are required",
+        },
+      });
+      return;
+    }
+
+    try {
+      const service = resolveSessionsService(req);
+      const sessions = await service.getCalendarSessions(tenantId || "", from, to);
+      res.json({ sessions, count: sessions.length });
+    } catch (err: unknown) {
+      res.status(500).json({
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Failed to fetch calendar sessions",
+          details: (err as Error).message,
+        },
       });
     }
   }

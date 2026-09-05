@@ -10,6 +10,7 @@ import { renderStudentsView } from './components/StudentsView.js';
 import { renderGroupsView } from './components/GroupsView.js';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js';
+import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 
 class CentrlyApp {
   constructor() {
@@ -48,6 +49,11 @@ class CentrlyApp {
       { id: 'm1', studentId: 's1', studentName: 'أحمد محمود', phone: '01012345678', type: 'ملاحظة حضور', status: 'sent', time: '16:08', reason: null },
       { id: 'm2', studentId: 's3', studentName: 'عمر إبراهيم', phone: '01234567890', type: 'إنذار غياب', status: 'failed', time: '16:10', reason: 'الرقم غير مسجل على واتساب' },
     ];
+    this.calendarState = {
+      view: 'week',
+      selectedGroup: 'all',
+      dateLabel: 'أسبوع 6 سبتمبر - 12 سبتمبر 2026',
+    };
   }
 
   init() {
@@ -307,6 +313,8 @@ class CentrlyApp {
     switch (route) {
       case 'dashboard':
         return renderTeacherDashboard();
+      case 'calendar':
+        return renderTeacherCalendar(this.calendarState);
       case 'sessions':
         return renderSessionsView(this.sessionState, this.user);
       case 'students':
@@ -476,6 +484,29 @@ class CentrlyApp {
   }
   viewGroupDetails() {}
   editStudent() {}
+
+  // DEV-56: Teacher Calendar Controls
+  switchCalendarView(view) {
+    this.calendarState.view = view;
+    this.renderMainContent();
+  }
+
+  calendarPrev() {
+    this.renderMainContent();
+  }
+
+  calendarNext() {
+    this.renderMainContent();
+  }
+
+  calendarToday() {
+    this.renderMainContent();
+  }
+
+  filterCalendarByGroup(groupId) {
+    this.calendarState.selectedGroup = groupId;
+    this.renderMainContent();
+  }
 }
 
 window.centrlyApp = new CentrlyApp();

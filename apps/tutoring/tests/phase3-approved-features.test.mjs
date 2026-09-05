@@ -19,6 +19,7 @@ import {
 } from "../dist/features/telemetry/service.js";
 import { FakeTelemetryRepository } from "../dist/features/telemetry/repository.js";
 import { analytics } from "../../../apps/web/src/utils/analytics.js";
+import { renderTeacherCalendar } from "../../../apps/web/src/components/TeacherCalendar.js";
 import { app } from "../dist/app.js";
 
 // Mock Repository for domain unit tests
@@ -93,6 +94,17 @@ class MockSessionsRepo {
   async logSessionActionNotification(tenantId, idempotencyKey, phone, messageType, content) {
     this.loggedNotifications.push({ tenantId, idempotencyKey, phone, messageType, content });
     return "msg-log-" + this.loggedNotifications.length;
+  }
+
+  async getSessionsByDateRange(tenantId, fromDate, toDate) {
+    if (
+      this.session.tenant_id === tenantId &&
+      this.session.session_date >= fromDate &&
+      this.session.session_date <= toDate
+    ) {
+      return [{ ...this.session, groups: this.group }];
+    }
+    return [];
   }
 }
 
@@ -536,3 +548,81 @@ test("DEV-55: Client analytics adapter exposes all core funnel tracking methods"
   assert.equal(typeof analytics.trackWhatsAppConnect, "function");
   assert.equal(typeof analytics.trackSessionAction, "function");
 });
+
+// ============================================================================
+// DEV-56: Teacher Calendar (Daily / Weekly / Monthly) Tests
+// ============================================================================
+
+test("DEV-56: SessionsService.getCalendarSessions queries date range correctly", async () => {
+  const repo = new MockSessionsRepo();
+  const service = new SessionsService(repo);
+
+  // In range
+  const sessions = await service.getCalendarSessions("tenant-abc", "2026-09-01", "2026-09-15");
+  assert.equal(sessions.length, 1);
+  assert.equal(sessions[0].id, "sess-101");
+  assert.equal(sessions[0].groups.name, "مجموعة الصف الثالث الثانوي");
+
+  // Out of range
+  const emptySessions = await service.getCalendarSessions("tenant-abc", "2026-09-15", "2026-09-20");
+  assert.equal(emptySessions.length, 0);
+
+  // Different tenant
+  const wrongTenant = await service.getCalendarSessions("tenant-xyz", "2026-09-01", "2026-09-15");
+  assert.equal(wrongTenant.length, 0);
+});
+
+test("DEV-56: renderTeacherCalendar generates Arabic RTL calendar with all view modes and status badges", () => {
+  // 1. Weekly view (default)
+  const weekHtml = renderTeacherCalendar({ view: "week" });
+  assert.ok(weekHtml.includes("جدول الحصص والتقويم الأكاديمي"));
+  assert.ok(weekHtml.includes("السبت"));
+  assert.ok(weekHtml.includes("الأحد"));
+  assert.ok(weekHtml.includes("الجمعة"));
+  assert.ok(weekHtml.includes("🟢 جارية"));
+  assert.ok(weekHtml.includes("🏁 منتهية"));
+  assert.ok(weekHtml.includes("🕒 مجدولة"));
+  assert.ok(weekHtml.includes("❌ ملغاة"));
+  assert.ok(weekHtml.includes("📅 مؤجلة"));
+  assert.ok(weekHtml.includes("⭐ إضافية"));
+
+  // 2. Daily view
+  const dayHtml = renderTeacherCalendar({ view: "day" });
+  assert.ok(dayHtml.includes("حصص اليوم"));
+  assert.ok(dayHtml.includes("عرض الحصة"));
+
+  // 3. Monthly view
+  const monthHtml = renderTeacherCalendar({ view: "month" });
+  assert.ok(monthHtml.includes("تقويم الشهر (سبتمبر 2026)"));
+  assert.ok(monthHtml.includes("السبت"));
+});
+
+test("DEV-56: GET /api/sessions/calendar strictly returns 401 when unauthenticated", async () => {
+  const res = await fetch(`${baseUrl}/api/sessions/calendar?from=2026-09-01&to=2026-09-15`);
+  assert.equal(res.status, 401);
+});
+
+test("DEV-56: requireFeatureFlag('teacherCalendar') rejects with 404 FEATURE_DISABLED when flag is off", async () => {
+  const { requireFeatureFlag } = await import("../dist/shared/middleware/featureFlags.js");
+  const middleware = requireFeatureFlag("teacherCalendar");
+  let statusSent = 0;
+  let jsonSent = null;
+  const res = {
+    status: (code) => {
+      statusSent = code;
+      return {
+        json: (body) => {
+          jsonSent = body;
+        },
+      };
+    },
+  };
+  let nextCalled = false;
+  middleware({}, res, () => {
+    nextCalled = true;
+  });
+  assert.equal(nextCalled, false);
+  assert.equal(statusSent, 404);
+  assert.equal(jsonSent?.error?.code, "FEATURE_DISABLED");
+});
+
