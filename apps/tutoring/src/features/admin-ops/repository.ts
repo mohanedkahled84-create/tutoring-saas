@@ -7,6 +7,7 @@ import {
   IAdminOpsRepository,
 } from "./types.js";
 import { config } from "../../shared/config/index.js";
+import { getServiceSupabaseClient } from "../../supabase.js";
 
 export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
   constructor(private readonly client: SupabaseClient) {}
@@ -156,7 +157,7 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
   }
 
   async logFounderAlert(payload: NewSignupAlertPayload, formattedMessage: string): Promise<void> {
-    const idempotencyKey = `founder_alert:${payload.teacher_email}:${Date.now()}`;
+    const idempotencyKey = `founder_alert:${payload.teacher_email}`;
     await this.client.from("message_logs").insert({
       tenant_id: null,
       idempotency_key: idempotencyKey,
@@ -166,6 +167,27 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
       status: "needs_review",
       error_detail: formattedMessage,
     });
+  }
+
+  async logCriticalErrorAlert(data: {
+    tenant_id?: string | null;
+    idempotency_key: string;
+    recipient_email: string;
+    status: "sent" | "failed";
+    error_detail: string;
+  }): Promise<void> {
+    const { error } = await this.client.from("message_logs").insert({
+      tenant_id: data.tenant_id || null,
+      idempotency_key: data.idempotency_key,
+      message_type: "critical_error_email_alert",
+      recipient_type: "system",
+      recipient_phone: data.recipient_email,
+      status: data.status,
+      error_detail: data.error_detail,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 }
 
@@ -271,4 +293,27 @@ export class FakeAdminOpsRepository implements IAdminOpsRepository {
   async logFounderAlert(payload: NewSignupAlertPayload, formattedMessage: string): Promise<void> {
     this.messageLogs.push({ payload, formattedMessage });
   }
+
+  async logCriticalErrorAlert(data: {
+    tenant_id?: string | null;
+    idempotency_key: string;
+    recipient_email: string;
+    status: "sent" | "failed";
+    error_detail: string;
+  }): Promise<void> {
+    this.messageLogs.push({ ...data, message_type: "critical_error_email_alert" });
+  }
+}
+
+let defaultAdminOpsRepo: IAdminOpsRepository | null = null;
+
+export function getDefaultAdminOpsRepository(): IAdminOpsRepository {
+  if (!defaultAdminOpsRepo) {
+    if (process.env.NODE_ENV === "test") {
+      defaultAdminOpsRepo = new FakeAdminOpsRepository();
+    } else {
+      defaultAdminOpsRepo = new SupabaseAdminOpsRepository(getServiceSupabaseClient());
+    }
+  }
+  return defaultAdminOpsRepo;
 }

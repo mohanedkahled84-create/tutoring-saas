@@ -423,7 +423,7 @@ export class SessionsService {
 
     let loggedMessageId: string | null = null;
     if (options.send_via_whatsapp && options.recipient_phone) {
-      const idempotencyKey = `receipt:${tenantId}:${sessionId}:${Date.now()}`;
+      const idempotencyKey = `receipt:${tenantId}:${sessionId}`;
       loggedMessageId = await this.repository.logReceiptMessage(
         tenantId,
         idempotencyKey,

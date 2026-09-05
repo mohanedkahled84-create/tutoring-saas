@@ -1,11 +1,12 @@
-﻿import crypto from "node:crypto";
+import crypto from "node:crypto";
 import { config } from "../../shared/config/index.js";
-import { getServiceSupabaseClient } from "../../supabase.js";
 import { logger } from "../../shared/utils/logger.js";
 import {
   CriticalErrorAlertPayload,
   CriticalErrorAlertResult,
+  IAdminOpsRepository,
 } from "./types.js";
+import { getDefaultAdminOpsRepository } from "./repository.js";
 
 // Rate limiting & deduplication cache (fingerprint -> metadata)
 interface DedupEntry {
@@ -126,6 +127,7 @@ export async function dispatchCriticalErrorAlert(
   options?: {
     cooldownMs?: number;
     customSender?: (subject: string, text: string, html: string) => Promise<boolean>;
+    repository?: IAdminOpsRepository;
   }
 ): Promise<CriticalErrorAlertResult> {
   const recipientEmail = config.founderEmail;
@@ -203,17 +205,15 @@ export async function dispatchCriticalErrorAlert(
     logger.error("[OpsAlert] Failed to deliver alert email:", emailErr);
   }
 
-  // 4. Audit in message_logs
+  // 4. Audit in message_logs via repository (Clean Architecture Rule 1)
   try {
-    const supabase = getServiceSupabaseClient();
+    const repo = options?.repository || getDefaultAdminOpsRepository();
     const idempotencyKey = `ops_alert:${fingerprint}:${now}`;
 
-    await supabase.from("message_logs").insert({
+    await repo.logCriticalErrorAlert({
       tenant_id: payload.context?.tenant_id || null,
       idempotency_key: idempotencyKey,
-      message_type: "critical_error_email_alert",
-      recipient_type: "system",
-      recipient_phone: recipientEmail,
+      recipient_email: recipientEmail,
       status: emailDispatched ? "sent" : "failed",
       error_detail: text,
     });

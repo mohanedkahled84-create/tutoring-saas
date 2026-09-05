@@ -921,3 +921,100 @@ test("DEV-79: renderCenterOwnerDashboard generates Arabic RTL dashboard with fin
   assert.ok(onboardingHtml.includes("تم إنشاء رابط الدعوة بنجاح لـ (أ. محمود شاكر)"));
   assert.ok(onboardingHtml.includes("/register?invite=test-token-12345"));
 });
+
+// ============================================================================
+// DEV-83: Fix Rule-1 Violations in admin-ops Alerts + Idempotency Key Bugs
+// ============================================================================
+
+test("DEV-83: founderAlert.ts and criticalErrorAlert.ts comply with Clean Architecture Rule 1", () => {
+  const founderAlertPath = path.resolve(__dirname, "../src/features/admin-ops/founderAlert.ts");
+  const criticalErrorAlertPath = path.resolve(__dirname, "../src/features/admin-ops/criticalErrorAlert.ts");
+
+  const founderCode = fs.readFileSync(founderAlertPath, "utf8");
+  const criticalCode = fs.readFileSync(criticalErrorAlertPath, "utf8");
+
+  // Rule 1: No direct Supabase client or DB driver imports in business logic modules
+  assert.ok(
+    !founderCode.includes("getServiceSupabaseClient"),
+    "founderAlert.ts must not import getServiceSupabaseClient"
+  );
+  assert.ok(
+    !founderCode.includes("@supabase/supabase-js"),
+    "founderAlert.ts must not import @supabase/supabase-js"
+  );
+  assert.ok(
+    !founderCode.includes("alertFounderOfNewSignup"),
+    "Dead code alertFounderOfNewSignup must be deleted from founderAlert.ts"
+  );
+
+  assert.ok(
+    !criticalCode.includes("getServiceSupabaseClient"),
+    "criticalErrorAlert.ts must not import getServiceSupabaseClient"
+  );
+  assert.ok(
+    !criticalCode.includes("@supabase/supabase-js"),
+    "criticalErrorAlert.ts must not import @supabase/supabase-js"
+  );
+});
+
+test("DEV-83: dispatchCriticalErrorAlert delegates message_logs audit to repository", async () => {
+  const { FakeAdminOpsRepository } = await import("../dist/features/admin-ops/repository.js");
+  const { dispatchCriticalErrorAlert, clearAlertDeduplicationCache } = await import(
+    "../dist/features/admin-ops/criticalErrorAlert.js"
+  );
+
+  clearAlertDeduplicationCache();
+  const fakeRepo = new FakeAdminOpsRepository();
+
+  const payload = {
+    error_name: "DatabaseTimeoutError",
+    error_message: "Connection pool exhausted",
+    severity: "CRITICAL",
+    context: { tenant_id: "tenant-dev83-test", path: "/api/test" },
+  };
+
+  const result = await dispatchCriticalErrorAlert(payload, {
+    cooldownMs: 1000,
+    customSender: async () => true,
+    repository: fakeRepo,
+  });
+
+  assert.equal(result.dispatched, true);
+  assert.equal(fakeRepo.messageLogs.length, 1);
+  assert.equal(fakeRepo.messageLogs[0].tenant_id, "tenant-dev83-test");
+  assert.equal(fakeRepo.messageLogs[0].status, "sent");
+  assert.equal(fakeRepo.messageLogs[0].message_type, "critical_error_email_alert");
+  assert.ok(fakeRepo.messageLogs[0].idempotency_key.startsWith("ops_alert:"));
+});
+
+test("DEV-83: SessionsService.generateReceipt constructs deterministic idempotency key without Date.now()", async () => {
+  const { SessionsService } = await import("../dist/features/sessions/service.js");
+
+  let capturedKey = null;
+  const mockRepo = {
+    async getSessionWithGroup(sessionId) {
+      return {
+        session: { id: sessionId, session_number: 1, session_date: "2026-09-05" },
+        group: { id: "grp-83", name: "Physics Class", price: 150, billing_model: "percentage" },
+      };
+    },
+    async getAllAttendanceWithStudents() {
+      return [{ attended: true, students: { name: "Ahmed" } }];
+    },
+    async logReceiptMessage(_tenantId, idempotencyKey) {
+      capturedKey = idempotencyKey;
+      return "msg-83";
+    },
+  };
+
+  const service = new SessionsService(mockRepo);
+  const result = await service.generateReceipt("tenant-83", "sess-83", {
+    send_via_whatsapp: true,
+    recipient_phone: "01099998888",
+    recipient_type: "teacher",
+  });
+
+  assert.ok(result.logged_message_id);
+  // Must strictly be deterministic without any Date.now() timestamp suffix
+  assert.equal(capturedKey, "receipt:tenant-83:sess-83");
+});

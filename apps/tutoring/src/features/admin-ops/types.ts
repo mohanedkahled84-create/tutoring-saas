@@ -103,4 +103,11 @@ export interface IAdminOpsRepository {
     updates: Record<string, unknown>
   ): Promise<AdminTenantSummary>;
   logFounderAlert(payload: NewSignupAlertPayload, formattedMessage: string): Promise<void>;
+  logCriticalErrorAlert(data: {
+    tenant_id?: string | null;
+    idempotency_key: string;
+    recipient_email: string;
+    status: "sent" | "failed";
+    error_detail: string;
+  }): Promise<void>;
 }
