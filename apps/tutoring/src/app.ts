@@ -25,6 +25,7 @@ import { activityLogsRouter } from "./features/activity-log/index.js";
 import { templatesRouter, whatsappRouter } from "./features/whatsapp-notifications/index.js";
 import { settingsRouter } from "./features/auth/settingsRoutes.js";
 import { businessDashboardRouter } from "./features/business-dashboard/index.js";
+import { telemetryRouter } from "./features/telemetry/index.js";
 
 export function createApp(): Express {
   const app = express();
@@ -67,6 +68,7 @@ export function createApp(): Express {
   app.use("/api/whatsapp", authenticateUser, whatsappRouter);
   app.use("/api/settings", authenticateUser, settingsRouter);
   app.use("/api/business-dashboard", authenticateUser, businessDashboardRouter);
+  app.use("/api/telemetry", telemetryRouter);
 
   // DEV-WPA.1: Protected Internal Automation routes (shared-secret auth)
   app.use("/internal", authenticateInternalSecret, internalRouter);

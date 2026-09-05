@@ -13,6 +13,12 @@ import {
 import { BusinessDashboardService } from "../dist/features/business-dashboard/service.js";
 import { FakeBusinessDashboardRepository } from "../dist/features/business-dashboard/repository.js";
 import { renderBusinessOwnerDashboard } from "../../../apps/web/src/components/BusinessOwnerDashboard.js";
+import {
+  TelemetryService,
+  sanitizeTelemetryProperties,
+} from "../dist/features/telemetry/service.js";
+import { FakeTelemetryRepository } from "../dist/features/telemetry/repository.js";
+import { analytics } from "../../../apps/web/src/utils/analytics.js";
 import { app } from "../dist/app.js";
 
 // Mock Repository for domain unit tests
@@ -462,4 +468,71 @@ test("DEV-54: renderBusinessOwnerDashboard produces valid Arabic HTML with KPI c
   assert.ok(html.includes("رسائل الواتساب"));
   assert.ok(html.includes("إشارات خطر الإلغاء"));
   assert.ok(html.includes("توزيع الاشتراكات"));
+});
+
+// ============================================================================
+// DEV-55: Website/Product Behavior Tracking Integration Tests
+// ============================================================================
+
+test("DEV-55: sanitizeTelemetryProperties strictly redacts passwords, tokens, and secrets", () => {
+  const dirty = {
+    step: 2,
+    role: "teacher",
+    password: "SuperSecretPassword123!",
+    token: "jwt.bearer.token",
+    nested: {
+      api_key: "sk_live_12345",
+      safeField: "landing_hero_click",
+    },
+  };
+
+  const clean = sanitizeTelemetryProperties(dirty);
+  assert.equal(clean.step, 2);
+  assert.equal(clean.role, "teacher");
+  assert.equal(clean.password, "[REDACTED]");
+  assert.equal(clean.token, "[REDACTED]");
+  assert.equal(clean.nested.api_key, "[REDACTED]");
+  assert.equal(clean.nested.safeField, "landing_hero_click");
+});
+
+test("DEV-55: TelemetryService.trackEvents stores sanitized events and handles empty batch", async () => {
+  const repo = new FakeTelemetryRepository();
+  const service = new TelemetryService(repo);
+
+  const res1 = await service.trackEvents("tenant-100", [
+    { event_name: "signup_started", properties: { step: 1 } },
+    { event_name: "whatsapp_connect", properties: { status: "pairing_code_requested" } },
+  ]);
+
+  assert.equal(res1.recorded_count, 2);
+  assert.equal(repo.recorded.length, 2);
+  assert.equal(repo.recorded[0].event_name, "signup_started");
+  assert.equal(repo.recorded[0].tenant_id, "tenant-100");
+
+  const res2 = await service.trackEvents("tenant-100", []);
+  assert.equal(res2.recorded_count, 0);
+});
+
+test("DEV-55: POST /api/telemetry/events returns 404 FEATURE_DISABLED when flag is off", async () => {
+  const res = await fetch(`${baseUrl}/api/telemetry/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      events: [{ event_name: "page_view", page_path: "/login" }],
+    }),
+  });
+
+  // Since FEATURE_BEHAVIOR_TRACKING is disabled by default in test/prod
+  assert.equal(res.status, 404);
+  const data = await res.json();
+  assert.equal(data.error.code, "FEATURE_DISABLED");
+});
+
+test("DEV-55: Client analytics adapter exposes all core funnel tracking methods", () => {
+  assert.equal(typeof analytics.track, "function");
+  assert.equal(typeof analytics.trackPageView, "function");
+  assert.equal(typeof analytics.trackSignupStarted, "function");
+  assert.equal(typeof analytics.trackSignupCompleted, "function");
+  assert.equal(typeof analytics.trackWhatsAppConnect, "function");
+  assert.equal(typeof analytics.trackSessionAction, "function");
 });

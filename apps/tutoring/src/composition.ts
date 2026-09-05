@@ -68,6 +68,10 @@ import {
   BusinessDashboardService,
   SupabaseBusinessDashboardRepository,
 } from "./features/business-dashboard/index.js";
+import {
+  TelemetryService,
+  SupabaseTelemetryRepository,
+} from "./features/telemetry/index.js";
 
 export interface AppServices {
   riskWatchlist: RiskWatchlistService;
@@ -81,6 +85,7 @@ export interface AppServices {
   auth: AuthService;
   adminOps: AdminOpsService;
   businessDashboard: BusinessDashboardService;
+  telemetry: TelemetryService;
   [serviceName: string]: unknown;
 }
 
@@ -103,6 +108,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     auth: new AuthService(new SupabaseAuthRepository(effectiveClient, adminClient)),
     adminOps: new AdminOpsService(new SupabaseAdminOpsRepository(adminClient)),
     businessDashboard: new BusinessDashboardService(new SupabaseBusinessDashboardRepository(adminClient)),
+    telemetry: new TelemetryService(new SupabaseTelemetryRepository(effectiveClient)),
     _client: effectiveClient,
   };
 }
