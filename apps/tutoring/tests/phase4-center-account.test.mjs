@@ -159,3 +159,234 @@ test("DEV-75: formatNewSignupMessage formats distinct alerts for Center vs Solo 
   assert.ok(teacherAlert.includes("👤 *المعلم:* أ. محمود"));
 });
 
+// ============================================================================
+// DEV-76: Teacher/Assistant Onboarding (Invite Link + Direct Creation) Tests
+// ============================================================================
+
+test("DEV-76: generateInviteToken and verifyInviteToken manage signed expiring tokens", async () => {
+  const { generateInviteToken, verifyInviteToken } = await import(
+    "../dist/shared/utils/tokens.js"
+  );
+
+  // 1. Valid token
+  const token = generateInviteToken("tenant-c1", "rec-100", "teacher", 7);
+  assert.ok(token);
+  const verified = verifyInviteToken(token);
+  assert.ok(verified);
+  assert.equal(verified.tenant_id, "tenant-c1");
+  assert.equal(verified.record_id, "rec-100");
+  assert.equal(verified.role, "teacher");
+
+  // 2. Tampered token
+  const tampered = token.slice(0, -4) + "AAAA";
+  assert.equal(verifyInviteToken(tampered), null);
+
+  // 3. Expired token
+  const expiredToken = generateInviteToken("tenant-c1", "rec-100", "teacher", -1);
+  assert.equal(verifyInviteToken(expiredToken), null);
+
+  // 4. Malformed token
+  assert.equal(verifyInviteToken("not-a-valid-token"), null);
+});
+
+test("DEV-76: CentersService.addTeacher with direct_creation provisions auth user and marks active", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  const res = await service.addTeacher("tenant-c1", {
+    name: "أ. طارق حسام",
+    phone: "01011112222",
+    email: "tarek.hossam@example.com",
+    password: "TeacherPassword123!",
+    subjects: ["فيزياء", "كيمياء"],
+    revenue_model: "percentage",
+    revenue_value: 80,
+    onboarding_method: "direct_creation",
+  });
+
+  assert.equal(res.onboarding_method, "direct_creation");
+  assert.equal(res.member.status, "active");
+  assert.ok(res.member.user_id);
+  assert.equal(res.member.name, "أ. طارق حسام");
+  assert.equal(res.member.revenue_model, "percentage");
+  assert.equal(res.member.revenue_value, 80);
+  assert.equal(repo.users.length, 1);
+  assert.equal(repo.users[0].role, "teacher");
+});
+
+test("DEV-76: CentersService.addTeacher with invite_link creates invited record with token", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  const res = await service.addTeacher("tenant-c1", {
+    name: "أ. رانيا عادل",
+    phone: "01233334444",
+    email: "rania@example.com",
+    subjects: ["لغة إنجليزية"],
+    onboarding_method: "invite_link",
+  });
+
+  assert.equal(res.onboarding_method, "invite_link");
+  assert.equal(res.member.status, "invited");
+  assert.equal(res.member.user_id, null);
+  assert.ok(res.invite_token);
+  assert.ok(res.invite_url.includes(res.invite_token));
+  assert.equal(repo.users.length, 0); // No user provisioned yet until invite acceptance
+});
+
+test("DEV-76: CentersService.addAssistant supports both assistant_to_teacher and assistant_to_center", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  // 1. Assistant to specific teacher (invite link)
+  const asst1 = await service.addAssistant("tenant-c1", {
+    name: "علي سعيد",
+    phone: "01099998888",
+    teacher_id: "teach-101",
+    onboarding_method: "invite_link",
+  });
+  assert.equal(asst1.member.assistant_type, "assistant_to_teacher");
+  assert.equal(asst1.member.teacher_id, "teach-101");
+  assert.equal(asst1.member.status, "invited");
+
+  // 2. Assistant to center (direct creation)
+  const asst2 = await service.addAssistant("tenant-c1", {
+    name: "مروة حسن",
+    phone: "01188887777",
+    email: "marwa.center@example.com",
+    password: "AssistantPassword123!",
+    assistant_type: "assistant_to_center",
+    can_view_financials: false,
+    onboarding_method: "direct_creation",
+  });
+  assert.equal(asst2.member.assistant_type, "assistant_to_center");
+  assert.equal(asst2.member.status, "active");
+  assert.ok(asst2.member.user_id);
+});
+
+test("DEV-76: CentersService.acceptInvite successfully activates invited teacher account", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  // 1. Create invited teacher
+  const inviteRes = await service.addTeacher("tenant-c1", {
+    name: "أ. وائل شريف",
+    phone: "01511112222",
+    email: "wael@example.com",
+    onboarding_method: "invite_link",
+  });
+
+  // 2. Accept invite
+  const acceptRes = await service.acceptInvite({
+    token: inviteRes.invite_token,
+    password: "NewStrongPassword123!",
+  });
+
+  assert.equal(acceptRes.success, true);
+  assert.equal(acceptRes.role, "teacher");
+  assert.equal(acceptRes.record_id, inviteRes.member.id);
+
+  // Verify updated status in repository
+  const activated = await repo.getTeacherById("tenant-c1", inviteRes.member.id);
+  assert.equal(activated.status, "active");
+  assert.equal(activated.invite_token, null);
+  assert.ok(activated.user_id);
+});
+
+test("DEV-76: CentersService.acceptInvite rejects invalid token or weak password", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  await assert.rejects(
+    async () => {
+      await service.acceptInvite({
+        token: "invalid-token",
+        password: "ValidPassword123!",
+      });
+    },
+    { message: "INVALID_OR_EXPIRED_TOKEN" }
+  );
+
+  await assert.rejects(
+    async () => {
+      await service.acceptInvite({
+        token: "valid-looking-token",
+        password: "short",
+      });
+    },
+    { message: "WEAK_PASSWORD" }
+  );
+});
+
+test("DEV-76: CentersService.resendTeacherInvite generates fresh token for pending invite", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  const initial = await service.addTeacher("tenant-c1", {
+    name: "أ. عصام جلال",
+    phone: "01022223333",
+    email: "essam@example.com",
+    onboarding_method: "invite_link",
+  });
+
+  const resent = await service.resendTeacherInvite("tenant-c1", initial.member.id);
+  assert.ok(resent.invite_token);
+  assert.ok(resent.invite_url.includes(resent.invite_token));
+
+  // Active teacher cannot have invite resent
+  await repo.updateTeacher("tenant-c1", initial.member.id, { status: "active" });
+  await assert.rejects(
+    async () => {
+      await service.resendTeacherInvite("tenant-c1", initial.member.id);
+    },
+    { message: "TEACHER_ALREADY_ACTIVE" }
+  );
+});
+
+test("DEV-76: Center protected endpoints strictly return 401 when unauthenticated", async () => {
+  const http = await import("node:http");
+  const { app } = await import("../dist/app.js");
+
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  const url = `http://localhost:${port}`;
+
+  try {
+    const resTeachers = await fetch(`${url}/api/centers/teachers`);
+    assert.equal(resTeachers.status, 401);
+
+    const resAssistants = await fetch(`${url}/api/centers/assistants`);
+    assert.equal(resAssistants.status, 401);
+
+    // Public invite endpoint rejects invalid request with 400
+    const resAccept = await fetch(`${url}/api/centers/invitations/accept`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: "invalid-token", password: "Password123!" }),
+    });
+    assert.equal(resAccept.status, 400);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+

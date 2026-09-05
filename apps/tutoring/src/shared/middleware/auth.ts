@@ -134,14 +134,22 @@ export function requireRole(allowedRoles: UserRole[]) {
 
 export const requireAdmin = requireRole(["admin"]);
 export const requireOwnerOrAdmin = requireRole(["admin", "owner"]);
+export const requireCenterOwnerOrAdmin = requireRole(["admin", "owner", "center_owner"]);
+export const requireTeacherOrCenterOwner = requireRole([
+  "admin",
+  "owner",
+  "center_owner",
+  "teacher",
+]);
 
-// DEV-SE.5: Financial access guard - assistants must NEVER see teacher profit / revenue data
+// DEV-SE.5 & DEV-72: Financial access guard - assistants must NEVER see teacher/center profit data
 export function requireFinancialAccess(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): void {
-  if (!req.user || req.user.role === "assistant") {
+  const restrictedRoles: UserRole[] = ["assistant", "assistant_to_teacher", "assistant_to_center"];
+  if (!req.user || restrictedRoles.includes(req.user.role)) {
     res.status(403).json({
       error: {
         code: "FORBIDDEN",

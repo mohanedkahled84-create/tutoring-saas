@@ -1,7 +1,14 @@
 import { Request } from "express";
 import { SupabaseClient } from "@supabase/supabase-js";
 
-export type UserRole = "admin" | "owner" | "assistant";
+export type UserRole =
+  | "admin"
+  | "owner"
+  | "assistant"
+  | "center_owner"
+  | "teacher"
+  | "assistant_to_teacher"
+  | "assistant_to_center";
 
 export interface UserContext {
   id: string;
