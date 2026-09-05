@@ -16,12 +16,14 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "@types/pdfkit": "^0.17.6",
+    "@types/pg": "^8.23.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-rate-limit": "^8.7.0",
     "pdfkit": "^0.20.2",
+    "pg": "^8.23.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {

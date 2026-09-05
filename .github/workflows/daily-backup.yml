@@ -6,9 +6,24 @@ on:
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
 jobs:
-  backup:
-    name: Execute Daily Database Backup
+  backup-and-restore:
+    name: Execute Daily Database Backup & Tested Restore
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: postgres_restore_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout Codebase
@@ -27,19 +42,29 @@ jobs:
         working-directory: apps/tutoring
         run: npm run build
 
-      - name: Run Database Backup
+      - name: 1. Run Database Backup & In-Memory Encryption (AES-256-GCM)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
         run: node scripts/backup-db.mjs
 
-      - name: Test Backup Restoration Integrity
-        run: node scripts/test-restore.mjs
-
-      - name: Archive Backup Artifact
+      - name: 2. Upload Encrypted Backup Artifact (.json.enc only)
         uses: actions/upload-artifact@v4
         with:
-          name: database-daily-backup
-          path: backups/
+          name: database-daily-backup-encrypted
+          path: backups/*.json.enc
           retention-days: 30
+
+      - name: 3. Verify Decryption Workflow
+        env:
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: node scripts/decrypt-db.mjs
+
+      - name: 4. Execute Real Postgres Restore Test (Round-Trip Data Verification)
+        env:
+          CI: "true"
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+          RESTORE_DATABASE_URL: postgres://postgres:postgrespassword@localhost:5432/postgres_restore_test
+        run: node scripts/test-restore.mjs
