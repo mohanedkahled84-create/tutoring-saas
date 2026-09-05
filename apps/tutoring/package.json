@@ -4,10 +4,10 @@
   "description": "Tutoring SaaS Backend API - Auth, Tenant Context, Core CRUD, WhatsApp Contract",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "node --max-old-space-size=512 ./node_modules/typescript/bin/tsc",
     "start": "node dist/server.js",
     "dev": "node --watch src/server.ts",
-    "test": "node --test tests/**/*.test.mjs",
+    "test": "node --test --test-concurrency=1 tests/**/*.test.mjs",
     "lint": "eslint src/ --ext .ts",
     "lint:fix": "eslint src/ --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",

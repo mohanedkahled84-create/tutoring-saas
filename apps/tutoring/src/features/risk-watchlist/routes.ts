@@ -19,8 +19,8 @@ function resolveRiskService(req: AuthenticatedRequest): RiskWatchlistService {
   return services.riskWatchlist as RiskWatchlistService;
 }
 
-// DEV-ARW.1: GET /api/at-risk/watchlist - Compute on-demand watchlist
-riskRouter.get("/watchlist", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+// DEV-ARW.1: GET /api/at-risk & GET /api/at-risk/watchlist - Compute on-demand watchlist
+riskRouter.get(["/", "/watchlist"], async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id;
   const { group_id } = req.query;
 

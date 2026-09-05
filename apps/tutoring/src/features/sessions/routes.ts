@@ -217,6 +217,33 @@ sessionsRouter.get(
   }
 );
 
+// GET /api/sessions - List sessions for tenant
+sessionsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  if (!tenantId && req.user?.role !== "admin") {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
+
+  try {
+    const service = resolveSessionsService(req);
+    const from = (req.query.from as string) || "2020-01-01";
+    const to = (req.query.to as string) || "2030-12-31";
+    let sessions = await service.getCalendarSessions(tenantId || "", from, to);
+    if (req.query.status) {
+      sessions = sessions.filter((s: { status: string }) => s.status === req.query.status);
+    }
+    if (req.query.group_id) {
+      sessions = sessions.filter((s: { group_id: string }) => s.group_id === req.query.group_id);
+    }
+    res.json({ sessions, count: sessions.length });
+  } catch (err: unknown) {
+    res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Failed to list sessions", details: (err as Error).message },
+    });
+  }
+});
+
 // GET /api/sessions/:id - Retrieve session with attendance and quiz scores
 sessionsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { id } = req.params;

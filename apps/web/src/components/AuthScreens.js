@@ -19,15 +19,22 @@ export function renderAuthScreens() {
         <form id="formLogin" onsubmit="window.centrlyApp.handleLogin(event)">
           <div class="form-group">
             <label class="form-label">البريد الإلكتروني</label>
-            <input type="email" id="loginEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr">
+            <input type="email" id="loginEmail" class="form-input" value="teacher@example.com" placeholder="teacher@example.com" required dir="ltr">
           </div>
           <div class="form-group">
             <label class="form-label">كلمة المرور</label>
-            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required dir="ltr">
+            <input type="password" id="loginPassword" class="form-input" value="Password123!" placeholder="••••••••" required dir="ltr">
           </div>
           <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem;">
             دخول إلى المنظومة
           </button>
+
+          <div style="margin-top: 1rem; padding: 0.75rem; background: #f0f9ff; border: 1px dashed var(--centrly-blue-300); border-radius: var(--radius-md); text-align: center;">
+            <p style="font-size: 0.8rem; color: var(--centrly-blue-900); margin-bottom: 0.5rem; font-weight: 600;">بيانات الحساب التجريبي جاهزة للاستكشاف:</p>
+            <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; font-weight: 700; color: var(--centrly-blue-800); background: #ffffff;" onclick="window.centrlyApp.quickDemoLogin()">
+              ⚡ دخول تجريبي فوري بنقرة واحدة
+            </button>
+          </div>
         </form>
 
         <!-- Signup Form -->

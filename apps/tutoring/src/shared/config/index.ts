@@ -60,8 +60,13 @@ export function validateEnv(
     if (!effectiveEnv.SUPABASE_ANON_KEY) {
       effectiveEnv.SUPABASE_ANON_KEY = "test-placeholder-anon-key-min10chars";
     }
-    if (!effectiveEnv.INTERNAL_API_SECRET) {
+    if (!effectiveEnv.INTERNAL_API_SECRET || rawEnv === process.env) {
       effectiveEnv.INTERNAL_API_SECRET = "dev-shared-secret-change-in-production";
+    }
+    if (rawEnv === process.env) {
+      delete effectiveEnv.FEATURE_BUSINESS_DASHBOARD;
+      delete effectiveEnv.FEATURE_BEHAVIOR_TRACKING;
+      delete effectiveEnv.FEATURE_TEACHER_CALENDAR;
     }
   }
 

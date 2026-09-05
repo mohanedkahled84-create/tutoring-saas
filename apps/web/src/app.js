@@ -162,6 +162,17 @@ class CentrlyApp {
     }
   }
 
+  async quickDemoLogin() {
+    try {
+      const res = await authService.login('teacher@example.com', 'Password123!');
+      this.user = res.user;
+      this.renderApp();
+      await this.loadRouteData(this.currentRoute);
+    } catch (err) {
+      this.showAuthAlert(err.message || 'فشل تسجيل الدخول التجريبي.');
+    }
+  }
+
   async handleSignup(e) {
     e.preventDefault();
     const accountType = document.getElementById('signupAccountType')?.value || 'teacher';
