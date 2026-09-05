@@ -389,4 +389,256 @@ test("DEV-76: Center protected endpoints strictly return 401 when unauthenticate
   }
 });
 
+// ============================================================================
+// DEV-77: Rooms & Booking Conflict Engine + Front-Desk Smart Gate Scan
+// ============================================================================
 
+test("DEV-77: parseTimeToMinutes and isTimeOverlapping accurately detect collisions and boundaries", async () => {
+  const { parseTimeToMinutes, isTimeOverlapping } = await import("../dist/features/centers/service.js");
+
+  assert.equal(parseTimeToMinutes("00:00"), 0);
+  assert.equal(parseTimeToMinutes("14:30"), 870);
+  assert.equal(parseTimeToMinutes("23:59"), 1439);
+
+  // Overlap cases
+  assert.equal(isTimeOverlapping("14:00", "16:00", "15:00", "17:00"), true, "Partial overlap should collide");
+  assert.equal(isTimeOverlapping("14:00", "16:00", "14:15", "15:45"), true, "Contained interval should collide");
+  assert.equal(isTimeOverlapping("14:00", "16:00", "13:00", "17:00"), true, "Engulfing interval should collide");
+
+  // Non-overlap cases
+  assert.equal(isTimeOverlapping("14:00", "16:00", "16:00", "18:00"), false, "Adjacent subsequent slot should not collide");
+  assert.equal(isTimeOverlapping("14:00", "16:00", "12:00", "14:00"), false, "Adjacent preceding slot should not collide");
+  assert.equal(isTimeOverlapping("14:00", "16:00", "18:00", "20:00"), false, "Separate slot should not collide");
+});
+
+test("DEV-77: CentersService.createRoom and listRooms manage room inventory with capacity checks", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  const room = await service.createRoom("tenant-c1", {
+    name: "قاعة أينشتاين (1)",
+    capacity: 45,
+    location: "الدور الثاني - يمين",
+  });
+
+  assert.equal(room.name, "قاعة أينشتاين (1)");
+  assert.equal(room.capacity, 45);
+  assert.equal(room.location, "الدور الثاني - يمين");
+
+  const list = await service.listRooms("tenant-c1");
+  assert.equal(list.length, 1);
+  assert.equal(list[0].id, room.id);
+
+  // Invalid capacity rejects
+  await assert.rejects(
+    async () => {
+      await service.createRoom("tenant-c1", { name: "قاعة 2", capacity: 0 });
+    },
+    { message: "INVALID_CAPACITY" }
+  );
+});
+
+test("DEV-77: CentersService.checkRoomConflict detects conflicting bookings and surfaces capacity warnings", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  const room = await service.createRoom("tenant-c1", {
+    name: "قاعة الفارابي",
+    capacity: 30,
+  });
+
+  // Check empty day: no conflict, no warning
+  const check1 = await service.checkRoomConflict("tenant-c1", {
+    room_id: room.id,
+    date: "2026-09-10",
+    start_time: "14:00",
+    end_time: "16:00",
+    student_count: 25,
+  });
+  assert.equal(check1.has_conflict, false);
+  assert.equal(check1.warning, null);
+
+  // Check capacity exceeded: soft warning (non-blocking)
+  const checkCapacity = await service.checkRoomConflict("tenant-c1", {
+    room_id: room.id,
+    date: "2026-09-10",
+    start_time: "14:00",
+    end_time: "16:00",
+    student_count: 38,
+  });
+  assert.equal(checkCapacity.has_conflict, false);
+  assert.ok(checkCapacity.warning);
+  assert.equal(checkCapacity.warning.code, "CAPACITY_EXCEEDED");
+  assert.equal(checkCapacity.warning.student_count, 38);
+  assert.equal(checkCapacity.warning.room_capacity, 30);
+
+  // Add existing booking 15:00 - 17:00
+  repo.roomBookings.push({
+    session_id: "sess-101",
+    room_id: room.id,
+    group_id: "grp-1",
+    group_name: "فيزياء 3 ثانوى",
+    teacher_name: "مستر طارق",
+    date: "2026-09-10",
+    start_time: "15:00",
+    end_time: "17:00",
+    status: "scheduled",
+  });
+
+  // Proposed 14:00 - 16:00 should conflict with sess-101
+  const checkConflict = await service.checkRoomConflict("tenant-c1", {
+    room_id: room.id,
+    date: "2026-09-10",
+    start_time: "14:00",
+    end_time: "16:00",
+  });
+  assert.equal(checkConflict.has_conflict, true);
+  assert.equal(checkConflict.conflicting_booking.session_id, "sess-101");
+
+  // If excluding sess-101 (e.g. self update), no conflict
+  const checkExclude = await service.checkRoomConflict("tenant-c1", {
+    room_id: room.id,
+    date: "2026-09-10",
+    start_time: "14:00",
+    end_time: "16:00",
+    exclude_session_id: "sess-101",
+  });
+  assert.equal(checkExclude.has_conflict, false);
+
+  // Availability lookup returns bookings
+  const avail = await service.getRoomAvailability("tenant-c1", room.id, "2026-09-10");
+  assert.equal(avail.bookings.length, 1);
+  assert.equal(avail.room.id, room.id);
+});
+
+test("DEV-77: CentersService.frontDeskScan handles student lookups, active session matching, and make-up attendance", async () => {
+  const { CentersService } = await import("../dist/features/centers/service.js");
+  const { FakeCentersRepository } = await import("../dist/features/centers/repository.js");
+
+  const repo = new FakeCentersRepository();
+  const service = new CentersService(repo);
+
+  const tenantId = "tenant-c1";
+  const today = "2026-09-05";
+
+  // Setup students
+  repo.students.push(
+    { id: "std-1", tenant_id: tenantId, name: "عمر خالد", barcode: "STU-1001", phone: "01011112222" },
+    { id: "std-2", tenant_id: tenantId, name: "مريم حسن", barcode: "STU-1002", phone: "01033334444" },
+    { id: "std-no-enrollment", tenant_id: tenantId, name: "طالب غير مقيد", barcode: "STU-9999", phone: "01055556666" }
+  );
+
+  // Setup active sessions
+  repo.activeSessions.push({
+    id: "sess-active-1",
+    group_id: "grp-bio-1",
+    group_name: "أحياء مجموعة أ",
+    teacher_id: "teach-1",
+    teacher_name: "مستر أحمد مصطفى",
+    room_id: "room-1",
+    room_name: "قاعة 101",
+    subject: "أحياء",
+    session_number: 5,
+    session_date: today,
+    status: "in_progress",
+  });
+
+  // Setup enrollments
+  // Omar is in grp-bio-1 (exact match)
+  repo.enrollments.push({
+    id: "enr-1",
+    tenant_id: tenantId,
+    student_id: "std-1",
+    teacher_id: "teach-1",
+    group_id: "grp-bio-1",
+    status: "active",
+    joined_at: today,
+  });
+
+  // Mariam is in grp-bio-2 with same teacher teach-1 (make-up match)
+  repo.enrollments.push({
+    id: "enr-2",
+    tenant_id: tenantId,
+    student_id: "std-2",
+    teacher_id: "teach-1",
+    group_id: "grp-bio-2", // different group!
+    status: "active",
+    joined_at: today,
+  });
+
+  // 1. Unregistered barcode returns error
+  const unregRes = await service.frontDeskScan(tenantId, { barcode: "UNKNOWN-CODE", current_time: today + "T10:00:00Z" });
+  assert.equal(unregRes.success, false);
+  assert.equal(unregRes.code, "STUDENT_NOT_FOUND");
+  assert.equal(unregRes.audio_alert, "error");
+
+  // 2. Student without enrollments returns warning
+  const noEnrRes = await service.frontDeskScan(tenantId, { barcode: "STU-9999", current_time: today + "T10:00:00Z" });
+  assert.equal(noEnrRes.success, false);
+  assert.equal(noEnrRes.code, "NO_ACTIVE_ENROLLMENT_MATCH");
+  assert.equal(noEnrRes.audio_alert, "warning");
+
+  // 3. Exact match scan for Omar -> present, is_makeup: false
+  const omarScan = await service.frontDeskScan(tenantId, { barcode: "STU-1001", current_time: today + "T10:00:00Z" });
+  assert.equal(omarScan.success, true);
+  assert.equal(omarScan.mode, "front_desk");
+  assert.equal(omarScan.audio_alert, "success");
+  assert.equal(omarScan.session.id, "sess-active-1");
+  assert.equal(omarScan.session.is_makeup, false);
+  assert.match(omarScan.message, /عمر خالد — حاضر/);
+  assert.match(omarScan.message, /أحياء/);
+
+  // Verify attendance record created
+  assert.equal(repo.attendanceRecords.length, 1);
+  assert.equal(repo.attendanceRecords[0].student_id, "std-1");
+  assert.equal(repo.attendanceRecords[0].is_makeup, false);
+
+  // 4. Make-up scan for Mariam (different group of same teacher) -> present, is_makeup: true
+  const mariamScan = await service.frontDeskScan(tenantId, { barcode: "STU-1002", current_time: today + "T10:00:00Z" });
+  assert.equal(mariamScan.success, true);
+  assert.equal(mariamScan.audio_alert, "success");
+  assert.equal(mariamScan.session.is_makeup, true);
+  assert.match(mariamScan.message, /مريم حسن — حاضر \[تعويض\]/);
+
+  // Verify second attendance record with makeup
+  assert.equal(repo.attendanceRecords.length, 2);
+  assert.equal(repo.attendanceRecords[1].student_id, "std-2");
+  assert.equal(repo.attendanceRecords[1].is_makeup, true);
+});
+
+test("DEV-77: HTTP Endpoints for rooms and front-desk scan enforce authentication", async () => {
+  const http = await import("node:http");
+  const { app } = await import("../dist/app.js");
+
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  const url = `http://localhost:${port}`;
+
+  try {
+    const resRooms = await fetch(`${url}/api/centers/rooms`);
+    assert.equal(resRooms.status, 401);
+
+    const resCreateRoom = await fetch(`${url}/api/centers/rooms`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "قاعة 1", capacity: 20 }),
+    });
+    assert.equal(resCreateRoom.status, 401);
+
+    const resScan = await fetch(`${url}/api/centers/front-desk-scan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ barcode: "BAR-123" }),
+    });
+    assert.equal(resScan.status, 401);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
