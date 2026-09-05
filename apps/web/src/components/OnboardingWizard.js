@@ -5,12 +5,12 @@
 
 export function renderOnboardingWizard(step = 1, state = {}) {
   const defaultState = {
-    groupName: state.groupName || 'مجموعة الثانوية العامة - السبت والثلاثاء',
-    sessionPrice: state.sessionPrice || 100,
+    groupName: state.groupName || '',
+    sessionPrice: state.sessionPrice !== undefined ? state.sessionPrice : '',
     students: state.students || [
-      { name: 'أحمد محمود', phone: '01012345678' },
-      { name: 'مريم علي', phone: '01123456789' },
-      { name: 'عمر إبراهيم', phone: '01234567890' },
+      { name: '', phone: '' },
+      { name: '', phone: '' },
+      { name: '', phone: '' },
     ],
     homeworkSubmission: state.homeworkSubmission || 'in_session',
     autoNotification: state.autoNotification !== false,

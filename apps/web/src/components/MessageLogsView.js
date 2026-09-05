@@ -4,12 +4,7 @@
  */
 
 export function renderMessageLogsView(logs = []) {
-  const defaultLogs = logs.length > 0 ? logs : [
-    { id: 'm1', studentId: 's1', studentName: 'أحمد محمود', phone: '01012345678', type: 'ملاحظة حضور', status: 'sent', time: '16:08', reason: null },
-    { id: 'm2', studentId: 's3', studentName: 'عمر إبراهيم', phone: '01234567890', type: 'إنذار غياب', status: 'failed', time: '16:10', reason: 'الرقم غير مسجل على واتساب أو الهاتف مغلق' },
-    { id: 'm3', studentId: 's4', studentName: 'مريم علي', phone: '01512345678', type: 'إنذار غياب', status: 'sent', time: '16:12', reason: null },
-    { id: 'm4', studentId: 's5', studentName: 'كريم أحمد', phone: '01198765432', type: 'تقرير تسميع', status: 'needs_review', time: '16:15', reason: 'تجاوز حد الإرسال المؤقت' },
-  ];
+  const logsList = logs || [];
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
@@ -25,8 +20,8 @@ export function renderMessageLogsView(logs = []) {
           </div>
 
           <div style="display: flex; gap: 0.5rem;">
-            <span class="badge badge-success">تم التسليم: ${defaultLogs.filter(l => l.status === 'sent').length}</span>
-            <span class="badge badge-danger">فشل الإرسال: ${defaultLogs.filter(l => l.status === 'failed' || l.status === 'needs_review').length}</span>
+            <span class="badge badge-success">تم التسليم: ${logsList.filter(l => l.status === 'sent').length}</span>
+            <span class="badge badge-danger">فشل الإرسال: ${logsList.filter(l => l.status === 'failed' || l.status === 'needs_review').length}</span>
           </div>
         </div>
 
@@ -54,23 +49,23 @@ export function renderMessageLogsView(logs = []) {
               </tr>
             </thead>
             <tbody>
-              ${defaultLogs.map(l => `
+              ${logsList.length > 0 ? logsList.map(l => `
                 <tr>
-                  <td style="font-weight: 700;">${l.studentName}</td>
-                  <td dir="ltr" style="text-align: right; font-family: monospace;">${l.phone}</td>
-                  <td><span class="badge badge-blue">${l.type}</span></td>
+                  <td style="font-weight: 700;">${l.studentName || l.student_name || '—'}</td>
+                  <td dir="ltr" style="text-align: right; font-family: monospace;">${l.phone || '—'}</td>
+                  <td><span class="badge badge-blue">${l.type || 'إشعار'}</span></td>
                   <td>
                     <span class="badge ${l.status === 'sent' ? 'badge-success' : (l.status === 'failed' ? 'badge-danger' : 'badge-warning')}">
                       ${l.status === 'sent' ? 'تم التسليم' : (l.status === 'failed' ? 'فشل التسليم' : 'يحتاج مراجعة')}
                     </span>
                   </td>
-                  <td style="font-size: 0.8rem; color: var(--centrly-text);">${l.time}</td>
+                  <td style="font-size: 0.8rem; color: var(--centrly-text);">${l.time || '—'}</td>
                   <td style="font-size: 0.8rem; color: ${l.reason ? 'var(--centrly-danger)' : 'var(--centrly-text)'};">
                     ${l.reason || '—'}
                   </td>
                   <td>
                     ${l.status !== 'sent' ? `
-                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${l.studentId}', '${l.studentName}')" style="font-weight: 700; color: var(--centrly-blue-800);">
+                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${l.studentId || l.student_id}', '${l.studentName || l.student_name}')" style="font-weight: 700; color: var(--centrly-blue-800);">
                         🔄 إعادة إرسال
                       </button>
                     ` : `
@@ -78,7 +73,13 @@ export function renderMessageLogsView(logs = []) {
                     `}
                   </td>
                 </tr>
-              `).join('')}
+              `).join('') : `
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                    لا توجد سجلات رسائل بعد. الرسائل المرسلة لأولياء الأمور ستظهر هنا فور إرسالها.
+                  </td>
+                </tr>
+              `}
             </tbody>
           </table>
         </div>

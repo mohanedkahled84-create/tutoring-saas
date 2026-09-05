@@ -5,22 +5,14 @@
 
 export function renderTeacherDashboard(data = {}) {
   const stats = data.stats || {
-    totalStudents: 142,
-    activeGroups: 5,
-    todayAttendanceRate: '94%',
+    totalStudents: 0,
+    activeGroups: 0,
+    todayAttendanceRate: '0%',
     pendingMessages: 0,
   };
 
-  const atRiskStudents = data.atRiskStudents || [
-    { name: 'كريم أحمد', group: 'تانية ثانوي - أ', reason: 'غياب حصتين متتاليتين', severity: 'high' },
-    { name: 'حازم ياسر', group: 'أولى ثانوي - ب', reason: 'إهمال الواجب 3 مرات', severity: 'medium' },
-  ];
-
-  const topPerformers = data.topPerformers || [
-    { name: 'سارة خالد', group: 'تانية ثانوي - أ', score: '100%', note: 'حضور كامل وتفوق بالتسميع' },
-    { name: 'يوسف محمود', group: 'أولى ثانوي - ب', score: '98%', note: 'التزام تام بالواجبات والتسميع' },
-    { name: 'نور الدين مصطفى', group: 'تالتة ثانوي - عام', score: '97%', note: 'درجات ممتازة' },
-  ];
+  const atRiskStudents = data.atRiskStudents || [];
+  const topPerformers = data.topPerformers || [];
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
@@ -75,7 +67,7 @@ export function renderTeacherDashboard(data = {}) {
           </p>
 
           <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-            ${atRiskStudents.map(s => `
+            ${atRiskStudents.length > 0 ? atRiskStudents.map(s => `
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: var(--centrly-surface); border-radius: var(--radius-md); border-right: 3px solid var(--centrly-danger);">
                 <div>
                   <div style="font-weight: 700; font-size: 0.875rem; color: var(--centrly-ink);">${s.name}</div>
@@ -85,7 +77,11 @@ export function renderTeacherDashboard(data = {}) {
                   <span class="badge badge-danger" style="font-size: 0.725rem;">${s.reason}</span>
                 </div>
               </div>
-            `).join('')}
+            `).join('') : `
+              <div style="font-size: 0.825rem; color: var(--centrly-text); padding: 1.5rem; text-align: center;">
+                لا توجد مؤشرات خطر حالياً. أداء الطلاب مستقر.
+              </div>
+            `}
           </div>
         </div>
 
@@ -105,7 +101,7 @@ export function renderTeacherDashboard(data = {}) {
           </p>
 
           <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-            ${topPerformers.map((s, idx) => `
+            ${topPerformers.length > 0 ? topPerformers.map((s, idx) => `
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: var(--centrly-surface); border-radius: var(--radius-md); border-right: 3px solid var(--centrly-success);">
                 <div style="display: flex; align-items: center; gap: 0.6rem;">
                   <span style="font-weight: 800; font-size: 0.9rem; color: var(--centrly-accent);">#${idx + 1}</span>
@@ -118,7 +114,11 @@ export function renderTeacherDashboard(data = {}) {
                   <span class="badge badge-success" style="font-size: 0.75rem; font-weight: 800;">${s.score}</span>
                 </div>
               </div>
-            `).join('')}
+            `).join('') : `
+              <div style="font-size: 0.825rem; color: var(--centrly-text); padding: 1.5rem; text-align: center;">
+                لا توجد بيانات متفوقين بعد. ستظهر النتائج فور رصد درجات الحصص.
+              </div>
+            `}
           </div>
         </div>
 

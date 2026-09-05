@@ -18,21 +18,17 @@ export function renderSessionsView(sessionState = {}, user = {}) {
   else if (sessionState.status === 'scheduled') statusBadge = '<span class="badge badge-primary">🕒 مجدولة</span>';
 
   const group = sessionState.group || {
-    id: 'grp-1',
-    name: 'مجموعة الثانوية العامة - سنتر الأوائل',
-    price: 100,
+    id: '',
+    name: 'حصة دراسية',
+    price: 0,
   };
 
-  const attendanceList = sessionState.attendanceList || [
-    { code: '1001', name: 'أحمد محمود', attended: true, homework: 'done', comment: 'ممتاز اليوم', time: '16:05', sent: false },
-    { code: '1002', name: 'سارة خالد', attended: true, homework: 'done', comment: null, time: '16:07', sent: false },
-    { code: '1003', name: 'عمر إبراهيم', attended: false, homework: 'missing', comment: 'غياب بدون عذر', time: '-', sent: false },
-  ];
+  const attendanceList = sessionState.attendanceList || [];
 
   const financials = sessionState.financials || {
-    totalRevenue: 200,
-    attendeeCount: 2,
-    absentCount: 1,
+    totalRevenue: 0,
+    attendeeCount: 0,
+    absentCount: 0,
     exemptCount: 0,
     makeupCount: 0,
   };
@@ -204,7 +200,7 @@ export function renderSessionsView(sessionState = {}, user = {}) {
               </tr>
             </thead>
             <tbody>
-              ${attendanceList.map(a => `
+              ${attendanceList.length > 0 ? attendanceList.map(a => `
                 <tr>
                   <td style="font-family: monospace; font-weight: 700;">${a.code}</td>
                   <td style="font-weight: 700;">${a.name}</td>
@@ -228,7 +224,13 @@ export function renderSessionsView(sessionState = {}, user = {}) {
                     </span>
                   </td>
                 </tr>
-              `).join('')}
+              `).join('') : `
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                    لم يتم تسجيل أي حضور حتى الآن. استخدم نموذج المسح أو إدخال الكود أعلاه للبدء.
+                  </td>
+                </tr>
+              `}
             </tbody>
           </table>
         </div>

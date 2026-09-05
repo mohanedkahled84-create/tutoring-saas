@@ -3,7 +3,7 @@
  * Handles authenticated API calls to backend endpoints.
  */
 
-const API_BASE_URL = window.__CENTRLY_API_URL__ || 'http://localhost:3000/api/v1';
+const API_BASE_URL = window.__CENTRLY_API_URL__ || 'http://localhost:3000/api';
 
 export async function request(endpoint, options = {}) {
   const token = localStorage.getItem('centrly_access_token');

@@ -573,8 +573,78 @@ test("DEV-56: SessionsService.getCalendarSessions queries date range correctly",
 });
 
 test("DEV-56: renderTeacherCalendar generates Arabic RTL calendar with all view modes and status badges", () => {
+  const sampleSessions = [
+    {
+      id: "sess-1",
+      group_name: "مجموعة الثانوية العامة",
+      date: "2026-09-06",
+      day_name: "الأحد",
+      time: "04:00 م - 06:00 م",
+      center_name: "سنتر الأوائل",
+      session_number: 1,
+      status: "in_progress",
+      is_extra: false,
+    },
+    {
+      id: "sess-2",
+      group_name: "أولى ثانوي",
+      date: "2026-09-08",
+      day_name: "الثلاثاء",
+      time: "04:00 م - 06:00 م",
+      center_name: "سنتر الأوائل",
+      session_number: 2,
+      status: "ended",
+      is_extra: false,
+    },
+    {
+      id: "sess-3",
+      group_name: "تانية ثانوي",
+      date: "2026-09-09",
+      day_name: "الأربعاء",
+      time: "06:00 م - 08:00 م",
+      center_name: "سنتر النخبة",
+      session_number: 3,
+      status: "scheduled",
+      is_extra: false,
+    },
+    {
+      id: "sess-4",
+      group_name: "تانية ثانوي",
+      date: "2026-09-10",
+      day_name: "الخميس",
+      time: "02:00 م - 04:00 م",
+      center_name: "سنتر الأوائل",
+      session_number: 4,
+      status: "rescheduled",
+      is_extra: false,
+    },
+    {
+      id: "sess-5",
+      group_name: "مجموعة مراجعة",
+      date: "2026-09-11",
+      day_name: "الجمعة",
+      time: "03:00 م - 05:30 م",
+      center_name: "سنتر الأوائل",
+      session_number: 5,
+      status: "scheduled",
+      is_extra: true,
+      extra_topic: "حل نماذج امتحانات",
+    },
+    {
+      id: "sess-6",
+      group_name: "أولى ثانوي",
+      date: "2026-09-12",
+      day_name: "السبت",
+      time: "12:00 م - 02:00 م",
+      center_name: "سنتر النخبة",
+      session_number: 6,
+      status: "cancelled",
+      is_extra: false,
+    },
+  ];
+
   // 1. Weekly view (default)
-  const weekHtml = renderTeacherCalendar({ view: "week" });
+  const weekHtml = renderTeacherCalendar({ view: "week", sessions: sampleSessions });
   assert.ok(weekHtml.includes("جدول الحصص والتقويم الأكاديمي"));
   assert.ok(weekHtml.includes("السبت"));
   assert.ok(weekHtml.includes("الأحد"));
@@ -586,13 +656,17 @@ test("DEV-56: renderTeacherCalendar generates Arabic RTL calendar with all view 
   assert.ok(weekHtml.includes("📅 مؤجلة"));
   assert.ok(weekHtml.includes("⭐ إضافية"));
 
-  // 2. Daily view
-  const dayHtml = renderTeacherCalendar({ view: "day" });
+  // 2. Daily view with sessions
+  const dayHtml = renderTeacherCalendar({ view: "day", sessions: sampleSessions });
   assert.ok(dayHtml.includes("حصص اليوم"));
   assert.ok(dayHtml.includes("عرض الحصة"));
 
-  // 3. Monthly view
-  const monthHtml = renderTeacherCalendar({ view: "month" });
+  // 3. Daily view empty state (no mock fallback!)
+  const emptyDayHtml = renderTeacherCalendar({ view: "day", sessions: [] });
+  assert.ok(emptyDayHtml.includes("لا توجد حصص مجدولة لهذا اليوم"));
+
+  // 4. Monthly view
+  const monthHtml = renderTeacherCalendar({ view: "month", sessions: sampleSessions });
   assert.ok(monthHtml.includes("تقويم الشهر (سبتمبر 2026)"));
   assert.ok(monthHtml.includes("السبت"));
 });

@@ -10,87 +10,8 @@ export function renderTeacherCalendar(data = {}) {
   const currentDateLabel = data.dateLabel || 'أسبوع 6 سبتمبر - 12 سبتمبر 2026';
   const filterGroup = data.selectedGroup || 'all';
 
-  const defaultSessions = [
-    {
-      id: 'sess-cal-1',
-      group_name: 'مجموعة الثانوية العامة - سنتر الأوائل',
-      section_name: 'شعبة أ (بنين)',
-      date: '2026-09-06',
-      day_name: 'الأحد',
-      time: '04:00 م - 06:00 م',
-      center_name: 'سنتر الأوائل - قاعة 1',
-      session_number: 5,
-      status: 'ended',
-      is_extra: false,
-    },
-    {
-      id: 'sess-cal-2',
-      group_name: 'مجموعة الثانوية العامة - سنتر الأوائل',
-      section_name: 'شعبة ب (بنات)',
-      date: '2026-09-08',
-      day_name: 'الثلاثاء',
-      time: '04:00 م - 06:00 م',
-      center_name: 'سنتر الأوائل - قاعة 2',
-      session_number: 5,
-      status: 'in_progress',
-      is_extra: false,
-    },
-    {
-      id: 'sess-cal-3',
-      group_name: 'أولى ثانوي لغات - سنتر النخبة',
-      section_name: 'القسم العام',
-      date: '2026-09-09',
-      day_name: 'الأربعاء',
-      time: '06:00 م - 08:00 م',
-      center_name: 'سنتر النخبة - قاعة A',
-      session_number: 3,
-      status: 'scheduled',
-      is_extra: false,
-    },
-    {
-      id: 'sess-cal-4',
-      group_name: 'تانية ثانوي - سنتر الأوائل',
-      section_name: 'المجموعة المتقدمة',
-      date: '2026-09-10',
-      day_name: 'الخميس',
-      time: '02:00 م - 04:00 م',
-      center_name: 'سنتر الأوائل - قاعة 3',
-      session_number: 4,
-      status: 'rescheduled',
-      rescheduled_to_date: '2026-09-11',
-      rescheduled_to_time: '05:00 م',
-      cancellation_reason: 'صيانة مفاجئة بالقاعة',
-      is_extra: false,
-    },
-    {
-      id: 'sess-cal-5',
-      group_name: 'مجموعة الثانوية العامة - سنتر الأوائل',
-      section_name: 'مراجعة نهائية مكثفة',
-      date: '2026-09-11',
-      day_name: 'الجمعة',
-      time: '03:00 م - 05:30 م',
-      center_name: 'سنتر الأوائل - القاعة الكبرى',
-      session_number: 6,
-      status: 'scheduled',
-      is_extra: true,
-      extra_topic: 'حل نماذج امتحانات الوزارة والأسئلة غير النمطية',
-    },
-    {
-      id: 'sess-cal-6',
-      group_name: 'أولى ثانوي - سنتر النخبة',
-      section_name: 'شعبة 1',
-      date: '2026-09-12',
-      day_name: 'السبت',
-      time: '12:00 م - 02:00 م',
-      center_name: 'سنتر النخبة - قاعة B',
-      session_number: 2,
-      status: 'cancelled',
-      cancellation_reason: 'ظرف طارئ للمدرس',
-      is_extra: false,
-    },
-  ];
-
-  const sessions = data.sessions || defaultSessions;
+  const sessions = data.sessions || [];
+  const groups = data.groups || [];
 
   const totalCount = sessions.length;
   const inProgressCount = sessions.filter((s) => s.status === 'in_progress').length;
@@ -236,10 +157,8 @@ export function renderTeacherCalendar(data = {}) {
           <div style="display: flex; gap: 0.5rem; align-items: center;">
             <label style="font-size: 0.8rem; font-weight: 700;">المجموعة:</label>
             <select class="form-input" style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem;" onchange="window.centrlyApp.filterCalendarByGroup(this.value)">
-              <option value="all">جميع المجاميع</option>
-              <option value="grp-1">مجموعة الثانوية العامة - سنتر الأوائل</option>
-              <option value="grp-2">أولى ثانوي لغات - سنتر النخبة</option>
-              <option value="grp-3">تانية ثانوي - سنتر الأوائل</option>
+              <option value="all" ${filterGroup === 'all' ? 'selected' : ''}>جميع المجاميع</option>
+              ${groups.map(g => `<option value="${g.id}" ${filterGroup === g.id ? 'selected' : ''}>${g.name}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -255,7 +174,10 @@ export function renderTeacherCalendar(data = {}) {
             حصص اليوم (${sessions[0]?.date || 'اليوم'})
           </h3>
           <div style="display: flex; flex-direction: column; gap: 1rem;">
-            ${sessions.map((s) => renderSessionCard(s)).join('')}
+            ${sessions.length > 0
+              ? sessions.map((s) => renderSessionCard(s)).join('')
+              : '<div style="font-size: 0.85rem; color: var(--centrly-text); text-align: center; padding: 2.5rem 0;">لا توجد حصص مجدولة لهذا اليوم</div>'
+            }
           </div>
         </div>
       `

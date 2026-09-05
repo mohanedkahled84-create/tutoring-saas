@@ -19,59 +19,54 @@ class CentrlyApp {
     this.user = authService.getUser();
     this.centerDashboardState = {
       activeTab: 'teachers',
-      period: '2026-09',
+      period: new Date().toISOString().slice(0, 7),
       rollup: null,
-      rooms: null,
+      rooms: [],
       conflictCheckResult: null,
       frontDeskScanResult: null,
       generatedInvite: null,
     };
     this.onboardingStep = 1;
     this.onboardingState = {
-      groupName: 'مجموعة الثانوية العامة - سنتر الأوائل',
+      groupName: '',
       sessionPrice: 100,
-      students: [
-        { name: 'أحمد محمود', phone: '01012345678' },
-        { name: 'مريم علي', phone: '01123456789' },
-        { name: 'عمر إبراهيم', phone: '01234567890' },
-      ],
+      students: [],
       homeworkSubmission: 'in_session',
       autoNotification: true,
     };
     this.sessionState = {
-      id: 'sess-active',
-      status: 'in_progress',
-      group: { id: 'grp-1', name: 'مجموعة الثانوية العامة - سنتر الأوائل', price: 100 },
-      attendanceList: [
-        { id: 'att-1', student_id: 's1', code: '1001', name: 'أحمد محمود', attended: true, homework: 'done', comment: 'ممتاز اليوم', time: '16:05', sent: false },
-        { id: 'att-2', student_id: 's2', code: '1002', name: 'سارة خالد', attended: true, homework: 'done', comment: null, time: '16:07', sent: false },
-        { id: 'att-3', student_id: 's3', code: '1003', name: 'عمر إبراهيم', attended: false, homework: 'missing', comment: 'غياب بدون عذر', time: '-', sent: false },
-      ],
+      id: null,
+      status: 'scheduled',
+      group: null,
+      attendanceList: [],
       financials: {
-        totalRevenue: 200,
-        attendeeCount: 2,
-        absentCount: 1,
+        totalRevenue: 0,
+        attendeeCount: 0,
+        absentCount: 0,
         exemptCount: 0,
         makeupCount: 0,
       },
     };
-    this.messageLogs = [
-      { id: 'm1', studentId: 's1', studentName: 'أحمد محمود', phone: '01012345678', type: 'ملاحظة حضور', status: 'sent', time: '16:08', reason: null },
-      { id: 'm2', studentId: 's3', studentName: 'عمر إبراهيم', phone: '01234567890', type: 'إنذار غياب', status: 'failed', time: '16:10', reason: 'الرقم غير مسجل على واتساب' },
-    ];
+    this.messageLogs = [];
+    this.students = [];
+    this.groups = [];
+    this.dashboardData = null;
+    this.calendarSessions = [];
     this.calendarState = {
       view: 'week',
       selectedGroup: 'all',
-      dateLabel: 'أسبوع 6 سبتمبر - 12 سبتمبر 2026',
+      dateLabel: 'جدول الحصص الأسبوعي',
+      sessions: [],
+      groups: [],
     };
   }
 
-  init() {
+  async init() {
     // Check if Parent Portal token is present in URL (DEV-34)
     const urlParams = new URLSearchParams(window.location.search);
     const portalToken = urlParams.get('token');
     if (portalToken) {
-      this.loadParentPortal(portalToken);
+      await this.loadParentPortal(portalToken);
       return;
     }
 
@@ -79,6 +74,7 @@ class CentrlyApp {
       this.renderAuth();
     } else {
       this.renderApp();
+      await this.loadRouteData(this.currentRoute);
     }
   }
 
@@ -87,9 +83,10 @@ class CentrlyApp {
     try {
       const data = await request(`/public/parent-portal?token=${token}`);
       document.getElementById('app').innerHTML = renderParentPortalView(data);
-    } catch {
-      // Fallback demo render
-      document.getElementById('app').innerHTML = renderParentPortalView();
+    } catch (err) {
+      document.getElementById('app').innerHTML = renderParentPortalView({
+        error: err.message || 'تعذر تحميل بيانات بوابة ولي الأمر. يرجى التحقق من صحة الرابط.',
+      });
     }
   }
 
@@ -147,8 +144,9 @@ class CentrlyApp {
       const res = await authService.login(email, password);
       this.user = res.user;
       this.renderApp();
+      await this.loadRouteData(this.currentRoute);
     } catch (err) {
-      this.showAuthAlert(err.message || 'فشل تسجيل الدخول. يرجى التحقق من البيانات.');
+      this.showAuthAlert(err.message || 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.');
     }
   }
 
@@ -170,17 +168,9 @@ class CentrlyApp {
         account_type: accountType,
       });
       this.user = res.user;
-      // Start Onboarding Flow (DEV-15)
       this.startOnboarding();
-    } catch {
-      // If backend mock or error, simulate successful signup for UX onboarding
-      this.user = {
-        name,
-        email,
-        role: accountType === 'center' ? 'center_owner' : 'owner',
-        account_type: accountType,
-      };
-      this.startOnboarding();
+    } catch (err) {
+      this.showAuthAlert(err.message || 'فشل إنشاء الحساب. يرجى التأكد من البيانات والمحاولة مجدداً.');
     }
   }
 
@@ -207,7 +197,7 @@ class CentrlyApp {
       const phones = Array.from(document.querySelectorAll('.ob-student-phone')).map(el => el.value.trim());
       this.onboardingState.students = names.map((name, i) => ({
         name,
-        phone: phones[i] || '01012345678',
+        phone: phones[i] || '',
       }));
     }
 
@@ -237,7 +227,6 @@ class CentrlyApp {
     this.onboardingState.homeworkSubmission = selectedHw;
     this.onboardingState.autoNotification = autoNotif;
 
-    // Persist settings to backend (DEV-38)
     try {
       await request('/settings', {
         method: 'PUT',
@@ -247,11 +236,17 @@ class CentrlyApp {
           enable_top_performers: true,
         }),
       });
-    } catch {
-      // Graceful fallback
+      this.nextOnboardingStep(4);
+    } catch (err) {
+      const alertBox = document.getElementById('onboardingAlert');
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.className = 'badge-danger';
+        alertBox.textContent = `فشل حفظ الإعدادات: ${err.message || 'خطأ في الاتصال بالخادم'}`;
+      } else {
+        alert(`فشل حفظ الإعدادات: ${err.message || 'خطأ في الاتصال بالخادم'}`);
+      }
     }
-
-    this.nextOnboardingStep(4);
   }
 
   async sendTestWhatsAppMessage() {
@@ -277,16 +272,19 @@ class CentrlyApp {
         resultBox.style.color = 'var(--centrly-success)';
         resultBox.textContent = '✓ تم إرسال الرسالة بنجاح لهاتفك!';
       }
-    } catch {
+    } catch (err) {
       if (resultBox) {
-        resultBox.style.color = 'var(--centrly-success)';
-        resultBox.textContent = '✓ تم إرسال الرسالة الاختبارية بنجاح!';
+        resultBox.style.color = 'var(--centrly-danger)';
+        resultBox.textContent = `❌ فشل إرسال الرسالة الاختبارية: ${err.message || 'خطأ في الاتصال بخدمة واتساب'}`;
+      } else {
+        alert(`❌ فشل إرسال الرسالة الاختبارية: ${err.message || 'خطأ في الاتصال بخدمة واتساب'}`);
       }
     }
   }
 
   finishOnboarding() {
     this.renderApp();
+    this.loadRouteData(this.currentRoute);
   }
 
   logout() {
@@ -298,12 +296,104 @@ class CentrlyApp {
     if (sidebar) sidebar.classList.toggle('open');
   }
 
-  navigate(route) {
+  async navigate(route) {
     this.currentRoute = route;
     this.renderMainContent();
     document.querySelectorAll('.sidebar-nav .nav-link').forEach(btn => {
       btn.classList.remove('active');
     });
+    await this.loadRouteData(route);
+  }
+
+  async loadRouteData(route) {
+    try {
+      switch (route) {
+        case 'calendar': {
+          const [calRes, grpRes] = await Promise.all([
+            request('/sessions/calendar?from=2026-09-01&to=2026-09-30').catch(() => []),
+            request('/groups').catch(() => []),
+          ]);
+          this.calendarSessions = Array.isArray(calRes) ? calRes : (calRes.sessions || []);
+          this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          this.calendarState.sessions = this.calendarSessions;
+          this.calendarState.groups = this.groups;
+          this.renderMainContent();
+          break;
+        }
+        case 'center-dashboard': {
+          const period = this.centerDashboardState.period || new Date().toISOString().slice(0, 7);
+          const [rollupRes, roomsRes] = await Promise.all([
+            request(`/centers/financials/rollup?period=${period}`).catch(() => null),
+            request('/centers/rooms').catch(() => []),
+          ]);
+          if (rollupRes) this.centerDashboardState.rollup = rollupRes;
+          if (roomsRes) this.centerDashboardState.rooms = Array.isArray(roomsRes) ? roomsRes : (roomsRes.rooms || []);
+          this.renderMainContent();
+          break;
+        }
+        case 'students': {
+          const [studRes, grpRes] = await Promise.all([
+            request('/students').catch(() => []),
+            request('/groups').catch(() => []),
+          ]);
+          this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
+          this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          this.renderMainContent();
+          break;
+        }
+        case 'groups': {
+          const grpRes = await request('/groups').catch(() => []);
+          this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          this.renderMainContent();
+          break;
+        }
+        case 'dashboard': {
+          const [studRes, grpRes, riskRes] = await Promise.all([
+            request('/students').catch(() => []),
+            request('/groups').catch(() => []),
+            request('/at-risk').catch(() => []),
+          ]);
+          const students = Array.isArray(studRes) ? studRes : (studRes.students || []);
+          const groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          const atRisk = Array.isArray(riskRes) ? riskRes : (riskRes.students || []);
+          this.dashboardData = {
+            stats: {
+              totalStudents: students.length,
+              activeGroups: groups.length,
+              todayAttendanceRate: '0%',
+              pendingMessages: 0,
+            },
+            atRiskStudents: atRisk,
+            topPerformers: [],
+          };
+          this.renderMainContent();
+          break;
+        }
+        case 'activity-logs':
+        case 'whatsapp': {
+          const logsRes = await request('/activity-logs').catch(() => []);
+          this.messageLogs = Array.isArray(logsRes) ? logsRes : (logsRes.logs || []);
+          this.renderMainContent();
+          break;
+        }
+        case 'sessions': {
+          if (!this.sessionState.id) {
+            const todaySessions = await request('/sessions?status=in_progress').catch(() => []);
+            const sessionsArr = Array.isArray(todaySessions) ? todaySessions : (todaySessions.sessions || []);
+            if (sessionsArr.length > 0) {
+              const s = sessionsArr[0];
+              this.sessionState.id = s.id;
+              this.sessionState.status = s.status;
+              this.sessionState.group = s.group || { id: s.group_id, name: s.group_name || 'حصة اليوم', price: s.price || 0 };
+              this.renderMainContent();
+            }
+          }
+          break;
+        }
+      }
+    } catch (err) {
+      console.warn('loadRouteData error:', err);
+    }
   }
 
   renderApp() {
@@ -329,7 +419,7 @@ class CentrlyApp {
   getContentHtml(route) {
     switch (route) {
       case 'dashboard':
-        return renderTeacherDashboard();
+        return renderTeacherDashboard(this.dashboardData || {});
       case 'center-dashboard':
         return renderCenterOwnerDashboard(this.centerDashboardState);
       case 'calendar':
@@ -337,14 +427,14 @@ class CentrlyApp {
       case 'sessions':
         return renderSessionsView(this.sessionState, this.user);
       case 'students':
-        return renderStudentsView();
+        return renderStudentsView(this.students, this.groups);
       case 'groups':
-        return renderGroupsView([], this.user);
+        return renderGroupsView(this.groups, this.user);
       case 'activity-logs':
       case 'whatsapp':
         return renderMessageLogsView(this.messageLogs);
       default:
-        return renderTeacherDashboard();
+        return renderTeacherDashboard(this.dashboardData || {});
     }
   }
 
@@ -382,7 +472,7 @@ class CentrlyApp {
     });
 
     this.sessionState.financials.attendeeCount += 1;
-    this.sessionState.financials.totalRevenue += this.sessionState.group.price;
+    this.sessionState.financials.totalRevenue += (this.sessionState.group?.price || 0);
 
     // Reset inputs
     codeInput.value = '';
@@ -408,21 +498,27 @@ class CentrlyApp {
   }
 
   async endActiveSession() {
+    if (!this.sessionState.id) {
+      alert('لا توجد حصة نشطة لإنهائها.');
+      return;
+    }
     if (!confirm('هل أنت متأكد من رغبتك في إنهاء الحصة وتثبيت الحضور؟')) return;
-
-    this.sessionState.status = 'ended';
 
     try {
       await request(`/sessions/${this.sessionState.id}/end`, { method: 'POST' });
-    } catch {
-      // Graceful local update
+      this.sessionState.status = 'ended';
+      alert('🏁 تم إنهاء الحصة بنجاح وتثبيت الكشف! يمكنك الآن إرسال إشعارات الواتساب للغياب والملاحظات.');
+      this.renderMainContent();
+    } catch (err) {
+      alert(`❌ فشل إنهاء الحصة: ${err.message || 'حدث خطأ في الخادم'}`);
     }
-
-    alert('🏁 تم إنهاء الحصة بنجاح وتثبيت الكشف! يمكنك الآن إرسال إشعارات الواتساب للغياب والملاحظات.');
-    this.renderMainContent();
   }
 
   async dispatchSessionWhatsAppMessages() {
+    if (!this.sessionState.id) {
+      alert('لا توجد حصة محددة لإرسال الرسائل.');
+      return;
+    }
     const countEligible = this.sessionState.attendanceList.filter(a => !a.attended || a.comment).length;
     if (countEligible === 0) {
       alert('لا توجد رسائل للغياب أو ملاحظات لإرسالها لهذه الحصة.');
@@ -433,28 +529,26 @@ class CentrlyApp {
 
     try {
       await request(`/sessions/${this.sessionState.id}/send-messages`, { method: 'POST' });
-    } catch {
-      // Graceful update
+      this.sessionState.attendanceList.forEach(a => {
+        if (!a.attended || a.comment) {
+          a.sent = true;
+        }
+      });
+      alert(`💬 تم إطلاق إرسال ${countEligible} رسائل لأولياء الأمور بنجاح!`);
+      this.renderMainContent();
+    } catch (err) {
+      alert(`❌ فشل إرسال رسائل الواتساب: ${err.message || 'حدث خطأ أثناء الإرسال'}`);
     }
-
-    this.sessionState.attendanceList.forEach(a => {
-      if (!a.attended || a.comment) {
-        a.sent = true;
-      }
-    });
-
-    alert(`💬 تم إطلاق إرسال ${countEligible} رسائل لأولياء الأمور بنجاح!`);
-    this.renderMainContent();
   }
 
   async resendSingleMessage(studentId, studentName) {
     if (!confirm(`إعادة إرسال الرسالة إلى ولي أمر الطالب: ${studentName}؟`)) return;
 
     try {
-      await request(`/sessions/${this.sessionState.id}/resend/${studentId}`, { method: 'POST' });
+      await request(`/sessions/${this.sessionState.id || 'active'}/resend/${studentId}`, { method: 'POST' });
       alert(`✓ تمت إعادة إرسال الرسالة بنجاح إلى ولي أمر: ${studentName}`);
-    } catch {
-      alert(`✓ تمت إعادة جدولة إرسال الرسالة لـ: ${studentName}`);
+    } catch (err) {
+      alert(`❌ فشل إعادة إرسال الرسالة لـ (${studentName}): ${err.message || 'حدث خطأ في الإرسال'}`);
     }
   }
 
@@ -464,19 +558,21 @@ class CentrlyApp {
       const fullUrl = `${window.location.origin}${res.portal_url}`;
       await navigator.clipboard.writeText(fullUrl);
       alert(`✓ تم نسخ رابط ولي الأمر الخاص بالطالب بنجاح!\n${fullUrl}`);
-    } catch {
-      const dummyUrl = `${window.location.origin}/?token=demo-parent-token-${studentId}`;
-      await navigator.clipboard.writeText(dummyUrl);
-      alert(`✓ تم نسخ رابط ولي الأمر بنجاح:\n${dummyUrl}`);
+    } catch (err) {
+      alert(`❌ تعذر الحصول على رابط ولي الأمر: ${err.message || 'تأكد من اتصال الخادم'}`);
     }
   }
 
   downloadBarcodeSheet() {
-    window.open(`${window.__CENTRLY_API_URL__ || 'http://localhost:3000/api/v1'}/students/barcode-sheet.pdf`, '_blank');
+    const baseUrl = window.__CENTRLY_API_URL__ || 'http://localhost:3000/api';
+    window.open(`${baseUrl}/students/barcode-sheet.pdf`, '_blank');
   }
 
   openReceiptModal() {
-    alert('🧾 إيصال الحصة:\nإجمالي النقدية: 200 ج.م\nالطلاب الحاضرين: 2\nالغياب: 1\nتم الحفظ والتصفية.');
+    const rev = this.sessionState.financials.totalRevenue;
+    const att = this.sessionState.financials.attendeeCount;
+    const abs = this.sessionState.financials.absentCount;
+    alert(`🧾 إيصال الحصة:\nإجمالي النقدية: ${rev} ج.م\nالطلاب الحاضرين: ${att}\nالغياب: ${abs}\nتم التصفية.`);
   }
 
   filterStudentsTable() {
@@ -499,6 +595,10 @@ class CentrlyApp {
   startSessionForGroup(gId) {
     this.sessionState.id = `sess-${gId}`;
     this.sessionState.status = 'in_progress';
+    const grp = this.groups.find(g => g.id === gId);
+    if (grp) {
+      this.sessionState.group = grp;
+    }
     this.navigate('sessions');
   }
   viewGroupDetails() {}
@@ -536,27 +636,14 @@ class CentrlyApp {
     this.renderMainContent();
   }
 
-  changeCenterPeriod(period) {
+  async changeCenterPeriod(period) {
     this.centerDashboardState.period = period;
     this.renderMainContent();
+    await this.loadRouteData('center-dashboard');
   }
 
   async toggleTeacherPayout(teacherId, period, currentStatus) {
     const nextStatus = currentStatus === 'paid' ? 'unpaid' : 'paid';
-    if (this.centerDashboardState.rollup) {
-      const rep = this.centerDashboardState.rollup.reports.find(r => r.teacher.id === teacherId);
-      if (rep) {
-        rep.payout.status = nextStatus;
-        if (nextStatus === 'paid') {
-          rep.payout.paid_at = new Date().toISOString();
-          rep.payout.notes = 'تم الصرف يدوياً من لوحة الإدارة';
-        } else {
-          rep.payout.paid_at = null;
-          rep.payout.notes = null;
-        }
-      }
-    }
-    this.renderMainContent();
     try {
       await request('/centers/financials/payouts', {
         method: 'POST',
@@ -567,8 +654,23 @@ class CentrlyApp {
           notes: nextStatus === 'paid' ? 'تم الصرف يدوياً من لوحة الإدارة' : null,
         }),
       });
-    } catch {
-      // Gracefully handled
+
+      if (this.centerDashboardState.rollup) {
+        const rep = this.centerDashboardState.rollup.reports.find(r => r.teacher.id === teacherId);
+        if (rep) {
+          rep.payout.status = nextStatus;
+          if (nextStatus === 'paid') {
+            rep.payout.paid_at = new Date().toISOString();
+            rep.payout.notes = 'تم الصرف يدوياً من لوحة الإدارة';
+          } else {
+            rep.payout.paid_at = null;
+            rep.payout.notes = null;
+          }
+        }
+      }
+      this.renderMainContent();
+    } catch (err) {
+      alert(`❌ فشل تحديث حالة الصرف: ${err.message || 'حدث خطأ'}`);
     }
   }
 
@@ -578,18 +680,17 @@ class CentrlyApp {
     const capacity = parseInt(document.getElementById('newRoomCapacity')?.value, 10);
     if (!name || !capacity) return;
 
-    const newRoom = { id: `room-${Date.now()}`, name, capacity };
-    if (!this.centerDashboardState.rooms) this.centerDashboardState.rooms = [];
-    this.centerDashboardState.rooms.push(newRoom);
-    this.renderMainContent();
-
     try {
-      await request('/centers/rooms', {
+      const res = await request('/centers/rooms', {
         method: 'POST',
         body: JSON.stringify({ name, capacity }),
       });
-    } catch {
-      // Gracefully handled
+      if (!this.centerDashboardState.rooms) this.centerDashboardState.rooms = [];
+      this.centerDashboardState.rooms.push(res.room || { id: res.id || `room-${Date.now()}`, name, capacity });
+      this.renderMainContent();
+      alert('✓ تمت إضافة القاعة بنجاح!');
+    } catch (err) {
+      alert(`❌ فشل إضافة القاعة: ${err.message || 'حدث خطأ'}`);
     }
   }
 
@@ -600,6 +701,11 @@ class CentrlyApp {
     const startTime = document.getElementById('conflictStartTime')?.value;
     const endTime = document.getElementById('conflictEndTime')?.value;
     const studentCount = parseInt(document.getElementById('conflictStudentCount')?.value, 10) || undefined;
+
+    if (!roomId) {
+      alert('يرجى اختيار القاعة أولاً');
+      return;
+    }
 
     try {
       const res = await request('/centers/rooms/check-conflict', {
@@ -613,15 +719,9 @@ class CentrlyApp {
         }),
       });
       this.centerDashboardState.conflictCheckResult = res;
-    } catch {
-      this.centerDashboardState.conflictCheckResult = {
-        has_conflict: false,
-        conflicting_booking: null,
-        warning: studentCount && studentCount > 30 ? {
-          code: 'CAPACITY_EXCEEDED',
-          message: `عدد طلاب المجموعة (${studentCount}) يتجاوز سعة القاعة (30)`,
-        } : null,
-      };
+    } catch (err) {
+      this.centerDashboardState.conflictCheckResult = null;
+      alert(`❌ فشل فحص التعارض: ${err.message || 'حدث خطأ في الاتصال بالخدمة'}`);
     }
     this.renderMainContent();
   }
@@ -638,11 +738,11 @@ class CentrlyApp {
         body: JSON.stringify({ barcode }),
       });
       this.centerDashboardState.frontDeskScanResult = res;
-    } catch {
+    } catch (err) {
       this.centerDashboardState.frontDeskScanResult = {
         success: false,
         code: 'SCAN_FAILED',
-        message: 'تعذر الاتصال بخدمة التحقق',
+        message: err.message || 'تعذر الاتصال بخدمة التحقق',
         audio_alert: 'error',
       };
     }
@@ -685,8 +785,8 @@ class CentrlyApp {
       } else {
         alert('تمت إضافة المدرس وتفعيل حسابه بنجاح!');
       }
-    } catch {
-      alert('تم حفظ بيانات المدرس في وضع عدم الاتصال');
+    } catch (err) {
+      alert(`❌ فشل إضافة المدرس: ${err.message || 'حدث خطأ أثناء حفظ بيانات المدرس'}`);
     }
     this.renderMainContent();
   }
@@ -708,9 +808,9 @@ class CentrlyApp {
           can_view_financials,
         }),
       });
-      alert('تمت إضافة المساعد بنجاح!');
-    } catch {
-      alert('تم حفظ بيانات المساعد');
+      alert('✓ تمت إضافة المساعد بنجاح!');
+    } catch (err) {
+      alert(`❌ فشل إضافة المساعد: ${err.message || 'حدث خطأ'}`);
     }
     this.renderMainContent();
   }

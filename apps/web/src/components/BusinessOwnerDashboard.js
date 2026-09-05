@@ -1,51 +1,34 @@
-﻿/**
+/**
  * Centrly Business Owner Analytics Dashboard (DEV-54)
  * Cross-Tenant, Founder-Only strategic view of business health, MRR, message costs, and churn signals.
  */
 
 export function renderBusinessOwnerDashboard(data = {}, user = {}) {
   const overview = data.overview || {
-    total_tenants: 28,
-    active_tenants: 18,
-    trial_tenants: 8,
-    expired_tenants: 2,
-    total_students: 620,
-    total_sessions: 145,
-    mrr_egp: 5400,
+    total_tenants: 0,
+    active_tenants: 0,
+    trial_tenants: 0,
+    expired_tenants: 0,
+    total_students: 0,
+    total_sessions: 0,
+    mrr_egp: 0,
     whatsapp: {
-      total_sent: 4200,
-      total_failed: 31,
-      estimated_cost_egp: 210.0,
+      total_sent: 0,
+      total_failed: 0,
+      estimated_cost_egp: 0,
     },
   };
 
   const subs = data.subscription_breakdown || {
-    active: 18,
-    trial: 8,
-    pending_verification: 2,
-    expired: 2,
+    active: 0,
+    trial: 0,
+    pending_verification: 0,
+    expired: 0,
     grace_period: 0,
   };
 
-  const atRisk = data.at_risk_tenants || [
-    {
-      tenant_id: 't-1',
-      tenant_name: 'أكاديمية الفرسان - فيزياء',
-      risk_factor: 'trial_expiring_soon',
-      details: 'تنتهي التجربة المجانية بعد يومين (لم يتم سداد الاشتراك)',
-    },
-    {
-      tenant_id: 't-2',
-      tenant_name: 'مستر أحمد عزت - كيمياء',
-      risk_factor: 'inactive_7d',
-      details: 'لم يتم تسجيل أي حصة خلال الـ 7 أيام الماضية',
-    },
-  ];
-
-  const recentSignups = data.recent_signups || [
-    { tenant_id: 't-3', name: 'مستر عصام الشرقاوي', created_at: new Date().toISOString(), status: 'trial' },
-    { tenant_id: 't-4', name: 'سنتر الأهرام التعليمي', created_at: new Date().toISOString(), status: 'active' },
-  ];
+  const atRisk = data.at_risk_tenants || [];
+  const recentSignups = data.recent_signups || [];
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
@@ -153,12 +136,16 @@ export function renderBusinessOwnerDashboard(data = {}, user = {}) {
           </div>
           
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            ${atRisk.map(item => `
+            ${atRisk.length > 0 ? atRisk.map(item => `
               <div style="padding: 0.65rem; border-radius: 6px; background: #fff7ed; border-right: 3px solid #ea580c;">
                 <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${item.tenant_name}</div>
                 <div style="font-size: 0.8rem; color: #9a3412; margin-top: 0.2rem;">${item.details}</div>
               </div>
-            `).join('')}
+            `).join('') : `
+              <div style="padding: 1rem; text-align: center; color: var(--centrly-text); font-size: 0.825rem;">
+                لا توجد حسابات تحت إشارات خطر الإلغاء حالياً.
+              </div>
+            `}
           </div>
         </div>
 
@@ -168,7 +155,7 @@ export function renderBusinessOwnerDashboard(data = {}, user = {}) {
             🚀 أحدث المشتركين الجدد في المنصة
           </h3>
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            ${recentSignups.map(s => `
+            ${recentSignups.length > 0 ? recentSignups.map(s => `
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem; border-radius: 6px; background: #f8fafc; border: 1px solid var(--centrly-line);">
                 <div>
                   <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${s.name}</div>
@@ -176,7 +163,11 @@ export function renderBusinessOwnerDashboard(data = {}, user = {}) {
                 </div>
                 <span class="badge ${s.status === 'active' ? 'badge-success' : 'badge-primary'}">${s.status}</span>
               </div>
-            `).join('')}
+            `).join('') : `
+              <div style="padding: 1rem; text-align: center; color: var(--centrly-text); font-size: 0.825rem;">
+                لا توجد اشتراكات جديدة مسجلة مؤخراً.
+              </div>
+            `}
           </div>
         </div>
 

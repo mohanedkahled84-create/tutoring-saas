@@ -5,26 +5,32 @@
  */
 
 export function renderParentPortalView(portalData = {}) {
-  const student = portalData.student || {
-    name: 'أحمد محمود',
-    student_code: '1001',
-  };
+  if (portalData.error || !portalData.student) {
+    return `
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; padding: 1.5rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
+        <div style="max-width: 480px; width: 100%; background: #fff; border-radius: var(--radius-lg); padding: 2.5rem; box-shadow: var(--shadow-sm); border: 1px solid var(--centrly-line); text-align: center;">
+          <div style="font-size: 3rem; margin-bottom: 0.75rem;">⚠️</div>
+          <h2 style="font-size: 1.3rem; font-weight: 800; color: var(--centrly-danger); margin: 0 0 0.5rem 0;">رابط غير صالح أو منتهي الصلاحية</h2>
+          <p style="font-size: 0.9rem; color: var(--centrly-text); margin: 0 0 1.5rem 0; line-height: 1.6;">
+            ${portalData.error || 'تعذر تحميل بيانات متابعة الطالب. يرجى التأكد من فتح الرابط الصحيح المرسل عبر الواتساب أو مراجعة إدارة السنتر.'}
+          </p>
+          <div style="font-size: 0.75rem; color: var(--centrly-text); border-top: 1px solid var(--centrly-line); padding-top: 1rem;">
+            منظومة سنترلي التعليمية | Centrly
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
+  const student = portalData.student;
   const summary = portalData.summary || {
-    total_sessions: 8,
-    attended_count: 7,
-    absent_count: 1,
-    attendance_rate: '88%',
-    homework_done_count: 7,
+    total_sessions: 0,
+    attended_count: 0,
+    absent_count: 0,
+    attendance_rate: '0%',
+    homework_done_count: 0,
   };
-
-  const sessions = portalData.sessions || [
-    { session_number: 8, session_date: '2026-09-03', attended: true, homework_status: 'done', comment: 'ممتاز ومشارك بفاعلية في الحصة' },
-    { session_number: 7, session_date: '2026-08-31', attended: true, homework_status: 'done', comment: null },
-    { session_number: 6, session_date: '2026-08-27', attended: false, homework_status: 'missing', comment: 'غياب بدون عذر مسبق' },
-    { session_number: 5, session_date: '2026-08-24', attended: true, homework_status: 'partial', comment: 'الواجب غير مكتمل (ناقص صفحة)' },
-    { session_number: 4, session_date: '2026-08-20', attended: true, homework_status: 'done', comment: 'أداء متميز بالتسميع' },
-  ];
+  const sessions = portalData.sessions || [];
 
   return `
     <div style="min-height: 100vh; background-color: #f8fafc; padding: 1rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
@@ -73,7 +79,7 @@ export function renderParentPortalView(portalData = {}) {
           </h2>
 
           <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-            ${sessions.map(s => `
+            ${sessions.length > 0 ? sessions.map(s => `
               <div style="padding: 0.85rem; border-radius: var(--radius-md); background: #f8fafc; border: 1px solid var(--centrly-line); display: flex; flex-direction: column; gap: 0.4rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">
@@ -98,7 +104,11 @@ export function renderParentPortalView(portalData = {}) {
                   </div>
                 ` : ''}
               </div>
-            `).join('')}
+            `).join('') : `
+              <div style="text-align: center; padding: 2rem; color: var(--centrly-text); font-size: 0.85rem;">
+                لا توجد حصص مسجلة حتى الآن لهذا الطالب.
+              </div>
+            `}
           </div>
         </div>
 

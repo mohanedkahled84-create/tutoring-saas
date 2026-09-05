@@ -859,14 +859,56 @@ test("DEV-78: HTTP Endpoints for financials enforce authentication and financial
 test("DEV-79: renderCenterOwnerDashboard generates Arabic RTL dashboard with financial rollup, rooms, front-desk gate, and onboarding", async () => {
   const { renderCenterOwnerDashboard } = await import("../../../apps/web/src/components/CenterOwnerDashboard.js");
 
-  // 1. Render default teachers tab
-  const teachersHtml = renderCenterOwnerDashboard({ activeTab: "teachers" });
+  const sampleRollup = {
+    period: "2026-09",
+    totals: {
+      total_revenue: 38000,
+      total_teacher_cut: 27500,
+      total_center_cut: 10500,
+      paid_teachers_count: 2,
+      unpaid_teachers_count: 1,
+    },
+    reports: [
+      {
+        teacher: {
+          id: "teach-1",
+          name: "أ. طارق حسام",
+          phone: "01011112222",
+          subjects: ["فيزياء"],
+          revenue_model: "percentage",
+          revenue_value: 75,
+          status: "active",
+        },
+        period: "2026-09",
+        summary: {
+          total_revenue: 20000,
+          teacher_cut: 15000,
+          center_cut: 5000,
+          student_count: 200,
+          sessions_count: 8,
+        },
+        payout: {
+          id: "p-1",
+          status: "paid",
+          paid_at: "2026-09-04T10:00:00Z",
+          notes: "تحويل فودافون كاش",
+        },
+      },
+    ],
+  };
+
+  // 1. Render teachers tab with sample rollup
+  const teachersHtml = renderCenterOwnerDashboard({ activeTab: "teachers", rollup: sampleRollup });
   assert.ok(teachersHtml.includes("لوحة إدارة السنتر والقاعات"));
   assert.ok(teachersHtml.includes("إجمالي دخل السنتر"));
   assert.ok(teachersHtml.includes("مستحقات المدرسين"));
   assert.ok(teachersHtml.includes("صافي ربح السنتر"));
   assert.ok(teachersHtml.includes("أ. طارق حسام"));
   assert.ok(teachersHtml.includes("تسجيل الصرف ✅") || teachersHtml.includes("تحويل لغير مدفوع"));
+
+  // 1b. Render teachers tab with empty state (no mock fallback!)
+  const emptyTeachersHtml = renderCenterOwnerDashboard({ activeTab: "teachers", rollup: { totals: { total_revenue: 0, total_teacher_cut: 0, total_center_cut: 0, paid_teachers_count: 0, unpaid_teachers_count: 0 }, reports: [] } });
+  assert.ok(emptyTeachersHtml.includes("لا توجد بيانات تسويات مالية لهذا الشهر بعد"));
 
   // 2. Render rooms & conflict engine tab
   const roomsHtml = renderCenterOwnerDashboard({

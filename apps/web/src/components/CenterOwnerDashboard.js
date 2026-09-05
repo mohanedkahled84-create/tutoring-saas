@@ -14,96 +14,16 @@ export function renderCenterOwnerDashboard(state = {}) {
   const rollup = state.rollup || {
     period,
     totals: {
-      total_revenue: 38000,
-      total_teacher_cut: 27500,
-      total_center_cut: 10500,
-      paid_teachers_count: 2,
-      unpaid_teachers_count: 1,
+      total_revenue: 0,
+      total_teacher_cut: 0,
+      total_center_cut: 0,
+      paid_teachers_count: 0,
+      unpaid_teachers_count: 0,
     },
-    reports: [
-      {
-        teacher: {
-          id: 'teach-1',
-          name: 'أ. طارق حسام',
-          phone: '01011112222',
-          subjects: ['فيزياء'],
-          revenue_model: 'percentage',
-          revenue_value: 75,
-          status: 'active',
-        },
-        period,
-        summary: {
-          total_revenue: 20000,
-          teacher_cut: 15000,
-          center_cut: 5000,
-          student_count: 200,
-          sessions_count: 8,
-        },
-        payout: {
-          id: 'p-1',
-          status: 'paid',
-          paid_at: '2026-09-04T10:00:00Z',
-          notes: 'تحويل فودافون كاش',
-        },
-      },
-      {
-        teacher: {
-          id: 'teach-2',
-          name: 'د. شريف كمال',
-          phone: '01122223333',
-          subjects: ['كيمياء'],
-          revenue_model: 'fixed_per_student',
-          revenue_value: 60,
-          status: 'active',
-        },
-        period,
-        summary: {
-          total_revenue: 12000,
-          teacher_cut: 9000,
-          center_cut: 3000,
-          student_count: 150,
-          sessions_count: 6,
-        },
-        payout: {
-          id: 'p-2',
-          status: 'unpaid',
-          paid_at: null,
-          notes: null,
-        },
-      },
-      {
-        teacher: {
-          id: 'teach-3',
-          name: 'أ. رانيا عادل',
-          phone: '01233334444',
-          subjects: ['لغة إنجليزية'],
-          revenue_model: 'fixed_total',
-          revenue_value: 3500,
-          status: 'active',
-        },
-        period,
-        summary: {
-          total_revenue: 6000,
-          teacher_cut: 3500,
-          center_cut: 2500,
-          student_count: 60,
-          sessions_count: 4,
-        },
-        payout: {
-          id: 'p-3',
-          status: 'paid',
-          paid_at: '2026-09-03T15:30:00Z',
-          notes: 'استلام نقدي بالخزينة',
-        },
-      },
-    ],
+    reports: [],
   };
 
-  const rooms = state.rooms || [
-    { id: 'room-1', name: 'قاعة أينشتاين (1)', capacity: 45, location: 'الدور الثاني' },
-    { id: 'room-2', name: 'قاعة الفارابي (2)', capacity: 30, location: 'الدور الأول' },
-    { id: 'room-3', name: 'قاعة الخوارزمي (3)', capacity: 60, location: 'الدور الأرضي' },
-  ];
+  const rooms = state.rooms || [];
 
   const conflictCheckResult = state.conflictCheckResult || null;
   const frontDeskScanResult = state.frontDeskScanResult || null;
@@ -246,7 +166,7 @@ export function renderCenterOwnerDashboard(state = {}) {
                 </tr>
               </thead>
               <tbody>
-                ${rollup.reports.map((r) => {
+                ${rollup.reports.length > 0 ? rollup.reports.map((r) => {
                   const modelLabel =
                     r.teacher.revenue_model === 'percentage'
                       ? `نسبة (${r.teacher.revenue_value}%)`
@@ -288,7 +208,13 @@ export function renderCenterOwnerDashboard(state = {}) {
                       </td>
                     </tr>
                   `;
-                }).join('')}
+                }).join('') : `
+                  <tr>
+                    <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                      لا توجد بيانات تسويات مالية لهذا الشهر بعد.
+                    </td>
+                  </tr>
+                `}
               </tbody>
             </table>
           </div>
@@ -308,7 +234,7 @@ export function renderCenterOwnerDashboard(state = {}) {
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              ${rooms.map((room) => `
+              ${rooms.length > 0 ? rooms.map((room) => `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--centrly-line); background: var(--centrly-surface);">
                   <div>
                     <div style="font-weight: 700; color: var(--centrly-ink);">${room.name}</div>
@@ -320,7 +246,11 @@ export function renderCenterOwnerDashboard(state = {}) {
                     </span>
                   </div>
                 </div>
-              `).join('')}
+              `).join('') : `
+                <div style="text-align: center; padding: 2rem; color: var(--centrly-text); border: 1px dashed var(--centrly-line); border-radius: var(--radius-sm);">
+                  لا توجد قاعات مضافة حتى الآن. أضف قاعة جديدة من النموذج أدناه.
+                </div>
+              `}
             </div>
 
             <!-- Add Room Form -->
@@ -347,7 +277,7 @@ export function renderCenterOwnerDashboard(state = {}) {
               <div>
                 <label style="font-size: 0.8rem; font-weight: 700;">القاعة المراد حجزها:</label>
                 <select id="conflictRoomSelect" class="form-input" style="width: 100%;" required>
-                  ${rooms.map((r) => `<option value="${r.id}">${r.name} (سعة ${r.capacity} طالب)</option>`).join('')}
+                  ${rooms.length > 0 ? rooms.map((r) => `<option value="${r.id}">${r.name} (سعة ${r.capacity} طالب)</option>`).join('') : '<option value="">-- لا توجد قاعات مضافة --</option>'}
                 </select>
               </div>
 
