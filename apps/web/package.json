@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Centrly Web Application - RTL Arabic-First Frontend Shell",
   "scripts": {
-    "dev": "npx serve -s . -l 5000",
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
     "build": "echo 'Static assets ready in apps/web'"
   },
   "keywords": ["centrly", "edtech", "arabic", "rtl"],

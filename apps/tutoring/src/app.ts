@@ -41,8 +41,10 @@ export function createApp(): Express {
     "https://centrly.app",
     "https://www.centrly.app",
     "http://localhost:3000",
+    "http://localhost:5000",
     "http://localhost:5173",
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:5000",
     "http://127.0.0.1:5173",
   ];
   const configuredOrigins = process.env.ALLOWED_ORIGINS
