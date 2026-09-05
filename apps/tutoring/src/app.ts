@@ -34,8 +34,31 @@ export function createApp(): Express {
   // DEV-24: HTTPS enforcement & standard security headers (HSTS, CSP, X-Frame-Options)
   app.use(securityHeadersMiddleware);
 
-  // Basic security and parsing middleware
-  app.use(cors());
+  // DEV-24 & Security Hardening: Strict CORS origin allowlist with credentials
+  const defaultAllowedOrigins = [
+    "https://centrly.app",
+    "https://www.centrly.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+  ];
+  const configuredOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+    : defaultAllowedOrigins;
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin || configuredOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("CORS: Origin not allowed"));
+        }
+      },
+      credentials: true,
+    })
+  );
   app.use(cookieParser());
   app.use(express.json({ limit: "1mb" }));
 
