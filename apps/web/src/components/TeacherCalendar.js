@@ -85,13 +85,13 @@ export function renderTeacherCalendar(data = {}) {
   }
 
   const weekDays = [
-    { key: 'السبت', label: 'السبت', date: '12 سبتمبر' },
-    { key: 'الأحد', label: 'الأحد', date: '6 سبتمبر' },
-    { key: 'الإثنين', label: 'الإثنين', date: '7 سبتمبر' },
-    { key: 'الثلاثاء', label: 'الثلاثاء', date: '8 سبتمبر' },
-    { key: 'الأربعاء', label: 'الأربعاء', date: '9 سبتمبر' },
-    { key: 'الخميس', label: 'الخميس', date: '10 سبتمبر' },
-    { key: 'الجمعة', label: 'الجمعة', date: '11 سبتمبر' },
+    { key: 'السبت', label: 'السبت', date: '5 سبتمبر', iso: '2026-09-05' },
+    { key: 'الأحد', label: 'الأحد', date: '6 سبتمبر', iso: '2026-09-06' },
+    { key: 'الإثنين', label: 'الإثنين', date: '7 سبتمبر', iso: '2026-09-07' },
+    { key: 'الثلاثاء', label: 'الثلاثاء', date: '8 سبتمبر', iso: '2026-09-08' },
+    { key: 'الأربعاء', label: 'الأربعاء', date: '9 سبتمبر', iso: '2026-09-09' },
+    { key: 'الخميس', label: 'الخميس', date: '10 سبتمبر', iso: '2026-09-10' },
+    { key: 'الجمعة', label: 'الجمعة', date: '11 سبتمبر', iso: '2026-09-11' },
   ];
 
   return `
@@ -136,7 +136,7 @@ export function renderTeacherCalendar(data = {}) {
               </button>
             </div>
 
-            <button class="btn btn-primary btn-sm" onclick="document.getElementById('modalExtraSession') ? document.getElementById('modalExtraSession').style.display='flex' : alert('إضافة حصة إضافية')">
+            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.openScheduleSessionModal()">
               + إضافة حصة إضافية
             </button>
           </div>
@@ -195,7 +195,7 @@ export function renderTeacherCalendar(data = {}) {
             ${Array.from({ length: 30 }, (_, i) => {
               const dayNum = i + 1;
               const dateStr = `2026-09-${String(dayNum).padStart(2, '0')}`;
-              const daySessions = sessions.filter((s) => s.date === dateStr);
+              const daySessions = sessions.filter((s) => s.date === dateStr || s.session_date === dateStr);
               return `
                 <div style="min-height: 80px; border: 1px solid var(--centrly-line); border-radius: 6px; padding: 0.4rem; text-align: right; background: ${daySessions.length > 0 ? '#f8fafc' : '#fff'};">
                   <div style="font-weight: 700; font-size: 0.8rem; color: var(--centrly-text);">${dayNum}</div>
@@ -223,7 +223,7 @@ export function renderTeacherCalendar(data = {}) {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
           ${weekDays
             .map((wd) => {
-              const daySessions = sessions.filter((s) => s.day_name === wd.key || (s.date && s.date.includes(wd.key)));
+              const daySessions = sessions.filter((s) => s.day_name === wd.key || s.date === wd.iso || (s.date && s.date.includes(wd.date)));
               return `
               <div class="card" style="margin: 0; background: #fafbfc; border-top: 3px solid var(--centrly-blue-700);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.5rem;">

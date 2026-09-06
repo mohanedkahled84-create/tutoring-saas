@@ -68,7 +68,10 @@ export function renderSessionsView(sessionState = {}, user = {}) {
               </button>
             ` : ''}
             ${!isSessionEnded && !isCancelled && !isRescheduled ? `
-              <button class="btn btn-secondary" onclick="window.centrlyApp.endActiveSession()" style="font-weight: 700;">
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openBatchNotesModal()" style="font-size: 0.85rem; font-weight: 700;">
+                📝 إضافة ملاحظات للطلاب
+              </button>
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openEndSessionConfirmModal()" style="font-weight: 700;">
                 ⏹ إنهاء الحصة (End Session)
               </button>
             ` : ''}
@@ -197,6 +200,7 @@ export function renderSessionsView(sessionState = {}, user = {}) {
                 <th>الملاحظات</th>
                 <th>وقت الرصد</th>
                 <th>إشعار الواتساب</th>
+                <th>الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -215,18 +219,23 @@ export function renderSessionsView(sessionState = {}, user = {}) {
                     </span>
                   </td>
                   <td style="color: var(--centrly-text); font-size: 0.85rem;">
-                    ${a.comment || '—'}
+                    ${a.comment ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">${a.comment}</span>` : '<span style="color: #94a3b8;">لا توجد ملاحظة</span>'}
                   </td>
-                  <td style="font-size: 0.8rem; color: var(--centrly-text);">${a.time}</td>
+                  <td style="font-size: 0.8rem; color: var(--centrly-text);">${a.time || '—'}</td>
                   <td>
                     <span class="badge ${a.sent ? 'badge-success' : 'badge-secondary'}">
                       ${a.sent ? 'تم الإرسال' : (isSessionEnded ? 'جاهز للإرسال' : 'في الانتظار')}
                     </span>
                   </td>
+                  <td>
+                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openStudentNoteModal('${a.student_id || a.code}', '${a.name}', '${(a.comment || '').replace(/'/g, "\\'")}')" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">
+                      📝 ${a.comment ? 'تعديل' : 'إضافة ملاحظة'}
+                    </button>
+                  </td>
                 </tr>
               `).join('') : `
                 <tr>
-                  <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                  <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
                     لم يتم تسجيل أي حضور حتى الآن. استخدم نموذج المسح أو إدخال الكود أعلاه للبدء.
                   </td>
                 </tr>

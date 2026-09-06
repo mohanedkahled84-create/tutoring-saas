@@ -34,12 +34,18 @@ export class StudentsService {
       throw new Error("NO_TENANT_CONTEXT");
     }
 
+    let codeToUse = data.student_code || data.code;
+    if (!codeToUse) {
+      const nextSerial = await this.repo.getHighestSerialCode(tenantId);
+      codeToUse = String(nextSerial);
+    }
+
     return this.repo.create(tenantId, {
       name: data.name,
       parent_phone: data.parent_phone,
       student_phone: data.student_phone || null,
-      code: data.code || null,
-      student_code: data.code || null,
+      code: codeToUse,
+      student_code: codeToUse,
       notes: data.notes || null,
       fee_override: data.fee_override ?? null,
       exempt: data.exempt ?? false,

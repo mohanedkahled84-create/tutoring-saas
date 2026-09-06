@@ -22,7 +22,19 @@ export async function request(endpoint, options = {}) {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      throw new Error(data.error || data.message || `Request failed with status ${res.status}`);
+      let errMsg = `Request failed with status ${res.status}`;
+      if (typeof data.error === 'string') {
+        errMsg = data.error;
+      } else if (data.error && typeof data.error === 'object') {
+        if (Array.isArray(data.error.details) && data.error.details.length > 0) {
+          errMsg = data.error.details.map(d => d.message || d.field || JSON.stringify(d)).join(' • ');
+        } else if (data.error.message) {
+          errMsg = data.error.message;
+        }
+      } else if (data.message) {
+        errMsg = data.message;
+      }
+      throw new Error(errMsg);
     }
 
     return data;

@@ -3,7 +3,6 @@ import {
   MonthlyReportSummary,
   ReportSendResult,
   BulkSendSummary,
-  StudentPerformanceRecord,
 } from "./types.js";
 import {
   calculateStudentSummary,

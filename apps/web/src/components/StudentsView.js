@@ -59,21 +59,28 @@ export function renderStudentsView(students = [], groups = []) {
                 <th>كود الطالب</th>
                 <th>اسم الطالب</th>
                 <th>المجموعة</th>
-                <th>رقم ولي الأمر</th>
+                <th>أرقام الهاتف (ولي الأمر / الطالب)</th>
                 <th>الرسوم والخصم</th>
                 <th>رابط ولي الأمر</th>
                 <th>إجراءات</th>
               </tr>
             </thead>
             <tbody>
-              ${studentList.length > 0 ? studentList.map(s => `
+              ${studentList.length > 0 ? studentList.map(s => {
+                const matchedGroup = (groups || []).find(g => g.id === s.group_id || g.id === s.groupId);
+                const displayGroupName = s.groupName || s.group_name || matchedGroup?.name || 'مجموعة عامة';
+                const studentPhone = s.studentPhone || s.student_phone;
+                return `
                 <tr>
-                  <td style="font-family: monospace; font-weight: 700;">${s.code || s.student_code || '—'}</td>
-                  <td style="font-weight: 700;">${s.name || s.full_name || '—'}</td>
-                  <td>${s.groupName || s.group_name || '—'}</td>
-                  <td dir="ltr" style="text-align: right; font-family: monospace;">${s.parentPhone || s.parent_phone || '—'}</td>
+                  <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${s.code || s.student_code || '—'}</td>
+                  <td style="font-weight: 700; font-size: 0.95rem;">${s.name || s.full_name || '—'}</td>
+                  <td><span class="badge badge-blue" style="font-weight: 600;">${displayGroupName}</span></td>
+                  <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem;">
+                    <div>📱 ولي الأمر: ${s.parentPhone || s.parent_phone || '—'}</div>
+                    ${studentPhone ? `<div style="color: var(--centrly-text); font-size: 0.78rem;">👤 الطالب: ${studentPhone}</div>` : ''}
+                  </td>
                   <td>
-                    ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride ? `<span class="badge badge-blue">خصم: ${s.feeOverride} ج.م</span>` : 'أساسي')}
+                    ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride || s.fee_override ? `<span class="badge badge-warning">خصم: ${s.feeOverride || s.fee_override} ج.م</span>` : '<span style="color:var(--centrly-text); font-size:0.85rem;">أساسي</span>')}
                   </td>
                   <td>
                     <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${s.id}')" title="نسخ رابط ولي الأمر بدون تسجيل دخول">
@@ -85,8 +92,9 @@ export function renderStudentsView(students = [], groups = []) {
                       ✏️ تعديل
                     </button>
                   </td>
-                </tr>
-              `).join('') : `
+                  </tr>
+                `;
+              }).join('') : `
                 <tr>
                   <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
                     لا يوجد طلاب مسجلون حتى الآن. اضغط على "➕ طالب جديد" أو "استيراد من Excel" لإضافة طلابك.

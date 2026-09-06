@@ -44,7 +44,19 @@ export const authService = {
 
     if (response.token && response.user) {
       this.setSession(response.token, response.user);
+      return response;
     }
+
+    // Auto-login to establish authenticated session before onboarding starts
+    if (data.email && data.password) {
+      const loginRes = await this.login(data.email, data.password);
+      return {
+        ...response,
+        token: loginRes.token,
+        user: loginRes.user || response.user,
+      };
+    }
+
     return response;
   },
 
@@ -60,9 +72,10 @@ export const authService = {
   },
 
   async resetPassword(token, newPassword) {
+    // SEC-HOTFIX: Unified contract on 'password'
     return await request('/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ token, new_password: newPassword }),
+      body: JSON.stringify({ token, password: newPassword, new_password: newPassword }),
     });
   },
 

@@ -3,9 +3,17 @@ export function renderAuthScreens() {
     <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: var(--centrly-surface); padding: 1.5rem;">
       <div class="card" style="max-width: 440px; width: 100%; padding: 2rem; box-shadow: var(--shadow-lg);">
         <div style="text-align: center; margin-bottom: 1.5rem;">
-          <div class="brand-logo-badge" style="margin: 0 auto 0.75rem; width: 48px; height: 48px; font-size: 1.5rem;">سـ</div>
-          <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--centrly-ink); margin: 0;">منظومة سنترلي | Centrly</h2>
-          <p style="font-size: 0.85rem; color: var(--centrly-text); margin-top: 0.25rem;">إدارة الحصص والمجاميع وحضور الطلاب</p>
+          <div class="brand-logo-badge" style="margin: 0 auto 0.75rem; width: 56px; height: 56px; background: linear-gradient(135deg, #1e3a8a, #2563eb); border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(37,99,235,0.25);">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" fill="#F59E0B"/>
+              <path d="M12 15L3 10.09L12 5.18L21 10.09L12 15Z" fill="#FFFFFF" fill-opacity="0.95"/>
+            </svg>
+          </div>
+          <h2 style="font-family: 'Changa', sans-serif; font-size: 1.5rem; font-weight: 800; margin: 0; color: var(--centrly-ink);">
+            <span style="color: var(--centrly-blue-700);">سنتر</span><span style="color: #f59e0b;">لي</span>
+            <span style="font-size: 1rem; font-weight: 600; color: var(--centrly-text);">| Centrly</span>
+          </h2>
+          <p style="font-size: 0.85rem; color: var(--centrly-text); margin-top: 0.25rem;">المنظومة الذكية لإدارة الحصص والمجاميع وحضور الطلاب</p>
         </div>
 
         <div style="display: flex; border-bottom: 1px solid var(--centrly-line); margin-bottom: 1.5rem;">
@@ -19,22 +27,15 @@ export function renderAuthScreens() {
         <form id="formLogin" onsubmit="window.centrlyApp.handleLogin(event)">
           <div class="form-group">
             <label class="form-label">البريد الإلكتروني</label>
-            <input type="email" id="loginEmail" class="form-input" value="teacher@example.com" placeholder="teacher@example.com" required dir="ltr">
+            <input type="email" id="loginEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr">
           </div>
           <div class="form-group">
             <label class="form-label">كلمة المرور</label>
-            <input type="password" id="loginPassword" class="form-input" value="Password123!" placeholder="••••••••" required dir="ltr">
+            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required dir="ltr">
           </div>
           <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem;">
             دخول إلى المنظومة
           </button>
-
-          <div style="margin-top: 1rem; padding: 0.75rem; background: #f0f9ff; border: 1px dashed var(--centrly-blue-300); border-radius: var(--radius-md); text-align: center;">
-            <p style="font-size: 0.8rem; color: var(--centrly-blue-900); margin-bottom: 0.5rem; font-weight: 600;">بيانات الحساب التجريبي جاهزة للاستكشاف:</p>
-            <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; font-weight: 700; color: var(--centrly-blue-800); background: #ffffff;" onclick="window.centrlyApp.quickDemoLogin()">
-              ⚡ دخول تجريبي فوري بنقرة واحدة
-            </button>
-          </div>
         </form>
 
         <!-- Signup Form -->
@@ -61,6 +62,10 @@ export function renderAuthScreens() {
           <div class="form-group">
             <label class="form-label">كلمة المرور (8 أحرف + رقم + رمز)</label>
             <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" required dir="ltr">
+          </div>
+          <div class="form-group">
+            <label class="form-label">تأكيد كلمة المرور</label>
+            <input type="password" id="signupPasswordConfirm" class="form-input" placeholder="••••••••" required dir="ltr">
           </div>
           <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem;">
             إنشاء حساب وبدء التجربة المجانية

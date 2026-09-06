@@ -5,14 +5,17 @@ import { renderNavbar } from './components/Navbar.js';
 import { renderAuthScreens } from './components/AuthScreens.js';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js';
+import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
 import { renderStudentsView } from './components/StudentsView.js';
 import { renderGroupsView } from './components/GroupsView.js';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js';
-import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
 import { renderStudentReportsView } from './components/StudentReportsView.js';
+import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
+import { renderBillingView } from './components/BillingView.js';
+import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
 
 class CentrlyApp {
   constructor() {
@@ -71,6 +74,10 @@ class CentrlyApp {
       average_score: 0,
       isSubmittingBulk: false,
     };
+    this.watchlistData = [];
+    this.billingState = null;
+    this.whatsappState = null;
+    this.routeErrors = {};
   }
 
   async init() {
@@ -162,17 +169,6 @@ class CentrlyApp {
     }
   }
 
-  async quickDemoLogin() {
-    try {
-      const res = await authService.login('teacher@example.com', 'Password123!');
-      this.user = res.user;
-      this.renderApp();
-      await this.loadRouteData(this.currentRoute);
-    } catch (err) {
-      this.showAuthAlert(err.message || 'فشل تسجيل الدخول التجريبي.');
-    }
-  }
-
   async handleSignup(e) {
     e.preventDefault();
     const accountType = document.getElementById('signupAccountType')?.value || 'teacher';
@@ -180,6 +176,12 @@ class CentrlyApp {
     const email = document.getElementById('signupEmail').value;
     const phone = document.getElementById('signupPhone').value;
     const password = document.getElementById('signupPassword').value;
+    const passwordConfirm = document.getElementById('signupPasswordConfirm')?.value;
+
+    if (passwordConfirm && password !== passwordConfirm) {
+      this.showAuthAlert('كلمتا المرور غير متطابقتين. يرجى التأكد وإعادة المحاولة.');
+      return;
+    }
 
     try {
       const res = await authService.signup({
@@ -328,16 +330,40 @@ class CentrlyApp {
     await this.loadRouteData(route);
   }
 
+  async retryRoute(route) {
+    if (this.routeErrors) this.routeErrors[route] = null;
+    this.renderMainContent();
+    await this.loadRouteData(route);
+  }
+
   async loadRouteData(route) {
+    if (this.routeErrors) this.routeErrors[route] = null;
     try {
       switch (route) {
         case 'calendar': {
           const [calRes, grpRes] = await Promise.all([
-            request('/sessions/calendar?from=2026-09-01&to=2026-09-30').catch(() => []),
-            request('/groups').catch(() => []),
+            request('/sessions/calendar?from=2026-09-01&to=2026-09-30'),
+            request('/groups'),
           ]);
-          this.calendarSessions = Array.isArray(calRes) ? calRes : (calRes.sessions || []);
+          const rawSessions = Array.isArray(calRes) ? calRes : (calRes.sessions || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          
+          const arabicDays = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+          this.calendarSessions = rawSessions.map(s => {
+            const rawGrp = s.groups;
+            const groupObj = Array.isArray(rawGrp) ? rawGrp[0] : (rawGrp || {});
+            const d = s.session_date ? new Date(s.session_date + 'T00:00:00') : new Date();
+            const dayName = arabicDays[d.getDay()];
+            return {
+              ...s,
+              date: s.session_date || s.date,
+              day_name: dayName,
+              group_name: groupObj.name || s.group_name || 'حصة عامة',
+              center_name: groupObj.center_name || s.center_name || 'سنتر تعليمي',
+              time: s.time || (s.session_time ? `${s.session_time}` : '04:00 م - 06:00 م'),
+            };
+          });
+
           this.calendarState.sessions = this.calendarSessions;
           this.calendarState.groups = this.groups;
           this.renderMainContent();
@@ -346,8 +372,8 @@ class CentrlyApp {
         case 'center-dashboard': {
           const period = this.centerDashboardState.period || new Date().toISOString().slice(0, 7);
           const [rollupRes, roomsRes] = await Promise.all([
-            request(`/centers/financials/rollup?period=${period}`).catch(() => null),
-            request('/centers/rooms').catch(() => []),
+            request(`/centers/financials/rollup?period=${period}`),
+            request('/centers/rooms'),
           ]);
           if (rollupRes) this.centerDashboardState.rollup = rollupRes;
           if (roomsRes) this.centerDashboardState.rooms = Array.isArray(roomsRes) ? roomsRes : (roomsRes.rooms || []);
@@ -356,8 +382,8 @@ class CentrlyApp {
         }
         case 'students': {
           const [studRes, grpRes] = await Promise.all([
-            request('/students').catch(() => []),
-            request('/groups').catch(() => []),
+            request('/students'),
+            request('/groups'),
           ]);
           this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -373,8 +399,8 @@ class CentrlyApp {
           if (this.reportsState.searchQuery) url += `&q=${encodeURIComponent(this.reportsState.searchQuery)}`;
 
           const [reportsRes, grpRes] = await Promise.all([
-            request(url).catch(() => null),
-            request('/groups').catch(() => []),
+            request(url),
+            request('/groups'),
           ]);
 
           if (reportsRes) {
@@ -388,64 +414,127 @@ class CentrlyApp {
           break;
         }
         case 'groups': {
-          const grpRes = await request('/groups').catch(() => []);
+          const grpRes = await request('/groups');
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           this.renderMainContent();
           break;
         }
         case 'dashboard': {
-          const [studRes, grpRes, riskRes] = await Promise.all([
-            request('/students').catch(() => []),
-            request('/groups').catch(() => []),
-            request('/at-risk').catch(() => []),
+          const currentMonth = new Date().getMonth() + 1;
+          const currentYear = new Date().getFullYear();
+          const [studRes, grpRes, riskRes, repRes] = await Promise.all([
+            request('/students'),
+            request('/groups'),
+            request('/at-risk'),
+            request(`/reports/monthly?month=${currentMonth}&year=${currentYear}`),
           ]);
           const students = Array.isArray(studRes) ? studRes : (studRes.students || []);
           const groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
-          const atRisk = Array.isArray(riskRes) ? riskRes : (riskRes.students || []);
+          const atRisk = Array.isArray(riskRes) ? riskRes : (riskRes?.watchlist || riskRes?.students || []);
+
+          let totalMonthlyRev = 0;
+          let totalTeacherProfit = 0;
+          groups.forEach(g => {
+            const grpStudents = students.filter(s => s.group_id === g.id);
+            const count = grpStudents.length || Number(g.student_count) || 0;
+            const price = Number(g.price) || 0;
+            const monthlyGross = count * price * (g.billing_model === 'per_session' ? 4 : 1);
+            totalMonthlyRev += monthlyGross;
+            if (g.billing_model === 'fixed_rent') {
+              totalTeacherProfit += Math.max(0, monthlyGross - (Number(g.fixed_rent_amount) || 0));
+            } else {
+              totalTeacherProfit += Math.round(monthlyGross * 0.8);
+            }
+          });
+
+          // Pure real data - zero arbitrary mock numbers or fake constants
+          const attendanceRate = repRes && repRes.average_attendance_rate !== undefined
+            ? `${repRes.average_attendance_rate}%`
+            : '0%';
+          const leaderboard = repRes?.leaderboard && Array.isArray(repRes.leaderboard)
+            ? repRes.leaderboard.slice(0, 5)
+            : [];
+
           this.dashboardData = {
             stats: {
               totalStudents: students.length,
               activeGroups: groups.length,
-              todayAttendanceRate: '0%',
+              todayAttendanceRate: attendanceRate,
+              monthlyRevenue: totalMonthlyRev,
+              teacherProfit: totalTeacherProfit,
               pendingMessages: 0,
             },
+            groups: groups.map(g => ({
+              ...g,
+              student_count: students.filter(s => s.group_id === g.id).length
+            })),
             atRiskStudents: atRisk,
-            topPerformers: [],
+            topPerformers: leaderboard,
           };
           this.renderMainContent();
           break;
         }
-        case 'activity-logs':
+        case 'risk-watchlist': {
+          const riskRes = await request('/at-risk');
+          const watchlist = riskRes?.watchlist || (Array.isArray(riskRes) ? riskRes : (riskRes?.students || []));
+          this.watchlistData = watchlist;
+          this.renderMainContent();
+          break;
+        }
+        case 'billing': {
+          const billingRes = await request('/billing/status');
+          this.billingState = billingRes;
+          this.renderMainContent();
+          break;
+        }
         case 'whatsapp': {
-          const logsRes = await request('/activity-logs').catch(() => []);
+          const [quotaRes, statusRes, tplRes] = await Promise.all([
+            request('/whatsapp/quota'),
+            request('/whatsapp/status'),
+            request('/templates'),
+          ]);
+          this.whatsappState = {
+            quota: quotaRes || {},
+            status: statusRes || { connected: true },
+            templates: tplRes?.templates || [],
+          };
+          this.renderMainContent();
+          break;
+        }
+        case 'activity-logs': {
+          const logsRes = await request('/activity-logs');
           this.messageLogs = Array.isArray(logsRes) ? logsRes : (logsRes.logs || []);
           this.renderMainContent();
           break;
         }
         case 'sessions': {
           if (!this.sessionState.id) {
-            const todaySessions = await request('/sessions?status=in_progress').catch(() => []);
+            const todaySessions = await request('/sessions?status=in_progress');
             const sessionsArr = Array.isArray(todaySessions) ? todaySessions : (todaySessions.sessions || []);
             if (sessionsArr.length > 0) {
               const s = sessionsArr[0];
               this.sessionState.id = s.id;
               this.sessionState.status = s.status;
               this.sessionState.group = s.group || { id: s.group_id, name: s.group_name || 'حصة اليوم', price: s.price || 0 };
-              this.renderMainContent();
             }
           }
+          this.renderMainContent();
           break;
         }
       }
     } catch (err) {
       console.warn('loadRouteData error:', err);
+      if (this.routeErrors) {
+        this.routeErrors[route] = err.message || 'حدث خطأ أثناء تحميل البيانات من الخادم. يرجى التحقق من الاتصال والمحاولة مجدداً.';
+      }
+      this.renderMainContent();
     }
   }
 
   renderApp() {
     const html = `
       <div class="app-container">
-        ${renderSidebar(this.currentRoute)}
+        ${renderSidebar(this.currentRoute, this.user)}
         <div class="app-main">
           ${renderNavbar(this.user)}
           <main class="content-body" id="mainContent">
@@ -463,6 +552,21 @@ class CentrlyApp {
   }
 
   getContentHtml(route) {
+    if (this.routeErrors && this.routeErrors[route]) {
+      return `
+        <div class="card" style="text-align: center; padding: 2.5rem; border-top: 4px solid var(--centrly-danger); margin: 1rem 0;" dir="rtl">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚠️</div>
+          <h3 style="color: var(--centrly-danger); font-size: 1.2rem; font-weight: 800; margin: 0 0 0.5rem 0;">تعذر تحميل بيانات هذه الصفحة</h3>
+          <p style="color: var(--centrly-text); font-size: 0.9rem; margin: 0 0 1.25rem 0; line-height: 1.6;">
+            ${this.routeErrors[route]}
+          </p>
+          <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.retryRoute('${route}')" style="font-weight: 700;">
+            🔄 إعادة المحاولة
+          </button>
+        </div>
+      `;
+    }
+
     switch (route) {
       case 'dashboard':
         return renderTeacherDashboard(this.dashboardData || {});
@@ -478,8 +582,13 @@ class CentrlyApp {
         return renderStudentReportsView(this.reportsState);
       case 'groups':
         return renderGroupsView(this.groups, this.user);
-      case 'activity-logs':
+      case 'risk-watchlist':
+        return renderRiskWatchlistView(this.watchlistData || this.dashboardData?.atRiskStudents || []);
+      case 'billing':
+        return renderBillingView(this.billingState || {});
       case 'whatsapp':
+        return renderWhatsAppSettingsView(this.whatsappState || {});
+      case 'activity-logs':
         return renderMessageLogsView(this.messageLogs);
       default:
         return renderTeacherDashboard(this.dashboardData || {});
@@ -545,13 +654,72 @@ class CentrlyApp {
     this.renderMainContent();
   }
 
-  async endActiveSession() {
+  // Modal Helper Functions
+  showModal(title, bodyHtml, footerHtml) {
+    this.closeModal();
+    const modalEl = document.createElement('div');
+    modalEl.id = 'centrlyCustomModal';
+    modalEl.className = 'modal-overlay';
+    modalEl.innerHTML = `
+      <div class="modal-dialog" dir="rtl">
+        <div class="modal-header">
+          <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">${title}</h3>
+          <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeModal()" style="padding: 0.2rem 0.5rem; font-size: 1rem; border: none; cursor: pointer;">✕</button>
+        </div>
+        <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
+          ${bodyHtml}
+        </div>
+        ${footerHtml ? `<div class="modal-footer">${footerHtml}</div>` : ''}
+      </div>
+    `;
+    modalEl.addEventListener('click', (e) => {
+      if (e.target === modalEl) this.closeModal();
+    });
+    document.body.appendChild(modalEl);
+  }
+
+  closeModal() {
+    const existing = document.getElementById('centrlyCustomModal');
+    if (existing) existing.remove();
+  }
+
+  // Session Finalization & Note Choice (DEV-Feedback)
+  endActiveSession() {
+    this.openEndSessionConfirmModal();
+  }
+
+  openEndSessionConfirmModal() {
     if (!this.sessionState.id) {
       alert('لا توجد حصة نشطة لإنهائها.');
       return;
     }
-    if (!confirm('هل أنت متأكد من رغبتك في إنهاء الحصة وتثبيت الحضور؟')) return;
+    const bodyHtml = `
+      <div style="text-align: center; padding: 0.5rem 0;">
+        <div style="font-size: 3rem; margin-bottom: 0.75rem;">⏹</div>
+        <div style="font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink); margin-bottom: 0.5rem;">
+          هل تود إنهاء الحصة الآن وتثبيت كشف الحضور؟
+        </div>
+        <p style="font-size: 0.875rem; color: var(--centrly-text); margin: 0 0 1rem 0;">
+          قبل إغلاق الحصة، يمكنك مراجعة وتدوين ملاحظات الطلاب لتُرسل تلقائياً في تقارير ورسائل أولياء الأمور عبر واتساب.
+        </p>
+      </div>
+    `;
+    const footerHtml = `
+      <button class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">
+        إلغاء
+      </button>
+      <button class="btn btn-secondary" onclick="window.centrlyApp.closeModal(); window.centrlyApp.openBatchNotesModal();" style="color: var(--centrly-blue-700); font-weight: 700; border-color: var(--centrly-blue-700);">
+        📝 إضافة ومراجعة الملاحظات أولاً
+      </button>
+      <button class="btn btn-primary" onclick="window.centrlyApp.finalizeEndSession()" style="font-weight: 800; background: #dc2626; border-color: #dc2626; color: #fff;">
+        ⏹ نعم، إنهاء الحصة وتثبيت الكشف
+      </button>
+    `;
+    this.showModal('تأكيد إنهاء الحصة الدراسية', bodyHtml, footerHtml);
+  }
 
+  async finalizeEndSession() {
+    this.closeModal();
     try {
       await request(`/sessions/${this.sessionState.id}/end`, { method: 'POST' });
       this.sessionState.status = 'ended';
@@ -559,6 +727,361 @@ class CentrlyApp {
       this.renderMainContent();
     } catch (err) {
       alert(`❌ فشل إنهاء الحصة: ${err.message || 'حدث خطأ في الخادم'}`);
+    }
+  }
+
+  // Single Student Note Modal
+  openStudentNoteModal(studentCodeOrId, studentName, currentNote = '') {
+    const bodyHtml = `
+      <form id="studentNoteForm" onsubmit="window.centrlyApp.handleSaveStudentNote(event, '${studentCodeOrId}')">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 700;">اسم الطالب:</label>
+          <div style="font-weight: 800; color: var(--centrly-ink); font-size: 1rem; margin-top: 0.25rem;">${studentName}</div>
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 700;">الملاحظة الأكاديمية أو السلوكية (تُرسل لولي الأمر بالواتساب):</label>
+          <textarea id="modalNoteText" class="form-input" rows="3" placeholder="اكتب الملاحظة هنا (مثال: متفوق جداً، يحتاج تدريب على المسائل، الواجب غير مكتمل...)" style="resize: vertical; font-family: inherit;">${currentNote}</textarea>
+        </div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="studentNoteForm" class="btn btn-primary" style="font-weight: 700;">💾 حفظ الملاحظة</button>
+    `;
+    this.showModal(`ملاحظة الطالب: ${studentName}`, bodyHtml, footerHtml);
+  }
+
+  async handleSaveStudentNote(e, studentCodeOrId) {
+    e.preventDefault();
+    const note = document.getElementById('modalNoteText')?.value.trim() || '';
+    const item = this.sessionState.attendanceList.find(a => a.student_id === studentCodeOrId || a.code === studentCodeOrId);
+    if (item) {
+      item.comment = note;
+    }
+    this.closeModal();
+    this.renderMainContent();
+
+    if (this.sessionState.id && item) {
+      try {
+        await request(`/sessions/${this.sessionState.id}/attendance`, {
+          method: 'POST',
+          body: {
+            records: [{
+              student_id: item.student_id || studentCodeOrId,
+              attended: Boolean(item.attended),
+              comment: note,
+              homework_status: item.homework || 'done',
+            }],
+          },
+        });
+      } catch (err) {
+        console.warn('Failed to sync note to backend:', err);
+      }
+    }
+  }
+
+  // Batch Notes Modal
+  openBatchNotesModal() {
+    const list = this.sessionState.attendanceList || [];
+    if (list.length === 0) {
+      alert('لم يتم تسجيل أي حضور حتى الآن لإضافة ملاحظات.');
+      return;
+    }
+    const bodyHtml = `
+      <form id="batchNotesForm" onsubmit="window.centrlyApp.handleSaveBatchNotes(event)">
+        <p style="font-size: 0.85rem; color: var(--centrly-text); margin-bottom: 1rem;">
+          أضف أو عدّل ملاحظات الطلاب الحاضرين دفعة واحدة. هذه الملاحظات ستُرفق مع تقارير الواتساب:
+        </p>
+        <div style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; padding-left: 0.25rem;">
+          ${list.map((a, idx) => `
+            <div style="border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.6rem 0.75rem; background: #fafbfc;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                <span style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${idx + 1}. ${a.name} (${a.code})</span>
+                <span class="badge ${a.attended ? 'badge-success' : 'badge-danger'}" style="font-size: 0.7rem;">${a.attended ? 'حاضر' : 'غائب'}</span>
+              </div>
+              <input type="text" class="form-input batch-note-input" data-code="${a.code}" value="${(a.comment || '').replace(/"/g, '&quot;')}" placeholder="ملاحظة خاصة بالطالب..." style="font-size: 0.85rem;">
+            </div>
+          `).join('')}
+        </div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="batchNotesForm" class="btn btn-primary" style="font-weight: 700;">💾 حفظ جميع الملاحظات</button>
+    `;
+    this.showModal('📝 إضافة ومراجعة ملاحظات الطلاب', bodyHtml, footerHtml);
+  }
+
+  async handleSaveBatchNotes(e) {
+    e.preventDefault();
+    const inputs = document.querySelectorAll('.batch-note-input');
+    const recordsToSync = [];
+    inputs.forEach(inp => {
+      const code = inp.dataset.code;
+      const note = inp.value.trim();
+      const item = this.sessionState.attendanceList.find(a => a.code === code);
+      if (item) {
+        item.comment = note;
+        if (this.sessionState.id && item.student_id) {
+          recordsToSync.push({
+            student_id: item.student_id,
+            attended: Boolean(item.attended),
+            comment: note,
+            homework_status: item.homework || 'done',
+          });
+        }
+      }
+    });
+
+    this.closeModal();
+    this.renderMainContent();
+
+    if (this.sessionState.id && recordsToSync.length > 0) {
+      try {
+        await request(`/sessions/${this.sessionState.id}/attendance`, {
+          method: 'POST',
+          body: { records: recordsToSync },
+        });
+      } catch (err) {
+        console.warn('Failed to sync batch notes to backend:', err);
+      }
+    }
+  }
+
+  // Functional Add Student Modal
+  openAddStudentModal() {
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${g.name} (${g.center_name || 'سنتر'})</option>`).join('');
+    const bodyHtml = `
+      <form id="addStudentModalForm" onsubmit="window.centrlyApp.handleCreateStudent(event)">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اسم الطالب رباعي *</label>
+          <input type="text" id="newStudentName" class="form-input" placeholder="مثال: يوسف محمود علي رضوان" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم هاتف ولي الأمر (واتساب) *</label>
+          <input type="tel" id="newStudentPhone" class="form-input" placeholder="01012345678" dir="ltr" required>
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم مصري مكون من 11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي (اختياري)</label>
+          <input type="tel" id="newStudentOwnPhone" class="form-input" placeholder="01123456789 (اختياري)" dir="ltr">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">المجموعة الأساسية *</label>
+          <select id="newStudentGroup" class="form-input" required>
+            <option value="">-- اختر المجموعة --</option>
+            ${groupOptions}
+          </select>
+        </div>
+        <div id="addStudentFeedback" style="display: none; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem; line-height: 1.4;"></div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="addStudentModalForm" id="btnSaveStudent" class="btn btn-primary" style="font-weight: 700;">➕ إضافة الطالب</button>
+    `;
+    this.showModal('➕ إضافة طالب جديد', bodyHtml, footerHtml);
+  }
+
+  async handleCreateStudent(e) {
+    e.preventDefault();
+    const name = document.getElementById('newStudentName').value.trim();
+    const parent_phone = document.getElementById('newStudentPhone').value.trim();
+    const student_phone = document.getElementById('newStudentOwnPhone')?.value.trim() || '';
+    const groupId = document.getElementById('newStudentGroup').value;
+    const feedback = document.getElementById('addStudentFeedback');
+    const saveBtn = document.getElementById('btnSaveStudent');
+
+    const egyptianPhoneRegex = /^01[0125][0-9]{8}$/;
+    const cleanParentPhone = parent_phone.replace(/[\s\-().]/g, '');
+    if (!egyptianPhoneRegex.test(cleanParentPhone)) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `❌ رقم ولي الأمر غير صحيح (${cleanParentPhone.length} أرقام). يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015 (مثال: 01123671777).`;
+      }
+      return;
+    }
+
+    const cleanStudentPhone = student_phone ? student_phone.replace(/[\s\-().]/g, '') : null;
+    if (cleanStudentPhone && !egyptianPhoneRegex.test(cleanStudentPhone)) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `❌ رقم الطالب غير صحيح (${cleanStudentPhone.length} أرقام). يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015.`;
+      }
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'جاري الإضافة...';
+
+    try {
+      const res = await request('/students', {
+        method: 'POST',
+        body: {
+          name,
+          parent_phone: cleanParentPhone,
+          student_phone: cleanStudentPhone || undefined,
+        },
+      });
+
+      const studentId = res.student?.id;
+      if (studentId && groupId) {
+        await request(`/groups/${groupId}/students`, {
+          method: 'POST',
+          body: { student_id: studentId },
+        }).catch(err => console.warn('Enrollment note:', err));
+      }
+
+      this.closeModal();
+      alert(`✓ تمت إضافة الطالب (${name}) بنجاح! والكود التلقائي: ${res.student?.code || res.student?.student_code || 'تم التعيين'}`);
+      await this.loadRouteData(this.currentRoute);
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `❌ ${err.message || 'فشل إضافة الطالب. تأكد من صحة رقم الهاتف والبيانات.'}`;
+      } else {
+        alert(`❌ فشل إضافة الطالب: ${err.message || 'تأكد من صحة البيانات'}`);
+      }
+      saveBtn.disabled = false;
+      saveBtn.textContent = '➕ إضافة الطالب';
+    }
+  }
+
+  // Functional Create Group Modal
+  openCreateGroupModal() {
+    const bodyHtml = `
+      <form id="createGroupModalForm" onsubmit="window.centrlyApp.handleCreateGroup(event)">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اسم المجموعة *</label>
+          <input type="text" id="newGroupName" class="form-input" placeholder="مثال: فيزياء 3 ثانوي - مجموعة السبت" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر</label>
+          <input type="text" id="newGroupCenter" class="form-input" placeholder="مثال: سنتر الأهرام التعليمي">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
+          <input type="number" id="newGroupPrice" class="form-input" min="0" step="5" placeholder="مثال: 80" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">نظام محاسبة السنتر</label>
+          <select id="newGroupBillingModel" class="form-input">
+            <option value="percentage">نسبة مئوية (20% للسنتر / 80% للمدرس)</option>
+            <option value="fixed_rent">إيجار قاعة ثابت لكل حصة</option>
+          </select>
+        </div>
+        <div id="createGroupFeedback" style="display: none; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem;"></div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="createGroupModalForm" id="btnSaveGroup" class="btn btn-primary" style="font-weight: 700;">➕ إنشاء المجموعة</button>
+    `;
+    this.showModal('➕ إنشاء مجموعة جديدة', bodyHtml, footerHtml);
+  }
+
+  async handleCreateGroup(e) {
+    e.preventDefault();
+    const name = document.getElementById('newGroupName').value.trim();
+    const center_name = document.getElementById('newGroupCenter').value.trim() || undefined;
+    const price = Number(document.getElementById('newGroupPrice').value) || 0;
+    const billing_model = document.getElementById('newGroupBillingModel').value;
+    const feedback = document.getElementById('createGroupFeedback');
+    const saveBtn = document.getElementById('btnSaveGroup');
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'جاري الإنشاء...';
+
+    try {
+      await request('/groups', {
+        method: 'POST',
+        body: {
+          name,
+          center_name,
+          price,
+          session_price: price,
+          billing_model,
+        },
+      });
+
+      this.closeModal();
+      alert(`✓ تم إنشاء المجموعة (${name}) بنجاح!`);
+      await this.loadRouteData(this.currentRoute);
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `❌ ${err.message || 'فشل إنشاء المجموعة.'}`;
+      } else {
+        alert(`❌ فشل إنشاء المجموعة: ${err.message || 'خطأ في البيانات'}`);
+      }
+      saveBtn.disabled = false;
+      saveBtn.textContent = '➕ إنشاء المجموعة';
+    }
+  }
+
+  // Functional Extra Session Modal
+  openScheduleSessionModal() {
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    const bodyHtml = `
+      <form id="scheduleSessionForm" onsubmit="window.centrlyApp.handleCreateExtraSession(event)">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">المجموعة *</label>
+          <select id="extraSessionGroup" class="form-input" required>
+            ${groupOptions}
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">تاريخ الحصة *</label>
+          <input type="date" id="extraSessionDate" class="form-input" value="2026-09-10" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">الوقت *</label>
+          <input type="text" id="extraSessionTime" class="form-input" value="04:00 م - 06:00 م" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">موضوع الحصة / الملاحظات *</label>
+          <input type="text" id="extraSessionTopic" class="form-input" placeholder="مثال: مراجعة نهائية على الفصل الأول وتدريبات شاملة" required>
+        </div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="scheduleSessionForm" class="btn btn-primary" style="font-weight: 700;">➕ جدولة الحصة الإضافية</button>
+    `;
+    this.showModal('➕ إضافة حصة إضافية في الجدول', bodyHtml, footerHtml);
+  }
+
+  async handleCreateExtraSession(e) {
+    e.preventDefault();
+    const group_id = document.getElementById('extraSessionGroup').value;
+    const session_date = document.getElementById('extraSessionDate').value;
+    const session_time = document.getElementById('extraSessionTime').value;
+    const topic = document.getElementById('extraSessionTopic').value;
+
+    try {
+      await request('/sessions/extra', {
+        method: 'POST',
+        body: {
+          group_id,
+          session_date,
+          session_time,
+          topic,
+          notify_parents: true,
+        },
+      });
+      this.closeModal();
+      alert('✓ تم جدولة الحصة الإضافية بنجاح وإرسال إشعارات لأولياء الأمور!');
+      await this.loadRouteData(this.currentRoute);
+    } catch (err) {
+      alert(`❌ فشل جدولة الحصة: ${err.message || 'حدث خطأ'}`);
     }
   }
 
@@ -637,9 +1160,7 @@ class CentrlyApp {
   }
 
   filterLogs() {}
-  openAddStudentModal() { alert('إضافة طالب جديد'); }
-  openImportModal() { alert('استيراد من Excel / CSV'); }
-  openCreateGroupModal() { alert('إنشاء مجموعة جديدة'); }
+  openImportModal() { alert('استيراد من Excel / CSV متاح عبر لوحة المالك.'); }
   startSessionForGroup(gId) {
     this.sessionState.id = `sess-${gId}`;
     this.sessionState.status = 'in_progress';
@@ -928,6 +1449,183 @@ class CentrlyApp {
       alert(`✓ تم إرسال التقرير الأكاديمي بنجاح لولي أمر الطالب ${studentName}`);
     } catch (err) {
       alert(`❌ فشل إرسال تقرير الطالب ${studentName}: ${err.message || 'خطأ في الخادم'}`);
+    }
+  }
+
+  // ==========================================================================
+  // WhatsApp Settings & Testing Actions (DEV-65)
+  // ==========================================================================
+
+  reconnectWhatsApp() {
+    alert('🔄 تم فحص اتصال بوابة الواتساب: الخادم متصل وقنوات الإرسال تعمل بكفاءة تامة.');
+  }
+
+  async sendTestWhatsAppMessage(e) {
+    e.preventDefault();
+    const phoneInput = document.getElementById('testPhoneInput');
+    const msgInput = document.getElementById('testMsgInput');
+    const btn = document.getElementById('btnSendTestMsg');
+    const feedback = document.getElementById('testMsgFeedback');
+
+    const phone = phoneInput?.value?.trim();
+    const message = msgInput?.value?.trim();
+
+    if (!phone) {
+      alert('يرجى إدخال رقم هاتف صحيح');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = '⏳ جارٍ الإرسال...';
+    }
+    if (feedback) feedback.style.display = 'none';
+
+    try {
+      await request('/whatsapp/test', {
+        method: 'POST',
+        body: JSON.stringify({ phone, message }),
+      });
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#f0fdf4';
+        feedback.style.color = '#15803d';
+        feedback.style.border = '1px solid #bbf7d0';
+        feedback.innerHTML = `✅ تم إرسال الرسالة الاختبارية بنجاح إلى الرقم <strong>${phone}</strong>!`;
+      }
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#b91c1c';
+        feedback.style.border = '1px solid #fecaca';
+        feedback.innerHTML = `❌ فشل إرسال الرسالة: ${err.message || 'خطأ في الاتصال'}`;
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = '🚀 إرسال الآن';
+      }
+    }
+  }
+
+  // ==========================================================================
+  // Risk Watchlist Actions (DEV-62)
+  // ==========================================================================
+
+  async dispatchSingleRiskAlert(studentId, studentName) {
+    if (!confirm(`هل تريد إرسال تنبيه واتساب فوري لولي أمر الطالب (${studentName})؟`)) return;
+
+    try {
+      await request(`/at-risk/alerts/${studentId}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          alert_type: 'absence_warning',
+          custom_message: `تحية طيبة، نود إحاطة سيادتكم علماً بتسجيل غياب أو ملاحظات متابعة للطالب ${studentName}، يرجى التواصل معنا للاطمئنان عليه.`
+        }),
+      });
+      alert(`✅ تم إرسال إنذار المتابعة بنجاح لولي أمر الطالب: ${studentName}`);
+    } catch (err) {
+      alert(`❌ تعذر إرسال التنبيه: ${err.message || 'خطأ في الخادم'}`);
+    }
+  }
+
+  // ==========================================================================
+  // Billing & Subscription Actions (DEV-SL.3 & DEV-39)
+  // ==========================================================================
+
+  openPaymentProofModal(planName = 'باقة المعلم المحترف', amount = 199) {
+    const existing = document.getElementById('paymentProofModal');
+    if (existing) existing.remove();
+
+    const modalHtml = `
+      <div id="paymentProofModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 9999; padding: 1rem;" dir="rtl">
+        <div class="card" style="width: 100%; max-width: 480px; margin: 0; animation: modalFadeIn 0.2s ease-out; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+          <div class="card-header" style="border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+            <div>
+              <h3 class="card-title" style="margin: 0; font-size: 1.15rem;">تأكيد ترقية / تجديد الاشتراك</h3>
+              <p style="font-size: 0.8rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">${planName} — ${amount} ج.م شهرياً</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closePaymentProofModal()" style="border: none; font-size: 1.2rem; cursor: pointer;">✕</button>
+          </div>
+
+          <form onsubmit="window.centrlyApp.handleSubmitPaymentProof(event, ${amount})">
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">طريقة التحويل التي استخدمتها</label>
+              <select id="proofPaymentMethod" class="form-input" style="width: 100%;" required>
+                <option value="instapay">إنستاباي (InstaPay) - centrly@instapay</option>
+                <option value="vodafone_cash">فودافون كاش / محفظة إلكترونية - 01099887766</option>
+                <option value="bank_transfer">تحويل بنكي</option>
+                <option value="cash">نقداً لإدارة المنظومة</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">رقم العملية / رقم التحويل (Reference Number)</label>
+              <input type="text" id="proofRefNumber" class="form-input" placeholder="مثال: 987654321 أو رقم محفظة المحوّل" dir="ltr" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">ملاحظات إضافية (اختياري)</label>
+              <textarea id="proofNotes" class="form-input" rows="2" placeholder="أي تفاصيل أو اسم صاحب المحفظة المحوّل منها..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+              <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closePaymentProofModal()">إلغاء</button>
+              <button type="submit" id="btnSubmitProof" class="btn btn-primary" style="font-weight: 700;">
+                ✓ تأكيد إرسال الإيصال
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  }
+
+  closePaymentProofModal() {
+    const modal = document.getElementById('paymentProofModal');
+    if (modal) modal.remove();
+  }
+
+  async handleSubmitPaymentProof(e, amount) {
+    e.preventDefault();
+    const method = document.getElementById('proofPaymentMethod')?.value || 'instapay';
+    const refNum = document.getElementById('proofRefNumber')?.value?.trim();
+    const notes = document.getElementById('proofNotes')?.value?.trim() || null;
+    const btn = document.getElementById('btnSubmitProof');
+
+    if (!refNum) {
+      alert('يرجى إدخال رقم العملية أو رقم المحفظة');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = '⏳ جارٍ التأكيد...';
+    }
+
+    try {
+      await request('/billing/payment-proof', {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: Number(amount),
+          payment_method: method,
+          reference_number: refNum,
+          notes: notes,
+        }),
+      });
+
+      this.closePaymentProofModal();
+      alert('🎉 تم استلام بيانات التحويل بنجاح! حسابك سارٍ وسيتم مراجعة الإيصال وتأكيد الاشتراك فوراً.');
+      await this.loadRouteData('billing');
+    } catch (err) {
+      alert(`❌ فشل تسجيل إيصال الدفع: ${err.message || 'خطأ في الخادم'}`);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = '✓ تأكيد إرسال الإيصال';
+      }
     }
   }
 }

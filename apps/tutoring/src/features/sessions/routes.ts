@@ -12,6 +12,7 @@ import { requireFinancialAccess } from "../../shared/middleware/auth.js";
 import { requireFeatureFlag } from "../../shared/middleware/featureFlags.js";
 import { getServices } from "../../composition.js";
 import { SessionsService } from "./service.js";
+import { SessionModel } from "./types.js";
 import { attendanceRouter } from "../attendance/routes.js";
 
 export const sessionsRouter = Router();
@@ -231,10 +232,10 @@ sessionsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
     const to = (req.query.to as string) || "2030-12-31";
     let sessions = await service.getCalendarSessions(tenantId || "", from, to);
     if (req.query.status) {
-      sessions = sessions.filter((s: { status: string }) => s.status === req.query.status);
+      sessions = sessions.filter((s: SessionModel) => s.status === req.query.status);
     }
     if (req.query.group_id) {
-      sessions = sessions.filter((s: { group_id: string }) => s.group_id === req.query.group_id);
+      sessions = sessions.filter((s: SessionModel) => s.group_id === req.query.group_id);
     }
     res.json({ sessions, count: sessions.length });
   } catch (err: unknown) {

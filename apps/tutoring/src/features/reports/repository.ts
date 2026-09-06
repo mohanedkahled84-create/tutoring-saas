@@ -4,6 +4,34 @@ import {
   StudentRawPerformanceData,
 } from "./types.js";
 
+interface AttendanceReportRow {
+  id: string;
+  student_id: string;
+  session_id: string;
+  attended: boolean;
+  comment?: string | null;
+  quiz_score?: number | null;
+  quiz_max_score?: number | null;
+}
+
+interface QuizScoreReportRow {
+  student_id: string;
+  score: number;
+  max_score: number;
+  session_id?: string;
+  created_at?: string;
+}
+
+interface StudentReportRow {
+  id: string;
+  name: string;
+  code?: string | null;
+  student_code?: string | null;
+  parent_phone?: string;
+  student_phone?: string | null;
+  group_id?: string | null;
+}
+
 export class SupabaseReportsRepository implements IReportsRepository {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -67,7 +95,7 @@ export class SupabaseReportsRepository implements IReportsRepository {
       const sessionIds = sessions.map((s) => s.id);
 
       // 5. Fetch attendance and quiz scores for those sessions
-      let attendances: any[] = [];
+      let attendances: AttendanceReportRow[] = [];
       if (sessionIds.length > 0) {
         const { data: attData, error: attError } = await this.client
           .from("attendance")
@@ -75,12 +103,12 @@ export class SupabaseReportsRepository implements IReportsRepository {
           .in("session_id", sessionIds);
 
         if (!attError && attData) {
-          attendances = attData;
+          attendances = attData as unknown as AttendanceReportRow[];
         }
       }
 
       // Optional: fetch from quiz_scores table if it exists
-      let separateQuizScores: any[] = [];
+      let separateQuizScores: QuizScoreReportRow[] = [];
       try {
         const { data: qsData } = await this.client
           .from("quiz_scores")
@@ -89,13 +117,13 @@ export class SupabaseReportsRepository implements IReportsRepository {
           .gte("created_at", `${startDate}T00:00:00.000Z`)
           .lte("created_at", `${endDate}T23:59:59.999Z`);
 
-        if (qsData) separateQuizScores = qsData;
+        if (qsData) separateQuizScores = qsData as unknown as QuizScoreReportRow[];
       } catch {
         // Table might not exist or be empty in some setups
       }
 
       // 6. Aggregate per student
-      const result: StudentRawPerformanceData[] = students.map((std: any) => {
+      const result: StudentRawPerformanceData[] = (students as unknown as StudentReportRow[]).map((std: StudentReportRow) => {
         const stdAttendances = attendances.filter((a) => a.student_id === std.id);
         const stdQuizScores = separateQuizScores.filter((q) => q.student_id === std.id);
 
@@ -125,10 +153,10 @@ export class SupabaseReportsRepository implements IReportsRepository {
           student: {
             id: std.id,
             name: std.name,
-            code: std.code,
-            parent_phone: std.parent_phone,
-            student_phone: std.student_phone,
-            group_id: std.group_id,
+            code: std.code || std.student_code || "",
+            parent_phone: std.parent_phone || "",
+            student_phone: std.student_phone || null,
+            group_id: std.group_id || null,
             group_name: std.group_id ? groupMap.get(std.group_id) || null : null,
           },
           attendances: stdAttendances.map((a) => ({

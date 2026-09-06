@@ -84,6 +84,27 @@ authRouter.post("/signup", async (req: Request, res: Response): Promise<void> =>
       }
     );
 
+    // SEC-HOTFIX: Attempt immediate login so signup response contains token and sets httpOnly cookie
+    try {
+      const loginRes = await authService.login({ email, password });
+      res.cookie("access_token", loginRes.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: loginRes.expires_in * 1000,
+      });
+      res.status(201).json({
+        message: "Signup successful. Your 14-day free trial is active.",
+        user: result.user,
+        tenant: result.tenant,
+        token: loginRes.token,
+        expires_in: loginRes.expires_in,
+      });
+      return;
+    } catch {
+      // Fall back to base signup response
+    }
+
     res.status(201).json({
       message: "Signup successful. Your 14-day free trial is active.",
       user: result.user,
@@ -123,11 +144,12 @@ authRouter.post("/forgot-password", async (req: Request, res: Response): Promise
 // DEV-PR.1: POST /api/auth/reset-password - Complete password reset using user session/token
 authRouter.post("/reset-password", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const token = extractToken(req) || req.body.token;
-  const { password } = req.body;
+  // SEC-HOTFIX: Unified contract on 'password' with fallback support for 'new_password'
+  const password = req.body.password || req.body.new_password;
 
   if (!token || !password) {
     res.status(400).json({
-      error: { code: "BAD_REQUEST", message: "token and new password are required" },
+      error: { code: "BAD_REQUEST", message: "token and password are required" },
     });
     return;
   }

@@ -57,9 +57,9 @@ export function createApp(): Express {
         if (!origin || configuredOrigins.includes(origin)) {
           callback(null, true);
         } else {
-          const corsErr = new Error("CORS: Origin not allowed");
-          (corsErr as any).statusCode = 403;
-          (corsErr as any).code = "CORS_FORBIDDEN";
+          const corsErr: Error & { statusCode?: number; code?: string } = new Error("CORS: Origin not allowed");
+          corsErr.statusCode = 403;
+          corsErr.code = "CORS_FORBIDDEN";
           callback(corsErr);
         }
       },

@@ -7,7 +7,7 @@ export const reportsRouter = Router();
 
 function resolveReportsService(req: AuthenticatedRequest): ReportsService {
   const services = getServices(req);
-  return (services as any).reports as ReportsService;
+  return services.reports;
 }
 
 // GET /api/reports/monthly - Retrieve ranked performance leaderboard and summary

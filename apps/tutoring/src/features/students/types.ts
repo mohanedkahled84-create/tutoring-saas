@@ -22,6 +22,7 @@ export interface CreateStudentDTO {
   parent_phone: string;
   student_phone?: string | null;
   code?: string | null;
+  student_code?: string | null;
   notes?: string | null;
   fee_override?: number | null;
   exempt?: boolean;
