@@ -1,3 +1,5 @@
+import { escapeHtml } from "../utils/escapeHtml.js";
+
 /**
  * Centrly Teacher Calendar (DEV-56)
  * Daily, Weekly, and Monthly schedule views for teachers.
@@ -52,8 +54,8 @@ export function renderTeacherCalendar(data = {}) {
       }; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 0.5rem;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
           <div style="font-weight: 800; font-size: 0.95rem; color: var(--centrly-ink);">
-            ${session.group_name}
-            ${session.section_name ? `<span style="font-size: 0.75rem; color: var(--centrly-text); font-weight: 500;"> • ${session.section_name}</span>` : ''}
+            ${escapeHtml(session.group_name)}
+            ${session.section_name ? `<span style="font-size: 0.75rem; color: var(--centrly-text); font-weight: 500;"> • ${escapeHtml(session.section_name)}</span>` : ''}
           </div>
           <div style="display: flex; gap: 0.35rem; align-items: center;">
             ${renderStatusBadge(session)}
@@ -62,12 +64,12 @@ export function renderTeacherCalendar(data = {}) {
         </div>
 
         <div style="font-size: 0.82rem; color: var(--centrly-text); display: flex; flex-direction: column; gap: 0.25rem;">
-          <div>⏰ <strong>الموعد:</strong> ${session.day_name ? `${session.day_name} • ` : ''}${session.time} (${session.date})</div>
-          <div>📍 <strong>المكان:</strong> ${session.center_name || 'سنتر تعليمي'}</div>
-          <div>🔢 <strong>رقم الحصة:</strong> حصة ${session.session_number}</div>
-          ${session.extra_topic ? `<div style="color: #7c3aed;">📝 <strong>موضوع الحصة:</strong> ${session.extra_topic}</div>` : ''}
-          ${session.cancellation_reason ? `<div style="color: #ef4444;">⚠️ <strong>سبب الإلغاء:</strong> ${session.cancellation_reason}</div>` : ''}
-          ${session.rescheduled_to_date ? `<div style="color: #d97706;">📅 <strong>الموعد البديل:</strong> ${session.rescheduled_to_date} ${session.rescheduled_to_time || ''}</div>` : ''}
+          <div>⏰ <strong>الموعد:</strong> ${session.day_name ? `${escapeHtml(session.day_name)} • ` : ''}${escapeHtml(session.time)} (${escapeHtml(session.date)})</div>
+          <div>📍 <strong>المكان:</strong> ${escapeHtml(session.center_name || 'سنتر تعليمي')}</div>
+          <div>🔢 <strong>رقم الحصة:</strong> حصة ${escapeHtml(session.session_number)}</div>
+          ${session.extra_topic ? `<div style="color: #7c3aed;">📝 <strong>موضوع الحصة:</strong> ${escapeHtml(session.extra_topic)}</div>` : ''}
+          ${session.cancellation_reason ? `<div style="color: #ef4444;">⚠️ <strong>سبب الإلغاء:</strong> ${escapeHtml(session.cancellation_reason)}</div>` : ''}
+          ${session.rescheduled_to_date ? `<div style="color: #d97706;">📅 <strong>الموعد البديل:</strong> ${escapeHtml(session.rescheduled_to_date)} ${escapeHtml(session.rescheduled_to_time || '')}</div>` : ''}
         </div>
 
         <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; border-top: 1px solid var(--centrly-line); padding-top: 0.5rem;">
@@ -75,7 +77,7 @@ export function renderTeacherCalendar(data = {}) {
             عرض الحصة
           </button>
           ${session.status === 'scheduled' ? `
-            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.startSessionForGroup('${session.id}')" style="font-size: 0.75rem;">
+            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(session.id)}')" style="font-size: 0.75rem;">
               بدء التحضير
             </button>
           ` : ''}
@@ -158,7 +160,7 @@ export function renderTeacherCalendar(data = {}) {
             <label style="font-size: 0.8rem; font-weight: 700;">المجموعة:</label>
             <select class="form-input" style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem;" onchange="window.centrlyApp.filterCalendarByGroup(this.value)">
               <option value="all" ${filterGroup === 'all' ? 'selected' : ''}>جميع المجاميع</option>
-              ${groups.map(g => `<option value="${g.id}" ${filterGroup === g.id ? 'selected' : ''}>${g.name}</option>`).join('')}
+              ${groups.map(g => `<option value="${escapeHtml(g.id)}" ${filterGroup === g.id ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -171,7 +173,7 @@ export function renderTeacherCalendar(data = {}) {
         <!-- DAILY VIEW -->
         <div class="card" style="margin: 0;">
           <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: var(--centrly-ink);">
-            حصص اليوم (${sessions[0]?.date || 'اليوم'})
+            حصص اليوم (${escapeHtml(sessions[0]?.date || 'اليوم')})
           </h3>
           <div style="display: flex; flex-direction: column; gap: 1rem;">
             ${sessions.length > 0
@@ -205,8 +207,8 @@ export function renderTeacherCalendar(data = {}) {
                         (s) => `
                       <div style="font-size: 0.7rem; padding: 0.15rem 0.3rem; border-radius: 4px; background: ${
                         s.is_extra ? '#f3e8ff; color: #7c3aed;' : s.status === 'cancelled' ? '#fee2e2; color: #b91c1c;' : '#e0f2fe; color: #0369a1;'
-                      }; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${s.group_name}">
-                        ${s.time.split(' ')[0]} ${s.group_name.substring(0, 10)}..
+                      }; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(s.group_name)}">
+                        ${escapeHtml(s.time.split(' ')[0])} ${escapeHtml(s.group_name.substring(0, 10))}..
                       </div>
                     `
                       )

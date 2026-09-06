@@ -1,27 +1,29 @@
 import { request } from './api.js';
 
 export const authService = {
-  getToken() {
-    return localStorage.getItem('centrly_access_token');
-  },
-
   getUser() {
     const raw = localStorage.getItem('centrly_user');
     return raw ? JSON.parse(raw) : null;
   },
 
-  setSession(token, user) {
-    if (token) localStorage.setItem('centrly_access_token', token);
+  setSession(user) {
+    // Non-sensitive user display data
     if (user) localStorage.setItem('centrly_user', JSON.stringify(user));
+    // Non-sensitive client-side navigation flag (session secret is strictly kept in httpOnly cookie)
+    localStorage.setItem('centrly_logged_in', '1');
   },
 
   clearSession() {
-    localStorage.removeItem('centrly_access_token');
+    localStorage.removeItem('centrly_access_token'); // Cleanup legacy token if present
+    localStorage.removeItem('centrly_logged_in');
     localStorage.removeItem('centrly_user');
   },
 
   isAuthenticated() {
-    return !!this.getToken();
+    // Synchronous non-sensitive flag set upon successful login/signup and cleared on logout/401.
+    // Avoids redundant network roundtrips during frontend routing while the true session
+    // validation is enforced by the backend on every API request via httpOnly cookie.
+    return localStorage.getItem('centrly_logged_in') === '1';
   },
 
   async login(email, password) {
@@ -30,8 +32,8 @@ export const authService = {
       body: JSON.stringify({ email, password }),
     });
 
-    if (response.token && response.user) {
-      this.setSession(response.token, response.user);
+    if (response.user) {
+      this.setSession(response.user);
     }
     return response;
   },
@@ -42,8 +44,8 @@ export const authService = {
       body: JSON.stringify(data),
     });
 
-    if (response.token && response.user) {
-      this.setSession(response.token, response.user);
+    if (response.user) {
+      this.setSession(response.user);
       return response;
     }
 
@@ -52,7 +54,6 @@ export const authService = {
       const loginRes = await this.login(data.email, data.password);
       return {
         ...response,
-        token: loginRes.token,
         user: loginRes.user || response.user,
       };
     }
@@ -79,8 +80,14 @@ export const authService = {
     });
   },
 
-  logout() {
-    this.clearSession();
-    window.location.reload();
+  async logout() {
+    try {
+      await request('/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.warn('Backend logout request failed:', err);
+    } finally {
+      this.clearSession();
+      window.location.reload();
+    }
   }
 };

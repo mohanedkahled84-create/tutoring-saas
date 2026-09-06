@@ -1,3 +1,5 @@
+import { escapeHtml } from "../utils/escapeHtml.js";
+
 /**
  * Centrly Sessions & Attendance Workspace (DEV-16, DEV-13, DEV-36)
  * Real-time scanning, auto-resetting homework selector, role-based financial lock,
@@ -41,29 +43,29 @@ export function renderSessionsView(sessionState = {}, user = {}) {
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <h2 class="card-title" style="margin: 0; font-size: 1.25rem;">${group.name}</h2>
+              <h2 class="card-title" style="margin: 0; font-size: 1.25rem;">${escapeHtml(group.name)}</h2>
               ${statusBadge}
               ${isExtra ? '<span class="badge" style="background:#7c3aed;color:#fff;">⭐ حصة إضافية</span>' : ''}
             </div>
             <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              حصة رقم ${sessionState.session_number || 4} • تاريخ: ${sessionState.session_date || new Date().toLocaleDateString('ar-EG')}
-              ${sessionState.rescheduled_to_date ? ` • الموعد الجديد: ${sessionState.rescheduled_to_date}` : ''}
-              ${sessionState.cancellation_reason ? ` • سبب الإلغاء: ${sessionState.cancellation_reason}` : ''}
+              حصة رقم ${escapeHtml(sessionState.session_number || 4)} • تاريخ: ${escapeHtml(sessionState.session_date || new Date().toLocaleDateString('ar-EG'))}
+              ${sessionState.rescheduled_to_date ? ` • الموعد الجديد: ${escapeHtml(sessionState.rescheduled_to_date)}` : ''}
+              ${sessionState.cancellation_reason ? ` • سبب الإلغاء: ${escapeHtml(sessionState.cancellation_reason)}` : ''}
             </div>
           </div>
 
           <!-- Session Flow Buttons (DEV-13 & DEV-50) -->
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             ${!isAssistant && !isCancelled && !isRescheduled ? `
-              <button class="btn btn-secondary" onclick="window.centrlyApp.openCancelSessionModal('${sessionState.id || ''}')" style="font-size: 0.85rem;">
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openCancelSessionModal('${escapeHtml(sessionState.id || '')}')" style="font-size: 0.85rem;">
                 ❌ إلغاء الحصة
               </button>
-              <button class="btn btn-secondary" onclick="window.centrlyApp.openRescheduleSessionModal('${sessionState.id || ''}')" style="font-size: 0.85rem;">
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openRescheduleSessionModal('${escapeHtml(sessionState.id || '')}')" style="font-size: 0.85rem;">
                 📅 تأجيل الحصة
               </button>
             ` : ''}
             ${!isAssistant ? `
-              <button class="btn btn-secondary" onclick="window.centrlyApp.openExtraSessionModal('${group.id || ''}')" style="font-size: 0.85rem;">
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openExtraSessionModal('${escapeHtml(group.id || '')}')" style="font-size: 0.85rem;">
                 ➕ حصة إضافية
               </button>
             ` : ''}
@@ -149,18 +151,18 @@ export function renderSessionsView(sessionState = {}, user = {}) {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem;">
               <div style="background: #fff; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--centrly-line);">
                 <div style="font-size: 0.75rem; color: var(--centrly-text);">إجمالي النقدية المحصلة</div>
-                <div style="font-size: 1.4rem; font-weight: 900; color: var(--centrly-success);">${financials.totalRevenue} ج.م</div>
+                <div style="font-size: 1.4rem; font-weight: 900; color: var(--centrly-success);">${escapeHtml(financials.totalRevenue)} ج.م</div>
               </div>
               <div style="background: #fff; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--centrly-line);">
                 <div style="font-size: 0.75rem; color: var(--centrly-text);">سعر الحصة الأساسي</div>
-                <div style="font-size: 1.4rem; font-weight: 900; color: var(--centrly-ink);">${group.price} ج.م</div>
+                <div style="font-size: 1.4rem; font-weight: 900; color: var(--centrly-ink);">${escapeHtml(group.price)} ج.م</div>
               </div>
             </div>
 
             <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--centrly-text); display: flex; justify-content: space-between;">
-              <span>الطلاب الحاضرين: <b>${financials.attendeeCount}</b></span>
-              <span>الغياب: <b>${financials.absentCount}</b></span>
-              <span>معفي / منحة: <b>${financials.exemptCount}</b></span>
+              <span>الطلاب الحاضرين: <b>${escapeHtml(financials.attendeeCount)}</b></span>
+              <span>الغياب: <b>${escapeHtml(financials.absentCount)}</b></span>
+              <span>معفي / منحة: <b>${escapeHtml(financials.exemptCount)}</b></span>
             </div>
           </div>
         ` : `
@@ -182,7 +184,7 @@ export function renderSessionsView(sessionState = {}, user = {}) {
       <div class="card" style="margin: 0;">
         <div class="card-header">
           <h3 class="card-title" style="font-size: 1.05rem;">
-            📋 كشف حضور حصة اليوم (${attendanceList.length} طلاب مسجلين)
+            📋 كشف حضور حصة اليوم (${escapeHtml(attendanceList.length)} طلاب مسجلين)
           </h3>
           <span style="font-size: 0.8rem; color: var(--centrly-text);">
             الرسائل تُرسل كدفعة واحدة عبر واتساب بعد إنهاء الحصة
@@ -206,8 +208,8 @@ export function renderSessionsView(sessionState = {}, user = {}) {
             <tbody>
               ${attendanceList.length > 0 ? attendanceList.map(a => `
                 <tr>
-                  <td style="font-family: monospace; font-weight: 700;">${a.code}</td>
-                  <td style="font-weight: 700;">${a.name}</td>
+                  <td style="font-family: monospace; font-weight: 700;">${escapeHtml(a.code)}</td>
+                  <td style="font-weight: 700;">${escapeHtml(a.name)}</td>
                   <td>
                     <span class="badge ${a.attended ? 'badge-success' : 'badge-danger'}">
                       ${a.attended ? 'حاضر' : 'غائب'}
@@ -219,16 +221,16 @@ export function renderSessionsView(sessionState = {}, user = {}) {
                     </span>
                   </td>
                   <td style="color: var(--centrly-text); font-size: 0.85rem;">
-                    ${a.comment ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">${a.comment}</span>` : '<span style="color: #94a3b8;">لا توجد ملاحظة</span>'}
+                    ${a.comment ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">${escapeHtml(a.comment)}</span>` : '<span style="color: #94a3b8;">لا توجد ملاحظة</span>'}
                   </td>
-                  <td style="font-size: 0.8rem; color: var(--centrly-text);">${a.time || '—'}</td>
+                  <td style="font-size: 0.8rem; color: var(--centrly-text);">${escapeHtml(a.time || '—')}</td>
                   <td>
                     <span class="badge ${a.sent ? 'badge-success' : 'badge-secondary'}">
                       ${a.sent ? 'تم الإرسال' : (isSessionEnded ? 'جاهز للإرسال' : 'في الانتظار')}
                     </span>
                   </td>
                   <td>
-                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openStudentNoteModal('${a.student_id || a.code}', '${a.name}', '${(a.comment || '').replace(/'/g, "\\'")}')" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">
+                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openStudentNoteModal('${escapeHtml(a.student_id || a.code)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}', '${escapeHtml(a.comment || '').replace(/'/g, "\\'")}')" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">
                       📝 ${a.comment ? 'تعديل' : 'إضافة ملاحظة'}
                     </button>
                   </td>

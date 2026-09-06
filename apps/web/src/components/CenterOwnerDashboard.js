@@ -1,3 +1,5 @@
+import { escapeHtml } from "../utils/escapeHtml.js";
+
 /**
  * Centrly Center Owner Dashboard (DEV-79)
  * Operational Screen for Center Owners:
@@ -179,10 +181,10 @@ export function renderCenterOwnerDashboard(state = {}) {
                   return `
                     <tr style="border-bottom: 1px solid var(--centrly-line);">
                       <td style="padding: 0.75rem; font-weight: 700; color: var(--centrly-ink);">
-                        ${r.teacher.name}
-                        <div style="font-size: 0.75rem; font-weight: normal; color: var(--centrly-text);">${r.teacher.phone}</div>
+                        ${escapeHtml(r.teacher.name)}
+                        <div style="font-size: 0.75rem; font-weight: normal; color: var(--centrly-text);">${escapeHtml(r.teacher.phone)}</div>
                       </td>
-                      <td style="padding: 0.75rem; color: var(--centrly-text);">${r.teacher.subjects.join(', ')}</td>
+                      <td style="padding: 0.75rem; color: var(--centrly-text);">${(r.teacher.subjects || []).map(s => escapeHtml(s)).join(', ')}</td>
                       <td style="padding: 0.75rem;">
                         <span class="badge" style="background: var(--centrly-blue-100); color: var(--centrly-blue-900); font-weight: 600;">
                           ${modelLabel}
@@ -200,7 +202,7 @@ export function renderCenterOwnerDashboard(state = {}) {
                       <td style="padding: 0.75rem;">
                         <button 
                           class="btn btn-sm ${isPaid ? 'btn-secondary' : 'btn-primary'}" 
-                          onclick="window.centrlyApp.toggleTeacherPayout('${r.teacher.id}', '${period}', '${r.payout.status}')"
+                          onclick="window.centrlyApp.toggleTeacherPayout('${escapeHtml(r.teacher.id)}', '${period}', '${r.payout.status}')"
                           style="font-size: 0.8rem; padding: 0.3rem 0.6rem;"
                         >
                           ${isPaid ? 'تحويل لغير مدفوع' : 'تسجيل الصرف ✅'}
@@ -237,12 +239,12 @@ export function renderCenterOwnerDashboard(state = {}) {
               ${rooms.length > 0 ? rooms.map((room) => `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--centrly-line); background: var(--centrly-surface);">
                   <div>
-                    <div style="font-weight: 700; color: var(--centrly-ink);">${room.name}</div>
-                    <div style="font-size: 0.8rem; color: var(--centrly-text);">${room.location || 'داخل السنتر'}</div>
+                    <div style="font-weight: 700; color: var(--centrly-ink);">${escapeHtml(room.name)}</div>
+                    <div style="font-size: 0.8rem; color: var(--centrly-text);">${escapeHtml(room.location || 'داخل السنتر')}</div>
                   </div>
                   <div style="text-align: left;">
                     <span class="badge" style="background: var(--centrly-blue-100); color: var(--centrly-blue-900); font-weight: 700;">
-                      سعة ${room.capacity} طالب
+                      سعة ${escapeHtml(room.capacity)} طالب
                     </span>
                   </div>
                 </div>
@@ -394,15 +396,15 @@ export function renderCenterOwnerDashboard(state = {}) {
                   ? 'var(--centrly-danger)'
                   : 'var(--centrly-warning)'
               };">
-                ${frontDeskScanResult.message}
+                ${escapeHtml(frontDeskScanResult.message)}
               </div>
 
               ${frontDeskScanResult.session ? `
                 <div style="display: flex; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap; font-size: 0.9rem;">
-                  <div>المدرس: <strong>${frontDeskScanResult.session.teacher_name || 'غير محدد'}</strong></div>
-                  <div>المادة: <strong>${frontDeskScanResult.session.subject || 'غير محدد'}</strong></div>
-                  <div>القاعة: <strong>${frontDeskScanResult.session.room_name || 'قاعة السنتر'}</strong></div>
-                  <div>المجموعة: <strong>${frontDeskScanResult.session.group_name || 'المجموعة'}</strong></div>
+                  <div>المدرس: <strong>${escapeHtml(frontDeskScanResult.session.teacher_name || 'غير محدد')}</strong></div>
+                  <div>المادة: <strong>${escapeHtml(frontDeskScanResult.session.subject || 'غير محدد')}</strong></div>
+                  <div>القاعة: <strong>${escapeHtml(frontDeskScanResult.session.room_name || 'قاعة السنتر')}</strong></div>
+                  <div>المجموعة: <strong>${escapeHtml(frontDeskScanResult.session.group_name || 'المجموعة')}</strong></div>
                   ${frontDeskScanResult.session.is_makeup ? `
                     <span class="badge" style="background: var(--centrly-amber-500); color: #fff; font-weight: 800;">
                       حصّة تعويض

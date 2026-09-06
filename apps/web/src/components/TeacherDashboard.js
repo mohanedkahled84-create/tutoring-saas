@@ -1,3 +1,5 @@
+import { escapeHtml } from "../utils/escapeHtml.js";
+
 /**
  * Centrly Teacher Dashboard (DEV-16)
  * KPI Rollup + At-Risk Watchlist (Warnings) + Top Performers (المتفوقين)
@@ -82,50 +84,47 @@ export function renderTeacherDashboard(data = {}) {
             ${stats.totalStudents} <span style="font-size: 0.85rem; font-weight: 500;">طالب</span>
           </div>
           <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.35rem;">
-            موزعين على ${stats.activeGroups} مجاميع
+            موزعين على ${stats.activeGroups} مجاميع نشطة
           </div>
         </div>
 
         <!-- 4. Today Attendance Rate -->
         <div class="card" style="margin: 0; background: #fff; border-top: 4px solid #f59e0b;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">نسبة التزام الحضور</span>
-            <span style="font-size: 1.2rem;">🎯</span>
+            <span style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">نسبة الحضور اليومي</span>
+            <span style="font-size: 1.2rem;">📊</span>
           </div>
           <div style="font-size: 1.8rem; font-weight: 900; color: #d97706; margin-top: 0.4rem;">
-            ${stats.todayAttendanceRate || '95%'}
+            ${stats.todayAttendanceRate}
           </div>
           <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.35rem;">
-            معدل الحضور لحصص الأسبوع
+            من واقع حصص اليوم الجارية
           </div>
         </div>
 
       </div>
 
-      <!-- Groups & Financial Breakdown Table (جدول أرباح المجاميع) -->
+      <!-- Active Groups & Performance Breakdown Table -->
       <div class="card" style="margin: 0;">
         <div class="card-header">
-          <div>
-            <h3 class="card-title" style="font-size: 1.05rem;">🏢 تفاصيل أرباح وتسعير المجاميع الدراسية</h3>
-            <p style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.2rem;">
-              حساب الإيرادات الشهرية المقدرة لكل مجموعة بناءً على عدد الحصص والطلاب المسجلين:
-            </p>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openCreateGroupModal()">
-            ➕ مجموعة جديدة
-          </button>
+          <h3 class="card-title" style="font-size: 1.05rem;">
+            📊 بيان المجاميع النشطة والعائد المالي المقدر
+          </h3>
+          <span style="font-size: 0.8rem; color: var(--centrly-text);">
+            البيانات المالية خاصة بحساب المعلم والمالك فقط
+          </span>
         </div>
 
-        <div style="overflow-x: auto; margin-top: 0.75rem;">
+        <div style="overflow-x: auto; margin-top: 1rem;">
           <table class="data-table">
             <thead>
               <tr>
-                <th>اسم المجموعة</th>
-                <th>المكان / السنتر</th>
-                <th>سعر الحصة للطالب</th>
+                <th>المجموعة</th>
+                <th>السنتر / القاعة</th>
+                <th>سعر الحصة</th>
                 <th>نظام المحاسبة</th>
-                <th>الطلاب المقيدين</th>
-                <th>الدخل المقدر (شهرياً)</th>
+                <th>عدد الطلاب</th>
+                <th>الدخل الشهري المقدر</th>
                 <th>صافي المدرس</th>
               </tr>
             </thead>
@@ -137,13 +136,13 @@ export function renderTeacherDashboard(data = {}) {
                 const netProfit = Math.round(monthlyRev * 0.8);
                 return `
                   <tr>
-                    <td style="font-weight: 700; color: var(--centrly-ink); font-size: 0.95rem;">${g.name}</td>
-                    <td><span class="badge badge-blue">${g.center_name || 'سنتر تعليمي'}</span></td>
-                    <td style="font-weight: 700; font-family: monospace;">${price} ج.م</td>
+                    <td style="font-weight: 700; color: var(--centrly-ink); font-size: 0.95rem;">${escapeHtml(g.name)}</td>
+                    <td><span class="badge badge-blue">${escapeHtml(g.center_name || 'سنتر تعليمي')}</span></td>
+                    <td style="font-weight: 700; font-family: monospace;">${escapeHtml(price)} ج.م</td>
                     <td style="font-size: 0.85rem; color: var(--centrly-text);">
                       ${g.billing_model === 'fixed_rent' ? 'إيجار قاعة ثابت' : 'نسبة سنتر (20%)'}
                     </td>
-                    <td style="font-weight: 700;">${studentCount} طلاب</td>
+                    <td style="font-weight: 700;">${escapeHtml(studentCount)} طلاب</td>
                     <td style="font-weight: 800; color: #059669; font-family: monospace;">
                       ${monthlyRev.toLocaleString('ar-EG')} ج.م
                     </td>
@@ -190,13 +189,13 @@ export function renderTeacherDashboard(data = {}) {
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                   <span style="font-weight: 900; font-size: 1rem; color: ${idx === 0 ? '#d97706' : '#2563eb'};">#${idx + 1}</span>
                   <div>
-                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${s.student_name || s.name}</div>
-                    <div style="font-size: 0.75rem; color: var(--centrly-text);">${s.group_name || s.group || 'مجموعة الفيزياء'} • كود: ${s.student_code || s.code || '—'}</div>
+                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${escapeHtml(s.student_name || s.name)}</div>
+                    <div style="font-size: 0.75rem; color: var(--centrly-text);">${escapeHtml(s.group_name || s.group || 'مجموعة الفيزياء')} • كود: ${escapeHtml(s.student_code || s.code || '—')}</div>
                   </div>
                 </div>
                 <div>
                   <span class="badge badge-success" style="font-weight: 800; font-size: 0.8rem;">
-                    ${s.overall_score || s.score || 100}%
+                    ${escapeHtml(s.overall_score || s.score || 100)}%
                   </span>
                 </div>
               </div>
@@ -217,7 +216,7 @@ export function renderTeacherDashboard(data = {}) {
                 مؤشرات الخطر والمتابعة (At-Risk)
               </h3>
             </div>
-            <span class="badge badge-danger">${atRiskStudents.length} طلاب</span>
+            <span class="badge badge-danger">${escapeHtml(atRiskStudents.length)} طلاب</span>
           </div>
           <p style="font-size: 0.8rem; color: var(--centrly-text); margin-bottom: 0.75rem;">
             الطلاب الذين يحتاجون متابعة بسبب الغياب أو عدم تسليم الواجب:
@@ -227,11 +226,11 @@ export function renderTeacherDashboard(data = {}) {
             ${atRiskStudents.length > 0 ? atRiskStudents.map(s => `
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: var(--centrly-surface); border-radius: var(--radius-md); border-right: 3px solid var(--centrly-danger);">
                 <div>
-                  <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${s.name || s.student_name}</div>
-                  <div style="font-size: 0.75rem; color: var(--centrly-text);">${s.group || s.group_name || 'مجموعة عامة'}</div>
+                  <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${escapeHtml(s.name || s.student_name)}</div>
+                  <div style="font-size: 0.75rem; color: var(--centrly-text);">${escapeHtml(s.group || s.group_name || 'مجموعة عامة')}</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <span class="badge badge-danger" style="font-size: 0.75rem;">${s.reason || 'تكرار غياب'}</span>
+                  <span class="badge badge-danger" style="font-size: 0.75rem;">${escapeHtml(s.reason || 'تكرار غياب')}</span>
                   <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('whatsapp')" title="إرسال تنبيه عبر واتساب">
                     💬
                   </button>

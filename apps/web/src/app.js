@@ -16,6 +16,7 @@ import { renderStudentReportsView } from './components/StudentReportsView.js';
 import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
 import { renderBillingView } from './components/BillingView.js';
 import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
+import { escapeHtml } from './utils/escapeHtml.js';
 
 class CentrlyApp {
   constructor() {
@@ -312,8 +313,8 @@ class CentrlyApp {
     this.loadRouteData(this.currentRoute);
   }
 
-  logout() {
-    authService.logout();
+  async logout() {
+    await authService.logout();
   }
 
   toggleSidebar() {
@@ -733,14 +734,14 @@ class CentrlyApp {
   // Single Student Note Modal
   openStudentNoteModal(studentCodeOrId, studentName, currentNote = '') {
     const bodyHtml = `
-      <form id="studentNoteForm" onsubmit="window.centrlyApp.handleSaveStudentNote(event, '${studentCodeOrId}')">
+      <form id="studentNoteForm" onsubmit="window.centrlyApp.handleSaveStudentNote(event, '${escapeHtml(studentCodeOrId)}')">
         <div class="form-group" style="margin-bottom: 1rem;">
           <label class="form-label" style="font-weight: 700;">اسم الطالب:</label>
-          <div style="font-weight: 800; color: var(--centrly-ink); font-size: 1rem; margin-top: 0.25rem;">${studentName}</div>
+          <div style="font-weight: 800; color: var(--centrly-ink); font-size: 1rem; margin-top: 0.25rem;">${escapeHtml(studentName)}</div>
         </div>
         <div class="form-group" style="margin-bottom: 1rem;">
           <label class="form-label" style="font-weight: 700;">الملاحظة الأكاديمية أو السلوكية (تُرسل لولي الأمر بالواتساب):</label>
-          <textarea id="modalNoteText" class="form-input" rows="3" placeholder="اكتب الملاحظة هنا (مثال: متفوق جداً، يحتاج تدريب على المسائل، الواجب غير مكتمل...)" style="resize: vertical; font-family: inherit;">${currentNote}</textarea>
+          <textarea id="modalNoteText" class="form-input" rows="3" placeholder="اكتب الملاحظة هنا (مثال: متفوق جداً، يحتاج تدريب على المسائل، الواجب غير مكتمل...)" style="resize: vertical; font-family: inherit;">${escapeHtml(currentNote)}</textarea>
         </div>
       </form>
     `;
@@ -748,7 +749,7 @@ class CentrlyApp {
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
       <button type="submit" form="studentNoteForm" class="btn btn-primary" style="font-weight: 700;">💾 حفظ الملاحظة</button>
     `;
-    this.showModal(`ملاحظة الطالب: ${studentName}`, bodyHtml, footerHtml);
+    this.showModal(`ملاحظة الطالب: ${escapeHtml(studentName)}`, bodyHtml, footerHtml);
   }
 
   async handleSaveStudentNote(e, studentCodeOrId) {
@@ -796,10 +797,10 @@ class CentrlyApp {
           ${list.map((a, idx) => `
             <div style="border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.6rem 0.75rem; background: #fafbfc;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                <span style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${idx + 1}. ${a.name} (${a.code})</span>
+                <span style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${idx + 1}. ${escapeHtml(a.name)} (${escapeHtml(a.code)})</span>
                 <span class="badge ${a.attended ? 'badge-success' : 'badge-danger'}" style="font-size: 0.7rem;">${a.attended ? 'حاضر' : 'غائب'}</span>
               </div>
-              <input type="text" class="form-input batch-note-input" data-code="${a.code}" value="${(a.comment || '').replace(/"/g, '&quot;')}" placeholder="ملاحظة خاصة بالطالب..." style="font-size: 0.85rem;">
+              <input type="text" class="form-input batch-note-input" data-code="${escapeHtml(a.code)}" value="${escapeHtml(a.comment || '')}" placeholder="ملاحظة خاصة بالطالب..." style="font-size: 0.85rem;">
             </div>
           `).join('')}
         </div>
@@ -1491,7 +1492,7 @@ class CentrlyApp {
         feedback.style.background = '#f0fdf4';
         feedback.style.color = '#15803d';
         feedback.style.border = '1px solid #bbf7d0';
-        feedback.innerHTML = `✅ تم إرسال الرسالة الاختبارية بنجاح إلى الرقم <strong>${phone}</strong>!`;
+        feedback.innerHTML = `✅ تم إرسال الرسالة الاختبارية بنجاح إلى الرقم <strong>${escapeHtml(phone)}</strong>!`;
       }
     } catch (err) {
       if (feedback) {
@@ -1499,7 +1500,7 @@ class CentrlyApp {
         feedback.style.background = '#fef2f2';
         feedback.style.color = '#b91c1c';
         feedback.style.border = '1px solid #fecaca';
-        feedback.innerHTML = `❌ فشل إرسال الرسالة: ${err.message || 'خطأ في الاتصال'}`;
+        feedback.innerHTML = `❌ فشل إرسال الرسالة: ${escapeHtml(err.message || 'خطأ في الاتصال')}`;
       }
     } finally {
       if (btn) {

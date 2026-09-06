@@ -1,3 +1,5 @@
+import { escapeHtml } from "../utils/escapeHtml.js";
+
 /**
  * Centrly Parent Web Portal Component (DEV-34)
  * Lightweight, no-app, no-login portal for Egyptian parents to track
@@ -12,7 +14,7 @@ export function renderParentPortalView(portalData = {}) {
           <div style="font-size: 3rem; margin-bottom: 0.75rem;">⚠️</div>
           <h2 style="font-size: 1.3rem; font-weight: 800; color: var(--centrly-danger); margin: 0 0 0.5rem 0;">رابط غير صالح أو منتهي الصلاحية</h2>
           <p style="font-size: 0.9rem; color: var(--centrly-text); margin: 0 0 1.5rem 0; line-height: 1.6;">
-            ${portalData.error || 'تعذر تحميل بيانات متابعة الطالب. يرجى التأكد من فتح الرابط الصحيح المرسل عبر الواتساب أو مراجعة إدارة السنتر.'}
+            ${escapeHtml(portalData.error || 'تعذر تحميل بيانات متابعة الطالب. يرجى التأكد من فتح الرابط الصحيح المرسل عبر الواتساب أو مراجعة إدارة السنتر.')}
           </p>
           <div style="font-size: 0.75rem; color: var(--centrly-text); border-top: 1px solid var(--centrly-line); padding-top: 1rem;">
             منظومة سنترلي التعليمية | Centrly
@@ -41,8 +43,8 @@ export function renderParentPortalView(portalData = {}) {
           <div class="brand-logo-badge" style="margin: 0 auto 0.5rem; width: 44px; height: 44px; font-size: 1.25rem;">سـ</div>
           <h1 style="font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink); margin: 0;">بوابة ولي الأمر | سنترلي</h1>
           <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-            <span style="font-size: 1.1rem; font-weight: 900; color: var(--centrly-blue-800);">${student.name}</span>
-            <span class="badge badge-secondary" style="font-family: monospace;">كود: ${student.student_code}</span>
+            <span style="font-size: 1.1rem; font-weight: 900; color: var(--centrly-blue-800);">${escapeHtml(student.name)}</span>
+            <span class="badge badge-secondary" style="font-family: monospace;">كود: ${escapeHtml(student.student_code)}</span>
           </div>
           <p style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.35rem;">
             تقرير الحضور والواجبات المدرسية المحدث لحظياً
@@ -54,20 +56,20 @@ export function renderParentPortalView(portalData = {}) {
           <div style="background: #fff; padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--centrly-line); text-align: center;">
             <div style="font-size: 0.75rem; font-weight: 700; color: var(--centrly-text);">نسبة الحضور الإجمالية</div>
             <div style="font-size: 1.75rem; font-weight: 900; color: var(--centrly-success); margin-top: 0.25rem;">
-              ${summary.attendance_rate}
+              ${escapeHtml(summary.attendance_rate)}
             </div>
             <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.2rem;">
-              حضر ${summary.attended_count} من أصل ${summary.total_sessions} حصص
+              حضر ${escapeHtml(summary.attended_count)} من أصل ${escapeHtml(summary.total_sessions)} حصص
             </div>
           </div>
 
           <div style="background: #fff; padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--centrly-line); text-align: center;">
             <div style="font-size: 0.75rem; font-weight: 700; color: var(--centrly-text);">الالتزام بالواجبات</div>
             <div style="font-size: 1.75rem; font-weight: 900; color: var(--centrly-blue-800); margin-top: 0.25rem;">
-              ${summary.homework_done_count}/${summary.total_sessions}
+              ${escapeHtml(summary.homework_done_count)}/${escapeHtml(summary.total_sessions)}
             </div>
             <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.2rem;">
-              ${summary.absent_count > 0 ? `<span style="color: var(--centrly-danger); font-weight: 700;">${summary.absent_count} غياب</span>` : 'لا يوجد غياب'}
+              ${summary.absent_count > 0 ? `<span style="color: var(--centrly-danger); font-weight: 700;">${escapeHtml(summary.absent_count)} غياب</span>` : 'لا يوجد غياب'}
             </div>
           </div>
         </div>
@@ -83,7 +85,7 @@ export function renderParentPortalView(portalData = {}) {
               <div style="padding: 0.85rem; border-radius: var(--radius-md); background: #f8fafc; border: 1px solid var(--centrly-line); display: flex; flex-direction: column; gap: 0.4rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">
-                    حصة رقم ${s.session_number} • ${s.session_date}
+                    حصة رقم ${escapeHtml(s.session_number)} • ${escapeHtml(s.session_date)}
                   </div>
                   <span class="badge ${s.attended ? 'badge-success' : 'badge-danger'}">
                     ${s.attended ? 'حاضر ✓' : 'غائب ✗'}
@@ -100,7 +102,7 @@ export function renderParentPortalView(portalData = {}) {
 
                 ${s.comment ? `
                   <div style="font-size: 0.825rem; background: #fff; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border-right: 3px solid var(--centrly-blue-700); color: var(--centrly-ink); margin-top: 0.25rem;">
-                    💬 <b>ملاحظة المعلم:</b> ${s.comment}
+                    💬 <b>ملاحظة المعلم:</b> ${escapeHtml(s.comment)}
                   </div>
                 ` : ''}
               </div>

@@ -1,3 +1,5 @@
+import { escapeHtml } from "../utils/escapeHtml.js";
+
 /**
  * Centrly Message Logs & Delivery Status View (DEV-16 DEV-TDB.3 & DEV-ATN.3)
  * Visibility on WhatsApp sent/failed statuses + manual resend trigger.
@@ -51,21 +53,21 @@ export function renderMessageLogsView(logs = []) {
             <tbody>
               ${logsList.length > 0 ? logsList.map(l => `
                 <tr>
-                  <td style="font-weight: 700;">${l.studentName || l.student_name || '—'}</td>
-                  <td dir="ltr" style="text-align: right; font-family: monospace;">${l.phone || '—'}</td>
-                  <td><span class="badge badge-blue">${l.type || 'إشعار'}</span></td>
+                  <td style="font-weight: 700;">${escapeHtml(l.studentName || l.student_name || '—')}</td>
+                  <td dir="ltr" style="text-align: right; font-family: monospace;">${escapeHtml(l.phone || '—')}</td>
+                  <td><span class="badge badge-blue">${escapeHtml(l.type || 'إشعار')}</span></td>
                   <td>
                     <span class="badge ${l.status === 'sent' ? 'badge-success' : (l.status === 'failed' ? 'badge-danger' : 'badge-warning')}">
                       ${l.status === 'sent' ? 'تم التسليم' : (l.status === 'failed' ? 'فشل التسليم' : 'يحتاج مراجعة')}
                     </span>
                   </td>
-                  <td style="font-size: 0.8rem; color: var(--centrly-text);">${l.time || '—'}</td>
+                  <td style="font-size: 0.8rem; color: var(--centrly-text);">${escapeHtml(l.time || '—')}</td>
                   <td style="font-size: 0.8rem; color: ${l.reason ? 'var(--centrly-danger)' : 'var(--centrly-text)'};">
-                    ${l.reason || '—'}
+                    ${escapeHtml(l.reason || '—')}
                   </td>
                   <td>
                     ${l.status !== 'sent' ? `
-                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${l.studentId || l.student_id}', '${l.studentName || l.student_name}')" style="font-weight: 700; color: var(--centrly-blue-800);">
+                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${escapeHtml(l.studentId || l.student_id)}', '${escapeHtml(l.studentName || l.student_name).replace(/'/g, "\\'")}')" style="font-weight: 700; color: var(--centrly-blue-800);">
                         🔄 إعادة إرسال
                       </button>
                     ` : `

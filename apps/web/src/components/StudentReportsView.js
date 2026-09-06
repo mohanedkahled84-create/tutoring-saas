@@ -1,4 +1,5 @@
 import { renderStudentSearchBar } from "./StudentSearchBar.js";
+import { escapeHtml } from "../utils/escapeHtml.js";
 
 /**
  * Centrly Student Reports & Monthly Leaderboard View (DEV-80)
@@ -97,7 +98,7 @@ export function renderStudentReportsView(state = {}) {
             >
               <option value="">جميع المجاميع</option>
               ${(groups || []).map((g) => `
-                <option value="${g.id}" ${g.id === selectedGroupId ? "selected" : ""}>${g.name}</option>
+                <option value="${escapeHtml(g.id)}" ${g.id === selectedGroupId ? "selected" : ""}>${escapeHtml(g.name)}</option>
               `).join("")}
             </select>
           </div>
@@ -119,21 +120,21 @@ export function renderStudentReportsView(state = {}) {
         <div class="card" style="margin: 0; padding: 1.25rem;">
           <div style="font-size: 0.85rem; color: var(--centrly-muted, #64748b);">إجمالي الطلاب في التقرير</div>
           <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: var(--centrly-primary, #2563eb);">
-            ${total_students || students.length || 0}
+            ${escapeHtml(total_students || students.length || 0)}
           </div>
         </div>
 
         <div class="card" style="margin: 0; padding: 1.25rem;">
           <div style="font-size: 0.85rem; color: var(--centrly-muted, #64748b);">متوسط الالتزام بالحضور</div>
           <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: #16a34a;">
-            ${average_attendance_rate || 0}%
+            ${escapeHtml(average_attendance_rate || 0)}%
           </div>
         </div>
 
         <div class="card" style="margin: 0; padding: 1.25rem;">
           <div style="font-size: 0.85rem; color: var(--centrly-muted, #64748b);">متوسط درجات الاختبارات</div>
           <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: #8b5cf6;">
-            ${average_score || 0}%
+            ${escapeHtml(average_score || 0)}%
           </div>
         </div>
       </div>
@@ -191,30 +192,30 @@ export function renderStudentReportsView(state = {}) {
                         ${rankBadge}
                       </span>
                     </td>
-                    <td><code>${std.student_code || "—"}</code></td>
-                    <td style="font-weight: 600;">${std.student_name}</td>
-                    <td>${std.group_name || "—"}</td>
-                    <td dir="ltr" style="text-align: right;">${std.parent_phone || "—"}</td>
+                    <td><code>${escapeHtml(std.student_code || "—")}</code></td>
+                    <td style="font-weight: 600;">${escapeHtml(std.student_name)}</td>
+                    <td>${escapeHtml(std.group_name || "—")}</td>
+                    <td dir="ltr" style="text-align: right;">${escapeHtml(std.parent_phone || "—")}</td>
                     <td>
                       <span class="badge ${std.attendance_rate >= 80 ? "badge-success" : std.attendance_rate >= 50 ? "badge-warning" : "badge-danger"}">
-                        ${std.attendance_rate}% (${std.attended_sessions}/${std.total_sessions})
+                        ${escapeHtml(std.attendance_rate)}% (${escapeHtml(std.attended_sessions)}/${escapeHtml(std.total_sessions)})
                       </span>
                     </td>
                     <td>
                       <span style="font-weight: 600; color: ${std.average_score >= 70 ? "#16a34a" : "#dc2626"};">
-                        ${std.average_score}%
+                        ${escapeHtml(std.average_score)}%
                       </span>
-                      <small style="color: var(--centrly-muted, #64748b);"> (${std.total_quizzes} كويز)</small>
+                      <small style="color: var(--centrly-muted, #64748b);"> (${escapeHtml(std.total_quizzes)} كويز)</small>
                     </td>
                     <td>
                       <div style="font-weight: bold; color: var(--centrly-primary, #2563eb);">
-                        ${std.overall_score}%
+                        ${escapeHtml(std.overall_score)}%
                       </div>
                     </td>
                     <td style="text-align: center;">
                       <button
                         class="btn btn-secondary btn-sm"
-                        onclick="window.centrlyApp.handleSendIndividualReport('${std.student_id}', '${std.student_name}')"
+                        onclick="window.centrlyApp.handleSendIndividualReport('${escapeHtml(std.student_id)}', '${escapeHtml(std.student_name).replace(/'/g, "\\'")}')"
                         title="إرسال تقرير الواتساب لولي الأمر"
                         style="display: inline-flex; align-items: center; gap: 0.35rem;"
                       >

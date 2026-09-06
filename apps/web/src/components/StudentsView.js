@@ -1,4 +1,5 @@
 import { renderStudentSearchBar } from "./StudentSearchBar.js";
+import { escapeHtml } from "../utils/escapeHtml.js";
 
 /**
  * Centrly Students Directory Component (DEV-16)
@@ -45,7 +46,7 @@ export function renderStudentsView(students = [], groups = []) {
           </div>
           <select id="studentGroupFilter" class="form-select" style="flex: 1; min-width: 180px;" onchange="window.centrlyApp.filterStudentsTable()">
             <option value="">جميع المجاميع</option>
-            ${(groups || []).map(g => `<option value="${g.name || g.id}">${g.name}</option>`).join('')}
+            ${(groups || []).map(g => `<option value="${escapeHtml(g.name || g.id)}">${escapeHtml(g.name)}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -72,23 +73,23 @@ export function renderStudentsView(students = [], groups = []) {
                 const studentPhone = s.studentPhone || s.student_phone;
                 return `
                 <tr>
-                  <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${s.code || s.student_code || '—'}</td>
-                  <td style="font-weight: 700; font-size: 0.95rem;">${s.name || s.full_name || '—'}</td>
-                  <td><span class="badge badge-blue" style="font-weight: 600;">${displayGroupName}</span></td>
+                  <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>
+                  <td style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(s.name || s.full_name || '—')}</td>
+                  <td><span class="badge badge-blue" style="font-weight: 600;">${escapeHtml(displayGroupName)}</span></td>
                   <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem;">
-                    <div>📱 ولي الأمر: ${s.parentPhone || s.parent_phone || '—'}</div>
-                    ${studentPhone ? `<div style="color: var(--centrly-text); font-size: 0.78rem;">👤 الطالب: ${studentPhone}</div>` : ''}
+                    <div>📱 ولي الأمر: ${escapeHtml(s.parentPhone || s.parent_phone || '—')}</div>
+                    ${studentPhone ? `<div style="color: var(--centrly-text); font-size: 0.78rem;">👤 الطالب: ${escapeHtml(studentPhone)}</div>` : ''}
                   </td>
                   <td>
-                    ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride || s.fee_override ? `<span class="badge badge-warning">خصم: ${s.feeOverride || s.fee_override} ج.م</span>` : '<span style="color:var(--centrly-text); font-size:0.85rem;">أساسي</span>')}
+                    ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride || s.fee_override ? `<span class="badge badge-warning">خصم: ${escapeHtml(s.feeOverride || s.fee_override)} ج.م</span>` : '<span style="color:var(--centrly-text); font-size:0.85rem;">أساسي</span>')}
                   </td>
                   <td>
-                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${s.id}')" title="نسخ رابط ولي الأمر بدون تسجيل دخول">
+                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رابط ولي الأمر بدون تسجيل دخول">
                       🔗 نسخ الرابط
                     </button>
                   </td>
                   <td>
-                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.editStudent('${s.id}')">
+                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.editStudent('${escapeHtml(s.id)}')">
                       ✏️ تعديل
                     </button>
                   </td>

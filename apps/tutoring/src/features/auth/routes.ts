@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { getServices } from "../../composition.js";
-import { extractToken } from "../../shared/middleware/auth.js";
+import { extractToken, authenticateUser } from "../../shared/middleware/auth.js";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 
 export const authRouter = Router();
@@ -178,3 +178,19 @@ authRouter.post("/validate-password", (req: Request, res: Response): void => {
   const result = authService.validatePassword(password || "");
   res.json(result);
 });
+
+// POST /api/auth/logout - Clear httpOnly access token cookie
+authRouter.post("/logout", (_req: Request, res: Response): void => {
+  res.clearCookie("access_token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+  res.status(200).json({ message: "Logged out successfully" });
+});
+
+// GET /api/auth/me - Return authenticated user profile
+authRouter.get("/me", authenticateUser, (req: AuthenticatedRequest, res: Response): void => {
+  res.json({ user: req.user });
+});
+

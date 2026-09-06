@@ -6,15 +6,14 @@
 const API_BASE_URL = window.__CENTRLY_API_URL__ || 'http://localhost:3000/api';
 
 export async function request(endpoint, options = {}) {
-  const token = localStorage.getItem('centrly_access_token');
   const headers = {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
   try {
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      credentials: 'include',
       ...options,
       headers,
     });
@@ -22,6 +21,10 @@ export async function request(endpoint, options = {}) {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
+      if (res.status === 401) {
+        localStorage.removeItem('centrly_logged_in');
+        localStorage.removeItem('centrly_user');
+      }
       let errMsg = `Request failed with status ${res.status}`;
       if (typeof data.error === 'string') {
         errMsg = data.error;

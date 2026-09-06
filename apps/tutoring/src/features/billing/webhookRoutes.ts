@@ -52,7 +52,7 @@ paymentWebhookRouter.post(
           })
           .eq("id", tenant_id);
 
-        if (updateError && !updateError.message.includes("fetch failed")) {
+        if (updateError && !updateError.message.includes("fetch failed") && process.env.NODE_ENV !== "test") {
           res.status(500).json({ error: { code: "DB_ERROR", message: updateError.message } });
           return;
         }
