@@ -171,7 +171,7 @@ test("DEV-HTTPS.1 & DEV-HTTPS.2: Security headers are present on API responses",
 // ========================================================
 
 test("DEV-60: validateEnv passes with valid configuration", async () => {
-  const { validateEnv } = await import("../dist/config/index.js");
+  const { validateEnv } = await import("../dist/shared/config/index.js");
   const valid = validateEnv({
     SUPABASE_URL: "https://example.supabase.co",
     SUPABASE_ANON_KEY: "valid-supabase-anon-key-12345",
@@ -188,7 +188,7 @@ test("DEV-60: validateEnv passes with valid configuration", async () => {
 });
 
 test("DEV-60: validateEnv rejects invalid SUPABASE_URL", async () => {
-  const { validateEnv } = await import("../dist/config/index.js");
+  const { validateEnv } = await import("../dist/shared/config/index.js");
   assert.throws(
     () => {
       validateEnv({
@@ -203,7 +203,7 @@ test("DEV-60: validateEnv rejects invalid SUPABASE_URL", async () => {
 });
 
 test("DEV-60: validateEnv rejects short SUPABASE_ANON_KEY", async () => {
-  const { validateEnv } = await import("../dist/config/index.js");
+  const { validateEnv } = await import("../dist/shared/config/index.js");
   assert.throws(
     () => {
       validateEnv({
