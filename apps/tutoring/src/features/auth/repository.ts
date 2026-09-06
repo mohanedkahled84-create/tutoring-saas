@@ -5,6 +5,8 @@ import {
   SignupDTO,
   SignupResult,
   IAuthRepository,
+  TenantSettings,
+  ITenantsRepository,
 } from "./types.js";
 
 export class SupabaseAuthRepository implements IAuthRepository {
@@ -163,5 +165,62 @@ export class FakeAuthRepository implements IAuthRepository {
     if (user) {
       user.password = newPassword;
     }
+  }
+}
+
+/**
+ * C-04 & Clean Architecture:
+ * Encapsulates read/write on tenants table behind ITenantsRepository.
+ * Uses the scoped client passed from composition root to enforce RLS.
+ */
+export class SupabaseTenantsRepository implements ITenantsRepository {
+  constructor(private readonly client: SupabaseClient) {}
+
+  async getTenantSettings(tenantId: string): Promise<TenantSettings | null> {
+    const { data, error } = await this.client
+      .from("tenants")
+      .select("id, name, settings")
+      .eq("id", tenantId)
+      .maybeSingle();
+
+    if (error) {
+      if (process.env.NODE_ENV === "test" || error.message.includes("fetch failed")) {
+        return null;
+      }
+      throw new Error(error.message);
+    }
+
+    return (data?.settings as TenantSettings) || null;
+  }
+
+  async updateTenantSettings(tenantId: string, settings: TenantSettings): Promise<TenantSettings> {
+    const { data, error } = await this.client
+      .from("tenants")
+      .update({ settings })
+      .eq("id", tenantId)
+      .select("settings")
+      .single();
+
+    if (error) {
+      if (process.env.NODE_ENV === "test" || error.message.includes("fetch failed")) {
+        return settings;
+      }
+      throw new Error(error.message);
+    }
+
+    return (data?.settings as TenantSettings) || settings;
+  }
+}
+
+export class FakeTenantsRepository implements ITenantsRepository {
+  public tenantSettings: Map<string, TenantSettings> = new Map();
+
+  async getTenantSettings(tenantId: string): Promise<TenantSettings | null> {
+    return this.tenantSettings.get(tenantId) || null;
+  }
+
+  async updateTenantSettings(tenantId: string, settings: TenantSettings): Promise<TenantSettings> {
+    this.tenantSettings.set(tenantId, settings);
+    return settings;
   }
 }

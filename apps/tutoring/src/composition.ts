@@ -59,6 +59,8 @@ import {
 import {
   AuthService,
   SupabaseAuthRepository,
+  SupabaseTenantsRepository,
+  ITenantsRepository,
 } from "./features/auth/index.js";
 import {
   AdminOpsService,
@@ -96,6 +98,7 @@ export interface AppServices {
   telemetry: TelemetryService;
   centers: CentersService;
   reports: ReportsService;
+  tenants: ITenantsRepository;
   [serviceName: string]: unknown;
 }
 
@@ -121,6 +124,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     telemetry: new TelemetryService(new SupabaseTelemetryRepository(effectiveClient)),
     centers: new CentersService(new SupabaseCentersRepository(effectiveClient, adminClient)),
     reports: new ReportsService(new SupabaseReportsRepository(effectiveClient)),
+    tenants: new SupabaseTenantsRepository(effectiveClient),
     _client: effectiveClient,
   };
 }
@@ -140,8 +144,14 @@ export function injectServices(defaultClient?: SupabaseClient) {
  * Helper to retrieve services from an incoming request or fallback to public container.
  */
 export function getServices(req: AuthenticatedRequest): AppServices {
+  if (req.supabase) {
+    if (!req.services || (req.services as { _client?: SupabaseClient })._client !== req.supabase) {
+      req.services = createCompositionRoot(req.supabase);
+    }
+    return req.services as unknown as AppServices;
+  }
   if (req.services) {
     return req.services as unknown as AppServices;
   }
-  return createCompositionRoot(req.supabase || supabasePublic);
+  return createCompositionRoot(supabasePublic);
 }

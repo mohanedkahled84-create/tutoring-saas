@@ -49,3 +49,15 @@ export interface IAuthRepository {
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(token: string, newPassword: string): Promise<void>;
 }
+
+export interface TenantSettings {
+  homework_submission?: "in_session" | "online_before_session";
+  auto_notification?: boolean;
+  enable_top_performers?: boolean;
+  [key: string]: unknown;
+}
+
+export interface ITenantsRepository {
+  getTenantSettings(tenantId: string): Promise<TenantSettings | null>;
+  updateTenantSettings(tenantId: string, settings: TenantSettings): Promise<TenantSettings>;
+}

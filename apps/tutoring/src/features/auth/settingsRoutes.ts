@@ -2,7 +2,8 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { validateBody } from "../../shared/middleware/validation.js";
-import { getServiceSupabaseClient } from "../../supabase.js";
+import { requireCenterOwnerOrAdmin } from "../../shared/middleware/auth.js";
+import { getServices } from "../../composition.js";
 
 export const settingsRouter = Router();
 
@@ -26,30 +27,27 @@ settingsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
     return;
   }
 
-  const supabase = getServiceSupabaseClient();
-  const { data: tenant, error } = await supabase
-    .from("tenants")
-    .select("id, name, settings")
-    .eq("id", tenantId)
-    .single();
+  try {
+    const tenantsRepo = getServices(req).tenants;
+    const settings = tenantId ? await tenantsRepo.getTenantSettings(tenantId) : null;
 
-  if (error || !tenant) {
-    // Return default settings gracefully
+    res.json({
+      settings: {
+        ...DEFAULT_TENANT_SETTINGS,
+        ...(settings || {}),
+      },
+    });
+  } catch (_err: unknown) {
+    // Return default settings gracefully on failure
     res.json({ settings: DEFAULT_TENANT_SETTINGS });
-    return;
   }
-
-  res.json({
-    settings: {
-      ...DEFAULT_TENANT_SETTINGS,
-      ...(tenant.settings || {}),
-    },
-  });
 });
 
 // PUT /api/settings - Update tenant workflow settings
+// C-04: Role gate enforced - only owner, center_owner, or admin can modify tenant settings
 settingsRouter.put(
   "/",
+  requireCenterOwnerOrAdmin,
   validateBody(updateSettingsSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id;
@@ -58,36 +56,30 @@ settingsRouter.put(
       return;
     }
 
-    const supabase = getServiceSupabaseClient();
+    try {
+      const targetTenantId = tenantId || "admin-tenant";
+      const tenantsRepo = getServices(req).tenants;
 
-    // Fetch existing settings
-    const { data: tenant } = await supabase
-      .from("tenants")
-      .select("settings")
-      .eq("id", tenantId)
-      .single();
+      // Fetch existing settings via repository (scoped client)
+      const existingSettings = await tenantsRepo.getTenantSettings(targetTenantId);
 
-    const mergedSettings = {
-      ...DEFAULT_TENANT_SETTINGS,
-      ...(tenant?.settings || {}),
-      ...req.body,
-    };
+      const mergedSettings = {
+        ...DEFAULT_TENANT_SETTINGS,
+        ...(existingSettings || {}),
+        ...req.body,
+      };
 
-    const { error: updateError } = await supabase
-      .from("tenants")
-      .update({ settings: mergedSettings })
-      .eq("id", tenantId);
+      const updated = await tenantsRepo.updateTenantSettings(targetTenantId, mergedSettings);
 
-    if (updateError) {
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to update tenant settings", details: updateError.message },
+      res.json({
+        message: "Settings updated successfully",
+        settings: updated || mergedSettings,
       });
-      return;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to update tenant settings";
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Failed to update tenant settings", details: message },
+      });
     }
-
-    res.json({
-      message: "Settings updated successfully",
-      settings: mergedSettings,
-    });
   }
 );
