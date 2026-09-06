@@ -22,14 +22,19 @@ const updateSettingsSchema = z.object({
 // GET /api/settings - Get tenant workflow settings
 settingsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id;
-  if (!tenantId && req.user?.role !== "admin") {
-    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+  if (!tenantId) {
+    res.status(400).json({
+      error: {
+        code: "TENANT_CONTEXT_REQUIRED",
+        message: "No tenant context available for this request.",
+      },
+    });
     return;
   }
 
   try {
     const tenantsRepo = getServices(req).tenants;
-    const settings = tenantId ? await tenantsRepo.getTenantSettings(tenantId) : null;
+    const settings = await tenantsRepo.getTenantSettings(tenantId);
 
     res.json({
       settings: {
@@ -51,17 +56,21 @@ settingsRouter.put(
   validateBody(updateSettingsSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id;
-    if (!tenantId && req.user?.role !== "admin") {
-      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    if (!tenantId) {
+      res.status(400).json({
+        error: {
+          code: "TENANT_CONTEXT_REQUIRED",
+          message: "No tenant context available for this request.",
+        },
+      });
       return;
     }
 
     try {
-      const targetTenantId = tenantId || "admin-tenant";
       const tenantsRepo = getServices(req).tenants;
 
       // Fetch existing settings via repository (scoped client)
-      const existingSettings = await tenantsRepo.getTenantSettings(targetTenantId);
+      const existingSettings = await tenantsRepo.getTenantSettings(tenantId);
 
       const mergedSettings = {
         ...DEFAULT_TENANT_SETTINGS,
@@ -69,7 +78,7 @@ settingsRouter.put(
         ...req.body,
       };
 
-      const updated = await tenantsRepo.updateTenantSettings(targetTenantId, mergedSettings);
+      const updated = await tenantsRepo.updateTenantSettings(tenantId, mergedSettings);
 
       res.json({
         message: "Settings updated successfully",

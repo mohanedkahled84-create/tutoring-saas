@@ -63,6 +63,12 @@ test("C-04: settingsRoutes.ts adheres to Clean Architecture and uses Repository 
     "settingsRoutes.ts must NOT import @supabase/supabase-js directly"
   );
 
+  // Must not have fake admin-tenant fallback
+  assert.ok(
+    !code.includes("admin-tenant"),
+    "settingsRoutes.ts must NOT contain fake admin-tenant fallback"
+  );
+
   // Must enforce owner/center_owner role gate on PUT /
   assert.ok(
     code.includes("requireCenterOwnerOrAdmin"),
@@ -250,7 +256,98 @@ test("C-04: End-to-end PUT /api/settings blocks assistant and permits owner", as
     const bodyGet = await resGet.json();
     assert.equal(bodyGet.settings.homework_submission, "online_before_session");
     assert.equal(bodyGet.settings.auto_notification, false);
+
+    // 4. Center owner user attempt -> 200 OK
+    currentUser = { id: "u-center-owner", role: "center_owner", tenant_id: "tenant-abc" };
+    const resCenterOwner = await fetch(`${baseUrl}/api/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enable_top_performers: false }),
+    });
+    assert.equal(resCenterOwner.status, 200);
+
+    // 5. Admin user WITH tenant_id attempt -> 200 OK
+    currentUser = { id: "u-admin", role: "admin", tenant_id: "tenant-abc" };
+    const resAdmin = await fetch(`${baseUrl}/api/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enable_top_performers: true }),
+    });
+    assert.equal(resAdmin.status, 200);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("C-04: PUT and GET /api/settings reject admin without tenant_id with 400 TENANT_CONTEXT_REQUIRED and no repo update", async () => {
+  const { settingsRouter } = await import("../dist/features/auth/settingsRoutes.js");
+  const { FakeTenantsRepository } = await import("../dist/features/auth/repository.js");
+
+  const app = express();
+  app.use(express.json());
+
+  let updateCalled = false;
+  let getCalled = false;
+  const fakeRepo = new FakeTenantsRepository();
+  const originalUpdate = fakeRepo.updateTenantSettings.bind(fakeRepo);
+  const originalGet = fakeRepo.getTenantSettings.bind(fakeRepo);
+
+  fakeRepo.updateTenantSettings = async (tenantId, settings) => {
+    updateCalled = true;
+    return originalUpdate(tenantId, settings);
+  };
+  fakeRepo.getTenantSettings = async (tenantId) => {
+    getCalled = true;
+    return originalGet(tenantId);
+  };
+
+  let currentUser = { id: "u-admin", role: "admin" }; // Admin with NO tenant_id
+  app.use((req, _res, next) => {
+    req.user = currentUser;
+    req.services = {
+      tenants: fakeRepo,
+    };
+    next();
+  });
+
+  app.use("/api/settings", settingsRouter);
+
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  const baseUrl = `http://localhost:${port}`;
+
+  try {
+    // 1. PUT /api/settings without tenant_id -> 400 Bad Request
+    const resPut = await fetch(`${baseUrl}/api/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ homework_submission: "online_before_session" }),
+    });
+    assert.equal(resPut.status, 400);
+    const bodyPut = await resPut.json();
+    assert.deepEqual(bodyPut, {
+      error: {
+        code: "TENANT_CONTEXT_REQUIRED",
+        message: "No tenant context available for this request.",
+      },
+    });
+    // Ensure repository update was NEVER called
+    assert.equal(updateCalled, false, "updateTenantSettings must NOT be called when tenant context is missing");
+
+    // 2. GET /api/settings without tenant_id -> 400 Bad Request
+    const resGet = await fetch(`${baseUrl}/api/settings`);
+    assert.equal(resGet.status, 400);
+    const bodyGet = await resGet.json();
+    assert.deepEqual(bodyGet, {
+      error: {
+        code: "TENANT_CONTEXT_REQUIRED",
+        message: "No tenant context available for this request.",
+      },
+    });
+    assert.equal(getCalled, false, "getTenantSettings must NOT be called when tenant context is missing");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
