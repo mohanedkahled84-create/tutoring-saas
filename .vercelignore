@@ -1,0 +1,10 @@
+apps/
+packages/
+backups/
+docs/
+scripts/
+supabase/
+tests/
+.git/
+.github/
+.husky/
