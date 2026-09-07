@@ -1,9 +1,1 @@
-{
-  "version": 2,
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/apps/web/$1"
-    }
-  ]
-}
+{"rewrites":[{"source":"/","destination":"/index.html"},{"source":"/api/waitlist","destination":"/api/waitlist.js"}]}
