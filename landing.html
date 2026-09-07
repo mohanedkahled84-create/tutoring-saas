@@ -1234,8 +1234,8 @@
               </label>
 
               <label class="w-full" id="field-center-details" style="display:none;">
-                اسم السنتر والمحافظة *
-                <input name="location" type="text" placeholder="اسم السنتر والمحافظة">
+                <span id="lbl-center-name">اسم السنتر *</span>
+                <input name="location" type="text" placeholder="اسم السنتر">
               </label>
 
               <label class="w-full">
@@ -1481,6 +1481,7 @@
       const fieldSubject = document.getElementById('field-subject');
       const fieldCenter = document.getElementById('field-center-details');
       const lblCount = document.getElementById('lbl-count');
+      const inputFullname = document.querySelector('input[name="fullname"]');
 
       inputType.value = role;
 
@@ -1488,13 +1489,15 @@
         btnTeacher.classList.add('active');
         btnCenter.classList.remove('active');
         lblName.innerText = 'الاسم *';
+        if (inputFullname) inputFullname.placeholder = 'الاسم بالكامل';
         fieldSubject.style.display = 'flex';
         fieldCenter.style.display = 'none';
         lblCount.innerText = 'عدد الطلاب التقديري';
       } else {
         btnCenter.classList.add('active');
         btnTeacher.classList.remove('active');
-        lblName.innerText = 'اسم السنتر / المسؤول *';
+        lblName.innerText = 'اسم المسؤول *';
+        if (inputFullname) inputFullname.placeholder = 'اسم المسؤول بالكامل';
         fieldSubject.style.display = 'none';
         fieldCenter.style.display = 'flex';
         lblCount.innerText = 'عدد القاعات والمدرسين بالسنتر';
