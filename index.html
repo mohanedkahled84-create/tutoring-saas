@@ -1500,6 +1500,14 @@
       const formData = new FormData(form);
       const data = Object.fromEntries(formData.entries());
 
+      // Normalize phone and text inputs
+      const convertDigits = (s) => (s || '').replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
+      if (data.phone) data.phone = convertDigits(data.phone).replace(/[\s\-\+]/g, '');
+      if (data.fullname) data.fullname = data.fullname.trim();
+      if (data.email) data.email = data.email.trim();
+      if (data.subject) data.subject = data.subject.trim();
+      if (data.location) data.location = data.location.trim();
+
       try {
         const response = await fetch('/api/waitlist', {
           method: 'POST',
@@ -1515,7 +1523,9 @@
           feedback.className = 'form-alert success';
           feedback.style.display = 'block';
           feedback.innerText = result.message || 'تم تسجيل حجزك بنجاح وحفظ كود خصم الـ 20%! سنتواصل معك عبر الواتساب لتأكيد موعد تجربتك المجانية.';
+          const currentRole = data.account_type || 'teacher';
           form.reset();
+          setFormRole(currentRole);
         } else {
           feedback.className = 'form-alert error';
           feedback.style.display = 'block';
@@ -1528,6 +1538,7 @@
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerText = 'تأكيد الحجز وحفظ كود الخصم 20%';
+        feedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
   </script>
