@@ -3,6 +3,7 @@ import {
   MonthlyReportSummary,
   ReportSendResult,
   BulkSendSummary,
+  IMessageLogsRepository,
 } from "./types.js";
 import {
   calculateStudentSummary,
@@ -11,7 +12,6 @@ import {
   formatStudentReportMessage,
 } from "./calculation.js";
 import { logger } from "../../shared/utils/logger.js";
-import { getServiceSupabaseClient } from "../../supabase.js";
 
 export interface IReportsWhatsAppDispatcher {
   dispatchReportMessage?: (payload: {
@@ -27,7 +27,8 @@ export interface IReportsWhatsAppDispatcher {
 export class ReportsService {
   constructor(
     private readonly repo: IReportsRepository,
-    private readonly whatsAppDispatcher?: IReportsWhatsAppDispatcher
+    private readonly whatsAppDispatcher?: IReportsWhatsAppDispatcher,
+    private readonly messageLogsRepo?: IMessageLogsRepository
   ) {}
 
   /**
@@ -245,19 +246,20 @@ export class ReportsService {
       return;
     }
 
-    // Default: Record directly into message_logs table with idempotency
+    // Default: Record directly into message_logs table with idempotency via repository
     try {
-      const supabase = getServiceSupabaseClient();
-      await supabase.from("message_logs").insert({
-        tenant_id: tenantId,
-        student_id: studentId,
-        recipient_type: "parent",
-        recipient_phone: recipientPhone,
-        message_type: "attendance_absent", // fallback enum if report enum not migrated
-        status: priority === "immediate" ? "sent" : "needs_review",
-        idempotency_key: idempotencyKey,
-        error_detail: `[ReportNotification] Priority: ${priority}`,
-      });
+      if (this.messageLogsRepo) {
+        await this.messageLogsRepo.insertLog({
+          tenant_id: tenantId,
+          student_id: studentId,
+          recipient_type: "parent",
+          recipient_phone: recipientPhone,
+          message_type: "attendance_absent", // fallback enum if report enum not migrated
+          status: priority === "immediate" ? "sent" : "needs_review",
+          idempotency_key: idempotencyKey,
+          error_detail: `[ReportNotification] Priority: ${priority}`,
+        });
+      }
     } catch {
       // In test/mock mode, ignore DB errors
     }

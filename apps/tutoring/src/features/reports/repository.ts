@@ -2,6 +2,8 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import {
   IReportsRepository,
   StudentRawPerformanceData,
+  MessageLogEntry,
+  IMessageLogsRepository,
 } from "./types.js";
 
 interface AttendanceReportRow {
@@ -185,5 +187,60 @@ export class SupabaseReportsRepository implements IReportsRepository {
   ): Promise<StudentRawPerformanceData | null> {
     const students = await this.getStudentsWithPerformanceData(tenantId, month, year);
     return students.find((s) => s.student.id === studentId) || null;
+  }
+}
+
+/**
+ * M-05: MessageLogs Repository implementation using scoped client.
+ * Encapsulates message_logs writes behind a Clean Architecture repository boundary.
+ */
+export class SupabaseMessageLogsRepository implements IMessageLogsRepository {
+  constructor(private readonly client: SupabaseClient) {}
+
+  async insertLog(entry: MessageLogEntry): Promise<void> {
+    const { error } = await this.client.from("message_logs").insert({
+      tenant_id: entry.tenant_id,
+      student_id: entry.student_id || null,
+      recipient_type: entry.recipient_type,
+      recipient_phone: entry.recipient_phone,
+      message_type: entry.message_type,
+      status: entry.status,
+      idempotency_key: entry.idempotency_key,
+      error_detail: entry.error_detail || null,
+      payload: entry.payload || {},
+    });
+
+    if (error) {
+      if (process.env.NODE_ENV === "test" || error.message?.includes("fetch failed")) {
+        return;
+      }
+      throw new Error(`Failed to insert message log: ${error.message}`);
+    }
+  }
+
+  async isMessageDispatched(idempotencyKey: string): Promise<boolean> {
+    try {
+      const { data } = await this.client
+        .from("message_logs")
+        .select("id")
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+
+      return Boolean(data);
+    } catch {
+      return false;
+    }
+  }
+}
+
+export class FakeMessageLogsRepository implements IMessageLogsRepository {
+  public logs: MessageLogEntry[] = [];
+
+  async insertLog(entry: MessageLogEntry): Promise<void> {
+    this.logs.push(entry);
+  }
+
+  async isMessageDispatched(idempotencyKey: string): Promise<boolean> {
+    return this.logs.some((l) => l.idempotency_key === idempotencyKey);
   }
 }

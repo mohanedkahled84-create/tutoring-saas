@@ -81,6 +81,8 @@ import {
 import {
   ReportsService,
   SupabaseReportsRepository,
+  SupabaseMessageLogsRepository,
+  IMessageLogsRepository,
 } from "./features/reports/index.js";
 
 export interface AppServices {
@@ -99,6 +101,7 @@ export interface AppServices {
   centers: CentersService;
   reports: ReportsService;
   tenants: ITenantsRepository;
+  messageLogs: IMessageLogsRepository;
   [serviceName: string]: unknown;
 }
 
@@ -108,6 +111,7 @@ export interface AppServices {
 export function createCompositionRoot(client?: SupabaseClient): AppServices {
   const effectiveClient = client || supabasePublic;
   const adminClient = getServiceSupabaseClient();
+  const messageLogsRepo = new SupabaseMessageLogsRepository(effectiveClient);
 
   return {
     riskWatchlist: new RiskWatchlistService(new SupabaseRiskWatchlistRepository(effectiveClient)),
@@ -121,10 +125,11 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     auth: new AuthService(new SupabaseAuthRepository(effectiveClient, adminClient)),
     adminOps: new AdminOpsService(new SupabaseAdminOpsRepository(adminClient)),
     businessDashboard: new BusinessDashboardService(new SupabaseBusinessDashboardRepository(adminClient)),
-    telemetry: new TelemetryService(new SupabaseTelemetryRepository(effectiveClient)),
+    telemetry: new TelemetryService(new SupabaseTelemetryRepository(adminClient)),
     centers: new CentersService(new SupabaseCentersRepository(effectiveClient, adminClient)),
-    reports: new ReportsService(new SupabaseReportsRepository(effectiveClient)),
+    reports: new ReportsService(new SupabaseReportsRepository(effectiveClient), undefined, messageLogsRepo),
     tenants: new SupabaseTenantsRepository(effectiveClient),
+    messageLogs: messageLogsRepo,
     _client: effectiveClient,
   };
 }

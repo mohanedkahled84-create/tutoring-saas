@@ -1,14 +1,18 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { requireFeatureFlag } from "../../shared/middleware/featureFlags.js";
+import { telemetryRateLimiter } from "../../shared/middleware/rateLimit.js";
+import { extractToken } from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
 import { TelemetryService } from "./service.js";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
+import { supabasePublic, getServiceSupabaseClient } from "../../supabase.js";
 
 export const telemetryRouter = Router();
 
-// Guarded by behaviorTracking feature flag
+// Guarded by behaviorTracking feature flag and dedicated rate limiter (DEV-55 / M-02)
 telemetryRouter.use(requireFeatureFlag("behaviorTracking"));
+telemetryRouter.use(telemetryRateLimiter);
 
 const telemetryEventsSchema = z.object({
   events: z
@@ -26,6 +30,7 @@ const telemetryEventsSchema = z.object({
 });
 
 // POST /api/telemetry/events - Ingest batched client/product behavior events
+// M-02: Rate-limited, schema-validated, and binds verified tenant_id exclusively from auth token
 telemetryRouter.post(
   "/events",
   async (req: Request, res: Response): Promise<void> => {
@@ -43,7 +48,29 @@ telemetryRouter.post(
 
     try {
       const authReq = req as AuthenticatedRequest;
-      const tenantId = authReq.user?.tenant_id || null;
+      let tenantId: string | null = authReq.user?.tenant_id || null;
+
+      // If user not already resolved, check for session token to bind legitimate tenant_id
+      if (!tenantId) {
+        const token = extractToken(authReq);
+        if (token) {
+          try {
+            const { data: authData, error: authError } = await supabasePublic.auth.getUser(token);
+            if (!authError && authData?.user) {
+              const supabase = getServiceSupabaseClient();
+              const { data: userRec } = await supabase
+                .from("users")
+                .select("tenant_id")
+                .eq("id", authData.user.id)
+                .single();
+              tenantId = userRec?.tenant_id || null;
+            }
+          } catch {
+            tenantId = null;
+          }
+        }
+      }
+
       const services = getServices(authReq);
       const telemetryService = services.telemetry as TelemetryService;
 
@@ -60,3 +87,4 @@ telemetryRouter.post(
     }
   }
 );
+

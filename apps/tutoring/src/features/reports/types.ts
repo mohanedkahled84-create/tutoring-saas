@@ -86,3 +86,20 @@ export interface IReportsRepository {
     year: number
   ): Promise<StudentRawPerformanceData | null>;
 }
+
+export interface MessageLogEntry {
+  tenant_id: string;
+  student_id?: string | null;
+  recipient_type: "student" | "parent";
+  recipient_phone: string;
+  message_type: string;
+  status: "sent" | "needs_review" | "failed" | "queued";
+  idempotency_key: string;
+  error_detail?: string | null;
+  payload?: Record<string, unknown>;
+}
+
+export interface IMessageLogsRepository {
+  insertLog(entry: MessageLogEntry): Promise<void>;
+  isMessageDispatched?(idempotencyKey: string): Promise<boolean>;
+}

@@ -1,4 +1,4 @@
-﻿import rateLimit from "express-rate-limit";
+import rateLimit from "express-rate-limit";
 import { Request, Response } from "express";
 
 // DEV-APISEC.1: Global rate limiter (100 requests per 15 minutes per IP)
@@ -45,6 +45,22 @@ export const attendanceRateLimiter = rateLimit({
         code: "RATE_LIMITED",
         message:
           "Attendance submission rate limit exceeded. Please wait a minute before submitting again.",
+      },
+    });
+  },
+});
+
+// DEV-55 / M-02: Telemetry batch ingestion rate limiter - 60 batches/minute per IP
+export const telemetryRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req: Request, res: Response) => {
+    res.status(429).json({
+      error: {
+        code: "RATE_LIMITED",
+        message: "Telemetry ingestion rate limit exceeded. Please try again later.",
       },
     });
   },

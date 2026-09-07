@@ -351,3 +351,225 @@ test("C-04: PUT and GET /api/settings reject admin without tenant_id with 400 TE
   }
 });
 
+// ============================================================================
+// M-02: Telemetry Rate Limiting & Authenticated Tenant Binding
+// ============================================================================
+
+test("M-02: Migration 20260906000002_sec_hotfix_m02_telemetry_rls.sql drops open insert policy and restricts to service_role", () => {
+  const migrationPath = path.resolve(
+    __dirname,
+    "../../../supabase/migrations/20260906000002_sec_hotfix_m02_telemetry_rls.sql"
+  );
+  assert.ok(fs.existsSync(migrationPath), "M-02 Migration file must exist");
+
+  const sql = fs.readFileSync(migrationPath, "utf8");
+
+  assert.ok(
+    sql.includes("drop policy if exists telemetry_events_insert_all on public.telemetry_events;"),
+    "Must drop open insert policy"
+  );
+  assert.ok(
+    sql.includes("create policy telemetry_events_service_role_insert on public.telemetry_events"),
+    "Must create service_role insert policy"
+  );
+  assert.ok(
+    sql.includes("for insert to service_role with check (true);"),
+    "Must restrict insert strictly to service_role"
+  );
+});
+
+test("M-02: Telemetry endpoint rate limits excessive requests", async () => {
+  const { telemetryRateLimiter } = await import("../dist/shared/middleware/rateLimit.js");
+
+  const app = express();
+  app.use(express.json());
+  app.use(telemetryRateLimiter);
+  app.post("/test-telemetry-rate", (_req, res) => {
+    res.status(200).json({ ok: true });
+  });
+
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  const baseUrl = `http://localhost:${port}`;
+
+  try {
+    let rateLimited = false;
+    for (let i = 0; i < 65; i++) {
+      const res = await fetch(`${baseUrl}/test-telemetry-rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (res.status === 429) {
+        rateLimited = true;
+        const body = await res.json();
+        assert.equal(body.error.code, "RATE_LIMITED");
+        break;
+      }
+    }
+    assert.equal(rateLimited, true, "Rate limiter must trip after 60 requests per minute");
+  } finally {
+    await telemetryRateLimiter.resetKey("::/56");
+    await telemetryRateLimiter.resetKey("::1");
+    await telemetryRateLimiter.resetKey("127.0.0.1");
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("M-02: Telemetry endpoint binds verified tenant_id from user session, ignoring body spoofing", async () => {
+  const { config } = await import("../dist/shared/config/index.js");
+  const { telemetryRouter } = await import("../dist/features/telemetry/routes.js");
+  const { FakeTelemetryRepository } = await import("../dist/features/telemetry/repository.js");
+  const { TelemetryService } = await import("../dist/features/telemetry/service.js");
+  const { telemetryRateLimiter } = await import("../dist/shared/middleware/rateLimit.js");
+
+  await telemetryRateLimiter.resetKey("::/56");
+  await telemetryRateLimiter.resetKey("::1");
+  await telemetryRateLimiter.resetKey("127.0.0.1");
+
+  const prevBehaviorTracking = config.features.behaviorTracking;
+  config.features.behaviorTracking = true;
+
+  const fakeRepo = new FakeTelemetryRepository();
+  const service = new TelemetryService(fakeRepo);
+
+  const app = express();
+  app.use(express.json());
+
+  let testUser = null;
+  app.use((req, _res, next) => {
+    req.user = testUser;
+    req.services = {
+      telemetry: service,
+    };
+    next();
+  });
+
+  app.use("/api/telemetry", telemetryRouter);
+
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  const baseUrl = `http://localhost:${port}`;
+
+  try {
+    // 1. Authenticated user: body attempts to spoof tenant_id: "evil-tenant-999"
+    testUser = { id: "u-legit", tenant_id: "legit-tenant-123", role: "owner" };
+    const resAuth = await fetch(`${baseUrl}/api/telemetry/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tenant_id: "evil-tenant-999", // Spoof attempt
+        events: [
+          {
+            event_name: "test_action",
+            properties: { spoofed_tenant: "evil-tenant-999" },
+          },
+        ],
+      }),
+    });
+    assert.equal(resAuth.status, 200);
+    // Recorded event must have the legit tenant_id, never the spoofed one
+    const authEvent = fakeRepo.recorded[fakeRepo.recorded.length - 1];
+    assert.equal(authEvent.tenant_id, "legit-tenant-123");
+
+    // 2. Anonymous user: tenant_id must be null
+    testUser = null;
+    const resAnon = await fetch(`${baseUrl}/api/telemetry/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tenant_id: "evil-tenant-999", // Spoof attempt
+        events: [
+          {
+            event_name: "anonymous_page_view",
+            properties: { path: "/login" },
+          },
+        ],
+      }),
+    });
+    assert.equal(resAnon.status, 200);
+    const anonEvent = fakeRepo.recorded[fakeRepo.recorded.length - 1];
+    assert.equal(anonEvent.tenant_id, null);
+  } finally {
+    config.features.behaviorTracking = prevBehaviorTracking;
+    await telemetryRateLimiter.resetKey("::/56");
+    await telemetryRateLimiter.resetKey("::1");
+    await telemetryRateLimiter.resetKey("127.0.0.1");
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+// ============================================================================
+// M-05: Repository Boundary Encapsulation in ReportsService
+// ============================================================================
+
+test("M-05: reports/service.ts has ZERO direct Supabase imports and complies with Clean Architecture", () => {
+  const servicePath = path.resolve(__dirname, "../src/features/reports/service.ts");
+  const code = fs.readFileSync(servicePath, "utf8");
+
+  // Must not import getServiceSupabaseClient
+  assert.ok(
+    !code.includes("getServiceSupabaseClient"),
+    "reports/service.ts must NOT import getServiceSupabaseClient"
+  );
+
+  // Must not import @supabase/supabase-js
+  assert.ok(
+    !code.includes("@supabase/supabase-js"),
+    "reports/service.ts must NOT import @supabase/supabase-js"
+  );
+});
+
+test("M-05: ReportsService routes message_logs writes through IMessageLogsRepository", async () => {
+  const { ReportsService } = await import("../dist/features/reports/service.js");
+  const { FakeMessageLogsRepository } = await import("../dist/features/reports/repository.js");
+
+  const fakeMessageLogsRepo = new FakeMessageLogsRepository();
+  const mockReportsRepo = {
+    async getStudentsWithPerformanceData() {
+      return [
+        {
+          student: {
+            id: "stu-1",
+            name: "سالم محمود",
+            code: "1001",
+            parent_phone: "01012345678",
+          },
+          attendances: [{ attended: true }],
+          grades: [{ score: 20, max_score: 20 }],
+        },
+      ];
+    },
+    async getStudentPerformanceData(_tenantId, studentId) {
+      return {
+        student: {
+          id: studentId,
+          name: "سالم محمود",
+          code: "1001",
+          parent_phone: "01012345678",
+        },
+        attendances: [{ attended: true }],
+        grades: [{ score: 20, max_score: 20 }],
+      };
+    },
+  };
+
+  // Instantiate ReportsService with no custom WhatsApp dispatcher, but with FakeMessageLogsRepository
+  const service = new ReportsService(mockReportsRepo, undefined, fakeMessageLogsRepo);
+
+  // Trigger individual report send (triggers fallback message log write)
+  const result = await service.sendIndividualReport("tenant-test-1", "stu-1", 9, 2026);
+  assert.equal(result.status, "sent");
+
+  // Verify write was captured by FakeMessageLogsRepository
+  assert.equal(fakeMessageLogsRepo.logs.length, 1);
+  const log = fakeMessageLogsRepo.logs[0];
+  assert.equal(log.tenant_id, "tenant-test-1");
+  assert.equal(log.student_id, "stu-1");
+  assert.equal(log.recipient_phone, "01012345678");
+  assert.equal(log.status, "sent");
+});
+
+
