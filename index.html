@@ -30,7 +30,14 @@
     }
 
     * { box-sizing: border-box; }
-    html, body {
+    html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      -webkit-font-smoothing: antialiased;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
       margin: 0;
       padding: 0;
       overflow-x: hidden;
@@ -40,6 +47,8 @@
       font-family: 'Cairo', sans-serif;
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      -webkit-overflow-scrolling: touch;
+      text-rendering: optimizeLegibility;
     }
 
     .shell {
@@ -50,18 +59,19 @@
       width: 100%;
     }
 
-    /* Top Navigation */
+    /* Top Navigation - High Performance Hardware Accelerated */
     .nav {
       height: 72px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(8px);
+      background: #FFFFFF;
       border-bottom: 1px solid var(--line);
       position: sticky;
       top: 0;
       z-index: 100;
+      transform: translateZ(0);
+      box-shadow: 0 2px 8px rgba(23, 45, 112, 0.03);
     }
     .brand-wrap {
       display: inline-flex;
@@ -356,13 +366,15 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      transition: .2s;
-      box-shadow: 0 6px 18px rgba(23, 45, 112, 0.03);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 14px rgba(23, 45, 112, 0.04);
+      transform: translateZ(0);
+      will-change: transform;
     }
     .feature-card:hover {
       border-color: var(--blue);
-      transform: translateY(-3px);
-      box-shadow: 0 12px 28px rgba(23, 45, 112, 0.08);
+      transform: translateY(-3px) translateZ(0);
+      box-shadow: 0 8px 22px rgba(23, 45, 112, 0.08);
     }
     .feature-card.highlight {
       border-color: #ffd899;
@@ -656,22 +668,22 @@
       margin: 8px 0 0;
     }
 
-    /* Modal / Deep-Dive Drawer */
+    /* Modal / Deep-Dive Drawer - Zero GPU Overhead when closed */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(18, 28, 62, 0.6);
-      backdrop-filter: blur(4px);
+      background: rgba(18, 28, 62, 0.72);
       z-index: 1000;
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       padding: 16px;
       opacity: 0;
       pointer-events: none;
-      transition: .25s ease;
+      transition: opacity .2s ease;
     }
     .modal-overlay.active {
+      display: flex !important;
       opacity: 1;
       pointer-events: auto;
     }
@@ -935,6 +947,12 @@
       color: #9C1C26;
       border: 1.5px solid #C9414D;
       box-shadow: 0 4px 12px rgba(201, 65, 77, 0.1);
+    }
+
+    /* Off-screen Render Optimization (60fps Scroll) */
+    .features-wrap, .bento-section, .faq-wrap {
+      content-visibility: auto;
+      contain-intrinsic-size: 0 400px;
     }
   </style>
 </head>
