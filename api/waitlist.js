@@ -12,7 +12,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { fullname, phone, email, account_type, subject, location, capacity } = req.body || {};
+    let parsedBody = req.body;
+    if (typeof parsedBody === 'string') {
+      try {
+        parsedBody = JSON.parse(parsedBody);
+      } catch (e) {
+        console.error('Failed to parse body string:', e);
+      }
+    }
+    const { fullname, phone, email, account_type, subject, location, capacity } = parsedBody || {};
 
     if (!fullname || !phone) {
       return res.status(400).json({ success: false, message: 'الاسم ورقم الواتساب مطلوبان' });
@@ -52,6 +60,7 @@ export default async function handler(req, res) {
       if (!response.ok) {
         const errorDetails = await response.text();
         console.error('Airtable Error:', errorDetails);
+        return res.status(500).json({ success: false, message: 'خطأ في الربط مع Airtable: ' + errorDetails });
       }
     } else {
       console.log('Submission received (Waiting for Airtable environment variables):', {

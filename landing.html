@@ -912,7 +912,31 @@
         border-radius: 18px;
         width: 94%;
         max-height: 85vh;
-      }
+    /* Form Alert Feedback */
+    .form-alert {
+      display: none;
+      margin-top: 15px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.6;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    .form-alert.success {
+      display: block !important;
+      background: #EAF8F0;
+      color: #1A5E3A;
+      border: 1.5px solid #25845A;
+      box-shadow: 0 4px 12px rgba(37, 132, 90, 0.1);
+    }
+    .form-alert.error {
+      display: block !important;
+      background: #FEECEB;
+      color: #9C1C26;
+      border: 1.5px solid #C9414D;
+      box-shadow: 0 4px 12px rgba(201, 65, 77, 0.1);
     }
   </style>
 </head>
