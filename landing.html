@@ -1462,8 +1462,8 @@
       }
     }
 
-    // Booking Form Submission Handler
-    function handleFormSubmit(e) {
+    // Booking Form Submission Handler (Connected to Vercel API & Airtable)
+    async function handleFormSubmit(e) {
       e.preventDefault();
       const form = document.getElementById('booking-form');
       const feedback = document.getElementById('form-feedback');
@@ -1471,14 +1471,40 @@
 
       submitBtn.disabled = true;
       submitBtn.innerText = 'جارٍ تسجيل بياناتك وتأكيد الخصم...';
+      feedback.style.display = 'none';
 
-      setTimeout(() => {
-        feedback.className = 'form-alert success';
-        feedback.innerText = 'تم تسجيل حجزك بنجاح وحفظ كود خصم الـ 20%! سنتواصل معك عبر الواتساب لتأكيد موعد تجربتك المجانية.';
-        form.reset();
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch('/api/waitlist', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          feedback.className = 'form-alert success';
+          feedback.style.display = 'block';
+          feedback.innerText = result.message || 'تم تسجيل حجزك بنجاح وحفظ كود خصم الـ 20%! سنتواصل معك عبر الواتساب لتأكيد موعد تجربتك المجانية.';
+          form.reset();
+        } else {
+          feedback.className = 'form-alert error';
+          feedback.style.display = 'block';
+          feedback.innerText = result.message || 'حدث خطأ أثناء التسجيل، يرجى المحاولة مرة أخرى أو التواصل معنا عبر الواتساب.';
+        }
+      } catch (err) {
+        feedback.className = 'form-alert error';
+        feedback.style.display = 'block';
+        feedback.innerText = 'تعذر الاتصال بالخادم، يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.';
+      } finally {
         submitBtn.disabled = false;
         submitBtn.innerText = 'تأكيد الحجز وحفظ كود الخصم 20%';
-      }, 1000);
+      }
     }
   </script>
 </body>
