@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="سنترلي: المنصة الأذكى لإدارة حصص المدرسين والسناتر التعليمية ومتابعة أولياء الأمور خطوة بخطوة.">
   <title>سنترلي | المنظومة الذكية للمدرس والسنتر</title>
   
@@ -274,65 +274,230 @@
       gap: 6px;
     }
 
-    /* Live Interactive Preview Card */
-    .showcase-wrapper {
-      margin: 30px auto 10px;
-      max-width: 720px;
-      background: #fff;
-      border: 1.5px solid #d5dfef;
+    /* Hero Composite Mockup Visual */
+    .hero-composite {
+      margin: 28px auto 10px;
+      max-width: 760px;
+      background: #FFFFFF;
+      border: 1.5px solid #D5DFEF;
       border-radius: 20px;
       padding: 20px;
-      box-shadow: 0 16px 40px rgba(23, 45, 112, 0.06);
+      box-shadow: 0 16px 40px rgba(23, 45, 112, 0.08);
       text-align: right;
     }
-    .showcase-header {
+    .composite-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid var(--line);
       padding-bottom: 12px;
       margin-bottom: 16px;
-      gap: 10px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
-    .showcase-title {
+    .composite-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .live-dot {
+      width: 9px;
+      height: 9px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(37, 132, 90, 0.2);
+    }
+    .composite-title {
       font-weight: 700;
       font-size: 13.5px;
       color: var(--navy);
     }
-    .badge-live {
-      background: var(--green-light);
-      color: var(--green);
+    .composite-stats {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .stat-pill {
       font-size: 11px;
       font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 20px;
-      border: 1px solid #c9ebd8;
+      padding: 3px 9px;
+      border-radius: 16px;
+      border: 1px solid transparent;
       white-space: nowrap;
     }
-    .showcase-grid {
+    .stat-present {
+      background: #EAF8F0;
+      color: #1A5E3A;
+      border-color: #C9EBD8;
+    }
+    .stat-absent {
+      background: #F4F6FB;
+      color: var(--muted);
+      border-color: #E2E8F5;
+    }
+    .stat-hw {
+      background: var(--pale);
+      color: var(--blue);
+      border-color: #D3DEF9;
+    }
+    .composite-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 14px;
+      align-items: stretch;
     }
-    .preview-box {
-      background: #f8fafd;
-      border: 1px solid #e6edfa;
-      border-radius: 12px;
+    
+    /* Attendance Scan Card */
+    .scan-card-box {
+      background: #F8FAFD;
+      border: 1px solid #E1E8F6;
+      border-radius: 14px;
       padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-align: right;
+    }
+    .scan-badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .scan-success-tag {
+      background: #DFF3E7;
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .scan-time {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .student-details {
+      margin-bottom: 10px;
+    }
+    .student-name {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 3px;
+    }
+    .student-meta {
+      font-size: 12px;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .hw-status-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #EAF8F0;
+      border: 1px solid #C9EBD8;
+      color: #1A5E3A;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .barcode-sim {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #FFF;
+      border: 1px dashed #CDD8EB;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    
+    /* WhatsApp Notification Bubble */
+    .whatsapp-card-box {
+      background: #F3F7F3;
+      border: 1px solid #D6E4D6;
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-align: right;
+    }
+    .wa-chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #DCE8DC;
+    }
+    .wa-recipient {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #1E4620;
+    }
+    .wa-online {
+      font-size: 10.5px;
+      color: #2E7D32;
+      font-weight: 600;
+    }
+    .wa-bubble {
+      background: #FFFFFF;
+      border-radius: 10px 0 10px 10px;
+      padding: 10px 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      font-size: 12px;
+      line-height: 1.65;
+      color: #1D2D1F;
+    }
+    .wa-bubble-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 4px;
+      font-size: 10.5px;
+      color: #728A73;
+      margin-top: 4px;
+    }
+    .wa-ticks {
+      color: #34B7F1;
+      font-weight: 700;
       font-size: 12px;
     }
-    .preview-box b { color: var(--navy); display: block; margin-bottom: 4px; font-size: 13px; }
-    .preview-box p { margin: 0; color: var(--text); line-height: 1.6; }
-    .status-tag {
-      display: inline-block;
-      margin-top: 8px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-size: 11px;
+    .wa-auto-note {
+      font-size: 10.5px;
+      color: #557556;
+      margin-top: 6px;
     }
-    .tag-green { background: #dff3e7; color: var(--green); }
-    .tag-blue { background: var(--pale); color: var(--blue); }
+
+    /* Pricing Highlight Strip */
+    .pricing-badge-strip {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin: 14px 0 16px;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .pricing-price-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: #FFF;
+    }
+    .pricing-price-text b {
+      color: var(--gold);
+      font-size: 18px;
+    }
+    .pricing-sub-text {
+      font-size: 12px;
+      color: #DBE4FC;
+    }
 
     /* Compact Features Grid */
     .section-title {
@@ -858,21 +1023,24 @@
         border-radius: 10px;
       }
 
-      /* Showcase card on mobile */
-      .showcase-wrapper {
-        padding: 16px 14px;
+      /* Hero composite on mobile */
+      .hero-composite {
+        padding: 15px 12px;
         border-radius: 16px;
-        margin-top: 22px;
+        margin-top: 20px;
       }
-      .showcase-header {
+      .composite-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 6px;
+        gap: 8px;
       }
-      .showcase-title { font-size: 12.5px; }
-      .badge-live { font-size: 10px; padding: 2px 8px; }
-      .showcase-grid { grid-template-columns: 1fr; gap: 10px; }
-      .preview-box { padding: 12px; }
+      .composite-title { font-size: 12.5px; }
+      .composite-stats { width: 100%; justify-content: flex-start; gap: 5px; }
+      .stat-pill { font-size: 10.5px; padding: 2px 7px; }
+      .composite-grid { grid-template-columns: 1fr; gap: 10px; }
+      .scan-card-box, .whatsapp-card-box { padding: 12px; border-radius: 12px; }
+      .student-name { font-size: 13.5px; }
+      .wa-bubble { font-size: 11.5px; padding: 10px; }
 
       /* Features on mobile */
       .features-grid { grid-template-columns: 1fr; gap: 12px; }
@@ -921,6 +1089,9 @@
         border-radius: 18px;
         width: 94%;
         max-height: 85vh;
+      }
+    }
+
     /* Form Alert Feedback */
     .form-alert {
       display: none;
@@ -966,9 +1137,9 @@
       <span class="brand-badge">إطلاق تجريبي 2026</span>
     </a>
     <nav class="nav-links">
-      <a href="#features">المميزات الأساسية</a>
-      <a href="#for-who">مدرس أم سنتر؟</a>
-      <a href="#faq">الأسئلة الشائعة</a>
+      <a href="#features">المميزات</a>
+      <a href="#for-who">مدرس ولا سنتر؟</a>
+      <a href="#faq">أسئلة بتتسأل كتير</a>
     </nav>
     <a class="button amber" href="#waitlist">احجز مكانك (خصم 20%)</a>
   </header>
@@ -981,7 +1152,7 @@
     <section class="hero">
       
       <div class="hero-pill">
-        <span>باب التسجيل المبكر مفتوح الآن</span>
+        <span>باب الحجز المسبق مفتوح دلوقتي</span>
         <b>خصم 20% لأول 50 مشترك</b>
       </div>
 
@@ -991,48 +1162,78 @@
       </h1>
 
       <p class="hero-sub">
-        منصة متكاملة لمتابعة أولياء الأمور أولاً بأول: إشعار فوري بالحضور والغياب وحالة الواجب، كروت تسجيل سريع بالباركود مع خدمة توفيرها مطبوعة، وتنظيم دقيق لمجموعات المدرس وقاعات السنتر بدون أي تعقيد.
+        كل اللي محتاجه عشان تدير حصتك وسنترك براحة بال: إشعار واتساب فوري لولي الأمر بالحضور والواجب، كروت باركود سريعة بكاميرا الموبايل ونطبعها لك لو تحب، وتنظيم لمواعيد وقاعات السنتر من غير أي دوشة.
       </p>
 
       <!-- Target Audience Selector Bar -->
       <div class="audience-bar">
-        <button class="aud-btn active" id="btn-show-all" onclick="filterAudience('all')">الكل معاً</button>
-        <button class="aud-btn" id="btn-show-teacher" onclick="filterAudience('teacher')">مدرس</button>
+        <button class="aud-btn active" id="btn-show-all" onclick="filterAudience('all')">الكل</button>
+        <button class="aud-btn" id="btn-show-teacher" onclick="filterAudience('teacher')">مدرس مستقل</button>
         <button class="aud-btn" id="btn-show-center" onclick="filterAudience('center')">سنتر تعليمي</button>
       </div>
 
       <div class="hero-ctas">
-        <a class="button primary" href="#waitlist">سجل بياناتك واحفظ خصم 20%</a>
+        <a class="button primary" href="#waitlist">احجز مكانك واحفظ خصم الـ 20%</a>
       </div>
 
       <!-- Trust Strip (Neat Responsive 2x2 on Mobile) -->
       <div class="trust-strip">
-        <span>سحابي خفيف للموبايل واللابتوب</span>
-        <span>مسح الباركود في ثانية</span>
-        <span>متابعة لحظية وموثوقة</span>
-        <span>رسائل واتساب راقية للأهالي</span>
+        <span>شغال على أي موبايل ولابتوب</span>
+        <span>مسح الكارت في ثانية بالموبايل</span>
+        <span>متابعة لحظية لأولياء الأمور</span>
+        <span>رسائل واتساب شيك للأهالي</span>
       </div>
 
-      <!-- Live Clean Showcase Card -->
-      <div class="showcase-wrapper" id="showcase-card">
-        <div class="showcase-header">
-          <div class="showcase-title">
-            <span id="showcase-title-text">حصة نشطة الآن: فيزياء — مجموعة السبت (4:00 م)</span>
+      <!-- Composite UI Visual from Real Product Mockups -->
+      <div class="hero-composite" id="hero-showcase">
+        <div class="composite-header">
+          <div class="composite-title-wrap">
+            <span class="live-dot"></span>
+            <div class="composite-title">حصة نشطة الآن: فيزياء 3 ثانوي • مجموعة السبت (4:00 م)</div>
           </div>
-          <span class="badge-live">الحصة جارية</span>
+          <div class="composite-stats">
+            <span class="stat-pill stat-present">حضور: 142 طالب</span>
+            <span class="stat-pill stat-absent">غياب: 3</span>
+            <span class="stat-pill stat-hw">الواجب: 139 تم</span>
+          </div>
         </div>
 
-        <div class="showcase-grid">
-          <div class="preview-box">
-            <b>مسح الكارت بكاميرا الموبايل</b>
-            <p>المساعد يمسح باركود الطالب في ثانية. يتسجل الحضور وحالة الواجب فوراً مع إشعار ولي الأمر.</p>
-            <span class="status-tag tag-green">تم التسجيل: طالب #1001 (الواجب: كامل)</span>
+        <div class="composite-grid">
+          <!-- Card A: Real Attendance Scan Card -->
+          <div class="scan-card-box">
+            <div>
+              <div class="scan-badge-row">
+                <span class="scan-success-tag">تم تسجيل الحضور بنجاح</span>
+                <span class="scan-time">04:02 م</span>
+              </div>
+              <div class="student-details">
+                <div class="student-name">أحمد محمود خالد</div>
+                <div class="student-meta">كود الطالب: #1042 • قاعة 1</div>
+                <div class="hw-status-row">حالة الواجب: سلم كاملاً ✓</div>
+              </div>
+            </div>
+            <div class="barcode-sim">
+              <span>مسح فوري بكاميرا الموبايل</span>
+              <span style="font-family:monospace; font-weight:700; color:var(--navy);">CEN-2026-1042</span>
+            </div>
           </div>
 
-          <div class="preview-box">
-            <b>إشعار ولي الأمر والسنتر</b>
-            <p>رسالة المتابعة جاهزة للإرسال لوالد الطالب، والسنتر يتابع إشغال القاعة لحظة بلحظة.</p>
-            <span class="status-tag tag-blue">إشعار ولي الأمر جاهز • قاعة 1</span>
+          <!-- Card B: WhatsApp Notification Bubble -->
+          <div class="whatsapp-card-box">
+            <div class="wa-chat-header">
+              <span class="wa-recipient">إشعار ولي الأمر (والد أحمد)</span>
+              <span class="wa-online">متصل الآن</span>
+            </div>
+            <div class="wa-bubble">
+              <div>مساء الخير يا فندم، بنبلغ حضرتك بحضور (أحمد محمود) لحصة الفيزياء اليوم الساعة 04:02 م.</div>
+              <div style="margin-top:4px; font-weight:700; color:#1b5e20;">موقف الواجب: تم تسليمه كاملاً ومستواه ممتاز.</div>
+              <div style="font-size:11.5px; color:#555; margin-top:4px;">أ. محمد الشناوي — سنتر الأوائل</div>
+              <div class="wa-bubble-footer">
+                <span>04:02 م</span>
+                <span class="wa-ticks">✓✓</span>
+              </div>
+            </div>
+            <div class="wa-auto-note">تم الإرسال تلقائياً عبر واتساب سنترلي</div>
           </div>
         </div>
       </div>
@@ -1044,8 +1245,8 @@
     <!-- ============================================== -->
     <section id="features">
       <div class="section-title">
-        <h2>كل ما تحتاجه لإدارة حصتك وسنترك ببساطة</h2>
-        <p>بدون رغي ولا شاشات معقدة — اضغط على "اقرأ المزيد" لمعرفة تفاصيل أي ميزة</p>
+        <h2>كل اللي محتاجه لإدارة حصتك وسنترك ببساطة</h2>
+        <p>من غير رغي ولا شاشات معقدة — اضغط على "اقرأ المزيد" لمعرفة تفاصيل أي ميزة</p>
       </div>
 
       <div class="features-grid">
@@ -1055,7 +1256,7 @@
           <div>
             <div class="f-badge">المدرس والسنتر</div>
             <h3>1. حضور وواجب بكاميرا الموبايل</h3>
-            <p>المساعد يفتح الموقع بالموبايل ويمسح كارت الطالب. الحضور والواجب يتسجلوا بلمسة واحدة بدون كشاكيل أو أجهزة باهظة.</p>
+            <p>المساعد بيمسح كارت الطالب بكاميرا أي موبايل في ثانية، والحضور والواجب يتسجلوا بلمسة واحدة بدون أجهزة مكلفة.</p>
           </div>
           <button class="read-more-btn" onclick="openModal('attendance')">اقرأ المزيد عن المسح السريع</button>
         </article>
@@ -1065,7 +1266,7 @@
           <div>
             <div class="f-badge parent">متابعة ولي الأمر</div>
             <h3>2. إشعار فوري لولي الأمر بالواتساب</h3>
-            <p>إشعار دقيق لولي الأمر بحضور ابنه، غيابه، أو موقفه من الواجب بأسلوب راقٍ يرفع هيبة المدرس والسنتر ويبني الثقة الدائمة.</p>
+            <p>رسالة واتساب تلقائية بتوصل لولي الأمر فوراً بحضور ابنه وموقفه من الواجب، عشان يطمن ويثق فيك أول بأول.</p>
           </div>
           <button class="read-more-btn" onclick="openModal('whatsapp')">اقرأ المزيد عن متابعة ولي الأمر</button>
         </article>
@@ -1075,7 +1276,7 @@
           <div>
             <div class="f-badge new">خاصة بالسناتر</div>
             <h3>3. تنظيم القاعات ونسب المدرسين</h3>
-            <p>لوحة تحكم لإدارة السنتر: حجز القاعات بدون أي تضارب في المواعيد، وتقسيم إيراد كل مدرس تلقائياً (نسبة أو إيجار قاعة ثابت).</p>
+            <p>جدول إلكتروني يمنع أي تضارب في مواعيد القاعات، ويحسب نسبة أو إيجار كل مدرس تلقائياً بضغطة زر.</p>
           </div>
           <button class="read-more-btn" onclick="openModal('center')">اقرأ المزيد عن نظام السنتر</button>
         </article>
@@ -1085,7 +1286,7 @@
           <div>
             <div class="f-badge new">كروت جاهزة</div>
             <h3>4. كروت تسجيل سريع وخدمة طباعتها</h3>
-            <p>كروت باركود فورية لكل طالب بالسنتر برقم هاتفه، مع خدمة توفير وطباعة الكروت وتوصيلها جاهزة لو طلبتها بدون أي عناء.</p>
+            <p>كارت باركود برقم الموبايل لكل طالب، ونقدر نطبعهولك ونسلمهولك جاهز لطلابك لو حابب بدون أي وجع دماغ.</p>
           </div>
           <button class="read-more-btn" onclick="openModal('cards')">اقرأ المزيد عن خدمة الكروت</button>
         </article>
@@ -1095,7 +1296,7 @@
           <div>
             <div class="f-badge">ملف موحد</div>
             <h3>5. كارت موحد لكل مواد السنتر</h3>
-            <p>الطالب يدخل كل مواد السنتر بكارت باركود واحد برقم موبايله، بدون تكرار تسجيل البيانات عند كل مدرس داخل نفس السنتر.</p>
+            <p>الطالب بيحضر كل مواد السنتر بنفس الكارت، وبياناته تتسجل مرة واحدة بس بدون تكرار عند كل مدرس.</p>
           </div>
           <button class="read-more-btn" onclick="openModal('students')">اقرأ المزيد عن كارت السنتر الموحد</button>
         </article>
@@ -1104,8 +1305,8 @@
         <article class="feature-card" data-cat="all">
           <div>
             <div class="f-badge">التقارير الدورية</div>
-            <h3>6. تقارير أداء ومتابعة المتعثرين</h3>
-            <p>قائمة ذكية تنبهك بالطلاب المتراجعين في الدرجات أو كثيري الغياب لمعالجة المشكلة مبكراً وتكريم المتفوقين في الحصص.</p>
+            <h3>6. تقارير متابعة وكشف المتعثرين</h3>
+            <p>تنبيه فوري بالطلاب اللي درجاتهم نزلت أو غابوا كتير عشان تلحقهم، مع تقرير مجمع يتبعت للأهالي.</p>
           </div>
           <button class="read-more-btn" onclick="openModal('reports')">اقرأ المزيد عن تقارير المتابعة</button>
         </article>
@@ -1114,7 +1315,7 @@
 
       <!-- Action Button Placed Below Features -->
       <div class="features-footer-action">
-        <a class="button outline" href="#waitlist">استعرض المميزات بالتفصيل واحجز حسابك</a>
+        <a class="button outline" href="#waitlist">استعرض المميزات واحجز حسابك</a>
       </div>
     </section>
 
@@ -1132,25 +1333,25 @@
         <div class="persona-list">
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>متابعة دقيقة ومستمرة لولي الأمر:</b> إشعار فوري بحالة الحضور وغياب الحصة وموقف الواجب لبناء جسر ثقة دائم مع الأسرة بدون اتصالات يدوية.</div>
+            <div><b>إشعار واتساب لحظي لولي الأمر:</b> رسالة فورية بحضور ابنه وموقفه من الواجب أول ما الحصة تبدأ بدون اتصالات يدوية.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>مفيش كذب في تسليم الواجب:</b> حالة الواجب تتوثق وتصل لولي الأمر فوراً وتظهر في تقرير الحصة.</div>
+            <div><b>مفيش تحوير في تسليم الواجب:</b> كل طالب بيتسجل موقفه في ثانية ويوصل لولي الأمر فوراً في تقرير الحصة.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>طابور الدخول ينتهي في دقائق:</b> مسح الكارت بكاميرا الموبايل في أقل من ثانية بصوت تنبيه مميز.</div>
+            <div><b>طابور الدخول يخلص في دقايق:</b> مسح الكارت بكاميرا أي موبايل في أقل من ثانية وبدون أجهزة باهظة.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>كروت جاهزة لطلابك:</b> نوفر لك كروت الباركود السريعة مطبوعة وجاهزة لتسليمها لطلابك فوراً.</div>
+            <div><b>كروت جاهزة لطلابك:</b> نوفر لك كروت الباركود مطبوعة وجاهزة لتوزيعها على طلابك لحد عندك.</div>
           </div>
         </div>
 
         <div class="persona-box">
-          <b>ركز في الشرح وتطوير مادتك</b>
-          <p>وسيب سنترلي ومساعديك يخلصوا الحضور والواجب ومتابعة أولياء الأمور بدون ما تضيع دقيقة واحدة من وقتك.</p>
+          <b>ركز في الشرح وسيب الباقي علينا</b>
+          <p>سنترلي ومساعديك هيخلصوا الحضور والواجب ومتابعة الأهالي من غير ما تضيع دقيقة من وقت حصتك.</p>
           <a class="button amber" href="#waitlist">احجز حسابك بخصم 20%</a>
         </div>
       </div>
@@ -1160,25 +1361,25 @@
         <div class="persona-list">
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>تقارير شاملة لأولياء الأمور باسم السنتر:</b> إرسال تقرير مجمع لولي الأمر عن مستوى ابنه في كل المواد التي يحضرها بالسنتر.</div>
+            <div><b>جدول ذكي للقاعات:</b> تنظيم إلكتروني يمنع أي تضارب في مواعيد المدرسين أو حجز نفس القاعة تلقائياً.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>تنظيم القاعات بدون أي تضارب:</b> جدول إلكتروني يمنع حجز قاعة لمدرسين في نفس الميعاد تلقائياً.</div>
+            <div><b>تصفية حسابات ونسب المدرسين:</b> حساب نسبة كل مدرس أو إيجار القاعة وتصفية الحساب بضغطة زر واحدة.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>حسابات المدرسين بضغطة زر:</b> سواء بنسبة مئوية، أو إيجار قاعة ثابت، أو رسم لكل طالب.</div>
+            <div><b>كارت موحد للطالب:</b> نفس كارت الباركود يدخل به الطالب كل مواد وحصص السنتر بدون تكرار تسجيله.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>كارت سنتر موحد للطالب:</b> نفس كارت الباركود يدخل به الطالب حصة الفيزياء والكيمياء والعربي.</div>
+            <div><b>تقرير مجمع باسم السنتر:</b> إرسال تقرير موحد لولي الأمر عن مستوى وحضور ابنه في كل المواد اللي بيحضرها.</div>
           </div>
         </div>
 
         <div class="persona-box">
-          <b>حوّل سنترك لمؤسسة تعليمية محترفة</b>
-          <p>أولياء الأمور والمدرسين هيثقوا في سنترك أكثر عندما يجدون نظاماً إلكترونياً محكماً ومتابعة مستمرة.</p>
+          <b>حوّل سنترك لمؤسسة منظمة</b>
+          <p>المدرسين والأهالي هيثقوا في سنترك أكتر لما يلاقوا نظام إلكتروني ومواعيد قاعات مظبوطة بالدقيقة.</p>
           <a class="button amber" href="#waitlist">احجز حسابك بخصم 20%</a>
         </div>
       </div>
@@ -1193,10 +1394,17 @@
           <span class="w-badge">خصم الحجز المسبق 20%</span>
           <h2>احجز مكانك في سنترلي<br>قبل اكتمال المقاعد الأولى</h2>
           <p>
-            سجّل بياناتك في دقيقة واحدة. الحجز المبكر يمنحك: أولوية التفعيل، تجربة مجانية لكافة الميزات، تدريباً لمساعديك، وخصم 20% معتمد على باقتك عند الإطلاق الرسمي.
+            سجل بياناتك في دقيقة واحدة. حجزك المبكر بيضمن لك أولوية التفعيل وتجربة مجانية لكل الميزات وتدريب لمساعديك.
           </p>
-          <div style="font-size:11.5px; color:#c6d5fb;">
-            بياناتك في أمان تام ولن نرسل لك أي رسائل ترويجية مزعجة.
+
+          <!-- Pricing Clear Highlight (No complex tiers) -->
+          <div class="pricing-badge-strip">
+            <div class="pricing-price-text">الاشتراك يبدأ من <b>799 جنيه</b> / شهرياً</div>
+            <div class="pricing-sub-text">خصم خاص 20% لأول 50 مشترك في الحجز المسبق</div>
+          </div>
+
+          <div style="font-size:11.5px; color:#c6d5fb; margin-top:4px;">
+            بياناتك في أمان تام ومش هنبعت لك أي رسائل ترويجية مزعجة.
           </div>
         </div>
 
@@ -1241,6 +1449,7 @@
               <label class="w-full">
                 <span id="lbl-count">عدد الطلاب التقديري</span>
                 <select name="capacity">
+                  <option value="under-50">أقل من 50 طالباً</option>
                   <option value="50-150">من 50 إلى 150 طالباً</option>
                   <option value="150-500" selected>من 150 إلى 500 طالب</option>
                   <option value="500-1000">من 500 إلى 1,000 طالب</option>
@@ -1265,27 +1474,27 @@
     <section id="faq" class="faq-wrap">
       <div class="section-title">
         <h2>أسئلة سريعة</h2>
-        <p>إجابات واضحة على أكثر الاستفسارات شيوعاً</p>
+        <p>إجابات واضحة على أكتر الأسئلة اللي بتتسأل</p>
       </div>
 
       <details>
-        <summary>كيف يتم إشعار ولي الأمر بالواتساب؟</summary>
-        <p>يتم تجهيز رسائل الحضور والغياب والواجب تلقائياً وإرسالها للأهالي فور انتهاء الحصة، وتحتوي الرسالة على اسم المدرس واسم السنتر بوضوح لبناء الثقة الكاملة.</p>
+        <summary>إزاي ولي الأمر بيوصله إشعار بالواتساب؟</summary>
+        <p>أول ما المساعد بيمسح كارت الطالب، بتتبعت رسالة واتساب تلقائية لولي الأمر فيها الحضور وموقف الواجب باسمك واسم السنتر. كل ده بيتم في ثواني وبشكل منظم يريحك من كتر الاتصالات.</p>
       </details>
 
       <details>
-        <summary>هل تتوفر كروت باركود جاهزة مطبوعة للطلاب؟</summary>
-        <p>نعم، بجانب إمكانية استخراج وتوليد الباركود فورياً من النظام، نوفر لك خدمة طباعة كروت عالية الجودة وتسليمها لك جاهزة ومخصصة ببيانات طلابك.</p>
+        <summary>هل بتوفروا كروت باركود مطبوعة وجاهزة للطلاب؟</summary>
+        <p>أيوة، بجانب إنك تقدر تطلع وتطبع الكروت بنفسك في أي وقت، بنوفر لك خدمة طباعة كروت بلاستيكية شيك ونسلمها لك جاهزة لحد عندك.</p>
       </details>
 
       <details>
-        <summary>كيف يخدم سنترلي السناتر التعليمية التي تضم عدة مدرسين؟</summary>
-        <p>يتيح حساب السنتر تنظيم جدول القاعات ومنع التضارب، وتحديد نماذج محاسبة كل مدرس بشكل مستقل، مع إصدار كارت موحد للطالب يمكن مسحه في أي حصة داخل السنتر.</p>
+        <summary>إزاي سنترلي بيفيد السنتر اللي فيه كذا مدرس؟</summary>
+        <p>بينظم جدول القاعات عشان يمنع أي تعارض في المواعيد، وبيحسب نسبة كل مدرس تلقائياً حسب اتفاقك معاه. ده غير إن الطالب بيدخل كل المواد بنفس الكارت الموحد.</p>
       </details>
 
       <details>
-        <summary>ماذا يمنحني الحجز المسبق حالياً؟</summary>
-        <p>الحجز المسبق مجاني ويضمن لك أولوية التفعيل، تجربة كاملة الميزات، تدريباً لمساعديك، بالإضافة لخصم 20% على اشتراكك عند الإطلاق الرسمي.</p>
+        <summary>الحجز المسبق دلوقتي بيديني إيه بالظبط؟</summary>
+        <p>حجزك مجاني وبيضمن لك أولوية التفعيل مع تجربة كاملة وتدريب لمساعديك. وفوق كل ده هتاخد خصم 20% دائم أول ما نطلق الخدمة رسمياً.</p>
       </details>
     </section>
 
@@ -1299,11 +1508,11 @@
       <button class="modal-close" onclick="closeModal()" aria-label="إغلاق">✕</button>
       
       <div class="m-header">
-        <h3 id="m-title">عنوان الميزة</h3>
+        <h3 id="m-title">تفاصيل الميزة</h3>
       </div>
 
       <div class="m-body" id="m-desc">
-        وصف الميزة هنا...
+        اضغط على أي ميزة لعرض تفاصيلها بالكامل...
       </div>
 
       <ul class="m-bullets" id="m-bullets">
@@ -1338,64 +1547,56 @@
     const featureDetails = {
       attendance: {
         title: "حضور وواجب سريع بكاميرا الموبايل",
-        desc: "صممنا شاشة مسح الحضور لتكون الأسرع حتى لا يتعطل وقت شرح الحصة نهائياً:",
+        desc: "شاشة سريعة معمولة مخصوص للمساعدين عشان تخلص طابور الحضور في دقايق معدودة. بكاميرا أي موبايل عادي بيمسح كارت الطالب، ويسجل موقف الواجب بلمسة واحدة بدون أي تعطيل لوقت الحصة، ومفيش أي مسح مكرر هيتسجل بالغلط.",
         bullets: [
-          "يعمل مباشرة من كاميرا متصفح الموبايل بدون الحاجة لشراء ماسح ليزر أو تنزيل برامج ثقيلة.",
-          "تسجيل حالة الواجب (كامل / ناقص / لم يسلم) مع نفس مسحة الحضور بلمسة واحدة.",
-          "مؤشر الواجب يعود تلقائياً لحالة 'سلم كاملاً' لتوفير وقت المساعدين.",
-          "منع آلي لأي مسح مكرر مع صوت تنبيه مميز لكل حالة لتفادي أي أخطاء.",
-          "تسجيل حصص التعويض تلقائياً للطلاب القادمين من مجموعات أو مواعيد أخرى."
+          "شغال من متصفح الموبايل مباشرة بدون شراء أجهزة ليزر أو تنزيل برامج تقيلة.",
+          "تسجيل الحضور وموقف الواجب (كامل، ناقص، لم يسلم) في ثانية واحدة بلمسة واحدة.",
+          "منع تلقائي لأي مسح مكرر مع نغمة تنبيه صوتية مميزة لتفادي أي لخبطة."
         ]
       },
       whatsapp: {
-        title: "متابعة دقيقة لولي الأمر عبر الواتساب",
-        desc: "ولي الأمر يتابع مستوى ابنه خطوة بخطوة، ولذلك وفرنا نظام رسائل يعزز ثقة الأسرة في المدرس والسنتر:",
+        title: "إشعار فوري لولي الأمر بالواتساب",
+        desc: "أول ما الطالب يدخل الحصة أو يغيب، بتوصل رسالة واتساب تلقائية لولي الأمر فيها موقفه بالكامل وحالة الواجب. الرسالة بتتبعت باسم المدرس والسنتر عشان تطمن الأهالي أول بأول من غير ما تضيع وقتك في مكالمات ورسائل يدوية.",
         bullets: [
-          "إشعار فوري لولي الأمر بحضور ابنه أو غيابه عن الحصة مع ذكر موعد حصة التعويض.",
-          "إرسال تقارير الواجب ودرجات الاختبارات الدورية أولاً بأول.",
-          "طابور إرسال آمن وسريع يضمن وصول كافة الرسائل والتقارير للأهالي في مواعيدها.",
-          "تضمين اسم المدرس واسم السنتر بوضوح في نص الرسالة لضمان المصداقية."
+          "إشعار لحظي بالحضور والغياب وموقف الواجب بدون أي مجهود إضافي من مساعديك.",
+          "الرسالة بتتبعت باسم المدرس واسم السنتر عشان تبني ثقة واحترافية كاملة.",
+          "إمكانية إرسال درجات الامتحانات والتقارير الشهرية للأهالي أولاً بأول."
         ]
       },
       center: {
-        title: "منظومة متكاملة لإدارة السنتر والقاعات",
-        desc: "حساب السنتر يوفر لأصحاب ومديري السناتر راحة بال كاملة وتحكماً إدارياً دقيقاً:",
+        title: "تنظيم القاعات ونسب المدرسين للسناتر",
+        desc: "لوحة تحكم ذكية لإدارة السنتر بالكامل تمنع تضارب المواعيد وحجز نفس القاعة لمدرسين في نفس الميعاد. النظام بيحسب إيرادات الحصة تلقائياً ويصفي حساب كل مدرس سواء بالنسبة أو إيجار قاعة ثابت بضغطة زر واحدة.",
         bullets: [
-          "تنظيم قاعات السنتر ومطابقة سعة كل قاعة ومنع تضارب المواعيد بين المدرسين تلقائياً.",
-          "دعم نماذج المحاسبة المتبعة (نسبة مئوية، إيجار قاعة ثابت، أو أجر محدد لكل طالب).",
-          "تخصيص نموذج الحساب لكل مدرس بشكل مستقل وفقاً لاتفاق السنتر معه.",
-          "تسوية حسابات المدرسين وتوثيق حركة المدفوعات.",
-          "صلاحيات محددة لموظفي الاستقبال ومساعدي السنتر."
+          "جدول إلكتروني ذكي للقاعات يمنع أي تعارض في مواعيد الحصص تلقائياً.",
+          "تصفية حسابات ونسب المدرسين فور انتهاء الحصة بدون دفاتر وحسابات معقدة.",
+          "صلاحيات محددة ومنفصلة لكل مساعد وموظف استقبال داخل السنتر."
         ]
       },
       cards: {
-        title: "كروت تسجيل سريع مع خدمة التوفير المطبوع",
-        desc: "توفير أسهل وسيلة لدخول الطلاب الحصص بباركود مميز:",
+        title: "كروت باركود جاهزة مطبوعة ومغلفة",
+        desc: "بمجرد ما تسجل بيانات الطالب بيتولد له كود وباركود خاص برقم موبايله في ثانية واحدة. ولو مش عاوز توجع دماغك بالطباعة، بنوفر لك خدمة طباعة كروت بلاستيكية شيك ومغلفة باسمك واسم سنترك ونسلمهالك جاهزة لحد عندك.",
         bullets: [
-          "توليد كود وباركود خاص بكل طالب فور تسجيله بالنظام.",
-          "خدمة توفير وطباعة الكروت وتوصيلها جاهزة ومغلفة للمدرس أو السنتر عند الطلب.",
-          "إمكانية استخدام كروت رقمية على هواتف الطلاب كبديل فوري.",
-          "سرعة استبدال أو إعادة إصدار الكارت لأي طالب يفقد كرته."
+          "كود وباركود فوري لكل طالب ينفع يطبعه أو يحتفظ بيه على موبايله فوراً.",
+          "خدمة طباعة كروت بجودة عالية وتوصيلها جاهزة ومغلفة للمدرس أو السنتر.",
+          "سهولة استخراج كارت بديل في ثواني برقم الموبايل لو الطالب ضيع كرته."
         ]
       },
       students: {
-        title: "كارت سنتر موحد لكل المواد برقم الموبايل",
-        desc: "تنظيم ملف الطالب داخل السنتر بدون تكرار:",
+        title: "كارت موحد لكل مواد السنتر برقم الموبايل",
+        desc: "ريحنا أولياء الأمور والسنتر من زحمة الكروت؛ الطالب بيدخل كل حصص ومواد السنتر بنفس الكارت ورقم الموبايل. بيانات الطالب بتتسجل مرة واحدة بس، وكل مدرس بيشوف طلاب مجموعته بنظام وأمان كامل بدون أي لخبطة.",
         bullets: [
-          "ملف الطالب موحد في السنتر برقم هاتفه؛ يحضر كافة المواد بنفس الكارت والكود.",
-          "استيراد قوائم الطلاب الحالية من شيتات إكسيل بضغطة زر واحدة.",
-          "التعرف التلقائي على الطالب المسجل مسبقاً عند ضمه لأي مادة دراسية جديدة بالسنتر.",
-          "تحديد الطلاب المعفيين أو أصحاب الخصومات الخاصة بشارات واضحة."
+          "كارت موحد للطالب لكل المواد بدلاً من كارت منفصل لكل مادة ومدرس.",
+          "استيراد بيانات الطلاب من شيتات إكسيل جاهزة بضغطة واحدة وبدون تعب.",
+          "التعرف التلقائي على الطالب المسجل مسبقاً أول ما يضيف مادة جديدة بالسنتر."
         ]
       },
       reports: {
-        title: "تقارير متابعة الطلاب وكشف المتعثرين",
-        desc: "متابعة علمية دقيقة لرفع مستوى التحصيل الدراسي:",
+        title: "تقارير متابعة وكشف الطلاب المتعثرين",
+        desc: "لوحة متابعة ذكية بتوضح لك فوراً الطلاب اللي بدأ مستواهم ينزل أو غابوا أكتر من حصة عشان تلحقهم بدري قبل ما يفوتهم المنهج. وبضغطة زرار تقدر تطلع تقرير شامل ومجمع لولي الأمر في آخر كل شهر عن درجات ومستوى ابنه.",
         bullets: [
-          "رصد فوري لدرجات الاختبارات والاختبارات الدورية بسهولة.",
-          "تنبيه تلقائي بالطلاب المعرضين للتعثر أو متكرري الغياب لمعالجة الأمر مبكراً.",
-          "تقرير متابعة شامل ومجمع لمستوى الطالب في المواد يرسل دورياً لولي الأمر.",
-          "سجل عمليات يوثق تسجيل الحضور والتعديلات لضمان الانضباط."
+          "تنبيه تلقائي بالطلاب كثيري الغياب أو المتراجعين في الواجب والامتحانات الدورية.",
+          "تقارير دورية واضحة ومبسطة بتتبعت للأهالي تبين مستوى الطالب خطوة بخطوة.",
+          "سجل كامل ومحمي لعمليات الحضور والغياب لمنع أي تلاعب أو أخطاء."
         ]
       }
     };
