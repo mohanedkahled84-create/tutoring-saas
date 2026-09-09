@@ -27,8 +27,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: 'الاسم ورقم الواتساب مطلوبان' });
     }
 
-    const fallbackToken = Buffer.from('cGF0aG5mZXl5T0FSbHJiRW8uNWVmNDc0Nzc2ZmYyZDIwM2M1Mjc5ODFmZDQzZjE2MGNiNDFmZjEwNmM4NmQxYjI1MzIwNjM4YTAwZDZhZThiYw==', 'base64').toString('utf-8');
-    const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || process.env.AIRTABLE_PAT || fallbackToken;
+    const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || process.env.AIRTABLE_PAT;
     const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || 'appZNeYmlt2X9HgG8';
     const AIRTABLE_TABLE_NAME = process.env.AIRTABLE_TABLE_NAME || 'Centerly Waitlist';
 
@@ -64,12 +63,15 @@ export default async function handler(req, res) {
         return res.status(500).json({ success: false, message: 'خطأ في الربط مع Airtable: ' + errorDetails });
       }
     } else {
-      console.log('Submission received (Waiting for Airtable environment variables):', {
+      console.warn('AIRTABLE_API_KEY missing: storing waitlist submission in server logs as fallback', {
         fullname,
         phone,
         email,
         account_type,
-        date: new Date().toISOString()
+        subject,
+        location: finalLocation,
+        capacity,
+        receivedAt: new Date().toISOString()
       });
     }
 
