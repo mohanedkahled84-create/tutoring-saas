@@ -31,10 +31,16 @@ export interface IEvolutionGateway {
 }
 
 export class HttpEvolutionGateway implements IEvolutionGateway {
+  private readonly apiUrl?: string;
+
   constructor(
-    private readonly apiUrl?: string,
+    apiUrl?: string,
     private readonly apiKey?: string
-  ) {}
+  ) {
+    if (apiUrl) {
+      this.apiUrl = apiUrl.trim().replace(/\/manager\/?$/i, "").replace(/\/+$/, "");
+    }
+  }
 
   async getQrCode(instanceName: string): Promise<EvolutionQrResult> {
     if (!this.apiUrl || !this.apiKey) {
