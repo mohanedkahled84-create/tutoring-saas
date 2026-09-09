@@ -6,24 +6,38 @@ export const authService = {
     return raw ? JSON.parse(raw) : null;
   },
 
-  setSession(user) {
-    // Non-sensitive user display data
-    if (user) localStorage.setItem('centrly_user', JSON.stringify(user));
-    // Non-sensitive client-side navigation flag (session secret is strictly kept in httpOnly cookie)
-    localStorage.setItem('centrly_logged_in', '1');
+  getToken() {
+    try {
+      return localStorage.getItem('centrly_token');
+    } catch (_) {
+      return null;
+    }
+  },
+
+  setSession(user, token) {
+    try {
+      if (user) localStorage.setItem('centrly_user', JSON.stringify(user));
+      if (token) localStorage.setItem('centrly_token', token);
+      localStorage.setItem('centrly_logged_in', '1');
+    } catch (_) {}
   },
 
   clearSession() {
-    localStorage.removeItem('centrly_access_token'); // Cleanup legacy token if present
-    localStorage.removeItem('centrly_logged_in');
-    localStorage.removeItem('centrly_user');
+    try {
+      localStorage.removeItem('centrly_token');
+      localStorage.removeItem('centrly_access_token'); // Cleanup legacy token if present
+      localStorage.removeItem('centrly_logged_in');
+      localStorage.removeItem('centrly_user');
+    } catch (_) {}
   },
 
   isAuthenticated() {
-    // Synchronous non-sensitive flag set upon successful login/signup and cleared on logout/401.
-    // Avoids redundant network roundtrips during frontend routing while the true session
-    // validation is enforced by the backend on every API request via httpOnly cookie.
-    return localStorage.getItem('centrly_logged_in') === '1';
+    // Requires both logged_in flag and an active token
+    try {
+      return localStorage.getItem('centrly_logged_in') === '1' && !!localStorage.getItem('centrly_token');
+    } catch (_) {
+      return false;
+    }
   },
 
   async login(email, password) {
@@ -33,7 +47,7 @@ export const authService = {
     });
 
     if (response.user) {
-      this.setSession(response.user);
+      this.setSession(response.user, response.token);
     }
     return response;
   },
@@ -45,7 +59,7 @@ export const authService = {
     });
 
     if (response.user) {
-      this.setSession(response.user);
+      this.setSession(response.user, response.token);
       return response;
     }
 
@@ -55,6 +69,7 @@ export const authService = {
       return {
         ...response,
         user: loginRes.user || response.user,
+        token: loginRes.token || response.token,
       };
     }
 

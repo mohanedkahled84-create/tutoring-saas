@@ -19,6 +19,15 @@ export async function request(endpoint, options = {}) {
   };
 
   try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_token') : null;
+    if (token && !headers['Authorization'] && !headers['authorization']) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  } catch (_) {
+    // localStorage might be unavailable or restricted
+  }
+
+  try {
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       credentials: 'include',
       ...options,
@@ -29,8 +38,11 @@ export async function request(endpoint, options = {}) {
 
     if (!res.ok) {
       if (res.status === 401) {
-        localStorage.removeItem('centrly_logged_in');
-        localStorage.removeItem('centrly_user');
+        try {
+          localStorage.removeItem('centrly_token');
+          localStorage.removeItem('centrly_logged_in');
+          localStorage.removeItem('centrly_user');
+        } catch (_) {}
       }
       let errMsg = `Request failed with status ${res.status}`;
       if (typeof data.error === 'string') {
