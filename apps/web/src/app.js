@@ -457,20 +457,24 @@ class CentrlyApp {
           });
 
           // Automatically include recurring weekly groups in their day slots
+          const arabicDayNames = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
           const recurringGroupSessions = (this.groups || [])
-            .filter(g => g.day_of_week)
-            .map(g => ({
-              id: `rec-${g.id}`,
-              group_id: g.id,
-              group_name: g.name,
-              center_name: g.center_name || g.centerName || 'السنتر',
-              day_name: g.day_of_week,
-              time: g.session_time || '04:00 م',
-              date: 'موعد أسبوعي ثابت',
-              status: 'scheduled',
-              session_number: 1,
-              price: g.price || 0,
-            }));
+            .map(g => {
+              const day = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || 'السبت';
+              const time = g.session_time || (g.schedule && g.schedule.includes('•') ? g.schedule.split('•')[1].trim() : '04:00 م');
+              return {
+                id: `rec-${g.id}`,
+                group_id: g.id,
+                group_name: g.name,
+                center_name: g.center_name || g.centerName || 'السنتر',
+                day_name: day,
+                time: time,
+                date: 'موعد أسبوعي ثابت',
+                status: 'scheduled',
+                session_number: 1,
+                price: g.price || 0,
+              };
+            });
 
           this.calendarSessions = [...mappedSessions, ...recurringGroupSessions];
           this.calendarState.sessions = this.calendarSessions;
@@ -2402,8 +2406,9 @@ class CentrlyApp {
   }
 
   // Functional Extra Session Modal
-  openScheduleSessionModal() {
-    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+  openScheduleSessionModal(defaultGroupId = null) {
+    const cleanDefaultId = defaultGroupId ? String(defaultGroupId).replace(/^rec-/, '') : null;
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}" ${cleanDefaultId === g.id ? 'selected' : ''}>${g.name}</option>`).join('');
     const bodyHtml = `
       <form id="scheduleSessionForm" onsubmit="window.centrlyApp.handleCreateExtraSession(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -2578,9 +2583,10 @@ class CentrlyApp {
   filterLogs() {}
   openImportModal() { this.showToast('استيراد من Excel / CSV متاح عبر لوحة المالك.', 'info'); }
   startSessionForGroup(gId) {
-    this.sessionState.id = `sess-${gId}`;
+    const cleanId = String(gId).replace(/^rec-/, '');
+    this.sessionState.id = `sess-${cleanId}`;
     this.sessionState.status = 'in_progress';
-    const grp = this.groups.find(g => g.id === gId);
+    const grp = this.groups.find(g => g.id === cleanId);
     if (grp) {
       this.sessionState.group = grp;
     }
@@ -2604,16 +2610,32 @@ class CentrlyApp {
     this.renderMainContent();
   }
 
-  calendarPrev() {
+  selectCalendarDay(dayKey) {
+    this.calendarState.selectedDayName = dayKey;
     this.renderMainContent();
+  }
+
+  calendarPrev() {
+    this.showToast('تم استعراض الفترة السابقة', 'info');
   }
 
   calendarNext() {
-    this.renderMainContent();
+    this.showToast('تم استعراض الفترة التالية', 'info');
   }
 
   calendarToday() {
+    const jsDayToDayName = {
+      0: 'الأحد',
+      1: 'الإثنين',
+      2: 'الثلاثاء',
+      3: 'الأربعاء',
+      4: 'الخميس',
+      5: 'الجمعة',
+      6: 'السبت',
+    };
+    this.calendarState.selectedDayName = jsDayToDayName[new Date().getDay()] || 'السبت';
     this.renderMainContent();
+    this.showToast('عرض جدول اليوم الحالي', 'info');
   }
 
   filterCalendarByGroup(groupId) {

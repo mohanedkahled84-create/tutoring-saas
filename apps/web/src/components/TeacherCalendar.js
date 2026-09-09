@@ -12,8 +12,17 @@ export function renderTeacherCalendar(data = {}) {
   const currentDateLabel = data.dateLabel || 'أسبوع 6 سبتمبر - 12 سبتمبر 2026';
   const filterGroup = data.selectedGroup || 'all';
 
-  const sessions = data.sessions || [];
+  const rawSessions = data.sessions || [];
   const groups = data.groups || [];
+
+  const sessions = filterGroup === 'all'
+    ? rawSessions
+    : rawSessions.filter(
+        (s) =>
+          String(s.group_id) === String(filterGroup) ||
+          String(s.groupId) === String(filterGroup) ||
+          s.id === `rec-${filterGroup}`
+      );
 
   const totalCount = sessions.length;
   const inProgressCount = sessions.filter((s) => s.status === 'in_progress').length;
@@ -86,7 +95,7 @@ export function renderTeacherCalendar(data = {}) {
             عرض الحصة
           </button>
           ${session.status === 'scheduled' ? `
-            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(session.id)}')" style="font-size: 0.75rem;">
+            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(session.group_id || session.id)}')" style="font-size: 0.75rem;">
               بدء التحضير
             </button>
           ` : ''}
@@ -182,57 +191,101 @@ export function renderTeacherCalendar(data = {}) {
       <!-- Calendar View Display Body -->
       ${
         currentView === 'day'
-          ? `
-        <!-- DAILY VIEW -->
-        <div class="card" style="margin: 0;">
-          <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: var(--centrly-ink);">
-            حصص اليوم (${escapeHtml(sessions[0]?.date || 'اليوم')})
-          </h3>
-          <div style="display: flex; flex-direction: column; gap: 1rem;">
-            ${sessions.length > 0
-              ? sessions.map((s) => renderSessionCard(s)).join('')
-              : '<div style="font-size: 0.85rem; color: var(--centrly-text); text-align: center; padding: 2.5rem 0;">لا توجد حصص مجدولة لهذا اليوم</div>'
-            }
-          </div>
-        </div>
-      `
-          : currentView === 'month'
-          ? `
-        <!-- MONTHLY VIEW -->
-        <div class="card" style="margin: 0;">
-          <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: var(--centrly-ink);">
-            تقويم الشهر (سبتمبر 2026)
-          </h3>
-          <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; text-align: center;">
-            ${['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة']
-              .map((d) => `<div style="font-weight: 800; font-size: 0.85rem; padding: 0.5rem; background: var(--centrly-bg); border-radius: 6px;">${d}</div>`)
-              .join('')}
-            ${Array.from({ length: 30 }, (_, i) => {
-              const dayNum = i + 1;
-              const dateStr = `2026-09-${String(dayNum).padStart(2, '0')}`;
-              const daySessions = sessions.filter((s) => s.date === dateStr || s.session_date === dateStr);
+          ? (() => {
+              const jsDayToDayName = {
+                0: 'الأحد',
+                1: 'الإثنين',
+                2: 'الثلاثاء',
+                3: 'الأربعاء',
+                4: 'الخميس',
+                5: 'الجمعة',
+                6: 'السبت',
+              };
+              const todayDayName = jsDayToDayName[new Date().getDay()] || 'السبت';
+              const selectedDayKey = data.selectedDayName || todayDayName;
+              const daySessions = sessions.filter((s) => s.day_name === selectedDayKey || (s.date && s.date.includes(selectedDayKey)));
+
               return `
-                <div style="min-height: 80px; border: 1px solid var(--centrly-line); border-radius: 6px; padding: 0.4rem; text-align: right; background: ${daySessions.length > 0 ? '#f8fafc' : '#fff'};">
-                  <div style="font-weight: 700; font-size: 0.8rem; color: var(--centrly-text);">${dayNum}</div>
-                  <div style="display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.25rem;">
-                    ${daySessions
-                      .map(
-                        (s) => `
-                      <div style="font-size: 0.7rem; padding: 0.15rem 0.3rem; border-radius: 4px; background: ${
-                        s.is_extra ? '#f3e8ff; color: #7c3aed;' : s.status === 'cancelled' ? '#fee2e2; color: #b91c1c;' : '#e0f2fe; color: #0369a1;'
-                      }; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(s.group_name)}">
-                        ${escapeHtml(s.time.split(' ')[0])} ${escapeHtml(s.group_name.substring(0, 10))}..
+                <!-- DAILY VIEW -->
+                <div class="card" style="margin: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem;">
+                    <div>
+                      <h3 style="margin: 0; font-size: 1.15rem; color: var(--centrly-ink);">
+                        حصص اليوم (${escapeHtml(selectedDayKey)})
+                      </h3>
+                      <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.2rem;">
+                        اختر يوماً من الأسبوع لاستعراض حصصه المجدولة
                       </div>
-                    `
-                      )
-                      .join('')}
+                    </div>
+                    <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                      ${weekDays.map(wd => `
+                        <button class="btn btn-sm ${selectedDayKey === wd.key ? 'btn-primary' : 'btn-secondary'}" 
+                                style="padding: 0.3rem 0.65rem; font-size: 0.8rem; font-weight: 700;" 
+                                onclick="window.centrlyApp.selectCalendarDay('${wd.key}')">
+                          ${wd.key}
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    ${daySessions.length > 0
+                      ? daySessions.map((s) => renderSessionCard(s)).join('')
+                      : `<div style="font-size: 0.9rem; color: var(--centrly-text); text-align: center; padding: 3rem 0;">لا توجد حصص مجدولة لهذا اليوم (${escapeHtml(selectedDayKey)})</div>`
+                    }
                   </div>
                 </div>
               `;
-            }).join('')}
-          </div>
-        </div>
-      `
+            })()
+          : currentView === 'month'
+          ? (() => {
+              const weekDaysHeader = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+              // In Sept 2026: Sept 1 was Tuesday (index 3 in weekDaysHeader)
+              const firstDayOffset = 3; 
+
+              return `
+                <!-- MONTHLY VIEW -->
+                <div class="card" style="margin: 0;">
+                  <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: var(--centrly-ink);">
+                    تقويم الشهر (سبتمبر 2026)
+                  </h3>
+                  <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; text-align: center;">
+                    ${weekDaysHeader
+                      .map((d) => `<div style="font-weight: 800; font-size: 0.85rem; padding: 0.5rem; background: var(--centrly-bg); border-radius: 6px;">${d}</div>`)
+                      .join('')}
+                    ${Array.from({ length: firstDayOffset }, () => `<div style="min-height: 80px; background: transparent;"></div>`).join('')}
+                    ${Array.from({ length: 30 }, (_, i) => {
+                      const dayNum = i + 1;
+                      const dayOfWeekIndex = (i + firstDayOffset) % 7;
+                      const dayArabicName = weekDaysHeader[dayOfWeekIndex];
+                      const dateStr = `2026-09-${String(dayNum).padStart(2, '0')}`;
+                      const daySessions = sessions.filter((s) => s.date === dateStr || s.session_date === dateStr || s.day_name === dayArabicName);
+
+                      return `
+                        <div style="min-height: 85px; border: 1px solid var(--centrly-line); border-radius: 6px; padding: 0.4rem; text-align: right; background: ${daySessions.length > 0 ? '#f8fafc' : '#fff'};">
+                          <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 0.8rem; color: var(--centrly-text);">${dayNum}</span>
+                            <span style="font-size: 0.65rem; color: #94a3b8;">${dayArabicName}</span>
+                          </div>
+                          <div style="display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.35rem;">
+                            ${daySessions
+                              .map(
+                                (s) => `
+                              <div style="font-size: 0.72rem; padding: 0.2rem 0.35rem; border-radius: 4px; background: ${
+                                s.is_extra ? '#f3e8ff; color: #7c3aed;' : s.status === 'cancelled' ? '#fee2e2; color: #b91c1c;' : '#e0f2fe; color: #0369a1;'
+                              }; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; cursor: pointer;" title="${escapeHtml(s.group_name)} (${escapeHtml(s.time)})" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(s.group_id || s.id)}')">
+                                ${escapeHtml(s.time.split(' ')[0])} ${escapeHtml(s.group_name.substring(0, 10))}..
+                              </div>
+                            `
+                              )
+                              .join('')}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              `;
+            })()
           : `
         <!-- WEEKLY VIEW (Default) -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
