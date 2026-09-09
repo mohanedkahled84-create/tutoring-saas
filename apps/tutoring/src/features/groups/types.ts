@@ -10,6 +10,8 @@ export interface Group {
   fixed_rent_amount?: number | null;
   teacher_cut_percentage?: number | null;
   center_name?: string | null;
+  teacher_id?: string | null;
+  room_id?: string | null;
   day_of_week?: string | null;
   session_time?: string | null;
   created_at?: string;
@@ -39,6 +41,8 @@ export interface CreateGroupDTO {
   fixed_rent_amount?: number | null;
   teacher_cut_percentage?: number | null;
   center_name?: string | null;
+  teacher_id?: string | null;
+  room_id?: string | null;
   day_of_week?: string | null;
   session_time?: string | null;
   schedule?: string | null;
@@ -67,6 +71,8 @@ export interface UpdateGroupDTO {
   fixed_rent_amount?: number | null;
   teacher_cut_percentage?: number | null;
   center_name?: string | null;
+  teacher_id?: string | null;
+  room_id?: string | null;
   day_of_week?: string | null;
   session_time?: string | null;
   schedule?: string | null;

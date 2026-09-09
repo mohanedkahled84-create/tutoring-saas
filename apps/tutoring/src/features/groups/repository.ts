@@ -15,7 +15,7 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
   async list(tenantId?: string): Promise<Group[]> {
     let query = this.client
       .from("groups")
-      .select("id, tenant_id, name, price, billing_model, fixed_rent_amount, center_name, created_at")
+      .select("id, tenant_id, name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name")
       .order("name", { ascending: true });
 
     if (tenantId) {
@@ -32,7 +32,7 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
   async findById(id: string): Promise<Group | null> {
     const { data, error } = await this.client
       .from("groups")
-      .select("id, tenant_id, name, price, billing_model, fixed_rent_amount, center_name, created_at")
+      .select("id, tenant_id, name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name")
       .eq("id", id)
       .maybeSingle();
 
@@ -55,8 +55,11 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
     if (data.center_cut_percentage !== undefined) insertPayload.center_cut_percentage = data.center_cut_percentage;
     if (data.fixed_per_student_amount !== undefined) insertPayload.fixed_per_student_amount = data.fixed_per_student_amount;
     if (data.teacher_cut_percentage !== undefined) insertPayload.teacher_cut_percentage = data.teacher_cut_percentage;
+    if (data.teacher_id !== undefined) insertPayload.teacher_id = data.teacher_id;
+    if (data.room_id !== undefined) insertPayload.room_id = data.room_id;
     if (data.day_of_week !== undefined) insertPayload.day_of_week = data.day_of_week;
     if (data.session_time !== undefined) insertPayload.session_time = data.session_time;
+    if (data.schedule !== undefined) insertPayload.schedule = data.schedule;
 
     const { data: created, error } = await this.client
       .from("groups")
@@ -85,9 +88,12 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
     if (data.fixed_per_student_amount !== undefined) updatePayload.fixed_per_student_amount = data.fixed_per_student_amount;
     if (data.center_cut_percentage !== undefined) updatePayload.center_cut_percentage = data.center_cut_percentage;
     if (data.teacher_cut_percentage !== undefined) updatePayload.teacher_cut_percentage = data.teacher_cut_percentage;
+    if (data.teacher_id !== undefined) updatePayload.teacher_id = data.teacher_id;
+    if (data.room_id !== undefined) updatePayload.room_id = data.room_id;
     if (data.center_name !== undefined) updatePayload.center_name = data.center_name;
     if (data.day_of_week !== undefined) updatePayload.day_of_week = data.day_of_week;
     if (data.session_time !== undefined) updatePayload.session_time = data.session_time;
+    if (data.schedule !== undefined) updatePayload.schedule = data.schedule;
 
     const { data: updated, error } = await this.client
       .from("groups")

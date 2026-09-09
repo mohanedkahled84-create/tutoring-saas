@@ -370,6 +370,42 @@ export class WhatsAppNotificationsService {
     };
   }
 
+  async sendTestMessage(
+    tenantId: string,
+    teacherId: string,
+    phone: string,
+    message: string
+  ): Promise<{
+    success: boolean;
+    recipient: string;
+    message: string;
+    sent_at: string;
+    warning?: string;
+  }> {
+    const instanceName = buildInstanceName(tenantId, teacherId);
+    const conn = await this.getConnectionStatus(tenantId, teacherId);
+
+    if (conn.status !== "connected") {
+      throw new Error(
+        "حساب الواتساب غير متصل حالياً. يرجى مسح رمز QR من صفحة الإعدادات وربط جهازك أولاً لتتمكن من إرسال الرسائل لهاتفك."
+      );
+    }
+
+    if (this.gateway?.sendTextMessage) {
+      const result = await this.gateway.sendTextMessage(instanceName, phone, message);
+      if (!result.success) {
+        throw new Error(`تعذر إرسال الرسالة عبر خادم الواتساب: ${result.error || "خطأ غير معروف"}`);
+      }
+    }
+
+    return {
+      success: true,
+      recipient: phone,
+      message,
+      sent_at: new Date().toISOString(),
+    };
+  }
+
   /**
    * DEV-36: WhatsApp Send Pacing & Batch Queue Strategy
    * Loops through batch with 4-9s jitter delay, checks daily volume cap,

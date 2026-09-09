@@ -52,7 +52,7 @@ export function renderWhatsAppSettingsView(data = {}) {
                 امسح رمز QR من هاتفك عبر <strong>الأجهزة المرتبطة > ربط جهاز</strong> في تطبيق واتساب لبدء إرسال الإشعارات تلقائياً.
               </p>
               <div style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink); margin-bottom: 0.75rem;">
-                كود الاقتران: <span id="settingsPairingCode" style="font-family: monospace; color: var(--centrly-blue-800);">${data.pairing_code || '---'}</span>
+                كود الاقتران: <span id="settingsPairingCode" style="font-family: monospace; color: var(--centrly-blue-800); word-break: break-all; overflow-wrap: anywhere; display: inline-block; max-width: 100%; background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid var(--centrly-line);">${data.pairing_code || '---'}</span>
               </div>
               <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.refreshWhatsAppQR()">
                 🔄 تحديث رمز QR

@@ -101,13 +101,28 @@ whatsappRouter.post(
   "/test",
   validateBody(testMessageSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id || "default";
+    const requestedTeacherId = (req.body?.teacher_id as string) || (req.query?.teacher_id as string) || undefined;
+    const resolution = resolveTargetTeacher(req, requestedTeacherId);
+
     const { phone, message } = req.body;
-    res.json({
-      success: true,
-      recipient: phone,
-      message: message || "رسالة اختبارية من منصة الأستاذ الذكي - الاتصال يعمل بنجاح!",
-      sent_at: new Date().toISOString(),
-    });
+    try {
+      const service = resolveWhatsAppService(req);
+      const result = await service.sendTestMessage(
+        tenantId,
+        resolution.teacherId,
+        phone,
+        message || "رسالة اختبارية من منصة سنترلي - الاتصال يعمل بنجاح!"
+      );
+      res.json(result);
+    } catch (err: unknown) {
+      res.status(400).json({
+        error: {
+          code: "WHATSAPP_SEND_FAILED",
+          message: (err as Error).message || "فشل إرسال الرسالة الاختبارية",
+        },
+      });
+    }
   }
 );
 

@@ -81,6 +81,20 @@ export function renderGroupsView(groups = [], user = {}) {
                     <span>سعر الحصة: ${isAssistant ? '<span class="badge badge-secondary">محجوب للمساعد</span>' : `<b style="color: var(--centrly-ink);">${escapeHtml(g.price ?? g.session_price ?? 0)} ج.م</b>`}</span>
                   </div>
 
+                  ${g.teacher_name ? `
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <span style="color: var(--centrly-blue-700); display: flex;">${getIcon('students', 16)}</span>
+                      <span>المدرس: <b style="color: var(--centrly-ink);">${escapeHtml(g.teacher_name)}</b></span>
+                    </div>
+                  ` : ''}
+
+                  ${g.room_name ? `
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <span style="color: var(--centrly-blue-700); display: flex;">${getIcon('center', 16)}</span>
+                      <span>القاعة: <b style="color: var(--centrly-ink);">${escapeHtml(g.room_name)}</b></span>
+                    </div>
+                  ` : ''}
+
                   ${!isAssistant ? `
                     <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.775rem; background: #f8fafc; padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px dashed var(--centrly-line);">
                       <span style="color: #f59e0b; display: flex;">${getIcon('dotNeutral', 8)}</span>
@@ -116,6 +130,18 @@ export function renderGroupsView(groups = [], user = {}) {
                   <button class="btn btn-secondary btn-sm" style="flex: 1; font-size: 0.75rem; padding: 0.25rem 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem; color: var(--centrly-danger);" onclick="window.centrlyApp.openCancelSessionModal('${escapeHtml(g.id)}')" title="إلغاء حصة وإخطار أولياء الأمور">
                     ${getIcon('close', 12)}
                     <span>إلغاء</span>
+                  </button>
+                </div>
+
+                <!-- Group Edit & Delete Actions -->
+                <div style="display: flex; gap: 0.35rem; margin-top: 0.25rem;">
+                  <button class="btn btn-secondary btn-sm" style="flex: 1; font-size: 0.75rem; padding: 0.25rem 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem;" onclick="window.centrlyApp.openEditGroupModal('${escapeHtml(g.id)}')" title="تعديل بيانات المجموعة والمواعيد">
+                    ${getIcon('edit', 12)}
+                    <span>تعديل المجموعة</span>
+                  </button>
+                  <button class="btn btn-secondary btn-sm" style="flex: 1; font-size: 0.75rem; padding: 0.25rem 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem; color: var(--centrly-danger); border-color: rgba(239, 68, 68, 0.3);" onclick="window.centrlyApp.confirmDeleteGroup('${escapeHtml(g.id)}', '${escapeHtml(g.name)}')" title="حذف المجموعة نهائياً">
+                    ${getIcon('close', 12)}
+                    <span>حذف</span>
                   </button>
                 </div>
               </div>

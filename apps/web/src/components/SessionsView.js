@@ -190,49 +190,75 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
             <span>تسجيل حضور الطالب (مسح الباركود أو الكود)</span>
           </h3>
           
-          <form id="attendanceScanForm" onsubmit="window.centrlyApp.handleStudentScan(event)">
-            <div class="form-group">
-              <label class="form-label">كود الطالب أو رقم الكارت</label>
+          <form id="attendanceScanForm" onsubmit="window.centrlyApp.handleStudentScan(event)" style="position: relative;">
+            <div class="form-group" style="position: relative;">
+              <label class="form-label">كود الطالب أو البحث بالاسم</label>
               <div style="display: flex; gap: 0.5rem;">
-                <input type="text" id="scanStudentCode" class="form-input" placeholder="امسح أو اكتب الكود (مثال: 1001)" autofocus ${isSessionEnded ? 'disabled' : ''} dir="ltr">
-                <button type="submit" class="btn btn-primary" ${isSessionEnded ? 'disabled' : ''} style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700;">
+                <div style="flex: 1; position: relative;">
+                  <input 
+                    type="text" 
+                    id="scanStudentCode" 
+                    class="form-input" 
+                    placeholder="اكتب كود أو اسم الطالب، أو امسح الباركود..." 
+                    autofocus 
+                    ${isSessionEnded ? 'disabled' : ''} 
+                    autocomplete="off"
+                    oninput="window.centrlyApp.onStudentScanInput(this.value)"
+                  >
+                  <div id="studentScanSuggestions" style="display: none; position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 50; background: #fff; border: 1px solid var(--centrly-line); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); max-height: 220px; overflow-y: auto;"></div>
+                </div>
+                <button type="submit" class="btn btn-primary" ${isSessionEnded ? 'disabled' : ''} style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700; white-space: nowrap;">
                   ${getIcon('check', 16)}
-                  <span>تسجيل</span>
+                  <span>تسجيل حضور</span>
                 </button>
               </div>
             </div>
 
             <!-- Homework Radio Selector (Default: none / لم يُحدد) -->
-            <div class="form-group" style="margin-top: 1rem;">
-              <label class="form-label">حالة الواجب الدراسي:</label>
-              <div style="display: flex; gap: 0.85rem; margin-top: 0.35rem; flex-wrap: wrap;">
-                <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; cursor: pointer; background: #f8fafc; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
+            <div class="form-group" style="margin-top: 0.75rem;">
+              <label class="form-label" style="font-size: 0.8rem;">حالة الواجب الدراسي للطالب:</label>
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; cursor: pointer; background: #f8fafc; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
                   <input type="radio" name="scanHomework" value="none" id="hwNone" checked>
                   <span style="color: var(--centrly-text); font-weight: 600;">لم يُحدد</span>
                 </label>
-                <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; cursor: pointer; background: #f8fafc; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
+                <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; cursor: pointer; background: #f8fafc; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
                   <input type="radio" name="scanHomework" value="done" id="hwDone">
                   <span style="color: var(--centrly-success); font-weight: 700;">كامل</span>
                 </label>
-                <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; cursor: pointer; background: #f8fafc; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
+                <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; cursor: pointer; background: #f8fafc; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
                   <input type="radio" name="scanHomework" value="partial" id="hwPartial">
                   <span style="color: var(--centrly-warning); font-weight: 700;">ناقص</span>
                 </label>
-                <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; cursor: pointer; background: #f8fafc; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
+                <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; cursor: pointer; background: #f8fafc; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
                   <input type="radio" name="scanHomework" value="missing" id="hwMissing">
                   <span style="color: var(--centrly-danger); font-weight: 700;">لم يُسلم</span>
                 </label>
               </div>
             </div>
-
-            <!-- Optional Comment for WhatsApp report -->
-            <div class="form-group" style="margin-top: 1rem;">
-              <label class="form-label">ملاحظة فورية لولي الأمر (اختياري)</label>
-              <input type="text" id="scanComment" class="form-input" placeholder="مثال: متميز جداً اليوم، يحتاج تدريب إضافي...">
-            </div>
           </form>
 
-          <div id="scanFeedback" style="display: none; margin-top: 1rem; padding: 0.75rem; border-radius: var(--radius-md); font-size: 0.85rem;"></div>
+          <!-- Scan Feedback -->
+          <div id="scanFeedback" style="display: none; margin-top: 0.75rem; padding: 0.75rem; border-radius: var(--radius-md); font-size: 0.85rem;"></div>
+
+          <!-- Inline Quick Add Student Form (shown if student is not registered) -->
+          <div id="inlineQuickAddStudentBox" style="display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px; background: #f0fdf4; border: 1px solid #86efac;">
+            <div style="font-weight: 700; color: #166534; font-size: 0.9rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('add', 16, '#166534')}
+              <span>إضافة طالب جديد وقيده في الحصة والمجموعة فوراً</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.5rem;">
+              <input type="text" id="inlineNewStudentName" class="form-input" placeholder="اسم الطالب بالكامل *">
+              <input type="tel" id="inlineNewStudentParentPhone" class="form-input" placeholder="هاتف ولي الأمر (010...)*" dir="ltr">
+              <input type="tel" id="inlineNewStudentPhone" class="form-input" placeholder="هاتف الطالب (011...)" dir="ltr">
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; justify-content: flex-end;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeInlineStudentAdd()">إلغاء</button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="window.centrlyApp.saveInlineNewStudentAndAttend()" style="font-weight: 700;">
+                ✓ حفظ وتسجيل الحضور الآن
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Role-based Financial Summary -->
@@ -258,15 +284,14 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
             </div>
 
             <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--centrly-text); display: flex; justify-content: space-between;">
-              <span>الطلاب الحاضرين: <b style="color: var(--centrly-ink);">${escapeHtml(financials.attendeeCount)}</b></span>
-              <span>الغياب: <b style="color: var(--centrly-ink);">${escapeHtml(financials.absentCount)}</b></span>
-              <span>معفي / منحة: <b style="color: var(--centrly-ink);">${escapeHtml(financials.exemptCount)}</b></span>
+              <span>عدد الحضور: <b>${escapeHtml(financials.attendeeCount)}</b> طالب</span>
+              <span>الغياب: <b>${escapeHtml(financials.absentCount)}</b> طالب</span>
             </div>
           </div>
         ` : `
-          <div class="card" style="margin: 0; background: #fff; border: 1px dashed var(--centrly-line); display: flex; align-items: center; justify-content: center; text-align: center; padding: 2rem;">
+          <div class="card" style="margin: 0; background: #f8fafc; border: 1px dashed var(--centrly-line); display: flex; align-items: center; justify-content: center; text-align: center; padding: 2rem 1rem;">
             <div>
-              <div style="display: flex; justify-content: center; margin-bottom: 0.5rem; color: var(--centrly-text);">
+              <div style="color: var(--centrly-blue-700); margin-bottom: 0.5rem;">
                 ${getIcon('activity', 32)}
               </div>
               <div style="font-weight: 700; color: var(--centrly-ink); font-size: 0.95rem;">الإيرادات المالية مقفلة</div>
@@ -298,7 +323,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 <th>كود الطالب</th>
                 <th>اسم الطالب</th>
                 <th>الحالة</th>
-                <th>الواجب</th>
+                <th>تعديل الواجب لايف</th>
                 <th>الملاحظات</th>
                 <th>وقت الرصد</th>
                 <th>حالة إشعار الواتساب</th>
@@ -316,11 +341,6 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                   deliveryBadge = '<span class="badge badge-danger" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + getIcon('close', 12) + '<span>فشل الإرسال</span></span>';
                 }
 
-                let hwBadge = '<span class="badge badge-secondary">لم يُحدد</span>';
-                if (a.homework === 'done') hwBadge = '<span class="badge badge-success">كامل</span>';
-                else if (a.homework === 'partial') hwBadge = '<span class="badge badge-warning">ناقص</span>';
-                else if (a.homework === 'missing') hwBadge = '<span class="badge badge-danger">لم يُسلم</span>';
-
                 return `
                 <tr>
                   <td style="font-family: monospace; font-weight: 700;">${escapeHtml(a.code)}</td>
@@ -330,7 +350,14 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                       ${a.attended ? 'حاضر' : 'غائب'}
                     </span>
                   </td>
-                  <td>${hwBadge}</td>
+                  <td>
+                    <select class="form-select" style="padding: 0.2rem 0.4rem; font-size: 0.8rem; font-weight: 700; width: 105px; border-radius: 6px;" onchange="window.centrlyApp.updateAttendanceHomework('${escapeHtml(a.id)}', this.value)">
+                      <option value="none" ${a.homework === 'none' || !a.homework ? 'selected' : ''}>لم يُحدد</option>
+                      <option value="done" ${a.homework === 'done' ? 'selected' : ''}>كامل ✓</option>
+                      <option value="partial" ${a.homework === 'partial' ? 'selected' : ''}>ناقص ⚠️</option>
+                      <option value="missing" ${a.homework === 'missing' ? 'selected' : ''}>لم يُسلم ❌</option>
+                    </select>
+                  </td>
                   <td style="color: var(--centrly-text); font-size: 0.85rem;">
                     ${a.comment ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; color: var(--centrly-ink);">${escapeHtml(a.comment)}</span>` : '<span style="color: #94a3b8;">لا توجد</span>'}
                   </td>

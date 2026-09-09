@@ -7,7 +7,7 @@ import { getIcon } from "../utils/icons.js";
  * Clean vector icons, mandatory student phone, cards navigation, and direct parent notes.
  */
 
-export function renderStudentsView(students = [], groups = []) {
+export function renderStudentsView(students = [], groups = [], isLoading = false) {
   const studentList = students || [];
 
   return `
@@ -33,7 +33,7 @@ export function renderStudentsView(students = [], groups = []) {
             </button>
             <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('student-cards')" style="display: flex; align-items: center; gap: 0.4rem;">
               ${getIcon('cards', 18)}
-              <span>طباعة كروت الطلاب</span>
+              <span>طلب كروت الطلاب</span>
             </button>
             <button class="btn btn-secondary" onclick="window.centrlyApp.openImportModal()" style="display: flex; align-items: center; gap: 0.4rem;">
               ${getIcon('download', 18)}
@@ -75,7 +75,16 @@ export function renderStudentsView(students = [], groups = []) {
               </tr>
             </thead>
             <tbody>
-              ${studentList.length > 0 ? studentList.map(s => {
+              ${isLoading ? `
+                <tr>
+                  <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                    <div style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                      <span style="display: inline-block; width: 18px; height: 18px; border: 2px solid var(--centrly-blue-700); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
+                      <span>جاري تحميل بيانات الطلاب من الخادم...</span>
+                    </div>
+                  </td>
+                </tr>
+              ` : studentList.length > 0 ? studentList.map(s => {
                 const matchedGroup = (groups || []).find(g => g.id === s.group_id || g.id === s.groupId);
                 const displayGroupName = s.groupName || s.group_name || matchedGroup?.name || 'مجموعة عامة';
                 const studentPhone = s.studentPhone || s.student_phone;
@@ -108,6 +117,9 @@ export function renderStudentsView(students = [], groups = []) {
                       </button>
                       <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.editStudent('${escapeHtml(s.id)}')" title="تعديل بيانات الطالب">
                         ${getIcon('edit', 14)}
+                      </button>
+                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.confirmDeleteStudent('${escapeHtml(s.id)}', '${escapeHtml(s.name)}')" title="حذف الطالب" style="color: var(--centrly-danger); border-color: rgba(239, 68, 68, 0.3);">
+                        ${getIcon('close', 14)}
                       </button>
                     </div>
                   </td>

@@ -100,6 +100,8 @@ export const createGroupSchema = z.object({
   fixed_per_student_amount: z.number().min(0).optional().nullable(),
   fixed_rent_amount: z.number().min(0).optional().nullable(),
   teacher_cut_percentage: z.number().min(0).max(100).optional().default(100),
+  teacher_id: z.string().uuid().optional().nullable(),
+  room_id: z.string().uuid().optional().nullable(),
   day_of_week: z.string().max(50).optional().nullable(),
   session_time: z.string().max(100).optional().nullable(),
   schedule: z.string().max(200).optional().nullable(),

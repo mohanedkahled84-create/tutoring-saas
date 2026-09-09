@@ -28,6 +28,7 @@ export interface IEvolutionGateway {
   getQrCode(instanceName: string): Promise<EvolutionQrResult>;
   getConnectionState(instanceName: string): Promise<EvolutionStateResult>;
   disconnectInstance(instanceName: string): Promise<boolean>;
+  sendTextMessage?(instanceName: string, recipientNumber: string, text: string): Promise<{ success: boolean; error?: string }>;
 }
 
 export class HttpEvolutionGateway implements IEvolutionGateway {
@@ -211,9 +212,55 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
       return false;
     }
   }
+
+  async sendTextMessage(
+    instanceName: string,
+    recipientNumber: string,
+    text: string
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!this.apiUrl || !this.apiKey) {
+      return { success: true };
+    }
+
+    let cleanPhone = recipientNumber.replace(/[\s\-\+\(\)]/g, "");
+    if (cleanPhone.startsWith("00")) cleanPhone = cleanPhone.slice(2);
+    if (cleanPhone.startsWith("01") && cleanPhone.length === 11) {
+      cleanPhone = "20" + cleanPhone.slice(1);
+    }
+
+    try {
+      const res = await fetch(`${this.apiUrl}/message/sendText/${instanceName}`, {
+        method: "POST",
+        headers: {
+          apikey: this.apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          number: cleanPhone,
+          text,
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        return { success: false, error: `Evolution API HTTP ${res.status}: ${errText}` };
+      }
+      return { success: true };
+    } catch (err: unknown) {
+      return { success: false, error: (err as Error).message };
+    }
+  }
 }
 
 export class FakeEvolutionGateway implements IEvolutionGateway {
+  async sendTextMessage(
+    _instanceName: string,
+    _recipientNumber: string,
+    _text: string
+  ): Promise<{ success: boolean; error?: string }> {
+    return { success: true };
+  }
   private instances = new Map<
     string,
     {
