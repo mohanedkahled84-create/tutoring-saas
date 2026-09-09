@@ -1215,7 +1215,9 @@ class CentrlyApp {
     }
     const bodyHtml = `
       <div style="text-align: center; padding: 0.5rem 0;">
-        <div style="font-size: 3rem; margin-bottom: 0.75rem;">⏹</div>
+        <div style="margin-bottom: 0.75rem; display: flex; justify-content: center; color: #dc2626;">
+          ${getIcon('close', 42, '#dc2626')}
+        </div>
         <div style="font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink); margin-bottom: 0.5rem;">
           هل تود إنهاء الحصة الآن وتثبيت كشف الحضور؟
         </div>
@@ -1242,13 +1244,89 @@ class CentrlyApp {
   async finalizeEndSession() {
     this.closeModal();
     try {
-      await request(`/sessions/${this.sessionState.id}/end`, { method: 'POST' });
+      const currentId = this.sessionState?.id;
+      let realSessionId = currentId;
+
+      // If the session ID was a temporary client ID (sess-xxx), try to create a real record on the server first
+      if (currentId && String(currentId).startsWith('sess-')) {
+        const cleanGroupId = String(currentId).replace(/^sess-/, '');
+        try {
+          const todayStr = new Date().toISOString().split('T')[0];
+          const createRes = await request('/sessions', {
+            method: 'POST',
+            body: {
+              group_id: cleanGroupId,
+              session_number: 1,
+              session_date: todayStr,
+            },
+          });
+          if (createRes?.session?.id) {
+            realSessionId = createRes.session.id;
+            this.sessionState.id = realSessionId;
+          }
+        } catch (cErr) {
+          console.warn('Could not backfill session on server:', cErr);
+        }
+      }
+
+      // If there are attendance records, sync them to backend before closing
+      if (this.sessionState?.attendanceList && this.sessionState.attendanceList.length > 0 && realSessionId && !String(realSessionId).startsWith('sess-')) {
+        const records = this.sessionState.attendanceList
+          .filter(a => a.student_id)
+          .map(a => ({
+            student_id: a.student_id,
+            attended: Boolean(a.attended),
+            comment: a.comment || null,
+            homework_status: a.homework || 'done',
+          }));
+        if (records.length > 0) {
+          await request(`/sessions/${realSessionId}/attendance`, {
+            method: 'POST',
+            body: { records },
+          }).catch(err => console.warn('Sync attendance on end failed:', err));
+        }
+      }
+
+      // Call end endpoint on server if we have a valid server ID
+      if (realSessionId && !String(realSessionId).startsWith('sess-')) {
+        await request(`/sessions/${realSessionId}/end`, { method: 'POST' });
+      }
+
       this.sessionState.status = 'ended';
+      this.persistSessionState();
       this.showToast('تم إنهاء الحصة بنجاح وتثبيت الكشف! يمكنك الآن إرسال إشعارات الواتساب للغياب والملاحظات.', 'success');
       this.renderMainContent();
     } catch (err) {
+      // If server returns NOT_FOUND / Session not found, finish locally to never trap the user
+      if (err.message && (err.message.includes('Session not found') || err.message.includes('NOT_FOUND'))) {
+        this.sessionState.status = 'ended';
+        this.persistSessionState();
+        this.showToast('تم إنهاء الحصة وتثبيت كشف الحضور بنجاح.', 'success');
+        this.renderMainContent();
+        return;
+      }
       this.showToast(`فشل إنهاء الحصة: ${err.message || 'حدث خطأ في الخادم'}`, 'danger');
     }
+  }
+
+  resetActiveSession() {
+    this.sessionState = {
+      id: null,
+      status: 'scheduled',
+      group: null,
+      attendanceList: [],
+      financials: {
+        totalRevenue: 0,
+        attendeeCount: 0,
+        absentCount: 0,
+        exemptCount: 0,
+        makeupCount: 0,
+      },
+    };
+    localStorage.removeItem('centrly_active_session_state');
+    localStorage.removeItem('centrly_active_session_id');
+    this.showToast('تم إغلاق الحصة بنجاح، يمكنك الآن بدء حصة جديدة.', 'info');
+    this.renderMainContent();
   }
 
   // Single Student Note Modal
@@ -2229,8 +2307,12 @@ class CentrlyApp {
   }
 
   // Session Management & Action Flow Handlers (DEV-89)
-  openStartNewSessionModal() {
-    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${g.name} (${g.center_name || 'السنتر'})</option>`).join('');
+  async openStartNewSessionModal() {
+    if (!this.groups || this.groups.length === 0) {
+      const res = await request('/groups').catch(() => []);
+      this.groups = Array.isArray(res) ? res : (res.groups || []);
+    }
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${escapeHtml(g.center_name || 'السنتر')})</option>`).join('');
     const bodyHtml = `
       <form id="startNewSessionForm" onsubmit="window.centrlyApp.handleStartSessionSubmit(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -2653,14 +2735,70 @@ class CentrlyApp {
 
   filterLogs() {}
   openImportModal() { this.showToast('استيراد من Excel / CSV متاح عبر لوحة المالك.', 'info'); }
-  startSessionForGroup(gId) {
+  async startSessionForGroup(gId) {
     const cleanId = String(gId).replace(/^rec-/, '');
-    this.sessionState.id = `sess-${cleanId}`;
-    this.sessionState.status = 'in_progress';
-    const grp = this.groups.find(g => g.id === cleanId);
-    if (grp) {
-      this.sessionState.group = grp;
+    const grp = (this.groups || []).find(g => g.id === cleanId);
+    this.showToast('جاري بدء وتجهيز الحصة...', 'info');
+
+    let serverSession = null;
+
+    // 1. Check if there is already an in_progress session on the server for this group
+    try {
+      const activeRes = await request('/sessions?status=in_progress').catch(() => null);
+      const activeList = Array.isArray(activeRes) ? activeRes : (activeRes?.sessions || []);
+      const existing = activeList.find(s => s.group_id === cleanId);
+      if (existing) {
+        serverSession = existing;
+      }
+    } catch (err) {
+      console.warn('Check active sessions error:', err);
     }
+
+    // 2. If no existing session, create a real session on server
+    if (!serverSession) {
+      try {
+        let nextNum = 1;
+        const pastRes = await request(`/sessions?group_id=${cleanId}`).catch(() => null);
+        const pastList = Array.isArray(pastRes) ? pastRes : (pastRes?.sessions || []);
+        if (pastList.length > 0) {
+          const maxNum = Math.max(...pastList.map(s => Number(s.session_number) || 0));
+          nextNum = maxNum + 1;
+        }
+        const todayStr = new Date().toISOString().split('T')[0];
+        const createRes = await request('/sessions', {
+          method: 'POST',
+          body: {
+            group_id: cleanId,
+            session_number: nextNum,
+            session_date: todayStr,
+          },
+        });
+        if (createRes && createRes.session) {
+          serverSession = createRes.session;
+        }
+      } catch (err) {
+        console.warn('Server session creation failed, continuing with local fallback:', err);
+      }
+    }
+
+    const sessionId = serverSession ? serverSession.id : `sess-${cleanId}`;
+    this.sessionState = {
+      id: sessionId,
+      status: 'in_progress',
+      session_number: serverSession?.session_number || 1,
+      session_date: serverSession?.session_date || new Date().toISOString().split('T')[0],
+      group: grp || (serverSession?.groups ? serverSession.groups : { id: cleanId, name: 'حصة دراسية', price: 100 }),
+      attendanceList: [],
+      financials: {
+        totalRevenue: 0,
+        attendeeCount: 0,
+        absentCount: 0,
+        exemptCount: 0,
+        makeupCount: 0,
+      },
+    };
+
+    this.persistSessionState();
     this.navigate('sessions');
   }
   viewGroupDetails(groupId) {

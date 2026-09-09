@@ -173,6 +173,10 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 ${getIcon('print', 16)}
                 <span>إيصال التصفية</span>
               </button>
+              <button class="btn btn-secondary" onclick="window.centrlyApp.resetActiveSession()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                ${getIcon('add', 16)}
+                <span>بدء حصة جديدة أخرى</span>
+              </button>
             ` : ''}
             ${failedMessagesCount > 0 ? `
               <button class="btn btn-secondary" onclick="window.centrlyApp.retryFailedWhatsAppMessages()" style="display: flex; align-items: center; gap: 0.4rem; color: var(--centrly-danger); font-weight: 700;">
