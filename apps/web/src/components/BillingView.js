@@ -1,3 +1,5 @@
+import { getIcon } from '../utils/icons.js';
+
 /**
  * Centrly Billing & Subscription Plans Component (DEV-SL.3 & DEV-39)
  */
@@ -14,7 +16,9 @@ export function renderBillingView(data = {}) {
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-              <span class="badge" style="background: #10b981; color: #fff; font-weight: 700;">🟢 اشتراك ساري (فترة تجريبية)</span>
+              <span class="badge" style="background: #10b981; color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+                ${getIcon('dotSuccess', 8)} <span>اشتراك ساري (فترة تجريبية)</span>
+              </span>
               <span style="font-size: 0.8rem; color: #93c5fd;">باقة المعلم الكاملة</span>
             </div>
             <h2 style="font-size: 1.35rem; font-weight: 900; margin: 0; color: #fff;">
@@ -26,7 +30,7 @@ export function renderBillingView(data = {}) {
           </div>
 
           <button class="btn" style="background: #f59e0b; color: #182349; font-weight: 800; border: none; box-shadow: 0 4px 12px rgba(245,158,11,0.4);" onclick="window.centrlyApp.openPaymentProofModal()">
-            ⚡ تجديد / ترقية الاشتراك الآن
+            تجديد / ترقية الاشتراك الآن
           </button>
         </div>
       </div>
@@ -48,11 +52,11 @@ export function renderBillingView(data = {}) {
           </p>
 
           <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
-            <li style="display: flex; align-items: center; gap: 0.5rem;">✓ <strong>عدد طلاب ومجاميع غير محدود</strong></li>
-            <li style="display: flex; align-items: center; gap: 0.5rem;">✓ <strong>مسح الباركود السريع وطباعة كروت A4</strong></li>
-            <li style="display: flex; align-items: center; gap: 0.5rem;">✓ <strong>1,200 رسالة واتساب شهرياً لأولياء الأمور</strong></li>
-            <li style="display: flex; align-items: center; gap: 0.5rem;">✓ <strong>حساب خاص للمساعد لرصد الغياب والواجب</strong></li>
-            <li style="display: flex; align-items: center; gap: 0.5rem;">✓ <strong>تقارير المتفوقين وكشوف الحضور الشهرية</strong></li>
+            <li style="display: flex; align-items: center; gap: 0.5rem;"><span style="color: var(--centrly-success);">${getIcon('check', 14)}</span> <strong>عدد طلاب ومجاميع غير محدود</strong></li>
+            <li style="display: flex; align-items: center; gap: 0.5rem;"><span style="color: var(--centrly-success);">${getIcon('check', 14)}</span> <strong>مسح الباركود السريع وطباعة كروت A4</strong></li>
+            <li style="display: flex; align-items: center; gap: 0.5rem;"><span style="color: var(--centrly-success);">${getIcon('check', 14)}</span> <strong>1,200 رسالة واتساب شهرياً لأولياء الأمور</strong></li>
+            <li style="display: flex; align-items: center; gap: 0.5rem;"><span style="color: var(--centrly-success);">${getIcon('check', 14)}</span> <strong>حساب خاص للمساعد لرصد الغياب والواجب</strong></li>
+            <li style="display: flex; align-items: center; gap: 0.5rem;"><span style="color: var(--centrly-success);">${getIcon('check', 14)}</span> <strong>تقارير المتفوقين وكشوف الحضور الشهرية</strong></li>
           </ul>
 
           <button class="btn btn-primary" style="width: 100%; font-weight: 800;" onclick="window.centrlyApp.openPaymentProofModal('باقة المعلم المحترف', 199)">
@@ -71,11 +75,11 @@ export function renderBillingView(data = {}) {
           </p>
 
           <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
-            <li style="display: flex; align-items: center; gap: 0.5rem;">✓ <strong>كل مميزات باقة المعلم</strong></li>
-            <li style="display: flex; align-items: center; gap: 0.5rem;">✓ <strong>إدارة القاعات ومنع تضارب الحصص</strong></li>
-            <li style="display: flex; align-items: center; gap: 0.5rem;">✓ <strong>حسابات متعددة للمدرسين والمساعدين</strong></li>
-            <li style="display: flex; align-items: center; gap: 0.5rem;">✓ <strong>نظام حسابات ونسب السنتر وتصفية الأرباح</strong></li>
-            <li style="display: flex; align-items: center; gap: 0.5rem;">✓ <strong>رسائل واتساب غير محدودة بنظام Pacing الآمن</strong></li>
+            <li style="display: flex; align-items: center; gap: 0.5rem;"><span style="color: var(--centrly-success);">${getIcon('check', 14)}</span> <strong>كل مميزات باقة المعلم</strong></li>
+            <li style="display: flex; align-items: center; gap: 0.5rem;"><span style="color: var(--centrly-success);">${getIcon('check', 14)}</span> <strong>إدارة القاعات ومنع تضارب الحصص</strong></li>
+            <li style="display: flex; align-items: center; gap: 0.5rem;"><span style="color: var(--centrly-success);">${getIcon('check', 14)}</span> <strong>حسابات متعددة للمدرسين والمساعدين</strong></li>
+            <li style="display: flex; align-items: center; gap: 0.5rem;"><span style="color: var(--centrly-success);">${getIcon('check', 14)}</span> <strong>نظام حسابات ونسب السنتر وتصفية الأرباح</strong></li>
+            <li style="display: flex; align-items: center; gap: 0.5rem;"><span style="color: var(--centrly-success);">${getIcon('check', 14)}</span> <strong>رسائل واتساب غير محدودة بنظام Pacing الآمن</strong></li>
           </ul>
 
           <button class="btn btn-secondary" style="width: 100%; font-weight: 700;" onclick="window.centrlyApp.openPaymentProofModal('باقة السنتر', 499)">
@@ -87,8 +91,9 @@ export function renderBillingView(data = {}) {
 
       <!-- Payment Methods & Instructions -->
       <div class="card" style="margin: 0; background: #fafbfc;">
-        <h3 style="font-size: 1rem; font-weight: 800; margin-top: 0; color: var(--centrly-ink);">
-          💳 طرق الدفع المتاحة داخل مصر
+        <h3 style="font-size: 1rem; font-weight: 800; margin-top: 0; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.5rem;">
+          ${getIcon('billing', 18, 'var(--centrly-blue-700)')}
+          <span>طرق الدفع المتاحة داخل مصر</span>
         </h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-top: 0.75rem;">
           <div style="background: #fff; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">

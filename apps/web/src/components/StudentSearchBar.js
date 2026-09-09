@@ -1,3 +1,5 @@
+import { getIcon } from "../utils/icons.js";
+
 /**
  * Universal Student Search Bar Component (DEV-80)
  * Reusable across every page that lists students (Reports, StudentsView, TeacherDashboard, CenterOwnerDashboard).
@@ -7,7 +9,7 @@
 export function renderStudentSearchBar(options = {}) {
   const {
     id = "universalStudentSearch",
-    placeholder = "🔍 ابحث بكود الطالب / الباركود، الاسم، أو رقم ولي الأمر...",
+    placeholder = "ابحث بكود الطالب / الباركود، الاسم، أو رقم ولي الأمر...",
     value = "",
     onInputHandler = "window.centrlyApp.handleUniversalStudentSearch(this.value)",
     extraControlsHtml = "",
@@ -26,8 +28,8 @@ export function renderStudentSearchBar(options = {}) {
           oninput="${onInputHandler}"
           autocomplete="off"
         />
-        <span style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--centrly-muted, #64748b); pointer-events: none;">
-          🏷️
+        <span style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--centrly-text); pointer-events: none; display: flex; align-items: center;">
+          ${getIcon('search', 16, 'var(--centrly-text)')}
         </span>
       </div>
       ${extraControlsHtml || ''}

@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
+import { getIcon } from "../utils/icons.js";
 
 /**
  * Centrly Risk & Watchlist Component (DEV-62)
@@ -19,7 +20,7 @@ export function renderRiskWatchlistView(data = {}) {
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <span style="font-size: 1.4rem;">⚠️</span>
+              <span>${getIcon('risk', 22, 'var(--centrly-danger)')}</span>
               <h2 class="card-title" style="margin: 0; font-size: 1.25rem;">مؤشرات الخطر والإنذارات المبكرة (At-Risk Watchlist)</h2>
             </div>
             <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
@@ -27,8 +28,9 @@ export function renderRiskWatchlistView(data = {}) {
             </p>
           </div>
 
-          <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('whatsapp')">
-            💬 إعدادات قوالب الإنذار
+          <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('whatsapp')" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+            ${getIcon('whatsapp', 16)}
+            <span>إعدادات قوالب الإنذار</span>
           </button>
         </div>
 
@@ -52,8 +54,9 @@ export function renderRiskWatchlistView(data = {}) {
       <!-- Main Watchlist Table -->
       <div class="card" style="margin: 0;">
         <div class="card-header">
-          <h3 class="card-title" style="font-size: 1.05rem;">
-            📋 كشف الطلاب المحتاجين للمتابعة (${escapeHtml(students.length)})
+          <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.4rem;">
+            ${getIcon('reports', 18, 'var(--centrly-blue-700)')}
+            <span>كشف الطلاب المحتاجين للمتابعة (${escapeHtml(students.length)})</span>
           </h3>
           <span style="font-size: 0.8rem; color: var(--centrly-text);">
             يتم تحديث القائمة آلياً بعد انتهاء كل حصة
@@ -81,27 +84,28 @@ export function renderRiskWatchlistView(data = {}) {
                   <td><span class="badge badge-blue">${escapeHtml(s.group || s.group_name || 'مجموعة عامة')}</span></td>
                   <td>
                     <span style="font-weight: 700; color: var(--centrly-ink);">
-                      ${s.alert_type === 'absence_warning' ? '❌ غياب متكرر' : (s.alert_type === 'grade_drop' ? '📉 تراجع درجات' : (s.alert_type === 'homework_neglect' ? '📝 إهمال واجب' : escapeHtml(s.reason || 'إنذار متابعة')))}
+                      ${s.alert_type === 'absence_warning' ? 'غياب متكرر' : (s.alert_type === 'grade_drop' ? 'تراجع درجات' : (s.alert_type === 'homework_neglect' ? 'إهمال واجب' : escapeHtml(s.reason || 'إنذار متابعة')))}
                     </span>
                   </td>
                   <td>
                     <span class="badge ${s.severity === 'high' || s.severity === 'critical' ? 'badge-danger' : 'badge-warning'}">
-                      ${s.severity === 'high' || s.severity === 'critical' ? 'حرج 🔴' : 'متوسط 🟠'}
+                      ${s.severity === 'high' || s.severity === 'critical' ? 'حرج' : 'متوسط'}
                     </span>
                   </td>
                   <td style="font-size: 0.85rem; color: var(--centrly-text);">
                     ${escapeHtml(s.reason || s.detail || 'تكرار الغياب عن الحصص الأخيرة')}
                   </td>
                   <td>
-                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.dispatchSingleRiskAlert('${escapeHtml(s.id || s.student_id)}', '${escapeHtml(s.name || s.student_name).replace(/'/g, "\\'")}')" style="font-size: 0.78rem; padding: 0.3rem 0.6rem;">
-                      💬 إرسال إنذار واتساب
+                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.dispatchSingleRiskAlert('${escapeHtml(s.id || s.student_id)}', '${escapeHtml(s.name || s.student_name).replace(/'/g, "\\'")}')" style="font-size: 0.78rem; padding: 0.3rem 0.6rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                      ${getIcon('whatsapp', 14)}
+                      <span>إرسال إنذار واتساب</span>
                     </button>
                   </td>
                 </tr>
               `).join('') : `
                 <tr>
                   <td colspan="7" style="text-align: center; padding: 3rem; color: var(--centrly-text);">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
+                    <div style="margin-bottom: 0.5rem;">${getIcon('check', 36, 'var(--centrly-success)')}</div>
                     <div style="font-weight: 700; font-size: 1rem; color: var(--centrly-ink);">لا توجد مؤشرات خطر حالياً</div>
                     <p style="font-size: 0.85rem; margin-top: 0.25rem;">جميع الطلاب ملتزمون بالحضور والواجبات وأداؤهم مستقر وممتاز.</p>
                   </td>

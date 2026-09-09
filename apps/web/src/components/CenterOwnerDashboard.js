@@ -197,8 +197,8 @@ export function renderCenterOwnerDashboard(state = {}) {
                       <td style="padding: 0.75rem; font-weight: 700; color: var(--centrly-success);">${r.summary.center_cut.toLocaleString('ar-EG')} ج.م</td>
                       <td style="padding: 0.75rem;">
                         ${isPaid
-                          ? `<span class="badge badge-success" style="background: var(--centrly-success-light); color: var(--centrly-success); font-weight: 700;">✓ مدفوع</span>`
-                          : `<span class="badge badge-danger" style="background: var(--centrly-amber-100); color: var(--centrly-amber-700); font-weight: 700;">⏳ معلق</span>`
+                          ? `<span class="badge badge-success" style="background: var(--centrly-success-light); color: var(--centrly-success); font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('dotSuccess', 8)} <span>مدفوع</span></span>`
+                          : `<span class="badge badge-danger" style="background: var(--centrly-amber-100); color: var(--centrly-amber-700); font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('dotWarning', 8)} <span>معلق</span></span>`
                         }
                       </td>
                       <td style="padding: 0.75rem;">
@@ -207,7 +207,7 @@ export function renderCenterOwnerDashboard(state = {}) {
                           onclick="window.centrlyApp.toggleTeacherPayout('${escapeHtml(r.teacher.id)}', '${period}', '${r.payout.status}')"
                           style="font-size: 0.8rem; padding: 0.3rem 0.6rem;"
                         >
-                          ${isPaid ? 'تحويل لغير مدفوع' : 'تسجيل الصرف ✅'}
+                          ${isPaid ? 'تحويل لغير مدفوع' : 'تسجيل الصرف'}
                         </button>
                       </td>
                     </tr>
@@ -232,8 +232,9 @@ export function renderCenterOwnerDashboard(state = {}) {
           <!-- Rooms List -->
           <div class="card" style="margin: 0; background: #fff;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-              <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0;">
-                🚪 قاعات السنتر والسعة الاستيعابية
+              <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                ${getIcon('center', 18, 'var(--centrly-blue-700)')}
+                <span>قاعات السنتر والسعة الاستيعابية</span>
               </h2>
             </div>
 
@@ -270,8 +271,9 @@ export function renderCenterOwnerDashboard(state = {}) {
 
           <!-- Conflict Engine Test / Booking Inspector -->
           <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-amber-500);">
-            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0 0 0.5rem 0;">
-              ⚡ محرك فحص تضارب الحصص (Booking Conflict Engine)
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('clock', 18, 'var(--centrly-amber-500)')}
+              <span>محرك فحص تضارب الحصص (Booking Conflict Engine)</span>
             </h2>
             <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1rem 0;">
               اختر القاعة والتوقيت المطلوب للتأكد من خلو القاعة وعدم تعارضها مع أي مدرس آخر قبل اعتماد الحصة.
@@ -305,8 +307,9 @@ export function renderCenterOwnerDashboard(state = {}) {
                 <input type="number" id="conflictStudentCount" class="form-input" placeholder="مثال: 35" min="1">
               </div>
 
-              <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">
-                🔍 فحص توفر القاعة ومنع التضارب
+              <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                ${getIcon('search', 16)}
+                <span>فحص توفر القاعة ومنع التضارب</span>
               </button>
             </form>
 
@@ -319,10 +322,10 @@ export function renderCenterOwnerDashboard(state = {}) {
               };">
                 <div style="font-weight: 800; font-size: 0.95rem; color: ${
                   conflictCheckResult.has_conflict ? 'var(--centrly-danger)' : 'var(--centrly-success)'
-                };">
+                }; display: flex; align-items: center; gap: 0.35rem;">
                   ${conflictCheckResult.has_conflict
-                    ? '⚠️ تنبيه تعارض: القاعة محجوزة بالفعل في هذا التوقيت!'
-                    : '✓ القاعة شاغرة ومتاحة للحجز في هذا التوقيت'}
+                    ? `${getIcon('close', 16, 'var(--centrly-danger)')} تنبيه تعارض: القاعة محجوزة بالفعل في هذا التوقيت!`
+                    : `${getIcon('check', 16, 'var(--centrly-success)')} القاعة شاغرة ومتاحة للحجز في هذا التوقيت`}
                 </div>
                 ${conflictCheckResult.conflicting_booking ? `
                   <div style="font-size: 0.85rem; color: var(--centrly-ink); margin-top: 0.4rem;">
@@ -332,8 +335,9 @@ export function renderCenterOwnerDashboard(state = {}) {
                   </div>
                 ` : ''}
                 ${conflictCheckResult.warning ? `
-                  <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--centrly-warning); font-weight: 700;">
-                    ⚠️ ${conflictCheckResult.warning.message}
+                  <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--centrly-warning); font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">
+                    ${getIcon('risk', 14, 'var(--centrly-warning)')}
+                    <span>${conflictCheckResult.warning.message}</span>
                   </div>
                 ` : ''}
               </div>
@@ -349,8 +353,9 @@ export function renderCenterOwnerDashboard(state = {}) {
         <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-blue-700);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <div>
-              <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink); margin: 0;">
-                ⚡ بوابة الاستقبال الذكية (Smart Gate Mode)
+              <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                ${getIcon('sessions', 18, 'var(--centrly-blue-700)')}
+                <span>بوابة الاستقبال الذكية (Smart Gate Mode)</span>
               </h2>
               <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
                 مسح باركود الطالب في مدخل السنتر يقوم بتوجيهه فوراً إلى حصته النشطة وتسجيل حضوره آلياً مع التنبيه الصوتي
@@ -429,8 +434,9 @@ export function renderCenterOwnerDashboard(state = {}) {
           
           <!-- Add Teacher Form -->
           <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-blue-700);">
-            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0 0 1rem 0;">
-              👨‍🏫 إضافة مدرس جديد للسنتر
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('students', 18, 'var(--centrly-blue-700)')}
+              <span>إضافة مدرس جديد للسنتر</span>
             </h2>
 
             <form onsubmit="window.centrlyApp.handleAddTeacherSubmit(event)" style="display: flex; flex-direction: column; gap: 0.85rem;">
@@ -486,8 +492,9 @@ export function renderCenterOwnerDashboard(state = {}) {
 
           <!-- Add Assistant Form -->
           <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-amber-600);">
-            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0 0 1rem 0;">
-              🧑‍💼 إضافة مساعد جديد
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('students', 18, 'var(--centrly-amber-600)')}
+              <span>إضافة مساعد جديد</span>
             </h2>
 
             <form onsubmit="window.centrlyApp.handleAddAssistantSubmit(event)" style="display: flex; flex-direction: column; gap: 0.85rem;">
@@ -527,8 +534,9 @@ export function renderCenterOwnerDashboard(state = {}) {
         <!-- Generated Invite Link Box -->
         ${generatedInvite ? `
           <div class="card" style="margin-top: 1.5rem; background: var(--centrly-success-light); border: 2px solid var(--centrly-success);">
-            <div style="font-weight: 800; font-size: 1.1rem; color: var(--centrly-success);">
-              ✓ تم إنشاء رابط الدعوة بنجاح لـ (${generatedInvite.name})!
+            <div style="font-weight: 800; font-size: 1.1rem; color: var(--centrly-success); display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('check', 16, 'var(--centrly-success)')}
+              <span>تم إنشاء رابط الدعوة بنجاح لـ (${generatedInvite.name})!</span>
             </div>
             <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0.35rem 0;">
               صالح لمدة 7 أيام للاستخدام مرة واحدة، يُتيح للمدرس تسجيل الدخول وتعيين كلمة مروره مباشرة.

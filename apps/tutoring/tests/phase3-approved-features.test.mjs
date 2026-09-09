@@ -649,12 +649,12 @@ test("DEV-56: renderTeacherCalendar generates Arabic RTL calendar with all view 
   assert.ok(weekHtml.includes("السبت"));
   assert.ok(weekHtml.includes("الأحد"));
   assert.ok(weekHtml.includes("الجمعة"));
-  assert.ok(weekHtml.includes("🟢 جارية"));
-  assert.ok(weekHtml.includes("🏁 منتهية"));
-  assert.ok(weekHtml.includes("🕒 مجدولة"));
-  assert.ok(weekHtml.includes("❌ ملغاة"));
-  assert.ok(weekHtml.includes("📅 مؤجلة"));
-  assert.ok(weekHtml.includes("⭐ إضافية"));
+  assert.ok(weekHtml.includes("جارية"));
+  assert.ok(weekHtml.includes("منتهية"));
+  assert.ok(weekHtml.includes("مجدولة"));
+  assert.ok(weekHtml.includes("ملغاة"));
+  assert.ok(weekHtml.includes("مؤجلة"));
+  assert.ok(weekHtml.includes("إضافية"));
 
   // 2. Daily view with sessions
   const dayHtml = renderTeacherCalendar({ view: "day", sessions: sampleSessions });

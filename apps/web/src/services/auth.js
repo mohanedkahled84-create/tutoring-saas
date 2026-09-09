@@ -57,6 +57,15 @@ export const authService = {
     });
 
     if (response.user) {
+      if (response.token) {
+        this.setSession(response.user, response.token, response.refresh_token);
+        try {
+          const profile = await request('/auth/me');
+          if (profile?.user) {
+            response.user = { ...response.user, ...profile.user };
+          }
+        } catch (_) {}
+      }
       this.setSession(response.user, response.token, response.refresh_token);
     }
     return response;
@@ -87,7 +96,13 @@ export const authService = {
   },
 
   async getProfile() {
-    return await request('/auth/me');
+    const res = await request('/auth/me');
+    if (res?.user) {
+      const currentUser = this.getUser() || {};
+      const merged = { ...currentUser, ...res.user };
+      this.setSession(merged, this.getToken(), this.getRefreshToken());
+    }
+    return res;
   },
 
   async forgotPassword(email) {

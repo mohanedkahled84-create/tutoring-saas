@@ -1,3 +1,6 @@
+import { escapeHtml } from '../utils/escapeHtml.js';
+import { getIcon } from '../utils/icons.js';
+
 /**
  * Centrly WhatsApp Settings & Templates Workspace (DEV-65)
  */
@@ -14,10 +17,10 @@ export function renderWhatsAppSettingsView(data = {}) {
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <span style="font-size: 1.4rem;">💬</span>
+              <span>${getIcon('whatsapp', 24, 'var(--centrly-blue-700)')}</span>
               <h2 class="card-title" style="margin: 0; font-size: 1.25rem;">إعدادات وتكامل واتساب (WhatsApp & Templates)</h2>
               <span class="badge ${isConnected ? 'badge-success' : 'badge-warning'}" id="settingsWaBadge">
-                ${isConnected ? `🟢 الخادم متصل وجاهز ${data.phone_number ? `(${data.phone_number})` : ''}` : '🟡 بانتظار مسح رمز QR'}
+                ${isConnected ? `${getIcon('dotSuccess', 8)} الخادم متصل وجاهز ${data.phone_number ? `(${data.phone_number})` : ''}` : `${getIcon('dotWarning', 8)} بانتظار مسح رمز QR`}
               </span>
             </div>
             <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
@@ -26,12 +29,14 @@ export function renderWhatsAppSettingsView(data = {}) {
           </div>
 
           <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.reconnectWhatsApp()">
-              🔄 فحص الاتصال
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.reconnectWhatsApp()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+              ${getIcon('refresh', 14)}
+              <span>فحص الاتصال</span>
             </button>
             ${isConnected && !isAssistant ? `
-              <button class="btn btn-danger btn-sm" onclick="window.centrlyApp.disconnectWhatsApp()">
-                🔴 إلغاء ربط الحساب
+              <button class="btn btn-danger btn-sm" onclick="window.centrlyApp.disconnectWhatsApp()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                ${getIcon('close', 14)}
+                <span>إلغاء ربط الحساب</span>
               </button>
             ` : ''}
           </div>
@@ -51,11 +56,14 @@ export function renderWhatsAppSettingsView(data = {}) {
               <p style="font-size: 0.825rem; color: var(--centrly-text); margin-bottom: 0.75rem;">
                 امسح رمز QR من هاتفك عبر <strong>الأجهزة المرتبطة > ربط جهاز</strong> في تطبيق واتساب لبدء إرسال الإشعارات تلقائياً.
               </p>
-              <div style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink); margin-bottom: 0.75rem;">
-                كود الاقتران: <span id="settingsPairingCode" style="font-family: monospace; color: var(--centrly-blue-800); word-break: break-all; overflow-wrap: anywhere; display: inline-block; max-width: 100%; background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid var(--centrly-line);">${data.pairing_code || '---'}</span>
-              </div>
-              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.refreshWhatsAppQR()">
-                🔄 تحديث رمز QR
+              ${(data.pairing_code && data.pairing_code.length <= 15) ? `
+                <div style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink); margin-bottom: 0.75rem;">
+                  كود الاقتران: <span id="settingsPairingCode" style="font-family: monospace; color: var(--centrly-blue-800); background: #f1f5f9; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line); font-size: 1.05rem; letter-spacing: 2px; font-weight: 800;">${escapeHtml(data.pairing_code)}</span>
+                </div>
+              ` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.refreshWhatsAppQR()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                ${getIcon('refresh', 14)}
+                <span>تحديث رمز QR</span>
               </button>
             </div>
           </div>
@@ -83,8 +91,9 @@ export function renderWhatsAppSettingsView(data = {}) {
 
       <!-- Quick Test Message Sender -->
       <div class="card" style="margin: 0;">
-        <h3 class="card-title" style="font-size: 1.05rem; margin-bottom: 0.75rem;">
-          📱 إرسال رسالة اختبارية إلى هاتفك للتأكد من وصول الإشعارات
+        <h3 class="card-title" style="font-size: 1.05rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          ${getIcon('send', 18, 'var(--centrly-blue-700)')}
+          <span>إرسال رسالة اختبارية إلى هاتفك للتأكد من وصول الإشعارات</span>
         </h3>
         <p style="font-size: 0.825rem; color: var(--centrly-text); margin-bottom: 1rem;">
           أدخل رقم هاتفك لتجربة استلام رسالة واتساب فورية من منظومة سنترلي للتأكد من جاهزية الخدمة.
@@ -97,10 +106,11 @@ export function renderWhatsAppSettingsView(data = {}) {
           </div>
           <div class="form-group" style="flex: 2; min-width: 280px; margin: 0;">
             <label class="form-label" style="font-weight: 700;">نص الرسالة الاختبارية</label>
-            <input type="text" id="testMsgInput" class="form-input" value="مرحباً بك! رسالة اختبارية لتأكيد ربط منظومة سنترلي بحسابك بنجاح ✅">
+            <input type="text" id="testMsgInput" class="form-input" value="مرحباً بك! رسالة اختبارية لتأكيد ربط منظومة سنترلي بحسابك بنجاح.">
           </div>
-          <button type="submit" id="btnSendTestMsg" class="btn btn-primary" style="height: 42px; font-weight: 700; white-space: nowrap;">
-            🚀 إرسال الآن
+          <button type="submit" id="btnSendTestMsg" class="btn btn-primary" style="height: 42px; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.4rem;">
+            ${getIcon('send', 16, '#ffffff')}
+            <span>إرسال الآن</span>
           </button>
         </form>
         <div id="testMsgFeedback" style="display: none; margin-top: 0.75rem; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.85rem;"></div>
@@ -109,8 +119,9 @@ export function renderWhatsAppSettingsView(data = {}) {
       <!-- Ready Message Templates -->
       <div class="card" style="margin: 0;">
         <div class="card-header">
-          <h3 class="card-title" style="font-size: 1.05rem;">
-            📑 قوالب رسائل الواتساب المعتمدة (تُرسل تلقائياً)
+          <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+            ${getIcon('note', 18, 'var(--centrly-blue-700)')}
+            <span>قوالب رسائل الواتساب المعتمدة (تُرسل تلقائياً)</span>
           </h3>
           <span style="font-size: 0.8rem; color: var(--centrly-text);">
             يتم استبدال المتغيرات آلياً ببيانات كل طالب

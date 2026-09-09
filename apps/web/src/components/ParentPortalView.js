@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
+import { getIcon } from "../utils/icons.js";
 
 /**
  * Centrly Parent Web Portal Component (DEV-34)
@@ -11,7 +12,7 @@ export function renderParentPortalView(portalData = {}) {
     return `
       <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; padding: 1.5rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
         <div style="max-width: 480px; width: 100%; background: #fff; border-radius: var(--radius-lg); padding: 2.5rem; box-shadow: var(--shadow-sm); border: 1px solid var(--centrly-line); text-align: center;">
-          <div style="font-size: 3rem; margin-bottom: 0.75rem;">⚠️</div>
+          <div style="font-size: 3rem; margin-bottom: 0.75rem;"></div>
           <h2 style="font-size: 1.3rem; font-weight: 800; color: var(--centrly-danger); margin: 0 0 0.5rem 0;">رابط غير صالح أو منتهي الصلاحية</h2>
           <p style="font-size: 0.9rem; color: var(--centrly-text); margin: 0 0 1.5rem 0; line-height: 1.6;">
             ${escapeHtml(portalData.error || 'تعذر تحميل بيانات متابعة الطالب. يرجى التأكد من فتح الرابط الصحيح المرسل عبر الواتساب أو مراجعة إدارة السنتر.')}
@@ -76,8 +77,9 @@ export function renderParentPortalView(portalData = {}) {
 
         <!-- Attendance History Timeline -->
         <div style="background: #fff; border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-sm); border: 1px solid var(--centrly-line);">
-          <h2 style="font-size: 1rem; font-weight: 800; color: var(--centrly-ink); margin: 0 0 1rem;">
-            📅 سجل الحصص الأخيرة
+          <h2 style="font-size: 1rem; font-weight: 800; color: var(--centrly-ink); margin: 0 0 1rem; display: flex; align-items: center; gap: 0.4rem;">
+            ${getIcon('calendar', 16, 'var(--centrly-blue-700)')}
+            <span>سجل الحصص الأخيرة</span>
           </h2>
 
           <div style="display: flex; flex-direction: column; gap: 0.75rem;">
@@ -88,7 +90,7 @@ export function renderParentPortalView(portalData = {}) {
                     حصة رقم ${escapeHtml(s.session_number)} • ${escapeHtml(s.session_date)}
                   </div>
                   <span class="badge ${s.attended ? 'badge-success' : 'badge-danger'}">
-                    ${s.attended ? 'حاضر ✓' : 'غائب ✗'}
+                    ${s.attended ? 'حاضر' : 'غائب'}
                   </span>
                 </div>
 
@@ -101,8 +103,9 @@ export function renderParentPortalView(portalData = {}) {
                 </div>
 
                 ${s.comment ? `
-                  <div style="font-size: 0.825rem; background: #fff; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border-right: 3px solid var(--centrly-blue-700); color: var(--centrly-ink); margin-top: 0.25rem;">
-                    💬 <b>ملاحظة المعلم:</b> ${escapeHtml(s.comment)}
+                  <div style="font-size: 0.825rem; background: #fff; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border-right: 3px solid var(--centrly-blue-700); color: var(--centrly-ink); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+                    ${getIcon('note', 14, 'var(--centrly-blue-700)')}
+                    <span><b>ملاحظة المعلم:</b> ${escapeHtml(s.comment)}</span>
                   </div>
                 ` : ''}
               </div>
@@ -116,7 +119,7 @@ export function renderParentPortalView(portalData = {}) {
 
         <!-- Portal Security Note -->
         <div style="text-align: center; padding: 1rem 0; font-size: 0.75rem; color: var(--centrly-text);">
-          🔒 رابط مشفر وخاص بولي الأمر فقط • مدعوم بواسطة <b>منظومة سنترلي (Centrly)</b>
+          رابط مشفر وخاص بولي الأمر فقط • مدعوم بواسطة <b>منظومة سنترلي (Centrly)</b>
         </div>
 
       </div>

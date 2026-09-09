@@ -202,7 +202,7 @@ export function renderStudentReportsView(state = {}) {
                   <tr>
                     <td style="text-align: center;">
                       <span class="badge" style="${badgeBg} padding: 0.25rem 0.6rem; border-radius: 9999px; font-size: 0.85rem;">
-                        ${isTop1 ? "🥇 1" : isTop2 ? "🥈 2" : isTop3 ? "🥉 3" : `#${std.rank}`}
+                        ${isTop1 ? "#1" : isTop2 ? "#2" : isTop3 ? "#3" : `#${std.rank}`}
                       </span>
                     </td>
                     <td><code style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(std.student_code || "—")}</code></td>

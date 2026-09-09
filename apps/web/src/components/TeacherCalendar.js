@@ -169,13 +169,13 @@ export function renderTeacherCalendar(data = {}) {
         <!-- Filter & KPI Strip -->
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">
           <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem;">
-            <span>📊 إجمالي الحصص: <strong>${totalCount}</strong></span>
-            <span style="color: var(--centrly-success);">🟢 جارية: <strong>${inProgressCount}</strong></span>
-            <span style="color: var(--centrly-blue-700);">🕒 مجدولة: <strong>${scheduledCount}</strong></span>
-            <span style="color: var(--centrly-text);">🏁 منتهية: <strong>${completedCount}</strong></span>
-            <span style="color: var(--centrly-warning);">📅 مؤجلة: <strong>${rescheduledCount}</strong></span>
-            <span style="color: var(--centrly-danger);">❌ ملغاة: <strong>${cancelledCount}</strong></span>
-            <span style="color: #7c3aed;">⭐ إضافية: <strong>${extraCount}</strong></span>
+            <span>إجمالي الحصص: <strong>${totalCount}</strong></span>
+            <span style="color: var(--centrly-success);">${getIcon('dotSuccess', 8)} جارية: <strong>${inProgressCount}</strong></span>
+            <span style="color: var(--centrly-blue-700);">مجدولة: <strong>${scheduledCount}</strong></span>
+            <span style="color: var(--centrly-text);">منتهية: <strong>${completedCount}</strong></span>
+            <span style="color: var(--centrly-warning);">مؤجلة: <strong>${rescheduledCount}</strong></span>
+            <span style="color: var(--centrly-danger);">ملغاة: <strong>${cancelledCount}</strong></span>
+            <span style="color: #7c3aed;">إضافية: <strong>${extraCount}</strong></span>
           </div>
 
           <div style="display: flex; gap: 0.5rem; align-items: center;">

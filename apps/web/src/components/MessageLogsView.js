@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
+import { getIcon } from "../utils/icons.js";
 
 /**
  * Centrly Message Logs & Delivery Status View (DEV-16 DEV-TDB.3 & DEV-ATN.3)
@@ -67,11 +68,15 @@ export function renderMessageLogsView(logs = []) {
                   </td>
                   <td>
                     ${l.status !== 'sent' ? `
-                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${escapeHtml(l.studentId || l.student_id)}', '${escapeHtml(l.studentName || l.student_name).replace(/'/g, "\\'")}')" style="font-weight: 700; color: var(--centrly-blue-800);">
-                        🔄 إعادة إرسال
+                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${escapeHtml(l.studentId || l.student_id)}', '${escapeHtml(l.studentName || l.student_name).replace(/'/g, "\\'")}')" style="font-weight: 700; color: var(--centrly-blue-800); display: inline-flex; align-items: center; gap: 0.35rem;">
+                        ${getIcon('refresh', 14)}
+                        <span>إعادة إرسال</span>
                       </button>
                     ` : `
-                      <span style="font-size: 0.8rem; color: var(--centrly-success);">مكتمل ✓</span>
+                      <span style="font-size: 0.8rem; color: var(--centrly-success); display: inline-flex; align-items: center; gap: 0.25rem;">
+                        ${getIcon('check', 14, 'var(--centrly-success)')}
+                        <span>مكتمل</span>
+                      </span>
                     `}
                   </td>
                 </tr>

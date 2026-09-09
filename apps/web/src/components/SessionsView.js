@@ -151,6 +151,10 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
           <!-- Session Flow Buttons -->
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             ${!isSessionEnded && !isCancelled && !isRescheduled ? `
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openEditSessionModal()" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700;">
+                ${getIcon('edit', 16)}
+                <span>تعديل بيانات الحصة</span>
+              </button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openBatchNotesModal()" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700;">
                 ${getIcon('note', 16)}
                 <span>ملاحظات الطلاب</span>
@@ -254,9 +258,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
             </div>
             <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; justify-content: flex-end;">
               <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeInlineStudentAdd()">إلغاء</button>
-              <button type="button" class="btn btn-primary btn-sm" onclick="window.centrlyApp.saveInlineNewStudentAndAttend()" style="font-weight: 700;">
-                ✓ حفظ وتسجيل الحضور الآن
-              </button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="window.centrlyApp.saveInlineNewStudentAndAttend()" style="font-weight: 700;">حفظ وتسجيل الحضور الآن</button>
             </div>
           </div>
         </div>
@@ -353,9 +355,9 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                   <td>
                     <select class="form-select" style="padding: 0.2rem 0.4rem; font-size: 0.8rem; font-weight: 700; width: 105px; border-radius: 6px;" onchange="window.centrlyApp.updateAttendanceHomework('${escapeHtml(a.id)}', this.value)">
                       <option value="none" ${a.homework === 'none' || !a.homework ? 'selected' : ''}>لم يُحدد</option>
-                      <option value="done" ${a.homework === 'done' ? 'selected' : ''}>كامل ✓</option>
-                      <option value="partial" ${a.homework === 'partial' ? 'selected' : ''}>ناقص ⚠️</option>
-                      <option value="missing" ${a.homework === 'missing' ? 'selected' : ''}>لم يُسلم ❌</option>
+                      <option value="done" ${a.homework === 'done' ? 'selected' : ''}>كامل</option>
+                      <option value="partial" ${a.homework === 'partial' ? 'selected' : ''}>ناقص</option>
+                      <option value="missing" ${a.homework === 'missing' ? 'selected' : ''}>لم يُسلم</option>
                     </select>
                   </td>
                   <td style="color: var(--centrly-text); font-size: 0.85rem;">

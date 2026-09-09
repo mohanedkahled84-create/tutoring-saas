@@ -395,7 +395,7 @@ test("DEV-80: StudentSearchBar & StudentReportsView render valid Arabic HTML wit
   });
 
   assert.ok(populatedHtml.includes("عمرو دياب"));
-  assert.ok(populatedHtml.includes("🥇 1"));
+  assert.ok(populatedHtml.includes("#1") || populatedHtml.includes("🥇 1"));
   assert.ok(populatedHtml.includes("95%"));
   assert.ok(populatedHtml.includes("92%"));
   assert.ok(populatedHtml.includes("إرسال التقرير"));

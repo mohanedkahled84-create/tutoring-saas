@@ -1,3 +1,5 @@
+import { getIcon } from "../utils/icons.js";
+
 /**
  * Centrly Onboarding Wizard (DEV-15 & DEV-38)
  * Self-Serve Signup + Quick Add Group & Students + WhatsApp Connect
@@ -23,32 +25,30 @@ export function renderOnboardingWizard(step = 1, state = {}) {
         
         <!-- Wizard Header & Steps -->
         <div style="text-align: center; margin-bottom: 2rem;">
-          <div class="brand-logo-badge" style="margin: 0 auto 0.75rem; width: 44px; height: 44px; font-size: 1.3rem;">سـ</div>
-          <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--centrly-ink); margin: 0;">تهيئة حسابك في سنترلي</h2>
-          <p style="font-size: 0.875rem; color: var(--centrly-text); margin-top: 0.35rem;">
-            ابدأ في 4 خطوات سريعة لتجهيز مجموعتك والاتصال بواتساب في أقل من 5 دقائق
+          <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--centrly-ink); margin-bottom: 0.5rem;">
+            أهلاً بك في منصة سنترلي (Centrly)
+          </h1>
+          <p style="color: var(--centrly-text); font-size: 0.875rem;">
+            لنبدأ بإعداد حسابك خلال دقيقتين فقط لتتمكن من رصد الحضور وإرسال رسائل الواتساب
           </p>
           
-          <!-- Stepper Indicators -->
-          <div style="display: flex; justify-content: center; gap: 0.75rem; margin-top: 1.25rem;">
-            <div style="display: flex; align-items: center; gap: 0.35rem;">
-              <span class="badge ${step >= 1 ? 'badge-blue' : 'badge-secondary'}" style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">1</span>
-              <span style="font-size: 0.8rem; font-weight: 700; color: ${step >= 1 ? 'var(--centrly-blue-800)' : 'var(--centrly-text)'};">المجموعة</span>
+          <!-- Stepper Indicator -->
+          <div style="display: flex; justify-content: center; gap: 1.5rem; margin-top: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: ${step >= 1 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
+              <span style="width: 24px; height: 24px; border-radius: 50%; background: ${step >= 1 ? 'var(--centrly-blue-700)' : 'var(--centrly-line)'}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">1</span>
+              <span>المجموعة</span>
             </div>
-            <div style="width: 24px; height: 1px; background: var(--centrly-line); align-self: center;"></div>
-            <div style="display: flex; align-items: center; gap: 0.35rem;">
-              <span class="badge ${step >= 2 ? 'badge-blue' : 'badge-secondary'}" style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">2</span>
-              <span style="font-size: 0.8rem; font-weight: 700; color: ${step >= 2 ? 'var(--centrly-blue-800)' : 'var(--centrly-text)'};">الطلاب</span>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: ${step >= 2 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
+              <span style="width: 24px; height: 24px; border-radius: 50%; background: ${step >= 2 ? 'var(--centrly-blue-700)' : 'var(--centrly-line)'}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">2</span>
+              <span>الطلاب</span>
             </div>
-            <div style="width: 24px; height: 1px; background: var(--centrly-line); align-self: center;"></div>
-            <div style="display: flex; align-items: center; gap: 0.35rem;">
-              <span class="badge ${step >= 3 ? 'badge-blue' : 'badge-secondary'}" style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">3</span>
-              <span style="font-size: 0.8rem; font-weight: 700; color: ${step >= 3 ? 'var(--centrly-blue-800)' : 'var(--centrly-text)'};">سير العمل</span>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: ${step >= 3 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
+              <span style="width: 24px; height: 24px; border-radius: 50%; background: ${step >= 3 ? 'var(--centrly-blue-700)' : 'var(--centrly-line)'}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">3</span>
+              <span>سير العمل</span>
             </div>
-            <div style="width: 24px; height: 1px; background: var(--centrly-line); align-self: center;"></div>
-            <div style="display: flex; align-items: center; gap: 0.35rem;">
-              <span class="badge ${step >= 4 ? 'badge-blue' : 'badge-secondary'}" style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">4</span>
-              <span style="font-size: 0.8rem; font-weight: 700; color: ${step >= 4 ? 'var(--centrly-blue-800)' : 'var(--centrly-text)'};">ربط واتساب</span>
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: ${step >= 4 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
+              <span style="width: 24px; height: 24px; border-radius: 50%; background: ${step >= 4 ? 'var(--centrly-blue-700)' : 'var(--centrly-line)'}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">4</span>
+              <span>واتساب</span>
             </div>
           </div>
         </div>
@@ -58,8 +58,9 @@ export function renderOnboardingWizard(step = 1, state = {}) {
         <!-- Step 1: Create First Group -->
         ${step === 1 ? `
           <div id="step1">
-            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--centrly-ink);">
-              🏫 الخطوة 1: إنشاء مجموعتك الأولى
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('groups', 18, 'var(--centrly-blue-700)')}
+              <span>الخطوة 1: إنشاء مجموعتك الأولى</span>
             </h3>
             <div class="form-group">
               <label class="form-label">اسم المجموعة / الصف الدراسي</label>
@@ -71,7 +72,7 @@ export function renderOnboardingWizard(step = 1, state = {}) {
             </div>
             <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
               <button class="btn btn-primary" onclick="window.centrlyApp.nextOnboardingStep(2)">
-                التالي: إضافة الطلاب ⬅
+                التالي: إضافة الطلاب
               </button>
             </div>
           </div>
@@ -81,11 +82,13 @@ export function renderOnboardingWizard(step = 1, state = {}) {
         ${step === 2 ? `
           <div id="step2">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-              <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--centrly-ink);">
-                👥 الخطوة 2: إضافة طلاب المجموعة سريعاً
+              <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
+                ${getIcon('students', 18, 'var(--centrly-blue-700)')}
+                <span>الخطوة 2: إضافة طلاب المجموعة سريعاً</span>
               </h3>
-              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.addQuickStudentRow()">
-                ➕ إضافة طالب آخر
+              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.addQuickStudentRow()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                ${getIcon('add', 14)}
+                <span>إضافة طالب آخر</span>
               </button>
             </div>
             <p style="font-size: 0.825rem; color: var(--centrly-text); margin-bottom: 1rem;">
@@ -104,10 +107,10 @@ export function renderOnboardingWizard(step = 1, state = {}) {
 
             <div style="display: flex; justify-content: space-between;">
               <button class="btn btn-secondary" onclick="window.centrlyApp.nextOnboardingStep(1)">
-                ➡ السابق
+                السابق
               </button>
               <button class="btn btn-primary" onclick="window.centrlyApp.nextOnboardingStep(3)">
-                التالي: إعدادات سير العمل ⬅
+                التالي: إعدادات سير العمل
               </button>
             </div>
           </div>
@@ -116,8 +119,9 @@ export function renderOnboardingWizard(step = 1, state = {}) {
         <!-- Step 3: Workflow Settings (DEV-38) -->
         ${step === 3 ? `
           <div id="step3">
-            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--centrly-ink);">
-              ⚙️ الخطوة 3: تفضيلات سير العمل للمدرس
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('dashboard', 18, 'var(--centrly-blue-700)')}
+              <span>الخطوة 3: تفضيلات سير العمل للمدرس</span>
             </h3>
             
             <div class="form-group" style="margin-bottom: 1.25rem;">
@@ -144,10 +148,10 @@ export function renderOnboardingWizard(step = 1, state = {}) {
 
             <div style="display: flex; justify-content: space-between;">
               <button class="btn btn-secondary" onclick="window.centrlyApp.nextOnboardingStep(2)">
-                ➡ السابق
+                السابق
               </button>
               <button class="btn btn-primary" onclick="window.centrlyApp.saveOnboardingDataAndGoToStep4()">
-                حفظ والمتابعة إلى ربط واتساب ⬅
+                حفظ والمتابعة إلى ربط واتساب
               </button>
             </div>
           </div>
@@ -156,8 +160,9 @@ export function renderOnboardingWizard(step = 1, state = {}) {
         <!-- Step 4: WhatsApp Connect (DEV-SSO.3) -->
         ${step === 4 ? `
           <div id="step4" style="text-align: center;">
-            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--centrly-ink);">
-              💬 الخطوة 4: ربط رقم الواتساب بالمنظومة
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--centrly-ink); display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+              ${getIcon('whatsapp', 18, 'var(--centrly-blue-700)')}
+              <span>الخطوة 4: ربط رقم الواتساب بالمنظومة</span>
             </h3>
             <p style="font-size: 0.85rem; color: var(--centrly-text); margin-bottom: 1.5rem;">
               امسح رمز الاستجابة السريعة (QR Code) أو استخدم كود الاقتران لربط رقم واتساب لإرسال الإشعارات لأولياء الأمور
@@ -167,7 +172,7 @@ export function renderOnboardingWizard(step = 1, state = {}) {
               <div id="obQrWrapper" style="width: 180px; height: 180px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); margin: 0 auto; overflow: hidden;">
                 <img id="obQrImage" src="${defaultState.qrBase64 || ''}" alt="WhatsApp QR Code" style="width: 100%; height: 100%; object-fit: contain; ${defaultState.qrBase64 ? '' : 'display: none;'}">
                 <div id="obQrLoading" style="font-size: 0.8rem; color: var(--centrly-text); padding: 1rem; ${defaultState.qrBase64 ? 'display: none;' : ''}">
-                  ⏳ جارٍ إنشاء رمز QR...
+                  جارٍ إنشاء رمز QR...
                 </div>
               </div>
               <div id="obPairingContainer" style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink);">
@@ -177,7 +182,7 @@ export function renderOnboardingWizard(step = 1, state = {}) {
 
             <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem;">
               <span class="badge ${defaultState.waConnected ? 'badge-success' : 'badge-warning'}" id="obWaStatusBadge">
-                ${defaultState.waConnected ? '🟢 بوابة الإرسال متصلة وجاهزة' : '🟡 بانتظار مسح رمز QR'}
+                ${defaultState.waConnected ? `${getIcon('dotSuccess', 8)} بوابة الإرسال متصلة وجاهزة` : `${getIcon('dotWarning', 8)} بانتظار مسح رمز QR`}
               </span>
             </div>
 
@@ -195,10 +200,10 @@ export function renderOnboardingWizard(step = 1, state = {}) {
 
             <div style="display: flex; justify-content: space-between;">
               <button class="btn btn-secondary" onclick="window.centrlyApp.nextOnboardingStep(3)">
-                ➡ السابق
+                السابق
               </button>
               <button class="btn btn-primary" onclick="window.centrlyApp.finishOnboarding()">
-                🎉 إنهاء والذهاب إلى لوحة التحكم
+                إنهاء والذهاب إلى لوحة التحكم
               </button>
             </div>
           </div>

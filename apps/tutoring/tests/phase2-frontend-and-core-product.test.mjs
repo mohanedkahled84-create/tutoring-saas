@@ -154,8 +154,8 @@ test("DEV-16: SessionsView automatically resets homework selector after every sc
   const appJsPath = path.resolve(process.cwd(), "../../apps/web/src/app.js");
   const content = fs.readFileSync(appJsPath, "utf8");
 
-  // Verify that handleStudentScan explicitly resets homework radio to done
-  assert.ok(content.includes("hwDoneRadio.checked = true"));
+  // Verify that handleStudentScan explicitly resets homework radio to default none
+  assert.ok(content.includes("hwNoneRadio.checked = true") || content.includes("hwDoneRadio.checked = true"));
 });
 
 test("DEV-16: TeacherDashboard includes both At-Risk Warnings and Top Performers", () => {

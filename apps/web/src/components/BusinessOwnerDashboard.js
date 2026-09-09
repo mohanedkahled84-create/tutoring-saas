@@ -1,17 +1,23 @@
+import { escapeHtml } from "../utils/escapeHtml.js";
+import { getIcon } from "../utils/icons.js";
+
 /**
- * Centrly Business Owner Analytics Dashboard (DEV-54)
- * Cross-Tenant, Founder-Only strategic view of business health, MRR, message costs, and churn signals.
+ * Centrly Business Owner & Founder Dashboard (DEV-78)
+ * Executive Metrics Screen for Platform Owners:
+ * - MRR & ARR in EGP
+ * - Tenant Growth & Subscription Breakdown
+ * - Consolidated WhatsApp Usage & Estimated Cost
+ * - Churn Signals & At-Risk Accounts
  */
 
-export function renderBusinessOwnerDashboard(data = {}, user = {}) {
+export function renderBusinessOwnerDashboard(data = {}) {
   const overview = data.overview || {
     total_tenants: 0,
     active_tenants: 0,
     trial_tenants: 0,
-    expired_tenants: 0,
+    mrr_egp: 0,
     total_students: 0,
     total_sessions: 0,
-    mrr_egp: 0,
     whatsapp: {
       total_sent: 0,
       total_failed: 0,
@@ -24,7 +30,6 @@ export function renderBusinessOwnerDashboard(data = {}, user = {}) {
     trial: 0,
     pending_verification: 0,
     expired: 0,
-    grace_period: 0,
   };
 
   const atRisk = data.at_risk_tenants || [];
@@ -38,7 +43,7 @@ export function renderBusinessOwnerDashboard(data = {}, user = {}) {
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <span style="font-size: 1.5rem;">👑</span>
+              <span>${getIcon('dashboard', 24, '#3b82f6')}</span>
               <h2 style="margin: 0; font-size: 1.3rem; font-weight: 800; color: #fff;">لوحة تحكم المؤسس وإحصائيات الأعمال (Centrly HQ)</h2>
               <span class="badge" style="background: #3b82f6; color: #fff;">Cross-Tenant • خاص بالإدارة</span>
             </div>
@@ -47,8 +52,9 @@ export function renderBusinessOwnerDashboard(data = {}, user = {}) {
             </p>
           </div>
 
-          <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.refreshBusinessDashboard()" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff;">
-            🔄 تحديث البيانات
+          <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.refreshBusinessDashboard()" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff; display: inline-flex; align-items: center; gap: 0.35rem;">
+            ${getIcon('refresh', 14)}
+            <span>تحديث البيانات</span>
           </button>
         </div>
       </div>
@@ -71,8 +77,8 @@ export function renderBusinessOwnerDashboard(data = {}, user = {}) {
           <div style="font-size: 1.8rem; font-weight: 900; color: var(--centrly-ink); margin: 0.25rem 0;">
             ${overview.total_tenants}
           </div>
-          <div style="font-size: 0.75rem; color: var(--centrly-text);">
-            🟢 ${overview.active_tenants} نشط • ⏳ ${overview.trial_tenants} تجربة
+          <div style="font-size: 0.75rem; color: var(--centrly-text); display: flex; align-items: center; gap: 0.35rem;">
+            ${getIcon('dotSuccess', 8)} <span>${overview.active_tenants} نشط • ${overview.trial_tenants} تجربة</span>
           </div>
         </div>
 
@@ -100,8 +106,9 @@ export function renderBusinessOwnerDashboard(data = {}, user = {}) {
 
       <!-- Subscription Health Breakdown -->
       <div class="card" style="margin: 0;">
-        <h3 class="card-title" style="font-size: 1.05rem; margin-bottom: 0.75rem;">
-          📊 توزيع الاشتراكات وحالة الحسابات عبر المنصة
+        <h3 class="card-title" style="font-size: 1.05rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+          ${getIcon('reports', 18, 'var(--centrly-blue-700)')}
+          <span>توزيع الاشتراكات وحالة الحسابات عبر المنصة</span>
         </h3>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
           <div style="padding: 0.5rem 1rem; border-radius: 6px; background: #ecfdf5; border: 1px solid #a7f3d0;">
@@ -129,8 +136,9 @@ export function renderBusinessOwnerDashboard(data = {}, user = {}) {
         <!-- At-Risk Accounts -->
         <div class="card" style="margin: 0; border: 1px solid #fed7aa;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h3 class="card-title" style="font-size: 1rem; color: #c2410c; margin: 0;">
-              ⚠️ إشارات خطر الإلغاء (Churn Signals)
+            <h3 class="card-title" style="font-size: 1rem; color: #c2410c; margin: 0; display: flex; align-items: center; gap: 0.35rem;">
+              ${getIcon('risk', 16, '#c2410c')}
+              <span>إشارات خطر الإلغاء (Churn Signals)</span>
             </h3>
             <span class="badge" style="background: #ea580c; color: #fff;">${atRisk.length} في الخطر</span>
           </div>
@@ -151,8 +159,9 @@ export function renderBusinessOwnerDashboard(data = {}, user = {}) {
 
         <!-- Recent Signups -->
         <div class="card" style="margin: 0;">
-          <h3 class="card-title" style="font-size: 1rem; margin-bottom: 0.75rem;">
-            🚀 أحدث المشتركين الجدد في المنصة
+          <h3 class="card-title" style="font-size: 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.35rem;">
+            ${getIcon('students', 16, 'var(--centrly-blue-700)')}
+            <span>أحدث المشتركين الجدد في المنصة</span>
           </h3>
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
             ${recentSignups.length > 0 ? recentSignups.map(s => `
