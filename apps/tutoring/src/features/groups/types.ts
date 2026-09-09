@@ -3,9 +3,15 @@ export interface Group {
   tenant_id: string;
   name: string;
   price?: number;
-  billing_model?: "percentage" | "fixed_rent" | string;
+  session_price?: number;
+  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
+  center_cut_percentage?: number | null;
+  fixed_per_student_amount?: number | null;
   fixed_rent_amount?: number | null;
+  teacher_cut_percentage?: number | null;
   center_name?: string | null;
+  day_of_week?: string | null;
+  session_time?: string | null;
   created_at?: string;
   parent_group_id?: string | null;
   is_section?: boolean;
