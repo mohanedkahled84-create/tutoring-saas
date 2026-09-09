@@ -3,7 +3,14 @@
  * Handles authenticated API calls to backend endpoints.
  */
 
-const API_BASE_URL = window.__CENTRLY_API_URL__ || 'http://localhost:3000/api';
+const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+export const API_BASE_URL = window.__CENTRLY_API_URL__ || (
+  isLocalhost
+    ? 'http://localhost:3000/api'
+    : 'https://tutoring-backend-production-c8dd.up.railway.app/api'
+);
 
 export async function request(endpoint, options = {}) {
   const headers = {

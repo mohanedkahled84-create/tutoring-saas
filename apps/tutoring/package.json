@@ -1,8 +1,10 @@
 {
   "name": "@tutoring-saas/backend",
   "version": "1.0.0",
-  "description": "Tutoring SaaS Backend API - Auth, Tenant Context, Core CRUD, WhatsApp Contract",
   "main": "dist/server.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",

@@ -1161,7 +1161,11 @@ class CentrlyApp {
   }
 
   downloadBarcodeSheet() {
-    const baseUrl = window.__CENTRLY_API_URL__ || 'http://localhost:3000/api';
+    const baseUrl = window.__CENTRLY_API_URL__ || (
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:3000/api'
+        : 'https://tutoring-backend-production-c8dd.up.railway.app/api'
+    );
     window.open(`${baseUrl}/students/barcode-sheet.pdf`, '_blank');
   }
 
