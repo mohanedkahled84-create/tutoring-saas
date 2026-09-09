@@ -86,24 +86,27 @@
       font-size: 28px;
       font-weight: 700;
       color: var(--blue);
-      letter-spacing: -1px;
+      letter-spacing: 0;
       text-decoration: none;
       position: relative;
       display: inline-block;
-      line-height: 1;
+      line-height: 1.1;
+      white-space: nowrap;
+      font-feature-settings: "liga" 1;
     }
     .brand-logo .lam-gold {
       color: var(--gold);
+      display: inline;
     }
     .brand-logo::after {
       content: "";
       position: absolute;
-      right: 4%;
-      left: 1%;
-      height: 3.5px;
-      border-radius: 10px;
+      right: 2px;
+      left: 2px;
+      height: 3px;
+      border-radius: 6px;
       background: var(--gold);
-      bottom: -5px;
+      bottom: -4px;
     }
 
     .brand-badge {
@@ -216,34 +219,7 @@
       line-height: 1.85;
     }
     
-    /* Target Audience Selector Bar */
-    .audience-bar {
-      display: inline-flex;
-      background: #fff;
-      border: 1.5px solid var(--line);
-      border-radius: 14px;
-      padding: 4px;
-      gap: 4px;
-      margin-bottom: 24px;
-      box-shadow: 0 3px 12px rgba(23, 45, 112, 0.04);
-    }
-    .aud-btn {
-      border: none;
-      background: transparent;
-      padding: 8px 18px;
-      font-family: 'Cairo', sans-serif;
-      font-weight: 700;
-      font-size: 13px;
-      color: var(--text);
-      border-radius: 10px;
-      cursor: pointer;
-      transition: .2s;
-      white-space: nowrap;
-    }
-    .aud-btn.active {
-      background: var(--navy);
-      color: #fff;
-    }
+
 
     .hero-ctas {
       display: flex;
@@ -951,11 +927,20 @@
       .nav { height: 62px; }
       .nav-links { display: none; }
       .brand-badge { display: none; }
-      .brand-logo { font-size: 24px; }
+      .brand-logo {
+        font-size: 22px;
+        white-space: nowrap;
+        line-height: 1.1;
+      }
+      .brand-logo::after {
+        bottom: -3px;
+        height: 2.5px;
+      }
       .nav .button.amber {
-        padding: 7px 12px;
-        font-size: 11.5px;
+        padding: 6px 11px;
+        font-size: 11px;
         border-radius: 10px;
+        white-space: nowrap;
       }
 
       /* Hero section on mobile: clean vertical rhythm */
@@ -980,22 +965,6 @@
         font-size: 13.5px;
         line-height: 1.7;
         margin-bottom: 18px;
-      }
-
-      /* Audience switcher: mobile segmented control */
-      .audience-bar {
-        width: 100%;
-        max-width: 350px;
-        display: flex;
-        padding: 3px;
-        gap: 3px;
-        margin-bottom: 18px;
-      }
-      .aud-btn {
-        flex: 1;
-        padding: 7px 2px;
-        font-size: 12px;
-        text-align: center;
       }
 
       /* CTAs full width on phone */
@@ -1042,10 +1011,55 @@
       .student-name { font-size: 13.5px; }
       .wa-bubble { font-size: 11.5px; padding: 10px; }
 
-      /* Features on mobile */
-      .features-grid { grid-template-columns: 1fr; gap: 12px; }
-      .feature-card { padding: 18px; border-radius: 16px; }
-      .feature-card h3 { font-size: 15.5px; }
+      /* Features swipe carousel on mobile */
+      .features-grid {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        gap: 12px;
+        padding: 6px 2px 14px;
+        scrollbar-width: none;
+      }
+      .features-grid::-webkit-scrollbar {
+        display: none;
+      }
+      .feature-card {
+        flex: 0 0 84%;
+        min-width: 260px;
+        max-width: 310px;
+        scroll-snap-align: center;
+        padding: 16px;
+        border-radius: 16px;
+      }
+      .feature-card h3 { font-size: 15px; }
+      .features-scroll-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 4px;
+        margin-bottom: 16px;
+        font-size: 11.5px;
+        color: var(--muted);
+      }
+      .features-dots {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+      }
+      .features-dots span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #D5DFEF;
+        transition: all 0.2s ease;
+      }
+      .features-dots span.active {
+        width: 16px;
+        border-radius: 8px;
+        background: var(--navy);
+      }
 
       /* Persona tabs on mobile */
       .persona-section {
@@ -1092,6 +1106,12 @@
       }
     }
 
+    @media (min-width: 601px) {
+      .features-scroll-indicator {
+        display: none !important;
+      }
+    }
+
     /* Form Alert Feedback */
     .form-alert {
       display: none;
@@ -1133,8 +1153,8 @@
   <!-- ============================================== -->
   <header class="nav shell">
     <a class="brand-wrap" href="#top" aria-label="سنترلي">
-      <div class="brand-logo">سنتر<span class="lam-gold">ل</span>ي</div>
-      <span class="brand-badge">إطلاق تجريبي 2026</span>
+      <div class="brand-logo">سنتر<span class="lam-gold">&zwj;ل&zwj;</span>ي</div>
+      <span class="brand-badge">نسخة تجريبية 2026</span>
     </a>
     <nav class="nav-links">
       <a href="#features">المميزات</a>
@@ -1162,15 +1182,8 @@
       </h1>
 
       <p class="hero-sub">
-        كل اللي محتاجه عشان تدير حصتك وسنترك براحة بال: إشعار واتساب فوري لولي الأمر بالحضور والواجب، كروت باركود سريعة بكاميرا الموبايل ونطبعها لك لو تحب، وتنظيم لمواعيد وقاعات السنتر من غير أي دوشة.
+        كل اللي محتاجه عشان تدير حصتك وسنترك وتريّح بالك: رسائل واتساب فورية للأهالي بالحضور والواجب، مسح باركود في ثانية بكاميرا أي موبايل، وتنظيم لمواعيد وقاعات السنتر من غير أي دوشة ولا لخبطة.
       </p>
-
-      <!-- Target Audience Selector Bar -->
-      <div class="audience-bar">
-        <button class="aud-btn active" id="btn-show-all" onclick="filterAudience('all')">الكل</button>
-        <button class="aud-btn" id="btn-show-teacher" onclick="filterAudience('teacher')">مدرس مستقل</button>
-        <button class="aud-btn" id="btn-show-center" onclick="filterAudience('center')">سنتر تعليمي</button>
-      </div>
 
       <div class="hero-ctas">
         <a class="button primary" href="#waitlist">احجز مكانك واحفظ خصم الـ 20%</a>
@@ -1180,8 +1193,8 @@
       <div class="trust-strip">
         <span>شغال على أي موبايل ولابتوب</span>
         <span>مسح الكارت في ثانية بالموبايل</span>
-        <span>متابعة لحظية لأولياء الأمور</span>
-        <span>رسائل واتساب شيك للأهالي</span>
+        <span>أولياء الأمور متابعين أول بأول</span>
+        <span>رسائل واتساب شيك لولي الأمر</span>
       </div>
 
       <!-- Composite UI Visual from Real Product Mockups -->
@@ -1189,12 +1202,12 @@
         <div class="composite-header">
           <div class="composite-title-wrap">
             <span class="live-dot"></span>
-            <div class="composite-title">حصة نشطة الآن: فيزياء 3 ثانوي • مجموعة السبت (4:00 م)</div>
+            <div class="composite-title">حصة شغالة دلوقتي: فيزياء 3 ثانوي • مجموعة السبت (4:00 م)</div>
           </div>
           <div class="composite-stats">
             <span class="stat-pill stat-present">حضور: 142 طالب</span>
             <span class="stat-pill stat-absent">غياب: 3</span>
-            <span class="stat-pill stat-hw">الواجب: 139 تم</span>
+            <span class="stat-pill stat-hw">الواجب: 139 استلموا</span>
           </div>
         </div>
 
@@ -1203,7 +1216,7 @@
           <div class="scan-card-box">
             <div>
               <div class="scan-badge-row">
-                <span class="scan-success-tag">تم تسجيل الحضور بنجاح</span>
+                <span class="scan-success-tag">تم تسجيل الحضور في ثانية</span>
                 <span class="scan-time">04:02 م</span>
               </div>
               <div class="student-details">
@@ -1225,15 +1238,15 @@
               <span class="wa-online">متصل الآن</span>
             </div>
             <div class="wa-bubble">
-              <div>مساء الخير يا فندم، بنبلغ حضرتك بحضور (أحمد محمود) لحصة الفيزياء اليوم الساعة 04:02 م.</div>
-              <div style="margin-top:4px; font-weight:700; color:#1b5e20;">موقف الواجب: تم تسليمه كاملاً ومستواه ممتاز.</div>
+              <div>مساء الخير يا فندم، بنبلغ حضرتك إن (أحمد محمود) حضر حصة الفيزياء النهاردة الساعة 04:02 م.</div>
+              <div style="margin-top:4px; font-weight:700; color:#1b5e20;">موقف الواجب: سلمه كاملاً ومستواه ما شاء الله ممتاز.</div>
               <div style="font-size:11.5px; color:#555; margin-top:4px;">أ. محمد الشناوي — سنتر الأوائل</div>
               <div class="wa-bubble-footer">
                 <span>04:02 م</span>
                 <span class="wa-ticks">✓✓</span>
               </div>
             </div>
-            <div class="wa-auto-note">تم الإرسال تلقائياً عبر واتساب سنترلي</div>
+            <div class="wa-auto-note">الرسالة اتبعتت تلقائياً من سنترلي</div>
           </div>
         </div>
       </div>
@@ -1245,8 +1258,8 @@
     <!-- ============================================== -->
     <section id="features">
       <div class="section-title">
-        <h2>كل اللي محتاجه لإدارة حصتك وسنترك ببساطة</h2>
-        <p>من غير رغي ولا شاشات معقدة — اضغط على "اقرأ المزيد" لمعرفة تفاصيل أي ميزة</p>
+        <h2>كل اللي هتحتاجه عشان تدير حصتك وسنترك</h2>
+        <p>من غير دوشة ولا كشاكيل — اضغط على أي ميزة وشوف تفاصيلها</p>
       </div>
 
       <div class="features-grid">
@@ -1255,67 +1268,80 @@
         <article class="feature-card" data-cat="teacher">
           <div>
             <div class="f-badge">المدرس والسنتر</div>
-            <h3>1. حضور وواجب بكاميرا الموبايل</h3>
-            <p>المساعد بيمسح كارت الطالب بكاميرا أي موبايل في ثانية، والحضور والواجب يتسجلوا بلمسة واحدة بدون أجهزة مكلفة.</p>
+            <h3>1. تسجيل حضور وواجب بكاميرا الموبايل</h3>
+            <p>المساعد بيفتح الكاميرا من الموبايل ويمسح كارت الطالب في ثانية، والحضور والواجب يتسجلوا بلمسة واحدة.</p>
           </div>
-          <button class="read-more-btn" onclick="openModal('attendance')">اقرأ المزيد عن المسح السريع</button>
+          <button class="read-more-btn" onclick="openModal('attendance')">اعرف أكتر</button>
         </article>
 
         <!-- Card 2: Parent Follow-up (PRIMARY FOCUS) -->
         <article class="feature-card highlight" data-cat="all">
           <div>
             <div class="f-badge parent">متابعة ولي الأمر</div>
-            <h3>2. إشعار فوري لولي الأمر بالواتساب</h3>
-            <p>رسالة واتساب تلقائية بتوصل لولي الأمر فوراً بحضور ابنه وموقفه من الواجب، عشان يطمن ويثق فيك أول بأول.</p>
+            <h3>2. رسالة واتساب فورية لولي الأمر</h3>
+            <p>أول ما الطالب يدخل، بتوصل رسالة واتساب تلقائية لولي الأمر بحضوره وموقفه من الواجب عشان يطمن أول بأول.</p>
           </div>
-          <button class="read-more-btn" onclick="openModal('whatsapp')">اقرأ المزيد عن متابعة ولي الأمر</button>
+          <button class="read-more-btn" onclick="openModal('whatsapp')">اعرف أكتر</button>
         </article>
 
         <!-- Card 3: Center Management -->
         <article class="feature-card" data-cat="center">
           <div>
             <div class="f-badge new">خاصة بالسناتر</div>
-            <h3>3. تنظيم القاعات ونسب المدرسين</h3>
-            <p>جدول إلكتروني يمنع أي تضارب في مواعيد القاعات، ويحسب نسبة أو إيجار كل مدرس تلقائياً بضغطة زر.</p>
+            <h3>3. تنظيم قاعات وحسابات المدرسين</h3>
+            <p>جدول ذكي يمنع تضارب مواعيد القاعات، ويحسب نسبة أو إيجار كل مدرس تلقائياً بضغطة زرار.</p>
           </div>
-          <button class="read-more-btn" onclick="openModal('center')">اقرأ المزيد عن نظام السنتر</button>
+          <button class="read-more-btn" onclick="openModal('center')">اعرف أكتر</button>
         </article>
 
         <!-- Card 4: Fast Registration Cards & Card Delivery Service -->
         <article class="feature-card highlight" data-cat="all">
           <div>
             <div class="f-badge new">كروت جاهزة</div>
-            <h3>4. كروت تسجيل سريع وخدمة طباعتها</h3>
-            <p>كارت باركود برقم الموبايل لكل طالب، ونقدر نطبعهولك ونسلمهولك جاهز لطلابك لو حابب بدون أي وجع دماغ.</p>
+            <h3>4. كروت باركود جاهزة ومطبوعة لطلابك</h3>
+            <p>كارت باركود برقم الموبايل لكل طالب، ونقدر نطبعهولك ونوصلهولك جاهز ومغلف لحد عندك لو تحب.</p>
           </div>
-          <button class="read-more-btn" onclick="openModal('cards')">اقرأ المزيد عن خدمة الكروت</button>
+          <button class="read-more-btn" onclick="openModal('cards')">اعرف أكتر</button>
         </article>
 
         <!-- Card 5: Unified Student Profile -->
         <article class="feature-card" data-cat="center">
           <div>
             <div class="f-badge">ملف موحد</div>
-            <h3>5. كارت موحد لكل مواد السنتر</h3>
-            <p>الطالب بيحضر كل مواد السنتر بنفس الكارت، وبياناته تتسجل مرة واحدة بس بدون تكرار عند كل مدرس.</p>
+            <h3>5. كارت واحد للطالب لكل مواد السنتر</h3>
+            <p>الطالب بيدخل كل حصص ومواد السنتر بنفس الكارت، وبياناته بتتسجل مرة واحدة بس من غير تكرار.</p>
           </div>
-          <button class="read-more-btn" onclick="openModal('students')">اقرأ المزيد عن كارت السنتر الموحد</button>
+          <button class="read-more-btn" onclick="openModal('students')">اعرف أكتر</button>
         </article>
 
         <!-- Card 6: Performance & Follow-up -->
         <article class="feature-card" data-cat="all">
           <div>
             <div class="f-badge">التقارير الدورية</div>
-            <h3>6. تقارير متابعة وكشف المتعثرين</h3>
-            <p>تنبيه فوري بالطلاب اللي درجاتهم نزلت أو غابوا كتير عشان تلحقهم، مع تقرير مجمع يتبعت للأهالي.</p>
+            <h3>6. كشف الطلاب اللي درجاتهم نزلت أو غابوا</h3>
+            <p>تنبيه فوري بالطلاب اللي مستواهم اتراجع أو غابوا كتير عشان تلحقهم، مع تقرير شهري يتبعت للأهالي.</p>
           </div>
-          <button class="read-more-btn" onclick="openModal('reports')">اقرأ المزيد عن تقارير المتابعة</button>
+          <button class="read-more-btn" onclick="openModal('reports')">اعرف أكتر</button>
         </article>
 
       </div>
 
+      <!-- Mobile Scroll Dots Indicator -->
+      <div class="features-scroll-indicator">
+        <span>اسحب يمين وشمال لباقي المميزات</span>
+        <div class="features-dots" id="features-dots">
+          <span class="active"></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+
       <!-- Action Button Placed Below Features -->
       <div class="features-footer-action">
-        <a class="button outline" href="#waitlist">استعرض المميزات واحجز حسابك</a>
+        <a class="button outline" href="#waitlist">احجز مكانك في سنترلي دلوقتي</a>
       </div>
     </section>
 
@@ -1392,9 +1418,9 @@
       <div class="waitlist-inner">
         <div>
           <span class="w-badge">خصم الحجز المسبق 20%</span>
-          <h2>احجز مكانك في سنترلي<br>قبل اكتمال المقاعد الأولى</h2>
+          <h2>احجز مكانك في سنترلي<br>قبل ما تكتمل أول 50 مقعد</h2>
           <p>
-            سجل بياناتك في دقيقة واحدة. حجزك المبكر بيضمن لك أولوية التفعيل وتجربة مجانية لكل الميزات وتدريب لمساعديك.
+            سجل بياناتك في دقيقة واحدة. حجزك المسبق بيضمن لك أولوية التفعيل وتجربة مجانية لكل الميزات وتدريب لمساعديك.
           </p>
 
           <!-- Pricing Clear Highlight (No complex tiers) -->
@@ -1520,8 +1546,8 @@
       </ul>
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:18px;">
-        <a class="button primary" href="#waitlist" onclick="closeModal()">احجز حسابك في سنترلي</a>
-        <button class="button outline" onclick="closeModal()">إغلاق</button>
+        <a class="button primary" href="#waitlist" onclick="closeModal()">احجز مكانك في سنترلي</a>
+        <button class="button outline" onclick="closeModal()">اقفل</button>
       </div>
     </div>
   </div>
@@ -1532,9 +1558,9 @@
   <footer>
     <div class="shell">
       <div class="brand-wrap">
-        <div class="brand-logo" style="font-size:22px;">سنتر<span class="lam-gold">ل</span>ي</div>
+        <div class="brand-logo" style="font-size:22px;">سنتر<span class="lam-gold">&zwj;ل&zwj;</span>ي</div>
       </div>
-      <span>المنظومة الأذكى لإدارة الحصص والمجموعات للمدرس والسنتر</span>
+      <span>المنصة الأذكى لإدارة حصص ومجموعات المدرس والسنتر في مصر</span>
       <span>جميع الحقوق محفوظة 2026</span>
     </div>
   </footer>
@@ -1652,25 +1678,17 @@
       }
     }
 
-    // Filter Features Audience
-    function filterAudience(cat) {
-      document.getElementById('btn-show-all').classList.remove('active');
-      document.getElementById('btn-show-teacher').classList.remove('active');
-      document.getElementById('btn-show-center').classList.remove('active');
-
-      if (cat === 'all') document.getElementById('btn-show-all').classList.add('active');
-      if (cat === 'teacher') document.getElementById('btn-show-teacher').classList.add('active');
-      if (cat === 'center') document.getElementById('btn-show-center').classList.add('active');
-
-      const cards = document.querySelectorAll('.feature-card');
-      cards.forEach(card => {
-        const cardCat = card.getAttribute('data-cat');
-        if (cat === 'all' || cardCat === cat || cardCat === 'all') {
-          card.style.display = 'flex';
-        } else {
-          card.style.display = 'none';
-        }
-      });
+    // Features Carousel Scroll Dots on Mobile
+    const fGrid = document.querySelector('.features-grid');
+    const fDots = document.querySelectorAll('.features-dots span');
+    if (fGrid && fDots.length) {
+      fGrid.addEventListener('scroll', () => {
+        const cardWidth = fGrid.firstElementChild ? fGrid.firstElementChild.offsetWidth + 12 : 280;
+        const index = Math.round(fGrid.scrollLeft * -1 / cardWidth);
+        fDots.forEach((dot, i) => {
+          dot.classList.toggle('active', i === Math.min(Math.max(index, 0), fDots.length - 1));
+        });
+      }, { passive: true });
     }
 
     // Waitlist Form Role Switcher
