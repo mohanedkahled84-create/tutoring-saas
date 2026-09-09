@@ -8,7 +8,7 @@ import {
   updateGroupSchema,
   enrollStudentSchema,
 } from "../../shared/middleware/validation.js";
-import { requireOwnerOrAdmin } from "../../shared/middleware/auth.js";
+import { requireTeacherOrCenterOwner } from "../../shared/middleware/auth.js";
 import { generateBarcodeSheetPdf } from "../students/index.js";
 
 export const groupsRouter = Router();
@@ -28,10 +28,10 @@ groupsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<
   }
 });
 
-// POST /api/groups - Create a new group (Owner or Admin only)
+// POST /api/groups - Create a new group (Owner, Center Owner, Teacher, or Admin)
 groupsRouter.post(
   "/",
-  requireOwnerOrAdmin,
+  requireTeacherOrCenterOwner,
   validateBody(createGroupSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id || undefined;
@@ -79,7 +79,7 @@ groupsRouter.get("/:id", async (req: AuthenticatedRequest, res: Response): Promi
 // PUT /api/groups/:id - Update group (Owner or Admin only)
 groupsRouter.put(
   "/:id",
-  requireOwnerOrAdmin,
+  requireTeacherOrCenterOwner,
   validateBody(updateGroupSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { id } = req.params;
@@ -104,7 +104,7 @@ groupsRouter.put(
 // DELETE /api/groups/:id - Delete group (Owner or Admin only)
 groupsRouter.delete(
   "/:id",
-  requireOwnerOrAdmin,
+  requireTeacherOrCenterOwner,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { id } = req.params;
 

@@ -43,16 +43,24 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
   }
 
   async create(tenantId: string | undefined, data: CreateGroupDTO): Promise<Group> {
+    const insertPayload: Record<string, unknown> = {
+      tenant_id: tenantId,
+      name: data.name,
+      price: data.price !== undefined ? data.price : (data.session_price || 0),
+      session_price: data.session_price !== undefined ? data.session_price : (data.price || 0),
+      billing_model: data.billing_model || "percentage",
+      fixed_rent_amount: data.fixed_rent_amount || null,
+      center_name: data.center_name || null,
+    };
+    if (data.center_cut_percentage !== undefined) insertPayload.center_cut_percentage = data.center_cut_percentage;
+    if (data.fixed_per_student_amount !== undefined) insertPayload.fixed_per_student_amount = data.fixed_per_student_amount;
+    if (data.teacher_cut_percentage !== undefined) insertPayload.teacher_cut_percentage = data.teacher_cut_percentage;
+    if (data.day_of_week !== undefined) insertPayload.day_of_week = data.day_of_week;
+    if (data.session_time !== undefined) insertPayload.session_time = data.session_time;
+
     const { data: created, error } = await this.client
       .from("groups")
-      .insert({
-        tenant_id: tenantId,
-        name: data.name,
-        price: data.price || 0,
-        billing_model: data.billing_model || "percentage",
-        fixed_rent_amount: data.fixed_rent_amount || null,
-        center_name: data.center_name || null,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
@@ -65,10 +73,21 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
   async update(id: string, data: UpdateGroupDTO): Promise<Group | null> {
     const updatePayload: Record<string, unknown> = {};
     if (data.name !== undefined) updatePayload.name = data.name;
-    if (data.price !== undefined) updatePayload.price = data.price;
+    if (data.price !== undefined) {
+      updatePayload.price = data.price;
+      updatePayload.session_price = data.price;
+    } else if (data.session_price !== undefined) {
+      updatePayload.price = data.session_price;
+      updatePayload.session_price = data.session_price;
+    }
     if (data.billing_model !== undefined) updatePayload.billing_model = data.billing_model;
     if (data.fixed_rent_amount !== undefined) updatePayload.fixed_rent_amount = data.fixed_rent_amount;
+    if (data.fixed_per_student_amount !== undefined) updatePayload.fixed_per_student_amount = data.fixed_per_student_amount;
+    if (data.center_cut_percentage !== undefined) updatePayload.center_cut_percentage = data.center_cut_percentage;
+    if (data.teacher_cut_percentage !== undefined) updatePayload.teacher_cut_percentage = data.teacher_cut_percentage;
     if (data.center_name !== undefined) updatePayload.center_name = data.center_name;
+    if (data.day_of_week !== undefined) updatePayload.day_of_week = data.day_of_week;
+    if (data.session_time !== undefined) updatePayload.session_time = data.session_time;
 
     const { data: updated, error } = await this.client
       .from("groups")
@@ -251,10 +270,16 @@ export class FakeGroupsRepository implements IGroupsRepository {
       id: `grp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       tenant_id: tenantId || "tenant-1",
       name: data.name,
-      price: data.price || 0,
+      price: data.price !== undefined ? data.price : (data.session_price || 0),
+      session_price: data.session_price !== undefined ? data.session_price : (data.price || 0),
       billing_model: data.billing_model || "percentage",
-      fixed_rent_amount: data.fixed_rent_amount || null,
+      center_cut_percentage: data.center_cut_percentage ?? null,
+      fixed_per_student_amount: data.fixed_per_student_amount ?? null,
+      fixed_rent_amount: data.fixed_rent_amount ?? null,
+      teacher_cut_percentage: data.teacher_cut_percentage ?? null,
       center_name: data.center_name || null,
+      day_of_week: data.day_of_week || null,
+      session_time: data.session_time || null,
       created_at: new Date().toISOString(),
     };
     this.groups.push(newGroup);

@@ -26,25 +26,44 @@ export interface EnrolledStudent {
 export interface CreateGroupDTO {
   name: string;
   price?: number;
-  billing_model?: "percentage" | "fixed_rent" | string;
+  session_price?: number;
+  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
+  center_cut_percentage?: number | null;
+  fixed_per_student_amount?: number | null;
   fixed_rent_amount?: number | null;
+  teacher_cut_percentage?: number | null;
   center_name?: string | null;
+  day_of_week?: string | null;
+  session_time?: string | null;
+  schedule?: string | null;
 }
 
 export interface CreateSectionDTO {
   section_name: string;
   price?: number;
-  billing_model?: "percentage" | "fixed_rent" | string;
+  session_price?: number;
+  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
+  center_cut_percentage?: number | null;
+  fixed_per_student_amount?: number | null;
   fixed_rent_amount?: number | null;
   center_name?: string | null;
+  day_of_week?: string | null;
+  session_time?: string | null;
 }
 
 export interface UpdateGroupDTO {
   name?: string;
   price?: number;
-  billing_model?: "percentage" | "fixed_rent" | string;
+  session_price?: number;
+  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
+  center_cut_percentage?: number | null;
+  fixed_per_student_amount?: number | null;
   fixed_rent_amount?: number | null;
+  teacher_cut_percentage?: number | null;
   center_name?: string | null;
+  day_of_week?: string | null;
+  session_time?: string | null;
+  schedule?: string | null;
 }
 
 export interface GroupRollUpReport {

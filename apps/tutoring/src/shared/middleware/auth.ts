@@ -135,7 +135,7 @@ export function requireRole(allowedRoles: UserRole[]) {
 }
 
 export const requireAdmin = requireRole(["admin"]);
-export const requireOwnerOrAdmin = requireRole(["admin", "owner"]);
+export const requireOwnerOrAdmin = requireRole(["admin", "owner", "center_owner"]);
 export const requireCenterOwnerOrAdmin = requireRole(["admin", "owner", "center_owner"]);
 export const requireTeacherOrCenterOwner = requireRole([
   "admin",
