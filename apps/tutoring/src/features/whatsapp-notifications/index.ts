@@ -4,6 +4,7 @@ import { SupabaseWhatsAppNotificationsRepository } from "./repository.js";
 import { supabasePublic } from "../../supabase.js";
 
 export * from "./types.js";
+export * from "./gateway.js";
 export * from "./service.js";
 export * from "./repository.js";
 export * from "./routes.js";

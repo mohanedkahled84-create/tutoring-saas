@@ -58,7 +58,7 @@ export async function authenticateUser(
     const userClient = getScopedSupabaseClient(token);
     const { data: userRecord, error: userError } = await userClient
       .from("users")
-      .select("id, tenant_id, role, email")
+      .select("id, tenant_id, role, email, teacher_id, assistant_id")
       .eq("id", userId)
       .single();
 
@@ -88,6 +88,8 @@ export async function authenticateUser(
       email: email || userRecord.email,
       tenant_id: userRecord.tenant_id,
       role: userRecord.role as UserRole,
+      teacher_id: userRecord.teacher_id,
+      assistant_id: userRecord.assistant_id,
     };
     req.token = token;
     req.supabase = userClient;

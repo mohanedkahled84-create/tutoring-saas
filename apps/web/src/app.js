@@ -229,6 +229,12 @@ class CentrlyApp {
 
     this.onboardingStep = step;
     document.getElementById('app').innerHTML = renderOnboardingWizard(this.onboardingStep, this.onboardingState);
+
+    if (step === 4) {
+      this.initOnboardingStep4();
+    } else {
+      this.stopWhatsAppStatusPolling();
+    }
   }
 
   addQuickStudentRow() {
@@ -309,11 +315,13 @@ class CentrlyApp {
   }
 
   finishOnboarding() {
+    this.stopWhatsAppStatusPolling();
     this.renderApp();
     this.loadRouteData(this.currentRoute);
   }
 
   async logout() {
+    this.stopWhatsAppStatusPolling();
     await authService.logout();
   }
 
@@ -323,6 +331,7 @@ class CentrlyApp {
   }
 
   async navigate(route) {
+    this.stopWhatsAppStatusPolling();
     this.currentRoute = route;
     this.renderMainContent();
     document.querySelectorAll('.sidebar-nav .nav-link').forEach(btn => {
@@ -489,17 +498,33 @@ class CentrlyApp {
           break;
         }
         case 'whatsapp': {
+          const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
           const [quotaRes, statusRes, tplRes] = await Promise.all([
             request('/whatsapp/quota'),
-            request('/whatsapp/status'),
+            request(`/whatsapp/status${teacherParam}`),
             request('/templates'),
           ]);
+          let qrRes = null;
+          if (statusRes?.status !== 'connected') {
+            try {
+              qrRes = await request(`/whatsapp/qr${teacherParam}`);
+            } catch (err) {
+              console.warn('Initial QR load failed:', err);
+            }
+          }
           this.whatsappState = {
+            role: this.user?.role,
             quota: quotaRes || {},
-            status: statusRes || { connected: true },
+            status: statusRes?.status || 'disconnected',
+            phone_number: statusRes?.phone_number || '',
+            qr_base64: qrRes?.qr_base64 || null,
+            pairing_code: qrRes?.pairing_code || null,
             templates: tplRes?.templates || [],
           };
           this.renderMainContent();
+          if (this.whatsappState.status !== 'connected') {
+            this.startWhatsAppStatusPolling('settings');
+          }
           break;
         }
         case 'activity-logs': {
@@ -1453,12 +1478,130 @@ class CentrlyApp {
     }
   }
 
-  // ==========================================================================
-  // WhatsApp Settings & Testing Actions (DEV-65)
-  // ==========================================================================
+  async initOnboardingStep4() {
+    try {
+      const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
+      const [qrRes, statusRes] = await Promise.all([
+        request(`/whatsapp/qr${teacherParam}`).catch(() => null),
+        request(`/whatsapp/status${teacherParam}`).catch(() => null),
+      ]);
+
+      const img = document.getElementById('obQrImage');
+      const loading = document.getElementById('obQrLoading');
+      const code = document.getElementById('obPairingCode');
+      const badge = document.getElementById('obWaStatusBadge');
+
+      if (statusRes?.status === 'connected' || qrRes?.status === 'connected') {
+        if (badge) {
+          badge.className = 'badge badge-success';
+          badge.textContent = '🟢 بوابة الإرسال متصلة وجاهزة';
+        }
+        if (loading) {
+          loading.style.display = 'block';
+          loading.textContent = '✅ الحساب متصل بالفعل وجاهز للاستخدام!';
+        }
+        return;
+      }
+
+      if (qrRes && qrRes.qr_base64 && img) {
+        img.src = qrRes.qr_base64;
+        img.style.display = 'block';
+        if (loading) loading.style.display = 'none';
+      }
+      if (qrRes && qrRes.pairing_code && code) {
+        code.textContent = qrRes.pairing_code;
+      }
+
+      this.startWhatsAppStatusPolling('onboarding');
+    } catch (err) {
+      console.warn('initOnboardingStep4 error:', err);
+    }
+  }
+
+  startWhatsAppStatusPolling(context = 'onboarding') {
+    this.stopWhatsAppStatusPolling();
+    this.waPollingInterval = setInterval(async () => {
+      try {
+        const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
+        const status = await request(`/whatsapp/status${teacherParam}`);
+
+        if (status && status.status === 'connected') {
+          this.stopWhatsAppStatusPolling();
+
+          if (context === 'onboarding') {
+            const badge = document.getElementById('obWaStatusBadge');
+            const loading = document.getElementById('obQrLoading');
+            const img = document.getElementById('obQrImage');
+            if (badge) {
+              badge.className = 'badge badge-success';
+              badge.textContent = '🟢 تم الاتصال بنجاح وجاهز للإرسال!';
+            }
+            if (img) img.style.display = 'none';
+            if (loading) {
+              loading.style.display = 'block';
+              loading.textContent = '🎉 تم ربط واتساب بنجاح! جاري التوجيه للوحة التحكم...';
+            }
+            setTimeout(() => {
+              this.finishOnboarding();
+            }, 1500);
+          } else if (context === 'settings') {
+            const badge = document.getElementById('settingsWaBadge');
+            if (badge) {
+              badge.className = 'badge badge-success';
+              badge.textContent = `🟢 الخادم متصل وجاهز ${status.phone_number ? `(${status.phone_number})` : ''}`;
+            }
+            await this.loadRouteData('whatsapp');
+          }
+        }
+      } catch (err) {
+        // silent polling catch
+      }
+    }, 3000);
+  }
+
+  stopWhatsAppStatusPolling() {
+    if (this.waPollingInterval) {
+      clearInterval(this.waPollingInterval);
+      this.waPollingInterval = null;
+    }
+  }
+
+  async refreshWhatsAppQR() {
+    try {
+      const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
+      const qrRes = await request(`/whatsapp/qr${teacherParam}`);
+      const img = document.getElementById('settingsQrImage');
+      const loading = document.getElementById('settingsQrLoading');
+      const code = document.getElementById('settingsPairingCode');
+
+      if (img && qrRes.qr_base64) {
+        img.src = qrRes.qr_base64;
+        img.style.display = 'block';
+        if (loading) loading.style.display = 'none';
+      }
+      if (code && qrRes.pairing_code) {
+        code.textContent = qrRes.pairing_code;
+      }
+      this.startWhatsAppStatusPolling('settings');
+    } catch (err) {
+      alert('فشل تحديث رمز QR: ' + (err.message || 'خطأ في الاتصال'));
+    }
+  }
+
+  async disconnectWhatsApp() {
+    if (!confirm('هل أنت متأكد من رغبتك في إلغاء ربط حساب واتساب؟')) return;
+    try {
+      const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
+      await request(`/whatsapp/disconnect${teacherParam}`, { method: 'POST' });
+      alert('تم فصل الحساب بنجاح. يرجى مسح رمز QR لإعادة الربط.');
+      await this.loadRouteData('whatsapp');
+    } catch (err) {
+      alert('فشل فصل الحساب: ' + (err.message || 'خطأ غير متوقع'));
+    }
+  }
 
   reconnectWhatsApp() {
-    alert('🔄 تم فحص اتصال بوابة الواتساب: الخادم متصل وقنوات الإرسال تعمل بكفاءة تامة.');
+    this.refreshWhatsAppQR();
   }
 
   async sendTestWhatsAppMessage(e) {

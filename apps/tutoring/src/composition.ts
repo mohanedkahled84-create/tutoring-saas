@@ -40,9 +40,11 @@ import {
   AttendanceService,
   SupabaseAttendanceRepository,
 } from "./features/attendance/index.js";
+import { config } from "./shared/config/index.js";
 import {
   WhatsAppNotificationsService,
   SupabaseWhatsAppNotificationsRepository,
+  HttpEvolutionGateway,
 } from "./features/whatsapp-notifications/index.js";
 import {
   BillingService,
@@ -118,7 +120,10 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     activityLog: new ActivityLogService(new SupabaseActivityLogRepository(effectiveClient)),
     sessions: new SessionsService(new SupabaseSessionsRepository(effectiveClient)),
     attendance: new AttendanceService(new SupabaseAttendanceRepository(effectiveClient)),
-    whatsapp: new WhatsAppNotificationsService(new SupabaseWhatsAppNotificationsRepository(effectiveClient)),
+    whatsapp: new WhatsAppNotificationsService(
+      new SupabaseWhatsAppNotificationsRepository(effectiveClient),
+      new HttpEvolutionGateway(config.evolutionApiUrl, config.evolutionApiKey)
+    ),
     billing: new BillingService(new SupabaseBillingRepository(effectiveClient)),
     students: new StudentsService(new SupabaseStudentsRepository(effectiveClient)),
     groups: new GroupsService(new SupabaseGroupsRepository(effectiveClient)),

@@ -92,7 +92,12 @@ export interface MessageTemplate {
   updated_at?: string;
 }
 
+export function buildInstanceName(tenantId: string, teacherId: string): string {
+  return `centrly_tenant_${tenantId}_teacher_${teacherId}`;
+}
+
 export interface WhatsAppConnectionStatus {
+  instance_name?: string;
   status: string;
   phone_number: string;
   gateway: string;
@@ -102,6 +107,23 @@ export interface WhatsAppConnectionStatus {
     limit: number;
     safety_score: string;
   };
+  qr_base64?: string | null;
+  pairing_code?: string | null;
+  expires_in_seconds?: number;
+}
+
+export interface WhatsAppConnectionRecord {
+  id?: string;
+  tenant_id: string;
+  teacher_id?: string | null;
+  provider: "evolution" | "cloud_api";
+  instance_url: string;
+  instance_status: "connected" | "disconnected" | "pending";
+  connected_at?: string | null;
+  sent_today?: number;
+  last_sent_date?: string | null;
+  daily_limit?: number;
+  created_at?: string;
 }
 
 export interface IWhatsAppNotificationsRepository {
@@ -113,5 +135,7 @@ export interface IWhatsAppNotificationsRepository {
     variants: unknown;
     is_active: boolean;
   }): Promise<MessageTemplate>;
-  getConnectionStatus(tenantId?: string): Promise<WhatsAppConnectionStatus>;
+  getConnectionStatus(tenantId?: string, teacherId?: string): Promise<WhatsAppConnectionStatus>;
+  getConnection?(tenantId: string, teacherId?: string | null): Promise<WhatsAppConnectionRecord | null>;
+  upsertConnection?(conn: Partial<WhatsAppConnectionRecord>): Promise<WhatsAppConnectionRecord>;
 }

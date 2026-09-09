@@ -3,6 +3,9 @@
  */
 
 export function renderWhatsAppSettingsView(data = {}) {
+  const isConnected = data.status === 'connected';
+  const isAssistant = data.role === 'assistant' || data.role === 'assistant_to_teacher' || data.role === 'assistant_to_center';
+
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
       
@@ -13,7 +16,9 @@ export function renderWhatsAppSettingsView(data = {}) {
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <span style="font-size: 1.4rem;">💬</span>
               <h2 class="card-title" style="margin: 0; font-size: 1.25rem;">إعدادات وتكامل واتساب (WhatsApp & Templates)</h2>
-              <span class="badge badge-success">🟢 الخادم متصل وجاهز</span>
+              <span class="badge ${isConnected ? 'badge-success' : 'badge-warning'}" id="settingsWaBadge">
+                ${isConnected ? `🟢 الخادم متصل وجاهز ${data.phone_number ? `(${data.phone_number})` : ''}` : '🟡 بانتظار مسح رمز QR'}
+              </span>
             </div>
             <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
               ربط مباشر ومحمي عبر Evolution API مع آليات حماية رقم المعلم من الحظر (Anti-Ban Pacing & Circuit Breaker).
@@ -24,8 +29,37 @@ export function renderWhatsAppSettingsView(data = {}) {
             <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.reconnectWhatsApp()">
               🔄 فحص الاتصال
             </button>
+            ${isConnected && !isAssistant ? `
+              <button class="btn btn-danger btn-sm" onclick="window.centrlyApp.disconnectWhatsApp()">
+                🔴 إلغاء ربط الحساب
+              </button>
+            ` : ''}
           </div>
         </div>
+
+        <!-- Dynamic QR Connect Area (shown when not connected) -->
+        ${!isConnected ? `
+          <div style="background: #fff; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1.25rem; margin-top: 1.25rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+            <div style="width: 180px; height: 180px; background: #f8fafc; border: 2px dashed var(--centrly-blue-700); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+              <img id="settingsQrImage" src="${data.qr_base64 || ''}" alt="WhatsApp QR Code" style="width: 100%; height: 100%; object-fit: contain; ${data.qr_base64 ? '' : 'display: none;'}">
+              <div id="settingsQrLoading" style="font-size: 0.8rem; color: var(--centrly-text); padding: 1rem; text-align: center; ${data.qr_base64 ? 'display: none;' : ''}">
+                ⏳ جارٍ إنشاء رمز QR...
+              </div>
+            </div>
+            <div style="flex: 1; min-width: 250px;">
+              <h4 style="margin: 0 0 0.5rem; font-size: 1rem; color: var(--centrly-ink);">ربط رقم واتساب بالمنظومة</h4>
+              <p style="font-size: 0.825rem; color: var(--centrly-text); margin-bottom: 0.75rem;">
+                امسح رمز QR من هاتفك عبر <strong>الأجهزة المرتبطة > ربط جهاز</strong> في تطبيق واتساب لبدء إرسال الإشعارات تلقائياً.
+              </p>
+              <div style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink); margin-bottom: 0.75rem;">
+                كود الاقتران: <span id="settingsPairingCode" style="font-family: monospace; color: var(--centrly-blue-800);">${data.pairing_code || '---'}</span>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.refreshWhatsAppQR()">
+                🔄 تحديث رمز QR
+              </button>
+            </div>
+          </div>
+        ` : ''}
 
         <!-- Protection & Quota Badges -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">

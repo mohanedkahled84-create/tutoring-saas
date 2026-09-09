@@ -164,17 +164,20 @@ export function renderOnboardingWizard(step = 1, state = {}) {
             </p>
 
             <div style="display: inline-block; padding: 1.25rem; background: #fff; border: 2px dashed var(--centrly-blue-700); border-radius: var(--radius-md); margin-bottom: 1.25rem;">
-              <div style="width: 180px; height: 180px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); margin: 0 auto;">
-                <div style="font-size: 3rem;">📱</div>
+              <div id="obQrWrapper" style="width: 180px; height: 180px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); margin: 0 auto; overflow: hidden;">
+                <img id="obQrImage" src="${defaultState.qrBase64 || ''}" alt="WhatsApp QR Code" style="width: 100%; height: 100%; object-fit: contain; ${defaultState.qrBase64 ? '' : 'display: none;'}">
+                <div id="obQrLoading" style="font-size: 0.8rem; color: var(--centrly-text); padding: 1rem; ${defaultState.qrBase64 ? 'display: none;' : ''}">
+                  ⏳ جارٍ إنشاء رمز QR...
+                </div>
               </div>
-              <div style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink);">
-                كود الاقتران: <span style="font-family: monospace; color: var(--centrly-blue-800);">CENTRLY-2026-OK</span>
+              <div id="obPairingContainer" style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink);">
+                كود الاقتران: <span id="obPairingCode" style="font-family: monospace; color: var(--centrly-blue-800);">${defaultState.pairingCode || '---'}</span>
               </div>
             </div>
 
             <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem;">
-              <span class="badge badge-success" id="obWaStatusBadge">
-                🟢 بوابة الإرسال متصلة وجاهزة
+              <span class="badge ${defaultState.waConnected ? 'badge-success' : 'badge-warning'}" id="obWaStatusBadge">
+                ${defaultState.waConnected ? '🟢 بوابة الإرسال متصلة وجاهزة' : '🟡 بانتظار مسح رمز QR'}
               </span>
             </div>
 
