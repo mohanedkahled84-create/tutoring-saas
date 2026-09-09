@@ -80,10 +80,10 @@ export default async function handler(req, res) {
       message: 'تم تسجيل حجزك بنجاح وحفظ كود خصم الـ 20%! سنتواصل معك عبر الواتساب لتأكيد موعد تجربتك المجانية.'
     });
   } catch (error) {
-    console.error('Handler error:', error);
-    return res.status(200).json({
-      success: true,
-      message: 'تم تسجيل حجزك بنجاح وحفظ كود خصم الـ 20%! سنتواصل معك عبر الواتساب لتأكيد موعد تجربتك المجانية.'
+    console.error('Waitlist internal handler error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'حصل خطأ، برجاء المحاولة تاني أو التواصل معنا على الواتساب.'
     });
   }
 }
