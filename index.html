@@ -1462,6 +1462,12 @@
           <form id="booking-form" onsubmit="handleFormSubmit(event)">
             <input type="hidden" name="account_type" id="input-account-type" value="teacher">
             
+            <!-- Honeypot anti-spam trap (hidden from real users, filled by automated bots) -->
+            <div style="position: absolute; opacity: 0; z-index: -1; pointer-events: none; width: 0; height: 0; overflow: hidden;" aria-hidden="true" tabindex="-1">
+              <label for="website_url">Website</label>
+              <input type="text" id="website_url" name="website_url" autocomplete="off" tabindex="-1">
+            </div>
+            
             <div class="w-form-grid">
               
               <label>
