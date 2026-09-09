@@ -20,7 +20,8 @@ export default async function handler(req, res) {
         console.error('Failed to parse body string:', e);
       }
     }
-    const { fullname, phone, email, account_type, subject, location, capacity } = parsedBody || {};
+    const { fullname, phone, email, account_type, subject, location, rooms_count, capacity } = parsedBody || {};
+    const finalLocation = location ? (rooms_count ? `${location} (${rooms_count} قاعات)` : location) : (rooms_count ? `${rooms_count} قاعات` : '');
 
     if (!fullname || !phone) {
       return res.status(400).json({ success: false, message: 'الاسم ورقم الواتساب مطلوبان' });
@@ -48,7 +49,7 @@ export default async function handler(req, res) {
                 "رقم الواتساب": phone,
                 "البريد الإلكتروني": email || '',
                 "نوع الحساب": account_type === 'center' ? 'سنتر تعليمي' : 'مدرس مستقل',
-                "المادة أو المحافظة": subject || location || '',
+                "المادة أو المحافظة": subject || finalLocation || '',
                 "عدد الطلاب": capacity || '',
                 "الحالة": "جديد"
               }

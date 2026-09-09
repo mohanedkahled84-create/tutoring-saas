@@ -75,34 +75,43 @@
     .brand-wrap {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       text-decoration: none;
       flex-shrink: 0;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(23, 45, 112, 0.12);
     }
     
     /* Official Brand Wordmark */
     .brand-logo {
-      font-family: 'Changa', sans-serif;
+      font-family: 'Changa', 'Cairo', sans-serif;
       font-size: 28px;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--blue);
-      letter-spacing: 0;
+      letter-spacing: 0 !important;
       text-decoration: none;
       position: relative;
       display: inline-block;
       line-height: 1.1;
       white-space: nowrap;
-      font-feature-settings: "liga" 1;
     }
-    .brand-logo .lam-gold {
+    .brand-logo .logo-main {
+      color: var(--blue);
+    }
+    .brand-logo .logo-gold {
       color: var(--gold);
-      display: inline;
     }
     .brand-logo::after {
       content: "";
       position: absolute;
-      right: 2px;
-      left: 2px;
+      right: 0;
+      left: 0;
       height: 3px;
       border-radius: 6px;
       background: var(--gold);
@@ -378,6 +387,11 @@
       font-weight: 700;
       padding: 3px 8px;
       border-radius: 6px;
+    }
+    .hw-status-row.missing {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #B91C1C;
     }
     .barcode-sim {
       display: flex;
@@ -927,10 +941,17 @@
       .nav { height: 62px; }
       .nav-links { display: none; }
       .brand-badge { display: none; }
+      .brand-wrap { gap: 8px; }
+      .brand-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+      }
       .brand-logo {
         font-size: 22px;
         white-space: nowrap;
         line-height: 1.1;
+        letter-spacing: 0 !important;
       }
       .brand-logo::after {
         bottom: -3px;
@@ -1153,7 +1174,8 @@
   <!-- ============================================== -->
   <header class="nav shell">
     <a class="brand-wrap" href="#top" aria-label="سنترلي">
-      <div class="brand-logo">سنتر<span class="lam-gold">&zwj;ل&zwj;</span>ي</div>
+      <img src="favicon.png" alt="شعار سنترلي" class="brand-icon" width="36" height="36">
+      <div class="brand-logo"><span class="logo-main">سنتر</span><span class="logo-gold">لي</span></div>
       <span class="brand-badge">نسخة تجريبية 2026</span>
     </a>
     <nav class="nav-links">
@@ -1182,7 +1204,7 @@
       </h1>
 
       <p class="hero-sub">
-        كل اللي محتاجه عشان تدير حصتك وسنترك وتريّح بالك: رسائل واتساب فورية للأهالي بالحضور والواجب، مسح باركود في ثانية بكاميرا أي موبايل، وتنظيم لمواعيد وقاعات السنتر من غير أي دوشة ولا لخبطة.
+        كل اللي محتاجه عشان تدير حصتك وسنترك وتريّح بالك: رسائل واتساب للأهالي بعد الحصة بتقرير الحضور والواجب، مسح باركود في ثانية بكاميرا أي موبايل، وتنظيم لمواعيد وقاعات السنتر من غير أي دوشة ولا لخبطة.
       </p>
 
       <div class="hero-ctas">
@@ -1207,7 +1229,7 @@
           <div class="composite-stats">
             <span class="stat-pill stat-present">حضور: 142 طالب</span>
             <span class="stat-pill stat-absent">غياب: 3</span>
-            <span class="stat-pill stat-hw">الواجب: 139 استلموا</span>
+            <span class="stat-pill stat-hw">الواجب: 139 سلّموا • 3 ما سلّموش</span>
           </div>
         </div>
 
@@ -1222,7 +1244,7 @@
               <div class="student-details">
                 <div class="student-name">أحمد محمود خالد</div>
                 <div class="student-meta">كود الطالب: #1042 • قاعة 1</div>
-                <div class="hw-status-row">حالة الواجب: سلم كاملاً ✓</div>
+                <div class="hw-status-row missing">حالة الواجب: لم يسلم الواجب</div>
               </div>
             </div>
             <div class="barcode-sim">
@@ -1235,18 +1257,18 @@
           <div class="whatsapp-card-box">
             <div class="wa-chat-header">
               <span class="wa-recipient">إشعار ولي الأمر (والد أحمد)</span>
-              <span class="wa-online">متصل الآن</span>
+              <span class="wa-online">تقرير بعد انتهاء الحصة</span>
             </div>
             <div class="wa-bubble">
-              <div>مساء الخير يا فندم، بنبلغ حضرتك إن (أحمد محمود) حضر حصة الفيزياء النهاردة الساعة 04:02 م.</div>
-              <div style="margin-top:4px; font-weight:700; color:#1b5e20;">موقف الواجب: سلمه كاملاً ومستواه ما شاء الله ممتاز.</div>
+              <div>مساء الخير يا فندم، تقرير حصة الفيزياء النهاردة: (أحمد محمود) حضر الحصة، لكن ما سلّمش الواجب.</div>
+              <div style="margin-top:4px; font-weight:700; color:#b91c1c;">موقف الواجب: لم يسلم الواجب، برجاء المتابعة معاه عشان ما يراكمش الدروس.</div>
               <div style="font-size:11.5px; color:#555; margin-top:4px;">أ. محمد الشناوي — سنتر الأوائل</div>
               <div class="wa-bubble-footer">
-                <span>04:02 م</span>
+                <span>06:05 م</span>
                 <span class="wa-ticks">✓✓</span>
               </div>
             </div>
-            <div class="wa-auto-note">الرسالة اتبعتت تلقائياً من سنترلي</div>
+            <div class="wa-auto-note">رسالة بتتبعت تلقائياً بعد نهاية الحصة من سنترلي</div>
           </div>
         </div>
       </div>
@@ -1278,8 +1300,8 @@
         <article class="feature-card highlight" data-cat="all">
           <div>
             <div class="f-badge parent">متابعة ولي الأمر</div>
-            <h3>2. رسالة واتساب فورية لولي الأمر</h3>
-            <p>أول ما الطالب يدخل، بتوصل رسالة واتساب تلقائية لولي الأمر بحضوره وموقفه من الواجب عشان يطمن أول بأول.</p>
+            <h3>2. رسالة واتساب لولي الأمر بعد الحصة</h3>
+            <p>بعد ما الحصة تخلص، بتوصل رسالة واتساب لولي الأمر بتقرير كامل بحضور ابنه وموقفه من الواجب عشان يطمن أول بأول.</p>
           </div>
           <button class="read-more-btn" onclick="openModal('whatsapp')">اعرف أكتر</button>
         </article>
@@ -1359,15 +1381,15 @@
         <div class="persona-list">
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>إشعار واتساب لحظي لولي الأمر:</b> رسالة فورية بحضور ابنه وموقفه من الواجب أول ما الحصة تبدأ بدون اتصالات يدوية.</div>
+            <div><b>تقرير واتساب لولي الأمر بعد الحصة:</b> رسالة بتقرير حضور ابنه وموقفه من الواجب بتتبعت بعد نهاية كل حصة من غير مكالمات ومتابعة يدوية.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>مفيش تحوير في تسليم الواجب:</b> كل طالب بيتسجل موقفه في ثانية ويوصل لولي الأمر فوراً في تقرير الحصة.</div>
+            <div><b>مفيش كدب في تسليم الواجب:</b> كل طالب بيتسجل موقفه في ثانية ويوصل لولي الأمر بعد الحصة في التقرير.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>طابور الدخول يخلص في دقايق:</b> مسح الكارت بكاميرا أي موبايل في أقل من ثانية وبدون أجهزة باهظة.</div>
+            <div><b>طابور الدخول يخلص في دقايق:</b> مسح الكارت بكاميرا أي موبايل في أقل من ثانية ومن غير أجهزة غالية ومكلفة.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
@@ -1391,11 +1413,11 @@
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>تصفية حسابات ونسب المدرسين:</b> حساب نسبة كل مدرس أو إيجار القاعة وتصفية الحساب بضغطة زر واحدة.</div>
+            <div><b>تصفية حسابات ونسب المدرسين:</b> حساب نسبة كل مدرس أو إيجار القاعة وتصفية حسابه بضغطة زرار واحدة ومن غير دفاتر.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
-            <div><b>كارت موحد للطالب:</b> نفس كارت الباركود يدخل به الطالب كل مواد وحصص السنتر بدون تكرار تسجيله.</div>
+            <div><b>كارت موحد للطالب:</b> نفس الكارت يدخل بيه الطالب كل مواد وحصص السنتر من غير ما نسجله مرتين.</div>
           </div>
           <div class="persona-item">
             <span class="persona-check">✓</span>
@@ -1417,7 +1439,7 @@
     <section id="waitlist" class="waitlist-wrap">
       <div class="waitlist-inner">
         <div>
-          <span class="w-badge">خصم الحجز المسبق 20%</span>
+          <span class="w-badge">سجل دلوقتي واحصل على خصم 20%</span>
           <h2>احجز مكانك في سنترلي<br>قبل ما تكتمل أول 50 مقعد</h2>
           <p>
             سجل بياناتك في دقيقة واحدة. حجزك المسبق بيضمن لك أولوية التفعيل وتجربة مجانية لكل الميزات وتدريب لمساعديك.
@@ -1425,12 +1447,8 @@
 
           <!-- Pricing Clear Highlight (No complex tiers) -->
           <div class="pricing-badge-strip">
-            <div class="pricing-price-text">الاشتراك يبدأ من <b>799 جنيه</b> / شهرياً</div>
+            <div class="pricing-price-text">باشتراك يبدأ من <b>599 جنيه</b></div>
             <div class="pricing-sub-text">خصم خاص 20% لأول 50 مشترك في الحجز المسبق</div>
-          </div>
-
-          <div style="font-size:11.5px; color:#c6d5fb; margin-top:4px;">
-            بياناتك في أمان تام ومش هنبعت لك أي رسائل ترويجية مزعجة.
           </div>
         </div>
 
@@ -1472,11 +1490,16 @@
                 <input name="location" type="text" placeholder="اسم السنتر">
               </label>
 
-              <label class="w-full">
-                <span id="lbl-count">عدد الطلاب التقديري</span>
+              <label class="w-full" id="field-center-rooms" style="display:none;">
+                <span>عدد القاعات بالسنتر</span>
+                <input name="rooms_count" type="number" min="1" max="100" placeholder="اكتب عدد القاعات (مثال: 4)">
+              </label>
+
+              <label class="w-full" id="field-capacity">
+                <span id="lbl-count">عدد الطلاب المتوقع</span>
                 <select name="capacity">
-                  <option value="under-50">أقل من 50 طالباً</option>
-                  <option value="50-150">من 50 إلى 150 طالباً</option>
+                  <option value="under-50">أقل من 50 طالب</option>
+                  <option value="50-150">من 50 إلى 150 طالب</option>
                   <option value="150-500" selected>من 150 إلى 500 طالب</option>
                   <option value="500-1000">من 500 إلى 1,000 طالب</option>
                   <option value="1000+">أكثر من 1,000 طالب</option>
@@ -1484,7 +1507,7 @@
               </label>
 
               <button class="button amber w-full" type="submit" style="padding:12px; font-size:14px; margin-top:6px;">
-                تأكيد الحجز وحفظ كود الخصم 20%
+                سجل دلوقتي واحصل على خصم 20%
               </button>
             </div>
 
@@ -1504,8 +1527,8 @@
       </div>
 
       <details>
-        <summary>إزاي ولي الأمر بيوصله إشعار بالواتساب؟</summary>
-        <p>أول ما المساعد بيمسح كارت الطالب، بتتبعت رسالة واتساب تلقائية لولي الأمر فيها الحضور وموقف الواجب باسمك واسم السنتر. كل ده بيتم في ثواني وبشكل منظم يريحك من كتر الاتصالات.</p>
+        <summary>إزاي ولي الأمر بيوصله تقرير الحصة بالواتساب؟</summary>
+        <p>المساعد بيمسح كارت الطالب ويسجل الواجب في ثانية بكاميرا الموبايل، وبمجرد ما الحصة تخلص بتوصل رسالة واتساب لولي الأمر فيها تقرير كامل بحضور وموقف واجب ابنه باسمك واسم السنتر.</p>
       </details>
 
       <details>
@@ -1531,7 +1554,7 @@
   <!-- ============================================== -->
   <div id="feature-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
     <div class="modal-box">
-      <button class="modal-close" onclick="closeModal()" aria-label="إغلاق">✕</button>
+      <button class="modal-close" onclick="closeModal()" aria-label="إغلاق">&times;</button>
       
       <div class="m-header">
         <h3 id="m-title">تفاصيل الميزة</h3>
@@ -1558,7 +1581,8 @@
   <footer>
     <div class="shell">
       <div class="brand-wrap">
-        <div class="brand-logo" style="font-size:22px;">سنتر<span class="lam-gold">&zwj;ل&zwj;</span>ي</div>
+        <img src="favicon.png" alt="شعار سنترلي" class="brand-icon" width="28" height="28">
+        <div class="brand-logo" style="font-size:22px;"><span class="logo-main">سنتر</span><span class="logo-gold">لي</span></div>
       </div>
       <span>المنصة الأذكى لإدارة حصص ومجموعات المدرس والسنتر في مصر</span>
       <span>جميع الحقوق محفوظة 2026</span>
@@ -1576,15 +1600,15 @@
         desc: "شاشة سريعة معمولة مخصوص للمساعدين عشان تخلص طابور الحضور في دقايق معدودة. بكاميرا أي موبايل عادي بيمسح كارت الطالب، ويسجل موقف الواجب بلمسة واحدة بدون أي تعطيل لوقت الحصة، ومفيش أي مسح مكرر هيتسجل بالغلط.",
         bullets: [
           "شغال من متصفح الموبايل مباشرة بدون شراء أجهزة ليزر أو تنزيل برامج تقيلة.",
-          "تسجيل الحضور وموقف الواجب (كامل، ناقص، لم يسلم) في ثانية واحدة بلمسة واحدة.",
+          "تسجيل الحضور وموقف الواجب (كامل، ناقص، ما سلّمش) في ثانية واحدة بلمسة واحدة.",
           "منع تلقائي لأي مسح مكرر مع نغمة تنبيه صوتية مميزة لتفادي أي لخبطة."
         ]
       },
       whatsapp: {
-        title: "إشعار فوري لولي الأمر بالواتساب",
-        desc: "أول ما الطالب يدخل الحصة أو يغيب، بتوصل رسالة واتساب تلقائية لولي الأمر فيها موقفه بالكامل وحالة الواجب. الرسالة بتتبعت باسم المدرس والسنتر عشان تطمن الأهالي أول بأول من غير ما تضيع وقتك في مكالمات ورسائل يدوية.",
+        title: "رسالة ومتابعة لولي الأمر بالواتساب بعد الحصة",
+        desc: "بعد ما الحصة تخلص، بتوصل رسالة واتساب تلقائية لولي الأمر فيها تقرير الحصة بالكامل وموقف الواجب. الرسالة بتتبعت باسم المدرس والسنتر عشان تطمن الأهالي أول بأول من غير ما تضيع وقتك في مكالمات ورسائل يدوية.",
         bullets: [
-          "إشعار لحظي بالحضور والغياب وموقف الواجب بدون أي مجهود إضافي من مساعديك.",
+          "إشعار كامل بعد انتهاء الحصة بالحضور والغياب وموقف الواجب بدون أي مجهود إضافي من مساعديك.",
           "الرسالة بتتبعت باسم المدرس واسم السنتر عشان تبني ثقة واحترافية كاملة.",
           "إمكانية إرسال درجات الامتحانات والتقارير الشهرية للأهالي أولاً بأول."
         ]
@@ -1699,6 +1723,7 @@
       const lblName = document.getElementById('lbl-name');
       const fieldSubject = document.getElementById('field-subject');
       const fieldCenter = document.getElementById('field-center-details');
+      const fieldRooms = document.getElementById('field-center-rooms');
       const lblCount = document.getElementById('lbl-count');
       const inputFullname = document.querySelector('input[name="fullname"]');
 
@@ -1711,7 +1736,8 @@
         if (inputFullname) inputFullname.placeholder = 'الاسم بالكامل';
         fieldSubject.style.display = 'flex';
         fieldCenter.style.display = 'none';
-        lblCount.innerText = 'عدد الطلاب التقديري';
+        if (fieldRooms) fieldRooms.style.display = 'none';
+        lblCount.innerText = 'عدد الطلاب المتوقع';
       } else {
         btnCenter.classList.add('active');
         btnTeacher.classList.remove('active');
@@ -1719,7 +1745,8 @@
         if (inputFullname) inputFullname.placeholder = 'اسم المسؤول بالكامل';
         fieldSubject.style.display = 'none';
         fieldCenter.style.display = 'flex';
-        lblCount.innerText = 'عدد القاعات والمدرسين بالسنتر';
+        if (fieldRooms) fieldRooms.style.display = 'flex';
+        lblCount.innerText = 'عدد الطلاب المتوقع بالسنتر';
       }
     }
 
@@ -1744,6 +1771,10 @@
       if (data.email) data.email = data.email.trim();
       if (data.subject) data.subject = data.subject.trim();
       if (data.location) data.location = data.location.trim();
+      if (data.rooms_count) data.rooms_count = data.rooms_count.trim();
+      if (data.account_type === 'center' && data.rooms_count) {
+        data.location = (data.location ? data.location + ' - ' : '') + data.rooms_count + ' قاعات';
+      }
 
       try {
         const response = await fetch('/api/waitlist', {
@@ -1774,7 +1805,7 @@
         feedback.innerText = 'تعذر الاتصال بالخادم، يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.';
       } finally {
         submitBtn.disabled = false;
-        submitBtn.innerText = 'تأكيد الحجز وحفظ كود الخصم 20%';
+        submitBtn.innerText = 'سجل دلوقتي واحصل على خصم 20%';
         feedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
