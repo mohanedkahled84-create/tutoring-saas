@@ -6,7 +6,7 @@
 const isLocalhost = typeof window !== 'undefined' && 
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-export const API_BASE_URL = window.__CENTRLY_API_URL__ || (
+export const API_BASE_URL = (typeof window !== 'undefined' && window.__CENTRLY_API_URL__) || (
   isLocalhost
     ? 'http://localhost:3000/api'
     : 'https://tutoring-backend-production-c8dd.up.railway.app/api'
