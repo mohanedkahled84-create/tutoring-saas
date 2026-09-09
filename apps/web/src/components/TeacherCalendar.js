@@ -1,14 +1,14 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
+import { getIcon } from "../utils/icons.js";
 
 /**
- * Centrly Teacher Calendar (DEV-56)
- * Daily, Weekly, and Monthly schedule views for teachers.
- * Displays scheduled, in-progress, ended, cancelled, rescheduled, and extra sessions
- * with Arabic RTL layout, visual badges, and quick session actions.
+ * Centrly Teacher Calendar (DEV-89)
+ * Daily, Weekly, and Monthly schedule views with clean vector icons,
+ * Arabic RTL layout, status badges, and quick session actions.
  */
 
 export function renderTeacherCalendar(data = {}) {
-  const currentView = data.view || 'week'; // 'day' | 'week' | 'month'
+  const currentView = data.view || 'week';
   const currentDateLabel = data.dateLabel || 'أسبوع 6 سبتمبر - 12 سبتمبر 2026';
   const filterGroup = data.selectedGroup || 'all';
 
@@ -25,18 +25,18 @@ export function renderTeacherCalendar(data = {}) {
 
   function renderStatusBadge(session) {
     if (session.status === 'in_progress') {
-      return '<span class="badge badge-success" style="font-size:0.75rem;">🟢 جارية</span>';
+      return `<span class="badge badge-success" style="font-size:0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('dotSuccess', 8)}<span>جارية</span></span>`;
     }
     if (session.status === 'ended') {
-      return '<span class="badge badge-secondary" style="font-size:0.75rem;">🏁 منتهية</span>';
+      return '<span class="badge badge-secondary" style="font-size:0.75rem;">منتهية</span>';
     }
     if (session.status === 'cancelled') {
-      return '<span class="badge" style="background:#ef4444;color:#fff;font-size:0.75rem;">❌ ملغاة</span>';
+      return '<span class="badge badge-danger" style="font-size:0.75rem;">ملغاة</span>';
     }
     if (session.status === 'rescheduled') {
-      return '<span class="badge" style="background:#f59e0b;color:#fff;font-size:0.75rem;">📅 مؤجلة</span>';
+      return '<span class="badge badge-warning" style="font-size:0.75rem;">مؤجلة</span>';
     }
-    return '<span class="badge badge-primary" style="font-size:0.75rem;">🕒 مجدولة</span>';
+    return '<span class="badge badge-blue" style="font-size:0.75rem;">مجدولة</span>';
   }
 
   function renderSessionCard(session) {
@@ -45,11 +45,11 @@ export function renderTeacherCalendar(data = {}) {
         session.is_extra
           ? '#7c3aed'
           : session.status === 'in_progress'
-          ? '#10b981'
+          ? 'var(--centrly-success)'
           : session.status === 'cancelled'
-          ? '#ef4444'
+          ? 'var(--centrly-danger)'
           : session.status === 'rescheduled'
-          ? '#f59e0b'
+          ? 'var(--centrly-warning)'
           : 'var(--centrly-blue-700)'
       }; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 0.5rem;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
@@ -59,17 +59,26 @@ export function renderTeacherCalendar(data = {}) {
           </div>
           <div style="display: flex; gap: 0.35rem; align-items: center;">
             ${renderStatusBadge(session)}
-            ${session.is_extra ? '<span class="badge" style="background:#7c3aed;color:#fff;font-size:0.75rem;">⭐ إضافية</span>' : ''}
+            ${session.is_extra ? '<span class="badge" style="background:#ede9fe;color:#7c3aed;font-size:0.75rem;">إضافية</span>' : ''}
           </div>
         </div>
 
         <div style="font-size: 0.82rem; color: var(--centrly-text); display: flex; flex-direction: column; gap: 0.25rem;">
-          <div>⏰ <strong>الموعد:</strong> ${session.day_name ? `${escapeHtml(session.day_name)} • ` : ''}${escapeHtml(session.time)} (${escapeHtml(session.date)})</div>
-          <div>📍 <strong>المكان:</strong> ${escapeHtml(session.center_name || 'سنتر تعليمي')}</div>
-          <div>🔢 <strong>رقم الحصة:</strong> حصة ${escapeHtml(session.session_number)}</div>
-          ${session.extra_topic ? `<div style="color: #7c3aed;">📝 <strong>موضوع الحصة:</strong> ${escapeHtml(session.extra_topic)}</div>` : ''}
-          ${session.cancellation_reason ? `<div style="color: #ef4444;">⚠️ <strong>سبب الإلغاء:</strong> ${escapeHtml(session.cancellation_reason)}</div>` : ''}
-          ${session.rescheduled_to_date ? `<div style="color: #d97706;">📅 <strong>الموعد البديل:</strong> ${escapeHtml(session.rescheduled_to_date)} ${escapeHtml(session.rescheduled_to_time || '')}</div>` : ''}
+          <div style="display: flex; align-items: center; gap: 0.35rem;">
+            <span style="color: var(--centrly-blue-700);">${getIcon('clock', 14)}</span>
+            <span><strong>الموعد:</strong> ${session.day_name ? `${escapeHtml(session.day_name)} • ` : ''}${escapeHtml(session.time)} (${escapeHtml(session.date)})</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.35rem;">
+            <span style="color: var(--centrly-blue-700);">${getIcon('center', 14)}</span>
+            <span><strong>المكان:</strong> ${escapeHtml(session.center_name || 'سنتر تعليمي')}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.35rem;">
+            <span style="color: var(--centrly-blue-700);">${getIcon('sessions', 14)}</span>
+            <span><strong>رقم الحصة:</strong> حصة ${escapeHtml(session.session_number)}</span>
+          </div>
+          ${session.extra_topic ? `<div style="color: #7c3aed; display: flex; align-items: center; gap: 0.35rem;"><span>${getIcon('note', 14)}</span><span><strong>موضوع الحصة:</strong> ${escapeHtml(session.extra_topic)}</span></div>` : ''}
+          ${session.cancellation_reason ? `<div style="color: var(--centrly-danger); display: flex; align-items: center; gap: 0.35rem;"><span>${getIcon('close', 14)}</span><span><strong>سبب الإلغاء:</strong> ${escapeHtml(session.cancellation_reason)}</span></div>` : ''}
+          ${session.rescheduled_to_date ? `<div style="color: var(--centrly-warning); display: flex; align-items: center; gap: 0.35rem;"><span>${getIcon('calendar', 14)}</span><span><strong>الموعد البديل:</strong> ${escapeHtml(session.rescheduled_to_date)} ${escapeHtml(session.rescheduled_to_time || '')}</span></div>` : ''}
         </div>
 
         <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; border-top: 1px solid var(--centrly-line); padding-top: 0.5rem;">
@@ -104,7 +113,10 @@ export function renderTeacherCalendar(data = {}) {
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <h2 class="card-title" style="margin: 0; font-size: 1.35rem;">📅 جدول الحصص والتقويم الأكاديمي</h2>
+              <h2 class="card-title" style="margin: 0; font-size: 1.35rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>${getIcon('calendar', 22, 'var(--centrly-blue-700)')}</span>
+                <span>جدول الحصص والتقويم الأكاديمي</span>
+              </h2>
               <span class="badge badge-primary">${currentDateLabel}</span>
             </div>
             <div style="font-size: 0.85rem; color: var(--centrly-text); margin-top: 0.25rem;">
@@ -128,18 +140,19 @@ export function renderTeacherCalendar(data = {}) {
 
             <div style="display: flex; gap: 0.25rem;">
               <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.calendarPrev()" title="الفترة السابقة">
-                ▶ السابق
+                السابق
               </button>
               <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.calendarToday()" title="اليوم الحالي">
                 اليوم
               </button>
               <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.calendarNext()" title="الفترة التالية">
-                التالي ◀
+                التالي
               </button>
             </div>
 
-            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.openScheduleSessionModal()">
-              + إضافة حصة إضافية
+            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.openScheduleSessionModal()" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700;">
+              ${getIcon('add', 14)}
+              <span>حصة إضافية</span>
             </button>
           </div>
         </div>
@@ -148,11 +161,11 @@ export function renderTeacherCalendar(data = {}) {
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">
           <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem;">
             <span>📊 إجمالي الحصص: <strong>${totalCount}</strong></span>
-            <span style="color: #10b981;">🟢 جارية: <strong>${inProgressCount}</strong></span>
+            <span style="color: var(--centrly-success);">🟢 جارية: <strong>${inProgressCount}</strong></span>
             <span style="color: var(--centrly-blue-700);">🕒 مجدولة: <strong>${scheduledCount}</strong></span>
             <span style="color: var(--centrly-text);">🏁 منتهية: <strong>${completedCount}</strong></span>
-            <span style="color: #f59e0b;">📅 مؤجلة: <strong>${rescheduledCount}</strong></span>
-            <span style="color: #ef4444;">❌ ملغاة: <strong>${cancelledCount}</strong></span>
+            <span style="color: var(--centrly-warning);">📅 مؤجلة: <strong>${rescheduledCount}</strong></span>
+            <span style="color: var(--centrly-danger);">❌ ملغاة: <strong>${cancelledCount}</strong></span>
             <span style="color: #7c3aed;">⭐ إضافية: <strong>${extraCount}</strong></span>
           </div>
 

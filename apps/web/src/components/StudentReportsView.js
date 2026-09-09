@@ -1,9 +1,11 @@
 import { renderStudentSearchBar } from "./StudentSearchBar.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
+import { getIcon } from "../utils/icons.js";
 
 /**
- * Centrly Student Reports & Monthly Leaderboard View (DEV-80)
- * Arabic-first RTL view for monthly performance ranking, bulk parent report dispatch, and individual send.
+ * Centrly Student Reports & Monthly Leaderboard View (DEV-89)
+ * Arabic-first RTL view for monthly performance ranking, bulk report locking per month,
+ * individual report dispatch, and clean vector icons.
  */
 export function renderStudentReportsView(state = {}) {
   const {
@@ -16,12 +18,15 @@ export function renderStudentReportsView(state = {}) {
     average_attendance_rate = 0,
     average_score = 0,
     isSubmittingBulk = false,
+    dispatchedMonths = {},
   } = state;
 
   const currentMonth = period.month || (new Date().getMonth() + 1);
   const currentYear = period.year || new Date().getFullYear();
+  const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+  const dispatchedInfo = dispatchedMonths[monthKey];
+  const isMonthDispatched = Boolean(dispatchedInfo);
 
-  // Arabic month names
   const monthNames = [
     "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
     "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
@@ -37,29 +42,37 @@ export function renderStudentReportsView(state = {}) {
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <h2 class="card-title" style="margin: 0; font-size: 1.35rem; display: flex; align-items: center; gap: 0.5rem;">
-              <span>🏆</span> تقارير الأداء ولوحة الشرف والتميز
+              <span>${getIcon('reports', 24, 'var(--centrly-blue-700)')}</span>
+              <span>تقارير الأداء ولوحة الشرف والتميز</span>
             </h2>
-            <p style="font-size: 0.85rem; color: var(--centrly-muted, #64748b); margin-top: 0.25rem;">
-              متابعة درجات الكويزات، نسب الحضور والغياب، وترتيب الطلاب وإرسال تقارير واتساب دورية لأولياء الأمور
+            <p style="font-size: 0.85rem; color: var(--centrly-text); margin-top: 0.25rem;">
+              متابعة درجات الكويزات، نسب الحضور والغياب، وإرسال تقارير واتساب الدورية لأولياء الأمور
             </p>
           </div>
 
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-            <button
-              class="btn btn-primary"
-              id="bulkSendReportsBtn"
-              onclick="window.centrlyApp.handleBulkSendReports()"
-              ${isSubmittingBulk ? "disabled" : ""}
-              style="display: flex; align-items: center; gap: 0.5rem;"
-            >
-              <span>🚀</span>
-              <span>${isSubmittingBulk ? "جاري الإرسال عبر الطابور..." : "إرسال التقارير لجميع أولياء الأمور (Bulk)"}</span>
-            </button>
+            ${isMonthDispatched ? `
+              <div class="badge badge-success" style="padding: 0.5rem 0.9rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+                ${getIcon('check', 16)}
+                <span>تم إرسال تقييمات شهر ${monthNames[currentMonth - 1]} ${currentYear} (${dispatchedInfo.sentDate || 'مؤخراً'})</span>
+              </div>
+            ` : `
+              <button
+                class="btn btn-primary"
+                id="bulkSendReportsBtn"
+                onclick="window.centrlyApp.handleBulkSendReports()"
+                ${isSubmittingBulk ? "disabled" : ""}
+                style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700;"
+              >
+                ${getIcon('send', 18)}
+                <span>${isSubmittingBulk ? "جاري الإرسال عبر الطابور..." : "إرسال التقارير لجميع أولياء الأمور (Bulk)"}</span>
+              </button>
+            `}
           </div>
         </div>
 
         <!-- Period and Group Selectors -->
-        <div style="display: flex; gap: 1rem; margin-top: 1.25rem; flex-wrap: wrap; align-items: center; padding-top: 1rem; border-top: 1px solid var(--centrly-border, #e2e8f0);">
+        <div style="display: flex; gap: 1rem; margin-top: 1.25rem; flex-wrap: wrap; align-items: center; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">
           <div style="display: flex; gap: 0.5rem; align-items: center;">
             <label style="font-size: 0.85rem; font-weight: 600;">الشهر:</label>
             <select
@@ -109,7 +122,7 @@ export function renderStudentReportsView(state = {}) {
           ${renderStudentSearchBar({
             id: "reportsStudentSearch",
             value: searchQuery,
-            placeholder: "🔍 ابحث برقم الكود، اسم الطالب، أو رقم هاتف ولي الأمر في لوحة الترتيب...",
+            placeholder: "ابحث بكود الطالب، اسمه، أو رقم ولي الأمر في لوحة الترتيب...",
             onInputHandler: "window.centrlyApp.handleReportsSearch(this.value)",
           })}
         </div>
@@ -118,22 +131,22 @@ export function renderStudentReportsView(state = {}) {
       <!-- Overview KPI Cards -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
         <div class="card" style="margin: 0; padding: 1.25rem;">
-          <div style="font-size: 0.85rem; color: var(--centrly-muted, #64748b);">إجمالي الطلاب في التقرير</div>
-          <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: var(--centrly-primary, #2563eb);">
+          <div style="font-size: 0.85rem; color: var(--centrly-text);">إجمالي الطلاب في التقرير</div>
+          <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: var(--centrly-blue-700);">
             ${escapeHtml(total_students || students.length || 0)}
           </div>
         </div>
 
         <div class="card" style="margin: 0; padding: 1.25rem;">
-          <div style="font-size: 0.85rem; color: var(--centrly-muted, #64748b);">متوسط الالتزام بالحضور</div>
-          <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: #16a34a;">
+          <div style="font-size: 0.85rem; color: var(--centrly-text);">متوسط الالتزام بالحضور</div>
+          <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: var(--centrly-success);">
             ${escapeHtml(average_attendance_rate || 0)}%
           </div>
         </div>
 
         <div class="card" style="margin: 0; padding: 1.25rem;">
-          <div style="font-size: 0.85rem; color: var(--centrly-muted, #64748b);">متوسط درجات الاختبارات</div>
-          <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: #8b5cf6;">
+          <div style="font-size: 0.85rem; color: var(--centrly-text);">متوسط درجات الاختبارات</div>
+          <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: #7c3aed;">
             ${escapeHtml(average_score || 0)}%
           </div>
         </div>
@@ -141,9 +154,9 @@ export function renderStudentReportsView(state = {}) {
 
       <!-- Ranked Leaderboard Table -->
       <div class="card" style="margin: 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <h3 style="margin: 0; font-size: 1.15rem;">ترتيب الطلاب لشهر ${monthNames[currentMonth - 1]} ${currentYear}</h3>
-          <span style="font-size: 0.8rem; color: var(--centrly-muted, #64748b);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">ترتيب الطلاب لشهر ${monthNames[currentMonth - 1]} ${currentYear}</h3>
+          <span style="font-size: 0.8rem; color: var(--centrly-text);">
             الترتيب مبني على التقييم الأكاديمي والالتزام بالحضور
           </span>
         </div>
@@ -160,55 +173,55 @@ export function renderStudentReportsView(state = {}) {
                 <th>نسبة الحضور</th>
                 <th>متوسط الدرجات</th>
                 <th>التقييم الشامل</th>
-                <th style="text-align: center;">إرسال التقرير</th>
+                <th style="text-align: center;">إرسال تقرير منفصل</th>
               </tr>
             </thead>
             <tbody>
               ${students.length === 0 ? `
                 <tr>
-                  <td colspan="9" style="text-align: center; padding: 3rem 1rem; color: var(--centrly-muted, #64748b);">
-                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📊</div>
-                    <div style="font-weight: 600; font-size: 1rem;">لا توجد بيانات تقارير متاحة لهذه الفترة أو المجموعة</div>
+                  <td colspan="9" style="text-align: center; padding: 3rem 1rem; color: var(--centrly-text);">
+                    <div style="display: flex; justify-content: center; margin-bottom: 0.5rem; color: var(--centrly-blue-700);">
+                      ${getIcon('reports', 36)}
+                    </div>
+                    <div style="font-weight: 600; font-size: 1rem; color: var(--centrly-ink);">لا توجد بيانات تقارير متاحة لهذه الفترة أو المجموعة</div>
                     <div style="font-size: 0.85rem; margin-top: 0.25rem;">تأكد من تسجيل الحضور وإدخال درجات الكويزات لحصص هذا الشهر</div>
                   </td>
                 </tr>
               ` : students.map((std) => {
-                const rankBadge =
-                  std.rank === 1 ? "🥇 1" :
-                  std.rank === 2 ? "🥈 2" :
-                  std.rank === 3 ? "🥉 3" :
-                  `#${std.rank}`;
+                const isTop1 = std.rank === 1;
+                const isTop2 = std.rank === 2;
+                const isTop3 = std.rank === 3;
 
                 const badgeBg =
-                  std.rank === 1 ? "background: #fef9c3; color: #854d0e; font-weight: bold;" :
-                  std.rank === 2 ? "background: #f1f5f9; color: #334155; font-weight: bold;" :
-                  std.rank === 3 ? "background: #ffedd5; color: #9a3412; font-weight: bold;" :
-                  "color: var(--centrly-muted, #64748b);";
+                  isTop1 ? "background: #fef9c3; color: #854d0e; font-weight: bold; border: 1px solid #fde047;" :
+                  isTop2 ? "background: #f1f5f9; color: #334155; font-weight: bold; border: 1px solid #cbd5e1;" :
+                  isTop3 ? "background: #ffedd5; color: #9a3412; font-weight: bold; border: 1px solid #fdba74;" :
+                  "color: var(--centrly-text);";
 
                 return `
                   <tr>
                     <td style="text-align: center;">
-                      <span class="badge" style="${badgeBg} padding: 0.25rem 0.6rem; border-radius: 9999px; font-size: 0.9rem;">
-                        ${rankBadge}
+                      <span class="badge" style="${badgeBg} padding: 0.25rem 0.6rem; border-radius: 9999px; font-size: 0.85rem;">
+                        ${isTop1 ? "🥇 1" : isTop2 ? "🥈 2" : isTop3 ? "🥉 3" : `#${std.rank}`}
                       </span>
                     </td>
-                    <td><code>${escapeHtml(std.student_code || "—")}</code></td>
-                    <td style="font-weight: 600;">${escapeHtml(std.student_name)}</td>
-                    <td>${escapeHtml(std.group_name || "—")}</td>
-                    <td dir="ltr" style="text-align: right;">${escapeHtml(std.parent_phone || "—")}</td>
+                    <td><code style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(std.student_code || "—")}</code></td>
+                    <td style="font-weight: 700;">${escapeHtml(std.student_name)}</td>
+                    <td><span class="badge badge-blue">${escapeHtml(std.group_name || "—")}</span></td>
+                    <td dir="ltr" style="text-align: right; font-family: monospace;">${escapeHtml(std.parent_phone || "—")}</td>
                     <td>
                       <span class="badge ${std.attendance_rate >= 80 ? "badge-success" : std.attendance_rate >= 50 ? "badge-warning" : "badge-danger"}">
                         ${escapeHtml(std.attendance_rate)}% (${escapeHtml(std.attended_sessions)}/${escapeHtml(std.total_sessions)})
                       </span>
                     </td>
                     <td>
-                      <span style="font-weight: 600; color: ${std.average_score >= 70 ? "#16a34a" : "#dc2626"};">
+                      <span style="font-weight: 700; color: ${std.average_score >= 70 ? "var(--centrly-success)" : "var(--centrly-danger)"};">
                         ${escapeHtml(std.average_score)}%
                       </span>
-                      <small style="color: var(--centrly-muted, #64748b);"> (${escapeHtml(std.total_quizzes)} كويز)</small>
+                      <small style="color: var(--centrly-text);"> (${escapeHtml(std.total_quizzes)} كويز)</small>
                     </td>
                     <td>
-                      <div style="font-weight: bold; color: var(--centrly-primary, #2563eb);">
+                      <div style="font-weight: 800; color: var(--centrly-blue-700);">
                         ${escapeHtml(std.overall_score)}%
                       </div>
                     </td>
@@ -219,7 +232,8 @@ export function renderStudentReportsView(state = {}) {
                         title="إرسال تقرير الواتساب لولي الأمر"
                         style="display: inline-flex; align-items: center; gap: 0.35rem;"
                       >
-                        <span>📤</span> إرسال التقرير
+                        ${getIcon('whatsapp', 14)}
+                        <span>إرسال التقرير</span>
                       </button>
                     </td>
                   </tr>

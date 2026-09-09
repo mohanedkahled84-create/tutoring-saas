@@ -359,14 +359,26 @@
   gap: 0.75rem;
 }
 
-/* Responsive */
+/* Responsive Drawer */
 @media (max-width: 768px) {
+  #sidebarToggle {
+    display: inline-flex !important;
+  }
   .app-sidebar {
     position: fixed;
-    right: -280px;
-    transition: right 0.3s ease;
+    right: -290px;
+    top: 0;
+    bottom: 0;
+    height: 100vh;
+    z-index: 1000;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
   }
   .app-sidebar.open {
     right: 0;
+    box-shadow: -6px 0 25px rgba(0, 0, 0, 0.2);
+  }
+  .app-sidebar .mobile-close-btn {
+    display: inline-flex !important;
   }
 }

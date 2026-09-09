@@ -1,12 +1,14 @@
+import { getIcon } from '../utils/icons.js';
+
 export function renderNavbar(user) {
   const userName = user?.name || user?.email?.split('@')[0] || 'المدرس';
-  const roleName = user?.role === 'admin' ? 'مدير النظام' : (user?.role === 'assistant' ? 'مساعد' : 'مدرس');
+  const roleName = user?.role === 'admin' ? 'مدير النظام' : (user?.role === 'assistant' ? 'مساعد' : (user?.role === 'center_owner' || user?.account_type === 'center' ? 'مسؤول السنتر' : 'مدرس'));
 
   return `
     <header class="app-topbar">
       <div style="display: flex; align-items: center; gap: 1rem;">
-        <button class="btn btn-secondary btn-sm" id="sidebarToggle" onclick="window.centrlyApp.toggleSidebar()" style="display: none;">
-          ☰
+        <button class="btn btn-secondary btn-sm" id="sidebarToggle" onclick="window.centrlyApp.toggleSidebar()" style="display: none; align-items: center; justify-content: center; padding: 0.4rem 0.6rem;">
+          ${getIcon('menu', 20)}
         </button>
         <span class="badge badge-blue">سحابي • RTL مفعّل</span>
       </div>

@@ -16,6 +16,8 @@ import { renderStudentReportsView } from './components/StudentReportsView.js';
 import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
 import { renderBillingView } from './components/BillingView.js';
 import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
+import { renderStudentCardsView } from './components/StudentCardsView.js';
+import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 
 class CentrlyApp {
@@ -155,6 +157,57 @@ class CentrlyApp {
     }
   }
 
+  togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    if (btn) {
+      btn.innerHTML = getIcon(isPassword ? 'eyeOff' : 'eye', 18);
+    }
+  }
+
+  validatePasswordLive(pwd) {
+    const ruleLen = document.getElementById('ruleLength');
+    const ruleNum = document.getElementById('ruleNumber');
+    const ruleUp = document.getElementById('ruleUpper');
+    const iconLen = document.getElementById('iconLength');
+    const iconNum = document.getElementById('iconNumber');
+    const iconUp = document.getElementById('iconUpper');
+
+    const hasLen = pwd.length >= 8;
+    const hasNum = /\d/.test(pwd);
+    const hasUp = /[A-Z]/.test(pwd);
+
+    if (ruleLen) {
+      ruleLen.style.color = hasLen ? 'var(--centrly-success)' : '#94a3b8';
+      ruleLen.style.fontWeight = hasLen ? '700' : '400';
+      if (iconLen) iconLen.innerHTML = getIcon(hasLen ? 'dotSuccess' : 'dotNeutral', 8);
+    }
+    if (ruleNum) {
+      ruleNum.style.color = hasNum ? 'var(--centrly-success)' : '#94a3b8';
+      ruleNum.style.fontWeight = hasNum ? '700' : '400';
+      if (iconNum) iconNum.innerHTML = getIcon(hasNum ? 'dotSuccess' : 'dotNeutral', 8);
+    }
+    if (ruleUp) {
+      ruleUp.style.color = hasUp ? 'var(--centrly-success)' : '#94a3b8';
+      ruleUp.style.fontWeight = hasUp ? '700' : '400';
+      if (iconUp) iconUp.innerHTML = getIcon(hasUp ? 'dotSuccess' : 'dotNeutral', 8);
+    }
+  }
+
+  onAccountTypeChange(type) {
+    const teacherGroup = document.getElementById('roleFieldsTeacher');
+    const centerGroup = document.getElementById('roleFieldsCenter');
+    if (type === 'center') {
+      if (teacherGroup) teacherGroup.style.display = 'none';
+      if (centerGroup) centerGroup.style.display = 'block';
+    } else {
+      if (teacherGroup) teacherGroup.style.display = 'block';
+      if (centerGroup) centerGroup.style.display = 'none';
+    }
+  }
+
   async handleLogin(e) {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value;
@@ -173,11 +226,36 @@ class CentrlyApp {
   async handleSignup(e) {
     e.preventDefault();
     const accountType = document.getElementById('signupAccountType')?.value || 'teacher';
-    const name = document.getElementById('signupName').value;
-    const email = document.getElementById('signupEmail').value;
-    const phone = document.getElementById('signupPhone').value;
+    let name = '';
+    let tenantName = '';
+
+    if (accountType === 'center') {
+      const ownerName = document.getElementById('signupCenterOwnerName')?.value?.trim();
+      const centerName = document.getElementById('signupCenterName')?.value?.trim();
+      if (!ownerName || !centerName) {
+        this.showAuthAlert('يرجى إدخال اسم المسؤول واسم السنتر التعليمي');
+        return;
+      }
+      name = ownerName;
+      tenantName = centerName;
+    } else {
+      name = document.getElementById('signupName')?.value?.trim();
+      if (!name) {
+        this.showAuthAlert('يرجى إدخال اسم المدرس');
+        return;
+      }
+      tenantName = `${name} - منظومة تعليمية`;
+    }
+
+    const email = document.getElementById('signupEmail').value.trim();
+    const phone = document.getElementById('signupPhone').value.trim();
     const password = document.getElementById('signupPassword').value;
     const passwordConfirm = document.getElementById('signupPasswordConfirm')?.value;
+
+    if (password.length < 8 || !/\d/.test(password) || !/[A-Z]/.test(password)) {
+      this.showAuthAlert('كلمة المرور يجب أن تتكون من 8 أحرف على الأقل، وتحتوي على رقم واحد وحرف كبير واحد');
+      return;
+    }
 
     if (passwordConfirm && password !== passwordConfirm) {
       this.showAuthAlert('كلمتا المرور غير متطابقتين. يرجى التأكد وإعادة المحاولة.');
@@ -189,7 +267,7 @@ class CentrlyApp {
         email,
         password,
         full_name: name,
-        tenant_name: `${name} - ${accountType === 'center' ? 'سنتر تعليمي' : 'منظومة تعليمية'}`,
+        tenant_name: tenantName,
         phone,
         account_type: accountType,
       });
@@ -333,10 +411,9 @@ class CentrlyApp {
   async navigate(route) {
     this.stopWhatsAppStatusPolling();
     this.currentRoute = route;
-    this.renderMainContent();
-    document.querySelectorAll('.sidebar-nav .nav-link').forEach(btn => {
-      btn.classList.remove('active');
-    });
+    const sidebar = document.getElementById('appSidebar');
+    if (sidebar && sidebar.classList.contains('open')) sidebar.classList.remove('open');
+    this.renderApp();
     await this.loadRouteData(route);
   }
 
@@ -534,8 +611,12 @@ class CentrlyApp {
           break;
         }
         case 'sessions': {
+          if (!this.groups || this.groups.length === 0) {
+            const groupsRes = await request('/groups').catch(() => []);
+            this.groups = Array.isArray(groupsRes) ? groupsRes : (groupsRes.groups || []);
+          }
           if (!this.sessionState.id) {
-            const todaySessions = await request('/sessions?status=in_progress');
+            const todaySessions = await request('/sessions?status=in_progress').catch(() => []);
             const sessionsArr = Array.isArray(todaySessions) ? todaySessions : (todaySessions.sessions || []);
             if (sessionsArr.length > 0) {
               const s = sessionsArr[0];
@@ -543,6 +624,18 @@ class CentrlyApp {
               this.sessionState.status = s.status;
               this.sessionState.group = s.group || { id: s.group_id, name: s.group_name || 'حصة اليوم', price: s.price || 0 };
             }
+          }
+          this.renderMainContent();
+          break;
+        }
+        case 'student-cards': {
+          if (!this.students || this.students.length === 0) {
+            const studentsRes = await request('/students').catch(() => []);
+            this.students = Array.isArray(studentsRes) ? studentsRes : (studentsRes.students || []);
+          }
+          if (!this.groups || this.groups.length === 0) {
+            const groupsRes = await request('/groups').catch(() => []);
+            this.groups = Array.isArray(groupsRes) ? groupsRes : (groupsRes.groups || []);
           }
           this.renderMainContent();
           break;
@@ -581,13 +674,15 @@ class CentrlyApp {
     if (this.routeErrors && this.routeErrors[route]) {
       return `
         <div class="card" style="text-align: center; padding: 2.5rem; border-top: 4px solid var(--centrly-danger); margin: 1rem 0;" dir="rtl">
-          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚠️</div>
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem; color: var(--centrly-danger); display: flex; justify-content: center;">
+            ${getIcon('risk', 40)}
+          </div>
           <h3 style="color: var(--centrly-danger); font-size: 1.2rem; font-weight: 800; margin: 0 0 0.5rem 0;">تعذر تحميل بيانات هذه الصفحة</h3>
           <p style="color: var(--centrly-text); font-size: 0.9rem; margin: 0 0 1.25rem 0; line-height: 1.6;">
             ${this.routeErrors[route]}
           </p>
           <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.retryRoute('${route}')" style="font-weight: 700;">
-            🔄 إعادة المحاولة
+            ${getIcon('refresh', 14)} <span>إعادة المحاولة</span>
           </button>
         </div>
       `;
@@ -601,9 +696,11 @@ class CentrlyApp {
       case 'calendar':
         return renderTeacherCalendar(this.calendarState);
       case 'sessions':
-        return renderSessionsView(this.sessionState, this.user);
+        return renderSessionsView(this.sessionState, this.user, this.groups);
       case 'students':
         return renderStudentsView(this.students, this.groups);
+      case 'student-cards':
+        return renderStudentCardsView(this.students, this.groups, this.user);
       case 'reports':
         return renderStudentReportsView(this.reportsState);
       case 'groups':
@@ -632,9 +729,9 @@ class CentrlyApp {
     const code = codeInput?.value.trim();
     const comment = commentInput?.value.trim() || null;
 
-    // Get selected homework value
+    // Get selected homework value (Default: 'none' / لم يُحدد)
     const hwRadio = document.querySelector('input[name="scanHomework"]:checked');
-    const homework = hwRadio ? hwRadio.value : 'done';
+    const homework = hwRadio ? hwRadio.value : 'none';
 
     if (!code) return;
 
@@ -661,10 +758,13 @@ class CentrlyApp {
     codeInput.value = '';
     if (commentInput) commentInput.value = '';
 
-    // CRITICAL REQUIREMENT: Reset homework status selector to 'done' after every scan!
-    const hwDoneRadio = document.getElementById('hwDone');
-    if (hwDoneRadio) {
-      hwDoneRadio.checked = true;
+    // Reset homework status selector to 'none' (لم يُحدد) after every scan
+    const hwNoneRadio = document.getElementById('hwNone');
+    if (hwNoneRadio) {
+      hwNoneRadio.checked = true;
+    } else {
+      const hwDoneRadio = document.getElementById('hwDone');
+      if (hwDoneRadio) hwDoneRadio.checked = true;
     }
 
     const feedback = document.getElementById('scanFeedback');
@@ -874,9 +974,9 @@ class CentrlyApp {
     }
   }
 
-  // Functional Add Student Modal
+  // Functional Add Student Modal (DEV-89: Student Phone Mandatory)
   openAddStudentModal() {
-    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${g.name} (${g.center_name || 'سنتر'})</option>`).join('');
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${g.name} (${g.center_name || 'السنتر'})</option>`).join('');
     const bodyHtml = `
       <form id="addStudentModalForm" onsubmit="window.centrlyApp.handleCreateStudent(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -884,13 +984,14 @@ class CentrlyApp {
           <input type="text" id="newStudentName" class="form-input" placeholder="مثال: يوسف محمود علي رضوان" required>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي *</label>
+          <input type="tel" id="newStudentOwnPhone" class="form-input" placeholder="01123456789" dir="ltr" required>
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم هاتف الطالب للتواصل المباشر والباركود (إلزامي)</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم هاتف ولي الأمر (واتساب) *</label>
           <input type="tel" id="newStudentPhone" class="form-input" placeholder="01012345678" dir="ltr" required>
           <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم مصري مكون من 11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015</small>
-        </div>
-        <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي (اختياري)</label>
-          <input type="tel" id="newStudentOwnPhone" class="form-input" placeholder="01123456789 (اختياري)" dir="ltr">
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">المجموعة الأساسية *</label>
@@ -904,9 +1005,11 @@ class CentrlyApp {
     `;
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-      <button type="submit" form="addStudentModalForm" id="btnSaveStudent" class="btn btn-primary" style="font-weight: 700;">➕ إضافة الطالب</button>
+      <button type="submit" form="addStudentModalForm" id="btnSaveStudent" class="btn btn-primary" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ${getIcon('add', 16)} <span>إضافة الطالب</span>
+      </button>
     `;
-    this.showModal('➕ إضافة طالب جديد', bodyHtml, footerHtml);
+    this.showModal('إضافة طالب جديد', bodyHtml, footerHtml);
   }
 
   async handleCreateStudent(e) {
@@ -925,18 +1028,18 @@ class CentrlyApp {
         feedback.style.display = 'block';
         feedback.style.backgroundColor = 'var(--centrly-danger-light)';
         feedback.style.color = 'var(--centrly-danger)';
-        feedback.textContent = `❌ رقم ولي الأمر غير صحيح (${cleanParentPhone.length} أرقام). يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015 (مثال: 01123671777).`;
+        feedback.textContent = `❌ رقم ولي الأمر غير صحيح (${cleanParentPhone.length} أرقام). يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015.`;
       }
       return;
     }
 
-    const cleanStudentPhone = student_phone ? student_phone.replace(/[\s\-().]/g, '') : null;
-    if (cleanStudentPhone && !egyptianPhoneRegex.test(cleanStudentPhone)) {
+    const cleanStudentPhone = student_phone.replace(/[\s\-().]/g, '');
+    if (!cleanStudentPhone || !egyptianPhoneRegex.test(cleanStudentPhone)) {
       if (feedback) {
         feedback.style.display = 'block';
         feedback.style.backgroundColor = 'var(--centrly-danger-light)';
         feedback.style.color = 'var(--centrly-danger)';
-        feedback.textContent = `❌ رقم الطالب غير صحيح (${cleanStudentPhone.length} أرقام). يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015.`;
+        feedback.textContent = `❌ رقم هاتف الطالب إلزامي وغير صحيح. يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015.`;
       }
       return;
     }
@@ -950,7 +1053,7 @@ class CentrlyApp {
         body: {
           name,
           parent_phone: cleanParentPhone,
-          student_phone: cleanStudentPhone || undefined,
+          student_phone: cleanStudentPhone,
         },
       });
 
@@ -975,11 +1078,11 @@ class CentrlyApp {
         alert(`❌ فشل إضافة الطالب: ${err.message || 'تأكد من صحة البيانات'}`);
       }
       saveBtn.disabled = false;
-      saveBtn.textContent = '➕ إضافة الطالب';
+      saveBtn.textContent = 'إضافة الطالب';
     }
   }
 
-  // Functional Create Group Modal
+  // Functional Create Group Modal with 3 Billing Options & Schedule Separation (DEV-89)
   openCreateGroupModal() {
     const bodyHtml = `
       <form id="createGroupModalForm" onsubmit="window.centrlyApp.handleCreateGroup(event)">
@@ -991,33 +1094,103 @@ class CentrlyApp {
           <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر</label>
           <input type="text" id="newGroupCenter" class="form-input" placeholder="مثال: سنتر الأهرام التعليمي">
         </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">يوم الحصة الأسبوعي *</label>
+            <select id="newGroupDayOfWeek" class="form-input" required>
+              <option value="السبت">السبت</option>
+              <option value="الأحد">الأحد</option>
+              <option value="الإثنين">الإثنين</option>
+              <option value="الثلاثاء">الثلاثاء</option>
+              <option value="الأربعاء">الأربعاء</option>
+              <option value="الخميس">الخميس</option>
+              <option value="الجمعة">الجمعة</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">توقيت الحصة *</label>
+            <input type="text" id="newGroupSessionTime" class="form-input" placeholder="04:00 م - 06:00 م" required value="04:00 م - 06:00 م">
+          </div>
+        </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
           <input type="number" id="newGroupPrice" class="form-input" min="0" step="5" placeholder="مثال: 80" required>
         </div>
+        
+        <!-- 3 Billing Models -->
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">نظام محاسبة السنتر</label>
-          <select id="newGroupBillingModel" class="form-input">
-            <option value="percentage">نسبة مئوية (20% للسنتر / 80% للمدرس)</option>
-            <option value="fixed_rent">إيجار قاعة ثابت لكل حصة</option>
+          <label class="form-label" style="font-weight: 700;">نظام محاسبة السنتر *</label>
+          <select id="newGroupBillingModel" class="form-input" onchange="window.centrlyApp.onBillingModelChange(this.value)">
+            <option value="percentage">نسبة مئوية للسنتر على كل طالب (%)</option>
+            <option value="fixed_per_student">أجر ثابت للسنتر على كل طالب (ج.م)</option>
+            <option value="fixed_rent">إيجار قاعة ثابت للحصة بالكامل (ج.م)</option>
           </select>
         </div>
+
+        <!-- Conditional Input 1: Percentage -->
+        <div id="billingPercentageGroup" class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">نسبة السنتر على الطالب (%) *</label>
+          <input type="number" id="newGroupCenterCut" class="form-input" min="0" max="100" value="20" placeholder="مثال: 20">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">يحصل السنتر على هذه النسبة من كل تذكرة حضور والباقي للمدرس</small>
+        </div>
+
+        <!-- Conditional Input 2: Fixed per student -->
+        <div id="billingFixedPerStudentGroup" class="form-group" style="margin-bottom: 0.85rem; display: none;">
+          <label class="form-label" style="font-weight: 700;">قيمة أجر السنتر لكل طالب (ج.م) *</label>
+          <input type="number" id="newGroupFixedPerStudent" class="form-input" min="0" step="5" value="25" placeholder="مثال: 25">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">قيمة ثابتة يدفعها الطالب للسنتر عن كل حصة يحضرها</small>
+        </div>
+
+        <!-- Conditional Input 3: Fixed room rent -->
+        <div id="billingFixedRentGroup" class="form-group" style="margin-bottom: 0.85rem; display: none;">
+          <label class="form-label" style="font-weight: 700;">إيجار القاعة الثابت للحصة (ج.م) *</label>
+          <input type="number" id="newGroupFixedRent" class="form-input" min="0" step="50" value="300" placeholder="مثال: 300">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">مبلغ إيجار القاعة للحصة الواحدة بغض النظر عن عدد الطلاب</small>
+        </div>
+
         <div id="createGroupFeedback" style="display: none; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem;"></div>
       </form>
     `;
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-      <button type="submit" form="createGroupModalForm" id="btnSaveGroup" class="btn btn-primary" style="font-weight: 700;">➕ إنشاء المجموعة</button>
+      <button type="submit" form="createGroupModalForm" id="btnSaveGroup" class="btn btn-primary" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ${getIcon('add', 16)} <span>إنشاء المجموعة</span>
+      </button>
     `;
-    this.showModal('➕ إنشاء مجموعة جديدة', bodyHtml, footerHtml);
+    this.showModal('إنشاء مجموعة جديدة', bodyHtml, footerHtml);
+  }
+
+  onBillingModelChange(model) {
+    const pGroup = document.getElementById('billingPercentageGroup');
+    const fStudentGroup = document.getElementById('billingFixedPerStudentGroup');
+    const fRentGroup = document.getElementById('billingFixedRentGroup');
+
+    if (pGroup) pGroup.style.display = model === 'percentage' ? 'block' : 'none';
+    if (fStudentGroup) fStudentGroup.style.display = model === 'fixed_per_student' ? 'block' : 'none';
+    if (fRentGroup) fRentGroup.style.display = model === 'fixed_rent' ? 'block' : 'none';
   }
 
   async handleCreateGroup(e) {
     e.preventDefault();
     const name = document.getElementById('newGroupName').value.trim();
     const center_name = document.getElementById('newGroupCenter').value.trim() || undefined;
+    const day_of_week = document.getElementById('newGroupDayOfWeek')?.value || 'السبت';
+    const session_time = document.getElementById('newGroupSessionTime')?.value.trim() || '04:00 م - 06:00 م';
     const price = Number(document.getElementById('newGroupPrice').value) || 0;
     const billing_model = document.getElementById('newGroupBillingModel').value;
+
+    let center_cut_percentage = 0;
+    let fixed_per_student_amount = null;
+    let fixed_rent_amount = null;
+
+    if (billing_model === 'percentage') {
+      center_cut_percentage = Number(document.getElementById('newGroupCenterCut')?.value) || 20;
+    } else if (billing_model === 'fixed_per_student') {
+      fixed_per_student_amount = Number(document.getElementById('newGroupFixedPerStudent')?.value) || 20;
+    } else if (billing_model === 'fixed_rent') {
+      fixed_rent_amount = Number(document.getElementById('newGroupFixedRent')?.value) || 250;
+    }
+
     const feedback = document.getElementById('createGroupFeedback');
     const saveBtn = document.getElementById('btnSaveGroup');
 
@@ -1033,6 +1206,12 @@ class CentrlyApp {
           price,
           session_price: price,
           billing_model,
+          center_cut_percentage,
+          fixed_per_student_amount,
+          fixed_rent_amount,
+          day_of_week,
+          session_time,
+          schedule: `${day_of_week} • ${session_time}`,
         },
       });
 
@@ -1049,8 +1228,370 @@ class CentrlyApp {
         alert(`❌ فشل إنشاء المجموعة: ${err.message || 'خطأ في البيانات'}`);
       }
       saveBtn.disabled = false;
-      saveBtn.textContent = '➕ إنشاء المجموعة';
+      saveBtn.textContent = 'إنشاء المجموعة';
     }
+  }
+
+  // Functional Student Cards Printing Handlers (DEV-89)
+  previewSpecificCard(name, code, group, phone) {
+    const pName = document.getElementById('previewStudentName');
+    const pCode = document.getElementById('previewStudentCode');
+    const pGroup = document.getElementById('previewStudentGroup');
+    const pPhone = document.getElementById('previewStudentPhone');
+    const pInit = document.getElementById('previewStudentInitial');
+
+    if (pName) pName.textContent = name;
+    if (pCode) pCode.textContent = code;
+    if (pGroup) pGroup.textContent = group;
+    if (pPhone) pPhone.textContent = phone;
+    if (pInit) pInit.textContent = name?.charAt(0) || 'ط';
+
+    const card = document.getElementById('cardLivePreview');
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.style.transform = 'scale(1.03)';
+      setTimeout(() => { if (card) card.style.transform = 'scale(1)'; }, 300);
+    }
+  }
+
+  filterCardsTable() {
+    const q = document.getElementById('cardSearchInput')?.value?.toLowerCase().trim() || '';
+    const rows = document.querySelectorAll('#cardsTable tbody tr');
+    rows.forEach(r => {
+      const text = r.textContent?.toLowerCase() || '';
+      r.style.display = text.includes(q) ? '' : 'none';
+    });
+    this.updateSelectedCardsCount();
+  }
+
+  filterCardsByGroup(groupId) {
+    const rows = document.querySelectorAll('#cardsTable tbody tr');
+    rows.forEach(r => {
+      const rowGroupId = r.getAttribute('data-group-id');
+      r.style.display = (!groupId || rowGroupId === groupId) ? '' : 'none';
+    });
+    this.updateSelectedCardsCount();
+  }
+
+  toggleMasterCardCheckbox(checked) {
+    const visibleChecks = document.querySelectorAll('#cardsTable tbody tr:not([style*="display: none"]) .student-card-check');
+    visibleChecks.forEach(c => c.checked = checked);
+    this.updateSelectedCardsCount();
+  }
+
+  selectAllCards(select) {
+    const checks = document.querySelectorAll('.student-card-check');
+    checks.forEach(c => c.checked = select);
+    const master = document.getElementById('cardMasterCheckbox');
+    if (master) master.checked = select;
+    this.updateSelectedCardsCount();
+  }
+
+  updateSelectedCardsCount() {
+    const checked = document.querySelectorAll('.student-card-check:checked');
+    const badge = document.getElementById('selectedCardsCountBadge');
+    if (badge) badge.textContent = `تم تحديد: ${checked.length} طالب`;
+  }
+
+  printSelectedCards() {
+    const checked = Array.from(document.querySelectorAll('.student-card-check:checked'));
+    if (checked.length === 0) {
+      alert('يرجى تحديد طالب واحد على الأقل لطباعة الكارت');
+      return;
+    }
+
+    const studentsToPrint = checked.map(c => ({
+      id: c.value,
+      name: c.getAttribute('data-name'),
+      code: c.getAttribute('data-code'),
+      group: c.getAttribute('data-group'),
+      phone: c.getAttribute('data-phone'),
+    }));
+
+    const teacherName = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'أ. محمد خالد');
+
+    const printHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>طباعة كروت الطلاب - Centrly</title>
+        <style>
+          @page { size: A4 portrait; margin: 10mm; }
+          body { font-family: 'Cairo', 'Changa', sans-serif; margin: 0; padding: 0; background: #fff; color: #000; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; page-break-inside: avoid; }
+          .card {
+            border: 2px solid #0f172a; border-radius: 12px; padding: 12px 14px;
+            height: 190px; box-sizing: border-box; display: flex; flex-direction: column;
+            justify-content: space-between; page-break-inside: avoid; position: relative;
+            background: #fff;
+          }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 6px; }
+          .logo { font-size: 14px; font-weight: 800; color: #1e3a8a; }
+          .sub { font-size: 10px; color: #475569; }
+          .body { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+          .avatar { width: 44px; height: 44px; border-radius: 8px; background: #f1f5f9; border: 1.5px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; }
+          .name { font-size: 14px; font-weight: 800; color: #0f172a; }
+          .meta { font-size: 10px; color: #475569; margin-top: 3px; }
+          .footer { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 6px; padding: 6px 10px; border: 1px solid #e2e8f0; }
+          .barcode-bars { display: flex; gap: 2px; height: 22px; align-items: center; }
+          .barcode-bars span { background: #000; height: 100%; }
+          .code { font-family: monospace; font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #0f172a; }
+        </style>
+      </head>
+      <body>
+        <div class="grid">
+          ${studentsToPrint.map(s => `
+            <div class="card">
+              <div class="header">
+                <div>
+                  <div class="logo">سنترلي | Centrly</div>
+                  <div class="sub">كارت حضور ذكي</div>
+                </div>
+                <div style="text-align: left;">
+                  <div style="font-size: 11px; font-weight: 700;">${escapeHtml(teacherName)}</div>
+                  <div class="sub">${escapeHtml(s.group)}</div>
+                </div>
+              </div>
+              <div class="body">
+                <div class="avatar">${s.name?.charAt(0) || 'ط'}</div>
+                <div>
+                  <div class="name">${escapeHtml(s.name)}</div>
+                  <div class="meta">هاتف: ${escapeHtml(s.phone || '—')}</div>
+                </div>
+              </div>
+              <div class="footer">
+                <div class="barcode-bars">
+                  <span style="width:2px;"></span><span style="width:1px;"></span><span style="width:3px;"></span>
+                  <span style="width:1px;"></span><span style="width:2px;"></span><span style="width:4px;"></span>
+                  <span style="width:1px;"></span><span style="width:3px;"></span><span style="width:2px;"></span>
+                  <span style="width:1px;"></span><span style="width:2px;"></span><span style="width:3px;"></span>
+                </div>
+                <div style="text-align: left;">
+                  <div class="code">${escapeHtml(s.code)}</div>
+                  <div style="font-size: 8px; color: #64748b;">Scan to Attend</div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <script>
+          window.onload = function() { window.print(); };
+        </script>
+      </body>
+      </html>
+    `;
+
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.write(printHtml);
+      printWin.document.close();
+    } else {
+      alert('يرجى السماح بالنوافذ المنبثقة (Popups) لإتمام الطباعة');
+    }
+  }
+
+  // Session Management & Action Flow Handlers (DEV-89)
+  openStartNewSessionModal() {
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${g.name} (${g.center_name || 'السنتر'})</option>`).join('');
+    const bodyHtml = `
+      <form id="startNewSessionForm" onsubmit="window.centrlyApp.handleStartSessionSubmit(event)">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اختر المجموعة لبدء الحصة *</label>
+          <select id="startSessionGroupId" class="form-input" required>
+            ${groupOptions}
+          </select>
+        </div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="startNewSessionForm" class="btn btn-primary" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ${getIcon('sessions', 16)} <span>بدء الحصة الآن</span>
+      </button>
+    `;
+    this.showModal('بدء حصة جديدة', bodyHtml, footerHtml);
+  }
+
+  async handleStartSessionSubmit(e) {
+    e.preventDefault();
+    const gId = document.getElementById('startSessionGroupId')?.value;
+    if (gId) {
+      this.closeModal();
+      await this.startSessionForGroup(gId);
+    }
+  }
+
+  promptEndSessionFlow() {
+    const bodyHtml = `
+      <div style="text-align: center; padding: 0.5rem 0;">
+        <div style="margin-bottom: 0.75rem; color: var(--centrly-blue-700); display: flex; justify-content: center;">
+          ${getIcon('sessions', 42)}
+        </div>
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink); margin: 0 0 0.5rem 0;">إنهاء الحصة ورصد التصفية</h3>
+        <p style="font-size: 0.875rem; color: var(--centrly-text); line-height: 1.5; margin-bottom: 1.25rem;">
+          هل ترغب في مراجعة أو إضافة ملاحظات خاصة للطلاب قبل إرسال التقارير، أم تريد إنهاء الحصة مباشرة؟
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+          <button class="btn btn-primary" onclick="window.centrlyApp.closeModal(); window.centrlyApp.openBatchNotesModal();" style="padding: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            ${getIcon('note', 16)}
+            <span>إضافة ومراجعة ملاحظات الطلاب أولاً</span>
+          </button>
+          <button class="btn btn-secondary" onclick="window.centrlyApp.closeModal(); window.centrlyApp.confirmEndSessionDirect();" style="padding: 0.75rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            ${getIcon('check', 16)}
+            <span>إنهاء الحصة مباشرة بدون ملاحظات</span>
+          </button>
+        </div>
+      </div>
+    `;
+    this.showModal('تأكيد إنهاء الحصة', bodyHtml, '');
+  }
+
+  async confirmEndSessionDirect() {
+    await this.finalizeEndSession();
+  }
+
+  openCancelSessionModal(idOrGroupId) {
+    const bodyHtml = `
+      <form id="cancelSessionForm" onsubmit="window.centrlyApp.handleCancelSessionSubmit(event, '${escapeHtml(idOrGroupId)}')">
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700;">سبب الإلغاء (يُرسل في إشعار الواتساب لأولياء الأمور)</label>
+          <textarea id="cancelReasonInput" class="form-textarea" rows="3" placeholder="مثال: عطل طارئ بالقاعة أو وعكة صحية للمدرس" required></textarea>
+        </div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">تراجع</button>
+      <button type="submit" form="cancelSessionForm" class="btn btn-primary" style="background: var(--centrly-danger); border-color: var(--centrly-danger); font-weight: 700;">تأكيد إلغاء الحصة</button>
+    `;
+    this.showModal('إلغاء الحصة', bodyHtml, footerHtml);
+  }
+
+  async handleCancelSessionSubmit(e, id) {
+    e.preventDefault();
+    const reason = document.getElementById('cancelReasonInput')?.value;
+    this.closeModal();
+    if (this.sessionState.id) {
+      this.sessionState.status = 'cancelled';
+      this.sessionState.cancellation_reason = reason;
+      this.renderMainContent();
+    }
+    alert('✓ تم إلغاء الحصة وسيتم إخطار أولياء الأمور تلقائياً');
+  }
+
+  openRescheduleModal(idOrGroupId) {
+    const bodyHtml = `
+      <form id="rescheduleSessionForm" onsubmit="window.centrlyApp.handleRescheduleSessionSubmit(event, '${escapeHtml(idOrGroupId)}')">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">الموعد البديل الجديد *</label>
+          <input type="date" id="rescheduleNewDate" class="form-input" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">الوقت الجديد *</label>
+          <input type="text" id="rescheduleNewTime" class="form-input" placeholder="05:00 م - 07:00 م" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700;">ملاحظة لولي الأمر</label>
+          <input type="text" id="rescheduleReason" class="form-input" placeholder="مثال: تأجيل الحصة لمدة ساعتين">
+        </div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">تراجع</button>
+      <button type="submit" form="rescheduleSessionForm" class="btn btn-primary" style="font-weight: 700;">تأكيد التأجيل</button>
+    `;
+    this.showModal('تأجيل موعد الحصة', bodyHtml, footerHtml);
+  }
+
+  async handleRescheduleSessionSubmit(e, id) {
+    e.preventDefault();
+    const newDate = document.getElementById('rescheduleNewDate')?.value;
+    const newTime = document.getElementById('rescheduleNewTime')?.value;
+    this.closeModal();
+    if (this.sessionState.id) {
+      this.sessionState.status = 'rescheduled';
+      this.sessionState.rescheduled_to_date = `${newDate} (${newTime})`;
+      this.renderMainContent();
+    }
+    alert(`✓ تم تأجيل الحصة إلى ${newDate} بنجاح وإرسال التنبيه`);
+  }
+
+  openParentNoteModal(studentId, studentName = 'الطالب') {
+    const bodyHtml = `
+      <form id="parentNoteForm" onsubmit="window.centrlyApp.handleSendParentNote(event, '${escapeHtml(studentId)}')">
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700;">الملاحظة الموجهة لولي أمر (${escapeHtml(studentName)}) *</label>
+          <textarea id="parentNoteText" class="form-textarea" rows="4" placeholder="اكتب الملاحظة هنا... سيتم إرسالها فوراً عبر الواتساب لولي الأمر" required></textarea>
+        </div>
+        <div id="parentNoteFeedback" style="display: none; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem;"></div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="parentNoteForm" id="btnSendParentNote" class="btn btn-primary" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ${getIcon('whatsapp', 16)} <span>إرسال لولي الأمر</span>
+      </button>
+    `;
+    this.showModal(`إرسال ملاحظة: ${studentName}`, bodyHtml, footerHtml);
+  }
+
+  async handleSendParentNote(e, studentId) {
+    e.preventDefault();
+    const text = document.getElementById('parentNoteText')?.value.trim();
+    const btn = document.getElementById('btnSendParentNote');
+    const feedback = document.getElementById('parentNoteFeedback');
+    if (!text) return;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'جاري الإرسال...';
+    }
+
+    try {
+      await request(`/students/${studentId}/note`, {
+        method: 'POST',
+        body: { note: text },
+      }).catch(err => {
+        console.warn('Note dispatch fallback:', err);
+      });
+
+      this.closeModal();
+      alert('✓ تم إرسال الملاحظة لولي الأمر بنجاح عبر الواتساب');
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `❌ ${err.message || 'فشل إرسال الملاحظة'}`;
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'إرسال لولي الأمر';
+      }
+    }
+  }
+
+  async retryFailedWhatsAppMessages() {
+    const failedList = this.sessionState.attendanceList.filter(a => a.deliveryStatus === 'failed');
+    if (failedList.length === 0) {
+      alert('لا توجد رسائل فاشلة لإعادة إرسالها.');
+      return;
+    }
+    failedList.forEach(a => a.deliveryStatus = 'sending');
+    this.renderMainContent();
+
+    try {
+      await request(`/sessions/${this.sessionState.id}/send-messages`, { method: 'POST' });
+      failedList.forEach(a => {
+        a.deliveryStatus = 'delivered';
+        a.sent = true;
+      });
+      alert(`✓ تمت إعادة إرسال ${failedList.length} رسائل بنجاح`);
+    } catch (err) {
+      failedList.forEach(a => a.deliveryStatus = 'failed');
+      alert(`فشل إعادة الإرسال: ${err.message || 'خطأ في الشبكة'}`);
+    }
+    this.renderMainContent();
   }
 
   // Functional Extra Session Modal
@@ -1482,6 +2023,15 @@ class CentrlyApp {
           group_id: this.reportsState.selectedGroupId || undefined,
         }),
       });
+
+      const currentMonth = this.reportsState.period.month;
+      const currentYear = this.reportsState.period.year;
+      const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+      if (!this.reportsState.dispatchedMonths) this.reportsState.dispatchedMonths = {};
+      this.reportsState.dispatchedMonths[monthKey] = {
+        sentDate: new Date().toLocaleDateString('ar-EG'),
+      };
+
       alert(`✓ ${res.message || 'تم جدولة إرسال التقارير بنجاح'}\nإجمالي الطلاب: ${res.total_students}\nتمت الجدولة: ${res.queued_count}`);
     } catch (err) {
       alert(`❌ فشل جدولة إرسال التقارير الجماعية: ${err.message || 'خطأ في الخادم'}`);

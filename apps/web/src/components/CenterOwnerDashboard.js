@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
+import { getIcon } from "../utils/icons.js";
 
 /**
  * Centrly Center Owner Dashboard (DEV-79)
@@ -37,8 +38,9 @@ export function renderCenterOwnerDashboard(state = {}) {
       <!-- Top Title & Period Switcher -->
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--centrly-white); padding: 1.25rem 1.5rem; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--centrly-line);">
         <div>
-          <h1 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--centrly-ink);">
-            🏛️ لوحة إدارة السنتر والقاعات
+          <h1 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.5rem;">
+            <span>${getIcon('center', 24, 'var(--centrly-blue-700)')}</span>
+            <span>لوحة إدارة السنتر والقاعات</span>
           </h1>
           <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--centrly-text);">
             متابعة إيرادات المدرسين، إدارة القاعات، ومنع التعارضات، وبوابة الاستقبال الذكية
@@ -109,7 +111,7 @@ export function renderCenterOwnerDashboard(state = {}) {
           onclick="window.centrlyApp.switchCenterTab('teachers')"
           style="display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem;"
         >
-          <span>👨‍🏫</span>
+          <span>${getIcon('students', 16)}</span>
           <span>المدرسين والمستحقات المالية</span>
         </button>
 
@@ -118,7 +120,7 @@ export function renderCenterOwnerDashboard(state = {}) {
           onclick="window.centrlyApp.switchCenterTab('rooms')"
           style="display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem;"
         >
-          <span>🚪</span>
+          <span>${getIcon('center', 16)}</span>
           <span>إشغال القاعات وتضارب الحصص</span>
         </button>
 
@@ -127,7 +129,7 @@ export function renderCenterOwnerDashboard(state = {}) {
           onclick="window.centrlyApp.switchCenterTab('front_desk')"
           style="display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem;"
         >
-          <span>⚡</span>
+          <span>${getIcon('sessions', 16)}</span>
           <span>بوابة الاستقبال الذكية (Smart Gate)</span>
         </button>
 
@@ -136,7 +138,7 @@ export function renderCenterOwnerDashboard(state = {}) {
           onclick="window.centrlyApp.switchCenterTab('onboarding')"
           style="display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem;"
         >
-          <span>➕</span>
+          <span>${getIcon('add', 16)}</span>
           <span>إضافة مدرس / مساعد</span>
         </button>
       </div>

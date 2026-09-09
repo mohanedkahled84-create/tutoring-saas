@@ -1,3 +1,5 @@
+import { getIcon } from '../utils/icons.js';
+
 export function renderAuthScreens() {
   return `
     <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: var(--centrly-surface); padding: 1.5rem;">
@@ -31,10 +33,15 @@ export function renderAuthScreens() {
           </div>
           <div class="form-group">
             <label class="form-label">كلمة المرور</label>
-            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required dir="ltr">
+            <div style="position: relative;">
+              <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;">
+              <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('loginPassword', this)" title="إظهار/إخفاء كلمة المرور" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px; display: flex; align-items: center; justify-content: center;">
+                ${getIcon('eye', 18)}
+              </button>
+            </div>
           </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem;">
-            دخول إلى المنظومة
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <span>دخول إلى المنظومة</span>
           </button>
         </form>
 
@@ -42,33 +49,74 @@ export function renderAuthScreens() {
         <form id="formSignup" style="display: none;" onsubmit="window.centrlyApp.handleSignup(event)">
           <div class="form-group">
             <label class="form-label">نوع الحساب</label>
-            <select id="signupAccountType" class="form-select">
+            <select id="signupAccountType" class="form-select" onchange="window.centrlyApp.onAccountTypeChange(this.value)">
               <option value="teacher">مدرس فردي (Solo Teacher)</option>
               <option value="center">سنتر تعليمي (Educational Center)</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label">الاسم الكامل / اسم السنتر</label>
+
+          <!-- Dynamic Role Fields -->
+          <div id="roleFieldsTeacher" class="form-group">
+            <label class="form-label">اسم المدرس *</label>
             <input type="text" id="signupName" class="form-input" placeholder="أ. محمد خالد" required>
           </div>
+
+          <div id="roleFieldsCenter" style="display: none;">
+            <div class="form-group">
+              <label class="form-label">اسم مسؤول السنتر *</label>
+              <input type="text" id="signupCenterOwnerName" class="form-input" placeholder="أ. أحمد محمود">
+            </div>
+            <div class="form-group">
+              <label class="form-label">اسم السنتر التعليمي *</label>
+              <input type="text" id="signupCenterName" class="form-input" placeholder="سنتر التفوق التعليمي">
+            </div>
+          </div>
+
           <div class="form-group">
-            <label class="form-label">البريد الإلكتروني</label>
+            <label class="form-label">البريد الإلكتروني *</label>
             <input type="email" id="signupEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr">
           </div>
           <div class="form-group">
-            <label class="form-label">رقم الواتساب (مصري)</label>
+            <label class="form-label">رقم الواتساب (مصري) *</label>
             <input type="tel" id="signupPhone" class="form-input" placeholder="01012345678" required dir="ltr">
           </div>
           <div class="form-group">
-            <label class="form-label">كلمة المرور (8 أحرف + رقم + رمز)</label>
-            <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" required dir="ltr">
+            <label class="form-label">كلمة المرور *</label>
+            <div style="position: relative;">
+              <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" oninput="window.centrlyApp.validatePasswordLive(this.value)">
+              <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('signupPassword', this)" title="إظهار/إخفاء كلمة المرور" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px; display: flex; align-items: center; justify-content: center;">
+                ${getIcon('eye', 18)}
+              </button>
+            </div>
+            
+            <!-- Real-time Criteria Checklist -->
+            <div id="passwordChecklist" style="margin-top: 0.5rem; background: #f8fafc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.6rem 0.75rem; font-size: 0.775rem;">
+              <div style="font-weight: 600; color: var(--centrly-ink); margin-bottom: 0.35rem;">شروط كلمة المرور:</div>
+              <div id="ruleLength" style="display: flex; align-items: center; gap: 0.4rem; color: #94a3b8; transition: color 0.2s;">
+                <span id="iconLength">${getIcon('dotNeutral', 8)}</span>
+                <span>8 أحرف أو أكثر</span>
+              </div>
+              <div id="ruleNumber" style="display: flex; align-items: center; gap: 0.4rem; color: #94a3b8; transition: color 0.2s; margin-top: 0.25rem;">
+                <span id="iconNumber">${getIcon('dotNeutral', 8)}</span>
+                <span>رقم واحد على الأقل (0-9)</span>
+              </div>
+              <div id="ruleUpper" style="display: flex; align-items: center; gap: 0.4rem; color: #94a3b8; transition: color 0.2s; margin-top: 0.25rem;">
+                <span id="iconUpper">${getIcon('dotNeutral', 8)}</span>
+                <span>حرف كبير واحد على الأقل (A-Z)</span>
+              </div>
+            </div>
           </div>
           <div class="form-group">
-            <label class="form-label">تأكيد كلمة المرور</label>
-            <input type="password" id="signupPasswordConfirm" class="form-input" placeholder="••••••••" required dir="ltr">
+            <label class="form-label">تأكيد كلمة المرور *</label>
+            <div style="position: relative;">
+              <input type="password" id="signupPasswordConfirm" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;">
+              <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('signupPasswordConfirm', this)" title="إظهار/إخفاء كلمة المرور" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px; display: flex; align-items: center; justify-content: center;">
+                ${getIcon('eye', 18)}
+              </button>
+            </div>
           </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem;">
-            إنشاء حساب وبدء التجربة المجانية
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <span>إنشاء حساب وبدء التجربة المجانية</span>
           </button>
         </form>
       </div>

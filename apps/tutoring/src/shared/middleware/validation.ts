@@ -95,10 +95,14 @@ export const createGroupSchema = z.object({
   center_name: z.string().max(150).optional().nullable(),
   price: z.number().min(0).optional().default(0),
   session_price: z.number().min(0).optional().default(0),
-  billing_model: z.enum(["percentage", "fixed_rent"]).optional().default("percentage"),
-  fixed_rent_amount: z.number().min(0).optional().nullable(),
+  billing_model: z.enum(["percentage", "fixed_per_student", "fixed_rent"]).optional().default("percentage"),
   center_cut_percentage: z.number().min(0).max(100).optional().default(0),
+  fixed_per_student_amount: z.number().min(0).optional().nullable(),
+  fixed_rent_amount: z.number().min(0).optional().nullable(),
   teacher_cut_percentage: z.number().min(0).max(100).optional().default(100),
+  day_of_week: z.string().max(50).optional().nullable(),
+  session_time: z.string().max(100).optional().nullable(),
+  schedule: z.string().max(200).optional().nullable(),
 });
 
 export const updateGroupSchema = createGroupSchema.partial();
@@ -111,9 +115,13 @@ export const enrollStudentSchema = z.object({
 export const createSectionSchema = z.object({
   section_name: z.string().min(1, "section_name is required").max(100),
   price: z.number().min(0).optional(),
-  billing_model: z.enum(["percentage", "fixed_rent"]).optional(),
+  billing_model: z.enum(["percentage", "fixed_per_student", "fixed_rent"]).optional(),
+  center_cut_percentage: z.number().min(0).max(100).optional().nullable(),
+  fixed_per_student_amount: z.number().min(0).optional().nullable(),
   fixed_rent_amount: z.number().min(0).optional().nullable(),
   center_name: z.string().max(150).optional().nullable(),
+  day_of_week: z.string().max(50).optional().nullable(),
+  session_time: z.string().max(100).optional().nullable(),
 });
 
 // Session & Scan Schemas
