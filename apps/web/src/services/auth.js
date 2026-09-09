@@ -14,10 +14,19 @@ export const authService = {
     }
   },
 
-  setSession(user, token) {
+  getRefreshToken() {
+    try {
+      return localStorage.getItem('centrly_refresh_token');
+    } catch (_) {
+      return null;
+    }
+  },
+
+  setSession(user, token, refreshToken) {
     try {
       if (user) localStorage.setItem('centrly_user', JSON.stringify(user));
       if (token) localStorage.setItem('centrly_token', token);
+      if (refreshToken) localStorage.setItem('centrly_refresh_token', refreshToken);
       localStorage.setItem('centrly_logged_in', '1');
     } catch (_) {}
   },
@@ -25,6 +34,7 @@ export const authService = {
   clearSession() {
     try {
       localStorage.removeItem('centrly_token');
+      localStorage.removeItem('centrly_refresh_token');
       localStorage.removeItem('centrly_access_token'); // Cleanup legacy token if present
       localStorage.removeItem('centrly_logged_in');
       localStorage.removeItem('centrly_user');
@@ -47,7 +57,7 @@ export const authService = {
     });
 
     if (response.user) {
-      this.setSession(response.user, response.token);
+      this.setSession(response.user, response.token, response.refresh_token);
     }
     return response;
   },
@@ -59,7 +69,7 @@ export const authService = {
     });
 
     if (response.user) {
-      this.setSession(response.user, response.token);
+      this.setSession(response.user, response.token, response.refresh_token);
       return response;
     }
 

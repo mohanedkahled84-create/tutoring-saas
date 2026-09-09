@@ -32,6 +32,7 @@ import { reportsRouter } from "./features/reports/index.js";
 
 export function createApp(): Express {
   const app = express();
+  app.set("trust proxy", 1);
 
   // DEV-24: HTTPS enforcement & standard security headers (HSTS, CSP, X-Frame-Options)
   app.use(securityHeadersMiddleware);

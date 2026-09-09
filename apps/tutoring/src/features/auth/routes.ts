@@ -29,6 +29,7 @@ authRouter.post("/login", async (req: Request, res: Response): Promise<void> => 
       message: "Login successful",
       user: result.user,
       token: result.token,
+      refresh_token: result.refresh_token,
       expires_in: result.expires_in,
     });
   } catch (err: unknown) {
@@ -44,6 +45,39 @@ authRouter.post("/login", async (req: Request, res: Response): Promise<void> => 
     }
     const message = err instanceof Error ? err.message : "Internal error";
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+  }
+});
+
+// POST /api/auth/refresh - Refresh access token using refresh token
+authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> => {
+  const { refresh_token } = req.body;
+
+  if (!refresh_token) {
+    res.status(400).json({ error: { code: "BAD_REQUEST", message: "refresh_token is required" } });
+    return;
+  }
+
+  try {
+    const authService = getServices(req as AuthenticatedRequest).auth;
+    const result = await authService.refresh(refresh_token);
+
+    res.cookie("access_token", result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: result.expires_in * 1000,
+    });
+
+    res.json({
+      message: "Token refreshed successfully",
+      user: result.user,
+      token: result.token,
+      refresh_token: result.refresh_token,
+      expires_in: result.expires_in,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to refresh session token";
+    res.status(401).json({ error: { code: "UNAUTHORIZED", message } });
   }
 });
 
@@ -98,6 +132,7 @@ authRouter.post("/signup", async (req: Request, res: Response): Promise<void> =>
         user: result.user,
         tenant: result.tenant,
         token: loginRes.token,
+        refresh_token: loginRes.refresh_token,
         expires_in: loginRes.expires_in,
       });
       return;

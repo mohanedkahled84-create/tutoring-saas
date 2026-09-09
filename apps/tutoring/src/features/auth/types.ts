@@ -9,6 +9,7 @@ export interface LoginResult {
     email?: string;
   };
   token: string;
+  refresh_token?: string;
   expires_in: number;
 }
 
@@ -45,6 +46,7 @@ export interface ResetPasswordDTO {
 
 export interface IAuthRepository {
   signIn(email: string, password: string): Promise<LoginResult>;
+  refreshToken?(refreshToken: string): Promise<LoginResult>;
   createTenantWithOwner(data: SignupDTO, trialEndsAt: string): Promise<SignupResult>;
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(token: string, newPassword: string): Promise<void>;

@@ -31,6 +31,27 @@ export class SupabaseAuthRepository implements IAuthRepository {
         email: data.user.email,
       },
       token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      expires_in: data.session.expires_in,
+    };
+  }
+
+  async refreshToken(refreshToken: string): Promise<LoginResult> {
+    const { data, error } = await this.publicClient.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error || !data.session || !data.user) {
+      throw new Error("INVALID_REFRESH_TOKEN");
+    }
+
+    return {
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+      },
+      token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
       expires_in: data.session.expires_in,
     };
   }
@@ -119,6 +140,16 @@ export class FakeAuthRepository implements IAuthRepository {
     return {
       user: { id: user.id, email: user.email },
       token: `mock-jwt-token-${user.id}`,
+      refresh_token: `mock-refresh-token-${user.id}`,
+      expires_in: 3600,
+    };
+  }
+
+  async refreshToken(refreshToken: string): Promise<LoginResult> {
+    return {
+      user: { id: "mock-user", email: "mock@centrly.app" },
+      token: `mock-refreshed-jwt-${Date.now()}`,
+      refresh_token: `mock-refresh-${Date.now()}`,
       expires_in: 3600,
     };
   }

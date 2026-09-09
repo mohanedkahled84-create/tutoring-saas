@@ -1160,13 +1160,37 @@ class CentrlyApp {
     }
   }
 
-  downloadBarcodeSheet() {
-    const baseUrl = window.__CENTRLY_API_URL__ || (
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ? 'http://localhost:3000/api'
-        : 'https://tutoring-backend-production-c8dd.up.railway.app/api'
-    );
-    window.open(`${baseUrl}/students/barcode-sheet.pdf`, '_blank');
+  async downloadBarcodeSheet(groupId) {
+    const targetGroupId = groupId || (this.groups && this.groups[0]?.id);
+    if (!targetGroupId) {
+      alert('يرجى إنشاء مجموعة دراسية أولاً لطباعة كروت الباركود لطلابها.');
+      return;
+    }
+    try {
+      const baseUrl = window.__CENTRLY_API_URL__ || (
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? 'http://localhost:3000/api'
+          : 'https://tutoring-backend-production-c8dd.up.railway.app/api'
+      );
+      const token = authService.getToken();
+      const res = await fetch(`${baseUrl}/groups/${targetGroupId}/barcode-sheet`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        throw new Error(`تعذر تحميل ملف الباركود (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `group-${targetGroupId}-barcodes.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(`❌ ${err.message || 'فشل تحميل ملف الباركود'}`);
+    }
   }
 
   openReceiptModal() {

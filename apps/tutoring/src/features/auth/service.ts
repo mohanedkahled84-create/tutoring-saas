@@ -74,6 +74,16 @@ export class AuthService {
     }
   }
 
+  async refresh(refreshToken: string): Promise<LoginResult> {
+    if (!refreshToken) {
+      throw new Error("MISSING_REFRESH_TOKEN");
+    }
+    if (typeof this.repo.refreshToken === "function") {
+      return await this.repo.refreshToken(refreshToken);
+    }
+    throw new Error("REFRESH_NOT_SUPPORTED");
+  }
+
   async signup(
     dto: SignupDTO,
     onNewSignup?: (payload: {

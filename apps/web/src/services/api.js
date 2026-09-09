@@ -13,6 +13,11 @@ export const API_BASE_URL = window.__CENTRLY_API_URL__ || (
 );
 
 export async function request(endpoint, options = {}) {
+  let body = options.body;
+  if (body && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof Blob)) {
+    body = JSON.stringify(body);
+  }
+
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -32,18 +37,60 @@ export async function request(endpoint, options = {}) {
       credentials: 'include',
       ...options,
       headers,
+      body,
     });
 
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
       if (res.status === 401) {
+        // Attempt silent session refresh if refresh token is available
+        const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/refresh') || endpoint.includes('/auth/signup');
+        if (!isAuthEndpoint && !options._retry) {
+          const refreshToken = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_refresh_token') : null;
+          if (refreshToken) {
+            try {
+              const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refreshToken }),
+              });
+              const refreshData = await refreshRes.json();
+              if (refreshRes.ok && refreshData.token) {
+                localStorage.setItem('centrly_token', refreshData.token);
+                if (refreshData.refresh_token) {
+                  localStorage.setItem('centrly_refresh_token', refreshData.refresh_token);
+                }
+                const retryHeaders = {
+                  ...headers,
+                  'Authorization': `Bearer ${refreshData.token}`,
+                };
+                return await request(endpoint, {
+                  ...options,
+                  headers: retryHeaders,
+                  _retry: true,
+                });
+              }
+            } catch (refErr) {
+              console.warn('Session refresh attempt failed:', refErr);
+            }
+          }
+        }
+
+        // Clean up expired session and reload to show clean login screen
         try {
           localStorage.removeItem('centrly_token');
+          localStorage.removeItem('centrly_refresh_token');
           localStorage.removeItem('centrly_logged_in');
           localStorage.removeItem('centrly_user');
         } catch (_) {}
+
+        if (!isAuthEndpoint && typeof window !== 'undefined' && window.location) {
+          window.location.reload();
+          return;
+        }
       }
+
       let errMsg = `Request failed with status ${res.status}`;
       if (typeof data.error === 'string') {
         errMsg = data.error;
