@@ -306,6 +306,7 @@ export class CentersService {
         assistant_type: assistantType,
         teacher_id: input.teacher_id || null,
         can_view_financials: canViewFinancials,
+        salary: input.salary !== undefined ? Number(input.salary) : 0,
         status: "active",
       });
 
@@ -337,6 +338,7 @@ export class CentersService {
       assistant_type: assistantType,
       teacher_id: input.teacher_id || null,
       can_view_financials: canViewFinancials,
+      salary: input.salary !== undefined ? Number(input.salary) : 0,
       status: "invited",
       invite_token: inviteToken,
     });
@@ -406,6 +408,7 @@ export class CentersService {
     return this.repository.createRoom(tenantId, {
       name: input.name.trim(),
       capacity,
+      hourly_rate: input.hourly_rate !== undefined ? Number(input.hourly_rate) : 0,
       location: input.location ? input.location.trim() : undefined,
     });
   }

@@ -21,6 +21,10 @@ export class SupabaseCentersRepository implements ICentersRepository {
     private readonly adminClient: SupabaseClient
   ) {}
 
+  private get db(): SupabaseClient {
+    return this.client || this.adminClient;
+  }
+
   async createTeacher(
     tenantId: string,
     data: {
@@ -110,6 +114,7 @@ export class SupabaseCentersRepository implements ICentersRepository {
       teacher_id?: string | null;
       can_view_financials: boolean;
       status: MemberStatus;
+      salary?: number;
       user_id?: string | null;
       invite_token?: string | null;
     }
@@ -123,6 +128,7 @@ export class SupabaseCentersRepository implements ICentersRepository {
         assistant_type: data.assistant_type,
         teacher_id: data.teacher_id || null,
         can_view_financials: data.can_view_financials,
+        salary: data.salary || 0,
         status: data.status,
         user_id: data.user_id || null,
         invite_token: data.invite_token || null,
@@ -189,6 +195,7 @@ export class SupabaseCentersRepository implements ICentersRepository {
         tenant_id: tenantId,
         name: data.name,
         capacity: data.capacity,
+        hourly_rate: data.hourly_rate || 0,
       })
       .select()
       .single();
@@ -515,25 +522,44 @@ export class SupabaseCentersRepository implements ICentersRepository {
     teacherId?: string | null;
     assistantId?: string | null;
   }): Promise<{ user_id: string }> {
-    const { data: authData, error: authError } = await this.adminClient.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: data.fullName,
-        phone: data.phone,
-        role: data.role,
-        tenant_id: data.tenantId,
-      },
-    });
+    let userId: string | null = null;
+    try {
+      const { data: authData, error: authError } = await this.adminClient.auth.admin.createUser({
+        email: data.email,
+        password: data.password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: data.fullName,
+          phone: data.phone,
+          role: data.role,
+          tenant_id: data.tenantId,
+        },
+      });
+      if (!authError && authData?.user) {
+        userId = authData.user.id;
+      }
+    } catch (_) {}
 
-    if (authError || !authData.user) {
-      throw new Error(authError ? authError.message : "Failed to provision auth user");
+    if (!userId) {
+      const { data: signUpData, error: signUpErr } = await this.adminClient.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.fullName,
+            phone: data.phone,
+            role: data.role,
+            tenant_id: data.tenantId,
+          },
+        },
+      });
+      if (signUpErr || !signUpData?.user) {
+        throw new Error(signUpErr ? signUpErr.message : "Failed to provision auth user");
+      }
+      userId = signUpData.user.id;
     }
 
-    const userId = authData.user.id;
-
-    const { error: profileError } = await this.adminClient.from("users").insert({
+    const { error: profileError } = await this.db.from("users").insert({
       id: userId,
       tenant_id: data.tenantId,
       full_name: data.fullName,
@@ -634,6 +660,7 @@ export class FakeCentersRepository implements ICentersRepository {
       assistant_type?: AssistantType;
       teacher_id?: string | null;
       can_view_financials?: boolean;
+      salary?: number;
       status?: MemberStatus;
       user_id?: string | null;
       invite_token?: string | null;
@@ -649,6 +676,7 @@ export class FakeCentersRepository implements ICentersRepository {
       assistant_type: data.assistant_type || "assistant_to_center",
       teacher_id: data.teacher_id || null,
       can_view_financials: Boolean(data.can_view_financials),
+      salary: data.salary || 0,
       status: data.status || "active",
       invite_token: data.invite_token || null,
       created_at: new Date().toISOString(),
@@ -679,6 +707,7 @@ export class FakeCentersRepository implements ICentersRepository {
       tenant_id: tenantId,
       name: data.name,
       capacity: data.capacity,
+      hourly_rate: data.hourly_rate || 0,
       location: data.location || null,
       created_at: new Date().toISOString(),
     };

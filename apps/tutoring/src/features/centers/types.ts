@@ -29,6 +29,7 @@ export interface AssistantModel {
   email?: string | null;
   assistant_type: AssistantType;
   can_view_financials: boolean;
+  salary?: number;
   status: MemberStatus;
   invite_token?: string | null;
   created_at: string;
@@ -40,6 +41,7 @@ export interface RoomModel {
   tenant_id: string;
   name: string;
   capacity: number;
+  hourly_rate?: number;
   location?: string | null;
   created_at: string;
 }
@@ -47,6 +49,7 @@ export interface RoomModel {
 export interface CreateRoomInput {
   name: string;
   capacity: number;
+  hourly_rate?: number;
   location?: string;
 }
 
@@ -232,6 +235,7 @@ export interface CreateAssistantInput {
   teacher_id?: string | null;
   assistant_type?: AssistantType;
   can_view_financials?: boolean;
+  salary?: number;
   onboarding_method?: "invite_link" | "direct_creation";
 }
 
@@ -283,6 +287,7 @@ export interface ICentersRepository {
       status: MemberStatus;
       user_id?: string | null;
       invite_token?: string | null;
+      salary?: number;
     }
   ): Promise<AssistantModel>;
   getAssistantById(tenantId: string, assistantId: string): Promise<AssistantModel | null>;
