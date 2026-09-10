@@ -80,6 +80,8 @@ export interface AttendanceWebhookPayload {
   comment: string | null;
   parent_phone: string;
   idempotency_key: string;
+  force_send?: boolean;
+  teacher_id?: string | null;
 }
 
 export interface MessageTemplate {

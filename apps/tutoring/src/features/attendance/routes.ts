@@ -207,7 +207,8 @@ attendanceRouter.post(
         tenantId || "",
         sessionId,
         studentId,
-        whatsAppService
+        whatsAppService,
+        { teacher_id: req.user?.teacher_id || req.user?.id }
       );
 
       res.status(200).json(result);

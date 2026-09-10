@@ -15,13 +15,14 @@ export const importRouter = Router();
 // GET /api/students - List all students for current tenant
 studentsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id || undefined;
-  const { q } = req.query;
+  const { q, group_id } = req.query;
 
   try {
     const studentsService = getServices(req).students;
     const students = await studentsService.listStudents(
       tenantId,
-      typeof q === "string" ? q : undefined
+      typeof q === "string" ? q : undefined,
+      typeof group_id === "string" ? group_id : undefined
     );
     res.json({ students });
   } catch (err: unknown) {

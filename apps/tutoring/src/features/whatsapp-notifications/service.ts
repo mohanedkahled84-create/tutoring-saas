@@ -208,9 +208,9 @@ export class WhatsAppNotificationsService {
    * DEV-WPA.3: Triggers the n8n attendance webhook exactly once per idempotency_key.
    */
   async dispatchAttendanceWebhook(payload: AttendanceWebhookPayload): Promise<boolean> {
-    const { idempotency_key, attended, comment } = payload;
+    const { idempotency_key, attended, comment, force_send } = payload;
 
-    if (attended === true && (!comment || comment.trim() === "")) {
+    if (!force_send && attended === true && (!comment || comment.trim() === "")) {
       logger.info(
         `[WhatsAppService] Skipping present student without comment: ${payload.student_name}`
       );
@@ -234,13 +234,49 @@ export class WhatsAppNotificationsService {
     }
 
     dispatchedKeys.add(idempotency_key);
+
+    // 1. Send real message via Evolution API Gateway if configured
+    let gatewaySent = false;
+    if (this.gateway?.sendTextMessage && payload.parent_phone) {
+      const teacherId = payload.teacher_id || "default";
+      const primaryInstance = buildInstanceName(payload.tenant_id, teacherId);
+      const fallbackInstance = buildInstanceName(payload.tenant_id, "default");
+
+      let text = "";
+      if (payload.attended) {
+        text = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب/ة (${payload.student_name || "الطالب"}).\nنفيدكم بحضور الطالب اليوم لحصة المادة بنجاح.\n`;
+        if (payload.comment && payload.comment.trim()) {
+          text += `ملاحظة المعلم: ${payload.comment.trim()}`;
+        }
+      } else {
+        text = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب/ة (${payload.student_name || "الطالب"}).\nنود إحاطة سيادتكم بغياب الطالب/ة عن حضور حصة اليوم.\nيرجى المتابعة والاطمئنان حرصاً على مستواه الدراسي.`;
+      }
+
+      try {
+        let gwRes = await this.gateway.sendTextMessage(primaryInstance, payload.parent_phone, text);
+        if (!gwRes.success && primaryInstance !== fallbackInstance) {
+          logger.info(`[WhatsAppService] Retrying sendTextMessage with fallback instance ${fallbackInstance}`);
+          gwRes = await this.gateway.sendTextMessage(fallbackInstance, payload.parent_phone, text);
+        }
+
+        if (gwRes.success) {
+          logger.info(`[WhatsAppService] Real message sent to ${payload.parent_phone} for ${payload.student_name}`);
+          gatewaySent = true;
+        } else {
+          logger.warn(`[WhatsAppService] Gateway send failed for ${payload.parent_phone}: ${gwRes.error}`);
+        }
+      } catch (gwErr) {
+        logger.warn(`[WhatsAppService] Gateway send error: ${(gwErr as Error).message}`);
+      }
+    }
+
     const webhookUrl = process.env.N8N_ATTENDANCE_WEBHOOK_URL;
 
     if (!webhookUrl) {
       logger.info(
-        `[WhatsAppService] [SIMULATED] n8n webhook triggered for ${payload.student_name} (${idempotency_key})`
+        `[WhatsAppService] n8n webhook not configured; ${gatewaySent ? 'dispatched via gateway' : 'simulated/skipped'} for ${payload.student_name} (${idempotency_key})`
       );
-      return true;
+      return this.gateway ? gatewaySent : true;
     }
 
     try {
@@ -258,7 +294,7 @@ export class WhatsAppNotificationsService {
         logger.warn(
           `[WhatsAppService] n8n returned non-200 status (${response.status}) for ${idempotency_key}`
         );
-        return false;
+        return gatewaySent;
       }
 
       logger.info(
@@ -269,7 +305,7 @@ export class WhatsAppNotificationsService {
       logger.error(
         `[WhatsAppService] Failed to dispatch webhook to n8n for ${idempotency_key}: ${(err as Error).message}`
       );
-      return false;
+      return gatewaySent;
     }
   }
 

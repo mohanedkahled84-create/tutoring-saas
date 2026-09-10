@@ -62,6 +62,8 @@ export interface ResendMessageResult {
   student_name: string;
   phone: string;
   resend_idempotency_key: string;
+  dispatched?: boolean;
+  gateway_delivered?: boolean;
 }
 
 export interface IWhatsAppBatchDispatcher {

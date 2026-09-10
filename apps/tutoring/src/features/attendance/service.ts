@@ -489,7 +489,8 @@ export class AttendanceService {
     tenantId: string,
     sessionId: string,
     studentId: string,
-    whatsAppDispatcher: IWhatsAppBatchDispatcher
+    whatsAppDispatcher: IWhatsAppBatchDispatcher,
+    options?: { teacher_id?: string }
   ): Promise<ResendMessageResult> {
     const student = await this.repository.findStudent(tenantId, studentId);
     if (!student) {
@@ -507,7 +508,7 @@ export class AttendanceService {
 
     const resendKey = `${tenantId}:${studentId}:${sessionId}:resend:${Date.now()}`;
 
-    await whatsAppDispatcher.dispatchAttendanceWebhook({
+    const delivered = await whatsAppDispatcher.dispatchAttendanceWebhook({
       tenant_id: tenantId,
       event_type: "attendance_recorded",
       student_id: studentId,
@@ -517,20 +518,24 @@ export class AttendanceService {
       comment: attRecord.comment || null,
       parent_phone: student.parent_phone,
       idempotency_key: resendKey,
+      force_send: true,
+      teacher_id: options?.teacher_id,
     });
 
     await this.repository.updateAttendanceStatus(attRecord.id, {
-      sent: true,
-      wa_status: "sent",
+      sent: delivered,
+      wa_status: delivered ? "sent" : "failed",
     });
 
     return {
-      success: true,
-      message: "Notification resent successfully",
+      success: delivered,
+      message: delivered ? "Notification resent successfully" : "WhatsApp dispatch attempted but gateway returned failure",
       student_id: studentId,
       student_name: student.name,
       phone: student.parent_phone,
       resend_idempotency_key: resendKey,
+      dispatched: delivered,
+      gateway_delivered: delivered,
     };
   }
 }

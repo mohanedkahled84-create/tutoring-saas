@@ -36,9 +36,9 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
               <span>${getIcon('cards', 16, '#ffffff')}</span>
               <span>خدمة طباعة الكروت الرسمية للطلاب</span>
             </div>
-            <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #ffffff;">طباعة كروت الطلاب</h2>
+            <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #ffffff;">كروت الطلاب الذكية والباركود</h2>
             <p style="font-size: 0.875rem; color: rgba(255,255,255,0.9); margin-top: 0.4rem; line-height: 1.6;">
-              اطبع كروت ورقية فورية بجودة عالية للباركود، أو اطلب كروت بلاستيكية فاخرة (PVC ID Cards) ضد التلف والماء مع شعار السنتر والمدرس لطلبتك بأسعار خاصة للمشتركين.
+              تصدير وإرسال كشف كروت الطلاب بملف رقمي منظم يحتوي على بيانات وأكواد وباركود الطلاب مباشرة عبر واتساب، أو طلب كروت بلاستيكية فاخرة (PVC ID Cards) لمنظومتك.
             </p>
           </div>
 
@@ -61,24 +61,20 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
       <div class="card" style="margin: 0;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
           <div>
-            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0;">تحديد الطلاب للطباعة</h3>
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0;">تحديد الطلاب لإصدار الكروت</h3>
             <p style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.2rem;">
-              يمكنك اختيار مجموعة كاملة، أو تحديد عدد معين من الطلاب للطباعة، أو طباعة كافة الطلاب
+              يمكنك اختيار مجموعة كاملة، أو تحديد طلاب معينين لإرسال كشف الكروت كملف منظم عبر واتساب
             </p>
           </div>
 
-          <!-- Print & Order Action Buttons -->
+          <!-- Action Buttons -->
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <div id="selectedCardsCountBadge" class="badge badge-blue" style="font-size: 0.825rem; padding: 0.4rem 0.75rem;">
               تم تحديد: 0 طالب
             </div>
-            <button class="btn btn-primary" onclick="window.centrlyApp.printSelectedCards()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; background: var(--centrly-blue-700);">
-              ${getIcon('print', 18, '#ffffff')}
-              <span>تجهيز ملف الطباعة الفورية (PDF / طباعة A4)</span>
-            </button>
-            <button class="btn" style="background: #25d366; color: #ffffff; border: none; display: flex; align-items: center; gap: 0.4rem; font-weight: 700; padding: 0.45rem 0.9rem; border-radius: 8px;" onclick="window.centrlyApp.orderSelectedCardsViaWhatsApp()">
+            <button class="btn btn-primary" style="background: #25d366; border-color: #25d366; color: #ffffff; display: flex; align-items: center; gap: 0.45rem; font-weight: 800; padding: 0.5rem 1.1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(37,211,102,0.25);" onclick="window.centrlyApp.openCardsWhatsAppDispatchModal()">
               ${getIcon('whatsapp', 18, '#ffffff')}
-              <span>إرسال طلب الكروت بالبيانات (واتساب)</span>
+              <span>إرسال ملف كروت الطلاب (واتساب)</span>
             </button>
             <button class="btn btn-secondary" onclick="window.centrlyApp.selectAllCards(true)">
               تحديد الكل
@@ -126,7 +122,7 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
                 return `
                 <tr data-student-id="${escapeHtml(s.id)}" data-group-id="${escapeHtml(s.group_id || matchedGroup?.id || '')}">
                   <td style="text-align: center;">
-                    <input type="checkbox" class="student-card-check" value="${escapeHtml(s.id)}" data-name="${escapeHtml(s.name)}" data-code="${escapeHtml(sCode)}" data-group="${escapeHtml(groupName)}" data-phone="${escapeHtml(s.student_phone || s.parent_phone || '')}" onchange="window.centrlyApp.updateSelectedCardsCount()">
+                    <input type="checkbox" class="student-card-check" value="${escapeHtml(s.id)}" data-name="${escapeHtml(s.name)}" data-code="${escapeHtml(sCode)}" data-group="${escapeHtml(groupName)}" data-phone="${escapeHtml(s.student_phone || '')}" data-parent-phone="${escapeHtml(s.parent_phone || '')}" onchange="window.centrlyApp.updateSelectedCardsCount()">
                   </td>
                   <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(sCode)}</td>
                   <td style="font-weight: 700;">${escapeHtml(s.name)}</td>

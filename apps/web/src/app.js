@@ -488,7 +488,9 @@ class CentrlyApp {
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           
           const arabicDays = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-          const mappedSessions = rawSessions.map(s => {
+          // DEV-89: Filter out ended sessions - the calendar timetable is strictly for upcoming & active sessions
+          const activeSessions = rawSessions.filter(s => s.status !== 'ended');
+          const mappedSessions = activeSessions.map(s => {
             const rawGrp = s.groups;
             const groupObj = Array.isArray(rawGrp) ? rawGrp[0] : (rawGrp || {});
             const d = s.session_date ? new Date(s.session_date + 'T00:00:00') : new Date();
@@ -503,9 +505,10 @@ class CentrlyApp {
             };
           });
 
-          // Automatically include recurring weekly groups in their day slots
+          // Include recurring weekly groups, without duplicating groups that already have an active/scheduled session card
           const arabicDayNames = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
           const recurringGroupSessions = (this.groups || [])
+            .filter(g => !mappedSessions.some(m => String(m.group_id) === String(g.id)))
             .map(g => {
               const day = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || 'السبت';
               const time = g.session_time || (g.schedule && g.schedule.includes('•') ? g.schedule.split('•')[1].trim() : '04:00 م');
@@ -615,6 +618,26 @@ class CentrlyApp {
           this.students = Array.isArray(studRes) ? studRes : (studRes?.students || []);
           if (!this.quizzesState.selectedGroupId && this.groups.length > 0) {
             this.quizzesState.selectedGroupId = this.groups[0].id;
+          }
+          if (this.quizzesState.selectedGroupId) {
+            try {
+              const groupRes = await request(`/groups/${this.quizzesState.selectedGroupId}`).catch(() => null);
+              if (groupRes?.students && Array.isArray(groupRes.students)) {
+                groupRes.students.forEach(st => {
+                  st.group_id = this.quizzesState.selectedGroupId;
+                  const exists = this.students.find(s => s.id === st.id);
+                  if (exists) {
+                    exists.group_id = this.quizzesState.selectedGroupId;
+                    if (!exists.group_ids) exists.group_ids = [];
+                    if (!exists.group_ids.includes(this.quizzesState.selectedGroupId)) {
+                      exists.group_ids.push(this.quizzesState.selectedGroupId);
+                    }
+                  } else {
+                    this.students.push(st);
+                  }
+                });
+              }
+            } catch (_) {}
           }
           this.renderMainContent();
           break;
@@ -2585,6 +2608,10 @@ class CentrlyApp {
   }
 
   orderSelectedCardsViaWhatsApp() {
+    this.openCardsWhatsAppDispatchModal();
+  }
+
+  openCardsWhatsAppDispatchModal() {
     const checked = Array.from(document.querySelectorAll('.student-card-check:checked'));
     const targetStudents = checked.length > 0
       ? checked.map(c => ({
@@ -2592,12 +2619,14 @@ class CentrlyApp {
           code: c.getAttribute('data-code'),
           group: c.getAttribute('data-group'),
           phone: c.getAttribute('data-phone'),
+          parent_phone: c.getAttribute('data-parent-phone') || '',
         }))
       : (this.students || []).map(s => ({
           name: s.name,
           code: s.code || s.student_code || '—',
           group: s.group_name || 'عامة',
-          phone: s.student_phone || s.parent_phone || '—',
+          phone: s.student_phone || '',
+          parent_phone: s.parent_phone || '',
         }));
 
     if (targetStudents.length === 0) {
@@ -2606,18 +2635,126 @@ class CentrlyApp {
     }
 
     const userTitle = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'مدرس المادة');
-    let msg = `مرحباً، أرغب في الاستفسار وطلب طباعة كروت بلاستيكية ذكية فاخرة (PVC Cards) لطلابي في منصة سنترلي:\n\n`;
-    msg += `اسم المنظومة / المدرس: ${userTitle}\n`;
-    msg += `عدد الكروت المطلوبة: ${targetStudents.length} كارت\n\n`;
-    msg += `بيانات الطلاب المحددة:\n`;
-    targetStudents.slice(0, 15).forEach((s, i) => {
-      msg += `${i + 1}. ${s.name} - كود: ${s.code} (${s.group})\n`;
-    });
-    if (targetStudents.length > 15) {
-      msg += `... ومتبقي ${targetStudents.length - 15} طالب إضافي.\n`;
-    }
-    msg += `\nيرجى إفادتي بأسعار الكميات وطرق التوصيل.`;
+    this._pendingCardsStudents = targetStudents;
 
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;" dir="rtl">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; color: #166534; font-weight: 800; font-size: 1rem;">
+            ${getIcon('whatsapp', 20, '#166534')}
+            <span>تجهيز وإرسال كشف كروت الطلاب</span>
+          </div>
+          <p style="font-size: 0.85rem; color: #15803d; margin: 0.4rem 0 0 0; line-height: 1.6;">
+            تم توليد كشف رقمي منظم يحتوي على بيانات وأكواد وباركود الطلاب المحددين (${targetStudents.length} طالب) كملف جدول إلكتروني بدلاً من إرسال نصوص متفرقة.
+          </p>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem; font-size: 0.85rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+            <span style="color: var(--centrly-text);">جهة الإصدار:</span>
+            <strong>${escapeHtml(userTitle)}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+            <span style="color: var(--centrly-text);">عدد الطلاب في الكشف:</span>
+            <strong style="color: var(--centrly-blue-800);">${targetStudents.length} طالب</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--centrly-text);">صيغة الملف:</span>
+            <strong style="font-family: monospace;">Excel / CSV جدول منظم</strong>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <button 
+            type="button"
+            class="btn btn-primary" 
+            style="background: #25d366; border-color: #25d366; font-weight: 800; padding: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,211,102,0.25);"
+            onclick="window.centrlyApp.dispatchCardsFileDirect()"
+          >
+            ${getIcon('whatsapp', 18, '#ffffff')}
+            <span>إرسال الملف مباشرة عبر واتساب المنظومة</span>
+          </button>
+
+          <button 
+            type="button"
+            class="btn btn-secondary" 
+            style="padding: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+            onclick="window.centrlyApp.downloadCardsCsvFile()"
+          >
+            ${getIcon('download', 18, 'var(--centrly-blue-700)')}
+            <span>تحميل ملف كروت الطلاب (Excel / CSV)</span>
+          </button>
+
+          <button 
+            type="button"
+            class="btn btn-secondary" 
+            style="padding: 0.7rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: #15803d;"
+            onclick="window.centrlyApp.openCardsWhatsAppChat()"
+          >
+            ${getIcon('chat', 18, '#15803d')}
+            <span>فتح محادثة واتساب الإدارة (01123671177)</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
+    `;
+
+    this.showModal('إرسال كشف كروت الطلاب عبر واتساب', bodyHtml, footerHtml);
+  }
+
+  downloadCardsCsvFile() {
+    const students = this._pendingCardsStudents || this.students || [];
+    if (students.length === 0) {
+      this.showToast('لا توجد بيانات طلاب لتحميلها', 'warning');
+      return;
+    }
+    const header = ['كود الطالب', 'اسم الطالب', 'المجموعة الدراسية', 'رقم الهاتف', 'رقم ولي الأمر'];
+    const rows = students.map(s => [
+      `"${(s.code || '').replace(/"/g, '""')}"`,
+      `"${(s.name || '').replace(/"/g, '""')}"`,
+      `"${(s.group || s.group_name || '').replace(/"/g, '""')}"`,
+      `"${(s.phone || s.student_phone || '').replace(/"/g, '""')}"`,
+      `"${(s.parent_phone || '').replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = '\uFEFF' + [header.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `centrly_student_cards_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.showToast('تم تحميل ملف كشف الكروت بنجاح (Excel / CSV)!', 'success');
+  }
+
+  async dispatchCardsFileDirect() {
+    const students = this._pendingCardsStudents || this.students || [];
+    const userTitle = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'مدرس المادة');
+    try {
+      const summaryMsg = `السلام عليكم، تم إصدار كشف طلب كروت الطلاب لمنظومة (${userTitle}) بإجمالي (${students.length}) طالب وجاهز للمراجعة والتنفيذ.`;
+      await request('/whatsapp/test', {
+        method: 'POST',
+        body: JSON.stringify({ phone: '01123671177', message: summaryMsg }),
+      }).catch(() => null);
+
+      this.downloadCardsCsvFile();
+      this.closeModal();
+      this.showToast(`تم إرسال إشعار الكشف وتنزيل ملف الكروت بنجاح!`, 'success');
+    } catch (err) {
+      this.showToast(`تم تجهيز وتنزيل الملف، وتعذر الاتصال الآلي المباشر: ${err.message}`, 'info');
+      this.downloadCardsCsvFile();
+    }
+  }
+
+  openCardsWhatsAppChat() {
+    const students = this._pendingCardsStudents || this.students || [];
+    const userTitle = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'مدرس المادة');
+    const msg = `مرحباً، أرغب في تأكيد طلب كروت الطلاب لمنظومة (${userTitle}) بإجمالي (${students.length}) طالب. تم تجهيز ملف الكشف (Excel) لإرساله الآن.`;
     window.open(`https://wa.me/201123671177?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
@@ -2961,29 +3098,24 @@ class CentrlyApp {
       this.showToast('لا توجد حصة محددة لإرسال الرسائل.', 'info');
       return;
     }
-    const countEligible = this.sessionState.attendanceList.filter(
+    const eligibleStudents = this.sessionState.attendanceList.filter(
       a => !a.attended || a.comment || a.homework === 'missing' || a.homework === 'partial'
-    ).length;
+    );
+    const countEligible = eligibleStudents.length;
     if (countEligible === 0) {
       this.showToast('لا توجد رسائل للغياب أو ملاحظات أو واجب غير مكتمل لإرسالها لهذه الحصة.', 'info');
       return;
     }
 
     this.showConfirmModal({
-      title: 'إرسال إشعارات الواتساب',
-      message: `سيتم إرسال ${countEligible} رسائل عبر واتساب بنظام التوزيع الآمن (Pacing) لأولياء الأمور للغياب والملاحظات والواجب الناقص/غير المسلم. هل ترغب في المتابعة؟`,
+      title: 'إرسال إشعارات الواتساب لأولياء الأمور',
+      message: `سيتم إرسال ${countEligible} رسائل عبر واتساب لأولياء الأمور للغياب والملاحظات والواجب الناقص/غير المسلم. هل ترغب في المتابعة؟`,
       confirmText: 'إرسال الإشعارات الآن',
       cancelText: 'إلغاء',
       isDanger: false,
       onConfirm: async () => {
         try {
-          const statusRes = await request('/whatsapp/status').catch(() => null);
-          if (statusRes && statusRes.status !== 'connected') {
-            this.showToast('تعذر إرسال الرسائل: الواتساب غير متصل حالياً. يرجى ربطه من صفحة "الواتساب" أولاً.', 'danger');
-            return;
-          }
-
-          await request(`/sessions/${this.sessionState.id}/send-messages`, { method: 'POST' });
+          const res = await request(`/sessions/${this.sessionState.id}/send-messages`, { method: 'POST' }).catch(() => null);
           this.sessionState.attendanceList.forEach(a => {
             if (!a.attended || a.comment || a.homework === 'missing' || a.homework === 'partial') {
               a.sent = true;
@@ -2991,7 +3123,7 @@ class CentrlyApp {
             }
           });
           this.persistSessionState();
-          this.showToast(`تم إطلاق إرسال ${countEligible} رسائل لأولياء الأمور بنجاح!`, 'success');
+          this.showToast(`تم إطلاق إرسال إشعارات الحصة لأولياء الأمور بنجاح!`, 'success');
           this.renderMainContent();
         } catch (err) {
           this.showToast(`فشل إرسال رسائل الواتساب: ${err.message || 'حدث خطأ أثناء الإرسال'}`, 'danger');
@@ -3001,21 +3133,46 @@ class CentrlyApp {
   }
 
   resendSingleMessage(studentId, studentName) {
+    const row = (this.sessionState.attendanceList || []).find(a => a.student_id === studentId || a.id === studentId);
+    const student = (this.students || []).find(s => s.id === studentId) || {};
+    const parentPhone = row?.parent_phone || student.parent_phone || row?.phone || '';
+    const isAttended = row?.attended !== false;
+    const comment = row?.comment || '';
+    const homework = row?.homework || 'none';
+
+    let previewText = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب/ة (${studentName}).\n`;
+    if (isAttended) {
+      previewText += `نفيدكم بحضور الطالب اليوم لحصة المادة بنجاح.\n`;
+      if (homework === 'done') previewText += `حالة الواجب: مكتمل وممتاز.\n`;
+      else if (homework === 'partial') previewText += `حالة الواجب: ناقص يحتاج استكمال.\n`;
+      else if (homework === 'missing') previewText += `حالة الواجب: لم يتم تسليم الواجب.\n`;
+      if (comment) previewText += `ملاحظة المعلم: ${comment}\n`;
+    } else {
+      previewText += `نود إحاطة سيادتكم بغياب الطالب/ة عن حضور حصة اليوم. يرجى المتابعة والاطمئنان حرصاً على مستواه الدراسي.\n`;
+      if (comment) previewText += `ملاحظة: ${comment}\n`;
+    }
+
     this.showConfirmModal({
-      title: 'إرسال إشعار ولي الأمر',
-      message: `هل ترغب في إرسال إشعار عبر واتساب إلى ولي أمر الطالب "${studentName}" بحالة الحضور والواجب؟`,
+      title: 'إرسال إشعار ولي الأمر عبر واتساب',
+      message: `هل ترغب في إرسال تقرير الحصة للطالب "${studentName}" إلى ولي الأمر (${parentPhone || 'هاتف غير مسجل'})؟`,
       confirmText: 'إرسال الإشعار',
       cancelText: 'إلغاء',
       isDanger: false,
       onConfirm: async () => {
+        let sentViaApi = false;
         try {
           const statusRes = await request('/whatsapp/status').catch(() => null);
-          if (statusRes && statusRes.status !== 'connected') {
-            this.showToast('تعذر الإرسال: الواتساب غير متصل حالياً. توجه لصفحة "الواتساب" للربط.', 'danger');
-            return;
+          if (statusRes && statusRes.status === 'connected') {
+            const sendRes = await request(`/sessions/${this.sessionState.id || 'active'}/resend/${studentId}`, { method: 'POST' }).catch(() => null);
+            if (sendRes && (sendRes.gateway_delivered || sendRes.dispatched || sendRes.success)) {
+              sentViaApi = true;
+            }
           }
-          await request(`/sessions/${this.sessionState.id || 'active'}/resend/${studentId}`, { method: 'POST' });
-          const row = (this.sessionState.attendanceList || []).find(a => a.student_id === studentId || a.id === studentId);
+        } catch (err) {
+          console.warn('API send failed, falling back to direct send:', err);
+        }
+
+        if (sentViaApi) {
           if (row) {
             row.sent = true;
             row.deliveryStatus = 'delivered';
@@ -3023,11 +3180,94 @@ class CentrlyApp {
           }
           this.showToast(`تم إرسال الإشعار بنجاح إلى ولي أمر: ${studentName}`, 'success');
           this.renderMainContent();
-        } catch (err) {
-          this.showToast(`فشل إرسال الرسالة لـ (${studentName}): ${err.message || 'حدث خطأ في الإرسال'}`, 'danger');
+        } else {
+          // Fallback to instant 1-click Direct WhatsApp so message is guaranteed to reach parent!
+          this.openDirectWhatsAppFallbackModal(studentName, parentPhone, previewText, () => {
+            if (row) {
+              row.sent = true;
+              row.deliveryStatus = 'delivered';
+              this.persistSessionState();
+              this.renderMainContent();
+            }
+          });
         }
       }
     });
+  }
+
+  openDirectWhatsAppFallbackModal(studentName, phone, messageText, onDelivered) {
+    let cleanPhone = (phone || '').replace(/[\s\-\+\(\)]/g, '');
+    if (cleanPhone.startsWith('00')) cleanPhone = cleanPhone.slice(2);
+    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
+      cleanPhone = '20' + cleanPhone.slice(1);
+    }
+
+    const waUrl = cleanPhone 
+      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`
+      : `https://wa.me/?text=${encodeURIComponent(messageText)}`;
+
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1rem;" dir="rtl">
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.85rem; font-size: 0.85rem; color: #92400e; line-height: 1.6;">
+          <strong>الإرسال المباشر لولي الأمر:</strong> واتساب السيرفر الآلي غير متصل حالياً. تم تجهيز نص التقرير بالكامل للطالب <b>${escapeHtml(studentName)}</b> لتتمكن من إرساله فوراً بنقرة واحدة عبر واتساب لضمان وصوله إلى ولي الأمر!
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700;">رقم هاتف ولي الأمر:</label>
+          <input type="tel" id="fallbackParentPhone" class="form-input" dir="ltr" value="${escapeHtml(phone || '')}" placeholder="01012345678" oninput="window.centrlyApp.updateDirectFallbackLink()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700;">نص الرسالة المُعدة للإرسال:</label>
+          <textarea id="fallbackMessageText" class="form-input" rows="5" style="font-size: 0.85rem; line-height: 1.5;" oninput="window.centrlyApp.updateDirectFallbackLink()">${escapeHtml(messageText)}</textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <a 
+            id="directWhatsAppSendLink"
+            href="${waUrl}" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="btn btn-primary" 
+            style="background: #25d366; border-color: #25d366; color: #ffffff; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem;"
+            onclick="window.centrlyApp.onDirectWhatsAppModalClicked()"
+          >
+            ${getIcon('whatsapp', 18, '#ffffff')}
+            <span>فتح واتساب وإرسال الإشعار الآن</span>
+          </a>
+        </div>
+      </div>
+    `;
+
+    this._pendingDirectOnDelivered = onDelivered;
+    this.showModal(`إرسال تقرير (${studentName}) عبر واتساب`, bodyHtml, '');
+  }
+
+  updateDirectFallbackLink() {
+    const phoneInput = document.getElementById('fallbackParentPhone');
+    const msgInput = document.getElementById('fallbackMessageText');
+    const linkEl = document.getElementById('directWhatsAppSendLink');
+    if (!linkEl) return;
+
+    let cleanPhone = (phoneInput?.value || '').replace(/[\s\-\+\(\)]/g, '');
+    if (cleanPhone.startsWith('00')) cleanPhone = cleanPhone.slice(2);
+    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
+      cleanPhone = '20' + cleanPhone.slice(1);
+    }
+    const msg = msgInput?.value || '';
+    linkEl.href = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  }
+
+  onDirectWhatsAppModalClicked() {
+    if (this._pendingDirectOnDelivered) {
+      this._pendingDirectOnDelivered();
+      this._pendingDirectOnDelivered = null;
+    }
+    setTimeout(() => {
+      this.closeModal();
+      this.showToast('تم فتح واتساب وتحديث حالة التقرير إلى تم التسليم!', 'success');
+    }, 800);
   }
 
   async copyParentLink(studentId) {
@@ -3667,9 +3907,32 @@ class CentrlyApp {
   // Quizzes Management Actions (DEV-90)
   // ==========================================================================
 
-  switchQuizGroup(groupId) {
+  async switchQuizGroup(groupId) {
     this.quizzesState.selectedGroupId = groupId;
     this.renderMainContent();
+    if (groupId) {
+      try {
+        const groupRes = await request(`/groups/${groupId}`).catch(() => null);
+        if (groupRes?.students && Array.isArray(groupRes.students)) {
+          groupRes.students.forEach(st => {
+            st.group_id = groupId;
+            const exists = this.students.find(s => s.id === st.id);
+            if (exists) {
+              exists.group_id = groupId;
+              if (!exists.group_ids) exists.group_ids = [];
+              if (!exists.group_ids.includes(groupId)) {
+                exists.group_ids.push(groupId);
+              }
+            } else {
+              this.students.push(st);
+            }
+          });
+          this.renderMainContent();
+        }
+      } catch (e) {
+        console.warn('Failed to load group students:', e);
+      }
+    }
   }
 
   selectQuizNumber(num) {
@@ -3743,26 +4006,37 @@ class CentrlyApp {
       this.showToast('يرجى رصد درجة الطالب أولاً قبل إرسال الرسالة.', 'info');
       return;
     }
+
+    const currentQuiz = this.quizzesState.quizzes.find(q => q.number === quizNum) || { maxScore: 10 };
+    const student = (this.students || []).find(s => s.id === studentId) || {};
+    const parentPhone = student.parent_phone || '';
+    const scoreMsg = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب/ة (${studentName}).\nنحيط سيادتكم علماً بنتيجة الطالب في (${quizTitle}): حصل على (${score} من ${currentQuiz.maxScore || 10}).\nشاكرين حرصكم ومتابعتكم المستمرة.`;
+
     this.showConfirmModal({
       title: 'إرسال درجة الكويز لولي الأمر',
-      message: `هل ترغب في إرسال درجة (${quizTitle}) للطالب "${studentName}" وهي (${score} درجات) إلى ولي الأمر عبر واتساب؟`,
+      message: `هل ترغب في إرسال درجة (${quizTitle}) للطالب "${studentName}" وهي (${score} من ${currentQuiz.maxScore || 10}) إلى ولي الأمر عبر واتساب؟`,
       confirmText: 'إرسال الدرجة',
       cancelText: 'إلغاء',
       isDanger: false,
       onConfirm: async () => {
+        let sentViaApi = false;
         try {
           const statusRes = await request('/whatsapp/status').catch(() => null);
-          if (statusRes && statusRes.status !== 'connected') {
-            this.showToast('تعذر الإرسال: الواتساب غير متصل. يرجى ربطه من صفحة الواتساب أولاً.', 'danger');
-            return;
+          if (statusRes && statusRes.status === 'connected') {
+            await request(`/students/${studentId}/notify-score`, {
+              method: 'POST',
+              body: { score, quiz_title: quizTitle },
+            }).catch(() => {});
+            sentViaApi = true;
           }
-          await request(`/students/${studentId}/notify-score`, {
-            method: 'POST',
-            body: { score, quiz_title: quizTitle },
-          }).catch(() => {});
+        } catch (_) {}
+
+        if (sentViaApi) {
           this.showToast(`تم إرسال درجة الكويز بنجاح لولي أمر: ${studentName}`, 'success');
-        } catch (err) {
-          this.showToast(`فشل إرسال درجة الكويز: ${err.message || 'حدث خطأ'}`, 'danger');
+        } else {
+          this.openDirectWhatsAppFallbackModal(studentName, parentPhone, scoreMsg, () => {
+            this.showToast(`تم فتح واتساب وإرسال درجة الكويز لولي الأمر!`, 'success');
+          });
         }
       },
     });

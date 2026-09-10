@@ -9,10 +9,10 @@ import {
 export class SupabaseStudentsRepository implements IStudentsRepository {
   constructor(private readonly client: SupabaseClient) {}
 
-  async list(tenantId?: string, query?: string): Promise<Student[]> {
+  async list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]> {
     let q = this.client
       .from("students")
-      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, created_at")
+      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, created_at, group_students(group_id, groups(id, name))")
       .order("created_at", { ascending: false });
 
     if (tenantId) {
@@ -28,9 +28,45 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
 
     const { data, error } = await q;
     if (error) {
-      throw new Error(error.message);
+      // Fallback to direct select if relational join fails
+      const fallback = await this.client
+        .from("students")
+        .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, created_at")
+        .order("created_at", { ascending: false });
+      if (fallback.error) {
+        throw new Error(fallback.error.message);
+      }
+      return (fallback.data as Student[]) || [];
     }
-    return (data as Student[]) || [];
+
+    const mapped: Student[] = ((data as any[]) || []).map((s) => {
+      const rawGs = s.group_students;
+      const gsList = Array.isArray(rawGs) ? rawGs : (rawGs ? [rawGs] : []);
+      const matchedGs = groupId ? gsList.find((g: any) => g.group_id === groupId) : gsList[0];
+      const primaryGs = matchedGs || gsList[0];
+      const grp = primaryGs?.groups;
+      return {
+        id: s.id,
+        tenant_id: s.tenant_id,
+        code: s.code,
+        student_code: s.student_code,
+        name: s.name,
+        parent_phone: s.parent_phone,
+        student_phone: s.student_phone,
+        fee_override: s.fee_override,
+        exempt: s.exempt,
+        notes: s.notes,
+        created_at: s.created_at,
+        group_id: primaryGs?.group_id || null,
+        group_name: grp?.name || null,
+        group_ids: gsList.map((g: any) => g.group_id).filter(Boolean),
+      };
+    });
+
+    if (groupId) {
+      return mapped.filter((s) => s.group_id === groupId || (s.group_ids && s.group_ids.includes(groupId)));
+    }
+    return mapped;
   }
 
   async findById(id: string): Promise<Student | null> {
@@ -156,10 +192,16 @@ export class FakeStudentsRepository implements IStudentsRepository {
   public groups: GroupRecord[] = [];
   public groupEnrollments: Array<{ tenant_id?: string; student_id: string; group_id: string }> = [];
 
-  async list(tenantId?: string, query?: string): Promise<Student[]> {
+  async list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]> {
     let list = this.students;
     if (tenantId) {
       list = list.filter((s) => s.tenant_id === tenantId);
+    }
+    if (groupId) {
+      const enrolledStudentIds = this.groupEnrollments
+        .filter((ge) => ge.group_id === groupId)
+        .map((ge) => ge.student_id);
+      list = list.filter((s) => enrolledStudentIds.includes(s.id) || s.group_id === groupId);
     }
     if (query) {
       const q = query.toLowerCase();

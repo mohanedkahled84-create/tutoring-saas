@@ -191,6 +191,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
       <!-- Main Scanning & Attendance Workspace -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
         
+        ${!isSessionEnded ? `
         <!-- Barcode / Student Check-in Scanner -->
         <div class="card" style="margin: 0;">
           <h3 class="card-title" style="font-size: 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
@@ -209,13 +210,12 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                     class="form-input" 
                     placeholder="اكتب كود أو اسم الطالب، أو امسح الباركود..." 
                     autofocus 
-                    ${isSessionEnded ? 'disabled' : ''} 
                     autocomplete="off"
                     oninput="window.centrlyApp.onStudentScanInput(this.value)"
                   >
                   <div id="studentScanSuggestions" style="display: none; position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 50; background: #fff; border: 1px solid var(--centrly-line); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); max-height: 220px; overflow-y: auto;"></div>
                 </div>
-                <button type="submit" class="btn btn-primary" ${isSessionEnded ? 'disabled' : ''} style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700; white-space: nowrap;">
+                <button type="submit" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700; white-space: nowrap;">
                   ${getIcon('check', 16)}
                   <span>تسجيل حضور</span>
                 </button>
@@ -266,6 +266,33 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
             </div>
           </div>
         </div>
+        ` : `
+        <!-- Ended Session Final Summary Card -->
+        <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-blue-700); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <h3 class="card-title" style="font-size: 1.05rem; margin: 0; display: flex; align-items: center; gap: 0.4rem; color: var(--centrly-ink);">
+                ${getIcon('check', 20, 'var(--centrly-success)')}
+                <span>تم اكتمال هذه الحصة بنجاح</span>
+              </h3>
+              <span class="badge badge-secondary">حصة منتهية</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1rem 0; line-height: 1.6;">
+              تم إغلاق الحصة ورصد الحضور والواجب لكافة الطلاب. يمكنك مراجعة الكشف أدناه أو إرسال تقارير الواتساب لأولياء الأمور.
+            </p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+            <button class="btn btn-primary" onclick="window.centrlyApp.dispatchSessionWhatsAppMessages()" style="font-weight: 700; background: #25D366; border-color: #25D366; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('whatsapp', 16, '#ffffff')}
+              <span>إرسال تقارير الواتساب للغياب والملاحظات</span>
+            </button>
+            <button class="btn btn-secondary" onclick="window.centrlyApp.openReceiptModal()" style="font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('print', 14)}
+              <span>إيصال التصفية</span>
+            </button>
+          </div>
+        </div>
+        `}
 
         <!-- Operational Attendance Status Card (No financial settlement box per user request) -->
         <div class="card" style="margin: 0; background: linear-gradient(135deg, #f8fafc, #edf2f7); border: 1px solid var(--centrly-line);">
@@ -304,9 +331,6 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
             ${getIcon('sessions', 18, 'var(--centrly-blue-700)')}
             <span>كشف حضور الحصة (${escapeHtml(attendanceList.length)} طالب مسجل)</span>
           </h3>
-          <span style="font-size: 0.775rem; color: var(--centrly-text);">
-            الرسائل تُرسل كدفعة واحدة عبر واتساب بعد انتهاء الحصة لتقليل التكلفة
-          </span>
         </div>
 
         <div style="overflow-x: auto; margin-top: 1rem;">

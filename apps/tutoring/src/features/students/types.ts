@@ -15,6 +15,9 @@ export interface Student {
   exempt?: boolean;
   notes?: string | null;
   created_at?: string;
+  group_id?: string | null;
+  group_name?: string | null;
+  group_ids?: string[];
 }
 
 export interface CreateStudentDTO {
@@ -59,7 +62,7 @@ export interface GroupRecord {
 }
 
 export interface IStudentsRepository {
-  list(tenantId?: string, query?: string): Promise<Student[]>;
+  list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]>;
   findById(id: string): Promise<Student | null>;
   create(tenantId: string | undefined, student: Partial<Student>): Promise<Student>;
   update(id: string, data: UpdateStudentDTO): Promise<Student | null>;

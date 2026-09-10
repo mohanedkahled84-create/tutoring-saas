@@ -14,7 +14,13 @@ import { getIcon } from "../utils/icons.js";
 export function renderTeacherQuizzesView(state = {}, groups = [], students = []) {
   const selectedGroupId = state.selectedGroupId || (groups[0]?.id || '');
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
-  const groupStudents = (students || []).filter(s => !selectedGroupId || s.group_id === selectedGroupId);
+  const groupStudents = (students || []).filter(s => {
+    if (!selectedGroupId) return true;
+    if (String(s.group_id) === String(selectedGroupId) || String(s.groupId) === String(selectedGroupId)) return true;
+    if (Array.isArray(s.group_ids) && s.group_ids.some(gid => String(gid) === String(selectedGroupId))) return true;
+    if (s.group_name && activeGroup?.name && s.group_name.trim().toLowerCase() === activeGroup.name.trim().toLowerCase()) return true;
+    return false;
+  });
 
   const quizzes = state.quizzes || [
     { id: 1, number: 1, title: 'كويز 1: أساسيات المادة', maxScore: 10, date: '2026-09-01', skipped: false },

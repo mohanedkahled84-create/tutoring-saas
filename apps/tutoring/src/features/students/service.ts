@@ -17,8 +17,8 @@ import {
 export class StudentsService {
   constructor(private readonly repo: IStudentsRepository) {}
 
-  async listStudents(tenantId?: string, query?: string): Promise<Student[]> {
-    return this.repo.list(tenantId, query);
+  async listStudents(tenantId?: string, query?: string, groupId?: string): Promise<Student[]> {
+    return this.repo.list(tenantId, query, groupId);
   }
 
   async getStudent(id: string): Promise<Student | null> {

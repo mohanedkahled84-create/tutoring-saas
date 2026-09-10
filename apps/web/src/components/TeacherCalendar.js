@@ -15,9 +15,11 @@ export function renderTeacherCalendar(data = {}) {
   const rawSessions = data.sessions || [];
   const groups = data.groups || [];
 
+  const shouldFilterEnded = data.hideEnded === true;
+  const filteredRaw = shouldFilterEnded ? rawSessions.filter(s => s.status !== 'ended') : rawSessions;
   const sessions = filterGroup === 'all'
-    ? rawSessions
-    : rawSessions.filter(
+    ? filteredRaw
+    : filteredRaw.filter(
         (s) =>
           String(s.group_id) === String(filterGroup) ||
           String(s.groupId) === String(filterGroup) ||
@@ -172,7 +174,7 @@ export function renderTeacherCalendar(data = {}) {
             <span>إجمالي الحصص: <strong>${totalCount}</strong></span>
             <span style="color: var(--centrly-success);">${getIcon('dotSuccess', 8)} جارية: <strong>${inProgressCount}</strong></span>
             <span style="color: var(--centrly-blue-700);">مجدولة: <strong>${scheduledCount}</strong></span>
-            <span style="color: var(--centrly-text);">منتهية: <strong>${completedCount}</strong></span>
+            ${completedCount > 0 ? `<span style="color: var(--centrly-text);">منتهية: <strong>${completedCount}</strong></span>` : ''}
             <span style="color: var(--centrly-warning);">مؤجلة: <strong>${rescheduledCount}</strong></span>
             <span style="color: var(--centrly-danger);">ملغاة: <strong>${cancelledCount}</strong></span>
             <span style="color: #7c3aed;">إضافية: <strong>${extraCount}</strong></span>
