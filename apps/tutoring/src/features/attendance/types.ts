@@ -98,6 +98,8 @@ export interface IWhatsAppBatchDispatcher {
     comment: string | null;
     parent_phone: string;
     idempotency_key: string;
+    force_send?: boolean;
+    teacher_id?: string | null;
   }): Promise<boolean>;
 }
 
