@@ -1505,7 +1505,7 @@ class CentrlyApp {
         </div>
         <div class="form-group" style="margin-bottom: 1rem;">
           <label class="form-label" style="font-weight: 700;">الملاحظة الأكاديمية أو السلوكية (تُرسل لولي الأمر بالواتساب):</label>
-          <textarea id="modalNoteText" class="form-input" rows="3" placeholder="اكتب الملاحظة هنا (مثال: متفوق جداً، يحتاج تدريب على المسائل، الواجب غير مكتمل...)" style="resize: vertical; font-family: inherit;">${escapeHtml(currentNote)}</textarea>
+          <textarea id="modalNoteText" class="form-input" rows="3" placeholder="اكتب الملاحظة هنا حول مستوى الطالب أو أداءه في الحصة..." style="resize: vertical; font-family: inherit;">${escapeHtml(currentNote)}</textarea>
         </div>
       </form>
     `;
@@ -1620,7 +1620,7 @@ class CentrlyApp {
       <form id="addStudentModalForm" onsubmit="window.centrlyApp.handleCreateStudent(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">اسم الطالب رباعي *</label>
-          <input type="text" id="newStudentName" class="form-input" placeholder="مثال: يوسف محمود علي رضوان" required>
+          <input type="text" id="newStudentName" class="form-input" placeholder="اسم الطالب بالكامل" required>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي *</label>
@@ -1872,7 +1872,7 @@ class CentrlyApp {
       <form id="createGroupModalForm" onsubmit="window.centrlyApp.handleCreateGroup(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">اسم المجموعة *</label>
-          <input type="text" id="newGroupName" class="form-input" placeholder="مثال: فيزياء 3 ثانوي - مجموعة السبت" required>
+          <input type="text" id="newGroupName" class="form-input" placeholder="اسم المجموعة الدراسية" required>
         </div>
 
         ${isCenterOwner ? `
@@ -1893,9 +1893,15 @@ class CentrlyApp {
             </div>
           </div>
         ` : `
-          <div class="form-group" style="margin-bottom: 0.85rem;">
-            <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر</label>
-            <input type="text" id="newGroupCenter" class="form-input" placeholder="مثال: سنتر الأهرام التعليمي">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر</label>
+              <input type="text" id="newGroupCenter" class="form-input" placeholder="اسم السنتر أو المقر">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">القاعة المخصصة</label>
+              <input type="text" id="newGroupRoomName" class="form-input" placeholder="اسم أو رقم القاعة">
+            </div>
           </div>
         `}
 
@@ -1919,7 +1925,7 @@ class CentrlyApp {
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
-          <input type="number" id="newGroupPrice" class="form-input" min="0" step="5" placeholder="مثال: 80" required>
+          <input type="number" id="newGroupPrice" class="form-input" min="0" step="5" placeholder="سعر الحصة" required>
         </div>
         
         <!-- 3 Billing Models -->
@@ -1935,21 +1941,21 @@ class CentrlyApp {
         <!-- Conditional Input 1: Percentage -->
         <div id="billingPercentageGroup" class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">نسبة السنتر على الطالب (%) *</label>
-          <input type="number" id="newGroupCenterCut" class="form-input" min="0" max="100" value="20" placeholder="مثال: 20">
+          <input type="number" id="newGroupCenterCut" class="form-input" min="0" max="100" value="20" placeholder="20">
           <small style="color: var(--centrly-text); font-size: 0.75rem;">يحصل السنتر على هذه النسبة من كل تذكرة حضور والباقي للمدرس</small>
         </div>
 
         <!-- Conditional Input 2: Fixed per student -->
         <div id="billingFixedPerStudentGroup" class="form-group" style="margin-bottom: 0.85rem; display: none;">
           <label class="form-label" style="font-weight: 700;">قيمة أجر السنتر لكل طالب (ج.م) *</label>
-          <input type="number" id="newGroupFixedPerStudent" class="form-input" min="0" step="5" value="25" placeholder="مثال: 25">
+          <input type="number" id="newGroupFixedPerStudent" class="form-input" min="0" step="5" value="25" placeholder="25">
           <small style="color: var(--centrly-text); font-size: 0.75rem;">قيمة ثابتة يدفعها الطالب للسنتر عن كل حصة يحضرها</small>
         </div>
 
         <!-- Conditional Input 3: Fixed room rent -->
         <div id="billingFixedRentGroup" class="form-group" style="margin-bottom: 0.85rem; display: none;">
           <label class="form-label" style="font-weight: 700;">إيجار القاعة الثابت للحصة (ج.م) *</label>
-          <input type="number" id="newGroupFixedRent" class="form-input" min="0" step="50" value="300" placeholder="مثال: 300">
+          <input type="number" id="newGroupFixedRent" class="form-input" min="0" step="50" value="300" placeholder="300">
           <small style="color: var(--centrly-text); font-size: 0.75rem;">مبلغ إيجار القاعة للحصة الواحدة بغض النظر عن عدد الطلاب</small>
         </div>
 
@@ -2025,9 +2031,15 @@ class CentrlyApp {
             </div>
           </div>
         ` : `
-          <div class="form-group" style="margin-bottom: 0.85rem;">
-            <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر</label>
-            <input type="text" id="editGroupCenter" class="form-input" value="${escapeHtml(group.center_name || group.centerName || '')}">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر</label>
+              <input type="text" id="editGroupCenter" class="form-input" value="${escapeHtml(group.center_name || group.centerName || '')}" placeholder="اسم السنتر أو المقر">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">القاعة المخصصة</label>
+              <input type="text" id="editGroupRoomName" class="form-input" value="${escapeHtml(group.room || group.room_name || '')}" placeholder="اسم أو رقم القاعة">
+            </div>
           </div>
         `}
 
@@ -2110,12 +2122,15 @@ class CentrlyApp {
     const teacher_id = isCenterOwner ? (document.getElementById('newGroupTeacherId')?.value || null) : null;
     const room_id = isCenterOwner ? (document.getElementById('newGroupRoomId')?.value || null) : null;
     let center_name = undefined;
+    let room_name = undefined;
 
     if (isCenterOwner && room_id) {
       const matchedRoom = (this.centerRooms || []).find(r => r.id === room_id);
       center_name = matchedRoom ? matchedRoom.name : 'قاعة السنتر';
+      room_name = matchedRoom ? matchedRoom.name : undefined;
     } else {
       center_name = document.getElementById('newGroupCenter')?.value.trim() || undefined;
+      room_name = document.getElementById('newGroupRoomName')?.value.trim() || undefined;
     }
 
     const day_of_week = document.getElementById('newGroupDayOfWeek')?.value || 'السبت';
@@ -2138,8 +2153,10 @@ class CentrlyApp {
     const feedback = document.getElementById('createGroupFeedback');
     const saveBtn = document.getElementById('btnSaveGroup');
 
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'جاري الإنشاء...';
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'جاري الإنشاء...';
+    }
 
     try {
       await request('/groups', {
@@ -2149,6 +2166,8 @@ class CentrlyApp {
           center_name,
           teacher_id,
           room_id,
+          room: room_name,
+          room_name: room_name,
           price,
           session_price: price,
           billing_model,
@@ -2173,8 +2192,10 @@ class CentrlyApp {
       } else {
         this.showToast(`فشل إنشاء المجموعة: ${err.message || 'خطأ في البيانات'}`, 'danger');
       }
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'إنشاء المجموعة';
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'إنشاء المجموعة';
+      }
     }
   }
 
@@ -2185,12 +2206,15 @@ class CentrlyApp {
     const teacher_id = isCenterOwner ? (document.getElementById('editGroupTeacherId')?.value || null) : null;
     const room_id = isCenterOwner ? (document.getElementById('editGroupRoomId')?.value || null) : null;
     let center_name = undefined;
+    let room_name = undefined;
 
     if (isCenterOwner && room_id) {
       const matchedRoom = (this.centerRooms || []).find(r => r.id === room_id);
       center_name = matchedRoom ? matchedRoom.name : 'قاعة السنتر';
+      room_name = matchedRoom ? matchedRoom.name : undefined;
     } else {
       center_name = document.getElementById('editGroupCenter')?.value.trim() || undefined;
+      room_name = document.getElementById('editGroupRoomName')?.value.trim() || undefined;
     }
 
     const day_of_week = document.getElementById('editGroupDayOfWeek')?.value || 'السبت';
@@ -2226,6 +2250,8 @@ class CentrlyApp {
           center_name,
           teacher_id,
           room_id,
+          room: room_name,
+          room_name: room_name,
           price,
           session_price: price,
           billing_model,
@@ -2237,6 +2263,18 @@ class CentrlyApp {
           schedule: `${day_of_week} • ${session_time}`,
         },
       });
+
+      // Update local cache
+      const cached = (this.groups || []).find(g => g.id === groupId);
+      if (cached) {
+        cached.name = name;
+        cached.center_name = center_name;
+        cached.room = room_name;
+        cached.room_name = room_name;
+        cached.price = price;
+        cached.day_of_week = day_of_week;
+        cached.session_time = session_time;
+      }
 
       this.closeModal();
       this.showToast(`تم تحديث بيانات المجموعة (${name}) بنجاح!`, 'success');
@@ -2276,25 +2314,136 @@ class CentrlyApp {
     });
   }
 
-  // Functional Student Cards Printing Handlers (DEV-89)
   previewSpecificCard(name, code, group, phone) {
-    const pName = document.getElementById('previewStudentName');
-    const pCode = document.getElementById('previewStudentCode');
-    const pGroup = document.getElementById('previewStudentGroup');
-    const pPhone = document.getElementById('previewStudentPhone');
-    const pInit = document.getElementById('previewStudentInitial');
+    const teacherName = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'المدرس');
+    const initial = name ? name.charAt(0) : 'ط';
+    const bodyHtml = `
+      <div style="display: flex; justify-content: center; padding: 0.5rem 0;">
+        <div style="width: 100%; max-width: 380px; border: 2px solid #0f172a; border-radius: 14px; padding: 16px 18px; background: #fff; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
+            <div>
+              <div style="font-size: 14px; font-weight: 800; color: #1e3a8a;">سنترلي | Centrly</div>
+              <div style="font-size: 10px; color: #475569;">كارت حضور ذكي</div>
+            </div>
+            <div style="text-align: left;">
+              <div style="font-size: 11px; font-weight: 700; color: #0f172a;">${escapeHtml(teacherName)}</div>
+              <div style="font-size: 10px; color: #475569;">${escapeHtml(group || 'المجموعة')}</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+            <div style="width: 46px; height: 46px; border-radius: 8px; background: #f1f5f9; border: 1.5px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #1e3a8a;">
+              ${escapeHtml(initial)}
+            </div>
+            <div>
+              <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${escapeHtml(name)}</div>
+              <div style="font-size: 10px; color: #475569; margin-top: 2px;">هاتف: ${escapeHtml(phone || '—')}</div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 8px; padding: 8px 12px; border: 1px solid #e2e8f0;">
+            <div style="display: flex; gap: 2px; height: 24px; align-items: center;">
+              <span style="background: #000; width:2px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:1px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:3px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:1px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:2px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:4px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:1px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:3px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:2px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:1px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:2px; height:100%; display:inline-block;"></span>
+              <span style="background: #000; width:3px; height:100%; display:inline-block;"></span>
+            </div>
+            <div style="text-align: left;">
+              <div style="font-family: monospace; font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #0f172a;">${escapeHtml(code)}</div>
+              <div style="font-size: 8px; color: #64748b;">Scan to Attend</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
+      <button type="button" class="btn btn-primary" onclick="window.centrlyApp.printSingleCard('${escapeHtml(name)}', '${escapeHtml(code)}', '${escapeHtml(group)}', '${escapeHtml(phone)}')">
+        ${getIcon('printer', 16)} <span>طباعة الكارت الآن</span>
+      </button>
+    `;
+    this.showModal(`معاينة كارت الطالب: ${name}`, bodyHtml, footerHtml);
+  }
 
-    if (pName) pName.textContent = name;
-    if (pCode) pCode.textContent = code;
-    if (pGroup) pGroup.textContent = group;
-    if (pPhone) pPhone.textContent = phone;
-    if (pInit) pInit.textContent = name?.charAt(0) || 'ط';
-
-    const card = document.getElementById('cardLivePreview');
-    if (card) {
-      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      card.style.transform = 'scale(1.03)';
-      setTimeout(() => { if (card) card.style.transform = 'scale(1)'; }, 300);
+  printSingleCard(name, code, group, phone) {
+    const teacherName = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'المدرس');
+    const printHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>طباعة كارت - ${escapeHtml(name)}</title>
+        <style>
+          @page { size: auto; margin: 10mm; }
+          body { font-family: 'Cairo', 'Changa', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; display: flex; justify-content: center; }
+          .card {
+            border: 2px solid #0f172a; border-radius: 12px; padding: 14px 16px;
+            width: 320px; height: 190px; box-sizing: border-box; display: flex; flex-direction: column;
+            justify-content: space-between; page-break-inside: avoid; background: #fff;
+          }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 6px; }
+          .logo { font-size: 14px; font-weight: 800; color: #1e3a8a; }
+          .sub { font-size: 10px; color: #475569; }
+          .body { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+          .avatar { width: 44px; height: 44px; border-radius: 8px; background: #f1f5f9; border: 1.5px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; }
+          .name { font-size: 14px; font-weight: 800; color: #0f172a; }
+          .meta { font-size: 10px; color: #475569; margin-top: 3px; }
+          .footer { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 6px; padding: 6px 10px; border: 1px solid #e2e8f0; }
+          .barcode-bars { display: flex; gap: 2px; height: 22px; align-items: center; }
+          .barcode-bars span { background: #000; height: 100%; display: inline-block; }
+          .code { font-family: monospace; font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #0f172a; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="header">
+            <div>
+              <div class="logo">سنترلي | Centrly</div>
+              <div class="sub">كارت حضور ذكي</div>
+            </div>
+            <div style="text-align: left;">
+              <div style="font-size: 11px; font-weight: 700;">${escapeHtml(teacherName)}</div>
+              <div class="sub">${escapeHtml(group || 'المجموعة')}</div>
+            </div>
+          </div>
+          <div class="body">
+            <div class="avatar">${name?.charAt(0) || 'ط'}</div>
+            <div>
+              <div class="name">${escapeHtml(name)}</div>
+              <div class="meta">هاتف: ${escapeHtml(phone || '—')}</div>
+            </div>
+          </div>
+          <div class="footer">
+            <div class="barcode-bars">
+              <span style="width:2px;"></span><span style="width:1px;"></span><span style="width:3px;"></span>
+              <span style="width:1px;"></span><span style="width:2px;"></span><span style="width:4px;"></span>
+              <span style="width:1px;"></span><span style="width:3px;"></span><span style="width:2px;"></span>
+              <span style="width:1px;"></span><span style="width:2px;"></span><span style="width:3px;"></span>
+            </div>
+            <div style="text-align: left;">
+              <div class="code">${escapeHtml(code)}</div>
+              <div style="font-size: 8px; color: #64748b;">Scan to Attend</div>
+            </div>
+          </div>
+        </div>
+        <script>
+          window.onload = function() { window.print(); };
+        </script>
+      </body>
+      </html>
+    `;
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.write(printHtml);
+      printWin.document.close();
+    } else {
+      this.showToast('يرجى السماح بالنوافذ المنبثقة (Popups) لإتمام الطباعة', 'danger');
     }
   }
 
@@ -2479,13 +2628,19 @@ class CentrlyApp {
       this.groups = Array.isArray(res) ? res : (res.groups || []);
     }
     const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${escapeHtml(g.center_name || 'السنتر')})</option>`).join('');
+    const defaultGroup = (this.groups && this.groups.length > 0) ? this.groups[0] : null;
+    const defaultRoom = defaultGroup ? (defaultGroup.room || defaultGroup.room_name || '') : '';
     const bodyHtml = `
       <form id="startNewSessionForm" onsubmit="window.centrlyApp.handleStartSessionSubmit(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">اختر المجموعة لبدء الحصة *</label>
-          <select id="startSessionGroupId" class="form-input" required>
+          <select id="startSessionGroupId" class="form-input" onchange="window.centrlyApp.onStartSessionGroupChange(this.value)" required>
             ${groupOptions}
           </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">القاعة المخصصة للحصة</label>
+          <input type="text" id="startSessionRoom" class="form-input" value="${escapeHtml(defaultRoom)}" placeholder="اسم أو رقم القاعة (يمكن تعديلها الآن)">
         </div>
       </form>
     `;
@@ -2498,12 +2653,22 @@ class CentrlyApp {
     this.showModal('بدء حصة جديدة', bodyHtml, footerHtml);
   }
 
+  onStartSessionGroupChange(groupId) {
+    const cleanId = String(groupId).replace(/^rec-/, '');
+    const grp = (this.groups || []).find(g => g.id === cleanId);
+    const roomInput = document.getElementById('startSessionRoom');
+    if (roomInput && grp) {
+      roomInput.value = grp.room || grp.room_name || '';
+    }
+  }
+
   async handleStartSessionSubmit(e) {
     e.preventDefault();
     const gId = document.getElementById('startSessionGroupId')?.value;
+    const customRoom = document.getElementById('startSessionRoom')?.value?.trim() || '';
     if (gId) {
       this.closeModal();
-      await this.startSessionForGroup(gId);
+      await this.startSessionForGroup(gId, customRoom);
     }
   }
 
@@ -2541,7 +2706,7 @@ class CentrlyApp {
       <form id="cancelSessionForm" onsubmit="window.centrlyApp.handleCancelSessionSubmit(event, '${escapeHtml(idOrGroupId)}')">
         <div class="form-group">
           <label class="form-label" style="font-weight: 700;">سبب الإلغاء (يُرسل في إشعار الواتساب لأولياء الأمور)</label>
-          <textarea id="cancelReasonInput" class="form-textarea" rows="3" placeholder="مثال: عطل طارئ بالقاعة أو وعكة صحية للمدرس" required></textarea>
+          <textarea id="cancelReasonInput" class="form-textarea" rows="3" placeholder="سبب إلغاء الحصة بالتفصيل" required></textarea>
         </div>
       </form>
     `;
@@ -2577,7 +2742,7 @@ class CentrlyApp {
         </div>
         <div class="form-group">
           <label class="form-label" style="font-weight: 700;">ملاحظة لولي الأمر</label>
-          <input type="text" id="rescheduleReason" class="form-input" placeholder="مثال: تأجيل الحصة لمدة ساعتين">
+          <input type="text" id="rescheduleReason" class="form-input" placeholder="سبب تأجيل الحصة بالتفصيل">
         </div>
       </form>
     `;
@@ -2682,11 +2847,16 @@ class CentrlyApp {
   openEditSessionModal() {
     if (!this.sessionState.id) return;
     const currentPrice = this.sessionState.group?.price ?? 100;
+    const currentRoom = this.sessionState.room || this.sessionState.group?.room || this.sessionState.group?.room_name || '';
     const bodyHtml = `
       <form id="editSessionModalForm" onsubmit="window.centrlyApp.handleSaveSessionEdit(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">موضوع / عنوان الحصة</label>
-          <input type="text" id="editSessionTopic" class="form-input" value="${escapeHtml(this.sessionState.topic || this.sessionState.extra_topic || '')}" placeholder="مثال: مراجعة شاملة وحل تدريبات">
+          <input type="text" id="editSessionTopic" class="form-input" value="${escapeHtml(this.sessionState.topic || this.sessionState.extra_topic || '')}" placeholder="عنوان أو موضوع الحصة">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">القاعة المخصصة للحصة</label>
+          <input type="text" id="editSessionRoom" class="form-input" value="${escapeHtml(currentRoom)}" placeholder="اسم أو رقم القاعة">
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">توقيت الحصة</label>
@@ -2708,14 +2878,17 @@ class CentrlyApp {
   handleSaveSessionEdit(e) {
     e.preventDefault();
     const topic = document.getElementById('editSessionTopic')?.value.trim();
+    const room = document.getElementById('editSessionRoom')?.value.trim();
     const time = document.getElementById('editSessionTime')?.value.trim();
     const price = Number(document.getElementById('editSessionPrice')?.value) || 0;
 
     if (this.sessionState) {
       this.sessionState.topic = topic;
+      this.sessionState.room = room;
       this.sessionState.session_time = time;
       if (this.sessionState.group) {
         this.sessionState.group.price = price;
+        this.sessionState.group.room = room;
       }
       this.persistSessionState();
       this.closeModal();
@@ -2746,7 +2919,7 @@ class CentrlyApp {
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">موضوع الحصة / الملاحظات *</label>
-          <input type="text" id="extraSessionTopic" class="form-input" placeholder="مثال: مراجعة نهائية على الفصل الأول وتدريبات شاملة" required>
+          <input type="text" id="extraSessionTopic" class="form-input" placeholder="عنوان أو موضوع الحصة الإضافية" required>
         </div>
       </form>
     `;
@@ -2923,9 +3096,12 @@ class CentrlyApp {
 
   filterLogs() {}
   openImportModal() { this.showToast('استيراد من Excel / CSV متاح عبر لوحة المالك.', 'info'); }
-  async startSessionForGroup(gId) {
+  async startSessionForGroup(gId, customRoom = null) {
     const cleanId = String(gId).replace(/^rec-/, '');
     const grp = (this.groups || []).find(g => g.id === cleanId);
+    const assignedRoom = (customRoom !== null && customRoom !== undefined && customRoom !== '')
+      ? customRoom
+      : (grp?.room || grp?.room_name || '');
     this.showToast('جاري بدء وتجهيز الحصة...', 'info');
 
     let serverSession = null;
@@ -2959,6 +3135,7 @@ class CentrlyApp {
             group_id: cleanId,
             session_number: nextNum,
             session_date: todayStr,
+            ...(assignedRoom ? { room: assignedRoom } : {}),
           },
         });
         if (createRes && createRes.session) {
@@ -3005,6 +3182,7 @@ class CentrlyApp {
       status: 'in_progress',
       session_number: serverSession?.session_number || 1,
       session_date: serverSession?.session_date || new Date().toISOString().split('T')[0],
+      room: assignedRoom || serverSession?.room || '',
       group: grp || (serverSession?.groups ? serverSession.groups : { id: cleanId, name: 'حصة دراسية', price: 100 }),
       attendanceList: preRoster,
       financials: {
@@ -3391,7 +3569,7 @@ class CentrlyApp {
         </div>
         <div class="form-group" style="margin-bottom: 0.75rem;">
           <label class="form-label">المرتب الشهري / الأجر (ج.م)</label>
-          <input type="number" id="modalAssistantSalary" class="form-input" placeholder="مثال: 2500" min="0" value="0">
+          <input type="number" id="modalAssistantSalary" class="form-input" placeholder="المرتب الشهري (ج.م)" min="0" value="0">
         </div>
         <div class="form-group" style="margin-bottom: 0.75rem;">
           <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
@@ -3447,15 +3625,11 @@ class CentrlyApp {
       <form id="modalAddRoomForm" onsubmit="window.centrlyApp.handleModalAddRoomSubmit(event)">
         <div class="form-group" style="margin-bottom: 0.75rem;">
           <label class="form-label">اسم القاعة *</label>
-          <input type="text" id="modalRoomName" class="form-input" placeholder="مثال: قاعة النيل الكبرى" required>
+          <input type="text" id="modalRoomName" class="form-input" placeholder="اسم القاعة" required>
         </div>
         <div class="form-group" style="margin-bottom: 0.75rem;">
           <label class="form-label">السعة الاستيعابية القصوى (عدد الطلاب) *</label>
-          <input type="number" id="modalRoomCapacity" class="form-input" placeholder="مثال: 40" min="1" required>
-        </div>
-        <div class="form-group" style="margin-bottom: 0.75rem;">
-          <label class="form-label">سعر الإيجار بالساعة / الحصة (ج.م) [اختياري]</label>
-          <input type="number" id="modalRoomHourlyRate" class="form-input" placeholder="مثال: 150" min="0" value="0">
+          <input type="number" id="modalRoomCapacity" class="form-input" placeholder="السعة الاستيعابية" min="1" required>
         </div>
         <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem;">
           <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
@@ -3470,7 +3644,6 @@ class CentrlyApp {
     e.preventDefault();
     const name = document.getElementById('modalRoomName')?.value.trim();
     const capacity = parseInt(document.getElementById('modalRoomCapacity')?.value, 10);
-    const hourly_rate = parseFloat(document.getElementById('modalRoomHourlyRate')?.value) || 0;
 
     if (!name || !capacity) {
       this.showToast('يرجى ملء اسم القاعة وسعتها', 'error');
@@ -3480,7 +3653,7 @@ class CentrlyApp {
     try {
       await request('/centers/rooms', {
         method: 'POST',
-        body: { name, capacity, hourly_rate },
+        body: { name, capacity, hourly_rate: 0 },
       });
       this.closeModal();
       this.showToast(`تمت إضافة القاعة (${name}) بنجاح!`, 'success');
@@ -4063,7 +4236,7 @@ class CentrlyApp {
 
             <div class="form-group" style="margin-bottom: 0.85rem;">
               <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">رقم العملية / رقم التحويل (Reference Number)</label>
-              <input type="text" id="proofRefNumber" class="form-input" placeholder="مثال: 987654321 أو رقم محفظة المحوّل" dir="ltr" required>
+              <input type="text" id="proofRefNumber" class="form-input" placeholder="رقم العملية أو رقم المحفظة المحوّل منها" dir="ltr" required>
             </div>
 
             <div class="form-group" style="margin-bottom: 1.25rem;">

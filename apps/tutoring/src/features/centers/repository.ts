@@ -38,7 +38,8 @@ export class SupabaseCentersRepository implements ICentersRepository {
       invite_token?: string | null;
     }
   ): Promise<TeacherModel> {
-    const { data: row, error } = await this.adminClient
+    const client = this.db;
+    const { data: row, error } = await client
       .from("teachers")
       .insert({
         tenant_id: tenantId,
@@ -54,8 +55,26 @@ export class SupabaseCentersRepository implements ICentersRepository {
       .select()
       .single();
 
-    if (error || !row) {
-      throw new Error(error ? error.message : "Failed to create teacher");
+    if (error) {
+      const { data: rpcRow, error: rpcErr } = await client.rpc("create_teacher_secure", {
+        p_tenant_id: tenantId,
+        p_name: data.name,
+        p_phone: data.phone,
+        p_subjects: data.subjects,
+        p_revenue_model: data.revenue_model,
+        p_revenue_value: data.revenue_value,
+        p_status: data.status,
+        p_user_id: data.user_id || null,
+        p_invite_token: data.invite_token || null,
+      });
+      if (rpcErr || !rpcRow) {
+        throw new Error(rpcErr ? rpcErr.message : (error.message || "Failed to create teacher"));
+      }
+      return rpcRow as unknown as TeacherModel;
+    }
+
+    if (!row) {
+      throw new Error("Failed to create teacher");
     }
     return row as unknown as TeacherModel;
   }
@@ -119,7 +138,8 @@ export class SupabaseCentersRepository implements ICentersRepository {
       invite_token?: string | null;
     }
   ): Promise<AssistantModel> {
-    const { data: row, error } = await this.adminClient
+    const client = this.db;
+    const { data: row, error } = await client
       .from("assistants")
       .insert({
         tenant_id: tenantId,
@@ -136,8 +156,27 @@ export class SupabaseCentersRepository implements ICentersRepository {
       .select()
       .single();
 
-    if (error || !row) {
-      throw new Error(error ? error.message : "Failed to create assistant");
+    if (error) {
+      const { data: rpcRow, error: rpcErr } = await client.rpc("create_assistant_secure", {
+        p_tenant_id: tenantId,
+        p_name: data.name,
+        p_phone: data.phone,
+        p_assistant_type: data.assistant_type,
+        p_teacher_id: data.teacher_id || null,
+        p_can_view_financials: data.can_view_financials,
+        p_status: data.status,
+        p_salary: data.salary || 0,
+        p_user_id: data.user_id || null,
+        p_invite_token: data.invite_token || null,
+      });
+      if (rpcErr || !rpcRow) {
+        throw new Error(rpcErr ? rpcErr.message : (error.message || "Failed to create assistant"));
+      }
+      return rpcRow as unknown as AssistantModel;
+    }
+
+    if (!row) {
+      throw new Error("Failed to create assistant");
     }
     return row as unknown as AssistantModel;
   }
@@ -189,7 +228,8 @@ export class SupabaseCentersRepository implements ICentersRepository {
 
   // --- Rooms Management ---
   async createRoom(tenantId: string, data: CreateRoomInput): Promise<RoomModel> {
-    const { data: row, error } = await this.adminClient
+    const client = this.db;
+    const { data: row, error } = await client
       .from("rooms")
       .insert({
         tenant_id: tenantId,
@@ -200,8 +240,21 @@ export class SupabaseCentersRepository implements ICentersRepository {
       .select()
       .single();
 
-    if (error || !row) {
-      throw new Error(error ? error.message : "Failed to create room");
+    if (error) {
+      const { data: rpcRow, error: rpcErr } = await client.rpc("create_room_secure", {
+        p_tenant_id: tenantId,
+        p_name: data.name,
+        p_capacity: data.capacity,
+        p_hourly_rate: data.hourly_rate || 0,
+      });
+      if (rpcErr || !rpcRow) {
+        throw new Error(rpcErr ? rpcErr.message : (error.message || "Failed to create room"));
+      }
+      return rpcRow as unknown as RoomModel;
+    }
+
+    if (!row) {
+      throw new Error("Failed to create room");
     }
     return row as unknown as RoomModel;
   }

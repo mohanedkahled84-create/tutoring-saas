@@ -88,10 +88,10 @@ export function renderGroupsView(groups = [], user = {}) {
                     </div>
                   ` : ''}
 
-                  ${g.room_name ? `
+                  ${(g.room_name || g.room) ? `
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <span style="color: var(--centrly-blue-700); display: flex;">${getIcon('center', 16)}</span>
-                      <span>القاعة: <b style="color: var(--centrly-ink);">${escapeHtml(g.room_name)}</b></span>
+                      <span style="color: var(--centrly-blue-700); display: flex;">${getIcon('rooms', 16)}</span>
+                      <span>القاعة: <b style="color: var(--centrly-ink);">${escapeHtml(g.room_name || g.room)}</b></span>
                     </div>
                   ` : ''}
 

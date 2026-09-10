@@ -7,9 +7,9 @@ export function renderSidebar(currentRoute = 'sessions', user = {}) {
   const centerRoutes = [
     { id: 'center-dashboard', title: 'لوحة السنتر والإيرادات', icon: 'center' },
     { id: 'center-sessions', title: 'الحصص والقاعات الجارية', icon: 'sessions' },
-    { id: 'center-teachers', title: 'المدرسين', icon: 'students' },
+    { id: 'center-teachers', title: 'المدرسين', icon: 'teachers' },
     { id: 'center-assistants', title: 'المساعدين', icon: 'assistants' },
-    { id: 'center-rooms', title: 'القاعات', icon: 'center' },
+    { id: 'center-rooms', title: 'القاعات', icon: 'rooms' },
     { id: 'groups', title: 'مجاميع السنتر', icon: 'groups' },
     { id: 'calendar', title: 'جدول السنتر الشامل', icon: 'calendar' },
     { id: 'students', title: 'دليل الطلاب والتسجيل', icon: 'students' },

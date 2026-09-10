@@ -262,8 +262,8 @@ export function renderCenterOwnerDashboard(state = {}) {
             <form onsubmit="window.centrlyApp.handleAddRoomSubmit(event)" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">
               <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--centrly-ink);">+ إضافة قاعة جديدة للسنتر</div>
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <input type="text" id="newRoomName" placeholder="اسم القاعة (مثال: قاعة 4)" class="form-input" style="flex: 2;" required>
-                <input type="number" id="newRoomCapacity" placeholder="السعة" class="form-input" style="flex: 1;" min="1" required>
+                <input type="text" id="newRoomName" placeholder="اسم القاعة" class="form-input" style="flex: 2;" required>
+                <input type="number" id="newRoomCapacity" placeholder="السعة الاستيعابية" class="form-input" style="flex: 1;" min="1" required>
                 <button type="submit" class="btn btn-primary" style="flex: 1;">إضافة</button>
               </div>
             </form>
@@ -304,7 +304,7 @@ export function renderCenterOwnerDashboard(state = {}) {
 
               <div>
                 <label style="font-size: 0.8rem; font-weight: 700;">عدد طلاب المجموعة المتوقع (لفحص السعة):</label>
-                <input type="number" id="conflictStudentCount" class="form-input" placeholder="مثال: 35" min="1">
+                <input type="number" id="conflictStudentCount" class="form-input" placeholder="عدد الطلاب المتوقع" min="1">
               </div>
 
               <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">

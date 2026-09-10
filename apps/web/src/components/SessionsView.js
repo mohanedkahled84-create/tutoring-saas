@@ -144,7 +144,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
               ${isExtra ? '<span class="badge" style="background:#ede9fe;color:#7c3aed;">حصة إضافية</span>' : ''}
             </div>
             <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              حصة رقم ${escapeHtml(sessionState.session_number || 1)} • التاريخ: ${escapeHtml(sessionState.session_date || new Date().toLocaleDateString('ar-EG'))}
+              حصة رقم ${escapeHtml(sessionState.session_number || 1)} • التاريخ: ${escapeHtml(sessionState.session_date || new Date().toLocaleDateString('ar-EG'))}${sessionState.room ? ` • القاعة: <b style="color: var(--centrly-blue-800);">${escapeHtml(sessionState.room)}</b>` : ''}
             </div>
           </div>
 

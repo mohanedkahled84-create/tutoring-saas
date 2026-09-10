@@ -22,7 +22,7 @@ export function renderCenterRoomsView(rooms = []) {
               <span>سجل قاعات السنتر والسعة الاستيعابية</span>
             </h2>
             <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              إدارة قاعات التدريس، تحديد السعة القصوى لكل قاعة وسعر إيجار القاعة بالساعة لتجنب التضارب.
+              إدارة قاعات التدريس وتحديد السعة القصوى لكل قاعة لتنظيم الحصص ومنع التضارب.
             </p>
           </div>
 
@@ -83,30 +83,23 @@ export function renderCenterRoomsView(rooms = []) {
               <tr>
                 <th>اسم القاعة</th>
                 <th>السعة القصوى (الطلاب)</th>
-                <th>سعر الإيجار بالساعة / الحصة</th>
                 <th>كود القاعة</th>
                 <th>حالة القاعة</th>
               </tr>
             </thead>
             <tbody>
-              ${roomList.length > 0 ? roomList.map(r => {
-                const hourlyRate = Number(r.hourly_rate || 0);
-                return `
-                  <tr>
-                    <td style="font-weight: 700; color: var(--centrly-ink); font-size: 0.95rem;">${escapeHtml(r.name)}</td>
-                    <td style="font-weight: 700; color: var(--centrly-blue-800); font-family: monospace;">${escapeHtml(r.capacity)} طالب</td>
-                    <td style="font-family: monospace; font-weight: 700; color: var(--centrly-success);">
-                      ${hourlyRate > 0 ? `${hourlyRate.toLocaleString('ar-EG')} ج.م / ساعة` : 'ضمن نسبة السنتر'}
-                    </td>
-                    <td style="font-family: monospace; color: var(--centrly-text); font-size: 0.85rem;">${escapeHtml(r.id.slice(0, 8))}</td>
-                    <td>
-                      <span class="badge badge-success">جاهزة للاستخدام</span>
-                    </td>
-                  </tr>
-                `;
-              }).join('') : `
+              ${roomList.length > 0 ? roomList.map(r => `
                 <tr>
-                  <td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                  <td style="font-weight: 700; color: var(--centrly-ink); font-size: 0.95rem;">${escapeHtml(r.name)}</td>
+                  <td style="font-weight: 700; color: var(--centrly-blue-800); font-family: monospace;">${escapeHtml(r.capacity)} طالب</td>
+                  <td style="font-family: monospace; color: var(--centrly-text); font-size: 0.85rem;">${escapeHtml(r.id.slice(0, 8))}</td>
+                  <td>
+                    <span class="badge badge-success">جاهزة للاستخدام</span>
+                  </td>
+                </tr>
+              `).join('') : `
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
                     لا توجد قاعات مسجلة بعد. اضغط على "إضافة قاعة جديدة" لتهيئة قاعات السنتر.
                   </td>
                 </tr>

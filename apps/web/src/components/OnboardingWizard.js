@@ -64,7 +64,7 @@ export function renderOnboardingWizard(step = 1, state = {}) {
             </h3>
             <div class="form-group">
               <label class="form-label">اسم المجموعة / الصف الدراسي</label>
-              <input type="text" id="obGroupName" class="form-input" value="${defaultState.groupName}" placeholder="مثال: أولى ثانوي - سنتر الأوائل" required>
+              <input type="text" id="obGroupName" class="form-input" value="${defaultState.groupName}" placeholder="اسم المجموعة الدراسية" required>
             </div>
             <div class="form-group">
               <label class="form-label">سعر الحصة للطالب (جنيه مصري)</label>
