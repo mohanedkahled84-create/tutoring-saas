@@ -22,6 +22,36 @@ export function renderTeacherDashboard(data = {}, user = {}) {
   const topPerformers = data.topPerformers || [];
   const displayName = data.userName || user?.name || 'المعلم';
 
+  // Calculate total monthly revenue and net teacher profit directly from groups to guarantee consistency with the breakdown table below
+  let calculatedMonthlyRev = 0;
+  let calculatedTeacherProfit = 0;
+  let totalEnrolledStudents = 0;
+
+  groups.forEach(g => {
+    const studentCount = g.students_count || (stats.totalStudents > 0 ? Math.ceil(stats.totalStudents / Math.max(1, groups.length)) : (g.student_count || 2));
+    totalEnrolledStudents += studentCount;
+    const price = Number(g.price || g.session_price) || 120;
+    const monthlyRev = price * studentCount * 4;
+    let netProfit = Math.round(monthlyRev * 0.8);
+
+    if (g.billing_model === 'fixed_per_student') {
+      const cut = Number(g.fixed_per_student_amount) || 20;
+      netProfit = Math.max(0, (price - cut) * studentCount * 4);
+    } else if (g.billing_model === 'fixed_rent') {
+      const rent = Number(g.fixed_rent_amount) || 250;
+      netProfit = Math.max(0, monthlyRev - (rent * 4));
+    } else if (g.center_cut_percentage) {
+      netProfit = Math.round(monthlyRev * ((100 - g.center_cut_percentage) / 100));
+    }
+
+    calculatedMonthlyRev += monthlyRev;
+    calculatedTeacherProfit += netProfit;
+  });
+
+  const finalMonthlyRevenue = (Number(stats.monthlyRevenue) > 0) ? Number(stats.monthlyRevenue) : calculatedMonthlyRev;
+  const finalTeacherProfit = (Number(stats.teacherProfit) > 0) ? Number(stats.teacherProfit) : calculatedTeacherProfit;
+  const finalTotalStudents = (Number(stats.totalStudents) > 0) ? stats.totalStudents : totalEnrolledStudents;
+
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
       
@@ -58,7 +88,7 @@ export function renderTeacherDashboard(data = {}, user = {}) {
             <span style="color: var(--centrly-success);">${getIcon('billing', 20)}</span>
           </div>
           <div style="font-size: 1.8rem; font-weight: 900; color: var(--centrly-success); margin-top: 0.4rem;">
-            ${(stats.monthlyRevenue || 0).toLocaleString('ar-EG')} <span style="font-size: 0.85rem; font-weight: 600;">ج.م</span>
+            ${finalMonthlyRevenue.toLocaleString('ar-EG')} <span style="font-size: 0.85rem; font-weight: 600;">ج.م</span>
           </div>
           <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.35rem;">
             محسوب بناءً على اشتراكات الطلاب
@@ -72,7 +102,7 @@ export function renderTeacherDashboard(data = {}, user = {}) {
             <span style="color: var(--centrly-blue-700);">${getIcon('dashboard', 20)}</span>
           </div>
           <div style="font-size: 1.8rem; font-weight: 900; color: var(--centrly-blue-800); margin-top: 0.4rem;">
-            ${(stats.teacherProfit || 0).toLocaleString('ar-EG')} <span style="font-size: 0.85rem; font-weight: 600;">ج.م</span>
+            ${finalTeacherProfit.toLocaleString('ar-EG')} <span style="font-size: 0.85rem; font-weight: 600;">ج.م</span>
           </div>
           <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.35rem;">
             بعد تسوية أجر ونسبة السنتر
@@ -86,10 +116,10 @@ export function renderTeacherDashboard(data = {}, user = {}) {
             <span style="color: #6366f1;">${getIcon('students', 20)}</span>
           </div>
           <div style="font-size: 1.8rem; font-weight: 900; color: var(--centrly-ink); margin-top: 0.4rem;">
-            ${stats.totalStudents} <span style="font-size: 0.85rem; font-weight: 500;">طالب</span>
+            ${finalTotalStudents} <span style="font-size: 0.85rem; font-weight: 500;">طالب</span>
           </div>
           <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.35rem;">
-            موزعين على ${stats.activeGroups} مجاميع نشطة
+            موزعين على ${stats.activeGroups || groups.length} مجاميع نشطة
           </div>
         </div>
 

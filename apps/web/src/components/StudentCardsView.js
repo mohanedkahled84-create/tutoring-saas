@@ -174,13 +174,13 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
             <div id="selectedCardsCountBadge" class="badge badge-blue" style="font-size: 0.825rem; padding: 0.4rem 0.75rem;">
               تم تحديد: 0 طالب
             </div>
+            <button class="btn btn-primary" onclick="window.centrlyApp.printSelectedCards()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; background: var(--centrly-blue-700);">
+              ${getIcon('print', 18, '#ffffff')}
+              <span>تجهيز ملف الطباعة الفورية (PDF / طباعة A4)</span>
+            </button>
             <button class="btn" style="background: #25d366; color: #ffffff; border: none; display: flex; align-items: center; gap: 0.4rem; font-weight: 700; padding: 0.45rem 0.9rem; border-radius: 8px;" onclick="window.centrlyApp.orderSelectedCardsViaWhatsApp()">
               ${getIcon('whatsapp', 18, '#ffffff')}
-              <span>طلب طباعة الكروت المحددة (واتساب)</span>
-            </button>
-            <button class="btn btn-primary" onclick="window.centrlyApp.printSelectedCards()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-              ${getIcon('print', 18)}
-              <span>طباعة ورقية فورية (A4)</span>
+              <span>إرسال طلب الكروت بالبيانات (واتساب)</span>
             </button>
             <button class="btn btn-secondary" onclick="window.centrlyApp.selectAllCards(true)">
               تحديد الكل

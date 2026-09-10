@@ -267,46 +267,33 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
           </div>
         </div>
 
-        <!-- Role-based Financial Summary -->
-        ${!isAssistant ? `
-          <div class="card" style="margin: 0; background: linear-gradient(135deg, #f8fafc, #edf2f7); border: 1px solid var(--centrly-line);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-              <h3 class="card-title" style="font-size: 1rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                ${getIcon('billing', 18, 'var(--centrly-blue-700)')}
-                <span>الإيرادات وتصفية الحصة</span>
-              </h3>
-              <span class="badge badge-blue">المعلم والمالك</span>
+        <!-- Operational Attendance Status Card (No financial settlement box per user request) -->
+        <div class="card" style="margin: 0; background: linear-gradient(135deg, #f8fafc, #edf2f7); border: 1px solid var(--centrly-line);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 class="card-title" style="font-size: 1rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('activity', 18, 'var(--centrly-blue-700)')}
+              <span>مؤشرات حضور الحصة الجارية</span>
+            </h3>
+            <span class="badge badge-blue">${attendanceList.length} طلاب مقيدين</span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem;">
+            <div style="background: #fff; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--centrly-line); border-right: 4px solid var(--centrly-success);">
+              <div style="font-size: 0.75rem; color: var(--centrly-text);">الطلاب الحاضرون</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: var(--centrly-success);">${attendanceList.filter(a => a.attended).length} <span style="font-size: 0.85rem; font-weight: 500;">طالب</span></div>
             </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem;">
-              <div style="background: #fff; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--centrly-line);">
-                <div style="font-size: 0.75rem; color: var(--centrly-text);">إجمالي النقدية المحصلة</div>
-                <div style="font-size: 1.4rem; font-weight: 900; color: var(--centrly-success);">${escapeHtml(financials.totalRevenue)} ج.م</div>
-              </div>
-              <div style="background: #fff; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--centrly-line);">
-                <div style="font-size: 0.75rem; color: var(--centrly-text);">سعر الحصة الأساسي</div>
-                <div style="font-size: 1.4rem; font-weight: 900; color: var(--centrly-ink);">${escapeHtml(group.price)} ج.م</div>
-              </div>
+            <div style="background: #fff; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--centrly-line); border-right: 4px solid var(--centrly-danger);">
+              <div style="font-size: 0.75rem; color: var(--centrly-text);">الطلاب الغائبون</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: var(--centrly-danger);">${attendanceList.filter(a => !a.attended).length} <span style="font-size: 0.85rem; font-weight: 500;">طالب</span></div>
             </div>
+          </div>
 
-            <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--centrly-text); display: flex; justify-content: space-between;">
-              <span>عدد الحضور: <b>${escapeHtml(financials.attendeeCount)}</b> طالب</span>
-              <span>الغياب: <b>${escapeHtml(financials.absentCount)}</b> طالب</span>
-            </div>
+          <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--centrly-text); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <span>نسبة الحضور: <b>${attendanceList.length > 0 ? Math.round((attendanceList.filter(a => a.attended).length / attendanceList.length) * 100) : 0}%</b></span>
+            <span>لم يسلموا الواجب: <b style="color: var(--centrly-danger);">${attendanceList.filter(a => a.homework === 'missing').length}</b> طالب</span>
+            ${isAssistant ? '<span class="badge badge-secondary" style="font-size: 0.75rem; font-weight: 700;">الإيرادات المالية مقفلة</span>' : ''}
           </div>
-        ` : `
-          <div class="card" style="margin: 0; background: #f8fafc; border: 1px dashed var(--centrly-line); display: flex; align-items: center; justify-content: center; text-align: center; padding: 2rem 1rem;">
-            <div>
-              <div style="color: var(--centrly-blue-700); margin-bottom: 0.5rem;">
-                ${getIcon('activity', 32)}
-              </div>
-              <div style="font-weight: 700; color: var(--centrly-ink); font-size: 0.95rem;">الإيرادات المالية مقفلة</div>
-              <p style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem;">
-                حساب المساعد مخصص لرصد الحضور والواجب فقط، البيانات المالية تقتصر على المعلم والمالك.
-              </p>
-            </div>
-          </div>
-        `}
+        </div>
 
       </div>
 
@@ -330,6 +317,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 <th>اسم الطالب</th>
                 <th>الحالة</th>
                 <th>تعديل الواجب لايف</th>
+                <th>درجة الكويز</th>
                 <th>الملاحظات</th>
                 <th>وقت الرصد</th>
                 <th>حالة إشعار الواتساب</th>
@@ -364,22 +352,44 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                       <option value="missing" ${a.homework === 'missing' ? 'selected' : ''}>لم يُسلم</option>
                     </select>
                   </td>
+                  <td>
+                    <div style="display: inline-flex; align-items: center; gap: 0.3rem;">
+                      <input 
+                        type="number" 
+                        min="0" 
+                        max="100" 
+                        step="0.5" 
+                        class="form-input" 
+                        placeholder="—"
+                        value="${a.quiz_score !== undefined && a.quiz_score !== null && a.quiz_score !== '' ? escapeHtml(a.quiz_score) : ''}"
+                        style="width: 70px; padding: 0.2rem 0.4rem; text-align: center; font-family: monospace; font-size: 0.85rem; font-weight: 700; border-radius: 6px;"
+                        onchange="window.centrlyApp.updateAttendanceQuizScore('${escapeHtml(a.id || a.student_id)}', this.value)"
+                      >
+                      ${(a.quiz_score === undefined || a.quiz_score === null || a.quiz_score === '') ? '<span class="badge badge-secondary" style="font-size: 0.7rem;">لم يُصحح بعد</span>' : ''}
+                    </div>
+                  </td>
                   <td style="color: var(--centrly-text); font-size: 0.85rem;">
                     ${a.comment ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; color: var(--centrly-ink);">${escapeHtml(a.comment)}</span>` : '<span style="color: #94a3b8;">لا توجد</span>'}
                   </td>
                   <td style="font-size: 0.8rem; color: var(--centrly-text); font-family: monospace;">${escapeHtml(a.time || '—')}</td>
                   <td>${deliveryBadge}</td>
                   <td>
-                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openStudentNoteModal('${escapeHtml(a.student_id || a.code)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}', '${escapeHtml(a.comment || '').replace(/'/g, "\\'")}')" style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; padding: 0.25rem 0.6rem;">
-                      ${getIcon('note', 12)}
-                      <span>${a.comment ? 'تعديل' : 'ملاحظة'}</span>
-                    </button>
+                    <div style="display: flex; gap: 0.35rem; align-items: center;">
+                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openStudentNoteModal('${escapeHtml(a.student_id || a.code)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}', '${escapeHtml(a.comment || '').replace(/'/g, "\\'")}')" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem;" title="ملاحظة">
+                        ${getIcon('note', 12)}
+                        <span>${a.comment ? 'تعديل' : 'ملاحظة'}</span>
+                      </button>
+                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${escapeHtml(a.student_id || a.id)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}')" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem; color: #15803d;" title="إرسال إشعار فوري لولي الأمر عبر واتساب">
+                        ${getIcon('whatsapp', 14, '#15803d')}
+                        <span>إرسال</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
                 `;
               }).join('') : `
                 <tr>
-                  <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                  <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
                     لم يتم تسجيل أي حضور حتى الآن. استخدم نموذج المسح أعلاه لبدء رصد الحضور.
                   </td>
                 </tr>

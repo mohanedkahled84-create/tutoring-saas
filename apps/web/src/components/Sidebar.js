@@ -6,26 +6,31 @@ export function renderSidebar(currentRoute = 'sessions', user = {}) {
   // Dedicated Center Navigation
   const centerRoutes = [
     { id: 'center-dashboard', title: 'لوحة السنتر والإيرادات', icon: 'center' },
-    { id: 'groups', title: 'مجاميع السنتر والقاعات', icon: 'groups' },
+    { id: 'center-sessions', title: 'الحصص والقاعات الجارية', icon: 'sessions' },
+    { id: 'center-teachers', title: 'المدرسين', icon: 'students' },
+    { id: 'center-assistants', title: 'المساعدين', icon: 'assistants' },
+    { id: 'center-rooms', title: 'القاعات', icon: 'center' },
+    { id: 'groups', title: 'مجاميع السنتر', icon: 'groups' },
     { id: 'calendar', title: 'جدول السنتر الشامل', icon: 'calendar' },
     { id: 'students', title: 'دليل الطلاب والتسجيل', icon: 'students' },
     { id: 'student-cards', title: 'طلب كروت طلاب السنتر', icon: 'cards' },
-    { id: 'whatsapp', title: 'واتساب السنتر العام', icon: 'whatsapp' },
+    { id: 'whatsapp', title: 'الواتساب', icon: 'whatsapp' },
     { id: 'billing', title: 'الاشتراك والباقات', icon: 'billing' },
-    { id: 'activity-logs', title: 'سجل الخزينة والعمليات', icon: 'activity' },
+    { id: 'activity-logs', title: 'تسويات المدرسين والماليات', icon: 'billing' },
   ];
 
   // Dedicated Teacher Navigation
   const teacherRoutes = [
     { id: 'dashboard', title: 'لوحة المعلم والأرباح', icon: 'dashboard' },
     { id: 'sessions', title: 'بدء حصة ورصد الحضور', icon: 'sessions' },
+    { id: 'quizzes', title: 'الكويزات والامتحانات', icon: 'reports' },
     { id: 'groups', title: 'مجاميعي الدراسية', icon: 'groups' },
     { id: 'students', title: 'دليل طلابي', icon: 'students' },
     { id: 'calendar', title: 'جدول الحصص والتقويم', icon: 'calendar' },
     { id: 'student-cards', title: 'طلب كروت الطلاب', icon: 'cards' },
     { id: 'reports', title: 'الدرجات ولوحة الشرف', icon: 'reports' },
     { id: 'risk-watchlist', title: 'مؤشرات الخطر والإنذارات', icon: 'risk' },
-    { id: 'whatsapp', title: 'واتساب المعلم المخصص', icon: 'whatsapp' },
+    { id: 'whatsapp', title: 'الواتساب', icon: 'whatsapp' },
     { id: 'billing', title: 'الاشتراك والباقات', icon: 'billing' },
     { id: 'activity-logs', title: 'سجل النشاطات والأمان', icon: 'activity' },
   ];
