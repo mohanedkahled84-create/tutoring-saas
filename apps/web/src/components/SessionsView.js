@@ -351,7 +351,9 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
             <tbody>
               ${attendanceList.length > 0 ? attendanceList.map(a => {
                 let deliveryBadge = '<span class="badge badge-secondary">في الانتظار</span>';
-                if (a.deliveryStatus === 'delivered' || a.sent) {
+                if (a.is_makeup) {
+                  deliveryBadge = '<span class="badge badge-secondary" style="font-size: 0.72rem; color: #64748b;" title="حصة تعويضية - لا يتم إرسال إشعار لولي الأمر">معفى (تعويضي)</span>';
+                } else if (a.deliveryStatus === 'delivered' || a.sent) {
                   deliveryBadge = '<span class="badge badge-success" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + getIcon('check', 12) + '<span>تم التسليم</span></span>';
                 } else if (a.deliveryStatus === 'sending') {
                   deliveryBadge = '<span class="badge badge-warning" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + getIcon('clock', 12) + '<span>قيد الإرسال</span></span>';
@@ -362,7 +364,10 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 return `
                 <tr>
                   <td style="font-family: monospace; font-weight: 700;">${escapeHtml(a.code)}</td>
-                  <td style="font-weight: 700;">${escapeHtml(a.name)}</td>
+                  <td style="font-weight: 700;">
+                    ${escapeHtml(a.name)}
+                    ${a.is_makeup ? '<span class="badge badge-warning" style="font-size: 0.65rem; margin-right: 0.35rem;">تعويضي</span>' : ''}
+                  </td>
                   <td>
                     <span class="badge ${a.attended ? 'badge-success' : 'badge-danger'}">
                       ${a.attended ? 'حاضر' : 'غائب'}
@@ -393,7 +398,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                     </div>
                   </td>
                   <td style="color: var(--centrly-text); font-size: 0.85rem;">
-                    ${a.comment ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; color: var(--centrly-ink);">${escapeHtml(a.comment)}</span>` : '<span style="color: #94a3b8;">لا توجد</span>'}
+                    ${(a.comment && a.comment !== 'حصة تعويضية') ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; color: var(--centrly-ink);">${escapeHtml(a.comment)}</span>` : '<span style="color: #94a3b8;">لا توجد</span>'}
                   </td>
                   <td style="font-size: 0.8rem; color: var(--centrly-text); font-family: monospace;">${escapeHtml(a.time || '—')}</td>
                   <td>${deliveryBadge}</td>

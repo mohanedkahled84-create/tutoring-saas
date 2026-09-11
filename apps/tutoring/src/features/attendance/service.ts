@@ -24,12 +24,16 @@ import {
  */
 export function evaluateNotificationDecision(
   attended: boolean,
-  comment?: string | null
+  comment?: string | null,
+  is_makeup?: boolean
 ): NotificationDecisionType {
+  if (is_makeup) {
+    return "none";
+  }
   if (!attended) {
     return "attendance_absent";
   }
-  if (comment && comment.trim().length > 0) {
+  if (comment && comment.trim().length > 0 && comment.trim() !== "حصة تعويضية") {
     return "attendance_present_comment";
   }
   return "none";
@@ -357,7 +361,7 @@ export class AttendanceService {
     tenantId: string,
     sessionId: string,
     whatsAppDispatcher: IWhatsAppBatchDispatcher,
-    options?: { pacingDelayMs?: number; dailyCap?: number }
+    options?: { pacingDelayMs?: number; dailyCap?: number; teacher_id?: string | null }
   ): Promise<DispatchSessionMessagesResult> {
     const attendanceRecords = await this.repository.getAttendanceWithStudentsForSession(sessionId);
 
@@ -372,6 +376,7 @@ export class AttendanceService {
       comment?: string | null;
       idempotency_key: string;
       decision: string;
+      teacher_id?: string | null;
     }> = [];
 
     const preFilteredResults: DispatchSessionMessagesResult["results"] = [];
@@ -380,7 +385,21 @@ export class AttendanceService {
       const student = record.students;
       const studentName = student?.name || "طالب";
       const parentPhone = student?.parent_phone || "";
-      const decision = evaluateNotificationDecision(record.attended, record.comment);
+      const isMakeup = Boolean(record.is_makeup || record.comment === "حصة تعويضية");
+
+      if (isMakeup) {
+        preFilteredResults.push({
+          student_id: record.student_id,
+          student_name: studentName,
+          phone: parentPhone,
+          decision: "none",
+          status: "skipped",
+          reason: "Makeup session student (automated parent notification suppressed)",
+        });
+        continue;
+      }
+
+      const decision = evaluateNotificationDecision(record.attended, record.comment, isMakeup);
 
       if (decision === "none") {
         preFilteredResults.push({
@@ -428,6 +447,7 @@ export class AttendanceService {
         comment: record.comment,
         idempotency_key: record.idempotency_key,
         decision,
+        teacher_id: options?.teacher_id || null,
       });
     }
 

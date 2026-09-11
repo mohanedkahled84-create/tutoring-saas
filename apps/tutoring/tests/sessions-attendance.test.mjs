@@ -154,6 +154,11 @@ test("DEV-64: evaluateNotificationDecision classifies correctly", () => {
   assert.equal(evaluateNotificationDecision(true, "ممتاز اليوم"), "attendance_present_comment");
   assert.equal(evaluateNotificationDecision(true, ""), "none");
   assert.equal(evaluateNotificationDecision(true, null), "none");
+  // Makeup session tests
+  assert.equal(evaluateNotificationDecision(true, null, true), "none");
+  assert.equal(evaluateNotificationDecision(true, "حصة تعويضية", false), "none");
+  assert.equal(evaluateNotificationDecision(true, "حصة تعويضية", true), "none");
+  assert.equal(evaluateNotificationDecision(false, null, true), "none");
 });
 
 test("DEV-64: SessionsService.calculateFinancialSummary computes revenue, exemptions, and overrides", () => {

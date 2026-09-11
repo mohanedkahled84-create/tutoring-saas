@@ -724,17 +724,32 @@ class CentrlyApp {
 
           let totalMonthlyRev = 0;
           let totalTeacherProfit = 0;
-          groups.forEach(g => {
-            const grpStudents = students.filter(s => s.group_id === g.id);
-            const count = grpStudents.length || Number(g.student_count) || 0;
-            const price = Number(g.price) || 0;
-            const monthlyGross = count * price * (g.billing_model === 'per_session' ? 4 : 1);
-            totalMonthlyRev += monthlyGross;
-            if (g.billing_model === 'fixed_rent') {
-              totalTeacherProfit += Math.max(0, monthlyGross - (Number(g.fixed_rent_amount) || 0));
-            } else {
-              totalTeacherProfit += Math.round(monthlyGross * 0.8);
+          const mappedGroups = groups.map(g => {
+            const count = Number(g.students_count) || Number(g.student_count) || students.filter(s => s.group_id === g.id || (Array.isArray(s.group_ids) && s.group_ids.includes(g.id))).length;
+            const price = Number(g.price || g.session_price) || 0;
+            const monthlyGross = price * count * 4;
+            let netProfit = Math.round(monthlyGross * 0.8);
+
+            if (g.billing_model === 'fixed_per_student') {
+              const cut = Number(g.fixed_per_student_amount) || 0;
+              netProfit = Math.max(0, (price - cut) * count * 4);
+            } else if (g.billing_model === 'fixed_rent') {
+              const rent = Number(g.fixed_rent_amount) || 0;
+              netProfit = Math.max(0, monthlyGross - (rent * 4));
+            } else if (g.center_cut_percentage) {
+              netProfit = Math.round(monthlyGross * ((100 - Number(g.center_cut_percentage)) / 100));
             }
+
+            totalMonthlyRev += monthlyGross;
+            totalTeacherProfit += netProfit;
+
+            return {
+              ...g,
+              student_count: count,
+              students_count: count,
+              monthly_rev: monthlyGross,
+              net_profit: netProfit,
+            };
           });
 
           // Pure real data - zero arbitrary mock numbers or fake constants
@@ -754,10 +769,7 @@ class CentrlyApp {
               teacherProfit: totalTeacherProfit,
               pendingMessages: 0,
             },
-            groups: groups.map(g => ({
-              ...g,
-              student_count: students.filter(s => s.group_id === g.id).length
-            })),
+            groups: mappedGroups,
             atRiskStudents: atRisk,
             topPerformers: leaderboard,
           };
@@ -1170,7 +1182,7 @@ class CentrlyApp {
         attended: true,
         homework,
         quiz_score: null,
-        comment: isMakeup ? 'حصة تعويضية' : null,
+        comment: null,
         time: timeStr,
         sent: false,
         is_makeup: isMakeup,
@@ -3099,7 +3111,7 @@ class CentrlyApp {
       return;
     }
     const eligibleStudents = this.sessionState.attendanceList.filter(
-      a => !a.attended || a.comment || a.homework === 'missing' || a.homework === 'partial'
+      a => !a.is_makeup && (!a.attended || (a.comment && a.comment !== 'حصة تعويضية') || a.homework === 'missing' || a.homework === 'partial')
     );
     const countEligible = eligibleStudents.length;
     if (countEligible === 0) {
@@ -3117,7 +3129,7 @@ class CentrlyApp {
         try {
           const res = await request(`/sessions/${this.sessionState.id}/send-messages`, { method: 'POST' }).catch(() => null);
           this.sessionState.attendanceList.forEach(a => {
-            if (!a.attended || a.comment || a.homework === 'missing' || a.homework === 'partial') {
+            if (!a.is_makeup && (!a.attended || (a.comment && a.comment !== 'حصة تعويضية') || a.homework === 'missing' || a.homework === 'partial')) {
               a.sent = true;
               a.deliveryStatus = 'delivered';
             }

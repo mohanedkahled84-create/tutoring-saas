@@ -77,8 +77,9 @@ export interface IWhatsAppBatchDispatcher {
       attended: boolean;
       comment?: string | null;
       idempotency_key: string;
+      teacher_id?: string | null;
     }>,
-    options?: { pacingDelayMs?: number; dailyCap?: number }
+    options?: { pacingDelayMs?: number; dailyCap?: number; teacher_id?: string | null }
   ): Promise<{
     sent_count: number;
     results: Array<{

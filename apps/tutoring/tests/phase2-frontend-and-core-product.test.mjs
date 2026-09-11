@@ -158,11 +158,11 @@ test("DEV-16: SessionsView automatically resets homework selector after every sc
   assert.ok(content.includes("hwNoneRadio.checked = true") || content.includes("hwDoneRadio.checked = true"));
 });
 
-test("DEV-16: TeacherDashboard includes both At-Risk Warnings and Top Performers", () => {
+test("DEV-16: TeacherDashboard excludes At-Risk and Top Performers per user request", () => {
   const dashboardPath = path.resolve(process.cwd(), "../../apps/web/src/components/TeacherDashboard.js");
   const content = fs.readFileSync(dashboardPath, "utf8");
 
-  assert.ok(content.includes("At-Risk Watchlist"));
-  assert.ok(content.includes("Top Performers"));
-  assert.ok(content.includes("المتفوقين"));
+  assert.ok(!content.includes("At-Risk Watchlist"));
+  assert.ok(!content.includes("Top Performers"));
+  assert.ok(!content.includes("المتفوقين"));
 });

@@ -2,9 +2,9 @@ import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 
 /**
- * Centrly Teacher Dashboard (DEV-89)
+ * Centrly Teacher Dashboard
  * Clean vector icons, dynamic teacher greeting, 3 billing models display,
- * KPI Rollup + At-Risk Watchlist + Top Performers
+ * KPI Rollup & Active Groups Breakdown
  */
 
 export function renderTeacherDashboard(data = {}, user = {}) {
@@ -18,38 +18,50 @@ export function renderTeacherDashboard(data = {}, user = {}) {
   };
 
   const groups = data.groups || [];
-  const atRiskStudents = data.atRiskStudents || [];
-  const topPerformers = data.topPerformers || [];
   const displayName = data.userName || user?.name || 'المعلم';
 
-  // Calculate total monthly revenue and net teacher profit directly from groups to guarantee consistency with the breakdown table below
+  // Calculate total monthly revenue and net teacher profit directly from groups
+  // to guarantee 100% consistency between the KPI cards and the breakdown table
   let calculatedMonthlyRev = 0;
   let calculatedTeacherProfit = 0;
   let totalEnrolledStudents = 0;
 
-  groups.forEach(g => {
-    const studentCount = g.students_count || (stats.totalStudents > 0 ? Math.ceil(stats.totalStudents / Math.max(1, groups.length)) : (g.student_count || 2));
+  const processedGroups = groups.map(g => {
+    const studentCount = Number(g.student_count) || Number(g.students_count) || (stats.totalStudents > 0 ? Math.ceil(stats.totalStudents / Math.max(1, groups.length)) : 0);
     totalEnrolledStudents += studentCount;
     const price = Number(g.price || g.session_price) || 120;
     const monthlyRev = price * studentCount * 4;
     let netProfit = Math.round(monthlyRev * 0.8);
+    let billingModelName = 'نسبة سنتر (20%)';
 
     if (g.billing_model === 'fixed_per_student') {
       const cut = Number(g.fixed_per_student_amount) || 20;
       netProfit = Math.max(0, (price - cut) * studentCount * 4);
+      billingModelName = `أجر ثابت (${cut} ج.م/طالب)`;
     } else if (g.billing_model === 'fixed_rent') {
       const rent = Number(g.fixed_rent_amount) || 250;
       netProfit = Math.max(0, monthlyRev - (rent * 4));
+      billingModelName = `إيجار قاعة (${rent} ج.م/حصة)`;
     } else if (g.center_cut_percentage) {
-      netProfit = Math.round(monthlyRev * ((100 - g.center_cut_percentage) / 100));
+      billingModelName = `نسبة سنتر (${g.center_cut_percentage}%)`;
+      netProfit = Math.round(monthlyRev * ((100 - Number(g.center_cut_percentage)) / 100));
     }
 
     calculatedMonthlyRev += monthlyRev;
     calculatedTeacherProfit += netProfit;
+
+    return {
+      ...g,
+      studentCount,
+      price,
+      monthlyRev,
+      netProfit,
+      billingModelName,
+    };
   });
 
-  const finalMonthlyRevenue = (Number(stats.monthlyRevenue) > 0) ? Number(stats.monthlyRevenue) : calculatedMonthlyRev;
-  const finalTeacherProfit = (Number(stats.teacherProfit) > 0) ? Number(stats.teacherProfit) : calculatedTeacherProfit;
+  const finalMonthlyRevenue = calculatedMonthlyRev;
+  const finalTeacherProfit = calculatedTeacherProfit;
   const finalTotalStudents = (Number(stats.totalStudents) > 0) ? stats.totalStudents : totalEnrolledStudents;
 
   return `
@@ -62,7 +74,7 @@ export function renderTeacherDashboard(data = {}, user = {}) {
             <div style="font-size: 0.85rem; color: #93c5fd; font-weight: 700; margin-bottom: 0.25rem;">لوحة المتابعة والأرباح العامة للمدرس</div>
             <h2 style="font-size: 1.5rem; font-weight: 900; margin: 0; color: #fff;">مرحباً بك، ${escapeHtml(displayName)}</h2>
             <p style="font-size: 0.875rem; color: #e2e8f0; margin-top: 0.35rem; max-width: 600px; line-height: 1.5;">
-              إليك ملخص أرباحك الصافية، تفاصيل تحصيل المجاميع، ولوحة شرف المتفوقين ومؤشرات المتابعة.
+              إليك ملخص أرباحك الصافية، تفاصيل تحصيل المجاميع، وجدول الحصص اليومية.
             </p>
           </div>
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
@@ -165,44 +177,23 @@ export function renderTeacherDashboard(data = {}, user = {}) {
               </tr>
             </thead>
             <tbody>
-              ${groups.length > 0 ? groups.map(g => {
-                const studentCount = g.students_count || (stats.totalStudents > 0 ? Math.ceil(stats.totalStudents / Math.max(1, groups.length)) : 3);
-                const price = Number(g.price || g.session_price) || 120;
-                const monthlyRev = price * studentCount * 4;
-                let netProfit = Math.round(monthlyRev * 0.8);
-                let billingModelName = 'نسبة سنتر (20%)';
-
-                if (g.billing_model === 'fixed_per_student') {
-                  const cut = Number(g.fixed_per_student_amount) || 20;
-                  netProfit = Math.max(0, (price - cut) * studentCount * 4);
-                  billingModelName = `أجر ثابت (${cut} ج.م/طالب)`;
-                } else if (g.billing_model === 'fixed_rent') {
-                  const rent = Number(g.fixed_rent_amount) || 250;
-                  netProfit = Math.max(0, monthlyRev - (rent * 4));
-                  billingModelName = `إيجار قاعة (${rent} ج.م/حصة)`;
-                } else if (g.center_cut_percentage) {
-                  billingModelName = `نسبة سنتر (${g.center_cut_percentage}%)`;
-                  netProfit = Math.round(monthlyRev * ((100 - g.center_cut_percentage) / 100));
-                }
-
-                return `
-                  <tr>
-                    <td style="font-weight: 700; color: var(--centrly-ink); font-size: 0.95rem;">${escapeHtml(g.name)}</td>
-                    <td><span class="badge badge-blue">${escapeHtml(g.center_name || 'سنتر تعليمي')}</span></td>
-                    <td style="font-weight: 700; font-family: monospace;">${escapeHtml(price)} ج.م</td>
-                    <td style="font-size: 0.825rem; color: var(--centrly-text);">
-                      ${escapeHtml(billingModelName)}
-                    </td>
-                    <td style="font-weight: 700;">${escapeHtml(studentCount)} طلاب</td>
-                    <td style="font-weight: 800; color: var(--centrly-success); font-family: monospace;">
-                      ${monthlyRev.toLocaleString('ar-EG')} ج.م
-                    </td>
-                    <td style="font-weight: 800; color: var(--centrly-blue-800); font-family: monospace;">
-                      ${netProfit.toLocaleString('ar-EG')} ج.م
-                    </td>
-                  </tr>
-                `;
-              }).join('') : `
+              ${processedGroups.length > 0 ? processedGroups.map(g => `
+                <tr>
+                  <td style="font-weight: 700; color: var(--centrly-ink); font-size: 0.95rem;">${escapeHtml(g.name)}</td>
+                  <td><span class="badge badge-blue">${escapeHtml(g.center_name || 'سنتر تعليمي')}</span></td>
+                  <td style="font-weight: 700; font-family: monospace;">${escapeHtml(g.price)} ج.م</td>
+                  <td style="font-size: 0.825rem; color: var(--centrly-text);">
+                    ${escapeHtml(g.billingModelName)}
+                  </td>
+                  <td style="font-weight: 700;">${escapeHtml(g.studentCount)} طلاب</td>
+                  <td style="font-weight: 800; color: var(--centrly-success); font-family: monospace;">
+                    ${g.monthlyRev.toLocaleString('ar-EG')} ج.م
+                  </td>
+                  <td style="font-weight: 800; color: var(--centrly-blue-800); font-family: monospace;">
+                    ${g.netProfit.toLocaleString('ar-EG')} ج.م
+                  </td>
+                </tr>
+              `).join('') : `
                 <tr>
                   <td colspan="7" style="text-align: center; padding: 2rem; color: var(--centrly-text);">
                     لا توجد مجاميع نشطة بعد. أنشئ مجموعتك الأولى للبدء في تتبع الأرباح.
@@ -212,89 +203,6 @@ export function renderTeacherDashboard(data = {}, user = {}) {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <!-- Two Column: Top Performers & Follow-up Alerts -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
-        
-        <!-- Top Performers -->
-        <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-success);">
-          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <span style="color: #f59e0b;">${getIcon('reports', 20)}</span>
-              <h3 class="card-title" style="font-size: 1rem; color: var(--centrly-ink);">
-                لوحة الشرف والمتفوقين (Top Performers)
-              </h3>
-            </div>
-            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('reports')">
-              عرض الكل
-            </button>
-          </div>
-          <p style="font-size: 0.8rem; color: var(--centrly-text); margin-bottom: 0.75rem;">
-            الطلاب أصحاب أعلى درجات في الاختبارات والالتزام بالحضور:
-          </p>
-
-          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-            ${topPerformers.length > 0 ? topPerformers.map((s, idx) => `
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: var(--centrly-surface); border-radius: var(--radius-md); border-right: 3px solid var(--centrly-success);">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                  <span style="font-weight: 900; font-size: 1rem; color: ${idx === 0 ? '#d97706' : 'var(--centrly-blue-700)'};">#${idx + 1}</span>
-                  <div>
-                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${escapeHtml(s.student_name || s.name)}</div>
-                    <div style="font-size: 0.75rem; color: var(--centrly-text);">${escapeHtml(s.group_name || s.group || 'مجموعة الفيزياء')} • كود: ${escapeHtml(s.student_code || s.code || '—')}</div>
-                  </div>
-                </div>
-                <div>
-                  <span class="badge badge-success" style="font-weight: 800; font-size: 0.8rem;">
-                    ${escapeHtml(s.overall_score || s.score || 100)}%
-                  </span>
-                </div>
-              </div>
-            `).join('') : `
-              <div style="font-size: 0.825rem; color: var(--centrly-text); padding: 1.5rem; text-align: center;">
-                لا توجد بيانات متفوقين بعد
-              </div>
-            `}
-          </div>
-        </div>
-
-        <!-- Follow-up & At-Risk Watchlist -->
-        <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-danger);">
-          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <span style="color: var(--centrly-danger);">${getIcon('risk', 20)}</span>
-              <h3 class="card-title" style="font-size: 1rem; color: var(--centrly-danger);">
-                مؤشرات الخطر والمتابعة (At-Risk)
-              </h3>
-            </div>
-            <span class="badge badge-danger">${escapeHtml(atRiskStudents.length)} طلاب</span>
-          </div>
-          <p style="font-size: 0.8rem; color: var(--centrly-text); margin-bottom: 0.75rem;">
-            الطلاب الذين يحتاجون متابعة بسبب تكرار الغياب أو إهمال الواجب:
-          </p>
-
-          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-            ${atRiskStudents.length > 0 ? atRiskStudents.map(s => `
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: var(--centrly-surface); border-radius: var(--radius-md); border-right: 3px solid var(--centrly-danger);">
-                <div>
-                  <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${escapeHtml(s.name || s.student_name)}</div>
-                  <div style="font-size: 0.75rem; color: var(--centrly-text);">${escapeHtml(s.group || s.group_name || 'مجموعة عامة')}</div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <span class="badge badge-danger" style="font-size: 0.75rem;">${escapeHtml(s.reason || 'تكرار غياب')}</span>
-                  <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('whatsapp')" title="إرسال تنبيه عبر واتساب" style="display: flex; align-items: center; gap: 0.25rem;">
-                    ${getIcon('whatsapp', 14)}
-                  </button>
-                </div>
-              </div>
-            `).join('') : `
-              <div style="font-size: 0.825rem; color: var(--centrly-text); padding: 1.5rem; text-align: center;">
-                لا توجد مؤشرات خطر حالياً
-              </div>
-            `}
-          </div>
-        </div>
-
       </div>
 
     </div>

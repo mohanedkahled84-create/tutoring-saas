@@ -457,10 +457,12 @@ export class WhatsAppNotificationsService {
       attended: boolean;
       comment?: string | null;
       idempotency_key: string;
+      teacher_id?: string | null;
     }>,
     options?: {
       pacingDelayMs?: number;
       dailyCap?: number;
+      teacher_id?: string | null;
     }
   ): Promise<{
     total: number;
@@ -546,6 +548,7 @@ export class WhatsAppNotificationsService {
           comment: item.comment || null,
           parent_phone: item.parent_phone,
           idempotency_key: item.idempotency_key,
+          teacher_id: item.teacher_id || options?.teacher_id || null,
         });
 
         if (delivered) {

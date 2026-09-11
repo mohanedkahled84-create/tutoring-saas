@@ -203,6 +203,7 @@ test("DEV-13: dispatchSessionMessages sends ONLY eligible candidates (absent + p
       { id: "s2", tenant_id: "t1", name: "Mona", parent_phone: "+201022222222" },
       { id: "s3", tenant_id: "t1", name: "Ali", parent_phone: "+201033333333" },
       { id: "s4", tenant_id: "t1", name: "Sara", parent_phone: "+201044444444" },
+      { id: "s5", tenant_id: "t1", name: "Omar", parent_phone: "+201055555555" },
     ],
     attendance: [
       // 1. Absent -> ELIGIBLE
@@ -213,6 +214,8 @@ test("DEV-13: dispatchSessionMessages sends ONLY eligible candidates (absent + p
       { id: "att-3", tenant_id: "t1", session_id: "sess-1", student_id: "s3", attended: true, comment: null, sent: false, idempotency_key: "t1:s3:sess-1" },
       // 4. Absent but ALREADY SENT -> SKIPPED (idempotent)
       { id: "att-4", tenant_id: "t1", session_id: "sess-1", student_id: "s4", attended: false, sent: true, idempotency_key: "t1:s4:sess-1" },
+      // 5. Makeup session -> SKIPPED (suppressed for makeup sessions)
+      { id: "att-5", tenant_id: "t1", session_id: "sess-1", student_id: "s5", attended: true, is_makeup: true, comment: "حصة تعويضية", sent: false, idempotency_key: "t1:s5:sess-1" },
     ],
   });
 
@@ -222,23 +225,26 @@ test("DEV-13: dispatchSessionMessages sends ONLY eligible candidates (absent + p
 
   const result = await attendanceService.dispatchSessionMessages("t1", "sess-1", whatsAppService, {
     pacingDelayMs: 0,
+    teacher_id: "teach-123",
   });
 
-  assert.equal(result.total_students, 4);
+  assert.equal(result.total_students, 5);
   assert.equal(result.eligible_count, 2); // Only s1 and s2
   assert.equal(result.dispatched_count, 2);
-  assert.equal(result.skipped_count, 2); // s3 (no comment) and s4 (already sent)
+  assert.equal(result.skipped_count, 3); // s3 (no comment), s4 (already sent), s5 (makeup session)
 
   // Check that records in repository were updated to sent: true
   const s1Att = fakeAttendanceRepo.attendance.find((a) => a.id === "att-1");
   const s2Att = fakeAttendanceRepo.attendance.find((a) => a.id === "att-2");
   const s3Att = fakeAttendanceRepo.attendance.find((a) => a.id === "att-3");
+  const s5Att = fakeAttendanceRepo.attendance.find((a) => a.id === "att-5");
 
   assert.equal(s1Att.sent, true);
   assert.equal(s1Att.wa_status, "sent");
   assert.equal(s2Att.sent, true);
   assert.equal(s2Att.wa_status, "sent");
   assert.equal(s3Att.sent, false); // untouched
+  assert.equal(s5Att.sent, false); // untouched (makeup session)
 });
 
 test("DEV-13 (DEV-ATN.3): resendStudentMessage allows manual resend for single student", async () => {

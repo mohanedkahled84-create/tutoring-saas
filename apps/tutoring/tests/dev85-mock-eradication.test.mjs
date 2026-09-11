@@ -50,8 +50,8 @@ test('DEV-85: TeacherDashboard zero-defaults when no stats or data provided', as
   const { renderTeacherDashboard } = await import('../../../apps/web/src/components/TeacherDashboard.js');
   const html = renderTeacherDashboard({});
   assert.ok(html.includes('0 <span style="font-size: 0.85rem; font-weight: 500;">طالب</span>'));
-  assert.ok(html.includes('لا توجد مؤشرات خطر حالياً'));
-  assert.ok(html.includes('لا توجد بيانات متفوقين بعد'));
+  assert.ok(!html.includes('At-Risk'));
+  assert.ok(!html.includes('Top Performers'));
   assert.ok(!html.includes('142'));
   assert.ok(!html.includes('كريم أحمد'));
 });
