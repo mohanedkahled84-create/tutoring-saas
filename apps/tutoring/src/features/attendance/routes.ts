@@ -171,12 +171,13 @@ attendanceRouter.post(
       const whatsAppService = services.whatsapp;
 
       const teacherId = req.user?.teacher_id || req.user?.id;
+      const { include_all_present = true } = req.body || {};
 
       const result = await attendanceService.dispatchSessionMessages(
         tenantId || "",
         sessionId,
         whatsAppService,
-        { teacher_id: teacherId }
+        { teacher_id: teacherId, include_all_present }
       );
 
       res.status(200).json(result);

@@ -242,21 +242,23 @@ export class WhatsAppNotificationsService {
       const primaryInstance = buildInstanceName(payload.tenant_id, teacherId);
       const fallbackInstance = buildInstanceName(payload.tenant_id, "default");
 
-      let text = "";
-      if (payload.attended) {
-        text = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب/ة (${payload.student_name || "الطالب"}).\nنفيدكم بحضور الطالب اليوم لحصة المادة بنجاح.\n`;
-        if (payload.comment && payload.comment.trim()) {
-          text += `ملاحظة المعلم: ${payload.comment.trim()}`;
-        }
-      } else {
-        text = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب/ة (${payload.student_name || "الطالب"}).\nنود إحاطة سيادتكم بغياب الطالب/ة عن حضور حصة اليوم.\nيرجى المتابعة والاطمئنان حرصاً على مستواه الدراسي.`;
-      }
+      const text = generateAttendanceMessage({
+        student_name: payload.student_name || "الطالب",
+        attended: payload.attended,
+        comment: payload.comment,
+        homework_status: payload.homework_status,
+      });
 
       try {
         let gwRes = await this.gateway.sendTextMessage(primaryInstance, payload.parent_phone, text);
         if (!gwRes.success && primaryInstance !== fallbackInstance) {
           logger.info(`[WhatsAppService] Retrying sendTextMessage with fallback instance ${fallbackInstance}`);
           gwRes = await this.gateway.sendTextMessage(fallbackInstance, payload.parent_phone, text);
+        }
+        const globalInstance = config.evolutionInstanceName;
+        if (!gwRes.success && globalInstance && globalInstance !== primaryInstance && globalInstance !== fallbackInstance) {
+          logger.info(`[WhatsAppService] Retrying sendTextMessage with global instance ${globalInstance}`);
+          gwRes = await this.gateway.sendTextMessage(globalInstance, payload.parent_phone, text);
         }
 
         if (gwRes.success) {
@@ -458,11 +460,14 @@ export class WhatsAppNotificationsService {
       comment?: string | null;
       idempotency_key: string;
       teacher_id?: string | null;
+      homework_status?: string | null;
     }>,
     options?: {
       pacingDelayMs?: number;
       dailyCap?: number;
       teacher_id?: string | null;
+      force_send?: boolean;
+      include_all_present?: boolean;
     }
   ): Promise<{
     total: number;
@@ -546,9 +551,11 @@ export class WhatsAppNotificationsService {
           session_id: item.session_id,
           attended: item.attended,
           comment: item.comment || null,
+          homework_status: item.homework_status || null,
           parent_phone: item.parent_phone,
           idempotency_key: item.idempotency_key,
           teacher_id: item.teacher_id || options?.teacher_id || null,
+          force_send: options?.force_send ?? true,
         });
 
         if (delivered) {
@@ -678,6 +685,11 @@ export class WhatsAppNotificationsService {
             `[WhatsAppService] Retrying sendQuizScore with fallback instance ${fallbackInstance}`
           );
           gwRes = await this.gateway.sendTextMessage(fallbackInstance, parent_phone, messageText);
+        }
+        const globalInstance = config.evolutionInstanceName;
+        if (!gwRes.success && globalInstance && globalInstance !== primaryInstance && globalInstance !== fallbackInstance) {
+          logger.info(`[WhatsAppService] Retrying sendQuizScore with global instance ${globalInstance}`);
+          gwRes = await this.gateway.sendTextMessage(globalInstance, parent_phone, messageText);
         }
 
         if (gwRes.success) {
@@ -1018,6 +1030,10 @@ export class WhatsAppNotificationsService {
           if (!gwRes.success && primaryInstance !== fallbackInstance) {
             gwRes = await this.gateway.sendTextMessage(fallbackInstance, item.phone, text);
           }
+          const globalInstance = config.evolutionInstanceName;
+          if (!gwRes.success && globalInstance && globalInstance !== primaryInstance && globalInstance !== fallbackInstance) {
+            gwRes = await this.gateway.sendTextMessage(globalInstance, item.phone, text);
+          }
           if (gwRes.success) {
             delivered = true;
             sentCount += 1;
@@ -1078,6 +1094,73 @@ export class WhatsAppNotificationsService {
       results,
     };
   }
+}
+
+export interface AttendanceMessageOptions {
+  student_name: string;
+  attended: boolean;
+  comment?: string | null;
+  homework_status?: string | null;
+  teacher_name?: string | null;
+}
+
+/**
+ * Dynamic Attendance message generator with Anti-Ban Spintax & Phrase Variations.
+ * Prevents Meta broadcast spam detection by varying greetings, presence/absence phrasing, and closings.
+ */
+export function generateAttendanceMessage(options: AttendanceMessageOptions): string {
+  const { student_name, attended, comment, homework_status, teacher_name } = options;
+
+  const greetings = [
+    `السلام عليكم ورحمة الله وبركاته، تحية طيبة لولي أمر الطالب/ة (${student_name}).`,
+    `تحية طيبة وبعد، ولي أمر الطالب/ة العزيز (${student_name}).`,
+    `أهلاً بحضرتك، ولي أمر الطالب/ة (${student_name}) الكرام.`,
+    `السلام عليكم، إفادة دورية لولي أمر الطالب/ة (${student_name}).`,
+  ];
+
+  const presentBodies = [
+    `نفيدكم بحضور الطالب اليوم لحصة المادة بنجاح والالتزام بالحضور.`,
+    `نحيط سيادتكم علماً بأن الطالب قد حضر حصة اليوم وتفاعل مع المعلم بنجاح.`,
+    `تم بحمد الله تسجيل حضور الطالب اليوم لحصة المادة ونتمنى له دوام الاستفادة والتفوق.`,
+  ];
+
+  const absentBodies = [
+    `نود إحاطة سيادتكم بغياب الطالب/ة عن حضور حصة اليوم. يرجى المتابعة والاطمئنان حرصاً على مستواه الدراسي.`,
+    `نلفت عناية حضراتكم إلى تغيب الطالب/ة عن حصة اليوم. نرجو التواصل للاطمئنان عليه وتدارك ما فاته.`,
+    `تغيب الطالب/ة عن حضور موعد حصة اليوم، وحرصاً منا على مستواه الدراسي نرجو المتابعة المستمرة.`,
+  ];
+
+  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+  let body = attended
+    ? presentBodies[Math.floor(Math.random() * presentBodies.length)]
+    : absentBodies[Math.floor(Math.random() * absentBodies.length)];
+
+  let message = `${greeting}\n${body}`;
+
+  if (homework_status === "done") {
+    message += `\nحالة الواجب: مكتمل وممتاز 👍`;
+  } else if (homework_status === "partial") {
+    message += `\nحالة الواجب: ناقص ويحتاج إلى استكمال ⚠️`;
+  } else if (homework_status === "missing") {
+    message += `\nحالة الواجب: لم يتم تسليم الواجب ❌`;
+  }
+
+  if (comment && comment.trim() && comment.trim() !== "حصة تعويضية") {
+    message += `\nملاحظة المعلم: ${comment.trim()}`;
+  }
+
+  if (teacher_name && teacher_name.trim()) {
+    message += `\nمع تحيات: مستر ${teacher_name.trim()}`;
+  } else {
+    const closings = [
+      "شاكرين حسن تعاونكم وحرصكم المستمر.",
+      "مع أطيب تمنياتنا للطالب بالتوفيق والنجاح الدائم.",
+      "شاكرين ومقدرين متابعتكم الكريمة.",
+    ];
+    message += `\n${closings[Math.floor(Math.random() * closings.length)]}`;
+  }
+
+  return message;
 }
 
 export interface QuizMessageOptions {

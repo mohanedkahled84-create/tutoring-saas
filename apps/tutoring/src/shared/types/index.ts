@@ -40,7 +40,7 @@ export interface QuizScoreInput {
   max_score: number;
 }
 
-export type NotificationDecisionType = "attendance_absent" | "attendance_present_comment" | "none";
+export type NotificationDecisionType = "attendance_absent" | "attendance_present_comment" | "attendance_present" | "none";
 
 export interface AttendanceEvaluation {
   student_id: string;

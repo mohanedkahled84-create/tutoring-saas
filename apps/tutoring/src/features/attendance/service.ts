@@ -361,7 +361,13 @@ export class AttendanceService {
     tenantId: string,
     sessionId: string,
     whatsAppDispatcher: IWhatsAppBatchDispatcher,
-    options?: { pacingDelayMs?: number; dailyCap?: number; teacher_id?: string | null }
+    options?: {
+      pacingDelayMs?: number;
+      dailyCap?: number;
+      teacher_id?: string | null;
+      force_send?: boolean;
+      include_all_present?: boolean;
+    }
   ): Promise<DispatchSessionMessagesResult> {
     const attendanceRecords = await this.repository.getAttendanceWithStudentsForSession(sessionId);
 
@@ -377,6 +383,7 @@ export class AttendanceService {
       idempotency_key: string;
       decision: string;
       teacher_id?: string | null;
+      homework_status?: string | null;
     }> = [];
 
     const preFilteredResults: DispatchSessionMessagesResult["results"] = [];
@@ -399,7 +406,11 @@ export class AttendanceService {
         continue;
       }
 
-      const decision = evaluateNotificationDecision(record.attended, record.comment, isMakeup);
+      let decision = evaluateNotificationDecision(record.attended, record.comment, isMakeup);
+
+      if (options?.include_all_present && decision === "none" && record.attended) {
+        decision = "attendance_present";
+      }
 
       if (decision === "none") {
         preFilteredResults.push({
@@ -445,6 +456,7 @@ export class AttendanceService {
         session_id: sessionId,
         attended: record.attended,
         comment: record.comment,
+        homework_status: record.homework_status || null,
         idempotency_key: record.idempotency_key,
         decision,
         teacher_id: options?.teacher_id || null,
@@ -536,6 +548,7 @@ export class AttendanceService {
       session_id: sessionId,
       attended: attRecord.attended,
       comment: attRecord.comment || null,
+      homework_status: attRecord.homework_status || null,
       parent_phone: student.parent_phone,
       idempotency_key: resendKey,
       force_send: true,

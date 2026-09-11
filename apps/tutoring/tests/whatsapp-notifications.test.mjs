@@ -11,6 +11,7 @@ import {
   validateBusinessProfile,
   WhatsAppNotificationsService,
   generateQuizScoreMessage,
+  generateAttendanceMessage,
   resetTenantDailyCount,
 } from "../dist/features/whatsapp-notifications/index.js";
 
@@ -322,4 +323,29 @@ test("DEV-NOTIF.1: batchSendCustomNotification sends alerts to students with Ant
   assert.ok(gateway.sentMessages[0].text.includes("أحمد"));
   assert.ok(gateway.sentMessages[0].text.includes("2026-09-15"));
   assert.ok(gateway.sentMessages[0].text.includes("عطل طارئ بالقاعة"));
+});
+
+test("DEV-SPIN.1: generateAttendanceMessage produces varied spintax messages for present and absent", () => {
+  // Attended student with homework and comment
+  const presentMsg = generateAttendanceMessage({
+    student_name: "عمر خالد",
+    attended: true,
+    homework_status: "done",
+    comment: "مشارك ممتاز في حل المسائل",
+    teacher_name: "محمد علي",
+  });
+
+  assert.ok(presentMsg.includes("عمر خالد"));
+  assert.ok(presentMsg.includes("مكتمل وممتاز"));
+  assert.ok(presentMsg.includes("مشارك ممتاز في حل المسائل"));
+  assert.ok(presentMsg.includes("مستر محمد علي"));
+
+  // Absent student
+  const absentMsg = generateAttendanceMessage({
+    student_name: "يوسف أحمد",
+    attended: false,
+  });
+
+  assert.ok(absentMsg.includes("يوسف أحمد"));
+  assert.ok(absentMsg.includes("غياب") || absentMsg.includes("تغيب"));
 });

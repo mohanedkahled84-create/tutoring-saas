@@ -78,8 +78,9 @@ export interface IWhatsAppBatchDispatcher {
       comment?: string | null;
       idempotency_key: string;
       teacher_id?: string | null;
+      homework_status?: string | null;
     }>,
-    options?: { pacingDelayMs?: number; dailyCap?: number; teacher_id?: string | null }
+    options?: { pacingDelayMs?: number; dailyCap?: number; teacher_id?: string | null; force_send?: boolean; include_all_present?: boolean }
   ): Promise<{
     sent_count: number;
     results: Array<{
@@ -101,6 +102,7 @@ export interface IWhatsAppBatchDispatcher {
     idempotency_key: string;
     force_send?: boolean;
     teacher_id?: string | null;
+    homework_status?: string | null;
   }): Promise<boolean>;
 }
 

@@ -82,6 +82,7 @@ export interface AttendanceWebhookPayload {
   idempotency_key: string;
   force_send?: boolean;
   teacher_id?: string | null;
+  homework_status?: string | null;
 }
 
 export interface MessageTemplate {

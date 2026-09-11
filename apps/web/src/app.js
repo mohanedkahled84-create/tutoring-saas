@@ -3169,32 +3169,36 @@ class CentrlyApp {
       this.showToast('لا توجد حصة محددة لإرسال الرسائل.', 'info');
       return;
     }
-    const eligibleStudents = this.sessionState.attendanceList.filter(
-      a => !a.is_makeup && (!a.attended || (a.comment && a.comment !== 'حصة تعويضية') || a.homework === 'missing' || a.homework === 'partial')
+    const eligibleStudents = (this.sessionState.attendanceList || []).filter(
+      a => !a.is_makeup && a.comment !== 'حصة تعويضية'
     );
     const countEligible = eligibleStudents.length;
     if (countEligible === 0) {
-      this.showToast('لا توجد رسائل للغياب أو ملاحظات أو واجب غير مكتمل لإرسالها لهذه الحصة.', 'info');
+      this.showToast('لا يوجد طلاب لإرسال إشعارات الحصة لهم.', 'info');
       return;
     }
 
     this.showConfirmModal({
-      title: 'إرسال إشعارات الواتساب لأولياء الأمور',
-      message: `سيتم إرسال ${countEligible} رسائل عبر واتساب لأولياء الأمور للغياب والملاحظات والواجب الناقص/غير المسلم. هل ترغب في المتابعة؟`,
-      confirmText: 'إرسال الإشعارات الآن',
+      title: 'إرسال إشعارات الحصة لأولياء الأمور عبر واتساب',
+      message: `سيتم إرسال (${countEligible}) رسالة لأولياء الأمور لتقارير الحضور والغياب والملاحظات والواجب مع تطبيق نظام الأمان ومكافحة الحظر (Anti-Ban) بفواصل زمنية عشوائية وصياغات متغيرة. هل ترغب في المتابعة؟`,
+      confirmText: `إرسال الإشعارات الآن (${countEligible} رسالة)`,
       cancelText: 'إلغاء',
       isDanger: false,
       onConfirm: async () => {
         try {
-          const res = await request(`/sessions/${this.sessionState.id}/send-messages`, { method: 'POST' }).catch(() => null);
+          this.showToast('جارٍ إرسال إشعارات الحصة عبر واتساب في الخلفية...', 'info');
+          const res = await request(`/sessions/${this.sessionState.id}/send-messages`, {
+            method: 'POST',
+            body: { include_all_present: true },
+          }).catch(() => null);
           this.sessionState.attendanceList.forEach(a => {
-            if (!a.is_makeup && (!a.attended || (a.comment && a.comment !== 'حصة تعويضية') || a.homework === 'missing' || a.homework === 'partial')) {
+            if (!a.is_makeup && a.comment !== 'حصة تعويضية') {
               a.sent = true;
               a.deliveryStatus = 'delivered';
             }
           });
           this.persistSessionState();
-          this.showToast(`تم إطلاق إرسال إشعارات الحصة لأولياء الأمور بنجاح!`, 'success');
+          this.showToast(`تم إرسال إشعارات الحصة بنجاح عبر منظومة الواتساب الآمنة!`, 'success');
           this.renderMainContent();
         } catch (err) {
           this.showToast(`فشل إرسال رسائل الواتساب: ${err.message || 'حدث خطأ أثناء الإرسال'}`, 'danger');

@@ -247,6 +247,49 @@ test("DEV-13: dispatchSessionMessages sends ONLY eligible candidates (absent + p
   assert.equal(s5Att.sent, false); // untouched (makeup session)
 });
 
+test("DEV-13.B: dispatchSessionMessages with include_all_present: true sends to all present students except makeup", async () => {
+  const fakeAttendanceRepo = new FakeAttendanceRepository({
+    students: [
+      { id: "s1", tenant_id: "t1", name: "Ahmed", parent_phone: "+201011111111" },
+      { id: "s2", tenant_id: "t1", name: "Mona", parent_phone: "+201022222222" },
+      { id: "s3", tenant_id: "t1", name: "Ali", parent_phone: "+201033333333" },
+      { id: "s4", tenant_id: "t1", name: "Sara", parent_phone: "+201044444444" },
+      { id: "s5", tenant_id: "t1", name: "Omar", parent_phone: "+201055555555" },
+    ],
+    attendance: [
+      // 1. Absent -> ELIGIBLE
+      { id: "att-1", tenant_id: "t1", session_id: "sess-b", student_id: "s1", attended: false, sent: false, idempotency_key: "t1:s1:sess-b" },
+      // 2. Present with comment -> ELIGIBLE
+      { id: "att-2", tenant_id: "t1", session_id: "sess-b", student_id: "s2", attended: true, comment: "انتباه ممتاز", sent: false, idempotency_key: "t1:s2:sess-b" },
+      // 3. Present WITHOUT comment -> ELIGIBLE because include_all_present: true
+      { id: "att-3", tenant_id: "t1", session_id: "sess-b", student_id: "s3", attended: true, comment: null, sent: false, idempotency_key: "t1:s3:sess-b" },
+      // 4. Absent but ALREADY SENT -> SKIPPED (idempotent)
+      { id: "att-4", tenant_id: "t1", session_id: "sess-b", student_id: "s4", attended: false, sent: true, idempotency_key: "t1:s4:sess-b" },
+      // 5. Makeup session -> SKIPPED (suppressed for makeup sessions)
+      { id: "att-5", tenant_id: "t1", session_id: "sess-b", student_id: "s5", attended: true, is_makeup: true, comment: "حصة تعويضية", sent: false, idempotency_key: "t1:s5:sess-b" },
+    ],
+  });
+
+  const fakeWaRepo = new FakeWhatsAppRepository();
+  const whatsAppService = new WhatsAppNotificationsService(fakeWaRepo);
+  const attendanceService = new AttendanceService(fakeAttendanceRepo);
+
+  const result = await attendanceService.dispatchSessionMessages("t1", "sess-b", whatsAppService, {
+    pacingDelayMs: 0,
+    teacher_id: "teach-123",
+    include_all_present: true,
+  });
+
+  assert.equal(result.total_students, 5);
+  assert.equal(result.eligible_count, 3); // s1, s2, and s3
+  assert.equal(result.dispatched_count, 3);
+  assert.equal(result.skipped_count, 2); // s4 (already sent), s5 (makeup session)
+
+  const s3Att = fakeAttendanceRepo.attendance.find((a) => a.id === "att-3");
+  assert.equal(s3Att.sent, true);
+  assert.equal(s3Att.wa_status, "sent");
+});
+
 test("DEV-13 (DEV-ATN.3): resendStudentMessage allows manual resend for single student", async () => {
   const fakeAttendanceRepo = new FakeAttendanceRepository({
     students: [
