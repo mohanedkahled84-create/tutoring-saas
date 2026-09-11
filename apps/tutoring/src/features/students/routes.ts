@@ -119,6 +119,77 @@ studentsRouter.get("/:id/parent-link", async (req: AuthenticatedRequest, res: Re
   });
 });
 
+// DEV-QUIZ.1: POST /api/students/:id/notify-score - Send quiz score via WhatsApp
+studentsRouter.post("/:id/notify-score", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  const { id: studentId } = req.params;
+  const { score, max_score, quiz_title, teacher_id, teacher_name, note, custom_message } = req.body;
+
+  if (score === undefined || score === null || score === "") {
+    res.status(400).json({ error: { code: "BAD_REQUEST", message: "score is required" } });
+    return;
+  }
+
+  try {
+    const studentsService = getServices(req).students;
+    const student = await studentsService.getStudent(studentId);
+
+    if (!student) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found" } });
+      return;
+    }
+
+    if (!student.parent_phone) {
+      res.status(400).json({
+        error: { code: "NO_PARENT_PHONE", message: "Student has no parent phone registered" },
+      });
+      return;
+    }
+
+    const whatsAppService = getServices(req).whatsapp;
+    const resolvedTeacherId =
+      teacher_id ||
+      req.user?.teacher_id ||
+      (req.user?.role === "teacher" ? req.user?.id : "default");
+
+    const result = await whatsAppService.sendQuizScore({
+      tenant_id: tenantId || student.tenant_id || "default",
+      teacher_id: resolvedTeacherId,
+      student_id: student.id,
+      student_name: student.name,
+      parent_phone: student.parent_phone,
+      quiz_title: quiz_title || "الكويز",
+      score: Number(score),
+      max_score: max_score ? Number(max_score) : 10,
+      teacher_name,
+      note,
+      custom_message,
+    });
+
+    if (!result.success) {
+      res.status(400).json({
+        success: false,
+        error: { code: "SEND_FAILED", message: result.error },
+        message_text: result.message_text,
+        parent_phone: student.parent_phone,
+        student_name: student.name,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Quiz score sent successfully",
+      student_name: student.name,
+      parent_phone: student.parent_phone,
+      message_text: result.message_text,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to send quiz score";
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+  }
+});
+
 // DELETE /api/students/:id - Delete student
 studentsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { id } = req.params;

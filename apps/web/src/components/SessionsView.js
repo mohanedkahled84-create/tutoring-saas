@@ -77,30 +77,53 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
           </div>
         ` : ''}
 
-        <!-- Clean Empty State Card with Group Quick-Starters -->
-        <div class="card" style="margin: 0; text-align: center; padding: 3rem 1.5rem;">
-          <div style="display: flex; justify-content: center; margin-bottom: 1rem; color: var(--centrly-blue-700);">
-            ${getIcon('sessions', 52)}
+        <!-- Suggested Sessions / Groups Today for Quick Start -->
+        <div class="card" style="margin: 0; border: 1px solid var(--centrly-line); background: #ffffff;">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem;">
+            <div>
+              <h3 class="card-title" style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; margin: 0; color: var(--centrly-ink);">
+                <span>${getIcon('calendar', 20, 'var(--centrly-blue-700)')}</span>
+                <span>حصص اليوم والمجموعات المقترحة للبدء الفوري</span>
+              </h3>
+              <p style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem;">
+                لم يتم تسجيل أي حضور حتى الآن. يمكنك بدء تسجيل حضور الطلاب مسبقاً قبل موعد الحصة لتسهيل وتسريع دخول الطلاب
+              </p>
+            </div>
+            <span class="badge badge-blue" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+              ${availableGroups.length} مجموعات متاحة
+            </span>
           </div>
-          <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink); margin: 0 0 0.5rem 0;">لا توجد حصة قيد التشغيل حالياً</h3>
-          <p style="font-size: 0.875rem; color: var(--centrly-text); max-width: 500px; margin: 0 auto 1.5rem auto; line-height: 1.6;">
-            لم يتم تسجيل أي حضور حتى الآن. اختر إحدى مجموعاتك الدراسية لبدء رصد الحضور الفوري بالباركود ومتابعة درجات الواجب وإشعارات الواتساب.
-          </p>
 
           ${availableGroups.length > 0 ? `
-            <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; max-width: 700px; margin: 0 auto;">
-              ${availableGroups.slice(0, 4).map(g => `
-                <button class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; padding: 0.6rem 1rem;" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}')">
-                  ${getIcon('sessions', 16, 'var(--centrly-blue-700)')}
-                  <span>بدء: ${escapeHtml(g.name)}</span>
-                </button>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
+              ${availableGroups.map(g => `
+                <div style="border: 1px solid var(--centrly-line); border-radius: 10px; padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; justify-content: space-between; gap: 0.75rem;">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                      <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--centrly-ink);">${escapeHtml(g.name)}</h4>
+                      <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 0.75rem;">${escapeHtml(g.session_time || g.schedule || 'اليوم')}</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.4rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                      <span>سعر الحصة: <b style="color: var(--centrly-ink);">${escapeHtml(g.price || 0)} ج.م</b></span>
+                      ${g.room_name || g.room ? `<span>القاعة: <b style="color: var(--centrly-blue-800);">${escapeHtml(g.room_name || g.room)}</b></span>` : ''}
+                    </div>
+                  </div>
+
+                  <button class="btn btn-primary" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 700; padding: 0.55rem;">
+                    ${getIcon('sessions', 16)}
+                    <span>بدء تسجيل الحضور الآن</span>
+                  </button>
+                </div>
               `).join('')}
             </div>
           ` : `
-            <button class="btn btn-primary" onclick="window.centrlyApp.openCreateGroupModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700;">
-              ${getIcon('add', 18)}
-              <span>إنشاء أول مجموعة لبدء الحصص</span>
-            </button>
+            <div style="text-align: center; padding: 2.5rem 1rem;">
+              <p style="font-size: 0.9rem; color: var(--centrly-text); margin-bottom: 1rem;">لا توجد مجموعات دراسية مسجلة حتى الآن.</p>
+              <button class="btn btn-primary" onclick="window.centrlyApp.openCreateGroupModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700;">
+                ${getIcon('add', 18)}
+                <span>إنشاء أول مجموعة لبدء الحصص</span>
+              </button>
+            </div>
           `}
         </div>
 
@@ -134,8 +157,8 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       
-      <!-- Top Action Bar & Session Meta -->
-      <div class="card" style="margin: 0;">
+      <!-- Session Master Status Bar -->
+      <div class="card" style="margin: 0; border-top: 4px solid ${isCancelled ? 'var(--centrly-danger)' : (isRescheduled ? 'var(--centrly-warning)' : (isSessionEnded ? 'var(--centrly-line)' : 'var(--centrly-primary)'))};">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -162,6 +185,20 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
               <button class="btn btn-secondary" onclick="window.centrlyApp.promptEndSessionFlow()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--centrly-danger); border-color: var(--centrly-danger);">
                 ${getIcon('close', 16)}
                 <span>إنهاء الحصة</span>
+              </button>
+            ` : ''}
+            ${(isRescheduled || isCancelled) ? `
+              <button class="btn btn-primary" onclick="window.centrlyApp.resumeSessionNow()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; background: var(--centrly-blue-700);">
+                ${getIcon('sessions', 16)}
+                <span>بدء تشغيل الحصة الآن</span>
+              </button>
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openEditSessionModal()" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700;">
+                ${getIcon('edit', 16)}
+                <span>تعديل الموعد والبيانات</span>
+              </button>
+              <button class="btn btn-secondary" onclick="window.centrlyApp.resetActiveSession()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                ${getIcon('add', 16)}
+                <span>بدء حصة جديدة</span>
               </button>
             ` : ''}
             ${isSessionEnded ? `
@@ -398,15 +435,15 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                     </div>
                   </td>
                   <td style="color: var(--centrly-text); font-size: 0.85rem;">
-                    ${(a.comment && a.comment !== 'حصة تعويضية') ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; color: var(--centrly-ink);">${escapeHtml(a.comment)}</span>` : '<span style="color: #94a3b8;">لا توجد</span>'}
+                    ${(a.comment && a.comment !== 'حصة تعويضية' && !a.comment.startsWith('حصة تعويضية')) ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; color: var(--centrly-ink);">${escapeHtml(a.comment)}</span>` : '<span style="color: #94a3b8;">لا توجد</span>'}
                   </td>
                   <td style="font-size: 0.8rem; color: var(--centrly-text); font-family: monospace;">${escapeHtml(a.time || '—')}</td>
                   <td>${deliveryBadge}</td>
                   <td>
                     <div style="display: flex; gap: 0.35rem; align-items: center;">
-                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openStudentNoteModal('${escapeHtml(a.student_id || a.code)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}', '${escapeHtml(a.comment || '').replace(/'/g, "\\'")}')" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem;" title="ملاحظة">
+                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openStudentNoteModal('${escapeHtml(a.student_id || a.code)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}', '${(a.comment && a.comment !== 'حصة تعويضية' && !a.comment.startsWith('حصة تعويضية')) ? escapeHtml(a.comment).replace(/'/g, "\\'") : ''}')" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem;" title="ملاحظة">
                         ${getIcon('note', 12)}
-                        <span>${a.comment ? 'تعديل' : 'ملاحظة'}</span>
+                        <span>${(a.comment && a.comment !== 'حصة تعويضية' && !a.comment.startsWith('حصة تعويضية')) ? 'تعديل' : 'ملاحظة'}</span>
                       </button>
                       <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${escapeHtml(a.student_id || a.id)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}')" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem; color: #15803d;" title="إرسال إشعار فوري لولي الأمر عبر واتساب">
                         ${getIcon('whatsapp', 14, '#15803d')}

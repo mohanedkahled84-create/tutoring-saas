@@ -115,11 +115,18 @@ export class SupabaseReportsRepository implements IReportsRepository {
         const { data: qsData } = await this.client
           .from("quiz_scores")
           .select("student_id, score, max_score, session_id, created_at")
-          .eq("tenant_id", tenantId)
-          .gte("created_at", `${startDate}T00:00:00.000Z`)
-          .lte("created_at", `${endDate}T23:59:59.999Z`);
+          .eq("tenant_id", tenantId);
 
-        if (qsData) separateQuizScores = qsData as unknown as QuizScoreReportRow[];
+        if (qsData && qsData.length > 0) {
+          const monthScores = (qsData as unknown as QuizScoreReportRow[]).filter((q) => {
+            if (!q.created_at) return true;
+            return (
+              q.created_at >= `${startDate}T00:00:00.000Z` &&
+              q.created_at <= `${endDate}T23:59:59.999Z`
+            );
+          });
+          separateQuizScores = monthScores.length > 0 ? monthScores : (qsData as unknown as QuizScoreReportRow[]);
+        }
       } catch {
         // Table might not exist or be empty in some setups
       }

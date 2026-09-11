@@ -31,39 +31,42 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
       <!-- Top Header & Direct Plastic Card Order Banner -->
       <div class="card" style="margin: 0; background: linear-gradient(135deg, #1e3a8a, #1e40af); color: #ffffff; border: none; box-shadow: 0 10px 25px rgba(30,58,138,0.25);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
-          <div style="max-width: 650px;">
+          <div style="max-width: 680px;">
             <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.15); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600; margin-bottom: 0.6rem;">
               <span>${getIcon('cards', 16, '#ffffff')}</span>
-              <span>خدمة طباعة الكروت الرسمية للطلاب</span>
+              <span>طباعة كروت الطلاب والباركود الذكي</span>
             </div>
-            <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #ffffff;">كروت الطلاب الذكية والباركود</h2>
-            <p style="font-size: 0.875rem; color: rgba(255,255,255,0.9); margin-top: 0.4rem; line-height: 1.6;">
-              تصدير وإرسال كشف كروت الطلاب بملف رقمي منظم يحتوي على بيانات وأكواد وباركود الطلاب مباشرة عبر واتساب، أو طلب كروت بلاستيكية فاخرة (PVC ID Cards) لمنظومتك.
-            </p>
+            <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #ffffff;">كروت الطلاب الذكية والباركود للطباعة</h2>
+            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.95); margin-top: 0.6rem; line-height: 1.6; background: rgba(0,0,0,0.15); padding: 0.75rem 1rem; border-radius: 8px;">
+              <strong style="color: #93c5fd;">💡 خطوات طلب كروت بلاستيكية فاخرة (PVC ID Cards) لمنظومتك:</strong>
+              <ol style="margin: 0.35rem 0 0 0; padding-right: 1.2rem; font-size: 0.82rem; color: #f1f5f9;">
+                <li>حدد الطلاب المطلوبين من الجدول بالأسفل (أو اختر "تحديد الكل").</li>
+                <li>اضغط على زر <b>"تنزيل كروت الطلاب للطباعة (PDF / باركود)"</b> لتحميل الملف المُنظم على جهازك.</li>
+                <li>اضغط على زر <b>"طلب كروت بلاستيكية (واتساب)"</b> هنا للتواصل معنا وإرسال الملف لتجهيزها وشحنها لك فوراً.</li>
+              </ol>
+            </div>
           </div>
 
           <!-- Order Plastic Cards WhatsApp Button -->
           <div style="text-align: center;">
-            <a href="https://wa.me/201123671177?text=${encodeURIComponent('مرحباً، أرغب في الاستفسار عن طباعة كروت الطلاب البلاستيكية الذكية لمنظومتي في سنترلي')}" target="_blank" rel="noopener noreferrer" class="btn" style="background: #25d366; color: #ffffff; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.35); transition: transform 0.2s;">
+            <a href="https://wa.me/201123671177?text=${encodeURIComponent('مرحباً، قمت بتنزيل ملف كروت الطلاب والباركود من منصة سنترلي، وأرغب في إرساله لكم لطباعة كروت بلاستيكية فاخرة PVC للطلاب.')}" target="_blank" rel="noopener noreferrer" class="btn" style="background: #25d366; color: #ffffff; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.35); transition: transform 0.2s;">
               ${getIcon('whatsapp', 20, '#ffffff')}
               <span style="font-size: 0.95rem;">طلب كروت بلاستيكية (واتساب)</span>
             </a>
             <div style="font-size: 0.72rem; color: rgba(255,255,255,0.8); margin-top: 0.4rem;">
-              تواصل مباشر مع الإدارة لمعرفة الأسعار والكميات
+              تواصل مباشر مع الإدارة لطلب الكروت البلاستيكية بعد تنزيل الملف
             </div>
           </div>
         </div>
       </div>
 
-
-
       <!-- Selective Printing Controls & Student Table -->
       <div class="card" style="margin: 0;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
           <div>
-            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0;">تحديد الطلاب لإصدار الكروت</h3>
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0;">تحديد الطلاب لإصدار وتنزيل الكروت</h3>
             <p style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.2rem;">
-              يمكنك اختيار مجموعة كاملة، أو تحديد طلاب معينين لإرسال كشف الكروت كملف منظم عبر واتساب
+              حدد الطلاب أو اختر مجموعة كاملة، ثم اضغط "تنزيل كروت الطلاب" لحفظ وطباعة الكروت بالباركود
             </p>
           </div>
 
@@ -72,9 +75,9 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
             <div id="selectedCardsCountBadge" class="badge badge-blue" style="font-size: 0.825rem; padding: 0.4rem 0.75rem;">
               تم تحديد: 0 طالب
             </div>
-            <button class="btn btn-primary" style="background: #25d366; border-color: #25d366; color: #ffffff; display: flex; align-items: center; gap: 0.45rem; font-weight: 800; padding: 0.5rem 1.1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(37,211,102,0.25);" onclick="window.centrlyApp.openCardsWhatsAppDispatchModal()">
-              ${getIcon('whatsapp', 18, '#ffffff')}
-              <span>إرسال ملف كروت الطلاب (واتساب)</span>
+            <button class="btn btn-primary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 800; padding: 0.5rem 1.1rem; border-radius: 8px;" onclick="window.centrlyApp.downloadSelectedCardsPdf()">
+              ${getIcon('print', 18)}
+              <span>تنزيل كروت الطلاب للطباعة (PDF / باركود)</span>
             </button>
             <button class="btn btn-secondary" onclick="window.centrlyApp.selectAllCards(true)">
               تحديد الكل

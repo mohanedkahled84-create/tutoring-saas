@@ -592,6 +592,565 @@ export class WhatsAppNotificationsService {
       results,
     };
   }
+
+  /**
+   * DEV-QUIZ.1: Send single student quiz score via WhatsApp with dynamic variation & anti-ban protection.
+   */
+  async sendQuizScore(params: {
+    tenant_id: string;
+    teacher_id?: string | null;
+    student_id: string;
+    student_name: string;
+    parent_phone: string;
+    quiz_title: string;
+    score: number;
+    max_score?: number;
+    teacher_name?: string;
+    note?: string;
+    custom_message?: string;
+  }): Promise<{
+    success: boolean;
+    error?: string;
+    message_text: string;
+    recipient: string;
+    gateway_sent: boolean;
+  }> {
+    const {
+      tenant_id,
+      teacher_id,
+      student_id,
+      student_name,
+      parent_phone,
+      quiz_title,
+      score,
+      max_score = 10,
+      teacher_name,
+      note,
+      custom_message,
+    } = params;
+
+    const messageText =
+      custom_message ||
+      generateQuizScoreMessage({
+        student_name,
+        quiz_title,
+        score,
+        max_score,
+        teacher_name,
+        note,
+      });
+
+    // 1. Check Circuit Breaker
+    const health = getHealthStatus(tenant_id);
+    if (!health.can_send) {
+      return {
+        success: false,
+        error: `Circuit breaker is paused until ${health.paused_until || "unknown"}`,
+        message_text: messageText,
+        recipient: parent_phone,
+        gateway_sent: false,
+      };
+    }
+
+    // 2. Check Daily Volume Cap
+    const currentQuota = getDailyQuotaStatus(tenant_id);
+    if (currentQuota.cap_reached) {
+      return {
+        success: false,
+        error: `Daily volume cap reached for tenant. Sending paused to prevent ban.`,
+        message_text: messageText,
+        recipient: parent_phone,
+        gateway_sent: false,
+      };
+    }
+
+    // 3. Dispatch via Gateway using teacher instance with fallback
+    let gatewaySent = false;
+    if (this.gateway?.sendTextMessage && parent_phone) {
+      const actualTeacherId = teacher_id || "default";
+      const primaryInstance = buildInstanceName(tenant_id, actualTeacherId);
+      const fallbackInstance = buildInstanceName(tenant_id, "default");
+
+      try {
+        let gwRes = await this.gateway.sendTextMessage(primaryInstance, parent_phone, messageText);
+        if (!gwRes.success && primaryInstance !== fallbackInstance) {
+          logger.info(
+            `[WhatsAppService] Retrying sendQuizScore with fallback instance ${fallbackInstance}`
+          );
+          gwRes = await this.gateway.sendTextMessage(fallbackInstance, parent_phone, messageText);
+        }
+
+        if (gwRes.success) {
+          gatewaySent = true;
+          incrementTenantDailyCount(tenant_id, 1);
+          recordHealthSuccess(tenant_id);
+        } else {
+          recordHealthError(tenant_id, "disconnect");
+          return {
+            success: false,
+            error: gwRes.error || "Evolution gateway failed to send text message",
+            message_text: messageText,
+            recipient: parent_phone,
+            gateway_sent: false,
+          };
+        }
+      } catch (gwErr) {
+        recordHealthError(tenant_id, "timeout");
+        return {
+          success: false,
+          error: (gwErr as Error).message,
+          message_text: messageText,
+          recipient: parent_phone,
+          gateway_sent: false,
+        };
+      }
+    } else {
+      // In test or non-gateway environment
+      gatewaySent = true;
+      incrementTenantDailyCount(tenant_id, 1);
+      recordHealthSuccess(tenant_id);
+    }
+
+    return {
+      success: true,
+      message_text: messageText,
+      recipient: parent_phone,
+      gateway_sent: gatewaySent,
+    };
+  }
+
+  /**
+   * DEV-QUIZ.2: Batch send quiz scores with Anti-Ban jitter delay, volume checks & dynamic variations.
+   */
+  async batchSendQuizScores(
+    tenantId: string,
+    items: Array<{
+      student_id: string;
+      student_name: string;
+      parent_phone: string;
+      score: number;
+      note?: string;
+    }>,
+    options: {
+      quiz_title: string;
+      max_score?: number;
+      teacher_id?: string | null;
+      teacher_name?: string;
+      pacingDelayMs?: number;
+      dailyCap?: number;
+    }
+  ): Promise<{
+    total: number;
+    sent_count: number;
+    skipped_count: number;
+    failed_count: number;
+    daily_quota: {
+      sent_today: number;
+      daily_limit: number;
+      remaining: number;
+      cap_reached: boolean;
+      approaching_cap: boolean;
+      warning?: string;
+    };
+    results: Array<{
+      student_id: string;
+      student_name: string;
+      status: "sent" | "failed" | "skipped_daily_cap" | "skipped_circuit_open";
+      error?: string;
+      delay_applied_ms?: number;
+      message_text?: string;
+    }>;
+  }> {
+    const dailyCap = options?.dailyCap || DEFAULT_SAFE_DAILY_CAP;
+    const results: Array<{
+      student_id: string;
+      student_name: string;
+      status: "sent" | "failed" | "skipped_daily_cap" | "skipped_circuit_open";
+      error?: string;
+      delay_applied_ms?: number;
+      message_text?: string;
+    }> = [];
+
+    let sentCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      // 1. Check Circuit Breaker
+      const health = getHealthStatus(tenantId);
+      if (!health.can_send) {
+        skippedCount += 1;
+        results.push({
+          student_id: item.student_id,
+          student_name: item.student_name,
+          status: "skipped_circuit_open",
+          error: `Circuit breaker is paused until ${health.paused_until || "unknown"}`,
+        });
+        continue;
+      }
+
+      // 2. Check Daily Volume Cap
+      const currentQuota = getDailyQuotaStatus(tenantId, dailyCap);
+      if (currentQuota.cap_reached) {
+        skippedCount += 1;
+        results.push({
+          student_id: item.student_id,
+          student_name: item.student_name,
+          status: "skipped_daily_cap",
+          error: `Daily volume cap of ${dailyCap} reached for tenant. Further sends halted to prevent Meta ban.`,
+        });
+        continue;
+      }
+
+      // 3. Apply Jitter Delay (if not first item and delay requested)
+      let delayApplied = 0;
+      if (i > 0) {
+        delayApplied =
+          options?.pacingDelayMs !== undefined
+            ? options.pacingDelayMs
+            : calculateJitterDelay();
+        if (delayApplied > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayApplied));
+        }
+      }
+
+      // 4. Send Quiz Score Message
+      try {
+        const sendRes = await this.sendQuizScore({
+          tenant_id: tenantId,
+          teacher_id: options.teacher_id,
+          student_id: item.student_id,
+          student_name: item.student_name,
+          parent_phone: item.parent_phone,
+          quiz_title: options.quiz_title,
+          score: item.score,
+          max_score: options.max_score,
+          teacher_name: options.teacher_name,
+          note: item.note,
+        });
+
+        if (sendRes.success) {
+          sentCount += 1;
+          results.push({
+            student_id: item.student_id,
+            student_name: item.student_name,
+            status: "sent",
+            delay_applied_ms: delayApplied,
+            message_text: sendRes.message_text,
+          });
+        } else {
+          failedCount += 1;
+          results.push({
+            student_id: item.student_id,
+            student_name: item.student_name,
+            status: "failed",
+            error: sendRes.error,
+            delay_applied_ms: delayApplied,
+            message_text: sendRes.message_text,
+          });
+        }
+      } catch (err: unknown) {
+        failedCount += 1;
+        recordHealthError(tenantId, "timeout");
+        results.push({
+          student_id: item.student_id,
+          student_name: item.student_name,
+          status: "failed",
+          error: (err as Error).message,
+          delay_applied_ms: delayApplied,
+        });
+      }
+    }
+
+    return {
+      total: items.length,
+      sent_count: sentCount,
+      skipped_count: skippedCount,
+      failed_count: failedCount,
+      daily_quota: getDailyQuotaStatus(tenantId, dailyCap),
+      results,
+    };
+  }
+
+  /**
+   * DEV-NOTIF.1: Batch send notifications (rescheduled, cancelled, extra_session) directly to students with Anti-Ban pacing & spintax.
+   */
+  async batchSendCustomNotification(
+    tenantId: string,
+    items: Array<{
+      recipient_id: string;
+      recipient_name: string;
+      phone: string;
+      custom_message?: string;
+    }>,
+    options: {
+      event_type: "rescheduled" | "cancelled" | "extra_session" | "general";
+      group_name?: string;
+      date?: string;
+      time?: string;
+      reason?: string;
+      topic?: string;
+      teacher_id?: string | null;
+      teacher_name?: string;
+      pacingDelayMs?: number;
+      dailyCap?: number;
+    }
+  ): Promise<{
+    total: number;
+    sent_count: number;
+    skipped_count: number;
+    failed_count: number;
+    daily_quota: {
+      sent_today: number;
+      daily_limit: number;
+      remaining: number;
+      cap_reached: boolean;
+      approaching_cap: boolean;
+      warning?: string;
+    };
+    results: Array<{
+      recipient_id: string;
+      recipient_name: string;
+      status: "sent" | "failed" | "skipped_daily_cap" | "skipped_circuit_open" | "skipped_no_phone";
+      error?: string;
+      delay_applied_ms?: number;
+      message_text?: string;
+    }>;
+  }> {
+    const dailyCap = options?.dailyCap || DEFAULT_SAFE_DAILY_CAP;
+    const results: Array<{
+      recipient_id: string;
+      recipient_name: string;
+      status: "sent" | "failed" | "skipped_daily_cap" | "skipped_circuit_open" | "skipped_no_phone";
+      error?: string;
+      delay_applied_ms?: number;
+      message_text?: string;
+    }> = [];
+
+    let sentCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      if (!item.phone || item.phone.trim().length < 8) {
+        skippedCount += 1;
+        results.push({
+          recipient_id: item.recipient_id,
+          recipient_name: item.recipient_name,
+          status: "skipped_no_phone",
+          error: "No valid student phone number registered",
+        });
+        continue;
+      }
+
+      // 1. Check Circuit Breaker
+      const health = getHealthStatus(tenantId);
+      if (!health.can_send) {
+        skippedCount += 1;
+        results.push({
+          recipient_id: item.recipient_id,
+          recipient_name: item.recipient_name,
+          status: "skipped_circuit_open",
+          error: `Circuit breaker is paused until ${health.paused_until || "unknown"}`,
+        });
+        continue;
+      }
+
+      // 2. Check Daily Volume Cap
+      const currentQuota = getDailyQuotaStatus(tenantId, dailyCap);
+      if (currentQuota.cap_reached) {
+        skippedCount += 1;
+        results.push({
+          recipient_id: item.recipient_id,
+          recipient_name: item.recipient_name,
+          status: "skipped_daily_cap",
+          error: `Daily volume cap of ${dailyCap} reached for tenant. Further sends halted to prevent Meta ban.`,
+        });
+        continue;
+      }
+
+      // 3. Apply Jitter Delay
+      let delayApplied = 0;
+      if (i > 0) {
+        delayApplied =
+          options?.pacingDelayMs !== undefined
+            ? options.pacingDelayMs
+            : calculateJitterDelay();
+        if (delayApplied > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayApplied));
+        }
+      }
+
+      // 4. Generate dynamic message with spintax
+      let text = item.custom_message;
+      if (!text) {
+        const greetings = [
+          `السلام عليكم ورحمة الله، عزيزنا الطالب (${item.recipient_name})`,
+          `أهلاً بك يا بطل (${item.recipient_name})، تنبيه هام بخصوص الحصة`,
+          `تحية طيبة للطالب العزيز (${item.recipient_name})`,
+        ];
+        const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+
+        if (options.event_type === "rescheduled") {
+          text = `${greeting}\nنود إبلاغك بتعديل موعد حصة (${options.group_name || "المجموعة"}).\n📅 الموعد الجديد: ${options.date || ""}${options.time ? ` (${options.time})` : ""}.\n${options.reason ? `سبب التعديل: ${options.reason}\n` : ""}نرجو التواجد في الموعد المحدد.\nمع تحيات: مستر ${options.teacher_name || "المعلم"}`;
+        } else if (options.event_type === "cancelled") {
+          text = `${greeting}\nنحيطك علماً بإلغاء حصة (${options.group_name || "المجموعة"})${options.date ? ` المقررة بتاريخ ${options.date}` : ""}.\n${options.reason ? `السبب: ${options.reason}\n` : ""}سيتم إعلامك بالموعد البديل لاحقاً حرصاً على دراستك.\nمع تمنياتنا بالتوفيق.`;
+        } else if (options.event_type === "extra_session") {
+          text = `${greeting}\nيسعدنا إبلاغك بجدولة حصة إضافية لمجموعة (${options.group_name || "المجموعة"}).\n📅 الموعد: ${options.date || ""}${options.time ? ` (${options.time})` : ""}.\n${options.topic ? `موضوع الحصة: ${options.topic}\n` : ""}يرجى الالتزام بالحضور والاستعداد الجيد.\nمع تحيات: مستر ${options.teacher_name || "المعلم"}`;
+        } else {
+          text = `${greeting}\nتنبيه هام بخصوص مجموعة (${options.group_name || "المجموعة"}).\n${options.reason || options.topic || ""}\nمع أطيب التمنيات.`;
+        }
+      }
+
+      // 5. Send via Gateway through teacher instance with fallback
+      let delivered = false;
+      if (this.gateway?.sendTextMessage) {
+        const actualTeacherId = options.teacher_id || "default";
+        const primaryInstance = buildInstanceName(tenantId, actualTeacherId);
+        const fallbackInstance = buildInstanceName(tenantId, "default");
+
+        try {
+          let gwRes = await this.gateway.sendTextMessage(primaryInstance, item.phone, text);
+          if (!gwRes.success && primaryInstance !== fallbackInstance) {
+            gwRes = await this.gateway.sendTextMessage(fallbackInstance, item.phone, text);
+          }
+          if (gwRes.success) {
+            delivered = true;
+            sentCount += 1;
+            incrementTenantDailyCount(tenantId, 1);
+            recordHealthSuccess(tenantId);
+            results.push({
+              recipient_id: item.recipient_id,
+              recipient_name: item.recipient_name,
+              status: "sent",
+              delay_applied_ms: delayApplied,
+              message_text: text,
+            });
+          } else {
+            failedCount += 1;
+            recordHealthError(tenantId, "disconnect");
+            results.push({
+              recipient_id: item.recipient_id,
+              recipient_name: item.recipient_name,
+              status: "failed",
+              error: gwRes.error || "Gateway send failed",
+              delay_applied_ms: delayApplied,
+              message_text: text,
+            });
+          }
+        } catch (err: unknown) {
+          failedCount += 1;
+          recordHealthError(tenantId, "timeout");
+          results.push({
+            recipient_id: item.recipient_id,
+            recipient_name: item.recipient_name,
+            status: "failed",
+            error: (err as Error).message,
+            delay_applied_ms: delayApplied,
+            message_text: text,
+          });
+        }
+      } else {
+        // Non-gateway / test environment
+        sentCount += 1;
+        incrementTenantDailyCount(tenantId, 1);
+        recordHealthSuccess(tenantId);
+        results.push({
+          recipient_id: item.recipient_id,
+          recipient_name: item.recipient_name,
+          status: "sent",
+          delay_applied_ms: delayApplied,
+          message_text: text,
+        });
+      }
+    }
+
+    return {
+      total: items.length,
+      sent_count: sentCount,
+      skipped_count: skippedCount,
+      failed_count: failedCount,
+      daily_quota: getDailyQuotaStatus(tenantId, dailyCap),
+      results,
+    };
+  }
+}
+
+export interface QuizMessageOptions {
+  student_name: string;
+  quiz_title: string;
+  score: number;
+  max_score?: number;
+  teacher_name?: string;
+  note?: string;
+}
+
+/**
+ * DEV-QUIZ.3: Dynamic message generator with Anti-Ban Spintax & Phrase Variations.
+ * Prevents Meta broadcast spam detection by varying greetings, appraisal tone, and closings.
+ */
+export function generateQuizScoreMessage(options: QuizMessageOptions): string {
+  const { student_name, quiz_title, score, max_score = 10, teacher_name, note } = options;
+  const percentage = (score / max_score) * 100;
+
+  const greetings = [
+    `السلام عليكم ورحمة الله وبركاته، تحية طيبة لولي أمر الطالب/ة (${student_name}).`,
+    `تحية طيبة وبعد، ولي أمر الطالب/ة العزيز (${student_name}).`,
+    `أهلاً بحضرتك ولي أمر الطالب/ة (${student_name})، ونتمنى لكم دوام التوفيق.`,
+    `السلام عليكم، نود إحاطة سيادتكم علماً بنتيجة الطالب/ة (${student_name}).`,
+  ];
+
+  const excellentPhrases = [
+    `نبارك لكم تميز وتفوق الطالب في (${quiz_title}) وحصوله على درجة ممتازة: (${score} من ${max_score}) 🌟.`,
+    `يسعدنا إبلاغكم بنتيجة الطالب الرائعة في (${quiz_title}): حيث حقق (${score} من ${max_score})، أداء ممتاز ومشرف!`,
+    `ما شاء الله، أداء متألق في (${quiz_title}) بدرجة (${score} من ${max_score}). نرجو له دوام التميز والتفوق.`,
+  ];
+
+  const goodPhrases = [
+    `نفيدكم بنتيجة الطالب في (${quiz_title}) حصل على (${score} من ${max_score})، وهو أداء جيد ونتطلع لمزيد من التقدم.`,
+    `حقق الطالب في (${quiz_title}) درجة (${score} من ${max_score}). مستوى جيد وبمزيد من التركيز والاجتهاد سيصل للقمة بإذن الله.`,
+    `نحيطكم علماً بأن درجة الطالب في (${quiz_title}) هي (${score} من ${max_score}). بداية جيدة ونشجعه على الاستمرار.`,
+  ];
+
+  const needAttentionPhrases = [
+    `نحيطكم علماً بنتيجة الطالب في (${quiz_title}): حيث حصل على (${score} من ${max_score}). برجاء حثه على المذاكرة والمتابعة المستمرة لتحسين مستواه في الاختبارات القادمة.`,
+    `سجل الطالب درجة (${score} من ${max_score}) في (${quiz_title}). نرجو تكثيف المتابعة المنزلية والمراجعة لتدارك النقاط الصعبة أولاً بأول.`,
+    `حصل الطالب على درجة (${score} من ${max_score}) في (${quiz_title}). نحثكم على تشجيعه لتعويض ذلك والتركيز خلال الحصص القادمة.`,
+  ];
+
+  const closings = [
+    "شاكرين حسن تعاونكم وحرصكم المستمر.",
+    "مع أطيب تمنياتنا بالتوفيق والنجاح الدائم.",
+    "شاكرين ومقدرين متابعتكم الكريمة.",
+  ];
+
+  // Randomize selection
+  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+  let body = "";
+  if (percentage >= 85) {
+    body = excellentPhrases[Math.floor(Math.random() * excellentPhrases.length)];
+  } else if (percentage >= 65) {
+    body = goodPhrases[Math.floor(Math.random() * goodPhrases.length)];
+  } else {
+    body = needAttentionPhrases[Math.floor(Math.random() * needAttentionPhrases.length)];
+  }
+  const closing = closings[Math.floor(Math.random() * closings.length)];
+
+  let message = `${greeting}\n${body}`;
+  if (note && note.trim()) {
+    message += `\nملاحظة المعلم: ${note.trim()}`;
+  }
+  if (teacher_name && teacher_name.trim()) {
+    message += `\nمع تحيات: ${teacher_name.trim()}`;
+  } else {
+    message += `\n${closing}`;
+  }
+
+  return message;
 }
 
 // Daily Volume Tracking (DEV-36)

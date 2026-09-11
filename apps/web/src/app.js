@@ -777,9 +777,28 @@ class CentrlyApp {
           break;
         }
         case 'risk-watchlist': {
-          const riskRes = await request('/at-risk');
-          const watchlist = riskRes?.watchlist || (Array.isArray(riskRes) ? riskRes : (riskRes?.students || []));
-          this.watchlistData = watchlist;
+          const [riskRes, studRes, grpRes] = await Promise.all([
+            request('/at-risk/watchlist').catch(() => request('/at-risk')).catch(() => ({ watchlist: [] })),
+            (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students),
+            (!this.groups || this.groups.length === 0) ? request('/groups').catch(() => []) : Promise.resolve(this.groups),
+          ]);
+          this.students = Array.isArray(studRes) ? studRes : (studRes.students || this.students || []);
+          this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || this.groups || []);
+
+          let rawWatchlist = riskRes?.watchlist || (Array.isArray(riskRes) ? riskRes : (riskRes?.students || []));
+          this.watchlistData = rawWatchlist.map(s => {
+            const matchedGroup = this.groups.find(g => g.id === s.group_id);
+            return {
+              ...s,
+              id: s.id || s.student_id,
+              name: s.name || s.student_name,
+              code: s.code || s.student_code,
+              group: s.group || s.group_name || matchedGroup?.name || 'مجموعة عامة',
+              alert_type: s.alert_type || s.primary_risk || 'absence_warning',
+              severity: s.severity || 'medium',
+              reason: s.reason || s.recommended_action || 'متابعة الأداء الأكاديمي والغياب',
+            };
+          });
           this.renderMainContent();
           break;
         }
@@ -826,7 +845,7 @@ class CentrlyApp {
             const rollupRes = await request(`/centers/financials/rollup?period=${period}`).catch(() => null);
             if (rollupRes) this.centerDashboardState.rollup = rollupRes;
           } else {
-            const logsRes = await request('/activity-logs').catch(() => []);
+            const logsRes = await request('/whatsapp/logs').catch(() => request('/activity-logs')).catch(() => []);
             this.messageLogs = Array.isArray(logsRes) ? logsRes : (logsRes?.logs || []);
           }
           this.renderMainContent();
@@ -1045,7 +1064,14 @@ class CentrlyApp {
     if (student) {
       this.closeInlineStudentAdd();
       this.registerStudentAttendance(student);
-      codeInput.value = '';
+      setTimeout(() => {
+        const inp = document.getElementById('scanStudentCode');
+        if (inp) {
+          inp.value = '';
+          inp.focus();
+          inp.select();
+        }
+      }, 50);
     } else {
       // Student NOT found! Do NOT add dummy name! Show inline registration form!
       const feedback = document.getElementById('scanFeedback');
@@ -1152,6 +1178,12 @@ class CentrlyApp {
 
     if (existing && existing.attended) {
       this.showToast(`الطالب (${student.name}) مسجل حضوره بالفعل في هذه الحصة مسبقاً!`, 'info');
+      const codeInput = document.getElementById('scanStudentCode');
+      if (codeInput) {
+        codeInput.value = '';
+        codeInput.focus();
+        codeInput.select();
+      }
       return;
     }
 
@@ -1199,6 +1231,14 @@ class CentrlyApp {
     this.persistSessionState();
     this.showToast(isMakeup ? `تم تسجيل حضور تعويضي للطالب: ${student.name}` : `تم رصد حضور الطالب: ${student.name}`, 'success');
     this.renderMainContent();
+    setTimeout(() => {
+      const codeInp = document.getElementById('scanStudentCode');
+      if (codeInp) {
+        codeInp.value = '';
+        codeInp.focus();
+        codeInp.select();
+      }
+    }, 40);
   }
 
   updateAttendanceQuizScore(attendanceId, score) {
@@ -1530,8 +1570,27 @@ class CentrlyApp {
     this.renderMainContent();
   }
 
+  resumeSessionNow() {
+    if (!this.sessionState || !this.sessionState.id) {
+      this.showToast('لا توجد حصة قيد التشغيل للتفعيل', 'warning');
+      return;
+    }
+    this.sessionState.status = 'in_progress';
+    this.persistSessionState();
+    this.showToast('تم تفعيل الحصة بنجاح! رصد الحضور متاح الآن.', 'success');
+    this.renderMainContent();
+    setTimeout(() => {
+      const codeInp = document.getElementById('scanStudentCode');
+      if (codeInp) {
+        codeInp.focus();
+        codeInp.select();
+      }
+    }, 40);
+  }
+
   // Single Student Note Modal
   openStudentNoteModal(studentCodeOrId, studentName, currentNote = '') {
+    const cleanNote = (currentNote === 'حصة تعويضية' || (typeof currentNote === 'string' && currentNote.startsWith('حصة تعويضية'))) ? '' : currentNote;
     const bodyHtml = `
       <form id="studentNoteForm" onsubmit="window.centrlyApp.handleSaveStudentNote(event, '${escapeHtml(studentCodeOrId)}')">
         <div class="form-group" style="margin-bottom: 1rem;">
@@ -1540,7 +1599,7 @@ class CentrlyApp {
         </div>
         <div class="form-group" style="margin-bottom: 1rem;">
           <label class="form-label" style="font-weight: 700;">الملاحظة الأكاديمية أو السلوكية (تُرسل لولي الأمر بالواتساب):</label>
-          <textarea id="modalNoteText" class="form-input" rows="3" placeholder="اكتب الملاحظة هنا حول مستوى الطالب أو أداءه في الحصة..." style="resize: vertical; font-family: inherit;">${escapeHtml(currentNote)}</textarea>
+          <textarea id="modalNoteText" class="form-input" rows="3" placeholder="اكتب الملاحظة هنا حول مستوى الطالب أو أداءه في الحصة..." style="resize: vertical; font-family: inherit;">${escapeHtml(cleanNote)}</textarea>
         </div>
       </form>
     `;
@@ -3347,7 +3406,111 @@ class CentrlyApp {
   }
 
   filterLogs() {}
-  openImportModal() { this.showToast('استيراد من Excel / CSV متاح عبر لوحة المالك.', 'info'); }
+
+  openImportModal() {
+    const defaultGroup = this.groups && this.groups[0];
+    const bodyHtml = `
+      <form id="importStudentsForm" onsubmit="window.centrlyApp.handleImportStudents(event)">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 700;">المجموعة المستهدفة:</label>
+          <select id="importGroupId" class="form-select" required>
+            ${(this.groups || []).map(g => `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 700;">بيانات الطلاب بصيغة CSV أو لصق نصي:</label>
+          <div style="font-size: 0.78rem; color: var(--centrly-text); margin-bottom: 0.4rem;">
+            اكتب كل طالب في سطر بالترتيب: <code>اسم الطالب, رقم ولي الأمر, رقم هاتف الطالب (اختياري)</code>
+          </div>
+          <textarea id="importCsvText" class="form-input" rows="6" placeholder="أحمد محمد, 01012345678, 01123456789\nمحمود علي, 01223344556\nعمر خالد, 01555443322" style="font-family: monospace; font-size: 0.85rem;" dir="ltr"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700;">أو رفع ملف CSV من جهازك:</label>
+          <input type="file" id="importCsvFile" accept=".csv,text/csv" class="form-input" onchange="window.centrlyApp.handleCsvFileSelected(this)">
+        </div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="importStudentsForm" class="btn btn-primary" style="font-weight: 700;">بدء استيراد الطلاب</button>
+    `;
+    this.showModal('استيراد قائمة الطلاب من Excel / CSV', bodyHtml, footerHtml);
+  }
+
+  handleCsvFileSelected(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const textarea = document.getElementById('importCsvText');
+      if (textarea) textarea.value = text;
+    };
+    reader.readAsText(file);
+  }
+
+  async handleImportStudents(e) {
+    e.preventDefault();
+    const groupId = document.getElementById('importGroupId')?.value;
+    const csvContent = document.getElementById('importCsvText')?.value.trim();
+
+    if (!csvContent) {
+      this.showToast('يرجى كتابة أو رفع بيانات الطلاب المراد استيرادهم', 'warning');
+      return;
+    }
+
+    const lines = csvContent.split(/\r?\n/).filter(line => line.trim().length > 0);
+    const studentsToCreate = [];
+
+    for (const line of lines) {
+      const parts = line.split(',').map(p => p.trim());
+      if (parts.length >= 2) {
+        const name = parts[0];
+        const parentPhone = parts[1];
+        const studentPhone = parts[2] || null;
+        if (name && parentPhone && parentPhone.length >= 10) {
+          studentsToCreate.push({ name, parent_phone: parentPhone, student_phone: studentPhone });
+        }
+      }
+    }
+
+    if (studentsToCreate.length === 0) {
+      this.showToast('لم يتم العثور على أسطر صالحة. تأكد أن كل سطر يحتوي على: اسم الطالب, رقم ولي الأمر', 'danger');
+      return;
+    }
+
+    this.closeModal();
+    this.showToast(`جارٍ استيراد (${studentsToCreate.length}) طالب إلى المجموعة...`, 'info');
+
+    let importedCount = 0;
+    for (const st of studentsToCreate) {
+      try {
+        const res = await request('/students', {
+          method: 'POST',
+          body: {
+            name: st.name,
+            parent_phone: st.parent_phone,
+            student_phone: st.student_phone,
+          },
+        });
+        if (res?.student) {
+          if (groupId) {
+            await request(`/groups/${groupId}/students`, {
+              method: 'POST',
+              body: { student_id: res.student.id },
+            }).catch(() => {});
+          }
+          this.students.unshift(res.student);
+          importedCount++;
+        }
+      } catch (err) {
+        console.warn('Import student row failed:', err);
+      }
+    }
+
+    this.showToast(`تم استيراد وإضافة (${importedCount}) طالب بنجاح!`, 'success');
+    await this.loadRouteData('students');
+  }
   async startSessionForGroup(gId, customRoom = null) {
     const cleanId = String(gId).replace(/^rec-/, '');
     const grp = (this.groups || []).find(g => g.id === cleanId);
@@ -4586,6 +4749,533 @@ class CentrlyApp {
         btn.disabled = false;
         btn.innerText = 'تأكيد إرسال الإيصال';
       }
+    }
+  }
+
+  // ==========================================================================
+  // Calendar View Helpers
+  // ==========================================================================
+
+  toggleCalendarHideEnded() {
+    this.calendarState.hideEnded = this.calendarState.hideEnded !== false ? false : true;
+    this.renderMainContent();
+  }
+
+  // ==========================================================================
+  // Teacher Quizzes Management & WhatsApp Integration (DEV-QUIZ)
+  // ==========================================================================
+
+  switchQuizGroup(groupId) {
+    this.quizzesState.selectedGroupId = groupId;
+    this.renderMainContent();
+  }
+
+  selectQuizNumber(quizNum) {
+    this.quizzesState.currentQuizNumber = quizNum;
+    this.renderMainContent();
+  }
+
+  addNewQuiz() {
+    const nextNum = (this.quizzesState.quizzes.length > 0)
+      ? Math.max(...this.quizzesState.quizzes.map(q => q.number)) + 1
+      : 1;
+    const today = new Date().toISOString().slice(0, 10);
+    this.quizzesState.quizzes.push({
+      id: Date.now(),
+      number: nextNum,
+      title: `كويز ${nextNum}`,
+      maxScore: 10,
+      date: today,
+      skipped: false,
+    });
+    this.quizzesState.currentQuizNumber = nextNum;
+    this.showToast(`تمت إضافة كويز ${nextNum} بنجاح`, 'success');
+    this.renderMainContent();
+  }
+
+  skipCurrentQuiz(quizNum) {
+    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    if (quiz) {
+      quiz.skipped = true;
+      const nextQuiz = this.quizzesState.quizzes.find(q => q.number > quizNum && !q.skipped);
+      if (nextQuiz) {
+        this.quizzesState.currentQuizNumber = nextQuiz.number;
+      }
+      this.showToast(`تم تخطي كويز ${quizNum}`, 'info');
+      this.renderMainContent();
+    }
+  }
+
+  updateStudentQuizScore(studentId, score) {
+    const currQuiz = this.quizzesState.currentQuizNumber || 1;
+    if (!this.quizzesState.scoresMap[currQuiz]) {
+      this.quizzesState.scoresMap[currQuiz] = {};
+    }
+    this.quizzesState.scoresMap[currQuiz][studentId] = score;
+  }
+
+  updateStudentQuizNote(studentId, note) {
+    const currQuiz = this.quizzesState.currentQuizNumber || 1;
+    if (!this.quizzesState.notesMap[currQuiz]) {
+      this.quizzesState.notesMap[currQuiz] = {};
+    }
+    this.quizzesState.notesMap[currQuiz][studentId] = note;
+  }
+
+  async saveCurrentQuizScores() {
+    const currQuizNum = this.quizzesState.currentQuizNumber || 1;
+    const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
+    const scores = this.quizzesState.scoresMap[currQuizNum] || {};
+
+    const count = Object.keys(scores).filter(k => scores[k] !== '' && scores[k] !== null).length;
+    if (count === 0) {
+      this.showToast('يرجى إدخال درجة طالب واحد على الأقل قبل الحفظ', 'warning');
+      return;
+    }
+
+    try {
+      await request('/quizzes/scores', {
+        method: 'POST',
+        body: {
+          session_id: `quiz-session-${currQuizNum}`,
+          quiz_number: currQuizNum,
+          max_score: currentQuiz.maxScore || 10,
+          scores,
+        },
+      });
+
+      // Synchronize in-memory with reportsState
+      if (this.reportsState) {
+        const month = this.reportsState.period?.month || (new Date().getMonth() + 1);
+        const year = this.reportsState.period?.year || new Date().getFullYear();
+        request(`/reports/monthly?month=${month}&year=${year}`).then(rep => {
+          if (rep?.leaderboard) {
+            this.reportsState.leaderboard = rep.leaderboard;
+            this.reportsState.average_score = rep.average_score || 0;
+          }
+        }).catch(() => {});
+      }
+
+      this.showToast(`تم حفظ وتثبيت درجات كويز ${currQuizNum} لـ (${count}) طالب بنجاح!`, 'success');
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل حفظ درجات الكويز: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  async sendQuizScoreWhatsApp(studentId, studentName, quizTitle) {
+    const currQuizNum = this.quizzesState.currentQuizNumber || 1;
+    const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
+    const score = this.quizzesState.scoresMap[currQuizNum]?.[studentId];
+    const note = this.quizzesState.notesMap[currQuizNum]?.[studentId] || '';
+
+    if (score === undefined || score === null || score === '') {
+      this.showToast(`يرجى رصد درجة الطالب (${studentName}) أولاً قبل إرسال الإشعار`, 'warning');
+      return;
+    }
+
+    try {
+      this.showToast(`جارٍ إرسال درجة (${studentName}) عبر واتساب...`, 'info');
+      await request(`/students/${studentId}/notify-score`, {
+        method: 'POST',
+        body: {
+          quiz_title: quizTitle || `كويز ${currQuizNum}`,
+          score: Number(score),
+          max_score: currentQuiz.maxScore || 10,
+          note: note || undefined,
+        },
+      });
+
+      if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
+      if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+
+      this.showToast(`تم إرسال إشعار درجة (${studentName}) لولي الأمر بنجاح عبر واتساب ✓`, 'success');
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل إرسال إشعار الكويز: ${err.message || 'خطأ في خادم الواتساب'}`, 'danger');
+    }
+  }
+
+  dispatchBatchQuizScores() {
+    const currQuizNum = this.quizzesState.currentQuizNumber || 1;
+    const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
+    const scores = this.quizzesState.scoresMap[currQuizNum] || {};
+    const notes = this.quizzesState.notesMap[currQuizNum] || {};
+
+    const selectedGroupId = this.quizzesState.selectedGroupId;
+    const groupStudents = (this.students || []).filter(s => {
+      if (!selectedGroupId) return true;
+      if (String(s.group_id) === String(selectedGroupId) || String(s.groupId) === String(selectedGroupId)) return true;
+      if (Array.isArray(s.group_ids) && s.group_ids.some(gid => String(gid) === String(selectedGroupId))) return true;
+      return false;
+    });
+
+    const studentsToDispatch = groupStudents
+      .filter(s => scores[s.id] !== undefined && scores[s.id] !== null && scores[s.id] !== '')
+      .map(s => ({
+        student_id: s.id,
+        student_name: s.name,
+        parent_phone: s.parent_phone,
+        score: Number(scores[s.id]),
+        note: notes[s.id] || undefined,
+      }));
+
+    if (studentsToDispatch.length === 0) {
+      this.showToast('لا يوجد طلاب مرصودة درجاتهم في هذا الكويز للإرسال الجماعي', 'warning');
+      return;
+    }
+
+    this.showConfirmModal({
+      title: 'إرسال درجات الكويز دفعة واحدة (Anti-Ban)',
+      message: `هل أنت متأكد من رغبتك في إرسال درجات (${studentsToDispatch.length}) طالب إلى أولياء الأمور؟ سيتم الإرسال عبر محرك الأمان بفواصل عشوائية (4 إلى 9 ثوانٍ) وصياغات متغيرة لحماية الخط من الحظر.`,
+      confirmText: `بدء الإرسال الآمن (${studentsToDispatch.length} رسالة)`,
+      cancelText: 'إلغاء',
+      isDanger: false,
+      onConfirm: async () => {
+        try {
+          this.showToast('بدأت عملية الإرسال الآمن لدرجات الكويز في الخلفية...', 'info');
+          const res = await request('/quizzes/dispatch-scores', {
+            method: 'POST',
+            body: {
+              quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
+              max_score: currentQuiz.maxScore || 10,
+              students: studentsToDispatch,
+            },
+          });
+
+          this.showToast(`تم إتمام إرسال درجات الكويز! (المرسل: ${res.sent || studentsToDispatch.length} ، الفاشل: ${res.failed || 0})`, 'success');
+          this.renderMainContent();
+        } catch (err) {
+          this.showToast(`حدث خطأ أثناء الإرسال الجماعي: ${err.message || 'خطأ في الخادم'}`, 'danger');
+        }
+      },
+    });
+  }
+
+  // ==========================================================================
+  // Student Cards Printing & Download Flow
+  // ==========================================================================
+
+  downloadSelectedCardsPdf() {
+    const checkedBoxes = Array.from(document.querySelectorAll('.student-card-check:checked'));
+    let targetStudents = [];
+
+    if (checkedBoxes.length > 0) {
+      targetStudents = checkedBoxes.map(cb => ({
+        id: cb.value,
+        name: cb.getAttribute('data-name') || '',
+        code: cb.getAttribute('data-code') || '',
+        group: cb.getAttribute('data-group') || '',
+        phone: cb.getAttribute('data-phone') || cb.getAttribute('data-parent-phone') || '',
+      }));
+    } else {
+      const rows = Array.from(document.querySelectorAll('#cardsTable tbody tr[data-student-id]'));
+      if (rows.length === 0) {
+        this.showToast('لا يوجد طلاب لتنزيل كروت لهم. يرجى إضافة طلاب أولاً.', 'warning');
+        return;
+      }
+      targetStudents = rows.map(r => {
+        const cb = r.querySelector('.student-card-check');
+        return {
+          id: r.getAttribute('data-student-id'),
+          name: cb?.getAttribute('data-name') || r.cells[2]?.textContent.trim(),
+          code: cb?.getAttribute('data-code') || r.cells[1]?.textContent.trim(),
+          group: cb?.getAttribute('data-group') || r.cells[3]?.textContent.trim(),
+          phone: cb?.getAttribute('data-phone') || r.cells[4]?.textContent.trim(),
+        };
+      });
+    }
+
+    const orgName = this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'منظومة المعلم');
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      this.showToast('يرجى السماح بالنوافذ المنبثقة (Pop-ups) لتنزيل ملف الكروت للطباعة', 'warning');
+      return;
+    }
+
+    const cardsHtml = targetStudents.map(st => {
+      const barcodeSvg = `
+        <svg style="width: 100%; height: 42px;" viewBox="0 0 200 42">
+          <rect x="10" y="2" width="4" height="38" fill="#000"/>
+          <rect x="18" y="2" width="2" height="38" fill="#000"/>
+          <rect x="24" y="2" width="6" height="38" fill="#000"/>
+          <rect x="34" y="2" width="2" height="38" fill="#000"/>
+          <rect x="40" y="2" width="4" height="38" fill="#000"/>
+          <rect x="48" y="2" width="2" height="38" fill="#000"/>
+          <rect x="54" y="2" width="6" height="38" fill="#000"/>
+          <rect x="64" y="2" width="4" height="38" fill="#000"/>
+          <rect x="72" y="2" width="2" height="38" fill="#000"/>
+          <rect x="78" y="2" width="4" height="38" fill="#000"/>
+          <rect x="86" y="2" width="6" height="38" fill="#000"/>
+          <rect x="96" y="2" width="2" height="38" fill="#000"/>
+          <rect x="102" y="2" width="4" height="38" fill="#000"/>
+          <rect x="110" y="2" width="4" height="38" fill="#000"/>
+          <rect x="118" y="2" width="2" height="38" fill="#000"/>
+          <rect x="124" y="2" width="6" height="38" fill="#000"/>
+          <rect x="134" y="2" width="2" height="38" fill="#000"/>
+          <rect x="140" y="2" width="4" height="38" fill="#000"/>
+          <rect x="148" y="2" width="2" height="38" fill="#000"/>
+          <rect x="154" y="2" width="6" height="38" fill="#000"/>
+          <rect x="164" y="2" width="4" height="38" fill="#000"/>
+          <rect x="172" y="2" width="2" height="38" fill="#000"/>
+          <rect x="178" y="2" width="6" height="38" fill="#000"/>
+          <rect x="188" y="2" width="4" height="38" fill="#000"/>
+        </svg>
+      `;
+
+      return `
+        <div class="card-box">
+          <div class="card-header">
+            <div class="org-name">${escapeHtml(orgName)}</div>
+            <div class="card-badge">كارت حضور ذكي</div>
+          </div>
+          <div class="card-body">
+            <div class="student-name">${escapeHtml(st.name)}</div>
+            <div class="student-meta">
+              <span>المجموعة: <b>${escapeHtml(st.group)}</b></span>
+              ${st.phone ? `<span>الهاتف: <b dir="ltr">${escapeHtml(st.phone)}</b></span>` : ''}
+            </div>
+            <div class="barcode-container">
+              ${barcodeSvg}
+              <div class="barcode-code">${escapeHtml(st.code)}</div>
+            </div>
+          </div>
+          <div class="card-footer">منصة سنترلي الذكية • Centrly</div>
+        </div>
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>كروت الطلاب للطباعة - سنترلي (${targetStudents.length} طالب)</title>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            font-family: 'Cairo', Tahoma, Arial, sans-serif;
+            background: #f1f5f9;
+            padding: 20px;
+            color: #0f172a;
+          }
+          .no-print-bar {
+            background: #1e3a8a;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .print-btn {
+            background: #22c55e;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+          }
+          .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+          }
+          .card-box {
+            background: white;
+            border: 2px solid #0f172a;
+            border-radius: 12px;
+            padding: 14px;
+            page-break-inside: avoid;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 190px;
+          }
+          .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 6px;
+          }
+          .org-name {
+            font-size: 13px;
+            font-weight: 800;
+            color: #1e3a8a;
+          }
+          .card-badge {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+          }
+          .student-name {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-top: 6px;
+          }
+          .student-meta {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 4px;
+            display: flex;
+            gap: 15px;
+          }
+          .barcode-container {
+            margin-top: 8px;
+            text-align: center;
+            background: #f8fafc;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px dashed #cbd5e1;
+          }
+          .barcode-code {
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #0f172a;
+            margin-top: 2px;
+          }
+          .card-footer {
+            font-size: 9px;
+            color: #94a3b8;
+            text-align: center;
+            margin-top: 6px;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 4px;
+          }
+          @media print {
+            body { background: white; padding: 0; }
+            .no-print-bar { display: none; }
+            .cards-grid {
+              grid-template-columns: repeat(2, 1fr);
+              gap: 10mm;
+            }
+            .card-box {
+              border: 1.5pt solid #000;
+              box-shadow: none;
+            }
+            @page {
+              size: A4;
+              margin: 10mm;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print-bar">
+          <div>
+            <strong>جاهز للطباعة أو التنزيل كـ PDF:</strong> تم تجهيز كروت (${targetStudents.length}) طالب مع الأكواد والباركود.
+          </div>
+          <button class="print-btn" onclick="window.print()">طباعة / حفظ كـ PDF</button>
+        </div>
+        <div class="cards-grid">
+          ${cardsHtml}
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    this.showToast(`تم فتح وتجهيز كروت (${targetStudents.length}) طالب للطباعة / التنزيل بنجاح!`, 'success');
+  }
+
+  selectAllCards(selectAll) {
+    const checkboxes = document.querySelectorAll('.student-card-check');
+    checkboxes.forEach(cb => cb.checked = Boolean(selectAll));
+    const master = document.getElementById('cardMasterCheckbox');
+    if (master) master.checked = Boolean(selectAll);
+    this.updateSelectedCardsCount();
+  }
+
+  toggleMasterCardCheckbox(checked) {
+    this.selectAllCards(checked);
+  }
+
+  updateSelectedCardsCount() {
+    const count = document.querySelectorAll('.student-card-check:checked').length;
+    const badge = document.getElementById('selectedCardsCountBadge');
+    if (badge) {
+      badge.textContent = `تم تحديد: ${count} طالب`;
+    }
+  }
+
+  filterCardsTable() {
+    const q = document.getElementById('cardSearchInput')?.value.toLowerCase() || '';
+    const rows = document.querySelectorAll('#cardsTable tbody tr[data-student-id]');
+    rows.forEach(r => {
+      const text = r.textContent.toLowerCase();
+      r.style.display = text.includes(q) ? '' : 'none';
+    });
+  }
+
+  filterCardsByGroup(groupId) {
+    const rows = document.querySelectorAll('#cardsTable tbody tr[data-student-id]');
+    rows.forEach(r => {
+      if (!groupId) {
+        r.style.display = '';
+      } else {
+        const rowGrp = r.getAttribute('data-group-id');
+        r.style.display = (rowGrp === groupId) ? '' : 'none';
+      }
+    });
+  }
+
+  previewSpecificCard(name, code, group, phone) {
+    const bodyHtml = `
+      <div style="border: 2px solid var(--centrly-ink); border-radius: 12px; padding: 1.25rem; background: #fff; max-width: 360px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">
+          <strong style="color: var(--centrly-blue-800); font-size: 0.95rem;">${escapeHtml(this.user?.name || 'كارت المنظومة التعليمية')}</strong>
+          <span class="badge badge-blue" style="font-size: 0.72rem;">كارت ذكي</span>
+        </div>
+        <div style="margin-top: 0.75rem;">
+          <h4 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">${escapeHtml(name)}</h4>
+          <div style="font-size: 0.82rem; color: var(--centrly-text); margin-top: 0.35rem;">المجموعة: <b>${escapeHtml(group)}</b></div>
+          ${phone ? `<div style="font-size: 0.82rem; color: var(--centrly-text); margin-top: 0.2rem;">الهاتف: <b dir="ltr">${escapeHtml(phone)}</b></div>` : ''}
+        </div>
+        <div style="margin-top: 1rem; background: #f8fafc; padding: 0.75rem; border-radius: 8px; text-align: center; border: 1px dashed #cbd5e1;">
+          <div style="font-family: monospace; font-size: 1.1rem; font-weight: 800; letter-spacing: 2px; color: var(--centrly-blue-900);">${escapeHtml(code)}</div>
+        </div>
+      </div>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
+      <button type="button" class="btn btn-primary" onclick="window.centrlyApp.downloadSelectedCardsPdf(); window.centrlyApp.closeModal();">طباعة الكارت</button>
+    `;
+    this.showModal(`معاينة كارت الطالب: ${escapeHtml(name)}`, bodyHtml, footerHtml);
+  }
+
+  openCardsWhatsAppDispatchModal() {
+    this.downloadSelectedCardsPdf();
+  }
+
+  // ==========================================================================
+  // At-Risk Watchlist Single Alert
+  // ==========================================================================
+
+  async dispatchSingleRiskAlert(studentId, studentName) {
+    try {
+      this.showToast(`جارٍ إرسال تنبيه المتابعة لولي أمر (${studentName})...`, 'info');
+      await request(`/at-risk/alerts/${studentId}`, {
+        method: 'POST',
+        body: { alert_type: 'absence_warning' },
+      });
+      this.showToast(`تم إرسال تنبيه المتابعة لولي أمر (${studentName}) بنجاح عبر واتساب ✓`, 'success');
+      await this.loadRouteData('risk-watchlist');
+    } catch (err) {
+      this.showToast(`فشل إرسال تنبيه المتابعة: ${err.message || 'خطأ في الإرسال'}`, 'danger');
     }
   }
 }

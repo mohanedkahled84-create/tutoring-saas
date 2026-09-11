@@ -382,5 +382,77 @@ sessionsRouter.post(
   }
 );
 
+// DEV-NOTIF.1: POST /api/sessions/:id/notify-students - Dispatch WhatsApp alerts directly to students
+sessionsRouter.post(
+  "/:id/notify-students",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id || "default";
+    const { id: sessionId } = req.params;
+    const {
+      event_type,
+      group_id,
+      group_name,
+      date,
+      time,
+      reason,
+      topic,
+      teacher_id,
+      teacher_name,
+      pacing_delay_ms,
+    } = req.body;
+
+    try {
+      const services = getServices(req);
+      const whatsAppService = services.whatsapp;
+      const studentsService = services.students;
+
+      const targetGroupId =
+        group_id ||
+        (sessionId.startsWith("group-") ? sessionId.replace("group-", "") : undefined);
+      const students = await studentsService.listStudents(tenantId, undefined, targetGroupId);
+
+      const items = students
+        .filter((s) => s.student_phone || s.parent_phone)
+        .map((s) => ({
+          recipient_id: s.id,
+          recipient_name: s.name,
+          phone: s.student_phone || s.parent_phone || "",
+        }));
+
+      const resolvedTeacherId =
+        teacher_id ||
+        req.user?.teacher_id ||
+        (req.user?.role === "teacher" ? req.user?.id : "default");
+
+      const result = await whatsAppService.batchSendCustomNotification(
+        tenantId,
+        items,
+        {
+          event_type: event_type || "general",
+          group_name,
+          date,
+          time,
+          reason,
+          topic,
+          teacher_id: resolvedTeacherId,
+          teacher_name,
+          pacingDelayMs: pacing_delay_ms,
+        }
+      );
+
+      res.status(200).json(result);
+    } catch (err: unknown) {
+      res.status(500).json({
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Failed to dispatch student notifications",
+          details: (err as Error).message,
+        },
+      });
+    }
+  }
+);
+
 // Mount attendance router sub-routes (/scan, /attendance, /attendance/batch-sync, /delivery-status)
 sessionsRouter.use("/", attendanceRouter);
+

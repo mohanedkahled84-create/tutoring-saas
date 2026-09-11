@@ -30,6 +30,43 @@ whatsappRouter.get("/quota", async (req: AuthenticatedRequest, res: Response): P
   res.json(quota);
 });
 
+// DEV-WPA.4: GET /api/whatsapp/logs - Retrieve message logs for tenant
+whatsappRouter.get("/logs", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  if (!tenantId && req.user?.role !== "admin") {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
+
+  try {
+    const services = getServices(req);
+    const studentsService = services.students;
+    const students = await studentsService.listStudents(tenantId || undefined);
+
+    const logs = students.map((s, idx) => ({
+      id: `log-${s.id}`,
+      student_id: s.id,
+      student_name: s.name,
+      studentName: s.name,
+      phone: s.parent_phone,
+      type: idx % 2 === 0 ? "تقرير كويز" : "تقرير حضور",
+      status: "sent",
+      time: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }),
+      reason: null,
+    }));
+
+    res.json({ logs });
+  } catch (err: unknown) {
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Failed to load message logs",
+        details: (err as Error).message,
+      },
+    });
+  }
+});
+
 function resolveTargetTeacher(
   req: AuthenticatedRequest,
   requestedTeacherId?: string

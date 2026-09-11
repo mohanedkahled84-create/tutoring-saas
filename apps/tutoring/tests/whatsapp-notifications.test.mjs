@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import http from "node:http";
+import { app } from "../dist/app.js";
 import {
   calculateJitterDelay,
   checkWarmUpLimit,
@@ -8,6 +10,8 @@ import {
   getHealthStatus,
   validateBusinessProfile,
   WhatsAppNotificationsService,
+  generateQuizScoreMessage,
+  resetTenantDailyCount,
 } from "../dist/features/whatsapp-notifications/index.js";
 
 /**
@@ -50,6 +54,21 @@ class FakeWhatsAppRepository {
       latency_ms: 95,
       daily_quota: { used: 50, limit: 500, safety_score: "excellent" },
     };
+  }
+}
+
+class FakeTestGateway {
+  constructor(shouldFail = false) {
+    this.shouldFail = shouldFail;
+    this.sentMessages = [];
+  }
+
+  async sendTextMessage(instanceName, number, text) {
+    if (this.shouldFail) {
+      return { success: false, error: "Simulated gateway failure" };
+    }
+    this.sentMessages.push({ instanceName, number, text });
+    return { success: true };
   }
 }
 
@@ -142,4 +161,165 @@ test("DEV-65: dispatchAttendanceWebhook skips present students with no comments"
   });
 
   assert.equal(dispatched, false);
+});
+
+test("DEV-QUIZ.1: generateQuizScoreMessage generates tailored spintax messages based on score tier", () => {
+  // 1. Excellent score (>= 85%)
+  const msgExcellent = generateQuizScoreMessage({
+    student_name: "زياد أحمد",
+    quiz_title: "كويز 1 فيزياء",
+    score: 9.5,
+    max_score: 10,
+    teacher_name: "مستر محمد",
+    note: "إجابات نموذجية",
+  });
+
+  assert.ok(msgExcellent.includes("زياد أحمد"));
+  assert.ok(msgExcellent.includes("كويز 1 فيزياء"));
+  assert.ok(msgExcellent.includes("9.5 من 10"));
+  assert.ok(msgExcellent.includes("إجابات نموذجية"));
+  assert.ok(msgExcellent.includes("مستر محمد"));
+
+  // 2. Good score (65-84%)
+  const msgGood = generateQuizScoreMessage({
+    student_name: "محمود علي",
+    quiz_title: "كويز كيمياء",
+    score: 7,
+    max_score: 10,
+  });
+  assert.ok(msgGood.includes("محمود علي"));
+  assert.ok(msgGood.includes("7 من 10"));
+
+  // 3. Needs attention (< 65%)
+  const msgNeedsAttention = generateQuizScoreMessage({
+    student_name: "سارة خالد",
+    quiz_title: "كويز أحياء",
+    score: 4,
+    max_score: 10,
+    note: "يرجى إعادة مذاكرة الباب الأول",
+  });
+  assert.ok(msgNeedsAttention.includes("سارة خالد"));
+  assert.ok(msgNeedsAttention.includes("4 من 10"));
+  assert.ok(msgNeedsAttention.includes("يرجى إعادة مذاكرة الباب الأول"));
+});
+
+test("DEV-QUIZ.2: sendQuizScore routes to teacher instance with anti-ban protections", async () => {
+  const repo = new FakeWhatsAppRepository();
+  const gateway = new FakeTestGateway();
+  const service = new WhatsAppNotificationsService(repo, gateway);
+  const tenantId = "tenant-quiz-test-1";
+  recordHealthSuccess(tenantId);
+  resetTenantDailyCount(tenantId);
+
+  const res = await service.sendQuizScore({
+    tenant_id: tenantId,
+    teacher_id: "teach-123",
+    student_id: "s-1",
+    student_name: "كريم حاتم",
+    parent_phone: "01012345678",
+    quiz_title: "كويز 1",
+    score: 9,
+    max_score: 10,
+    teacher_name: "أ. محمود",
+  });
+
+  assert.equal(res.success, true);
+  assert.equal(res.gateway_sent, true);
+  assert.equal(gateway.sentMessages.length, 1);
+  assert.equal(gateway.sentMessages[0].instanceName, "centrly_tenant_tenant-quiz-test-1_teacher_teach-123");
+  assert.equal(gateway.sentMessages[0].number, "01012345678");
+});
+
+test("DEV-QUIZ.3: batchSendQuizScores processes batch with anti-ban pacing and circuit protection", async () => {
+  const repo = new FakeWhatsAppRepository();
+  const gateway = new FakeTestGateway();
+  const service = new WhatsAppNotificationsService(repo, gateway);
+  const tenantId = "tenant-quiz-batch-test";
+  recordHealthSuccess(tenantId);
+  resetTenantDailyCount(tenantId);
+
+  const students = [
+    { student_id: "s-1", student_name: "طالب 1", parent_phone: "01011111111", score: 10, note: "أول المجموعة" },
+    { student_id: "s-2", student_name: "طالب 2", parent_phone: "01022222222", score: 8 },
+    { student_id: "s-3", student_name: "طالب 3", parent_phone: "01033333333", score: 5 },
+  ];
+
+  const batchRes = await service.batchSendQuizScores(
+    tenantId,
+    students,
+    {
+      quiz_title: "كويز المراجعة",
+      max_score: 10,
+      teacher_id: "teach-math",
+      teacher_name: "أستاذ الرياضيات",
+      pacingDelayMs: 0,
+    }
+  );
+
+  assert.equal(batchRes.total, 3);
+  assert.equal(batchRes.sent_count, 3);
+  assert.equal(batchRes.failed_count, 0);
+  assert.equal(batchRes.skipped_count, 0);
+  assert.equal(gateway.sentMessages.length, 3);
+
+  assert.equal(gateway.sentMessages[0].number, "01011111111");
+  assert.equal(gateway.sentMessages[1].number, "01022222222");
+  assert.equal(gateway.sentMessages[2].number, "01033333333");
+});
+
+test("DEV-QUIZ.4: batchSendQuizScores respects Circuit Breaker when paused", async () => {
+  const repo = new FakeWhatsAppRepository();
+  const gateway = new FakeTestGateway();
+  const service = new WhatsAppNotificationsService(repo, gateway);
+  const tenantId = "tenant-circuit-quiz";
+
+  // Force trip circuit breaker
+  recordHealthError(tenantId, "disconnect");
+  recordHealthError(tenantId, "disconnect");
+  recordHealthError(tenantId, "disconnect");
+
+  const batchRes = await service.batchSendQuizScores(
+    tenantId,
+    [{ student_id: "s-1", student_name: "علي", parent_phone: "01000000000", score: 9 }],
+    { quiz_title: "كويز", pacingDelayMs: 0 }
+  );
+
+  assert.equal(batchRes.sent_count, 0);
+  assert.equal(batchRes.skipped_count, 1);
+  assert.equal(batchRes.results[0].status, "skipped_circuit_open");
+});
+
+test("DEV-NOTIF.1: batchSendCustomNotification sends alerts to students with Anti-Ban pacing", async () => {
+  const repo = new FakeWhatsAppRepository();
+  const gateway = new FakeTestGateway();
+  const service = new WhatsAppNotificationsService(repo, gateway);
+  const tenantId = "tenant-notif-test";
+  recordHealthSuccess(tenantId);
+  resetTenantDailyCount(tenantId);
+
+  const students = [
+    { recipient_id: "s-1", recipient_name: "أحمد", phone: "01011112222" },
+    { recipient_id: "s-2", recipient_name: "مروان", phone: "01033334444" },
+  ];
+
+  const res = await service.batchSendCustomNotification(
+    tenantId,
+    students,
+    {
+      event_type: "rescheduled",
+      group_name: "مجموعة السبت",
+      date: "2026-09-15",
+      time: "05:00 م",
+      reason: "عطل طارئ بالقاعة",
+      teacher_name: "مستر أحمد",
+      pacingDelayMs: 0,
+    }
+  );
+
+  assert.equal(res.total, 2);
+  assert.equal(res.sent_count, 2);
+  assert.equal(gateway.sentMessages.length, 2);
+  assert.ok(gateway.sentMessages[0].text.includes("أحمد"));
+  assert.ok(gateway.sentMessages[0].text.includes("2026-09-15"));
+  assert.ok(gateway.sentMessages[0].text.includes("عطل طارئ بالقاعة"));
 });
