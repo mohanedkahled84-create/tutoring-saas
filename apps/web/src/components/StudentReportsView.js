@@ -51,6 +51,15 @@ export function renderStudentReportsView(state = {}) {
           </div>
 
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <button
+              class="btn btn-secondary"
+              onclick="window.centrlyApp.loadRouteData('reports')"
+              style="display: flex; align-items: center; gap: 0.45rem; font-weight: 700;"
+              title="تحديث درجات الكويزات والحضور فوراً من الخادم"
+            >
+              ${getIcon('refresh', 16)}
+              <span>تحديث القائمة</span>
+            </button>
             ${isMonthDispatched ? `
               <div class="badge badge-success" style="padding: 0.5rem 0.9rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
                 ${getIcon('check', 16)}

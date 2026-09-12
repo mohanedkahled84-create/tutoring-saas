@@ -53,19 +53,24 @@ export class SupabaseReportsRepository implements IReportsRepository {
       // 2. Fetch students for tenant (and optional group)
       let studentsQuery = this.client
         .from("students")
-        .select("id, name, code, parent_phone, student_phone, group_id")
+        .select("id, name, code, student_code, parent_phone, student_phone, group_id, group_students(group_id, groups(id, name))")
         .eq("tenant_id", tenantId);
-
-      if (groupId) {
-        studentsQuery = studentsQuery.eq("group_id", groupId);
-      }
 
       const { data: studentsData, error: studentsError } = await studentsQuery;
       if (studentsError) {
         throw new Error(`Failed to load students: ${studentsError.message}`);
       }
 
-      const students = studentsData || [];
+      // Filter by groupId if specified
+      const rawStudents = (studentsData || []) as any[];
+      const students = rawStudents.filter((s) => {
+        if (!groupId) return true;
+        if (s.group_id === groupId) return true;
+        const rawGs = s.group_students;
+        const gsList = Array.isArray(rawGs) ? rawGs : (rawGs ? [rawGs] : []);
+        return gsList.some((g: any) => g.group_id === groupId);
+      });
+
       if (students.length === 0) {
         return [];
       }
@@ -82,12 +87,19 @@ export class SupabaseReportsRepository implements IReportsRepository {
       }
 
       // 4. Fetch sessions in the period
-      const { data: sessionsData, error: sessionsError } = await this.client
+      let sessionsQuery = this.client
         .from("sessions")
         .select("id, group_id, session_date")
         .eq("tenant_id", tenantId)
         .gte("session_date", startDate)
-        .lte("session_date", endDate);
+        .lte("session_date", endDate)
+        .limit(10000);
+
+      if (groupId) {
+        sessionsQuery = sessionsQuery.eq("group_id", groupId);
+      }
+
+      const { data: sessionsData, error: sessionsError } = await sessionsQuery;
 
       if (sessionsError) {
         throw new Error(`Failed to load sessions: ${sessionsError.message}`);
@@ -102,7 +114,8 @@ export class SupabaseReportsRepository implements IReportsRepository {
         const { data: attData, error: attError } = await this.client
           .from("attendance")
           .select("id, student_id, session_id, attended, comment, quiz_score, quiz_max_score")
-          .in("session_id", sessionIds);
+          .in("session_id", sessionIds)
+          .limit(10000);
 
         if (!attError && attData) {
           attendances = attData as unknown as AttendanceReportRow[];
@@ -112,10 +125,17 @@ export class SupabaseReportsRepository implements IReportsRepository {
       // Optional: fetch from quiz_scores table if it exists
       let separateQuizScores: QuizScoreReportRow[] = [];
       try {
-        const { data: qsData } = await this.client
+        let qsQuery = this.client
           .from("quiz_scores")
-          .select("student_id, score, max_score, session_id, created_at")
-          .eq("tenant_id", tenantId);
+          .select("student_id, score, max_score, session_id, group_id, created_at")
+          .eq("tenant_id", tenantId)
+          .limit(10000);
+
+        if (groupId) {
+          qsQuery = qsQuery.eq("group_id", groupId);
+        }
+
+        const { data: qsData } = await qsQuery;
 
         if (qsData && qsData.length > 0) {
           const monthScores = (qsData as unknown as QuizScoreReportRow[]).filter((q) => {
@@ -132,31 +152,43 @@ export class SupabaseReportsRepository implements IReportsRepository {
       }
 
       // 6. Aggregate per student
-      const result: StudentRawPerformanceData[] = (students as unknown as StudentReportRow[]).map((std: StudentReportRow) => {
+      const result: StudentRawPerformanceData[] = students.map((std: any) => {
         const stdAttendances = attendances.filter((a) => a.student_id === std.id);
         const stdQuizScores = separateQuizScores.filter((q) => q.student_id === std.id);
 
         const grades: Array<{ score: number; max_score: number }> = [];
+        const processedSessionQuizIds = new Set<string>();
 
         // Add scores recorded on attendance row
         for (const att of stdAttendances) {
           if (att.quiz_score !== null && att.quiz_score !== undefined) {
+            processedSessionQuizIds.add(att.session_id);
             grades.push({
               score: Number(att.quiz_score),
-              max_score: Number(att.quiz_max_score || 20),
+              max_score: Number(att.quiz_max_score || 10),
             });
           }
         }
 
-        // Add scores recorded in quiz_scores table
+        // Add scores recorded in quiz_scores table (ignoring duplicates already recorded on session attendance)
         for (const qs of stdQuizScores) {
+          if (qs.session_id && processedSessionQuizIds.has(qs.session_id)) {
+            continue;
+          }
           if (qs.score !== null && qs.score !== undefined) {
             grades.push({
               score: Number(qs.score),
-              max_score: Number(qs.max_score || 20),
+              max_score: Number(qs.max_score || 10),
             });
           }
         }
+
+        const rawGs = std.group_students;
+        const gsList = Array.isArray(rawGs) ? rawGs : (rawGs ? [rawGs] : []);
+        const matchedGs = groupId ? gsList.find((g: any) => g.group_id === groupId) : gsList[0];
+        const primaryGs = matchedGs || gsList[0];
+        const studentGroupId = std.group_id || primaryGs?.group_id || null;
+        const studentGroupName = primaryGs?.groups?.name || (studentGroupId ? groupMap.get(studentGroupId) : null) || null;
 
         return {
           student: {
@@ -165,8 +197,8 @@ export class SupabaseReportsRepository implements IReportsRepository {
             code: std.code || std.student_code || "",
             parent_phone: std.parent_phone || "",
             student_phone: std.student_phone || null,
-            group_id: std.group_id || null,
-            group_name: std.group_id ? groupMap.get(std.group_id) || null : null,
+            group_id: studentGroupId,
+            group_name: studentGroupName,
           },
           attendances: stdAttendances.map((a) => ({
             attended: Boolean(a.attended),
