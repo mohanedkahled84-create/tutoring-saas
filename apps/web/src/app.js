@@ -3614,10 +3614,18 @@ class CentrlyApp {
           this.renderMainContent();
         }
       } else {
-        this.showToast(res.error || 'فشل إرسال الرابط عبر واتساب', 'danger');
+        const errorMsg = res.error || 'فشل إرسال الرابط عبر واتساب';
+        const displayMsg = (errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404'))
+          ? 'تعذر الإرسال: حساب الواتساب غير متصل حالياً أو يحتاج لمسح كود QR من صفحة الإعدادات أولاً.'
+          : errorMsg;
+        this.showToast(displayMsg, 'danger');
       }
     } catch (err) {
-      this.showToast(`خطأ أثناء إرسال الرابط: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
+      const errorMsg = err.message || 'تأكد من اتصال الخادم';
+      const displayMsg = (errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404'))
+        ? 'تعذر الإرسال: حساب الواتساب غير متصل حالياً أو يحتاج لمسح كود QR من صفحة الإعدادات أولاً.'
+        : `خطأ أثناء إرسال الرابط: ${errorMsg}`;
+      this.showToast(displayMsg, 'danger');
     }
   }
 

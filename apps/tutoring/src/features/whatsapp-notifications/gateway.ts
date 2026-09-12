@@ -214,6 +214,28 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
     }
   }
 
+  async fetchActiveOpenInstance(): Promise<string | null> {
+    if (!this.apiUrl || !this.apiKey) return null;
+    try {
+      const res = await fetch(`${this.apiUrl}/instance/fetchInstances`, {
+        headers: { apikey: this.apiKey },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (!res.ok) return null;
+      const data = (await res.json()) as any[];
+      if (!Array.isArray(data)) return null;
+      const openInst = data.find(
+        (inst) =>
+          inst.connectionStatus === "open" ||
+          inst.status === "open" ||
+          inst.state === "open"
+      );
+      return openInst?.name || null;
+    } catch {
+      return null;
+    }
+  }
+
   async sendTextMessage(
     instanceName: string,
     recipientNumber: string,
@@ -230,7 +252,8 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
     }
 
     try {
-      const res = await fetch(`${this.apiUrl}/message/sendText/${instanceName}`, {
+      let activeTarget = instanceName;
+      let res = await fetch(`${this.apiUrl}/message/sendText/${activeTarget}`, {
         method: "POST",
         headers: {
           apikey: this.apiKey,
@@ -243,13 +266,40 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
         signal: AbortSignal.timeout(10000),
       });
 
+      // If instance does not exist (404) or is not connected, discover any active open instance
+      if (!res.ok && (res.status === 404 || res.status === 400 || res.status === 401)) {
+        const discovered = await this.fetchActiveOpenInstance();
+        if (discovered && discovered !== activeTarget) {
+          activeTarget = discovered;
+          res = await fetch(`${this.apiUrl}/message/sendText/${activeTarget}`, {
+            method: "POST",
+            headers: {
+              apikey: this.apiKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              number: cleanPhone,
+              text,
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+        }
+      }
+
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
-        return { success: false, error: `Evolution API HTTP ${res.status}: ${errText}` };
+        let friendlyError = "تعذر إرسال رسالة الواتساب: حساب الواتساب غير متصل حالياً أو لم يتم ربطه بعد. يرجى مسح رمز QR من صفحة الإعدادات لتفعيل الإرسال.";
+        if (errText.includes("does not exist") || res.status === 404) {
+          friendlyError = "حساب الواتساب غير مربوط أو تم حذفه من خادم الواتساب. يرجى فتح الإعدادات ومسح رمز QR لربط جهازك.";
+        }
+        return { success: false, error: friendlyError };
       }
       return { success: true };
     } catch (err: unknown) {
-      return { success: false, error: (err as Error).message };
+      return {
+        success: false,
+        error: "تعذر الاتصال بخادم الواتساب. يرجى التأكد من اتصال الإنترنت وحالة حساب الواتساب في الإعدادات.",
+      };
     }
   }
 
