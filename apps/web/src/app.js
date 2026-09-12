@@ -202,7 +202,7 @@ class CentrlyApp {
       titleEl.innerText = 'سياسة الاسترجاع والإلغاء (Refund & Cancellation Policy)';
       bodyEl.innerHTML = `
         <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #065f46; font-weight: 700;">
-          🛡️ ضمان استرداد الأموال بنسبة 100% خلال 7 أيام (Money-Back Guarantee)
+          ضمان استرداد الأموال بنسبة 100% خلال 7 أيام (Money-Back Guarantee)
         </div>
         <p>في سنترلي، رضاك التام ونجاح منظومتك هو أساس عملنا. لذلك نوفر سياسة استرجاع مرنة وعادلة تماماً:</p>
         
@@ -224,12 +224,12 @@ class CentrlyApp {
         <h4 style="color: #1e3a8a; margin-top: 0; font-weight: 800;">بيانات التواصل المعتمدة لدى سنترلي:</h4>
         <p>يسعدنا تقديم الدعم الفني والإجابة على أي استفسارات للمعلمين وأصحاب السناتر في مصر:</p>
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem; line-height: 2.2;">
-          🏢 <b>الاسم التجاري الرسمي:</b> سنترلي للحلول التعليمية والبرمجيات (Centrly SaaS)<br>
-          📍 <b>العنوان والمقر:</b> جمهورية مصر العربية — القاهرة<br>
-          ✉️ <b>البريد الإلكتروني الرسمي:</b> <a href="mailto:support@centrly.app" style="color: #2563eb; font-weight: 700;">support@centrly.app</a><br>
-          📱 <b>الهاتف والواتساب المباشر:</b> <span dir="ltr" style="font-weight: 800; color: #0f172a;">+20 100 000 0000</span><br>
-          ⏰ <b>أوقات خدمة العملاء:</b> يومياً من 9:00 صباحاً حتى 10:00 مساءً بتوقيت القاهرة<br>
-          💱 <b>العملة الرسمية لجميع المعاملات:</b> الجنيه المصري (EGP - ج.م)
+          <b>• الاسم التجاري الرسمي:</b> سنترلي للحلول التعليمية والبرمجيات (Centrly SaaS)<br>
+          <b>• المقر والعنوان:</b> جمهورية مصر العربية — القاهرة<br>
+          <b>• البريد الإلكتروني الرسمي:</b> <a href="mailto:support@centrly.app" style="color: #2563eb; font-weight: 700;">support@centrly.app</a><br>
+          <b>• الهاتف والواتساب المباشر:</b> <span dir="ltr" style="font-weight: 800; color: #0f172a;">+20 100 000 0000</span><br>
+          <b>• أوقات خدمة العملاء:</b> يومياً من 9:00 صباحاً حتى 10:00 مساءً بتوقيت القاهرة<br>
+          <b>• العملة الرسمية لجميع المعاملات:</b> الجنيه المصري (EGP - ج.م)
         </div>
       `;
     }

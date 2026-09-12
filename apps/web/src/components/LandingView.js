@@ -72,9 +72,10 @@ export function renderLandingView() {
           box-shadow: 0 8px 20px rgba(23, 45, 112, 0.08);
         }
 
-        /* Responsive Mobile Horizontal Scroll for Features */
+        /* Responsive Mobile Horizontal Scroll for Features & Policies */
         @media (max-width: 768px) {
-          .features-container {
+          .features-container,
+          .policies-container {
             display: flex !important;
             overflow-x: auto !important;
             scroll-snap-type: x mandatory !important;
@@ -83,16 +84,23 @@ export function renderLandingView() {
             gap: 1rem !important;
             scrollbar-width: thin;
           }
-          .features-container::-webkit-scrollbar {
+          .features-container::-webkit-scrollbar,
+          .policies-container::-webkit-scrollbar {
             height: 4px;
           }
-          .features-container::-webkit-scrollbar-thumb {
+          .features-container::-webkit-scrollbar-thumb,
+          .policies-container::-webkit-scrollbar-thumb {
             background: var(--brand-line);
             border-radius: 4px;
           }
           .features-container .feature-card {
             flex: 0 0 82% !important;
             max-width: 82% !important;
+            scroll-snap-align: center !important;
+          }
+          .policies-container .policy-card-item {
+            flex: 0 0 78% !important;
+            max-width: 78% !important;
             scroll-snap-align: center !important;
           }
           .mobile-scroll-hint {
@@ -462,10 +470,17 @@ export function renderLandingView() {
             <p style="font-size: 0.95rem; color: var(--brand-text); margin: 0;">
               اضغط على أي قسم لعرض المستند القانوني الكامل المعتمد وفقاً للمعايير المصرية
             </p>
+
+            <!-- Mobile Scroll Hint -->
+            <div class="mobile-scroll-hint" style="display: none; align-items: center; justify-content: center; gap: 8px; margin-top: 1rem; font-size: 0.85rem; color: var(--brand-blue); font-weight: 700;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              <span>مرر أفقياً لعرض باقي الأقسام</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
           </div>
 
-          <!-- 4 Cards Side-By-Side -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.25rem;">
+          <!-- 4 Cards Side-By-Side (With Mobile Horizontal Snap) -->
+          <div class="policies-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.25rem;">
             
             <!-- Policy Card 1: Terms -->
             <div class="policy-card-item" onclick="window.centrlyApp.openPolicyModal('terms')" style="background: var(--brand-cream); border: 1.5px solid var(--brand-line); border-radius: 14px; padding: 1.5rem 1.25rem; text-align: center; cursor: pointer; transition: all 0.2s;">
