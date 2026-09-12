@@ -86,6 +86,10 @@ import {
   SupabaseMessageLogsRepository,
   IMessageLogsRepository,
 } from "./features/reports/index.js";
+import {
+  QuizzesService,
+  SupabaseQuizzesRepository,
+} from "./features/quizzes/index.js";
 
 export interface AppServices {
   riskWatchlist: RiskWatchlistService;
@@ -102,6 +106,7 @@ export interface AppServices {
   telemetry: TelemetryService;
   centers: CentersService;
   reports: ReportsService;
+  quizzes: QuizzesService;
   tenants: ITenantsRepository;
   messageLogs: IMessageLogsRepository;
   [serviceName: string]: unknown;
@@ -133,6 +138,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     telemetry: new TelemetryService(new SupabaseTelemetryRepository(adminClient)),
     centers: new CentersService(new SupabaseCentersRepository(effectiveClient, adminClient)),
     reports: new ReportsService(new SupabaseReportsRepository(effectiveClient), undefined, messageLogsRepo),
+    quizzes: new QuizzesService(new SupabaseQuizzesRepository(effectiveClient)),
     tenants: new SupabaseTenantsRepository(effectiveClient),
     messageLogs: messageLogsRepo,
     _client: effectiveClient,

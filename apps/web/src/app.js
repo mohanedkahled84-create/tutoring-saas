@@ -639,6 +639,9 @@ class CentrlyApp {
               }
             } catch (_) {}
           }
+          if (this.quizzesState.selectedGroupId) {
+            await this.loadQuizzesForGroup(this.quizzesState.selectedGroupId);
+          }
           this.renderMainContent();
           break;
         }
@@ -4909,13 +4912,95 @@ class CentrlyApp {
   // Teacher Quizzes Management & WhatsApp Integration (DEV-QUIZ)
   // ==========================================================================
 
-  switchQuizGroup(groupId) {
+  saveQuizzesToLocalStorage(groupId) {
+    const gid = groupId || this.quizzesState.selectedGroupId;
+    if (!gid) return;
+    try {
+      localStorage.setItem(`centrly_quizzes_${gid}`, JSON.stringify({
+        quizzes: this.quizzesState.quizzes,
+        scoresMap: this.quizzesState.scoresMap,
+        notesMap: this.quizzesState.notesMap,
+        deliveryStatusMap: this.quizzesState.deliveryStatusMap,
+        currentQuizNumber: this.quizzesState.currentQuizNumber,
+      }));
+    } catch (_) {}
+  }
+
+  async loadQuizzesForGroup(groupId) {
+    if (!groupId) return;
+    // 1. Fast local cache recovery to prevent data loss on refresh
+    const cacheKey = `centrly_quizzes_${groupId}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.quizzes) && parsed.quizzes.length > 0) {
+          this.quizzesState.quizzes = parsed.quizzes;
+        }
+        if (parsed.scoresMap) {
+          this.quizzesState.scoresMap = { ...this.quizzesState.scoresMap, ...parsed.scoresMap };
+        }
+        if (parsed.notesMap) {
+          this.quizzesState.notesMap = { ...this.quizzesState.notesMap, ...parsed.notesMap };
+        }
+        if (parsed.deliveryStatusMap) {
+          this.quizzesState.deliveryStatusMap = { ...this.quizzesState.deliveryStatusMap, ...parsed.deliveryStatusMap };
+        }
+        if (parsed.currentQuizNumber) {
+          this.quizzesState.currentQuizNumber = parsed.currentQuizNumber;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fetch authoritative data from backend Supabase API
+    try {
+      const res = await request(`/quizzes?group_id=${groupId}`);
+      if (res?.success && Array.isArray(res.quizzes) && res.quizzes.length > 0) {
+        this.quizzesState.quizzes = res.quizzes.map(q => ({
+          id: q.id,
+          number: q.quiz_number,
+          title: q.title,
+          maxScore: Number(q.max_score || 10),
+          date: q.quiz_date || new Date().toISOString().slice(0, 10),
+          skipped: Boolean(q.is_skipped),
+        }));
+
+        if (res.scores_map) {
+          this.quizzesState.scoresMap = {
+            ...this.quizzesState.scoresMap,
+            ...res.scores_map,
+          };
+        }
+        if (res.notes_map) {
+          this.quizzesState.notesMap = {
+            ...this.quizzesState.notesMap,
+            ...res.notes_map,
+          };
+        }
+        if (res.delivery_status_map) {
+          this.quizzesState.deliveryStatusMap = {
+            ...this.quizzesState.deliveryStatusMap,
+            ...res.delivery_status_map,
+          };
+        }
+
+        this.saveQuizzesToLocalStorage(groupId);
+      }
+    } catch (err) {
+      console.warn('[Centrly] Could not fetch quizzes from backend, using cached state:', err);
+    }
+  }
+
+  async switchQuizGroup(groupId) {
     this.quizzesState.selectedGroupId = groupId;
+    this.renderMainContent();
+    await this.loadQuizzesForGroup(groupId);
     this.renderMainContent();
   }
 
   selectQuizNumber(quizNum) {
     this.quizzesState.currentQuizNumber = quizNum;
+    this.saveQuizzesToLocalStorage();
     this.renderMainContent();
   }
 
@@ -4924,15 +5009,38 @@ class CentrlyApp {
       ? Math.max(...this.quizzesState.quizzes.map(q => q.number)) + 1
       : 1;
     const today = new Date().toISOString().slice(0, 10);
-    this.quizzesState.quizzes.push({
-      id: Date.now(),
+    const newQuizObj = {
+      id: `quiz-tmp-${Date.now()}`,
       number: nextNum,
       title: `كويز ${nextNum}`,
       maxScore: 10,
       date: today,
       skipped: false,
-    });
+    };
+    this.quizzesState.quizzes.push(newQuizObj);
     this.quizzesState.currentQuizNumber = nextNum;
+    this.saveQuizzesToLocalStorage();
+
+    // Persist new quiz definition in background
+    if (this.quizzesState.selectedGroupId) {
+      request('/quizzes', {
+        method: 'POST',
+        body: {
+          group_id: this.quizzesState.selectedGroupId,
+          quiz_number: nextNum,
+          title: `كويز ${nextNum}`,
+          max_score: 10,
+          quiz_date: today,
+          is_skipped: false,
+        },
+      }).then(res => {
+        if (res?.quiz?.id) {
+          newQuizObj.id = res.quiz.id;
+          this.saveQuizzesToLocalStorage();
+        }
+      }).catch(() => {});
+    }
+
     this.showToast(`تمت إضافة كويز ${nextNum} بنجاح`, 'success');
     this.renderMainContent();
   }
@@ -4945,6 +5053,22 @@ class CentrlyApp {
       if (nextQuiz) {
         this.quizzesState.currentQuizNumber = nextQuiz.number;
       }
+      this.saveQuizzesToLocalStorage();
+
+      // Persist skipped status in background
+      if (this.quizzesState.selectedGroupId) {
+        request('/quizzes', {
+          method: 'POST',
+          body: {
+            group_id: this.quizzesState.selectedGroupId,
+            quiz_number: quizNum,
+            title: quiz.title || `كويز ${quizNum}`,
+            max_score: quiz.maxScore || 10,
+            is_skipped: true,
+          },
+        }).catch(() => {});
+      }
+
       this.showToast(`تم تخطي كويز ${quizNum}`, 'info');
       this.renderMainContent();
     }
@@ -4956,6 +5080,7 @@ class CentrlyApp {
       this.quizzesState.scoresMap[currQuiz] = {};
     }
     this.quizzesState.scoresMap[currQuiz][studentId] = score;
+    this.saveQuizzesToLocalStorage();
   }
 
   updateStudentQuizNote(studentId, note) {
@@ -4964,12 +5089,15 @@ class CentrlyApp {
       this.quizzesState.notesMap[currQuiz] = {};
     }
     this.quizzesState.notesMap[currQuiz][studentId] = note;
+    this.saveQuizzesToLocalStorage();
   }
 
   async saveCurrentQuizScores() {
+    if (this.quizzesState.isSaving) return;
     const currQuizNum = this.quizzesState.currentQuizNumber || 1;
     const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
     const scores = this.quizzesState.scoresMap[currQuizNum] || {};
+    const notes = this.quizzesState.notesMap[currQuizNum] || {};
 
     const count = Object.keys(scores).filter(k => scores[k] !== '' && scores[k] !== null).length;
     if (count === 0) {
@@ -4977,14 +5105,18 @@ class CentrlyApp {
       return;
     }
 
+    this.quizzesState.isSaving = true;
     try {
+      this.saveQuizzesToLocalStorage();
       await request('/quizzes/scores', {
         method: 'POST',
         body: {
-          session_id: `quiz-session-${currQuizNum}`,
+          group_id: this.quizzesState.selectedGroupId,
           quiz_number: currQuizNum,
+          quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
           max_score: currentQuiz.maxScore || 10,
           scores,
+          notes,
         },
       });
 
@@ -5000,13 +5132,13 @@ class CentrlyApp {
         }).catch(() => {});
       }
 
-      this.showToast(`تم حفظ وتثبيت درجات كويز ${currQuizNum} لـ (${count}) طالب بنجاح!`, 'success');
+      this.showToast(`تم حفظ وتثبيت درجات كويز ${currQuizNum} لـ (${count}) طالب بنجاح في قاعدة البيانات ✓`, 'success');
       this.renderMainContent();
 
       // Offer immediate dispatch to WhatsApp
       this.showConfirmModal({
         title: 'إرسال درجات الكويز لأولياء الأمور عبر الواتساب',
-        message: `تم حفظ درجات (${count}) طالب بنجاح! هل ترغب في إرسال النتائج الآن إلى جميع أولياء الأمور عبر واتساب؟`,
+        message: `تم حفظ درجات (${count}) طالب في قاعدة البيانات بنجاح! هل ترغب في إرسال النتائج الآن إلى أولياء الأمور عبر واتساب بنظام الأمان الفائق ومكافحة الحظر؟`,
         confirmText: `نعم، إرسال الدرجات للجميع (${count} طلاب)`,
         cancelText: 'لاحقاً',
         isDanger: false,
@@ -5016,6 +5148,8 @@ class CentrlyApp {
       });
     } catch (err) {
       this.showToast(`فشل حفظ درجات الكويز: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    } finally {
+      this.quizzesState.isSaving = false;
     }
   }
 
@@ -5031,7 +5165,7 @@ class CentrlyApp {
     }
 
     try {
-      this.showToast(`جارٍ إرسال درجة (${studentName}) عبر واتساب...`, 'info');
+      this.showToast(`جارٍ إرسال درجة (${studentName}) بنظام الأمان ومحاكاة الكتابة الحية...`, 'info');
       const res = await request(`/students/${studentId}/notify-score`, {
         method: 'POST',
         body: {
@@ -5052,17 +5186,24 @@ class CentrlyApp {
       } else {
         this.showToast(`تعذر تسليم إشعار (${studentName}): ${res?.error || 'فشل التوصيل'}`, 'danger');
       }
+      this.saveQuizzesToLocalStorage();
       this.renderMainContent();
     } catch (err) {
       if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
       if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
       this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'failed';
+      this.saveQuizzesToLocalStorage();
       this.showToast(`فشل إرسال إشعار الكويز: ${err.message || 'خطأ في خادم الواتساب'}`, 'danger');
       this.renderMainContent();
     }
   }
 
   dispatchBatchQuizScores() {
+    if (this.sessionState.isDispatchingQuizWhatsApp) {
+      this.showToast('عملية الإرسال قيد التنفيذ بالفعل مع فواصل الأمان الفائق...', 'warning');
+      return;
+    }
+
     const currQuizNum = this.quizzesState.currentQuizNumber || 1;
     const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
     const scores = this.quizzesState.scoresMap[currQuizNum] || {};
@@ -5092,17 +5233,21 @@ class CentrlyApp {
     }
 
     this.showConfirmModal({
-      title: 'إرسال درجات الكويز دفعة واحدة (Anti-Ban)',
-      message: `هل أنت متأكد من رغبتك في إرسال درجات (${studentsToDispatch.length}) طالب إلى أولياء الأمور عبر الواتساب؟ سيتم الإرسال عبر محرك الأمان بفواصل عشوائية (4 إلى 9 ثوانٍ) وصياغات متغيرة لحماية الخط من الحظر.`,
+      title: 'إرسال درجات الكويز دفعة واحدة (Ultra Anti-Ban)',
+      message: `هل أنت متأكد من رغبتك في إرسال درجات (${studentsToDispatch.length}) طالب إلى أولياء الأمور عبر الواتساب؟ سيتم الإرسال عبر محرك الأمان الفائق (Ultra Anti-Ban) بفواصل عشوائية (20 إلى 40 ثانية لكل طالب) مع محاكاة الكتابة الحية (جاري الكتابة...) لحماية الخط من الحظر.`,
       confirmText: `بدء الإرسال الآمن (${studentsToDispatch.length} رسالة)`,
       cancelText: 'إلغاء',
       isDanger: false,
       onConfirm: async () => {
+        if (this.sessionState.isDispatchingQuizWhatsApp) return;
+        this.sessionState.isDispatchingQuizWhatsApp = true;
         try {
-          this.showToast('بدأت عملية الإرسال الآمن لدرجات الكويز في الخلفية...', 'info');
+          this.showToast('بدأت عملية الإرسال الآمن لدرجات الكويز بأعلى معايير الأمان ومحاكاة الكتابة الحية...', 'info');
           const res = await request('/quizzes/dispatch-scores', {
             method: 'POST',
             body: {
+              group_id: selectedGroupId,
+              quiz_number: currQuizNum,
               quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
               max_score: currentQuiz.maxScore || 10,
               students: studentsToDispatch,
@@ -5125,10 +5270,13 @@ class CentrlyApp {
             });
           }
 
+          this.saveQuizzesToLocalStorage();
           this.showToast(`تم إتمام إرسال درجات الكويز! (المرسل: ${res.sent || studentsToDispatch.length} ، الفاشل: ${res.failed || 0})`, 'success');
           this.renderMainContent();
         } catch (err) {
           this.showToast(`حدث خطأ أثناء الإرسال الجماعي: ${err.message || 'خطأ في الخادم'}`, 'danger');
+        } finally {
+          this.sessionState.isDispatchingQuizWhatsApp = false;
         }
       },
     });

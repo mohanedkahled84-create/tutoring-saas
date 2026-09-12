@@ -204,14 +204,14 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
 
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <button 
-              id="btnDispatchBatchQuizScoresTable"
+              id="btnSaveQuizScoresTable"
               class="btn btn-primary" 
-              onclick="window.centrlyApp.dispatchBatchQuizScores()"
-              style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 800; font-size: 0.9rem; background: #25D366; border-color: #25D366; color: #fff; padding: 0.55rem 1.15rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(37,211,102,0.3); cursor: pointer;"
-              title="إرسال درجات الكويز لجميع أولياء الأمور عبر واتساب مع نظام الأمان وفواصل زحف عشوائية"
+              onclick="window.centrlyApp.saveCurrentQuizScores()"
+              style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 800; font-size: 0.9rem; background: var(--centrly-blue-700); border-color: var(--centrly-blue-700); color: #fff; padding: 0.55rem 1.25rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(37, 99, 235, 0.25); cursor: pointer;"
+              title="حفظ ورصد درجات الكويز وتثبيتها في قاعدة البيانات"
             >
-              ${getIcon('whatsapp', 18, '#ffffff')}
-              <span>إرسال درجات الكويز لجميع أولياء الأمور (${gradedCount} طلاب)</span>
+              ${getIcon('check', 18, '#ffffff')}
+              <span>حفظ ورصد درجات الكويز ✓</span>
             </button>
           </div>
         </div>
