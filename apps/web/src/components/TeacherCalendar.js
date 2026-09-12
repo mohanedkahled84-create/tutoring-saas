@@ -212,12 +212,18 @@ export function renderTeacherCalendar(data = {}) {
     if (Array.isArray(data.customWeekDays) && data.customWeekDays.length === 7) {
       return data.customWeekDays;
     }
-    const now = new Date();
-    const dayOfWeek = now.getDay();
+    let anchor = new Date();
+    if (data.weekOffset === undefined) {
+      const firstDatedSession = sessions.find((s) => s.date && /^\d{4}-\d{2}-\d{2}$/.test(s.date));
+      if (firstDatedSession) {
+        anchor = new Date(firstDatedSession.date + 'T00:00:00');
+      }
+    }
+    const dayOfWeek = anchor.getDay();
     const daysSinceSat = (dayOfWeek + 1) % 7;
     const offset = Number(data.weekOffset) || 0;
-    const sat = new Date(now);
-    sat.setDate(now.getDate() - daysSinceSat + (offset * 7));
+    const sat = new Date(anchor);
+    sat.setDate(anchor.getDate() - daysSinceSat + (offset * 7));
     sat.setHours(0, 0, 0, 0);
 
     const arabicMonthNames = [
@@ -431,7 +437,16 @@ export function renderTeacherCalendar(data = {}) {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
           ${weekDays
             .map((wd) => {
-              const daySessions = sessions.filter((s) => s.day_name === wd.key || s.date === wd.iso || (s.date && s.date.includes(wd.date)));
+              const daySessions = sessions.filter((s) => {
+                if (s.is_recurring) return s.day_name === wd.key;
+                if (s.date && /^\d{4}-\d{2}-\d{2}$/.test(s.date)) {
+                  if (data.weekOffset !== undefined) {
+                    return s.date === wd.iso;
+                  }
+                  return s.date === wd.iso || s.day_name === wd.key;
+                }
+                return s.day_name === wd.key || (s.date && s.date.includes(wd.date));
+              });
               return `
               <div class="card" style="margin: 0; background: ${wd.isToday ? '#f0f9ff' : '#fafbfc'}; border-top: 3px solid ${wd.isToday ? 'var(--centrly-blue-700)' : '#cbd5e1'};">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.5rem;">

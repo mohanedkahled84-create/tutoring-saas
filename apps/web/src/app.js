@@ -90,6 +90,7 @@ class CentrlyApp {
       view: 'week',
       selectedGroup: 'all',
       dateLabel: 'جدول الحصص والتقويم الأسبوعي',
+      weekOffset: 0,
       sessions: [],
       groups: [],
     };
@@ -3303,6 +3304,13 @@ class CentrlyApp {
 
   async handleCreateExtraSession(e) {
     e.preventDefault();
+    const submitBtn = e.target.querySelector('button[type="submit"]') || document.querySelector('button[form="scheduleSessionForm"]');
+    if (submitBtn) {
+      if (submitBtn.disabled) return;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'جاري الحفظ...';
+    }
+
     const group_id = document.getElementById('extraSessionGroup').value;
     const session_date = document.getElementById('extraSessionDate').value;
     const session_time = document.getElementById('extraSessionTime').value;
@@ -3323,6 +3331,10 @@ class CentrlyApp {
       this.showToast('تم جدولة الحصة الإضافية بنجاح وإرسال إشعارات لأولياء الأمور!', 'success');
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'جدولة الحصة الإضافية';
+      }
       this.showToast(`فشل جدولة الحصة: ${err.message || 'حدث خطأ'}`, 'danger');
     }
   }
