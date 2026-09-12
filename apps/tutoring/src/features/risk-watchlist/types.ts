@@ -30,6 +30,8 @@ export interface StudentRiskProfile {
   student_code?: string | null;
   parent_phone: string;
   tenant_id: string;
+  group_id?: string | null;
+  group_name?: string | null;
 }
 
 export interface SessionRiskData {

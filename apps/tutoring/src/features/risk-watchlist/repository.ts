@@ -17,26 +17,33 @@ export class SupabaseRiskWatchlistRepository implements IRiskWatchlistRepository
   async getStudents(tenantId: string): Promise<StudentRiskProfile[]> {
     const { data, error } = await this.supabase
       .from("students")
-      .select("id, name, student_code, parent_phone, tenant_id")
+      .select("id, name, student_code, code, parent_phone, tenant_id, group_id, group_students(group_id, groups(name))")
       .eq("tenant_id", tenantId);
 
     if (error || !data) {
       return [];
     }
 
-    return data.map((s) => ({
-      id: s.id,
-      name: s.name,
-      student_code: s.student_code,
-      parent_phone: s.parent_phone,
-      tenant_id: s.tenant_id,
-    }));
+    return data.map((s: any) => {
+      const rawGs = s.group_students;
+      const gsList = Array.isArray(rawGs) ? rawGs : (rawGs ? [rawGs] : []);
+      const primaryGs = gsList[0];
+      return {
+        id: s.id,
+        name: s.name,
+        student_code: s.code || s.student_code,
+        parent_phone: s.parent_phone,
+        tenant_id: s.tenant_id,
+        group_id: s.group_id || primaryGs?.group_id || null,
+        group_name: primaryGs?.groups?.name || null,
+      };
+    });
   }
 
   async getRecentSessions(
     tenantId: string,
     groupId?: string,
-    limit = 15
+    limit = 50
   ): Promise<SessionRiskData[]> {
     let query = this.supabase
       .from("sessions")

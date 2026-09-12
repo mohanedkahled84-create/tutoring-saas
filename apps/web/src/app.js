@@ -844,13 +844,17 @@ class CentrlyApp {
 
           let rawWatchlist = riskRes?.watchlist || (Array.isArray(riskRes) ? riskRes : (riskRes?.students || []));
           this.watchlistData = rawWatchlist.map(s => {
-            const matchedGroup = this.groups.find(g => g.id === s.group_id);
+            const sid = s.id || s.student_id;
+            const matchedStudent = (this.students || []).find(st => st.id === sid);
+            const matchedGroup = (this.groups || []).find(g => g.id === (s.group_id || matchedStudent?.group_id));
+            const resolvedGroupName = s.group || s.group_name || matchedStudent?.group_name || matchedGroup?.name || 'مجموعة عامة';
             return {
               ...s,
-              id: s.id || s.student_id,
-              name: s.name || s.student_name,
-              code: s.code || s.student_code,
-              group: s.group || s.group_name || matchedGroup?.name || 'مجموعة عامة',
+              id: sid,
+              name: s.name || s.student_name || matchedStudent?.name,
+              code: s.code || s.student_code || matchedStudent?.code || matchedStudent?.student_code,
+              group: resolvedGroupName,
+              group_name: resolvedGroupName,
               alert_type: s.alert_type || s.primary_risk || 'absence_warning',
               severity: s.severity || 'medium',
               reason: s.reason || s.recommended_action || 'متابعة الأداء الأكاديمي والغياب',

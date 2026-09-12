@@ -28,10 +28,16 @@ export function renderRiskWatchlistView(data = {}) {
             </p>
           </div>
 
-          <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('whatsapp')" style="display: inline-flex; align-items: center; gap: 0.35rem;">
-            ${getIcon('whatsapp', 16)}
-            <span>إعدادات قوالب الإنذار</span>
-          </button>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="window.centrlyApp.loadRouteData('risk-watchlist')" style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700;" title="تحديث مؤشرات الخطر لحظياً">
+              ${getIcon('refresh', 16)}
+              <span>تحديث القائمة</span>
+            </button>
+            <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('whatsapp')" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+              ${getIcon('whatsapp', 16)}
+              <span>إعدادات قوالب الإنذار</span>
+            </button>
+          </div>
         </div>
 
         <!-- Severity Counters Strip -->

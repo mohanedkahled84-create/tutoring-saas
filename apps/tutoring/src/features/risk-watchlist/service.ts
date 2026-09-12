@@ -116,6 +116,8 @@ export class RiskWatchlistService {
           student_name: student.name,
           student_code: student.student_code,
           parent_phone: student.parent_phone,
+          group_id: student.group_id || undefined,
+          group_name: student.group_name || undefined,
           primary_risk: primaryRisk,
           risk_reasons: riskReasons,
           severity,
