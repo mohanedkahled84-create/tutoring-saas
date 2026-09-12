@@ -153,6 +153,9 @@ attendanceRouter.get(
   }
 );
 
+// Concurrency guard to prevent parallel overlapping dispatches for the same session
+const activeSessionDispatches = new Set<string>();
+
 // DEV-13 (Founder correction) & DEV-36: Explicit batch dispatch of WhatsApp messages
 attendanceRouter.post(
   "/:id/send-messages",
@@ -165,6 +168,18 @@ attendanceRouter.post(
       res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
       return;
     }
+
+    if (activeSessionDispatches.has(sessionId)) {
+      res.status(409).json({
+        error: {
+          code: "SESSION_DISPATCH_IN_PROGRESS",
+          message: "يتم إرسال إشعارات هذه الحصة حالياً بفواصل الأمان. يرجى الانتظار لحين اكتمال الإرسال.",
+        },
+      });
+      return;
+    }
+
+    activeSessionDispatches.add(sessionId);
 
     try {
       const services = getServices(req);
@@ -198,6 +213,8 @@ attendanceRouter.post(
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Failed to dispatch session messages", details: (err as Error).message },
       });
+    } finally {
+      activeSessionDispatches.delete(sessionId);
     }
   }
 );

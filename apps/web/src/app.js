@@ -1447,6 +1447,12 @@ class CentrlyApp {
       modalEl.remove();
     };
     document.getElementById('confirmModalActionBtn').onclick = async () => {
+      const btn = document.getElementById('confirmModalActionBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+      }
       modalEl.remove();
       if (onConfirm) await onConfirm();
     };
@@ -3271,6 +3277,10 @@ class CentrlyApp {
       this.showToast('لا توجد حصة محددة لإرسال الرسائل.', 'info');
       return;
     }
+    if (this.sessionState.isDispatchingWhatsApp) {
+      this.showToast('الإرسال جارٍ بالفعل حالياً بفواصل الأمان. يرجى الانتظار لحين اكتمال إرسال الدفعة.', 'warning');
+      return;
+    }
     const eligibleStudents = (this.sessionState.attendanceList || []).filter(
       a => !a.is_makeup && a.comment !== 'حصة تعويضية'
     );
@@ -3282,13 +3292,15 @@ class CentrlyApp {
 
     this.showConfirmModal({
       title: 'إرسال إشعارات الحصة لأولياء الأمور عبر واتساب',
-      message: `سيتم إرسال (${countEligible}) رسالة لأولياء الأمور لتقارير الحضور والغياب والملاحظات والواجب مع تطبيق نظام الأمان ومكافحة الحظر (Anti-Ban) بفواصل زمنية عشوائية وصياغات متغيرة. هل ترغب في المتابعة؟`,
+      message: `سيتم إرسال (${countEligible}) رسالة لأولياء الأمور لتقارير الحضور والغياب والملاحظات والواجب مع تطبيق نظام الأمان ومكافحة الحظر (Anti-Ban) بفواصل زمنية عشوائية (من 10 إلى 30 ثانية لكل طالب) وصياغات متغيرة ومتباينة لكل طالب. هل ترغب في المتابعة؟`,
       confirmText: `إرسال الإشعارات الآن (${countEligible} رسالة)`,
       cancelText: 'إلغاء',
       isDanger: false,
       onConfirm: async () => {
+        if (this.sessionState.isDispatchingWhatsApp) return;
+        this.sessionState.isDispatchingWhatsApp = true;
         try {
-          this.showToast('جارٍ إرسال إشعارات الحصة عبر واتساب في الخلفية...', 'info');
+          this.showToast('جارٍ إرسال إشعارات الحصة عبر واتساب بفواصل أمان عشوائية (10-30 ثانية لكل طالب) لحماية الرقم من الحظر...', 'info');
 
           // 1. First: Guarantee all attendance records (attended + absent) are synced to the backend
           const syncRecords = (this.sessionState.attendanceList || [])
@@ -3393,6 +3405,8 @@ class CentrlyApp {
           this.persistSessionState();
           this.renderMainContent();
           this.showToast(`فشل إرسال رسائل الواتساب: ${err.message || 'لم يتم التسليم'}`, 'danger');
+        } finally {
+          this.sessionState.isDispatchingWhatsApp = false;
         }
       }
     });

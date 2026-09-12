@@ -537,6 +537,9 @@ export class WhatsAppNotificationsService {
       if (i > 0) {
         delayApplied = options?.pacingDelayMs !== undefined ? options.pacingDelayMs : calculateJitterDelay();
         if (delayApplied > 0) {
+          logger.info(
+            `[WhatsAppPacing] Anti-Ban Jitter applied: waiting ${delayApplied}ms (${(delayApplied / 1000).toFixed(1)}s) before sending message ${i + 1}/${items.length} to ${item.student_name} (${item.parent_phone})`
+          );
           await new Promise((resolve) => setTimeout(resolve, delayApplied));
         }
       }
@@ -1105,9 +1108,47 @@ export interface AttendanceMessageOptions {
   teacher_name?: string | null;
 }
 
+// Anti-Repetition Rotation Engine for Spintax
+interface SpintaxRotationState {
+  greetingIdx: number;
+  presentBodyIdx: number;
+  absentBodyIdx: number;
+  homeworkDoneIdx: number;
+  homeworkPartialIdx: number;
+  homeworkMissingIdx: number;
+  notePrefixIdx: number;
+  closingIdx: number;
+  quizGreetingIdx: number;
+  quizBodyIdx: number;
+  quizClosingIdx: number;
+}
+
+const spintaxState: SpintaxRotationState = {
+  greetingIdx: -1,
+  presentBodyIdx: -1,
+  absentBodyIdx: -1,
+  homeworkDoneIdx: -1,
+  homeworkPartialIdx: -1,
+  homeworkMissingIdx: -1,
+  notePrefixIdx: -1,
+  closingIdx: -1,
+  quizGreetingIdx: -1,
+  quizBodyIdx: -1,
+  quizClosingIdx: -1,
+};
+
+function getRotatedIndex(arrayLength: number, lastIdx: number): number {
+  if (arrayLength <= 1) return 0;
+  let nextIdx = Math.floor(Math.random() * arrayLength);
+  if (nextIdx === lastIdx) {
+    nextIdx = (nextIdx + 1 + Math.floor(Math.random() * (arrayLength - 1))) % arrayLength;
+  }
+  return nextIdx;
+}
+
 /**
  * Dynamic Attendance message generator with Anti-Ban Spintax & Phrase Variations.
- * Prevents Meta broadcast spam detection by varying greetings, presence/absence phrasing, and closings.
+ * Prevents Meta broadcast spam detection by rotating greetings, presence/absence phrasing, homework, notes, and closings.
  */
 export function generateAttendanceMessage(options: AttendanceMessageOptions): string {
   const { student_name, attended, comment, homework_status, teacher_name } = options;
@@ -1116,49 +1157,118 @@ export function generateAttendanceMessage(options: AttendanceMessageOptions): st
     `السلام عليكم ورحمة الله وبركاته، تحية طيبة لولي أمر الطالب/ة (${student_name}).`,
     `تحية طيبة وبعد، ولي أمر الطالب/ة العزيز (${student_name}).`,
     `أهلاً بحضرتك، ولي أمر الطالب/ة (${student_name}) الكرام.`,
-    `السلام عليكم، إفادة دورية لولي أمر الطالب/ة (${student_name}).`,
+    `السلام عليكم، إفادة دورية من إدارة المتابعة لولي أمر الطالب/ة (${student_name}).`,
+    `أسعد الله أوقاتكم بكل خير، ولي أمر الطالب/ة (${student_name}).`,
+    `تحية تقدير واعتزاز لولي أمر الطالب/ة (${student_name}).`,
+    `السلام عليكم ورحمة الله، تقرير المتابعة الخاص بالطالب/ة (${student_name}).`,
+    `مرحباً بحضرتك، إشعار الحصة الخاص بنجلكم/نجلتكم (${student_name}).`,
   ];
 
   const presentBodies = [
     `نفيدكم بحضور الطالب اليوم لحصة المادة بنجاح والالتزام بالحضور.`,
     `نحيط سيادتكم علماً بأن الطالب قد حضر حصة اليوم وتفاعل مع المعلم بنجاح.`,
     `تم بحمد الله تسجيل حضور الطالب اليوم لحصة المادة ونتمنى له دوام الاستفادة والتفوق.`,
+    `حضر الطالب حصة اليوم وكان ملتزماً بالموعد ومتابعاً للشرح بكل تركيز.`,
+    `نود إعلامكم بتواجد الطالب في حصة اليوم ومشاركته الفعالة مع المعلم.`,
+    `سجل الطالب حضوره لحصة اليوم باهتمام وانضباط مشكور عليه.`,
+    `يسعدنا إبلاغكم بحضور الطالب اليوم واستفادته من شرح موضوع الحصة كاملاً.`,
+    `حرص الطالب اليوم على الحضور في الموعد المحدد ومتابعة تفاصيل الدرس باجتهاد.`,
   ];
 
   const absentBodies = [
     `نود إحاطة سيادتكم بغياب الطالب/ة عن حضور حصة اليوم. يرجى المتابعة والاطمئنان حرصاً على مستواه الدراسي.`,
     `نلفت عناية حضراتكم إلى تغيب الطالب/ة عن حصة اليوم. نرجو التواصل للاطمئنان عليه وتدارك ما فاته.`,
     `تغيب الطالب/ة عن حضور موعد حصة اليوم، وحرصاً منا على مستواه الدراسي نرجو المتابعة المستمرة.`,
+    `يؤسفنا إبلاغكم بتسجيل غياب الطالب/ة عن حصة اليوم وعدم الحضور. برجاء التأكيد والتواصل معنا لمعرفة موعد التعويض.`,
+    `إشعار غياب: لم يحضر الطالب/ة حصة اليوم المقررة (غياب). نرجو منكم متابعته والتأكد من تدارك الدرس.`,
+    `نحيطكم علماً بغياب الطالب/ة عن حصة اليوم. نأمل الاطمئنان عليه وحثه على عدم تفويت الحصص.`,
+    `حرصاً على مصلحة الطالب/ة التعليمية، نود إخطاركم بتغيبه عن حصة اليوم، ونرجو التواصل للتنسيق.`,
+    `سجل الطالب/ة غياباً في حصة اليوم، برجاء المتابعة حرصاً على عدم تراكم المنهج والمقررات عليه.`,
   ];
 
-  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
-  let body = attended
-    ? presentBodies[Math.floor(Math.random() * presentBodies.length)]
-    : absentBodies[Math.floor(Math.random() * absentBodies.length)];
+  const homeworkDonePhrases = [
+    `\nحالة الواجب: مكتمل وممتاز 👍`,
+    `\nمتابعة الواجب المنزلي: مكتمل وممتاز وتم أداؤه بعناية 🌟`,
+    `\nالواجب: مكتمل وممتاز، تم تسليمه والالتزام بالحل النموذجي ✔️`,
+    `\nحالة الواجب: مكتمل وممتاز وأداء مبشر يستحق التشجيع 👏`,
+    `\nتقرير الواجب: مكتمل وممتاز ومحلول بالكامل 💯`,
+  ];
+
+  const homeworkPartialPhrases = [
+    `\nحالة الواجب: ناقص ويحتاج إلى استكمال ⚠️`,
+    `\nمتابعة الواجب المنزلي: تم إنجاز جزء فقط من الواجب ويحتاج لاستكمال 📝`,
+    `\nالواجب: غير مكتمل، يرجى التنبيه بضرورة إنهائه كاملاً ⚠️`,
+    `\nحالة الواجب: ناقص، نرجو حثه على استكمال باقي التمارين قبل الحصة القادمة ⏳`,
+    `\nتقرير الواجب: منجز جزئياً فقط، ونرجو المتابعة المنزلية لاستكماله 📌`,
+  ];
+
+  const homeworkMissingPhrases = [
+    `\nحالة الواجب: لم يتم تسليم الواجب ❌`,
+    `\nمتابعة الواجب المنزلي: لم يقم الطالب بإحضار أو تسليم الواجب ⚠️`,
+    `\nالواجب: لم يتم حله، نرجو المتابعة الجادة والتأكيد على الالتزام ❌`,
+    `\nحالة الواجب: لم يتم تسليمه في الحصة، يرجى التنبيه عليه بالتعويض فوراً 📌`,
+    `\nتقرير الواجب: لم يُسلّم اليوم، حرصاً على مستواه نرجو المتابعة المنزلية ❌`,
+  ];
+
+  const notePrefixes = [
+    "ملاحظة المعلم: ",
+    "توجيه خاص من المعلم: ",
+    "إفادة المعلم حول مستوى الطالب: ",
+    "ملاحظة خاصة من الحصة: ",
+    "تقرير الأداء من المعلم: ",
+  ];
+
+  const closings = [
+    "شاكرين حسن تعاونكم وحرصكم المستمر.",
+    "مع أطيب تمنياتنا للطالب بالتوفيق والنجاح الدائم.",
+    "شاكرين ومقدرين متابعتكم الكريمة واهتمامكم.",
+    "دمتم ودام أبناؤكم في تفوق ونجاح مستمر.",
+    "مع خالص تحياتنا وتمنياتنا بدوام التميز والتفوق.",
+    "خالص الشكر والتقدير لتعاونكم المثمر دائماً.",
+    "نسأل الله له التوفيق والسداد في مسيرته الدراسية.",
+    "مع تحيات إدارة المتابعة والتعليم.",
+  ];
+
+  // Rotate greeting
+  spintaxState.greetingIdx = getRotatedIndex(greetings.length, spintaxState.greetingIdx);
+  const greeting = greetings[spintaxState.greetingIdx];
+
+  // Rotate body
+  let body = "";
+  if (attended) {
+    spintaxState.presentBodyIdx = getRotatedIndex(presentBodies.length, spintaxState.presentBodyIdx);
+    body = presentBodies[spintaxState.presentBodyIdx];
+  } else {
+    spintaxState.absentBodyIdx = getRotatedIndex(absentBodies.length, spintaxState.absentBodyIdx);
+    body = absentBodies[spintaxState.absentBodyIdx];
+  }
 
   let message = `${greeting}\n${body}`;
 
+  // Rotate homework phrasing
   if (homework_status === "done") {
-    message += `\nحالة الواجب: مكتمل وممتاز 👍`;
+    spintaxState.homeworkDoneIdx = getRotatedIndex(homeworkDonePhrases.length, spintaxState.homeworkDoneIdx);
+    message += homeworkDonePhrases[spintaxState.homeworkDoneIdx];
   } else if (homework_status === "partial") {
-    message += `\nحالة الواجب: ناقص ويحتاج إلى استكمال ⚠️`;
+    spintaxState.homeworkPartialIdx = getRotatedIndex(homeworkPartialPhrases.length, spintaxState.homeworkPartialIdx);
+    message += homeworkPartialPhrases[spintaxState.homeworkPartialIdx];
   } else if (homework_status === "missing") {
-    message += `\nحالة الواجب: لم يتم تسليم الواجب ❌`;
+    spintaxState.homeworkMissingIdx = getRotatedIndex(homeworkMissingPhrases.length, spintaxState.homeworkMissingIdx);
+    message += homeworkMissingPhrases[spintaxState.homeworkMissingIdx];
   }
 
+  // Rotate note prefix if comment exists
   if (comment && comment.trim() && comment.trim() !== "حصة تعويضية") {
-    message += `\nملاحظة المعلم: ${comment.trim()}`;
+    spintaxState.notePrefixIdx = getRotatedIndex(notePrefixes.length, spintaxState.notePrefixIdx);
+    const prefix = notePrefixes[spintaxState.notePrefixIdx];
+    message += `\n${prefix}${comment.trim()}`;
   }
 
   if (teacher_name && teacher_name.trim()) {
     message += `\nمع تحيات: مستر ${teacher_name.trim()}`;
   } else {
-    const closings = [
-      "شاكرين حسن تعاونكم وحرصكم المستمر.",
-      "مع أطيب تمنياتنا للطالب بالتوفيق والنجاح الدائم.",
-      "شاكرين ومقدرين متابعتكم الكريمة.",
-    ];
-    message += `\n${closings[Math.floor(Math.random() * closings.length)]}`;
+    spintaxState.closingIdx = getRotatedIndex(closings.length, spintaxState.closingIdx);
+    message += `\n${closings[spintaxState.closingIdx]}`;
   }
 
   return message;
@@ -1186,43 +1296,58 @@ export function generateQuizScoreMessage(options: QuizMessageOptions): string {
     `تحية طيبة وبعد، ولي أمر الطالب/ة العزيز (${student_name}).`,
     `أهلاً بحضرتك ولي أمر الطالب/ة (${student_name})، ونتمنى لكم دوام التوفيق.`,
     `السلام عليكم، نود إحاطة سيادتكم علماً بنتيجة الطالب/ة (${student_name}).`,
+    `تحية تقدير واعتزاز لولي أمر الطالب/ة (${student_name}).`,
+    `أسعد الله أوقاتكم بكل خير، إفادة بنتائج تقييم الطالب/ة (${student_name}).`,
+    `السلام عليكم ورحمة الله، تقرير الاختبار الخاص بالطالب/ة (${student_name}).`,
+    `مرحباً بحضرتك، نود مشاركتكم نتيجة التقييم لنجلكم/نجلتكم (${student_name}).`,
   ];
 
   const excellentPhrases = [
     `نبارك لكم تميز وتفوق الطالب في (${quiz_title}) وحصوله على درجة ممتازة: (${score} من ${max_score}) 🌟.`,
     `يسعدنا إبلاغكم بنتيجة الطالب الرائعة في (${quiz_title}): حيث حقق (${score} من ${max_score})، أداء ممتاز ومشرف!`,
     `ما شاء الله، أداء متألق في (${quiz_title}) بدرجة (${score} من ${max_score}). نرجو له دوام التميز والتفوق.`,
+    `أداء استثنائي وعلامة مشرفة في (${quiz_title}) بدرجة (${score} من ${max_score})، نتمنى له استمرار الصدارة 👏.`,
   ];
 
   const goodPhrases = [
     `نفيدكم بنتيجة الطالب في (${quiz_title}) حصل على (${score} من ${max_score})، وهو أداء جيد ونتطلع لمزيد من التقدم.`,
     `حقق الطالب في (${quiz_title}) درجة (${score} من ${max_score}). مستوى جيد وبمزيد من التركيز والاجتهاد سيصل للقمة بإذن الله.`,
     `نحيطكم علماً بأن درجة الطالب في (${quiz_title}) هي (${score} من ${max_score}). بداية جيدة ونشجعه على الاستمرار.`,
+    `أحرز الطالب (${score} من ${max_score}) في (${quiz_title}). مستوى طيب ومبشر ونتوقع منه الأفضل دوماً 👍.`,
   ];
 
   const needAttentionPhrases = [
     `نحيطكم علماً بنتيجة الطالب في (${quiz_title}): حيث حصل على (${score} من ${max_score}). برجاء حثه على المذاكرة والمتابعة المستمرة لتحسين مستواه في الاختبارات القادمة.`,
     `سجل الطالب درجة (${score} من ${max_score}) في (${quiz_title}). نرجو تكثيف المتابعة المنزلية والمراجعة لتدارك النقاط الصعبة أولاً بأول.`,
     `حصل الطالب على درجة (${score} من ${max_score}) في (${quiz_title}). نحثكم على تشجيعه لتعويض ذلك والتركيز خلال الحصص القادمة.`,
+    `أظهر تقييم (${quiz_title}) حصول الطالب على (${score} من ${max_score}). نرجو التعاون وحثه على المراجعة الجادة لرفع مستواه في الاختبار القادم ⚠️.`,
   ];
 
   const closings = [
     "شاكرين حسن تعاونكم وحرصكم المستمر.",
     "مع أطيب تمنياتنا بالتوفيق والنجاح الدائم.",
-    "شاكرين ومقدرين متابعتكم الكريمة.",
+    "شاكرين ومقدرين متابعتكم الكريمة واهتمامكم.",
+    "دمتم ودام أبناؤكم في رفعة وتفوق مستمر.",
+    "مع خالص تحياتنا وتمنياتنا بدوام التميز.",
+    "شاكرين لكم حرصكم ومتابعتكم الدائمة.",
   ];
 
-  // Randomize selection
-  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+  // Rotate greeting
+  spintaxState.quizGreetingIdx = getRotatedIndex(greetings.length, spintaxState.quizGreetingIdx);
+  const greeting = greetings[spintaxState.quizGreetingIdx];
+
+  // Rotate body based on tier
   let body = "";
   if (percentage >= 85) {
-    body = excellentPhrases[Math.floor(Math.random() * excellentPhrases.length)];
+    spintaxState.quizBodyIdx = getRotatedIndex(excellentPhrases.length, spintaxState.quizBodyIdx);
+    body = excellentPhrases[spintaxState.quizBodyIdx];
   } else if (percentage >= 65) {
-    body = goodPhrases[Math.floor(Math.random() * goodPhrases.length)];
+    spintaxState.quizBodyIdx = getRotatedIndex(goodPhrases.length, spintaxState.quizBodyIdx);
+    body = goodPhrases[spintaxState.quizBodyIdx];
   } else {
-    body = needAttentionPhrases[Math.floor(Math.random() * needAttentionPhrases.length)];
+    spintaxState.quizBodyIdx = getRotatedIndex(needAttentionPhrases.length, spintaxState.quizBodyIdx);
+    body = needAttentionPhrases[spintaxState.quizBodyIdx];
   }
-  const closing = closings[Math.floor(Math.random() * closings.length)];
 
   let message = `${greeting}\n${body}`;
   if (note && note.trim()) {
@@ -1231,7 +1356,8 @@ export function generateQuizScoreMessage(options: QuizMessageOptions): string {
   if (teacher_name && teacher_name.trim()) {
     message += `\nمع تحيات: ${teacher_name.trim()}`;
   } else {
-    message += `\n${closing}`;
+    spintaxState.quizClosingIdx = getRotatedIndex(closings.length, spintaxState.quizClosingIdx);
+    message += `\n${closings[spintaxState.quizClosingIdx]}`;
   }
 
   return message;

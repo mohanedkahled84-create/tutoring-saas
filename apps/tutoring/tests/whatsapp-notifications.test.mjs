@@ -78,9 +78,16 @@ class FakeTestGateway {
 // ========================================================
 
 test("DEV-65: calculateJitterDelay stays within configured bounds", () => {
+  // Test explicit custom bounds
   for (let i = 0; i < 20; i++) {
     const delay = calculateJitterDelay({ minDelayMs: 4000, maxDelayMs: 9000 });
     assert.ok(delay >= 3900 && delay <= 9100, `Delay ${delay} was out of expected range`);
+  }
+
+  // Test default bounds (10s to 30s)
+  for (let i = 0; i < 20; i++) {
+    const defaultDelay = calculateJitterDelay();
+    assert.ok(defaultDelay >= 9900 && defaultDelay <= 30100, `Default delay ${defaultDelay} was out of 10s-30s range`);
   }
 });
 
@@ -348,4 +355,30 @@ test("DEV-SPIN.1: generateAttendanceMessage produces varied spintax messages for
 
   assert.ok(absentMsg.includes("يوسف أحمد"));
   assert.ok(absentMsg.includes("غياب") || absentMsg.includes("تغيب"));
+});
+
+test("DEV-SPIN.2: generateAttendanceMessage rotates templates across consecutive messages so they are never identical", () => {
+  const msg1 = generateAttendanceMessage({
+    student_name: "طالب أ",
+    attended: true,
+    homework_status: "done",
+    comment: "ملاحظة أولى",
+  });
+
+  const msg2 = generateAttendanceMessage({
+    student_name: "طالب ب",
+    attended: true,
+    homework_status: "done",
+    comment: "ملاحظة ثانية",
+  });
+
+  // Greetings and structures must differ due to anti-repetition rotation
+  const greeting1 = msg1.split("\n")[0];
+  const greeting2 = msg2.split("\n")[0];
+  assert.notEqual(greeting1.replace("طالب أ", ""), greeting2.replace("طالب ب", ""), "Consecutive greetings must rotate and differ");
+
+  // Homework lines must also rotate
+  const hw1 = msg1.split("\n").find(l => l.includes("الواجب"));
+  const hw2 = msg2.split("\n").find(l => l.includes("الواجب"));
+  assert.notEqual(hw1, hw2, "Consecutive homework phrasing must rotate and differ");
 });

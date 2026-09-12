@@ -8,8 +8,8 @@ export interface JitterConfig {
 }
 
 export const DEFAULT_JITTER_CONFIG: JitterConfig = {
-  minDelayMs: 4000,
-  maxDelayMs: 9000,
+  minDelayMs: 10000,
+  maxDelayMs: 30000,
 };
 
 export const WARMUP_SCHEDULE: Record<number, number> = {
