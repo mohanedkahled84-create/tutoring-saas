@@ -9,6 +9,7 @@ import { getIcon } from "../utils/icons.js";
 
 export function renderStudentsView(students = [], groups = [], isLoading = false) {
   const studentList = students || [];
+  const unsentCount = studentList.filter(s => !s.parent_portal_sent_at && (s.parentPhone || s.parent_phone)).length;
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
@@ -26,7 +27,14 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
             </p>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-primary" onclick="window.centrlyApp.openBatchParentLinksModal()" style="display: flex; align-items: center; gap: 0.4rem; background-color: #0284c7; border-color: #0284c7; font-weight: 700;" title="إرسال رابط المتابعة للطلاب الجدد عبر واتساب">
+              ${getIcon('whatsapp', 18)}
+              <span>إرسال الرابط للطلاب الجدد</span>
+              ${unsentCount > 0 
+                ? `<span style="background: #ef4444; color: #fff; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 9999px; font-weight: 900;">${unsentCount}</span>` 
+                : `<span style="background: #10b981; color: #fff; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 9999px;">✔</span>`}
+            </button>
             <button class="btn btn-primary" onclick="window.centrlyApp.openAddStudentModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
               ${getIcon('add', 18)}
               <span>طالب جديد</span>
@@ -104,10 +112,34 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                     ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride || s.fee_override ? `<span class="badge badge-warning">خصم: ${escapeHtml(s.feeOverride || s.fee_override)} ج.م</span>` : '<span style="color:var(--centrly-text); font-size:0.85rem;">أساسي</span>')}
                   </td>
                   <td>
-                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رابط ولي الأمر بدون تسجيل دخول" style="display: flex; align-items: center; gap: 0.3rem;">
-                      ${getIcon('whatsapp', 14)}
-                      <span>رابط المتابعة</span>
-                    </button>
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem; min-width: 135px;">
+                      <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رابط ولي الأمر الخاص بالطالب" style="padding: 0.2rem 0.45rem; font-size: 0.775rem; display: flex; align-items: center; gap: 0.2rem;">
+                          <span>📋</span>
+                          <span>نسخ</span>
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendSingleParentLink('${escapeHtml(s.id)}')" title="إرسال رابط المتابعة لولي الأمر عبر واتساب" style="padding: 0.2rem 0.45rem; font-size: 0.775rem; display: flex; align-items: center; gap: 0.2rem; color: #059669; border-color: rgba(5, 150, 105, 0.3);">
+                          <span>📲</span>
+                          <span>إرسال</span>
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.previewParentPortal('${escapeHtml(s.id)}')" title="معاينة بوابة ولي الأمر في نافذة جديدة" style="padding: 0.2rem 0.35rem; font-size: 0.775rem; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700);">
+                          <span>👁️</span>
+                        </button>
+                      </div>
+                      <div style="font-size: 0.7rem; display: flex; align-items: center; gap: 0.25rem;">
+                        ${s.parent_portal_sent_at ? `
+                          <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="تم الإرسال مسبقاً">
+                            <span style="display:inline-block; width:6px; height:6px; background:#059669; border-radius:50%;"></span>
+                            تم الإرسال
+                          </span>
+                        ` : `
+                          <span style="color: #94a3b8; font-weight: 600; display: inline-flex; align-items: center; gap: 0.2rem;">
+                            <span style="display:inline-block; width:6px; height:6px; background:#cbd5e1; border-radius:50%;"></span>
+                            جديد (لم يُرسل)
+                          </span>
+                        `}
+                      </div>
+                    </div>
                   </td>
                   <td>
                     <div style="display: flex; gap: 0.35rem;">

@@ -1070,6 +1070,180 @@ export class WhatsAppNotificationsService {
   }
 
   /**
+   * DEV-PORTAL.1: Send parent tracking portal link to a single student's parent via WhatsApp.
+   */
+  async sendParentPortalLink(params: {
+    tenant_id: string;
+    teacher_id?: string | null;
+    student_id: string;
+    student_name: string;
+    parent_phone: string;
+    teacher_name?: string;
+    portal_url: string;
+  }): Promise<{
+    success: boolean;
+    error?: string;
+    message_text: string;
+    recipient: string;
+    gateway_sent: boolean;
+  }> {
+    const { tenant_id, teacher_id, student_name, parent_phone, teacher_name, portal_url } = params;
+    const cleanPhone = (parent_phone || "").replace(/[\s\-\(\)\.]/g, "");
+    if (!cleanPhone) {
+      return {
+        success: false,
+        error: "رقم هاتف ولي الأمر غير متوفر",
+        message_text: "",
+        recipient: "",
+        gateway_sent: false,
+      };
+    }
+
+    const health = getHealthStatus(tenant_id);
+    if (!health.can_send) {
+      return {
+        success: false,
+        error: `Circuit breaker is paused until ${health.paused_until || "unknown"}`,
+        message_text: "",
+        recipient: cleanPhone,
+        gateway_sent: false,
+      };
+    }
+
+    const quota = getDailyQuotaStatus(tenant_id);
+    if (quota.cap_reached) {
+      return {
+        success: false,
+        error: "Daily volume cap reached for tenant. Sending paused to prevent ban.",
+        message_text: "",
+        recipient: cleanPhone,
+        gateway_sent: false,
+      };
+    }
+
+    const messageText = generateParentPortalInviteMessage({
+      student_name,
+      teacher_name: teacher_name || undefined,
+      portal_url,
+    });
+
+    const res = await this.deliverSingleTextMessage({
+      tenant_id,
+      teacher_id,
+      recipient_phone: cleanPhone,
+      message_text: messageText,
+    });
+
+    return {
+      success: res.success,
+      error: res.error,
+      message_text: messageText,
+      recipient: cleanPhone,
+      gateway_sent: res.gateway_sent,
+    };
+  }
+
+  /**
+   * DEV-PORTAL.2: Batch send parent tracking portal links to new students with anti-ban pacing and pauses.
+   */
+  async batchSendParentPortalLinks(params: {
+    tenant_id: string;
+    teacher_id?: string | null;
+    teacher_name?: string;
+    students: Array<{
+      student_id: string;
+      student_name: string;
+      parent_phone: string;
+      portal_url: string;
+    }>;
+    pacingDelayMs?: number;
+  }): Promise<{
+    total: number;
+    sent_count: number;
+    failed_count: number;
+    results: Array<{
+      student_id: string;
+      student_name: string;
+      status: "sent" | "failed";
+      error?: string;
+      delay_applied_ms?: number;
+      message_text?: string;
+    }>;
+  }> {
+    const { tenant_id, teacher_id, teacher_name, students, pacingDelayMs } = params;
+    const results: Array<any> = [];
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (let i = 0; i < students.length; i++) {
+      const item = students[i];
+      let delayApplied = 0;
+
+      if (i > 0) {
+        // Natural break every 10 messages: pause for 45-60s
+        if (i % 10 === 0 && pacingDelayMs === undefined) {
+          const breakDelay = 45000 + Math.floor(Math.random() * 20000);
+          logger.info(`[WhatsAppPacing] Parent portal batch break: pausing for ${(breakDelay / 1000).toFixed(0)}s`);
+          await new Promise((r) => setTimeout(r, breakDelay));
+        }
+
+        delayApplied = pacingDelayMs !== undefined ? pacingDelayMs : (12000 + Math.floor(Math.random() * 18000));
+        if (delayApplied > 0) {
+          await new Promise((r) => setTimeout(r, delayApplied));
+        }
+      }
+
+      try {
+        const sendRes = await this.sendParentPortalLink({
+          tenant_id,
+          teacher_id,
+          student_id: item.student_id,
+          student_name: item.student_name,
+          parent_phone: item.parent_phone,
+          teacher_name,
+          portal_url: item.portal_url,
+        });
+
+        if (sendRes.success) {
+          sentCount++;
+          results.push({
+            student_id: item.student_id,
+            student_name: item.student_name,
+            status: "sent",
+            delay_applied_ms: delayApplied,
+            message_text: sendRes.message_text,
+          });
+        } else {
+          failedCount++;
+          results.push({
+            student_id: item.student_id,
+            student_name: item.student_name,
+            status: "failed",
+            error: sendRes.error,
+            delay_applied_ms: delayApplied,
+          });
+        }
+      } catch (err: unknown) {
+        failedCount++;
+        results.push({
+          student_id: item.student_id,
+          student_name: item.student_name,
+          status: "failed",
+          error: (err as Error).message,
+          delay_applied_ms: delayApplied,
+        });
+      }
+    }
+
+    return {
+      total: students.length,
+      sent_count: sentCount,
+      failed_count: failedCount,
+      results,
+    };
+  }
+
+  /**
    * DEV-NOTIF.1: Batch send notifications (rescheduled, cancelled, extra_session) directly to students with Anti-Ban pacing & spintax.
    */
   async batchSendCustomNotification(
@@ -1641,6 +1815,61 @@ export function generateQuizScoreMessage(options: QuizMessageOptions): string {
   message += `\n\n${teacherLine}`;
 
   return message;
+}
+
+/**
+ * DEV-PORTAL.3: Generates warm, respectful, anti-ban spintax invite message for parent tracking portal.
+ */
+export function generateParentPortalInviteMessage(params: {
+  student_name: string;
+  teacher_name?: string;
+  portal_url: string;
+}): string {
+  const student = (params.student_name || "").trim() || "الطالب";
+  const rawTeacher = (params.teacher_name || "").trim() || "إدارة المتابعة";
+  const teacher = rawTeacher.startsWith("مستر") || rawTeacher.startsWith("أ.") || rawTeacher.startsWith("أستاذ")
+    ? rawTeacher
+    : `مستر ${rawTeacher}`;
+  const url = params.portal_url;
+
+  const greetings = [
+    `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (${student}).`,
+    `تحياتنا الطيبة لولي أمر الطالب (${student})، السلام عليكم ورحمة الله وبركاته.`,
+    `السلام عليكم ورحمة الله، أهلاً بحضرتك ولي أمر الطالب (${student}).`,
+    `تحية تربوية كريمة لولي أمر الطالب (${student})، السلام عليكم ورحمة الله.`,
+  ];
+  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+
+  const intros = [
+    `حرصاً على متابعة المستوى الدراسي لـ (${student}) أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:`,
+    `لمتابعة مستوى وتفوق نجلكم (${student}) بصفة مستمرة، إليكم رابط المتابعة الإلكتروني الخاص به:`,
+    `تيسيراً على حضراتكم في متابعة أداء الطالب (${student})، نقدم لكم الرابط المباشر لملف المتابعة الخاص به:`,
+    `في إطار حرصنا على الشفافية والتواصل الدائم، نرفق لحضراتكم رابط المتابعة الأكاديمية الخاص بـ (${student}):`,
+  ];
+  const intro = intros[Math.floor(Math.random() * intros.length)];
+
+  const closings = [
+    `مع خالص تمنياتنا للطالب (${student}) بدوام التفوق والنجاح.\nمع تحيات: ${teacher}`,
+    `نسأل الله له كامل التوفيق والتميز دائماً.\nمع تحيات: ${teacher}`,
+    `شاكرين لحضراتكم حسن المتابعة والاهتمام.\nمع تحيات: ${teacher}`,
+    `مع أطيب التمنيات بمستقبل مشرق ومتميز.\nمع تحيات: ${teacher}`,
+  ];
+  const closing = closings[Math.floor(Math.random() * closings.length)];
+
+  return `${greeting}
+
+${intro}
+
+🔗 *رابط المتابعة المباشر:*
+${url}
+
+💡 *من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول:*
+• متابعة تسجيل الحضور والغياب لحظياً مع كل حصة.
+• الاطلاع على درجات الكويزات والامتحانات الدورية فور رصدها.
+• متابعة الالتزام بتسليم وحل الواجبات المنزلية.
+• قراءة ملاحظات وتوجيهات المعلم المباشرة.
+
+${closing}`;
 }
 
 // Daily Volume Tracking (DEV-36)

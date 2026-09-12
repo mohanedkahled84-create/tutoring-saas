@@ -6,6 +6,7 @@ import {
   generateParentPortalToken,
   verifyParentPortalToken,
 } from "../dist/shared/utils/tokens.js";
+import { generateParentPortalInviteMessage } from "../dist/features/whatsapp-notifications/service.js";
 import { DEFAULT_TENANT_SETTINGS } from "../dist/features/auth/settingsRoutes.js";
 import { app } from "../dist/app.js";
 
@@ -79,6 +80,19 @@ test("DEV-34: GET /api/public/parent-portal rejects missing or invalid token", a
   assert.equal(res2.status, 401);
   const body = await res2.json();
   assert.equal(body.error.code, "UNAUTHORIZED");
+});
+
+test("DEV-PORTAL.3: generateParentPortalInviteMessage creates natural, respectful message with portal URL", () => {
+  const msg = generateParentPortalInviteMessage({
+    student_name: "زياد أحمد",
+    teacher_name: "مستر أحمد",
+    portal_url: "https://centerly-platform.vercel.app/parent-portal?token=test-123",
+  });
+  assert.ok(msg);
+  assert.ok(msg.includes("زياد أحمد"));
+  assert.ok(msg.includes("https://centerly-platform.vercel.app/parent-portal?token=test-123"));
+  assert.ok(msg.includes("رابط المتابعة"));
+  assert.ok(msg.includes("مستر أحمد"));
 });
 
 // ============================================================================

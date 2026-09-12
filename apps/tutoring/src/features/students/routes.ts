@@ -108,15 +108,191 @@ studentsRouter.get("/:id/parent-link", async (req: AuthenticatedRequest, res: Re
     return;
   }
 
-  const token = generateParentPortalToken(studentId, tenantId || "default", 30);
-  const portalUrl = `/parent-portal?token=${token}`;
+  try {
+    const studentsService = getServices(req).students;
+    const student = await studentsService.getStudent(studentId);
+    if (!student) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found" } });
+      return;
+    }
 
-  res.json({
-    student_id: studentId,
-    token,
-    portal_url: portalUrl,
-    expires_in_days: 30,
-  });
+    let token = student.parent_portal_token;
+    if (!token) {
+      token = generateParentPortalToken(studentId, tenantId || "default", 365);
+      await studentsService.updateStudent(studentId, { parent_portal_token: token }).catch(() => {});
+    }
+
+    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const portalUrl = `/parent-portal?token=${token}`;
+    const fullUrl = `${canonicalOrigin}${portalUrl}`;
+
+    res.json({
+      student_id: studentId,
+      token,
+      portal_url: portalUrl,
+      full_url: fullUrl,
+      parent_portal_sent_at: student.parent_portal_sent_at || null,
+      expires_in_days: 365,
+    });
+  } catch (err: unknown) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
+  }
+});
+
+// DEV-PORTAL.1: POST /api/students/:id/send-parent-link - Dispatch parent portal link via WhatsApp
+studentsRouter.post("/:id/send-parent-link", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  const { id: studentId } = req.params;
+  const { teacher_id, teacher_name } = req.body || {};
+
+  if (!tenantId && req.user?.role !== "admin") {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
+
+  try {
+    const studentsService = getServices(req).students;
+    const student = await studentsService.getStudent(studentId);
+
+    if (!student) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found" } });
+      return;
+    }
+
+    const parentPhone = (student.parent_phone || "").trim();
+    if (!parentPhone) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: "رقم هاتف ولي الأمر غير متوفر لهذا الطالب" } });
+      return;
+    }
+
+    let token = student.parent_portal_token;
+    if (!token) {
+      token = generateParentPortalToken(student.id, tenantId || "default", 365);
+    }
+
+    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const portalUrl = `${canonicalOrigin}/parent-portal?token=${token}`;
+
+    const whatsAppService = getServices(req).whatsapp;
+    const result = await whatsAppService.sendParentPortalLink({
+      tenant_id: tenantId || "default",
+      teacher_id: teacher_id || req.user?.id || null,
+      student_id: student.id,
+      student_name: student.name,
+      parent_phone: parentPhone,
+      teacher_name: teacher_name || (req.user as any)?.name,
+      portal_url: portalUrl,
+    });
+
+    if (result.success) {
+      const now = new Date().toISOString();
+      await studentsService.updateStudent(student.id, {
+        parent_portal_sent_at: now,
+        parent_portal_token: token,
+      });
+
+      res.json({
+        success: true,
+        portal_url: portalUrl,
+        sent_at: now,
+        recipient: result.recipient,
+        message_text: result.message_text,
+      });
+    } else {
+      res.status(502).json({
+        success: false,
+        error: result.error || "فشل إرسال الرابط عبر بوابة واتساب",
+      });
+    }
+  } catch (err: unknown) {
+    res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: (err as Error).message },
+    });
+  }
+});
+
+// DEV-PORTAL.2: POST /api/students/batch-send-parent-links - Batch dispatch to new/unsent students
+studentsRouter.post("/batch-send-parent-links", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  const { student_ids, teacher_id, teacher_name, pacing_delay_ms } = req.body || {};
+
+  if (!tenantId && req.user?.role !== "admin") {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
+
+  try {
+    const studentsService = getServices(req).students;
+    const allStudents = await studentsService.listStudents(tenantId || undefined);
+
+    // Target either explicitly passed IDs or all students with parent_portal_sent_at === null
+    const targetStudents = (allStudents || []).filter((s) => {
+      const hasPhone = !!(s.parent_phone && s.parent_phone.trim());
+      if (!hasPhone) return false;
+      if (Array.isArray(student_ids) && student_ids.length > 0) {
+        return student_ids.includes(s.id);
+      }
+      return !s.parent_portal_sent_at;
+    });
+
+    if (targetStudents.length === 0) {
+      res.json({
+        total: 0,
+        sent_count: 0,
+        failed_count: 0,
+        message: "جميع الطلاب المستهدفين تم إرسال الروابط لهم مسبقاً",
+        results: [],
+      });
+      return;
+    }
+
+    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const studentsPayload = targetStudents.map((s) => {
+      let token = s.parent_portal_token;
+      if (!token) {
+        token = generateParentPortalToken(s.id, tenantId || "default", 365);
+      }
+      return {
+        student_id: s.id,
+        student_name: s.name,
+        parent_phone: s.parent_phone,
+        portal_url: `${canonicalOrigin}/parent-portal?token=${token}`,
+        token,
+      };
+    });
+
+    const whatsAppService = getServices(req).whatsapp;
+    const batchRes = await whatsAppService.batchSendParentPortalLinks({
+      tenant_id: tenantId || "default",
+      teacher_id: teacher_id || req.user?.id || null,
+      teacher_name: teacher_name || (req.user as any)?.name,
+      students: studentsPayload,
+      pacingDelayMs: pacing_delay_ms,
+    });
+
+    // Mark successfully sent students in database
+    const now = new Date().toISOString();
+    for (const r of batchRes.results) {
+      if (r.status === "sent") {
+        const item = studentsPayload.find((p) => p.student_id === r.student_id);
+        await studentsService.updateStudent(r.student_id, {
+          parent_portal_sent_at: now,
+          parent_portal_token: item?.token,
+        }).catch(() => {});
+      }
+    }
+
+    res.json({
+      total: batchRes.total,
+      sent_count: batchRes.sent_count,
+      failed_count: batchRes.failed_count,
+      results: batchRes.results,
+    });
+  } catch (err: unknown) {
+    res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: (err as Error).message },
+    });
+  }
 });
 
 // DEV-QUIZ.1: POST /api/students/:id/notify-score - Send quiz score via WhatsApp

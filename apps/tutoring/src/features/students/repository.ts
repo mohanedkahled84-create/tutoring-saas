@@ -12,7 +12,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   async list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]> {
     let q = this.client
       .from("students")
-      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, created_at, group_students(group_id, groups(id, name))")
+      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, parent_portal_token, created_at, group_students(group_id, groups(id, name))")
       .order("created_at", { ascending: false });
 
     if (tenantId) {
@@ -31,7 +31,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       // Fallback to direct select if relational join fails
       const fallback = await this.client
         .from("students")
-        .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, created_at")
+        .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, parent_portal_token, created_at")
         .order("created_at", { ascending: false });
       if (fallback.error) {
         throw new Error(fallback.error.message);
@@ -56,6 +56,8 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
         fee_override: s.fee_override,
         exempt: s.exempt,
         notes: s.notes,
+        parent_portal_sent_at: s.parent_portal_sent_at || null,
+        parent_portal_token: s.parent_portal_token || null,
         created_at: s.created_at,
         group_id: primaryGs?.group_id || null,
         group_name: grp?.name || null,
@@ -72,7 +74,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   async findById(id: string): Promise<Student | null> {
     const { data, error } = await this.client
       .from("students")
-      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, created_at")
+      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, parent_portal_token, created_at")
       .eq("id", id)
       .maybeSingle();
 
@@ -109,6 +111,8 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     if (data.code !== undefined) updatePayload.code = data.code;
     if (data.fee_override !== undefined) updatePayload.fee_override = data.fee_override;
     if (data.exempt !== undefined) updatePayload.exempt = data.exempt;
+    if (data.parent_portal_sent_at !== undefined) updatePayload.parent_portal_sent_at = data.parent_portal_sent_at;
+    if (data.parent_portal_token !== undefined) updatePayload.parent_portal_token = data.parent_portal_token;
 
     const { data: updated, error } = await this.client
       .from("students")

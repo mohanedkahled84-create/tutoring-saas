@@ -7,10 +7,10 @@ import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.1.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
-import { renderStudentsView } from './components/StudentsView.js';
+import { renderStudentsView } from './components/StudentsView.js?v=2.7.0';
 import { renderGroupsView } from './components/GroupsView.js';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
-import { renderParentPortalView } from './components/ParentPortalView.js';
+import { renderParentPortalView } from './components/ParentPortalView.js?v=2.7.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
 import { renderStudentReportsView } from './components/StudentReportsView.js';
 import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
@@ -146,6 +146,7 @@ class CentrlyApp {
 
   // DEV-34: No-App Parent Portal
   async loadParentPortal(token) {
+    this._parentPortalToken = token;
     try {
       const data = await request(`/public/parent-portal?token=${token}`);
       document.getElementById('app').innerHTML = renderParentPortalView(data);
@@ -153,6 +154,15 @@ class CentrlyApp {
       document.getElementById('app').innerHTML = renderParentPortalView({
         error: err.message || 'تعذر تحميل بيانات بوابة ولي الأمر. يرجى التحقق من صحة الرابط.',
       });
+    }
+  }
+
+  async reloadParentPortal() {
+    if (this._parentPortalToken) {
+      await this.loadParentPortal(this._parentPortalToken);
+      this.showToast('تم تحديث بيانات المتابعة بنجاح!', 'success');
+    } else {
+      window.location.reload();
     }
   }
 
@@ -3556,11 +3566,195 @@ class CentrlyApp {
   async copyParentLink(studentId) {
     try {
       const res = await request(`/students/${studentId}/parent-link`);
-      const fullUrl = `${window.location.origin}${res.portal_url}`;
+      const canonicalOrigin = 'https://centerly-platform.vercel.app';
+      const fullUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
       await navigator.clipboard.writeText(fullUrl);
-      this.showToast('تم نسخ رابط ولي الأمر الخاص بالطالب بنجاح!', 'success');
+      this.showToast('تم نسخ رابط متابعة ولي الأمر بنجاح!', 'success');
     } catch (err) {
       this.showToast(`تعذر الحصول على رابط ولي الأمر: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
+    }
+  }
+
+  async previewParentPortal(studentId) {
+    try {
+      const res = await request(`/students/${studentId}/parent-link`);
+      const canonicalOrigin = 'https://centerly-platform.vercel.app';
+      const fullUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
+      window.open(fullUrl, '_blank');
+    } catch (err) {
+      this.showToast(`تعذر فتح رابط المعاينة: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
+    }
+  }
+
+  async sendSingleParentLink(studentId) {
+    const student = (this.students || []).find(s => s.id === studentId);
+    const parentPhone = student?.parentPhone || student?.parent_phone;
+    if (!parentPhone) {
+      this.showToast('رقم هاتف ولي الأمر غير مسجل لهذا الطالب.', 'warning');
+      return;
+    }
+
+    const studentName = student?.name || 'الطالب';
+    this.showToast(`جاري إرسال رابط المتابعة لولي أمر (${studentName})...`, 'info');
+
+    try {
+      const res = await request(`/students/${studentId}/send-parent-link`, {
+        method: 'POST',
+        body: {
+          teacher_name: this.user?.name || 'المعلم',
+        },
+      });
+
+      if (res.success) {
+        if (student) {
+          student.parent_portal_sent_at = res.sent_at || new Date().toISOString();
+        }
+        this.showToast(`تم إرسال رابط المتابعة بنجاح لولي أمر (${studentName})!`, 'success');
+        if (this.currentRoute === 'students') {
+          this.renderMainContent();
+        }
+      } else {
+        this.showToast(res.error || 'فشل إرسال الرابط عبر واتساب', 'danger');
+      }
+    } catch (err) {
+      this.showToast(`خطأ أثناء إرسال الرابط: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
+    }
+  }
+
+  openBatchParentLinksModal() {
+    const studentList = this.students || [];
+    const unsentStudents = studentList.filter(s => !s.parent_portal_sent_at && (s.parentPhone || s.parent_phone));
+
+    if (unsentStudents.length === 0) {
+      this.showToast('جميع أولياء أمور الطلاب المسجلين تم إرسال روابط المتابعة إليهم بالفعل! ✔', 'info');
+      return;
+    }
+
+    const teacherName = this.user?.name || 'مستر أحمد';
+
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.75rem; padding: 0.85rem; color: #0369a1; font-size: 0.85rem; line-height: 1.5;">
+          <b>📢 إرسال ذكي للطلاب الجدد:</b>
+          سيتم إرسال رسالة واتساب رسمية ومخصصة لكل ولي أمر تحتوي على رابط المتابعة المباشر الخاص بنجله مع تطبيق فواصل الأمان (Anti-Ban).
+        </div>
+
+        <div>
+          <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <span>الطلاب الجدد المستهدفون (${unsentStudents.length} طالب):</span>
+            <label style="font-size: 0.8rem; color: #64748b; font-weight: 600; cursor: pointer;">
+              <input type="checkbox" id="selectAllBatchParentLinks" checked onchange="
+                const checked = this.checked;
+                document.querySelectorAll('.batch-parent-checkbox').forEach(cb => cb.checked = checked);
+              "> تحديد الكل
+            </label>
+          </div>
+
+          <div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; background: #fafafa;">
+            ${unsentStudents.map(s => {
+              const phone = s.parentPhone || s.parent_phone;
+              return `
+                <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.6rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 0.4rem; cursor: pointer;">
+                  <span style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" class="batch-parent-checkbox" value="${escapeHtml(s.id)}" checked>
+                    <span style="font-weight: 700; color: #1e293b;">${escapeHtml(s.name)}</span>
+                    <span style="font-size: 0.75rem; color: #64748b; font-family: monospace;">كود: ${escapeHtml(s.code || s.student_code || '—')}</span>
+                  </span>
+                  <span dir="ltr" style="font-size: 0.8rem; font-family: monospace; color: #475569;">${escapeHtml(phone)}</span>
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 0.75rem;">
+          <div style="font-weight: 700; font-size: 0.85rem; color: #0f172a; margin-bottom: 0.35rem;">معاينة نموذج الرسالة لولي الأمر:</div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.8rem; color: #334155; line-height: 1.6; white-space: pre-line;">
+السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (اسم الطالب).
+
+حرصاً على متابعة المستوى الدراسي أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:
+🔗 *رابط المتابعة المباشر:*
+https://centerly-platform.vercel.app/parent-portal?token=...
+
+💡 من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول متابعة درجات الكويزات والحضور والواجبات لحظياً.
+
+مع تحيات: ${escapeHtml(teacherName)}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 0.75rem;">
+        <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+        <button type="button" id="btnConfirmBatchParentLinks" class="btn btn-primary" onclick="window.centrlyApp.dispatchBatchParentLinks()" style="background-color: #0284c7; border-color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+          <span>📲</span>
+          <span>بدء الإرسال لـ ${unsentStudents.length} ولي أمر</span>
+        </button>
+      </div>
+    `;
+
+    this.showModal(`إرسال روابط المتابعة للطلاب الجدد`, bodyHtml, footerHtml);
+  }
+
+  async dispatchBatchParentLinks() {
+    const selectedBoxes = Array.from(document.querySelectorAll('.batch-parent-checkbox:checked'));
+    const selectedIds = selectedBoxes.map(cb => cb.value);
+
+    if (selectedIds.length === 0) {
+      this.showToast('يرجى اختيار طالب واحد على الأقل للإرسال.', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('btnConfirmBatchParentLinks');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `<span>⏳</span><span>جاري إرسال الروابط بأمان...</span>`;
+    }
+
+    this.showToast(`بدأ إرسال روابط المتابعة لـ (${selectedIds.length}) من أولياء الأمور بأعلى معايير الأمان...`, 'info');
+
+    try {
+      const res = await request('/students/batch-send-parent-links', {
+        method: 'POST',
+        body: {
+          student_ids: selectedIds,
+          teacher_name: this.user?.name || 'المعلم',
+        },
+      });
+
+      this.closeModal();
+
+      const sentCount = res.sent_count || 0;
+      const failedCount = res.failed_count || 0;
+
+      // Update local student records
+      const now = new Date().toISOString();
+      (this.students || []).forEach(s => {
+        if (selectedIds.includes(s.id)) {
+          const resultItem = (res.results || []).find(r => r.student_id === s.id);
+          if (!resultItem || resultItem.status === 'sent') {
+            s.parent_portal_sent_at = now;
+          }
+        }
+      });
+
+      if (sentCount > 0) {
+        this.showToast(`تم بنجاح إرسال روابط المتابعة إلى (${sentCount}) ولي أمر!`, 'success');
+      }
+      if (failedCount > 0) {
+        this.showToast(`تعذر إرسال (${failedCount}) رسائل بسبب انقطاع الاتصال أو أرقام غير صحيحة.`, 'warning');
+      }
+
+      if (this.currentRoute === 'students') {
+        this.renderMainContent();
+      }
+    } catch (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<span>📲</span><span>إعادة المحاولة</span>`;
+      }
+      this.showToast(`حدث خطأ أثناء الإرسال الجماعي: ${err.message || 'تأكد من الاتصال بالخادم'}`, 'danger');
     }
   }
 

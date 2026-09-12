@@ -18,6 +18,8 @@ export interface Student {
   group_id?: string | null;
   group_name?: string | null;
   group_ids?: string[];
+  parent_portal_token?: string | null;
+  parent_portal_sent_at?: string | null;
 }
 
 export interface CreateStudentDTO {
@@ -39,6 +41,8 @@ export interface UpdateStudentDTO {
   code?: string | null;
   fee_override?: number | null;
   exempt?: boolean;
+  parent_portal_token?: string | null;
+  parent_portal_sent_at?: string | null;
 }
 
 export interface PublicRegisterDTO {
