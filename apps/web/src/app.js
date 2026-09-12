@@ -5256,7 +5256,9 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const modalHtml = `
       <div id="quotaBlockedModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999; padding: 1rem;" dir="rtl">
         <div class="card" style="width: 100%; max-width: 480px; margin: 0; text-align: center; padding: 2rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25); font-family: 'Cairo', sans-serif;">
-          <div style="font-size: 3rem; margin-bottom: 0.75rem;">🚨</div>
+          <div style="width: 56px; height: 56px; margin: 0 auto 1rem; border-radius: 50%; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 900;">
+            !
+          </div>
           <h3 style="font-size: 1.3rem; font-weight: 900; color: #991b1b; margin: 0 0 0.5rem 0;">
             تم الوصول للحد الأقصى لباقتك
           </h3>
@@ -5268,7 +5270,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           <div style="display: flex; gap: 0.75rem; justify-content: center;">
             <button class="btn btn-secondary" onclick="document.getElementById('quotaBlockedModal')?.remove()">إغلاق</button>
             <button class="btn btn-primary" onclick="document.getElementById('quotaBlockedModal')?.remove(); window.centrlyApp.navigate('billing');" style="background: #2563eb; font-weight: 800;">
-              ترقية الباقة الآن 💳
+              ترقية الباقة الآن
             </button>
           </div>
         </div>
@@ -5282,12 +5284,13 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const existing = document.getElementById('paymentProofModal');
     if (existing) existing.remove();
 
+    this.currentProofImageData = null;
     const isYearly = (billingCycle === 'yearly');
     const periodLabel = isYearly ? 'اشتراك سنوي (خصم 10%)' : 'اشتراك شهري';
 
     const modalHtml = `
-      <div id="paymentProofModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 9999; padding: 1rem;" dir="rtl">
-        <div class="card" style="width: 100%; max-width: 480px; margin: 0; animation: modalFadeIn 0.2s ease-out; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); font-family: 'Cairo', sans-serif;">
+      <div id="paymentProofModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 9999; padding: 1rem; overflow-y: auto;" dir="rtl">
+        <div class="card" style="width: 100%; max-width: 500px; margin: auto; animation: modalFadeIn 0.2s ease-out; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); font-family: 'Cairo', sans-serif;">
           <div class="card-header" style="border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem; margin-bottom: 1rem;">
             <div>
               <h3 class="card-title" style="margin: 0; font-size: 1.15rem;">تأكيد ترقية / تجديد الاشتراك</h3>
@@ -5310,8 +5313,34 @@ https://centerly-platform.vercel.app/parent-portal?token=...
             </div>
 
             <div class="form-group" style="margin-bottom: 0.85rem;">
-              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">رقم العملية / رقم التحويل (Reference Number)</label>
-              <input type="text" id="proofRefNumber" class="form-input" placeholder="رقم العملية أو رقم المحفظة المحوّل منها" dir="ltr" required>
+              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">رقم العملية أو رقم المحفظة المحوّل منها</label>
+              <input type="text" id="proofRefNumber" class="form-input" placeholder="مثال: 987654321 أو رقم محفظتك (أو ارفق السكرين شوت أدناه)" dir="ltr">
+            </div>
+
+            <!-- Transfer Screenshot Upload -->
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label class="form-label" style="font-weight: 700; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>صورة إيصال التحويل / سكرين شوت</span>
+                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">PNG, JPG</span>
+              </label>
+
+              <input type="file" id="proofImageFile" accept="image/*" style="display: none;" onchange="window.centrlyApp.handleProofImageSelected(this)">
+
+              <div id="proofDropzone" onclick="document.getElementById('proofImageFile').click()" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 1rem; text-align: center; cursor: pointer; background: #f8fafc; transition: all 0.2s ease;">
+                <div style="font-size: 0.9rem; font-weight: 800; color: var(--centrly-blue-700); margin-bottom: 0.25rem;">
+                  انقر هنا لاختيار صورة إيصال التحويل
+                </div>
+                <div style="font-size: 0.775rem; color: #64748b;">
+                  أو اسحب وأفلت لقطة الشاشة (سكرين شوت) هنا
+                </div>
+              </div>
+
+              <div id="proofImagePreviewContainer" style="display: none; margin-top: 0.6rem; position: relative; border-radius: 12px; overflow: hidden; border: 1.5px solid #cbd5e1; background: #0f172a;">
+                <img id="proofImagePreview" src="" alt="معاينة إيصال التحويل" style="width: 100%; max-height: 180px; object-fit: contain; display: block;">
+                <button type="button" onclick="window.centrlyApp.removeProofImage()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.95); color: white; border: none; border-radius: 6px; padding: 0.35rem 0.65rem; font-size: 0.75rem; font-weight: 800; cursor: pointer; font-family: 'Cairo', sans-serif;">
+                  حذف الصورة
+                </button>
+              </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 1.25rem;">
@@ -5331,9 +5360,98 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Setup drag and drop for dropzone
+    setTimeout(() => {
+      const dropzone = document.getElementById('proofDropzone');
+      if (dropzone) {
+        dropzone.addEventListener('dragover', (ev) => {
+          ev.preventDefault();
+          dropzone.style.borderColor = 'var(--centrly-blue-700)';
+          dropzone.style.background = '#eff6ff';
+        });
+        dropzone.addEventListener('dragleave', () => {
+          dropzone.style.borderColor = '#cbd5e1';
+          dropzone.style.background = '#f8fafc';
+        });
+        dropzone.addEventListener('drop', (ev) => {
+          ev.preventDefault();
+          dropzone.style.borderColor = '#cbd5e1';
+          dropzone.style.background = '#f8fafc';
+          if (ev.dataTransfer?.files?.length) {
+            const fileInput = document.getElementById('proofImageFile');
+            if (fileInput) {
+              fileInput.files = ev.dataTransfer.files;
+              this.handleProofImageSelected(fileInput);
+            }
+          }
+        });
+      }
+    }, 50);
+  }
+
+  handleProofImageSelected(input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.showToast('يرجى اختيار ملف صورة صالح (PNG أو JPG)', 'danger');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        this.currentProofImageData = compressedDataUrl;
+
+        const preview = document.getElementById('proofImagePreview');
+        const container = document.getElementById('proofImagePreviewContainer');
+        const dropzone = document.getElementById('proofDropzone');
+        if (preview && container) {
+          preview.src = compressedDataUrl;
+          container.style.display = 'block';
+        }
+        if (dropzone) {
+          dropzone.style.display = 'none';
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  removeProofImage() {
+    this.currentProofImageData = null;
+    const fileInput = document.getElementById('proofImageFile');
+    if (fileInput) fileInput.value = '';
+    const container = document.getElementById('proofImagePreviewContainer');
+    if (container) container.style.display = 'none';
+    const preview = document.getElementById('proofImagePreview');
+    if (preview) preview.src = '';
+    const dropzone = document.getElementById('proofDropzone');
+    if (dropzone) dropzone.style.display = 'block';
   }
 
   closePaymentProofModal() {
+    this.currentProofImageData = null;
     const modal = document.getElementById('paymentProofModal');
     if (modal) modal.remove();
   }
@@ -5345,8 +5463,8 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const notes = document.getElementById('proofNotes')?.value?.trim() || null;
     const btn = document.getElementById('btnSubmitProof');
 
-    if (!refNum) {
-      this.showToast('يرجى إدخال رقم العملية أو رقم المحفظة', 'danger');
+    if (!refNum && !this.currentProofImageData) {
+      this.showToast('يرجى إدخال رقم العملية أو إرفاق صورة إيصال التحويل', 'danger');
       return;
     }
 
@@ -5364,7 +5482,8 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         body: JSON.stringify({
           amount: Number(amount),
           payment_method: method,
-          reference_number: refNum,
+          reference_number: refNum || null,
+          proof_image_url: this.currentProofImageData || null,
           notes: fullNotes,
         }),
       });

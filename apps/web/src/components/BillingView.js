@@ -62,7 +62,7 @@ export function renderBillingView(data = {}, user = {}) {
       yearlyMonthlyEquivalent: 809,
       yearlySavings: 1079,
       isPopular: true,
-      badgeText: '⭐ الأكثر طلباً للمعلمين',
+      badgeText: 'الأكثر طلباً للمعلمين',
     },
     {
       id: 'plan_500',
@@ -76,17 +76,6 @@ export function renderBillingView(data = {}, user = {}) {
       isPopular: false,
       badgeText: 'للسناتر وكبار المدرسين',
     }
-  ];
-
-  const commonFeatures = [
-    'تسجيل الحضور بالباركود السريع المستمر بالكاميرا والماسح',
-    'رسائل واتساب فورية لأولياء الأمور بنظام Pacing الآمن (ضد الحظر)',
-    'كروت الطلاب الذكية (طباعة PDF + تصدير لكانفا وفوتوشوب)',
-    'رصد درجات الكويزات وتوزيع النتائج للطلاب وأولياء الأمور بنقرة زر',
-    'بوابة متابعة ولي الأمر التفاعلية لحظة بلحظة (بدون أي تطبيق)',
-    'إدارة القاعات والمساعدين ومنع تضارب الحصص للسنتر',
-    'كشوف الحضور والغياب الشهرية وتقارير المتفوقين وقائمة المتابعة',
-    'دعم فني مصري مباشر وسريع عبر الواتساب على مدار الساعة'
   ];
 
   let statusBadgeHtml = '';
@@ -113,6 +102,7 @@ export function renderBillingView(data = {}, user = {}) {
   return `
     <div style="display: flex; flex-direction: column; gap: 1.75rem; font-family: 'Cairo', sans-serif;" dir="rtl">
       
+
       <!-- Current Subscription Status Card -->
       <div class="card" style="margin: 0; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: #fff; border: none; border-radius: 16px; padding: 1.75rem; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
@@ -150,7 +140,7 @@ export function renderBillingView(data = {}, user = {}) {
 
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
             <button class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 800; font-size: 0.95rem; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); cursor: pointer;" onclick="window.centrlyApp.openPaymentProofModal('باقة 100 طالب', ${isYearly ? 6469 : 599}, '${isYearly ? 'yearly' : 'monthly'}')">
-              تجديد / ترقية الاشتراك الآن 💳
+              تجديد / ترقية الاشتراك الآن
             </button>
           </div>
 
@@ -173,14 +163,14 @@ export function renderBillingView(data = {}, user = {}) {
           <button type="button" 
             onclick="window.centrlyApp.setBillingCycle('monthly')" 
             style="font-family: 'Cairo', sans-serif; font-size: 0.925rem; font-weight: 800; padding: 0.55rem 1.4rem; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s ease; ${!isYearly ? 'background: #ffffff; color: var(--centrly-blue-800); box-shadow: 0 2px 8px rgba(0,0,0,0.08);' : 'background: transparent; color: #64748b;'}">
-            📅 اشتراك شهري
+            اشتراك شهري
           </button>
           
           <button type="button" 
             onclick="window.centrlyApp.setBillingCycle('yearly')" 
             style="font-family: 'Cairo', sans-serif; font-size: 0.925rem; font-weight: 800; padding: 0.55rem 1.4rem; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.4rem; ${isYearly ? 'background: var(--centrly-blue-700); color: #ffffff; box-shadow: 0 2px 8px rgba(37,99,235,0.25);' : 'background: transparent; color: #64748b;'}">
-            <span>⭐ اشتراك سنوي</span>
-            <span style="background: #10b981; color: #fff; font-size: 0.725rem; padding: 0.15rem 0.45rem; border-radius: 9999px; font-weight: 900;">خصم 10% 🎉</span>
+            <span>اشتراك سنوي</span>
+            <span style="background: #10b981; color: #fff; font-size: 0.725rem; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 800;">خصم 10%</span>
           </button>
         </div>
 
@@ -199,7 +189,7 @@ export function renderBillingView(data = {}, user = {}) {
               
               ${plan.isPopular ? `
                 <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, var(--centrly-blue-700), var(--centrly-blue-900)); color: #fff; padding: 0.25rem 1rem; border-radius: 9999px; font-size: 0.775rem; font-weight: 800; box-shadow: 0 2px 8px rgba(37,99,235,0.3);">
-                  ${plan.badgeText}
+                  الأكثر طلباً للمعلمين
                 </div>
               ` : ''}
 
@@ -239,22 +229,17 @@ export function renderBillingView(data = {}, user = {}) {
                 </div>
 
                 <!-- Capacity Badge -->
-                <div style="background: ${plan.isPopular ? '#eff6ff' : '#f8fafc'}; border: 1px solid ${plan.isPopular ? '#bfdbfe' : '#e2e8f0'}; color: ${plan.isPopular ? '#1e3a8a' : '#334155'}; font-size: 0.875rem; font-weight: 800; padding: 0.55rem 0.75rem; border-radius: 8px; text-align: center; margin: 1rem 0 1.25rem;">
-                  👥 سعة الطلاب: حتى ${plan.capacity} طالباً
+                <div style="background: ${plan.isPopular ? '#eff6ff' : '#f8fafc'}; border: 1px solid ${plan.isPopular ? '#bfdbfe' : '#e2e8f0'}; color: ${plan.isPopular ? '#1e3a8a' : '#334155'}; font-size: 0.9rem; font-weight: 800; padding: 0.65rem 0.85rem; border-radius: 8px; text-align: center; margin: 1.25rem 0 1rem;">
+                  سعة الطلاب: حتى ${plan.capacity} طالباً
                 </div>
 
-                <div style="font-size: 0.8rem; font-weight: 800; color: #10b981; margin-bottom: 0.75rem;">
-                  🎁 تشمل جميع ميزات المنظومة بالكامل:
+                <!-- All Features Included Notice (Clean and concise without long bullet points) -->
+                <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.75rem; text-align: center;">
+                  <div style="font-size: 0.95rem; font-weight: 800; color: #166534;">
+                    تشمل جميع ميزات المنصة بالكامل
+                  </div>
                 </div>
 
-                <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; display: flex; flex-direction: column; gap: 0.55rem; font-size: 0.85rem; color: #334155;">
-                  ${commonFeatures.map(feat => `
-                    <li style="display: flex; align-items: flex-start; gap: 0.5rem; line-height: 1.5;">
-                      <span style="color: #10b981; flex-shrink: 0; margin-top: 2px;">${getIcon('check', 14)}</span>
-                      <span>${feat}</span>
-                    </li>
-                  `).join('')}
-                </ul>
               </div>
 
               <div>
@@ -282,7 +267,7 @@ export function renderBillingView(data = {}, user = {}) {
         </div>
         <div>
           <button class="btn btn-secondary" onclick="window.centrlyApp.openPaymentProofModal('باقة مخصصة للسناتر (+500 طالب)', 2499, '${isYearly ? 'yearly' : 'monthly'}')" style="font-weight: 800; padding: 0.65rem 1.25rem; font-size: 0.9rem;">
-            طلب تسعير سنتر مخصص 💬
+            طلب تسعير سنتر مخصص
           </button>
         </div>
       </div>

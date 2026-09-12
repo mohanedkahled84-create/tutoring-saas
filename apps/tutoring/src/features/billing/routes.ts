@@ -11,8 +11,8 @@ const paymentProofSchema = z.object({
   amount: z.number().positive("Amount must be a positive number"),
   payment_method: z.enum(["instapay", "vodafone_cash", "bank_transfer", "cash", "other"]),
   reference_number: z.string().max(100).optional().nullable(),
-  proof_image_url: z.string().url("Invalid image URL").optional().nullable(),
-  notes: z.string().max(500).optional().nullable(),
+  proof_image_url: z.string().optional().nullable(),
+  notes: z.string().max(1000).optional().nullable(),
 });
 
 function resolveBillingService(req: AuthenticatedRequest): BillingService {
