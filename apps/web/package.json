@@ -5,7 +5,8 @@
   "description": "Centrly Web Application - RTL Arabic-First Frontend Shell",
   "scripts": {
     "dev": "node local-dev-server.mjs",
-    "build": "echo 'Static build complete'"
+    "build": "echo 'Static build complete'",
+    "deploy:prod": "vercel --prod --yes && vercel alias set centerly-platform.vercel.app && vercel alias set centrly-platform.vercel.app"
   },
   "keywords": ["centrly", "edtech", "arabic", "rtl"],
   "author": "Centrly Team",

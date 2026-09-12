@@ -1,5 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "alias": [
+    "centerly-platform.vercel.app"
+  ],
   "outputDirectory": ".",
   "headers": [
     {
@@ -12,6 +15,58 @@
     }
   ],
   "routes": [
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "centrly-platform.vercel.app"
+        }
+      ],
+      "status": 308,
+      "headers": {
+        "Location": "https://centerly-platform.vercel.app/$1"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "centrly.vercel.app"
+        }
+      ],
+      "status": 308,
+      "headers": {
+        "Location": "https://centerly-platform.vercel.app/$1"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "web-mohaned-khaled1.vercel.app"
+        }
+      ],
+      "status": 308,
+      "headers": {
+        "Location": "https://centerly-platform.vercel.app/$1"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "web-gules-xi-53.vercel.app"
+        }
+      ],
+      "status": 308,
+      "headers": {
+        "Location": "https://centerly-platform.vercel.app/$1"
+      }
+    },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
