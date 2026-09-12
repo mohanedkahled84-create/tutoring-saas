@@ -7,21 +7,120 @@ import { getIcon } from "../utils/icons.js";
  * Clean vector icons, mandatory student phone, cards navigation, and direct parent notes.
  */
 
-export function renderStudentsView(students = [], groups = [], isLoading = false) {
+export function renderStudentsView(students = [], groups = [], isLoading = false, billing = {}) {
   const studentList = students || [];
   const unsentCount = studentList.filter(s => !s.parent_portal_sent_at && (s.parentPhone || s.parent_phone)).length;
+
+  const currentCount = studentList.length;
+  const billingData = billing || window.centrlyApp?.billingState || {};
+  const studentLimit = billingData.students_limit || 100;
+  const ratio = studentLimit > 0 ? (currentCount / studentLimit) : 0;
+  const isApproaching = ratio >= 0.85 && ratio < 1.0;
+  const isReachedOrExceeded = currentCount >= studentLimit;
+
+  // Track when limit was first reached in localStorage for 3-day grace period calculation
+  let graceDaysLeft = 3;
+  let isGraceExpired = false;
+  if (isReachedOrExceeded) {
+    const storageKey = 'centrly_quota_exceeded_timestamp';
+    let reachedTimestamp = localStorage.getItem(storageKey);
+    if (!reachedTimestamp) {
+      reachedTimestamp = Date.now().toString();
+      localStorage.setItem(storageKey, reachedTimestamp);
+    }
+    const elapsedDays = (Date.now() - Number(reachedTimestamp)) / (1000 * 60 * 60 * 24);
+    if (elapsedDays > 3) {
+      isGraceExpired = true;
+      graceDaysLeft = 0;
+    } else {
+      graceDaysLeft = Math.max(1, Math.ceil(3 - elapsedDays));
+    }
+  } else {
+    try {
+      localStorage.removeItem('centrly_quota_exceeded_timestamp');
+    } catch (_) {}
+  }
+
+  let quotaBannerHtml = '';
+  if (isReachedOrExceeded) {
+    if (isGraceExpired) {
+      quotaBannerHtml = `
+        <div class="card" style="margin: 0; background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 12px; padding: 1rem 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.6rem;">🚨</span>
+              <div>
+                <div style="font-weight: 800; color: #991b1b; font-size: 0.95rem;">تم إيقاف إضافة طلاب جدد مؤقتاً (استنفاد المقاعد وانتهاء مهلة السماح)</div>
+                <div style="font-size: 0.825rem; color: #b91c1c; margin-top: 0.2rem;">
+                  لقد استهلكت كامل سعة باقتك (${currentCount} من ${studentLimit} طالب) وانتهت فترة السماح المحددة بـ 3 أيام. لمتابعة تسجيل طلاب جدد، يرجى الترقية إلى باقة 250 أو 500 طالب.
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.navigate('billing')" style="background: #dc2626; border-color: #dc2626; font-weight: 800; padding: 0.5rem 1rem;">
+              ترقية الباقة الآن 💳
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      quotaBannerHtml = `
+        <div class="card" style="margin: 0; background: #fff7ed; border: 1.5px solid #fdba74; border-radius: 12px; padding: 1rem 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.6rem;">⚠️</span>
+              <div>
+                <div style="font-weight: 800; color: #9a3412; font-size: 0.95rem;">تنبيه فترة سماح: تم الوصول للحد الأقصى للباقة (${currentCount} / ${studentLimit} طالب)</div>
+                <div style="font-size: 0.825rem; color: #c2410c; margin-top: 0.2rem;">
+                  أنت الآن في فترة سماح استثنائية (متبقي <strong>${graceDaysLeft} أيام</strong>). يمكنك إضافة طلاب مؤقتاً، ولكن بادر بالترقية قبل انتهاء المهلة لضمان عدم توقف التسجيل.
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.navigate('billing')" style="background: #ea580c; border-color: #ea580c; font-weight: 800; padding: 0.5rem 1rem;">
+              ترقية الباقة قبل الإيقاف ⚡
+            </button>
+          </div>
+        </div>
+      `;
+    }
+  } else if (isApproaching) {
+    quotaBannerHtml = `
+      <div class="card" style="margin: 0; background: #fefce8; border: 1.5px solid #fde047; border-radius: 12px; padding: 0.85rem 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.35rem;">⚠️</span>
+            <div>
+              <div style="font-weight: 800; color: #854d0e; font-size: 0.9rem;">اقتربت من السعة القصوى للباقة (${currentCount} / ${studentLimit} طالب)</div>
+              <div style="font-size: 0.8rem; color: #a16207; margin-top: 0.15rem;">
+                متبقي لديك <strong>${studentLimit - currentCount} مقاعد</strong> فقط. سارع بترقية باقتك للاستمرار بإضافة الطلاب بسلاسة دون قيود.
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('billing')" style="font-weight: 800; font-size: 0.8rem;">
+            ترقية الباقة
+          </button>
+        </div>
+      </div>
+    `;
+  }
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       
+      ${quotaBannerHtml}
+
       <!-- Top Action Bar -->
       <div class="card" style="margin: 0;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
-            <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-              <span>${getIcon('students', 22, 'var(--centrly-blue-700)')}</span>
-              <span>دليل الطلاب وقاعدة البيانات</span>
-            </h2>
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>${getIcon('students', 22, 'var(--centrly-blue-700)')}</span>
+                <span>دليل الطلاب وقاعدة البيانات</span>
+              </h2>
+              <span style="background: ${isReachedOrExceeded ? '#fee2e2' : '#f1f5f9'}; color: ${isReachedOrExceeded ? '#b91c1c' : '#334155'}; font-size: 0.8rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 9999px; border: 1px solid ${isReachedOrExceeded ? '#fca5a5' : '#cbd5e1'};">
+                👥 المقاعد: ${currentCount} / ${studentLimit} طالب
+              </span>
+            </div>
             <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
               إدارة بيانات الطلاب، أرقام الهواتف الإلزامية، إرسال الملاحظات، والاستثناءات المالية
             </p>

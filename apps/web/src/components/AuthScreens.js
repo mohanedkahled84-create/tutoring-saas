@@ -3,7 +3,14 @@ import { getIcon } from '../utils/icons.js';
 export function renderAuthScreens() {
   return `
     <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: var(--centrly-surface); padding: 1.5rem;">
-      <div class="card" style="max-width: 440px; width: 100%; padding: 2rem; box-shadow: var(--shadow-lg);">
+      <div class="card" style="max-width: 440px; width: 100%; padding: 2rem; box-shadow: var(--shadow-lg); position: relative;">
+        
+        <div style="margin-bottom: 1rem; text-align: right;">
+          <button type="button" onclick="window.centrlyApp.renderLanding()" style="background: none; border: none; color: var(--centrly-blue-700); cursor: pointer; font-size: 0.825rem; font-weight: 700; font-family: 'Cairo', sans-serif; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.4rem; border-radius: 6px;" onmouseover="this.style.backgroundColor='#eff6ff'" onmouseout="this.style.backgroundColor='transparent'">
+            <span>← العودة للصفحة الرئيسية</span>
+          </button>
+        </div>
+
         <div style="text-align: center; margin-bottom: 1.5rem;">
           <div class="brand-logo-badge" style="margin: 0 auto 0.75rem; width: 56px; height: 56px; background: linear-gradient(135deg, #1e3a8a, #2563eb); border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(37,99,235,0.25);">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

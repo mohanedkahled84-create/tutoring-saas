@@ -59,6 +59,9 @@ export class BillingService {
       tenant.trial_ends_at,
       tenant.subscription_ends_at
     );
+    const studentCount = this.repository.getStudentCount
+      ? await this.repository.getStudentCount(tenantId)
+      : 0;
 
     return {
       subscription_status: tenant.subscription_status,
@@ -66,6 +69,9 @@ export class BillingService {
       subscription_ends_at: tenant.subscription_ends_at,
       days_remaining: daysRemaining,
       payment_proofs: proofs,
+      students_count: studentCount,
+      students_limit: 100,
+      plan_name: "باقة 100 طالب",
     };
   }
 

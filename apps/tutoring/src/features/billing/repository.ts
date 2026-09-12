@@ -114,6 +114,22 @@ export class SupabaseBillingRepository implements IBillingRepository {
     return data?.phone || null;
   }
 
+  async getStudentCount(tenantId: string): Promise<number> {
+    try {
+      const { count, error } = await this.supabase
+        .from("students")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId);
+
+      if (error || typeof count !== "number") {
+        return 0;
+      }
+      return count;
+    } catch {
+      return 0;
+    }
+  }
+
   async insertReminderLog(entry: {
     tenant_id: string;
     idempotency_key: string;

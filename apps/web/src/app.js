@@ -23,6 +23,7 @@ import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
 import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
+import { renderLandingView } from './components/LandingView.js?v=2.8.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 
@@ -107,6 +108,7 @@ class CentrlyApp {
     };
     this.watchlistData = [];
     this.billingState = null;
+    this.billingCycle = 'monthly';
     this.whatsappState = null;
     this.routeErrors = {};
   }
@@ -121,7 +123,12 @@ class CentrlyApp {
     }
 
     if (!authService.isAuthenticated()) {
-      this.renderAuth();
+      const viewParam = urlParams.get('view');
+      if (viewParam === 'login' || viewParam === 'signup') {
+        this.renderAuth(viewParam);
+      } else {
+        this.renderLanding();
+      }
     } else {
       this.user = authService.getUser();
       try {
@@ -143,6 +150,96 @@ class CentrlyApp {
       this.renderApp();
       await this.loadRouteData(this.currentRoute);
     }
+  }
+
+  // Official Landing / Welcome Page
+  renderLanding() {
+    window.scrollTo(0, 0);
+    document.getElementById('app').innerHTML = renderLandingView();
+  }
+
+  // Kashier Compliance & Legal Policies Modal Flow
+  openPolicyModal(type) {
+    const overlay = document.getElementById('policyModalOverlay');
+    const titleEl = document.getElementById('policyModalTitle');
+    const bodyEl = document.getElementById('policyModalBody');
+    if (!overlay || !titleEl || !bodyEl) return;
+
+    if (type === 'terms') {
+      titleEl.innerText = 'شروط وأحكام الاستخدام (Terms of Service)';
+      bodyEl.innerHTML = `
+        <h4 style="color: #1e3a8a; margin-top: 0; font-weight: 800;">1. مقدمة وقبول الشروط</h4>
+        <p>مرحباً بك في منصة <b>سنترلي (Centrly)</b>. باستخدامك لخدماتنا عبر هذا الموقع أو الاشتراك في باقاتنا، فإنك توافق على الالتزام الكامل بهذه الشروط والأحكام. إذا كنت لا توافق على أي بند، يرجى التوقف عن استخدام المنصة.</p>
+        
+        <h4 style="color: #1e3a8a; font-weight: 800;">2. وصف الخدمة</h4>
+        <p>سنترلي هي منصة برمجية سحابية (SaaS) مصممة لإدارة وتطوير شؤون المعلمين المستقلين والمراكز التعليمية، وتشمل تسجيل حضور الطلاب عبر الباركود، وإصدار كروت الطلاب، وأتمتة إشعارات أولياء الأمور عبر الواتساب، ورصد الكويزات وبوابة المتابعة التفاعلية لولي الأمر.</p>
+
+        <h4 style="color: #1e3a8a; font-weight: 800;">3. حسابات المستخدمين والمسؤولية</h4>
+        <p>أنت مسؤول مسؤولية كاملة عن الحفاظ على سرية بيانات تسجيل الدخول الخاصة بحسابك، وعن أي نشاط يصدر من خلاله. يتعهد المعلم أو إدارة السنتر بعدم استخدام الخدمة في أي غرض مخالف للقوانين المعمول بها في جمهورية مصر العربية.</p>
+
+        <h4 style="color: #1e3a8a; font-weight: 800;">4. الاشتراكات والدفع</h4>
+        <p>يتم تحصيل رسوم الاشتراك بالجنيه المصري (EGP) شهرياً وفقاً للباقة المختارة. تحتفظ المنصة بالحق في تعديل الأسعار مستقبلاً مع إخطار المشتركين مسبقاً قبل موعد التجديد بوقت كافٍ.</p>
+
+        <h4 style="color: #1e3a8a; font-weight: 800;">5. الملكية الفكرية والبيانات</h4>
+        <p>جميع حقوق الملكية الفكرية، التصاميم، العلامات التجارية، والبرمجيات الخاصة بـ سنترلي هي ملكية حصرية للمنصة، في حين تظل جميع بيانات الطلاب وأولياء الأمور ملكية حصرية للمدرس أو السنتر المشترك.</p>
+      `;
+    } else if (type === 'privacy') {
+      titleEl.innerText = 'سياسة الخصوصية وحماية البيانات (Privacy Policy)';
+      bodyEl.innerHTML = `
+        <h4 style="color: #1e3a8a; margin-top: 0; font-weight: 800;">1. جمع واستخدام البيانات</h4>
+        <p>نحن نحترم خصوصيتك وخصوصية بيانات طلابك بأعلى المعايير. نجمع فقط البيانات الضرورية لتشغيل الخدمة بكفاءة (مثل: اسم المعلم، أرقام هواتف الطلاب وأولياء الأمور، وسجلات الحضور والدرجات).</p>
+
+        <h4 style="color: #1e3a8a; font-weight: 800;">2. سرية وأمان البيانات المشفرة</h4>
+        <p>تُخزّن جميع البيانات في قواعد بيانات سحابية مشفرة ومؤمنة بأحدث بروتوكولات الحماية (RLS Encryption). نحن نلتزم التزاماً قاطعاً بعدم بيع أو تأجير أو مشاركة أي بيانات تخص طلابك أو أرقام هواتفهم مع أي طرف ثالث أو استخدامها لأي أغراض إعلانية.</p>
+
+        <h4 style="color: #1e3a8a; font-weight: 800;">3. إشعارات الواتساب</h4>
+        <p>يتم إرسال الرسائل بناءً على طلب وتوجيه المعلم أو السنتر لإخطار أولياء الأمور فقط بمواعيد الحصص وحالة الحضور والدرجات.</p>
+
+        <h4 style="color: #1e3a8a; font-weight: 800;">4. حقوق المستخدم</h4>
+        <p>يحق للمشترك في أي وقت طلب تصدير كامل بياناته أو حذف حسابه وبيانات طلابه بالكامل من خوادمنا بمجرد تقديم طلب للدعم الفني.</p>
+      `;
+    } else if (type === 'refund') {
+      titleEl.innerText = 'سياسة الاسترجاع والإلغاء (Refund & Cancellation Policy)';
+      bodyEl.innerHTML = `
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #065f46; font-weight: 700;">
+          🛡️ ضمان استرداد الأموال بنسبة 100% خلال 7 أيام (Money-Back Guarantee)
+        </div>
+        <p>في سنترلي، رضاك التام ونجاح منظومتك هو أساس عملنا. لذلك نوفر سياسة استرجاع مرنة وعادلة تماماً:</p>
+        
+        <h4 style="color: #1e3a8a; font-weight: 800;">1. شروط استرداد قيمة الاشتراك</h4>
+        <ul>
+          <li>يحق لأي مشترك جديد في باقات المنصة طلب استرداد كامل قيمة الاشتراك خلال <b>7 أيام</b> من تاريخ الدفع الأول، في حال عدم رضاه عن الخدمة أو وجود أي عائق تقني لم نتمكن من حله.</li>
+          <li>يتم تحويل المبلغ المسترد كاملاً بنفس وسيلة الدفع التي استخدمها العميل (عبر بطاقة البنك أو المحفظة الإلكترونية) خلال 3 إلى 5 أيام عمل وفقاً لقواعد شبكات الدفع المصرية.</li>
+        </ul>
+
+        <h4 style="color: #1e3a8a; font-weight: 800;">2. إلغاء الاشتراك الشهري</h4>
+        <p>يمكنك إلغاء تجديد اشتراكك في أي وقت من لوحة التحكم أو بالتواصل مع الدعم الفني، وسيظل حسابك نشطاً حتى نهاية الفترة المدفوعة بالفعل دون أي رسوم أو غرامات إلغاء إضافية.</p>
+
+        <h4 style="color: #1e3a8a; font-weight: 800;">3. طلبات كروت الطلاب المطبوعة</h4>
+        <p>المبالغ المدفوعة لطباعة كروت الطلاب البلاستيكية (PVC) التي تم تنفيذها وطباعتها وشحنها بالفعل للمدرس لا تخضع لسياسة الاسترجاع نظراً لتخصيصها وطباعة بيانات المدرس عليها.</p>
+      `;
+    } else if (type === 'contact') {
+      titleEl.innerText = 'بيانات التواصل الرسمية وخدمة العملاء';
+      bodyEl.innerHTML = `
+        <h4 style="color: #1e3a8a; margin-top: 0; font-weight: 800;">بيانات التواصل المعتمدة لدى سنترلي:</h4>
+        <p>يسعدنا تقديم الدعم الفني والإجابة على أي استفسارات للمعلمين وأصحاب السناتر في مصر:</p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem; line-height: 2.2;">
+          🏢 <b>الاسم التجاري الرسمي:</b> سنترلي للحلول التعليمية والبرمجيات (Centrly SaaS)<br>
+          📍 <b>العنوان والمقر:</b> جمهورية مصر العربية — القاهرة<br>
+          ✉️ <b>البريد الإلكتروني الرسمي:</b> <a href="mailto:support@centrly.app" style="color: #2563eb; font-weight: 700;">support@centrly.app</a><br>
+          📱 <b>الهاتف والواتساب المباشر:</b> <span dir="ltr" style="font-weight: 800; color: #0f172a;">+20 100 000 0000</span><br>
+          ⏰ <b>أوقات خدمة العملاء:</b> يومياً من 9:00 صباحاً حتى 10:00 مساءً بتوقيت القاهرة<br>
+          💱 <b>العملة الرسمية لجميع المعاملات:</b> الجنيه المصري (EGP - ج.م)
+        </div>
+      `;
+    }
+
+    overlay.style.display = 'flex';
+  }
+
+  closePolicyModal() {
+    const overlay = document.getElementById('policyModalOverlay');
+    if (overlay) overlay.style.display = 'none';
   }
 
   // DEV-34: No-App Parent Portal
@@ -167,8 +264,14 @@ class CentrlyApp {
     }
   }
 
-  renderAuth() {
+  renderAuth(tab = 'login') {
+    window.scrollTo(0, 0);
     document.getElementById('app').innerHTML = renderAuthScreens();
+    if (tab === 'signup') {
+      this.switchAuthTab('signup');
+    } else {
+      this.switchAuthTab('login');
+    }
   }
 
   switchAuthTab(tab) {
@@ -701,12 +804,14 @@ class CentrlyApp {
           this.studentsLoading = true;
           this.renderMainContent();
           try {
-            const [studRes, grpRes] = await Promise.all([
+            const [studRes, grpRes, billingRes] = await Promise.all([
               request('/students'),
               request('/groups'),
+              (!this.billingState || !this.billingState.students_limit) ? request('/billing/status').catch(() => null) : Promise.resolve(this.billingState),
             ]);
             this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
             this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+            if (billingRes) this.billingState = billingRes;
           } finally {
             this.studentsLoading = false;
             this.renderMainContent();
@@ -1037,7 +1142,7 @@ class CentrlyApp {
       case 'sessions':
         return renderSessionsView(this.sessionState, this.user, this.groups);
       case 'students':
-        return renderStudentsView(this.students, this.groups, this.studentsLoading);
+        return renderStudentsView(this.students, this.groups, this.studentsLoading, this.billingState);
       case 'student-cards':
         return renderStudentCardsView(this.students, this.groups, this.user);
       case 'reports':
@@ -1047,7 +1152,7 @@ class CentrlyApp {
       case 'risk-watchlist':
         return renderRiskWatchlistView(this.watchlistData || this.dashboardData?.atRiskStudents || []);
       case 'billing':
-        return renderBillingView(this.billingState || {});
+        return renderBillingView(this.billingState || {}, this.user || {});
       case 'whatsapp':
         return renderWhatsAppSettingsView(this.whatsappState || {});
       case 'activity-logs': {
@@ -1221,6 +1326,23 @@ class CentrlyApp {
   }
 
   async saveInlineNewStudentAndAttend() {
+    const studentLimit = this.billingState?.students_limit || 100;
+    const currentCount = (this.students || []).length;
+    if (currentCount >= studentLimit) {
+      const storageKey = 'centrly_quota_exceeded_timestamp';
+      let reachedTimestamp = localStorage.getItem(storageKey);
+      if (!reachedTimestamp) {
+        reachedTimestamp = Date.now().toString();
+        localStorage.setItem(storageKey, reachedTimestamp);
+      }
+      const elapsedDays = (Date.now() - Number(reachedTimestamp)) / (1000 * 60 * 60 * 24);
+      if (elapsedDays > 3) {
+        this.showToast('تم استنفاد سعة الطلاب بالكامل وتجاوزت مهلة السماح. يرجى ترقية الباقة لإضافة طلاب جدد.', 'danger');
+        this.showQuotaBlockedModal(currentCount, studentLimit);
+        return;
+      }
+    }
+
     const name = document.getElementById('inlineNewStudentName')?.value.trim();
     const parentPhone = document.getElementById('inlineNewStudentParentPhone')?.value.trim();
     const studentPhone = document.getElementById('inlineNewStudentPhone')?.value.trim();
@@ -1818,6 +1940,22 @@ class CentrlyApp {
 
   // Functional Add Student Modal (DEV-89: Student Phone Mandatory)
   openAddStudentModal() {
+    const studentLimit = this.billingState?.students_limit || 100;
+    const currentCount = (this.students || []).length;
+    if (currentCount >= studentLimit) {
+      const storageKey = 'centrly_quota_exceeded_timestamp';
+      let reachedTimestamp = localStorage.getItem(storageKey);
+      if (!reachedTimestamp) {
+        reachedTimestamp = Date.now().toString();
+        localStorage.setItem(storageKey, reachedTimestamp);
+      }
+      const elapsedDays = (Date.now() - Number(reachedTimestamp)) / (1000 * 60 * 60 * 24);
+      if (elapsedDays > 3) {
+        this.showQuotaBlockedModal(currentCount, studentLimit);
+        return;
+      }
+    }
+
     const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${g.name} (${g.center_name || 'السنتر'})</option>`).join('');
     const bodyHtml = `
       <form id="addStudentModalForm" onsubmit="window.centrlyApp.handleCreateStudent(event)">
@@ -3880,6 +4018,22 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   filterLogs() {}
 
   openImportModal() {
+    const studentLimit = this.billingState?.students_limit || 100;
+    const currentCount = (this.students || []).length;
+    if (currentCount >= studentLimit) {
+      const storageKey = 'centrly_quota_exceeded_timestamp';
+      let reachedTimestamp = localStorage.getItem(storageKey);
+      if (!reachedTimestamp) {
+        reachedTimestamp = Date.now().toString();
+        localStorage.setItem(storageKey, reachedTimestamp);
+      }
+      const elapsedDays = (Date.now() - Number(reachedTimestamp)) / (1000 * 60 * 60 * 24);
+      if (elapsedDays > 3) {
+        this.showQuotaBlockedModal(currentCount, studentLimit);
+        return;
+      }
+    }
+
     const defaultGroup = this.groups && this.groups[0];
     const bodyHtml = `
       <form id="importStudentsForm" onsubmit="window.centrlyApp.handleImportStudents(event)">
@@ -5090,22 +5244,61 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   // Billing & Subscription Actions (DEV-SL.3 & DEV-39)
   // ==========================================================================
 
-  openPaymentProofModal(planName = 'باقة المعلم المحترف', amount = 199) {
-    const existing = document.getElementById('paymentProofModal');
+  setBillingCycle(cycle = 'monthly') {
+    this.billingCycle = cycle;
+    this.renderMainContent();
+  }
+
+  showQuotaBlockedModal(currentCount, limit) {
+    const existing = document.getElementById('quotaBlockedModal');
     if (existing) existing.remove();
 
     const modalHtml = `
+      <div id="quotaBlockedModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999; padding: 1rem;" dir="rtl">
+        <div class="card" style="width: 100%; max-width: 480px; margin: 0; text-align: center; padding: 2rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25); font-family: 'Cairo', sans-serif;">
+          <div style="font-size: 3rem; margin-bottom: 0.75rem;">🚨</div>
+          <h3 style="font-size: 1.3rem; font-weight: 900; color: #991b1b; margin: 0 0 0.5rem 0;">
+            تم الوصول للحد الأقصى لباقتك
+          </h3>
+          <p style="font-size: 0.9rem; color: #475569; line-height: 1.6; margin: 0 0 1.25rem 0;">
+            لقد استهلكت كامل سعة الطلاب المتاحة في باقتك (<strong>${currentCount} من أصل ${limit} طالب</strong>) وتجاوزت فترة السماح المحددة بـ 3 أيام.
+            <br>
+            لمواصلة إضافة الطلاب الجدد، يرجى ترقية باقتك إلى باقة أعلى (250 أو 500 طالب).
+          </p>
+          <div style="display: flex; gap: 0.75rem; justify-content: center;">
+            <button class="btn btn-secondary" onclick="document.getElementById('quotaBlockedModal')?.remove()">إغلاق</button>
+            <button class="btn btn-primary" onclick="document.getElementById('quotaBlockedModal')?.remove(); window.centrlyApp.navigate('billing');" style="background: #2563eb; font-weight: 800;">
+              ترقية الباقة الآن 💳
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  }
+
+  openPaymentProofModal(planName = 'باقة 100 طالب', amount = 599, billingCycle = 'monthly') {
+    const existing = document.getElementById('paymentProofModal');
+    if (existing) existing.remove();
+
+    const isYearly = (billingCycle === 'yearly');
+    const periodLabel = isYearly ? 'اشتراك سنوي (خصم 10%)' : 'اشتراك شهري';
+
+    const modalHtml = `
       <div id="paymentProofModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 9999; padding: 1rem;" dir="rtl">
-        <div class="card" style="width: 100%; max-width: 480px; margin: 0; animation: modalFadeIn 0.2s ease-out; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+        <div class="card" style="width: 100%; max-width: 480px; margin: 0; animation: modalFadeIn 0.2s ease-out; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); font-family: 'Cairo', sans-serif;">
           <div class="card-header" style="border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem; margin-bottom: 1rem;">
             <div>
               <h3 class="card-title" style="margin: 0; font-size: 1.15rem;">تأكيد ترقية / تجديد الاشتراك</h3>
-              <p style="font-size: 0.8rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">${planName} — ${amount} ج.م شهرياً</p>
+              <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
+                <strong style="color: var(--centrly-blue-700);">${planName}</strong> — <strong>${Number(amount).toLocaleString('ar-EG')} ج.م</strong> (${periodLabel})
+              </p>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closePaymentProofModal()" style="border: none; font-size: 1.2rem; cursor: pointer;">✕</button>
           </div>
 
-          <form onsubmit="window.centrlyApp.handleSubmitPaymentProof(event, ${amount})">
+          <form onsubmit="window.centrlyApp.handleSubmitPaymentProof(event, ${amount}, '${planName}', '${billingCycle}')">
             <div class="form-group" style="margin-bottom: 0.85rem;">
               <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">طريقة التحويل التي استخدمتها</label>
               <select id="proofPaymentMethod" class="form-input" style="width: 100%;" required>
@@ -5145,7 +5338,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     if (modal) modal.remove();
   }
 
-  async handleSubmitPaymentProof(e, amount) {
+  async handleSubmitPaymentProof(e, amount, planName = 'باقة 100 طالب', billingCycle = 'monthly') {
     e.preventDefault();
     const method = document.getElementById('proofPaymentMethod')?.value || 'instapay';
     const refNum = document.getElementById('proofRefNumber')?.value?.trim();
@@ -5162,6 +5355,9 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       btn.innerText = 'جارٍ التأكيد...';
     }
 
+    const planTag = `[${planName} - ${billingCycle === 'yearly' ? 'اشتراك سنوي' : 'اشتراك شهري'}]`;
+    const fullNotes = notes ? `${planTag} ${notes}` : planTag;
+
     try {
       await request('/billing/payment-proof', {
         method: 'POST',
@@ -5169,7 +5365,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           amount: Number(amount),
           payment_method: method,
           reference_number: refNum,
-          notes: notes,
+          notes: fullNotes,
         }),
       });
 

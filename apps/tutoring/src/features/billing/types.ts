@@ -41,6 +41,9 @@ export interface TenantBillingStatus {
   subscription_ends_at?: string | null;
   days_remaining: number;
   payment_proofs: PaymentProofRecord[];
+  students_count?: number;
+  students_limit?: number;
+  plan_name?: string;
 }
 
 export interface ReminderResult {
@@ -71,6 +74,7 @@ export interface IBillingRepository {
   getActiveOrTrialTenants(): Promise<TenantBillingInfo[]>;
   isReminderDispatched(idempotencyKey: string): Promise<boolean>;
   getTenantOwnerPhone(tenantId: string): Promise<string | null>;
+  getStudentCount?(tenantId: string): Promise<number>;
   insertReminderLog(entry: {
     tenant_id: string;
     idempotency_key: string;
