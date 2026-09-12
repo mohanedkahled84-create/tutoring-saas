@@ -497,46 +497,87 @@ class CentrlyApp {
           const rawSessions = Array.isArray(calRes) ? calRes : (calRes.sessions || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           
-          const arabicDays = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-          // DEV-89: Filter out ended sessions - the calendar timetable is strictly for upcoming & active sessions
-          const activeSessions = rawSessions.filter(s => s.status !== 'ended');
-          const mappedSessions = activeSessions.map(s => {
-            const rawGrp = s.groups;
-            const groupObj = Array.isArray(rawGrp) ? rawGrp[0] : (rawGrp || {});
-            const d = s.session_date ? new Date(s.session_date + 'T00:00:00') : new Date();
-            const dayName = arabicDays[d.getDay()];
+          const arabicDayNames = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+          const jsDayToDayName = {
+            0: 'الأحد',
+            1: 'الإثنين',
+            2: 'الثلاثاء',
+            3: 'الأربعاء',
+            4: 'الخميس',
+            5: 'الجمعة',
+            6: 'السبت',
+          };
+
+          // 1. Recurring weekly classes for all teacher groups (pure schedule of class times)
+          const recurringGroupSessions = (this.groups || []).map(g => {
+            const day = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || 'السبت';
+            let time = g.session_time || '04:00 م - 06:00 م';
+            if (g.schedule && g.schedule.includes('•')) {
+              time = g.schedule.split('•')[1].trim();
+            }
             return {
-              ...s,
-              date: s.session_date || s.date,
-              day_name: dayName,
-              group_name: groupObj.name || s.group_name || 'حصة عامة',
-              center_name: groupObj.center_name || s.center_name || 'سنتر تعليمي',
-              time: s.time || (s.session_time ? `${s.session_time}` : '04:00 م - 06:00 م'),
+              id: `rec-${g.id}`,
+              group_id: g.id,
+              group_name: g.name,
+              center_name: g.center_name || g.centerName || 'سنتر تعليمي',
+              day_name: day,
+              time: time,
+              date: 'موعد أسبوعي ثابت',
+              is_recurring: true,
+              status: 'recurring',
+              price: g.price || 0,
             };
           });
 
-          // Include recurring weekly groups, without duplicating groups that already have an active/scheduled session card
-          const arabicDayNames = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
-          const recurringGroupSessions = (this.groups || [])
-            .filter(g => !mappedSessions.some(m => String(m.group_id) === String(g.id)))
-            .map(g => {
-              const day = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || 'السبت';
-              const time = g.session_time || (g.schedule && g.schedule.includes('•') ? g.schedule.split('•')[1].trim() : '04:00 م');
+          // 2. Extra sessions (حصص إضافية)
+          const extraSessions = rawSessions
+            .filter(s => s.is_extra)
+            .map(s => {
+              const rawGrp = s.groups;
+              const groupObj = Array.isArray(rawGrp) ? rawGrp[0] : (rawGrp || {});
+              const grp = this.groups.find(g => g.id === s.group_id) || groupObj;
+              const d = s.session_date ? new Date(s.session_date + 'T00:00:00') : new Date();
+              const dayName = jsDayToDayName[d.getDay()] || 'السبت';
               return {
-                id: `rec-${g.id}`,
-                group_id: g.id,
-                group_name: g.name,
-                center_name: g.center_name || g.centerName || 'السنتر',
-                day_name: day,
-                time: time,
-                date: 'موعد أسبوعي ثابت',
-                status: 'scheduled',
-                session_number: 1,
-                price: g.price || 0,
+                id: s.id,
+                group_id: s.group_id,
+                group_name: grp.name || s.group_name || 'حصة عامة',
+                center_name: grp.center_name || s.center_name || 'سنتر تعليمي',
+                day_name: dayName,
+                time: s.session_time || s.time || '04:00 م - 06:00 م',
+                date: s.session_date || s.date,
+                is_extra: true,
+                extra_topic: s.extra_topic || s.topic || '',
+                status: 'extra',
               };
             });
 
-          this.calendarSessions = [...mappedSessions, ...recurringGroupSessions];
+          // 3. Rescheduled sessions (مواعيد بديلة / مؤجلة)
+          const rescheduledSessions = rawSessions
+            .filter(s => s.status === 'rescheduled' || s.rescheduled_to_date)
+            .map(s => {
+              const rawGrp = s.groups;
+              const groupObj = Array.isArray(rawGrp) ? rawGrp[0] : (rawGrp || {});
+              const grp = this.groups.find(g => g.id === s.group_id) || groupObj;
+              const targetDate = s.rescheduled_to_date || s.session_date;
+              const d = targetDate ? new Date(targetDate + 'T00:00:00') : new Date();
+              const dayName = jsDayToDayName[d.getDay()] || 'السبت';
+              return {
+                id: s.id,
+                group_id: s.group_id,
+                group_name: grp.name || s.group_name || 'حصة عامة',
+                center_name: grp.center_name || s.center_name || 'سنتر تعليمي',
+                day_name: dayName,
+                time: s.rescheduled_to_time || s.session_time || s.time || '04:00 م - 06:00 م',
+                date: targetDate,
+                rescheduled_to_date: s.rescheduled_to_date,
+                rescheduled_to_time: s.rescheduled_to_time,
+                cancellation_reason: s.cancellation_reason,
+                status: 'rescheduled',
+              };
+            });
+
+          this.calendarSessions = [...recurringGroupSessions, ...extraSessions, ...rescheduledSessions];
           this.calendarState.sessions = this.calendarSessions;
           this.calendarState.groups = this.groups;
           this.renderMainContent();
@@ -1781,12 +1822,12 @@ class CentrlyApp {
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي *</label>
-          <input type="tel" id="newStudentOwnPhone" class="form-input" placeholder="01123456789" dir="ltr" required>
+          <input type="tel" id="newStudentOwnPhone" class="form-input" placeholder="" dir="ltr" required>
           <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم هاتف الطالب للتواصل المباشر والباركود (إلزامي)</small>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم هاتف ولي الأمر (واتساب) *</label>
-          <input type="tel" id="newStudentPhone" class="form-input" placeholder="01012345678" dir="ltr" required>
+          <input type="tel" id="newStudentPhone" class="form-input" placeholder="" dir="ltr" required>
           <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم مصري مكون من 11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015</small>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -1898,12 +1939,12 @@ class CentrlyApp {
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي *</label>
-          <input type="tel" id="editStudentOwnPhone" class="form-input" value="${escapeHtml(student.student_phone || '')}" placeholder="01123456789" dir="ltr" required>
+          <input type="tel" id="editStudentOwnPhone" class="form-input" value="${escapeHtml(student.student_phone || '')}" placeholder="" dir="ltr" required>
           <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم هاتف الطالب للتواصل المباشر والباركود (إلزامي 11 رقماً)</small>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم هاتف ولي الأمر (واتساب) *</label>
-          <input type="tel" id="editStudentPhone" class="form-input" value="${escapeHtml(student.parent_phone || '')}" placeholder="01012345678" dir="ltr" required>
+          <input type="tel" id="editStudentPhone" class="form-input" value="${escapeHtml(student.parent_phone || '')}" placeholder="" dir="ltr" required>
           <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم مصري مكون من 11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015</small>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -3230,6 +3271,7 @@ class CentrlyApp {
   openScheduleSessionModal(defaultGroupId = null) {
     const cleanDefaultId = defaultGroupId ? String(defaultGroupId).replace(/^rec-/, '') : null;
     const groupOptions = (this.groups || []).map(g => `<option value="${g.id}" ${cleanDefaultId === g.id ? 'selected' : ''}>${g.name}</option>`).join('');
+    const todayIso = new Date().toISOString().slice(0, 10);
     const bodyHtml = `
       <form id="scheduleSessionForm" onsubmit="window.centrlyApp.handleCreateExtraSession(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -3240,7 +3282,7 @@ class CentrlyApp {
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">تاريخ الحصة *</label>
-          <input type="date" id="extraSessionDate" class="form-input" value="2026-09-10" required>
+          <input type="date" id="extraSessionDate" class="form-input" value="${todayIso}" required>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">الوقت *</label>
@@ -4049,15 +4091,40 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     this.renderMainContent();
   }
 
+  updateCalendarDateLabel() {
+    const offset = Number(this.calendarState.weekOffset) || 0;
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const daysSinceSat = (dayOfWeek + 1) % 7;
+    const sat = new Date(now);
+    sat.setDate(now.getDate() - daysSinceSat + (offset * 7));
+    const fri = new Date(sat);
+    fri.setDate(sat.getDate() + 6);
+
+    const arabicMonthNames = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+
+    const startStr = `${sat.getDate()} ${arabicMonthNames[sat.getMonth()]}`;
+    const endStr = `${fri.getDate()} ${arabicMonthNames[fri.getMonth()]} ${fri.getFullYear()}`;
+    this.calendarState.dateLabel = `أسبوع ${startStr} - ${endStr}`;
+  }
+
   calendarPrev() {
-    this.showToast('تم استعراض الفترة السابقة', 'info');
+    this.calendarState.weekOffset = (this.calendarState.weekOffset || 0) - 1;
+    this.updateCalendarDateLabel();
+    this.renderMainContent();
   }
 
   calendarNext() {
-    this.showToast('تم استعراض الفترة التالية', 'info');
+    this.calendarState.weekOffset = (this.calendarState.weekOffset || 0) + 1;
+    this.updateCalendarDateLabel();
+    this.renderMainContent();
   }
 
   calendarToday() {
+    this.calendarState.weekOffset = 0;
     const jsDayToDayName = {
       0: 'الأحد',
       1: 'الإثنين',
@@ -4068,6 +4135,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       6: 'السبت',
     };
     this.calendarState.selectedDayName = jsDayToDayName[new Date().getDay()] || 'السبت';
+    this.updateCalendarDateLabel();
     this.renderMainContent();
     this.showToast('عرض جدول اليوم الحالي', 'info');
   }
