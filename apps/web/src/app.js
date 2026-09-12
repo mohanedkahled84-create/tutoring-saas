@@ -725,19 +725,21 @@ class CentrlyApp {
           let totalMonthlyRev = 0;
           let totalTeacherProfit = 0;
           const mappedGroups = groups.map(g => {
-            const count = Number(g.students_count) || Number(g.student_count) || students.filter(s => s.group_id === g.id || (Array.isArray(s.group_ids) && s.group_ids.includes(g.id))).length;
-            const price = Number(g.price || g.session_price) || 0;
+            const enrolledCount = students.filter(s => s.group_id === g.id || (Array.isArray(s.group_ids) && s.group_ids.includes(g.id))).length;
+            const count = enrolledCount || Number(g.students_count || g.student_count || 0);
+            const price = Number(g.price ?? g.session_price ?? 0);
             const monthlyGross = price * count * 4;
             let netProfit = Math.round(monthlyGross * 0.8);
 
             if (g.billing_model === 'fixed_per_student') {
-              const cut = Number(g.fixed_per_student_amount) || 0;
+              const cut = Number(g.fixed_per_student_amount || 0);
               netProfit = Math.max(0, (price - cut) * count * 4);
             } else if (g.billing_model === 'fixed_rent') {
-              const rent = Number(g.fixed_rent_amount) || 0;
+              const rent = Number(g.fixed_rent_amount || 0);
               netProfit = Math.max(0, monthlyGross - (rent * 4));
-            } else if (g.center_cut_percentage) {
-              netProfit = Math.round(monthlyGross * ((100 - Number(g.center_cut_percentage)) / 100));
+            } else if (g.center_cut_percentage !== undefined && g.center_cut_percentage !== null) {
+              const pct = Number(g.center_cut_percentage);
+              netProfit = Math.round(monthlyGross * ((100 - pct) / 100));
             }
 
             totalMonthlyRev += monthlyGross;
@@ -958,7 +960,7 @@ class CentrlyApp {
 
     switch (route) {
       case 'dashboard':
-        return renderTeacherDashboard(this.dashboardData || {});
+        return renderTeacherDashboard(this.dashboardData || {}, this.user || {});
       case 'center-dashboard':
         return renderCenterOwnerDashboard(this.centerDashboardState);
       case 'center-sessions':
@@ -997,7 +999,7 @@ class CentrlyApp {
         return renderMessageLogsView(this.messageLogs);
       }
       default:
-        return renderTeacherDashboard(this.dashboardData || {});
+        return renderTeacherDashboard(this.dashboardData || {}, this.user || {});
     }
   }
 

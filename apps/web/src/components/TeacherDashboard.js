@@ -18,33 +18,35 @@ export function renderTeacherDashboard(data = {}, user = {}) {
   };
 
   const groups = data.groups || [];
-  const displayName = data.userName || user?.name || 'المعلم';
+  const displayName = user?.name || data.userName || (user?.email ? user.email.split('@')[0] : 'المعلم');
 
   // Calculate total monthly revenue and net teacher profit directly from groups
+  // based on 4 sessions per month for every active group
   // to guarantee 100% consistency between the KPI cards and the breakdown table
   let calculatedMonthlyRev = 0;
   let calculatedTeacherProfit = 0;
   let totalEnrolledStudents = 0;
 
   const processedGroups = groups.map(g => {
-    const studentCount = Number(g.student_count) || Number(g.students_count) || (stats.totalStudents > 0 ? Math.ceil(stats.totalStudents / Math.max(1, groups.length)) : 0);
+    const studentCount = Number(g.student_count ?? g.students_count ?? 0);
     totalEnrolledStudents += studentCount;
-    const price = Number(g.price || g.session_price) || 120;
+    const price = Number(g.price ?? g.session_price ?? 0);
     const monthlyRev = price * studentCount * 4;
     let netProfit = Math.round(monthlyRev * 0.8);
     let billingModelName = 'نسبة سنتر (20%)';
 
     if (g.billing_model === 'fixed_per_student') {
-      const cut = Number(g.fixed_per_student_amount) || 20;
+      const cut = Number(g.fixed_per_student_amount || 0);
       netProfit = Math.max(0, (price - cut) * studentCount * 4);
       billingModelName = `أجر ثابت (${cut} ج.م/طالب)`;
     } else if (g.billing_model === 'fixed_rent') {
-      const rent = Number(g.fixed_rent_amount) || 250;
+      const rent = Number(g.fixed_rent_amount || 0);
       netProfit = Math.max(0, monthlyRev - (rent * 4));
       billingModelName = `إيجار قاعة (${rent} ج.م/حصة)`;
-    } else if (g.center_cut_percentage) {
-      billingModelName = `نسبة سنتر (${g.center_cut_percentage}%)`;
-      netProfit = Math.round(monthlyRev * ((100 - Number(g.center_cut_percentage)) / 100));
+    } else if (g.center_cut_percentage !== undefined && g.center_cut_percentage !== null) {
+      const pct = Number(g.center_cut_percentage);
+      billingModelName = `نسبة سنتر (${pct}%)`;
+      netProfit = Math.round(monthlyRev * ((100 - pct) / 100));
     }
 
     calculatedMonthlyRev += monthlyRev;

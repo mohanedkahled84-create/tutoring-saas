@@ -166,3 +166,52 @@ test("DEV-16: TeacherDashboard excludes At-Risk and Top Performers per user requ
   assert.ok(!content.includes("Top Performers"));
   assert.ok(!content.includes("المتفوقين"));
 });
+
+test("DEV-89: TeacherDashboard accurately calculates monthly revenue for 4 sessions per month across all billing models", async () => {
+  const { renderTeacherDashboard } = await import("../../../apps/web/src/components/TeacherDashboard.js");
+
+  const mockData = {
+    stats: { totalStudents: 6, activeGroups: 3, todayAttendanceRate: "100%" },
+    groups: [
+      {
+        id: "g1",
+        name: "مجموعة السبت (نسبة سنتر 20%)",
+        price: 120,
+        student_count: 2,
+        billing_model: "percentage",
+        center_cut_percentage: 20,
+      },
+      {
+        id: "g2",
+        name: "مجموعة الأحد (أجر ثابت 25 ج.م/طالب)",
+        price: 100,
+        student_count: 2,
+        billing_model: "fixed_per_student",
+        fixed_per_student_amount: 25,
+      },
+      {
+        id: "g3",
+        name: "مجموعة الإثنين (إيجار قاعة 200 ج.م/حصة)",
+        price: 150,
+        student_count: 2,
+        billing_model: "fixed_rent",
+        fixed_rent_amount: 200,
+      },
+    ],
+  };
+
+  const html = renderTeacherDashboard(mockData, { name: "أحمد حسني" });
+
+  // Calculation verification:
+  // Group 1: 120 * 2 * 4 = 960 gross, net = 960 * 0.8 = 768
+  // Group 2: 100 * 2 * 4 = 800 gross, net = (100 - 25) * 2 * 4 = 600
+  // Group 3: 150 * 2 * 4 = 1200 gross, net = 1200 - (200 * 4) = 400
+  // Total Monthly Revenue = 960 + 800 + 1200 = 2960
+  // Total Teacher Profit = 768 + 600 + 400 = 1768
+  assert.ok(html.includes((2960).toLocaleString("ar-EG")), "Total monthly revenue must be 2,960");
+  assert.ok(html.includes((1768).toLocaleString("ar-EG")), "Total teacher profit must be 1,768");
+  assert.ok(html.includes("مرحباً بك، أحمد حسني"), "Must display teacher's actual name");
+  assert.ok(!html.includes("Top Performers"), "Must not include Top Performers");
+  assert.ok(!html.includes("At-Risk"), "Must not include At-Risk");
+});
+
