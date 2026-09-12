@@ -158,12 +158,38 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
         
         <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-blue-700);">
-          <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">اسم الكويز الحالي</div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: var(--centrly-ink); margin-top: 0.35rem;">
-            ${escapeHtml(currentQuiz.title || `كويز ${currentQuiz.number}`)}
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="quizTitleInput" style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">
+              اسم / موضوع الكويز:
+            </label>
+            <span style="font-size: 0.72rem; color: var(--centrly-blue-700); font-weight: 700;">قابل للتعديل ✎</span>
           </div>
-          <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.25rem;">
-            الدرجة العظمى: ${currentQuiz.maxScore || 10} درجات
+          <div style="margin-top: 0.35rem;">
+            <input 
+              id="quizTitleInput"
+              type="text" 
+              class="form-input" 
+              value="${escapeHtml(currentQuiz.title || `كويز ${currentQuiz.number}`)}" 
+              placeholder="مثال: كويز 1 أو الفصل الأول..."
+              style="font-size: 0.95rem; font-weight: 800; color: var(--centrly-ink); padding: 0.4rem 0.65rem; border: 1.5px solid var(--centrly-line); border-radius: 6px; width: 100%;"
+              onchange="window.centrlyApp.updateQuizTitle(${currentQuiz.number}, this.value)"
+            />
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.4rem; font-size: 0.78rem; color: var(--centrly-text);">
+            <span style="font-weight: 600;">الدرجة العظمى للكويز:</span>
+            <div style="display: inline-flex; align-items: center; gap: 0.3rem;">
+              <input 
+                type="number" 
+                min="1" 
+                max="200" 
+                step="1"
+                class="form-input" 
+                value="${currentQuiz.maxScore || 10}" 
+                style="width: 65px; text-align: center; padding: 0.2rem 0.35rem; font-weight: 800; font-size: 0.85rem;"
+                onchange="window.centrlyApp.updateQuizMaxScore(${currentQuiz.number}, this.value)"
+              />
+              <span style="font-weight: 700;">درجات</span>
+            </div>
           </div>
         </div>
 

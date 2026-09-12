@@ -5074,6 +5074,66 @@ class CentrlyApp {
     }
   }
 
+  updateQuizTitle(quizNum, newTitle) {
+    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    if (quiz) {
+      quiz.title = newTitle ? newTitle.trim() : `كويز ${quizNum}`;
+      this.saveQuizzesToLocalStorage();
+
+      if (this.quizzesState.selectedGroupId) {
+        request('/quizzes', {
+          method: 'POST',
+          body: {
+            id: quiz.id && quiz.id.length > 20 ? quiz.id : undefined,
+            group_id: this.quizzesState.selectedGroupId,
+            quiz_number: quizNum,
+            title: quiz.title,
+            max_score: quiz.maxScore || 10,
+            is_skipped: Boolean(quiz.skipped),
+          },
+        }).then(res => {
+          if (res?.quiz?.id) {
+            quiz.id = res.quiz.id;
+            this.saveQuizzesToLocalStorage();
+          }
+        }).catch(() => {});
+      }
+      this.showToast('تم تحديث عنوان الكويز بنجاح ✓', 'info');
+      this.renderMainContent();
+    }
+  }
+
+  updateQuizMaxScore(quizNum, newMaxScore) {
+    const num = Number(newMaxScore);
+    if (isNaN(num) || num <= 0) return;
+    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    if (quiz) {
+      quiz.maxScore = num;
+      this.saveQuizzesToLocalStorage();
+
+      if (this.quizzesState.selectedGroupId) {
+        request('/quizzes', {
+          method: 'POST',
+          body: {
+            id: quiz.id && quiz.id.length > 20 ? quiz.id : undefined,
+            group_id: this.quizzesState.selectedGroupId,
+            quiz_number: quizNum,
+            title: quiz.title || `كويز ${quizNum}`,
+            max_score: num,
+            is_skipped: Boolean(quiz.skipped),
+          },
+        }).then(res => {
+          if (res?.quiz?.id) {
+            quiz.id = res.quiz.id;
+            this.saveQuizzesToLocalStorage();
+          }
+        }).catch(() => {});
+      }
+      this.showToast(`تم تحديث الدرجة العظمى إلى (${num} درجات) ✓`, 'info');
+      this.renderMainContent();
+    }
+  }
+
   updateStudentQuizScore(studentId, score) {
     const currQuiz = this.quizzesState.currentQuizNumber || 1;
     if (!this.quizzesState.scoresMap[currQuiz]) {

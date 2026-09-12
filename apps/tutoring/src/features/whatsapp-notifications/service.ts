@@ -1083,13 +1083,13 @@ export class WhatsAppNotificationsService {
         const greeting = greetings[Math.floor(Math.random() * greetings.length)];
 
         if (options.event_type === "rescheduled") {
-          text = `${greeting}\nنود إبلاغك بتعديل موعد حصة (${options.group_name || "المجموعة"}).\n📅 الموعد الجديد: ${options.date || ""}${options.time ? ` (${options.time})` : ""}.\n${options.reason ? `سبب التعديل: ${options.reason}\n` : ""}نرجو التواجد في الموعد المحدد.\nمع تحيات: مستر ${options.teacher_name || "المعلم"}`;
+          text = `${greeting}\n\n📢 *تعديل موعد الحصة*\n━━━━━━━━━━━━━━━\n👥 *المجموعة:* ${options.group_name || "المجموعة"}\n📅 *الموعد الجديد:* ${options.date || ""}${options.time ? ` (${options.time})` : ""}\n${options.reason ? `⚠️ *السبب:* ${options.reason}\n` : ""}━━━━━━━━━━━━━━━\nيرجى التواجد في الموعد المحدد والالتزام.\n━━━━━━━━━━━━━━━\nمع تحيات: مستر ${options.teacher_name || "المعلم"}`;
         } else if (options.event_type === "cancelled") {
-          text = `${greeting}\nنحيطك علماً بإلغاء حصة (${options.group_name || "المجموعة"})${options.date ? ` المقررة بتاريخ ${options.date}` : ""}.\n${options.reason ? `السبب: ${options.reason}\n` : ""}سيتم إعلامك بالموعد البديل لاحقاً حرصاً على دراستك.\nمع تمنياتنا بالتوفيق.`;
+          text = `${greeting}\n\n⚠️ *إلغاء موعد الحصة*\n━━━━━━━━━━━━━━━\n👥 *المجموعة:* ${options.group_name || "المجموعة"}${options.date ? `\n📅 *تاريخ الحصة:* ${options.date}` : ""}\n${options.reason ? `📌 *السبب:* ${options.reason}\n` : ""}━━━━━━━━━━━━━━━\nسيتم إعلامكم بالموعد البديل لاحقاً حرصاً على دراستكم.\n━━━━━━━━━━━━━━━\nمع أطيب التمنيات بالتوفيق والنجاح.`;
         } else if (options.event_type === "extra_session") {
-          text = `${greeting}\nيسعدنا إبلاغك بجدولة حصة إضافية لمجموعة (${options.group_name || "المجموعة"}).\n📅 الموعد: ${options.date || ""}${options.time ? ` (${options.time})` : ""}.\n${options.topic ? `موضوع الحصة: ${options.topic}\n` : ""}يرجى الالتزام بالحضور والاستعداد الجيد.\nمع تحيات: مستر ${options.teacher_name || "المعلم"}`;
+          text = `${greeting}\n\n✨ *جدولة حصة إضافية*\n━━━━━━━━━━━━━━━\n👥 *المجموعة:* ${options.group_name || "المجموعة"}\n📅 *الموعد:* ${options.date || ""}${options.time ? ` (${options.time})` : ""}\n${options.topic ? `📖 *موضوع الحصة:* ${options.topic}\n` : ""}━━━━━━━━━━━━━━━\nيرجى الالتزام بالحضور والاستعداد الجيد.\n━━━━━━━━━━━━━━━\nمع تحيات: مستر ${options.teacher_name || "المعلم"}`;
         } else {
-          text = `${greeting}\nتنبيه هام بخصوص مجموعة (${options.group_name || "المجموعة"}).\n${options.reason || options.topic || ""}\nمع أطيب التمنيات.`;
+          text = `${greeting}\n\n📢 *تنبيه هام للطلاب*\n━━━━━━━━━━━━━━━\n👥 *المجموعة:* ${options.group_name || "المجموعة"}\n${options.reason ? `📌 *التفاصيل:* ${options.reason}\n` : options.topic ? `📌 *الموضوع:* ${options.topic}\n` : ""}━━━━━━━━━━━━━━━\nمع أطيب التمنيات بالتوفيق والنجاح.`;
         }
       }
 
@@ -1258,27 +1258,27 @@ export function generateAttendanceMessage(options: AttendanceMessageOptions): st
   ];
 
   const homeworkDonePhrases = [
-    `\nحالة الواجب: مكتمل وممتاز 👍`,
-    `\nمتابعة الواجب المنزلي: مكتمل وممتاز وتم أداؤه بعناية 🌟`,
-    `\nالواجب: مكتمل وممتاز، تم تسليمه والالتزام بالحل النموذجي ✔️`,
-    `\nحالة الواجب: مكتمل وممتاز وأداء مبشر يستحق التشجيع 👏`,
-    `\nتقرير الواجب: مكتمل وممتاز ومحلول بالكامل 💯`,
+    `📝 *الواجب المنزلي:* مكتمل وممتاز 👍`,
+    `📝 *متابعة الواجب:* مكتمل وممتاز وتم أداؤه بعناية 🌟`,
+    `📝 *حالة الواجب:* مكتمل وممتاز، تم تسليمه والالتزام بالحل النموذجي ✔️`,
+    `📝 *أداء الواجب:* مكتمل وممتاز وأداء مبشر يستحق التشجيع 👏`,
+    `📝 *تقرير الواجب:* مكتمل وممتاز ومحلول بالكامل 💯`,
   ];
 
   const homeworkPartialPhrases = [
-    `\nحالة الواجب: ناقص ويحتاج إلى استكمال ⚠️`,
-    `\nمتابعة الواجب المنزلي: تم إنجاز جزء فقط من الواجب ويحتاج لاستكمال 📝`,
-    `\nالواجب: غير مكتمل، يرجى التنبيه بضرورة إنهائه كاملاً ⚠️`,
-    `\nحالة الواجب: ناقص، نرجو حثه على استكمال باقي التمارين قبل الحصة القادمة ⏳`,
-    `\nتقرير الواجب: منجز جزئياً فقط، ونرجو المتابعة المنزلية لاستكماله 📌`,
+    `📝 *حالة الواجب:* ناقص ويحتاج إلى استكمال ⚠️`,
+    `📝 *متابعة الواجب المنزلي:* تم إنجاز جزء فقط من الواجب ويحتاج لاستكمال 📝`,
+    `📝 *الواجب:* غير مكتمل، يرجى التنبيه بضرورة إنهائه كاملاً ⚠️`,
+    `📝 *أداء الواجب:* ناقص، نرجو حثه على استكمال باقي التمارين قبل الحصة القادمة ⏳`,
+    `📝 *تقرير الواجب:* منجز جزئياً فقط، ونرجو المتابعة المنزلية لاستكماله 📌`,
   ];
 
   const homeworkMissingPhrases = [
-    `\nحالة الواجب: لم يتم تسليم الواجب ❌`,
-    `\nمتابعة الواجب المنزلي: لم يقم الطالب بإحضار أو تسليم الواجب ⚠️`,
-    `\nالواجب: لم يتم حله، نرجو المتابعة الجادة والتأكيد على الالتزام ❌`,
-    `\nحالة الواجب: لم يتم تسليمه في الحصة، يرجى التنبيه عليه بالتعويض فوراً 📌`,
-    `\nتقرير الواجب: لم يُسلّم اليوم، حرصاً على مستواه نرجو المتابعة المنزلية ❌`,
+    `📝 *حالة الواجب:* لم يتم تسليم الواجب ❌`,
+    `📝 *متابعة الواجب المنزلي:* لم يقم الطالب بإحضار أو تسليم الواجب ⚠️`,
+    `📝 *الواجب:* لم يتم حله، نرجو المتابعة الجادة والتأكيد على الالتزام ❌`,
+    `📝 *أداء الواجب:* لم يتم تسليمه في الحصة، يرجى التنبيه عليه بالتعويض فوراً 📌`,
+    `📝 *تقرير الواجب:* لم يُسلّم اليوم، حرصاً على مستواه نرجو المتابعة المنزلية ❌`,
   ];
 
   const notePrefixes = [
@@ -1314,33 +1314,48 @@ export function generateAttendanceMessage(options: AttendanceMessageOptions): st
     body = absentBodies[spintaxState.absentBodyIdx];
   }
 
-  let message = `${greeting}\n${body}`;
-
   // Rotate homework phrasing
+  let hwPhrase = "";
   if (homework_status === "done") {
     spintaxState.homeworkDoneIdx = getRotatedIndex(homeworkDonePhrases.length, spintaxState.homeworkDoneIdx);
-    message += homeworkDonePhrases[spintaxState.homeworkDoneIdx];
+    hwPhrase = homeworkDonePhrases[spintaxState.homeworkDoneIdx];
   } else if (homework_status === "partial") {
     spintaxState.homeworkPartialIdx = getRotatedIndex(homeworkPartialPhrases.length, spintaxState.homeworkPartialIdx);
-    message += homeworkPartialPhrases[spintaxState.homeworkPartialIdx];
+    hwPhrase = homeworkPartialPhrases[spintaxState.homeworkPartialIdx];
   } else if (homework_status === "missing") {
     spintaxState.homeworkMissingIdx = getRotatedIndex(homeworkMissingPhrases.length, spintaxState.homeworkMissingIdx);
-    message += homeworkMissingPhrases[spintaxState.homeworkMissingIdx];
+    hwPhrase = homeworkMissingPhrases[spintaxState.homeworkMissingIdx];
   }
+
+  let closingOrTeacher = "";
+  if (teacher_name && teacher_name.trim()) {
+    const tName = teacher_name.trim();
+    const formattedTeacher = tName.startsWith("مستر") ? tName : `مستر ${tName}`;
+    closingOrTeacher = `مع تحيات: ${formattedTeacher}`;
+  } else {
+    spintaxState.closingIdx = getRotatedIndex(closings.length, spintaxState.closingIdx);
+    closingOrTeacher = closings[spintaxState.closingIdx];
+  }
+
+  const header = attended ? "📋 *تقرير متابعة الحصة*" : "⚠️ *إشعار غياب عن الحصة*";
+  const statusLine = attended
+    ? "📌 *حالة الحضور:* ✅ *حاضر ومشارك في الحصة*"
+    : "📌 *حالة الحضور:* ❌ *غياب (لم يحضر الحصة)*";
+
+  let message = `${greeting}\n\n${header}\n━━━━━━━━━━━━━━━\n${statusLine}`;
+  if (hwPhrase) {
+    message += `\n${hwPhrase}`;
+  }
+  message += `\n━━━━━━━━━━━━━━━\n💬 *البيان:* ${body}`;
 
   // Rotate note prefix if comment exists
   if (comment && comment.trim() && comment.trim() !== "حصة تعويضية") {
     spintaxState.notePrefixIdx = getRotatedIndex(notePrefixes.length, spintaxState.notePrefixIdx);
     const prefix = notePrefixes[spintaxState.notePrefixIdx];
-    message += `\n${prefix}${comment.trim()}`;
+    message += `\n━━━━━━━━━━━━━━━\n💡 *${prefix}* ${comment.trim()}`;
   }
 
-  if (teacher_name && teacher_name.trim()) {
-    message += `\nمع تحيات: مستر ${teacher_name.trim()}`;
-  } else {
-    spintaxState.closingIdx = getRotatedIndex(closings.length, spintaxState.closingIdx);
-    message += `\n${closings[spintaxState.closingIdx]}`;
-  }
+  message += `\n━━━━━━━━━━━━━━━\n${closingOrTeacher}`;
 
   return message;
 }
@@ -1361,6 +1376,18 @@ export interface QuizMessageOptions {
 export function generateQuizScoreMessage(options: QuizMessageOptions): string {
   const { student_name, quiz_title, score, max_score = 10, teacher_name, note } = options;
   const percentage = (score / max_score) * 100;
+  const displayTitle = quiz_title && quiz_title.trim() ? quiz_title.trim() : "كويز";
+  const percentText = percentage % 1 === 0 ? percentage.toFixed(0) : percentage.toFixed(1);
+
+  // Rating badge
+  let ratingBadge = "";
+  if (percentage >= 85) {
+    ratingBadge = "🌟 ممتاز (أداء متفوق)";
+  } else if (percentage >= 65) {
+    ratingBadge = "👍 جيد (مستوى طيب ومبشر)";
+  } else {
+    ratingBadge = "⚠️ يحتاج اهتمام ومتابعة";
+  }
 
   const greetings = [
     `السلام عليكم ورحمة الله وبركاته، تحية طيبة لولي أمر الطالب/ة (${student_name}).`,
@@ -1374,24 +1401,24 @@ export function generateQuizScoreMessage(options: QuizMessageOptions): string {
   ];
 
   const excellentPhrases = [
-    `نبارك لكم تميز وتفوق الطالب في (${quiz_title}) وحصوله على درجة ممتازة: (${score} من ${max_score}) 🌟.`,
-    `يسعدنا إبلاغكم بنتيجة الطالب الرائعة في (${quiz_title}): حيث حقق (${score} من ${max_score})، أداء ممتاز ومشرف!`,
-    `ما شاء الله، أداء متألق في (${quiz_title}) بدرجة (${score} من ${max_score}). نرجو له دوام التميز والتفوق.`,
-    `أداء استثنائي وعلامة مشرفة في (${quiz_title}) بدرجة (${score} من ${max_score})، نتمنى له استمرار الصدارة 👏.`,
+    `نبارك لكم تميز وتفوق الطالب في (${displayTitle}) وحصوله على درجة ممتازة: (${score} من ${max_score}) 🌟.`,
+    `يسعدنا إبلاغكم بنتيجة الطالب الرائعة في (${displayTitle}): حيث حقق (${score} من ${max_score})، أداء ممتاز ومشرف!`,
+    `ما شاء الله، أداء متألق في (${displayTitle}) بدرجة (${score} من ${max_score}). نرجو له دوام التميز والتفوق.`,
+    `أداء استثنائي وعلامة مشرفة في (${displayTitle}) بدرجة (${score} من ${max_score})، نتمنى له استمرار الصدارة 👏.`,
   ];
 
   const goodPhrases = [
-    `نفيدكم بنتيجة الطالب في (${quiz_title}) حصل على (${score} من ${max_score})، وهو أداء جيد ونتطلع لمزيد من التقدم.`,
-    `حقق الطالب في (${quiz_title}) درجة (${score} من ${max_score}). مستوى جيد وبمزيد من التركيز والاجتهاد سيصل للقمة بإذن الله.`,
-    `نحيطكم علماً بأن درجة الطالب في (${quiz_title}) هي (${score} من ${max_score}). بداية جيدة ونشجعه على الاستمرار.`,
-    `أحرز الطالب (${score} من ${max_score}) في (${quiz_title}). مستوى طيب ومبشر ونتوقع منه الأفضل دوماً 👍.`,
+    `نفيدكم بنتيجة الطالب في (${displayTitle}) حصل على (${score} من ${max_score})، وهو أداء جيد ونتطلع لمزيد من التقدم.`,
+    `حقق الطالب في (${displayTitle}) درجة (${score} من ${max_score}). مستوى جيد وبمزيد من التركيز والاجتهاد سيصل للقمة بإذن الله.`,
+    `نحيطكم علماً بأن درجة الطالب في (${displayTitle}) هي (${score} من ${max_score}). بداية جيدة ونشجعه على الاستمرار.`,
+    `أحرز الطالب (${score} من ${max_score}) في (${displayTitle}). مستوى طيب ومبشر ونتوقع منه الأفضل دوماً 👍.`,
   ];
 
   const needAttentionPhrases = [
-    `نحيطكم علماً بنتيجة الطالب في (${quiz_title}): حيث حصل على (${score} من ${max_score}). برجاء حثه على المذاكرة والمتابعة المستمرة لتحسين مستواه في الاختبارات القادمة.`,
-    `سجل الطالب درجة (${score} من ${max_score}) في (${quiz_title}). نرجو تكثيف المتابعة المنزلية والمراجعة لتدارك النقاط الصعبة أولاً بأول.`,
-    `حصل الطالب على درجة (${score} من ${max_score}) في (${quiz_title}). نحثكم على تشجيعه لتعويض ذلك والتركيز خلال الحصص القادمة.`,
-    `أظهر تقييم (${quiz_title}) حصول الطالب على (${score} من ${max_score}). نرجو التعاون وحثه على المراجعة الجادة لرفع مستواه في الاختبار القادم ⚠️.`,
+    `نحيطكم علماً بنتيجة الطالب في (${displayTitle}): حيث حصل على (${score} من ${max_score}). برجاء حثه على المذاكرة والمتابعة المستمرة لتحسين مستواه في الاختبارات القادمة.`,
+    `سجل الطالب درجة (${score} من ${max_score}) في (${displayTitle}). نرجو تكثيف المتابعة المنزلية والمراجعة لتدارك النقاط الصعبة أولاً بأول.`,
+    `حصل الطالب على درجة (${score} من ${max_score}) في (${displayTitle}). نحثكم على تشجيعه لتعويض ذلك والتركيز خلال الحصص القادمة.`,
+    `أظهر تقييم (${displayTitle}) حصول الطالب على (${score} من ${max_score}). نرجو التعاون وحثه على المراجعة الجادة لرفع مستواه في الاختبار القادم ⚠️.`,
   ];
 
   const closings = [
@@ -1420,16 +1447,23 @@ export function generateQuizScoreMessage(options: QuizMessageOptions): string {
     body = needAttentionPhrases[spintaxState.quizBodyIdx];
   }
 
-  let message = `${greeting}\n${body}`;
-  if (note && note.trim()) {
-    message += `\nملاحظة المعلم: ${note.trim()}`;
-  }
+  let teacherLine = "";
   if (teacher_name && teacher_name.trim()) {
-    message += `\nمع تحيات: ${teacher_name.trim()}`;
+    const tName = teacher_name.trim();
+    const formattedTeacher = tName.startsWith("مستر") || tName.startsWith("أ.") || tName.startsWith("أستاذ") ? tName : `مستر ${tName}`;
+    teacherLine = `مع تحيات: ${formattedTeacher}`;
   } else {
     spintaxState.quizClosingIdx = getRotatedIndex(closings.length, spintaxState.quizClosingIdx);
-    message += `\n${closings[spintaxState.quizClosingIdx]}`;
+    teacherLine = closings[spintaxState.quizClosingIdx];
   }
+
+  let message = `${greeting}\n\n📊 *تقرير نتيجة الكويز*\n━━━━━━━━━━━━━━━\n📝 *الاختبار:* ${displayTitle}\n🎯 *الدرجة المحققة:* ⭐️ *${score} من ${max_score}* ⭐️ (%${percentText})\n📈 *التقدير العام:* ${ratingBadge}\n━━━━━━━━━━━━━━━\n💬 *التقييم:* ${body}`;
+
+  if (note && note.trim()) {
+    message += `\n━━━━━━━━━━━━━━━\n📝 *ملاحظة المعلم:* ${note.trim()}`;
+  }
+
+  message += `\n━━━━━━━━━━━━━━━\n${teacherLine}`;
 
   return message;
 }
