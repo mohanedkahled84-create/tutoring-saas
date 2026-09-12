@@ -29,6 +29,7 @@ export interface IEvolutionGateway {
   getConnectionState(instanceName: string): Promise<EvolutionStateResult>;
   disconnectInstance(instanceName: string): Promise<boolean>;
   sendTextMessage?(instanceName: string, recipientNumber: string, text: string): Promise<{ success: boolean; error?: string }>;
+  sendPresence?(instanceName: string, recipientNumber: string, presence?: "composing" | "available" | "paused"): Promise<boolean>;
 }
 
 export class HttpEvolutionGateway implements IEvolutionGateway {
@@ -251,6 +252,42 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
       return { success: false, error: (err as Error).message };
     }
   }
+
+  async sendPresence(
+    instanceName: string,
+    recipientNumber: string,
+    presence: "composing" | "available" | "paused" = "composing"
+  ): Promise<boolean> {
+    if (!this.apiUrl || !this.apiKey) {
+      return true;
+    }
+
+    let cleanPhone = recipientNumber.replace(/[\s\-\+\(\)]/g, "");
+    if (cleanPhone.startsWith("00")) cleanPhone = cleanPhone.slice(2);
+    if (cleanPhone.startsWith("01") && cleanPhone.length === 11) {
+      cleanPhone = "20" + cleanPhone.slice(1);
+    }
+
+    try {
+      const res = await fetch(`${this.apiUrl}/chat/sendPresence/${instanceName}`, {
+        method: "POST",
+        headers: {
+          apikey: this.apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          number: cleanPhone,
+          presence,
+          delay: 1200,
+        }),
+        signal: AbortSignal.timeout(4000),
+      }).catch(() => null);
+
+      return Boolean(res?.ok);
+    } catch {
+      return false;
+    }
+  }
 }
 
 export class FakeEvolutionGateway implements IEvolutionGateway {
@@ -260,6 +297,14 @@ export class FakeEvolutionGateway implements IEvolutionGateway {
     _text: string
   ): Promise<{ success: boolean; error?: string }> {
     return { success: true };
+  }
+
+  async sendPresence(
+    _instanceName: string,
+    _recipientNumber: string,
+    _presence: "composing" | "available" | "paused" = "composing"
+  ): Promise<boolean> {
+    return true;
   }
   private instances = new Map<
     string,

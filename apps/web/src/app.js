@@ -3292,7 +3292,7 @@ class CentrlyApp {
 
     this.showConfirmModal({
       title: 'إرسال إشعارات الحصة لأولياء الأمور عبر واتساب',
-      message: `سيتم إرسال (${countEligible}) رسالة لأولياء الأمور لتقارير الحضور والغياب والملاحظات والواجب مع تطبيق نظام الأمان ومكافحة الحظر (Anti-Ban) بفواصل زمنية عشوائية (من 10 إلى 30 ثانية لكل طالب) وصياغات متغيرة ومتباينة لكل طالب. هل ترغب في المتابعة؟`,
+      message: `سيتم إرسال (${countEligible}) رسالة لأولياء الأمور لتقارير الحضور والغياب والملاحظات والواجب مع تطبيق نظام الأمان الفائق ومكافحة الحظر (Ultra Anti-Ban) بفواصل عشوائية (من 20 إلى 40 ثانية لكل طالب) ومحاكاة الكتابة الحية (جاري الكتابة...). هل ترغب في المتابعة؟`,
       confirmText: `إرسال الإشعارات الآن (${countEligible} رسالة)`,
       cancelText: 'إلغاء',
       isDanger: false,
@@ -3300,7 +3300,7 @@ class CentrlyApp {
         if (this.sessionState.isDispatchingWhatsApp) return;
         this.sessionState.isDispatchingWhatsApp = true;
         try {
-          this.showToast('جارٍ إرسال إشعارات الحصة عبر واتساب بفواصل أمان عشوائية (10-30 ثانية لكل طالب) لحماية الرقم من الحظر...', 'info');
+          this.showToast('جارٍ إرسال إشعارات الحصة عبر واتساب بأعلى درجات الأمان (فواصل 20-40 ثانية ومحاكاة الكتابة)...', 'info');
 
           // 1. First: Guarantee all attendance records (attended + absent) are synced to the backend
           const syncRecords = (this.sessionState.attendanceList || [])

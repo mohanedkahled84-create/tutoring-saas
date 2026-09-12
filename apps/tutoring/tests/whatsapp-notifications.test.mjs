@@ -4,6 +4,7 @@ import http from "node:http";
 import { app } from "../dist/app.js";
 import {
   calculateJitterDelay,
+  calculateInitialJitterDelay,
   checkWarmUpLimit,
   recordHealthError,
   recordHealthSuccess,
@@ -84,10 +85,16 @@ test("DEV-65: calculateJitterDelay stays within configured bounds", () => {
     assert.ok(delay >= 3900 && delay <= 9100, `Delay ${delay} was out of expected range`);
   }
 
-  // Test default bounds (10s to 30s)
+  // Test default bounds (20s to 40s)
   for (let i = 0; i < 20; i++) {
     const defaultDelay = calculateJitterDelay();
-    assert.ok(defaultDelay >= 9900 && defaultDelay <= 30100, `Default delay ${defaultDelay} was out of 10s-30s range`);
+    assert.ok(defaultDelay >= 19900 && defaultDelay <= 40100, `Default delay ${defaultDelay} was out of 20s-40s range`);
+  }
+
+  // Test initial delay bounds (5s to 10s)
+  for (let i = 0; i < 20; i++) {
+    const initDelay = calculateInitialJitterDelay();
+    assert.ok(initDelay >= 4900 && initDelay <= 10100, `Initial delay ${initDelay} was out of 5s-10s range`);
   }
 });
 

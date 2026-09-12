@@ -5,6 +5,7 @@ import {
   IWhatsAppNotificationsRepository,
   JitterConfig,
   DEFAULT_JITTER_CONFIG,
+  INITIAL_JITTER_CONFIG,
   ConnectionWarmUpInfo,
   WarmUpCheckResult,
   WARMUP_SCHEDULE,
@@ -31,6 +32,11 @@ export function calculateJitterDelay(jitterConfig: JitterConfig = DEFAULT_JITTER
   }
   lastGeneratedDelay = delay;
   return delay;
+}
+
+export function calculateInitialJitterDelay(jitterConfig: JitterConfig = INITIAL_JITTER_CONFIG): number {
+  const range = jitterConfig.maxDelayMs - jitterConfig.minDelayMs;
+  return jitterConfig.minDelayMs + Math.floor(Math.random() * (range + 1));
 }
 
 // Anti-ban Warm-up
@@ -250,6 +256,14 @@ export class WhatsAppNotificationsService {
       });
 
       try {
+        if (this.gateway.sendPresence) {
+          await this.gateway.sendPresence(primaryInstance, payload.parent_phone, "composing").catch(() => {});
+          if (process.env.NODE_ENV !== "test") {
+            const typingDuration = 2000 + Math.floor(Math.random() * 1500);
+            await new Promise((r) => setTimeout(r, typingDuration));
+          }
+        }
+
         let gwRes = await this.gateway.sendTextMessage(primaryInstance, payload.parent_phone, text);
         if (!gwRes.success && primaryInstance !== fallbackInstance) {
           logger.info(`[WhatsAppService] Retrying sendTextMessage with fallback instance ${fallbackInstance}`);
@@ -532,9 +546,32 @@ export class WhatsAppNotificationsService {
         continue;
       }
 
-      // 3. Apply Jitter Delay (if not first item and delay requested)
+      // 3. Apply Jitter Delay
       let delayApplied = 0;
-      if (i > 0) {
+      if (i === 0) {
+        // Initial delay before first message (5 to 10s) to avoid instantaneous bot dispatch
+        const initialDelay =
+          options?.pacingDelayMs === 0
+            ? 0
+            : calculateInitialJitterDelay();
+
+        if (initialDelay > 0) {
+          logger.info(
+            `[WhatsAppPacing] Initial Anti-Ban Jitter applied: waiting ${initialDelay}ms (${(initialDelay / 1000).toFixed(1)}s) before sending first message to ${item.student_name} (${item.parent_phone})`
+          );
+          await new Promise((resolve) => setTimeout(resolve, initialDelay));
+          delayApplied = initialDelay;
+        }
+      } else {
+        // Batch break: every 10th message, add natural rest pause (60-90s) unless test pacingDelayMs is set
+        if (i % 10 === 0 && options?.pacingDelayMs === undefined) {
+          const breakDelay = 60000 + Math.floor(Math.random() * 30000);
+          logger.info(
+            `[WhatsAppPacing] Batch Rest Break applied: pausing for ${(breakDelay / 1000).toFixed(0)}s after 10 messages to mimic human behavior.`
+          );
+          await new Promise((resolve) => setTimeout(resolve, breakDelay));
+        }
+
         delayApplied = options?.pacingDelayMs !== undefined ? options.pacingDelayMs : calculateJitterDelay();
         if (delayApplied > 0) {
           logger.info(
