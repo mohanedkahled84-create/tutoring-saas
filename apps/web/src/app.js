@@ -4,7 +4,7 @@ import { renderSidebar } from './components/Sidebar.js';
 import { renderNavbar } from './components/Navbar.js';
 import { renderAuthScreens } from './components/AuthScreens.js';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
-import { renderTeacherDashboard } from './components/TeacherDashboard.js';
+import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.1.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
 import { renderStudentsView } from './components/StudentsView.js';
