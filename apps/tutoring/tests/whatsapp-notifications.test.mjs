@@ -304,6 +304,64 @@ test("DEV-QUIZ.4: batchSendQuizScores respects Circuit Breaker when paused", asy
   assert.equal(batchRes.results[0].status, "skipped_circuit_open");
 });
 
+test("DEV-QUIZ.9: sendQuizScore supports direct student dispatch and dual parent+student dispatch", async () => {
+  const repo = new FakeWhatsAppRepository();
+  const gateway = new FakeTestGateway();
+  const service = new WhatsAppNotificationsService(repo, gateway);
+  const tenantId = "tenant-quiz-student-test";
+  recordHealthSuccess(tenantId);
+  resetTenantDailyCount(tenantId);
+
+  // 1. Student-only dispatch
+  const studentOnlyRes = await service.sendQuizScore({
+    tenant_id: tenantId,
+    teacher_id: "teach-chem",
+    student_id: "std-55",
+    student_name: "حمزة طارق",
+    student_phone: "01199887766",
+    recipient_type: "student",
+    quiz_title: "كويز كيمياء عضويّة",
+    score: 9,
+    max_score: 10,
+    teacher_name: "مستر أحمد",
+  });
+
+  assert.equal(studentOnlyRes.success, true);
+  assert.equal(studentOnlyRes.gateway_sent, true);
+  assert.deepEqual(studentOnlyRes.sent_to, ["student"]);
+  assert.ok(studentOnlyRes.message_text.includes("حمزة طارق"));
+  assert.ok(studentOnlyRes.message_text.includes("عزيزنا الطالب") || studentOnlyRes.message_text.includes("يا (حمزة طارق)"));
+  assert.equal(gateway.sentMessages.length, 1);
+  assert.equal(gateway.sentMessages[0].number, "01199887766");
+
+  // 2. Dual dispatch (both parent and student)
+  const dualRes = await service.sendQuizScore({
+    tenant_id: tenantId,
+    teacher_id: "teach-chem",
+    student_id: "std-56",
+    student_name: "رنا سعيد",
+    parent_phone: "01011223344",
+    student_phone: "01233445566",
+    recipient_type: "both",
+    quiz_title: "كويز 2 كيمياء",
+    score: 8.5,
+    max_score: 10,
+    teacher_name: "مستر أحمد",
+  });
+
+  assert.equal(dualRes.success, true);
+  assert.equal(dualRes.gateway_sent, true);
+  assert.deepEqual(dualRes.sent_to, ["parent", "student"]);
+  assert.equal(gateway.sentMessages.length, 3); // 1 + 2 = 3
+  assert.equal(gateway.sentMessages[1].number, "01011223344"); // parent
+  assert.equal(gateway.sentMessages[2].number, "01233445566"); // student
+  assert.ok(gateway.sentMessages[1].text.includes("رنا سعيد"));
+  assert.ok(gateway.sentMessages[1].text.includes("8.5 من 10"));
+  assert.ok(gateway.sentMessages[2].text.includes("رنا سعيد"));
+  assert.ok(gateway.sentMessages[2].text.includes("8.5 من 10"));
+  assert.ok(gateway.sentMessages[2].text.includes("عزيزنا الطالب") || gateway.sentMessages[2].text.includes("يا (رنا سعيد)"));
+});
+
 test("DEV-NOTIF.1: batchSendCustomNotification sends alerts to students with Anti-Ban pacing", async () => {
   const repo = new FakeWhatsAppRepository();
   const gateway = new FakeTestGateway();

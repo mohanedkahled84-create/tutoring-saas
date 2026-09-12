@@ -644,12 +644,88 @@ export class WhatsAppNotificationsService {
   /**
    * DEV-QUIZ.1: Send single student quiz score via WhatsApp with dynamic variation & anti-ban protection.
    */
+  /**
+   * Helper to dispatch a single text message through the Evolution gateway
+   * with instance fallback, simulated presence, quota accounting, and circuit breaker health reporting.
+   */
+  private async deliverSingleTextMessage(params: {
+    tenant_id: string;
+    teacher_id?: string | null;
+    recipient_phone: string;
+    message_text: string;
+  }): Promise<{ success: boolean; error?: string; gateway_sent: boolean }> {
+    const { tenant_id, teacher_id, recipient_phone, message_text } = params;
+    let gatewaySent = false;
+
+    if (this.gateway?.sendTextMessage && recipient_phone) {
+      const actualTeacherId = teacher_id || "default";
+      const primaryInstance = buildInstanceName(tenant_id, actualTeacherId);
+      const fallbackInstance = buildInstanceName(tenant_id, "default");
+
+      try {
+        if (this.gateway.sendPresence) {
+          await this.gateway.sendPresence(primaryInstance, recipient_phone, "composing").catch(() => {});
+          if (process.env.NODE_ENV !== "test") {
+            const typingDuration = 2000 + Math.floor(Math.random() * 1500);
+            await new Promise((r) => setTimeout(r, typingDuration));
+          }
+        }
+
+        let gwRes = await this.gateway.sendTextMessage(primaryInstance, recipient_phone, message_text);
+        if (!gwRes.success && primaryInstance !== fallbackInstance) {
+          logger.info(
+            `[WhatsAppService] Retrying with fallback instance ${fallbackInstance}`
+          );
+          gwRes = await this.gateway.sendTextMessage(fallbackInstance, recipient_phone, message_text);
+        }
+        const globalInstance = config.evolutionInstanceName;
+        if (!gwRes.success && globalInstance && globalInstance !== primaryInstance && globalInstance !== fallbackInstance) {
+          logger.info(`[WhatsAppService] Retrying with global instance ${globalInstance}`);
+          gwRes = await this.gateway.sendTextMessage(globalInstance, recipient_phone, message_text);
+        }
+
+        if (gwRes.success) {
+          gatewaySent = true;
+          incrementTenantDailyCount(tenant_id, 1);
+          recordHealthSuccess(tenant_id);
+          return { success: true, gateway_sent: true };
+        } else {
+          recordHealthError(tenant_id, "disconnect");
+          return {
+            success: false,
+            error: gwRes.error || "Evolution gateway failed to send text message",
+            gateway_sent: false,
+          };
+        }
+      } catch (gwErr) {
+        recordHealthError(tenant_id, "timeout");
+        return {
+          success: false,
+          error: (gwErr as Error).message,
+          gateway_sent: false,
+        };
+      }
+    } else {
+      // In test or non-gateway environment
+      gatewaySent = true;
+      incrementTenantDailyCount(tenant_id, 1);
+      recordHealthSuccess(tenant_id);
+      return { success: true, gateway_sent: true };
+    }
+  }
+
+  /**
+   * DEV-QUIZ.1: Send single student quiz score via WhatsApp with dynamic variation & anti-ban protection.
+   * Supports parent-facing, student-facing, or dual dispatch.
+   */
   async sendQuizScore(params: {
     tenant_id: string;
     teacher_id?: string | null;
     student_id: string;
     student_name: string;
-    parent_phone: string;
+    parent_phone?: string;
+    student_phone?: string;
+    recipient_type?: "parent" | "student" | "both";
     quiz_title: string;
     score: number;
     max_score?: number;
@@ -662,6 +738,9 @@ export class WhatsAppNotificationsService {
     message_text: string;
     recipient: string;
     gateway_sent: boolean;
+    sent_to?: ("parent" | "student")[];
+    student_message_text?: string;
+    student_recipient?: string;
   }> {
     const {
       tenant_id,
@@ -669,6 +748,8 @@ export class WhatsAppNotificationsService {
       student_id,
       student_name,
       parent_phone,
+      student_phone,
+      recipient_type = "both",
       quiz_title,
       score,
       max_score = 10,
@@ -677,16 +758,8 @@ export class WhatsAppNotificationsService {
       custom_message,
     } = params;
 
-    const messageText =
-      custom_message ||
-      generateQuizScoreMessage({
-        student_name,
-        quiz_title,
-        score,
-        max_score,
-        teacher_name,
-        note,
-      });
+    const cleanParentPhone = (parent_phone || "").replace(/[\s\-\(\)\.]/g, "");
+    const cleanStudentPhone = (student_phone || "").replace(/[\s\-\(\)\.]/g, "");
 
     // 1. Check Circuit Breaker
     const health = getHealthStatus(tenant_id);
@@ -694,8 +767,8 @@ export class WhatsAppNotificationsService {
       return {
         success: false,
         error: `Circuit breaker is paused until ${health.paused_until || "unknown"}`,
-        message_text: messageText,
-        recipient: parent_phone,
+        message_text: "",
+        recipient: cleanParentPhone || cleanStudentPhone || "",
         gateway_sent: false,
       };
     }
@@ -706,77 +779,101 @@ export class WhatsAppNotificationsService {
       return {
         success: false,
         error: `Daily volume cap reached for tenant. Sending paused to prevent ban.`,
-        message_text: messageText,
-        recipient: parent_phone,
+        message_text: "",
+        recipient: cleanParentPhone || cleanStudentPhone || "",
         gateway_sent: false,
       };
     }
 
-    // 3. Dispatch via Gateway using teacher instance with fallback
-    let gatewaySent = false;
-    if (this.gateway?.sendTextMessage && parent_phone) {
-      const actualTeacherId = teacher_id || "default";
-      const primaryInstance = buildInstanceName(tenant_id, actualTeacherId);
-      const fallbackInstance = buildInstanceName(tenant_id, "default");
-
-      try {
-        if (this.gateway.sendPresence) {
-          await this.gateway.sendPresence(primaryInstance, parent_phone, "composing").catch(() => {});
-          if (process.env.NODE_ENV !== "test") {
-            const typingDuration = 2000 + Math.floor(Math.random() * 1500);
-            await new Promise((r) => setTimeout(r, typingDuration));
-          }
-        }
-
-        let gwRes = await this.gateway.sendTextMessage(primaryInstance, parent_phone, messageText);
-        if (!gwRes.success && primaryInstance !== fallbackInstance) {
-          logger.info(
-            `[WhatsAppService] Retrying sendQuizScore with fallback instance ${fallbackInstance}`
-          );
-          gwRes = await this.gateway.sendTextMessage(fallbackInstance, parent_phone, messageText);
-        }
-        const globalInstance = config.evolutionInstanceName;
-        if (!gwRes.success && globalInstance && globalInstance !== primaryInstance && globalInstance !== fallbackInstance) {
-          logger.info(`[WhatsAppService] Retrying sendQuizScore with global instance ${globalInstance}`);
-          gwRes = await this.gateway.sendTextMessage(globalInstance, parent_phone, messageText);
-        }
-
-        if (gwRes.success) {
-          gatewaySent = true;
-          incrementTenantDailyCount(tenant_id, 1);
-          recordHealthSuccess(tenant_id);
-        } else {
-          recordHealthError(tenant_id, "disconnect");
-          return {
-            success: false,
-            error: gwRes.error || "Evolution gateway failed to send text message",
-            message_text: messageText,
-            recipient: parent_phone,
-            gateway_sent: false,
-          };
-        }
-      } catch (gwErr) {
-        recordHealthError(tenant_id, "timeout");
-        return {
-          success: false,
-          error: (gwErr as Error).message,
-          message_text: messageText,
-          recipient: parent_phone,
-          gateway_sent: false,
-        };
+    // 3. Determine target phone list
+    const targets: Array<{ type: "parent" | "student"; phone: string }> = [];
+    if (recipient_type === "parent" || recipient_type === "both") {
+      if (cleanParentPhone.length >= 8) {
+        targets.push({ type: "parent", phone: cleanParentPhone });
       }
-    } else {
-      // In test or non-gateway environment
-      gatewaySent = true;
-      incrementTenantDailyCount(tenant_id, 1);
-      recordHealthSuccess(tenant_id);
+    }
+    if (recipient_type === "student" || recipient_type === "both") {
+      if (cleanStudentPhone.length >= 8) {
+        targets.push({ type: "student", phone: cleanStudentPhone });
+      }
     }
 
+    if (targets.length === 0) {
+      const targetLabel = recipient_type === "student" ? "هاتف الطالب" : recipient_type === "parent" ? "هاتف ولي الأمر" : "هاتف الطالب أو ولي الأمر";
+      return {
+        success: false,
+        error: `لم يتم العثور على رقم صحيح لـ (${targetLabel}) لإرسال النتيجة`,
+        message_text: "",
+        recipient: cleanParentPhone || cleanStudentPhone || "",
+        gateway_sent: false,
+      };
+    }
+
+    let primaryMessageText = "";
+    let primaryRecipient = "";
+    let studentMessageText: string | undefined;
+    let studentRecipient: string | undefined;
+    const sentTo: ("parent" | "student")[] = [];
+    let lastError: string | undefined;
+    let anyGatewaySent = false;
+
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i];
+      const msgText =
+        custom_message ||
+        generateQuizScoreMessage({
+          student_name,
+          quiz_title,
+          score,
+          max_score,
+          teacher_name,
+          note,
+          recipient_type: target.type,
+        });
+
+      if (target.type === "parent") {
+        primaryMessageText = msgText;
+        primaryRecipient = target.phone;
+      } else {
+        studentMessageText = msgText;
+        studentRecipient = target.phone;
+        if (!primaryMessageText) {
+          primaryMessageText = msgText;
+          primaryRecipient = target.phone;
+        }
+      }
+
+      // Between sending to parent and student for the same student, add natural human pause
+      if (i > 0 && process.env.NODE_ENV !== "test") {
+        const typingDuration = 1500 + Math.floor(Math.random() * 1500);
+        await new Promise((r) => setTimeout(r, typingDuration));
+      }
+
+      const deliverRes = await this.deliverSingleTextMessage({
+        tenant_id,
+        teacher_id,
+        recipient_phone: target.phone,
+        message_text: msgText,
+      });
+
+      if (deliverRes.success) {
+        sentTo.push(target.type);
+        if (deliverRes.gateway_sent) anyGatewaySent = true;
+      } else {
+        lastError = deliverRes.error;
+      }
+    }
+
+    const isSuccess = sentTo.length > 0;
     return {
-      success: true,
-      message_text: messageText,
-      recipient: parent_phone,
-      gateway_sent: gatewaySent,
+      success: isSuccess,
+      error: isSuccess ? undefined : (lastError || "Failed to deliver quiz score message"),
+      message_text: primaryMessageText,
+      recipient: primaryRecipient,
+      gateway_sent: anyGatewaySent,
+      sent_to: sentTo,
+      student_message_text: studentMessageText,
+      student_recipient: studentRecipient,
     };
   }
 
@@ -789,6 +886,7 @@ export class WhatsAppNotificationsService {
       student_id: string;
       student_name: string;
       parent_phone: string;
+      student_phone?: string;
       score: number;
       note?: string;
     }>,
@@ -799,6 +897,7 @@ export class WhatsAppNotificationsService {
       teacher_name?: string;
       pacingDelayMs?: number;
       dailyCap?: number;
+      target?: "parents" | "students" | "both";
     }
   ): Promise<{
     total: number;
@@ -905,12 +1004,21 @@ export class WhatsAppNotificationsService {
 
       // 4. Send Quiz Score Message
       try {
+        const recipientType =
+          options?.target === "parents"
+            ? "parent"
+            : options?.target === "students"
+            ? "student"
+            : "both";
+
         const sendRes = await this.sendQuizScore({
           tenant_id: tenantId,
           teacher_id: options.teacher_id,
           student_id: item.student_id,
           student_name: item.student_name,
           parent_phone: item.parent_phone,
+          student_phone: item.student_phone,
+          recipient_type: recipientType,
           quiz_title: options.quiz_title,
           score: item.score,
           max_score: options.max_score,
@@ -1192,6 +1300,9 @@ interface SpintaxRotationState {
   quizGreetingIdx: number;
   quizBodyIdx: number;
   quizClosingIdx: number;
+  studentQuizGreetingIdx: number;
+  studentQuizBodyIdx: number;
+  studentQuizClosingIdx: number;
 }
 
 const spintaxState: SpintaxRotationState = {
@@ -1206,6 +1317,9 @@ const spintaxState: SpintaxRotationState = {
   quizGreetingIdx: -1,
   quizBodyIdx: -1,
   quizClosingIdx: -1,
+  studentQuizGreetingIdx: -1,
+  studentQuizBodyIdx: -1,
+  studentQuizClosingIdx: -1,
 };
 
 function getRotatedIndex(arrayLength: number, lastIdx: number): number {
@@ -1361,17 +1475,94 @@ export interface QuizMessageOptions {
   max_score?: number;
   teacher_name?: string;
   note?: string;
+  recipient_type?: "parent" | "student";
 }
 
 /**
  * DEV-QUIZ.3: Dynamic message generator with Anti-Ban Spintax & Phrase Variations.
+ * Supports both parent-facing and student-facing phrasing.
  * Prevents Meta broadcast spam detection by varying greetings, appraisal tone, and closings.
  */
 export function generateQuizScoreMessage(options: QuizMessageOptions): string {
-  const { student_name, quiz_title, score, max_score = 10, teacher_name, note } = options;
+  const { student_name, quiz_title, score, max_score = 10, teacher_name, note, recipient_type = "parent" } = options;
   const percentage = (score / max_score) * 100;
   const displayTitle = quiz_title && quiz_title.trim() ? quiz_title.trim() : "كويز";
   const ratingText = percentage >= 85 ? "ممتاز" : percentage >= 65 ? "جيد" : "يحتاج متابعة";
+
+  if (recipient_type === "student") {
+    const studentGreetings = [
+      `السلام عليكم ورحمة الله وبركاته، عزيزنا الطالب (${student_name}).`,
+      `أهلاً بك يا (${student_name})، نتمنى لك دوام التوفيق والنجاح.`,
+      `تحية طيبة عزيزنا الطالب (${student_name}).`,
+      `السلام عليكم يا (${student_name})، نتيجة تقييمك في الاختبار:`,
+      `مرحباً يا (${student_name})، إليك نتيجتك في تقييم اليوم:`,
+      `أسعد الله أوقاتك بكل خير يا (${student_name})، تقرير درجاتك:`,
+      `السلام عليكم ورحمة الله، درجات اختبارك الأخير يا (${student_name}):`,
+    ];
+
+    const studentExcellentPhrases = [
+      `نبارك لك تميزك وتفوقك في (${displayTitle}) وحصولك على درجة ممتازة: (${score} من ${max_score}). استمر على هذا الأداء الرائع!`,
+      `ما شاء الله، أداء متألق ومتميز في (${displayTitle}) بدرجة (${score} من ${max_score}). فخورون باجتهادك ونتمنى لك دوام التفوق.`,
+      `أحسنت يا بطل! حققت درجة مشرفة في (${displayTitle}): (${score} من ${max_score}). حافظ على هذا المستوى المتميز دائماً.`,
+      `أداء استثنائي وعلامة ممتازة في (${displayTitle}): (${score} من ${max_score}). استمر في الاجتهاد وننتظر منك الأفضل دائماً.`,
+    ];
+
+    const studentGoodPhrases = [
+      `أحسنت، درجتك في (${displayTitle}) هي (${score} من ${max_score}). بداية طيبة، وبمزيد من التركيز والمراجعة ستصل للدرجة النهائية بإذن الله.`,
+      `حققت في (${displayTitle}) درجة (${score} من ${max_score}). مستوى جيد، ركّز على النقاط التي أخطأت بها لتعويضها في الاختبار القادم.`,
+      `نتيجتك في (${displayTitle}) هي (${score} من ${max_score}). أداء طيب ونثق بقدرتك على تحقيق أعلى الدرجات بالمثابرة والمذاكرة الجادة.`,
+      `أحرزت (${score} من ${max_score}) في (${displayTitle}). مستوى طيب، شد حيلك ونريد منك الدرجة النهائية في المرة القادمة إن شاء الله.`,
+    ];
+
+    const studentNeedAttentionPhrases = [
+      `درجتك في (${displayTitle}) هي (${score} من ${max_score}). لا تقلق، راجع أخطاءك جيداً وركّز في الحصص القادمة للتعويض ورفع مستواك.`,
+      `حصلت على درجة (${score} من ${max_score}) في (${displayTitle}). تحتاج لمزيد من المذاكرة والاهتمام بحل التمارين لتدارك هذا المستوى سريعاً.`,
+      `نتيجتك في (${displayTitle}) هي (${score} من ${max_score}). ننتظر منك مجهوداً أكبر وتركيزاً أعلى في المذاكرة، وأنت قادر على التعويض بإذن الله.`,
+      `أظهر اختبار (${displayTitle}) حصولك على (${score} من ${max_score}). لا تستسلم، راجع الدروس واطلب المساعدة في أي نقطة غير واضحة للتعويض.`,
+    ];
+
+    const studentClosings = [
+      "مع تمنياتنا لك بالتوفيق والنجاح الدائم.",
+      "دائماً في رفعة وتفوق مستمر إن شاء الله.",
+      "مع أطيب تمنياتنا لك بدوام التميز والإنجاز.",
+      "نثق بقدراتك، بالتوفيق والنجاح الدائم.",
+      "مع خالص أمنياتنا لك بمستقبل مشرق ومتميز.",
+    ];
+
+    spintaxState.studentQuizGreetingIdx = getRotatedIndex(studentGreetings.length, spintaxState.studentQuizGreetingIdx);
+    const greeting = studentGreetings[spintaxState.studentQuizGreetingIdx];
+
+    let body = "";
+    if (percentage >= 85) {
+      spintaxState.studentQuizBodyIdx = getRotatedIndex(studentExcellentPhrases.length, spintaxState.studentQuizBodyIdx);
+      body = studentExcellentPhrases[spintaxState.studentQuizBodyIdx];
+    } else if (percentage >= 65) {
+      spintaxState.studentQuizBodyIdx = getRotatedIndex(studentGoodPhrases.length, spintaxState.studentQuizBodyIdx);
+      body = studentGoodPhrases[spintaxState.studentQuizBodyIdx];
+    } else {
+      spintaxState.studentQuizBodyIdx = getRotatedIndex(studentNeedAttentionPhrases.length, spintaxState.studentQuizBodyIdx);
+      body = studentNeedAttentionPhrases[spintaxState.studentQuizBodyIdx];
+    }
+
+    let teacherLine = "";
+    if (teacher_name && teacher_name.trim()) {
+      const tName = teacher_name.trim();
+      const formattedTeacher = tName.startsWith("مستر") || tName.startsWith("أ.") || tName.startsWith("أستاذ") ? tName : `مستر ${tName}`;
+      teacherLine = `مع تحيات: ${formattedTeacher}`;
+    } else {
+      spintaxState.studentQuizClosingIdx = getRotatedIndex(studentClosings.length, spintaxState.studentQuizClosingIdx);
+      teacherLine = studentClosings[spintaxState.studentQuizClosingIdx];
+    }
+
+    let message = `${greeting}\n\nنتيجة اختبار: ${displayTitle}\nدرجتك: *${score} من ${max_score}* (${ratingText})\n\n${body}`;
+
+    if (note && note.trim()) {
+      message += `\nملاحظة المعلم: ${note.trim()}`;
+    }
+
+    message += `\n\n${teacherLine}`;
+    return message;
+  }
 
   const greetings = [
     `السلام عليكم ورحمة الله وبركاته، تحية طيبة لولي أمر الطالب/ة (${student_name}).`,

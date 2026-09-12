@@ -17,7 +17,7 @@ import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
 import { renderBillingView } from './components/BillingView.js';
 import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
 import { renderStudentCardsView } from './components/StudentCardsView.js';
-import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=2.5.0';
+import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=2.6.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -5233,7 +5233,7 @@ class CentrlyApp {
     }
   }
 
-  async sendQuizScoreWhatsApp(studentId, studentName, quizTitle) {
+  async sendQuizScoreWhatsApp(studentId, studentName, quizTitle, target = 'both') {
     const currQuizNum = this.quizzesState.currentQuizNumber || 1;
     const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
     const score = this.quizzesState.scoresMap[currQuizNum]?.[studentId];
@@ -5245,7 +5245,8 @@ class CentrlyApp {
     }
 
     try {
-      this.showToast(`جارٍ إرسال درجة (${studentName}) بنظام الأمان ومحاكاة الكتابة الحية...`, 'info');
+      const targetLabel = target === 'student' ? 'للطالب' : (target === 'parent' ? 'لولي الأمر' : 'لولي الأمر والطالب');
+      this.showToast(`جارٍ إرسال درجة (${studentName}) ${targetLabel} بنظام الأمان ومحاكاة الكتابة الحية...`, 'info');
       const res = await request(`/students/${studentId}/notify-score`, {
         method: 'POST',
         body: {
@@ -5253,6 +5254,7 @@ class CentrlyApp {
           score: Number(score),
           max_score: currentQuiz.maxScore || 10,
           note: note || undefined,
+          target,
         },
       });
 
@@ -5262,7 +5264,8 @@ class CentrlyApp {
       this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = isDelivered ? 'sent' : 'failed';
 
       if (isDelivered) {
-        this.showToast(`تم إرسال إشعار درجة (${studentName}) لولي الأمر بنجاح عبر واتساب ✓`, 'success');
+        const sentToStr = Array.isArray(res?.sent_to) && res.sent_to.length > 1 ? 'لولي الأمر والطالب معاً' : (res?.sent_to?.[0] === 'student' ? 'للطالب مباشرة' : 'لولي الأمر');
+        this.showToast(`تم إرسال إشعار درجة (${studentName}) ${sentToStr} بنجاح عبر واتساب ✓`, 'success');
       } else {
         this.showToast(`تعذر تسليم إشعار (${studentName}): ${res?.error || 'فشل التوصيل'}`, 'danger');
       }
@@ -5302,7 +5305,8 @@ class CentrlyApp {
       .map(s => ({
         student_id: s.id,
         student_name: s.name,
-        parent_phone: s.parent_phone,
+        parent_phone: s.parent_phone || '',
+        student_phone: s.student_phone || s.phone || '',
         score: Number(scores[s.id]),
         note: notes[s.id] || undefined,
       }));
@@ -5312,54 +5316,116 @@ class CentrlyApp {
       return;
     }
 
-    this.showConfirmModal({
-      title: 'إرسال درجات الكويز دفعة واحدة (Ultra Anti-Ban)',
-      message: `هل أنت متأكد من رغبتك في إرسال درجات (${studentsToDispatch.length}) طالب إلى أولياء الأمور عبر الواتساب؟ سيتم الإرسال عبر محرك الأمان الفائق (Ultra Anti-Ban) بفواصل عشوائية (20 إلى 40 ثانية لكل طالب) مع محاكاة الكتابة الحية (جاري الكتابة...) لحماية الخط من الحظر.`,
-      confirmText: `بدء الإرسال الآمن (${studentsToDispatch.length} رسالة)`,
-      cancelText: 'إلغاء',
-      isDanger: false,
-      onConfirm: async () => {
-        if (this.sessionState.isDispatchingQuizWhatsApp) return;
-        this.sessionState.isDispatchingQuizWhatsApp = true;
-        try {
-          this.showToast('بدأت عملية الإرسال الآمن لدرجات الكويز بأعلى معايير الأمان ومحاكاة الكتابة الحية...', 'info');
-          const res = await request('/quizzes/dispatch-scores', {
-            method: 'POST',
-            body: {
-              group_id: selectedGroupId,
-              quiz_number: currQuizNum,
-              quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
-              max_score: currentQuiz.maxScore || 10,
-              students: studentsToDispatch,
-            },
+    const existing = document.getElementById('centrlyConfirmModal');
+    if (existing) existing.remove();
+
+    const modalEl = document.createElement('div');
+    modalEl.id = 'centrlyConfirmModal';
+    modalEl.className = 'modal-overlay';
+    modalEl.style.cssText = `
+      position: fixed; inset: 0; z-index: 100000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; padding: 1rem;
+    `;
+    modalEl.innerHTML = `
+      <div class="modal-dialog" dir="rtl" style="background: #ffffff; border-radius: 14px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--centrly-line);">
+        <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--centrly-line); display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink);">
+            إرسال درجات الكويز دفعة واحدة (Ultra Anti-Ban)
+          </h3>
+          <button onclick="document.getElementById('centrlyConfirmModal')?.remove()" style="background: transparent; border: none; cursor: pointer; font-size: 1.2rem; color: var(--centrly-text);">✕</button>
+        </div>
+        <div style="padding: 1.5rem; font-size: 0.925rem; color: var(--centrly-ink); line-height: 1.6;">
+          <p style="margin: 0 0 1rem 0;">
+            هل أنت متأكد من رغبتك في إرسال درجات (<strong>${studentsToDispatch.length}</strong>) طالب عبر الواتساب؟
+            <br>
+            <span style="font-size: 0.825rem; color: var(--centrly-text);">سيتم الإرسال عبر محرك الأمان الفائق بفواصل عشوائية مع محاكاة الكتابة الحية (جاري الكتابة...) لحماية الخط.</span>
+          </p>
+
+          <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 1rem;">
+            <div style="font-weight: 800; font-size: 0.875rem; color: var(--centrly-ink); margin-bottom: 0.65rem;">
+              اختر جهة استلام النتيجة:
+            </div>
+            <label style="display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.6rem; cursor: pointer; font-size: 0.88rem;">
+              <input type="radio" name="quizBatchTarget" value="both" checked style="margin-top: 3px;" />
+              <div>
+                <strong>ولي الأمر والطالب معاً</strong> <span style="font-size: 0.75rem; color: #15803d; background: #dcfce7; padding: 1px 6px; border-radius: 4px; font-weight: 700;">موصى به</span>
+                <div style="font-size: 0.78rem; color: var(--centrly-text);">إرسال رسالة تقرير لولي الأمر، ورسالة تشجيعية منفصلة للطالب</div>
+              </div>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.88rem;">
+              <input type="radio" name="quizBatchTarget" value="parents" />
+              <span>أولياء الأمور فقط</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.88rem;">
+              <input type="radio" name="quizBatchTarget" value="students" />
+              <span>الطلاب فقط</span>
+            </label>
+          </div>
+        </div>
+        <div style="padding: 1rem 1.5rem; background: var(--centrly-surface); border-top: 1px solid var(--centrly-line); display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button id="confirmModalCancelBtn" class="btn" style="background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1; font-weight: 700; padding: 0.5rem 1.25rem; border-radius: 8px; cursor: pointer;">
+            إلغاء
+          </button>
+          <button id="confirmModalActionBtn" class="btn" style="background: #25D366; color: #ffffff; border: none; font-weight: 800; padding: 0.5rem 1.4rem; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(37,211,102,0.35);">
+            بدء الإرسال الآمن (${studentsToDispatch.length} طالب)
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modalEl);
+
+    document.getElementById('confirmModalCancelBtn').onclick = () => {
+      modalEl.remove();
+    };
+
+    document.getElementById('confirmModalActionBtn').onclick = async () => {
+      const selectedTarget = document.querySelector('input[name="quizBatchTarget"]:checked')?.value || 'both';
+      modalEl.remove();
+
+      if (this.sessionState.isDispatchingQuizWhatsApp) return;
+      this.sessionState.isDispatchingQuizWhatsApp = true;
+      try {
+        const targetLabel = selectedTarget === 'both' ? 'لأولياء الأمور والطلاب' : (selectedTarget === 'students' ? 'للطلاب' : 'لأولياء الأمور');
+        this.showToast(`بدأت عملية الإرسال الآمن لدرجات الكويز ${targetLabel} بأعلى معايير الأمان...`, 'info');
+        const res = await request('/quizzes/dispatch-scores', {
+          method: 'POST',
+          body: {
+            group_id: selectedGroupId,
+            quiz_number: currQuizNum,
+            quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
+            max_score: currentQuiz.maxScore || 10,
+            students: studentsToDispatch,
+            target: selectedTarget,
+          },
+        });
+
+        if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
+        if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
+
+        if (Array.isArray(res?.results)) {
+          res.results.forEach(r => {
+            const sid = r.student_id || r.id;
+            if (sid) {
+              this.quizzesState.deliveryStatusMap[currQuizNum][sid] = (r.status === 'sent' || r.delivered) ? 'sent' : 'failed';
+            }
           });
-
-          if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
-          if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
-
-          if (Array.isArray(res?.results)) {
-            res.results.forEach(r => {
-              const sid = r.student_id || r.id;
-              if (sid) {
-                this.quizzesState.deliveryStatusMap[currQuizNum][sid] = (r.status === 'sent' || r.delivered) ? 'sent' : 'failed';
-              }
-            });
-          } else {
-            studentsToDispatch.forEach(s => {
-              this.quizzesState.deliveryStatusMap[currQuizNum][s.student_id] = 'sent';
-            });
-          }
-
-          this.saveQuizzesToLocalStorage();
-          this.showToast(`تم إتمام إرسال درجات الكويز! (المرسل: ${res.sent || studentsToDispatch.length} ، الفاشل: ${res.failed || 0})`, 'success');
-          this.renderMainContent();
-        } catch (err) {
-          this.showToast(`حدث خطأ أثناء الإرسال الجماعي: ${err.message || 'خطأ في الخادم'}`, 'danger');
-        } finally {
-          this.sessionState.isDispatchingQuizWhatsApp = false;
+        } else {
+          studentsToDispatch.forEach(s => {
+            this.quizzesState.deliveryStatusMap[currQuizNum][s.student_id] = 'sent';
+          });
         }
-      },
-    });
+
+        this.saveQuizzesToLocalStorage();
+        this.showToast(`تم إتمام إرسال درجات الكويز! (المرسل: ${res.sent_count || res.sent || studentsToDispatch.length} ، الفاشل: ${res.failed_count || res.failed || 0})`, 'success');
+        this.renderMainContent();
+      } catch (err) {
+        this.showToast(`حدث خطأ أثناء الإرسال الجماعي: ${err.message || 'خطأ في الخادم'}`, 'danger');
+      } finally {
+        this.sessionState.isDispatchingQuizWhatsApp = false;
+      }
+    };
   }
 
   // ==========================================================================

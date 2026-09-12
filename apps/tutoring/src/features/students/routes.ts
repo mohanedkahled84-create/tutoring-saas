@@ -139,9 +139,27 @@ studentsRouter.post("/:id/notify-score", async (req: AuthenticatedRequest, res: 
       return;
     }
 
-    if (!student.parent_phone) {
+    const target = req.body.target || req.body.recipient_type || "both";
+    const parentPhone = (student.parent_phone || "").trim();
+    const studentPhone = (student.student_phone || (student as any).phone || "").trim();
+
+    if (target === "parent" && !parentPhone) {
       res.status(400).json({
         error: { code: "NO_PARENT_PHONE", message: "Student has no parent phone registered" },
+      });
+      return;
+    }
+
+    if (target === "student" && !studentPhone) {
+      res.status(400).json({
+        error: { code: "NO_STUDENT_PHONE", message: "Student has no student phone registered" },
+      });
+      return;
+    }
+
+    if (!parentPhone && !studentPhone) {
+      res.status(400).json({
+        error: { code: "NO_PHONE_NUMBER", message: "Student has neither parent phone nor student phone registered" },
       });
       return;
     }
@@ -157,7 +175,9 @@ studentsRouter.post("/:id/notify-score", async (req: AuthenticatedRequest, res: 
       teacher_id: resolvedTeacherId,
       student_id: student.id,
       student_name: student.name,
-      parent_phone: student.parent_phone,
+      parent_phone: parentPhone,
+      student_phone: studentPhone,
+      recipient_type: target as ("parent" | "student" | "both"),
       quiz_title: quiz_title || "الكويز",
       score: Number(score),
       max_score: max_score ? Number(max_score) : 10,
@@ -172,6 +192,7 @@ studentsRouter.post("/:id/notify-score", async (req: AuthenticatedRequest, res: 
         error: { code: "SEND_FAILED", message: result.error },
         message_text: result.message_text,
         parent_phone: student.parent_phone,
+        student_phone: studentPhone,
         student_name: student.name,
       });
       return;
@@ -182,6 +203,8 @@ studentsRouter.post("/:id/notify-score", async (req: AuthenticatedRequest, res: 
       message: "Quiz score sent successfully",
       student_name: student.name,
       parent_phone: student.parent_phone,
+      student_phone: studentPhone,
+      sent_to: result.sent_to,
       message_text: result.message_text,
     });
   } catch (err: unknown) {

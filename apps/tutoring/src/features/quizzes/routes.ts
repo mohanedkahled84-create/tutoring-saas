@@ -95,6 +95,10 @@ quizzesRouter.post(
         req.user?.teacher_id ||
         (req.user?.role === "teacher" ? req.user?.id : "default");
 
+      const target = (req.body.target === "parents" || req.body.target === "students" || req.body.target === "both")
+        ? req.body.target
+        : "both";
+
       const result = await whatsAppService.batchSendQuizScores(
         tenantId,
         students.map((s: {
@@ -103,12 +107,15 @@ quizzesRouter.post(
           student_name?: string;
           name?: string;
           parent_phone?: string;
+          student_phone?: string;
+          phone?: string;
           score: number | string;
           note?: string;
         }) => ({
           student_id: s.student_id || s.id || "",
           student_name: s.student_name || s.name || "الطالب",
           parent_phone: s.parent_phone || "",
+          student_phone: s.student_phone || s.phone || "",
           score: Number(s.score),
           note: s.note,
         })),
@@ -119,6 +126,7 @@ quizzesRouter.post(
           teacher_name,
           pacingDelayMs: pacing_delay_ms,
           dailyCap: daily_cap,
+          target,
         }
       );
 

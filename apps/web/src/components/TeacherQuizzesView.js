@@ -271,11 +271,11 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
               <tr>
                 <th style="width: 70px;">كود الطالب</th>
                 <th>اسم الطالب</th>
-                <th>هاتف ولي الأمر</th>
+                <th style="width: 175px;">بيانات التواصل</th>
                 <th style="width: 160px; text-align: center;">الدرجة (من ${currentQuiz.maxScore || 10})</th>
                 <th>حالة التصحيح</th>
                 <th>ملاحظات على الإجابة</th>
-                <th style="width: 140px; text-align: center;">إشعار ولي الأمر</th>
+                <th style="width: 175px; text-align: center;">إشعار النتيجة</th>
               </tr>
             </thead>
             <tbody>
@@ -292,12 +292,27 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
                 }
 
                 const deliveryStatus = state.deliveryStatusMap?.[currentQuiz.number]?.[s.id];
+                const hasParentPhone = Boolean(s.parent_phone && s.parent_phone.trim());
+                const hasStudentPhone = Boolean((s.student_phone || s.phone) && (s.student_phone || s.phone).trim());
+                const quizTitleSafe = escapeHtml(currentQuiz.title || `كويز ${currentQuiz.number}`).replace(/'/g, "\\'");
+                const studentNameSafe = escapeHtml(s.name).replace(/'/g, "\\'");
 
                 return `
                   <tr>
                     <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || s.id.slice(0, 4))}</td>
                     <td style="font-weight: 700; color: var(--centrly-ink); font-size: 0.95rem;">${escapeHtml(s.name)}</td>
-                    <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; color: var(--centrly-text);">${escapeHtml(s.parent_phone || '—')}</td>
+                    <td dir="ltr" style="text-align: right; font-size: 0.82rem;">
+                      ${hasParentPhone ? `
+                        <div style="font-family: monospace; color: var(--centrly-ink); font-weight: 600; font-size: 0.825rem;">
+                          <span style="font-size: 0.7rem; font-family: sans-serif; color: var(--centrly-text); font-weight: 500;">ولي أمر:</span> ${escapeHtml(s.parent_phone)}
+                        </div>
+                      ` : ''}
+                      ${hasStudentPhone ? `
+                        <div style="font-family: monospace; color: #2563eb; font-weight: 600; font-size: 0.825rem; margin-top: 2px;">
+                          <span style="font-size: 0.7rem; font-family: sans-serif; color: #64748b; font-weight: 500;">طالب:</span> ${escapeHtml(s.student_phone || s.phone)}
+                        </div>
+                      ` : (!hasParentPhone ? '<span style="color: var(--centrly-text);">—</span>' : '')}
+                    </td>
                     <td style="text-align: center;">
                       <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
                         <input 
@@ -329,6 +344,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
                     </td>
                     <td style="text-align: center;">
                       ${(() => {
+                        const defaultTarget = hasParentPhone && hasStudentPhone ? 'both' : (hasStudentPhone ? 'student' : 'parent');
                         if (deliveryStatus === 'sent') {
                           return `
                             <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
@@ -337,9 +353,9 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
                               </span>
                               <button 
                                 class="btn btn-secondary btn-sm" 
-                                onclick="window.centrlyApp.sendQuizScoreWhatsApp('${escapeHtml(s.id)}', '${escapeHtml(s.name).replace(/'/g, "\\'")}', '${escapeHtml(currentQuiz.title || `كويز ${currentQuiz.number}`)}')"
+                                onclick="window.centrlyApp.sendQuizScoreWhatsApp('${escapeHtml(s.id)}', '${studentNameSafe}', '${quizTitleSafe}', '${defaultTarget}')"
                                 style="padding: 0.2rem 0.4rem;"
-                                title="إعادة إرسال النتيجة لولي الأمر"
+                                title="إعادة إرسال النتيجة"
                               >
                                 ${getIcon('whatsapp', 13, '#15803d')}
                               </button>
@@ -354,7 +370,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
                               </span>
                               <button 
                                 class="btn btn-secondary btn-sm" 
-                                onclick="window.centrlyApp.sendQuizScoreWhatsApp('${escapeHtml(s.id)}', '${escapeHtml(s.name).replace(/'/g, "\\'")}', '${escapeHtml(currentQuiz.title || `كويز ${currentQuiz.number}`)}')"
+                                onclick="window.centrlyApp.sendQuizScoreWhatsApp('${escapeHtml(s.id)}', '${studentNameSafe}', '${quizTitleSafe}', '${defaultTarget}')"
                                 style="padding: 0.2rem 0.4rem; color: #dc2626;"
                                 title="إعادة المحاولة"
                               >
@@ -363,17 +379,63 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
                             </div>
                           `;
                         }
-                        return `
-                          <button 
-                            class="btn btn-secondary btn-sm" 
-                            onclick="window.centrlyApp.sendQuizScoreWhatsApp('${escapeHtml(s.id)}', '${escapeHtml(s.name).replace(/'/g, "\\'")}', '${escapeHtml(currentQuiz.title || `كويز ${currentQuiz.number}`)}')"
-                            style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; color: #15803d;"
-                            title="إرسال درجة الكويز لولي الأمر"
-                          >
-                            ${getIcon('whatsapp', 14, '#15803d')}
-                            <span>إرسال</span>
-                          </button>
-                        `;
+                        if (hasParentPhone && hasStudentPhone) {
+                          return `
+                            <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                              <button 
+                                class="btn btn-secondary btn-sm" 
+                                onclick="window.centrlyApp.sendQuizScoreWhatsApp('${escapeHtml(s.id)}', '${studentNameSafe}', '${quizTitleSafe}', 'both')"
+                                style="display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.75rem; color: #15803d; font-weight: 700; padding: 0.25rem 0.45rem;"
+                                title="إرسال لولي الأمر والطالب معاً"
+                              >
+                                ${getIcon('whatsapp', 13, '#15803d')}
+                                <span>إرسال لكلاهما</span>
+                              </button>
+                              <div style="display: inline-flex; gap: 0.15rem;">
+                                <button 
+                                  class="btn btn-secondary btn-sm" 
+                                  onclick="window.centrlyApp.sendQuizScoreWhatsApp('${escapeHtml(s.id)}', '${studentNameSafe}', '${quizTitleSafe}', 'student')"
+                                  style="padding: 0.2rem 0.35rem; font-size: 0.68rem; color: #2563eb;"
+                                  title="إرسال للطالب فقط"
+                                >
+                                  طالب
+                                </button>
+                                <button 
+                                  class="btn btn-secondary btn-sm" 
+                                  onclick="window.centrlyApp.sendQuizScoreWhatsApp('${escapeHtml(s.id)}', '${studentNameSafe}', '${quizTitleSafe}', 'parent')"
+                                  style="padding: 0.2rem 0.35rem; font-size: 0.68rem; color: #475569;"
+                                  title="إرسال لولي الأمر فقط"
+                                >
+                                  ولي أمر
+                                </button>
+                              </div>
+                            </div>
+                          `;
+                        } else if (hasStudentPhone) {
+                          return `
+                            <button 
+                              class="btn btn-secondary btn-sm" 
+                              onclick="window.centrlyApp.sendQuizScoreWhatsApp('${escapeHtml(s.id)}', '${studentNameSafe}', '${quizTitleSafe}', 'student')"
+                              style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; color: #2563eb; font-weight: 700;"
+                              title="إرسال درجة الكويز للطالب عبر واتساب"
+                            >
+                              ${getIcon('whatsapp', 14, '#2563eb')}
+                              <span>إرسال للطالب</span>
+                            </button>
+                          `;
+                        } else {
+                          return `
+                            <button 
+                              class="btn btn-secondary btn-sm" 
+                              onclick="window.centrlyApp.sendQuizScoreWhatsApp('${escapeHtml(s.id)}', '${studentNameSafe}', '${quizTitleSafe}', 'parent')"
+                              style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; color: #15803d; font-weight: 700;"
+                              title="إرسال درجة الكويز لولي الأمر عبر واتساب"
+                            >
+                              ${getIcon('whatsapp', 14, '#15803d')}
+                              <span>إرسال لولي الأمر</span>
+                            </button>
+                          `;
+                        }
                       })()}
                     </td>
                   </tr>
