@@ -236,7 +236,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
             <span>تسجيل حضور الطالب (مسح الباركود أو الكود)</span>
           </h3>
           
-          <form id="attendanceScanForm" onsubmit="window.centrlyApp.handleStudentScan(event)" style="position: relative;">
+          <form id="attendanceScanForm" onsubmit="event.preventDefault(); event.stopPropagation(); window.centrlyApp.handleStudentScan(event); return false;" style="position: relative;">
             <div class="form-group" style="position: relative;">
               <label class="form-label">كود الطالب أو البحث بالاسم</label>
               <div style="display: flex; gap: 0.5rem;">
@@ -248,11 +248,13 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                     placeholder="اكتب كود أو اسم الطالب، أو امسح الباركود..." 
                     autofocus 
                     autocomplete="off"
+                    onkeydown="if (event.key === 'Enter' || event.keyCode === 13) { event.preventDefault(); event.stopPropagation(); window.centrlyApp.handleStudentScan(event); }"
                     oninput="window.centrlyApp.onStudentScanInput(this.value)"
+                    onfocus="this.select()"
                   >
                   <div id="studentScanSuggestions" style="display: none; position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 50; background: #fff; border: 1px solid var(--centrly-line); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); max-height: 220px; overflow-y: auto;"></div>
                 </div>
-                <button type="submit" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700; white-space: nowrap;">
+                <button type="button" onclick="window.centrlyApp.handleStudentScan(event)" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700; white-space: nowrap;">
                   ${getIcon('check', 16)}
                   <span>تسجيل حضور</span>
                 </button>

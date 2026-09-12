@@ -870,6 +870,9 @@ class CentrlyApp {
             }
           }
           this.renderMainContent();
+          if (this.sessionState?.status === 'in_progress') {
+            this.focusScanInput();
+          }
           break;
         }
         case 'student-cards': {
@@ -1038,20 +1041,55 @@ class CentrlyApp {
     if (input) input.value = student.code || student.student_code || student.name;
 
     const suggestionsBox = document.getElementById('studentScanSuggestions');
-    if (suggestionsBox) suggestionsBox.style.display = 'none';
+    if (suggestionsBox) {
+      suggestionsBox.style.display = 'none';
+      suggestionsBox.innerHTML = '';
+    }
 
     this.registerStudentAttendance(student);
-    if (input) input.value = '';
+    this.focusScanInput();
+  }
+
+  focusScanInput() {
+    const applyFocus = () => {
+      const inp = document.getElementById('scanStudentCode');
+      if (!inp) return;
+      if (document.activeElement !== inp) {
+        try {
+          inp.focus({ preventScroll: true });
+        } catch (_) {}
+      }
+      try {
+        inp.select();
+      } catch (_) {}
+    };
+
+    applyFocus();
+    requestAnimationFrame(() => {
+      applyFocus();
+      requestAnimationFrame(applyFocus);
+    });
+    setTimeout(applyFocus, 25);
+    setTimeout(applyFocus, 75);
+    setTimeout(applyFocus, 150);
+    setTimeout(applyFocus, 300);
   }
 
   handleStudentScan(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
     const codeInput = document.getElementById('scanStudentCode');
     const query = codeInput?.value.trim();
-    if (!query) return;
+    if (!query) {
+      this.focusScanInput();
+      return;
+    }
 
     const suggestionsBox = document.getElementById('studentScanSuggestions');
-    if (suggestionsBox) suggestionsBox.style.display = 'none';
+    if (suggestionsBox) {
+      suggestionsBox.style.display = 'none';
+      suggestionsBox.innerHTML = '';
+    }
 
     // Find student in directory
     const student = (this.students || []).find(s => {
@@ -1064,14 +1102,7 @@ class CentrlyApp {
     if (student) {
       this.closeInlineStudentAdd();
       this.registerStudentAttendance(student);
-      setTimeout(() => {
-        const inp = document.getElementById('scanStudentCode');
-        if (inp) {
-          inp.value = '';
-          inp.focus();
-          inp.select();
-        }
-      }, 50);
+      this.focusScanInput();
     } else {
       // Student NOT found! Do NOT add dummy name! Show inline registration form!
       const feedback = document.getElementById('scanFeedback');
@@ -1104,6 +1135,7 @@ class CentrlyApp {
     if (inlineBox) inlineBox.style.display = 'none';
     const feedback = document.getElementById('scanFeedback');
     if (feedback) feedback.style.display = 'none';
+    this.focusScanInput();
   }
 
   async saveInlineNewStudentAndAttend() {
@@ -1181,9 +1213,8 @@ class CentrlyApp {
       const codeInput = document.getElementById('scanStudentCode');
       if (codeInput) {
         codeInput.value = '';
-        codeInput.focus();
-        codeInput.select();
       }
+      this.focusScanInput();
       return;
     }
 
@@ -1231,14 +1262,7 @@ class CentrlyApp {
     this.persistSessionState();
     this.showToast(isMakeup ? `تم تسجيل حضور تعويضي للطالب: ${student.name}` : `تم رصد حضور الطالب: ${student.name}`, 'success');
     this.renderMainContent();
-    setTimeout(() => {
-      const codeInp = document.getElementById('scanStudentCode');
-      if (codeInp) {
-        codeInp.value = '';
-        codeInp.focus();
-        codeInp.select();
-      }
-    }, 40);
+    this.focusScanInput();
   }
 
   updateAttendanceQuizScore(attendanceId, score) {
@@ -1579,13 +1603,7 @@ class CentrlyApp {
     this.persistSessionState();
     this.showToast('تم تفعيل الحصة بنجاح! رصد الحضور متاح الآن.', 'success');
     this.renderMainContent();
-    setTimeout(() => {
-      const codeInp = document.getElementById('scanStudentCode');
-      if (codeInp) {
-        codeInp.focus();
-        codeInp.select();
-      }
-    }, 40);
+    this.focusScanInput();
   }
 
   // Single Student Note Modal
