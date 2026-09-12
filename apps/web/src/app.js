@@ -4345,71 +4345,6 @@ class CentrlyApp {
     }
   }
 
-  updateStudentQuizScore(studentId, score) {
-    const quizNum = this.quizzesState.currentQuizNumber;
-    if (!this.quizzesState.scoresMap[quizNum]) {
-      this.quizzesState.scoresMap[quizNum] = {};
-    }
-    this.quizzesState.scoresMap[quizNum][studentId] = score !== '' ? Number(score) : '';
-  }
-
-  updateStudentQuizNote(studentId, note) {
-    const quizNum = this.quizzesState.currentQuizNumber;
-    if (!this.quizzesState.notesMap) this.quizzesState.notesMap = {};
-    if (!this.quizzesState.notesMap[quizNum]) {
-      this.quizzesState.notesMap[quizNum] = {};
-    }
-    this.quizzesState.notesMap[quizNum][studentId] = note;
-  }
-
-  saveCurrentQuizScores() {
-    this.showToast('تم حفظ ورصد درجات الكويز بنجاح!', 'success');
-    this.renderMainContent();
-  }
-
-  sendQuizScoreWhatsApp(studentId, studentName, quizTitle) {
-    const quizNum = this.quizzesState.currentQuizNumber;
-    const score = this.quizzesState.scoresMap[quizNum]?.[studentId];
-    if (score === undefined || score === null || score === '') {
-      this.showToast('يرجى رصد درجة الطالب أولاً قبل إرسال الرسالة.', 'info');
-      return;
-    }
-
-    const currentQuiz = this.quizzesState.quizzes.find(q => q.number === quizNum) || { maxScore: 10 };
-    const student = (this.students || []).find(s => s.id === studentId) || {};
-    const parentPhone = student.parent_phone || '';
-    const scoreMsg = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب/ة (${studentName}).\nنحيط سيادتكم علماً بنتيجة الطالب في (${quizTitle}): حصل على (${score} من ${currentQuiz.maxScore || 10}).\nشاكرين حرصكم ومتابعتكم المستمرة.`;
-
-    this.showConfirmModal({
-      title: 'إرسال درجة الكويز لولي الأمر',
-      message: `هل ترغب في إرسال درجة (${quizTitle}) للطالب "${studentName}" وهي (${score} من ${currentQuiz.maxScore || 10}) إلى ولي الأمر عبر واتساب؟`,
-      confirmText: 'إرسال الدرجة',
-      cancelText: 'إلغاء',
-      isDanger: false,
-      onConfirm: async () => {
-        let sentViaApi = false;
-        try {
-          const statusRes = await request('/whatsapp/status').catch(() => null);
-          if (statusRes && statusRes.status === 'connected') {
-            await request(`/students/${studentId}/notify-score`, {
-              method: 'POST',
-              body: { score, quiz_title: quizTitle },
-            }).catch(() => {});
-            sentViaApi = true;
-          }
-        } catch (_) {}
-
-        if (sentViaApi) {
-          this.showToast(`تم إرسال درجة الكويز بنجاح لولي أمر: ${studentName}`, 'success');
-        } else {
-          this.openDirectWhatsAppFallbackModal(studentName, parentPhone, scoreMsg, () => {
-            this.showToast(`تم فتح واتساب وإرسال درجة الكويز لولي الأمر!`, 'success');
-          });
-        }
-      },
-    });
-  }
-
   async handleAddRoomSubmit(e) {
     e.preventDefault();
     const name = document.getElementById('newRoomName')?.value.trim();
@@ -5051,6 +4986,18 @@ class CentrlyApp {
 
       this.showToast(`تم حفظ وتثبيت درجات كويز ${currQuizNum} لـ (${count}) طالب بنجاح!`, 'success');
       this.renderMainContent();
+
+      // Offer immediate dispatch to WhatsApp
+      this.showConfirmModal({
+        title: 'إرسال درجات الكويز لأولياء الأمور عبر الواتساب',
+        message: `تم حفظ درجات (${count}) طالب بنجاح! هل ترغب في إرسال النتائج الآن إلى جميع أولياء الأمور عبر واتساب؟`,
+        confirmText: `نعم، إرسال الدرجات للجميع (${count} طلاب)`,
+        cancelText: 'لاحقاً',
+        isDanger: false,
+        onConfirm: () => {
+          this.dispatchBatchQuizScores();
+        },
+      });
     } catch (err) {
       this.showToast(`فشل حفظ درجات الكويز: ${err.message || 'خطأ في الخادم'}`, 'danger');
     }
@@ -5069,7 +5016,7 @@ class CentrlyApp {
 
     try {
       this.showToast(`جارٍ إرسال درجة (${studentName}) عبر واتساب...`, 'info');
-      await request(`/students/${studentId}/notify-score`, {
+      const res = await request(`/students/${studentId}/notify-score`, {
         method: 'POST',
         body: {
           quiz_title: quizTitle || `كويز ${currQuizNum}`,
@@ -5081,12 +5028,21 @@ class CentrlyApp {
 
       if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
       if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
-      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+      const isDelivered = (res?.status === 'sent' || res?.delivered !== false);
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = isDelivered ? 'sent' : 'failed';
 
-      this.showToast(`تم إرسال إشعار درجة (${studentName}) لولي الأمر بنجاح عبر واتساب ✓`, 'success');
+      if (isDelivered) {
+        this.showToast(`تم إرسال إشعار درجة (${studentName}) لولي الأمر بنجاح عبر واتساب ✓`, 'success');
+      } else {
+        this.showToast(`تعذر تسليم إشعار (${studentName}): ${res?.error || 'فشل التوصيل'}`, 'danger');
+      }
       this.renderMainContent();
     } catch (err) {
+      if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
+      if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'failed';
       this.showToast(`فشل إرسال إشعار الكويز: ${err.message || 'خطأ في خادم الواتساب'}`, 'danger');
+      this.renderMainContent();
     }
   }
 
@@ -5115,13 +5071,13 @@ class CentrlyApp {
       }));
 
     if (studentsToDispatch.length === 0) {
-      this.showToast('لا يوجد طلاب مرصودة درجاتهم في هذا الكويز للإرسال الجماعي', 'warning');
+      this.showToast('لا يوجد طلاب مرصودة درجاتهم في هذا الكويز للإرسال الجماعي. يرجى رصد الدرجات أولاً.', 'warning');
       return;
     }
 
     this.showConfirmModal({
       title: 'إرسال درجات الكويز دفعة واحدة (Anti-Ban)',
-      message: `هل أنت متأكد من رغبتك في إرسال درجات (${studentsToDispatch.length}) طالب إلى أولياء الأمور؟ سيتم الإرسال عبر محرك الأمان بفواصل عشوائية (4 إلى 9 ثوانٍ) وصياغات متغيرة لحماية الخط من الحظر.`,
+      message: `هل أنت متأكد من رغبتك في إرسال درجات (${studentsToDispatch.length}) طالب إلى أولياء الأمور عبر الواتساب؟ سيتم الإرسال عبر محرك الأمان بفواصل عشوائية (4 إلى 9 ثوانٍ) وصياغات متغيرة لحماية الخط من الحظر.`,
       confirmText: `بدء الإرسال الآمن (${studentsToDispatch.length} رسالة)`,
       cancelText: 'إلغاء',
       isDanger: false,
@@ -5136,6 +5092,22 @@ class CentrlyApp {
               students: studentsToDispatch,
             },
           });
+
+          if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
+          if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
+
+          if (Array.isArray(res?.results)) {
+            res.results.forEach(r => {
+              const sid = r.student_id || r.id;
+              if (sid) {
+                this.quizzesState.deliveryStatusMap[currQuizNum][sid] = (r.status === 'sent' || r.delivered) ? 'sent' : 'failed';
+              }
+            });
+          } else {
+            studentsToDispatch.forEach(s => {
+              this.quizzesState.deliveryStatusMap[currQuizNum][s.student_id] = 'sent';
+            });
+          }
 
           this.showToast(`تم إتمام إرسال درجات الكويز! (المرسل: ${res.sent || studentsToDispatch.length} ، الفاشل: ${res.failed || 0})`, 'success');
           this.renderMainContent();
