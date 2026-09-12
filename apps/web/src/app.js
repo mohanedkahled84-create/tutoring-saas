@@ -17,7 +17,7 @@ import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
 import { renderBillingView } from './components/BillingView.js';
 import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
 import { renderStudentCardsView } from './components/StudentCardsView.js';
-import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js';
+import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=2.5.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -52,9 +52,9 @@ class CentrlyApp {
       selectedGroupId: '',
       currentQuizNumber: 1,
       quizzes: [
-        { id: 1, number: 1, title: 'كويز 1: أساسيات المادة', maxScore: 10, date: '2026-09-01', skipped: false },
-        { id: 2, number: 2, title: 'كويز 2: الفصل الأول', maxScore: 10, date: '2026-09-05', skipped: false },
-        { id: 3, number: 3, title: 'كويز 3: مراجعة شاملة', maxScore: 10, date: '2026-09-08', skipped: false },
+        { id: 1, number: 1, title: 'كويز 1', maxScore: 10, date: '2026-09-01', skipped: false },
+        { id: 2, number: 2, title: 'كويز 2', maxScore: 10, date: '2026-09-05', skipped: false },
+        { id: 3, number: 3, title: 'كويز 3', maxScore: 10, date: '2026-09-08', skipped: false },
       ],
       scoresMap: {},
       notesMap: {},
@@ -4935,6 +4935,11 @@ class CentrlyApp {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed.quizzes) && parsed.quizzes.length > 0) {
+          parsed.quizzes.forEach(q => {
+            if (q.title && (q.title.includes('أساسيات المادة') || q.title.includes('الفصل الأول') || q.title.includes('مراجعة شاملة'))) {
+              q.title = `كويز ${q.number}`;
+            }
+          });
           this.quizzesState.quizzes = parsed.quizzes;
         }
         if (parsed.scoresMap) {
@@ -4956,14 +4961,20 @@ class CentrlyApp {
     try {
       const res = await request(`/quizzes?group_id=${groupId}`);
       if (res?.success && Array.isArray(res.quizzes) && res.quizzes.length > 0) {
-        this.quizzesState.quizzes = res.quizzes.map(q => ({
-          id: q.id,
-          number: q.quiz_number,
-          title: q.title,
-          maxScore: Number(q.max_score || 10),
-          date: q.quiz_date || new Date().toISOString().slice(0, 10),
-          skipped: Boolean(q.is_skipped),
-        }));
+        this.quizzesState.quizzes = res.quizzes.map(q => {
+          let cleanTitle = q.title || `كويز ${q.quiz_number}`;
+          if (cleanTitle.includes('أساسيات المادة') || cleanTitle.includes('الفصل الأول') || cleanTitle.includes('مراجعة شاملة')) {
+            cleanTitle = `كويز ${q.quiz_number}`;
+          }
+          return {
+            id: q.id,
+            number: q.quiz_number,
+            title: cleanTitle,
+            maxScore: Number(q.max_score || 10),
+            date: q.quiz_date || new Date().toISOString().slice(0, 10),
+            skipped: Boolean(q.is_skipped),
+          };
+        });
 
         if (res.scores_map) {
           this.quizzesState.scoresMap = {
@@ -5071,6 +5082,15 @@ class CentrlyApp {
 
       this.showToast(`تم تخطي كويز ${quizNum}`, 'info');
       this.renderMainContent();
+    }
+  }
+
+  promptEditQuizTitle(quizNum) {
+    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    const currentTitle = quiz?.title || `كويز ${quizNum}`;
+    const newTitle = window.prompt('أدخل اسم الكويز الجديد (أو اتركه فارغاً للرجوع للاسم الافتراضي):', currentTitle);
+    if (newTitle !== null) {
+      this.updateQuizTitle(quizNum, newTitle.trim());
     }
   }
 

@@ -23,9 +23,9 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
   });
 
   const quizzes = state.quizzes || [
-    { id: 1, number: 1, title: 'كويز 1: أساسيات المادة', maxScore: 10, date: '2026-09-01', skipped: false },
-    { id: 2, number: 2, title: 'كويز 2: الفصل الأول', maxScore: 10, date: '2026-09-05', skipped: false },
-    { id: 3, number: 3, title: 'كويز 3: مراجعة شاملة', maxScore: 10, date: '2026-09-08', skipped: false },
+    { id: 1, number: 1, title: 'كويز 1', maxScore: 10, date: '2026-09-01', skipped: false },
+    { id: 2, number: 2, title: 'كويز 2', maxScore: 10, date: '2026-09-05', skipped: false },
+    { id: 3, number: 3, title: 'كويز 3', maxScore: 10, date: '2026-09-08', skipped: false },
   ];
 
   const currentQuizNumber = state.currentQuizNumber || quizzes[quizzes.length - 1]?.number || 1;
@@ -120,8 +120,16 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
             </button>
           </div>
 
-          <!-- Quick Action Buttons: Skip, Save, and WhatsApp Batch Dispatch -->
+          <!-- Quick Action Buttons: Edit, Skip, Save, and WhatsApp Batch Dispatch -->
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button 
+              class="btn btn-secondary" 
+              onclick="window.centrlyApp.promptEditQuizTitle(${currentQuiz.number})"
+              style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700; color: var(--centrly-blue-700);"
+              title="تعديل اسم الكويز الحالي مباشرة"
+            >
+              <span>✎ تعديل الاسم</span>
+            </button>
             <button 
               class="btn btn-secondary" 
               onclick="window.centrlyApp.skipCurrentQuiz(${currentQuiz.number})"
@@ -157,36 +165,51 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
       <!-- Quiz Overview KPI Summary Cards -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
         
-        <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-blue-700);">
+        <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-blue-700); box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label for="quizTitleInput" style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">
+            <label for="quizTitleInput" style="font-size: 0.85rem; color: var(--centrly-text); font-weight: 800;">
               اسم / موضوع الكويز:
             </label>
-            <span style="font-size: 0.72rem; color: var(--centrly-blue-700); font-weight: 700;">قابل للتعديل ✎</span>
+            <span style="font-size: 0.75rem; color: var(--centrly-blue-700); font-weight: 800; background: #eff6ff; padding: 2px 8px; border-radius: 4px; border: 1px solid #bfdbfe;">
+              ✎ قابل للتعديل
+            </span>
           </div>
-          <div style="margin-top: 0.35rem;">
+          <div style="display: flex; gap: 0.4rem; margin-top: 0.4rem;">
             <input 
               id="quizTitleInput"
               type="text" 
               class="form-input" 
               value="${escapeHtml(currentQuiz.title || `كويز ${currentQuiz.number}`)}" 
-              placeholder="مثال: كويز 1 أو الفصل الأول..."
-              style="font-size: 0.95rem; font-weight: 800; color: var(--centrly-ink); padding: 0.4rem 0.65rem; border: 1.5px solid var(--centrly-line); border-radius: 6px; width: 100%;"
+              placeholder="اكتب اسم الكويز هنا..."
+              style="font-size: 0.95rem; font-weight: 800; color: var(--centrly-ink); padding: 0.45rem 0.65rem; border: 2px solid var(--centrly-blue-700); background: #f8fafc; border-radius: 6px; flex: 1;"
               onchange="window.centrlyApp.updateQuizTitle(${currentQuiz.number}, this.value)"
+              onblur="window.centrlyApp.updateQuizTitle(${currentQuiz.number}, this.value)"
+              onkeydown="if(event.key === 'Enter'){ window.centrlyApp.updateQuizTitle(${currentQuiz.number}, this.value); this.blur(); }"
             />
+            <button 
+              class="btn btn-primary" 
+              style="padding: 0.4rem 0.75rem; font-size: 0.8rem; font-weight: 800; white-space: nowrap;"
+              onclick="window.centrlyApp.updateQuizTitle(${currentQuiz.number}, document.getElementById('quizTitleInput').value)"
+              title="حفظ اسم الكويز"
+            >
+              حفظ
+            </button>
           </div>
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.4rem; font-size: 0.78rem; color: var(--centrly-text);">
-            <span style="font-weight: 600;">الدرجة العظمى للكويز:</span>
-            <div style="display: inline-flex; align-items: center; gap: 0.3rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; font-size: 0.82rem; color: var(--centrly-text);">
+            <span style="font-weight: 700;">الدرجة العظمى للكويز:</span>
+            <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
               <input 
+                id="quizMaxScoreInput"
                 type="number" 
                 min="1" 
                 max="200" 
                 step="1"
                 class="form-input" 
                 value="${currentQuiz.maxScore || 10}" 
-                style="width: 65px; text-align: center; padding: 0.2rem 0.35rem; font-weight: 800; font-size: 0.85rem;"
+                style="width: 70px; text-align: center; padding: 0.25rem 0.35rem; font-weight: 800; font-size: 0.9rem; border: 1.5px solid var(--centrly-line); border-radius: 6px;"
                 onchange="window.centrlyApp.updateQuizMaxScore(${currentQuiz.number}, this.value)"
+                onblur="window.centrlyApp.updateQuizMaxScore(${currentQuiz.number}, this.value)"
+                onkeydown="if(event.key === 'Enter'){ window.centrlyApp.updateQuizMaxScore(${currentQuiz.number}, this.value); this.blur(); }"
               />
               <span style="font-weight: 700;">درجات</span>
             </div>
