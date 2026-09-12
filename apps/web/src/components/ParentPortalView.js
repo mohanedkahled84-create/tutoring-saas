@@ -99,10 +99,10 @@ export function renderParentPortalView(portalData = {}) {
           <div style="background: #fff; padding: 1.1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
             <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">إنجاز الواجبات</div>
             <div style="font-size: 1.6rem; font-weight: 900; color: #8b5cf6; margin-top: 0.2rem;">
-              ${summary.total_sessions > 0 ? `${Math.round((summary.homework_done_count / summary.total_sessions) * 100)}%` : '—'}
+              ${(summary.homework_total_count || summary.homework_done_count) > 0 ? `${Math.round((summary.homework_done_count / (summary.homework_total_count || summary.attended_count || 1)) * 100)}%` : '—'}
             </div>
             <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
-              سلم ${escapeHtml(summary.homework_done_count)} واجب
+              ${summary.homework_done_count > 0 ? `سلم ${escapeHtml(summary.homework_done_count)} واجب` : 'لا توجد واجبات مسجلة'}
             </div>
           </div>
 
@@ -179,13 +179,15 @@ export function renderParentPortalView(portalData = {}) {
                   </span>
                 </div>
 
-                <div style="display: flex; gap: 0.75rem; font-size: 0.8rem; color: #64748b; align-items: center;">
-                  <span>الواجب المنزلي: 
-                    <b style="color: ${s.homework_status === 'done' ? '#059669' : (s.homework_status === 'partial' ? '#d97706' : '#dc2626')};">
-                      ${s.homework_status === 'done' ? 'تم التسليم بالكامل' : (s.homework_status === 'partial' ? 'تسليم جزئي / ناقص' : 'لم يُسلم')}
-                    </b>
-                  </span>
-                </div>
+                ${s.attended && s.homework_status && s.homework_status !== 'none' ? `
+                  <div style="display: flex; gap: 0.75rem; font-size: 0.8rem; color: #64748b; align-items: center;">
+                    <span>الواجب المنزلي: 
+                      <b style="color: ${s.homework_status === 'done' ? '#059669' : (s.homework_status === 'partial' ? '#d97706' : '#dc2626')};">
+                        ${s.homework_status === 'done' ? 'تم التسليم بالكامل' : (s.homework_status === 'partial' ? 'تسليم جزئي / ناقص' : 'لم يُسلم')}
+                      </b>
+                    </span>
+                  </div>
+                ` : ''}
 
                 ${s.comment ? `
                   <div style="font-size: 0.8rem; background: #fff; padding: 0.4rem 0.65rem; border-radius: 0.4rem; border-right: 3px solid #1d4ed8; color: #0f172a; margin-top: 0.25rem;">

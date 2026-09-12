@@ -1602,17 +1602,19 @@ export function generateAttendanceMessage(options: AttendanceMessageOptions): st
     body = absentBodies[spintaxState.absentBodyIdx];
   }
 
-  // Rotate homework phrasing
+  // Rotate homework phrasing (only when student attended and homework status is provided)
   let hwPhrase = "";
-  if (homework_status === "done") {
-    spintaxState.homeworkDoneIdx = getRotatedIndex(homeworkDonePhrases.length, spintaxState.homeworkDoneIdx);
-    hwPhrase = homeworkDonePhrases[spintaxState.homeworkDoneIdx];
-  } else if (homework_status === "partial") {
-    spintaxState.homeworkPartialIdx = getRotatedIndex(homeworkPartialPhrases.length, spintaxState.homeworkPartialIdx);
-    hwPhrase = homeworkPartialPhrases[spintaxState.homeworkPartialIdx];
-  } else if (homework_status === "missing") {
-    spintaxState.homeworkMissingIdx = getRotatedIndex(homeworkMissingPhrases.length, spintaxState.homeworkMissingIdx);
-    hwPhrase = homeworkMissingPhrases[spintaxState.homeworkMissingIdx];
+  if (attended && homework_status) {
+    if (homework_status === "done") {
+      spintaxState.homeworkDoneIdx = getRotatedIndex(homeworkDonePhrases.length, spintaxState.homeworkDoneIdx);
+      hwPhrase = homeworkDonePhrases[spintaxState.homeworkDoneIdx];
+    } else if (homework_status === "partial") {
+      spintaxState.homeworkPartialIdx = getRotatedIndex(homeworkPartialPhrases.length, spintaxState.homeworkPartialIdx);
+      hwPhrase = homeworkPartialPhrases[spintaxState.homeworkPartialIdx];
+    } else if (homework_status === "missing") {
+      spintaxState.homeworkMissingIdx = getRotatedIndex(homeworkMissingPhrases.length, spintaxState.homeworkMissingIdx);
+      hwPhrase = homeworkMissingPhrases[spintaxState.homeworkMissingIdx];
+    }
   }
 
   let closingOrTeacher = "";
