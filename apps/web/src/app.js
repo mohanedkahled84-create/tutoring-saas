@@ -5714,6 +5714,63 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   // Student Cards Printing & Download Flow
   // ==========================================================================
 
+  downloadSelectedCardsDataExcel() {
+    const checkedBoxes = Array.from(document.querySelectorAll('.student-card-check:checked'));
+    let targetStudents = [];
+
+    if (checkedBoxes.length > 0) {
+      targetStudents = checkedBoxes.map(cb => ({
+        id: cb.value,
+        name: cb.getAttribute('data-name') || '',
+        code: cb.getAttribute('data-code') || '',
+        group: cb.getAttribute('data-group') || '',
+        phone: cb.getAttribute('data-phone') || '',
+        parent_phone: cb.getAttribute('data-parent-phone') || '',
+      }));
+    } else {
+      const rows = Array.from(document.querySelectorAll('#cardsTable tbody tr[data-student-id]'));
+      if (rows.length === 0) {
+        this.showToast('لا يوجد طلاب لتنزيل بياناتهم. يرجى إضافة طلاب أولاً.', 'warning');
+        return;
+      }
+      targetStudents = rows.map(r => {
+        const cb = r.querySelector('.student-card-check');
+        return {
+          id: r.getAttribute('data-student-id'),
+          name: cb?.getAttribute('data-name') || r.cells[2]?.textContent.trim() || '',
+          code: cb?.getAttribute('data-code') || r.cells[1]?.textContent.trim() || '',
+          group: cb?.getAttribute('data-group') || r.cells[3]?.textContent.trim() || '',
+          phone: cb?.getAttribute('data-phone') || r.cells[4]?.textContent.trim() || '',
+          parent_phone: cb?.getAttribute('data-parent-phone') || r.cells[5]?.textContent.trim() || '',
+        };
+      });
+    }
+
+    // CSV header & rows with UTF-8 BOM for Arabic Excel & Canva/Photoshop Data Merge compatibility
+    const header = ['كود الطالب', 'اسم الطالب', 'المجموعة الدراسية', 'رقم هاتف الطالب', 'رقم ولي الأمر', 'كود الباركود'];
+    const rows = targetStudents.map(s => [
+      `"${(s.code || '').replace(/"/g, '""')}"`,
+      `"${(s.name || '').replace(/"/g, '""')}"`,
+      `"${(s.group || '').replace(/"/g, '""')}"`,
+      `"${(s.phone || '').replace(/"/g, '""')}"`,
+      `"${(s.parent_phone || '').replace(/"/g, '""')}"`,
+      `"${(s.code || '').replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = '\uFEFF' + [header.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `بيانات_كروت_الطلاب_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    this.showToast(`تم تنزيل ملف بيانات (${targetStudents.length}) طالب بنجاح (Excel / CSV) جاهز لبرامج التصميم!`, 'success');
+  }
+
   downloadSelectedCardsPdf() {
     const checkedBoxes = Array.from(document.querySelectorAll('.student-card-check:checked'));
     let targetStudents = [];

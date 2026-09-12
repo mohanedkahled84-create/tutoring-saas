@@ -38,11 +38,12 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
             </div>
             <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #ffffff;">كروت الطلاب الذكية والباركود للطباعة</h2>
             <div style="font-size: 0.85rem; color: rgba(255,255,255,0.95); margin-top: 0.6rem; line-height: 1.6; background: rgba(0,0,0,0.15); padding: 0.75rem 1rem; border-radius: 8px;">
-              <strong style="color: #93c5fd;">💡 خطوات طلب كروت بلاستيكية فاخرة (PVC ID Cards) لمنظومتك:</strong>
+              <strong style="color: #93c5fd;">💡 خيارات طباعة وتصميم كروت الطلاب:</strong>
               <ol style="margin: 0.35rem 0 0 0; padding-right: 1.2rem; font-size: 0.82rem; color: #f1f5f9;">
                 <li>حدد الطلاب المطلوبين من الجدول بالأسفل (أو اختر "تحديد الكل").</li>
-                <li>اضغط على زر <b>"تنزيل كروت الطلاب للطباعة (PDF / باركود)"</b> لتحميل الملف المُنظم على جهازك.</li>
-                <li>اضغط على زر <b>"طلب كروت بلاستيكية (واتساب)"</b> هنا للتواصل معنا وإرسال الملف لتجهيزها وشحنها لك فوراً.</li>
+                <li><b>إذا كان لديك تصميم كارت خاص:</b> اضغط <b>"تنزيل البيانات للتصميم (Excel / CSV)"</b> لرفع الملف على (Canva / Photoshop) وتركيب الأسماء والأكواد على تصميمك وطباعتها.</li>
+                <li><b>إذا أردت طباعة سريعة جاهزة:</b> اضغط <b>"طباعة كروت جاهزة (PDF)"</b> لحفظ أو طباعة الكروت بتنسيق المنصة الافتراضي فوراً.</li>
+                <li><b>لطلب كروت بلاستيكية فاخرة (PVC) مطبوعة من سنترلي:</b> تواصل معنا مباشرة عبر واتساب الإدارة بالزر المجاور.</li>
               </ol>
             </div>
           </div>
@@ -66,7 +67,7 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
           <div>
             <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0;">تحديد الطلاب لإصدار وتنزيل الكروت</h3>
             <p style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.2rem;">
-              حدد الطلاب أو اختر مجموعة كاملة، ثم اضغط "تنزيل كروت الطلاب" لحفظ وطباعة الكروت بالباركود
+              حدد الطلاب أو اختر مجموعة كاملة، ثم اختر تنزيل البيانات لتصميمك الخاص أو الطباعة المباشرة
             </p>
           </div>
 
@@ -75,9 +76,13 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
             <div id="selectedCardsCountBadge" class="badge badge-blue" style="font-size: 0.825rem; padding: 0.4rem 0.75rem;">
               تم تحديد: 0 طالب
             </div>
-            <button class="btn btn-primary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 800; padding: 0.5rem 1.1rem; border-radius: 8px;" onclick="window.centrlyApp.downloadSelectedCardsPdf()">
+            <button class="btn" style="background: #10b981; color: #ffffff; display: flex; align-items: center; gap: 0.45rem; font-weight: 800; padding: 0.5rem 1.1rem; border-radius: 8px; border: none; box-shadow: 0 2px 6px rgba(16,185,129,0.3); cursor: pointer;" onclick="window.centrlyApp.downloadSelectedCardsDataExcel()">
+              ${getIcon('download', 18, '#ffffff')}
+              <span>تنزيل البيانات للتصميم (Excel / CSV)</span>
+            </button>
+            <button class="btn btn-primary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 8px;" onclick="window.centrlyApp.downloadSelectedCardsPdf()">
               ${getIcon('print', 18)}
-              <span>تنزيل كروت الطلاب للطباعة (PDF / باركود)</span>
+              <span>طباعة كروت جاهزة (PDF)</span>
             </button>
             <button class="btn btn-secondary" onclick="window.centrlyApp.selectAllCards(true)">
               تحديد الكل
