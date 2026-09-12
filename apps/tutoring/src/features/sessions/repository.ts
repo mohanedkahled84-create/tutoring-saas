@@ -201,7 +201,7 @@ export class SupabaseSessionsRepository implements ISessionsRepository {
       this.supabase
         .from("attendance")
         .select(
-          "id, student_id, attended, comment, homework_status, is_makeup, home_group_id, sent, idempotency_key, created_at, students(id, name, student_code, parent_phone)"
+          "id, student_id, attended, comment, homework_status, is_makeup, home_group_id, sent, wa_status, idempotency_key, created_at, students(id, name, student_code, parent_phone)"
         )
         .eq("session_id", sessionId),
       this.supabase

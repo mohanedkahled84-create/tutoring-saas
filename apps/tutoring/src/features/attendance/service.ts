@@ -153,8 +153,15 @@ export class AttendanceService {
       }>;
     }
   > {
+    const existing = await this.repository.getAttendanceForSession(sessionId).catch(() => []);
+    const existingSentMap = new Map<string, boolean>();
+    existing.forEach((e) => {
+      if (e.student_id) existingSentMap.set(e.student_id, Boolean(e.sent));
+    });
+
     const attendanceInserts = records.map((r) => {
       const idempotencyKey = `${tenantId}:${r.student_id}:${sessionId}`;
+      const isAlreadySent = existingSentMap.get(r.student_id) || Boolean(r.sent);
       return {
         tenant_id: tenantId,
         session_id: sessionId,
@@ -164,7 +171,7 @@ export class AttendanceService {
         homework_status: r.homework_status || null,
         is_makeup: r.is_makeup || false,
         home_group_id: r.home_group_id || null,
-        sent: false,
+        sent: isAlreadySent,
         idempotency_key: idempotencyKey,
       };
     });
@@ -437,13 +444,17 @@ export class AttendanceService {
       }
 
       if (!parentPhone || parentPhone.trim().length < 9) {
+        await this.repository.updateAttendanceStatus(record.id, {
+          sent: false,
+          wa_status: "failed",
+        }).catch(() => {});
         preFilteredResults.push({
           student_id: record.student_id,
           student_name: studentName,
           phone: parentPhone,
           decision,
           status: "failed",
-          reason: "Missing or invalid parent phone number",
+          reason: "رقم هاتف ولي الأمر غير مسجل أو غير صحيح",
         });
         continue;
       }

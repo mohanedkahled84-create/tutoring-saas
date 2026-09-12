@@ -8,6 +8,7 @@ import {
 } from "../../shared/middleware/validation.js";
 import { attendanceRateLimiter } from "../../shared/middleware/rateLimit.js";
 import { getServices } from "../../composition.js";
+import { logger } from "../../shared/utils/logger.js";
 import { AttendanceService } from "./service.js";
 
 export const attendanceRouter = Router();
@@ -171,7 +172,19 @@ attendanceRouter.post(
       const whatsAppService = services.whatsapp;
 
       const teacherId = req.user?.teacher_id || req.user?.id;
-      const { include_all_present = true } = req.body || {};
+      const { include_all_present = true, records } = req.body || {};
+
+      if (Array.isArray(records) && records.length > 0) {
+        try {
+          await attendanceService.recordBatchAttendance(
+            tenantId || "",
+            sessionId,
+            records
+          );
+        } catch (syncErr) {
+          logger.warn(`[send-messages] Auto-sync records failed: ${(syncErr as Error).message}`);
+        }
+      }
 
       const result = await attendanceService.dispatchSessionMessages(
         tenantId || "",

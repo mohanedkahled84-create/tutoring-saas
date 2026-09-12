@@ -869,6 +869,27 @@ class CentrlyApp {
               this.sessionState.group = s.group || { id: s.group_id, name: s.group_name || 'حصة اليوم', price: s.price || 0 };
             }
           }
+          if (this.sessionState.id && !String(this.sessionState.id).startsWith('sess-')) {
+            try {
+              const serverSessionRes = await request(`/sessions/${this.sessionState.id}`).catch(() => null);
+              if (serverSessionRes?.attendance && Array.isArray(serverSessionRes.attendance)) {
+                serverSessionRes.attendance.forEach(serverAtt => {
+                  const local = (this.sessionState.attendanceList || []).find(a => a.student_id === serverAtt.student_id);
+                  if (local) {
+                    if (serverAtt.wa_status === 'failed') {
+                      local.deliveryStatus = 'failed';
+                      local.wa_status = 'failed';
+                      local.sent = false;
+                    } else if (serverAtt.wa_status === 'sent' || serverAtt.sent) {
+                      local.deliveryStatus = 'delivered';
+                      local.wa_status = 'sent';
+                      local.sent = true;
+                    }
+                  }
+                });
+              }
+            } catch (_) {}
+          }
           this.renderMainContent();
           if (this.sessionState?.status === 'in_progress') {
             this.focusScanInput();
@@ -1542,7 +1563,10 @@ class CentrlyApp {
             student_id: a.student_id,
             attended: Boolean(a.attended),
             comment: a.comment || null,
-            homework_status: a.homework || 'done',
+            homework_status: (a.homework && a.homework !== 'none') ? a.homework : null,
+            is_makeup: Boolean(a.is_makeup),
+            quiz_score: (a.quiz_score !== undefined && a.quiz_score !== null && a.quiz_score !== '') ? Number(a.quiz_score) : null,
+            sent: Boolean(a.sent),
           }));
         if (records.length > 0) {
           await request(`/sessions/${realSessionId}/attendance`, {
@@ -1647,7 +1671,7 @@ class CentrlyApp {
               student_id: item.student_id || studentCodeOrId,
               attended: Boolean(item.attended),
               comment: note,
-              homework_status: item.homework || 'done',
+              homework_status: (item.homework && item.homework !== 'none') ? item.homework : null,
             }],
           },
         });
@@ -1704,7 +1728,7 @@ class CentrlyApp {
             student_id: item.student_id,
             attended: Boolean(item.attended),
             comment: note,
-            homework_status: item.homework || 'done',
+            homework_status: (item.homework && item.homework !== 'none') ? item.homework : null,
           });
         }
       }
@@ -3048,26 +3072,84 @@ class CentrlyApp {
   }
 
   async retryFailedWhatsAppMessages() {
-    const failedList = this.sessionState.attendanceList.filter(a => a.deliveryStatus === 'failed');
+    const failedList = this.sessionState.attendanceList.filter(a => !a.is_makeup && (a.deliveryStatus === 'failed' || a.wa_status === 'failed' || a.deliveryStatus === 'not_delivered'));
     if (failedList.length === 0) {
-      this.showToast('لا توجد رسائل فاشلة لإعادة إرسالها.', 'info');
+      this.showToast('لا توجد رسائل لم يتم تسليمها لإعادة إرسالها.', 'info');
       return;
     }
     failedList.forEach(a => a.deliveryStatus = 'sending');
     this.renderMainContent();
 
     try {
-      await request(`/sessions/${this.sessionState.id}/send-messages`, { method: 'POST' });
-      failedList.forEach(a => {
-        a.deliveryStatus = 'delivered';
-        a.sent = true;
+      const syncRecords = (this.sessionState.attendanceList || [])
+        .filter(a => a.student_id)
+        .map(a => ({
+          student_id: a.student_id,
+          attended: Boolean(a.attended),
+          comment: a.comment || null,
+          homework_status: (a.homework && a.homework !== 'none') ? a.homework : null,
+          is_makeup: Boolean(a.is_makeup),
+          quiz_score: (a.quiz_score !== undefined && a.quiz_score !== null && a.quiz_score !== '') ? Number(a.quiz_score) : null,
+          sent: Boolean(a.sent && a.deliveryStatus === 'delivered'),
+        }));
+
+      const res = await request(`/sessions/${this.sessionState.id}/send-messages`, {
+        method: 'POST',
+        body: {
+          include_all_present: true,
+          records: syncRecords,
+        },
       });
-      this.showToast(`تمت إعادة إرسال ${failedList.length} رسائل بنجاح`, 'success');
+
+      let retriedDelivered = 0;
+      let retriedFailed = 0;
+
+      if (res && Array.isArray(res.results)) {
+        const resultsMap = new Map();
+        res.results.forEach(r => {
+          if (r.student_id) resultsMap.set(String(r.student_id), r);
+        });
+
+        failedList.forEach(a => {
+          const r = resultsMap.get(String(a.student_id || a.id));
+          if (r && (r.status === 'dispatched' || r.status === 'sent')) {
+            a.sent = true;
+            a.deliveryStatus = 'delivered';
+            a.deliveryError = null;
+            retriedDelivered++;
+          } else {
+            a.sent = false;
+            a.deliveryStatus = 'failed';
+            a.deliveryError = r?.reason || 'لم يتم التسليم';
+            retriedFailed++;
+          }
+        });
+      } else {
+        failedList.forEach(a => {
+          a.sent = false;
+          a.deliveryStatus = 'failed';
+          a.deliveryError = 'تعذر تأكيد التسليم';
+          retriedFailed++;
+        });
+      }
+
+      this.persistSessionState();
+      this.renderMainContent();
+
+      if (retriedDelivered > 0) {
+        this.showToast(`تم تسليم (${retriedDelivered}) رسائل بنجاح`, 'success');
+      } else {
+        this.showToast(`لم يتم تسليم الرسائل. يمكنك استخدام زر الإرسال المباشر لكل طالب.`, 'danger');
+      }
     } catch (err) {
-      failedList.forEach(a => a.deliveryStatus = 'failed');
+      failedList.forEach(a => {
+        a.deliveryStatus = 'failed';
+        a.deliveryError = err.message || 'فشل الاتصال بالخادم';
+      });
+      this.persistSessionState();
+      this.renderMainContent();
       this.showToast(`فشل إعادة الإرسال: ${err.message || 'خطأ في الشبكة'}`, 'danger');
     }
-    this.renderMainContent();
   }
 
   openEditSessionModal() {
@@ -3205,21 +3287,110 @@ class CentrlyApp {
       onConfirm: async () => {
         try {
           this.showToast('جارٍ إرسال إشعارات الحصة عبر واتساب في الخلفية...', 'info');
-          const res = await request(`/sessions/${this.sessionState.id}/send-messages`, {
-            method: 'POST',
-            body: { include_all_present: true },
-          }).catch(() => null);
+
+          // 1. First: Guarantee all attendance records (attended + absent) are synced to the backend
+          const syncRecords = (this.sessionState.attendanceList || [])
+            .filter(a => a.student_id)
+            .map(a => ({
+              student_id: a.student_id,
+              attended: Boolean(a.attended),
+              comment: a.comment || null,
+              homework_status: (a.homework && a.homework !== 'none') ? a.homework : null,
+              is_makeup: Boolean(a.is_makeup),
+              quiz_score: (a.quiz_score !== undefined && a.quiz_score !== null && a.quiz_score !== '') ? Number(a.quiz_score) : null,
+              sent: Boolean(a.sent && a.deliveryStatus === 'delivered'),
+            }));
+
+          // Mark status as 'sending' in UI immediately
           this.sessionState.attendanceList.forEach(a => {
             if (!a.is_makeup && a.comment !== 'حصة تعويضية') {
-              a.sent = true;
-              a.deliveryStatus = 'delivered';
+              a.deliveryStatus = 'sending';
+            }
+          });
+          this.renderMainContent();
+
+          const res = await request(`/sessions/${this.sessionState.id}/send-messages`, {
+            method: 'POST',
+            body: { 
+              include_all_present: true,
+              records: syncRecords,
+            },
+          });
+
+          // 2. Process exact per-student results from the server
+          let deliveredCount = 0;
+          let failedCount = 0;
+
+          if (res && Array.isArray(res.results)) {
+            const resultsMap = new Map();
+            res.results.forEach(r => {
+              if (r.student_id) resultsMap.set(String(r.student_id), r);
+            });
+
+            this.sessionState.attendanceList.forEach(a => {
+              if (a.is_makeup || a.comment === 'حصة تعويضية') return;
+
+              const r = resultsMap.get(String(a.student_id || a.id));
+              if (r) {
+                if (r.status === 'dispatched' || r.status === 'sent') {
+                  a.sent = true;
+                  a.deliveryStatus = 'delivered';
+                  a.deliveryError = null;
+                  deliveredCount++;
+                } else if (r.status === 'already_sent') {
+                  a.sent = true;
+                  a.deliveryStatus = 'delivered';
+                  deliveredCount++;
+                } else if (r.status === 'failed') {
+                  a.sent = false;
+                  a.deliveryStatus = 'failed';
+                  a.deliveryError = r.reason || 'لم يتم التسليم';
+                  failedCount++;
+                } else if (r.status === 'skipped') {
+                  a.sent = false;
+                  a.deliveryStatus = 'failed';
+                  a.deliveryError = r.reason || 'تم التخطي';
+                  failedCount++;
+                }
+              } else {
+                a.sent = false;
+                a.deliveryStatus = 'failed';
+                a.deliveryError = 'لم يتم العثور على تقرير إرسال للطالب';
+                failedCount++;
+              }
+            });
+          } else {
+            this.sessionState.attendanceList.forEach(a => {
+              if (!a.is_makeup && a.comment !== 'حصة تعويضية') {
+                a.sent = false;
+                a.deliveryStatus = 'failed';
+                a.deliveryError = 'تعذر تأكيد التسليم من الخادم';
+                failedCount++;
+              }
+            });
+          }
+
+          this.persistSessionState();
+          this.renderMainContent();
+
+          if (failedCount > 0 && deliveredCount === 0) {
+            this.showToast(`تعذر تسليم الإشعارات (${failedCount} طالب لم يتم التسليم لهم). يرجى التحقق من اتصال الواتساب أو استخدام زر الإرسال المباشر.`, 'danger');
+          } else if (failedCount > 0) {
+            this.showToast(`تم تسليم (${deliveredCount}) رسالة بنجاح، و (${failedCount}) طالب لم يتم التسليم لهم.`, 'warning');
+          } else {
+            this.showToast(`تم إرسال كافة إشعارات الحصة (${deliveredCount} رسالة) بنجاح عبر واتساب!`, 'success');
+          }
+        } catch (err) {
+          this.sessionState.attendanceList.forEach(a => {
+            if (!a.is_makeup && a.comment !== 'حصة تعويضية') {
+              a.sent = false;
+              a.deliveryStatus = 'failed';
+              a.deliveryError = err.message || 'فشل الاتصال بالخادم';
             }
           });
           this.persistSessionState();
-          this.showToast(`تم إرسال إشعارات الحصة بنجاح عبر منظومة الواتساب الآمنة!`, 'success');
           this.renderMainContent();
-        } catch (err) {
-          this.showToast(`فشل إرسال رسائل الواتساب: ${err.message || 'حدث خطأ أثناء الإرسال'}`, 'danger');
+          this.showToast(`فشل إرسال رسائل الواتساب: ${err.message || 'لم يتم التسليم'}`, 'danger');
         }
       }
     });

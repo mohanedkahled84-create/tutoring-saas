@@ -164,12 +164,21 @@ export const quickCheckinSchema = z.object({
   code: z.string().min(1, "Student code or barcode is required"),
 });
 
+export const homeworkStatusSchema = z
+  .union([
+    z.enum(["done", "partial", "missing", "none"]),
+    z.string().max(20),
+  ])
+  .optional()
+  .nullable()
+  .transform((val) => (val === "none" || !val ? null : (val as "done" | "partial" | "missing")));
+
 // DEV-SBL.1: Scan schema
 export const scanStudentSchema = z
   .object({
     student_id: z.string().uuid().optional(),
     student_code: z.string().min(1).optional(),
-    homework_status: z.enum(["done", "partial", "missing"]).optional().nullable(),
+    homework_status: homeworkStatusSchema,
     is_makeup: z.boolean().optional().default(false),
     home_group_id: z.string().uuid().optional().nullable(),
     comment: z.string().max(500).optional().nullable(),
@@ -195,11 +204,12 @@ export const recordAttendanceSchema = z.object({
         student_id: z.string().uuid("student_id must be a valid UUID"),
         attended: z.boolean(),
         comment: z.string().max(500).optional().nullable(),
-        homework_status: z.enum(["done", "partial", "missing"]).optional().nullable(),
+        homework_status: homeworkStatusSchema,
         is_makeup: z.boolean().optional().default(false),
         home_group_id: z.string().uuid().optional().nullable(),
         quiz_score: z.number().min(0).max(100).optional().nullable(),
         quiz_max_score: z.number().min(0).optional().default(20),
+        sent: z.boolean().optional(),
       })
     )
     .min(1, "At least one attendance record is required"),
@@ -253,7 +263,7 @@ export const offlineBatchSyncSchema = z.object({
         session_id: z.string().uuid("session_id must be a valid UUID"),
         attended: z.boolean(),
         comment: z.string().max(500).optional().nullable(),
-        homework_status: z.enum(["done", "partial", "missing"]).optional().nullable(),
+        homework_status: homeworkStatusSchema,
         is_makeup: z.boolean().optional().default(false),
         home_group_id: z.string().uuid().optional().nullable(),
         client_timestamp: z.string().optional(),

@@ -144,7 +144,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
 
   const group = sessionState.group || { id: '', name: 'حصة دراسية', price: 0 };
   const attendanceList = sessionState.attendanceList || [];
-  const failedMessagesCount = attendanceList.filter(a => a.deliveryStatus === 'failed').length;
+  const failedMessagesCount = attendanceList.filter(a => !a.is_makeup && (a.deliveryStatus === 'failed' || a.wa_status === 'failed' || a.deliveryStatus === 'not_delivered')).length;
 
   const financials = sessionState.financials || {
     totalRevenue: 0,
@@ -155,36 +155,32 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
   };
 
   return `
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      
-      <!-- Session Master Status Bar -->
-      <div class="card" style="margin: 0; border-top: 4px solid ${isCancelled ? 'var(--centrly-danger)' : (isRescheduled ? 'var(--centrly-warning)' : (isSessionEnded ? 'var(--centrly-line)' : 'var(--centrly-primary)'))};">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div class="sessions-container" style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
+      <!-- Session Header & Quick Controls -->
+      <div class="card" style="margin: 0; border-right: 4px solid var(--centrly-blue);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
           <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <h2 class="card-title" style="margin: 0; font-size: 1.25rem;">${escapeHtml(group.name)}</h2>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
+              <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--centrly-ink); margin: 0;">${escapeHtml(group.name)}</h2>
               ${statusBadge}
-              ${isExtra ? '<span class="badge" style="background:#ede9fe;color:#7c3aed;">حصة إضافية</span>' : ''}
             </div>
-            <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              حصة رقم ${escapeHtml(sessionState.session_number || 1)} • التاريخ: ${escapeHtml(sessionState.session_date || new Date().toLocaleDateString('ar-EG'))}${sessionState.room ? ` • القاعة: <b style="color: var(--centrly-blue-800);">${escapeHtml(sessionState.room)}</b>` : ''}
+            <div style="color: var(--centrly-text); font-size: 0.85rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+              <span><strong>حصة رقم:</strong> ${sessionState.session_number || 1}</span>
+              <span><strong>التاريخ:</strong> ${sessionState.session_date || new Date().toISOString().split('T')[0]}</span>
+              ${sessionState.room ? `<span><strong>القاعة:</strong> ${escapeHtml(sessionState.room)}</span>` : ''}
+              ${sessionState.group?.center_name ? `<span><strong>السنتر:</strong> ${escapeHtml(sessionState.group.center_name)}</span>` : ''}
             </div>
           </div>
-
-          <!-- Session Flow Buttons -->
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            ${!isSessionEnded && !isCancelled && !isRescheduled ? `
+          
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+            ${!isSessionEnded && !isCancelled ? `
+              <button class="btn btn-danger" onclick="window.centrlyApp.endActiveSession()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                ${getIcon('close', 16, '#ffffff')}
+                <span>إنهاء الحصة ورصد الحضور</span>
+              </button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openEditSessionModal()" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700;">
                 ${getIcon('edit', 16)}
-                <span>تعديل بيانات الحصة</span>
-              </button>
-              <button class="btn btn-secondary" onclick="window.centrlyApp.openBatchNotesModal()" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700;">
-                ${getIcon('note', 16)}
-                <span>ملاحظات الطلاب</span>
-              </button>
-              <button class="btn btn-secondary" onclick="window.centrlyApp.promptEndSessionFlow()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--centrly-danger); border-color: var(--centrly-danger);">
-                ${getIcon('close', 16)}
-                <span>إنهاء الحصة</span>
+                <span>تعديل الموعد والبيانات</span>
               </button>
             ` : ''}
             ${(isRescheduled || isCancelled) ? `
@@ -216,9 +212,9 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
               </button>
             ` : ''}
             ${failedMessagesCount > 0 ? `
-              <button class="btn btn-secondary" onclick="window.centrlyApp.retryFailedWhatsAppMessages()" style="display: flex; align-items: center; gap: 0.4rem; color: var(--centrly-danger); font-weight: 700;">
-                ${getIcon('refresh', 16)}
-                <span>إعادة إرسال (${failedMessagesCount}) رسالة فاشلة</span>
+              <button class="btn btn-secondary" onclick="window.centrlyApp.retryFailedWhatsAppMessages()" style="display: flex; align-items: center; gap: 0.4rem; color: #b91c1c; font-weight: 700; border-color: #fca5a5; background: #fff5f5;">
+                ${getIcon('refresh', 16, '#b91c1c')}
+                <span>إعادة إرسال (${failedMessagesCount}) رسائل لم يتم تسليمها</span>
               </button>
             ` : ''}
           </div>
@@ -390,14 +386,16 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
             <tbody>
               ${attendanceList.length > 0 ? attendanceList.map(a => {
                 let deliveryBadge = '<span class="badge badge-secondary">في الانتظار</span>';
+                const isFailed = !a.is_makeup && (a.deliveryStatus === 'failed' || a.wa_status === 'failed' || a.deliveryStatus === 'not_delivered');
                 if (a.is_makeup) {
                   deliveryBadge = '<span class="badge badge-secondary" style="font-size: 0.72rem; color: #64748b;" title="حصة تعويضية - لا يتم إرسال إشعار لولي الأمر">معفى (تعويضي)</span>';
-                } else if (a.deliveryStatus === 'delivered' || a.sent) {
+                } else if (isFailed) {
+                  const errorTooltip = a.deliveryError ? ` title="${escapeHtml(a.deliveryError)}"` : ' title="تعذر إرسال الإشعار لولي الأمر عبر واتساب"';
+                  deliveryBadge = `<span class="badge badge-danger" style="display: inline-flex; align-items: center; gap: 0.25rem; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 700;"${errorTooltip}>${getIcon('close', 12, '#b91c1c')}<span>لم يتم التسليم</span></span>`;
+                } else if (a.deliveryStatus === 'delivered' || (a.sent && a.deliveryStatus !== 'failed' && a.wa_status !== 'failed')) {
                   deliveryBadge = '<span class="badge badge-success" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + getIcon('check', 12) + '<span>تم التسليم</span></span>';
                 } else if (a.deliveryStatus === 'sending') {
                   deliveryBadge = '<span class="badge badge-warning" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + getIcon('clock', 12) + '<span>قيد الإرسال</span></span>';
-                } else if (a.deliveryStatus === 'failed') {
-                  deliveryBadge = '<span class="badge badge-danger" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + getIcon('close', 12) + '<span>فشل الإرسال</span></span>';
                 }
 
                 return `
@@ -447,9 +445,9 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                         ${getIcon('note', 12)}
                         <span>${(a.comment && a.comment !== 'حصة تعويضية' && !a.comment.startsWith('حصة تعويضية')) ? 'تعديل' : 'ملاحظة'}</span>
                       </button>
-                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${escapeHtml(a.student_id || a.id)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}')" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem; color: #15803d;" title="إرسال إشعار فوري لولي الأمر عبر واتساب">
-                        ${getIcon('whatsapp', 14, '#15803d')}
-                        <span>إرسال</span>
+                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${escapeHtml(a.student_id || a.id)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}')" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem; color: ${isFailed ? '#b91c1c' : '#15803d'}; font-weight: 700; ${isFailed ? 'border-color: #fca5a5; background: #fff5f5;' : ''}" title="إرسال إشعار فوري لولي الأمر عبر واتساب">
+                        ${getIcon('whatsapp', 14, isFailed ? '#b91c1c' : '#15803d')}
+                        <span>${isFailed ? 'إعادة إرسال' : 'إرسال'}</span>
                       </button>
                     </div>
                   </td>

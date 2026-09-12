@@ -33,6 +33,7 @@ export interface AttendanceRecordInput {
   homework_status?: "done" | "partial" | "missing" | null;
   is_makeup?: boolean;
   home_group_id?: string | null;
+  sent?: boolean;
 }
 
 export interface QuizScoreInput {

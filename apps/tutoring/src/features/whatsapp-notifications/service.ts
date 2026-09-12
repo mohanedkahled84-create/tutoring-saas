@@ -569,11 +569,12 @@ export class WhatsAppNotificationsService {
             delay_applied_ms: delayApplied,
           });
         } else {
-          skippedCount += 1;
+          failedCount += 1;
           results.push({
             student_id: item.student_id,
             student_name: item.student_name,
-            status: "skipped_no_comment",
+            status: "failed",
+            error: "تعذر إرسال الإشعار لولي الأمر عبر بوابة واتساب",
             delay_applied_ms: delayApplied,
           });
         }
