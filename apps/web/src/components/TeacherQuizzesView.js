@@ -128,7 +128,8 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
               style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700; color: var(--centrly-blue-700);"
               title="تعديل اسم الكويز الحالي مباشرة"
             >
-              <span>✎ تعديل الاسم</span>
+              ${getIcon('edit', 14)}
+              <span>تعديل الاسم</span>
             </button>
             <button 
               class="btn btn-secondary" 
@@ -160,8 +161,9 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
             <label for="quizTitleInput" style="font-size: 0.85rem; color: var(--centrly-text); font-weight: 800;">
               اسم / موضوع الكويز:
             </label>
-            <span style="font-size: 0.75rem; color: var(--centrly-blue-700); font-weight: 800; background: #eff6ff; padding: 2px 8px; border-radius: 4px; border: 1px solid #bfdbfe;">
-              ✎ قابل للتعديل
+            <span style="font-size: 0.75rem; color: var(--centrly-blue-700); font-weight: 800; background: #eff6ff; padding: 2px 8px; border-radius: 4px; border: 1px solid #bfdbfe; display: inline-flex; align-items: center; gap: 0.25rem;">
+              ${getIcon('edit', 12)}
+              <span>قابل للتعديل</span>
             </span>
           </div>
           <div style="display: flex; gap: 0.4rem; margin-top: 0.4rem;">

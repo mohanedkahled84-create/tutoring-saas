@@ -36,7 +36,7 @@ export function renderTeacherAssistantsView(
       <div class="card" style="margin: 0; background: ${!hasPin ? '#fffbeb' : '#f8fafc'}; border: 1px solid ${!hasPin ? '#fde68a' : '#e2e8f0'}; padding: 1rem 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="font-size: 1.5rem;">${!hasPin ? '⚠️' : (isUnlocked ? '🔓' : '🔒')}</div>
+            <div style="display: flex; align-items: center;">${!hasPin ? getIcon('alertTriangle', 22, '#d97706') : (isUnlocked ? getIcon('lock', 22, '#10b981') : getIcon('lock', 22, '#64748b'))}</div>
             <div>
               <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">
                 ${!hasPin 
@@ -54,7 +54,7 @@ export function renderTeacherAssistantsView(
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             ${!hasPin ? `
               <button class="btn btn-warning" onclick="window.centrlyApp.openSetPinModal()" style="font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
-                <span>🔐</span>
+                ${getIcon('lock', 16)}
                 <span>تعيين رمز PIN الآن</span>
               </button>
             ` : `
@@ -68,8 +68,9 @@ export function renderTeacherAssistantsView(
                 <span>قفل البيانات</span>
               </button>
 
-              <button class="btn btn-secondary" onclick="window.centrlyApp.openSetPinModal()" style="font-size: 0.85rem; font-weight: 700;" title="تغيير رمز PIN">
-                <span>⚙️ تغيير PIN</span>
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openSetPinModal()" style="font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem;" title="تغيير رمز PIN">
+                ${getIcon('edit', 14)}
+                <span>تغيير PIN</span>
               </button>
             `}
           </div>
@@ -80,15 +81,15 @@ export function renderTeacherAssistantsView(
         <!-- Locked Gate Screen -->
         <div class="card" style="margin: 0; padding: 3rem 1.5rem; text-align: center; background: #fff;">
           <div style="max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-            <div style="width: 64px; height: 64px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #1d4ed8;">
-              🔒
+            <div style="width: 64px; height: 64px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1d4ed8;">
+              ${getIcon('lock', 32, '#1d4ed8')}
             </div>
             <h3 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">بيانات المساعدين والمرتبات مقفلة</h3>
             <p style="font-size: 0.875rem; color: #64748b; margin: 0; line-height: 1.6;">
               لأسباب الأمان والخصوصية، يرجى إدخال رمز الأمان (PIN) لفتح تفاصيل المساعدين ومستحقاتهم المالية.
             </p>
             <button class="btn btn-primary" onclick="window.centrlyApp.promptUnlockFinancials()" style="padding: 0.75rem 2rem; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-              <span>🔑</span>
+              ${getIcon('lock', 16)}
               <span>إدخال رمز PIN لفتح الصفحة</span>
             </button>
           </div>
@@ -243,7 +244,7 @@ export function renderTeacherAssistantsView(
                 }).join('') : `
                   <tr>
                     <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: #64748b;">
-                      <div style="font-size: 2rem; margin-bottom: 0.5rem;">👥</div>
+                      <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('assistants', 32, '#94a3b8')}</div>
                       لم يتم إضافة مساعدين بعد.<br>
                       اضغط على زر <b>"إضافة مساعد جديد"</b> لتسجيل أفراد فريقك وتحديد أدوارهم.
                     </td>

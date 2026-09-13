@@ -38,7 +38,7 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
             </div>
             <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #ffffff;">كروت الطلاب الذكية والباركود للطباعة</h2>
             <div style="font-size: 0.85rem; color: rgba(255,255,255,0.95); margin-top: 0.6rem; line-height: 1.6; background: rgba(0,0,0,0.15); padding: 0.75rem 1rem; border-radius: 8px;">
-              <strong style="color: #93c5fd;">💡 خيارات طباعة وتصميم كروت الطلاب:</strong>
+              <strong style="color: #93c5fd;">خيارات طباعة وتصميم كروت الطلاب:</strong>
               <ol style="margin: 0.35rem 0 0 0; padding-right: 1.2rem; font-size: 0.82rem; color: #f1f5f9;">
                 <li>حدد الطلاب المطلوبين من الجدول بالأسفل (أو اختر "تحديد الكل").</li>
                 <li><b>إذا كان لديك تصميم كارت خاص:</b> اضغط <b>"تنزيل البيانات للتصميم (Excel / CSV)"</b> لرفع الملف على (Canva / Photoshop) وتركيب الأسماء والأكواد على تصميمك وطباعتها.</li>

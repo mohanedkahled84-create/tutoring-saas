@@ -61,7 +61,7 @@ export function renderStudentReportsView(state = {}) {
               <span>تحديث القائمة</span>
             </button>
             <div style="display: inline-flex; align-items: center; gap: 0.45rem; background: #f0fdf4; color: #166534; padding: 0.5rem 0.9rem; border-radius: 8px; border: 1px solid #bbf7d0; font-size: 0.825rem; font-weight: 700;">
-              <span>🌐</span>
+              ${getIcon('check', 14, '#166534')}
               <span>التقارير ودرجات الكويزات متاحة ومحدثة لحظياً على بوابات أولياء الأمور</span>
             </div>
           </div>

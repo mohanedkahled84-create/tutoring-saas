@@ -42,7 +42,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button class="btn btn-primary" onclick="window.centrlyApp.openAddHomeworkModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; background: #059669; border-color: #059669;">
-              <span>📝</span>
+              ${getIcon('homework', 16, '#ffffff')}
               <span>نشر واجب (من كتاب أو ملف)</span>
             </button>
             <button class="btn btn-secondary" onclick="window.centrlyApp.openAddMaterialModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
@@ -77,9 +77,9 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
 
         <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-success);">
           <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">نوعية المحتوى</div>
-          <div style="font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink); margin-top: 0.5rem; display: flex; gap: 0.75rem;">
-            <span>📄 ${pdfCount} PDF</span>
-            <span>🎥 ${videoCount} فيديو</span>
+          <div style="font-size: 1rem; font-weight: 800; color: var(--centrly-ink); margin-top: 0.5rem; display: flex; gap: 0.85rem; align-items: center;">
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('file', 14, '#1d4ed8')} ${pdfCount} PDF</span>
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('video', 14, '#b45309')} ${videoCount} فيديو</span>
           </div>
           <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.35rem;">
             موزعة على كافة المجاميع
@@ -131,18 +131,18 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
                 const isTextbook = Boolean(m.book_name || m.pages || m.questions);
                 const hasUrl = Boolean(m.url && m.url !== '#' && m.url.trim().length > 0);
                 const typeBadge = isTextbook
-                  ? '<span class="badge badge-amber" style="font-weight: 800;">📖 كتاب / كشكول</span>'
+                  ? `<span class="badge badge-amber" style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('book', 12, 'currentColor')} كتاب / كشكول</span>`
                   : (isPdf 
-                    ? '<span class="badge badge-blue">📄 PDF</span>' 
-                    : (isVideo ? '<span class="badge badge-amber">🎥 فيديو</span>' : '<span class="badge badge-secondary">🔗 رابط خارجي</span>'));
+                    ? `<span class="badge badge-blue" style="display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('file', 12, 'currentColor')} PDF</span>` 
+                    : (isVideo ? `<span class="badge badge-amber" style="display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('video', 12, 'currentColor')} فيديو</span>` : `<span class="badge badge-secondary" style="display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('link', 12, 'currentColor')} رابط خارجي</span>`));
 
                 return `
                   <tr>
                     <td style="font-weight: 800; color: #0f172a; max-width: 280px;">
                       <div>${escapeHtml(m.title)}</div>
                       ${isTextbook ? `
-                        <div style="font-size: 0.75rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.2rem 0.45rem; border-radius: 0.35rem; margin-top: 0.25rem; display: inline-flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
-                          <span>📖 ${escapeHtml(m.book_name || 'الكتاب')}</span>
+                        <div style="font-size: 0.75rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.2rem 0.45rem; border-radius: 0.35rem; margin-top: 0.25rem; display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
+                          <span style="display: inline-flex; align-items: center; gap: 0.2rem;">${getIcon('book', 12, '#1e40af')} ${escapeHtml(m.book_name || 'الكتاب')}</span>
                           ${m.pages ? `<span>• ص: ${escapeHtml(m.pages)}</span>` : ''}
                           ${m.questions ? `<span style="color: #b45309; font-weight: 700;">• س: ${escapeHtml(m.questions)}</span>` : ''}
                         </div>
@@ -163,8 +163,9 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
                     </td>
                     <td>
                       ${m.is_homework ? `
-                        <span class="badge badge-warning" style="font-weight: 800;">
-                          📝 نعم (واجب)
+                        <span class="badge badge-warning" style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.25rem;">
+                          ${getIcon('homework', 12, 'currentColor')}
+                          <span>نعم (واجب)</span>
                         </span>
                       ` : `
                         <span style="font-size: 0.8rem; color: #94a3b8;">مذكرة عادية</span>
@@ -183,12 +184,12 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
                       ${hasUrl ? `
                         <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer"
                           style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; font-weight: 700; color: #1d4ed8; text-decoration: none; background: #eff6ff; padding: 0.25rem 0.6rem; border-radius: 0.4rem; border: 1px solid #bfdbfe;">
-                          <span>📥</span>
+                          ${getIcon('link', 12, '#1d4ed8')}
                           <span>فتح الرابط</span>
                         </a>
                       ` : (m.is_homework ? `
                         <span style="font-size: 0.75rem; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 0.25rem 0.5rem; border-radius: 0.4rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
-                          <span>✏️</span>
+                          ${getIcon('edit', 12, '#047857')}
                           <span>حل في الكشكول</span>
                         </span>
                       ` : `
@@ -205,7 +206,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
               }).join('') : `
                 <tr>
                   <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: #64748b;">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📚</div>
+                    <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('materials', 36, '#94a3b8')}</div>
                     لا توجد مذكرات أو ملفات تعليمية مسجلة هنا بعد.<br>
                     اضغط على زر <b>"إضافة مذكرة / واجب جديد"</b> لرفع الروابط والمذكرات لطلابك.
                   </td>

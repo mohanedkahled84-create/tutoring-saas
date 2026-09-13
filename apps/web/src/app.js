@@ -312,7 +312,7 @@ class CentrlyApp {
   async reloadStudentPortal() {
     if (this._studentPortalToken) {
       await this.loadStudentPortal(this._studentPortalToken);
-      this.showToast('تم تحديث بيانات الطالب بنجاح! 🎓', 'success');
+      this.showToast('تم تحديث بيانات الطالب بنجاح!', 'success');
     } else {
       window.location.reload();
     }
@@ -333,7 +333,7 @@ class CentrlyApp {
     const originalText = btn ? btn.innerHTML : '';
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span>⏳ جارٍ رفع الواجب للسحابة...</span>';
+      btn.innerHTML = '<span>جارٍ رفع الواجب للسحابة...</span>';
     }
 
     try {
@@ -351,7 +351,7 @@ class CentrlyApp {
               file_size: file.size,
             },
           });
-          alert('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة! 🎉');
+          alert('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة.');
           await this.loadStudentPortal(this._studentPortalToken);
         } catch (subErr) {
           alert(`فشل رفع الواجب: ${subErr.message || 'حدث خطأ في الاتصال'}`);
@@ -1815,8 +1815,9 @@ class CentrlyApp {
           </div>
 
           <!-- Quick Tip -->
-          <div style="margin-top: 0.85rem; font-size: 0.775rem; color: #64748b; background: #f8fafc; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.5;">
-            💡 <strong>نصيحة:</strong> الكاميرا تعمل بشكل مستمر ومباشر (Continuous Mode). دَع الطلاب يمررون كروت باركودهم واحداً تلو الآخر وستصدر المنظومة صوت "بيب" لتأكيد كل طالب فورياً دون لمس الشاشة.
+          <div style="margin-top: 0.85rem; font-size: 0.775rem; color: #64748b; background: #f8fafc; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.5; display: flex; align-items: flex-start; gap: 0.4rem;">
+            ${getIcon('lightbulb', 16, '#f59e0b')}
+            <div><strong>نصيحة:</strong> الكاميرا تعمل بشكل مستمر ومباشر (Continuous Mode). دَع الطلاب يمررون كروت باركودهم واحداً تلو الآخر وستصدر المنظومة صوت "بيب" لتأكيد كل طالب فورياً دون لمس الشاشة.</div>
           </div>
 
         </div>
@@ -1872,7 +1873,7 @@ class CentrlyApp {
       if (viewport) {
         viewport.innerHTML = `
           <div style="color: #f87171; padding: 2.5rem 1rem; text-align: center; font-size: 0.88rem; line-height: 1.6;">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+            <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('alertTriangle', 32, '#ef4444')}</div>
             <strong>تعذر فتح الكاميرا:</strong><br>
             ${err.message || 'يرجى السماح للمتصفح بالوصول للكاميرا (Camera Permissions).'}
           </div>
@@ -2174,9 +2175,15 @@ class CentrlyApp {
       toast.style.border = '1px solid #3b82f6';
     }
 
+    const toastIcon = type === 'success' 
+      ? getIcon('check', 16, '#ffffff') 
+      : ((type === 'error' || type === 'danger') 
+        ? getIcon('close', 16, '#ffffff') 
+        : getIcon('lightbulb', 16, '#ffffff'));
+
     toast.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-        <span style="font-size: 1.15rem;">${type === 'success' ? '' : (type === 'error' || type === 'danger' ? '✕' : 'ℹ')}</span>
+        <span style="display: flex; align-items: center;">${toastIcon}</span>
         <span>${escapeHtml(message)}</span>
       </div>
       <button style="background: transparent; border: none; color: #fff; cursor: pointer; font-size: 1.1rem; padding: 0 4px; opacity: 0.8;" onclick="this.parentElement.remove()">✕</button>
@@ -2413,7 +2420,7 @@ class CentrlyApp {
 
       this.sessionState.status = 'ended';
       this.persistSessionState();
-      this.showToast('تم إنهاء الحصة وتثبيت كشف الحضور بنجاح! ✅', 'success');
+      this.showToast('تم إنهاء الحصة وتثبيت كشف الحضور بنجاح.', 'success');
       this.renderMainContent();
     } catch (err) {
       // If server returns NOT_FOUND / Session not found, finish locally to never trap the user
@@ -4501,7 +4508,7 @@ class CentrlyApp {
         ? `${basePortalUrl}&portal=student` 
         : `${basePortalUrl}?portal=student`;
       await navigator.clipboard.writeText(studentUrl);
-      this.showToast('تم نسخ رابط بوابة الطالب بنجاح! 🎓', 'success');
+      this.showToast('تم نسخ رابط بوابة الطالب بنجاح!', 'success');
     } catch (err) {
       this.showToast(`تعذر الحصول على رابط الطالب: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
     }
@@ -4569,7 +4576,7 @@ class CentrlyApp {
     const unsentStudents = studentList.filter(s => !s.parent_portal_sent_at && (s.parentPhone || s.parent_phone));
 
     if (unsentStudents.length === 0) {
-      this.showToast('جميع أولياء أمور الطلاب المسجلين تم إرسال روابط المتابعة إليهم بالفعل! ✔', 'info');
+      this.showToast('جميع أولياء أمور الطلاب المسجلين تم إرسال روابط المتابعة إليهم بالفعل.', 'info');
       return;
     }
 
@@ -4578,7 +4585,7 @@ class CentrlyApp {
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.75rem; padding: 0.85rem; color: #0369a1; font-size: 0.85rem; line-height: 1.5;">
-          <b>📢 إرسال ذكي للطلاب الجدد:</b>
+          <b>إرسال ذكي للطلاب الجدد:</b>
           سيتم إرسال رسالة واتساب رسمية ومخصصة لكل ولي أمر تحتوي على رابط المتابعة المباشر الخاص بنجله مع تطبيق فواصل الأمان (Anti-Ban).
         </div>
 
@@ -4616,12 +4623,12 @@ class CentrlyApp {
 السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (اسم الطالب).
 
 حرصاً على متابعة المستوى الدراسي أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:
-🔗 *رابط المتابعة المباشر:*
+*رابط المتابعة المباشر:*
 https://centerly-platform.vercel.app/parent-portal?token=...
 
-💡 من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول متابعة درجات الكويزات والحضور والواجبات لحظياً.
+• من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول متابعة درجات الكويزات والحضور والواجبات لحظياً.
 
-📌 يرجى تسجيل وحفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان استلام إشعارات وتقارير الطالب أولاً بأول دون انقطاع.
+• يرجى تسجيل وحفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان استلام إشعارات وتقارير الطالب أولاً بأول دون انقطاع.
 
 مع تحيات: ${escapeHtml(teacherName)}
           </div>
@@ -4633,7 +4640,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 0.75rem;">
         <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
         <button type="button" id="btnConfirmBatchParentLinks" class="btn btn-primary" onclick="window.centrlyApp.dispatchBatchParentLinks()" style="background-color: #0284c7; border-color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
-          <span>📲</span>
+          ${getIcon('whatsapp', 18)}
           <span>بدء الإرسال لـ ${unsentStudents.length} ولي أمر</span>
         </button>
       </div>
@@ -4654,7 +4661,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const btn = document.getElementById('btnConfirmBatchParentLinks');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = `<span>⏳</span><span>جاري إرسال الروابط بأمان...</span>`;
+      btn.innerHTML = `<span>جاري إرسال الروابط بأمان...</span>`;
     }
 
     this.showToast(`بدأ إرسال روابط المتابعة لـ (${selectedIds.length}) من أولياء الأمور بأعلى معايير الأمان...`, 'info');
@@ -4697,7 +4704,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     } catch (err) {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<span>📲</span><span>إعادة المحاولة</span>`;
+        btn.innerHTML = `${getIcon('whatsapp', 16)}<span>إعادة المحاولة</span>`;
       }
       this.showToast(`حدث خطأ أثناء الإرسال الجماعي: ${err.message || 'تأكد من الاتصال بالخادم'}`, 'danger');
     }
@@ -7153,7 +7160,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const bodyHtml = `
       <form id="modalSetPinForm" onsubmit="window.centrlyApp.handleSavePinSubmit(event)">
         <div style="text-align: center; margin-bottom: 1.25rem;">
-          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔐</div>
+          <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('lock', 36, '#2563eb')}</div>
           <h4 style="margin: 0 0 0.4rem; color: #0f172a; font-weight: 800;">
             ${hasExisting ? 'تغيير رمز الأمان (PIN)' : 'تعيين رمز الأمان (PIN)'}
           </h4>
@@ -7170,7 +7177,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
               autocomplete="off">
             <button type="button" onclick="window.centrlyApp.togglePinVisibility('inputNewPin', this)"
               style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b;">
-              👁️
+              <span style="font-size: 0.75rem; font-weight: 700;">إظهار</span>
             </button>
           </div>
         </div>
@@ -7183,7 +7190,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
               autocomplete="off">
             <button type="button" onclick="window.centrlyApp.togglePinVisibility('inputConfirmPin', this)"
               style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b;">
-              👁️
+              <span style="font-size: 0.75rem; font-weight: 700;">إظهار</span>
             </button>
           </div>
         </div>
@@ -7204,7 +7211,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     if (!el) return;
     const isPass = el.type === 'password';
     el.type = isPass ? 'text' : 'password';
-    btn.innerText = isPass ? '🙈' : '👁️';
+    btn.innerHTML = isPass ? '<span style="font-size: 0.75rem; font-weight: 700; color: #2563eb;">إخفاء</span>' : '<span style="font-size: 0.75rem; font-weight: 700; color: #64748b;">إظهار</span>';
   }
 
   handleSavePinSubmit(e) {
@@ -7233,7 +7240,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     this.hasSecurityPin = true;
     this.isFinancialUnlocked = true;
     this.closeModal();
-    this.showToast('تم حفظ وتفعيل رمز الأمان بنجاح! 🔒', 'success');
+    this.showToast('تم حفظ وتفعيل رمز الأمان بنجاح.', 'success');
     this.renderMainContent();
   }
 
@@ -7247,7 +7254,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const bodyHtml = `
       <form id="modalUnlockPinForm" onsubmit="window.centrlyApp.handleUnlockPinSubmit(event)">
         <div style="text-align: center; margin-bottom: 1.25rem;">
-          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔒</div>
+          <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('lock', 36, '#ef4444')}</div>
           <h4 style="margin: 0 0 0.4rem; color: #0f172a; font-weight: 800;">
             إلغاء قفل البيانات المالية
           </h4>
@@ -7290,7 +7297,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     if (entered === savedPin) {
       this.isFinancialUnlocked = true;
       this.closeModal();
-      this.showToast('تم إلغاء القفل وعرض البيانات بنجاح 🔓', 'success');
+      this.showToast('تم إلغاء القفل وعرض البيانات بنجاح.', 'success');
       this.renderMainContent();
     } else {
       if (errEl) {
@@ -7307,13 +7314,13 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
   lockFinancials() {
     this.isFinancialUnlocked = false;
-    this.showToast('تم قفل البيانات الحساسة بنجاح 🔒', 'info');
+    this.showToast('تم قفل البيانات الحساسة بنجاح.', 'info');
     this.renderMainContent();
   }
 
   toggleHideFinancialNumbers() {
     this.hideFinancialNumbers = !this.hideFinancialNumbers;
-    this.showToast(this.hideFinancialNumbers ? 'تم إخفاء الأرقام المالية 👁️' : 'تم إظهار الأرقام المالية 👁️', 'info');
+    this.showToast(this.hideFinancialNumbers ? 'تم إخفاء الأرقام المالية.' : 'تم إظهار الأرقام المالية.', 'info');
     this.renderMainContent();
   }
 
@@ -7359,9 +7366,9 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">نوع المحتوى *</label>
             <select id="modalMatType" class="form-select">
-              <option value="pdf">📄 ملف PDF أو مذكرة</option>
-              <option value="video">🎥 فيديو شرح (YouTube / Drive)</option>
-              <option value="link">🔗 رابط خارجي أو موقع</option>
+              <option value="pdf">ملف PDF أو مذكرة</option>
+              <option value="video">فيديو شرح (YouTube / Drive)</option>
+              <option value="link">رابط خارجي أو موقع</option>
             </select>
           </div>
         </div>
@@ -7426,7 +7433,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         },
       });
       this.closeModal();
-      this.showToast('تمت إضافة المذكرة بنجاح وستظهر فوراً في بوابة ولي الأمر! 📚', 'success');
+      this.showToast('تمت إضافة المذكرة بنجاح وستظهر فوراً في بوابة ولي الأمر!', 'success');
       await this.loadRouteData('materials');
     } catch (err) {
       this.showToast(`فشل إضافة المذكرة: ${err.message || 'حدث خطأ'}`, 'danger');
@@ -7533,7 +7540,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         },
       });
       this.closeModal();
-      this.showToast(`تمت إضافة المساعد (${name}) بنجاح! 👥`, 'success');
+      this.showToast(`تمت إضافة المساعد (${name}) بنجاح!`, 'success');
       await this.loadRouteData('assistants');
     } catch (err) {
       this.showToast(`فشل إضافة المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
@@ -7624,7 +7631,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         },
       });
       this.closeModal();
-      this.showToast('تم حفظ تعديلات المساعد بنجاح! 👥', 'success');
+      this.showToast('تم حفظ تعديلات المساعد بنجاح!', 'success');
       await this.loadRouteData('assistants');
     } catch (err) {
       this.showToast(`فشل تعديل بيانات المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
@@ -7668,7 +7675,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         method: 'PUT',
         body: { status: 'approved' },
       });
-      this.showToast('تم اعتماد الواجب وحذف الملف لتوفير المساحة وتخفيف الحمل بنجاح! ⚡✅', 'success');
+      this.showToast('تم اعتماد الواجب وحذف الملف لتوفير المساحة وتخفيف الحمل بنجاح!', 'success');
       await this.loadRouteData('homework');
     } catch (err) {
       this.showToast(`فشل اعتماد الواجب: ${err.message || 'حدث خطأ'}`, 'danger');
@@ -7684,7 +7691,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         method: 'PUT',
         body: { status: 'rejected', teacher_notes: reason.trim() },
       });
-      this.showToast('تم تسجيل الملاحظة وتحديث حالة الواجب إلى يحتاج إعادة ⚠️', 'warning');
+      this.showToast('تم تسجيل الملاحظة وتحديث حالة الواجب إلى يحتاج إعادة', 'warning');
       await this.loadRouteData('homework');
     } catch (err) {
       this.showToast(`فشل تحديث حالة الواجب: ${err.message || 'حدث خطأ'}`, 'danger');
@@ -7722,7 +7729,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       return;
     }
     navigator.clipboard.writeText(phones.join(', '));
-    this.showToast(`تم نسخ ${phones.length} رقم هاتف للطلاب المتأخرين! 📋`, 'success');
+    this.showToast(`تم نسخ ${phones.length} رقم هاتف للطلاب المتأخرين!`, 'success');
   }
 
   // Dedicated Homework Creation Modal (DEV-HOMEWORK-CREATION)
@@ -7740,24 +7747,30 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
             
             <div id="hwCard-book" onclick="window.centrlyApp.onHomeworkTypeChange('book')" 
-              style="cursor: pointer; border: 2px solid #2563eb; background: #eff6ff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: all 0.2s;">
-              <span style="font-size: 1.6rem;">📖</span>
-              <span style="font-size: 0.825rem; font-weight: 800; color: #1e40af;">أسئلة من الكتاب / الملزمة</span>
-              <span style="font-size: 0.7rem; color: #3b82f6;">تحديد صفحات وأرقام أسئلة</span>
+              style="cursor: pointer; border: 2px solid #2563eb; background: #eff6ff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; transition: all 0.2s; color: #1e40af;">
+              <div id="hwCard-book-icon" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #dbeafe; border-radius: 8px;">
+                ${getIcon('book', 20, '#1e40af')}
+              </div>
+              <span style="font-size: 0.825rem; font-weight: 800;">أسئلة من الكتاب / الملزمة</span>
+              <span style="font-size: 0.7rem; opacity: 0.85;">تحديد صفحات وأرقام أسئلة</span>
             </div>
 
             <div id="hwCard-text" onclick="window.centrlyApp.onHomeworkTypeChange('text')" 
-              style="cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: all 0.2s;">
-              <span style="font-size: 1.6rem;">✍️</span>
-              <span style="font-size: 0.825rem; font-weight: 800; color: #334155;">نص حر ومسائل مكتوبة</span>
-              <span style="font-size: 0.7rem; color: #64748b;">تعليمات ومسائل يكتبها المعلم</span>
+              style="cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; transition: all 0.2s; color: #334155;">
+              <div id="hwCard-text-icon" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #f1f5f9; border-radius: 8px;">
+                ${getIcon('edit', 20, '#475569')}
+              </div>
+              <span style="font-size: 0.825rem; font-weight: 800;">نص حر ومسائل مكتوبة</span>
+              <span style="font-size: 0.7rem; opacity: 0.85;">تعليمات ومسائل يكتبها المعلم</span>
             </div>
 
             <div id="hwCard-pdf" onclick="window.centrlyApp.onHomeworkTypeChange('pdf')" 
-              style="cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: all 0.2s;">
-              <span style="font-size: 1.6rem;">📄</span>
-              <span style="font-size: 0.825rem; font-weight: 800; color: #334155;">ملف PDF / رابط خارجي</span>
-              <span style="font-size: 0.7rem; color: #64748b;">رابط Google Drive أو مذكرة</span>
+              style="cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; transition: all 0.2s; color: #334155;">
+              <div id="hwCard-pdf-icon" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #f1f5f9; border-radius: 8px;">
+                ${getIcon('file', 20, '#475569')}
+              </div>
+              <span style="font-size: 0.825rem; font-weight: 800;">ملف PDF / رابط خارجي</span>
+              <span style="font-size: 0.7rem; opacity: 0.85;">رابط Google Drive أو مذكرة</span>
             </div>
 
           </div>
@@ -7787,8 +7800,8 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
         <!-- Mode 1: Book details (visible when book is selected) -->
         <div id="modalHwBookFields" style="background: #f8fafc; border: 1px solid #bfdbfe; border-radius: 0.75rem; padding: 0.9rem; margin-bottom: 0.85rem;">
-          <div style="display: flex; align-items: center; gap: 0.35rem; font-weight: 800; color: #1e3a8a; margin-bottom: 0.65rem; font-size: 0.85rem;">
-            <span>📖</span>
+          <div style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; color: #1e3a8a; margin-bottom: 0.65rem; font-size: 0.85rem;">
+            ${getIcon('book', 18, '#1e3a8a')}
             <span>تحديد الكتاب وأرقام الأسئلة والصفحات</span>
           </div>
 
@@ -7825,7 +7838,10 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
         <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
           <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="submit" class="btn btn-primary" style="font-weight: 800; padding: 0.5rem 1.25rem;">🚀 نشر الواجب للطلاب الآن</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 800; padding: 0.5rem 1.25rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+            ${getIcon('check', 16, '#ffffff')}
+            <span>نشر الواجب للطلاب الآن</span>
+          </button>
         </div>
       </form>
     `;
@@ -7836,17 +7852,24 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const bookCard = document.getElementById('hwCard-book');
     const textCard = document.getElementById('hwCard-text');
     const pdfCard = document.getElementById('hwCard-pdf');
+    const bookIcon = document.getElementById('hwCard-book-icon');
+    const textIcon = document.getElementById('hwCard-text-icon');
+    const pdfIcon = document.getElementById('hwCard-pdf-icon');
     const bookFields = document.getElementById('modalHwBookFields');
     const pdfFields = document.getElementById('modalHwPdfFields');
     const descLabel = document.getElementById('modalHwDescLabel');
     const descInput = document.getElementById('modalHwDescription');
 
-    const activeStyle = 'cursor: pointer; border: 2px solid #2563eb; background: #eff6ff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: all 0.2s;';
-    const normalStyle = 'cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: all 0.2s;';
+    const activeStyle = 'cursor: pointer; border: 2px solid #2563eb; background: #eff6ff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; transition: all 0.2s; color: #1e40af;';
+    const normalStyle = 'cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; transition: all 0.2s; color: #334155;';
 
     if (bookCard) bookCard.style.cssText = mode === 'book' ? activeStyle : normalStyle;
     if (textCard) textCard.style.cssText = mode === 'text' ? activeStyle : normalStyle;
     if (pdfCard) pdfCard.style.cssText = mode === 'pdf' ? activeStyle : normalStyle;
+
+    if (bookIcon) bookIcon.style.background = mode === 'book' ? '#dbeafe' : '#f1f5f9';
+    if (textIcon) textIcon.style.background = mode === 'text' ? '#dbeafe' : '#f1f5f9';
+    if (pdfIcon) pdfIcon.style.background = mode === 'pdf' ? '#dbeafe' : '#f1f5f9';
 
     this._currentHwMode = mode;
 
@@ -7924,7 +7947,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         },
       });
       this.closeModal();
-      this.showToast('تم نشر الواجب بنجاح! سيظهر الآن في بوابات الطلاب وأولياء الأمور 📚✨', 'success');
+      this.showToast('تم نشر الواجب بنجاح! سيظهر الآن في بوابات الطلاب وأولياء الأمور', 'success');
       
       if (this.currentRoute === 'homework') {
         await this.loadRouteData('homework');
@@ -7943,18 +7966,18 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       return;
     }
 
-    let text = `📢 *واجب منزلي جديد مطلوب تسليمه*\n`;
-    text += `📌 *العنوان:* ${hw.title}\n`;
-    if (hw.book_name) text += `📖 *الكتاب / الملزمة:* ${hw.book_name}\n`;
-    if (hw.pages) text += `📄 *الصفحات المطلوبة:* ${hw.pages}\n`;
-    if (hw.questions) text += `🔢 *أرقام الأسئلة:* ${hw.questions}\n`;
-    if (hw.description) text += `📝 *تعليمات المعلم:* ${hw.description}\n`;
-    if (hw.due_date) text += `⏰ *آخر موعد للتسليم:* ${hw.due_date}\n`;
-    if (hw.url && hw.url !== '#' && hw.url.trim().length > 0) text += `🔗 *رابط الملف:* ${hw.url}\n`;
-    text += `\n📥 *طريقة التسليم:* حل المطلوب في كشكولك بخط واضح، وصوّر الصفحات وحوّلها لـ PDF وارفعها مباشرة عبر رابط بوابتك الخاصة في Centrly.\nبالتوفيق والنجاح دائماً! 🌟`;
+    let text = `*واجب منزلي جديد مطلوب تسليمه*\n`;
+    text += `• *العنوان:* ${hw.title}\n`;
+    if (hw.book_name) text += `• *الكتاب / الملزمة:* ${hw.book_name}\n`;
+    if (hw.pages) text += `• *الصفحات المطلوبة:* ${hw.pages}\n`;
+    if (hw.questions) text += `• *أرقام الأسئلة:* ${hw.questions}\n`;
+    if (hw.description) text += `• *تعليمات المعلم:* ${hw.description}\n`;
+    if (hw.due_date) text += `• *آخر موعد للتسليم:* ${hw.due_date}\n`;
+    if (hw.url && hw.url !== '#' && hw.url.trim().length > 0) text += `• *رابط الملف:* ${hw.url}\n`;
+    text += `\n• *طريقة التسليم:* حل المطلوب في كشكولك بخط واضح، وصوّر الصفحات وحوّلها لـ PDF وارفعها مباشرة عبر رابط بوابتك الخاصة في Centrly.\nبالتوفيق والنجاح دائماً.`;
 
     navigator.clipboard.writeText(text).then(() => {
-      this.showToast('تم نسخ تفاصيل الواجب بنجاح! جاهز للصق في جروب الواتساب 📋✨', 'success');
+      this.showToast('تم نسخ تفاصيل الواجب بنجاح! جاهز للصق في جروب الواتساب', 'success');
     }).catch(() => {
       prompt('انسخ نص الواجب التالي:', text);
     });

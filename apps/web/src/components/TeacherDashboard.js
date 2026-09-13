@@ -79,7 +79,7 @@ export function renderTeacherDashboard(
       <div class="card" style="margin: 0; background: ${!hasPin ? '#fffbeb' : '#f8fafc'}; border: 1px solid ${!hasPin ? '#fde68a' : '#e2e8f0'}; padding: 0.85rem 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
           <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div style="font-size: 1.3rem;">${!hasPin ? '⚠️' : (isUnlocked ? '🔓' : '🔒')}</div>
+            <div style="display: flex; align-items: center;">${!hasPin ? getIcon('alertTriangle', 20, '#d97706') : (isUnlocked ? getIcon('lock', 20, '#10b981') : getIcon('lock', 20, '#64748b'))}</div>
             <div>
               <div style="font-weight: 800; font-size: 0.9rem; color: #0f172a;">
                 ${!hasPin 
@@ -97,7 +97,7 @@ export function renderTeacherDashboard(
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             ${!hasPin ? `
               <button class="btn btn-warning btn-sm" onclick="window.centrlyApp.openSetPinModal()" style="font-weight: 800; display: flex; align-items: center; gap: 0.35rem;">
-                <span>🔐</span>
+                ${getIcon('lock', 14)}
                 <span>تعيين رمز PIN للأرباح</span>
               </button>
             ` : `
@@ -111,8 +111,8 @@ export function renderTeacherDashboard(
                 <span>قفل الأرباح</span>
               </button>
 
-              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openSetPinModal()" style="font-weight: 700;" title="تغيير رمز PIN">
-                <span>⚙️</span>
+              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openSetPinModal()" style="font-weight: 700; display: flex; align-items: center; justify-content: center;" title="تغيير رمز PIN">
+                ${getIcon('edit', 14)}
               </button>
             `}
           </div>
@@ -146,15 +146,15 @@ export function renderTeacherDashboard(
         <!-- Locked Financials Box -->
         <div class="card" style="margin: 0; padding: 2.5rem 1.5rem; text-align: center; background: #fff;">
           <div style="max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
-            <div style="width: 56px; height: 56px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #1d4ed8;">
-              🔒
+            <div style="width: 56px; height: 56px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1d4ed8;">
+              ${getIcon('lock', 28, '#1d4ed8')}
             </div>
             <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">الأرباح المالية مقفلة</h3>
             <p style="font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.6;">
               أدخل رمز الأمان (PIN) للاطلاع على إجمالي الدخل وصافي أرباحك ومستحقات السنتر.
             </p>
             <button class="btn btn-primary" onclick="window.centrlyApp.promptUnlockFinancials()" style="padding: 0.65rem 1.75rem; font-size: 0.9rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem; margin-top: 0.35rem;">
-              <span>🔑</span>
+              ${getIcon('lock', 16)}
               <span>إدخال رمز PIN لفتح الأرباح</span>
             </button>
           </div>

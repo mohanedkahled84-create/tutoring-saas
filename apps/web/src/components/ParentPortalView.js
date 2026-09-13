@@ -12,7 +12,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
     return `
       <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; padding: 1.5rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
         <div style="max-width: 480px; width: 100%; background: #fff; border-radius: 1rem; padding: 2.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; text-align: center;">
-          <div style="font-size: 3rem; margin-bottom: 0.75rem;">🔒</div>
+          <div style="display: flex; justify-content: center; margin-bottom: 0.75rem;">${getIcon('lock', 48, '#ef4444')}</div>
           <h2 style="font-size: 1.3rem; font-weight: 800; color: #ef4444; margin: 0 0 0.5rem 0;">رابط غير صالح أو منتهي الصلاحية</h2>
           <p style="font-size: 0.9rem; color: #64748b; margin: 0 0 1.5rem 0; line-height: 1.6;">
             ${escapeHtml(portalData.error || 'تعذر تحميل بيانات متابعة الطالب. يرجى التأكد من فتح الرابط الصحيح المرسل عبر الواتساب أو مراجعة إدارة السنتر.')}
@@ -53,7 +53,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
             </span>
             <button onclick="window.centrlyApp && window.centrlyApp.reloadParentPortal ? window.centrlyApp.reloadParentPortal() : window.location.reload()" 
               style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #334155; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
-              <span>🔄</span>
+              ${getIcon('refresh', 13, '#334155')}
               <span>تحديث البيانات</span>
             </button>
           </div>
@@ -76,19 +76,19 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
           <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('attendance') : null" id="tab-btn-attendance"
             style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            <span>📅</span>
+            ${getIcon('calendar', 16, activeTab === 'attendance' ? '#1e3a8a' : '#64748b')}
             <span>الحضور والغياب</span>
           </button>
           
           <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('quizzes') : null" id="tab-btn-quizzes"
             style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'quizzes' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'quizzes' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'quizzes' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            <span>📊</span>
+            ${getIcon('chart', 16, activeTab === 'quizzes' ? '#1e3a8a' : '#64748b')}
             <span>الكويزات (${quizzes.length})</span>
           </button>
 
           <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('homework') : null" id="tab-btn-homework"
             style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'homework' || activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'homework' || activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'homework' || activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            <span>📝</span>
+            ${getIcon('homework', 16, activeTab === 'homework' || activeTab === 'materials' ? '#1e3a8a' : '#64748b')}
             <span>الواجبات (${homeworkList.length})</span>
           </button>
         </div>
@@ -131,8 +131,8 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           <!-- Attendance Records -->
           <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
-              <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: gap: 0.4rem;">
-                <span>📅</span>
+              <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                ${getIcon('calendar', 18, 'var(--centrly-blue-700)')}
                 <span>سجل الحصص والالتزام</span>
               </h2>
               <span class="badge badge-blue" style="font-weight: 700;">${sessions.length} حصة</span>
@@ -146,7 +146,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                       حصة رقم ${escapeHtml(s.session_number)} • ${escapeHtml(s.session_date)}
                     </div>
                     <span class="badge ${s.attended ? 'badge-success' : 'badge-danger'}">
-                      ${s.attended ? 'حاضر ✅' : 'غائب ❌'}
+                      ${s.attended ? 'حاضر' : 'غائب'}
                     </span>
                   </div>
 
@@ -203,8 +203,8 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           <!-- Quizzes List -->
           <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
-              <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                <span>📝</span>
+              <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                ${getIcon('chart', 18, 'var(--centrly-blue-700)')}
                 <span>درجات الكويزات والامتحانات الدورية</span>
               </h2>
               <span class="badge badge-blue" style="font-weight: 700;">${quizzes.length} كويز</span>
@@ -269,7 +269,10 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
             </div>
 
             <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">تم تسليمه واعتُمِد ✅</div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+                ${getIcon('check', 14, '#10b981')}
+                <span>تم تسليمه واعتُمِد</span>
+              </div>
               <div style="font-size: 1.6rem; font-weight: 900; color: #10b981; margin-top: 0.2rem;">
                 ${homeworkList.filter(h => h.submission_status === 'approved').length}
               </div>
@@ -279,7 +282,10 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
             </div>
 
             <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">لم يُسلّم بعد ❌</div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+                ${getIcon('close', 14, '#ef4444')}
+                <span>لم يُسلّم بعد</span>
+              </div>
               <div style="font-size: 1.6rem; font-weight: 900; color: ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length > 0 ? '#ef4444' : '#64748b'}; margin-top: 0.2rem;">
                 ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length}
               </div>
@@ -293,8 +299,8 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
               <div>
-                <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                  <span>📝</span>
+                <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                  ${getIcon('homework', 18, 'var(--centrly-blue-700)')}
                   <span>متابعة تسليم الواجبات المنزلية</span>
                 </h2>
                 <p style="font-size: 0.75rem; color: #64748b; margin: 0.2rem 0 0 0;">
@@ -324,7 +330,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
 
                         ${(h.book_name || h.pages || h.questions) ? `
                           <div style="font-size: 0.8rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.35rem 0.65rem; border-radius: 0.4rem; margin-top: 0.4rem; display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
-                            <span>📖 <b>الكتاب:</b> ${escapeHtml(h.book_name || 'الكتاب المدرسي')}</span>
+                            <span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('book', 14, '#1e40af')} <b>الكتاب:</b> ${escapeHtml(h.book_name || 'الكتاب المدرسي')}</span>
                             ${h.pages ? `<span>• <b>ص:</b> ${escapeHtml(h.pages)}</span>` : ''}
                             ${h.questions ? `<span style="color: #b45309; font-weight: 700;">• <b>الأسئلة:</b> ${escapeHtml(h.questions)}</span>` : ''}
                           </div>
@@ -337,8 +343,8 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                         ` : ''}
 
                         ${h.due_date ? `
-                          <div style="font-size: 0.775rem; color: #64748b; margin-top: 0.35rem; display: flex; align-items: center; gap: 0.3rem;">
-                            <span>⏰</span>
+                          <div style="font-size: 0.775rem; color: #64748b; margin-top: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+                            ${getIcon('clock', 13, '#64748b')}
                             <span>آخر موعد للتسليم: <b>${escapeHtml(h.due_date)}</b></span>
                           </div>
                         ` : ''}
@@ -347,23 +353,23 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                       <!-- Big Status Badge for Parent -->
                       <div>
                         ${isApproved ? `
-                          <span style="display: inline-flex; align-items: center; gap: 0.35rem; color: #15803d; background: #f0fdf4; border: 1px solid #86efac; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
-                            <span>✅</span>
+                          <span style="display: inline-flex; align-items: center; gap: 0.4rem; color: #15803d; background: #f0fdf4; border: 1px solid #86efac; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
+                            ${getIcon('check', 14, '#15803d')}
                             <span>تم التسليم والاعتماد</span>
                           </span>
                         ` : (isPending ? `
-                          <span style="display: inline-flex; align-items: center; gap: 0.35rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
-                            <span>⏳</span>
+                          <span style="display: inline-flex; align-items: center; gap: 0.4rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
+                            ${getIcon('clock', 14, '#b45309')}
                             <span>تم التسليم • قيد التصحيح</span>
                           </span>
                         ` : (isRejected ? `
-                          <span style="display: inline-flex; align-items: center; gap: 0.35rem; color: #b91c1c; background: #fef2f2; border: 1px solid #fca5a5; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
-                            <span>⚠️</span>
+                          <span style="display: inline-flex; align-items: center; gap: 0.4rem; color: #b91c1c; background: #fef2f2; border: 1px solid #fca5a5; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
+                            ${getIcon('alertTriangle', 14, '#b91c1c')}
                             <span>يحتاج إعادة حل وتصحيح</span>
                           </span>
                         ` : `
-                          <span style="display: inline-flex; align-items: center; gap: 0.35rem; color: #dc2626; background: #fff1f2; border: 1px solid #fecdd3; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
-                            <span>❌</span>
+                          <span style="display: inline-flex; align-items: center; gap: 0.4rem; color: #dc2626; background: #fff1f2; border: 1px solid #fecdd3; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
+                            ${getIcon('close', 14, '#dc2626')}
                             <span>لم يتم تسليم الواجب بعد</span>
                           </span>
                         `))}
@@ -379,7 +385,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                 `;
               }).join('') : `
                 <div style="text-align: center; padding: 2.5rem 1rem; color: #64748b; font-size: 0.85rem; background: #f8fafc; border-radius: 0.75rem; border: 1px dashed #cbd5e1;">
-                  <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+                  <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('homework', 36, '#94a3b8')}</div>
                   لا توجد واجبات مطلوبة مسجلة لهذه المجموعة حتى الآن.
                 </div>
               `}
@@ -388,9 +394,12 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
         </div>
 
         <!-- Portal Security & Integrity Note -->
-        <div style="text-align: center; padding: 1rem 0; font-size: 0.75rem; color: #94a3b8; line-height: 1.6;">
-          🔒 رابط مشفر وخاص بولي الأمر فقط • تتحدث البيانات تلقائياً مع كل كويز أو حصة<br>
-          مدعوم بواسطة <b>منظومة سنترلي (Centrly)</b>
+        <div style="text-align: center; padding: 1rem 0; font-size: 0.75rem; color: #94a3b8; line-height: 1.6; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+          <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+            ${getIcon('lock', 13, '#94a3b8')}
+            <span>رابط مشفر وخاص بولي الأمر فقط • تتحدث البيانات تلقائياً مع كل كويز أو حصة</span>
+          </div>
+          <div>مدعوم بواسطة <b>منظومة سنترلي (Centrly)</b></div>
         </div>
 
       </div>

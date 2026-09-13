@@ -46,7 +46,8 @@ export function renderHomeworkReviewView(homeworkState = {}) {
             <button type="button" class="btn btn-primary" 
               onclick="window.centrlyApp && window.centrlyApp.openAddHomeworkModal ? window.centrlyApp.openAddHomeworkModal() : null" 
               style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 800; font-size: 0.85rem; padding: 0.45rem 0.95rem; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
-              <span>➕ نشر واجب جديد (من كتاب أو ملف)</span>
+              ${getIcon('plus', 16, '#ffffff')}
+              <span>نشر واجب جديد (من كتاب أو ملف)</span>
             </button>
 
             <!-- Assignment Selector Dropdown -->
@@ -80,17 +81,19 @@ export function renderHomeworkReviewView(homeworkState = {}) {
       ${!currentHomework ? `
         <!-- No Assignments Empty State -->
         <div class="card" style="margin: 0; text-align: center; padding: 3rem 1.5rem;">
-          <div style="font-size: 3rem; margin-bottom: 0.75rem;">📝</div>
+          <div style="display: flex; justify-content: center; margin-bottom: 0.75rem;">${getIcon('homework', 48, '#94a3b8')}</div>
           <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0;">لا توجد واجبات منزلية منشورة حتى الآن</h3>
           <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 1.5rem 0;">
             يمكنك نشر واجب منزلي جديد باختيار أسئلة من الكتاب المدرسي، أو نص حر، أو ملف PDF مع موعد التسليم.
           </p>
           <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
             <button class="btn btn-primary" onclick="window.centrlyApp.openAddHomeworkModal()" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 800;">
-              <span>➕ نشر واجب منزلي جديد الآن</span>
+              ${getIcon('plus', 16, '#ffffff')}
+              <span>نشر واجب منزلي جديد الآن</span>
             </button>
             <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('materials')" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-              <span>📚 الانتقال إلى المذكرات</span>
+              ${getIcon('materials', 16, 'currentColor')}
+              <span>الانتقال إلى المذكرات</span>
             </button>
           </div>
         </div>
@@ -101,7 +104,10 @@ export function renderHomeworkReviewView(homeworkState = {}) {
           <div class="card" style="margin: 0; background: #fff; border-top: 4px solid #10b981;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
-                <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">📥 مين سلّم الواجب</div>
+                <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
+                  ${getIcon('check', 14, '#059669')}
+                  <span>الطلاب المسلّمون للواجب</span>
+                </div>
                 <div style="font-size: 1.8rem; font-weight: 900; color: #059669; margin-top: 0.35rem;">
                   ${submitted.length} <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">طالب</span>
                 </div>
@@ -116,7 +122,10 @@ export function renderHomeworkReviewView(homeworkState = {}) {
           <div class="card" style="margin: 0; background: #fff; border-top: 4px solid #ef4444;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
-                <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">⏳ مين لسه ما سلّمش</div>
+                <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
+                  ${getIcon('clock', 14, '#dc2626')}
+                  <span>الطلاب المتأخرون عن التسليم</span>
+                </div>
                 <div style="font-size: 1.8rem; font-weight: 900; color: #dc2626; margin-top: 0.35rem;">
                   ${missing.length} <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">طالب</span>
                 </div>
@@ -146,24 +155,25 @@ export function renderHomeworkReviewView(homeworkState = {}) {
           <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.85rem;">
             <div style="flex: 1; min-width: 250px;">
               <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
-                <span style="font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 0.4rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
-                  ${currentHomework.book_name ? '📖 واجب من الكتاب المدرسي' : (currentHomework.url && currentHomework.url !== '#' ? '📄 ملف / مذكرة PDF' : '✍️ واجب كتابي')}
+                <span style="font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 0.4rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; display: inline-flex; align-items: center; gap: 0.3rem;">
+                  ${currentHomework.book_name ? `${getIcon('book', 14, '#1d4ed8')} واجب من الكتاب` : (currentHomework.url && currentHomework.url !== '#' ? `${getIcon('file', 14, '#1d4ed8')} ملف / مذكرة PDF` : `${getIcon('edit', 14, '#1d4ed8')} واجب كتابي`)}
                 </span>
                 <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">
                   ${escapeHtml(currentHomework.title)}
                 </h3>
                 ${currentHomework.due_date ? `
-                  <span style="font-size: 0.75rem; color: #b45309; background: #fffbeb; padding: 0.2rem 0.55rem; border-radius: 0.35rem; border: 1px solid #fde68a; font-weight: 700;">
-                    ⏰ آخر موعد: ${escapeHtml(currentHomework.due_date)}
+                  <span style="font-size: 0.75rem; color: #b45309; background: #fffbeb; padding: 0.2rem 0.55rem; border-radius: 0.35rem; border: 1px solid #fde68a; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+                    ${getIcon('clock', 13, '#b45309')}
+                    <span>آخر موعد: ${escapeHtml(currentHomework.due_date)}</span>
                   </span>
                 ` : ''}
               </div>
 
               ${(currentHomework.book_name || currentHomework.pages || currentHomework.questions) ? `
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.825rem; color: #1e3a8a; margin-top: 0.5rem; background: #eff6ff; padding: 0.45rem 0.85rem; border-radius: 0.45rem; border: 1px solid #bfdbfe;">
-                  ${currentHomework.book_name ? `<span>📖 <b>الكتاب:</b> ${escapeHtml(currentHomework.book_name)}</span>` : ''}
-                  ${currentHomework.pages ? `<span>• 📄 <b>الصفحات:</b> ${escapeHtml(currentHomework.pages)}</span>` : ''}
-                  ${currentHomework.questions ? `<span>• 🔢 <b>الأسئلة:</b> <b style="color: #b45309;">${escapeHtml(currentHomework.questions)}</b></span>` : ''}
+                  ${currentHomework.book_name ? `<span style="display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('book', 14, '#1e3a8a')} <b>الكتاب:</b> ${escapeHtml(currentHomework.book_name)}</span>` : ''}
+                  ${currentHomework.pages ? `<span style="display: inline-flex; align-items: center; gap: 0.3rem;">• ${getIcon('file', 14, '#1e3a8a')} <b>الصفحات:</b> ${escapeHtml(currentHomework.pages)}</span>` : ''}
+                  ${currentHomework.questions ? `<span style="display: inline-flex; align-items: center; gap: 0.3rem;">• <b>الأسئلة:</b> <b style="color: #b45309;">${escapeHtml(currentHomework.questions)}</b></span>` : ''}
                 </div>
               ` : ''}
 
@@ -177,15 +187,15 @@ export function renderHomeworkReviewView(homeworkState = {}) {
             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               ${currentHomework.url && currentHomework.url !== '#' ? `
                 <a href="${escapeHtml(currentHomework.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" 
-                  style="font-size: 0.8rem; padding: 0.4rem 0.8rem; display: inline-flex; align-items: center; gap: 0.3rem;">
-                  <span>📄</span>
+                  style="font-size: 0.8rem; padding: 0.4rem 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                  ${getIcon('file', 14, 'currentColor')}
                   <span>معاينة الملف</span>
                 </a>
               ` : ''}
               <button type="button" class="btn btn-secondary" 
                 style="font-size: 0.8rem; padding: 0.4rem 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem; background: #ecfdf5; color: #047857; border-color: #a7f3d0; font-weight: 800;"
                 onclick="window.centrlyApp && window.centrlyApp.copyHomeworkAssignmentText ? window.centrlyApp.copyHomeworkAssignmentText('${escapeHtml(currentHomework.id)}') : null">
-                <span>📋</span>
+                ${getIcon('copy', 14, '#047857')}
                 <span>نسخ نص الواجب للواتساب</span>
               </button>
             </div>
@@ -198,15 +208,15 @@ export function renderHomeworkReviewView(homeworkState = {}) {
             <button type="button" class="btn ${activeTab === 'submitted' ? 'btn-primary' : 'btn-secondary'}" 
               onclick="window.centrlyApp && window.centrlyApp.switchHomeworkTab ? window.centrlyApp.switchHomeworkTab('submitted') : null"
               style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 800; padding: 0.5rem 1.25rem;">
-              <span>📥</span>
-              <span>الطلاب المسلّمون (مين سلّم - ${submitted.length})</span>
+              ${getIcon('check', 16, activeTab === 'submitted' ? '#ffffff' : '#059669')}
+              <span>الطلاب المسلّمون (${submitted.length})</span>
             </button>
 
             <button type="button" class="btn ${activeTab === 'missing' ? 'btn-primary' : 'btn-secondary'}" 
               onclick="window.centrlyApp && window.centrlyApp.switchHomeworkTab ? window.centrlyApp.switchHomeworkTab('missing') : null"
               style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 800; padding: 0.5rem 1.25rem;">
-              <span>⏳</span>
-              <span>الطلاب المتأخرون (مين لسه - ${missing.length})</span>
+              ${getIcon('clock', 16, activeTab === 'missing' ? '#ffffff' : '#dc2626')}
+              <span>الطلاب المتأخرون (${missing.length})</span>
             </button>
           </div>
         </div>
@@ -216,7 +226,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
           <div class="card" style="margin: 0;">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
               <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.4rem; margin: 0;">
-                <span>📥</span>
+                ${getIcon('inbox', 18, 'var(--centrly-blue-700)')}
                 <span>قائمة الطلاب الذين قاموا برفع الواجب (${submitted.length})</span>
               </h3>
             </div>
@@ -241,10 +251,10 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                     const isRejected = sub.status === 'rejected';
 
                     const statusBadge = isApproved 
-                      ? '<span class="badge badge-success" style="font-weight: 800;">معتمد ✅</span>' 
+                      ? '<span class="badge badge-success" style="font-weight: 800;">معتمد</span>' 
                       : (isPending 
-                        ? '<span class="badge badge-warning" style="font-weight: 800;">قيد المراجعة ⏳</span>' 
-                        : '<span class="badge badge-danger" style="font-weight: 800;">يحتاج إعادة ⚠️</span>');
+                        ? '<span class="badge badge-warning" style="font-weight: 800;">قيد المراجعة</span>' 
+                        : '<span class="badge badge-danger" style="font-weight: 800;">يحتاج إعادة</span>');
 
                     const formattedDate = sub.submitted_at 
                       ? new Date(sub.submitted_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) 
@@ -259,12 +269,12 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                           ${sub.file_url ? `
                             <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
                               style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
-                              <span>📄</span>
+                              ${getIcon('file', 14, '#1d4ed8')}
                               <span>فتح ملف الـ PDF</span>
                             </a>
                           ` : (isApproved ? `
                             <span style="display: inline-flex; align-items: center; gap: 0.3rem; background: #f0fdf4; color: #15803d; padding: 0.25rem 0.6rem; border-radius: 0.4rem; border: 1px solid #bbf7d0; font-size: 0.78rem; font-weight: 700;" title="تم فحص الواجب وتفريغ الملف من السيرفر بنجاح لتخفيف الحمل وتوفير التخزين">
-                              <span>⚡</span>
+                              ${getIcon('check', 13, '#15803d')}
                               <span>تم الاعتماد وتفريغ المساحة</span>
                             </span>
                           ` : `
@@ -283,7 +293,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                               ${isApproved ? 'disabled' : ''}
                               title="${isApproved ? 'تم اعتماد الواجب وحذف الملف من الذاكرة لتخفيف الحمل' : 'اعتماد الواجب وتسجيله وحذف الملف لتوفير التخزين'}"
                               style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.6rem; ${isApproved ? 'opacity: 0.7; cursor: default;' : ''}">
-                              <span>✅</span>
+                              ${getIcon('check', 14, 'currentColor')}
                               <span>${isApproved ? 'معتمد ومُفرّغ' : 'موافق / اعتماد'}</span>
                             </button>
 
@@ -292,7 +302,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                               onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
                               title="طلب إعادة التسليم مع ملاحظة"
                               style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.5rem; color: #dc2626;">
-                              <span>✏️</span>
+                              ${getIcon('edit', 14, '#dc2626')}
                               <span>ملاحظة / رفض</span>
                             </button>
                           </div>
@@ -302,7 +312,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                   }).join('') : `
                     <tr>
                       <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: #64748b;">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📥</div>
+                        <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('inbox', 36, '#94a3b8')}</div>
                         لم يقم أي طالب بتسليم هذا الواجب بعد.<br>
                         يمكنك الاطلاع على قائمة الطلاب المتأخرين من التبويب المجاور وتذكيرهم عبر الواتساب.
                       </td>
@@ -318,7 +328,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
               <div>
                 <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.4rem; margin: 0;">
-                  <span>⏳</span>
+                  ${getIcon('clock', 18, '#dc2626')}
                   <span>قائمة الطلاب الذين لم يقوموا برفع الواجب بعد (${missing.length})</span>
                 </h3>
                 <p style="font-size: 0.775rem; color: #64748b; margin: 0.2rem 0 0 0;">
@@ -330,7 +340,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                 <button type="button" class="btn btn-secondary btn-sm" 
                   onclick="window.centrlyApp && window.centrlyApp.copyAllMissingStudentsPhones ? window.centrlyApp.copyAllMissingStudentsPhones() : null"
                   style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700;">
-                  <span>📋</span>
+                  ${getIcon('copy', 14, 'currentColor')}
                   <span>نسخ أرقام جميع المتأخرين</span>
                 </button>
               ` : ''}
@@ -365,7 +375,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                           ${escapeHtml(studentPhone || '—')}
                         </td>
                         <td>
-                          <span class="badge badge-danger" style="font-weight: 700;">لم يُسلّم ❌</span>
+                          <span class="badge badge-danger" style="font-weight: 700;">لم يُسلّم</span>
                         </td>
                         <td style="text-align: center;">
                           <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
@@ -374,7 +384,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                               onclick="window.centrlyApp && window.centrlyApp.sendHomeworkReminderWhatsApp ? window.centrlyApp.sendHomeworkReminderWhatsApp('${escapeHtml(m.id)}', '${escapeHtml(m.name)}', '${escapeHtml(studentPhone)}') : null"
                               title="إرسال تذكير عبر واتساب"
                               style="display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 700; color: #059669; border-color: #a7f3d0; padding: 0.25rem 0.65rem;">
-                              <span>💬</span>
+                              ${getIcon('whatsapp', 14, '#059669')}
                               <span>تذكير واتساب</span>
                             </button>
 
@@ -383,7 +393,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                               onclick="window.centrlyApp && window.centrlyApp.copyStudentLink ? window.centrlyApp.copyStudentLink('${escapeHtml(m.id)}') : null"
                               title="نسخ رابط الطالب لإرساله له"
                               style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem;">
-                              <span>🔗</span>
+                              ${getIcon('link', 13, 'currentColor')}
                               <span>رابط الطالب</span>
                             </button>
                           </div>
@@ -393,7 +403,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                   }).join('') : `
                     <tr>
                       <td colspan="6" style="text-align: center; padding: 2.5rem 1rem; color: #059669; font-weight: 700;">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
+                        <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('check', 36, '#059669')}</div>
                         رائع! جميع طلاب المجموعة قاموا بتسليم الواجب بنجاح بنسبة 100%.
                       </td>
                     </tr>

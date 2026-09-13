@@ -48,7 +48,7 @@ export function renderWhatsAppSettingsView(data = {}) {
             <div style="width: 180px; height: 180px; background: #f8fafc; border: 2px dashed var(--centrly-blue-700); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
               <img id="settingsQrImage" src="${data.qr_base64 || ''}" alt="WhatsApp QR Code" style="width: 100%; height: 100%; object-fit: contain; ${data.qr_base64 ? '' : 'display: none;'}">
               <div id="settingsQrLoading" style="font-size: 0.8rem; color: var(--centrly-text); padding: 1rem; text-align: center; ${data.qr_base64 ? 'display: none;' : ''}">
-                ⏳ جارٍ إنشاء رمز QR...
+                جارٍ إنشاء رمز QR...
               </div>
             </div>
             <div style="flex: 1; min-width: 250px;">
@@ -113,7 +113,7 @@ export function renderWhatsAppSettingsView(data = {}) {
           
           <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #ef4444; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
             <div style="font-weight: 800; color: #b91c1c; font-size: 0.9rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
-              <span>🚫</span> 1. التحول للبوابات الذكية بدلاً من الإرسال المتكرر
+              1. التحول للبوابات الذكية بدلاً من الإرسال المتكرر
             </div>
             <div style="font-size: 0.82rem; color: #475569; line-height: 1.6;">
               توقفنا تماماً عن إرسال رسائل متكررة مع كل حصة أو كويز أو واجب لتجنب خطر الحظر. المنظومة تنقل 90% من المتابعة إلى بوابة الطالب وبوابة ولي الأمر التي تُحدّث تلقائياً بالدرجات والحضور والمذكرات على الويب.
@@ -122,7 +122,7 @@ export function renderWhatsAppSettingsView(data = {}) {
 
           <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #3b82f6; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
             <div style="font-weight: 800; color: #1d4ed8; font-size: 0.9rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
-              <span>👥</span> 2. إرسال رابط البوابة لمرة واحدة والتأكيد على حفظ الرقم
+              2. إرسال رابط البوابة لمرة واحدة والتأكيد على حفظ الرقم
             </div>
             <div style="font-size: 0.82rem; color: #475569; line-height: 1.6;">
               يُرسل رابط البوابة المباشر لكل طالب/ولي أمر لمرة واحدة فقط، وتتضمن الرسالة تنبيهاً صريحاً بضرورة تسجيل الرقم باسم المنظومة على هواتفهم. حفظ الرقم يجعل الروابط قابلة للنقر فوراً ويمنع حظر الرقم كـ Spam نهائياً.
@@ -131,7 +131,7 @@ export function renderWhatsAppSettingsView(data = {}) {
 
           <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #f59e0b; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
             <div style="font-weight: 800; color: #b45309; font-size: 0.9rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
-              <span>📈</span> 3. التدرج في إرسال الروابط للطلاب الجدد (Warm-Up & Pacing)
+              3. التدرج في إرسال الروابط للطلاب الجدد (Warm-Up & Pacing)
             </div>
             <div style="font-size: 0.82rem; color: #475569; line-height: 1.6;">
               إذا كان رقمك جديداً، ابدأ بإرسال 20 إلى 40 رابط يومياً في الأسبوع الأول. يطبق النظام تلقائياً فواصل زمنية عشوائية (20 إلى 40 ثانية) بين كل رسالة لمحاكاة السلوك البشري الطبيعي؛ لا تحاول تسريع هذا الإرسال.
@@ -140,7 +140,7 @@ export function renderWhatsAppSettingsView(data = {}) {
 
           <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #10b981; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
             <div style="font-weight: 800; color: #047857; font-size: 0.9rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
-              <span>⚡</span> 4. قصر الواتساب على الروابط والإنذارات الحرجة فقط
+              4. قصر الواتساب على الروابط والإنذارات الحرجة فقط
             </div>
             <div style="font-size: 0.82rem; color: #475569; line-height: 1.6;">
               تم إلغاء أزرار الإرسال الجماعي العشوائي نهائياً لحماية رقمك. يقتصر الواتساب على: (1) تسليم روابط البوابات، (2) إنذارات الغياب الفوري، (3) إشعارات الطوارئ، مع حظر كامل لأي حملات إعلانية أو ترويجية.
@@ -168,7 +168,7 @@ export function renderWhatsAppSettingsView(data = {}) {
             نموذج: رسالة ترحيبية عادية
           </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="
-            document.getElementById('testMsgInput').value = 'السلام عليكم ولي أمر الطالب (محمد أحمد).\\nحرصاً على متابعة المستوى الدراسي، رابط بوابة المتابعة المباشرة:\\nhttps://centerly-platform.vercel.app/parent-portal?token=test_demo\\n\\n📌 يرجى حفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان وصول التقارير باستمرار.';
+            document.getElementById('testMsgInput').value = 'السلام عليكم ولي أمر الطالب (محمد أحمد).\\nحرصاً على متابعة المستوى الدراسي، رابط بوابة المتابعة المباشرة:\\nhttps://centerly-platform.vercel.app/parent-portal?token=test_demo\\n\\nيرجى حفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان وصول التقارير باستمرار.';
           " style="font-size: 0.78rem; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
             نموذج: تجربة رسالة رابط بوابة ولي الأمر (مع تنبيه حفظ الرقم)
           </button>
@@ -216,9 +216,9 @@ export function renderWhatsAppSettingsView(data = {}) {
             <div style="background: #fff; border: 1px dashed #93c5fd; border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
               السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب ({اسم_الطالب}).<br>
               حرصاً على متابعة مستواه أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة:<br>
-              🔗 <strong>{رابط_بوابة_ولي_الأمر}</strong><br>
-              💡 <em>من خلال الرابط يمكنكم في أي وقت وبدون تسجيل دخول: متابعة الحضور، درجات الكويزات، وحالة الواجبات لحظياً.</em><br>
-              📌 <strong>تنبيه هام:</strong> يرجى تسجيل وحفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان وصول التقارير باستمرار دون انقطاع.
+              • <strong>{رابط_بوابة_ولي_الأمر}</strong><br>
+              • <em>من خلال الرابط يمكنكم في أي وقت وبدون تسجيل دخول: متابعة الحضور، درجات الكويزات، وحالة الواجبات لحظياً.</em><br>
+              • <strong>تنبيه هام:</strong> يرجى تسجيل وحفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان وصول التقارير باستمرار دون انقطاع.
             </div>
           </div>
 
@@ -229,11 +229,11 @@ export function renderWhatsAppSettingsView(data = {}) {
               <span class="badge" style="background: #e0f2fe; color: #0369a1;">بوابة الطالب</span>
             </div>
             <div style="background: #fff; border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
-              مرحباً بك يا بطل ({اسم_الطالب})! 🎓<br>
+              مرحباً بك ({اسم_الطالب})،<br>
               تم تفعيل رابط بوابتك التعليمية الخاصة للمذكرات والواجبات:<br>
-              🔗 <strong>{رابط_بوابة_الطالب}</strong><br>
-              📚 يمكنك الآن تحميل مذكرات الحصص وتسليم الواجبات بصيغة PDF ومتابعة نتائج كويزاتك أولاً بأول.<br>
-              بالتوفيق والتميز دائماً! ✨
+              • <strong>{رابط_بوابة_الطالب}</strong><br>
+              • يمكنك الآن تحميل مذكرات الحصص وتسليم الواجبات بصيغة PDF ومتابعة نتائج كويزاتك أولاً بأول.<br>
+              مع خالص التمنيات بالتوفيق والتميز دائماً.
             </div>
           </div>
 
@@ -247,7 +247,7 @@ export function renderWhatsAppSettingsView(data = {}) {
               تنبيه غياب هام: ولي أمر الطالب <strong>{اسم_الطالب}</strong>،<br>
               نود إحاطتكم علماً بعدم حضوره حصة اليوم لمجموعة <strong>{اسم_المجموعة}</strong> بتاريخ {تاريخ_الحصة}.<br>
               يرجى مراجعة بوابة المتابعة للاطلاع على مذكرة الحصة وتنسيق موعد التعويض:<br>
-              🔗 <strong>{رابط_بوابة_ولي_الأمر}</strong>
+              • <strong>{رابط_بوابة_ولي_الأمر}</strong>
             </div>
           </div>
 
@@ -261,7 +261,7 @@ export function renderWhatsAppSettingsView(data = {}) {
               السلام عليكم ولي أمر الطالب <strong>{اسم_الطالب}</strong>،<br>
               تم رصد وتحديث تقرير التقييم الشامل ودرجات الكويزات لهذا الشهر.<br>
               يمكنكم الاطلاع على التقرير وملاحظات المعلم عبر بوابة المتابعة المباشرة:<br>
-              🔗 <strong>{رابط_بوابة_ولي_الأمر}</strong><br>
+              • <strong>{رابط_بوابة_ولي_الأمر}</strong><br>
               مع خالص تمنياتنا له بدوام التميز والتفوق.
             </div>
           </div>

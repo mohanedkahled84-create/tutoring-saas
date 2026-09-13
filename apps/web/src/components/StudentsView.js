@@ -48,7 +48,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
         <div class="card" style="margin: 0; background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 12px; padding: 1rem 1.25rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span style="font-size: 1.6rem;">🚨</span>
+              <div style="display: flex; align-items: center;">${getIcon('alertTriangle', 28, '#dc2626')}</div>
               <div>
                 <div style="font-weight: 800; color: #991b1b; font-size: 0.95rem;">تم إيقاف إضافة طلاب جدد مؤقتاً (استنفاد المقاعد وانتهاء مهلة السماح)</div>
                 <div style="font-size: 0.825rem; color: #b91c1c; margin-top: 0.2rem;">
@@ -57,7 +57,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
               </div>
             </div>
             <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.navigate('billing')" style="background: #dc2626; border-color: #dc2626; font-weight: 800; padding: 0.5rem 1rem;">
-              ترقية الباقة الآن 💳
+              ترقية الباقة الآن
             </button>
           </div>
         </div>
@@ -67,7 +67,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
         <div class="card" style="margin: 0; background: #fff7ed; border: 1.5px solid #fdba74; border-radius: 12px; padding: 1rem 1.25rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span style="font-size: 1.6rem;">⚠️</span>
+              <div style="display: flex; align-items: center;">${getIcon('alertTriangle', 28, '#ea580c')}</div>
               <div>
                 <div style="font-weight: 800; color: #9a3412; font-size: 0.95rem;">تنبيه فترة سماح: تم الوصول للحد الأقصى للباقة (${currentCount} / ${studentLimit} طالب)</div>
                 <div style="font-size: 0.825rem; color: #c2410c; margin-top: 0.2rem;">
@@ -76,7 +76,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
               </div>
             </div>
             <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.navigate('billing')" style="background: #ea580c; border-color: #ea580c; font-weight: 800; padding: 0.5rem 1rem;">
-              ترقية الباقة قبل الإيقاف ⚡
+              ترقية الباقة قبل الإيقاف
             </button>
           </div>
         </div>
@@ -87,7 +87,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
       <div class="card" style="margin: 0; background: #fefce8; border: 1.5px solid #fde047; border-radius: 12px; padding: 0.85rem 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <span style="font-size: 1.35rem;">⚠️</span>
+            <div style="display: flex; align-items: center;">${getIcon('alertTriangle', 22, '#ca8a04')}</div>
             <div>
               <div style="font-weight: 800; color: #854d0e; font-size: 0.9rem;">اقتربت من السعة القصوى للباقة (${currentCount} / ${studentLimit} طالب)</div>
               <div style="font-size: 0.8rem; color: #a16207; margin-top: 0.15rem;">
@@ -118,7 +118,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 <span>دليل الطلاب وقاعدة البيانات</span>
               </h2>
               <span style="background: ${isReachedOrExceeded ? '#fee2e2' : '#f1f5f9'}; color: ${isReachedOrExceeded ? '#b91c1c' : '#334155'}; font-size: 0.8rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 9999px; border: 1px solid ${isReachedOrExceeded ? '#fca5a5' : '#cbd5e1'};">
-                👥 المقاعد: ${currentCount} / ${studentLimit} طالب
+                المقاعد: ${currentCount} / ${studentLimit} طالب
               </span>
             </div>
             <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
@@ -132,7 +132,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
               <span>إرسال الرابط للطلاب الجدد</span>
               ${unsentCount > 0 
                 ? `<span style="background: #ef4444; color: #fff; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 9999px; font-weight: 900;">${unsentCount}</span>` 
-                : `<span style="background: #10b981; color: #fff; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 9999px;">✔</span>`}
+                : `<span style="background: #10b981; color: #fff; font-size: 0.75rem; padding: 0.15rem 0.45rem; border-radius: 9999px; display: inline-flex; align-items: center;">${getIcon('check', 10, '#fff')}</span>`}
             </button>
             <button class="btn btn-primary" onclick="window.centrlyApp.openAddStudentModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
               ${getIcon('add', 18)}
@@ -215,28 +215,28 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                       <!-- Parent Link Row -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
                         <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; width: 35px;">الأمر:</span>
-                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رابط متابعة ولي الأمر" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.15rem;">
-                          <span>📋</span>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رابط متابعة ولي الأمر" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem;">
+                          ${getIcon('copy', 12)}
                           <span>نسخ</span>
                         </button>
-                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendSingleParentLink('${escapeHtml(s.id)}')" title="إرسال رابط المتابعة لولي الأمر عبر واتساب" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.15rem; color: #059669; border-color: rgba(5, 150, 105, 0.3);">
-                          <span>📲</span>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendSingleParentLink('${escapeHtml(s.id)}')" title="إرسال رابط المتابعة لولي الأمر عبر واتساب" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; color: #059669; border-color: rgba(5, 150, 105, 0.3);">
+                          ${getIcon('whatsapp', 12)}
                           <span>إرسال</span>
                         </button>
-                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.previewParentPortal('${escapeHtml(s.id)}')" title="معاينة بوابة ولي الأمر" style="padding: 0.15rem 0.3rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700);">
-                          <span>👁️</span>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.previewParentPortal('${escapeHtml(s.id)}')" title="معاينة بوابة ولي الأمر" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700);">
+                          ${getIcon('link', 12)}
                         </button>
                       </div>
 
                       <!-- Student Link Row -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
                         <span style="font-size: 0.65rem; color: #1d4ed8; font-weight: 700; width: 35px;">الطالب:</span>
-                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyStudentLink('${escapeHtml(s.id)}')" title="نسخ رابط بوابة الطالب (الماتريال والواجبات)" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.15rem; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;">
-                          <span>🎓</span>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyStudentLink('${escapeHtml(s.id)}')" title="نسخ رابط بوابة الطالب (الماتريال والواجبات)" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;">
+                          ${getIcon('copy', 12)}
                           <span>نسخ</span>
                         </button>
-                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.previewStudentPortal('${escapeHtml(s.id)}')" title="معاينة بوابة الطالب (رفع الواجبات والماتريال)" style="padding: 0.15rem 0.3rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: #1d4ed8;">
-                          <span>👁️</span>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.previewStudentPortal('${escapeHtml(s.id)}')" title="معاينة بوابة الطالب (رفع الواجبات والماتريال)" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: #1d4ed8;">
+                          ${getIcon('link', 12)}
                         </button>
                       </div>
 

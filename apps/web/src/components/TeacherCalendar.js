@@ -37,13 +37,13 @@ export function renderTeacherCalendar(data = {}) {
 
   function renderStatusBadge(session) {
     if (session.is_recurring) {
-      return '<span class="badge badge-primary" style="font-size:0.75rem; background:#e0f2fe; color:#0284c7; border: 1px solid #bae6fd;">🔄 موعد أسبوعي ثابت</span>';
+      return '<span class="badge badge-primary" style="font-size:0.75rem; background:#e0f2fe; color:#0284c7; border: 1px solid #bae6fd;">موعد أسبوعي ثابت</span>';
     }
     if (session.is_extra) {
-      return '<span class="badge" style="background:#ede9fe; color:#7c3aed; font-size:0.75rem; border: 1px solid #ddd6fe;">⚡ حصة إضافية</span>';
+      return '<span class="badge" style="background:#ede9fe; color:#7c3aed; font-size:0.75rem; border: 1px solid #ddd6fe;">حصة إضافية</span>';
     }
     if (session.status === 'rescheduled' || session.rescheduled_to_date) {
-      return '<span class="badge badge-warning" style="font-size:0.75rem;">⏱️ موعد بديل / مؤجل</span>';
+      return '<span class="badge badge-warning" style="font-size:0.75rem;">موعد بديل / مؤجل</span>';
     }
     if (session.status === 'in_progress') {
       return `<span class="badge badge-success" style="font-size:0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('dotSuccess', 8)}<span>جارية</span></span>`;
@@ -67,7 +67,7 @@ export function renderTeacherCalendar(data = {}) {
               ${escapeHtml(session.group_name)}
             </div>
             <span class="badge badge-primary" style="font-size:0.75rem; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-weight: 700;">
-              🔄 موعد أسبوعي ثابت
+              موعد أسبوعي ثابت
             </span>
           </div>
 
@@ -100,7 +100,7 @@ export function renderTeacherCalendar(data = {}) {
               ${escapeHtml(session.group_name)}
             </div>
             <span class="badge" style="background:#ede9fe; color:#7c3aed; font-size:0.75rem; border: 1px solid #ddd6fe; font-weight: 700;">
-              ⚡ حصة إضافية
+              حصة إضافية
             </span>
           </div>
 
@@ -133,7 +133,7 @@ export function renderTeacherCalendar(data = {}) {
               ${escapeHtml(session.group_name)}
             </div>
             <span class="badge badge-warning" style="font-size:0.75rem; font-weight: 700;">
-              ⏱️ موعد بديل / مؤجل
+              موعد بديل / مؤجل
             </span>
           </div>
 
@@ -315,8 +315,8 @@ export function renderTeacherCalendar(data = {}) {
           <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem;">
             <span>إجمالي مواعيد الأسبوع: <strong>${totalCount}</strong></span>
             ${recurringCount > 0 ? `<span style="color: var(--centrly-blue-700);">${getIcon('calendar', 14)} مواعيد أسبوعية ثابتة: <strong>${recurringCount}</strong></span>` : ''}
-            ${extraCount > 0 ? `<span style="color: #7c3aed;">⚡ حصص إضافية: <strong>${extraCount}</strong></span>` : ''}
-            ${rescheduledCount > 0 ? `<span style="color: var(--centrly-warning);">⏱️ مواعيد بديلة / مؤجلة: <strong>${rescheduledCount}</strong></span>` : ''}
+            ${extraCount > 0 ? `<span style="color: #7c3aed;">حصص إضافية: <strong>${extraCount}</strong></span>` : ''}
+            ${rescheduledCount > 0 ? `<span style="color: var(--centrly-warning);">مواعيد بديلة / مؤجلة: <strong>${rescheduledCount}</strong></span>` : ''}
             ${inProgressCount > 0 ? `<span style="color: var(--centrly-success);">${getIcon('dotSuccess', 8)} جارية: <strong>${inProgressCount}</strong></span>` : ''}
             ${scheduledCount > 0 && recurringCount === 0 ? `<span style="color: var(--centrly-blue-700);">مجدولة: <strong>${scheduledCount}</strong></span>` : ''}
             ${completedCount > 0 && recurringCount === 0 ? `<span style="color: var(--centrly-text);">منتهية: <strong>${completedCount}</strong></span>` : ''}
