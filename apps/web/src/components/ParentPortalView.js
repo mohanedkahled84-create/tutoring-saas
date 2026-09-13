@@ -307,6 +307,46 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                       </div>
                     ` : ''}
 
+                    ${m.is_homework ? `
+                      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.65rem 0.85rem; font-size: 0.825rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem;">
+                          <span style="font-weight: 700; color: #334155;">حالة تسليم الطالب للواجب:</span>
+                          ${m.submission_status === 'approved' ? `
+                            <span style="color: #059669; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 0.2rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem;">
+                              تم التسليم والاعتماد ✅
+                            </span>
+                          ` : (m.submission_status === 'pending' ? `
+                            <span style="color: #d97706; font-weight: 800; background: #fffbeb; border: 1px solid #fde68a; padding: 0.2rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem;">
+                              تم الرفع • قيد التصحيح ⏳
+                            </span>
+                          ` : (m.submission_status === 'rejected' ? `
+                            <span style="color: #dc2626; font-weight: 800; background: #fef2f2; border: 1px solid #fca5a5; padding: 0.2rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem;">
+                              يحتاج إعادة تسليم ⚠️
+                            </span>
+                          ` : `
+                            <span style="color: #dc2626; font-weight: 800; background: #fef2f2; border: 1px solid #fca5a5; padding: 0.2rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem;">
+                              لم يُسلّم بعد ❌
+                            </span>
+                          `))}
+                        </div>
+
+                        ${m.teacher_feedback ? `
+                          <div style="font-size: 0.775rem; background: #fff7ed; border-right: 3px solid #ea580c; padding: 0.35rem 0.6rem; border-radius: 0.3rem; color: #9a3412;">
+                            <b>ملاحظة المعلم:</b> ${escapeHtml(m.teacher_feedback)}
+                          </div>
+                        ` : ''}
+
+                        ${m.submission_url ? `
+                          <div style="display: flex; justify-content: flex-end; margin-top: 0.2rem;">
+                            <a href="${escapeHtml(m.submission_url)}" target="_blank" rel="noopener noreferrer"
+                              style="font-size: 0.775rem; color: #2563eb; font-weight: 700; text-decoration: underline;">
+                              📄 الاطلاع على حل الطالب المرفوع
+                            </a>
+                          </div>
+                        ` : ''}
+                      </div>
+                    ` : ''}
+
                     <div style="display: flex; justify-content: flex-end; margin-top: 0.25rem;">
                       <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer"
                         style="display: inline-flex; align-items: center; gap: 0.4rem; background: #1d4ed8; color: #ffffff; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.825rem; font-weight: 700; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">

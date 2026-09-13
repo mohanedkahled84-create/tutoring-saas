@@ -11,6 +11,8 @@ import { renderStudentsView } from './components/StudentsView.js?v=2.7.0';
 import { renderGroupsView } from './components/GroupsView.js';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=2.7.0';
+import { renderStudentPortalView } from './components/StudentPortalView.js?v=2.7.0';
+import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=2.7.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
 import { renderStudentReportsView } from './components/StudentReportsView.js';
 import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
@@ -122,11 +124,16 @@ class CentrlyApp {
   }
 
   async init() {
-    // Check if Parent Portal token is present in URL (DEV-34)
+    // Check if Portal token is present in URL (Student vs Parent Portal)
     const urlParams = new URLSearchParams(window.location.search);
     const portalToken = urlParams.get('token');
+    const portalType = urlParams.get('portal');
     if (portalToken) {
-      await this.loadParentPortal(portalToken);
+      if (portalType === 'student') {
+        await this.loadStudentPortal(portalToken);
+      } else {
+        await this.loadParentPortal(portalToken);
+      }
       return;
     }
 
@@ -286,6 +293,88 @@ class CentrlyApp {
       this.showToast('تم تحديث بيانات المتابعة بنجاح!', 'success');
     } else {
       window.location.reload();
+    }
+  }
+
+  // Dedicated Student Portal (DEV-STUDENT-PORTAL)
+  async loadStudentPortal(token) {
+    this._studentPortalToken = token;
+    try {
+      const data = await request(`/public/parent-portal?token=${token}`);
+      document.getElementById('app').innerHTML = renderStudentPortalView(data);
+    } catch (err) {
+      document.getElementById('app').innerHTML = renderStudentPortalView({
+        error: err.message || 'تعذر تحميل بيانات بوابة الطالب. يرجى التحقق من صحة الرابط.',
+      });
+    }
+  }
+
+  async reloadStudentPortal() {
+    if (this._studentPortalToken) {
+      await this.loadStudentPortal(this._studentPortalToken);
+      this.showToast('تم تحديث بيانات الطالب بنجاح! 🎓', 'success');
+    } else {
+      window.location.reload();
+    }
+  }
+
+  async handleStudentHomeworkUpload(materialId, file) {
+    if (!file) return;
+    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+      alert('عفواً، يجب أن يكون الملف بصيغة PDF فقط. يمكنك استخدام موقع iLovePDF المجاني الموضح في الشرح أعلاه لتحويل صورك إلى PDF في ثوانٍ.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('حجم الملف يتجاوز الحد الأقصى المسموح به (10 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.');
+      return;
+    }
+
+    const btn = document.getElementById(`hw-upload-btn-${materialId}`);
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ جارٍ رفع الواجب للسحابة...</span>';
+    }
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const base64Data = e.target.result;
+          await request('/public/homework/submit', {
+            method: 'POST',
+            body: {
+              token: this._studentPortalToken,
+              material_id: materialId,
+              file_data: base64Data,
+              file_name: file.name,
+              file_size: file.size,
+            },
+          });
+          alert('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة! 🎉');
+          await this.loadStudentPortal(this._studentPortalToken);
+        } catch (subErr) {
+          alert(`فشل رفع الواجب: ${subErr.message || 'حدث خطأ في الاتصال'}`);
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
+        }
+      };
+      reader.onerror = () => {
+        alert('تعذر قراءة ملف الـ PDF من جهازك.');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      alert(`خطأ: ${err.message || 'حدث خطأ غير متوقع'}`);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
     }
   }
 
@@ -1130,6 +1219,47 @@ class CentrlyApp {
           this.renderMainContent();
           break;
         }
+        case 'homework': {
+          const [matRes, grpRes] = await Promise.all([
+            request('/materials').catch(() => ({ materials: [] })),
+            request('/groups').catch(() => ({ groups: [] })),
+          ]);
+          const materialsList = Array.isArray(matRes) ? matRes : (matRes.materials || []);
+          const hwAssignments = materialsList.filter(m => m.is_homework);
+          const groupsList = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          
+          let selectedMaterialId = this.homeworkState?.selectedMaterialId || (hwAssignments[0]?.id || '');
+          let selectedGroupId = this.homeworkState?.selectedGroupId || 'all';
+          let activeTab = this.homeworkState?.activeTab || 'submitted';
+
+          let submissionsData = { assignments: hwAssignments, submitted: [], missing: [] };
+          if (selectedMaterialId) {
+            try {
+              let url = `/homework/submissions?material_id=${encodeURIComponent(selectedMaterialId)}`;
+              if (selectedGroupId && selectedGroupId !== 'all') {
+                url += `&group_id=${encodeURIComponent(selectedGroupId)}`;
+              }
+              submissionsData = await request(url).catch(() => ({ submitted: [], missing: [] }));
+            } catch (err) {
+              console.warn('Failed to load homework submissions:', err);
+            }
+          }
+
+          const currentHw = hwAssignments.find(a => a.id === selectedMaterialId) || hwAssignments[0] || null;
+
+          this.homeworkState = {
+            assignments: hwAssignments,
+            currentHomework: currentHw,
+            groups: groupsList,
+            selectedMaterialId,
+            selectedGroupId,
+            activeTab,
+            submitted: submissionsData.submitted || [],
+            missing: submissionsData.missing || [],
+          };
+          this.renderMainContent();
+          break;
+        }
         case 'assistants': {
           const [astRes, grpRes] = await Promise.all([
             request('/assistants').catch(() => ({ assistants: [] })),
@@ -1197,6 +1327,8 @@ class CentrlyApp {
         });
       case 'materials':
         return renderMaterialsView(this.materials, this.groups, this.materialsGroupId);
+      case 'homework':
+        return renderHomeworkReviewView(this.homeworkState || {});
       case 'assistants':
         return renderTeacherAssistantsView(this.teacherAssistants, this.groups, {
           hasPin: this.hasSecurityPin,
@@ -4360,6 +4492,35 @@ class CentrlyApp {
     }
   }
 
+  async copyStudentLink(studentId) {
+    try {
+      const res = await request(`/students/${studentId}/parent-link`);
+      const canonicalOrigin = 'https://centerly-platform.vercel.app';
+      const basePortalUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
+      const studentUrl = basePortalUrl.includes('?') 
+        ? `${basePortalUrl}&portal=student` 
+        : `${basePortalUrl}?portal=student`;
+      await navigator.clipboard.writeText(studentUrl);
+      this.showToast('تم نسخ رابط بوابة الطالب بنجاح! 🎓', 'success');
+    } catch (err) {
+      this.showToast(`تعذر الحصول على رابط الطالب: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
+    }
+  }
+
+  async previewStudentPortal(studentId) {
+    try {
+      const res = await request(`/students/${studentId}/parent-link`);
+      const canonicalOrigin = 'https://centerly-platform.vercel.app';
+      const basePortalUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
+      const studentUrl = basePortalUrl.includes('?') 
+        ? `${basePortalUrl}&portal=student` 
+        : `${basePortalUrl}?portal=student`;
+      window.open(studentUrl, '_blank');
+    } catch (err) {
+      this.showToast(`تعذر فتح رابط المعاينة: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
+    }
+  }
+
   async sendSingleParentLink(studentId) {
     const student = (this.students || []).find(s => s.id === studentId);
     const parentPhone = student?.parentPhone || student?.parent_phone;
@@ -7492,6 +7653,88 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     } catch (err) {
       this.showToast(`فشل حذف المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
     }
+  }
+
+  // Teacher Homework Review & Grading Actions (DEV-HOMEWORK)
+  async onSelectHomeworkAssignment(materialId) {
+    if (!this.homeworkState) this.homeworkState = {};
+    this.homeworkState.selectedMaterialId = materialId;
+    await this.loadRouteData('homework');
+  }
+
+  async filterHomeworkSubmissionsByGroup(groupId) {
+    if (!this.homeworkState) this.homeworkState = {};
+    this.homeworkState.selectedGroupId = groupId;
+    await this.loadRouteData('homework');
+  }
+
+  switchHomeworkTab(tabName) {
+    if (!this.homeworkState) this.homeworkState = {};
+    this.homeworkState.activeTab = tabName;
+    this.renderMainContent();
+  }
+
+  async approveHomeworkSubmission(submissionId) {
+    try {
+      await request(`/homework/submissions/${submissionId}/review`, {
+        method: 'PUT',
+        body: { status: 'approved' },
+      });
+      this.showToast('تم اعتماد الواجب وتسجيله بنجاح! ✅', 'success');
+      await this.loadRouteData('homework');
+    } catch (err) {
+      this.showToast(`فشل اعتماد الواجب: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  async promptRejectHomework(submissionId, studentName) {
+    const reason = prompt(`اكتب ملاحظة أو سبب طلب إعادة الواجب للطالب (${studentName}):`, 'يرجى إعادة حل الأسئلة الناقصة');
+    if (reason === null) return;
+
+    try {
+      await request(`/homework/submissions/${submissionId}/review`, {
+        method: 'PUT',
+        body: { status: 'rejected', teacher_notes: reason.trim() },
+      });
+      this.showToast('تم تسجيل الملاحظة وتحديث حالة الواجب إلى يحتاج إعادة ⚠️', 'warning');
+      await this.loadRouteData('homework');
+    } catch (err) {
+      this.showToast(`فشل تحديث حالة الواجب: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  async sendHomeworkReminderWhatsApp(studentId, studentName, phone) {
+    if (!phone) {
+      this.showToast('رقم هاتف الطالب غير متوفر للتذكير عبر واتساب', 'warning');
+      return;
+    }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const targetPhone = cleanPhone.startsWith('2') ? cleanPhone : `2${cleanPhone}`;
+    const hwTitle = this.homeworkState?.currentHomework?.title || 'الواجب المنزلي';
+    
+    // Generate portal link
+    let studentPortalUrl = '';
+    try {
+      const res = await request(`/students/${studentId}/parent-link`);
+      const canonicalOrigin = 'https://centerly-platform.vercel.app';
+      const basePortalUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
+      studentPortalUrl = basePortalUrl.includes('?') ? `${basePortalUrl}&portal=student` : `${basePortalUrl}?portal=student`;
+    } catch (_) {}
+
+    const message = `أهلاً بك يا ${studentName}، نود تذكيرك بأن لديك واجب مطلوب تسليمه لمادة المعلم (${hwTitle}). يرجى رفع حل الواجب بصيغة PDF عبر بوابتك الخاصة:\n${studentPortalUrl}\n\nبالتوفيق والنجاح دائماً!`;
+    const waUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
+  }
+
+  copyAllMissingStudentsPhones() {
+    const missing = this.homeworkState?.missing || [];
+    const phones = missing.map(m => m.phone).filter(Boolean);
+    if (phones.length === 0) {
+      this.showToast('لا توجد أرقام هواتف مسجلة للطلاب المتأخرين', 'info');
+      return;
+    }
+    navigator.clipboard.writeText(phones.join(', '));
+    this.showToast(`تم نسخ ${phones.length} رقم هاتف للطلاب المتأخرين! 📋`, 'success');
   }
 }
 

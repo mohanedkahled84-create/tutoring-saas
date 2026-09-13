@@ -211,30 +211,45 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                     ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride || s.fee_override ? `<span class="badge badge-warning">خصم: ${escapeHtml(s.feeOverride || s.fee_override)} ج.م</span>` : '<span style="color:var(--centrly-text); font-size:0.85rem;">أساسي</span>')}
                   </td>
                   <td>
-                    <div style="display: flex; flex-direction: column; gap: 0.25rem; min-width: 135px;">
-                      <div style="display: flex; align-items: center; gap: 0.25rem;">
-                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رابط ولي الأمر الخاص بالطالب" style="padding: 0.2rem 0.45rem; font-size: 0.775rem; display: flex; align-items: center; gap: 0.2rem;">
+                    <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 155px;">
+                      <!-- Parent Link Row -->
+                      <div style="display: flex; align-items: center; gap: 0.2rem;">
+                        <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; width: 35px;">الأمر:</span>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رابط متابعة ولي الأمر" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.15rem;">
                           <span>📋</span>
                           <span>نسخ</span>
                         </button>
-                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendSingleParentLink('${escapeHtml(s.id)}')" title="إرسال رابط المتابعة لولي الأمر عبر واتساب" style="padding: 0.2rem 0.45rem; font-size: 0.775rem; display: flex; align-items: center; gap: 0.2rem; color: #059669; border-color: rgba(5, 150, 105, 0.3);">
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendSingleParentLink('${escapeHtml(s.id)}')" title="إرسال رابط المتابعة لولي الأمر عبر واتساب" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.15rem; color: #059669; border-color: rgba(5, 150, 105, 0.3);">
                           <span>📲</span>
                           <span>إرسال</span>
                         </button>
-                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.previewParentPortal('${escapeHtml(s.id)}')" title="معاينة بوابة ولي الأمر في نافذة جديدة" style="padding: 0.2rem 0.35rem; font-size: 0.775rem; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700);">
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.previewParentPortal('${escapeHtml(s.id)}')" title="معاينة بوابة ولي الأمر" style="padding: 0.15rem 0.3rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700);">
                           <span>👁️</span>
                         </button>
                       </div>
-                      <div style="font-size: 0.7rem; display: flex; align-items: center; gap: 0.25rem;">
+
+                      <!-- Student Link Row -->
+                      <div style="display: flex; align-items: center; gap: 0.2rem;">
+                        <span style="font-size: 0.65rem; color: #1d4ed8; font-weight: 700; width: 35px;">الطالب:</span>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyStudentLink('${escapeHtml(s.id)}')" title="نسخ رابط بوابة الطالب (الماتريال والواجبات)" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.15rem; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;">
+                          <span>🎓</span>
+                          <span>نسخ</span>
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.previewStudentPortal('${escapeHtml(s.id)}')" title="معاينة بوابة الطالب (رفع الواجبات والماتريال)" style="padding: 0.15rem 0.3rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: #1d4ed8;">
+                          <span>👁️</span>
+                        </button>
+                      </div>
+
+                      <div style="font-size: 0.65rem; display: flex; align-items: center; gap: 0.25rem;">
                         ${s.parent_portal_sent_at ? `
-                          <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="تم الإرسال مسبقاً">
-                            <span style="display:inline-block; width:6px; height:6px; background:#059669; border-radius:50%;"></span>
-                            تم الإرسال
+                          <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="تم إرسال رابط ولي الأمر مسبقاً">
+                            <span style="display:inline-block; width:5px; height:5px; background:#059669; border-radius:50%;"></span>
+                            تم الإرسال لولي الأمر
                           </span>
                         ` : `
                           <span style="color: #94a3b8; font-weight: 600; display: inline-flex; align-items: center; gap: 0.2rem;">
-                            <span style="display:inline-block; width:6px; height:6px; background:#cbd5e1; border-radius:50%;"></span>
-                            جديد (لم يُرسل)
+                            <span style="display:inline-block; width:5px; height:5px; background:#cbd5e1; border-radius:50%;"></span>
+                            جديد (لم يُرسل بعد)
                           </span>
                         `}
                       </div>

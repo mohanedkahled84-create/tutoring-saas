@@ -25,6 +25,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}) {
     { id: 'sessions', title: 'بدء حصة ورصد الحضور', icon: 'sessions' },
     { id: 'quizzes', title: 'الكويزات والامتحانات', icon: 'reports' },
     { id: 'materials', title: 'المذكرات والماتريال', icon: 'materials' },
+    { id: 'homework', title: 'مراجعة وتصحيح الواجبات', icon: 'homework' },
     { id: 'assistants', title: 'إدارة المساعدين (الأسستنت)', icon: 'assistants' },
     { id: 'groups', title: 'مجاميعي الدراسية', icon: 'groups' },
     { id: 'students', title: 'دليل طلابي', icon: 'students' },

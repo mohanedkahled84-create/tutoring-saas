@@ -32,6 +32,7 @@ import { reportsRouter } from "./features/reports/index.js";
 import { quizzesRouter } from "./features/quizzes/routes.js";
 import { materialsRouter } from "./features/materials/routes.js";
 import { assistantsRouter } from "./features/assistants/routes.js";
+import { homeworkRouter, publicHomeworkRouter } from "./features/homework/routes.js";
 
 export function createApp(): Express {
   const app = express();
@@ -71,7 +72,7 @@ export function createApp(): Express {
     })
   );
   app.use(cookieParser());
-  app.use(express.json({ limit: "1mb" }));
+  app.use(express.json({ limit: "15mb" }));
 
   // Health and uptime monitoring (unthrottled for monitoring agents)
   app.use("/health", healthRouter);
@@ -81,6 +82,7 @@ export function createApp(): Express {
 
   // Public endpoints (Self-registration from shareable links - no token needed)
   app.use("/api/public", publicRouter);
+  app.use("/api/public/homework", publicHomeworkRouter);
 
   // DEV-81 (GAP.3): Webhooks with signature verification and idempotency guard
   app.use("/api/webhooks", paymentWebhookRouter);
@@ -112,6 +114,7 @@ export function createApp(): Express {
   app.use("/api/quizzes", authenticateUser, quizzesRouter);
   app.use("/api/materials", authenticateUser, materialsRouter);
   app.use("/api/assistants", authenticateUser, assistantsRouter);
+  app.use("/api/homework", authenticateUser, homeworkRouter);
 
   // DEV-WPA.1: Protected Internal Automation routes (shared-secret auth)
   app.use("/internal", authenticateInternalSecret, internalRouter);

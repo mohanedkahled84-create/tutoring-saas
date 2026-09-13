@@ -374,29 +374,6 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 </button>
               </div>
             </div>
-
-            <!-- Homework Radio Selector (Default: none / لم يُحدد) -->
-            <div class="form-group" style="margin-top: 0.75rem;">
-              <label class="form-label" style="font-size: 0.8rem;">حالة الواجب الدراسي للطالب:</label>
-              <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
-                <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; cursor: pointer; background: #f8fafc; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
-                  <input type="radio" name="scanHomework" value="none" id="hwNone" checked>
-                  <span style="color: var(--centrly-text); font-weight: 600;">لم يُحدد</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; cursor: pointer; background: #f8fafc; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
-                  <input type="radio" name="scanHomework" value="done" id="hwDone">
-                  <span style="color: var(--centrly-success); font-weight: 700;">كامل</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; cursor: pointer; background: #f8fafc; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
-                  <input type="radio" name="scanHomework" value="partial" id="hwPartial">
-                  <span style="color: var(--centrly-warning); font-weight: 700;">ناقص</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; cursor: pointer; background: #f8fafc; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line);">
-                  <input type="radio" name="scanHomework" value="missing" id="hwMissing">
-                  <span style="color: var(--centrly-danger); font-weight: 700;">لم يُسلم</span>
-                </label>
-              </div>
-            </div>
           </form>
 
           <!-- Scan Feedback -->
@@ -493,7 +470,6 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 <th>كود الطالب</th>
                 <th>اسم الطالب</th>
                 <th>الحالة</th>
-                <th>تعديل الواجب لايف</th>
                 <th>درجة الكويز</th>
                 <th>الملاحظات</th>
                 <th>وقت الرصد</th>
@@ -527,14 +503,6 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                     <span class="badge ${a.attended ? 'badge-success' : 'badge-danger'}">
                       ${a.attended ? 'حاضر' : 'غائب'}
                     </span>
-                  </td>
-                  <td>
-                    <select class="form-select" style="padding: 0.2rem 0.4rem; font-size: 0.8rem; font-weight: 700; width: 105px; border-radius: 6px;" onchange="window.centrlyApp.updateAttendanceHomework('${escapeHtml(a.id)}', this.value)">
-                      <option value="none" ${a.homework === 'none' || !a.homework ? 'selected' : ''}>لم يُحدد</option>
-                      <option value="done" ${a.homework === 'done' ? 'selected' : ''}>كامل</option>
-                      <option value="partial" ${a.homework === 'partial' ? 'selected' : ''}>ناقص</option>
-                      <option value="missing" ${a.homework === 'missing' ? 'selected' : ''}>لم يُسلم</option>
-                    </select>
                   </td>
                   <td>
                     <div style="display: inline-flex; align-items: center; gap: 0.3rem;">
