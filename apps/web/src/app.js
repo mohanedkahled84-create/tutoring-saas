@@ -4663,7 +4663,7 @@ class CentrlyApp {
         const canonicalOrigin = 'https://centerly-platform.vercel.app';
         const portalUrl = linkRes.full_url || `${canonicalOrigin}${linkRes.portal_url}`;
         const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
-        const msg = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (${studentName}).\n\nحرصاً على متابعة المستوى الدراسي لـ (${studentName}) أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:\n\n🔗 رابط المتابعة المباشر:\n${portalUrl}\n\n💡 من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول:\n• متابعة الحضور والغياب لحظياً.\n• درجات الكويزات والامتحانات الدورية.\n• تسليم الواجبات المنزلية وملاحظات المعلم.\n\nمع خالص التمنيات بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
+        const msg = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (${studentName}).\n\nحرصاً على متابعة المستوى الدراسي لـ (${studentName}) أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:\n\n*رابط المتابعة المباشر:*\n${portalUrl}\n\n*من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول:*\n- متابعة الحضور والغياب لحظياً.\n- درجات الكويزات والامتحانات الدورية.\n- تسليم الواجبات المنزلية وملاحظات المعلم.\n\nمع خالص التمنيات بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
         this.openDirectWhatsAppFallbackModal(studentName, parentPhone, msg, () => {
           if (student) {
             student.parent_portal_sent_at = new Date().toISOString();
@@ -4733,7 +4733,7 @@ class CentrlyApp {
           ? `${basePortalUrl}&portal=student` 
           : `${basePortalUrl}?portal=student`;
         const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
-        const msg = `السلام عليكم ورحمة الله وبركاته، يا بطل (${studentName}) 👋\n\nيسعدنا تزويدك برابط بوابتك التعليمية الرسمية لمتابعة دروسك وتحميل المذكرات ورفع الواجبات أولاً بأول:\n\n🔗 رابط بوابتك التعليمية المباشر:\n${studentUrl}\n\n💡 من خلال هذه البوابة يمكنك في أي وقت:\n• تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n• معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n• رفع حلول الواجبات وملفات الـ PDF مباشرة.\n• الاطلاع على درجات الكويزات وسجل حضورك.\n\nشد حيلك وبالتوفيق والتميز دائماً بإذن الله 🎯\nمع تحيات: ${teacherName}`;
+        const msg = `السلام عليكم ورحمة الله وبركاته، الطالب (${studentName}).\n\nيسعدنا تزويدك برابط بوابتك التعليمية الرسمية لمتابعة دروسك وتحميل المذكرات ورفع الواجبات أولاً بأول:\n\n*رابط بوابتك التعليمية المباشر:*\n${studentUrl}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\nمع خالص التمنيات بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
         this.openDirectWhatsAppFallbackModal(studentName, studentPhone, msg, () => {
           if (student) {
             student.student_portal_sent_at = new Date().toISOString();
@@ -6682,7 +6682,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           }
         }).catch(() => {});
       }
-      this.showToast('تم تحديث عنوان الكويز بنجاح ✓', 'info');
+      this.showToast('تم تحديث عنوان الكويز بنجاح', 'info');
       this.renderMainContent();
     }
   }
@@ -6713,7 +6713,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           }
         }).catch(() => {});
       }
-      this.showToast(`تم تحديث الدرجة العظمى إلى (${num} درجات) ✓`, 'info');
+      this.showToast(`تم تحديث الدرجة العظمى إلى (${num} درجات)`, 'info');
       this.renderMainContent();
     }
   }
@@ -6776,7 +6776,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         }).catch(() => {});
       }
 
-      this.showToast(`تم حفظ وتثبيت درجات كويز ${currQuizNum} لـ (${count}) طالب بنجاح! وستظهر فوراً في بوابات المتابعة ✓`, 'success');
+      this.showToast(`تم حفظ وتثبيت درجات كويز ${currQuizNum} لـ (${count}) طالب بنجاح! وستظهر فوراً في بوابات المتابعة`, 'success');
       this.renderMainContent();
     } catch (err) {
       this.showToast(`فشل حفظ درجات الكويز: ${err.message || 'خطأ في الخادم'}`, 'danger');
@@ -6817,7 +6817,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
       if (isDelivered) {
         const sentToStr = Array.isArray(res?.sent_to) && res.sent_to.length > 1 ? 'لولي الأمر والطالب معاً' : (res?.sent_to?.[0] === 'student' ? 'للطالب مباشرة' : 'لولي الأمر');
-        this.showToast(`تم إرسال إشعار درجة (${studentName}) ${sentToStr} بنجاح عبر واتساب ✓`, 'success');
+        this.showToast(`تم إرسال إشعار درجة (${studentName}) ${sentToStr} بنجاح عبر واتساب`, 'success');
       } else {
         this.showToast(`تعذر تسليم إشعار (${studentName}): ${res?.error || 'فشل التوصيل'}`, 'danger');
       }
@@ -7357,7 +7357,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         method: 'POST',
         body: { alert_type: 'absence_warning' },
       });
-      this.showToast(`تم إرسال تنبيه المتابعة لولي أمر (${studentName}) بنجاح عبر واتساب ✓`, 'success');
+      this.showToast(`تم إرسال تنبيه المتابعة لولي أمر (${studentName}) بنجاح عبر واتساب`, 'success');
       await this.loadRouteData('risk-watchlist');
     } catch (err) {
       this.showToast(`فشل إرسال تنبيه المتابعة: ${err.message || 'خطأ في الإرسال'}`, 'danger');
@@ -7594,12 +7594,14 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           <label class="form-label" style="font-weight: 700; margin-bottom: 0.4rem; display: block;">مصدر ملف الـ PDF *</label>
           <div style="display: flex; gap: 0.4rem; background: #f1f5f9; padding: 4px; border-radius: 0.5rem; margin-bottom: 0.75rem;">
             <button type="button" id="matPdfSourceBtn-upload" onclick="window.centrlyApp.switchMatPdfSource('upload')"
-              style="flex: 1; border: none; background: #ffffff; color: var(--centrly-blue-800); padding: 0.45rem; border-radius: 0.4rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: all 0.2s;">
-              📁 رفع ملف PDF من جهازك
+              style="flex: 1; border: none; background: #ffffff; color: var(--centrly-blue-800); padding: 0.45rem; border-radius: 0.4rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;">
+              ${getIcon('upload', 14)}
+              <span>رفع ملف PDF من جهازك</span>
             </button>
             <button type="button" id="matPdfSourceBtn-link" onclick="window.centrlyApp.switchMatPdfSource('link')"
-              style="flex: 1; border: none; background: transparent; color: #64748b; padding: 0.45rem; border-radius: 0.4rem; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-              🔗 رابط سحابي (Google Drive)
+              style="flex: 1; border: none; background: transparent; color: #64748b; padding: 0.45rem; border-radius: 0.4rem; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;">
+              ${getIcon('link', 14)}
+              <span>رابط سحابي (Google Drive)</span>
             </button>
           </div>
 
@@ -7632,7 +7634,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
                 </div>
               </div>
               <button type="button" onclick="window.centrlyApp.clearMatPdfFile()" class="btn btn-sm" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; font-weight: 700; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.4rem; cursor: pointer;">
-                ✕ تغيير الملف
+                تغيير الملف
               </button>
             </div>
           </div>
@@ -8285,7 +8287,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
                 </div>
               </div>
               <button type="button" onclick="window.centrlyApp.clearHwPdfFile()" class="btn btn-sm" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; font-weight: 700; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.4rem; cursor: pointer;">
-                ✕ تغيير الملف
+                تغيير الملف
               </button>
             </div>
           </div>

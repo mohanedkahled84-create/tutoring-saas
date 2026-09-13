@@ -252,7 +252,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
               title="حفظ ورصد درجات الكويز وتثبيتها في قاعدة البيانات"
             >
               ${getIcon('check', 18, '#ffffff')}
-              <span>حفظ ورصد درجات الكويز ✓</span>
+              <span>حفظ ورصد درجات الكويز</span>
             </button>
           </div>
         </div>
