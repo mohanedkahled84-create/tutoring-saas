@@ -38,6 +38,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
   const sessions = portalData.sessions || [];
   const quizzes = portalData.quizzes || [];
   const materials = portalData.materials || [];
+  const homeworkList = materials.filter(m => m.is_homework);
 
   return `
     <div style="min-height: 100vh; background-color: #f8fafc; padding: 1rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
@@ -67,11 +68,11 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           </div>
           
           <p style="font-size: 0.8rem; color: #64748b; margin: 0.4rem 0 0 0;">
-            تقرير الحضور، درجات الكويزات، والواجبات والمذكرات الدراسية
+            تقرير الحضور والغياب، درجات الكويزات، ومتابعة تسليم الواجبات المنزلية
           </p>
         </div>
 
-        <!-- 3-Tab Navigation Bar -->
+        <!-- 3-Tab Navigation Bar: Attendance, Quizzes, Homework Tracking -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
           <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('attendance') : null" id="tab-btn-attendance"
             style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
@@ -85,10 +86,10 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
             <span>الكويزات (${quizzes.length})</span>
           </button>
 
-          <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('materials') : null" id="tab-btn-materials"
-            style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            <span>📚</span>
-            <span>المذكرات (${materials.length})</span>
+          <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('homework') : null" id="tab-btn-homework"
+            style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'homework' || activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'homework' || activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'homework' || activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            <span>📝</span>
+            <span>الواجبات (${homeworkList.length})</span>
           </button>
         </div>
 
@@ -252,115 +253,119 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           </div>
         </div>
 
-        <!-- ================= TAB 3: STUDY MATERIALS & HOMEWORK ================= -->
-        <div id="tab-content-materials" style="display: ${activeTab === 'materials' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
+        <!-- ================= TAB 3: HOMEWORK STATUS (الواجب اتسلم ولا لأ فقط) ================= -->
+        <div id="tab-content-homework" style="display: ${activeTab === 'homework' || activeTab === 'materials' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
+          
+          <!-- Homework KPI Stats for Parent -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
+            <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">إجمالي الواجبات</div>
+              <div style="font-size: 1.6rem; font-weight: 900; color: #1d4ed8; margin-top: 0.2rem;">
+                ${homeworkList.length}
+              </div>
+              <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
+                مطلوبة لمجموعة الطالب
+              </div>
+            </div>
+
+            <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">تم تسليمه واعتُمِد ✅</div>
+              <div style="font-size: 1.6rem; font-weight: 900; color: #10b981; margin-top: 0.2rem;">
+                ${homeworkList.filter(h => h.submission_status === 'approved').length}
+              </div>
+              <div style="font-size: 0.725rem; color: #10b981; font-weight: 700; margin-top: 0.2rem;">
+                واجبات محلولة ومعتمدة
+              </div>
+            </div>
+
+            <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">لم يُسلّم بعد ❌</div>
+              <div style="font-size: 1.6rem; font-weight: 900; color: ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length > 0 ? '#ef4444' : '#64748b'}; margin-top: 0.2rem;">
+                ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length}
+              </div>
+              <div style="font-size: 0.725rem; color: ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length > 0 ? '#dc2626' : '#64748b'}; font-weight: 700; margin-top: 0.2rem;">
+                ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length > 0 ? 'بحاجة لمتابعة ولي الأمر' : 'لا توجد واجبات متأخرة'}
+              </div>
+            </div>
+          </div>
+
+          <!-- Homework List Section -->
           <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
               <div>
                 <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                  <span>📚</span>
-                  <span>المذكرات الدراسية والواجبات</span>
+                  <span>📝</span>
+                  <span>متابعة تسليم الواجبات المنزلية</span>
                 </h2>
                 <p style="font-size: 0.75rem; color: #64748b; margin: 0.2rem 0 0 0;">
-                  جميع المذكرات والشروحات الخاصة بمجموعة الطالب
+                  توضيح فوري لما تم تسليمه وما لم يقم الطالب بحله بعد
                 </p>
               </div>
-              <span class="badge badge-blue" style="font-weight: 700;">${materials.length} ملف</span>
+              <span class="badge badge-blue" style="font-weight: 700;">${homeworkList.length} واجب</span>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-              ${materials.length > 0 ? materials.map(m => {
-                const isPdf = m.type === 'pdf';
-                const isVideo = m.type === 'video';
-                const typeIcon = isPdf ? '📄 PDF' : (isVideo ? '🎥 فيديو' : '🔗 رابط');
-                const actionText = isPdf ? 'تحميل / فتح المذكرة' : (isVideo ? 'مشاهدة الفيديو' : 'فتح الرابط الخارجي');
+              ${homeworkList.length > 0 ? homeworkList.map(h => {
+                const isApproved = h.submission_status === 'approved';
+                const isPending = h.submission_status === 'pending';
+                const isRejected = h.submission_status === 'rejected';
+                const isMissing = !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing';
 
                 return `
-                  <div style="padding: 1rem; border-radius: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.6rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-                      <div style="flex: 1;">
-                        <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.25rem;">
-                          <span style="font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 0.35rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
-                            ${typeIcon}
-                          </span>
-                          ${m.is_homework ? `
-                            <span style="font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 0.35rem; background: #fef3c7; color: #b45309; border: 1px solid #fde68a;">
-                              📝 واجب منزلي
-                            </span>
-                          ` : ''}
+                  <div style="padding: 1.1rem; border-radius: 0.75rem; background: #f8fafc; border: 1px solid ${isApproved ? '#bbf7d0' : (isMissing ? '#fecaca' : '#e2e8f0')}; display: flex; flex-direction: column; gap: 0.6rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+                      <div style="flex: 1; min-width: 200px;">
+                        <div style="font-size: 0.72rem; font-weight: 800; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; display: inline-block; padding: 0.2rem 0.5rem; border-radius: 0.35rem; margin-bottom: 0.35rem;">
+                          واجب منزلي
                         </div>
-                        <h3 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0;">
-                          ${escapeHtml(m.title)}
+                        <h3 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0;">
+                          ${escapeHtml(h.title)}
                         </h3>
-                        ${m.description ? `
-                          <p style="font-size: 0.8rem; color: #475569; margin: 0.35rem 0 0 0; line-height: 1.5;">
-                            ${escapeHtml(m.description)}
-                          </p>
-                        ` : ''}
-                      </div>
-                    </div>
-
-                    ${m.is_homework && m.due_date ? `
-                      <div style="font-size: 0.75rem; color: #b45309; background: #fffbeb; padding: 0.4rem 0.65rem; border-radius: 0.4rem; border: 1px solid #fef3c7; display: flex; align-items: center; gap: 0.3rem;">
-                        <span>⏰</span>
-                        <span>آخر موعد للتسليم: <b>${escapeHtml(m.due_date)}</b></span>
-                      </div>
-                    ` : ''}
-
-                    ${m.is_homework ? `
-                      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.65rem 0.85rem; font-size: 0.825rem; display: flex; flex-direction: column; gap: 0.4rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem;">
-                          <span style="font-weight: 700; color: #334155;">حالة تسليم الطالب للواجب:</span>
-                          ${m.submission_status === 'approved' ? `
-                            <span style="color: #059669; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 0.2rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem;">
-                              تم التسليم والاعتماد ✅
-                            </span>
-                          ` : (m.submission_status === 'pending' ? `
-                            <span style="color: #d97706; font-weight: 800; background: #fffbeb; border: 1px solid #fde68a; padding: 0.2rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem;">
-                              تم الرفع • قيد التصحيح ⏳
-                            </span>
-                          ` : (m.submission_status === 'rejected' ? `
-                            <span style="color: #dc2626; font-weight: 800; background: #fef2f2; border: 1px solid #fca5a5; padding: 0.2rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem;">
-                              يحتاج إعادة تسليم ⚠️
-                            </span>
-                          ` : `
-                            <span style="color: #dc2626; font-weight: 800; background: #fef2f2; border: 1px solid #fca5a5; padding: 0.2rem 0.55rem; border-radius: 0.35rem; font-size: 0.75rem;">
-                              لم يُسلّم بعد ❌
-                            </span>
-                          `))}
-                        </div>
-
-                        ${m.teacher_feedback ? `
-                          <div style="font-size: 0.775rem; background: #fff7ed; border-right: 3px solid #ea580c; padding: 0.35rem 0.6rem; border-radius: 0.3rem; color: #9a3412;">
-                            <b>ملاحظة المعلم:</b> ${escapeHtml(m.teacher_feedback)}
-                          </div>
-                        ` : ''}
-
-                        ${m.submission_url ? `
-                          <div style="display: flex; justify-content: flex-end; margin-top: 0.2rem;">
-                            <a href="${escapeHtml(m.submission_url)}" target="_blank" rel="noopener noreferrer"
-                              style="font-size: 0.775rem; color: #2563eb; font-weight: 700; text-decoration: underline;">
-                              📄 الاطلاع على حل الطالب المرفوع
-                            </a>
+                        ${h.due_date ? `
+                          <div style="font-size: 0.775rem; color: #64748b; margin-top: 0.35rem; display: flex; align-items: center; gap: 0.3rem;">
+                            <span>⏰</span>
+                            <span>آخر موعد للتسليم: <b>${escapeHtml(h.due_date)}</b></span>
                           </div>
                         ` : ''}
                       </div>
-                    ` : ''}
 
-                    <div style="display: flex; justify-content: flex-end; margin-top: 0.25rem;">
-                      <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer"
-                        style="display: inline-flex; align-items: center; gap: 0.4rem; background: #1d4ed8; color: #ffffff; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.825rem; font-weight: 700; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
-                        <span>📥</span>
-                        <span>${actionText}</span>
-                      </a>
+                      <!-- Big Status Badge for Parent -->
+                      <div>
+                        ${isApproved ? `
+                          <span style="display: inline-flex; align-items: center; gap: 0.35rem; color: #15803d; background: #f0fdf4; border: 1px solid #86efac; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
+                            <span>✅</span>
+                            <span>تم التسليم والاعتماد</span>
+                          </span>
+                        ` : (isPending ? `
+                          <span style="display: inline-flex; align-items: center; gap: 0.35rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
+                            <span>⏳</span>
+                            <span>تم التسليم • قيد التصحيح</span>
+                          </span>
+                        ` : (isRejected ? `
+                          <span style="display: inline-flex; align-items: center; gap: 0.35rem; color: #b91c1c; background: #fef2f2; border: 1px solid #fca5a5; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
+                            <span>⚠️</span>
+                            <span>يحتاج إعادة حل وتصحيح</span>
+                          </span>
+                        ` : `
+                          <span style="display: inline-flex; align-items: center; gap: 0.35rem; color: #dc2626; background: #fff1f2; border: 1px solid #fecdd3; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
+                            <span>❌</span>
+                            <span>لم يتم تسليم الواجب بعد</span>
+                          </span>
+                        `))}
+                      </div>
                     </div>
+
+                    ${h.teacher_feedback ? `
+                      <div style="font-size: 0.825rem; background: #fff7ed; border-right: 3px solid #ea580c; padding: 0.5rem 0.75rem; border-radius: 0.35rem; color: #9a3412; margin-top: 0.2rem;">
+                        <b>ملاحظة المعلم لولي الأمر:</b> ${escapeHtml(h.teacher_feedback)}
+                      </div>
+                    ` : ''}
                   </div>
                 `;
               }).join('') : `
                 <div style="text-align: center; padding: 2.5rem 1rem; color: #64748b; font-size: 0.85rem; background: #f8fafc; border-radius: 0.75rem; border: 1px dashed #cbd5e1;">
-                  <div style="font-size: 2rem; margin-bottom: 0.5rem;">📚</div>
-                  لم يتم إضافة مذكرات أو واجبات دراسية لهذه المجموعة بعد.<br>
-                  ستظهر الملفات هنا فور إضافتها من قِبل المعلم مباشرة.
+                  <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+                  لا توجد واجبات مطلوبة مسجلة لهذه المجموعة حتى الآن.
                 </div>
               `}
             </div>
@@ -381,17 +386,18 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
 // Global helper for switching tabs
 if (typeof window !== 'undefined') {
   window.switchParentPortalTab = function(tabName) {
-    const tabs = ['attendance', 'quizzes', 'materials'];
+    const target = (tabName === 'materials') ? 'homework' : tabName;
+    const tabs = ['attendance', 'quizzes', 'homework'];
     tabs.forEach(t => {
       const content = document.getElementById('tab-content-' + t);
       const btn = document.getElementById('tab-btn-' + t);
       if (content) {
-        content.style.display = (t === tabName) ? 'flex' : 'none';
+        content.style.display = (t === target) ? 'flex' : 'none';
       }
       if (btn) {
-        btn.style.background = (t === tabName) ? '#ffffff' : 'transparent';
-        btn.style.color = (t === tabName) ? '#1e3a8a' : '#64748b';
-        btn.style.boxShadow = (t === tabName) ? '0 2px 6px rgba(0,0,0,0.08)' : 'none';
+        btn.style.background = (t === target) ? '#ffffff' : 'transparent';
+        btn.style.color = (t === target) ? '#1e3a8a' : '#64748b';
+        btn.style.boxShadow = (t === target) ? '0 2px 6px rgba(0,0,0,0.08)' : 'none';
       }
     });
   };
