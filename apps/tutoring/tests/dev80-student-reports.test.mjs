@@ -232,7 +232,7 @@ test("DEV-80: formatStudentReportMessage generates clear Arabic message with med
 
   assert.ok(msg.includes("يوسف حسن"));
   assert.ok(msg.includes("2001"));
-  assert.ok(msg.includes("🥇 الأول"));
+  assert.ok(msg.includes("المركز الأول"));
   assert.ok(msg.includes("نسبة الالتزام بالحضور: 100%"));
   assert.ok(msg.includes("متوسط الدرجات: 98.5%"));
   assert.ok(msg.includes("مجموعة التفوق"));

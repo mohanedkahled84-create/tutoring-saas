@@ -76,7 +76,7 @@ export function validateEnv(
       .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)
       .join("\n");
     if (exitOnError) {
-      console.error(`\n❌ [FATAL] Environment configuration error at startup:\n${errorDetails}\n`);
+      console.error(`\n[FATAL] Environment configuration error at startup:\n${errorDetails}\n`);
       process.exit(1);
     }
     throw new Error(`Environment validation failed:\n${errorDetails}`);

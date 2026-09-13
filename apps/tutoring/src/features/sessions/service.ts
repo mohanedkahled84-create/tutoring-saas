@@ -66,10 +66,10 @@ export class SessionsService {
       const groupName = sessionData.group.name || "المجموعة";
       const sessionDate = sessionData.session.session_date;
       const noticeBody = [
-        "⚠️ *إلغاء حصة* ⚠️",
+        "*إلغاء حصة*",
         "━━━━━━━━━━━━━━━━━━━━━",
         `أولياء الأمور الكرام، نود إحاطتكم بأنه تم إلغاء حصة *${groupName}* المقررة بتاريخ ${sessionDate}.`,
-        input.reason ? `📌 *السبب:* ${input.reason}` : null,
+        input.reason ? `• *السبب:* ${input.reason}` : null,
         "━━━━━━━━━━━━━━━━━━━━━",
         "_نعتذر عن أي إزعاج ونوافيكم بالموعد البديل لاحقاً._",
       ]
@@ -130,11 +130,11 @@ export class SessionsService {
       const oldDate = sessionData.session.session_date;
       const timeStr = input.new_time ? ` الساعة ${input.new_time}` : "";
       const noticeBody = [
-        "📅 *تعديل موعد حصة* 📅",
+        "*تعديل موعد حصة*",
         "━━━━━━━━━━━━━━━━━━━━━",
         `أولياء الأمور الكرام، تم تعديل موعد حصة *${groupName}* (المقررة أصلاً في ${oldDate}).`,
-        `⏰ *الموعد الجديد:* يوم ${input.new_date}${timeStr}`,
-        input.reason ? `📌 *السبب:* ${input.reason}` : null,
+        `• *الموعد الجديد:* يوم ${input.new_date}${timeStr}`,
+        input.reason ? `• *السبب:* ${input.reason}` : null,
         "━━━━━━━━━━━━━━━━━━━━━",
         "_يرجى التنبيه على الطالب بالحضور في الموعد الجديد._",
       ]
@@ -192,11 +192,11 @@ export class SessionsService {
       const groupName = sessionWithGroup?.group.name || "المجموعة";
       const timeStr = input.session_time ? ` الساعة ${input.session_time}` : "";
       const noticeBody = [
-        "📢 *حصة إضافية / تعويضية* 📢",
+        "*حصة إضافية / تعويضية*",
         "━━━━━━━━━━━━━━━━━━━━━",
         `أولياء الأمور الكرام، تم تحديد موعد لحصة إضافية لمجموعة *${groupName}*.`,
-        `📅 *التاريخ:* ${input.session_date}${timeStr}`,
-        input.topic ? `📖 *الموضوع:* ${input.topic}` : null,
+        `• *التاريخ:* ${input.session_date}${timeStr}`,
+        input.topic ? `• *الموضوع:* ${input.topic}` : null,
         "━━━━━━━━━━━━━━━━━━━━━",
         "_حضور الطالب ضروري ومهم للاستفادة._",
       ]
@@ -403,18 +403,18 @@ export class SessionsService {
     }
 
     const formattedReceipt = [
-      "🧾 *إيصال تصفية الحصة / Session Settlement Receipt*",
+      "*إيصال تصفية الحصة / Session Settlement Receipt*",
       "━━━━━━━━━━━━━━━━━━━━━",
-      `🏫 *المجموعة:* ${group.name || ""}`,
-      group.center_name ? `📍 *السنتر:* ${group.center_name}` : null,
-      `📅 *التاريخ:* ${session.session_date} | *حصة رقم:* ${session.session_number}`,
-      `👥 *إجمالي الحضور:* ${presentCount} طالب (منهم ${exemptCount} منحة / معفي)`,
-      `❌ *إجمالي الغياب:* ${absentCount} طالب`,
-      makeupCount > 0 ? `🔄 *طلاب التعويض:* ${makeupCount} طالب` : null,
+      `• *المجموعة:* ${group.name || ""}`,
+      group.center_name ? `• *السنتر:* ${group.center_name}` : null,
+      `• *التاريخ:* ${session.session_date} | *حصة رقم:* ${session.session_number}`,
+      `• *إجمالي الحضور:* ${presentCount} طالب (منهم ${exemptCount} منحة / معفي)`,
+      `• *إجمالي الغياب:* ${absentCount} طالب`,
+      makeupCount > 0 ? `• *طلاب التعويض:* ${makeupCount} طالب` : null,
       "━━━━━━━━━━━━━━━━━━━━━",
-      `💵 *إجمالي النقدية المحصلة:* ${totalRevenue} ج.م`,
-      `🏢 *حصة السنتر:* ${centerShare} ج.م`,
-      `👨‍🏫 *صافي المعلم:* ${teacherShare} ج.م`,
+      `• *إجمالي النقدية المحصلة:* ${totalRevenue} ج.م`,
+      `• *حصة السنتر:* ${centerShare} ج.م`,
+      `• *صافي المعلم:* ${teacherShare} ج.م`,
       "━━━━━━━━━━━━━━━━━━━━━",
       `_تم الاستخراج آلياً بتاريخ ${new Date().toLocaleDateString("ar-EG")}_`,
     ]

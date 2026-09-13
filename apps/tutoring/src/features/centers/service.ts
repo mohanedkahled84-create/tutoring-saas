@@ -562,7 +562,7 @@ export class CentersService {
       return {
         success: true,
         mode: "front_desk",
-        message: `✅ ${student.name} — حاضر (${exactMatch.subject || "حصة"} - ${exactMatch.room_name || "قاعة"} - مستر ${exactMatch.teacher_name || "المدرس"})`,
+        message: `${student.name} — حاضر (${exactMatch.subject || "حصة"} - ${exactMatch.room_name || "قاعة"} - مستر ${exactMatch.teacher_name || "المدرس"})`,
         audio_alert: "success",
         student,
         session: {
@@ -595,7 +595,7 @@ export class CentersService {
       return {
         success: true,
         mode: "front_desk",
-        message: `✅ ${student.name} — حاضر [تعويض] (${makeupMatch.subject || "حصة"} - ${makeupMatch.room_name || "قاعة"} - مستر ${makeupMatch.teacher_name || "المدرس"})`,
+        message: `${student.name} — حاضر [تعويض] (${makeupMatch.subject || "حصة"} - ${makeupMatch.room_name || "قاعة"} - مستر ${makeupMatch.teacher_name || "المدرس"})`,
         audio_alert: "success",
         student,
         session: {

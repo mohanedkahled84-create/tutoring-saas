@@ -142,9 +142,9 @@ test("DEV-75: formatNewSignupMessage formats distinct alerts for Center vs Solo 
     trial_ends_at: "2026-09-19",
   });
 
-  assert.ok(centerAlert.includes("🏢 *تسجيل سنتر تعليمي جديد في المنصة!*"));
-  assert.ok(centerAlert.includes("🏢 *نوع الحساب:* سنتر تعليمي (Center)"));
-  assert.ok(centerAlert.includes("🏢 *اسم السنتر:* سنتر الأوائل"));
+  assert.ok(centerAlert.includes("*تسجيل سنتر تعليمي جديد في المنصة!*"));
+  assert.ok(centerAlert.includes("• *نوع الحساب:* سنتر تعليمي (Center)"));
+  assert.ok(centerAlert.includes("• *اسم السنتر:* سنتر الأوائل"));
 
   const teacherAlert = formatNewSignupMessage({
     teacher_name: "أ. محمود",
@@ -154,9 +154,9 @@ test("DEV-75: formatNewSignupMessage formats distinct alerts for Center vs Solo 
     trial_ends_at: "2026-09-19",
   });
 
-  assert.ok(teacherAlert.includes("🚀 *تسجيل معلم جديد في المنصة!*"));
-  assert.ok(teacherAlert.includes("🏢 *نوع الحساب:* معلم فردي (Solo Teacher)"));
-  assert.ok(teacherAlert.includes("👤 *المعلم:* أ. محمود"));
+  assert.ok(teacherAlert.includes("*تسجيل معلم جديد في المنصة!*"));
+  assert.ok(teacherAlert.includes("• *نوع الحساب:* معلم فردي (Solo Teacher)"));
+  assert.ok(teacherAlert.includes("• *المعلم:* أ. محمود"));
 });
 
 // ============================================================================

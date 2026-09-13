@@ -126,35 +126,35 @@ export function formatStudentReportMessage(
   const periodText = periodName || "الشهر الحالي";
   const rankBadge =
     record.rank === 1
-      ? "🥇 الأول"
+      ? "المركز الأول"
       : record.rank === 2
-        ? "🥈 الثاني"
+        ? "المركز الثاني"
         : record.rank === 3
-          ? "🥉 الثالث"
+          ? "المركز الثالث"
           : `المركز ${record.rank}`;
 
   return [
-    `📊 *تقرير الأداء والمتابعة الأكاديمية*`,
+    `*تقرير الأداء والمتابعة الأكاديمية*`,
     `--------------------------------`,
     `عزيزي ولي أمر الطالب: *${record.student_name}*`,
     `كود الطالب: \`${record.student_code}\``,
     `الفترة: ${periodText}`,
     record.group_name ? `المجموعة: ${record.group_name}` : null,
     ``,
-    `📈 *ملخص الحضور والغياب:*`,
+    `*ملخص الحضور والغياب:*`,
     `• إجمالي الحصص: ${record.total_sessions}`,
     `• عدد مرات الحضور: ${record.attended_sessions}`,
     `• عدد مرات الغياب: ${record.absent_sessions}`,
     `• نسبة الالتزام بالحضور: ${record.attendance_rate}%`,
     ``,
-    `📝 *التقييم والدرجات:*`,
+    `*التقييم والدرجات:*`,
     `• عدد الاختبارات / الكويزات: ${record.total_quizzes}`,
     `• متوسط الدرجات: ${record.average_score}%`,
     `• الترتيب في لوحة التميز: *${rankBadge}*`,
     `• التقييم العام: ${record.overall_score}%`,
     ``,
     `--------------------------------`,
-    `نتمنى لطلابنا دوام التوفيق والتميز الدراسي! ✨`,
+    `نتمنى لطلابنا دوام التوفيق والتميز الدراسي.`,
   ]
     .filter((line) => line !== null)
     .join("\n");

@@ -1779,7 +1779,7 @@ class CentrlyApp {
                 ${modeTitle}
               </div>
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeCameraScannerModal()" style="border: none; font-size: 1.2rem; cursor: pointer; padding: 0.2rem 0.6rem;">✕</button>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeCameraScannerModal()" style="border: none; cursor: pointer; padding: 0.35rem 0.6rem; display: flex; align-items: center;">${getIcon('close', 16, '#64748b')}</button>
           </div>
 
           <!-- Camera Viewport Container -->
@@ -2022,7 +2022,7 @@ class CentrlyApp {
                 دليل وضبط أجهزة الباركود سكانر (Hardware Setup)
               </h3>
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('scannerSetupModal')?.remove()" style="border: none; font-size: 1.2rem; cursor: pointer; padding: 0.2rem 0.6rem;">✕</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('scannerSetupModal')?.remove()" style="border: none; cursor: pointer; padding: 0.35rem 0.6rem; display: flex; align-items: center;">${getIcon('close', 16, '#64748b')}</button>
           </div>
 
           <!-- Step 1: Plug & Play -->
@@ -2106,7 +2106,7 @@ class CentrlyApp {
       <div class="modal-dialog" dir="rtl">
         <div class="modal-header">
           <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">${title}</h3>
-          <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeModal()" style="padding: 0.2rem 0.5rem; font-size: 1rem; border: none; cursor: pointer;">✕</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeModal()" style="padding: 0.35rem 0.55rem; border: none; cursor: pointer; display: flex; align-items: center;">${getIcon('close', 16, '#64748b')}</button>
         </div>
         <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
           ${bodyHtml}
@@ -2300,7 +2300,7 @@ class CentrlyApp {
         <span style="display: flex; align-items: center;">${toastIcon}</span>
         <span>${escapeHtml(message)}</span>
       </div>
-      <button style="background: transparent; border: none; color: #fff; cursor: pointer; font-size: 1.1rem; padding: 0 4px; opacity: 0.8;" onclick="this.parentElement.remove()">✕</button>
+      <button style="background: transparent; border: none; color: #fff; cursor: pointer; padding: 0 4px; opacity: 0.85; display: flex; align-items: center;" onclick="this.parentElement.remove()">${getIcon('close', 14, '#ffffff')}</button>
     `;
 
     container.appendChild(toast);
@@ -2336,7 +2336,7 @@ class CentrlyApp {
           <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: ${isDanger ? 'var(--centrly-danger)' : 'var(--centrly-ink)'};">
             ${escapeHtml(title)}
           </h3>
-          <button onclick="document.getElementById('centrlyConfirmModal')?.remove()" style="background: transparent; border: none; cursor: pointer; font-size: 1.2rem; color: var(--centrly-text);">✕</button>
+          <button onclick="document.getElementById('centrlyConfirmModal')?.remove()" style="background: transparent; border: none; cursor: pointer; color: var(--centrly-text); display: flex; align-items: center;">${getIcon('close', 16, 'currentColor')}</button>
         </div>
         <div style="padding: 1.5rem; font-size: 0.925rem; color: var(--centrly-ink); line-height: 1.6;">
           ${escapeHtml(message)}
@@ -6261,7 +6261,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
                 <strong style="color: var(--centrly-blue-700);">${planName}</strong> — <strong>${Number(amount).toLocaleString('ar-EG')} ج.م</strong> (${periodLabel})
               </p>
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closePaymentProofModal()" style="border: none; font-size: 1.2rem; cursor: pointer;">✕</button>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closePaymentProofModal()" style="border: none; cursor: pointer; padding: 0.35rem 0.6rem; display: flex; align-items: center;">${getIcon('close', 16, '#64748b')}</button>
           </div>
 
           <form onsubmit="window.centrlyApp.handleSubmitPaymentProof(event, ${amount}, '${planName}', '${billingCycle}')">
@@ -6887,7 +6887,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink);">
             إرسال درجات الكويز دفعة واحدة (Ultra Anti-Ban)
           </h3>
-          <button onclick="document.getElementById('centrlyConfirmModal')?.remove()" style="background: transparent; border: none; cursor: pointer; font-size: 1.2rem; color: var(--centrly-text);">✕</button>
+          <button onclick="document.getElementById('centrlyConfirmModal')?.remove()" style="background: transparent; border: none; cursor: pointer; color: var(--centrly-text); display: flex; align-items: center;">${getIcon('close', 16, 'currentColor')}</button>
         </div>
         <div style="padding: 1.5rem; font-size: 0.925rem; color: var(--centrly-ink); line-height: 1.6;">
           <p style="margin: 0 0 1rem 0;">

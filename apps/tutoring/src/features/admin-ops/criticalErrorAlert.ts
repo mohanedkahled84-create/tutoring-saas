@@ -43,14 +43,14 @@ export function formatCriticalAlertEmail(
 ): { subject: string; html: string; text: string } {
   const timestamp = payload.occurred_at || new Date().toISOString();
   const cairoTime = new Date(timestamp).toLocaleString("ar-EG", { timeZone: "Africa/Cairo" });
-  const subject = `🚨 [CRITICAL ALERT] Centrly Incident: ${payload.error_name}`;
+  const subject = `[CRITICAL ALERT] Centrly Incident: ${payload.error_name}`;
 
   const stackSnippet = payload.stack
     ? payload.stack.split("\n").slice(0, 6).join("\n")
     : "No stack trace available";
 
   const text = [
-    `🚨 CENTRLY CRITICAL OPS ALERT`,
+    `CENTRLY CRITICAL OPS ALERT`,
     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
     `Environment: ${config.nodeEnv.toUpperCase()}`,
     `Severity: ${payload.severity || "CRITICAL"}`,
@@ -62,7 +62,7 @@ export function formatCriticalAlertEmail(
     payload.context?.tenant_id ? `Tenant ID: ${payload.context.tenant_id}` : null,
     payload.context?.ip ? `IP Address: ${payload.context.ip}` : null,
     suppressedCount > 0
-      ? `⚠️ Note: ${suppressedCount} duplicate occurrences were suppressed during the cooldown window.`
+      ? `Note: ${suppressedCount} duplicate occurrences were suppressed during the cooldown window.`
       : null,
     `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
     `Stack Trace:`,
@@ -73,7 +73,7 @@ export function formatCriticalAlertEmail(
 
   const html = `
     <div style="font-family: Arial, sans-serif; background: #fdf2f2; padding: 24px; border-radius: 8px; border: 1px solid #f87171;">
-      <h2 style="color: #b91c1c; margin-top: 0;">🚨 Centrly Ops Alert: ${payload.error_name}</h2>
+      <h2 style="color: #b91c1c; margin-top: 0;">Centrly Ops Alert: ${payload.error_name}</h2>
       <p style="font-size: 14px; color: #374151;">A critical error or unhandled failure occurred in production.</p>
       
       <table style="width: 100%; border-collapse: collapse; margin: 16px 0; background: #fff; border-radius: 4px; overflow: hidden;">
@@ -107,7 +107,7 @@ export function formatCriticalAlertEmail(
 
       ${suppressedCount > 0 ? `
         <div style="background: #fef3c7; color: #92400e; padding: 8px 12px; border-radius: 4px; margin-bottom: 16px; font-size: 13px;">
-          ⚠️ <b>Rate Limit Dedup:</b> ${suppressedCount} duplicate events were suppressed during cooldown.
+          <b>Rate Limit Dedup:</b> ${suppressedCount} duplicate events were suppressed during cooldown.
         </div>` : ""}
 
       <h4 style="color: #374151; margin-bottom: 6px;">Stack Trace (Top Frames):</h4>
