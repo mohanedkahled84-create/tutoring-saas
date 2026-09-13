@@ -13,8 +13,23 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
 
   // If NO active or scheduled session is active, render clean standby state
   if (!hasActiveSession) {
-    const today = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const arabicDayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const now = new Date();
+    const todayArabic = arabicDayNames[now.getDay()];
+    const todayFormatted = now.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const availableGroups = groups || [];
+
+    const todayGroups = [];
+    const otherGroups = [];
+
+    availableGroups.forEach(g => {
+      const gDay = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || '';
+      if (gDay === todayArabic) {
+        todayGroups.push(g);
+      } else {
+        otherGroups.push(g);
+      }
+    });
 
     return `
       <div style="display: flex; flex-direction: column; gap: 1.5rem;">
@@ -28,18 +43,22 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 <span>الحصص ولوحة المساعد الذكية</span>
               </h2>
               <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
-                اليوم: <b style="color: var(--centrly-ink);">${today}</b> • نظام الرصد اللحظي بالحضور والباركود
+                اليوم: <b style="color: var(--centrly-ink);">${todayFormatted}</b> • اختر مجموعتك لبدء رصد الحضور بالباركود أو الكاميرا
               </p>
             </div>
 
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openOtherSessionsModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--centrly-blue-700); border-color: var(--centrly-blue-700); background: #f0f9ff;">
+                ${getIcon('calendar', 18)}
+                <span>حصص أخرى (${otherGroups.length})</span>
+              </button>
               <button class="btn btn-primary" onclick="window.centrlyApp.openStartNewSessionModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
                 ${getIcon('sessions', 18)}
-                <span>بدء حصة جديدة الآن</span>
+                <span>بدء حصة جديدة</span>
               </button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openScheduleSessionModal()" style="display: flex; align-items: center; gap: 0.4rem;">
                 ${getIcon('calendar', 18)}
-                <span>جدولة حصة استثنائية</span>
+                <span>جدولة استثنائية</span>
               </button>
             </div>
           </div>
@@ -77,39 +96,46 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
           </div>
         ` : ''}
 
-        <!-- Suggested Sessions / Groups Today for Quick Start -->
+        <!-- 1. Today's Scheduled Sessions Section -->
         <div class="card" style="margin: 0; border: 1px solid var(--centrly-line); background: #ffffff;">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem;">
             <div>
               <h3 class="card-title" style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; margin: 0; color: var(--centrly-ink);">
                 <span>${getIcon('calendar', 20, 'var(--centrly-blue-700)')}</span>
-                <span>حصص اليوم والمجموعات المقترحة للبدء الفوري</span>
+                <span>حصص ومجموعات اليوم (${todayArabic})</span>
               </h3>
               <p style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem;">
-                لم يتم تسجيل أي حضور حتى الآن. يمكنك بدء تسجيل حضور الطلاب مسبقاً قبل موعد الحصة لتسهيل وتسريع دخول الطلاب
+                لم يتم تسجيل أي حضور حتى الآن. الحصص المجدولة وفق الجدول الأسبوعي لهذا اليوم. اضغط على بدء الحضور للبدء الفوري برصد الطلاب
               </p>
             </div>
-            <span class="badge badge-blue" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
-              ${availableGroups.length} مجموعات متاحة
-            </span>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="badge badge-blue" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; font-weight: 700;">
+                ${todayGroups.length} حصص اليوم
+              </span>
+              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openOtherSessionsModal()" style="font-size: 0.8rem; font-weight: 700; color: var(--centrly-blue-700); border-color: var(--centrly-blue-700);">
+                ${getIcon('calendar', 14)} <span>حصص أخرى</span>
+              </button>
+            </div>
           </div>
 
-          ${availableGroups.length > 0 ? `
+          ${todayGroups.length > 0 ? `
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
-              ${availableGroups.map(g => `
-                <div style="border: 1px solid var(--centrly-line); border-radius: 10px; padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; justify-content: space-between; gap: 0.75rem;">
+              ${todayGroups.map(g => `
+                <div style="border: 1px solid #bfdbfe; border-radius: 10px; padding: 1.1rem; background: #f8fafc; display: flex; flex-direction: column; justify-content: space-between; gap: 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
                   <div>
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-                      <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--centrly-ink);">${escapeHtml(g.name)}</h4>
-                      <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 0.75rem;">${escapeHtml(g.session_time || g.schedule || 'اليوم')}</span>
+                      <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--centrly-ink);">${escapeHtml(g.name)}</h4>
+                      <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 0.75rem; font-weight: 700;">${escapeHtml(g.session_time || g.schedule || 'اليوم')}</span>
                     </div>
-                    <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.4rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                      <span>سعر الحصة: <b style="color: var(--centrly-ink);">${escapeHtml(g.price || 0)} ج.م</b></span>
+                    <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                      <span>السنتر: <b style="color: var(--centrly-ink);">${escapeHtml(g.center_name || g.centerName || 'السنتر')}</b></span>
                       ${g.room_name || g.room ? `<span>القاعة: <b style="color: var(--centrly-blue-800);">${escapeHtml(g.room_name || g.room)}</b></span>` : ''}
+                      <span>الطلاب: <b style="color: var(--centrly-ink);">${escapeHtml(g.studentCount || g.students_count || 0)} طالب</b></span>
+                      <span>سعر الحصة: <b style="color: var(--centrly-ink);">${escapeHtml(g.price || 0)} ج.م</b></span>
                     </div>
                   </div>
 
-                  <button class="btn btn-primary" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 700; padding: 0.55rem;">
+                  <button class="btn btn-primary" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 800; padding: 0.6rem; font-size: 0.9rem;">
                     ${getIcon('sessions', 16)}
                     <span>بدء تسجيل الحضور الآن</span>
                   </button>
@@ -117,15 +143,78 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
               `).join('')}
             </div>
           ` : `
-            <div style="text-align: center; padding: 2.5rem 1rem;">
-              <p style="font-size: 0.9rem; color: var(--centrly-text); margin-bottom: 1rem;">لا توجد مجموعات دراسية مسجلة حتى الآن.</p>
-              <button class="btn btn-primary" onclick="window.centrlyApp.openCreateGroupModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700;">
-                ${getIcon('add', 18)}
-                <span>إنشاء أول مجموعة لبدء الحصص</span>
+            <div style="text-align: center; padding: 2rem 1rem; background: #f8fafc; border-radius: 8px; margin-top: 1rem; border: 1px dashed var(--centrly-line);">
+              <div style="color: var(--centrly-ink); font-weight: 700; margin-bottom: 0.4rem; font-size: 0.95rem;">
+                لا توجد حصص مجدولة لليوم (${todayArabic})
+              </div>
+              <p style="font-size: 0.825rem; color: var(--centrly-text); margin-bottom: 1rem;">
+                يمكنك الاختيار من المجموعات الأخرى بالأسفل أو الضغط على زر <b>حصص أخرى</b> لبدء أي مجموعة مسجلة.
+              </p>
+              <button class="btn btn-primary" onclick="window.centrlyApp.openOtherSessionsModal()" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                ${getIcon('calendar', 16)}
+                <span>اختيار من الحصص الأخرى (${otherGroups.length})</span>
               </button>
             </div>
           `}
         </div>
+
+        <!-- 2. Other Sessions & Groups Section -->
+        ${otherGroups.length > 0 ? `
+          <div class="card" style="margin: 0; border: 1px solid var(--centrly-line); background: #ffffff;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem;">
+              <div>
+                <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem; margin: 0; color: var(--centrly-ink);">
+                  <span>${getIcon('groups', 20, 'var(--centrly-blue-700)')}</span>
+                  <span>حصص ومجموعات أخرى</span>
+                </h3>
+                <p style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem;">
+                  باقي المجموعات المجدولة في أيام الأسبوع الأخرى. يمكنك بدء تسجيل حضور أي حصة منها الآن
+                </p>
+              </div>
+              <span class="badge badge-neutral" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; font-weight: 700;">
+                ${otherGroups.length} مجموعات أخرى
+              </span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
+              ${otherGroups.map(g => {
+                const scheduleDisplay = g.day_of_week && g.session_time 
+                  ? `${g.day_of_week} • ${g.session_time}` 
+                  : (g.schedule || 'موعد غير محدد');
+                return `
+                  <div style="border: 1px solid var(--centrly-line); border-radius: 10px; padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; justify-content: space-between; gap: 0.75rem;">
+                    <div>
+                      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                        <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--centrly-ink);">${escapeHtml(g.name)}</h4>
+                        <span class="badge" style="background: #f1f5f9; color: #475569; font-size: 0.75rem;">${escapeHtml(scheduleDisplay)}</span>
+                      </div>
+                      <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.4rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                        <span>السنتر: <b style="color: var(--centrly-ink);">${escapeHtml(g.center_name || g.centerName || 'السنتر')}</b></span>
+                        ${g.room_name || g.room ? `<span>القاعة: <b style="color: var(--centrly-blue-800);">${escapeHtml(g.room_name || g.room)}</b></span>` : ''}
+                        <span>الطلاب: <b style="color: var(--centrly-ink);">${escapeHtml(g.studentCount || g.students_count || 0)} طالب</b></span>
+                      </div>
+                    </div>
+
+                    <button class="btn btn-secondary" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 700; padding: 0.55rem; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700);">
+                      ${getIcon('sessions', 16)}
+                      <span>بدء تسجيل الحضور لهذه الحصة</span>
+                    </button>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${availableGroups.length === 0 ? `
+          <div class="card" style="margin: 0; text-align: center; padding: 2.5rem 1rem;">
+            <p style="font-size: 0.9rem; color: var(--centrly-text); margin-bottom: 1rem;">لا توجد مجموعات دراسية مسجلة حتى الآن.</p>
+            <button class="btn btn-primary" onclick="window.centrlyApp.openCreateGroupModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700;">
+              ${getIcon('add', 18)}
+              <span>إنشاء أول مجموعة لبدء الحصص</span>
+            </button>
+          </div>
+        ` : ''}
 
       </div>
     `;

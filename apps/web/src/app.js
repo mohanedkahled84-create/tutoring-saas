@@ -1042,6 +1042,20 @@ class CentrlyApp {
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || this.groups || []);
           this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
 
+          const todayStr = new Date().toISOString().split('T')[0];
+          // If the active session is from a previous date, purge it immediately so user sees standby hub
+          if (this.sessionState?.id && (this.sessionState.session_date && this.sessionState.session_date !== todayStr)) {
+            this.sessionState = {
+              id: null,
+              status: 'scheduled',
+              group: null,
+              attendanceList: [],
+              financials: { totalRevenue: 0, attendeeCount: 0, absentCount: 0, exemptCount: 0, makeupCount: 0 },
+            };
+            localStorage.removeItem('centrly_active_session_state');
+            localStorage.removeItem('centrly_active_session_id');
+          }
+
           // Do not auto-hijack into arbitrary in_progress session; let the teacher select group from standby hub
           if (!this.sessionState.id) {
             const todaySessions = await request('/sessions?status=in_progress').catch(() => []);
@@ -2071,8 +2085,9 @@ class CentrlyApp {
       const saved = localStorage.getItem('centrly_active_session_state');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // If it is a phantom/empty dummy session named 'حصة اليوم' or has no group id, purge it immediately
-        if (parsed?.group?.name === 'حصة اليوم' || !parsed?.group?.id || (Array.isArray(parsed?.attendanceList) && parsed.attendanceList.length === 0 && !parsed.group?.id)) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        // If it is from a previous date, or dummy session named 'حصة اليوم', or has no group id, purge it immediately
+        if (!parsed || (parsed.session_date && parsed.session_date !== todayStr) || parsed?.group?.name === 'حصة اليوم' || !parsed?.group?.id || (Array.isArray(parsed?.attendanceList) && parsed.attendanceList.length === 0 && !parsed.group?.id)) {
           localStorage.removeItem('centrly_active_session_state');
           localStorage.removeItem('centrly_active_session_id');
           this.sessionState = {
@@ -3574,6 +3589,75 @@ class CentrlyApp {
       this.closeModal();
       await this.startSessionForGroup(gId, customRoom);
     }
+  }
+
+  async openOtherSessionsModal() {
+    if (!this.groups || this.groups.length === 0) {
+      const res = await request('/groups').catch(() => []);
+      this.groups = Array.isArray(res) ? res : (res.groups || []);
+    }
+    const arabicDayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const now = new Date();
+    const todayArabic = arabicDayNames[now.getDay()];
+    const allGroups = this.groups || [];
+    const otherGroups = allGroups.filter(g => {
+      const gDay = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || '';
+      return gDay !== todayArabic;
+    });
+
+    const displayGroups = otherGroups.length > 0 ? otherGroups : allGroups;
+
+    const listHtml = displayGroups.length > 0 ? `
+      <div style="margin-bottom: 1rem;">
+        <input type="text" id="otherSessionsSearchInput" class="form-input" placeholder="ابحث باسم المجموعة أو السنتر..." oninput="window.centrlyApp.filterOtherSessionsList(this.value)" style="width: 100%;">
+      </div>
+      <div id="otherSessionsCardsContainer" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 55vh; overflow-y: auto; padding: 0.25rem;">
+        ${displayGroups.map(g => {
+          const scheduleDisplay = g.day_of_week && g.session_time 
+            ? `${g.day_of_week} • ${g.session_time}` 
+            : (g.schedule || 'موعد غير محدد');
+          return `
+            <div class="other-session-item" data-search="${escapeHtml((g.name + ' ' + (g.center_name || g.centerName || '') + ' ' + scheduleDisplay).toLowerCase())}" style="border: 1px solid var(--centrly-line); border-radius: 10px; padding: 0.85rem 1rem; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+              <div>
+                <div style="font-weight: 800; font-size: 0.95rem; color: var(--centrly-ink);">${escapeHtml(g.name)}</div>
+                <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                  <span>${getIcon('calendar', 14)} <b>${escapeHtml(scheduleDisplay)}</b></span>
+                  <span>${getIcon('center', 14)} <b>${escapeHtml(g.center_name || g.centerName || 'السنتر')}</b></span>
+                  ${g.room_name || g.room ? `<span>القاعة: <b>${escapeHtml(g.room_name || g.room)}</b></span>` : ''}
+                  <span>${escapeHtml(g.studentCount || g.students_count || 0)} طالب</span>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.closeModal(); window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}')" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; white-space: nowrap;">
+                ${getIcon('sessions', 14)}
+                <span>بدء الحضور الآن</span>
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    ` : `
+      <div style="text-align: center; padding: 2rem 1rem; color: var(--centrly-text);">
+        لا توجد أي مجموعات مسجلة حتى الآن.
+      </div>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="button" class="btn btn-primary" onclick="window.centrlyApp.closeModal(); window.centrlyApp.openCreateGroupModal();" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+        ${getIcon('add', 16)} <span>إنشاء مجموعة جديدة</span>
+      </button>
+    `;
+
+    this.showModal('اختيار حصة من الحصص والمجموعات الأخرى', listHtml, footerHtml);
+  }
+
+  filterOtherSessionsList(query) {
+    const q = (query || '').trim().toLowerCase();
+    const items = document.querySelectorAll('#otherSessionsCardsContainer .other-session-item');
+    items.forEach(item => {
+      const text = item.getAttribute('data-search') || '';
+      item.style.display = text.includes(q) ? 'flex' : 'none';
+    });
   }
 
   promptEndSessionFlow() {
