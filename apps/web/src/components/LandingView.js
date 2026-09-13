@@ -68,6 +68,102 @@ export function renderLandingView() {
           box-shadow: 0 14px 30px rgba(23, 45, 112, 0.1);
         }
 
+                /* FAQ Accordion Styles */
+        .faq-item {
+          background: #FFFFFF;
+          border: 1.5px solid var(--brand-line);
+          border-radius: 12px;
+          overflow: hidden;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .faq-item:hover {
+          border-color: #cbd5e1;
+        }
+        .faq-question {
+          width: 100%;
+          background: none;
+          border: none;
+          padding: 1.15rem 1.35rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          text-align: right;
+          cursor: pointer;
+          font-family: 'Cairo', sans-serif;
+          font-size: 1rem;
+          font-weight: 800;
+          color: var(--brand-navy);
+          gap: 1rem;
+        }
+        .faq-icon {
+          flex-shrink: 0;
+          transition: transform 0.25s ease;
+          color: var(--brand-blue);
+        }
+        .faq-answer {
+          display: none;
+          padding: 0 1.35rem 1.25rem;
+          font-size: 0.925rem;
+          line-height: 1.85;
+          color: var(--brand-text);
+          border-top: 1px dashed var(--brand-line);
+          margin-top: -0.25rem;
+          padding-top: 1rem;
+        }
+
+        /* Sticky Mobile CTA Bar */
+        .mobile-sticky-cta {
+          display: none;
+        }
+        @media (max-width: 768px) {
+          .mobile-sticky-cta {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid var(--brand-line);
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.06);
+            padding: 0.65rem 1rem;
+            z-index: 999;
+            align-items: center;
+            gap: 0.65rem;
+          }
+          .landing-page {
+            padding-bottom: 70px !important;
+          }
+        }
+
+        /* Cookie Consent Banner */
+        .cookie-banner {
+          position: fixed;
+          bottom: 1.5rem;
+          left: 1.5rem;
+          right: 1.5rem;
+          max-width: 520px;
+          background: #FFFFFF;
+          border: 1px solid var(--brand-line);
+          border-radius: 14px;
+          box-shadow: 0 15px 35px rgba(23, 45, 112, 0.15);
+          padding: 1rem 1.25rem;
+          z-index: 1500;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          flex-wrap: wrap;
+        }
+        @media (max-width: 768px) {
+          .cookie-banner {
+            bottom: 4.5rem;
+            left: 0.75rem;
+            right: 0.75rem;
+          }
+        }
+
         /* Responsive Mobile Horizontal Scroll for Features */
         @media (max-width: 768px) {
           .features-container {
@@ -116,6 +212,7 @@ export function renderLandingView() {
           <nav style="display: flex; align-items: center; gap: 1.5rem; font-size: 0.9rem; font-weight: 700;">
             <button onclick="document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; font-family: 'Cairo', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--brand-text); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--brand-blue)'" onmouseout="this.style.color='var(--brand-text)'">المميزات</button>
             <button onclick="document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; font-family: 'Cairo', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--brand-text); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--brand-blue)'" onmouseout="this.style.color='var(--brand-text)'">الأسعار والباقات</button>
+            <button onclick="document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; font-family: 'Cairo', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--brand-text); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--brand-blue)'" onmouseout="this.style.color='var(--brand-text)'">الأسئلة الشائعة</button>
             <button onclick="document.querySelector('footer')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; font-family: 'Cairo', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--brand-text); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--brand-blue)'" onmouseout="this.style.color='var(--brand-text)'">الشروط والسياسات</button>
           </nav>
 
@@ -195,6 +292,10 @@ export function renderLandingView() {
             <div style="display: flex; align-items: center; gap: 6px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               <span>متوافق مع الهواتف والحواسيب</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; background: rgba(37, 132, 90, 0.1); padding: 4px 10px; border-radius: 20px; color: var(--brand-green);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>دعم مباشر — الرد خلال أقل من 15 دقيقة</span>
             </div>
           </div>
 
@@ -439,9 +540,101 @@ export function renderLandingView() {
               <div style="font-size: 0.95rem; font-weight: 800; color: var(--brand-navy);">لديك أكثر من 500 طالب أو عدة فروع لسنترك؟</div>
               <div style="font-size: 0.8rem; color: var(--brand-text); margin-top: 0.2rem;">نوفر باقات مخصصة للأعداد الكبرى بسيرفرات خاصة مع دعم مباشر.</div>
             </div>
-            <a href="https://wa.me/201010979708?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D9%85%D9%84%20%D9%85%D8%AC%D9%85%D9%88%D8%B9%D8%A9%20%D9%81%D9%88%D9%82%20500%20%D8%B7%D8%A7%D9%84%D8%A8%20%D9%88%D9%85%D8%AD%D8%AA%D8%A7%D8%AC%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%A7%D9%84%D8%AA%D9%81%D8%A7%D8%B5%D9%8A%D9%84%20%D9%88%D8%A7%D9%84%D8%A3%D8%B3%D8%B9%D8%A7%D8%B1." target="_blank" rel="noopener noreferrer" style="background: var(--brand-navy); color: #ffffff; text-decoration: none; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--brand-navy-light)';" onmouseout="this.style.backgroundColor='var(--brand-navy)';">
+            <a href="https://wa.me/201123671177?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D9%85%D9%84%20%D9%85%D8%AC%D9%85%D9%88%D8%B9%D8%A9%20%D9%81%D9%88%D9%82%20500%20%D8%B7%D8%A7%D9%84%D8%A8%20%D9%88%D9%85%D8%AD%D8%AA%D8%A7%D8%AC%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%A7%D9%84%D8%AA%D9%81%D8%A7%D8%B5%D9%8A%D9%84%20%D9%88%D8%A7%D9%84%D8%A3%D8%B3%D8%B9%D8%A7%D8%B1." target="_blank" rel="noopener noreferrer" style="background: var(--brand-navy); color: #ffffff; text-decoration: none; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--brand-navy-light)';" onmouseout="this.style.backgroundColor='var(--brand-navy)';">
               <span>طلب التفاصيل</span>
             </a>
+          </div>
+
+        </div>
+      </section>
+
+            <!-- ================================================================= -->
+      <!-- 4.5. FREQUENTLY ASKED QUESTIONS (FAQ) ACCORDION                   -->
+      <!-- ================================================================= -->
+      <section id="faq" style="padding: 4.5rem 1.25rem 4rem; background: #FFFFFF; border-top: 1px solid var(--brand-line);">
+        <div style="max-width: 860px; margin: 0 auto;">
+          
+          <div style="text-align: center; margin-bottom: 2.5rem;">
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: var(--brand-pale); color: var(--brand-blue); font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.9rem; border-radius: 20px; margin-bottom: 0.75rem;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>إجابات واضحة ومباشرة</span>
+            </div>
+            <h2 style="font-size: clamp(1.6rem, 3.2vw, 2.2rem); font-weight: 900; color: var(--brand-navy); margin: 0 0 0.75rem;">
+              الأسئلة الأكثر شيوعاً
+            </h2>
+            <p style="font-size: 0.95rem; color: var(--brand-text); margin: 0 auto; max-width: 600px; line-height: 1.7;">
+              كل ما يهمك معرفته عن عمل منظومة سنترلي، مسح الباركود، تأمين رسائل الواتساب، وبوابة أولياء الأمور.
+            </p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+            
+            <!-- Question 1 -->
+            <div class="faq-item" id="faqItem1">
+              <button type="button" class="faq-question" onclick="window.centrlyApp.toggleFaq(1)">
+                <span>هل المنظومة تحتاج أجهزة مخصصة لقراءة الباركود؟</span>
+                <svg id="faqIcon1" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="faq-answer" id="faqAnswer1">
+                لا، يمكنك استخدام كاميرا أي هاتف ذكي (أندرويد أو آيفون) لمسح الباركود بشكل فوري وسريع عبر المتصفح مباشرة، أو توصيل أي قارئ باركود USB أو لاسلكي بحاسوبك ليعمل فوراً بدون الحاجة لأي برامج تشغيل إضافية.
+              </div>
+            </div>
+
+            <!-- Question 2 -->
+            <div class="faq-item" id="faqItem2">
+              <button type="button" class="faq-question" onclick="window.centrlyApp.toggleFaq(2)">
+                <span>كيف تحمون حساب الواتساب الخاص بالمعلم أو المركز من الحظر؟</span>
+                <svg id="faqIcon2" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="faq-answer" id="faqAnswer2">
+                تعتمد سنترلي آلية إرسال ذكية تضع فواصل زمنية عشوائية وتشفير قوالب ديناميكية متوافقة مع سياسات الاستخدام العادل، مع توجيهات إرشادية كاملة لضمان أمان رقمك واستمرارية الإرسال لأولياء الأمور دون مضايقة خوارزميات ميتا.
+              </div>
+            </div>
+
+            <!-- Question 3 -->
+            <div class="faq-item" id="faqItem3">
+              <button type="button" class="faq-question" onclick="window.centrlyApp.toggleFaq(3)">
+                <span>هل يدفع ولي الأمر أو الطالب أي رسوم لاستخدام بوابة المتابعة؟</span>
+                <svg id="faqIcon3" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="faq-answer" id="faqAnswer3">
+                إطلاقاً، رابط بوابة المتابعة مجاني 100% وبدون الحاجة لتحميل أي تطبيقات، يستطيع ولي الأمر فتح تقرير الطالب عبر أي متصفح في أي وقت للاطلاع على سجل الحضور، درجات الكويزات، والواجبات.
+              </div>
+            </div>
+
+            <!-- Question 4 -->
+            <div class="faq-item" id="faqItem4">
+              <button type="button" class="faq-question" onclick="window.centrlyApp.toggleFaq(4)">
+                <span>ماذا يحدث بعد انتهاء فترة الـ 7 أيام المجانية؟</span>
+                <svg id="faqIcon4" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="faq-answer" id="faqAnswer4">
+                يمكنك اختيار الترقية إلى الباقة الأنسب لعدد طلابك (100، 250، أو 500 طالب) ومتابعة العمل بكامل بياناتك السابقة دون أي فقد، ولن يتم خصم أي مبالغ تلقائياً حيث لا نطلب بيانات بطاقة ائتمانية للتسجيل في التجربة.
+              </div>
+            </div>
+
+            <!-- Question 5 -->
+            <div class="faq-item" id="faqItem5">
+              <button type="button" class="faq-question" onclick="window.centrlyApp.toggleFaq(5)">
+                <span>هل يمكنني استخراج كروت الطلاب وتصميمها وطباعتها بسهولة؟</span>
+                <svg id="faqIcon5" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="faq-answer" id="faqAnswer5">
+                نعم، توفر سنترلي ميزة توليد كروت الطلاب بباركود مميز وهوية بصرية أنيقة، وتصديرها بضغطة زر واحدة بصيغة PDF جاهزة للطباعة الفورية على الورق العادي أو البلاستيك المقوى (PVC).
+              </div>
+            </div>
+
+            <!-- Question 6 -->
+            <div class="faq-item" id="faqItem6">
+              <button type="button" class="faq-question" onclick="window.centrlyApp.toggleFaq(6)">
+                <span>هل بيانات طلابي وأرقام هواتفهم مؤمنة وسرية؟</span>
+                <svg id="faqIcon6" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="faq-answer" id="faqAnswer6">
+                نعم تماماً، يتم تخزين البيانات وتشفيرها سحابياً على خوادم سريعة ومحمية مع نسخ احتياطي دوري، ونلتزم بعدم مشاركة أو بيع أي بيانات لأي طرف ثالث، مع سيطرة وتحكم كامل لك وحدك ومساعديك بحسابات مخصصة.
+              </div>
+            </div>
+
           </div>
 
         </div>
@@ -491,7 +684,33 @@ export function renderLandingView() {
       </footer>
 
       <!-- ================================================================= -->
-      <!-- 7. COMPLETE LEGAL POLICY POPUP MODAL (CLEAN, ELEGANT)             -->
+      <!-- 6. STICKY MOBILE CTA BAR (MOBILE ONLY)                           -->
+      <!-- ================================================================= -->
+      <div class="mobile-sticky-cta">
+        <button onclick="window.centrlyApp.renderAuth('signup')" style="flex: 1; background: var(--brand-gold); color: var(--brand-navy); border: none; font-family: 'Cairo', sans-serif; font-size: 0.9rem; font-weight: 800; padding: 0.75rem 0.5rem; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(231, 163, 48, 0.25);">
+          ابدأ مجاناً (7 أيام)
+        </button>
+        <a href="https://wa.me/201123671177?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D9%88%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D8%B3%D9%86%D8%AA%D8%B1%D9%84%D9%8A" target="_blank" rel="noopener noreferrer" style="background: #16a34a; color: #ffffff; padding: 0.75rem 1rem; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;" title="تواصل واتساب">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </a>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- 7. COOKIE CONSENT BANNER                                          -->
+      <!-- ================================================================= -->
+      <div id="centrlyCookieConsent" class="cookie-banner" style="display: none;">
+        <div style="flex: 1; min-width: 220px; font-size: 0.85rem; color: var(--brand-ink); line-height: 1.6;">
+          نستخدم ملفات تعريف الارتباط لتحسين تجربة استخدام المنصة وتأمين جلسات تسجيل الدخول. بمتابعة التصفح، فإنك توافق على <button type="button" onclick="window.centrlyApp.openPolicyModal('privacy')" style="background: none; border: none; padding: 0; color: var(--brand-blue); text-decoration: underline; font-weight: 700; cursor: pointer; font-family: inherit; font-size: inherit;">سياسة الخصوصية</button>.
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <button onclick="window.centrlyApp.acceptCookies()" style="background: var(--brand-navy); color: #ffffff; border: none; font-family: 'Cairo', sans-serif; font-size: 0.825rem; font-weight: 700; padding: 0.45rem 1.15rem; border-radius: 8px; cursor: pointer;">
+            موافق
+          </button>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- 8. COMPLETE LEGAL POLICY POPUP MODAL (CLEAN, ELEGANT)             -->
       <!-- ================================================================= -->
       <div id="policyModalOverlay" style="display: none; position: fixed; inset: 0; background: rgba(23, 45, 112, 0.7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 2000; align-items: center; justify-content: center; padding: 1.25rem;">
         <div style="background: #ffffff; width: 100%; max-width: 680px; max-height: 85vh; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--brand-line);">

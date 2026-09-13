@@ -307,7 +307,9 @@ class CentrlyApp {
   // Official Landing / Welcome Page
   renderLanding() {
     window.scrollTo(0, 0);
+    document.title = 'سنترلي | Centrly - المنظومة السحابية الأذكى لإدارة المعلمين والمراكز التعليمية';
     document.getElementById('app').innerHTML = renderLandingView();
+    this.initCookieConsent();
   }
 
   // Kashier Compliance & Legal Policies Modal Flow
@@ -409,6 +411,49 @@ class CentrlyApp {
   closePolicyModal() {
     const overlay = document.getElementById('policyModalOverlay');
     if (overlay) overlay.style.display = 'none';
+  }
+
+  toggleFaq(index) {
+    const item = document.getElementById(`faqItem${index}`);
+    const answer = document.getElementById(`faqAnswer${index}`);
+    const icon = document.getElementById(`faqIcon${index}`);
+    if (!item || !answer || !icon) return;
+
+    const isOpen = answer.style.display === 'block';
+
+    // Reset all FAQs
+    for (let i = 1; i <= 6; i++) {
+      const a = document.getElementById(`faqAnswer${i}`);
+      const ic = document.getElementById(`faqIcon${i}`);
+      const it = document.getElementById(`faqItem${i}`);
+      if (a) a.style.display = 'none';
+      if (ic) ic.style.transform = 'rotate(0deg)';
+      if (it) it.style.borderColor = 'var(--brand-line, #E5E9F2)';
+    }
+
+    if (!isOpen) {
+      answer.style.display = 'block';
+      icon.style.transform = 'rotate(180deg)';
+      item.style.borderColor = 'var(--brand-blue, #2949BA)';
+    }
+  }
+
+  acceptCookies() {
+    try {
+      localStorage.setItem('centrly_cookie_consent', 'accepted');
+    } catch (e) {}
+    const banner = document.getElementById('centrlyCookieConsent');
+    if (banner) banner.style.display = 'none';
+  }
+
+  initCookieConsent() {
+    try {
+      const consent = localStorage.getItem('centrly_cookie_consent');
+      if (!consent) {
+        const banner = document.getElementById('centrlyCookieConsent');
+        if (banner) banner.style.display = 'flex';
+      }
+    } catch (e) {}
   }
 
   // DEV-34: No-App Parent Portal
@@ -517,6 +562,7 @@ class CentrlyApp {
 
   renderAuth(tab = 'login') {
     window.scrollTo(0, 0);
+    document.title = tab === 'signup' ? 'إنشاء حساب جديد | سنترلي' : 'تسجيل الدخول | سنترلي';
     document.getElementById('app').innerHTML = renderAuthScreens();
     if (tab === 'signup') {
       this.switchAuthTab('signup');
@@ -526,6 +572,7 @@ class CentrlyApp {
   }
 
   switchAuthTab(tab) {
+    document.title = tab === 'signup' ? 'إنشاء حساب جديد | سنترلي' : 'تسجيل الدخول | سنترلي';
     const formLogin = document.getElementById('formLogin');
     const formSignup = document.getElementById('formSignup');
     const tabLogin = document.getElementById('tabLogin');

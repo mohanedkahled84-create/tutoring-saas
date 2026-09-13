@@ -1,0 +1,8 @@
+# Robots.txt for Centrly SaaS (سنترلي)
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /admin/
+
+Sitemap: https://centerly-platform.vercel.app/sitemap.xml

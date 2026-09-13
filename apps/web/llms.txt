@@ -1,0 +1,26 @@
+# Centrly SaaS (سنترلي)
+> المنظومة السحابية الذكية لإدارة المعلمين والمراكز التعليمية في مصر
+
+## Overview
+Centrly (سنترلي) is an all-in-one cloud management software (SaaS) built specifically for independent tutors, private teachers, and educational centers in Egypt. It streamlines attendance tracking, student communications, financial settlements, and parent reporting.
+
+## Key Features
+- **Barcode Attendance Tracking**: High-speed, continuous camera barcode scanning via mobile or desktop webcam with 0.1s instant detection and audio feedback. No dedicated hardware needed.
+- **WhatsApp Anti-Ban Messaging**: Intelligent message spintax phrasing rotation, randomized jitter delays, and simulated human typing to safely dispatch attendance and quiz score reports to parents directly without risk of number bans.
+- **Smart Student ID Cards**: Ready-to-print PDF card sheets and Excel/CSV data exports compatible with Canva and Photoshop for PVC card production.
+- **Interactive Parent Portal (No-App)**: One-click interactive web portal for parents to monitor attendance records, grades, and homework without downloading any mobile apps.
+- **Room & Session Management**: Conflict detection, timetable scheduling, and assistant payroll calculations.
+
+## Pricing Plans (EGP)
+- **100 Students Plan**: 599 EGP / month
+- **250 Students Plan**: 899 EGP / month (Most Popular)
+- **500 Students Plan**: 1,499 EGP / month
+- **Enterprise & Centers**: Custom quote for 500+ students and multi-branch centers.
+All plans include all features with 100% full access and 7-day free trial.
+
+## Official Contact & Details
+- **Company**: Centrly for Educational Solutions (سنترلي للحلول التعليمية)
+- **Location**: Cairo, Egypt
+- **Official Phone & WhatsApp**: +20 112 367 1177 (01123671177)
+- **Official Email**: mohanedabdulhalim@gmail.com
+- **Website**: https://centerly-platform.vercel.app/

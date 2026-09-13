@@ -348,7 +348,7 @@ export function renderTeacherCalendar(data = {}) {
                 6: 'السبت',
               };
               const todayDayName = jsDayToDayName[new Date().getDay()] || 'السبت';
-              const selectedDayKey = data.selectedDayName || todayDayName;
+              const selectedDayKey = data.selectedDayName || (sessions.some(s => s.day_name === todayDayName) ? todayDayName : (sessions[0]?.day_name || todayDayName));
               const daySessions = sessions.filter((s) => s.day_name === selectedDayKey || (s.date && s.date.includes(selectedDayKey)));
 
               return `

@@ -122,6 +122,12 @@ export function renderAuthScreens() {
               </button>
             </div>
           </div>
+          <div style="margin-top: 1rem; display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.8rem; color: var(--centrly-text);">
+            <input type="checkbox" id="signupTermsConsent" required style="margin-top: 0.2rem; cursor: pointer;">
+            <label for="signupTermsConsent" style="cursor: pointer; line-height: 1.5;">
+              أوافق على <button type="button" onclick="window.centrlyApp.openPolicyModal('terms')" style="background: none; border: none; padding: 0; color: var(--centrly-blue, #2949BA); text-decoration: underline; font-weight: 700; cursor: pointer; font-family: inherit; font-size: inherit;">شروط وأحكام الاستخدام</button> و <button type="button" onclick="window.centrlyApp.openPolicyModal('privacy')" style="background: none; border: none; padding: 0; color: var(--centrly-blue, #2949BA); text-decoration: underline; font-weight: 700; cursor: pointer; font-family: inherit; font-size: inherit;">سياسة الخصوصية</button>.
+            </label>
+          </div>
           <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
             <span>إنشاء حساب وبدء التجربة المجانية</span>
           </button>
