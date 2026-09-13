@@ -3,6 +3,17 @@ import { escapeHtml } from '../utils/escapeHtml.js';
 
 export function renderSidebar(currentRoute = 'sessions', user = {}) {
   const isCenterOwner = user?.role === 'center_owner' || user?.account_type === 'center';
+  const isAdmin = user?.role === 'admin' || user?.is_superadmin;
+
+  // Dedicated Superadmin HQ Navigation
+  const adminSection = {
+    category: 'إدارة المنظومة (Centrly HQ)',
+    routes: [
+      { id: 'admin-dashboard', title: 'لوحة الإدارة والإحصائيات', icon: 'dashboard' },
+      { id: 'admin-proofs', title: 'مراجعة إيصالات الدفع', icon: 'billing' },
+      { id: 'admin-tenants', title: 'المشتركين والمعلمين', icon: 'teachers' },
+    ],
+  };
 
   // Dedicated Center Navigation grouped logically by daily operations, academics, and administration
   const centerSections = [
@@ -78,7 +89,8 @@ export function renderSidebar(currentRoute = 'sessions', user = {}) {
     },
   ];
 
-  const sections = isCenterOwner ? centerSections : teacherSections;
+  const baseSections = isCenterOwner ? centerSections : teacherSections;
+  const sections = isAdmin ? [adminSection, ...baseSections] : baseSections;
 
   return `
     <aside class="app-sidebar" id="appSidebar">
@@ -95,11 +107,11 @@ export function renderSidebar(currentRoute = 'sessions', user = {}) {
             <span style="font-size: 0.82rem; font-weight: 600; color: var(--centrly-text);">| Centrly</span>
           </div>
           <div class="brand-tagline" style="font-size: 0.72rem; color: var(--centrly-text); font-weight: 500;">
-            ${isCenterOwner ? 'منظومة إدارة السنتر والقاعات' : 'المنظومة الذكية لإدارة الحصص'}
+            ${isAdmin ? 'لوحة الإدارة العليا والاشتراكات' : (isCenterOwner ? 'منظومة إدارة السنتر والقاعات' : 'المنظومة الذكية لإدارة الحصص')}
           </div>
           <div>
-            <span class="badge ${isCenterOwner ? 'badge-blue' : 'badge-warning'}" style="font-size: 0.65rem; padding: 0.15rem 0.5rem; margin-top: 0.2rem; display: inline-block;">
-              ${isCenterOwner ? 'حساب سنتر تعليمي' : 'حساب مدرس'}
+            <span class="badge ${isAdmin ? 'badge-primary' : (isCenterOwner ? 'badge-blue' : 'badge-warning')}" style="font-size: 0.65rem; padding: 0.15rem 0.5rem; margin-top: 0.2rem; display: inline-block;">
+              ${isAdmin ? 'إدارة المنظومة (Admin)' : (isCenterOwner ? 'حساب سنتر تعليمي' : 'حساب مدرس')}
             </span>
           </div>
         </div>

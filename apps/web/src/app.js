@@ -28,6 +28,9 @@ import { renderCenterSettlementsView } from './components/CenterSettlementsView.
 import { renderLandingView } from './components/LandingView.js?v=2.8.0';
 import { renderMaterialsView } from './components/MaterialsView.js?v=2.9.0';
 import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.js';
+import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js';
+import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
+import { renderAdminTenantsView } from './components/AdminTenantsView.js';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js';
@@ -35,8 +38,15 @@ import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardA
 class CentrlyApp {
   constructor() {
     this.user = authService.getUser();
+    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-    this.currentRoute = isCenter ? 'center-dashboard' : 'dashboard';
+    this.currentRoute = isAdmin ? 'admin-dashboard' : (isCenter ? 'center-dashboard' : 'dashboard');
+    this.adminOverviewData = null;
+    this.adminProofsData = { payment_proofs: [] };
+    this.adminProofsFilter = 'pending';
+    this.adminTenantsData = { tenants: [] };
+    this.adminTenantsFilter = 'all';
+    this.adminTenantsSearchQuery = '';
     this.centerDashboardState = {
       activeTab: 'teachers',
       period: new Date().toISOString().slice(0, 7),
@@ -924,6 +934,68 @@ class CentrlyApp {
     if (this.routeErrors) this.routeErrors[route] = null;
     try {
       switch (route) {
+        case 'admin-dashboard': {
+          try {
+            const [ovRes, proofsRes, tenantsRes] = await Promise.all([
+              request('/admin/overview').catch(() => ({})),
+              request('/admin/payment-proofs').catch(() => ({ payment_proofs: [] })),
+              request('/admin/tenants').catch(() => ({ tenants: [] })),
+            ]);
+            const overview = ovRes.metrics || ovRes || {};
+            const proofs = proofsRes.payment_proofs || [];
+            const tenants = tenantsRes.tenants || [];
+            const pendingCount = proofs.filter(p => p.status === 'pending').length;
+            const activeCount = tenants.filter(t => t.subscription_status === 'active').length;
+            const trialCount = tenants.filter(t => t.subscription_status === 'trial').length;
+            const expiredCount = tenants.filter(t => ['expired', 'past_due', 'deactivated'].includes(t.subscription_status)).length;
+            this.adminOverviewData = {
+              overview: {
+                total_tenants: tenants.length || overview.total_tenants || 0,
+                active_tenants: activeCount || overview.active_tenants || 0,
+                trial_tenants: trialCount || overview.trial_tenants || 0,
+                mrr_egp: (activeCount * 599) || overview.mrr_egp || 0,
+                total_students: overview.total_students || 0,
+                total_sessions: overview.total_sessions || 0,
+                whatsapp: overview.whatsapp || { total_sent: 0, total_failed: 0, estimated_cost_egp: 0 },
+              },
+              subscription_breakdown: {
+                active: activeCount,
+                trial: trialCount,
+                pending_verification: pendingCount,
+                expired: expiredCount,
+              },
+              recent_signups: tenants.slice(0, 5),
+              at_risk_tenants: tenants.filter(t => t.subscription_status === 'trial').slice(0, 5).map(t => ({
+                tenant_name: t.name,
+                details: `تنتهي التجربة في: ${t.trial_ends_at ? new Date(t.trial_ends_at).toLocaleDateString('ar-EG') : 'قريباً'}`,
+              })),
+            };
+          } catch (err) {
+            console.warn('admin-dashboard load error', err);
+            this.adminOverviewData = {};
+          }
+          break;
+        }
+        case 'admin-proofs': {
+          try {
+            const res = await request('/admin/payment-proofs');
+            this.adminProofsData = res || { payment_proofs: [] };
+          } catch (err) {
+            console.warn('admin-proofs load error', err);
+            this.adminProofsData = { payment_proofs: [] };
+          }
+          break;
+        }
+        case 'admin-tenants': {
+          try {
+            const res = await request('/admin/tenants');
+            this.adminTenantsData = res || { tenants: [] };
+          } catch (err) {
+            console.warn('admin-tenants load error', err);
+            this.adminTenantsData = { tenants: [] };
+          }
+          break;
+        }
         case 'calendar': {
           const [calRes, grpRes] = await Promise.all([
             request('/sessions/calendar?from=2026-09-01&to=2026-09-30').catch(() => ({ sessions: [] })),
@@ -1550,6 +1622,12 @@ class CentrlyApp {
     }
 
     switch (route) {
+      case 'admin-dashboard':
+        return renderBusinessOwnerDashboard(this.adminOverviewData || {});
+      case 'admin-proofs':
+        return renderAdminPaymentProofsView(this.adminProofsData || {}, this.adminProofsFilter || 'pending');
+      case 'admin-tenants':
+        return renderAdminTenantsView(this.adminTenantsData || {}, this.adminTenantsFilter || 'all', this.adminTenantsSearchQuery || '');
       case 'dashboard':
         return renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
           hasPin: this.hasSecurityPin,
@@ -8791,6 +8869,222 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     }).catch(() => {
       prompt('انسخ نص الواجب التالي:', text);
     });
+  }
+
+  // ==========================================================================
+  // Superadmin & Business Owner Actions (Centrly HQ)
+  // ==========================================================================
+
+  async refreshBusinessDashboard() {
+    await this.loadRouteData('admin-dashboard');
+    this.renderMainContent();
+    this.showToast('تم تحديث بيانات لوحة الإدارة', 'info');
+  }
+
+  async refreshAdminPaymentProofs() {
+    await this.loadRouteData('admin-proofs');
+    this.renderMainContent();
+    this.showToast('تم تحديث قائمة الإيصالات', 'info');
+  }
+
+  setAdminProofsFilter(filter) {
+    this.adminProofsFilter = filter;
+    this.renderMainContent();
+  }
+
+  openProofFullscreenModal(proofId) {
+    const proofs = this.adminProofsData?.payment_proofs || [];
+    const proof = proofs.find(p => p.id === proofId);
+    if (!proof || !proof.proof_image_url) {
+      this.showToast('تعذر العثور على صورة الإيصال', 'warning');
+      return;
+    }
+
+    const modalHtml = `
+      <div id="proofFullscreenModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9); align-items: center; justify-content: center; z-index: 10000; padding: 1rem;" dir="rtl">
+        <div style="max-width: 900px; width: 100%; max-height: 95vh; display: flex; flex-direction: column; background: #0f172a; border-radius: 16px; overflow: hidden; border: 1.5px solid #334155; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1.25rem; border-bottom: 1px solid #1e293b; background: #0b1120;">
+            <div style="color: #fff; font-weight: 800; font-size: 0.95rem;">
+              إيصال تحويل: ${escapeHtml(proof.tenants?.name || proof.tenant_name || 'مؤسسة')} (${Number(proof.amount || 0).toLocaleString('ar-EG')} ج.م)
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <a href="${proof.proof_image_url}" download="إيصال_تحويل_${proof.id}.png" class="btn btn-secondary btn-sm" style="font-size: 0.775rem; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                ${getIcon('download', 14)}
+                <span>تحميل الصورة</span>
+              </a>
+              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeProofFullscreenModal()" style="border: none; background: rgba(255,255,255,0.15); color: #fff; padding: 0.35rem 0.6rem; cursor: pointer; display: flex; align-items: center;">
+                ${getIcon('close', 16, '#fff')}
+              </button>
+            </div>
+          </div>
+
+          <div style="padding: 1rem; overflow: auto; display: flex; justify-content: center; align-items: center; background: #020617; flex: 1;">
+            <img src="${proof.proof_image_url}" alt="إيصال تحويل مكبر" style="max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px;">
+          </div>
+
+          <div style="padding: 0.75rem 1.25rem; background: #0b1120; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
+            <span>المرجع: ${escapeHtml(proof.reference_number || 'غير مسجل')}</span>
+            <span>طريقة الدفع: ${proof.payment_method === 'vodafone_cash' ? 'فودافون كاش' : 'إنستاباي'}</span>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    const existing = document.getElementById('proofFullscreenModal');
+    if (existing) existing.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  }
+
+  closeProofFullscreenModal() {
+    const modal = document.getElementById('proofFullscreenModal');
+    if (modal) modal.remove();
+  }
+
+  async handleApproveProof(proofId, extendDays = 30) {
+    if (!confirm(`هل أنت متأكد من اعتماد هذا الإيصال وتفعيل الاشتراك لمدة ${extendDays} يوماً؟`)) {
+      return;
+    }
+
+    try {
+      await request(`/admin/payment-proofs/${proofId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ extend_days: extendDays }),
+      });
+
+      this.closeProofFullscreenModal();
+      this.showToast(`تم اعتماد الإيصال بنجاح وتفعيل الاشتراك لمدة ${extendDays} يوماً!`, 'success');
+      
+      await Promise.all([
+        this.loadRouteData('admin-proofs'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل اعتماد الإيصال: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  async handleRejectProofPrompt(proofId) {
+    const reason = prompt('يرجى كتابة سبب رفض الإيصال (سيتم إشعار الحساب به):', 'التحويل لم يصل إلى الحساب البنكي أو المحفظة');
+    if (reason === null) return;
+
+    try {
+      await request(`/admin/payment-proofs/${proofId}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+
+      this.closeProofFullscreenModal();
+      this.showToast('تم رفض الإيصال بنجاح', 'info');
+      await Promise.all([
+        this.loadRouteData('admin-proofs'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل رفض الإيصال: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  async refreshAdminTenants() {
+    await this.loadRouteData('admin-tenants');
+    this.renderMainContent();
+    this.showToast('تم تحديث دليل المشتركين', 'info');
+  }
+
+  setAdminTenantsFilter(filter) {
+    this.adminTenantsFilter = filter;
+    this.renderMainContent();
+  }
+
+  handleAdminTenantsSearch(val) {
+    this.adminTenantsSearchQuery = val;
+    this.renderMainContent();
+    setTimeout(() => {
+      const inp = document.getElementById('adminTenantsSearchInput');
+      if (inp) {
+        inp.focus();
+        inp.selectionStart = inp.selectionEnd = inp.value.length;
+      }
+    }, 50);
+  }
+
+  openTenantOverrideModal(tenantId, tenantName, currentStatus) {
+    const bodyHtml = `
+      <form id="tenantOverrideForm" onsubmit="window.centrlyApp.handleSaveTenantOverride(event, '${tenantId}')">
+        <div style="margin-bottom: 1.25rem;">
+          <h4 style="margin: 0 0 0.35rem; font-weight: 800; color: var(--centrly-ink);">
+            تعديل اشتراك: ${escapeHtml(tenantName)}
+          </h4>
+          <p style="font-size: 0.825rem; color: #64748b; margin: 0;">
+            الحالة الحالية: <strong style="color: var(--centrly-blue-700);">${currentStatus}</strong>
+          </p>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">الحالة الجديدة للاشتراك</label>
+          <select id="overrideStatus" class="form-select" style="width: 100%;">
+            <option value="active" ${currentStatus === 'active' ? 'selected' : ''}>نشط ومفعل (Active)</option>
+            <option value="trial" ${currentStatus === 'trial' ? 'selected' : ''}>فترة تجريبية (Trial)</option>
+            <option value="past_due" ${currentStatus === 'past_due' ? 'selected' : ''}>متأخر / بانتظار السداد (Past Due)</option>
+            <option value="deactivated" ${currentStatus === 'deactivated' ? 'selected' : ''}>معطل وموقوف (Deactivated)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">تمديد الصلاحية لعدد أيام إضافي</label>
+          <input type="number" id="overrideExtendDays" class="form-input" placeholder="عدد الأيام (مثلاً: 14 أو 30 أو 365)" min="1" max="730" value="30">
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.35rem;">
+            سيتم إضافة هذه الأيام فوق الصلاحية الحالية أو من تاريخ اليوم.
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" id="btnSubmitOverride" class="btn btn-primary" style="font-weight: 800;">
+            حفظ وتطبيق التعديل
+          </button>
+        </div>
+      </form>
+    `;
+    this.showModal('تعديل صلاحية المشترك', bodyHtml);
+  }
+
+  async handleSaveTenantOverride(e, tenantId) {
+    e.preventDefault();
+    const status = document.getElementById('overrideStatus')?.value || 'active';
+    const extendDays = Number(document.getElementById('overrideExtendDays')?.value || 30);
+    const btn = document.getElementById('btnSubmitOverride');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = 'جارٍ الحفظ...';
+    }
+
+    try {
+      await request(`/admin/tenants/${tenantId}/subscription`, {
+        method: 'POST',
+        body: JSON.stringify({
+          status,
+          extend_days: extendDays,
+        }),
+      });
+
+      this.closeModal();
+      this.showToast('تم تعديل صلاحية المشترك وتحديث الاشتراك بنجاح!', 'success');
+      await Promise.all([
+        this.loadRouteData('admin-tenants'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل تعديل الاشتراك: ${err.message || 'خطأ في الخادم'}`, 'danger');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = 'حفظ وتطبيق التعديل';
+      }
+    }
   }
 }
 

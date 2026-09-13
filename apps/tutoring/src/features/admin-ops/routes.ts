@@ -48,16 +48,21 @@ adminRouter.get("/payment-proofs", async (req: AuthenticatedRequest, res: Respon
   }
 });
 
-// DEV-SL.3: POST /api/admin/payment-proofs/:id/approve - Approve payment & extend subscription by 30 days
+// DEV-SL.3: POST /api/admin/payment-proofs/:id/approve - Approve payment & extend subscription by specified days (default 30)
 adminRouter.post(
   "/payment-proofs/:id/approve",
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const adminId = req.user!.id;
     const { id: proofId } = req.params;
+    const { extend_days } = req.body || {};
 
     try {
       const adminOpsService = getServices(req).adminOps;
-      const result = await adminOpsService.approvePaymentProof(proofId, adminId);
+      const result = await adminOpsService.approvePaymentProof(
+        proofId,
+        adminId,
+        extend_days ? Number(extend_days) : 30
+      );
       res.json(result);
     } catch (err: unknown) {
       if (err instanceof Error && err.message === "PROOF_NOT_FOUND") {

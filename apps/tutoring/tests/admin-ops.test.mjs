@@ -83,3 +83,32 @@ test("DEV-68: AdminOpsService - formatNewSignupMessage includes Arabic formatted
   assert.ok(message.includes("01012345678"));
   assert.ok(message.includes("تجربة مجانية (Trial)"));
 });
+
+test("DEV-68: AdminOpsService - Approve payment proof with custom extendDays (yearly)", async () => {
+  const repo = new FakeAdminOpsRepository();
+  const service = new AdminOpsService(repo);
+
+  const tenant = {
+    id: "tenant-sub-3",
+    name: "سنتر الأوائل",
+    status: "active",
+    subscription_status: "pending_verification",
+  };
+  repo.tenants.push(tenant);
+
+  repo.paymentProofs.push({
+    id: "proof-3",
+    tenant_id: "tenant-sub-3",
+    amount: 6469,
+    payment_method: "instapay",
+    status: "pending",
+    created_at: new Date().toISOString(),
+  });
+
+  const result = await service.approvePaymentProof("proof-3", "admin-user-1", 365);
+  assert.equal(result.tenant.subscription_status, "active");
+  const newEnds = new Date(result.subscription_ends_at).getTime();
+  const diffDays = Math.round((newEnds - Date.now()) / (24 * 60 * 60 * 1000));
+  assert.ok(diffDays >= 364 && diffDays <= 366);
+});
+

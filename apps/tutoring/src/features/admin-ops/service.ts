@@ -26,7 +26,8 @@ export class AdminOpsService {
 
   async approvePaymentProof(
     proofId: string,
-    adminId: string
+    adminId: string,
+    extendDays: number = 30
   ): Promise<ApprovePaymentProofResult> {
     const proof = await this.repo.getPaymentProof(proofId);
     if (!proof) {
@@ -39,7 +40,8 @@ export class AdminOpsService {
     if (currentEnds < now) {
       currentEnds = now;
     }
-    const newEnds = new Date(currentEnds.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const days = extendDays > 0 ? extendDays : 30;
+    const newEnds = new Date(currentEnds.getTime() + days * 24 * 60 * 60 * 1000);
 
     const updatedTenant = await this.repo.approvePaymentProof(
       proofId,
@@ -49,7 +51,7 @@ export class AdminOpsService {
     );
 
     return {
-      message: "Payment proof approved successfully. Tenant subscription activated for 30 days.",
+      message: `Payment proof approved successfully. Tenant subscription activated for ${days} days.`,
       subscription_ends_at: newEnds.toISOString(),
       tenant: updatedTenant,
     };

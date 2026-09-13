@@ -52,12 +52,44 @@ export function renderBusinessOwnerDashboard(data = {}) {
             </p>
           </div>
 
-          <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.refreshBusinessDashboard()" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff; display: inline-flex; align-items: center; gap: 0.35rem;">
-            ${getIcon('refresh', 14)}
-            <span>تحديث البيانات</span>
-          </button>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.navigate('admin-proofs')" style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; background: #2563eb;">
+              ${getIcon('billing', 14)}
+              <span>مراجعة الإيصالات</span>
+              ${subs.pending_verification > 0 ? `<span style="background: #f59e0b; color: #0f172a; font-size: 0.725rem; font-weight: 900; padding: 0.1rem 0.4rem; border-radius: 9999px;">${subs.pending_verification}</span>` : ''}
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('admin-tenants')" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); color: #fff; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700;">
+              ${getIcon('teachers', 14)}
+              <span>إدارة المشتركين</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.refreshBusinessDashboard()" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff; display: inline-flex; align-items: center; gap: 0.35rem;">
+              ${getIcon('refresh', 14)}
+              <span>تحديث</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      ${subs.pending_verification > 0 ? `
+        <div class="card" style="margin: 0; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #fef3c7; color: #d97706;">
+              ${getIcon('billing', 18, '#d97706')}
+            </span>
+            <div>
+              <div style="font-weight: 800; font-size: 0.95rem; color: #92400e;">
+                يوجد ${subs.pending_verification} إيصال تحويل بانتظار مراجعتك وتفعيل الاشتراك
+              </div>
+              <div style="font-size: 0.8rem; color: #b45309; margin-top: 0.15rem;">
+                قام المشتركون بتحويل الرسوم ورفع الاسكرين شوت، يمكنك اعتماد وتفعيل اشتراكهم الآن بضغطة زر.
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.navigate('admin-proofs')" style="font-weight: 800; padding: 0.55rem 1.1rem; font-size: 0.85rem; background: #d97706; border-color: #d97706;">
+            مراجعة وتفعيل الإيصالات الآن
+          </button>
+        </div>
+      ` : ''}
 
       <!-- Core Financial & Growth KPIs -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
