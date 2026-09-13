@@ -247,7 +247,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
                         ${m.description ? `
                           <div style="font-size: 0.85rem; color: #1e293b; margin: 0.5rem 0 0 0; line-height: 1.6; background: #f8fafc; padding: 0.65rem 0.85rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; border-right: 3px solid #2563eb;">
-                            <div style="font-weight: 800; color: #1e40af; font-size: 0.825rem; margin-bottom: 0.25rem;">وصف الواجب والمطلوب حله:</div>
+                            <div style="font-weight: 800; color: #1e40af; font-size: 0.825rem; margin-bottom: 0.25rem;">${m.is_homework ? 'وصف الواجب والمطلوب حله:' : 'توجيهات أو وصف المذكرة:'}</div>
                             <div style="white-space: pre-wrap; color: #334155;">${escapeHtml(m.description)}</div>
                           </div>
                         ` : ''}
@@ -256,8 +256,8 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                           <div style="margin-top: 0.6rem;">
                             <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" 
                               style="display: inline-flex; align-items: center; gap: 0.4rem; background: #2563eb; color: #ffffff; font-weight: 800; text-decoration: none; padding: 0.45rem 0.85rem; border-radius: 0.5rem; font-size: 0.825rem; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
-                              ${getIcon('file', 14, '#ffffff')}
-                              <span>فتح / تحميل ملف الواجب المرفق (PDF / الرابط)</span>
+                              ${getIcon(isPdf ? 'file' : (isVideo ? 'video' : 'link'), 14, '#ffffff')}
+                              <span>${m.is_homework ? 'فتح / تحميل ملف الواجب المرفق (PDF / الرابط)' : actionText}</span>
                             </a>
                           </div>
                         ` : ''}

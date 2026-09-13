@@ -7462,6 +7462,9 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   }
 
   openAddMaterialModal() {
+    this._selectedMatPdfFile = null;
+    this._currentMatPdfSource = 'upload';
+
     const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
     const bodyHtml = `
       <form id="modalAddMaterialForm" onsubmit="window.centrlyApp.handleAddMaterialSubmit(event)">
@@ -7481,7 +7484,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">نوع المحتوى *</label>
-            <select id="modalMatType" class="form-select">
+            <select id="modalMatType" class="form-select" onchange="window.centrlyApp.onMaterialTypeChange(this.value)">
               <option value="pdf">ملف PDF أو مذكرة</option>
               <option value="video">فيديو شرح (YouTube / Drive)</option>
               <option value="link">رابط خارجي أو موقع</option>
@@ -7489,9 +7492,62 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           </div>
         </div>
 
-        <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">الرابط المباشر للملف أو الفيديو *</label>
-          <input type="url" id="modalMatUrl" class="form-input" placeholder="https://drive.google.com/... أو https://youtu.be/..." dir="ltr" required>
+        <!-- PDF Source Segmented Switch & Upload Area (Visible when type == 'pdf') -->
+        <div id="matPdfSourceWrapper" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700; margin-bottom: 0.4rem; display: block;">مصدر ملف الـ PDF *</label>
+          <div style="display: flex; gap: 0.4rem; background: #f1f5f9; padding: 4px; border-radius: 0.5rem; margin-bottom: 0.75rem;">
+            <button type="button" id="matPdfSourceBtn-upload" onclick="window.centrlyApp.switchMatPdfSource('upload')"
+              style="flex: 1; border: none; background: #ffffff; color: var(--centrly-blue-800); padding: 0.45rem; border-radius: 0.4rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: all 0.2s;">
+              📁 رفع ملف PDF من جهازك
+            </button>
+            <button type="button" id="matPdfSourceBtn-link" onclick="window.centrlyApp.switchMatPdfSource('link')"
+              style="flex: 1; border: none; background: transparent; color: #64748b; padding: 0.45rem; border-radius: 0.4rem; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+              🔗 رابط سحابي (Google Drive)
+            </button>
+          </div>
+
+          <!-- Dropzone file picker -->
+          <div id="matPdfUploadContainer">
+            <input type="file" id="modalMatPdfFileInput" accept="application/pdf" style="display: none;" onchange="window.centrlyApp.handleMatPdfSelected(event)">
+            
+            <div id="matPdfDropzone" onclick="document.getElementById('modalMatPdfFileInput').click()" 
+              ondragover="event.preventDefault(); this.style.borderColor='#2563eb'; this.style.background='#dbeafe';" 
+              ondragleave="this.style.borderColor='#3b82f6'; this.style.background='#eff6ff';" 
+              ondrop="event.preventDefault(); window.centrlyApp.handleMatPdfDrop(event)"
+              style="border: 2px dashed #3b82f6; border-radius: 0.75rem; padding: 1.35rem 1rem; text-align: center; cursor: pointer; background: #eff6ff; transition: all 0.2s;">
+              <div style="display: flex; justify-content: center; margin-bottom: 0.4rem;">
+                ${getIcon('upload', 32, '#2563eb')}
+              </div>
+              <div style="font-weight: 800; font-size: 0.95rem; color: #1e40af; margin-bottom: 0.2rem;">
+                اضغط هنا لاختيار ملف PDF من اللابتوب أو الموبايل
+              </div>
+              <div style="font-size: 0.78rem; color: #64748b;">
+                ملفات PDF فقط (الحد الأقصى 25 ميجابايت) — أو اسحب الملف وأفلته هنا
+              </div>
+            </div>
+
+            <div id="matPdfSelectedPreview" style="display: none; margin-top: 0.6rem; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 0.65rem; padding: 0.75rem 0.9rem; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
+                <span style="display: flex; align-items: center; color: #15803d;">${getIcon('file', 22, '#15803d')}</span>
+                <div style="overflow: hidden;">
+                  <div id="matPdfSelectedName" style="font-weight: 800; font-size: 0.875rem; color: #166534; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                  <div id="matPdfSelectedSize" style="font-size: 0.75rem; color: #15803d; font-weight: 600;"></div>
+                </div>
+              </div>
+              <button type="button" onclick="window.centrlyApp.clearMatPdfFile()" class="btn btn-sm" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; font-weight: 700; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.4rem; cursor: pointer;">
+                ✕ تغيير الملف
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- URL Input Container (Used when PDF Link or Video or External Link) -->
+        <div id="matUrlContainer" style="display: none; margin-bottom: 0.85rem;">
+          <label id="matUrlLabel" class="form-label" style="font-weight: 700;">الرابط المباشر للملف أو الفيديو *</label>
+          <input type="url" id="modalMatUrl" class="form-input" placeholder="https://drive.google.com/..." dir="ltr">
+          <div id="matUrlHint" style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+            تأكد أن الرابط متاح للعرض والمشاركة مع الطلاب
+          </div>
         </div>
 
         <div class="form-group" style="margin-bottom: 0.5rem;">
@@ -7503,9 +7559,146 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-      <button type="submit" form="modalAddMaterialForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">إضافة المذكرة الآن</button>
+      <button type="submit" form="modalAddMaterialForm" id="btnPublishMaterial" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ${getIcon('check', 16, '#ffffff')}
+        <span>إضافة المذكرة الآن</span>
+      </button>
     `;
     this.showModal('إضافة مذكرة تعليمية أو شرح جديد', bodyHtml, footerHtml);
+  }
+
+  handleMatPdfSelected(e) {
+    const file = e.target.files?.[0];
+    if (file) this._processSelectedMatPdf(file);
+  }
+
+  handleMatPdfDrop(e) {
+    const file = e.dataTransfer?.files?.[0];
+    if (file) this._processSelectedMatPdf(file);
+  }
+
+  _processSelectedMatPdf(file) {
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      this.showToast('يرجى اختيار ملف PDF صالح فقط', 'error');
+      return;
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      this.showToast('حجم الملف كبير جداً (أقصى حد مسموح 25 ميجابايت)', 'error');
+      return;
+    }
+
+    this._selectedMatPdfFile = file;
+
+    const preview = document.getElementById('matPdfSelectedPreview');
+    const dropzone = document.getElementById('matPdfDropzone');
+    const nameEl = document.getElementById('matPdfSelectedName');
+    const sizeEl = document.getElementById('matPdfSelectedSize');
+
+    if (preview && nameEl && sizeEl) {
+      nameEl.textContent = file.name;
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      sizeEl.textContent = `${sizeMB} ميجابايت`;
+      preview.style.display = 'flex';
+      if (dropzone) dropzone.style.display = 'none';
+    }
+  }
+
+  clearMatPdfFile() {
+    this._selectedMatPdfFile = null;
+    const input = document.getElementById('modalMatPdfFileInput');
+    if (input) input.value = '';
+    const preview = document.getElementById('matPdfSelectedPreview');
+    const dropzone = document.getElementById('matPdfDropzone');
+    if (preview) preview.style.display = 'none';
+    if (dropzone) {
+      dropzone.style.display = 'block';
+      dropzone.style.borderColor = '#3b82f6';
+      dropzone.style.background = '#eff6ff';
+    }
+  }
+
+  switchMatPdfSource(source) {
+    this._currentMatPdfSource = source;
+    const btnUpload = document.getElementById('matPdfSourceBtn-upload');
+    const btnLink = document.getElementById('matPdfSourceBtn-link');
+    const uploadContainer = document.getElementById('matPdfUploadContainer');
+    const urlContainer = document.getElementById('matUrlContainer');
+    const urlLabel = document.getElementById('matUrlLabel');
+    const urlHint = document.getElementById('matUrlHint');
+    const urlInput = document.getElementById('modalMatUrl');
+
+    if (source === 'upload') {
+      if (btnUpload) {
+        btnUpload.style.background = '#ffffff';
+        btnUpload.style.color = 'var(--centrly-blue-800)';
+        btnUpload.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+        btnUpload.style.fontWeight = '800';
+      }
+      if (btnLink) {
+        btnLink.style.background = 'transparent';
+        btnLink.style.color = '#64748b';
+        btnLink.style.boxShadow = 'none';
+        btnLink.style.fontWeight = '700';
+      }
+      if (uploadContainer) uploadContainer.style.display = 'block';
+      if (urlContainer) urlContainer.style.display = 'none';
+    } else {
+      if (btnLink) {
+        btnLink.style.background = '#ffffff';
+        btnLink.style.color = 'var(--centrly-blue-800)';
+        btnLink.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+        btnLink.style.fontWeight = '800';
+      }
+      if (btnUpload) {
+        btnUpload.style.background = 'transparent';
+        btnUpload.style.color = '#64748b';
+        btnUpload.style.boxShadow = 'none';
+        btnUpload.style.fontWeight = '700';
+      }
+      if (uploadContainer) uploadContainer.style.display = 'none';
+      if (urlContainer) {
+        urlContainer.style.display = 'block';
+        if (urlLabel) urlLabel.textContent = 'رابط ملف الـ PDF (Google Drive أو سحابي) *';
+        if (urlHint) urlHint.textContent = 'تأكد من تفعيل صلاحية المشاركة (Anyone with the link can view)';
+        if (urlInput) {
+          urlInput.placeholder = 'https://drive.google.com/...';
+          setTimeout(() => urlInput.focus(), 50);
+        }
+      }
+    }
+  }
+
+  onMaterialTypeChange(type) {
+    const pdfWrapper = document.getElementById('matPdfSourceWrapper');
+    const urlContainer = document.getElementById('matUrlContainer');
+    const urlLabel = document.getElementById('matUrlLabel');
+    const urlHint = document.getElementById('matUrlHint');
+    const urlInput = document.getElementById('modalMatUrl');
+
+    if (type === 'pdf') {
+      if (pdfWrapper) pdfWrapper.style.display = 'block';
+      this.switchMatPdfSource(this._currentMatPdfSource || 'upload');
+    } else if (type === 'video') {
+      if (pdfWrapper) pdfWrapper.style.display = 'none';
+      if (urlContainer) urlContainer.style.display = 'block';
+      if (urlLabel) urlLabel.textContent = 'رابط فيديو الشرح (YouTube / Google Drive) *';
+      if (urlHint) urlHint.textContent = 'يمكنك وضع رابط يوتيوب أو فيديو على جوجل درايف ليظهر مباشرة للطلاب';
+      if (urlInput) {
+        urlInput.placeholder = 'https://www.youtube.com/watch?v=... أو https://drive.google.com/...';
+        setTimeout(() => urlInput.focus(), 50);
+      }
+    } else {
+      // link
+      if (pdfWrapper) pdfWrapper.style.display = 'none';
+      if (urlContainer) urlContainer.style.display = 'block';
+      if (urlLabel) urlLabel.textContent = 'الرابط المباشر للموقع أو المنصة *';
+      if (urlHint) urlHint.textContent = 'رابط صفحة أو موقع تعليمي يريد الطالب الرجوع إليه';
+      if (urlInput) {
+        urlInput.placeholder = 'https://...';
+        setTimeout(() => urlInput.focus(), 50);
+      }
+    }
   }
 
   async handleAddMaterialSubmit(e) {
@@ -7513,12 +7706,67 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const title = document.getElementById('modalMatTitle')?.value.trim();
     const group_id = document.getElementById('modalMatGroupId')?.value || null;
     const type = document.getElementById('modalMatType')?.value || 'pdf';
-    const url = document.getElementById('modalMatUrl')?.value.trim();
     const description = document.getElementById('modalMatDescription')?.value.trim();
+    const submitBtn = document.getElementById('btnPublishMaterial');
 
-    if (!title || !url) {
-      this.showToast('يرجى كتابة عنوان المذكرة والرابط المباشر', 'error');
+    if (!title) {
+      this.showToast('يرجى كتابة عنوان المذكرة أو المحتوى التعليمي', 'error');
       return;
+    }
+
+    let url = '';
+    let file_data = null;
+    let file_name = null;
+
+    if (type === 'pdf') {
+      const source = this._currentMatPdfSource || 'upload';
+      if (source === 'upload') {
+        if (!this._selectedMatPdfFile) {
+          this.showToast('يرجى اختيار ملف PDF لرفعه من جهازك', 'error');
+          return;
+        }
+        file_name = this._selectedMatPdfFile.name;
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = `<span>جاري قراءة ورفع الملف للسحابة...</span>`;
+        }
+
+        try {
+          file_data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('فشل قراءة الملف من الجهاز'));
+            reader.readAsDataURL(this._selectedMatPdfFile);
+          });
+        } catch (readErr) {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>إضافة المذكرة الآن</span>`;
+          }
+          this.showToast('فشل قراءة ملف الـ PDF، يرجى المحاولة مرة أخرى', 'error');
+          return;
+        }
+      } else {
+        // link
+        url = document.getElementById('modalMatUrl')?.value.trim();
+        if (!url) {
+          this.showToast('يرجى إدخال رابط ملف الـ PDF (Google Drive أو رابط مباشر)', 'error');
+          return;
+        }
+      }
+    } else {
+      // video or link
+      url = document.getElementById('modalMatUrl')?.value.trim();
+      if (!url) {
+        this.showToast('يرجى إدخال الرابط المطلوب', 'error');
+        return;
+      }
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>جاري إضافة وحفظ المذكرة...</span>`;
     }
 
     try {
@@ -7529,6 +7777,8 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           group_id,
           type,
           url,
+          file_data,
+          file_name,
           description,
           is_homework: false,
           due_date: null,
@@ -7538,6 +7788,10 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       this.showToast('تمت إضافة المذكرة بنجاح وستظهر فوراً في بوابات الطلاب وأولياء الأمور!', 'success');
       await this.loadRouteData('materials');
     } catch (err) {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>إضافة المذكرة الآن</span>`;
+      }
       this.showToast(`فشل إضافة المذكرة: ${err.message || 'حدث خطأ'}`, 'danger');
     }
   }
