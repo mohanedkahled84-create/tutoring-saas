@@ -124,6 +124,8 @@ class CentrlyApp {
   }
 
   async init() {
+    this.setupModalKeyboardShortcuts();
+
     // Check if Portal token is present in URL (Student vs Parent Portal)
     const urlParams = new URLSearchParams(window.location.search);
     const portalToken = urlParams.get('token');
@@ -2116,11 +2118,123 @@ class CentrlyApp {
       if (e.target === modalEl) this.closeModal();
     });
     document.body.appendChild(modalEl);
+
+    // Auto-focus first input for immediate typing
+    setTimeout(() => {
+      const firstInput = modalEl.querySelector('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
+      if (firstInput) firstInput.focus();
+    }, 60);
   }
 
   closeModal() {
     const existing = document.getElementById('centrlyCustomModal');
     if (existing) existing.remove();
+  }
+
+  setupModalKeyboardShortcuts() {
+    if (this._modalKeydownBound) return;
+    this._modalKeydownBound = true;
+
+    document.addEventListener('keydown', (e) => {
+      // Find active modal overlay
+      const customModal = document.getElementById('centrlyCustomModal');
+      const confirmModal = document.getElementById('centrlyConfirmModal');
+      const cameraModal = document.getElementById('cameraScannerModal');
+      const scannerModal = document.getElementById('scannerSetupModal');
+      const quotaModal = document.getElementById('quotaBlockedModal');
+      const paymentModal = document.getElementById('paymentProofModal');
+      const genericModal = document.querySelector('.modal-overlay:not([style*="display: none"])');
+
+      const activeModal = customModal || confirmModal || cameraModal || scannerModal || quotaModal || paymentModal || genericModal;
+      if (!activeModal || !document.body.contains(activeModal)) return;
+
+      const style = window.getComputedStyle(activeModal);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return;
+
+      // 1. Handle Escape -> Close modal
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (customModal) {
+          this.closeModal();
+        } else if (confirmModal) {
+          confirmModal.remove();
+        } else if (cameraModal) {
+          if (typeof this.closeCameraScannerModal === 'function') this.closeCameraScannerModal();
+          else cameraModal.remove();
+        } else if (scannerModal) {
+          scannerModal.remove();
+        } else if (quotaModal) {
+          quotaModal.remove();
+        } else if (paymentModal) {
+          paymentModal.remove();
+        } else {
+          const closeBtn = activeModal.querySelector('.modal-header button, button.btn-secondary, button[onclick*="close"]');
+          if (closeBtn) closeBtn.click();
+          else activeModal.remove();
+        }
+        return;
+      }
+
+      // 2. Handle Enter -> Save / Submit modal
+      if (e.key === 'Enter') {
+        const target = e.target;
+
+        // In a textarea: allow regular Enter for line-breaks.
+        // Pressing Ctrl+Enter or Cmd+Enter triggers submit.
+        if (target && target.tagName === 'TEXTAREA') {
+          if (!e.ctrlKey && !e.metaKey) {
+            return;
+          }
+        }
+
+        // If target is already a button, let the browser fire the native click unless Ctrl/Cmd was pressed
+        if (target && target.tagName === 'BUTTON' && !e.ctrlKey && !e.metaKey) {
+          return;
+        }
+
+        e.preventDefault();
+
+        // If confirm modal is active, trigger confirm action button
+        if (confirmModal && activeModal === confirmModal) {
+          const confirmBtn = confirmModal.querySelector('#confirmModalActionBtn');
+          if (confirmBtn && !confirmBtn.disabled) {
+            confirmBtn.click();
+            return;
+          }
+        }
+
+        // Identify associated form
+        const form = (target && target.closest('form')) || activeModal.querySelector('form');
+
+        // Locate primary submit or save button
+        let primaryBtn = null;
+        if (form && form.id) {
+          primaryBtn = document.querySelector(`button[form="${form.id}"][type="submit"], button[form="${form.id}"].btn-primary`);
+        }
+        if (!primaryBtn && form) {
+          primaryBtn = form.querySelector('button[type="submit"], input[type="submit"], button.btn-primary');
+        }
+        if (!primaryBtn) {
+          primaryBtn = activeModal.querySelector(
+            '#confirmModalActionBtn, button[type="submit"], .modal-footer .btn-primary, .modal-footer button:not(.btn-secondary), .modal-body button.btn-primary, button.btn-primary'
+          );
+        }
+
+        if (primaryBtn && !primaryBtn.disabled) {
+          primaryBtn.click();
+          return;
+        }
+
+        // Fallback: Submit form directly if found
+        if (form) {
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else {
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          }
+        }
+      }
+    });
   }
 
   showToast(message, type = 'success') {
@@ -2214,9 +2328,10 @@ class CentrlyApp {
       background: rgba(15, 23, 42, 0.65);
       backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center; padding: 1rem;
+      overflow-y: auto;
     `;
     modalEl.innerHTML = `
-      <div class="modal-dialog" dir="rtl" style="background: #ffffff; border-radius: 14px; max-width: 440px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--centrly-line);">
+      <div class="modal-dialog" dir="rtl" style="background: #ffffff; border-radius: 14px; max-width: 440px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--centrly-line); margin: auto; max-height: calc(100vh - 2rem); display: flex; flex-direction: column;">
         <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--centrly-line); display: flex; justify-content: space-between; align-items: center;">
           <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: ${isDanger ? 'var(--centrly-danger)' : 'var(--centrly-ink)'};">
             ${escapeHtml(title)}
@@ -6667,9 +6782,10 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       background: rgba(15, 23, 42, 0.65);
       backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center; padding: 1rem;
+      overflow-y: auto;
     `;
     modalEl.innerHTML = `
-      <div class="modal-dialog" dir="rtl" style="background: #ffffff; border-radius: 14px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--centrly-line);">
+      <div class="modal-dialog" dir="rtl" style="background: #ffffff; border-radius: 14px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--centrly-line); margin: auto; max-height: calc(100vh - 2rem); display: flex; flex-direction: column;">
         <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--centrly-line); display: flex; justify-content: space-between; align-items: center;">
           <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink);">
             إرسال درجات الكويز دفعة واحدة (Ultra Anti-Ban)
@@ -7394,14 +7510,14 @@ https://centerly-platform.vercel.app/parent-portal?token=...
             <input type="date" id="modalMatDueDate" class="form-input" style="background: #fff;">
           </div>
         </div>
-
-        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="submit" class="btn btn-primary" style="font-weight: 800;">إضافة المذكرة الآن</button>
-        </div>
       </form>
     `;
-    this.showModal('إضافة مذكرة تعليمية / واجب دراسي', bodyHtml);
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="modalAddMaterialForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">إضافة المذكرة الآن</button>
+    `;
+    this.showModal('إضافة مذكرة تعليمية / واجب دراسي', bodyHtml, footerHtml);
   }
 
   async handleAddMaterialSubmit(e) {
@@ -7503,14 +7619,14 @@ https://centerly-platform.vercel.app/parent-portal?token=...
             <input type="number" id="modalTA_SalaryAmount" class="form-input" placeholder="0" min="0" value="0">
           </div>
         </div>
-
-        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="submit" class="btn btn-primary" style="font-weight: 800;">إضافة المساعد الآن</button>
-        </div>
       </form>
     `;
-    this.showModal('إضافة مساعد (أسستنت) جديد للمعلم', bodyHtml);
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="modalAddTeacherAssistantForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">إضافة المساعد الآن</button>
+    `;
+    this.showModal('إضافة مساعد (أسستنت) جديد للمعلم', bodyHtml, footerHtml);
   }
 
   async handleAddTeacherAssistantSubmit(e) {
@@ -7599,14 +7715,14 @@ https://centerly-platform.vercel.app/parent-portal?token=...
             <input type="number" id="modalEditTA_SalaryAmount" class="form-input" value="${Number(assistant.salary_amount) || 0}" min="0">
           </div>
         </div>
-
-        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="submit" class="btn btn-primary" style="font-weight: 800;">حفظ التعديلات</button>
-        </div>
       </form>
     `;
-    this.showModal(`تعديل بيانات المساعد: ${escapeHtml(assistant.name)}`, bodyHtml);
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="modalEditTeacherAssistantForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">حفظ التعديلات</button>
+    `;
+    this.showModal(`تعديل بيانات المساعد: ${escapeHtml(assistant.name)}`, bodyHtml, footerHtml);
   }
 
   async handleEditTeacherAssistantSubmit(e, assistantId) {
@@ -7776,24 +7892,25 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         </div>
 
         <!-- Optional PDF / Drive Link -->
-        <div class="form-group" style="margin-bottom: 1.1rem;">
+        <div class="form-group" style="margin-bottom: 0.5rem;">
           <label class="form-label" style="font-weight: 700; color: #475569; display: flex; align-items: center; gap: 0.35rem;">
             ${getIcon('link', 14, '#64748b')}
             <span>رابط ملف PDF أو مذكرة خارجية (اختياري)</span>
           </label>
           <input type="url" id="modalHwUrl" class="form-input" placeholder="https://drive.google.com/... أو رابط مباشر لملف PDF إذا أردت إرفاقه" dir="ltr">
         </div>
-
-        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="submit" class="btn btn-primary" style="font-weight: 800; padding: 0.5rem 1.25rem; display: inline-flex; align-items: center; gap: 0.4rem;">
-            ${getIcon('check', 16, '#ffffff')}
-            <span>نشر الواجب للطلاب الآن</span>
-          </button>
-        </div>
       </form>
     `;
-    this.showModal('نشر وتكليف واجب منزلي جديد (Homework)', bodyHtml);
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="modalAddHomeworkForm" id="btnPublishHomework" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ${getIcon('check', 16, '#ffffff')}
+        <span>نشر الواجب للطلاب الآن</span>
+      </button>
+    `;
+
+    this.showModal('نشر وتكليف واجب منزلي جديد (Homework)', bodyHtml, footerHtml);
   }
 
   onHomeworkTypeChange(mode) {
