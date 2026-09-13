@@ -213,10 +213,35 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                         <h3 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0;">
                           ${escapeHtml(m.title)}
                         </h3>
+
+                        ${(m.book_name || m.pages || m.questions) ? `
+                          <!-- Prominent Textbook Questions Box -->
+                          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.65rem; padding: 0.75rem 0.85rem; margin-top: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.35rem; font-weight: 800; color: #1e40af; font-size: 0.85rem; margin-bottom: 0.45rem;">
+                              <span>📖</span>
+                              <span>المطلوب حله من الكتاب / الملزمة:</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem; font-size: 0.825rem;">
+                              <div style="background: #ffffff; padding: 0.45rem 0.65rem; border-radius: 0.45rem; border: 1px solid #dbeafe;">
+                                <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">الكتاب / الملزمة:</span>
+                                <span style="font-weight: 800; color: #1e3a8a;">${escapeHtml(m.book_name || 'الكتاب المدرسي')}</span>
+                              </div>
+                              <div style="background: #ffffff; padding: 0.45rem 0.65rem; border-radius: 0.45rem; border: 1px solid #dbeafe;">
+                                <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">الصفحات المطلوبة:</span>
+                                <span style="font-weight: 800; color: #1e3a8a;">${escapeHtml(m.pages || '—')}</span>
+                              </div>
+                              <div style="background: #ffffff; padding: 0.45rem 0.65rem; border-radius: 0.45rem; border: 1px solid #dbeafe;">
+                                <span style="color: #64748b; font-size: 0.72rem; display: block; font-weight: 600;">أرقام الأسئلة:</span>
+                                <span style="font-weight: 800; color: #b45309;">${escapeHtml(m.questions || '—')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ` : ''}
+
                         ${m.description ? `
-                          <p style="font-size: 0.825rem; color: #475569; margin: 0.35rem 0 0 0; line-height: 1.5;">
-                            ${escapeHtml(m.description)}
-                          </p>
+                          <div style="font-size: 0.825rem; color: #334155; margin: 0.45rem 0 0 0; line-height: 1.5; background: #f1f5f9; padding: 0.5rem 0.75rem; border-radius: 0.45rem; border-right: 3px solid #3b82f6;">
+                            <b>تعليمات المعلم:</b> ${escapeHtml(m.description)}
+                          </div>
                         ` : ''}
                       </div>
                     </div>
@@ -307,14 +332,21 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                       </div>
                     ` : ''}
 
-                    <!-- Download study material button -->
-                    <div style="display: flex; justify-content: flex-end; margin-top: 0.25rem;">
-                      <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer"
-                        style="display: inline-flex; align-items: center; gap: 0.4rem; background: #1d4ed8; color: #ffffff; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.825rem; font-weight: 700; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
-                        <span>📥</span>
-                        <span>${actionText}</span>
-                      </a>
-                    </div>
+                    <!-- Download study material button or notebook instructions -->
+                    ${m.url && m.url !== '#' && m.url.trim().length > 0 ? `
+                      <div style="display: flex; justify-content: flex-end; margin-top: 0.25rem;">
+                        <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer"
+                          style="display: inline-flex; align-items: center; gap: 0.4rem; background: #1d4ed8; color: #ffffff; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.825rem; font-weight: 700; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
+                          <span>📥</span>
+                          <span>${actionText}</span>
+                        </a>
+                      </div>
+                    ` : (m.is_homework ? `
+                      <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #1e40af; background: #eff6ff; padding: 0.45rem 0.75rem; border-radius: 0.45rem; border: 1px solid #bfdbfe; margin-top: 0.25rem;">
+                        <span>✏️</span>
+                        <span><b>طريقة التسليم:</b> قم بحل الأسئلة المحددة أعلاه في كشكولك بخط واضح، ثم صوّر الصفحات وحوّلها لـ PDF وارفعها عبر زر الرفع أعلاه.</span>
+                      </div>
+                    ` : '')}
 
                   </div>
                 `;

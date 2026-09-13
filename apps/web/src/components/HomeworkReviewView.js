@@ -42,6 +42,13 @@ export function renderHomeworkReviewView(homeworkState = {}) {
           </div>
 
           <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <!-- New Homework Button -->
+            <button type="button" class="btn btn-primary" 
+              onclick="window.centrlyApp && window.centrlyApp.openAddHomeworkModal ? window.centrlyApp.openAddHomeworkModal() : null" 
+              style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 800; font-size: 0.85rem; padding: 0.45rem 0.95rem; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
+              <span>➕ نشر واجب جديد (من كتاب أو ملف)</span>
+            </button>
+
             <!-- Assignment Selector Dropdown -->
             <div style="display: flex; align-items: center; gap: 0.4rem;">
               <label style="font-size: 0.825rem; font-weight: 700; color: #475569;">الواجب النشط:</label>
@@ -76,11 +83,14 @@ export function renderHomeworkReviewView(homeworkState = {}) {
           <div style="font-size: 3rem; margin-bottom: 0.75rem;">📝</div>
           <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0;">لا توجد واجبات منزلية منشورة حتى الآن</h3>
           <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 1.5rem 0;">
-            يمكنك نشر واجب منزلي جديد مع رابط المذكرة وموعد التسليم من صفحة "المذكرات والماتريال".
+            يمكنك نشر واجب منزلي جديد باختيار أسئلة من الكتاب المدرسي، أو نص حر، أو ملف PDF مع موعد التسليم.
           </p>
-          <div>
-            <button class="btn btn-primary" onclick="window.centrlyApp.navigate('materials')" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-              <span>📚 الانتقال إلى المذكرات وإضافة واجب</span>
+          <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="window.centrlyApp.openAddHomeworkModal()" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 800;">
+              <span>➕ نشر واجب منزلي جديد الآن</span>
+            </button>
+            <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('materials')" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+              <span>📚 الانتقال إلى المذكرات</span>
             </button>
           </div>
         </div>
@@ -129,6 +139,57 @@ export function renderHomeworkReviewView(homeworkState = {}) {
             </div>
           </div>
 
+        </div>
+
+        <!-- Active Homework Details Card -->
+        <div class="card" style="margin: 0; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1.1rem; border-radius: 0.85rem;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.85rem;">
+            <div style="flex: 1; min-width: 250px;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
+                <span style="font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 0.4rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                  ${currentHomework.book_name ? '📖 واجب من الكتاب المدرسي' : (currentHomework.url && currentHomework.url !== '#' ? '📄 ملف / مذكرة PDF' : '✍️ واجب كتابي')}
+                </span>
+                <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">
+                  ${escapeHtml(currentHomework.title)}
+                </h3>
+                ${currentHomework.due_date ? `
+                  <span style="font-size: 0.75rem; color: #b45309; background: #fffbeb; padding: 0.2rem 0.55rem; border-radius: 0.35rem; border: 1px solid #fde68a; font-weight: 700;">
+                    ⏰ آخر موعد: ${escapeHtml(currentHomework.due_date)}
+                  </span>
+                ` : ''}
+              </div>
+
+              ${(currentHomework.book_name || currentHomework.pages || currentHomework.questions) ? `
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.825rem; color: #1e3a8a; margin-top: 0.5rem; background: #eff6ff; padding: 0.45rem 0.85rem; border-radius: 0.45rem; border: 1px solid #bfdbfe;">
+                  ${currentHomework.book_name ? `<span>📖 <b>الكتاب:</b> ${escapeHtml(currentHomework.book_name)}</span>` : ''}
+                  ${currentHomework.pages ? `<span>• 📄 <b>الصفحات:</b> ${escapeHtml(currentHomework.pages)}</span>` : ''}
+                  ${currentHomework.questions ? `<span>• 🔢 <b>الأسئلة:</b> <b style="color: #b45309;">${escapeHtml(currentHomework.questions)}</b></span>` : ''}
+                </div>
+              ` : ''}
+
+              ${currentHomework.description ? `
+                <div style="font-size: 0.825rem; color: #475569; margin-top: 0.45rem; line-height: 1.5; background: #ffffff; padding: 0.45rem 0.75rem; border-radius: 0.4rem; border: 1px solid #e2e8f0;">
+                  <b style="color: #334155;">نص الواجب / تعليمات المعلم:</b> ${escapeHtml(currentHomework.description)}
+                </div>
+              ` : ''}
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              ${currentHomework.url && currentHomework.url !== '#' ? `
+                <a href="${escapeHtml(currentHomework.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" 
+                  style="font-size: 0.8rem; padding: 0.4rem 0.8rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                  <span>📄</span>
+                  <span>معاينة الملف</span>
+                </a>
+              ` : ''}
+              <button type="button" class="btn btn-secondary" 
+                style="font-size: 0.8rem; padding: 0.4rem 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem; background: #ecfdf5; color: #047857; border-color: #a7f3d0; font-weight: 800;"
+                onclick="window.centrlyApp && window.centrlyApp.copyHomeworkAssignmentText ? window.centrlyApp.copyHomeworkAssignmentText('${escapeHtml(currentHomework.id)}') : null">
+                <span>📋</span>
+                <span>نسخ نص الواجب للواتساب</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- 2-Tab Navigation (Submitted vs Missing) -->

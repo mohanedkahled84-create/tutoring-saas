@@ -41,9 +41,13 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="btn btn-primary" onclick="window.centrlyApp.openAddMaterialModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+            <button class="btn btn-primary" onclick="window.centrlyApp.openAddHomeworkModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; background: #059669; border-color: #059669;">
+              <span>📝</span>
+              <span>نشر واجب (من كتاب أو ملف)</span>
+            </button>
+            <button class="btn btn-secondary" onclick="window.centrlyApp.openAddMaterialModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
               ${getIcon('add', 16)}
-              <span>إضافة مذكرة / واجب جديد</span>
+              <span>إضافة مذكرة / رابط شرح</span>
             </button>
           </div>
         </div>
@@ -124,14 +128,25 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
 
                 const isPdf = m.type === 'pdf';
                 const isVideo = m.type === 'video';
-                const typeBadge = isPdf 
-                  ? '<span class="badge badge-blue">📄 PDF</span>' 
-                  : (isVideo ? '<span class="badge badge-amber">🎥 فيديو</span>' : '<span class="badge badge-secondary">🔗 رابط خارجي</span>');
+                const isTextbook = Boolean(m.book_name || m.pages || m.questions);
+                const hasUrl = Boolean(m.url && m.url !== '#' && m.url.trim().length > 0);
+                const typeBadge = isTextbook
+                  ? '<span class="badge badge-amber" style="font-weight: 800;">📖 كتاب / كشكول</span>'
+                  : (isPdf 
+                    ? '<span class="badge badge-blue">📄 PDF</span>' 
+                    : (isVideo ? '<span class="badge badge-amber">🎥 فيديو</span>' : '<span class="badge badge-secondary">🔗 رابط خارجي</span>'));
 
                 return `
                   <tr>
-                    <td style="font-weight: 800; color: #0f172a; max-width: 250px;">
+                    <td style="font-weight: 800; color: #0f172a; max-width: 280px;">
                       <div>${escapeHtml(m.title)}</div>
+                      ${isTextbook ? `
+                        <div style="font-size: 0.75rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.2rem 0.45rem; border-radius: 0.35rem; margin-top: 0.25rem; display: inline-flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
+                          <span>📖 ${escapeHtml(m.book_name || 'الكتاب')}</span>
+                          ${m.pages ? `<span>• ص: ${escapeHtml(m.pages)}</span>` : ''}
+                          ${m.questions ? `<span style="color: #b45309; font-weight: 700;">• س: ${escapeHtml(m.questions)}</span>` : ''}
+                        </div>
+                      ` : ''}
                       ${m.description ? `
                         <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.15rem; font-weight: 400;">
                           ${escapeHtml(m.description)}
@@ -165,11 +180,20 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
                       `}
                     </td>
                     <td>
-                      <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer"
-                        style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; font-weight: 700; color: #1d4ed8; text-decoration: none; background: #eff6ff; padding: 0.25rem 0.6rem; border-radius: 0.4rem; border: 1px solid #bfdbfe;">
-                        <span>📥</span>
-                        <span>فتح الرابط</span>
-                      </a>
+                      ${hasUrl ? `
+                        <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer"
+                          style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; font-weight: 700; color: #1d4ed8; text-decoration: none; background: #eff6ff; padding: 0.25rem 0.6rem; border-radius: 0.4rem; border: 1px solid #bfdbfe;">
+                          <span>📥</span>
+                          <span>فتح الرابط</span>
+                        </a>
+                      ` : (m.is_homework ? `
+                        <span style="font-size: 0.75rem; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 0.25rem 0.5rem; border-radius: 0.4rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+                          <span>✏️</span>
+                          <span>حل في الكشكول</span>
+                        </span>
+                      ` : `
+                        <span style="font-size: 0.8rem; color: #94a3b8;">—</span>
+                      `)}
                     </td>
                     <td>
                       <button class="btn btn-sm btn-danger" onclick="window.centrlyApp.deleteMaterial('${m.id}', '${escapeHtml(m.title)}')" title="حذف المذكرة">

@@ -158,7 +158,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
     // 1. Fetch all active homework assignments for this teacher/tenant
     let materialsQuery = supabase
       .from("study_materials")
-      .select("id, title, description, group_id, due_date, created_at")
+      .select("id, title, description, group_id, due_date, created_at, book_name, pages, questions, url")
       .eq("tenant_id", tenantId)
       .eq("is_homework", true)
       .order("created_at", { ascending: false });

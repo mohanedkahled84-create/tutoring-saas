@@ -43,10 +43,16 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
     return;
   }
 
-  const { title, description, type, url, group_id, is_homework, due_date } = req.body;
+  const { title, description, type, url, group_id, is_homework, due_date, book_name, pages, questions } = req.body;
 
-  if (!title || !url) {
-    res.status(400).json({ error: { code: "BAD_REQUEST", message: "العنوان والرابط مطلوبان" } });
+  if (!title) {
+    res.status(400).json({ error: { code: "BAD_REQUEST", message: "عنوان المذكرة أو الواجب مطلوب" } });
+    return;
+  }
+
+  // If it's regular study material (not homework), url is strictly required
+  if (!is_homework && !url) {
+    res.status(400).json({ error: { code: "BAD_REQUEST", message: "رابط المذكرة أو الفيديو مطلوب" } });
     return;
   }
 
@@ -60,10 +66,13 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
         title: title.trim(),
         description: description ? description.trim() : null,
         type: type || "pdf",
-        url: url.trim(),
+        url: url ? url.trim() : "",
         group_id: group_id || null,
         is_homework: Boolean(is_homework),
         due_date: due_date || null,
+        book_name: book_name ? book_name.trim() : null,
+        pages: pages ? pages.trim() : null,
+        questions: questions ? questions.trim() : null,
       })
       .select()
       .single();

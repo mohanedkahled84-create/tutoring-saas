@@ -321,6 +321,21 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                         <h3 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0;">
                           ${escapeHtml(h.title)}
                         </h3>
+
+                        ${(h.book_name || h.pages || h.questions) ? `
+                          <div style="font-size: 0.8rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.35rem 0.65rem; border-radius: 0.4rem; margin-top: 0.4rem; display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                            <span>📖 <b>الكتاب:</b> ${escapeHtml(h.book_name || 'الكتاب المدرسي')}</span>
+                            ${h.pages ? `<span>• <b>ص:</b> ${escapeHtml(h.pages)}</span>` : ''}
+                            ${h.questions ? `<span style="color: #b45309; font-weight: 700;">• <b>الأسئلة:</b> ${escapeHtml(h.questions)}</span>` : ''}
+                          </div>
+                        ` : ''}
+
+                        ${h.description ? `
+                          <div style="font-size: 0.775rem; color: #475569; margin-top: 0.35rem; line-height: 1.4;">
+                            ${escapeHtml(h.description)}
+                          </div>
+                        ` : ''}
+
                         ${h.due_date ? `
                           <div style="font-size: 0.775rem; color: #64748b; margin-top: 0.35rem; display: flex; align-items: center; gap: 0.3rem;">
                             <span>⏰</span>
