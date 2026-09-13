@@ -66,16 +66,9 @@ export function renderLandingView() {
           box-shadow: 0 14px 30px rgba(23, 45, 112, 0.1);
         }
 
-        .policy-card-item:hover {
-          border-color: var(--brand-blue) !important;
-          transform: translateY(-3px);
-          box-shadow: 0 8px 20px rgba(23, 45, 112, 0.08);
-        }
-
-        /* Responsive Mobile Horizontal Scroll for Features & Policies */
+        /* Responsive Mobile Horizontal Scroll for Features */
         @media (max-width: 768px) {
-          .features-container,
-          .policies-container {
+          .features-container {
             display: flex !important;
             overflow-x: auto !important;
             scroll-snap-type: x mandatory !important;
@@ -84,23 +77,16 @@ export function renderLandingView() {
             gap: 1rem !important;
             scrollbar-width: thin;
           }
-          .features-container::-webkit-scrollbar,
-          .policies-container::-webkit-scrollbar {
+          .features-container::-webkit-scrollbar {
             height: 4px;
           }
-          .features-container::-webkit-scrollbar-thumb,
-          .policies-container::-webkit-scrollbar-thumb {
+          .features-container::-webkit-scrollbar-thumb {
             background: var(--brand-line);
             border-radius: 4px;
           }
           .features-container .feature-card {
             flex: 0 0 82% !important;
             max-width: 82% !important;
-            scroll-snap-align: center !important;
-          }
-          .policies-container .policy-card-item {
-            flex: 0 0 78% !important;
-            max-width: 78% !important;
             scroll-snap-align: center !important;
           }
           .mobile-scroll-hint {
@@ -126,9 +112,9 @@ export function renderLandingView() {
 
           <!-- Nav Links -->
           <nav style="display: flex; align-items: center; gap: 1.5rem; font-size: 0.9rem; font-weight: 700;">
-            <a href="#features" style="color: var(--brand-text); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--brand-blue)'" onmouseout="this.style.color='var(--brand-text)'">المميزات</a>
-            <a href="#pricing" style="color: var(--brand-text); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--brand-blue)'" onmouseout="this.style.color='var(--brand-text)'">الأسعار والباقات</a>
-            <a href="#policies" style="color: var(--brand-text); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--brand-blue)'" onmouseout="this.style.color='var(--brand-text)'">الشروط والسياسات</a>
+            <button onclick="document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; font-family: 'Cairo', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--brand-text); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--brand-blue)'" onmouseout="this.style.color='var(--brand-text)'">المميزات</button>
+            <button onclick="document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; font-family: 'Cairo', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--brand-text); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--brand-blue)'" onmouseout="this.style.color='var(--brand-text)'">الأسعار والباقات</button>
+            <button onclick="document.querySelector('footer')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; font-family: 'Cairo', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--brand-text); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--brand-blue)'" onmouseout="this.style.color='var(--brand-text)'">الشروط والسياسات</button>
           </nav>
 
           <!-- Persistent Action Buttons -->
@@ -457,90 +443,7 @@ export function renderLandingView() {
       </section>
 
       <!-- ================================================================= -->
-      <!-- 5. POLICIES SECTION: 4 CARDS SIDE-BY-SIDE OPENING POPUPS          -->
-      <!-- ================================================================= -->
-      <section id="policies" style="padding: 4.5rem 1.25rem 5rem; background: var(--brand-surface); border-top: 1px solid var(--brand-line);">
-        <div style="max-width: 1100px; margin: 0 auto;">
-          
-          <div style="text-align: center; margin-bottom: 2.5rem;">
-            <span style="color: var(--brand-navy); font-weight: 800; font-size: 0.85rem; text-transform: uppercase;">الشفافية والالتزام القانوني</span>
-            <h2 style="font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 900; color: var(--brand-navy); margin: 0.4rem 0 0.5rem;">
-              الشروط والسياسات والاعتماد القانوني
-            </h2>
-            <p style="font-size: 0.95rem; color: var(--brand-text); margin: 0;">
-              اضغط على أي قسم لعرض المستند القانوني الكامل المعتمد وفقاً للمعايير المصرية
-            </p>
-
-            <!-- Mobile Scroll Hint -->
-            <div class="mobile-scroll-hint" style="display: none; align-items: center; justify-content: center; gap: 8px; margin-top: 1rem; font-size: 0.85rem; color: var(--brand-blue); font-weight: 700;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-              <span>مرر أفقياً لعرض باقي الأقسام</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </div>
-          </div>
-
-          <!-- 4 Cards Side-By-Side (With Mobile Horizontal Snap) -->
-          <div class="policies-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.25rem;">
-            
-            <!-- Policy Card 1: Terms -->
-            <div class="policy-card-item" onclick="window.centrlyApp.openPolicyModal('terms')" style="background: var(--brand-cream); border: 1.5px solid var(--brand-line); border-radius: 14px; padding: 1.5rem 1.25rem; text-align: center; cursor: pointer; transition: all 0.2s;">
-              <div style="width: 42px; height: 42px; background: var(--brand-pale); color: var(--brand-blue); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              </div>
-              <h3 style="font-size: 1rem; font-weight: 800; color: var(--brand-navy); margin: 0 0 0.35rem;">شروط الاستخدام</h3>
-              <div style="font-size: 0.75rem; color: var(--brand-muted); margin-bottom: 0.85rem;">Terms of Service</div>
-              <span style="font-size: 0.8rem; font-weight: 700; color: var(--brand-blue); display: inline-flex; align-items: center; gap: 4px;">
-                <span>عرض الشروط كاملة</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-              </span>
-            </div>
-
-            <!-- Policy Card 2: Privacy -->
-            <div class="policy-card-item" onclick="window.centrlyApp.openPolicyModal('privacy')" style="background: var(--brand-cream); border: 1.5px solid var(--brand-line); border-radius: 14px; padding: 1.5rem 1.25rem; text-align: center; cursor: pointer; transition: all 0.2s;">
-              <div style="width: 42px; height: 42px; background: var(--brand-green-light); color: var(--brand-green); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              </div>
-              <h3 style="font-size: 1rem; font-weight: 800; color: var(--brand-navy); margin: 0 0 0.35rem;">سياسة الخصوصية</h3>
-              <div style="font-size: 0.75rem; color: var(--brand-muted); margin-bottom: 0.85rem;">Privacy Policy</div>
-              <span style="font-size: 0.8rem; font-weight: 700; color: var(--brand-green); display: inline-flex; align-items: center; gap: 4px;">
-                <span>عرض سياسة الخصوصية</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-              </span>
-            </div>
-
-            <!-- Policy Card 3: Refund -->
-            <div class="policy-card-item" onclick="window.centrlyApp.openPolicyModal('refund')" style="background: var(--brand-cream); border: 1.5px solid var(--brand-line); border-radius: 14px; padding: 1.5rem 1.25rem; text-align: center; cursor: pointer; transition: all 0.2s;">
-              <div style="width: 42px; height: 42px; background: var(--brand-gold-light); color: var(--brand-gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>
-              </div>
-              <h3 style="font-size: 1rem; font-weight: 800; color: var(--brand-navy); margin: 0 0 0.35rem;">سياسة الاسترجاع</h3>
-              <div style="font-size: 0.75rem; color: var(--brand-muted); margin-bottom: 0.85rem;">Refund Policy (7 Days)</div>
-              <span style="font-size: 0.8rem; font-weight: 700; color: var(--brand-gold); display: inline-flex; align-items: center; gap: 4px;">
-                <span>عرض ضمان الاسترجاع</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-              </span>
-            </div>
-
-            <!-- Policy Card 4: Contact -->
-            <div class="policy-card-item" onclick="window.centrlyApp.openPolicyModal('contact')" style="background: var(--brand-cream); border: 1.5px solid var(--brand-line); border-radius: 14px; padding: 1.5rem 1.25rem; text-align: center; cursor: pointer; transition: all 0.2s;">
-              <div style="width: 42px; height: 42px; background: var(--brand-pale); color: var(--brand-navy); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              </div>
-              <h3 style="font-size: 1rem; font-weight: 800; color: var(--brand-navy); margin: 0 0 0.35rem;">بيانات التواصل</h3>
-              <div style="font-size: 0.75rem; color: var(--brand-muted); margin-bottom: 0.85rem;">Company & Support</div>
-              <span style="font-size: 0.8rem; font-weight: 700; color: var(--brand-navy); display: inline-flex; align-items: center; gap: 4px;">
-                <span>عرض بيانات الإدارة</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-              </span>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-      <!-- ================================================================= -->
-      <!-- 6. FOOTER                                                         -->
+      <!-- 5. FOOTER                                                         -->
       <!-- ================================================================= -->
       <footer style="background: var(--brand-navy); color: #ffffff; padding: 3.5rem 1.25rem 2rem; border-top: 1px solid rgba(255,255,255,0.1);">
         <div style="max-width: 1200px; margin: 0 auto;">
@@ -561,12 +464,13 @@ export function renderLandingView() {
 
             <div>
               <h4 style="font-size: 0.95rem; font-weight: 800; color: #ffffff; margin: 0 0 1rem;">روابط سريعة</h4>
-              <div style="font-size: 0.85rem; line-height: 2.2; color: #cbd5e1;">
-                <div><a href="#features" style="color: #cbd5e1; text-decoration: none;">المميزات الشاملة</a></div>
-                <div><a href="#pricing" style="color: #cbd5e1; text-decoration: none;">الأسعار والباقات</a></div>
-                <div><a href="javascript:void(0)" onclick="window.centrlyApp.openPolicyModal('terms')" style="color: #cbd5e1; text-decoration: none;">شروط وأحكام الاستخدام</a></div>
-                <div><a href="javascript:void(0)" onclick="window.centrlyApp.openPolicyModal('privacy')" style="color: #cbd5e1; text-decoration: none;">سياسة الخصوصية</a></div>
-                <div><a href="javascript:void(0)" onclick="window.centrlyApp.openPolicyModal('refund')" style="color: #cbd5e1; text-decoration: none;">سياسة الاسترجاع والإلغاء</a></div>
+              <div style="font-size: 0.85rem; line-height: 2.2; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start;">
+                <button type="button" onclick="document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">المميزات الشاملة</button>
+                <button type="button" onclick="document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">الأسعار والباقات</button>
+                <button type="button" onclick="window.centrlyApp.openPolicyModal('terms')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">شروط وأحكام الاستخدام</button>
+                <button type="button" onclick="window.centrlyApp.openPolicyModal('privacy')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">سياسة الخصوصية</button>
+                <button type="button" onclick="window.centrlyApp.openPolicyModal('refund')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">سياسة الاسترجاع والإلغاء (7 أيام)</button>
+                <button type="button" onclick="window.centrlyApp.openPolicyModal('contact')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">بيانات التواصل الرسمي والدعم</button>
               </div>
             </div>
 

@@ -227,21 +227,42 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
         ${!isSessionEnded ? `
         <!-- Barcode / Student Check-in Scanner -->
         <div class="card" style="margin: 0;">
-          <h3 class="card-title" style="font-size: 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
-            ${getIcon('cards', 18, 'var(--centrly-blue-700)')}
-            <span>تسجيل حضور الطالب (مسح الباركود أو الكود)</span>
-          </h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 class="card-title" style="font-size: 1rem; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('barcode', 18, 'var(--centrly-blue-700)')}
+              <span>تسجيل حضور الطالب (مسح الباركود أو الكود)</span>
+            </h3>
+
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <!-- Camera Scanner Trigger -->
+              <button type="button" onclick="window.centrlyApp.openCameraScannerModal('session')" class="btn btn-secondary btn-sm" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 800; background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; padding: 0.35rem 0.75rem; border-radius: 8px;">
+                ${getIcon('camera', 16, '#047857')}
+                <span>مسح بالكاميرا</span>
+              </button>
+
+              <!-- Scanner Setup Guide & Test Trigger -->
+              <button type="button" onclick="window.centrlyApp.openScannerSetupGuide()" class="btn btn-secondary btn-sm" title="دليل وضبط أجهزة السكانر اليدوية واللاسلكية واختبارها" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700; color: #475569; padding: 0.35rem 0.65rem; border-radius: 8px;">
+                ${getIcon('gear', 15, '#475569')}
+                <span>سيت اب السكانر</span>
+              </button>
+            </div>
+          </div>
           
           <form id="attendanceScanForm" onsubmit="event.preventDefault(); event.stopPropagation(); window.centrlyApp.handleStudentScan(event); return false;" style="position: relative;">
-            <div class="form-group" style="position: relative;">
-              <label class="form-label">كود الطالب أو البحث بالاسم</label>
+            <div class="form-group" style="position: relative; margin-bottom: 0.5rem;">
+              <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>كود الطالب أو البحث بالاسم</span>
+                <span style="font-size: 0.75rem; color: #16a34a; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+                  ${getIcon('dotSuccess', 8)} جاهز للمسح بالسكانر مباشرة (Plug & Play)
+                </span>
+              </label>
               <div style="display: flex; gap: 0.5rem;">
                 <div style="flex: 1; position: relative;">
                   <input 
                     type="text" 
                     id="scanStudentCode" 
                     class="form-input" 
-                    placeholder="اكتب كود أو اسم الطالب، أو امسح الباركود..." 
+                    placeholder="اكتب كود أو اسم الطالب، أو امسح بالسكانر فوراً..." 
                     autofocus 
                     autocomplete="off"
                     onkeydown="if (event.key === 'Enter' || event.keyCode === 13) { event.preventDefault(); event.stopPropagation(); window.centrlyApp.handleStudentScan(event); }"

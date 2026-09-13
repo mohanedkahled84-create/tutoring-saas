@@ -76,6 +76,10 @@ export function renderCenterSessionsView(state = {}, groups = [], rooms = [], te
               ${getIcon('check', 18, '#ffffff')}
               <span>تسجيل فوري</span>
             </button>
+            <button type="button" onclick="window.centrlyApp.openCameraScannerModal('center')" class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; background: #1e293b; color: #38bdf8; border: 1px solid #334155; white-space: nowrap; padding: 0 1.25rem; border-radius: 8px;">
+              ${getIcon('camera', 18, '#38bdf8')}
+              <span>كاميرا الاستقبال</span>
+            </button>
           </div>
         </form>
 

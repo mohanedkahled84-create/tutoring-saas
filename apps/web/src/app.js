@@ -1291,6 +1291,7 @@ class CentrlyApp {
       this.registerStudentAttendance(student);
       this.focusScanInput();
     } else {
+      this.playScanBeep('error');
       // Student NOT found! Do NOT add dummy name! Show inline registration form!
       const feedback = document.getElementById('scanFeedback');
       if (feedback) {
@@ -1413,6 +1414,7 @@ class CentrlyApp {
     );
 
     if (existing && existing.attended) {
+      this.playScanBeep('warning');
       this.showToast(`الطالب (${student.name}) مسجل حضوره بالفعل في هذه الحصة مسبقاً!`, 'info');
       const codeInput = document.getElementById('scanStudentCode');
       if (codeInput) {
@@ -1463,6 +1465,7 @@ class CentrlyApp {
     const hwNoneRadio = document.getElementById('hwNone');
     if (hwNoneRadio) hwNoneRadio.checked = true;
 
+    this.playScanBeep('success');
     this.persistSessionState();
     this.showToast(isMakeup ? `تم تسجيل حضور تعويضي للطالب: ${student.name}` : `تم رصد حضور الطالب: ${student.name}`, 'success');
     this.renderMainContent();
@@ -1483,6 +1486,396 @@ class CentrlyApp {
       item.homework = newStatus;
       this.persistSessionState();
       this.showToast('تم تحديث حالة الواجب', 'info');
+    }
+  }
+
+  // ==========================================================================
+  // Audio Feedback & Hardware / Camera Scanner Suite (DEV-SCAN)
+  // ==========================================================================
+
+  playScanBeep(type = 'success') {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!this._audioCtx) {
+        this._audioCtx = new AudioCtx();
+      }
+      if (this._audioCtx.state === 'suspended') {
+        this._audioCtx.resume();
+      }
+      const ctx = this._audioCtx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === 'success') {
+        // Crisp supermarket-style success beep (880Hz -> 1046Hz)
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1046, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.12);
+      } else if (type === 'warning') {
+        // Double warning tone for duplicate check-in (587Hz)
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(587, ctx.currentTime);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.16);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.16);
+      } else {
+        // Low error buzz for unregistered code (220Hz)
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.22);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.22);
+      }
+    } catch (_) {}
+  }
+
+  openCameraScannerModal(mode = 'session') {
+    const existing = document.getElementById('cameraScannerModal');
+    if (existing) existing.remove();
+
+    this._cameraScanCount = 0;
+    this._cameraFacingMode = this._cameraFacingMode || 'environment';
+
+    const modeTitle = mode === 'center' 
+      ? 'بوابة استقبال السنتر (توجيه وحضور عام)' 
+      : 'تسجيل حضور الحصة الجارية';
+
+    const modalHtml = `
+      <div id="cameraScannerModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(15,23,42,0.75); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 9999; padding: 1rem;" dir="rtl">
+        <div class="card" style="width: 100%; max-width: 480px; margin: 0; padding: 1.25rem; border-radius: 16px; background: #ffffff; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); font-family: 'Cairo', sans-serif;">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem;">
+            <div>
+              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
+                ${getIcon('camera', 20, 'var(--centrly-blue-700)')}
+                <span>المسح المباشر بكاميرا الموبايل / اللابتوب</span>
+              </h3>
+              <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem; font-weight: 600;">
+                ${modeTitle}
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeCameraScannerModal()" style="border: none; font-size: 1.2rem; cursor: pointer; padding: 0.2rem 0.6rem;">✕</button>
+          </div>
+
+          <!-- Camera Viewport Container -->
+          <div style="position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #0f172a; border: 2px solid #334155;">
+            <div id="centrlyCameraViewport" style="width: 100%; height: 280px;"></div>
+
+            <!-- Target Reticle Box overlay -->
+            <div style="pointer-events: none; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+              <div style="width: 240px; height: 140px; border: 2.5px dashed #10b981; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(15,23,42,0.45); position: relative;">
+                <div style="position: absolute; top: -24px; left: 0; right: 0; text-align: center; color: #6ee7b7; font-size: 0.75rem; font-weight: 800;">
+                  ضع الباركود أو الـ QR داخل الإطار
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Status & Feedback Banner inside camera -->
+            <div id="cameraScanFeedback" style="display: none; position: absolute; bottom: 12px; left: 12px; right: 12px; z-index: 20; padding: 0.65rem; border-radius: 8px; font-weight: 800; font-size: 0.85rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s ease;"></div>
+          </div>
+
+          <!-- Controls and Counter -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-text);">
+              تم تسجيل: <strong id="cameraScanCount" style="color: #16a34a; font-size: 1.05rem;">0</strong> طلاب
+            </div>
+
+            <div style="display: flex; gap: 0.4rem;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleCameraFacingMode('${mode}')" style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; font-weight: 700;">
+                ${getIcon('refresh', 14)}
+                <span>تبديل الكاميرا</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeCameraScannerModal()" style="font-size: 0.8rem; font-weight: 700;">
+                إغلاق الكاميرا
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Tip -->
+          <div style="margin-top: 0.85rem; font-size: 0.775rem; color: #64748b; background: #f8fafc; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.5;">
+            💡 <strong>نصيحة:</strong> الكاميرا تعمل بشكل مستمر ومباشر (Continuous Mode). دَع الطلاب يمررون كروت باركودهم واحداً تلو الآخر وستصدر المنظومة صوت "بيب" لتأكيد كل طالب فورياً دون لمس الشاشة.
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    setTimeout(() => {
+      this.startCameraScanner(mode);
+    }, 100);
+  }
+
+  async startCameraScanner(mode = 'session') {
+    if (typeof Html5Qrcode === 'undefined') {
+      const viewport = document.getElementById('centrlyCameraViewport');
+      if (viewport) {
+        viewport.innerHTML = `
+          <div style="color: #cbd5e1; padding: 3rem 1rem; text-align: center; font-size: 0.9rem;">
+            جارٍ تجهيز الكاميرا...
+          </div>
+        `;
+      }
+      return;
+    }
+
+    try {
+      if (this._activeHtml5QrCode) {
+        await this._activeHtml5QrCode.stop().catch(() => {});
+        this._activeHtml5QrCode = null;
+      }
+
+      const html5QrCode = new Html5Qrcode('centrlyCameraViewport');
+      this._activeHtml5QrCode = html5QrCode;
+
+      const facingMode = this._cameraFacingMode || 'environment';
+
+      const config = {
+        fps: 15,
+        qrbox: { width: 250, height: 150 },
+        aspectRatio: 1.333334,
+      };
+
+      await html5QrCode.start(
+        { facingMode },
+        config,
+        (decodedText) => {
+          this.handleCameraScanDetected(decodedText, mode);
+        },
+        () => {} // frame noise ignored
+      );
+    } catch (err) {
+      const viewport = document.getElementById('centrlyCameraViewport');
+      if (viewport) {
+        viewport.innerHTML = `
+          <div style="color: #f87171; padding: 2.5rem 1rem; text-align: center; font-size: 0.88rem; line-height: 1.6;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+            <strong>تعذر فتح الكاميرا:</strong><br>
+            ${err.message || 'يرجى السماح للمتصفح بالوصول للكاميرا (Camera Permissions).'}
+          </div>
+        `;
+      }
+    }
+  }
+
+  async toggleCameraFacingMode(mode = 'session') {
+    this._cameraFacingMode = this._cameraFacingMode === 'environment' ? 'user' : 'environment';
+    await this.startCameraScanner(mode);
+  }
+
+  async closeCameraScannerModal() {
+    if (this._activeHtml5QrCode) {
+      try {
+        await this._activeHtml5QrCode.stop();
+      } catch (_) {}
+      this._activeHtml5QrCode = null;
+    }
+    const modal = document.getElementById('cameraScannerModal');
+    if (modal) modal.remove();
+    this.focusScanInput();
+  }
+
+  async handleCameraScanDetected(decodedText, mode = 'session') {
+    if (!decodedText) return;
+    const cleanCode = decodedText.trim();
+    const now = Date.now();
+
+    // Debounce to prevent multi-scanning the same student in rapid succession
+    if (this._lastCameraCode === cleanCode && now - (this._lastCameraTime || 0) < 2500) {
+      return;
+    }
+    this._lastCameraCode = cleanCode;
+    this._lastCameraTime = now;
+
+    const feedback = document.getElementById('cameraScanFeedback');
+
+    if (mode === 'center') {
+      try {
+        const res = await request('/centers/front-desk/scan', {
+          method: 'POST',
+          body: { barcode: cleanCode },
+        });
+        if (res.success) {
+          this.playScanBeep('success');
+          this._cameraScanCount = (this._cameraScanCount || 0) + 1;
+          const countEl = document.getElementById('cameraScanCount');
+          if (countEl) countEl.innerText = this._cameraScanCount;
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.background = '#10b981';
+            feedback.style.color = '#fff';
+            feedback.innerHTML = `<span>${getIcon('check', 16, '#fff')}</span> <span>${res.message || 'تم رصد الحضور والتوجيه!'}</span>`;
+            setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 2200);
+          }
+          await this.loadRouteData('center-sessions');
+        } else {
+          this.playScanBeep('error');
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.background = '#ef4444';
+            feedback.style.color = '#fff';
+            feedback.innerHTML = `<span>${getIcon('close', 16, '#fff')}</span> <span>${res.message || 'تعذر التعرف على الطالب'}</span>`;
+            setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 2200);
+          }
+        }
+      } catch (err) {
+        this.playScanBeep('error');
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.background = '#ef4444';
+          feedback.style.color = '#fff';
+          feedback.innerText = `خطأ في الاتصال: ${err.message || 'تعذر الإرسال'}`;
+          setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 2200);
+        }
+      }
+      return;
+    }
+
+    // Default: Session attendance
+    const student = (this.students || []).find(s => {
+      const code = (s.code || s.student_code || '').trim().toLowerCase();
+      const name = (s.name || '').trim().toLowerCase();
+      const q = cleanCode.toLowerCase();
+      return code === q || name === q || (s.student_phone && s.student_phone.includes(q)) || (s.parent_phone && s.parent_phone.includes(q));
+    });
+
+    if (student) {
+      // Check if already attended
+      const existing = this.sessionState.attendanceList.find(
+        a => a.student_id === student.id || a.code === (student.code || student.student_code)
+      );
+
+      if (existing && existing.attended) {
+        this.playScanBeep('warning');
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.background = '#f59e0b';
+          feedback.style.color = '#1e293b';
+          feedback.innerHTML = `<strong>تنبيه:</strong> الطالب (${escapeHtml(student.name)}) مسجل حضوره بالفعل مسبقاً!`;
+          setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 2200);
+        }
+        return;
+      }
+
+      this.registerStudentAttendance(student);
+      this._cameraScanCount = (this._cameraScanCount || 0) + 1;
+      const countEl = document.getElementById('cameraScanCount');
+      if (countEl) countEl.innerText = this._cameraScanCount;
+
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#10b981';
+        feedback.style.color = '#fff';
+        feedback.innerHTML = `<span>${getIcon('check', 16, '#fff')}</span> <span>تم تسجيل: <strong>${escapeHtml(student.name)}</strong> (${escapeHtml(student.code || student.student_code || cleanCode)})</span>`;
+        setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 2200);
+      }
+    } else {
+      this.playScanBeep('error');
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#ef4444';
+        feedback.style.color = '#fff';
+        feedback.innerHTML = `<span>${getIcon('close', 16, '#fff')}</span> <span>كود غير مسجل بالمنظومة: <strong>${escapeHtml(cleanCode)}</strong></span>`;
+        setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 2500);
+      }
+    }
+  }
+
+  openScannerSetupGuide() {
+    const existing = document.getElementById('scannerSetupModal');
+    if (existing) existing.remove();
+
+    const modalHtml = `
+      <div id="scannerSetupModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(15,23,42,0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 9999; padding: 1rem;" dir="rtl">
+        <div class="card" style="width: 100%; max-width: 560px; margin: 0; padding: 1.5rem; border-radius: 16px; background: #ffffff; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); font-family: 'Cairo', sans-serif; max-height: 90vh; overflow-y: auto;">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="color: var(--centrly-blue-700);">${getIcon('gear', 22, 'var(--centrly-blue-700)')}</span>
+              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">
+                دليل وضبط أجهزة الباركود سكانر (Hardware Setup)
+              </h3>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('scannerSetupModal')?.remove()" style="border: none; font-size: 1.2rem; cursor: pointer; padding: 0.2rem 0.6rem;">✕</button>
+          </div>
+
+          <!-- Step 1: Plug & Play -->
+          <div style="margin-bottom: 1.25rem;">
+            <div style="font-weight: 800; color: var(--centrly-blue-800); font-size: 0.95rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span style="background: #eff6ff; color: #2563eb; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900;">1</span>
+              <span>التوصيل الفوري (Plug & Play - بدون أي تعريفات)</span>
+            </div>
+            <p style="font-size: 0.85rem; color: #475569; margin: 0 0 0.5rem 0; line-height: 1.6;">
+              أي جهاز سكانر تشتريه من السوق (سلكي USB أو لاسلكي Wireless 2.4GHz مع دانجل أو Bluetooth) يعمل فورياً. فقط ضعه في مدخل الـ USB بالكمبيوتر أو اللابتوب وسيتعرف عليه كـ لوحة مفاتيح سريعة مباشرة دون برامج تعريف.
+            </p>
+          </div>
+
+          <!-- Step 2: Automatic Enter Key (Suffix CR/LF) -->
+          <div style="margin-bottom: 1.25rem;">
+            <div style="font-weight: 800; color: var(--centrly-blue-800); font-size: 0.95rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span style="background: #eff6ff; color: #2563eb; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900;">2</span>
+              <span>إرسال زر Enter تلقائياً بعد المسح</span>
+            </div>
+            <p style="font-size: 0.85rem; color: #475569; margin: 0 0 0.5rem 0; line-height: 1.6;">
+              99% من أجهزة السكانر تأتي مبرمجة تلقائياً لتضغط Enter فور قراءة الكود. إذا كان سكانرك يكتب الكود ولا يضغط Enter، قم بمسح باركود <strong>(Add Enter / Carriage Return)</strong> الموجود في ورقة الكتالوج المصاحبة للسكانر مرة واحدة فقط وسيعمل دائماً.
+            </p>
+          </div>
+
+          <!-- Step 3: Interactive Live Scanner Tester -->
+          <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem;">
+            <div style="font-weight: 800; color: #166534; font-size: 0.95rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('barcode', 18, '#166534')}
+              <span>منطقة اختبار السكانر التفاعلية الحية</span>
+            </div>
+            <p style="font-size: 0.825rem; color: #166534; margin: 0 0 0.75rem 0;">
+              وجه سكانرك الآن وامسح أي كارت أو باركود في المربع أدناه لتتأكد من سرعة القراءة وسماع صوت الـ Beep:
+            </p>
+            
+            <input 
+              type="text" 
+              id="scannerTestLiveInput" 
+              class="form-input" 
+              placeholder="ضع المؤشر هنا وامسح بالسكانر..." 
+              style="background: #fff; border: 1.5px solid #16a34a; font-size: 1rem; font-weight: 800; text-align: center; direction: ltr;"
+              onkeydown="if (event.key === 'Enter') { event.preventDefault(); window.centrlyApp.handleLiveScannerTest(this.value); this.value = ''; }"
+            >
+
+            <div id="scannerTestLiveResult" style="margin-top: 0.65rem; font-size: 0.85rem; font-weight: 700; text-align: center; color: #047857; min-height: 24px;"></div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end;">
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('scannerSetupModal')?.remove()" style="font-weight: 700; padding: 0.5rem 1.5rem;">
+              فهمت، والكل جاهز
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    setTimeout(() => {
+      document.getElementById('scannerTestLiveInput')?.focus();
+    }, 100);
+  }
+
+  handleLiveScannerTest(code) {
+    if (!code) return;
+    this.playScanBeep('success');
+    const resEl = document.getElementById('scannerTestLiveResult');
+    if (resEl) {
+      resEl.innerHTML = `
+        <span style="color: #15803d;">${getIcon('check', 16, '#15803d')} تم استلام الكود بنجاح: <strong>${escapeHtml(code)}</strong> وبسرعة استجابة فائقة!</span>
+      `;
     }
   }
 
@@ -4407,14 +4800,17 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
       this.centerSessionsState.scanResult = res;
       if (res.success) {
+        this.playScanBeep('success');
         this.showToast(res.message || 'تم رصد الحضور والتوجيه بنجاح!', 'success');
         await this.loadRouteData('center-sessions');
       } else {
+        this.playScanBeep('error');
         this.showToast(res.message || 'تعذر التعرف على الطالب', 'warning');
       }
       if (input) input.value = '';
       this.renderMainContent();
     } catch (err) {
+      this.playScanBeep('error');
       this.centerSessionsState.scanResult = {
         success: false,
         message: err.message || 'خطأ في عملية المسح',
