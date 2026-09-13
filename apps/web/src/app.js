@@ -30,6 +30,7 @@ import { renderMaterialsView } from './components/MaterialsView.js?v=2.9.0';
 import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.js';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
+import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js';
 
 class CentrlyApp {
   constructor() {
@@ -498,6 +499,14 @@ class CentrlyApp {
     } else {
       window.location.reload();
     }
+  }
+
+  downloadStudentCardPng(student) {
+    downloadStudentCardAsPng(student);
+  }
+
+  openFullscreenBarcode(student) {
+    openFullscreenBarcodeModal(student);
   }
 
   async handleStudentHomeworkUpload(materialId, file) {
@@ -7328,34 +7337,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     }
 
     const cardsHtml = targetStudents.map(st => {
-      const barcodeSvg = `
-        <svg style="width: 100%; height: 42px;" viewBox="0 0 200 42">
-          <rect x="10" y="2" width="4" height="38" fill="#000"/>
-          <rect x="18" y="2" width="2" height="38" fill="#000"/>
-          <rect x="24" y="2" width="6" height="38" fill="#000"/>
-          <rect x="34" y="2" width="2" height="38" fill="#000"/>
-          <rect x="40" y="2" width="4" height="38" fill="#000"/>
-          <rect x="48" y="2" width="2" height="38" fill="#000"/>
-          <rect x="54" y="2" width="6" height="38" fill="#000"/>
-          <rect x="64" y="2" width="4" height="38" fill="#000"/>
-          <rect x="72" y="2" width="2" height="38" fill="#000"/>
-          <rect x="78" y="2" width="4" height="38" fill="#000"/>
-          <rect x="86" y="2" width="6" height="38" fill="#000"/>
-          <rect x="96" y="2" width="2" height="38" fill="#000"/>
-          <rect x="102" y="2" width="4" height="38" fill="#000"/>
-          <rect x="110" y="2" width="4" height="38" fill="#000"/>
-          <rect x="118" y="2" width="2" height="38" fill="#000"/>
-          <rect x="124" y="2" width="6" height="38" fill="#000"/>
-          <rect x="134" y="2" width="2" height="38" fill="#000"/>
-          <rect x="140" y="2" width="4" height="38" fill="#000"/>
-          <rect x="148" y="2" width="2" height="38" fill="#000"/>
-          <rect x="154" y="2" width="6" height="38" fill="#000"/>
-          <rect x="164" y="2" width="4" height="38" fill="#000"/>
-          <rect x="172" y="2" width="2" height="38" fill="#000"/>
-          <rect x="178" y="2" width="6" height="38" fill="#000"/>
-          <rect x="188" y="2" width="4" height="38" fill="#000"/>
-        </svg>
-      `;
+      const barcodeSvg = generateBarcode128Svg(st.code, { height: 46, unitWidth: 2.0 });
 
       return `
         <div class="card-box">
@@ -7566,25 +7548,18 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   }
 
   previewSpecificCard(name, code, group, phone) {
-    const bodyHtml = `
-      <div style="border: 2px solid var(--centrly-ink); border-radius: 12px; padding: 1.25rem; background: #fff; max-width: 360px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">
-          <strong style="color: var(--centrly-blue-800); font-size: 0.95rem;">${escapeHtml(this.user?.name || 'كارت المنظومة التعليمية')}</strong>
-          <span class="badge badge-blue" style="font-size: 0.72rem;">كارت ذكي</span>
-        </div>
-        <div style="margin-top: 0.75rem;">
-          <h4 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">${escapeHtml(name)}</h4>
-          <div style="font-size: 0.82rem; color: var(--centrly-text); margin-top: 0.35rem;">المجموعة: <b>${escapeHtml(group)}</b></div>
-          ${phone ? `<div style="font-size: 0.82rem; color: var(--centrly-text); margin-top: 0.2rem;">الهاتف: <b dir="ltr">${escapeHtml(phone)}</b></div>` : ''}
-        </div>
-        <div style="margin-top: 1rem; background: #f8fafc; padding: 0.75rem; border-radius: 8px; text-align: center; border: 1px dashed #cbd5e1;">
-          <div style="font-family: monospace; font-size: 1.1rem; font-weight: 800; letter-spacing: 2px; color: var(--centrly-blue-900);">${escapeHtml(code)}</div>
-        </div>
-      </div>
-    `;
+    const studentObj = {
+      name,
+      student_code: code,
+      code,
+      group_name: group,
+      teacher_name: this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'معلم المادة'),
+      center_name: this.user?.account_type === 'center' ? this.user?.name : '',
+    };
+    const bodyHtml = renderStudentBarcodeCardHtml(studentObj);
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
-      <button type="button" class="btn btn-primary" onclick="window.centrlyApp.downloadSelectedCardsPdf(); window.centrlyApp.closeModal();">طباعة الكارت</button>
+      <button type="button" class="btn btn-primary" onclick="window.centrlyBarcodeCard.downloadCardPng(${JSON.stringify(studentObj).replace(/"/g, '&quot;')})">تحميل كصورة (PNG)</button>
     `;
     this.showModal(`معاينة كارت الطالب: ${escapeHtml(name)}`, bodyHtml, footerHtml);
   }

@@ -1,5 +1,6 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import { renderStudentBarcodeCardHtml } from "../utils/studentBarcodeCard.js";
 
 /**
  * Centrly Student Web Portal Component
@@ -82,6 +83,9 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
             المذكرات الدراسية، رفع الواجبات، ومتابعة الدرجات والغياب أولاً بأول
           </p>
         </div>
+
+        <!-- Student Barcode Card (Centrly Brand Identity, High-Resolution Code 128, Teacher Name) -->
+        ${renderStudentBarcodeCardHtml(student)}
 
         <!-- 3-Tab Navigation Bar (Prioritizing Materials & Homework first) -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
