@@ -267,8 +267,9 @@ export function renderBillingView(data = {}, user = {}) {
           </p>
         </div>
         <div>
-          <button class="btn btn-secondary" onclick="window.centrlyApp.openPaymentProofModal('باقة مخصصة للسناتر (+500 طالب)', 2499, '${isYearly ? 'yearly' : 'monthly'}')" style="font-weight: 800; padding: 0.65rem 1.25rem; font-size: 0.9rem;">
-            طلب تسعير سنتر مخصص
+          <button class="btn" onclick="window.centrlyApp.contactEnterpriseWhatsApp()" style="font-weight: 800; padding: 0.65rem 1.25rem; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.45rem; background: #25d366; color: #ffffff; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(37,211,102,0.25); cursor: pointer;">
+            ${getIcon('whatsapp', 18, '#ffffff')}
+            <span>طلب التفاصيل</span>
           </button>
         </div>
       </div>

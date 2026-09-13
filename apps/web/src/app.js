@@ -6257,6 +6257,12 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     document.body.insertAdjacentHTML('beforeend', modalHtml);
   }
 
+  contactEnterpriseWhatsApp() {
+    const phone = '201010979708';
+    const message = encodeURIComponent('السلام عليكم، عايز أعمل مجموعة فوق 500 طالب ومحتاج أعرف التفاصيل والأسعار.');
+    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+  }
+
   openPaymentProofModal(planName = 'باقة 100 طالب', amount = 599, billingCycle = 'monthly') {
     const existing = document.getElementById('paymentProofModal');
     if (existing) existing.remove();
