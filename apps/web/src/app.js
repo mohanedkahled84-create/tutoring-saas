@@ -6557,20 +6557,8 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         }).catch(() => {});
       }
 
-      this.showToast(`تم حفظ وتثبيت درجات كويز ${currQuizNum} لـ (${count}) طالب بنجاح في قاعدة البيانات ✓`, 'success');
+      this.showToast(`تم حفظ وتثبيت درجات كويز ${currQuizNum} لـ (${count}) طالب بنجاح! وستظهر فوراً في بوابات المتابعة ✓`, 'success');
       this.renderMainContent();
-
-      // Offer immediate dispatch to WhatsApp
-      this.showConfirmModal({
-        title: 'إرسال درجات الكويز لأولياء الأمور عبر الواتساب',
-        message: `تم حفظ درجات (${count}) طالب في قاعدة البيانات بنجاح! هل ترغب في إرسال النتائج الآن إلى أولياء الأمور عبر واتساب بنظام الأمان الفائق ومكافحة الحظر؟`,
-        confirmText: `نعم، إرسال الدرجات للجميع (${count} طلاب)`,
-        cancelText: 'لاحقاً',
-        isDanger: false,
-        onConfirm: () => {
-          this.dispatchBatchQuizScores();
-        },
-      });
     } catch (err) {
       this.showToast(`فشل حفظ درجات الكويز: ${err.message || 'خطأ في الخادم'}`, 'danger');
     } finally {
