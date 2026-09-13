@@ -78,8 +78,8 @@ export function createApp(): Express {
   // Health and uptime monitoring (unthrottled for monitoring agents)
   app.use("/health", healthRouter);
 
-  // DEV-AUTH.3 & DEV-APISEC.1: Auth routes with strict rate limiting
-  app.use("/api/auth", authRateLimiter, authRouter);
+  // DEV-AUTH.3 & DEV-APISEC.1: Auth routes (sensitive endpoints are individually rate-limited)
+  app.use("/api/auth", authRouter);
 
   // Public endpoints (Self-registration from shareable links - no token needed)
   app.use("/api/public", publicRouter);

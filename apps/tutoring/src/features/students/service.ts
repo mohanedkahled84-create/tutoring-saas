@@ -13,6 +13,7 @@ import {
   normalizePhoneNumber,
   isValidEgyptianPhone,
 } from "./import.js";
+import { generateParentPortalToken } from "../../shared/utils/tokens.js";
 
 export class StudentsService {
   constructor(private readonly repo: IStudentsRepository) {}
@@ -40,7 +41,7 @@ export class StudentsService {
       codeToUse = String(nextSerial);
     }
 
-    return this.repo.create(tenantId, {
+    const student = await this.repo.create(tenantId, {
       name: data.name,
       parent_phone: data.parent_phone,
       student_phone: data.student_phone || null,
@@ -50,6 +51,13 @@ export class StudentsService {
       fee_override: data.fee_override ?? null,
       exempt: data.exempt ?? false,
     });
+
+    if (student?.id && tenantId) {
+      const token = generateParentPortalToken(student.id, tenantId, 365);
+      await this.repo.update(student.id, { parent_portal_token: token }).catch(() => {});
+      student.parent_portal_token = token;
+    }
+    return student;
   }
 
   async updateStudent(id: string, data: UpdateStudentDTO): Promise<Student | null> {

@@ -1,12 +1,13 @@
 import { Router, Request, Response } from "express";
 import { getServices } from "../../composition.js";
 import { extractToken, authenticateUser } from "../../shared/middleware/auth.js";
+import { authRateLimiter } from "../../shared/middleware/rateLimit.js";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 
 export const authRouter = Router();
 
 // POST /api/auth/login - Rate-limited, brute-force protected login
-authRouter.post("/login", async (req: Request, res: Response): Promise<void> => {
+authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -82,7 +83,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
 });
 
 // DEV-SA.1 & DEV-SL.1: POST /api/auth/signup - Teacher registration with 14-day trial & founder alert
-authRouter.post("/signup", async (req: Request, res: Response): Promise<void> => {
+authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const { email, password, full_name, tenant_name, phone, subject, governorate, account_type } = req.body;
 
   if (!email || !password || !tenant_name) {
@@ -156,7 +157,7 @@ authRouter.post("/signup", async (req: Request, res: Response): Promise<void> =>
 });
 
 // DEV-PR.1: POST /api/auth/forgot-password - Request password reset email
-authRouter.post("/forgot-password", async (req: Request, res: Response): Promise<void> => {
+authRouter.post("/forgot-password", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body;
 
   if (!email) {
@@ -177,7 +178,7 @@ authRouter.post("/forgot-password", async (req: Request, res: Response): Promise
 });
 
 // DEV-PR.1: POST /api/auth/reset-password - Complete password reset using user session/token
-authRouter.post("/reset-password", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+authRouter.post("/reset-password", authRateLimiter, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const token = extractToken(req) || req.body.token;
   // SEC-HOTFIX: Unified contract on 'password' with fallback support for 'new_password'
   const password = req.body.password || req.body.new_password;

@@ -4901,54 +4901,199 @@ class CentrlyApp {
     }, 800);
   }
 
+  async copyToClipboard(text, successMessage = 'تم النسخ بنجاح!', fallbackTitle = 'نسخ الرابط') {
+    if (!text) return false;
+
+    let copied = false;
+
+    // 1. Try modern navigator.clipboard
+    if (navigator && navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      } catch (e) {
+        copied = false;
+      }
+    }
+
+    // 2. Fallback: Hidden textarea with document.execCommand('copy')
+    if (!copied) {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.top = '-9999px';
+        textArea.style.left = '-9999px';
+        textArea.style.opacity = '0';
+        textArea.setAttribute('readonly', '');
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        textArea.setSelectionRange(0, 99999);
+        copied = document.execCommand('copy');
+        document.body.removeChild(textArea);
+      } catch (e) {
+        copied = false;
+      }
+    }
+
+    // 3. Fallback: Web Share API if available (especially on mobile phones)
+    if (!copied && navigator.share) {
+      try {
+        await navigator.share({
+          title: fallbackTitle || 'Centrly',
+          text: text,
+          url: text.startsWith('http') ? text : undefined
+        });
+        this.showToast('تم فتح قائمة المشاركة بنجاح!', 'info');
+        return true;
+      } catch (e) {
+        // Ignored if user dismissed share sheet
+      }
+    }
+
+    // 4. Fallback: Clean modal dialog with pre-selected input so user can copy easily
+    if (!copied) {
+      this.openCopyFallbackModal(fallbackTitle || 'نسخ الرابط', text);
+      return true;
+    }
+
+    if (successMessage) {
+      this.showToast(successMessage, 'success');
+    }
+    return true;
+  }
+
+  openCopyFallbackModal(title, text) {
+    const waUrl = text.startsWith('http') ? `https://wa.me/?text=${encodeURIComponent(text)}` : '';
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1rem;" dir="rtl">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.85rem; font-size: 0.85rem; color: #1e40af; line-height: 1.5;">
+          <strong>تنبيه المتصفح:</strong> يرجى الضغط على الزر أدناه لنسخ الرابط أو مشاركته مباشرة.
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700;">الرابط المطلوب:</label>
+          <input type="text" id="centrlyFallbackCopyInput" class="form-input" dir="ltr" value="${escapeHtml(text)}" readonly onclick="this.select();" style="font-family: monospace; font-size: 0.82rem; background: #f8fafc;">
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
+          <button type="button" class="btn btn-primary" onclick="const input = document.getElementById('centrlyFallbackCopyInput'); if (input) { input.focus(); input.select(); document.execCommand('copy'); window.centrlyApp.showToast('تم النسخ بنجاح!', 'success'); window.centrlyApp.closeModal(); }">
+            ${getIcon('copy', 14)}
+            <span>تحديد ونسخ</span>
+          </button>
+          ${waUrl ? `
+            <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="background: #25d366; border-color: #25d366; color: #ffffff;">
+              ${getIcon('whatsapp', 14, '#ffffff')}
+              <span>مشاركة عبر واتساب</span>
+            </a>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    this.showModal(title, bodyHtml, '');
+    setTimeout(() => {
+      const input = document.getElementById('centrlyFallbackCopyInput');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 150);
+  }
+
   async copyParentLink(studentId) {
+    const student = (this.students || []).find(s => s.id === studentId);
+    const canonicalOrigin = 'https://centerly-platform.vercel.app';
+    const pToken = student?.parent_portal_token || student?.parentPortalToken;
+    if (pToken) {
+      const fullUrl = `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}`;
+      await this.copyToClipboard(fullUrl, 'تم نسخ رابط متابعة ولي الأمر بنجاح!', 'رابط متابعة ولي الأمر');
+      return;
+    }
+
     try {
       const res = await request(`/students/${studentId}/parent-link`);
-      const canonicalOrigin = 'https://centerly-platform.vercel.app';
       const fullUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
-      await navigator.clipboard.writeText(fullUrl);
-      this.showToast('تم نسخ رابط متابعة ولي الأمر بنجاح!', 'success');
+      if (student) student.parent_portal_token = res.token;
+      await this.copyToClipboard(fullUrl, 'تم نسخ رابط متابعة ولي الأمر بنجاح!', 'رابط متابعة ولي الأمر');
     } catch (err) {
       this.showToast(`تعذر الحصول على رابط ولي الأمر: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
     }
   }
 
   async previewParentPortal(studentId) {
+    const student = (this.students || []).find(s => s.id === studentId);
+    const canonicalOrigin = 'https://centerly-platform.vercel.app';
+    const pToken = student?.parent_portal_token || student?.parentPortalToken;
+    if (pToken) {
+      const fullUrl = `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}`;
+      window.open(fullUrl, '_blank');
+      return;
+    }
+
+    const newTab = window.open('about:blank', '_blank');
     try {
       const res = await request(`/students/${studentId}/parent-link`);
-      const canonicalOrigin = 'https://centerly-platform.vercel.app';
       const fullUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
-      window.open(fullUrl, '_blank');
+      if (student) student.parent_portal_token = res.token;
+      if (newTab) {
+        newTab.location.href = fullUrl;
+      } else {
+        window.open(fullUrl, '_blank');
+      }
     } catch (err) {
+      if (newTab) newTab.close();
       this.showToast(`تعذر فتح رابط المعاينة: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
     }
   }
 
   async copyStudentLink(studentId) {
+    const student = (this.students || []).find(s => s.id === studentId);
+    const canonicalOrigin = 'https://centerly-platform.vercel.app';
+    const pToken = student?.parent_portal_token || student?.parentPortalToken;
+    if (pToken) {
+      const studentUrl = `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}&portal=student`;
+      await this.copyToClipboard(studentUrl, 'تم نسخ رابط بوابة الطالب بنجاح!', 'رابط بوابة الطالب');
+      return;
+    }
+
     try {
       const res = await request(`/students/${studentId}/parent-link`);
-      const canonicalOrigin = 'https://centerly-platform.vercel.app';
       const basePortalUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
       const studentUrl = basePortalUrl.includes('?') 
         ? `${basePortalUrl}&portal=student` 
         : `${basePortalUrl}?portal=student`;
-      await navigator.clipboard.writeText(studentUrl);
-      this.showToast('تم نسخ رابط بوابة الطالب بنجاح!', 'success');
+      if (student) student.parent_portal_token = res.token;
+      await this.copyToClipboard(studentUrl, 'تم نسخ رابط بوابة الطالب بنجاح!', 'رابط بوابة الطالب');
     } catch (err) {
       this.showToast(`تعذر الحصول على رابط الطالب: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
     }
   }
 
   async previewStudentPortal(studentId) {
+    const student = (this.students || []).find(s => s.id === studentId);
+    const canonicalOrigin = 'https://centerly-platform.vercel.app';
+    const pToken = student?.parent_portal_token || student?.parentPortalToken;
+    if (pToken) {
+      const studentUrl = `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}&portal=student`;
+      window.open(studentUrl, '_blank');
+      return;
+    }
+
+    const newTab = window.open('about:blank', '_blank');
     try {
       const res = await request(`/students/${studentId}/parent-link`);
-      const canonicalOrigin = 'https://centerly-platform.vercel.app';
       const basePortalUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
       const studentUrl = basePortalUrl.includes('?') 
         ? `${basePortalUrl}&portal=student` 
         : `${basePortalUrl}?portal=student`;
-      window.open(studentUrl, '_blank');
+      if (student) student.parent_portal_token = res.token;
+      if (newTab) {
+        newTab.location.href = studentUrl;
+      } else {
+        window.open(studentUrl, '_blank');
+      }
     } catch (err) {
+      if (newTab) newTab.close();
       this.showToast(`تعذر فتح رابط المعاينة: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
     }
   }
@@ -6216,12 +6361,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   }
 
   copyInviteUrl(url) {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url);
-      this.showToast('تم نسخ رابط الدعوة بنجاح!', 'success');
-    } else {
-      prompt('انسخ الرابط التالي:', url);
-    }
+    this.copyToClipboard(url, 'تم نسخ رابط الدعوة بنجاح!', 'رابط الدعوة');
   }
 
   // ==========================================================================
@@ -6588,7 +6728,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
                 <div style="font-family: monospace; font-size: 1.35rem; font-weight: 900; color: #15803d; direction: ltr; letter-spacing: 1px;">
                   01010979708
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('01010979708'); window.centrlyApp.showToast('تم نسخ الرقم 01010979708', 'success');" style="font-weight: 800; font-size: 0.8rem; background: #ffffff; border-color: #86efac; color: #166534;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyToClipboard('01010979708', 'تم نسخ الرقم 01010979708 بنجاح!', 'رقم التحويل')" style="font-weight: 800; font-size: 0.8rem; background: #ffffff; border-color: #86efac; color: #166534;">
                   نسخ الرقم
                 </button>
               </div>
@@ -8529,8 +8669,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       this.showToast('لا توجد أرقام هواتف مسجلة للطلاب المتأخرين', 'info');
       return;
     }
-    navigator.clipboard.writeText(phones.join(', '));
-    this.showToast(`تم نسخ ${phones.length} رقم هاتف للطلاب المتأخرين!`, 'success');
+    this.copyToClipboard(phones.join(', '), `تم نسخ ${phones.length} رقم هاتف للطلاب المتأخرين!`, 'أرقام هواتف الطلاب المتأخرين');
   }
 
   // Dedicated Homework Creation Modal with 3 Clear Modes (Text, PDF Upload, External Link)
@@ -8864,11 +9003,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     if (hw.url && hw.url !== '#' && hw.url.trim().length > 0) text += `• *رابط الملف المرفق:* ${hw.url}\n`;
     text += `\n• *طريقة التسليم:* حل المطلوب في كشكولك بخط واضح، وصوّر الصفحات وحوّلها لـ PDF وارفعها مباشرة عبر رابط بوابتك الخاصة في Centrly.\nبالتوفيق والنجاح دائماً.`;
 
-    navigator.clipboard.writeText(text).then(() => {
-      this.showToast('تم نسخ تفاصيل الواجب بنجاح! جاهز للصق في جروب الواتساب', 'success');
-    }).catch(() => {
-      prompt('انسخ نص الواجب التالي:', text);
-    });
+    this.copyToClipboard(text, 'تم نسخ تفاصيل الواجب بنجاح! جاهز للصق في جروب الواتساب', 'تفاصيل الواجب');
   }
 
   // ==========================================================================

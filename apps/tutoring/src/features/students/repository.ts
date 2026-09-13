@@ -5,6 +5,7 @@ import {
   GroupRecord,
   IStudentsRepository,
 } from "./types.js";
+import { generateParentPortalToken } from "../../shared/utils/tokens.js";
 
 export class SupabaseStudentsRepository implements IStudentsRepository {
   constructor(private readonly client: SupabaseClient) {}
@@ -45,6 +46,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       const matchedGs = groupId ? gsList.find((g: any) => g.group_id === groupId) : gsList[0];
       const primaryGs = matchedGs || gsList[0];
       const grp = primaryGs?.groups;
+      const portalToken = s.parent_portal_token || (s.id && s.tenant_id ? generateParentPortalToken(s.id, s.tenant_id, 365) : null);
       return {
         id: s.id,
         tenant_id: s.tenant_id,
@@ -58,7 +60,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
         notes: s.notes,
         parent_portal_sent_at: s.parent_portal_sent_at || null,
         student_portal_sent_at: s.student_portal_sent_at || null,
-        parent_portal_token: s.parent_portal_token || null,
+        parent_portal_token: portalToken,
         created_at: s.created_at,
         group_id: primaryGs?.group_id || null,
         group_name: grp?.name || null,
@@ -82,7 +84,12 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     if (error) {
       throw new Error(error.message);
     }
-    return (data as Student) || null;
+    if (!data) return null;
+    const student = data as Student;
+    if (!student.parent_portal_token && student.id && student.tenant_id) {
+      student.parent_portal_token = generateParentPortalToken(student.id, student.tenant_id, 365);
+    }
+    return student;
   }
 
   async create(tenantId: string | undefined, student: Partial<Student>): Promise<Student> {

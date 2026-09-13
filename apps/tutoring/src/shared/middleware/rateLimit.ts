@@ -1,10 +1,10 @@
 import rateLimit from "express-rate-limit";
 import { Request, Response } from "express";
 
-// DEV-APISEC.1: Global rate limiter (100 requests per 15 minutes per IP)
+// DEV-APISEC.1: Global rate limiter (1000 requests per 15 minutes per IP)
 export const globalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
@@ -17,10 +17,11 @@ export const globalRateLimiter = rateLimit({
   },
 });
 
-// Sensitive auth endpoints (login, signup) - 10 attempts per 15 minutes
+// Sensitive auth endpoints (login, signup) - 50 attempts per 15 minutes, skipping successful logins
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 50,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
