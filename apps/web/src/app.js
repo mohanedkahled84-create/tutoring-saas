@@ -126,6 +126,16 @@ class CentrlyApp {
   async init() {
     this.setupModalKeyboardShortcuts();
 
+    // Auto-lock sensitive financial pages when browser tab loses focus or is hidden
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && this.hasSecurityPin && this.isFinancialUnlocked) {
+        this.isFinancialUnlocked = false;
+        if (this.currentRoute === 'teacher-dashboard' || this.currentRoute === 'assistants') {
+          this.renderMainContent();
+        }
+      }
+    });
+
     // Check if Portal token is present in URL (Student vs Parent Portal)
     const urlParams = new URLSearchParams(window.location.search);
     const portalToken = urlParams.get('token');
@@ -689,6 +699,10 @@ class CentrlyApp {
 
   async navigate(route) {
     this.stopWhatsAppStatusPolling();
+    // Auto-lock sensitive pages automatically upon changing or switching pages
+    if (this.hasSecurityPin && this.isFinancialUnlocked) {
+      this.isFinancialUnlocked = false;
+    }
     this.currentRoute = route;
     try {
       localStorage.setItem('centrly_current_route', route);
