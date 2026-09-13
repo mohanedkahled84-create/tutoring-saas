@@ -45,9 +45,9 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
               ${getIcon('add', 16, '#ffffff')}
               <span>إضافة مذكرة / رابط شرح جديد</span>
             </button>
-            <button class="btn btn-secondary" onclick="window.centrlyApp.navigateTo('homework')" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-              ${getIcon('homework', 16, 'var(--centrly-blue-700)')}
-              <span>الواجبات المنزلية (قسم منفصل)</span>
+            <button class="btn btn-secondary" onclick="window.centrlyApp.openAddHomeworkModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+              ${getIcon('add', 16, 'var(--centrly-blue-700)')}
+              <span>إضافة واجب</span>
             </button>
           </div>
         </div>

@@ -26,7 +26,7 @@ import { renderCenterAssistantsView } from './components/CenterAssistantsView.js
 import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
 import { renderLandingView } from './components/LandingView.js?v=2.8.0';
-import { renderMaterialsView } from './components/MaterialsView.js';
+import { renderMaterialsView } from './components/MaterialsView.js?v=2.9.0';
 import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.js';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
@@ -852,6 +852,10 @@ class CentrlyApp {
       this.finishProgressBar();
       this.renderMainContent();
     }
+  }
+
+  navigateTo(route) {
+    return this.navigate(route);
   }
 
   async retryRoute(route) {
@@ -7790,14 +7794,12 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           <label class="form-label" style="font-weight: 700; margin-bottom: 0.4rem; display: block;">مصدر ملف الـ PDF *</label>
           <div style="display: flex; gap: 0.4rem; background: #f1f5f9; padding: 4px; border-radius: 0.5rem; margin-bottom: 0.75rem;">
             <button type="button" id="matPdfSourceBtn-upload" onclick="window.centrlyApp.switchMatPdfSource('upload')"
-              style="flex: 1; border: none; background: #ffffff; color: var(--centrly-blue-800); padding: 0.45rem; border-radius: 0.4rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;">
-              ${getIcon('upload', 14)}
-              <span>رفع ملف PDF من جهازك</span>
+              style="flex: 1; border: none; background: #ffffff; color: var(--centrly-blue-800); padding: 0.5rem 0.6rem; border-radius: 0.4rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: all 0.2s; text-align: center;">
+              رفع ملف PDF من جهازك
             </button>
             <button type="button" id="matPdfSourceBtn-link" onclick="window.centrlyApp.switchMatPdfSource('link')"
-              style="flex: 1; border: none; background: transparent; color: #64748b; padding: 0.45rem; border-radius: 0.4rem; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;">
-              ${getIcon('link', 14)}
-              <span>رابط سحابي (Google Drive)</span>
+              style="flex: 1; border: none; background: transparent; color: #64748b; padding: 0.5rem 0.6rem; border-radius: 0.4rem; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; text-align: center;">
+              رابط سحابي (Google Drive)
             </button>
           </div>
 
@@ -7854,9 +7856,8 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-      <button type="submit" form="modalAddMaterialForm" id="btnPublishMaterial" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem; display: inline-flex; align-items: center; gap: 0.4rem;">
-        ${getIcon('check', 16, '#ffffff')}
-        <span>إضافة المذكرة الآن</span>
+      <button type="submit" form="modalAddMaterialForm" id="btnPublishMaterial" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">
+        إضافة المذكرة الآن
       </button>
     `;
     this.showModal('إضافة مذكرة تعليمية أو شرح جديد', bodyHtml, footerHtml);
@@ -8423,19 +8424,16 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           <label class="form-label" style="font-weight: 800; color: #0f172a; margin-bottom: 0.45rem;">اختر طريقة تقديم الواجب للطلاب *</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.4rem; background: #f1f5f9; padding: 0.35rem; border-radius: 0.65rem; border: 1px solid #e2e8f0;">
             <button type="button" id="hwTabBtn-text" onclick="window.centrlyApp.switchHwTab('text')" 
-              style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.55rem 0.4rem; font-size: 0.85rem; font-weight: 800; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; background: #ffffff; color: var(--centrly-blue-800); box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
-              ${getIcon('edit', 14, 'var(--centrly-blue-800)')}
-              <span>نص حر</span>
+              style="display: flex; align-items: center; justify-content: center; padding: 0.55rem 0.4rem; font-size: 0.85rem; font-weight: 800; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; background: #ffffff; color: var(--centrly-blue-800); box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
+              نص حر
             </button>
             <button type="button" id="hwTabBtn-pdf" onclick="window.centrlyApp.switchHwTab('pdf')" 
-              style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.55rem 0.4rem; font-size: 0.85rem; font-weight: 700; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #64748b;">
-              ${getIcon('file', 14, '#64748b')}
-              <span>رفع ملف PDF</span>
+              style="display: flex; align-items: center; justify-content: center; padding: 0.55rem 0.4rem; font-size: 0.85rem; font-weight: 700; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #64748b; text-align: center;">
+              رفع ملف PDF
             </button>
             <button type="button" id="hwTabBtn-link" onclick="window.centrlyApp.switchHwTab('link')" 
-              style="display: flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.55rem 0.4rem; font-size: 0.85rem; font-weight: 700; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #64748b;">
-              ${getIcon('link', 14, '#64748b')}
-              <span>رابط / لينك</span>
+              style="display: flex; align-items: center; justify-content: center; padding: 0.55rem 0.4rem; font-size: 0.85rem; font-weight: 700; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #64748b; text-align: center;">
+              رابط / لينك
             </button>
           </div>
         </div>
@@ -8517,9 +8515,8 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-      <button type="submit" form="modalAddHomeworkForm" id="btnPublishHomework" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem; display: inline-flex; align-items: center; gap: 0.4rem;">
-        ${getIcon('check', 16, '#ffffff')}
-        <span>نشر الواجب للطلاب الآن</span>
+      <button type="submit" form="modalAddHomeworkForm" id="btnPublishHomework" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">
+        نشر الواجب للطلاب الآن
       </button>
     `;
 
