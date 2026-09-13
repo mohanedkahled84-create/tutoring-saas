@@ -4516,7 +4516,7 @@ class CentrlyApp {
     });
   }
 
-  openDirectWhatsAppFallbackModal(studentName, phone, messageText, onDelivered) {
+  openDirectWhatsAppFallbackModal(studentName, phone, messageText, onDelivered, recipientType = 'parent') {
     let cleanPhone = (phone || '').replace(/[\s\-\+\(\)]/g, '');
     if (cleanPhone.startsWith('00')) cleanPhone = cleanPhone.slice(2);
     if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
@@ -4527,14 +4527,17 @@ class CentrlyApp {
       ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`
       : `https://wa.me/?text=${encodeURIComponent(messageText)}`;
 
+    const isStudent = recipientType === 'student';
+    const recipientTitle = isStudent ? 'الطالب' : 'ولي الأمر';
+
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1rem;" dir="rtl">
         <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.85rem; font-size: 0.85rem; color: #92400e; line-height: 1.6;">
-          <strong>الإرسال المباشر لولي الأمر:</strong> واتساب السيرفر الآلي غير متصل حالياً. تم تجهيز نص التقرير بالكامل للطالب <b>${escapeHtml(studentName)}</b> لتتمكن من إرساله فوراً بنقرة واحدة عبر واتساب لضمان وصوله إلى ولي الأمر!
+          <strong>الإرسال المباشر لـ ${recipientTitle}:</strong> واتساب السيرفر الآلي غير متصل حالياً. تم تجهيز نص الرسالة بالكامل لـ <b>${escapeHtml(studentName)}</b> لتتمكن من إرسالها فوراً بنقرة واحدة عبر واتساب لضمان وصولها!
         </div>
 
         <div class="form-group">
-          <label class="form-label" style="font-weight: 700;">رقم هاتف ولي الأمر:</label>
+          <label class="form-label" style="font-weight: 700;">رقم هاتف ${recipientTitle}:</label>
           <input type="tel" id="fallbackParentPhone" class="form-input" dir="ltr" value="${escapeHtml(phone || '')}" placeholder="01012345678" oninput="window.centrlyApp.updateDirectFallbackLink()">
         </div>
 
@@ -4555,14 +4558,14 @@ class CentrlyApp {
             onclick="window.centrlyApp.onDirectWhatsAppModalClicked()"
           >
             ${getIcon('whatsapp', 18, '#ffffff')}
-            <span>فتح واتساب وإرسال الإشعار الآن</span>
+            <span>فتح واتساب وإرسال الرابط الآن</span>
           </a>
         </div>
       </div>
     `;
 
     this._pendingDirectOnDelivered = onDelivered;
-    this.showModal(`إرسال تقرير (${studentName}) عبر واتساب`, bodyHtml, '');
+    this.showModal(`إرسال رابط بوابة (${studentName}) عبر واتساب`, bodyHtml, '');
   }
 
   updateDirectFallbackLink() {
@@ -4654,6 +4657,26 @@ class CentrlyApp {
     const studentName = student?.name || 'الطالب';
     this.showToast(`جاري إرسال رابط المتابعة لولي أمر (${studentName})...`, 'info');
 
+    const openDirectFallback = async () => {
+      try {
+        const linkRes = await request(`/students/${studentId}/parent-link`);
+        const canonicalOrigin = 'https://centerly-platform.vercel.app';
+        const portalUrl = linkRes.full_url || `${canonicalOrigin}${linkRes.portal_url}`;
+        const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
+        const msg = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (${studentName}).\n\nحرصاً على متابعة المستوى الدراسي لـ (${studentName}) أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:\n\n🔗 رابط المتابعة المباشر:\n${portalUrl}\n\n💡 من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول:\n• متابعة الحضور والغياب لحظياً.\n• درجات الكويزات والامتحانات الدورية.\n• تسليم الواجبات المنزلية وملاحظات المعلم.\n\nمع خالص التمنيات بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
+        this.openDirectWhatsAppFallbackModal(studentName, parentPhone, msg, () => {
+          if (student) {
+            student.parent_portal_sent_at = new Date().toISOString();
+          }
+          if (this.currentRoute === 'students') {
+            this.renderMainContent();
+          }
+        }, 'parent');
+      } catch (fErr) {
+        this.showToast('تعذر تجهيز رابط المتابعة المباشر', 'danger');
+      }
+    };
+
     try {
       const res = await request(`/students/${studentId}/send-parent-link`, {
         method: 'POST',
@@ -4672,17 +4695,91 @@ class CentrlyApp {
         }
       } else {
         const errorMsg = res.error || 'فشل إرسال الرابط عبر واتساب';
-        const displayMsg = (errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404'))
-          ? 'تعذر الإرسال: حساب الواتساب غير متصل حالياً أو يحتاج لمسح كود QR من صفحة الإعدادات أولاً.'
-          : errorMsg;
-        this.showToast(displayMsg, 'danger');
+        const isConnError = errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404') || errorMsg.includes('paused') || errorMsg.includes('Circuit breaker');
+        if (isConnError) {
+          await openDirectFallback();
+        } else {
+          this.showToast(errorMsg, 'danger');
+        }
       }
     } catch (err) {
       const errorMsg = err.message || 'تأكد من اتصال الخادم';
-      const displayMsg = (errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404'))
-        ? 'تعذر الإرسال: حساب الواتساب غير متصل حالياً أو يحتاج لمسح كود QR من صفحة الإعدادات أولاً.'
-        : `خطأ أثناء إرسال الرابط: ${errorMsg}`;
-      this.showToast(displayMsg, 'danger');
+      const isConnError = errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404') || errorMsg.includes('paused') || errorMsg.includes('Circuit breaker') || errorMsg.includes('502');
+      if (isConnError) {
+        await openDirectFallback();
+      } else {
+        this.showToast(`خطأ أثناء إرسال الرابط: ${errorMsg}`, 'danger');
+      }
+    }
+  }
+
+  async sendSingleStudentLink(studentId) {
+    const student = (this.students || []).find(s => s.id === studentId);
+    const studentPhone = student?.studentPhone || student?.student_phone;
+    if (!studentPhone) {
+      this.showToast('رقم هاتف الطالب غير مسجل لهذا الطالب.', 'warning');
+      return;
+    }
+
+    const studentName = student?.name || 'الطالب';
+    this.showToast(`جاري إرسال رابط البوابة للطالب (${studentName})...`, 'info');
+
+    const openDirectFallback = async () => {
+      try {
+        const linkRes = await request(`/students/${studentId}/parent-link`);
+        const canonicalOrigin = 'https://centerly-platform.vercel.app';
+        const basePortalUrl = linkRes.full_url || `${canonicalOrigin}${linkRes.portal_url}`;
+        const studentUrl = basePortalUrl.includes('?') 
+          ? `${basePortalUrl}&portal=student` 
+          : `${basePortalUrl}?portal=student`;
+        const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
+        const msg = `السلام عليكم ورحمة الله وبركاته، يا بطل (${studentName}) 👋\n\nيسعدنا تزويدك برابط بوابتك التعليمية الرسمية لمتابعة دروسك وتحميل المذكرات ورفع الواجبات أولاً بأول:\n\n🔗 رابط بوابتك التعليمية المباشر:\n${studentUrl}\n\n💡 من خلال هذه البوابة يمكنك في أي وقت:\n• تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n• معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n• رفع حلول الواجبات وملفات الـ PDF مباشرة.\n• الاطلاع على درجات الكويزات وسجل حضورك.\n\nشد حيلك وبالتوفيق والتميز دائماً بإذن الله 🎯\nمع تحيات: ${teacherName}`;
+        this.openDirectWhatsAppFallbackModal(studentName, studentPhone, msg, () => {
+          if (student) {
+            student.student_portal_sent_at = new Date().toISOString();
+          }
+          if (this.currentRoute === 'students') {
+            this.renderMainContent();
+          }
+        }, 'student');
+      } catch (fErr) {
+        this.showToast('تعذر تجهيز رابط بوابة الطالب المباشر', 'danger');
+      }
+    };
+
+    try {
+      const res = await request(`/students/${studentId}/send-student-link`, {
+        method: 'POST',
+        body: {
+          teacher_name: this.user?.name || 'المعلم',
+        },
+      });
+
+      if (res.success) {
+        if (student) {
+          student.student_portal_sent_at = res.sent_at || new Date().toISOString();
+        }
+        this.showToast(`تم إرسال رابط البوابة بنجاح للطالب (${studentName})!`, 'success');
+        if (this.currentRoute === 'students') {
+          this.renderMainContent();
+        }
+      } else {
+        const errorMsg = res.error || 'فشل إرسال الرابط عبر واتساب';
+        const isConnError = errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404') || errorMsg.includes('paused') || errorMsg.includes('Circuit breaker');
+        if (isConnError) {
+          await openDirectFallback();
+        } else {
+          this.showToast(errorMsg, 'danger');
+        }
+      }
+    } catch (err) {
+      const errorMsg = err.message || 'تأكد من اتصال الخادم';
+      const isConnError = errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404') || errorMsg.includes('paused') || errorMsg.includes('Circuit breaker') || errorMsg.includes('502');
+      if (isConnError) {
+        await openDirectFallback();
+      } else {
+        this.showToast(`خطأ أثناء إرسال الرابط: ${errorMsg}`, 'danger');
+      }
     }
   }
 

@@ -235,23 +235,34 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                           ${getIcon('copy', 12)}
                           <span>نسخ</span>
                         </button>
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendSingleStudentLink('${escapeHtml(s.id)}')" title="إرسال رابط البوابة للطالب عبر واتساب" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; color: #1d4ed8; border-color: rgba(29, 78, 216, 0.3);">
+                          ${getIcon('whatsapp', 12)}
+                          <span>إرسال</span>
+                        </button>
                         <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.previewStudentPortal('${escapeHtml(s.id)}')" title="معاينة بوابة الطالب (رفع الواجبات والماتريال)" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: #1d4ed8;">
                           ${getIcon('link', 12)}
                         </button>
                       </div>
 
-                      <div style="font-size: 0.65rem; display: flex; align-items: center; gap: 0.25rem;">
+                      <div style="font-size: 0.65rem; display: flex; flex-direction: column; gap: 0.15rem; margin-top: 0.1rem;">
                         ${s.parent_portal_sent_at ? `
                           <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="تم إرسال رابط ولي الأمر مسبقاً">
                             <span style="display:inline-block; width:5px; height:5px; background:#059669; border-radius:50%;"></span>
                             تم الإرسال لولي الأمر
                           </span>
-                        ` : `
+                        ` : ''}
+                        ${s.student_portal_sent_at ? `
+                          <span style="color: #2563eb; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="تم إرسال رابط بوابة الطالب مسبقاً">
+                            <span style="display:inline-block; width:5px; height:5px; background:#2563eb; border-radius:50%;"></span>
+                            تم الإرسال للطالب
+                          </span>
+                        ` : ''}
+                        ${(!s.parent_portal_sent_at && !s.student_portal_sent_at) ? `
                           <span style="color: #94a3b8; font-weight: 600; display: inline-flex; align-items: center; gap: 0.2rem;">
                             <span style="display:inline-block; width:5px; height:5px; background:#cbd5e1; border-radius:50%;"></span>
                             جديد (لم يُرسل بعد)
                           </span>
-                        `}
+                        ` : ''}
                       </div>
                     </div>
                   </td>

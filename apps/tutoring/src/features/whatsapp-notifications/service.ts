@@ -1144,6 +1144,80 @@ export class WhatsAppNotificationsService {
   }
 
   /**
+   * DEV-PORTAL: Send student learning portal link to a single student via WhatsApp.
+   */
+  async sendStudentPortalLink(params: {
+    tenant_id: string;
+    teacher_id?: string | null;
+    student_id: string;
+    student_name: string;
+    student_phone: string;
+    teacher_name?: string;
+    portal_url: string;
+  }): Promise<{
+    success: boolean;
+    error?: string;
+    message_text: string;
+    recipient: string;
+    gateway_sent: boolean;
+  }> {
+    const { tenant_id, teacher_id, student_name, student_phone, teacher_name, portal_url } = params;
+    const cleanPhone = (student_phone || "").replace(/[\s\-\(\)\.]/g, "");
+    if (!cleanPhone) {
+      return {
+        success: false,
+        error: "رقم هاتف الطالب غير متوفر",
+        message_text: "",
+        recipient: "",
+        gateway_sent: false,
+      };
+    }
+
+    const health = getHealthStatus(tenant_id);
+    if (!health.can_send) {
+      return {
+        success: false,
+        error: `Circuit breaker is paused until ${health.paused_until || "unknown"}`,
+        message_text: "",
+        recipient: cleanPhone,
+        gateway_sent: false,
+      };
+    }
+
+    const quota = getDailyQuotaStatus(tenant_id);
+    if (quota.cap_reached) {
+      return {
+        success: false,
+        error: "Daily volume cap reached for tenant. Sending paused to prevent ban.",
+        message_text: "",
+        recipient: cleanPhone,
+        gateway_sent: false,
+      };
+    }
+
+    const messageText = generateStudentPortalInviteMessage({
+      student_name,
+      teacher_name: teacher_name || undefined,
+      portal_url,
+    });
+
+    const res = await this.deliverSingleTextMessage({
+      tenant_id,
+      teacher_id,
+      recipient_phone: cleanPhone,
+      message_text: messageText,
+    });
+
+    return {
+      success: res.success,
+      error: res.error,
+      message_text: messageText,
+      recipient: cleanPhone,
+      gateway_sent: res.gateway_sent,
+    };
+  }
+
+  /**
    * DEV-PORTAL.2: Batch send parent tracking portal links to new students with anti-ban pacing and pauses.
    */
   async batchSendParentPortalLinks(params: {
@@ -1872,6 +1946,60 @@ ${url}
 • قراءة ملاحظات وتوجيهات المعلم المباشرة.
 
 📌 *تنبيه هام:* يرجى تسجيل وحفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان استلام إشعارات وتقارير الطالب أولاً بأول دون انقطاع.
+
+${closing}`;
+}
+
+/**
+ * DEV-PORTAL.4: Generates warm, encouraging invite message for student learning portal.
+ */
+export function generateStudentPortalInviteMessage(params: {
+  student_name: string;
+  teacher_name?: string;
+  portal_url: string;
+}): string {
+  const student = (params.student_name || "").trim() || "بطلنا";
+  const rawTeacher = (params.teacher_name || "").trim() || "إدارة المتابعة";
+  const teacher = rawTeacher.startsWith("مستر") || rawTeacher.startsWith("أ.") || rawTeacher.startsWith("أستاذ")
+    ? rawTeacher
+    : `مستر ${rawTeacher}`;
+  const url = params.portal_url;
+
+  const greetings = [
+    `السلام عليكم ورحمة الله وبركاته، يا بطل (${student}) 👋`,
+    `أهلاً بك يا (${student})، السلام عليكم ورحمة الله وبركاته 🌟`,
+    `تحياتنا الطيبة وتشجيعنا لك يا (${student}) 👋`,
+  ];
+  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+
+  const intros = [
+    `يسعدنا تزويدك برابط بوابة الطالب الرسمية الخاصة بك لمتابعة دروسك وتسليم واجباتك أولاً بأول:`,
+    `إليك الرابط المباشر لمنصتك التعليمية الخاصة لتحميل المذكرات ومتابعة الواجبات ورفع الحلول:`,
+    `حرصاً على تنظيم مذاكرتك وتفوقك، هذا هو رابط بوابتك التعليمية الرسمية:`,
+  ];
+  const intro = intros[Math.floor(Math.random() * intros.length)];
+
+  const closings = [
+    `مع أطيب التمنيات لك بدوام التفوق والتميز دائماً 🎯\nمع تحيات: ${teacher}`,
+    `شد حيلك ونسأل الله لك كامل النجاح والتوفيق 🚀\nمع تحيات: ${teacher}`,
+    `تمنياتنا لك بمستقبل مشرق وتفوق مستمر 🌟\nمع تحيات: ${teacher}`,
+  ];
+  const closing = closings[Math.floor(Math.random() * closings.length)];
+
+  return `${greeting}
+
+${intro}
+
+🔗 *رابط بوابتك التعليمية المباشر:*
+${url}
+
+💡 *من خلال هذه البوابة يمكنك في أي وقت:*
+• تحميل المذكرات وملازم الشرح وملفات الـ PDF.
+• معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.
+• رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها من المعلم.
+• الاطلاع على درجات الكويزات وسجل حضورك.
+
+📌 *ملحوظة:* احفظ هذا الرابط في المفضلة للرجوع إليه دائماً.
 
 ${closing}`;
 }

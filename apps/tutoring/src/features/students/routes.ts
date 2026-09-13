@@ -132,6 +132,7 @@ studentsRouter.get("/:id/parent-link", async (req: AuthenticatedRequest, res: Re
       portal_url: portalUrl,
       full_url: fullUrl,
       parent_portal_sent_at: student.parent_portal_sent_at || null,
+      student_portal_sent_at: student.student_portal_sent_at || null,
       expires_in_days: 365,
     });
   } catch (err: unknown) {
@@ -188,6 +189,78 @@ studentsRouter.post("/:id/send-parent-link", async (req: AuthenticatedRequest, r
       const now = new Date().toISOString();
       await studentsService.updateStudent(student.id, {
         parent_portal_sent_at: now,
+        parent_portal_token: token,
+      });
+
+      res.json({
+        success: true,
+        portal_url: portalUrl,
+        sent_at: now,
+        recipient: result.recipient,
+        message_text: result.message_text,
+      });
+    } else {
+      res.status(502).json({
+        success: false,
+        error: result.error || "فشل إرسال الرابط عبر بوابة واتساب",
+      });
+    }
+  } catch (err: unknown) {
+    res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: (err as Error).message },
+    });
+  }
+});
+
+// DEV-PORTAL: POST /api/students/:id/send-student-link - Dispatch student learning portal link via WhatsApp
+studentsRouter.post("/:id/send-student-link", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  const { id: studentId } = req.params;
+  const { teacher_id, teacher_name } = req.body || {};
+
+  if (!tenantId && req.user?.role !== "admin") {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
+
+  try {
+    const studentsService = getServices(req).students;
+    const student = await studentsService.getStudent(studentId);
+
+    if (!student) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found" } });
+      return;
+    }
+
+    const studentPhone = (student.student_phone || "").trim();
+    if (!studentPhone) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: "رقم هاتف الطالب غير متوفر لهذا الطالب" } });
+      return;
+    }
+
+    let token = student.parent_portal_token;
+    if (!token) {
+      token = generateParentPortalToken(student.id, tenantId || "default", 365);
+    }
+
+    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const portalUrl = `${canonicalOrigin}/parent-portal?token=${token}&portal=student`;
+
+    const whatsAppService = getServices(req).whatsapp;
+    const result = await whatsAppService.sendStudentPortalLink({
+      tenant_id: tenantId || "default",
+      teacher_id: teacher_id || req.user?.id || null,
+      student_id: student.id,
+      student_name: student.name,
+      student_phone: studentPhone,
+      teacher_name: teacher_name || (req.user as any)?.name,
+      portal_url: portalUrl,
+    });
+
+    if (result.success) {
+      const now = new Date().toISOString();
+      await studentsService.updateStudent(student.id, {
+        student_portal_sent_at: now,
         parent_portal_token: token,
       });
 
