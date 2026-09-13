@@ -453,9 +453,9 @@ export function renderLandingView() {
       <footer style="background: var(--brand-navy); color: #ffffff; padding: 3.5rem 1.25rem 2rem; border-top: 1px solid rgba(255,255,255,0.1);">
         <div style="max-width: 1200px; margin: 0 auto;">
           
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2.5rem; margin-bottom: 3rem;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 2.5rem; margin-bottom: 3rem;">
             
-            <div>
+            <div style="max-width: 480px;">
               <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
                 <img src="${CENTRLY_LOGO_BASE64}" alt="سنترلي" style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover;">
                 <div style="font-family: 'Changa', 'Cairo', sans-serif; font-size: 1.3rem; font-weight: 800; color: #ffffff;">
@@ -473,19 +473,6 @@ export function renderLandingView() {
                 <button type="button" onclick="window.centrlyApp.openPolicyModal('privacy')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">سياسة الخصوصية</button>
                 <button type="button" onclick="window.centrlyApp.openPolicyModal('refund')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">سياسة الاسترجاع واسترداد الأموال</button>
                 <button type="button" onclick="window.centrlyApp.openPolicyModal('contact')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">بيانات التواصل الرسمي والدعم</button>
-              </div>
-            </div>
-
-            <div>
-              <h4 style="font-size: 0.95rem; font-weight: 800; color: #ffffff; margin: 0 0 1rem;">وسائل الدفع المعتمدة في مصر</h4>
-              <p style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 1rem; line-height: 1.5;">
-                دفع آمن ومشفر بالجنيه المصري (EGP) عبر بوابات الدفع الإلكترونية المرخصة في مصر.
-              </p>
-              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                <span style="background: #ffffff; color: #e11d48; font-weight: 800; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px;">فودافون كاش</span>
-                <span style="background: #ffffff; color: #0284c7; font-weight: 800; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px;">ميزة Meeza</span>
-                <span style="background: #ffffff; color: #1e3a8a; font-weight: 800; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px;">Visa / MasterCard</span>
-                <span style="background: #ffffff; color: #ea580c; font-weight: 800; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 6px;">محافظ المحمول</span>
               </div>
             </div>
 
