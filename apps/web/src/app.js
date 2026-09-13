@@ -8002,9 +8002,10 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         body: {
           name,
           phone,
-          group_id,
+          group_id: group_id || null,
           role_type,
           salary_model,
+          salary: salary_amount,
           salary_amount,
         },
       });
@@ -8093,9 +8094,10 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         body: {
           name,
           phone,
-          group_id,
+          group_id: group_id || null,
           role_type,
           salary_model,
+          salary: salary_amount,
           salary_amount,
         },
       });

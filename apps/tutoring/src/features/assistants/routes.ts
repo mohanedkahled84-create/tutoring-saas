@@ -14,17 +14,12 @@ assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Prom
 
   try {
     const supabase = getServiceSupabaseClient();
-    let query = supabase
+    const { data, error } = await supabase
       .from("assistants")
       .select("*, groups:group_id(id, name)")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
 
-    if (req.user?.role === "teacher") {
-      query = query.or(`teacher_id.eq.${req.user.id},teacher_id.is.null`);
-    }
-
-    const { data, error } = await query;
     if (error) throw error;
 
     res.json({ assistants: data || [], count: (data || []).length });
@@ -41,7 +36,9 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
     return;
   }
 
-  const { name, phone, role_type, group_id, salary_model, salary } = req.body;
+  const { name, phone, role_type, group_id, salary_model } = req.body;
+  const salaryVal = Number(req.body.salary ?? req.body.salary_amount) || 0;
+  const cleanGroupId = group_id && typeof group_id === "string" && group_id.trim().length > 0 ? group_id.trim() : null;
 
   if (!name || !phone) {
     res.status(400).json({ error: { code: "BAD_REQUEST", message: "الاسم ورقم الهاتف مطلوبان" } });
@@ -50,18 +47,34 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
 
   try {
     const supabase = getServiceSupabaseClient();
+
+    // Safely resolve teacher_id against teachers table foreign key
+    let resolvedTeacherId: string | null = null;
+    if (req.user?.id) {
+      const { data: teacherRow } = await supabase
+        .from("teachers")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("user_id", req.user.id)
+        .maybeSingle();
+      if (teacherRow?.id) {
+        resolvedTeacherId = teacherRow.id;
+      }
+    }
+
     const { data, error } = await supabase
       .from("assistants")
       .insert({
         tenant_id: tenantId,
-        teacher_id: req.user?.id || null,
+        teacher_id: resolvedTeacherId,
         name: name.trim(),
         phone: phone.trim(),
         role_type: role_type || "both",
         assistant_type: "assistant_to_teacher",
-        group_id: group_id || null,
+        can_view_financials: false,
+        group_id: cleanGroupId,
         salary_model: salary_model || "monthly",
-        salary: Number(salary) || 0,
+        salary: salaryVal,
         status: "active",
       })
       .select()
@@ -85,7 +98,7 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
     return;
   }
 
-  const { name, phone, role_type, group_id, salary_model, salary, status } = req.body;
+  const { name, phone, role_type, group_id, salary_model, status } = req.body;
 
   try {
     const supabase = getServiceSupabaseClient();
@@ -93,9 +106,13 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
     if (name) updates.name = name.trim();
     if (phone) updates.phone = phone.trim();
     if (role_type) updates.role_type = role_type;
-    if (group_id !== undefined) updates.group_id = group_id || null;
+    if (group_id !== undefined) {
+      updates.group_id = group_id && typeof group_id === "string" && group_id.trim().length > 0 ? group_id.trim() : null;
+    }
     if (salary_model) updates.salary_model = salary_model;
-    if (salary !== undefined) updates.salary = Number(salary) || 0;
+    if (req.body.salary !== undefined || req.body.salary_amount !== undefined) {
+      updates.salary = Number(req.body.salary ?? req.body.salary_amount) || 0;
+    }
     if (status) updates.status = status;
 
     const { data, error } = await supabase
