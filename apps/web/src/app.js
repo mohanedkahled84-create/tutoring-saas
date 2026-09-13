@@ -7680,7 +7680,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         method: 'PUT',
         body: { status: 'approved' },
       });
-      this.showToast('تم اعتماد الواجب وتسجيله بنجاح! ✅', 'success');
+      this.showToast('تم اعتماد الواجب وحذف الملف لتوفير المساحة وتخفيف الحمل بنجاح! ⚡✅', 'success');
       await this.loadRouteData('homework');
     } catch (err) {
       this.showToast(`فشل اعتماد الواجب: ${err.message || 'حدث خطأ'}`, 'danger');

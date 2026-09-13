@@ -274,14 +274,63 @@ homeworkRouter.put("/submissions/:id/review", async (req: AuthenticatedRequest, 
   const supabase = getServiceSupabaseClient();
 
   try {
+    // 1. Fetch existing submission
+    const { data: existingSub, error: fetchErr } = await supabase
+      .from("homework_submissions")
+      .select("id, tenant_id, file_url, material_id, student_id, status")
+      .eq("id", submissionId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    if (fetchErr || !existingSub) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "تسليم الواجب غير موجود" } });
+      return;
+    }
+
+    // 2. If approved, purge the physical file from Supabase Storage to lighten memory and storage load
+    if (status === "approved" && existingSub.file_url) {
+      try {
+        const bucketName = "homework-submissions";
+        const marker = `/${bucketName}/`;
+        let storagePath = "";
+        if (existingSub.file_url.includes(marker)) {
+          storagePath = existingSub.file_url.substring(existingSub.file_url.indexOf(marker) + marker.length).split("?")[0];
+        } else if (!existingSub.file_url.startsWith("http")) {
+          storagePath = existingSub.file_url;
+        }
+
+        if (storagePath) {
+          const cleanPath = decodeURIComponent(storagePath);
+          const { error: removeErr } = await supabase.storage
+            .from(bucketName)
+            .remove([cleanPath]);
+          if (removeErr) {
+            logger.warn(`[Homework] Warning removing file from storage: ${removeErr.message}`);
+          } else {
+            logger.info(`[Homework] File removed from storage after approval: ${cleanPath}`);
+          }
+        }
+      } catch (storageErr) {
+        logger.warn(`[Homework] Error purging file from storage: ${(storageErr as Error).message}`);
+      }
+    }
+
+    // 3. Update homework_submissions record
+    const updatePayload: any = {
+      status,
+      teacher_notes: teacher_notes || null,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reviewerId || null,
+    };
+
+    if (status === "approved") {
+      updatePayload.file_url = null;
+      updatePayload.file_purged = true;
+    }
+
     const { data: updated, error } = await supabase
       .from("homework_submissions")
-      .update({
-        status,
-        teacher_notes: teacher_notes || null,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: reviewerId || null,
-      })
+      .update(updatePayload)
       .eq("id", submissionId)
       .eq("tenant_id", tenantId)
       .select("*")
@@ -292,8 +341,32 @@ homeworkRouter.put("/submissions/:id/review", async (req: AuthenticatedRequest, 
       return;
     }
 
+    // 4. Update attendance records for this student to mark homework as 'done'
+    if (status === "approved" && existingSub.student_id) {
+      try {
+        const { data: latestAtt } = await supabase
+          .from("attendance")
+          .select("id")
+          .eq("student_id", existingSub.student_id)
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestAtt?.id) {
+          await supabase
+            .from("attendance")
+            .update({ homework_status: "done" })
+            .eq("id", latestAtt.id);
+        }
+      } catch (attErr) {
+        logger.warn(`[Homework] Attendance sync warning: ${(attErr as Error).message}`);
+      }
+    }
+
     res.json({ success: true, submission: updated });
   } catch (err) {
+    logger.error(`[Homework] Review exception: ${(err as Error).message}`);
     res.status(500).json({ error: { code: "SERVER_ERROR", message: "فشل تحديث حالة مراجعة الواجب" } });
   }
 });

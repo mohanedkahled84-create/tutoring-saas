@@ -195,11 +195,20 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                         <td style="font-weight: 800; color: #0f172a;">${escapeHtml(sub.student_name)}</td>
                         <td style="font-size: 0.8rem; color: #64748b; font-family: monospace;">${escapeHtml(formattedDate)}</td>
                         <td>
-                          <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
-                            style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
-                            <span>📄</span>
-                            <span>فتح ملف الـ PDF</span>
-                          </a>
+                          ${sub.file_url ? `
+                            <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
+                              style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
+                              <span>📄</span>
+                              <span>فتح ملف الـ PDF</span>
+                            </a>
+                          ` : (isApproved ? `
+                            <span style="display: inline-flex; align-items: center; gap: 0.3rem; background: #f0fdf4; color: #15803d; padding: 0.25rem 0.6rem; border-radius: 0.4rem; border: 1px solid #bbf7d0; font-size: 0.78rem; font-weight: 700;" title="تم فحص الواجب وتفريغ الملف من السيرفر بنجاح لتخفيف الحمل وتوفير التخزين">
+                              <span>⚡</span>
+                              <span>تم الاعتماد وتفريغ المساحة</span>
+                            </span>
+                          ` : `
+                            <span style="font-size: 0.78rem; color: #94a3b8;">لا يوجد ملف مرفق</span>
+                          `)}
                         </td>
                         <td>${statusBadge}</td>
                         <td style="font-size: 0.8rem; color: #475569; max-width: 200px;">
@@ -209,11 +218,12 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                           <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
                             <!-- Approve Button -->
                             <button type="button" class="btn btn-sm ${isApproved ? 'btn-secondary' : 'btn-success'}" 
-                              onclick="window.centrlyApp && window.centrlyApp.approveHomeworkSubmission ? window.centrlyApp.approveHomeworkSubmission('${escapeHtml(sub.id)}') : null"
-                              title="اعتماد الواجب وتسجيله كواجب كامل"
-                              style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.6rem; ${isApproved ? 'opacity: 0.7;' : ''}">
+                              onclick="${isApproved ? 'return false;' : `window.centrlyApp && window.centrlyApp.approveHomeworkSubmission ? window.centrlyApp.approveHomeworkSubmission('${escapeHtml(sub.id)}') : null`}"
+                              ${isApproved ? 'disabled' : ''}
+                              title="${isApproved ? 'تم اعتماد الواجب وحذف الملف من الذاكرة لتخفيف الحمل' : 'اعتماد الواجب وتسجيله وحذف الملف لتوفير التخزين'}"
+                              style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.6rem; ${isApproved ? 'opacity: 0.7; cursor: default;' : ''}">
                               <span>✅</span>
-                              <span>${isApproved ? 'معتمد' : 'موافق / اعتماد'}</span>
+                              <span>${isApproved ? 'معتمد ومُفرّغ' : 'موافق / اعتماد'}</span>
                             </button>
 
                             <!-- Reject / Revision Request Button -->

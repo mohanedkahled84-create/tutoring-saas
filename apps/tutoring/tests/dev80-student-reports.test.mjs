@@ -372,7 +372,7 @@ test("DEV-80: StudentSearchBar & StudentReportsView render valid Arabic HTML wit
   const emptyHtml = renderStudentReportsView({ leaderboard: [] });
   assert.ok(emptyHtml.includes("تقارير الأداء ولوحة الشرف والتميز"));
   assert.ok(emptyHtml.includes("لا توجد بيانات تقارير متاحة لهذه الفترة"));
-  assert.ok(emptyHtml.includes("إرسال التقارير لجميع أولياء الأمور (Bulk)"));
+  assert.ok(emptyHtml.includes("بوابات أولياء الأمور"));
 
   // 3. Reports View with ranked student
   const populatedHtml = renderStudentReportsView({

@@ -275,19 +275,32 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                               <span>📄</span>
                               <span>معاينة ملفك المرفوع (${escapeHtml(m.submitted_at ? m.submitted_at.slice(0, 10) : 'مرفوع')})</span>
                             </a>
+                          ` : (isApproved ? `
+                            <span style="font-size: 0.78rem; color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+                              <span>⚡</span>
+                              <span>تم اعتماد الواجب بنجاح وحذف الملف لتوفير المساحة</span>
+                            </span>
                           ` : `
                             <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF (الحد الأقصى 10MB)</span>
-                          `}
+                          `)}
 
                           <!-- PDF File Upload Trigger -->
                           <div>
                             <input type="file" id="hw-file-input-${escapeHtml(m.id)}" accept="application/pdf,.pdf" style="display: none;" 
                               onchange="window.centrlyApp && window.centrlyApp.handleStudentHomeworkUpload ? window.centrlyApp.handleStudentHomeworkUpload('${escapeHtml(m.id)}', this.files[0]) : null">
                             
-                            <button type="button" onclick="document.getElementById('hw-file-input-${escapeHtml(m.id)}').click()" id="hw-upload-btn-${escapeHtml(m.id)}"
-                              style="background: ${isApproved ? '#f1f5f9' : '#059669'}; color: ${isApproved ? '#334155' : '#ffffff'}; border: 1px solid ${isApproved ? '#cbd5e1' : '#059669'}; padding: 0.45rem 0.9rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s; box-shadow: ${isApproved ? 'none' : '0 2px 6px rgba(5,150,105,0.2)'};">
-                              <span>${isApproved ? '🔄 إعادة رفع الواجب' : (isPending ? '🔄 تعديل / رفع نسخة أحدث' : '📤 رفع حل الواجب (PDF)')}</span>
-                            </button>
+                            ${isApproved ? `
+                              <button type="button" disabled
+                                style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 0.45rem 0.9rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem; cursor: default;">
+                                <span>✅</span>
+                                <span>الواجب معتمد ومكتمل</span>
+                              </button>
+                            ` : `
+                              <button type="button" onclick="document.getElementById('hw-file-input-${escapeHtml(m.id)}').click()" id="hw-upload-btn-${escapeHtml(m.id)}"
+                                style="background: #059669; color: #ffffff; border: 1px solid #059669; padding: 0.45rem 0.9rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s; box-shadow: 0 2px 6px rgba(5,150,105,0.2);">
+                                <span>${isPending ? '🔄 تعديل / رفع نسخة أحدث' : '📤 رفع حل الواجب (PDF)'}</span>
+                              </button>
+                            `}
                           </div>
                         </div>
 
