@@ -34,6 +34,7 @@ import { renderAdminTenantsView } from './components/AdminTenantsView.js';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js';
+import { playBeep, unlockAudio } from './utils/beepAudio.js';
 
 class CentrlyApp {
   constructor() {
@@ -883,12 +884,27 @@ class CentrlyApp {
     await authService.logout();
   }
 
-  toggleSidebar() {
+  toggleSidebar(forceClose = false) {
     const sidebar = document.getElementById('appSidebar');
-    if (sidebar) sidebar.classList.toggle('open');
+    let backdrop = document.getElementById('appSidebarBackdrop');
+    if (!backdrop) {
+      backdrop = document.createElement('div');
+      backdrop.id = 'appSidebarBackdrop';
+      backdrop.style.cssText = 'display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(2px); z-index: 999;';
+      backdrop.onclick = () => this.toggleSidebar(true);
+      document.body.appendChild(backdrop);
+    }
+    if (forceClose || (sidebar && sidebar.classList.contains('open'))) {
+      if (sidebar) sidebar.classList.remove('open');
+      backdrop.style.display = 'none';
+    } else if (sidebar) {
+      sidebar.classList.add('open');
+      backdrop.style.display = 'block';
+    }
   }
 
   async navigate(route) {
+    unlockAudio();
     this.stopWhatsAppStatusPolling();
     // Auto-lock sensitive pages automatically upon changing or switching pages
     if (this.hasSecurityPin && this.isFinancialUnlocked) {
@@ -898,8 +914,7 @@ class CentrlyApp {
     try {
       localStorage.setItem('centrly_current_route', route);
     } catch (_) {}
-    const sidebar = document.getElementById('appSidebar');
-    if (sidebar && sidebar.classList.contains('open')) sidebar.classList.remove('open');
+    this.toggleSidebar(true);
 
     // Instant tactile touch feedback with top progress bar
     this.startProgressBar();
@@ -1761,6 +1776,10 @@ class CentrlyApp {
   }
 
   focusScanInput() {
+    // On touch devices / mobile viewports, avoid forcibly popping up the virtual keyboard
+    const isMobile = window.innerWidth <= 768 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    if (isMobile) return;
+
     const applyFocus = () => {
       const inp = document.getElementById('scanStudentCode');
       if (!inp) return;
@@ -2017,72 +2036,33 @@ class CentrlyApp {
   // ==========================================================================
 
   playScanBeep(type = 'success') {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      if (!this._audioCtx) {
-        this._audioCtx = new AudioCtx();
-      }
-      if (this._audioCtx.state === 'suspended') {
-        this._audioCtx.resume();
-      }
-      const ctx = this._audioCtx;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      if (type === 'success') {
-        // Crisp supermarket-style success beep (880Hz -> 1046Hz)
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1046, ctx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.25, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.12);
-      } else if (type === 'warning') {
-        // Double warning tone for duplicate check-in (587Hz)
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(587, ctx.currentTime);
-        gain.gain.setValueAtTime(0.25, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.16);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.16);
-      } else {
-        // Low error buzz for unregistered code (220Hz)
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(220, ctx.currentTime);
-        gain.gain.setValueAtTime(0.2, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.22);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.22);
-      }
-    } catch (_) {}
+    playBeep(type);
   }
 
   openCameraScannerModal(mode = 'session') {
+    unlockAudio();
     const existing = document.getElementById('cameraScannerModal');
     if (existing) existing.remove();
 
     this._cameraScanCount = 0;
     this._cameraFacingMode = this._cameraFacingMode || 'environment';
+    this._cameraTorchOn = false;
 
     const modeTitle = mode === 'center' 
       ? 'بوابة استقبال السنتر (توجيه وحضور عام)' 
       : 'تسجيل حضور الحصة الجارية';
 
     const modalHtml = `
-      <div id="cameraScannerModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(15,23,42,0.75); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 9999; padding: 1rem;" dir="rtl">
-        <div class="card" style="width: 100%; max-width: 480px; margin: 0; padding: 1.25rem; border-radius: 16px; background: #ffffff; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); font-family: 'Cairo', sans-serif;">
+      <div id="cameraScannerModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(15,23,42,0.75); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 9999; padding: 0.75rem;" dir="rtl">
+        <div class="card" style="width: 100%; max-width: 480px; margin: 0; padding: 1.1rem; border-radius: 16px; background: #ffffff; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); font-family: 'Cairo', sans-serif; max-height: calc(100dvh - 1.5rem); overflow-y: auto;">
           
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.65rem;">
             <div>
-              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
+              <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
                 ${getIcon('camera', 20, 'var(--centrly-blue-700)')}
                 <span>المسح المباشر بكاميرا الموبايل / اللابتوب</span>
               </h3>
-              <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem; font-weight: 600;">
+              <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.15rem; font-weight: 600;">
                 ${modeTitle}
               </div>
             </div>
@@ -2090,13 +2070,14 @@ class CentrlyApp {
           </div>
 
           <!-- Camera Viewport Container -->
-          <div style="position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #0f172a; border: 2px solid #334155;">
-            <div id="centrlyCameraViewport" style="width: 100%; height: 280px;"></div>
+          <div style="position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #0f172a; border: 2px solid #334155; min-height: 240px;">
+            <div id="centrlyCameraViewport" style="width: 100%; min-height: 240px;"></div>
 
-            <!-- Target Reticle Box overlay -->
+            <!-- Target Reticle Box overlay with animated laser line -->
             <div style="pointer-events: none; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
-              <div style="width: 240px; height: 140px; border: 2.5px dashed #10b981; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(15,23,42,0.45); position: relative;">
-                <div style="position: absolute; top: -24px; left: 0; right: 0; text-align: center; color: #6ee7b7; font-size: 0.75rem; font-weight: 800;">
+              <div style="width: 80%; max-width: 250px; height: 130px; border: 2.5px dashed #10b981; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(15,23,42,0.45); position: relative; overflow: hidden;">
+                <div class="scanner-laser-line"></div>
+                <div style="position: absolute; top: -24px; left: 0; right: 0; text-align: center; color: #6ee7b7; font-size: 0.72rem; font-weight: 800;">
                   ضع الباركود أو الـ QR داخل الإطار
                 </div>
               </div>
@@ -2107,26 +2088,30 @@ class CentrlyApp {
           </div>
 
           <!-- Controls and Counter -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
             <div style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-text);">
               تم تسجيل: <strong id="cameraScanCount" style="color: #16a34a; font-size: 1.05rem;">0</strong> طلاب
             </div>
 
-            <div style="display: flex; gap: 0.4rem;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleCameraFacingMode('${mode}')" style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; font-weight: 700;">
+            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+              <button type="button" id="cameraTorchBtn" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleCameraTorch()" style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; font-weight: 700;">
+                ${getIcon('lightbulb', 14)}
+                <span id="cameraTorchBtnText">الفلاش</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleCameraFacingMode('${mode}')" style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; font-weight: 700;">
                 ${getIcon('refresh', 14)}
                 <span>تبديل الكاميرا</span>
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeCameraScannerModal()" style="font-size: 0.8rem; font-weight: 700;">
-                إغلاق الكاميرا
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeCameraScannerModal()" style="font-size: 0.78rem; font-weight: 700;">
+                إغلاق
               </button>
             </div>
           </div>
 
           <!-- Quick Tip -->
-          <div style="margin-top: 0.85rem; font-size: 0.775rem; color: #64748b; background: #f8fafc; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.5; display: flex; align-items: flex-start; gap: 0.4rem;">
+          <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #64748b; background: #f8fafc; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.5; display: flex; align-items: flex-start; gap: 0.4rem;">
             ${getIcon('lightbulb', 16, '#f59e0b')}
-            <div><strong>نصيحة:</strong> الكاميرا تعمل بشكل مستمر ومباشر (Continuous Mode). دَع الطلاب يمررون كروت باركودهم واحداً تلو الآخر وستصدر المنظومة صوت "بيب" لتأكيد كل طالب فورياً دون لمس الشاشة.</div>
+            <div><strong>نصيحة:</strong> الكاميرا تعمل بشكل مستمر ومباشر (Continuous Mode). مرر كروت الطلاب واحداً تلو الآخر وستسمع صفارة "بيب" واهتزاز هاتف لتأكيد كل طالب فورياً.</div>
           </div>
 
         </div>
@@ -2140,6 +2125,7 @@ class CentrlyApp {
   }
 
   async startCameraScanner(mode = 'session') {
+    unlockAudio();
     if (typeof Html5Qrcode === 'undefined') {
       const viewport = document.getElementById('centrlyCameraViewport');
       if (viewport) {
@@ -2157,17 +2143,31 @@ class CentrlyApp {
         await this._activeHtml5QrCode.stop().catch(() => {});
         this._activeHtml5QrCode = null;
       }
+      this._cameraTorchOn = false;
 
       const html5QrCode = new Html5Qrcode('centrlyCameraViewport');
       this._activeHtml5QrCode = html5QrCode;
 
       const facingMode = this._cameraFacingMode || 'environment';
+      const isMobile = window.innerWidth <= 768;
 
       const config = {
-        fps: 15,
-        qrbox: { width: 250, height: 150 },
-        aspectRatio: 1.333334,
+        fps: 20,
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const boxWidth = Math.min(Math.floor(minEdge * 0.85), 280);
+          const boxHeight = Math.min(Math.floor(boxWidth * 0.6), 170);
+          return { width: Math.max(boxWidth, 180), height: Math.max(boxHeight, 100) };
+        },
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true,
+        },
       };
+
+      // Only set fixed landscape aspect ratio on desktop viewports
+      if (!isMobile) {
+        config.aspectRatio = 1.333334;
+      }
 
       await html5QrCode.start(
         { facingMode },
@@ -2177,6 +2177,19 @@ class CentrlyApp {
         },
         () => {} // frame noise ignored
       );
+
+      // Mobile Safari / Chrome video attributes optimization
+      setTimeout(() => {
+        const video = document.querySelector('#centrlyCameraViewport video');
+        if (video) {
+          video.setAttribute('playsinline', 'true');
+          video.setAttribute('webkit-playsinline', 'true');
+          video.setAttribute('muted', 'true');
+          video.muted = true;
+          video.style.objectFit = 'cover';
+          video.style.borderRadius = '12px';
+        }
+      }, 150);
     } catch (err) {
       const viewport = document.getElementById('centrlyCameraViewport');
       if (viewport) {
@@ -2196,7 +2209,31 @@ class CentrlyApp {
     await this.startCameraScanner(mode);
   }
 
+  async toggleCameraTorch() {
+    if (!this._activeHtml5QrCode) return;
+    try {
+      this._cameraTorchOn = !this._cameraTorchOn;
+      await this._activeHtml5QrCode.applyVideoConstraints({
+        advanced: [{ torch: this._cameraTorchOn }],
+      });
+      const btn = document.getElementById('cameraTorchBtn');
+      const text = document.getElementById('cameraTorchBtnText');
+      if (btn) {
+        btn.style.background = this._cameraTorchOn ? '#fef3c7' : '';
+        btn.style.borderColor = this._cameraTorchOn ? '#f59e0b' : '';
+        btn.style.color = this._cameraTorchOn ? '#b45309' : '';
+      }
+      if (text) {
+        text.innerText = this._cameraTorchOn ? 'إطفاء الفلاش' : 'الفلاش';
+      }
+    } catch (err) {
+      this._cameraTorchOn = false;
+      this.showToast('الفلاش غير مدعوم على هذه الكاميرا أو وضع الكاميرا الحالي', 'info');
+    }
+  }
+
   async closeCameraScannerModal() {
+    this._cameraTorchOn = false;
     if (this._activeHtml5QrCode) {
       try {
         await this._activeHtml5QrCode.stop();

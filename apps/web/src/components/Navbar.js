@@ -7,7 +7,7 @@ export function renderNavbar(user) {
   return `
     <header class="app-topbar">
       <div style="display: flex; align-items: center; gap: 1rem;">
-        <button class="btn btn-secondary btn-sm" id="sidebarToggle" onclick="window.centrlyApp.toggleSidebar()" style="display: none; align-items: center; justify-content: center; padding: 0.4rem 0.6rem;">
+        <button class="btn btn-secondary btn-sm" id="sidebarToggle" onclick="window.centrlyApp.toggleSidebar()" style="align-items: center; justify-content: center; padding: 0.4rem 0.6rem;">
           ${getIcon('menu', 20)}
         </button>
         <span class="badge badge-blue">سحابي • RTL مفعّل</span>

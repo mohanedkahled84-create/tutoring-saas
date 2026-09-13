@@ -394,7 +394,11 @@
   background-color: #fafbfc;
 }
 
-/* Responsive Drawer */
+#sidebarToggle {
+  display: none;
+}
+
+/* Responsive Drawer & Comprehensive Mobile Optimizations */
 @media (max-width: 768px) {
   #sidebarToggle {
     display: inline-flex !important;
@@ -416,6 +420,65 @@
   .app-sidebar .mobile-close-btn {
     display: inline-flex !important;
   }
+
+  /* Prevent iOS Safari from automatically zooming into inputs on focus */
+  input, select, textarea, .form-input, .form-select, .form-textarea, .filter-select {
+    font-size: 16px !important;
+  }
+
+  /* Rapid touch response without 300ms tap delay */
+  button, a, .btn, .nav-link, input, select, label {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Mobile container padding & clean card spacing */
+  .content-body {
+    padding: 0.85rem 0.65rem !important;
+  }
+  .app-topbar {
+    padding: 0 0.85rem !important;
+  }
+  .card {
+    padding: 1rem 0.85rem !important;
+    max-width: 100% !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  /* Table horizontal scrolling without breaking mobile layout */
+  .card:has(table), .card:has(.data-table), .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modals full-width & max-height control on mobile */
+  .modal-overlay {
+    padding: 0.5rem !important;
+  }
+  .modal-dialog {
+    max-height: calc(100dvh - 1rem) !important;
+    width: 100% !important;
+    margin: auto 0 !important;
+  }
+}
+
+/* Scanner Laser Line Animation */
+@keyframes centrlyLaserScan {
+  0% { top: 6%; opacity: 0.6; }
+  50% { top: 92%; opacity: 1; }
+  100% { top: 6%; opacity: 0.6; }
+}
+
+.scanner-laser-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, #10b981, #34d399, #10b981, transparent);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.9);
+  animation: centrlyLaserScan 2s infinite ease-in-out;
+  pointer-events: none;
+  z-index: 10;
 }
 
 /* Sleek Top Progress Bar for Instant Page Feedback */
