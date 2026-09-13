@@ -7736,46 +7736,10 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   openAddHomeworkModal() {
     const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
     const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    this._currentHwMode = 'book';
 
     const bodyHtml = `
       <form id="modalAddHomeworkForm" onsubmit="window.centrlyApp.handleAddHomeworkSubmit(event)">
         
-        <!-- Selection of Homework Mode -->
-        <div class="form-group" style="margin-bottom: 1.1rem;">
-          <label class="form-label" style="font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; display: block;">طريقة تكليف الواجب للطلاب *</label>
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
-            
-            <div id="hwCard-book" onclick="window.centrlyApp.onHomeworkTypeChange('book')" 
-              style="cursor: pointer; border: 2px solid #2563eb; background: #eff6ff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; transition: all 0.2s; color: #1e40af;">
-              <div id="hwCard-book-icon" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #dbeafe; border-radius: 8px;">
-                ${getIcon('book', 20, '#1e40af')}
-              </div>
-              <span style="font-size: 0.825rem; font-weight: 800;">أسئلة من الكتاب / الملزمة</span>
-              <span style="font-size: 0.7rem; opacity: 0.85;">تحديد صفحات وأرقام أسئلة</span>
-            </div>
-
-            <div id="hwCard-text" onclick="window.centrlyApp.onHomeworkTypeChange('text')" 
-              style="cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; transition: all 0.2s; color: #334155;">
-              <div id="hwCard-text-icon" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #f1f5f9; border-radius: 8px;">
-                ${getIcon('edit', 20, '#475569')}
-              </div>
-              <span style="font-size: 0.825rem; font-weight: 800;">نص حر ومسائل مكتوبة</span>
-              <span style="font-size: 0.7rem; opacity: 0.85;">تعليمات ومسائل يكتبها المعلم</span>
-            </div>
-
-            <div id="hwCard-pdf" onclick="window.centrlyApp.onHomeworkTypeChange('pdf')" 
-              style="cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; transition: all 0.2s; color: #334155;">
-              <div id="hwCard-pdf-icon" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #f1f5f9; border-radius: 8px;">
-                ${getIcon('file', 20, '#475569')}
-              </div>
-              <span style="font-size: 0.825rem; font-weight: 800;">ملف PDF / رابط خارجي</span>
-              <span style="font-size: 0.7rem; opacity: 0.85;">رابط Google Drive أو مذكرة</span>
-            </div>
-
-          </div>
-        </div>
-
         <!-- Title -->
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">عنوان الواجب *</label>
@@ -7798,42 +7762,26 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           </div>
         </div>
 
-        <!-- Mode 1: Book details (visible when book is selected) -->
-        <div id="modalHwBookFields" style="background: #f8fafc; border: 1px solid #bfdbfe; border-radius: 0.75rem; padding: 0.9rem; margin-bottom: 0.85rem;">
-          <div style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; color: #1e3a8a; margin-bottom: 0.65rem; font-size: 0.85rem;">
-            ${getIcon('book', 18, '#1e3a8a')}
-            <span>تحديد الكتاب وأرقام الأسئلة والصفحات</span>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 0.65rem;">
-            <label class="form-label" style="font-weight: 700; font-size: 0.825rem;">اسم الكتاب أو الملزمة</label>
-            <input type="text" id="modalHwBookName" class="form-input" placeholder="مثال: كتاب المعاصر في الرياضيات / ملزمة الشرح (الجزء الأول)">
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
-            <div class="form-group">
-              <label class="form-label" style="font-weight: 700; font-size: 0.825rem;">أرقام الصفحات</label>
-              <input type="text" id="modalHwPages" class="form-input" placeholder="مثال: ص 45 إلى 48">
-            </div>
-            <div class="form-group">
-              <label class="form-label" style="font-weight: 700; font-size: 0.825rem;">أرقام الأسئلة المطلوبة</label>
-              <input type="text" id="modalHwQuestions" class="form-input" placeholder="مثال: س 1، س 3، ومن س 7 إلى س 15">
-            </div>
-          </div>
+        <!-- Unified Homework Description & Tasks Field -->
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 800; color: #0f172a; display: flex; align-items: center; justify-content: space-between;">
+            <span style="display: flex; align-items: center; gap: 0.35rem;">
+              ${getIcon('homework', 16, 'var(--centrly-blue-700)')}
+              <span>وصف الواجب والمطلوب حله *</span>
+            </span>
+          </label>
+          <textarea id="modalHwDescription" class="form-input" rows="4" 
+            placeholder="اكتب هنا تفاصيل الواجب والمطلوب حله براحتك...&#10;مثال: حل من كتاب الامتحان ص 45 إلى 48، الأسئلة 1 و 3 و 5 ومسألة 7 في الكشكول، أو اكتب نص المسائل والتعليمات بحرية كاملة." 
+            style="line-height: 1.6; resize: vertical;" required></textarea>
         </div>
 
-        <!-- Mode 3: PDF URL (visible when pdf is selected) -->
-        <div id="modalHwPdfFields" style="display: none; margin-bottom: 0.85rem;">
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">الرابط المباشر لملف الـ PDF *</label>
-            <input type="url" id="modalHwUrl" class="form-input" placeholder="https://drive.google.com/... أو رابط مباشر للملف" dir="ltr">
-          </div>
-        </div>
-
-        <!-- Free Text / Custom Instructions -->
+        <!-- Optional PDF / Drive Link -->
         <div class="form-group" style="margin-bottom: 1.1rem;">
-          <label id="modalHwDescLabel" class="form-label" style="font-weight: 700;">تعليمات وملاحظات للطلاب (اختياري)</label>
-          <textarea id="modalHwDescription" class="form-input" rows="3" placeholder="اكتب أي تعليمات إضافية، مسائل كتابية، طريقة الحل في الكشكول... براحتك بحرية كاملة"></textarea>
+          <label class="form-label" style="font-weight: 700; color: #475569; display: flex; align-items: center; gap: 0.35rem;">
+            ${getIcon('link', 14, '#64748b')}
+            <span>رابط ملف PDF أو مذكرة خارجية (اختياري)</span>
+          </label>
+          <input type="url" id="modalHwUrl" class="form-input" placeholder="https://drive.google.com/... أو رابط مباشر لملف PDF إذا أردت إرفاقه" dir="ltr">
         </div>
 
         <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
@@ -7849,85 +7797,25 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   }
 
   onHomeworkTypeChange(mode) {
-    const bookCard = document.getElementById('hwCard-book');
-    const textCard = document.getElementById('hwCard-text');
-    const pdfCard = document.getElementById('hwCard-pdf');
-    const bookIcon = document.getElementById('hwCard-book-icon');
-    const textIcon = document.getElementById('hwCard-text-icon');
-    const pdfIcon = document.getElementById('hwCard-pdf-icon');
-    const bookFields = document.getElementById('modalHwBookFields');
-    const pdfFields = document.getElementById('modalHwPdfFields');
-    const descLabel = document.getElementById('modalHwDescLabel');
-    const descInput = document.getElementById('modalHwDescription');
-
-    const activeStyle = 'cursor: pointer; border: 2px solid #2563eb; background: #eff6ff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; transition: all 0.2s; color: #1e40af;';
-    const normalStyle = 'cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 0.75rem; padding: 0.85rem 0.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; transition: all 0.2s; color: #334155;';
-
-    if (bookCard) bookCard.style.cssText = mode === 'book' ? activeStyle : normalStyle;
-    if (textCard) textCard.style.cssText = mode === 'text' ? activeStyle : normalStyle;
-    if (pdfCard) pdfCard.style.cssText = mode === 'pdf' ? activeStyle : normalStyle;
-
-    if (bookIcon) bookIcon.style.background = mode === 'book' ? '#dbeafe' : '#f1f5f9';
-    if (textIcon) textIcon.style.background = mode === 'text' ? '#dbeafe' : '#f1f5f9';
-    if (pdfIcon) pdfIcon.style.background = mode === 'pdf' ? '#dbeafe' : '#f1f5f9';
-
-    this._currentHwMode = mode;
-
-    if (mode === 'book') {
-      if (bookFields) bookFields.style.display = 'block';
-      if (pdfFields) pdfFields.style.display = 'none';
-      if (descLabel) descLabel.innerText = 'تعليمات إضافية وملاحظات للحل (اختياري)';
-      if (descInput) descInput.placeholder = 'مثال: يرجى حل المطلوب في كشكول الواجب مع كتابة خطوات القانون وتصوير الصفحات ورفعها كـ PDF';
-    } else if (mode === 'text') {
-      if (bookFields) bookFields.style.display = 'none';
-      if (pdfFields) pdfFields.style.display = 'none';
-      if (descLabel) descLabel.innerText = 'نص الواجب والمسائل والتعليمات *';
-      if (descInput) descInput.placeholder = 'اكتب هنا نص الأسئلة والمسائل والتعليمات التي تريد أن يراها الطالب ويحلها بالتفصيل...';
-    } else if (mode === 'pdf') {
-      if (bookFields) bookFields.style.display = 'none';
-      if (pdfFields) pdfFields.style.display = 'block';
-      if (descLabel) descLabel.innerText = 'وصف أو ملاحظات خاصة بالملف (اختياري)';
-      if (descInput) descInput.placeholder = 'اكتب أي ملاحظات للطلاب بخصوص الملف المرفق...';
-    }
+    // Kept for backward compatibility
   }
 
   async handleAddHomeworkSubmit(e) {
     e.preventDefault();
-    const mode = this._currentHwMode || 'book';
     const title = document.getElementById('modalHwTitle')?.value.trim();
     const group_id = document.getElementById('modalHwGroupId')?.value || null;
     const due_date = document.getElementById('modalHwDueDate')?.value || null;
     const description = document.getElementById('modalHwDescription')?.value.trim() || '';
-
-    let book_name = null;
-    let pages = null;
-    let questions = null;
-    let url = '';
+    const url = document.getElementById('modalHwUrl')?.value.trim() || '';
 
     if (!title) {
       this.showToast('يرجى كتابة عنوان الواجب', 'error');
       return;
     }
 
-    if (mode === 'book') {
-      book_name = document.getElementById('modalHwBookName')?.value.trim() || null;
-      pages = document.getElementById('modalHwPages')?.value.trim() || null;
-      questions = document.getElementById('modalHwQuestions')?.value.trim() || null;
-      if (!book_name && !pages && !questions && !description) {
-        this.showToast('يرجى إدخال اسم الكتاب أو الصفحات والأسئلة، أو كتابة نص الواجب في خانة التعليمات', 'error');
-        return;
-      }
-    } else if (mode === 'text') {
-      if (!description) {
-        this.showToast('يرجى كتابة نص الواجب أو الأسئلة المطلوبة في خانة التعليمات', 'error');
-        return;
-      }
-    } else if (mode === 'pdf') {
-      url = document.getElementById('modalHwUrl')?.value.trim() || '';
-      if (!url) {
-        this.showToast('يرجى إدخال رابط ملف الـ PDF', 'error');
-        return;
-      }
+    if (!description) {
+      this.showToast('يرجى كتابة وصف الواجب وتفاصيل المطلوب حله', 'error');
+      return;
     }
 
     try {
@@ -7938,12 +7826,12 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           group_id,
           type: 'pdf',
           url,
-          description: description || null,
+          description,
           is_homework: true,
           due_date,
-          book_name,
-          pages,
-          questions,
+          book_name: null,
+          pages: null,
+          questions: null,
         },
       });
       this.closeModal();
@@ -7971,9 +7859,9 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     if (hw.book_name) text += `• *الكتاب / الملزمة:* ${hw.book_name}\n`;
     if (hw.pages) text += `• *الصفحات المطلوبة:* ${hw.pages}\n`;
     if (hw.questions) text += `• *أرقام الأسئلة:* ${hw.questions}\n`;
-    if (hw.description) text += `• *تعليمات المعلم:* ${hw.description}\n`;
+    if (hw.description) text += `• *وصف الواجب والمطلوب حله:*\n${hw.description}\n`;
     if (hw.due_date) text += `• *آخر موعد للتسليم:* ${hw.due_date}\n`;
-    if (hw.url && hw.url !== '#' && hw.url.trim().length > 0) text += `• *رابط الملف:* ${hw.url}\n`;
+    if (hw.url && hw.url !== '#' && hw.url.trim().length > 0) text += `• *رابط الملف المرفق:* ${hw.url}\n`;
     text += `\n• *طريقة التسليم:* حل المطلوب في كشكولك بخط واضح، وصوّر الصفحات وحوّلها لـ PDF وارفعها مباشرة عبر رابط بوابتك الخاصة في Centrly.\nبالتوفيق والنجاح دائماً.`;
 
     navigator.clipboard.writeText(text).then(() => {

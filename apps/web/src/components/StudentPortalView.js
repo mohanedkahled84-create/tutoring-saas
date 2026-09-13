@@ -246,8 +246,9 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                         ` : ''}
 
                         ${m.description ? `
-                          <div style="font-size: 0.825rem; color: #334155; margin: 0.45rem 0 0 0; line-height: 1.5; background: #f1f5f9; padding: 0.5rem 0.75rem; border-radius: 0.45rem; border-right: 3px solid #3b82f6;">
-                            <b>تعليمات المعلم:</b> ${escapeHtml(m.description)}
+                          <div style="font-size: 0.85rem; color: #1e293b; margin: 0.5rem 0 0 0; line-height: 1.6; background: #f8fafc; padding: 0.65rem 0.85rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; border-right: 3px solid #2563eb;">
+                            <div style="font-weight: 800; color: #1e40af; font-size: 0.825rem; margin-bottom: 0.25rem;">وصف الواجب والمطلوب حله:</div>
+                            <div style="white-space: pre-wrap; color: #334155;">${escapeHtml(m.description)}</div>
                           </div>
                         ` : ''}
                       </div>

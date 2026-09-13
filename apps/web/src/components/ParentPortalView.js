@@ -337,8 +337,8 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                         ` : ''}
 
                         ${h.description ? `
-                          <div style="font-size: 0.775rem; color: #475569; margin-top: 0.35rem; line-height: 1.4;">
-                            ${escapeHtml(h.description)}
+                          <div style="font-size: 0.8rem; color: #334155; margin-top: 0.45rem; line-height: 1.5; background: #f8fafc; padding: 0.5rem 0.75rem; border-radius: 0.4rem; border: 1px solid #e2e8f0;">
+                            <b style="color: #1e40af;">وصف الواجب:</b> <span style="white-space: pre-wrap;">${escapeHtml(h.description)}</span>
                           </div>
                         ` : ''}
 

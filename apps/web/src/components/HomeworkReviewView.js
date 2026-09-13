@@ -84,7 +84,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
           <div style="display: flex; justify-content: center; margin-bottom: 0.75rem;">${getIcon('homework', 48, '#94a3b8')}</div>
           <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0;">لا توجد واجبات منزلية منشورة حتى الآن</h3>
           <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 1.5rem 0;">
-            يمكنك نشر واجب منزلي جديد باختيار أسئلة من الكتاب المدرسي، أو نص حر، أو ملف PDF مع موعد التسليم.
+            يمكنك نشر وتكليف واجب منزلي جديد وكتابة وصف المطلوب حله وموعد التسليم للطلاب بسهولة.
           </p>
           <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
             <button class="btn btn-primary" onclick="window.centrlyApp.openAddHomeworkModal()" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 800;">
@@ -178,8 +178,9 @@ export function renderHomeworkReviewView(homeworkState = {}) {
               ` : ''}
 
               ${currentHomework.description ? `
-                <div style="font-size: 0.825rem; color: #475569; margin-top: 0.45rem; line-height: 1.5; background: #ffffff; padding: 0.45rem 0.75rem; border-radius: 0.4rem; border: 1px solid #e2e8f0;">
-                  <b style="color: #334155;">نص الواجب / تعليمات المعلم:</b> ${escapeHtml(currentHomework.description)}
+                <div style="font-size: 0.85rem; color: #1e293b; margin-top: 0.5rem; line-height: 1.6; background: #f8fafc; padding: 0.65rem 0.85rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; border-right: 3px solid var(--centrly-blue-700);">
+                  <div style="font-weight: 800; color: var(--centrly-blue-800); font-size: 0.825rem; margin-bottom: 0.25rem;">وصف الواجب والمطلوب حله:</div>
+                  <div style="white-space: pre-wrap; color: #334155;">${escapeHtml(currentHomework.description)}</div>
                 </div>
               ` : ''}
             </div>
