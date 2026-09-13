@@ -72,7 +72,8 @@ export function createApp(): Express {
     })
   );
   app.use(cookieParser());
-  app.use(express.json({ limit: "15mb" }));
+  app.use(express.json({ limit: "30mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "30mb" }));
 
   // Health and uptime monitoring (unthrottled for monitoring agents)
   app.use("/health", healthRouter);

@@ -43,21 +43,49 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
     return;
   }
 
-  const { title, description, type, url, group_id, is_homework, due_date, book_name, pages, questions } = req.body;
+  const { title, description, type, url, group_id, is_homework, due_date, book_name, pages, questions, file_data, file_name } = req.body;
 
   if (!title) {
     res.status(400).json({ error: { code: "BAD_REQUEST", message: "عنوان المذكرة أو الواجب مطلوب" } });
     return;
   }
 
-  // If it's regular study material (not homework), url is strictly required
-  if (!is_homework && !url) {
-    res.status(400).json({ error: { code: "BAD_REQUEST", message: "رابط المذكرة أو الفيديو مطلوب" } });
+  // If it's regular study material (not homework), url or file_data is strictly required
+  if (!is_homework && !url && !file_data) {
+    res.status(400).json({ error: { code: "BAD_REQUEST", message: "رابط المذكرة أو ملف الـ PDF مطلوب" } });
     return;
   }
 
   try {
     const supabase = getServiceSupabaseClient();
+    let finalUrl = url ? url.trim() : "";
+
+    // If file_data (base64) provided, upload directly to Supabase Storage 'homework-submissions'
+    if (file_data) {
+      const base64Clean = file_data.replace(/^data:application\/pdf;base64,/, "").replace(/^data:.*;base64,/, "");
+      const fileBuffer = Buffer.from(base64Clean, "base64");
+      const cleanFileName = (file_name || "homework.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+      const storagePath = `materials/${tenantId}/${Date.now()}_${cleanFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("homework-submissions")
+        .upload(storagePath, fileBuffer, {
+          contentType: "application/pdf",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        res.status(500).json({ error: { code: "STORAGE_ERROR", message: "تعذر رفع ملف الـ PDF إلى السحابة: " + uploadError.message } });
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("homework-submissions")
+        .getPublicUrl(storagePath);
+
+      finalUrl = publicUrlData.publicUrl;
+    }
+
     const { data, error } = await supabase
       .from("study_materials")
       .insert({
@@ -66,7 +94,7 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
         title: title.trim(),
         description: description ? description.trim() : null,
         type: type || "pdf",
-        url: url ? url.trim() : "",
+        url: finalUrl,
         group_id: group_id || null,
         is_homework: Boolean(is_homework),
         due_date: due_date || null,

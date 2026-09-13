@@ -348,6 +348,15 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                             <span>آخر موعد للتسليم: <b>${escapeHtml(h.due_date)}</b></span>
                           </div>
                         ` : ''}
+
+                        ${(h.url && h.url !== '#') ? `
+                          <div style="margin-top: 0.4rem;">
+                            <a href="${escapeHtml(h.url)}" target="_blank" rel="noopener noreferrer" style="font-size: 0.8rem; color: #2563eb; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                              ${getIcon('file', 13, '#2563eb')}
+                              <span>معاينة ملف الواجب المرفق (PDF / الرابط)</span>
+                            </a>
+                          </div>
+                        ` : ''}
                       </div>
 
                       <!-- Big Status Badge for Parent -->

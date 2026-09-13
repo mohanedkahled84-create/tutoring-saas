@@ -251,6 +251,16 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                             <div style="white-space: pre-wrap; color: #334155;">${escapeHtml(m.description)}</div>
                           </div>
                         ` : ''}
+
+                        ${(m.url && m.url !== '#') ? `
+                          <div style="margin-top: 0.6rem;">
+                            <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" 
+                              style="display: inline-flex; align-items: center; gap: 0.4rem; background: #2563eb; color: #ffffff; font-weight: 800; text-decoration: none; padding: 0.45rem 0.85rem; border-radius: 0.5rem; font-size: 0.825rem; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
+                              ${getIcon('file', 14, '#ffffff')}
+                              <span>فتح / تحميل ملف الواجب المرفق (PDF / الرابط)</span>
+                            </a>
+                          </div>
+                        ` : ''}
                       </div>
                     </div>
 
