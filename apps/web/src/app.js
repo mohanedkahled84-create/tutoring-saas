@@ -182,6 +182,11 @@ class CentrlyApp {
 
         <h4 style="color: #1e3a8a; font-weight: 800;">5. الملكية الفكرية والبيانات</h4>
         <p>جميع حقوق الملكية الفكرية، التصاميم، العلامات التجارية، والبرمجيات الخاصة بـ سنترلي هي ملكية حصرية للمنصة، في حين تظل جميع بيانات الطلاب وأولياء الأمور ملكية حصرية للمدرس أو السنتر المشترك.</p>
+
+        <h4 style="color: #1e3a8a; font-weight: 800;">6. إخلاء مسؤولية بشأن خدمة الواتساب</h4>
+        <p style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.85rem 1rem; color: #92400e; font-size: 0.875rem; line-height: 1.8;">
+          <b>تنبيه هام وإخلاء مسؤولية:</b> إن الضغط المتواصل على خدمة إرسال رسائل الواتساب أو إرسال أعداد مكثفة من الرسائل قد يُعرّض رقم الهاتف لخطر الحظر أو الإغلاق التام من قِبل شركة واتساب (Meta). منصة سنترلي توفر آليات تقنية ذكية لتقليل المخاطر ولكنها <b>تخلي مسؤوليتها القانونية والتقنية والمالية تماماً</b> عن أي حظر أو إيقاف قد يتعرض له رقم العميل، ويتحمل المشترك كامل المسؤولية عن استخدام وإدارة رقمه.
+        </p>
       `;
     } else if (type === 'privacy') {
       titleEl.innerText = 'سياسة الخصوصية وحماية البيانات (Privacy Policy)';
@@ -193,23 +198,23 @@ class CentrlyApp {
         <p>تُخزّن جميع البيانات في قواعد بيانات سحابية مشفرة ومؤمنة بأحدث بروتوكولات الحماية (RLS Encryption). نحن نلتزم التزاماً قاطعاً بعدم بيع أو تأجير أو مشاركة أي بيانات تخص طلابك أو أرقام هواتفهم مع أي طرف ثالث أو استخدامها لأي أغراض إعلانية.</p>
 
         <h4 style="color: #1e3a8a; font-weight: 800;">3. إشعارات الواتساب</h4>
-        <p>يتم إرسال الرسائل بناءً على طلب وتوجيه المعلم أو السنتر لإخطار أولياء الأمور فقط بمواعيد الحصص وحالة الحضور والدرجات.</p>
+        <p>يتم إرسال الرسائل بناءً على طلب وتوجيه المعلم أو السنتر لإخطار أولياء الأمور فقط بمواعيد الحصص وحالة الحضور والدرجات، مع الالتزام التام بسياسات الاستخدام العادل.</p>
 
         <h4 style="color: #1e3a8a; font-weight: 800;">4. حقوق المستخدم</h4>
         <p>يحق للمشترك في أي وقت طلب تصدير كامل بياناته أو حذف حسابه وبيانات طلابه بالكامل من خوادمنا بمجرد تقديم طلب للدعم الفني.</p>
       `;
     } else if (type === 'refund') {
-      titleEl.innerText = 'سياسة الاسترجاع والإلغاء (Refund & Cancellation Policy)';
+      titleEl.innerText = 'سياسة الاسترجاع واسترداد الأموال (Refund & Cancellation Policy)';
       bodyEl.innerHTML = `
         <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #065f46; font-weight: 700;">
-          ضمان استرداد الأموال بنسبة 100% خلال 7 أيام (Money-Back Guarantee)
+          ضمان استرداد الأموال بنسبة 100% وفقاً لأحكام الاسترجاع (Money-Back Guarantee)
         </div>
         <p>في سنترلي، رضاك التام ونجاح منظومتك هو أساس عملنا. لذلك نوفر سياسة استرجاع مرنة وعادلة تماماً:</p>
         
-        <h4 style="color: #1e3a8a; font-weight: 800;">1. شروط استرداد قيمة الاشتراك</h4>
-        <ul>
-          <li>يحق لأي مشترك جديد في باقات المنصة طلب استرداد كامل قيمة الاشتراك خلال <b>7 أيام</b> من تاريخ الدفع الأول، في حال عدم رضاه عن الخدمة أو وجود أي عائق تقني لم نتمكن من حله.</li>
-          <li>يتم تحويل المبلغ المسترد كاملاً بنفس وسيلة الدفع التي استخدمها العميل (عبر بطاقة البنك أو المحفظة الإلكترونية) خلال 3 إلى 5 أيام عمل وفقاً لقواعد شبكات الدفع المصرية.</li>
+        <h4 style="color: #1e3a8a; font-weight: 800;">1. شروط ومهلة تقديم طلب استرداد قيمة الاشتراك</h4>
+        <ul style="padding-right: 1.25rem; line-height: 1.9;">
+          <li>يحق لأي مشترك جديد في باقات المنصة تقديم طلب استرداد كامل قيمة الاشتراك خلال <b>14 يوماً</b> من تاريخ الدفع الأول، في حال عدم رضاه عن الخدمة أو وجود أي عائق تقني لم نتمكن من حله.</li>
+          <li><b>مدة معالجة وتحويل المبلغ المسترد:</b> نظراً للدورات المصرفية المعتمدة لدى البنوك وشبكات الدفع الإلكتروني والمحافظ في جمهورية مصر العربية، فإن تنفيذ وتحويل المبلغ المسترد إلى حساب العميل البنكي أو محفظته الإلكترونية <b>يستغرق من 14 إلى 30 يوم عمل</b> لتأكيد التسوية المصرفية.</li>
         </ul>
 
         <h4 style="color: #1e3a8a; font-weight: 800;">2. إلغاء الاشتراك الشهري</h4>
@@ -219,17 +224,29 @@ class CentrlyApp {
         <p>المبالغ المدفوعة لطباعة كروت الطلاب البلاستيكية (PVC) التي تم تنفيذها وطباعتها وشحنها بالفعل للمدرس لا تخضع لسياسة الاسترجاع نظراً لتخصيصها وطباعة بيانات المدرس عليها.</p>
       `;
     } else if (type === 'contact') {
-      titleEl.innerText = 'بيانات التواصل الرسمية وخدمة العملاء';
+      titleEl.innerText = 'بيانات التواصل الرسمية والدعم الفني المباشر';
       bodyEl.innerHTML = `
         <h4 style="color: #1e3a8a; margin-top: 0; font-weight: 800;">بيانات التواصل المعتمدة لدى سنترلي:</h4>
         <p>يسعدنا تقديم الدعم الفني والإجابة على أي استفسارات للمعلمين وأصحاب السناتر في مصر:</p>
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem; line-height: 2.2;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem; line-height: 2.3; margin-top: 1rem;">
           <b>• الاسم التجاري الرسمي:</b> سنترلي للحلول التعليمية والبرمجيات (Centrly SaaS)<br>
           <b>• المقر والعنوان:</b> جمهورية مصر العربية — القاهرة<br>
-          <b>• البريد الإلكتروني الرسمي:</b> <a href="mailto:support@centrly.app" style="color: #2563eb; font-weight: 700;">support@centrly.app</a><br>
-          <b>• الهاتف والواتساب المباشر:</b> <span dir="ltr" style="font-weight: 800; color: #0f172a;">+20 100 000 0000</span><br>
+          <b>• البريد الإلكتروني الرسمي:</b> <a href="mailto:mohanedabdulhalim@gmail.com" style="color: #2563eb; font-weight: 700; text-decoration: none;">mohanedabdulhalim@gmail.com</a><br>
+          <b>• الهاتف والواتساب المباشر:</b> <a href="https://wa.me/201123671177?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D9%88%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D9%85%D9%86%D8%B5%D8%A9%20%D8%B3%D9%86%D8%AA%D8%B1%D9%84%D9%8A%20%D9%84%D8%A5%D8%AF%D8%A7%D8%B1%D8%A9%20%D8%A7%D9%84%D8%AD%D8%B5%D8%B5%20%D9%88%D8%A7%D9%84%D8%B7%D9%84%D8%A7%D8%A8" target="_blank" rel="noopener noreferrer" dir="ltr" style="font-weight: 800; color: #16a34a; text-decoration: none;">01123671177 (+20 112 367 1177)</a><br>
           <b>• أوقات خدمة العملاء:</b> يومياً من 9:00 صباحاً حتى 10:00 مساءً بتوقيت القاهرة<br>
           <b>• العملة الرسمية لجميع المعاملات:</b> الجنيه المصري (EGP - ج.م)
+        </div>
+
+        <div style="margin-top: 1.5rem; text-align: center;">
+          <a href="https://wa.me/201123671177?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D9%88%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D9%85%D9%86%D8%B5%D8%A9%20%D8%B3%D9%86%D8%AA%D8%B1%D9%84%D9%8A%20%D9%84%D8%A5%D8%AF%D8%A7%D8%B1%D8%A9%20%D8%A7%D9%84%D8%AD%D8%B5%D8%B5%20%D9%88%D8%A7%D9%84%D8%B7%D9%84%D8%A7%D8%A8" 
+             target="_blank" 
+             rel="noopener noreferrer" 
+             style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: #16a34a; color: #ffffff; text-decoration: none; font-family: 'Cairo', sans-serif; font-size: 1rem; font-weight: 800; padding: 0.85rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3); transition: all 0.2s;"
+             onmouseover="this.style.backgroundColor='#15803d'; this.style.transform='translateY(-1px)';"
+             onmouseout="this.style.backgroundColor='#16a34a'; this.style.transform='none';">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            <span>محادثة مباشرة عبر واتساب الآن</span>
+          </a>
         </div>
       `;
     }
@@ -1025,20 +1042,26 @@ class CentrlyApp {
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || this.groups || []);
           this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
 
+          // Do not auto-hijack into arbitrary in_progress session; let the teacher select group from standby hub
           if (!this.sessionState.id) {
             const todaySessions = await request('/sessions?status=in_progress').catch(() => []);
-            const sessionsArr = Array.isArray(todaySessions) ? todaySessions : (todaySessions.sessions || []);
-            if (sessionsArr.length > 0) {
-              const s = sessionsArr[0];
-              this.sessionState.id = s.id;
-              this.sessionState.status = s.status;
-              this.sessionState.group = s.group || { id: s.group_id, name: s.group_name || 'حصة اليوم', price: s.price || 0 };
-            }
+            this.ongoingServerSessions = Array.isArray(todaySessions) ? todaySessions : (todaySessions.sessions || []);
           }
           if (this.sessionState.id && !String(this.sessionState.id).startsWith('sess-')) {
             try {
               const serverSessionRes = await request(`/sessions/${this.sessionState.id}`).catch(() => null);
-              if (serverSessionRes?.attendance && Array.isArray(serverSessionRes.attendance)) {
+              const fetchedStatus = serverSessionRes?.session?.status || serverSessionRes?.status;
+              if (!serverSessionRes || serverSessionRes.error || fetchedStatus === 'ended' || fetchedStatus === 'cancelled') {
+                this.sessionState = {
+                  id: null,
+                  status: 'scheduled',
+                  group: null,
+                  attendanceList: [],
+                  financials: { totalRevenue: 0, attendeeCount: 0, absentCount: 0, exemptCount: 0, makeupCount: 0 },
+                };
+                localStorage.removeItem('centrly_active_session_state');
+                localStorage.removeItem('centrly_active_session_id');
+              } else if (serverSessionRes?.attendance && Array.isArray(serverSessionRes.attendance)) {
                 serverSessionRes.attendance.forEach(serverAtt => {
                   const local = (this.sessionState.attendanceList || []).find(a => a.student_id === serverAtt.student_id);
                   if (local) {
@@ -2048,6 +2071,19 @@ class CentrlyApp {
       const saved = localStorage.getItem('centrly_active_session_state');
       if (saved) {
         const parsed = JSON.parse(saved);
+        // If it is a phantom/empty dummy session named 'حصة اليوم' or has no group id, purge it immediately
+        if (parsed?.group?.name === 'حصة اليوم' || !parsed?.group?.id || (Array.isArray(parsed?.attendanceList) && parsed.attendanceList.length === 0 && !parsed.group?.id)) {
+          localStorage.removeItem('centrly_active_session_state');
+          localStorage.removeItem('centrly_active_session_id');
+          this.sessionState = {
+            id: null,
+            status: 'scheduled',
+            group: null,
+            attendanceList: [],
+            financials: { totalRevenue: 0, attendeeCount: 0, absentCount: 0, exemptCount: 0, makeupCount: 0 },
+          };
+          return;
+        }
         if (parsed && parsed.id && parsed.status === 'in_progress') {
           this.sessionState = parsed;
         }
@@ -2055,6 +2091,26 @@ class CentrlyApp {
     } catch (e) {
       console.warn('Failed to restore session state:', e);
     }
+  }
+
+  discardActiveSession() {
+    this.showConfirmModal({
+      title: 'إلغاء وإغلاق الحصة',
+      message: 'هل أنت متأكد من رغبتك في إغلاق هذه الحصة والعودة لقائمة المجموعات والحصص؟',
+      confirmText: 'نعم، إغلاق الحصة',
+      cancelText: 'تراجع',
+      isDanger: true,
+      onConfirm: async () => {
+        const id = this.sessionState?.id;
+        if (id && !String(id).startsWith('sess-')) {
+          await request(`/sessions/${id}/cancel`, {
+            method: 'POST',
+            body: { notify_parents: false, reason: 'إلغاء الحصة بدون تسجيل' },
+          }).catch(() => {});
+        }
+        this.resetActiveSession();
+      },
+    });
   }
 
   persistSessionState() {

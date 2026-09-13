@@ -247,6 +247,9 @@ export function renderLandingView() {
               <p style="font-size: 0.875rem; color: var(--brand-text); line-height: 1.7; margin: 0;">
                 تنويع تلقائي لصياغة الرسائل وفواصل زمنية عشوائية ذكية مع محاكاة الكتابة الحية لضمان إرسال التقارير بأمان تام لخطك.
               </p>
+              <div style="font-size: 0.75rem; color: var(--brand-muted); margin-top: 0.6rem; line-height: 1.5; border-top: 1px dashed var(--brand-line); padding-top: 0.5rem;">
+                * تنبيه وإخلاء مسؤولية: الضغط المتواصل أو إرسال رسائل مكثفة قد يُعرّض الرقم للإغلاق من شركة واتساب، والمنصة تخلي مسؤوليتها عن أي حظر للرقم.
+              </div>
             </div>
 
             <!-- Feature 3 -->
@@ -436,9 +439,9 @@ export function renderLandingView() {
               <div style="font-size: 0.95rem; font-weight: 800; color: var(--brand-navy);">لديك أكثر من 500 طالب أو عدة فروع لسنترك؟</div>
               <div style="font-size: 0.8rem; color: var(--brand-text); margin-top: 0.2rem;">نوفر باقات مخصصة للأعداد الكبرى بسيرفرات خاصة مع دعم مباشر.</div>
             </div>
-            <button onclick="window.centrlyApp.openPolicyModal('contact')" style="background: var(--brand-navy); color: #ffffff; border: none; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; border-radius: 8px; cursor: pointer;">
-              تواصل معنا لتسعير مخصص
-            </button>
+            <a href="https://wa.me/201123671177?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D9%88%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D8%A8%D8%A7%D9%82%D8%A9%20%D9%85%D8%AE%D8%B5%D8%B5%D8%A9%20%D9%84%D8%A3%D9%83%D8%AB%D8%B1%20%D9%85%D9%86%20500%20%D8%B7%D8%A7%D9%84%D8%A8%20%D9%81%D9%8A%20%D8%B3%D9%86%D8%AA%D8%B1%D9%84%D9%8A" target="_blank" rel="noopener noreferrer" style="background: var(--brand-navy); color: #ffffff; text-decoration: none; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--brand-navy-light)';" onmouseout="this.style.backgroundColor='var(--brand-navy)';">
+              <span>تواصل معنا لتسعير مخصص</span>
+            </a>
           </div>
 
         </div>
@@ -467,11 +470,9 @@ export function renderLandingView() {
             <div>
               <h4 style="font-size: 0.95rem; font-weight: 800; color: #ffffff; margin: 0 0 1rem;">روابط سريعة</h4>
               <div style="font-size: 0.85rem; line-height: 2.2; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start;">
-                <button type="button" onclick="document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">المميزات الشاملة</button>
-                <button type="button" onclick="document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">الأسعار والباقات</button>
                 <button type="button" onclick="window.centrlyApp.openPolicyModal('terms')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">شروط وأحكام الاستخدام</button>
                 <button type="button" onclick="window.centrlyApp.openPolicyModal('privacy')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">سياسة الخصوصية</button>
-                <button type="button" onclick="window.centrlyApp.openPolicyModal('refund')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">سياسة الاسترجاع والإلغاء (7 أيام)</button>
+                <button type="button" onclick="window.centrlyApp.openPolicyModal('refund')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">سياسة الاسترجاع واسترداد الأموال</button>
                 <button type="button" onclick="window.centrlyApp.openPolicyModal('contact')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">بيانات التواصل الرسمي والدعم</button>
               </div>
             </div>

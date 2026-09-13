@@ -182,6 +182,14 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 ${getIcon('edit', 16)}
                 <span>تعديل الموعد والبيانات</span>
               </button>
+              <button class="btn btn-secondary" onclick="window.centrlyApp.resetActiveSession()" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700;">
+                ${getIcon('groups', 16)}
+                <span>إغلاق والعودة للمجموعات</span>
+              </button>
+              <button class="btn btn-secondary" onclick="window.centrlyApp.discardActiveSession()" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700; color: #dc2626; border-color: #fca5a5; background: #fff5f5;">
+                ${getIcon('delete', 16, '#dc2626')}
+                <span>إلغاء الحصة</span>
+              </button>
             ` : ''}
             ${(isRescheduled || isCancelled) ? `
               <button class="btn btn-primary" onclick="window.centrlyApp.resumeSessionNow()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; background: var(--centrly-blue-700);">
@@ -193,8 +201,8 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 <span>تعديل الموعد والبيانات</span>
               </button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.resetActiveSession()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-                ${getIcon('add', 16)}
-                <span>بدء حصة جديدة</span>
+                ${getIcon('groups', 16)}
+                <span>العودة للمجموعات</span>
               </button>
             ` : ''}
             ${isSessionEnded ? `
@@ -207,8 +215,8 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 <span>إيصال التصفية</span>
               </button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.resetActiveSession()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-                ${getIcon('add', 16)}
-                <span>بدء حصة جديدة أخرى</span>
+                ${getIcon('groups', 16)}
+                <span>العودة للمجموعات وبدء حصة جديدة</span>
               </button>
             ` : ''}
             ${failedMessagesCount > 0 ? `
