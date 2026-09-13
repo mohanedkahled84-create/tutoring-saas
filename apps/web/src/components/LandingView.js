@@ -468,7 +468,6 @@ export function renderLandingView() {
             </div>
 
             <div>
-              <h4 style="font-size: 0.95rem; font-weight: 800; color: #ffffff; margin: 0 0 1rem;">روابط سريعة</h4>
               <div style="font-size: 0.85rem; line-height: 2.2; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start;">
                 <button type="button" onclick="window.centrlyApp.openPolicyModal('terms')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">شروط وأحكام الاستخدام</button>
                 <button type="button" onclick="window.centrlyApp.openPolicyModal('privacy')" style="background: none; border: none; padding: 0; color: #cbd5e1; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#cbd5e1'">سياسة الخصوصية</button>
