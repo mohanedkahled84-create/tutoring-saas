@@ -456,7 +456,6 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 <th>كود الطالب</th>
                 <th>اسم الطالب</th>
                 <th>الحالة</th>
-                <th>درجة الكويز</th>
                 <th>الملاحظات</th>
                 <th>وقت الرصد</th>
                 <th>حالة إشعار الواتساب</th>
@@ -490,22 +489,6 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                       ${a.attended ? 'حاضر' : 'غائب'}
                     </span>
                   </td>
-                  <td>
-                    <div style="display: inline-flex; align-items: center; gap: 0.3rem;">
-                      <input 
-                        type="number" 
-                        min="0" 
-                        max="100" 
-                        step="0.5" 
-                        class="form-input" 
-                        placeholder="—"
-                        value="${a.quiz_score !== undefined && a.quiz_score !== null && a.quiz_score !== '' ? escapeHtml(a.quiz_score) : ''}"
-                        style="width: 70px; padding: 0.2rem 0.4rem; text-align: center; font-family: monospace; font-size: 0.85rem; font-weight: 700; border-radius: 6px;"
-                        onchange="window.centrlyApp.updateAttendanceQuizScore('${escapeHtml(a.id || a.student_id)}', this.value)"
-                      >
-                      ${(a.quiz_score === undefined || a.quiz_score === null || a.quiz_score === '') ? '<span class="badge badge-secondary" style="font-size: 0.7rem;">لم يُصحح بعد</span>' : ''}
-                    </div>
-                  </td>
                   <td style="color: var(--centrly-text); font-size: 0.85rem;">
                     ${(a.comment && a.comment !== 'حصة تعويضية' && !a.comment.startsWith('حصة تعويضية')) ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; color: var(--centrly-ink);">${escapeHtml(a.comment)}</span>` : '<span style="color: #94a3b8;">لا توجد</span>'}
                   </td>
@@ -527,7 +510,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 `;
               }).join('') : `
                 <tr>
-                  <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                  <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
                     لم يتم تسجيل أي حضور حتى الآن. استخدم نموذج المسح أعلاه لبدء رصد الحضور.
                   </td>
                 </tr>
