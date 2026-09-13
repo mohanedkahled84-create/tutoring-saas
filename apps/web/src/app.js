@@ -7466,8 +7466,8 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const bodyHtml = `
       <form id="modalAddMaterialForm" onsubmit="window.centrlyApp.handleAddMaterialSubmit(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">عنوان المذكرة أو الواجب *</label>
-          <input type="text" id="modalMatTitle" class="form-input" placeholder="مثال: مذكرة مراجعة الباب الأول / واجب الحصة 4" required>
+          <label class="form-label" style="font-weight: 700;">عنوان المذكرة أو المحتوى التعليمي *</label>
+          <input type="text" id="modalMatTitle" class="form-input" placeholder="مثال: مذكرة مراجعة الباب الأول / فيديو شرح الدرس الثاني" required>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
@@ -7494,21 +7494,9 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           <input type="url" id="modalMatUrl" class="form-input" placeholder="https://drive.google.com/... أو https://youtu.be/..." dir="ltr" required>
         </div>
 
-        <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">وصف أو تعليمات للطلاب (اختياري)</label>
-          <textarea id="modalMatDescription" class="form-input" rows="2" placeholder="اكتب تعليمات المذاكرة أو المطلوب حله..."></textarea>
-        </div>
-
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 0.65rem; padding: 0.85rem; margin-bottom: 1.25rem;">
-          <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 800; color: #92400e; cursor: pointer;">
-            <input type="checkbox" id="modalMatIsHomework" onchange="document.getElementById('modalMatDueDateBox').style.display = this.checked ? 'block' : 'none'">
-            <span>تعيين هذا الملف كواجب منزلي (Homework) مطلوب تسليمه</span>
-          </label>
-
-          <div id="modalMatDueDateBox" style="display: none; margin-top: 0.75rem;">
-            <label class="form-label" style="font-weight: 700; color: #92400e;">آخر موعد لتسليم الواجب</label>
-            <input type="date" id="modalMatDueDate" class="form-input" style="background: #fff;">
-          </div>
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <label class="form-label" style="font-weight: 700;">وصف أو توجيهات للطلاب (اختياري)</label>
+          <textarea id="modalMatDescription" class="form-input" rows="2" placeholder="اكتب تعليمات المذاكرة أو أي ملحوظات للطلاب..."></textarea>
         </div>
       </form>
     `;
@@ -7517,7 +7505,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
       <button type="submit" form="modalAddMaterialForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">إضافة المذكرة الآن</button>
     `;
-    this.showModal('إضافة مذكرة تعليمية / واجب دراسي', bodyHtml, footerHtml);
+    this.showModal('إضافة مذكرة تعليمية أو شرح جديد', bodyHtml, footerHtml);
   }
 
   async handleAddMaterialSubmit(e) {
@@ -7527,8 +7515,6 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const type = document.getElementById('modalMatType')?.value || 'pdf';
     const url = document.getElementById('modalMatUrl')?.value.trim();
     const description = document.getElementById('modalMatDescription')?.value.trim();
-    const is_homework = Boolean(document.getElementById('modalMatIsHomework')?.checked);
-    const due_date = is_homework ? (document.getElementById('modalMatDueDate')?.value || null) : null;
 
     if (!title || !url) {
       this.showToast('يرجى كتابة عنوان المذكرة والرابط المباشر', 'error');
@@ -7544,12 +7530,12 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           type,
           url,
           description,
-          is_homework,
-          due_date,
+          is_homework: false,
+          due_date: null,
         },
       });
       this.closeModal();
-      this.showToast('تمت إضافة المذكرة بنجاح وستظهر فوراً في بوابة ولي الأمر!', 'success');
+      this.showToast('تمت إضافة المذكرة بنجاح وستظهر فوراً في بوابات الطلاب وأولياء الأمور!', 'success');
       await this.loadRouteData('materials');
     } catch (err) {
       this.showToast(`فشل إضافة المذكرة: ${err.message || 'حدث خطأ'}`, 'danger');

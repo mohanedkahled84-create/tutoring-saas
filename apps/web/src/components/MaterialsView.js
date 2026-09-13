@@ -36,18 +36,18 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
               <span>المذكرات والماتريال التعليمية (Study Materials)</span>
             </h2>
             <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              إرفاق المذكرات بصيغة PDF، روابط فيديوهات الشرح، والواجبات المنزلية لتظهر مباشرة لأولياء الأمور والطلاب في بوابتهم.
+              إرفاق المذكرات بصيغة PDF وروابط شروحات الفيديو لتظهر مباشرة للطلاب وأولياء الأمور في بواباتهم.
             </p>
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="btn btn-primary" onclick="window.centrlyApp.openAddHomeworkModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; background: #059669; border-color: #059669;">
-              ${getIcon('homework', 16, '#ffffff')}
-              <span>نشر واجب (من كتاب أو ملف)</span>
+            <button class="btn btn-primary" onclick="window.centrlyApp.openAddMaterialModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800;">
+              ${getIcon('add', 16, '#ffffff')}
+              <span>إضافة مذكرة / رابط شرح جديد</span>
             </button>
-            <button class="btn btn-secondary" onclick="window.centrlyApp.openAddMaterialModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-              ${getIcon('add', 16)}
-              <span>إضافة مذكرة / رابط شرح</span>
+            <button class="btn btn-secondary" onclick="window.centrlyApp.navigateTo('homework')" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+              ${getIcon('homework', 16, 'var(--centrly-blue-700)')}
+              <span>الواجبات المنزلية (قسم منفصل)</span>
             </button>
           </div>
         </div>
@@ -65,13 +65,13 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
           </div>
         </div>
 
-        <div class="card" style="margin: 0; background: #fff; border-top: 4px solid #f59e0b;">
-          <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">واجبات منزلية محددة</div>
-          <div style="font-size: 1.8rem; font-weight: 900; color: #b45309; margin-top: 0.35rem;">
-            ${homeworkCount} <span style="font-size: 0.85rem; font-weight: 500;">واجب</span>
+        <div class="card" style="margin: 0; background: #fff; border-top: 4px solid #059669;">
+          <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">مذكرات وملازم PDF</div>
+          <div style="font-size: 1.8rem; font-weight: 900; color: #047857; margin-top: 0.35rem;">
+            ${pdfCount} <span style="font-size: 0.85rem; font-weight: 500;">مذكرة</span>
           </div>
           <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.25rem;">
-            لها مواعيد تسليم ومتابعة
+            جاهزة للعرض والتحميل المباشر
           </div>
         </div>
 
@@ -92,7 +92,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
           <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.4rem; margin: 0;">
             ${getIcon('materials', 18, 'var(--centrly-blue-700)')}
-            <span>قائمة المذكرات والواجبات (${filtered.length})</span>
+            <span>قائمة المذكرات والشروحات التعليمية (${filtered.length})</span>
           </h3>
 
           <!-- Group Filter Dropdown -->
