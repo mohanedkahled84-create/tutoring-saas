@@ -10,6 +10,8 @@
  * - STRICTLY ZERO EMOJIS across the entire page (clean vector SVGs only)
  */
 
+import { CENTRLY_LOGO_BASE64 } from '../utils/logoBase64.js';
+
 export function renderLandingView() {
   return `
     <div class="landing-page" style="font-family: 'Cairo', sans-serif; direction: rtl; color: var(--brand-ink, #182349); background: var(--brand-cream, #F8F7F1); min-height: 100vh; overflow-x: hidden; padding-top: 74px;">
@@ -103,7 +105,7 @@ export function renderLandingView() {
           
           <!-- Official Brand Wordmark & Icon -->
           <div style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer;" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
-            <img src="favicon.png" alt="شعار سنترلي" style="width: 36px; height: 36px; border-radius: 10px; object-fit: cover; box-shadow: 0 2px 8px rgba(23, 45, 112, 0.12);">
+            <img src="${CENTRLY_LOGO_BASE64}" alt="شعار سنترلي" style="width: 36px; height: 36px; border-radius: 10px; object-fit: cover; box-shadow: 0 2px 8px rgba(23, 45, 112, 0.12);">
             <div class="brand-logo-text">
               <span class="logo-blue">سنتر</span><span class="logo-gold">لي</span>
             </div>
@@ -452,7 +454,7 @@ export function renderLandingView() {
             
             <div>
               <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
-                <img src="favicon.png" alt="سنترلي" style="width: 36px; height: 36px; border-radius: 8px;">
+                <img src="${CENTRLY_LOGO_BASE64}" alt="سنترلي" style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover;">
                 <div style="font-family: 'Changa', 'Cairo', sans-serif; font-size: 1.3rem; font-weight: 800; color: #ffffff;">
                   سنترلي | Centrly
                 </div>
