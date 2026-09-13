@@ -78,18 +78,19 @@ export function renderBillingView(data = {}, user = {}) {
     }
   ];
 
+  const isPending = status === 'pending_verification' || status === 'pending';
   let statusBadgeHtml = '';
   if (status === 'active') {
     statusBadgeHtml = `<span class="badge" style="background: #10b981; color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.75rem; border-radius: 9999px;">
       ${getIcon('dotSuccess', 8)} <span>اشتراك مفعّل وسارٍ</span>
     </span>`;
+  } else if (isPending) {
+    statusBadgeHtml = `<span class="badge" style="background: #f59e0b; color: #182349; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.75rem; border-radius: 9999px;">
+      ${getIcon('refresh', 12)} <span>قيد المراجعة (Pending)</span>
+    </span>`;
   } else if (status === 'trial') {
     statusBadgeHtml = `<span class="badge" style="background: #0284c7; color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.75rem; border-radius: 9999px;">
       ${getIcon('dotSuccess', 8)} <span>فترة تجريبية مجانية</span>
-    </span>`;
-  } else if (status === 'pending_verification') {
-    statusBadgeHtml = `<span class="badge" style="background: #f59e0b; color: #182349; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.75rem; border-radius: 9999px;">
-      ${getIcon('refresh', 12)} <span>قيد مراجعة التحويل</span>
     </span>`;
   } else {
     statusBadgeHtml = `<span class="badge" style="background: #ef4444; color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.75rem; border-radius: 9999px;">
@@ -272,55 +273,27 @@ export function renderBillingView(data = {}, user = {}) {
         </div>
       </div>
 
-      <!-- Payment Methods & Transfer Details -->
-      <div class="card" style="margin: 0; background: #ffffff; border: 1px solid var(--centrly-line); border-radius: 14px;">
-        <h3 style="font-size: 1.05rem; font-weight: 800; margin: 0 0 0.85rem; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.5rem;">
-          ${getIcon('billing', 20, 'var(--centrly-blue-700)')}
-          <span>طرق الدفع والتحويل المعتمدة في مصر</span>
-        </h3>
-        
-        <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1rem;">
-          قم بالتحويل عبر إحدى الوسائل التالية، ثم اضغط على زر <strong>(اشترك الآن)</strong> في باقتك وأدخل رقم العملية أو المحفظة لتفعيل حسابك فوراً:
-        </p>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
-          
-          <!-- Vodafone Cash -->
-          <div style="background: #fff1f2; border: 1.5px solid #fecdd3; padding: 1rem 1.25rem; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+      <!-- Subscription Status Bottom Bar -->
+      <div class="card" style="margin: 0; background: #ffffff; border: 1.5px solid ${isPending ? '#fde68a' : 'var(--centrly-line)'}; border-radius: 14px; padding: 1.25rem 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: ${isPending ? '#fef3c7' : '#f1f5f9'}; color: ${isPending ? '#d97706' : 'var(--centrly-blue-700)'};">
+              ${getIcon(isPending ? 'refresh' : 'billing', 20, isPending ? '#d97706' : 'var(--centrly-blue-700)')}
+            </span>
             <div>
-              <div style="font-weight: 800; color: #be123c; font-size: 0.95rem; margin-bottom: 0.25rem;">
-                فودافون كاش ومحافظ المحمول
+              <div style="font-weight: 800; font-size: 0.95rem; color: var(--centrly-ink);">
+                حالة الاشتراك: <span style="color: ${isPending ? '#d97706' : (status === 'active' ? '#10b981' : '#0284c7')};">${isPending ? 'قيد المراجعة (Pending)' : (status === 'active' ? 'مفعّل (Active)' : 'فترة تجريبية (Trial)')}</span>
               </div>
-              <div style="font-family: monospace; font-size: 1.2rem; font-weight: 900; color: #0f172a; direction: ltr; display: inline-block;">
-                01099887766
-              </div>
-              <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
-                تحويل مباشر من محفظتك الإلكترونية
+              <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.2rem;">
+                ${isPending 
+                  ? 'تم استلام بيانات التحويل والإيصال وهو الآن قيد المراجعة (Pending) - سيتم تفعيل حسابك فور التحقق.' 
+                  : 'يمكنك ترقية أو تجديد باقتك بالضغط على زر (اشترك في الباقة) لإتمام التحويل وإرفاق الإيصال.'}
               </div>
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('01099887766'); window.centrlyApp.showToast('تم نسخ رقم فودافون كاش', 'success');" style="font-weight: 800; font-size: 0.8rem;">
-              نسخ الرقم
-            </button>
           </div>
-
-          <!-- InstaPay -->
-          <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; padding: 1rem 1.25rem; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: 800; color: #0369a1; font-size: 0.95rem; margin-bottom: 0.25rem;">
-                إنستاباي (InstaPay)
-              </div>
-              <div style="font-family: monospace; font-size: 1.15rem; font-weight: 900; color: #0f172a; direction: ltr; display: inline-block;">
-                centrly@instapay
-              </div>
-              <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
-                تحويل لحظي فوري بدون أي مصاريف
-              </div>
-            </div>
-            <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('centrly@instapay'); window.centrlyApp.showToast('تم نسخ عنوان إنستاباي', 'success');" style="font-weight: 800; font-size: 0.8rem;">
-              نسخ المعرّف
-            </button>
-          </div>
-
+          <span class="badge" style="font-size: 0.85rem; font-weight: 800; padding: 0.4rem 0.85rem; border-radius: 8px; ${isPending ? 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;' : (status === 'active' ? 'background: #dcfce7; color: #166534;' : 'background: #e0f2fe; color: #0369a1;')}">
+            ${isPending ? 'Pending' : (status === 'active' ? 'Active' : 'Trial')}
+          </span>
         </div>
       </div>
 

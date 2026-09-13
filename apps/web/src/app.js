@@ -6267,48 +6267,61 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
     const modalHtml = `
       <div id="paymentProofModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 9999; padding: 1rem; overflow-y: auto;" dir="rtl">
-        <div class="card" style="width: 100%; max-width: 500px; margin: auto; animation: modalFadeIn 0.2s ease-out; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); font-family: 'Cairo', sans-serif;">
+        <div class="card" style="width: 100%; max-width: 480px; margin: auto; animation: modalFadeIn 0.2s ease-out; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); font-family: 'Cairo', sans-serif; border-radius: 16px;">
           <div class="card-header" style="border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem; margin-bottom: 1rem;">
             <div>
-              <h3 class="card-title" style="margin: 0; font-size: 1.15rem;">تأكيد ترقية / تجديد الاشتراك</h3>
+              <h3 class="card-title" style="margin: 0; font-size: 1.15rem; font-weight: 800;">الاشتراك في ${escapeHtml(planName)}</h3>
               <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
-                <strong style="color: var(--centrly-blue-700);">${planName}</strong> — <strong>${Number(amount).toLocaleString('ar-EG')} ج.م</strong> (${periodLabel})
+                المبلغ المطلوب: <strong style="color: var(--centrly-blue-700);">${Number(amount).toLocaleString('ar-EG')} ج.م</strong> (${periodLabel})
               </p>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closePaymentProofModal()" style="border: none; cursor: pointer; padding: 0.35rem 0.6rem; display: flex; align-items: center;">${getIcon('close', 16, '#64748b')}</button>
           </div>
 
           <form onsubmit="window.centrlyApp.handleSubmitPaymentProof(event, ${amount}, '${planName}', '${billingCycle}')">
+            
+            <!-- Transfer Number Card -->
+            <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 1rem;">
+              <div style="font-size: 0.825rem; color: #166534; font-weight: 700; margin-bottom: 0.35rem;">
+                رقم التحويل (إنستاباي أو محفظة إلكترونية):
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                <div style="font-family: monospace; font-size: 1.35rem; font-weight: 900; color: #15803d; direction: ltr; letter-spacing: 1px;">
+                  01010979708
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('01010979708'); window.centrlyApp.showToast('تم نسخ الرقم 01010979708', 'success');" style="font-weight: 800; font-size: 0.8rem; background: #ffffff; border-color: #86efac; color: #166534;">
+                  نسخ الرقم
+                </button>
+              </div>
+              <div style="font-size: 0.775rem; color: #4b5563; margin-top: 0.4rem; line-height: 1.5;">
+                قم بتحويل المبلغ <strong>(${Number(amount).toLocaleString('ar-EG')} ج.م)</strong> إلى هذا الرقم عبر إنستاباي أو من محفظتك، ثم أرفق الاسكرين شوت أدناه.
+              </div>
+            </div>
+
+            <!-- Transfer Method Selection -->
             <div class="form-group" style="margin-bottom: 0.85rem;">
-              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">طريقة التحويل التي استخدمتها</label>
+              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">طريقة التحويل المستخدمة</label>
               <select id="proofPaymentMethod" class="form-input" style="width: 100%;" required>
-                <option value="instapay">إنستاباي (InstaPay) - centrly@instapay</option>
-                <option value="vodafone_cash">فودافون كاش / محفظة إلكترونية - 01099887766</option>
-                <option value="bank_transfer">تحويل بنكي</option>
-                <option value="cash">نقداً لإدارة المنظومة</option>
+                <option value="instapay">إنستاباي (InstaPay)</option>
+                <option value="vodafone_cash">محفظة إلكترونية (فودافون كاش / محافظ المحمول)</option>
               </select>
             </div>
 
-            <div class="form-group" style="margin-bottom: 0.85rem;">
-              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">رقم العملية أو رقم المحفظة المحوّل منها</label>
-              <input type="text" id="proofRefNumber" class="form-input" placeholder="مثال: 987654321 أو رقم محفظتك (أو ارفق السكرين شوت أدناه)" dir="ltr">
-            </div>
-
-            <!-- Transfer Screenshot Upload -->
+            <!-- Screenshot Upload (Primary) -->
             <div class="form-group" style="margin-bottom: 0.85rem;">
               <label class="form-label" style="font-weight: 700; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
-                <span>صورة إيصال التحويل / سكرين شوت</span>
-                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">PNG, JPG</span>
+                <span>إرفاق الاسكرين شوت (صورة إيصال التحويل)</span>
+                <span style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">مطلوب</span>
               </label>
 
               <input type="file" id="proofImageFile" accept="image/*" style="display: none;" onchange="window.centrlyApp.handleProofImageSelected(this)">
 
-              <div id="proofDropzone" onclick="document.getElementById('proofImageFile').click()" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 1rem; text-align: center; cursor: pointer; background: #f8fafc; transition: all 0.2s ease;">
-                <div style="font-size: 0.9rem; font-weight: 800; color: var(--centrly-blue-700); margin-bottom: 0.25rem;">
-                  انقر هنا لاختيار صورة إيصال التحويل
+              <div id="proofDropzone" onclick="document.getElementById('proofImageFile').click()" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; cursor: pointer; background: #f8fafc; transition: all 0.2s ease;">
+                <div style="font-size: 0.95rem; font-weight: 800; color: var(--centrly-blue-700); margin-bottom: 0.25rem;">
+                  انقر هنا لاختيار الاسكرين شوت
                 </div>
                 <div style="font-size: 0.775rem; color: #64748b;">
-                  أو اسحب وأفلت لقطة الشاشة (سكرين شوت) هنا
+                  أو اسحب وأفلت صورة التحويل هنا
                 </div>
               </div>
 
@@ -6320,15 +6333,16 @@ https://centerly-platform.vercel.app/parent-portal?token=...
               </div>
             </div>
 
-            <div class="form-group" style="margin-bottom: 1.25rem;">
-              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">ملاحظات إضافية (اختياري)</label>
-              <textarea id="proofNotes" class="form-input" rows="2" placeholder="أي تفاصيل أو اسم صاحب المحفظة المحوّل منها..."></textarea>
+            <!-- Optional reference or notes -->
+            <div class="form-group" style="margin-bottom: 1rem;">
+              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">رقم المحفظة المحول منها أو رقم العملية (اختياري)</label>
+              <input type="text" id="proofRefNumber" class="form-input" placeholder="رقم هاتفك المحول منه أو رقم العملية..." dir="ltr">
             </div>
 
             <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
               <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closePaymentProofModal()">إلغاء</button>
               <button type="submit" id="btnSubmitProof" class="btn btn-primary" style="font-weight: 700;">
-                تأكيد إرسال الإيصال
+                تأكيد وإرسال الإيصال
               </button>
             </div>
           </form>
@@ -6440,8 +6454,8 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const notes = document.getElementById('proofNotes')?.value?.trim() || null;
     const btn = document.getElementById('btnSubmitProof');
 
-    if (!refNum && !this.currentProofImageData) {
-      this.showToast('يرجى إدخال رقم العملية أو إرفاق صورة إيصال التحويل', 'danger');
+    if (!this.currentProofImageData && !refNum) {
+      this.showToast('يرجى إرفاق صورة إيصال التحويل (الاسكرين شوت)', 'danger');
       return;
     }
 
@@ -6465,14 +6479,21 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         }),
       });
 
+      if (!this.billingState) this.billingState = {};
+      this.billingState.subscription_status = 'pending_verification';
+      this.billingState.status = 'pending';
+
       this.closePaymentProofModal();
-      this.showToast('تم استلام بيانات التحويل بنجاح! حسابك سارٍ وسيتم مراجعة الإيصال وتأكيد الاشتراك فوراً.', 'success');
-      await this.loadRouteData('billing');
+      this.showToast('تم استلام إيصال التحويل بنجاح! الحالة الآن قيد المراجعة (Pending).', 'success');
+      this.renderMainContent();
+      try {
+        await this.loadRouteData('billing');
+      } catch (_) {}
     } catch (err) {
       this.showToast(`فشل تسجيل إيصال الدفع: ${err.message || 'خطأ في الخادم'}`, 'danger');
       if (btn) {
         btn.disabled = false;
-        btn.innerText = 'تأكيد إرسال الإيصال';
+        btn.innerText = 'تأكيد وإرسال الإيصال';
       }
     }
   }
