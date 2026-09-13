@@ -50,7 +50,7 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
 
           <!-- Order Plastic Cards WhatsApp Button -->
           <div style="text-align: center;">
-            <a href="https://wa.me/201123671177?text=${encodeURIComponent('مرحباً، قمت بتنزيل ملف كروت الطلاب والباركود من منصة سنترلي، وأرغب في إرساله لكم لطباعة كروت بلاستيكية فاخرة PVC للطلاب.')}" target="_blank" rel="noopener noreferrer" class="btn" style="background: #25d366; color: #ffffff; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.35); transition: transform 0.2s;">
+            <a href="https://wa.me/201123671177?text=${encodeURIComponent('السلام عليكم، نزلت ملف كروت الطلاب من سنترلي وعايز اعرف تفاصيل وأسعار طباعة الكروت علشان اطلبها.')}" target="_blank" rel="noopener noreferrer" class="btn" style="background: #25d366; color: #ffffff; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.35); transition: transform 0.2s;">
               ${getIcon('whatsapp', 20, '#ffffff')}
               <span style="font-size: 0.95rem;">طلب كروت بلاستيكية (واتساب)</span>
             </a>

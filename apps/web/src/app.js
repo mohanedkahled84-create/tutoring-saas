@@ -3835,7 +3835,7 @@ class CentrlyApp {
   openCardsWhatsAppChat() {
     const students = this._pendingCardsStudents || this.students || [];
     const userTitle = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'مدرس المادة');
-    const msg = `مرحباً، أرغب في تأكيد طلب كروت الطلاب لمنظومة (${userTitle}) بإجمالي (${students.length}) طالب. تم تجهيز ملف الكشف (Excel) لإرساله الآن.`;
+    const msg = `السلام عليكم، نزلت كشف كروت الطلاب لمنظومة (${userTitle}) بإجمالي (${students.length}) طالب، وعايز اعرف تفاصيل وأسعار طباعة الكروت علشان اطلبها.`;
     window.open(`https://wa.me/201123671177?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
