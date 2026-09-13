@@ -7,8 +7,8 @@ import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.1.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
-import { renderStudentsView } from './components/StudentsView.js?v=2.7.0';
-import { renderGroupsView } from './components/GroupsView.js';
+import { renderStudentsView } from './components/StudentsView.js?v=2.8.0';
+import { renderGroupsView } from './components/GroupsView.js?v=2.8.0';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=2.7.0';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=2.7.0';
@@ -121,6 +121,130 @@ class CentrlyApp {
     this.hasSecurityPin = Boolean(localStorage.getItem('centrly_financial_pin'));
     this.isFinancialUnlocked = !this.hasSecurityPin;
     this.hideFinancialNumbers = false;
+    this.routeLoadingState = {};
+    this.restoreCachedData();
+  }
+
+  saveCache(key, data) {
+    try {
+      localStorage.setItem(`centrly_cache_${key}`, JSON.stringify(data));
+    } catch (_) {}
+  }
+
+  loadCache(key, defaultValue = null) {
+    try {
+      const raw = localStorage.getItem(`centrly_cache_${key}`);
+      return raw ? JSON.parse(raw) : defaultValue;
+    } catch (_) {
+      return defaultValue;
+    }
+  }
+
+  restoreCachedData() {
+    try {
+      const cachedGroups = this.loadCache('groups', null);
+      if (cachedGroups && Array.isArray(cachedGroups) && cachedGroups.length > 0) {
+        this.groups = cachedGroups;
+      }
+      const cachedStudents = this.loadCache('students', null);
+      if (cachedStudents && Array.isArray(cachedStudents) && cachedStudents.length > 0) {
+        this.students = cachedStudents;
+      }
+      const cachedDashboard = this.loadCache('dashboardData', null);
+      if (cachedDashboard) {
+        this.dashboardData = cachedDashboard;
+      }
+      const cachedBilling = this.loadCache('billingState', null);
+      if (cachedBilling) {
+        this.billingState = cachedBilling;
+      }
+      const cachedMaterials = this.loadCache('materials', null);
+      if (cachedMaterials && Array.isArray(cachedMaterials)) {
+        this.materials = cachedMaterials;
+      }
+      const cachedAssistants = this.loadCache('teacherAssistants', null);
+      if (cachedAssistants && Array.isArray(cachedAssistants)) {
+        this.teacherAssistants = cachedAssistants;
+      }
+    } catch (_) {}
+  }
+
+  hasRouteData(route) {
+    switch (route) {
+      case 'dashboard':
+      case 'teacher-dashboard':
+        return Boolean(this.dashboardData);
+      case 'students':
+        return Boolean(this.students && this.students.length > 0);
+      case 'groups':
+        return Boolean(this.groups && this.groups.length > 0);
+      case 'billing':
+        return Boolean(this.billingState);
+      case 'materials':
+        return Boolean(this.materials && this.materials.length > 0);
+      case 'assistants':
+        return Boolean(this.teacherAssistants && this.teacherAssistants.length > 0);
+      case 'student-cards':
+        return Boolean(this.students && this.students.length > 0);
+      case 'calendar':
+        return Boolean(this.calendarSessions && this.calendarSessions.length > 0);
+      case 'center-dashboard':
+        return Boolean(this.centerDashboardState?.rollup);
+      default:
+        return false;
+    }
+  }
+
+  startProgressBar() {
+    let bar = document.getElementById('centrlyProgressBar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'centrlyProgressBar';
+      bar.className = 'top-progress-bar';
+      document.body.appendChild(bar);
+    }
+    bar.classList.add('active');
+    bar.style.width = '30%';
+    if (this._progressTimer) clearTimeout(this._progressTimer);
+    this._progressTimer = setTimeout(() => {
+      if (bar.classList.contains('active')) {
+        bar.style.width = '70%';
+      }
+    }, 200);
+  }
+
+  finishProgressBar() {
+    const bar = document.getElementById('centrlyProgressBar');
+    if (!bar) return;
+    if (this._progressTimer) clearTimeout(this._progressTimer);
+    bar.style.width = '100%';
+    setTimeout(() => {
+      bar.classList.remove('active');
+      bar.style.width = '0%';
+    }, 250);
+  }
+
+  async prefetchCoreData() {
+    if (!authService.isAuthenticated()) return;
+    try {
+      const [studRes, grpRes, billingRes] = await Promise.all([
+        request('/students').catch(() => null),
+        request('/groups').catch(() => null),
+        request('/billing/status').catch(() => null),
+      ]);
+      if (studRes) {
+        this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
+        this.saveCache('students', this.students);
+      }
+      if (grpRes) {
+        this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+        this.saveCache('groups', this.groups);
+      }
+      if (billingRes) {
+        this.billingState = billingRes;
+        this.saveCache('billingState', this.billingState);
+      }
+    } catch (_) {}
   }
 
   async init() {
@@ -175,6 +299,7 @@ class CentrlyApp {
 
       this.restoreSessionState();
       this.renderApp();
+      this.prefetchCoreData();
       await this.loadRouteData(this.currentRoute);
     }
   }
@@ -709,8 +834,24 @@ class CentrlyApp {
     } catch (_) {}
     const sidebar = document.getElementById('appSidebar');
     if (sidebar && sidebar.classList.contains('open')) sidebar.classList.remove('open');
+
+    // Instant tactile touch feedback with top progress bar
+    this.startProgressBar();
+
+    // Check if we already have data for this route (instant render) or need skeleton loader
+    const hasData = this.hasRouteData(route);
+    this.routeLoadingState[route] = !hasData;
+
+    // Fast render: if cached, renders in 0ms! If not, renders skeleton shimmer!
     this.renderApp();
-    await this.loadRouteData(route);
+
+    try {
+      await this.loadRouteData(route);
+    } finally {
+      this.routeLoadingState[route] = false;
+      this.finishProgressBar();
+      this.renderMainContent();
+    }
   }
 
   async retryRoute(route) {
@@ -932,7 +1073,9 @@ class CentrlyApp {
         }
         case 'students': {
           this.studentsLoading = true;
-          this.renderMainContent();
+          if (!this.students || this.students.length === 0) {
+            this.renderMainContent();
+          }
           try {
             const [studRes, grpRes, billingRes] = await Promise.all([
               request('/students'),
@@ -942,6 +1085,9 @@ class CentrlyApp {
             this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
             this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
             if (billingRes) this.billingState = billingRes;
+            this.saveCache('students', this.students);
+            this.saveCache('groups', this.groups);
+            if (billingRes) this.saveCache('billingState', this.billingState);
           } finally {
             this.studentsLoading = false;
             this.renderMainContent();
@@ -996,6 +1142,7 @@ class CentrlyApp {
               };
             });
           }
+          this.saveCache('groups', this.groups);
           this.renderMainContent();
           break;
         }
@@ -1065,6 +1212,9 @@ class CentrlyApp {
             atRiskStudents: atRisk,
             topPerformers: leaderboard,
           };
+          this.saveCache('dashboardData', this.dashboardData);
+          this.saveCache('students', students);
+          this.saveCache('groups', groups);
           this.renderMainContent();
           break;
         }
@@ -1101,6 +1251,7 @@ class CentrlyApp {
         case 'billing': {
           const billingRes = await request('/billing/status');
           this.billingState = billingRes;
+          this.saveCache('billingState', this.billingState);
           this.renderMainContent();
           break;
         }
@@ -1232,6 +1383,8 @@ class CentrlyApp {
           this.materials = Array.isArray(matRes) ? matRes : (matRes.materials || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           this.materialsGroupId = this.materialsGroupId || 'all';
+          this.saveCache('materials', this.materials);
+          this.saveCache('groups', this.groups);
           this.renderMainContent();
           break;
         }
@@ -1283,6 +1436,8 @@ class CentrlyApp {
           ]);
           this.teacherAssistants = Array.isArray(astRes) ? astRes : (astRes.assistants || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          this.saveCache('teacherAssistants', this.teacherAssistants);
+          this.saveCache('groups', this.groups);
           this.renderMainContent();
           break;
         }
@@ -1368,13 +1523,13 @@ class CentrlyApp {
       case 'sessions':
         return renderSessionsView(this.sessionState, this.user, this.groups);
       case 'students':
-        return renderStudentsView(this.students, this.groups, this.studentsLoading, this.billingState);
+        return renderStudentsView(this.students, this.groups, this.studentsLoading || Boolean(this.routeLoadingState['students']), this.billingState);
       case 'student-cards':
         return renderStudentCardsView(this.students, this.groups, this.user);
       case 'reports':
         return renderStudentReportsView(this.reportsState);
       case 'groups':
-        return renderGroupsView(this.groups, this.user);
+        return renderGroupsView(this.groups, this.user, Boolean(this.routeLoadingState['groups']));
       case 'risk-watchlist':
         return renderRiskWatchlistView(this.watchlistData || this.dashboardData?.atRiskStudents || []);
       case 'billing':

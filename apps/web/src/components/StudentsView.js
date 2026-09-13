@@ -182,15 +182,30 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
               </tr>
             </thead>
             <tbody>
-              ${isLoading ? `
-                <tr>
-                  <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
-                    <div style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                      <span style="display: inline-block; width: 18px; height: 18px; border: 2px solid var(--centrly-blue-700); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
-                      <span>جاري تحميل بيانات الطلاب من الخادم...</span>
-                    </div>
-                  </td>
-                </tr>
+              ${(isLoading && studentList.length === 0) ? `
+                ${[1, 2, 3, 4, 5].map(() => `
+                  <tr class="skeleton-row">
+                    <td><span class="skeleton-box" style="width: 55px; height: 18px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 140px; height: 18px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 85px; height: 20px; border-radius: 12px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 100px; height: 18px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 100px; height: 18px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 60px; height: 18px;"></span></td>
+                    <td>
+                      <div style="display: flex; gap: 0.35rem;">
+                        <span class="skeleton-box" style="width: 50px; height: 22px; border-radius: 4px;"></span>
+                        <span class="skeleton-box" style="width: 50px; height: 22px; border-radius: 4px;"></span>
+                      </div>
+                    </td>
+                    <td>
+                      <div style="display: flex; gap: 0.35rem;">
+                        <span class="skeleton-box" style="width: 30px; height: 26px; border-radius: 6px;"></span>
+                        <span class="skeleton-box" style="width: 30px; height: 26px; border-radius: 6px;"></span>
+                        <span class="skeleton-box" style="width: 30px; height: 26px; border-radius: 6px;"></span>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
               ` : studentList.length > 0 ? studentList.map(s => {
                 const matchedGroup = (groups || []).find(g => g.id === s.group_id || g.id === s.groupId);
                 const displayGroupName = s.groupName || s.group_name || matchedGroup?.name || 'مجموعة عامة';

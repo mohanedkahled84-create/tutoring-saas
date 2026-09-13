@@ -417,3 +417,70 @@
     display: inline-flex !important;
   }
 }
+
+/* Sleek Top Progress Bar for Instant Page Feedback */
+.top-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 3px;
+  background: linear-gradient(90deg, #1d4ed8, #38bdf8, #2563eb);
+  background-size: 200% 100%;
+  z-index: 99999;
+  opacity: 0;
+  pointer-events: none;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+}
+
+.top-progress-bar.active {
+  opacity: 1;
+  animation: centrlyProgressPulse 1.2s infinite linear;
+}
+
+@keyframes centrlyProgressPulse {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Centrly Shimmer Skeleton Loaders */
+@keyframes centrlyShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-box {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  background: #e2e8f0;
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.65) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  border-radius: 6px;
+  animation: centrlyShimmer 1.4s infinite ease-in-out;
+}
+
+.skeleton-row td {
+  padding: 1rem 1rem !important;
+  vertical-align: middle;
+}
+
+.skeleton-card {
+  background: var(--centrly-white);
+  border: 1px solid var(--centrly-line);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}

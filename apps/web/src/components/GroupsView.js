@@ -6,7 +6,7 @@ import { getIcon } from "../utils/icons.js";
  * Clean vector icons, 3 billing models, schedule day/time, and quick action buttons.
  */
 
-export function renderGroupsView(groups = [], user = {}) {
+export function renderGroupsView(groups = [], user = {}, isLoading = false) {
   const isAssistant = user?.role === 'assistant';
   const groupList = groups || [];
 
@@ -33,7 +33,37 @@ export function renderGroupsView(groups = [], user = {}) {
         </div>
       </div>
 
-      ${groupList.length > 0 ? `
+      ${(isLoading && groupList.length === 0) ? `
+        <!-- Groups Skeleton Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+          ${[1, 2, 3].map(() => `
+            <div class="skeleton-card" style="min-height: 240px; justify-content: space-between;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                  <span class="skeleton-box" style="width: 140px; height: 22px;"></span>
+                  <span class="skeleton-box" style="width: 75px; height: 22px; border-radius: 12px;"></span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1rem;">
+                  <span class="skeleton-box" style="width: 180px; height: 16px;"></span>
+                  <span class="skeleton-box" style="width: 130px; height: 16px;"></span>
+                  <span class="skeleton-box" style="width: 160px; height: 16px;"></span>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1.5rem; border-top: 1px solid var(--centrly-line); padding-top: 0.75rem;">
+                <div style="display: flex; gap: 0.35rem;">
+                  <span class="skeleton-box" style="flex: 1; height: 28px; border-radius: 6px;"></span>
+                  <span class="skeleton-box" style="flex: 1; height: 28px; border-radius: 6px;"></span>
+                  <span class="skeleton-box" style="flex: 1; height: 28px; border-radius: 6px;"></span>
+                </div>
+                <div style="display: flex; gap: 0.35rem;">
+                  <span class="skeleton-box" style="flex: 1; height: 28px; border-radius: 6px;"></span>
+                  <span class="skeleton-box" style="flex: 1; height: 28px; border-radius: 6px;"></span>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : groupList.length > 0 ? `
         <!-- Groups Grid -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
           ${groupList.map(g => {
