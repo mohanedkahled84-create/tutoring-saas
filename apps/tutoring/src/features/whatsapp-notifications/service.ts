@@ -259,7 +259,7 @@ export class WhatsAppNotificationsService {
         if (this.gateway.sendPresence) {
           await this.gateway.sendPresence(primaryInstance, payload.parent_phone, "composing").catch(() => {});
           if (process.env.NODE_ENV !== "test") {
-            const typingDuration = 2000 + Math.floor(Math.random() * 1500);
+            const typingDuration = 5000 + Math.floor(Math.random() * 5000);
             await new Promise((r) => setTimeout(r, typingDuration));
           }
         }
@@ -666,7 +666,7 @@ export class WhatsAppNotificationsService {
         if (this.gateway.sendPresence) {
           await this.gateway.sendPresence(primaryInstance, recipient_phone, "composing").catch(() => {});
           if (process.env.NODE_ENV !== "test") {
-            const typingDuration = 2000 + Math.floor(Math.random() * 1500);
+            const typingDuration = 5000 + Math.floor(Math.random() * 5000);
             await new Promise((r) => setTimeout(r, typingDuration));
           }
         }
@@ -1882,7 +1882,9 @@ interface DailyQuotaRecord {
   sent_count: number;
 }
 const tenantDailyQuotaMap = new Map<string, DailyQuotaRecord>();
-export const DEFAULT_SAFE_DAILY_CAP = 500;
+export const DEFAULT_SAFE_DAILY_CAP = process.env.WHATSAPP_DAILY_CAP
+  ? parseInt(process.env.WHATSAPP_DAILY_CAP, 10)
+  : (process.env.NODE_ENV === "test" ? 500 : 25);
 const WARNING_THRESHOLD_PERCENT = 0.8; // 80% = 400 messages
 
 export function getTodayDateString(): string {

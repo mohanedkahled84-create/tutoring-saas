@@ -24,6 +24,8 @@ import { renderCenterAssistantsView } from './components/CenterAssistantsView.js
 import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
 import { renderLandingView } from './components/LandingView.js?v=2.8.0';
+import { renderMaterialsView } from './components/MaterialsView.js';
+import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.js';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 
@@ -111,6 +113,12 @@ class CentrlyApp {
     this.billingCycle = 'monthly';
     this.whatsappState = null;
     this.routeErrors = {};
+    this.materials = [];
+    this.materialsGroupId = 'all';
+    this.teacherAssistants = [];
+    this.hasSecurityPin = Boolean(localStorage.getItem('centrly_financial_pin'));
+    this.isFinancialUnlocked = !this.hasSecurityPin;
+    this.hideFinancialNumbers = false;
   }
 
   async init() {
@@ -1111,6 +1119,27 @@ class CentrlyApp {
           this.renderMainContent();
           break;
         }
+        case 'materials': {
+          const [matRes, grpRes] = await Promise.all([
+            request('/materials').catch(() => ({ materials: [] })),
+            request('/groups').catch(() => ({ groups: [] })),
+          ]);
+          this.materials = Array.isArray(matRes) ? matRes : (matRes.materials || []);
+          this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          this.materialsGroupId = this.materialsGroupId || 'all';
+          this.renderMainContent();
+          break;
+        }
+        case 'assistants': {
+          const [astRes, grpRes] = await Promise.all([
+            request('/assistants').catch(() => ({ assistants: [] })),
+            request('/groups').catch(() => ({ groups: [] })),
+          ]);
+          this.teacherAssistants = Array.isArray(astRes) ? astRes : (astRes.assistants || []);
+          this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          this.renderMainContent();
+          break;
+        }
       }
     } catch (err) {
       console.warn('loadRouteData error:', err);
@@ -1161,7 +1190,19 @@ class CentrlyApp {
 
     switch (route) {
       case 'dashboard':
-        return renderTeacherDashboard(this.dashboardData || {}, this.user || {});
+        return renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
+          hasPin: this.hasSecurityPin,
+          isUnlocked: this.isFinancialUnlocked,
+          hideNumbers: this.hideFinancialNumbers,
+        });
+      case 'materials':
+        return renderMaterialsView(this.materials, this.groups, this.materialsGroupId);
+      case 'assistants':
+        return renderTeacherAssistantsView(this.teacherAssistants, this.groups, {
+          hasPin: this.hasSecurityPin,
+          isUnlocked: this.isFinancialUnlocked,
+          hideNumbers: this.hideFinancialNumbers,
+        });
       case 'center-dashboard':
         return renderCenterOwnerDashboard(this.centerDashboardState);
       case 'center-sessions':
@@ -1200,7 +1241,11 @@ class CentrlyApp {
         return renderMessageLogsView(this.messageLogs);
       }
       default:
-        return renderTeacherDashboard(this.dashboardData || {}, this.user || {});
+        return renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
+          hasPin: this.hasSecurityPin,
+          isUnlocked: this.isFinancialUnlocked,
+          hideNumbers: this.hideFinancialNumbers,
+        });
     }
   }
 
@@ -6947,6 +6992,505 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       await this.loadRouteData('risk-watchlist');
     } catch (err) {
       this.showToast(`فشل إرسال تنبيه المتابعة: ${err.message || 'خطأ في الإرسال'}`, 'danger');
+    }
+  }
+
+  // ==========================================================================
+  // Security PIN Protection (Sensitive Financials & Salaries)
+  // ==========================================================================
+
+  openSetPinModal() {
+    const hasExisting = Boolean(localStorage.getItem('centrly_financial_pin'));
+    const bodyHtml = `
+      <form id="modalSetPinForm" onsubmit="window.centrlyApp.handleSavePinSubmit(event)">
+        <div style="text-align: center; margin-bottom: 1.25rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔐</div>
+          <h4 style="margin: 0 0 0.4rem; color: #0f172a; font-weight: 800;">
+            ${hasExisting ? 'تغيير رمز الأمان (PIN)' : 'تعيين رمز الأمان (PIN)'}
+          </h4>
+          <p style="font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.5;">
+            رمز رقمي سريع من 4 إلى 6 أرقام لحماية أرباحك ومرتبات المساعدين من أي متطفل بجانبك.
+          </p>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 700;">رمز الأمان الجديد (4-6 أرقام) *</label>
+          <div style="position: relative;">
+            <input type="password" id="inputNewPin" class="form-input" placeholder="مثال: 1234" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required
+              style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900;"
+              autocomplete="off">
+            <button type="button" onclick="window.centrlyApp.togglePinVisibility('inputNewPin', this)"
+              style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b;">
+              👁️
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="font-weight: 700;">تأكيد رمز الأمان *</label>
+          <div style="position: relative;">
+            <input type="password" id="inputConfirmPin" class="form-input" placeholder="أعد إدخال الرمز" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required
+              style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900;"
+              autocomplete="off">
+            <button type="button" onclick="window.centrlyApp.togglePinVisibility('inputConfirmPin', this)"
+              style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b;">
+              👁️
+            </button>
+          </div>
+        </div>
+
+        <div id="pinErrorMsg" style="display: none; color: #ef4444; font-size: 0.85rem; font-weight: 700; margin-bottom: 1rem; text-align: center;"></div>
+
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 800;">حفظ وتفعيل الرمز</button>
+        </div>
+      </form>
+    `;
+    this.showModal(hasExisting ? 'تعديل رمز الأمان (PIN)' : 'تعيين رمز الأمان لأول مرة', bodyHtml);
+  }
+
+  togglePinVisibility(inputId, btn) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    const isPass = el.type === 'password';
+    el.type = isPass ? 'text' : 'password';
+    btn.innerText = isPass ? '🙈' : '👁️';
+  }
+
+  handleSavePinSubmit(e) {
+    e.preventDefault();
+    const pin = document.getElementById('inputNewPin')?.value.trim();
+    const confirm = document.getElementById('inputConfirmPin')?.value.trim();
+    const errEl = document.getElementById('pinErrorMsg');
+
+    if (!pin || pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin)) {
+      if (errEl) {
+        errEl.innerText = 'يجب أن يتكون رمز الأمان من 4 إلى 6 أرقام فقط.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
+
+    if (pin !== confirm) {
+      if (errEl) {
+        errEl.innerText = 'رمزا الأمان غير متطابقين، يرجى إعادة الإدخال.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
+
+    localStorage.setItem('centrly_financial_pin', pin);
+    this.hasSecurityPin = true;
+    this.isFinancialUnlocked = true;
+    this.closeModal();
+    this.showToast('تم حفظ وتفعيل رمز الأمان بنجاح! 🔒', 'success');
+    this.renderMainContent();
+  }
+
+  promptUnlockFinancials() {
+    const savedPin = localStorage.getItem('centrly_financial_pin');
+    if (!savedPin) {
+      this.openSetPinModal();
+      return;
+    }
+
+    const bodyHtml = `
+      <form id="modalUnlockPinForm" onsubmit="window.centrlyApp.handleUnlockPinSubmit(event)">
+        <div style="text-align: center; margin-bottom: 1.25rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔒</div>
+          <h4 style="margin: 0 0 0.4rem; color: #0f172a; font-weight: 800;">
+            إلغاء قفل البيانات المالية
+          </h4>
+          <p style="font-size: 0.85rem; color: #64748b; margin: 0;">
+            أدخل رمز الـ PIN المكون من ${savedPin.length} أرقام لعرض تفاصيل الأرباح والمرتبات.
+          </p>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <input type="password" id="inputUnlockPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" autofocus required
+            style="text-align: center; letter-spacing: 0.5rem; font-size: 1.5rem; font-weight: 900;"
+            autocomplete="off">
+        </div>
+
+        <div id="unlockPinError" style="display: none; color: #ef4444; font-size: 0.85rem; font-weight: 700; margin-bottom: 1rem; text-align: center;"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resetFinancialPinPrompt()" style="font-size: 0.75rem; color: #64748b;">
+            نسيت رمز PIN؟
+          </button>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+            <button type="submit" class="btn btn-primary" style="font-weight: 800;">فتح البيانات الآن</button>
+          </div>
+        </div>
+      </form>
+    `;
+    this.showModal('تأكيد رمز الأمان (PIN)', bodyHtml);
+    setTimeout(() => {
+      document.getElementById('inputUnlockPin')?.focus();
+    }, 150);
+  }
+
+  handleUnlockPinSubmit(e) {
+    e.preventDefault();
+    const entered = document.getElementById('inputUnlockPin')?.value.trim();
+    const savedPin = localStorage.getItem('centrly_financial_pin');
+    const errEl = document.getElementById('unlockPinError');
+
+    if (entered === savedPin) {
+      this.isFinancialUnlocked = true;
+      this.closeModal();
+      this.showToast('تم إلغاء القفل وعرض البيانات بنجاح 🔓', 'success');
+      this.renderMainContent();
+    } else {
+      if (errEl) {
+        errEl.innerText = 'رمز الـ PIN غير صحيح. يرجى المحاولة مرة أخرى.';
+        errEl.style.display = 'block';
+      }
+      const inp = document.getElementById('inputUnlockPin');
+      if (inp) {
+        inp.value = '';
+        inp.focus();
+      }
+    }
+  }
+
+  lockFinancials() {
+    this.isFinancialUnlocked = false;
+    this.showToast('تم قفل البيانات الحساسة بنجاح 🔒', 'info');
+    this.renderMainContent();
+  }
+
+  toggleHideFinancialNumbers() {
+    this.hideFinancialNumbers = !this.hideFinancialNumbers;
+    this.showToast(this.hideFinancialNumbers ? 'تم إخفاء الأرقام المالية 👁️' : 'تم إظهار الأرقام المالية 👁️', 'info');
+    this.renderMainContent();
+  }
+
+  resetFinancialPinPrompt() {
+    if (confirm('هل ترغب في إعادة ضبط رمز الـ PIN؟ سيتم حذف الرمز القديم وتعيين رمز جديد.')) {
+      localStorage.removeItem('centrly_financial_pin');
+      this.hasSecurityPin = false;
+      this.isFinancialUnlocked = true;
+      this.closeModal();
+      this.showToast('تم حذف رمز PIN السابق. يمكنك الآن تعيين رمز جديد.', 'info');
+      this.renderMainContent();
+      this.openSetPinModal();
+    }
+  }
+
+  // ==========================================================================
+  // Study Materials & Homework Actions
+  // ==========================================================================
+
+  filterMaterialsByGroup(groupId) {
+    this.materialsGroupId = groupId;
+    this.renderMainContent();
+  }
+
+  openAddMaterialModal() {
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    const bodyHtml = `
+      <form id="modalAddMaterialForm" onsubmit="window.centrlyApp.handleAddMaterialSubmit(event)">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">عنوان المذكرة أو الواجب *</label>
+          <input type="text" id="modalMatTitle" class="form-input" placeholder="مثال: مذكرة مراجعة الباب الأول / واجب الحصة 4" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">المجموعة المستهدفة</label>
+            <select id="modalMatGroupId" class="form-select">
+              <option value="">جميع المجموعات (متاح للكل)</option>
+              ${groupOptions}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">نوع المحتوى *</label>
+            <select id="modalMatType" class="form-select">
+              <option value="pdf">📄 ملف PDF أو مذكرة</option>
+              <option value="video">🎥 فيديو شرح (YouTube / Drive)</option>
+              <option value="link">🔗 رابط خارجي أو موقع</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">الرابط المباشر للملف أو الفيديو *</label>
+          <input type="url" id="modalMatUrl" class="form-input" placeholder="https://drive.google.com/... أو https://youtu.be/..." dir="ltr" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">وصف أو تعليمات للطلاب (اختياري)</label>
+          <textarea id="modalMatDescription" class="form-input" rows="2" placeholder="اكتب تعليمات المذاكرة أو المطلوب حله..."></textarea>
+        </div>
+
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 0.65rem; padding: 0.85rem; margin-bottom: 1.25rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 800; color: #92400e; cursor: pointer;">
+            <input type="checkbox" id="modalMatIsHomework" onchange="document.getElementById('modalMatDueDateBox').style.display = this.checked ? 'block' : 'none'">
+            <span>تعيين هذا الملف كواجب منزلي (Homework) مطلوب تسليمه</span>
+          </label>
+
+          <div id="modalMatDueDateBox" style="display: none; margin-top: 0.75rem;">
+            <label class="form-label" style="font-weight: 700; color: #92400e;">آخر موعد لتسليم الواجب</label>
+            <input type="date" id="modalMatDueDate" class="form-input" style="background: #fff;">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 800;">إضافة المذكرة الآن</button>
+        </div>
+      </form>
+    `;
+    this.showModal('إضافة مذكرة تعليمية / واجب دراسي', bodyHtml);
+  }
+
+  async handleAddMaterialSubmit(e) {
+    e.preventDefault();
+    const title = document.getElementById('modalMatTitle')?.value.trim();
+    const group_id = document.getElementById('modalMatGroupId')?.value || null;
+    const type = document.getElementById('modalMatType')?.value || 'pdf';
+    const url = document.getElementById('modalMatUrl')?.value.trim();
+    const description = document.getElementById('modalMatDescription')?.value.trim();
+    const is_homework = Boolean(document.getElementById('modalMatIsHomework')?.checked);
+    const due_date = is_homework ? (document.getElementById('modalMatDueDate')?.value || null) : null;
+
+    if (!title || !url) {
+      this.showToast('يرجى كتابة عنوان المذكرة والرابط المباشر', 'error');
+      return;
+    }
+
+    try {
+      await request('/materials', {
+        method: 'POST',
+        body: {
+          title,
+          group_id,
+          type,
+          url,
+          description,
+          is_homework,
+          due_date,
+        },
+      });
+      this.closeModal();
+      this.showToast('تمت إضافة المذكرة بنجاح وستظهر فوراً في بوابة ولي الأمر! 📚', 'success');
+      await this.loadRouteData('materials');
+    } catch (err) {
+      this.showToast(`فشل إضافة المذكرة: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  async deleteMaterial(id, title) {
+    if (!confirm(`هل أنت متأكد من حذف المذكرة ("${title}")؟`)) return;
+
+    try {
+      await request(`/materials/${id}`, { method: 'DELETE' });
+      this.showToast('تم حذف المذكرة بنجاح', 'success');
+      await this.loadRouteData('materials');
+    } catch (err) {
+      this.showToast(`فشل حذف المذكرة: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  // ==========================================================================
+  // Teacher Assistants Actions
+  // ==========================================================================
+
+  openAddTeacherAssistantModal() {
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    const bodyHtml = `
+      <form id="modalAddTeacherAssistantForm" onsubmit="window.centrlyApp.handleAddTeacherAssistantSubmit(event)">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اسم المساعد (الأسستنت) *</label>
+          <input type="text" id="modalTA_Name" class="form-input" placeholder="مثال: أحمد محمد" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم الهاتف (للتواصل والواتساب) *</label>
+          <input type="tel" id="modalTA_Phone" class="form-input" placeholder="010..." dir="ltr" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">المجموعة المسندة</label>
+            <select id="modalTA_GroupId" class="form-select">
+              <option value="">جميع المجموعات (مسؤول عام)</option>
+              ${groupOptions}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">طبيعة الدور والعمل *</label>
+            <select id="modalTA_RoleType" class="form-select">
+              <option value="both">إداري وتعليمي شامل</option>
+              <option value="admin">إداري وتنظيمي فقط (حضور وكروت)</option>
+              <option value="educational">تعليمي وتدريسي فقط (شرح ومتابعة)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">نظام المحاسبة *</label>
+            <select id="modalTA_SalaryModel" class="form-select" onchange="document.getElementById('modalTA_SalaryLabel').innerText = (this.value === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)')">
+              <option value="monthly">مرتب شهري ثابت</option>
+              <option value="per_session">أجر بالحصة الواحدة</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" id="modalTA_SalaryLabel" style="font-weight: 700;">المرتب الشهري الثابت (ج.م)</label>
+            <input type="number" id="modalTA_SalaryAmount" class="form-input" placeholder="0" min="0" value="0">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 800;">إضافة المساعد الآن</button>
+        </div>
+      </form>
+    `;
+    this.showModal('إضافة مساعد (أسستنت) جديد للمعلم', bodyHtml);
+  }
+
+  async handleAddTeacherAssistantSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('modalTA_Name')?.value.trim();
+    const phone = document.getElementById('modalTA_Phone')?.value.trim();
+    const group_id = document.getElementById('modalTA_GroupId')?.value || null;
+    const role_type = document.getElementById('modalTA_RoleType')?.value || 'both';
+    const salary_model = document.getElementById('modalTA_SalaryModel')?.value || 'monthly';
+    const salary_amount = parseFloat(document.getElementById('modalTA_SalaryAmount')?.value) || 0;
+
+    if (!name || !phone) {
+      this.showToast('يرجى كتابة اسم المساعد ورقم هاتفه', 'error');
+      return;
+    }
+
+    try {
+      await request('/assistants', {
+        method: 'POST',
+        body: {
+          name,
+          phone,
+          group_id,
+          role_type,
+          salary_model,
+          salary_amount,
+        },
+      });
+      this.closeModal();
+      this.showToast(`تمت إضافة المساعد (${name}) بنجاح! 👥`, 'success');
+      await this.loadRouteData('assistants');
+    } catch (err) {
+      this.showToast(`فشل إضافة المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  openEditTeacherAssistantModal(assistantId) {
+    const assistant = (this.teacherAssistants || []).find(a => a.id === assistantId);
+    if (!assistant) return;
+
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}" ${assistant.group_id === g.id ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join('');
+    const bodyHtml = `
+      <form id="modalEditTeacherAssistantForm" onsubmit="window.centrlyApp.handleEditTeacherAssistantSubmit(event, '${assistantId}')">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اسم المساعد (الأسستنت) *</label>
+          <input type="text" id="modalEditTA_Name" class="form-input" value="${escapeHtml(assistant.name)}" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم الهاتف *</label>
+          <input type="tel" id="modalEditTA_Phone" class="form-input" value="${escapeHtml(assistant.phone || '')}" dir="ltr" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">المجموعة المسندة</label>
+            <select id="modalEditTA_GroupId" class="form-select">
+              <option value="" ${!assistant.group_id ? 'selected' : ''}>جميع المجموعات (مسؤول عام)</option>
+              ${groupOptions}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">طبيعة الدور والعمل *</label>
+            <select id="modalEditTA_RoleType" class="form-select">
+              <option value="both" ${assistant.role_type === 'both' ? 'selected' : ''}>إداري وتعليمي شامل</option>
+              <option value="admin" ${assistant.role_type === 'admin' ? 'selected' : ''}>إداري وتنظيمي فقط</option>
+              <option value="educational" ${assistant.role_type === 'educational' ? 'selected' : ''}>تعليمي وتدريسي فقط</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">نظام المحاسبة *</label>
+            <select id="modalEditTA_SalaryModel" class="form-select" onchange="document.getElementById('modalEditTA_SalaryLabel').innerText = (this.value === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)')">
+              <option value="monthly" ${assistant.salary_model === 'monthly' ? 'selected' : ''}>مرتب شهري ثابت</option>
+              <option value="per_session" ${assistant.salary_model === 'per_session' ? 'selected' : ''}>أجر بالحصة الواحدة</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" id="modalEditTA_SalaryLabel" style="font-weight: 700;">
+              ${assistant.salary_model === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)'}
+            </label>
+            <input type="number" id="modalEditTA_SalaryAmount" class="form-input" value="${Number(assistant.salary_amount) || 0}" min="0">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 800;">حفظ التعديلات</button>
+        </div>
+      </form>
+    `;
+    this.showModal(`تعديل بيانات المساعد: ${escapeHtml(assistant.name)}`, bodyHtml);
+  }
+
+  async handleEditTeacherAssistantSubmit(e, assistantId) {
+    e.preventDefault();
+    const name = document.getElementById('modalEditTA_Name')?.value.trim();
+    const phone = document.getElementById('modalEditTA_Phone')?.value.trim();
+    const group_id = document.getElementById('modalEditTA_GroupId')?.value || null;
+    const role_type = document.getElementById('modalEditTA_RoleType')?.value || 'both';
+    const salary_model = document.getElementById('modalEditTA_SalaryModel')?.value || 'monthly';
+    const salary_amount = parseFloat(document.getElementById('modalEditTA_SalaryAmount')?.value) || 0;
+
+    try {
+      await request(`/assistants/${assistantId}`, {
+        method: 'PUT',
+        body: {
+          name,
+          phone,
+          group_id,
+          role_type,
+          salary_model,
+          salary_amount,
+        },
+      });
+      this.closeModal();
+      this.showToast('تم حفظ تعديلات المساعد بنجاح! 👥', 'success');
+      await this.loadRouteData('assistants');
+    } catch (err) {
+      this.showToast(`فشل تعديل بيانات المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  async deleteTeacherAssistant(id, name) {
+    if (!confirm(`هل أنت متأكد من حذف المساعد ("${name}") من قائمة فريقك؟`)) return;
+
+    try {
+      await request(`/assistants/${id}`, { method: 'DELETE' });
+      this.showToast(`تم حذف المساعد (${name}) بنجاح`, 'success');
+      await this.loadRouteData('assistants');
+    } catch (err) {
+      this.showToast(`فشل حذف المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
     }
   }
 }

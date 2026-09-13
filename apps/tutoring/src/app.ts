@@ -30,6 +30,8 @@ import { telemetryRouter } from "./features/telemetry/index.js";
 import { centersRouter } from "./features/centers/index.js";
 import { reportsRouter } from "./features/reports/index.js";
 import { quizzesRouter } from "./features/quizzes/routes.js";
+import { materialsRouter } from "./features/materials/routes.js";
+import { assistantsRouter } from "./features/assistants/routes.js";
 
 export function createApp(): Express {
   const app = express();
@@ -108,6 +110,8 @@ export function createApp(): Express {
   app.use("/api/centers", centersRouter);
   app.use("/api/reports", authenticateUser, reportsRouter);
   app.use("/api/quizzes", authenticateUser, quizzesRouter);
+  app.use("/api/materials", authenticateUser, materialsRouter);
+  app.use("/api/assistants", authenticateUser, assistantsRouter);
 
   // DEV-WPA.1: Protected Internal Automation routes (shared-secret auth)
   app.use("/internal", authenticateInternalSecret, internalRouter);
