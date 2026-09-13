@@ -147,16 +147,6 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
               ${getIcon('check', 16)}
               <span>حفظ ورصد درجات الكويز</span>
             </button>
-            <button 
-              id="btnDispatchBatchQuizScoresTop"
-              class="btn btn-primary" 
-              onclick="window.centrlyApp.dispatchBatchQuizScores()"
-              style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; background: #25D366; border-color: #25D366; color: #fff; box-shadow: 0 2px 8px rgba(37,211,102,0.25);"
-              title="إرسال درجات الكويز لجميع أولياء الأمور عبر واتساب مع نظام الأمان وفواصل زحف عشوائية"
-            >
-              ${getIcon('whatsapp', 16, '#ffffff')}
-              <span>إرسال درجات الكويز بالواتساب (${gradedCount} طلاب)</span>
-            </button>
           </div>
 
         </div>

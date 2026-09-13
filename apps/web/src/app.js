@@ -2413,7 +2413,7 @@ class CentrlyApp {
 
       this.sessionState.status = 'ended';
       this.persistSessionState();
-      this.showToast('تم إنهاء الحصة بنجاح وتثبيت الكشف! يمكنك الآن إرسال إشعارات الواتساب للغياب والملاحظات.', 'success');
+      this.showToast('تم إنهاء الحصة وتثبيت كشف الحضور بنجاح! ✅', 'success');
       this.renderMainContent();
     } catch (err) {
       // If server returns NOT_FOUND / Session not found, finish locally to never trap the user

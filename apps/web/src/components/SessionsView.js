@@ -295,10 +295,6 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
               </button>
             ` : ''}
             ${isSessionEnded ? `
-              <button class="btn btn-primary" onclick="window.centrlyApp.dispatchSessionWhatsAppMessages()" style="font-weight: 700; background: #25D366; border-color: #25D366; color: #fff; display: flex; align-items: center; gap: 0.4rem;">
-                ${getIcon('whatsapp', 18, '#ffffff')}
-                <span>إرسال تقارير الواتساب للغياب والملاحظات</span>
-              </button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openReceiptModal()" style="display: flex; align-items: center; gap: 0.4rem;">
                 ${getIcon('print', 16)}
                 <span>إيصال التصفية</span>
@@ -306,12 +302,6 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
               <button class="btn btn-secondary" onclick="window.centrlyApp.resetActiveSession()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
                 ${getIcon('groups', 16)}
                 <span>العودة للمجموعات وبدء حصة جديدة</span>
-              </button>
-            ` : ''}
-            ${failedMessagesCount > 0 ? `
-              <button class="btn btn-secondary" onclick="window.centrlyApp.retryFailedWhatsAppMessages()" style="display: flex; align-items: center; gap: 0.4rem; color: #b91c1c; font-weight: 700; border-color: #fca5a5; background: #fff5f5;">
-                ${getIcon('refresh', 16, '#b91c1c')}
-                <span>إعادة إرسال (${failedMessagesCount}) رسائل لم يتم تسليمها</span>
               </button>
             ` : ''}
           </div>
@@ -408,14 +398,10 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
               <span class="badge badge-secondary">حصة منتهية</span>
             </div>
             <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1rem 0; line-height: 1.6;">
-              تم إغلاق الحصة ورصد الحضور والواجب لكافة الطلاب. يمكنك مراجعة الكشف أدناه أو إرسال تقارير الواتساب لأولياء الأمور.
+              تم إغلاق الحصة ورصد الحضور لكافة الطلاب. يمكنك مراجعة الكشف أدناه أو طباعة إيصال التصفية.
             </p>
           </div>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
-            <button class="btn btn-primary" onclick="window.centrlyApp.dispatchSessionWhatsAppMessages()" style="font-weight: 700; background: #25D366; border-color: #25D366; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
-              ${getIcon('whatsapp', 16, '#ffffff')}
-              <span>إرسال تقارير الواتساب للغياب والملاحظات</span>
-            </button>
             <button class="btn btn-secondary" onclick="window.centrlyApp.openReceiptModal()" style="font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
               ${getIcon('print', 14)}
               <span>إيصال التصفية</span>
