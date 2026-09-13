@@ -4347,7 +4347,7 @@ class CentrlyApp {
 
     this.showConfirmModal({
       title: 'إرسال إشعارات الحصة لأولياء الأمور عبر واتساب',
-      message: `سيتم إرسال (${countEligible}) رسالة لأولياء الأمور لتقارير الحضور والغياب والملاحظات والواجب مع تطبيق نظام الأمان الفائق ومكافحة الحظر (Ultra Anti-Ban) بفواصل عشوائية (من 20 إلى 40 ثانية لكل طالب) ومحاكاة الكتابة الحية (جاري الكتابة...). هل ترغب في المتابعة؟`,
+      message: `سيتم إرسال (${countEligible}) رسالة لأولياء الأمور لإشعارهم بتقرير الحصة بفواصل زمنية منظمة لضمان وصول الرسائل بسلاسة. هل ترغب في المتابعة؟`,
       confirmText: `إرسال الإشعارات الآن (${countEligible} رسالة)`,
       cancelText: 'إلغاء',
       isDanger: false,
@@ -4355,7 +4355,7 @@ class CentrlyApp {
         if (this.sessionState.isDispatchingWhatsApp) return;
         this.sessionState.isDispatchingWhatsApp = true;
         try {
-          this.showToast('جارٍ إرسال إشعارات الحصة عبر واتساب بأعلى درجات الأمان (فواصل 20-40 ثانية ومحاكاة الكتابة)...', 'info');
+          this.showToast('جارٍ إرسال إشعارات الحصة عبر واتساب...', 'info');
 
           // 1. First: Guarantee all attendance records (attended + absent) are synced to the backend
           const syncRecords = (this.sessionState.attendanceList || [])
@@ -4811,8 +4811,8 @@ class CentrlyApp {
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.75rem; padding: 0.85rem; color: #0369a1; font-size: 0.85rem; line-height: 1.5;">
-          <b>إرسال ذكي للطلاب الجدد:</b>
-          سيتم إرسال رسالة واتساب رسمية ومخصصة لكل ولي أمر تحتوي على رابط المتابعة المباشر الخاص بنجله مع تطبيق فواصل الأمان (Anti-Ban).
+          <b>إرسال روابط المتابعة:</b>
+          سيتم إرسال رسالة واتساب مخصصة لكل ولي أمر تحتوي على رابط المتابعة المباشر الخاص بنجله.
         </div>
 
         <div>
@@ -6899,7 +6899,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       <div class="modal-dialog" dir="rtl" style="background: #ffffff; border-radius: 14px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--centrly-line); margin: auto; max-height: calc(100vh - 2rem); display: flex; flex-direction: column;">
         <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--centrly-line); display: flex; justify-content: space-between; align-items: center;">
           <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink);">
-            إرسال درجات الكويز دفعة واحدة (Ultra Anti-Ban)
+            إرسال درجات الكويز عبر واتساب
           </h3>
           <button onclick="document.getElementById('centrlyConfirmModal')?.remove()" style="background: transparent; border: none; cursor: pointer; color: var(--centrly-text); display: flex; align-items: center;">${getIcon('close', 16, 'currentColor')}</button>
         </div>
@@ -6907,7 +6907,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           <p style="margin: 0 0 1rem 0;">
             هل أنت متأكد من رغبتك في إرسال درجات (<strong>${studentsToDispatch.length}</strong>) طالب عبر الواتساب؟
             <br>
-            <span style="font-size: 0.825rem; color: var(--centrly-text);">سيتم الإرسال عبر محرك الأمان الفائق بفواصل عشوائية مع محاكاة الكتابة الحية (جاري الكتابة...) لحماية الخط.</span>
+            <span style="font-size: 0.825rem; color: var(--centrly-text);">سيتم إرسال الرسائل بفواصل زمنية تلقائية لضمان وصولها بسلاسة.</span>
           </p>
 
           <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 1rem;">
