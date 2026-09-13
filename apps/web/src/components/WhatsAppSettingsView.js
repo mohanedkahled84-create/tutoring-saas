@@ -12,19 +12,19 @@ export function renderWhatsAppSettingsView(data = {}) {
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
       
-      <!-- Connection & Anti-Ban Status -->
+      <!-- Connection & Strategy Status Card -->
       <div class="card" style="margin: 0;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <span>${getIcon('whatsapp', 24, 'var(--centrly-blue-700)')}</span>
-              <h2 class="card-title" style="margin: 0; font-size: 1.25rem;">إعدادات وتكامل واتساب (WhatsApp & Templates)</h2>
+              <h2 class="card-title" style="margin: 0; font-size: 1.25rem;">إعدادات وتكامل واتساب (WhatsApp & Anti-Ban Architecture)</h2>
               <span class="badge ${isConnected ? 'badge-success' : 'badge-warning'}" id="settingsWaBadge">
                 ${isConnected ? `${getIcon('dotSuccess', 8)} الخادم متصل وجاهز ${data.phone_number ? `(${data.phone_number})` : ''}` : `${getIcon('dotWarning', 8)} بانتظار مسح رمز QR`}
               </span>
             </div>
-            <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              ربط مباشر ومحمي عبر Evolution API مع آليات حماية رقم المعلم من الحظر (Anti-Ban Pacing & Circuit Breaker).
+            <p style="font-size: 0.85rem; color: #475569; margin-top: 0.35rem; line-height: 1.6;">
+              ربط مباشر ومحمي عبر <strong>Evolution API</strong> يعتمد استراتيجية <strong>"بوابات الويب التفاعلية"</strong> لنقل المتابعة للويب وتخفيض رسائل الواتساب بنسبة <strong>90%</strong> لمنع الحظر نهائياً.
             </p>
           </div>
 
@@ -54,7 +54,7 @@ export function renderWhatsAppSettingsView(data = {}) {
             <div style="flex: 1; min-width: 250px;">
               <h4 style="margin: 0 0 0.5rem; font-size: 1rem; color: var(--centrly-ink);">ربط رقم واتساب بالمنظومة</h4>
               <p style="font-size: 0.825rem; color: var(--centrly-text); margin-bottom: 0.75rem;">
-                امسح رمز QR من هاتفك عبر <strong>الأجهزة المرتبطة > ربط جهاز</strong> في تطبيق واتساب لبدء إرسال الإشعارات تلقائياً.
+                امسح رمز QR من هاتفك عبر <strong>الأجهزة المرتبطة > ربط جهاز</strong> في تطبيق واتساب لبدء إرسال روابط البوابات والإنذارات الحرجة.
               </p>
               ${(data.pairing_code && data.pairing_code.length <= 15) ? `
                 <div style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink); margin-bottom: 0.75rem;">
@@ -69,27 +69,30 @@ export function renderWhatsAppSettingsView(data = {}) {
           </div>
         ` : ''}
 
-        <!-- Protection & Quota Badges -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">
-          <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
-            <div style="font-size: 0.8rem; color: var(--centrly-text);">نظام التوزيع الذكي (Ultra Pacing)</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #10b981; margin-top: 0.25rem;">مفعّل (20 - 40 ثانية عشوائي)</div>
-            <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.2rem;">محاكاة الكتابة البشرية لمنع رصد البوتات</div>
+        <!-- 4 Key Protection Pillars -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">
+          <div style="background: #f0fdf4; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #166534;">بوابات الويب (Zero-Ban Architecture)</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #15803d; margin-top: 0.25rem;">تخفيض 90% من الرسائل</div>
+            <div style="font-size: 0.75rem; color: #166534; margin-top: 0.25rem; line-height: 1.4;">نقل المتابعة اليومية للويب لمنع استنزاف الرقم نهائياً</div>
           </div>
-          <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
-            <div style="font-size: 0.8rem; color: var(--centrly-text);">قاطع الدائرة (Circuit Breaker)</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: var(--centrly-blue-700); margin-top: 0.25rem;">حماية نشطة 24/7</div>
-            <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.2rem;">إيقاف مؤقت 30 دقيقة عند تكرار الأخطاء</div>
+
+          <div style="background: #eff6ff; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #bfdbfe;">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #1e40af;">التوزيع الذكي (Ultra Pacing)</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #1d4ed8; margin-top: 0.25rem;">20 - 40 ثانية عشوائي</div>
+            <div style="font-size: 0.75rem; color: #1e40af; margin-top: 0.25rem; line-height: 1.4;">فواصل زمنية ومحاكاة بشرية تمنع رصد خوارزميات Meta للبوتات</div>
           </div>
-          <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
-            <div style="font-size: 0.8rem; color: var(--centrly-text);">تنويع النصوص (Spintax Engine)</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #7c3aed; margin-top: 0.25rem;">صيغ متغيرة آلياً</div>
-            <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.2rem;">صياغة فريدة لكل رسالة لمنع الفلترة</div>
+
+          <div style="background: #faf5ff; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #e9d5ff;">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #6b21a8;">تنبيه حفظ الرقم (Contact Guard)</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #7e22ce; margin-top: 0.25rem;">مدمج في كل رابط</div>
+            <div style="font-size: 0.75rem; color: #6b21a8; margin-top: 0.25rem; line-height: 1.4;">حث صريح لولي الأمر بحفظ الرقم لتفعيل الروابط ومنع الـ Spam</div>
           </div>
-          <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
-            <div style="font-size: 0.8rem; color: var(--centrly-text);">الإحماء التدريجي (Daily Warm-Up)</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink); margin-top: 0.25rem;">سقف يومي متصاعد</div>
-            <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.2rem;">حماية الأرقام الجديدة من القفزات المفاجئة</div>
+
+          <div style="background: #f8fafc; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #cbd5e1;">
+            <div style="font-size: 0.78rem; font-weight: 700; color: #334155;">قاطع الدائرة وتدرج الإحماء (Circuit Breaker)</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-top: 0.25rem;">حماية نشطة 24/7</div>
+            <div style="font-size: 0.75rem; color: #475569; margin-top: 0.25rem; line-height: 1.4;">إيقاف مؤقت وقائي 30 دقيقة عند الأخطاء وسقف يومي تصاعدي</div>
           </div>
         </div>
       </div>
@@ -99,48 +102,48 @@ export function renderWhatsAppSettingsView(data = {}) {
         <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
           <span>${getIcon('risk', 24, '#d97706')}</span>
           <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #92400e;">
-            تحذيرات وإرشادات أمنية هامة لحماية رقمك من الحظر (WhatsApp Anti-Ban Rules)
+            تحذيرات وإرشادات أمنية هامة لحماية رقمك من الحظر (WhatsApp Anti-Ban 2.0 Rules)
           </h3>
         </div>
         <p style="font-size: 0.85rem; color: #78350f; margin-bottom: 1rem; line-height: 1.6;">
-          واتساب يطبق خوارزميات صارمة جداً لمكافحة الرسائل المجمعة (Spam). لحماية رقمك وضمان استمرار عمله بدون أي حظر نهائياً، يرجى الالتزام الصارم بالقواعد التالية:
+          واتساب يطبق خوارزميات صارمة لمكافحة الرسائل المجمعة (Spam). بعد إطلاق <strong>بوابات المتابعة التفاعلية للطالب وولي الأمر</strong>، تم تحديث استراتيجية حماية الرقم للالتزام بالقواعد المحدثة التالية:
         </p>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
           
-          <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #ef4444;">
-            <div style="font-weight: 800; color: #b91c1c; font-size: 0.9rem; margin-bottom: 0.35rem;">
-              🚫 1. ممنوع الإرسال المفرط أو المتتالي في وقت واحد
+          <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #ef4444; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-weight: 800; color: #b91c1c; font-size: 0.9rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span>🚫</span> 1. التحول للبوابات الذكية بدلاً من الإرسال المتكرر
             </div>
             <div style="font-size: 0.82rem; color: #475569; line-height: 1.6;">
-              تجنب محاولة إرسال مئات الرسائل دفعة واحدة دون فواصل. النظام يطبق آلياً تأخيراً مدروساً (20 إلى 40 ثانية) بين كل رسالة والأخرى لمحاكاة السلوك البشري؛ لا تحاول تعطيل هذا التأخير أبداً.
+              توقفنا تماماً عن إرسال رسائل متكررة مع كل حصة أو كويز أو واجب لتجنب خطر الحظر. المنظومة تنقل 90% من المتابعة إلى بوابة الطالب وبوابة ولي الأمر التي تُحدّث تلقائياً بالدرجات والحضور والمذكرات على الويب.
             </div>
           </div>
 
-          <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #f59e0b;">
-            <div style="font-weight: 800; color: #b45309; font-size: 0.9rem; margin-bottom: 0.35rem;">
-              📈 2. التدرج في الإرسال للرقم الجديد (Warm-Up)
+          <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #3b82f6; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-weight: 800; color: #1d4ed8; font-size: 0.9rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span>👥</span> 2. إرسال رابط البوابة لمرة واحدة والتأكيد على حفظ الرقم
             </div>
             <div style="font-size: 0.82rem; color: #475569; line-height: 1.6;">
-              إذا كان رقمك جديداً أو حديث الربط، ابدأ بإرسال 20 - 40 رسالة يومياً في الأسبوع الأول، ثم ارفع العدد تدريجياً. القفزة المفاجئة من 0 إلى مئات الرسائل تؤدي للحظر الفوري من خوارزميات Meta.
+              يُرسل رابط البوابة المباشر لكل طالب/ولي أمر لمرة واحدة فقط، وتتضمن الرسالة تنبيهاً صريحاً بضرورة تسجيل الرقم باسم المنظومة على هواتفهم. حفظ الرقم يجعل الروابط قابلة للنقر فوراً ويمنع حظر الرقم كـ Spam نهائياً.
             </div>
           </div>
 
-          <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #3b82f6;">
-            <div style="font-weight: 800; color: #1d4ed8; font-size: 0.9rem; margin-bottom: 0.35rem;">
-              👥 3. تسجيل الرقم في جهات اتصال أولياء الأمور
+          <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #f59e0b; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-weight: 800; color: #b45309; font-size: 0.9rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span>📈</span> 3. التدرج في إرسال الروابط للطلاب الجدد (Warm-Up & Pacing)
             </div>
             <div style="font-size: 0.82rem; color: #475569; line-height: 1.6;">
-              اطلب من الطلاب وأولياء الأمور تسجيل رقمك باسم المنظومة على هواتفهم. قيام أي شخص بالإبلاغ عن الرقم (Report as Spam أو Block) هو السبب الأسرع والأكثر شيوعاً للحظر.
+              إذا كان رقمك جديداً، ابدأ بإرسال 20 إلى 40 رابط يومياً في الأسبوع الأول. يطبق النظام تلقائياً فواصل زمنية عشوائية (20 إلى 40 ثانية) بين كل رسالة لمحاكاة السلوك البشري الطبيعي؛ لا تحاول تسريع هذا الإرسال.
             </div>
           </div>
 
-          <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #10b981;">
-            <div style="font-weight: 800; color: #047857; font-size: 0.9rem; margin-bottom: 0.35rem;">
-              📝 4. رسائل تعليمية موجهة فقط (ممنوع الإعلانات)
+          <div style="background: #ffffff; padding: 0.9rem 1rem; border-radius: 8px; border-right: 4px solid #10b981; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-weight: 800; color: #047857; font-size: 0.9rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span>⚡</span> 4. قصر الواتساب على الروابط والإنذارات الحرجة فقط
             </div>
             <div style="font-size: 0.82rem; color: #475569; line-height: 1.6;">
-              استخدم الرقم فقط لإرسال الحضور والغياب ودرجات الكويزات والتقارير. تجنب تماماً استخدام الرقم في حملات إعلانية أو رسائل جماعية مكررة لأشخاص لم يطلبوا التواصل معك.
+              تم إلغاء أزرار الإرسال الجماعي العشوائي نهائياً لحماية رقمك. يقتصر الواتساب على: (1) تسليم روابط البوابات، (2) إنذارات الغياب الفوري، (3) إشعارات الطوارئ، مع حظر كامل لأي حملات إعلانية أو ترويجية.
             </div>
           </div>
 
@@ -153,9 +156,23 @@ export function renderWhatsAppSettingsView(data = {}) {
           ${getIcon('send', 18, 'var(--centrly-blue-700)')}
           <span>إرسال رسالة اختبارية إلى هاتفك للتأكد من وصول الإشعارات</span>
         </h3>
-        <p style="font-size: 0.825rem; color: var(--centrly-text); margin-bottom: 1rem;">
-          أدخل رقم هاتفك لتجربة استلام رسالة واتساب فورية من منظومة سنترلي للتأكد من جاهزية الخدمة.
+        <p style="font-size: 0.825rem; color: var(--centrly-text); margin-bottom: 0.75rem;">
+          أدخل رقم هاتفك لتجربة استلام رسالة واتساب فورية والتأكد من جاهزية الخدمة وتنسيق الروابط:
         </p>
+
+        <!-- Quick Fill Buttons -->
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="
+            document.getElementById('testMsgInput').value = 'مرحباً بك! رسالة اختبارية لتأكيد ربط منظومة سنترلي بحسابك بنجاح.';
+          " style="font-size: 0.78rem;">
+            نموذج: رسالة ترحيبية عادية
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="
+            document.getElementById('testMsgInput').value = 'السلام عليكم ولي أمر الطالب (محمد أحمد).\\nحرصاً على متابعة المستوى الدراسي، رابط بوابة المتابعة المباشرة:\\nhttps://centerly-platform.vercel.app/parent-portal?token=test_demo\\n\\n📌 يرجى حفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان وصول التقارير باستمرار.';
+          " style="font-size: 0.78rem; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
+            نموذج: تجربة رسالة رابط بوابة ولي الأمر (مع تنبيه حفظ الرقم)
+          </button>
+        </div>
 
         <form id="whatsappTestForm" onsubmit="window.centrlyApp.sendTestWhatsAppMessage(event)" style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end;">
           <div class="form-group" style="flex: 1; min-width: 240px; margin: 0;">
@@ -174,69 +191,78 @@ export function renderWhatsAppSettingsView(data = {}) {
         <div id="testMsgFeedback" style="display: none; margin-top: 0.75rem; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.85rem;"></div>
       </div>
 
-      <!-- Ready Message Templates -->
+      <!-- Ready Message Templates (Modernized for Portals) -->
       <div class="card" style="margin: 0;">
         <div class="card-header">
-          <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
-            ${getIcon('note', 18, 'var(--centrly-blue-700)')}
-            <span>قوالب رسائل الواتساب المعتمدة (تُرسل تلقائياً)</span>
-          </h3>
-          <span style="font-size: 0.8rem; color: var(--centrly-text);">
-            يتم استبدال المتغيرات آلياً وتنويع الصياغة لكل طالب لمنع الحظر
-          </span>
+          <div>
+            <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+              ${getIcon('note', 18, 'var(--centrly-blue-700)')}
+              <span>قوالب رسائل الواتساب المعتمدة وفق منظومة البوابات الذكية</span>
+            </h3>
+            <p style="font-size: 0.8rem; color: var(--centrly-text); margin: 0.25rem 0 0;">
+              يتم استبدال المتغيرات وتنويع صياغة المقدمات والخواتيم آلياً (Spintax Engine) لضمان خصوصية كل رسالة ومنع الفلترة
+            </p>
+          </div>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
           
-          <!-- Template 1: Absence -->
+          <!-- Template 1: Parent Portal Invite (Most Important) -->
+          <div style="background: #fafbfc; border: 2px solid #bfdbfe; border-radius: 8px; padding: 1rem; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-weight: 800; font-size: 0.95rem; color: #1d4ed8;">1. رسالة تفعيل بوابة ولي الأمر</span>
+              <span class="badge badge-blue">الأساسي (روابط المتابعة)</span>
+            </div>
+            <div style="background: #fff; border: 1px dashed #93c5fd; border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
+              السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب ({اسم_الطالب}).<br>
+              حرصاً على متابعة مستواه أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة:<br>
+              🔗 <strong>{رابط_بوابة_ولي_الأمر}</strong><br>
+              💡 <em>من خلال الرابط يمكنكم في أي وقت وبدون تسجيل دخول: متابعة الحضور، درجات الكويزات، وحالة الواجبات لحظياً.</em><br>
+              📌 <strong>تنبيه هام:</strong> يرجى تسجيل وحفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان وصول التقارير باستمرار دون انقطاع.
+            </div>
+          </div>
+
+          <!-- Template 2: Student Portal & Homework Submission -->
           <div style="background: #fafbfc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-weight: 800; font-size: 0.95rem; color: #b91c1c;">1. إشعار الغياب عن الحصة</span>
-              <span class="badge badge-danger">تلقائي</span>
+              <span style="font-weight: 800; font-size: 0.95rem; color: #0284c7;">2. رسالة تفعيل بوابة الطالب</span>
+              <span class="badge" style="background: #e0f2fe; color: #0369a1;">بوابة الطالب</span>
             </div>
             <div style="background: #fff; border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
-              عزيزي ولي أمر الطالب: <strong>{اسم_الطالب}</strong>،<br>
+              مرحباً بك يا بطل ({اسم_الطالب})! 🎓<br>
+              تم تفعيل رابط بوابتك التعليمية الخاصة للمذكرات والواجبات:<br>
+              🔗 <strong>{رابط_بوابة_الطالب}</strong><br>
+              📚 يمكنك الآن تحميل مذكرات الحصص وتسليم الواجبات بصيغة PDF ومتابعة نتائج كويزاتك أولاً بأول.<br>
+              بالتوفيق والتميز دائماً! ✨
+            </div>
+          </div>
+
+          <!-- Template 3: Emergency Absence Alert -->
+          <div style="background: #fafbfc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-weight: 800; font-size: 0.95rem; color: #b91c1c;">3. إنذار الغياب الفوري عن الحصة</span>
+              <span class="badge badge-danger">حالات طارئة فقط</span>
+            </div>
+            <div style="background: #fff; border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
+              تنبيه غياب هام: ولي أمر الطالب <strong>{اسم_الطالب}</strong>،<br>
               نود إحاطتكم علماً بعدم حضوره حصة اليوم لمجموعة <strong>{اسم_المجموعة}</strong> بتاريخ {تاريخ_الحصة}.<br>
-              يرجى المتابعة لتعويض الحصة وحرصاً على مصلحة الطالب.
+              يرجى مراجعة بوابة المتابعة للاطلاع على مذكرة الحصة وتنسيق موعد التعويض:<br>
+              🔗 <strong>{رابط_بوابة_ولي_الأمر}</strong>
             </div>
           </div>
 
-          <!-- Template 2: Performance Report -->
+          <!-- Template 4: Monthly Report Card -->
           <div style="background: #fafbfc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-weight: 800; font-size: 0.95rem; color: var(--centrly-blue-800);">2. إشعار الحضور والواجب</span>
-              <span class="badge badge-blue">تلقائي</span>
+              <span style="font-weight: 800; font-size: 0.95rem; color: #059669;">4. إشعار التقرير الشهري ولوحة الشرف</span>
+              <span class="badge badge-success">تقارير دورية</span>
             </div>
             <div style="background: #fff; border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
-              تم بحمد الله حضور الطالب: <strong>{اسم_الطالب}</strong> لحصة <strong>{اسم_المجموعة}</strong>.<br>
-              • الواجب المنزلي: <strong>{حالة_الواجب}</strong><br>
-              • ملاحظة المعلم: <strong>{الملاحظة}</strong>
-            </div>
-          </div>
-
-          <!-- Template 3: Quiz Score -->
-          <div style="background: #fafbfc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-weight: 800; font-size: 0.95rem; color: #059669;">3. إشعار نتيجة الكويز</span>
-              <span class="badge badge-success">تلقائي</span>
-            </div>
-            <div style="background: #fff; border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
-              السلام عليكم، نتيجة الطالب: <strong>{اسم_الطالب}</strong> في <strong>{عنوان_الكويز}</strong>:<br>
-              • الدرجة: <strong>{الدرجة} من {الدرجة_القصوى}</strong><br>
-              • التقييم: <strong>{مستوى_الأداء}</strong>
-            </div>
-          </div>
-
-          <!-- Template 4: Extra Session -->
-          <div style="background: #fafbfc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-weight: 800; font-size: 0.95rem; color: #7c3aed;">4. إشعار الحصة الإضافية</span>
-              <span class="badge" style="background:#ede9fe; color:#7c3aed;">تلقائي</span>
-            </div>
-            <div style="background: #fff; border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
-              تنبيه هام: تم جدولة حصة إضافية لمجموعة <strong>{اسم_المجموعة}</strong><br>
-              • الموعد: <strong>{تاريخ_الحصة} - {الوقت}</strong><br>
-              • موضوع الحصة: <strong>{الموضوع}</strong>
+              السلام عليكم ولي أمر الطالب <strong>{اسم_الطالب}</strong>،<br>
+              تم رصد وتحديث تقرير التقييم الشامل ودرجات الكويزات لهذا الشهر.<br>
+              يمكنكم الاطلاع على التقرير وملاحظات المعلم عبر بوابة المتابعة المباشرة:<br>
+              🔗 <strong>{رابط_بوابة_ولي_الأمر}</strong><br>
+              مع خالص تمنياتنا له بدوام التميز والتفوق.
             </div>
           </div>
 

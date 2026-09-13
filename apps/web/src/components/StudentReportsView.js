@@ -60,23 +60,10 @@ export function renderStudentReportsView(state = {}) {
               ${getIcon('refresh', 16)}
               <span>تحديث القائمة</span>
             </button>
-            ${isMonthDispatched ? `
-              <div class="badge badge-success" style="padding: 0.5rem 0.9rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
-                ${getIcon('check', 16)}
-                <span>تم إرسال تقييمات شهر ${monthNames[currentMonth - 1]} ${currentYear} (${dispatchedInfo.sentDate || 'مؤخراً'})</span>
-              </div>
-            ` : `
-              <button
-                class="btn btn-primary"
-                id="bulkSendReportsBtn"
-                onclick="window.centrlyApp.handleBulkSendReports()"
-                ${isSubmittingBulk ? "disabled" : ""}
-                style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700;"
-              >
-                ${getIcon('send', 18)}
-                <span>${isSubmittingBulk ? "جاري الإرسال عبر الطابور..." : "إرسال التقارير لجميع أولياء الأمور (Bulk)"}</span>
-              </button>
-            `}
+            <div style="display: inline-flex; align-items: center; gap: 0.45rem; background: #f0fdf4; color: #166534; padding: 0.5rem 0.9rem; border-radius: 8px; border: 1px solid #bbf7d0; font-size: 0.825rem; font-weight: 700;">
+              <span>🌐</span>
+              <span>التقارير ودرجات الكويزات متاحة ومحدثة لحظياً على بوابات أولياء الأمور</span>
+            </div>
           </div>
         </div>
 

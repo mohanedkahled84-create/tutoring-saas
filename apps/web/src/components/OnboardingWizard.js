@@ -142,7 +142,7 @@ export function renderOnboardingWizard(step = 1, state = {}) {
               <label class="form-label">إشعارات الواتساب بعد إنهاء الحصة:</label>
               <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; margin-top: 0.5rem; cursor: pointer;">
                 <input type="checkbox" id="obAutoNotification" ${defaultState.autoNotification ? 'checked' : ''}>
-                <span>إتاحة زر إرسال الإشعارات الجماعي للغياب وملاحظات الحصة فور إنهاء الحصة</span>
+                <span>إرسال تنبيهات الغياب الفردية للحالات الطارئة فقط (مع نقل المتابعة للبوابة)</span>
               </label>
             </div>
 
