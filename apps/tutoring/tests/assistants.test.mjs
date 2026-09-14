@@ -1,4 +1,4 @@
-﻿import test from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { app } from "../dist/app.js";
@@ -52,3 +52,15 @@ test("DEV-ASSISTANTS.4: /api/assistants/:id is mounted and rejects unauthenticat
   });
   assert.equal(res.status, 401);
 });
+
+test("DEV-ASSISTANTS.5: assistants routes use robust select without unindexed joins", async () => {
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const src = fs.readFileSync(path.resolve(__dirname, "../src/features/assistants/routes.ts"), "utf8");
+
+  assert.ok(src.includes('.select("*")'), "GET /api/assistants must use select('*') for stability");
+  assert.ok(!src.includes("groups:group_id(id, name)"), "Must not use risky PostgREST join syntax that fails without relation cache");
+});
+

@@ -16,7 +16,7 @@ assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Prom
     const supabase = getServiceSupabaseClient();
     const { data, error } = await supabase
       .from("assistants")
-      .select("*, groups:group_id(id, name)")
+      .select("*")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
 
