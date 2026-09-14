@@ -220,15 +220,15 @@ export function renderOnboardingWizard(step = 1, state = {}) {
               امسح رمز الاستجابة السريعة (QR Code) أو استخدم كود الاقتران لربط رقم واتساب لإرسال الإشعارات لأولياء الأمور
             </p>
 
-            <div style="display: inline-block; padding: 1.25rem; background: #fff; border: 2px dashed var(--centrly-blue-700); border-radius: var(--radius-md); margin-bottom: 1.25rem;">
-              <div id="obQrWrapper" style="width: 180px; height: 180px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); margin: 0 auto; overflow: hidden;">
+            <div style="max-width: 320px; width: 100%; margin: 0 auto 1.5rem; padding: 1.5rem; background: #fff; border: 2px dashed var(--centrly-blue-700); border-radius: var(--radius-lg, 12px); box-sizing: border-box; text-align: center;">
+              <div id="obQrWrapper" style="width: 200px; height: 200px; max-width: 100%; background: #f8fafc; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md, 8px); margin: 0 auto; overflow: hidden; border: 1px solid var(--centrly-line, #e2e8f0);">
                 <img id="obQrImage" src="${defaultState.qrBase64 || ''}" alt="WhatsApp QR Code" style="width: 100%; height: 100%; object-fit: contain; ${defaultState.qrBase64 ? '' : 'display: none;'}">
-                <div id="obQrLoading" style="font-size: 0.8rem; color: var(--centrly-text); padding: 1rem; ${defaultState.qrBase64 ? 'display: none;' : ''}">
+                <div id="obQrLoading" style="font-size: 0.85rem; color: var(--centrly-text); padding: 1rem; line-height: 1.5; ${defaultState.qrBase64 ? 'display: none;' : ''}">
                   جارٍ إنشاء رمز QR...
                 </div>
               </div>
-              <div id="obPairingContainer" style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink);">
-                كود الاقتران: <span id="obPairingCode" style="font-family: monospace; color: var(--centrly-blue-800);">${defaultState.pairingCode || '---'}</span>
+              <div id="obPairingContainer" style="margin-top: 1rem; font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink); word-break: break-all; ${(defaultState.pairingCode && defaultState.pairingCode.length <= 15 && !defaultState.pairingCode.includes('@') && !defaultState.pairingCode.includes(',')) ? '' : 'display: none;'}">
+                كود الاقتران: <span id="obPairingCode" style="font-family: monospace; color: var(--centrly-blue-800); background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; letter-spacing: 1px;">${(defaultState.pairingCode && defaultState.pairingCode.length <= 15 && !defaultState.pairingCode.includes('@')) ? defaultState.pairingCode : ''}</span>
               </div>
             </div>
 

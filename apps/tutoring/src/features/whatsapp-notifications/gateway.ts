@@ -115,7 +115,11 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
       };
 
       const rawBase64 = data.base64 || data.qrcode?.base64 || "";
-      const pairing = data.pairingCode || data.code || data.qrcode?.pairingCode || data.qrcode?.code || null;
+      const rawPairing = data.pairingCode || data.qrcode?.pairingCode || null;
+      let pairing: string | null = rawPairing;
+      if (pairing && (pairing.length > 15 || pairing.includes(",") || pairing.includes("@"))) {
+        pairing = null;
+      }
 
       const formattedBase64 = rawBase64.startsWith("data:image")
         ? rawBase64

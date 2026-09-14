@@ -6783,8 +6783,14 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         img.style.display = 'block';
         if (loading) loading.style.display = 'none';
       }
-      if (qrRes && qrRes.pairing_code && code) {
-        code.textContent = qrRes.pairing_code;
+      const pContainer = document.getElementById('obPairingContainer');
+      const pCode = qrRes?.pairing_code ? String(qrRes.pairing_code).trim() : '';
+      if (code && pCode && pCode.length <= 15 && !pCode.includes('@') && !pCode.includes(',')) {
+        code.textContent = pCode;
+        if (pContainer) pContainer.style.display = 'block';
+      } else {
+        if (code) code.textContent = '';
+        if (pContainer) pContainer.style.display = 'none';
       }
 
       this.startWhatsAppStatusPolling('onboarding');
@@ -6854,8 +6860,16 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         img.style.display = 'block';
         if (loading) loading.style.display = 'none';
       }
-      if (code && qrRes.pairing_code) {
-        code.textContent = qrRes.pairing_code;
+      if (code) {
+        const pCode = qrRes?.pairing_code ? String(qrRes.pairing_code).trim() : '';
+        const parentDiv = code.closest('div');
+        if (pCode && pCode.length <= 15 && !pCode.includes('@') && !pCode.includes(',')) {
+          code.textContent = pCode;
+          if (parentDiv) parentDiv.style.display = 'block';
+        } else {
+          code.textContent = '';
+          if (parentDiv) parentDiv.style.display = 'none';
+        }
       }
       this.startWhatsAppStatusPolling('settings');
     } catch (err) {
