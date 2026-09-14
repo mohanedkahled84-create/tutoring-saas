@@ -60,9 +60,46 @@ export class SupabaseAuthRepository implements IAuthRepository {
     const accountType = data.account_type === "center" ? "center" : "teacher";
     const userRole = accountType === "center" ? "center_owner" : "owner";
 
-    // 1. Create Supabase Auth User via publicClient.auth.signUp (works with publishable key, zero service_role needed)
-    let userId: string = "";
+    // 1. Primary method: Atomic direct registration via SECURITY DEFINER RPC
+    // Creates auth.users (with hash & email confirmed), auth.identities, public.tenants, and public.users in 1 transaction
+    try {
+      const { data: directData, error: directErr } = await this.publicClient.rpc(
+        "register_tenant_owner_direct",
+        {
+          p_email: data.email.trim().toLowerCase(),
+          p_password: data.password,
+          p_full_name: data.full_name || "",
+          p_phone: data.phone || "",
+          p_tenant_name: data.tenant_name,
+          p_account_type: accountType,
+          p_trial_ends_at: trialEndsAt,
+        }
+      );
 
+      if (!directErr && directData?.user_id) {
+        return {
+          user: { id: directData.user_id, email: data.email, role: directData.role || userRole },
+          tenant: {
+            id: directData.tenant_id,
+            name: directData.tenant_name || data.tenant_name,
+            account_type: accountType,
+            trial_ends_at: trialEndsAt,
+            subscription_status: directData.subscription_status || "trial",
+          },
+        };
+      }
+
+      if (directErr?.message && directErr.message.includes("USER_ALREADY_EXISTS")) {
+        throw new Error("هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول بدلاً من ذلك.");
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.includes("مسجل بالفعل")) {
+        throw err;
+      }
+    }
+
+    // 2. Fallback: standard signUp + register_tenant_owner
+    let userId: string = "";
     try {
       const { data: signUpData, error: signUpErr } = await this.publicClient.auth.signUp({
         email: data.email,
@@ -83,29 +120,13 @@ export class SupabaseAuthRepository implements IAuthRepository {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create user account";
-      // If public signUp failed, try adminClient if available
-      try {
-        const { data: adminAuth, error: adminErr } = await this.adminClient.auth.admin.createUser({
-          email: data.email,
-          password: data.password,
-          email_confirm: true,
-          user_metadata: { full_name: data.full_name, phone: data.phone },
-        });
-        if (!adminErr && adminAuth?.user) {
-          userId = adminAuth.user.id;
-        } else {
-          throw new Error(msg);
-        }
-      } catch {
-        throw new Error(msg);
-      }
+      throw new Error(msg);
     }
 
     if (!userId) {
       throw new Error("تعذر إنشاء حساب المستخدم في النظام. يرجى المحاولة مرة أخرى.");
     }
 
-    // 2. Call SECURITY DEFINER RPC register_tenant_owner to initialize tenant & user record
     const { data: rpcData, error: rpcErr } = await this.publicClient.rpc(
       "register_tenant_owner",
       {
@@ -120,40 +141,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
     );
 
     if (rpcErr || !rpcData) {
-      // Fallback: direct insert if RPC not available
-      const { data: tenant, error: tenantErr } = await this.adminClient
-        .from("tenants")
-        .insert({
-          name: data.tenant_name,
-          status: "active",
-          subscription_status: "trial",
-          trial_ends_at: trialEndsAt,
-          account_type: accountType,
-        })
-        .select()
-        .single();
-
-      if (tenantErr || !tenant) {
-        throw new Error(rpcErr?.message || tenantErr?.message || "Failed to create tenant");
-      }
-
-      await this.adminClient.from("users").insert({
-        id: userId,
-        tenant_id: tenant.id,
-        email: data.email,
-        role: userRole,
-      });
-
-      return {
-        user: { id: userId, email: data.email, role: userRole },
-        tenant: {
-          id: tenant.id,
-          name: tenant.name,
-          account_type: accountType,
-          trial_ends_at: trialEndsAt,
-          subscription_status: "trial",
-        },
-      };
+      throw new Error(rpcErr?.message || "Failed to initialize organization profile");
     }
 
     return {
