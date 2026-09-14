@@ -25,7 +25,7 @@ export function renderTeacherAssistantsView(
 
   const totalMonthlySalaries = assistantList
     .filter(a => a.salary_model === 'monthly' || !a.salary_model)
-    .reduce((sum, a) => sum + (Number(a.salary_amount) || 0), 0);
+    .reduce((sum, a) => sum + (Number(a.salary ?? a.salary_amount) || 0), 0);
 
   const displayMonthly = hideNumbers ? '••••••' : `${totalMonthlySalaries.toLocaleString('ar-EG')} ج.م`;
 
@@ -191,7 +191,7 @@ export function renderTeacherAssistantsView(
                     ? '<span class="badge badge-amber">بالحصة</span>' 
                     : '<span class="badge badge-success">بالشهر</span>';
 
-                  const salaryVal = Number(a.salary_amount) || 0;
+                  const salaryVal = Number(a.salary ?? a.salary_amount) || 0;
                   const salaryDisplay = hideNumbers 
                     ? '••••••' 
                     : `${salaryVal.toLocaleString('ar-EG')} ج.م ${isPerSession ? '/ حصة' : '/ شهر'}`;

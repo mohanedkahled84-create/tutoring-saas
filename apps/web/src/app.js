@@ -4,7 +4,7 @@ import { renderSidebar } from './components/Sidebar.js';
 import { renderNavbar } from './components/Navbar.js';
 import { renderAuthScreens } from './components/AuthScreens.js';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
-import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.1.0';
+import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
 import { renderStudentsView } from './components/StudentsView.js?v=2.8.0';
@@ -14,7 +14,7 @@ import { renderParentPortalView } from './components/ParentPortalView.js?v=2.7.0
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=2.7.0';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=2.7.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
-import { renderStudentReportsView } from './components/StudentReportsView.js';
+import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
 import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
 import { renderBillingView } from './components/BillingView.js';
 import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
@@ -27,7 +27,7 @@ import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
 import { renderLandingView } from './components/LandingView.js?v=2.8.0';
 import { renderMaterialsView } from './components/MaterialsView.js?v=2.9.0';
-import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.js';
+import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.js?v=2.1.0';
 import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js';
@@ -112,9 +112,12 @@ class CentrlyApp {
       groups: [],
     };
     this.reportsState = {
+      activeTab: 'academic',
       period: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
       leaderboard: [],
       groups: [],
+      assistants: [],
+      students: [],
       selectedGroupId: '',
       searchQuery: '',
       total_students: 0,
@@ -1496,9 +1499,11 @@ class CentrlyApp {
           if (groupId) url += `&group_id=${groupId}`;
           if (this.reportsState.searchQuery) url += `&q=${encodeURIComponent(this.reportsState.searchQuery)}`;
 
-          const [reportsRes, grpRes] = await Promise.all([
-            request(url),
-            request('/groups'),
+          const [reportsRes, grpRes, astRes, studRes] = await Promise.all([
+            request(url).catch(() => null),
+            request('/groups').catch(() => ({ groups: [] })),
+            request('/assistants').catch(() => ({ assistants: [] })),
+            request('/students').catch(() => ({ students: [] })),
           ]);
 
           if (reportsRes) {
@@ -1507,7 +1512,11 @@ class CentrlyApp {
             this.reportsState.average_attendance_rate = reportsRes.average_attendance_rate || 0;
             this.reportsState.average_score = reportsRes.average_score || 0;
           }
-          this.reportsState.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          this.reportsState.groups = Array.isArray(grpRes) ? grpRes : (grpRes?.groups || []);
+          this.reportsState.assistants = Array.isArray(astRes) ? astRes : (astRes?.assistants || []);
+          this.reportsState.students = Array.isArray(studRes) ? studRes : (studRes?.students || []);
+          this.teacherAssistants = this.reportsState.assistants;
+          this.saveCache('teacherAssistants', this.teacherAssistants);
           this.renderMainContent();
           break;
         }
@@ -1543,18 +1552,22 @@ class CentrlyApp {
         case 'dashboard': {
           const currentMonth = new Date().getMonth() + 1;
           const currentYear = new Date().getFullYear();
-          const [studRes, grpRes, riskRes, repRes] = await Promise.all([
-            request('/students'),
-            request('/groups'),
-            request('/at-risk'),
-            request(`/reports/monthly?month=${currentMonth}&year=${currentYear}`),
+          const [studRes, grpRes, riskRes, repRes, astRes] = await Promise.all([
+            request('/students').catch(() => ({ students: [] })),
+            request('/groups').catch(() => ({ groups: [] })),
+            request('/at-risk').catch(() => ({ watchlist: [] })),
+            request(`/reports/monthly?month=${currentMonth}&year=${currentYear}`).catch(() => null),
+            request('/assistants').catch(() => ({ assistants: [] })),
           ]);
           const students = Array.isArray(studRes) ? studRes : (studRes.students || []);
           const groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           const atRisk = Array.isArray(riskRes) ? riskRes : (riskRes?.watchlist || riskRes?.students || []);
+          const assistants = Array.isArray(astRes) ? astRes : (astRes?.assistants || []);
+          this.teacherAssistants = assistants;
+          this.saveCache('teacherAssistants', assistants);
 
           let totalMonthlyRev = 0;
-          let totalTeacherProfit = 0;
+          let totalGrossTeacherProfit = 0;
           const mappedGroups = groups.map(g => {
             const enrolledCount = students.filter(s => s.group_id === g.id || (Array.isArray(s.group_ids) && s.group_ids.includes(g.id))).length;
             const count = enrolledCount || Number(g.students_count || g.student_count || 0);
@@ -1574,7 +1587,7 @@ class CentrlyApp {
             }
 
             totalMonthlyRev += monthlyGross;
-            totalTeacherProfit += netProfit;
+            totalGrossTeacherProfit += netProfit;
 
             return {
               ...g,
@@ -1584,6 +1597,23 @@ class CentrlyApp {
               net_profit: netProfit,
             };
           });
+
+          // Assistant deductions calculation
+          const activeAssistants = assistants.filter(a => a.status !== 'inactive');
+          let totalAssistantSalaries = 0;
+          activeAssistants.forEach(a => {
+            const isPerSession = a.salary_model === 'per_session';
+            const rate = Number(a.salary ?? a.salary_amount ?? 0);
+            if (isPerSession) {
+              const sessCount = a.group_id ? 4 : (groups.length > 0 ? groups.length * 4 : 4);
+              totalAssistantSalaries += rate * sessCount;
+            } else {
+              totalAssistantSalaries += rate;
+            }
+          });
+
+          const totalCenterCut = Math.max(0, totalMonthlyRev - totalGrossTeacherProfit);
+          const finalTeacherNetProfit = Math.max(0, totalGrossTeacherProfit - totalAssistantSalaries);
 
           // Pure real data - zero arbitrary mock numbers or fake constants
           const attendanceRate = repRes && repRes.average_attendance_rate !== undefined
@@ -1599,10 +1629,13 @@ class CentrlyApp {
               activeGroups: groups.length,
               todayAttendanceRate: attendanceRate,
               monthlyRevenue: totalMonthlyRev,
-              teacherProfit: totalTeacherProfit,
+              centerCut: totalCenterCut,
+              assistantSalaries: totalAssistantSalaries,
+              teacherProfit: finalTeacherNetProfit,
               pendingMessages: 0,
             },
             groups: mappedGroups,
+            assistants: assistants,
             atRiskStudents: atRisk,
             topPerformers: leaderboard,
           };
@@ -1953,7 +1986,11 @@ class CentrlyApp {
       case 'student-cards':
         return renderStudentCardsView(this.students, this.groups, this.user);
       case 'reports':
-        return renderStudentReportsView(this.reportsState);
+        return renderStudentReportsView(this.reportsState, {
+          hasPin: this.hasSecurityPin,
+          isUnlocked: this.isFinancialUnlocked,
+          hideNumbers: this.hideFinancialNumbers,
+        });
       case 'groups':
         return renderGroupsView(this.groups, this.user, Boolean(this.routeLoadingState['groups']));
       case 'risk-watchlist':
@@ -6770,6 +6807,11 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   // Student Reports & Leaderboard Actions (DEV-80)
   // ==========================================================================
 
+  switchReportsTab(tab) {
+    this.reportsState.activeTab = tab;
+    this.renderMainContent();
+  }
+
   async handleReportsPeriodChange(month, year) {
     this.reportsState.period = { month: parseInt(month, 10), year: parseInt(year, 10) };
     await this.loadRouteData('reports');
@@ -8952,7 +8994,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
             <label class="form-label" id="modalEditTA_SalaryLabel" style="font-weight: 700;">
               ${assistant.salary_model === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)'}
             </label>
-            <input type="number" id="modalEditTA_SalaryAmount" class="form-input" value="${Number(assistant.salary_amount) || 0}" min="0">
+            <input type="number" id="modalEditTA_SalaryAmount" class="form-input" value="${Number(assistant.salary ?? assistant.salary_amount) || 0}" min="0">
           </div>
         </div>
       </form>
