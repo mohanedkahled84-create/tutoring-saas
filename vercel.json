@@ -4,6 +4,12 @@
   "routes": [
     {
       "src": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "centerly-app.vercel.app"
+        }
+      ],
       "status": 308,
       "headers": {
         "Location": "https://centerly-platform.vercel.app/$1"
