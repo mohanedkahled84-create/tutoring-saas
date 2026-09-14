@@ -30,7 +30,17 @@ export function renderBillingView(data = {}, user = {}) {
   const status = data.subscription_status || data.status || 'trial';
   const rawDate = data.subscription_ends_at || data.trial_ends_at || '';
   const formattedDate = formatArabicDate(rawDate);
-  const daysRemaining = typeof data.days_remaining === 'number' ? data.days_remaining : 14;
+
+  // Calculate or fallback accurately if server returned 0 or null while date is still in the future
+  let daysRemaining = typeof data.days_remaining === 'number' ? data.days_remaining : null;
+  if (daysRemaining === null || (daysRemaining <= 0 && rawDate && new Date(rawDate).getTime() > Date.now())) {
+    if (rawDate) {
+      const ms = new Date(rawDate).getTime() - Date.now();
+      daysRemaining = Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+    } else {
+      daysRemaining = 0;
+    }
+  }
 
   const currentStudents = data.students_count || (window.centrlyApp?.students?.length || 0);
   const studentLimit = data.students_limit || 100;
@@ -125,6 +135,7 @@ export function renderBillingView(data = {}, user = {}) {
               ${daysRemaining > 0 
                 ? `(متبقي <strong style="color: #fde047;">${daysRemaining} يوماً</strong> للاستفادة الكاملة من كافة الميزات)` 
                 : '<span style="color: #f87171;">(انتهت الفترة - يرجى التجديد)</span>'}
+              ${isPending ? '<span style="color: #fde047; font-weight: 700; margin-right: 0.4rem;">• طلب الترقية قيد المراجعة</span>' : ''}
             </p>
 
             <!-- Student Capacity Utilization Bar -->

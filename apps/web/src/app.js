@@ -16,7 +16,7 @@ import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=2
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
 import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
 import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
-import { renderBillingView } from './components/BillingView.js';
+import { renderBillingView } from './components/BillingView.js?v=3.8.0';
 import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
 import { renderStudentCardsView } from './components/StudentCardsView.js';
 import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=2.6.0';

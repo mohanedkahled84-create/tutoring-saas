@@ -17,8 +17,19 @@ export function calculateDaysRemaining(
   subscriptionEndsAt?: string | null,
   now: Date = new Date()
 ): number {
-  const targetDateStr =
-    subscriptionStatus === "trial" ? trialEndsAt : subscriptionEndsAt;
+  if (subscriptionStatus === "expired" || subscriptionStatus === "canceled") {
+    return 0;
+  }
+
+  let targetDateStr: string | null | undefined;
+  if (subscriptionStatus === "trial") {
+    targetDateStr = trialEndsAt || subscriptionEndsAt;
+  } else if (subscriptionEndsAt) {
+    targetDateStr = subscriptionEndsAt;
+  } else {
+    // If pending_verification or other status without a paid subscription_ends_at yet, retain remaining trial days
+    targetDateStr = trialEndsAt;
+  }
 
   if (!targetDateStr) {
     return 0;

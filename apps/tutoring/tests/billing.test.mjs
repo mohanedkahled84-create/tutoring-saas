@@ -85,6 +85,13 @@ test("DEV-66: calculateDaysRemaining calculates accurate countdown", () => {
 
   // Null date
   assert.equal(calculateDaysRemaining("active", null, null, now), 0);
+
+  // Pending verification during trial should keep remaining trial days
+  assert.equal(calculateDaysRemaining("pending_verification", futureDate, null, now), 3);
+
+  // Expired or canceled status should return 0
+  assert.equal(calculateDaysRemaining("expired", futureDate, null, now), 0);
+  assert.equal(calculateDaysRemaining("canceled", futureDate, null, now), 0);
 });
 
 test("DEV-66: BillingService.submitPaymentProof updates tenant status to pending_verification", async () => {
