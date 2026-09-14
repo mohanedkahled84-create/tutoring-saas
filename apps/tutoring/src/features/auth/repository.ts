@@ -60,57 +60,110 @@ export class SupabaseAuthRepository implements IAuthRepository {
     const accountType = data.account_type === "center" ? "center" : "teacher";
     const userRole = accountType === "center" ? "center_owner" : "owner";
 
-    // 1. Create Supabase Auth User
-    const { data: authUser, error: authErr } = await this.adminClient.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true,
-      user_metadata: { full_name: data.full_name, phone: data.phone },
-    });
+    // 1. Create Supabase Auth User via publicClient.auth.signUp (works with publishable key, zero service_role needed)
+    let userId: string = "";
 
-    if (authErr || !authUser.user) {
-      throw new Error(authErr?.message || "Failed to create user");
+    try {
+      const { data: signUpData, error: signUpErr } = await this.publicClient.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: { full_name: data.full_name, phone: data.phone },
+        },
+      });
+
+      if (signUpErr) {
+        if (signUpErr.message && (signUpErr.message.includes("already registered") || signUpErr.message.includes("User already exists"))) {
+          throw new Error("هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول بدلاً من ذلك.");
+        }
+        throw signUpErr;
+      }
+      if (signUpData?.user) {
+        userId = signUpData.user.id;
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create user account";
+      // If public signUp failed, try adminClient if available
+      try {
+        const { data: adminAuth, error: adminErr } = await this.adminClient.auth.admin.createUser({
+          email: data.email,
+          password: data.password,
+          email_confirm: true,
+          user_metadata: { full_name: data.full_name, phone: data.phone },
+        });
+        if (!adminErr && adminAuth?.user) {
+          userId = adminAuth.user.id;
+        } else {
+          throw new Error(msg);
+        }
+      } catch {
+        throw new Error(msg);
+      }
     }
 
-    const userId = authUser.user.id;
-
-    // 2. Create Tenant with 14-day trial & account_type
-    const { data: tenant, error: tenantErr } = await this.adminClient
-      .from("tenants")
-      .insert({
-        name: data.tenant_name,
-        status: "active",
-        subscription_status: "trial",
-        trial_ends_at: trialEndsAt,
-        account_type: accountType,
-      })
-      .select()
-      .single();
-
-    if (tenantErr || !tenant) {
-      throw new Error(tenantErr?.message || "Failed to create tenant");
+    if (!userId) {
+      throw new Error("تعذر إنشاء حساب المستخدم في النظام. يرجى المحاولة مرة أخرى.");
     }
 
-    // 3. Create Public User record linked as tenant owner or center owner
-    const { error: userInsertErr } = await this.adminClient.from("users").insert({
-      id: userId,
-      tenant_id: tenant.id,
-      email: data.email,
-      role: userRole,
-    });
+    // 2. Call SECURITY DEFINER RPC register_tenant_owner to initialize tenant & user record
+    const { data: rpcData, error: rpcErr } = await this.publicClient.rpc(
+      "register_tenant_owner",
+      {
+        p_user_id: userId,
+        p_email: data.email,
+        p_full_name: data.full_name || "",
+        p_phone: data.phone || "",
+        p_tenant_name: data.tenant_name,
+        p_account_type: accountType,
+        p_trial_ends_at: trialEndsAt,
+      }
+    );
 
-    if (userInsertErr) {
-      throw new Error(userInsertErr.message);
+    if (rpcErr || !rpcData) {
+      // Fallback: direct insert if RPC not available
+      const { data: tenant, error: tenantErr } = await this.adminClient
+        .from("tenants")
+        .insert({
+          name: data.tenant_name,
+          status: "active",
+          subscription_status: "trial",
+          trial_ends_at: trialEndsAt,
+          account_type: accountType,
+        })
+        .select()
+        .single();
+
+      if (tenantErr || !tenant) {
+        throw new Error(rpcErr?.message || tenantErr?.message || "Failed to create tenant");
+      }
+
+      await this.adminClient.from("users").insert({
+        id: userId,
+        tenant_id: tenant.id,
+        email: data.email,
+        role: userRole,
+      });
+
+      return {
+        user: { id: userId, email: data.email, role: userRole },
+        tenant: {
+          id: tenant.id,
+          name: tenant.name,
+          account_type: accountType,
+          trial_ends_at: trialEndsAt,
+          subscription_status: "trial",
+        },
+      };
     }
 
     return {
       user: { id: userId, email: data.email, role: userRole },
       tenant: {
-        id: tenant.id,
-        name: tenant.name,
+        id: rpcData.tenant_id,
+        name: rpcData.tenant_name || data.tenant_name,
         account_type: accountType,
         trial_ends_at: trialEndsAt,
-        subscription_status: "trial",
+        subscription_status: rpcData.subscription_status || "trial",
       },
     };
   }
