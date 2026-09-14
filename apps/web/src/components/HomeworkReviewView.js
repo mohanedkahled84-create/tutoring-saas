@@ -271,7 +271,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                             <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
                               style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
                               ${getIcon('file', 14, '#1d4ed8')}
-                              <span>فتح ملف الـ PDF</span>
+                              <span>معاينة ملف الواجب</span>
                             </a>
                           ` : (isApproved ? `
                             <span style="display: inline-flex; align-items: center; gap: 0.3rem; background: #f0fdf4; color: #15803d; padding: 0.25rem 0.6rem; border-radius: 0.4rem; border: 1px solid #bbf7d0; font-size: 0.78rem; font-weight: 700;" title="تم فحص الواجب وتفريغ الملف من السيرفر بنجاح لتخفيف الحمل وتوفير التخزين">

@@ -77,21 +77,38 @@ publicHomeworkRouter.post("/submit", async (req: Request, res: Response): Promis
 
     // 3. If base64 file_data provided, upload directly to Supabase Storage bucket 'homework-submissions'
     if (file_data) {
-      const base64Clean = file_data.replace(/^data:application\/pdf;base64,/, "").replace(/^data:.*;base64,/, "");
+      let contentType = "application/pdf";
+      const mimeMatch = file_data.match(/^data:([^;]+);base64,/);
+      if (mimeMatch && mimeMatch[1]) {
+        contentType = mimeMatch[1].toLowerCase();
+      } else if (file_name) {
+        const lowerName = file_name.toLowerCase();
+        if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) contentType = "image/jpeg";
+        else if (lowerName.endsWith(".png")) contentType = "image/png";
+        else if (lowerName.endsWith(".webp")) contentType = "image/webp";
+        else if (lowerName.endsWith(".pdf")) contentType = "application/pdf";
+      }
+
+      const base64Clean = file_data.replace(/^data:[^;]+;base64,/, "");
       const fileBuffer = Buffer.from(base64Clean, "base64");
-      const cleanFileName = (file_name || "homework.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+      const ext = contentType.includes("jpeg") || contentType.includes("jpg") ? ".jpg"
+        : contentType.includes("png") ? ".png"
+        : contentType.includes("webp") ? ".webp"
+        : ".pdf";
+      const rawCleanName = (file_name || "homework").replace(/[^a-zA-Z0-9._-]/g, "_");
+      const cleanFileName = rawCleanName.includes(".") ? rawCleanName : `${rawCleanName}${ext}`;
       const storagePath = `${tenantId}/${material_id}/${studentId}_${Date.now()}_${cleanFileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("homework-submissions")
         .upload(storagePath, fileBuffer, {
-          contentType: "application/pdf",
+          contentType,
           upsert: true,
         });
 
       if (uploadError) {
         logger.error(`[Homework] Storage upload error: ${uploadError.message}`);
-        res.status(500).json({ error: { code: "STORAGE_ERROR", message: "تعذر حفظ ملف الـ PDF في السحابة" } });
+        res.status(500).json({ error: { code: "STORAGE_ERROR", message: `تعذر حفظ الملف في السحابة: ${uploadError.message}` } });
         return;
       }
 

@@ -328,12 +328,12 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                               <span>تم اعتماد الواجب بنجاح وحذف الملف لتوفير المساحة</span>
                             </span>
                           ` : `
-                            <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF (الحد الأقصى 10MB)</span>
+                            <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF أو صورة واضحة (الحد الأقصى 25MB)</span>
                           `)}
 
-                          <!-- PDF File Upload Trigger -->
+                          <!-- File Upload Trigger (PDF or Images) -->
                           <div>
-                            <input type="file" id="hw-file-input-${escapeHtml(m.id)}" accept="application/pdf,.pdf" style="display: none;" 
+                            <input type="file" id="hw-file-input-${escapeHtml(m.id)}" accept="application/pdf,image/*,.pdf,.jpg,.jpeg,.png,.webp,.heic" style="display: none;" 
                               onchange="window.centrlyApp && window.centrlyApp.handleStudentHomeworkUpload ? window.centrlyApp.handleStudentHomeworkUpload('${escapeHtml(m.id)}', this.files[0]) : null">
                             
                             ${isApproved ? `
@@ -346,7 +346,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                               <button type="button" onclick="document.getElementById('hw-file-input-${escapeHtml(m.id)}').click()" id="hw-upload-btn-${escapeHtml(m.id)}"
                                 style="background: #059669; color: #ffffff; border: 1px solid #059669; padding: 0.45rem 0.9rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s; box-shadow: 0 2px 6px rgba(5,150,105,0.2);">
                                 ${getIcon('upload', 14, '#ffffff')}
-                                <span>${isPending ? 'تعديل / رفع نسخة أحدث' : 'رفع حل الواجب (PDF)'}</span>
+                                <span>${isPending ? 'تعديل / رفع نسخة أحدث' : 'رفع حل الواجب (PDF أو صورة)'}</span>
                               </button>
                             `}
                           </div>
@@ -367,7 +367,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                     ` : (m.is_homework ? `
                       <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #1e40af; background: #eff6ff; padding: 0.45rem 0.75rem; border-radius: 0.45rem; border: 1px solid #bfdbfe; margin-top: 0.25rem;">
                         ${getIcon('edit', 14, '#1e40af')}
-                        <span><b>طريقة التسليم:</b> قم بحل الأسئلة المحددة أعلاه في كشكولك بخط واضح، ثم صوّر الصفحات وحوّلها لـ PDF وارفعها عبر زر الرفع أعلاه.</span>
+                        <span><b>طريقة التسليم:</b> قم بحل الأسئلة في كشكولك بخط واضح، ثم صوّر الصفحات بكاميرا الموبايل وارفع الصورة أو ملف الـ PDF عبر زر الرفع أعلاه مباشرة.</span>
                       </div>
                     ` : '')}
 

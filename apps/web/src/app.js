@@ -585,9 +585,13 @@ class CentrlyApp {
     }
   }
 
-  // Dedicated Student Portal (DEV-STUDENT-PORTAL)
   async loadStudentPortal(token) {
     this._studentPortalToken = token;
+    try {
+      if (token && typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('centrly_student_portal_token', token);
+      }
+    } catch (_) {}
     try {
       const data = await request(`/public/parent-portal?token=${token}`);
       document.getElementById('app').innerHTML = renderStudentPortalView(data);
@@ -617,12 +621,27 @@ class CentrlyApp {
 
   async handleStudentHomeworkUpload(materialId, file) {
     if (!file) return;
-    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
-      alert('عفواً، يجب أن يكون الملف بصيغة PDF فقط. يمكنك استخدام موقع iLovePDF المجاني الموضح في الشرح أعلاه لتحويل صورك إلى PDF في ثوانٍ.');
+
+    const isPdf = (file.type && file.type.includes('pdf')) || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+    const isImage = (file.type && file.type.startsWith('image/')) || (file.name && /\.(jpg|jpeg|png|webp|heic|bmp)$/i.test(file.name));
+
+    if (!isPdf && !isImage) {
+      alert('يرجى رفع ملف الواجب بصيغة PDF أو صورة واضحة (JPG / PNG / WEBP).');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      alert('حجم الملف يتجاوز الحد الأقصى المسموح به (10 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.');
+
+    if (file.size > 25 * 1024 * 1024) {
+      alert('حجم الملف يتجاوز الحد الأقصى المسموح به (25 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.');
+      return;
+    }
+
+    const token = this._studentPortalToken
+      || new URLSearchParams(window.location.search).get('token')
+      || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('centrly_student_portal_token') : null)
+      || '';
+
+    if (!token) {
+      alert('تعذر التحقق من رمز الطالب. يرجى إعادة فتح رابط الطالب من جديد والمحاولة مرة أخرى.');
       return;
     }
 
@@ -641,7 +660,7 @@ class CentrlyApp {
           await request('/public/homework/submit', {
             method: 'POST',
             body: {
-              token: this._studentPortalToken,
+              token,
               material_id: materialId,
               file_data: base64Data,
               file_name: file.name,
@@ -649,8 +668,9 @@ class CentrlyApp {
             },
           });
           alert('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة.');
-          await this.loadStudentPortal(this._studentPortalToken);
+          await this.loadStudentPortal(token);
         } catch (subErr) {
+          console.error('Homework upload error:', subErr);
           alert(`فشل رفع الواجب: ${subErr.message || 'حدث خطأ في الاتصال'}`);
           if (btn) {
             btn.disabled = false;
@@ -659,7 +679,7 @@ class CentrlyApp {
         }
       };
       reader.onerror = () => {
-        alert('تعذر قراءة ملف الـ PDF من جهازك.');
+        alert('تعذر قراءة الملف من جهازك. يرجى التأكد من صلاحيات الملف والمحاولة مرة أخرى.');
         if (btn) {
           btn.disabled = false;
           btn.innerHTML = originalText;
