@@ -5568,22 +5568,12 @@ class CentrlyApp {
           this.renderMainContent();
         }
       } else {
-        const errorMsg = res.error || 'فشل إرسال الرابط عبر واتساب';
-        const isConnError = errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404') || errorMsg.includes('paused') || errorMsg.includes('Circuit breaker');
-        if (isConnError) {
-          await openDirectFallback();
-        } else {
-          this.showToast(errorMsg, 'danger');
-        }
+        const errorMsg = res.error || 'خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR أولاً.';
+        this.showToast(errorMsg, 'danger');
       }
     } catch (err) {
-      const errorMsg = err.message || 'تأكد من اتصال الخادم';
-      const isConnError = errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404') || errorMsg.includes('paused') || errorMsg.includes('Circuit breaker') || errorMsg.includes('502');
-      if (isConnError) {
-        await openDirectFallback();
-      } else {
-        this.showToast(`خطأ أثناء إرسال الرابط: ${errorMsg}`, 'danger');
-      }
+      const errorMsg = err.message || 'خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR أولاً.';
+      this.showToast(errorMsg, 'danger');
     }
   }
 
@@ -5638,22 +5628,12 @@ class CentrlyApp {
           this.renderMainContent();
         }
       } else {
-        const errorMsg = res.error || 'فشل إرسال الرابط عبر واتساب';
-        const isConnError = errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404') || errorMsg.includes('paused') || errorMsg.includes('Circuit breaker');
-        if (isConnError) {
-          await openDirectFallback();
-        } else {
-          this.showToast(errorMsg, 'danger');
-        }
+        const errorMsg = res.error || 'خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR أولاً.';
+        this.showToast(errorMsg, 'danger');
       }
     } catch (err) {
-      const errorMsg = err.message || 'تأكد من اتصال الخادم';
-      const isConnError = errorMsg.includes('Evolution') || errorMsg.includes('instance') || errorMsg.includes('404') || errorMsg.includes('paused') || errorMsg.includes('Circuit breaker') || errorMsg.includes('502');
-      if (isConnError) {
-        await openDirectFallback();
-      } else {
-        this.showToast(`خطأ أثناء إرسال الرابط: ${errorMsg}`, 'danger');
-      }
+      const errorMsg = err.message || 'خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR أولاً.';
+      this.showToast(errorMsg, 'danger');
     }
   }
 

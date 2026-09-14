@@ -269,11 +269,6 @@ export class WhatsAppNotificationsService {
           logger.info(`[WhatsAppService] Retrying sendTextMessage with fallback instance ${fallbackInstance}`);
           gwRes = await this.gateway.sendTextMessage(fallbackInstance, payload.parent_phone, text);
         }
-        const globalInstance = config.evolutionInstanceName;
-        if (!gwRes.success && globalInstance && globalInstance !== primaryInstance && globalInstance !== fallbackInstance) {
-          logger.info(`[WhatsAppService] Retrying sendTextMessage with global instance ${globalInstance}`);
-          gwRes = await this.gateway.sendTextMessage(globalInstance, payload.parent_phone, text);
-        }
 
         if (gwRes.success) {
           logger.info(`[WhatsAppService] Real message sent to ${payload.parent_phone} for ${payload.student_name}`);
@@ -678,11 +673,6 @@ export class WhatsAppNotificationsService {
           );
           gwRes = await this.gateway.sendTextMessage(fallbackInstance, recipient_phone, message_text);
         }
-        const globalInstance = config.evolutionInstanceName;
-        if (!gwRes.success && globalInstance && globalInstance !== primaryInstance && globalInstance !== fallbackInstance) {
-          logger.info(`[WhatsAppService] Retrying with global instance ${globalInstance}`);
-          gwRes = await this.gateway.sendTextMessage(globalInstance, recipient_phone, message_text);
-        }
 
         if (gwRes.success) {
           gatewaySent = true;
@@ -693,7 +683,7 @@ export class WhatsAppNotificationsService {
           recordHealthError(tenant_id, "disconnect");
           return {
             success: false,
-            error: gwRes.error || "Evolution gateway failed to send text message",
+            error: "خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR لربط رقمك أولاً.",
             gateway_sent: false,
           };
         }
@@ -701,16 +691,23 @@ export class WhatsAppNotificationsService {
         recordHealthError(tenant_id, "timeout");
         return {
           success: false,
-          error: (gwErr as Error).message,
+          error: (gwErr as Error).message || "خدمة واتساب غير متصلة برقمك. يرجى مسح رمز QR أولاً.",
           gateway_sent: false,
         };
       }
     } else {
       // In test or non-gateway environment
-      gatewaySent = true;
-      incrementTenantDailyCount(tenant_id, 1);
-      recordHealthSuccess(tenant_id);
-      return { success: true, gateway_sent: true };
+      if (process.env.NODE_ENV === "test") {
+        gatewaySent = true;
+        incrementTenantDailyCount(tenant_id, 1);
+        recordHealthSuccess(tenant_id);
+        return { success: true, gateway_sent: true };
+      }
+      return {
+        success: false,
+        error: "خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR لربط رقمك أولاً.",
+        gateway_sent: false,
+      };
     }
   }
 
@@ -1460,10 +1457,6 @@ export class WhatsAppNotificationsService {
           let gwRes = await this.gateway.sendTextMessage(primaryInstance, item.phone, text);
           if (!gwRes.success && primaryInstance !== fallbackInstance) {
             gwRes = await this.gateway.sendTextMessage(fallbackInstance, item.phone, text);
-          }
-          const globalInstance = config.evolutionInstanceName;
-          if (!gwRes.success && globalInstance && globalInstance !== primaryInstance && globalInstance !== fallbackInstance) {
-            gwRes = await this.gateway.sendTextMessage(globalInstance, item.phone, text);
           }
           if (gwRes.success) {
             delivered = true;
