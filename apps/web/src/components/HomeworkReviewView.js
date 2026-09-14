@@ -50,6 +50,14 @@ export function renderHomeworkReviewView(homeworkState = {}) {
               <span>نشر واجب جديد (من كتاب أو ملف)</span>
             </button>
 
+            <!-- Refresh Submissions Button -->
+            <button type="button" class="btn btn-secondary" 
+              onclick="window.centrlyApp && window.centrlyApp.refreshHomeworkReview ? window.centrlyApp.refreshHomeworkReview() : null" 
+              style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; font-size: 0.85rem; padding: 0.45rem 0.85rem;">
+              ${getIcon('refresh', 14)}
+              <span>تحديث التسليمات</span>
+            </button>
+
             <!-- Assignment Selector Dropdown -->
             <div style="display: flex; align-items: center; gap: 0.4rem;">
               <label style="font-size: 0.825rem; font-weight: 700; color: #475569;">الواجب النشط:</label>

@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServiceSupabaseClient } from "../../supabase.js";
+import { config } from "../../shared/config/index.js";
 
 export const materialsRouter = Router();
 
@@ -15,7 +16,7 @@ materialsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promi
   const groupId = req.query.group_id as string | undefined;
 
   try {
-    const supabase = getServiceSupabaseClient();
+    const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
     let query = supabase
       .from("study_materials")
       .select("*")
@@ -57,7 +58,7 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
   }
 
   try {
-    const supabase = getServiceSupabaseClient();
+    const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
     let finalUrl = url ? url.trim() : "";
 
     // If file_data (base64) provided, upload directly to Supabase Storage 'homework-submissions'
@@ -124,7 +125,7 @@ materialsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response):
   }
 
   try {
-    const supabase = getServiceSupabaseClient();
+    const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
     const { error } = await supabase
       .from("study_materials")
       .delete()

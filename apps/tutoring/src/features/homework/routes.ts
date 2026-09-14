@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServiceSupabaseClient } from "../../supabase.js";
+import { config } from "../../shared/config/index.js";
 import { verifyParentPortalToken } from "../../shared/utils/tokens.js";
 import { logger } from "../../shared/utils/logger.js";
 
@@ -169,7 +170,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
 
   const requestedMaterialId = req.query.material_id as string | undefined;
   const requestedGroupId = req.query.group_id as string | undefined;
-  const supabase = getServiceSupabaseClient();
+  const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
 
   try {
     // 1. Fetch all active homework assignments for this teacher/tenant
@@ -288,7 +289,7 @@ homeworkRouter.put("/submissions/:id/review", async (req: AuthenticatedRequest, 
   const { status, teacher_notes } = parsed.data;
   const tenantId = req.user?.tenant_id;
   const reviewerId = req.user?.id;
-  const supabase = getServiceSupabaseClient();
+  const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
 
   try {
     // 1. Fetch existing submission

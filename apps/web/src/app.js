@@ -622,6 +622,51 @@ class CentrlyApp {
     openFullscreenBarcodeModal(student);
   }
 
+  async compressImageFile(file, maxWidth = 1600, quality = 0.78) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onerror = () => resolve(null);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => resolve(null);
+        img.onload = () => {
+          try {
+            let { width, height } = img;
+            if (width > maxWidth || height > maxWidth) {
+              if (width > height) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              } else {
+                width = Math.round((width * maxWidth) / height);
+                height = maxWidth;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              resolve(null);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL('image/jpeg', quality);
+            const estimatedBytes = Math.round((compressed.length * 3) / 4);
+            resolve({
+              data: compressed,
+              size: estimatedBytes,
+              name: (file.name || 'homework').replace(/\.[^/.]+$/, '') + '.jpg',
+            });
+          } catch (_) {
+            resolve(null);
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   async handleStudentHomeworkUpload(materialId, file) {
     if (!file) return;
 
@@ -652,45 +697,52 @@ class CentrlyApp {
     const originalText = btn ? btn.innerHTML : '';
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span>جارٍ رفع الواجب للسحابة...</span>';
+      btn.innerHTML = '<span>جارٍ معالجة الملف...</span>';
     }
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const base64Data = e.target.result;
-          await request('/public/homework/submit', {
-            method: 'POST',
-            body: {
-              token,
-              material_id: materialId,
-              file_data: base64Data,
-              file_name: file.name,
-              file_size: file.size,
-            },
-          });
-          alert('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة.');
-          await this.loadStudentPortal(token);
-        } catch (subErr) {
-          console.error('Homework upload error:', subErr);
-          alert(`فشل رفع الواجب: ${subErr.message || 'حدث خطأ في الاتصال'}`);
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-          }
+      let uploadBase64 = null;
+      let uploadFileName = file.name;
+      let uploadFileSize = file.size;
+
+      if (isImage) {
+        if (btn) btn.innerHTML = '<span>جارٍ ضغط وتحسين الصورة للرفع الفوري...</span>';
+        const compressed = await this.compressImageFile(file, 1600, 0.78);
+        if (compressed && compressed.data) {
+          uploadBase64 = compressed.data;
+          uploadFileName = compressed.name;
+          uploadFileSize = compressed.size;
         }
-      };
-      reader.onerror = () => {
-        alert('تعذر قراءة الملف من جهازك. يرجى التأكد من صلاحيات الملف والمحاولة مرة أخرى.');
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = originalText;
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      alert(`خطأ: ${err.message || 'حدث خطأ غير متوقع'}`);
+      }
+
+      if (!uploadBase64) {
+        if (btn) btn.innerHTML = '<span>جارٍ قراءة الملف...</span>';
+        uploadBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = () => reject(new Error('تعذر قراءة الملف من جهازك'));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (btn) btn.innerHTML = '<span>جارٍ حفظ الواجب في السحابة...</span>';
+
+      await request('/public/homework/submit', {
+        method: 'POST',
+        body: {
+          token,
+          material_id: materialId,
+          file_data: uploadBase64,
+          file_name: uploadFileName,
+          file_size: uploadFileSize,
+        },
+      });
+
+      alert('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة.');
+      await this.loadStudentPortal(token);
+    } catch (subErr) {
+      console.error('Homework upload error:', subErr);
+      alert(`فشل رفع الواجب: ${subErr.message || 'حدث خطأ في الاتصال'}`);
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -9050,6 +9102,12 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   }
 
   // Teacher Homework Review & Grading Actions (DEV-HOMEWORK)
+  async refreshHomeworkReview() {
+    await this.loadRouteData('homework');
+    this.renderMainContent();
+    this.showToast('تم تحديث قائمة تسليمات الواجب بنجاح', 'info');
+  }
+
   async onSelectHomeworkAssignment(materialId) {
     if (!this.homeworkState) this.homeworkState = {};
     this.homeworkState.selectedMaterialId = materialId;
