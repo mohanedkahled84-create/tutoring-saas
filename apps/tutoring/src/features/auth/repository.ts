@@ -25,10 +25,13 @@ export class SupabaseAuthRepository implements IAuthRepository {
       throw new Error("INVALID_CREDENTIALS");
     }
 
+    const fullName = (data.user.user_metadata?.full_name as string) || null;
     return {
       user: {
         id: data.user.id,
         email: data.user.email,
+        name: fullName,
+        full_name: fullName,
       },
       token: data.session.access_token,
       refresh_token: data.session.refresh_token,
@@ -45,10 +48,13 @@ export class SupabaseAuthRepository implements IAuthRepository {
       throw new Error("INVALID_REFRESH_TOKEN");
     }
 
+    const fullName = (data.user.user_metadata?.full_name as string) || null;
     return {
       user: {
         id: data.user.id,
         email: data.user.email,
+        name: fullName,
+        full_name: fullName,
       },
       token: data.session.access_token,
       refresh_token: data.session.refresh_token,
@@ -78,7 +84,13 @@ export class SupabaseAuthRepository implements IAuthRepository {
 
       if (!directErr && directData?.user_id) {
         return {
-          user: { id: directData.user_id, email: data.email, role: directData.role || userRole },
+          user: {
+            id: directData.user_id,
+            email: data.email,
+            role: directData.role || userRole,
+            name: data.full_name || null,
+            full_name: data.full_name || null,
+          },
           tenant: {
             id: directData.tenant_id,
             name: directData.tenant_name || data.tenant_name,
@@ -145,7 +157,13 @@ export class SupabaseAuthRepository implements IAuthRepository {
     }
 
     return {
-      user: { id: userId, email: data.email, role: userRole },
+      user: {
+        id: userId,
+        email: data.email,
+        role: userRole,
+        name: data.full_name || null,
+        full_name: data.full_name || null,
+      },
       tenant: {
         id: rpcData.tenant_id,
         name: rpcData.tenant_name || data.tenant_name,
@@ -179,7 +197,7 @@ export class FakeAuthRepository implements IAuthRepository {
       throw new Error("INVALID_CREDENTIALS");
     }
     return {
-      user: { id: user.id, email: user.email },
+      user: { id: user.id, email: user.email, name: (user as any).full_name || null, full_name: (user as any).full_name || null },
       token: `mock-jwt-token-${user.id}`,
       refresh_token: `mock-refresh-token-${user.id}`,
       expires_in: 3600,
@@ -188,7 +206,7 @@ export class FakeAuthRepository implements IAuthRepository {
 
   async refreshToken(refreshToken: string): Promise<LoginResult> {
     return {
-      user: { id: "mock-user", email: "mock@centrly.app" },
+      user: { id: "mock-user", email: "mock@centrly.app", name: "Mock User", full_name: "Mock User" },
       token: `mock-refreshed-jwt-${Date.now()}`,
       refresh_token: `mock-refresh-${Date.now()}`,
       expires_in: 3600,
@@ -220,7 +238,7 @@ export class FakeAuthRepository implements IAuthRepository {
     this.users.push(user);
 
     return {
-      user: { id: userId, email: data.email, role: userRole },
+      user: { id: userId, email: data.email, role: userRole, name: data.full_name || null, full_name: data.full_name || null },
       tenant,
     };
   }

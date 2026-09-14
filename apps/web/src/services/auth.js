@@ -6,6 +6,14 @@ export const authService = {
     return raw ? JSON.parse(raw) : null;
   },
 
+  setUser(user) {
+    try {
+      if (user) {
+        localStorage.setItem('centrly_user', JSON.stringify(user));
+      }
+    } catch (_) {}
+  },
+
   getToken() {
     try {
       return localStorage.getItem('centrly_token');

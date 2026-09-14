@@ -811,7 +811,12 @@ class CentrlyApp {
         phone,
         account_type: accountType,
       });
-      this.user = res.user;
+      this.user = {
+        ...(res.user || {}),
+        full_name: name || res.user?.full_name,
+        name: name || res.user?.name,
+      };
+      authService.setUser(this.user);
       this.startOnboarding();
     } catch (err) {
       this.showAuthAlert(err.message || 'فشل إنشاء الحساب. يرجى التأكد من البيانات والمحاولة مجدداً.');

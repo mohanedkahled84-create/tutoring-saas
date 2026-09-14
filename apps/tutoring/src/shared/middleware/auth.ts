@@ -58,7 +58,7 @@ export async function authenticateUser(
     const userClient = getScopedSupabaseClient(token);
     const { data: userRecord, error: userError } = await userClient
       .from("users")
-      .select("id, tenant_id, role, email, teacher_id, assistant_id")
+      .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name")
       .eq("id", userId)
       .single();
 
@@ -83,9 +83,12 @@ export async function authenticateUser(
     }
 
     // 3. Attach user context and scoped client
+    const fullName = (userRecord as any)?.full_name || authData.user.user_metadata?.full_name || null;
     req.user = {
       id: userId,
       email: email || userRecord.email,
+      name: fullName,
+      full_name: fullName,
       tenant_id: userRecord.tenant_id,
       role: userRecord.role as UserRole,
       teacher_id: userRecord.teacher_id,

@@ -67,6 +67,45 @@
         "Location": "https://centerly-platform.vercel.app/$1"
       }
     },
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "centrly-platform-mohaned-khaled1.vercel.app"
+        }
+      ],
+      "status": 308,
+      "headers": {
+        "Location": "https://centerly-platform.vercel.app/$1"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "centerly-platform-mohaned-khaled1.vercel.app"
+        }
+      ],
+      "status": 308,
+      "headers": {
+        "Location": "https://centerly-platform.vercel.app/$1"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "centrly-app.vercel.app"
+        }
+      ],
+      "status": 308,
+      "headers": {
+        "Location": "https://centerly-platform.vercel.app/$1"
+      }
+    },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

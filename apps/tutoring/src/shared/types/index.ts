@@ -13,6 +13,8 @@ export type UserRole =
 export interface UserContext {
   id: string;
   email?: string;
+  name?: string | null;
+  full_name?: string | null;
   tenant_id: string | null;
   role: UserRole;
   teacher_id?: string | null;
