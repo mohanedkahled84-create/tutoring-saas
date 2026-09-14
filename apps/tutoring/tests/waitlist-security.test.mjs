@@ -71,12 +71,12 @@ test("H-01: Handler error catch block returns 500 with user-friendly Arabic erro
   );
 });
 
-test("M-01: Honeypot field in booking form exists in both index.html and landing.html", () => {
+test("M-01: Legacy waitlist booking form is retired from both index.html and landing.html", () => {
   const indexContent = fs.readFileSync(indexPath, "utf-8");
   const landingContent = fs.readFileSync(landingPath, "utf-8");
 
-  assert.match(indexContent, /name=["']website_url["']/, "index.html must contain honeypot input");
-  assert.match(landingContent, /name=["']website_url["']/, "landing.html must contain honeypot input");
+  assert.equal(indexContent.includes('id="booking-form"'), false, "Legacy waitlist form must be removed from index.html");
+  assert.equal(landingContent.includes('id="booking-form"'), false, "Legacy waitlist form must be removed from landing.html");
 });
 
 test("M-01: Honeypot non-empty submission is silently dropped with 200 OK and no Airtable call", async () => {
