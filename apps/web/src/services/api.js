@@ -77,18 +77,12 @@ export async function request(endpoint, options = {}) {
           }
         }
 
-        // Clean up expired session and reload to show clean login screen
+        // Remove only the expired token; keep user data and logged_in flag
+        // so the caller (e.g. init) can decide gracefully what to do
         try {
           localStorage.removeItem('centrly_token');
           localStorage.removeItem('centrly_refresh_token');
-          localStorage.removeItem('centrly_logged_in');
-          localStorage.removeItem('centrly_user');
         } catch (_) {}
-
-        if (!isAuthEndpoint && typeof window !== 'undefined' && window.location) {
-          window.location.reload();
-          return;
-        }
       }
 
       let errMsg = `Request failed with status ${res.status}`;

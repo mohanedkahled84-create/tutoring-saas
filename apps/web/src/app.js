@@ -330,7 +330,10 @@ class CentrlyApp {
       return;
     }
 
-    if (!authService.isAuthenticated()) {
+    const hasToken = authService.isAuthenticated();
+    const hasCachedSession = authService.hasSession();
+
+    if (!hasToken && !hasCachedSession) {
       const viewParam = urlParams.get('view');
       if (viewParam === 'login' || viewParam === 'signup') {
         this.renderAuth(viewParam);
@@ -339,13 +342,36 @@ class CentrlyApp {
       }
     } else {
       this.user = authService.getUser();
+
+      // If token expired but we have a cached session, try silent refresh first
+      if (!hasToken && hasCachedSession) {
+        const refreshed = await authService.tryRefreshSession();
+        if (!refreshed) {
+          // Refresh failed completely - clear session and show login
+          authService.clearSession();
+          this.renderAuth('login');
+          return;
+        }
+      }
+
+      // Try to fetch fresh profile from server
       try {
         const me = await authService.getProfile().catch(() => null);
         if (me?.user) {
           this.user = { ...this.user, ...me.user };
           authService.setUser(this.user);
         }
-      } catch (_) {}
+      } catch (_) {
+        // getProfile failed (e.g. network error or token just expired)
+        // Use cached user data - dashboard will still work with local data
+      }
+
+      // If we still have no user data at all, redirect to login
+      if (!this.user) {
+        authService.clearSession();
+        this.renderAuth('login');
+        return;
+      }
 
       const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
       const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
@@ -5083,6 +5109,14 @@ class CentrlyApp {
     const row = (this.sessionState.attendanceList || []).find(a => a.student_id === studentId || a.id === studentId);
     const student = (this.students || []).find(s => s.id === studentId) || {};
     const parentPhone = row?.parent_phone || student.parent_phone || row?.phone || '';
+
+    // Block sending if no valid parent phone is registered
+    const cleanCheck = (parentPhone || '').replace(/[\s\-().+]/g, '');
+    if (!cleanCheck || cleanCheck.length < 9) {
+      this.showToast(`رقم هاتف ولي الامر غير مسجل للطالب "${studentName}". يرجى تعديل بيانات الطالب واضافة رقم ولي الامر اولا.`, 'danger');
+      return;
+    }
+
     const isAttended = row?.attended !== false;
     const comment = row?.comment || '';
     const homework = row?.homework || 'none';
@@ -5101,7 +5135,7 @@ class CentrlyApp {
 
     this.showConfirmModal({
       title: 'إرسال إشعار ولي الأمر عبر واتساب',
-      message: `هل ترغب في إرسال تقرير الحصة للطالب "${studentName}" إلى ولي الأمر (${parentPhone || 'هاتف غير مسجل'})؟`,
+      message: `هل ترغب في إرسال تقرير الحصة للطالب "${studentName}" إلى ولي الأمر (${parentPhone})؟`,
       confirmText: 'إرسال الإشعار',
       cancelText: 'إلغاء',
       isDanger: false,
@@ -5128,7 +5162,7 @@ class CentrlyApp {
           this.showToast(`تم إرسال الإشعار بنجاح إلى ولي أمر: ${studentName}`, 'success');
           this.renderMainContent();
         } else {
-          // Fallback to instant 1-click Direct WhatsApp so message is guaranteed to reach parent!
+          // Fallback to instant 1-click Direct WhatsApp
           this.openDirectWhatsAppFallbackModal(studentName, parentPhone, previewText, () => {
             if (row) {
               row.sent = true;
@@ -5149,9 +5183,14 @@ class CentrlyApp {
       cleanPhone = '20' + cleanPhone.slice(1);
     }
 
-    const waUrl = cleanPhone 
-      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`
-      : `https://wa.me/?text=${encodeURIComponent(messageText)}`;
+    // Block modal if no valid phone - prevents sending to teacher's own number
+    if (!cleanPhone || cleanPhone.length < 9) {
+      const recipientLabel = recipientType === 'student' ? 'الطالب' : 'ولي الامر';
+      this.showToast(`رقم هاتف ${recipientLabel} غير مسجل للطالب "${studentName}". يرجى تعديل بيانات الطالب واضافة الرقم اولا.`, 'danger');
+      return;
+    }
+
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
 
     const isStudent = recipientType === 'student';
     const recipientTitle = isStudent ? 'الطالب' : 'ولي الأمر';

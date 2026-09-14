@@ -454,7 +454,7 @@ export class AttendanceService {
           phone: parentPhone,
           decision,
           status: "failed",
-          reason: "رقم هاتف ولي الأمر غير مسجل أو غير صحيح",
+          reason: "رقم هاتف ولي الامر غير مسجل لهذا الطالب. يرجى اضافة الرقم من صفحة الطلاب.",
         });
         continue;
       }

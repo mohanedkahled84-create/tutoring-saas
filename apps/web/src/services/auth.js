@@ -1,4 +1,4 @@
-import { request } from './api.js';
+import { request, API_BASE_URL } from './api.js';
 
 export const authService = {
   getUser() {
@@ -53,6 +53,40 @@ export const authService = {
     // Requires both logged_in flag and an active token
     try {
       return localStorage.getItem('centrly_logged_in') === '1' && !!localStorage.getItem('centrly_token');
+    } catch (_) {
+      return false;
+    }
+  },
+
+  hasSession() {
+    // Returns true if we have cached user data even without a valid token
+    try {
+      return localStorage.getItem('centrly_logged_in') === '1' && !!localStorage.getItem('centrly_user');
+    } catch (_) {
+      return false;
+    }
+  },
+
+  async tryRefreshSession() {
+    try {
+      const refreshToken = localStorage.getItem('centrly_refresh_token');
+      if (!refreshToken) return false;
+
+      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.token) {
+        localStorage.setItem('centrly_token', data.token);
+        if (data.refresh_token) {
+          localStorage.setItem('centrly_refresh_token', data.refresh_token);
+        }
+        return true;
+      }
+      return false;
     } catch (_) {
       return false;
     }
