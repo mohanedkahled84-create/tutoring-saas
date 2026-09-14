@@ -829,20 +829,15 @@ class CentrlyApp {
   nextOnboardingStep(step) {
     // Save state from step 1
     if (this.onboardingStep === 1) {
-      const gName = document.getElementById('obGroupName')?.value;
+      const gName = document.getElementById('obGroupName')?.value?.trim();
       const gPrice = document.getElementById('obSessionPrice')?.value;
       if (gName) this.onboardingState.groupName = gName;
-      if (gPrice) this.onboardingState.sessionPrice = Number(gPrice);
+      if (gPrice !== undefined && gPrice !== '') this.onboardingState.sessionPrice = Number(gPrice);
     }
 
     // Save state from step 2
     if (this.onboardingStep === 2) {
-      const names = Array.from(document.querySelectorAll('.ob-student-name')).map(el => el.value.trim()).filter(Boolean);
-      const phones = Array.from(document.querySelectorAll('.ob-student-phone')).map(el => el.value.trim());
-      this.onboardingState.students = names.map((name, i) => ({
-        name,
-        phone: phones[i] || '',
-      }));
+      this.captureOnboardingStep2Students();
     }
 
     this.onboardingStep = step;
@@ -855,19 +850,138 @@ class CentrlyApp {
     }
   }
 
+  submitOnboardingStep1() {
+    const gName = document.getElementById('obGroupName')?.value?.trim();
+    const gPrice = document.getElementById('obSessionPrice')?.value;
+    if (gName) this.onboardingState.groupName = gName;
+    if (gPrice !== undefined && gPrice !== '') this.onboardingState.sessionPrice = Number(gPrice);
+    this.nextOnboardingStep(2);
+  }
+
+  skipOnboardingStep(step) {
+    if (step === 1) {
+      this.nextOnboardingStep(2);
+    } else if (step === 2) {
+      this.nextOnboardingStep(3);
+    } else if (step === 3) {
+      this.nextOnboardingStep(4);
+    } else if (step === 4) {
+      this.finishOnboarding();
+    }
+  }
+
+  skipAllOnboarding() {
+    this.finishOnboarding();
+  }
+
+  captureOnboardingStep2Students() {
+    const rows = Array.from(document.querySelectorAll('#quickStudentsList .student-row'));
+    const students = [];
+    rows.forEach(row => {
+      const name = row.querySelector('.ob-student-name')?.value?.trim() || '';
+      const studentPhone = row.querySelector('.ob-student-phone')?.value?.trim() || '';
+      const parentPhone = row.querySelector('.ob-parent-phone')?.value?.trim() || '';
+      if (name || studentPhone || parentPhone) {
+        students.push({
+          name,
+          studentPhone,
+          parentPhone,
+          phone: studentPhone || parentPhone,
+        });
+      }
+    });
+    if (students.length > 0) {
+      this.onboardingState.students = students;
+    }
+  }
+
+  submitOnboardingStep2() {
+    this.captureOnboardingStep2Students();
+    this.nextOnboardingStep(3);
+  }
+
   addQuickStudentRow() {
     const list = document.getElementById('quickStudentsList');
     if (!list) return;
-    const count = list.children.length + 1;
+    const count = list.querySelectorAll('.student-row').length + 1;
     const div = document.createElement('div');
-    div.className = 'student-row';
-    div.style = 'display: flex; gap: 0.5rem; align-items: center;';
+    div.className = 'student-row onboarding-student-grid';
     div.innerHTML = `
-      <span style="font-size: 0.8rem; font-weight: 700; color: var(--centrly-text); width: 24px;">${count}.</span>
-      <input type="text" class="form-input ob-student-name" placeholder="اسم الطالب" style="flex: 1;">
-      <input type="tel" class="form-input ob-student-phone" placeholder="رقم ولي الأمر (010...)" dir="ltr" style="flex: 1;">
+      <span style="font-size: 0.8rem; font-weight: 700; color: var(--centrly-text); text-align: center;">${count}.</span>
+      <input type="text" class="form-input ob-student-name" placeholder="اسم الطالب">
+      <input type="tel" class="form-input ob-student-phone" placeholder="هاتف الطالب (010...)" dir="ltr">
+      <input type="tel" class="form-input ob-parent-phone" placeholder="هاتف ولي الأمر (010...)" dir="ltr">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.removeQuickStudentRow(this)" style="padding: 0.4rem; color: var(--centrly-danger); border: none; background: transparent; cursor: pointer;" title="حذف الصف">
+        ${getIcon('delete', 14, 'var(--centrly-danger)')}
+      </button>
     `;
     list.appendChild(div);
+  }
+
+  removeQuickStudentRow(buttonEl) {
+    const row = buttonEl.closest('.student-row');
+    if (!row) return;
+    const list = document.getElementById('quickStudentsList');
+    row.remove();
+    if (list) {
+      Array.from(list.querySelectorAll('.student-row')).forEach((r, idx) => {
+        const numSpan = r.querySelector('span');
+        if (numSpan) numSpan.textContent = `${idx + 1}.`;
+      });
+    }
+  }
+
+  async persistOnboardingGroupAndStudents() {
+    if (this.onboardingState.persisted) return;
+
+    const groupName = this.onboardingState.groupName?.trim();
+    const sessionPrice = Number(this.onboardingState.sessionPrice) || 0;
+
+    let createdGroupId = null;
+    if (groupName) {
+      try {
+        const groupRes = await request('/groups', {
+          method: 'POST',
+          body: {
+            name: groupName,
+            price: sessionPrice,
+            session_price: sessionPrice,
+            billing_model: 'percentage',
+          },
+        });
+        createdGroupId = groupRes?.group?.id || null;
+      } catch (e) {
+        console.warn('Onboarding group creation error:', e);
+      }
+    }
+
+    const studentsToSave = (this.onboardingState.students || []).filter(s => s && s.name && s.name.trim());
+    for (const st of studentsToSave) {
+      const studentName = st.name.trim();
+      const studentPhone = (st.studentPhone || '').trim() || null;
+      const parentPhone = (st.parentPhone || '').trim() || studentPhone || '';
+      try {
+        const stRes = await request('/students', {
+          method: 'POST',
+          body: {
+            name: studentName,
+            student_phone: studentPhone,
+            parent_phone: parentPhone,
+          },
+        });
+        const stId = stRes?.student?.id;
+        if (stId && createdGroupId) {
+          await request(`/groups/${createdGroupId}/students`, {
+            method: 'POST',
+            body: { student_id: stId },
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('Onboarding student creation error:', err);
+      }
+    }
+
+    this.onboardingState.persisted = true;
   }
 
   async saveOnboardingDataAndGoToStep4() {
@@ -885,17 +999,12 @@ class CentrlyApp {
           auto_notification: autoNotif,
           enable_top_performers: true,
         }),
-      });
+      }).catch(() => {});
+
+      this.persistOnboardingGroupAndStudents().catch(() => {});
       this.nextOnboardingStep(4);
     } catch (err) {
-      const alertBox = document.getElementById('onboardingAlert');
-      if (alertBox) {
-        alertBox.style.display = 'block';
-        alertBox.className = 'badge-danger';
-        alertBox.textContent = `فشل حفظ الإعدادات: ${err.message || 'خطأ في الاتصال بالخادم'}`;
-      } else {
-        this.showToast(`فشل حفظ الإعدادات: ${err.message || 'خطأ في الاتصال بالخادم'}`, 'danger');
-      }
+      this.nextOnboardingStep(4);
     }
   }
 
@@ -932,8 +1041,11 @@ class CentrlyApp {
     }
   }
 
-  finishOnboarding() {
+  async finishOnboarding() {
     this.stopWhatsAppStatusPolling();
+    if (!this.onboardingState.persisted) {
+      this.persistOnboardingGroupAndStudents().catch(() => {});
+    }
     this.renderApp();
     this.loadRouteData(this.currentRoute);
   }

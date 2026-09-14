@@ -9,10 +9,10 @@ export function renderOnboardingWizard(step = 1, state = {}) {
   const defaultState = {
     groupName: state.groupName || '',
     sessionPrice: state.sessionPrice !== undefined ? state.sessionPrice : '',
-    students: state.students || [
-      { name: '', phone: '' },
-      { name: '', phone: '' },
-      { name: '', phone: '' },
+    students: state.students && state.students.length > 0 ? state.students : [
+      { name: '', studentPhone: '', parentPhone: '' },
+      { name: '', studentPhone: '', parentPhone: '' },
+      { name: '', studentPhone: '', parentPhone: '' },
     ],
     homeworkSubmission: state.homeworkSubmission || 'in_session',
     autoNotification: state.autoNotification !== false,
@@ -20,33 +20,68 @@ export function renderOnboardingWizard(step = 1, state = {}) {
   };
 
   return `
+    <style>
+      .onboarding-student-grid {
+        display: grid;
+        grid-template-columns: 24px 1.3fr 1fr 1fr 32px;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      @media (max-width: 680px) {
+        .onboarding-student-grid {
+          grid-template-columns: 24px 1fr 32px;
+          gap: 0.45rem;
+          background: #f8fafc;
+          padding: 0.75rem;
+          border-radius: var(--radius-sm, 6px);
+          border: 1px solid var(--centrly-line, #e2e8f0);
+        }
+        .onboarding-student-grid .ob-student-name {
+          grid-column: 2 / 3;
+        }
+        .onboarding-student-grid .ob-student-phone {
+          grid-column: 2 / 3;
+        }
+        .onboarding-student-grid .ob-parent-phone {
+          grid-column: 2 / 3;
+        }
+      }
+    </style>
+
     <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: var(--centrly-surface); padding: 1.5rem;">
-      <div class="card" style="max-width: 680px; width: 100%; padding: 2.5rem; box-shadow: var(--shadow-lg);">
+      <div class="card" style="max-width: 720px; width: 100%; padding: 2.25rem; box-shadow: var(--shadow-lg);">
         
         <!-- Wizard Header & Steps -->
-        <div style="text-align: center; margin-bottom: 2rem;">
-          <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--centrly-ink); margin-bottom: 0.5rem;">
-            أهلاً بك في منصة سنترلي (Centrly)
-          </h1>
-          <p style="color: var(--centrly-text); font-size: 0.875rem;">
-            لنبدأ بإعداد حسابك خلال دقيقتين فقط لتتمكن من رصد الحضور وإرسال رسائل الواتساب
-          </p>
+        <div style="margin-bottom: 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+            <div>
+              <h1 style="font-size: 1.4rem; font-weight: 800; color: var(--centrly-ink); margin-bottom: 0.35rem;">
+                أهلاً بك في منصة سنترلي (Centrly)
+              </h1>
+              <p style="color: var(--centrly-text); font-size: 0.85rem; margin: 0;">
+                إعداد سريع لحسابك لتتمكن من رصد الحضور وإرسال رسائل الواتساب
+              </p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.skipAllOnboarding()" style="font-size: 0.78rem; color: var(--centrly-text); border: 1px solid var(--centrly-line); background: #fff; cursor: pointer; white-space: nowrap;">
+              تخطي الإعداد بالكامل والبدء فوراً
+            </button>
+          </div>
           
           <!-- Stepper Indicator -->
-          <div style="display: flex; justify-content: center; gap: 1.5rem; margin-top: 1.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: ${step >= 1 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
+          <div style="display: flex; justify-content: center; gap: 1.25rem; margin-top: 1rem; border-top: 1px solid var(--centrly-line); padding-top: 1.25rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.45rem; color: ${step >= 1 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
               <span style="width: 24px; height: 24px; border-radius: 50%; background: ${step >= 1 ? 'var(--centrly-blue-700)' : 'var(--centrly-line)'}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">1</span>
               <span>المجموعة</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: ${step >= 2 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
+            <div style="display: flex; align-items: center; gap: 0.45rem; color: ${step >= 2 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
               <span style="width: 24px; height: 24px; border-radius: 50%; background: ${step >= 2 ? 'var(--centrly-blue-700)' : 'var(--centrly-line)'}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">2</span>
               <span>الطلاب</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: ${step >= 3 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
+            <div style="display: flex; align-items: center; gap: 0.45rem; color: ${step >= 3 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
               <span style="width: 24px; height: 24px; border-radius: 50%; background: ${step >= 3 ? 'var(--centrly-blue-700)' : 'var(--centrly-line)'}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">3</span>
               <span>سير العمل</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; color: ${step >= 4 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
+            <div style="display: flex; align-items: center; gap: 0.45rem; color: ${step >= 4 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
               <span style="width: 24px; height: 24px; border-radius: 50%; background: ${step >= 4 ? 'var(--centrly-blue-700)' : 'var(--centrly-line)'}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">4</span>
               <span>واتساب</span>
             </div>
@@ -64,14 +99,17 @@ export function renderOnboardingWizard(step = 1, state = {}) {
             </h3>
             <div class="form-group">
               <label class="form-label">اسم المجموعة / الصف الدراسي</label>
-              <input type="text" id="obGroupName" class="form-input" value="${defaultState.groupName}" placeholder="اسم المجموعة الدراسية" required>
+              <input type="text" id="obGroupName" class="form-input" value="${defaultState.groupName}" placeholder="مثال: الصف الثالث الثانوي - سنتر الأوائل">
             </div>
             <div class="form-group">
               <label class="form-label">سعر الحصة للطالب (جنيه مصري)</label>
-              <input type="number" id="obSessionPrice" class="form-input" value="${defaultState.sessionPrice}" placeholder="100" min="0" required>
+              <input type="number" id="obSessionPrice" class="form-input" value="${defaultState.sessionPrice}" placeholder="100" min="0">
             </div>
-            <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
-              <button class="btn btn-primary" onclick="window.centrlyApp.nextOnboardingStep(2)">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.75rem;">
+              <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.skipOnboardingStep(1)" style="color: var(--centrly-text); border: 1px solid var(--centrly-line); background: #fff;">
+                تخطي هذه الخطوة
+              </button>
+              <button type="button" class="btn btn-primary" onclick="window.centrlyApp.submitOnboardingStep1()">
                 التالي: إضافة الطلاب
               </button>
             </div>
@@ -81,37 +119,46 @@ export function renderOnboardingWizard(step = 1, state = {}) {
         <!-- Step 2: Quick Add Students -->
         ${step === 2 ? `
           <div id="step2">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
               <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
                 ${getIcon('students', 18, 'var(--centrly-blue-700)')}
                 <span>الخطوة 2: إضافة طلاب المجموعة سريعاً</span>
               </h3>
-              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.addQuickStudentRow()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.addQuickStudentRow()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
                 ${getIcon('add', 14)}
                 <span>إضافة طالب آخر</span>
               </button>
             </div>
             <p style="font-size: 0.825rem; color: var(--centrly-text); margin-bottom: 1rem;">
-              أدخل أسماء الطلاب وأرقام أولياء الأمور لتجهيز كروت الباركود وإرسال الإشعارات:
+              أدخل أسماء الطلاب وأرقام هواتفهم (رقم الطالب، أو رقم ولي الأمر، أو كلاهما):
             </p>
             
-            <div id="quickStudentsList" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.5rem;">
+            <div id="quickStudentsList" style="max-height: 290px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.5rem; padding: 0.25rem;">
               ${defaultState.students.map((s, idx) => `
-                <div class="student-row" style="display: flex; gap: 0.5rem; align-items: center;">
-                  <span style="font-size: 0.8rem; font-weight: 700; color: var(--centrly-text); width: 24px;">${idx + 1}.</span>
-                  <input type="text" class="form-input ob-student-name" value="${s.name}" placeholder="اسم الطالب" style="flex: 1;">
-                  <input type="tel" class="form-input ob-student-phone" value="${s.phone}" placeholder="رقم ولي الأمر (010...)" dir="ltr" style="flex: 1;">
+                <div class="student-row onboarding-student-grid">
+                  <span style="font-size: 0.8rem; font-weight: 700; color: var(--centrly-text); text-align: center;">${idx + 1}.</span>
+                  <input type="text" class="form-input ob-student-name" value="${s.name || ''}" placeholder="اسم الطالب">
+                  <input type="tel" class="form-input ob-student-phone" value="${s.studentPhone || s.phone || ''}" placeholder="هاتف الطالب (010...)" dir="ltr">
+                  <input type="tel" class="form-input ob-parent-phone" value="${s.parentPhone || ''}" placeholder="هاتف ولي الأمر (010...)" dir="ltr">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.removeQuickStudentRow(this)" style="padding: 0.4rem; color: var(--centrly-danger); border: none; background: transparent; cursor: pointer;" title="حذف الصف">
+                    ${getIcon('delete', 14, 'var(--centrly-danger)')}
+                  </button>
                 </div>
               `).join('')}
             </div>
 
-            <div style="display: flex; justify-content: space-between;">
-              <button class="btn btn-secondary" onclick="window.centrlyApp.nextOnboardingStep(1)">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.nextOnboardingStep(1)">
                 السابق
               </button>
-              <button class="btn btn-primary" onclick="window.centrlyApp.nextOnboardingStep(3)">
-                التالي: إعدادات سير العمل
-              </button>
+              <div style="display: flex; gap: 0.5rem;">
+                <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.skipOnboardingStep(2)" style="color: var(--centrly-text); border: 1px solid var(--centrly-line); background: #fff;">
+                  تخطي هذه الخطوة
+                </button>
+                <button type="button" class="btn btn-primary" onclick="window.centrlyApp.submitOnboardingStep2()">
+                  التالي: إعدادات سير العمل
+                </button>
+              </div>
             </div>
           </div>
         ` : ''}
@@ -146,13 +193,18 @@ export function renderOnboardingWizard(step = 1, state = {}) {
               </label>
             </div>
 
-            <div style="display: flex; justify-content: space-between;">
-              <button class="btn btn-secondary" onclick="window.centrlyApp.nextOnboardingStep(2)">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.nextOnboardingStep(2)">
                 السابق
               </button>
-              <button class="btn btn-primary" onclick="window.centrlyApp.saveOnboardingDataAndGoToStep4()">
-                حفظ والمتابعة إلى ربط واتساب
-              </button>
+              <div style="display: flex; gap: 0.5rem;">
+                <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.skipOnboardingStep(3)" style="color: var(--centrly-text); border: 1px solid var(--centrly-line); background: #fff;">
+                  تخطي هذه الخطوة
+                </button>
+                <button type="button" class="btn btn-primary" onclick="window.centrlyApp.saveOnboardingDataAndGoToStep4()">
+                  حفظ والمتابعة إلى ربط واتساب
+                </button>
+              </div>
             </div>
           </div>
         ` : ''}
@@ -191,20 +243,25 @@ export function renderOnboardingWizard(step = 1, state = {}) {
               <label class="form-label" style="font-size: 0.8rem;">إرسال رسالة تجريبية لهاتفك للتحقق:</label>
               <div style="display: flex; gap: 0.5rem;">
                 <input type="tel" id="obTestPhone" class="form-input" placeholder="01012345678" dir="ltr" style="font-size: 0.85rem;">
-                <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendTestWhatsAppMessage()">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendTestWhatsAppMessage()">
                   إرسال تجربة
                 </button>
               </div>
               <div id="obTestMsgResult" style="font-size: 0.75rem; margin-top: 0.5rem; display: none;"></div>
             </div>
 
-            <div style="display: flex; justify-content: space-between;">
-              <button class="btn btn-secondary" onclick="window.centrlyApp.nextOnboardingStep(3)">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.nextOnboardingStep(3)">
                 السابق
               </button>
-              <button class="btn btn-primary" onclick="window.centrlyApp.finishOnboarding()">
-                إنهاء والذهاب إلى لوحة التحكم
-              </button>
+              <div style="display: flex; gap: 0.5rem;">
+                <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.finishOnboarding()" style="color: var(--centrly-text); border: 1px solid var(--centrly-line); background: #fff;">
+                  تخطي الربط الآن والبدء مباشرة
+                </button>
+                <button type="button" class="btn btn-primary" onclick="window.centrlyApp.finishOnboarding()">
+                  إنهاء والذهاب إلى لوحة التحكم
+                </button>
+              </div>
             </div>
           </div>
         ` : ''}
