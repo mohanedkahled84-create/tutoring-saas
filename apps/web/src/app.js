@@ -363,7 +363,25 @@ class CentrlyApp {
         }
       } catch (_) {
         // getProfile failed (e.g. network error or token just expired)
-        // Use cached user data - dashboard will still work with local data
+      }
+
+      // If getProfile's 401 handler wiped the token, try one explicit refresh
+      if (!authService.getToken()) {
+        const refreshed = await authService.tryRefreshSession();
+        if (!refreshed) {
+          // No valid token and refresh failed - must re-login
+          authService.clearSession();
+          this.renderAuth('login');
+          return;
+        }
+        // Refresh succeeded - retry profile fetch with fresh token
+        try {
+          const me = await authService.getProfile().catch(() => null);
+          if (me?.user) {
+            this.user = { ...this.user, ...me.user };
+            authService.setUser(this.user);
+          }
+        } catch (_) {}
       }
 
       // If we still have no user data at all, redirect to login
