@@ -238,6 +238,51 @@ class CentrlyApp {
 
   async prefetchCoreData() {
     if (!authService.isAuthenticated()) return;
+    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    if (isAdmin) {
+      try {
+        const [ovRes, proofsRes, tenantsRes] = await Promise.all([
+          request('/admin/overview').catch(() => null),
+          request('/admin/payment-proofs').catch(() => null),
+          request('/admin/tenants').catch(() => null),
+        ]);
+        if (ovRes) {
+          const overview = ovRes.metrics || ovRes || {};
+          const proofs = proofsRes?.payment_proofs || [];
+          const tenants = tenantsRes?.tenants || [];
+          const pendingCount = proofs.filter(p => p.status === 'pending').length;
+          const activeCount = tenants.filter(t => t.subscription_status === 'active').length;
+          const trialCount = tenants.filter(t => t.subscription_status === 'trial').length;
+          const expiredCount = tenants.filter(t => ['expired', 'past_due', 'deactivated'].includes(t.subscription_status)).length;
+          this.adminOverviewData = {
+            overview: {
+              total_tenants: tenants.length || overview.total_tenants || 0,
+              active_tenants: activeCount || overview.active_tenants || 0,
+              trial_tenants: trialCount || overview.trial_tenants || 0,
+              mrr_egp: (activeCount * 599) || overview.mrr_egp || 0,
+              total_students: overview.total_students || 0,
+              total_sessions: overview.total_sessions || 0,
+              whatsapp: overview.whatsapp || { total_sent: 0, total_failed: 0, estimated_cost_egp: 0 },
+            },
+            subscription_breakdown: {
+              active: activeCount,
+              trial: trialCount,
+              pending_verification: pendingCount,
+              expired: expiredCount,
+            },
+            recent_signups: tenants.slice(0, 5),
+            at_risk_tenants: tenants.filter(t => t.subscription_status === 'trial').slice(0, 5).map(t => ({
+              tenant_name: t.name,
+              details: `تنتهي التجربة في: ${t.trial_ends_at ? new Date(t.trial_ends_at).toLocaleDateString('ar-EG') : 'قريباً'}`,
+            })),
+          };
+          if (proofsRes) this.adminProofsData = proofsRes;
+          if (tenantsRes) this.adminTenantsData = tenantsRes;
+        }
+      } catch (_) {}
+      return;
+    }
+
     try {
       const [studRes, grpRes, billingRes] = await Promise.all([
         request('/students').catch(() => null),
@@ -298,15 +343,21 @@ class CentrlyApp {
         const me = await authService.getProfile().catch(() => null);
         if (me?.user) {
           this.user = { ...this.user, ...me.user };
+          authService.setUser(this.user);
         }
       } catch (_) {}
 
+      const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
       const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
       const savedRoute = localStorage.getItem('centrly_current_route');
-      if (savedRoute && savedRoute !== 'dashboard' && savedRoute !== 'center-dashboard') {
-        this.currentRoute = savedRoute;
+      const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'activity-logs'];
+
+      if (isAdmin) {
+        this.currentRoute = (savedRoute && adminRoutes.includes(savedRoute)) ? savedRoute : 'admin-dashboard';
+      } else if (isCenter) {
+        this.currentRoute = (savedRoute && savedRoute !== 'dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'center-dashboard';
       } else {
-        this.currentRoute = isCenter ? 'center-dashboard' : 'dashboard';
+        this.currentRoute = (savedRoute && savedRoute !== 'center-dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'dashboard';
       }
 
       this.restoreSessionState();
@@ -918,6 +969,13 @@ class CentrlyApp {
     if (this.hasSecurityPin && this.isFinancialUnlocked) {
       this.isFinancialUnlocked = false;
     }
+
+    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'activity-logs'];
+    if (isAdmin && !adminRoutes.includes(route)) {
+      route = 'admin-dashboard';
+    }
+
     this.currentRoute = route;
     try {
       localStorage.setItem('centrly_current_route', route);
@@ -1698,18 +1756,31 @@ class CentrlyApp {
       case 'whatsapp':
         return renderWhatsAppSettingsView(this.whatsappState || {});
       case 'activity-logs': {
+        const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+        if (isAdmin) {
+          return renderMessageLogsView(this.messageLogs);
+        }
         const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
         if (isCenter) {
           return renderCenterSettlementsView(this.centerDashboardState);
         }
         return renderMessageLogsView(this.messageLogs);
       }
-      default:
+      default: {
+        const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+        if (isAdmin) {
+          return renderBusinessOwnerDashboard(this.adminOverviewData || {});
+        }
+        const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
+        if (isCenter) {
+          return renderCenterOwnerDashboard(this.centerDashboardState);
+        }
         return renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
           hasPin: this.hasSecurityPin,
           isUnlocked: this.isFinancialUnlocked,
           hideNumbers: this.hideFinancialNumbers,
         });
+      }
     }
   }
 

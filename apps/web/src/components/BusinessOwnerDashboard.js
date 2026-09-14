@@ -42,13 +42,13 @@ export function renderBusinessOwnerDashboard(data = {}) {
       <div class="card" style="margin: 0; background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               <span>${getIcon('dashboard', 24, '#3b82f6')}</span>
               <h2 style="margin: 0; font-size: 1.3rem; font-weight: 800; color: #fff;">لوحة تحكم المؤسس وإحصائيات الأعمال (Centrly HQ)</h2>
-              <span class="badge" style="background: #3b82f6; color: #fff;">Cross-Tenant • خاص بالإدارة</span>
+              <span class="badge" style="background: #2563eb; color: #fff; font-weight: 700;">المدير والمؤسس: مهند خالد</span>
             </div>
             <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.35rem;">
-              نظرة شاملة ومباشرة على نمو المنصة، الإيراد الشهري، تكاليف الواتساب وإشارات خطر الإلغاء عبر جميع المعلمين والسناتر
+              منظومة الإدارة المركزية المستقلة لمتابعة نمو المنصة، إجمالي الأرباح، مراجعة إيصالات الدفع وإدارة المعلمين والسناتر
             </p>
           </div>
 
