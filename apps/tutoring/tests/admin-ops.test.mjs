@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   AdminOpsService,
   FakeAdminOpsRepository,
+  SupabaseAdminOpsRepository,
   formatNewSignupMessage,
 } from "../dist/features/admin-ops/index.js";
 
@@ -111,4 +112,146 @@ test("DEV-68: AdminOpsService - Approve payment proof with custom extendDays (ye
   const diffDays = Math.round((newEnds - Date.now()) / (24 * 60 * 60 * 1000));
   assert.ok(diffDays >= 364 && diffDays <= 366);
 });
+
+test("DEV-SL.3: AdminOpsService - listPaymentProofs filters by status or returns all proofs with tenant metadata", async () => {
+  const repo = new FakeAdminOpsRepository();
+  const service = new AdminOpsService(repo);
+
+  repo.paymentProofs.push(
+    {
+      id: "proof-pending-1",
+      tenant_id: "tenant-1",
+      amount: 899,
+      payment_method: "instapay",
+      status: "pending",
+      created_at: new Date().toISOString(),
+      tenants: { name: "مهند خالد - منظومة تعليمية" },
+    },
+    {
+      id: "proof-approved-1",
+      tenant_id: "tenant-2",
+      amount: 599,
+      payment_method: "vodafone_cash",
+      status: "approved",
+      created_at: new Date().toISOString(),
+      tenants: { name: "أكاديمية المستقبل" },
+    }
+  );
+
+  const pendingProofs = await service.listPaymentProofs("pending");
+  assert.equal(pendingProofs.length, 1);
+  assert.equal(pendingProofs[0].id, "proof-pending-1");
+  assert.equal(pendingProofs[0].amount, 899);
+  assert.equal(pendingProofs[0].tenants?.name, "مهند خالد - منظومة تعليمية");
+
+  const allProofs = await service.listPaymentProofs();
+  assert.equal(allProofs.length, 2);
+});
+
+test("DEV-SL.3: SupabaseAdminOpsRepository - listAllTenants maps owner user details (email, phone, account_type) and student counts", async () => {
+  const mockClient = {
+    from: (table) => {
+      if (table === "tenants") {
+        return {
+          select: (fields) => {
+            assert.ok(fields.includes("users(email, phone, full_name, role)"));
+            assert.ok(fields.includes("students(count)"));
+            return {
+              order: () => Promise.resolve({
+                data: [
+                  {
+                    id: "tenant-7b8b30e0",
+                    name: "مهند خالد - منظومة تعليمية",
+                    status: "active",
+                    subscription_status: "pending_verification",
+                    account_type: "teacher",
+                    trial_ends_at: "2026-09-28T13:10:21.391Z",
+                    subscription_ends_at: null,
+                    deleted_at: null,
+                    created_at: "2026-09-14T13:10:21.808Z",
+                    users: [
+                      {
+                        email: "mohanedkahled84@gmail.com",
+                        phone: "01123671177",
+                        full_name: "مهند خالد",
+                        role: "owner",
+                      },
+                    ],
+                    students: [{ count: 24 }],
+                  },
+                ],
+                error: null,
+              }),
+            };
+          },
+        };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    },
+  };
+
+  const repo = new SupabaseAdminOpsRepository(mockClient);
+  const tenants = await repo.listAllTenants();
+
+  assert.equal(tenants.length, 1);
+  const t = tenants[0];
+  assert.equal(t.id, "tenant-7b8b30e0");
+  assert.equal(t.name, "مهند خالد - منظومة تعليمية");
+  assert.equal(t.subscription_status, "pending_verification");
+  assert.equal(t.account_type, "teacher");
+  assert.equal(t.email, "mohanedkahled84@gmail.com");
+  assert.equal(t.phone, "01123671177");
+  assert.equal(t.full_name, "مهند خالد");
+  assert.equal(t.students_count, 24);
+});
+
+test("DEV-SL.3: SupabaseAdminOpsRepository - getTenant maps single tenant owner contact info correctly", async () => {
+  const mockClient = {
+    from: (table) => {
+      if (table === "tenants") {
+        return {
+          select: () => ({
+            eq: (_col, val) => ({
+              maybeSingle: () => Promise.resolve({
+                data: {
+                  id: val,
+                  name: "سنتر النخبة",
+                  status: "active",
+                  subscription_status: "active",
+                  account_type: "center",
+                  trial_ends_at: null,
+                  subscription_ends_at: "2026-10-15T00:00:00Z",
+                  deleted_at: null,
+                  created_at: "2026-09-01T10:00:00Z",
+                  users: [
+                    {
+                      email: "center_admin@nokhba.com",
+                      phone: "01099887766",
+                      full_name: "مدير سنتر النخبة",
+                      role: "center_owner",
+                    },
+                  ],
+                  students: [{ count: 120 }],
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    },
+  };
+
+  const repo = new SupabaseAdminOpsRepository(mockClient);
+  const tenant = await repo.getTenant("center-123");
+
+  assert.ok(tenant);
+  assert.equal(tenant.id, "center-123");
+  assert.equal(tenant.account_type, "center");
+  assert.equal(tenant.email, "center_admin@nokhba.com");
+  assert.equal(tenant.phone, "01099887766");
+  assert.equal(tenant.students_count, 120);
+});
+
 

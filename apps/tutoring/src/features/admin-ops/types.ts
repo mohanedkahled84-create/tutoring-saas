@@ -3,6 +3,11 @@ export interface AdminTenantSummary {
   name: string;
   status: string;
   subscription_status: string;
+  account_type?: string;
+  email?: string;
+  phone?: string;
+  full_name?: string;
+  students_count?: number;
   trial_ends_at?: string | null;
   subscription_ends_at?: string | null;
   deleted_at?: string | null;

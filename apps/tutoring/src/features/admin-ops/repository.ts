@@ -12,16 +12,42 @@ import { getServiceSupabaseClient } from "../../supabase.js";
 export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
   constructor(private readonly client: SupabaseClient) {}
 
+  private mapTenantRow(row: Record<string, any>): AdminTenantSummary {
+    const rawUsers = row.users;
+    const usersList = Array.isArray(rawUsers) ? rawUsers : (rawUsers ? [rawUsers] : []);
+    const ownerUser = usersList.find((u: any) => u.role === "owner" || u.role === "center_owner") || usersList[0];
+    const rawStudents = row.students;
+    const studentsCount = Array.isArray(rawStudents) && rawStudents[0] && typeof rawStudents[0].count === "number"
+      ? rawStudents[0].count
+      : undefined;
+
+    return {
+      id: row.id,
+      name: row.name,
+      status: row.status,
+      subscription_status: row.subscription_status,
+      account_type: row.account_type || (ownerUser?.role === "center_owner" ? "center" : "teacher"),
+      email: ownerUser?.email || undefined,
+      phone: ownerUser?.phone || undefined,
+      full_name: ownerUser?.full_name || undefined,
+      students_count: studentsCount,
+      trial_ends_at: row.trial_ends_at,
+      subscription_ends_at: row.subscription_ends_at,
+      deleted_at: row.deleted_at,
+      created_at: row.created_at,
+    };
+  }
+
   async listAllTenants(): Promise<AdminTenantSummary[]> {
     const { data, error } = await this.client
       .from("tenants")
-      .select("id, name, status, subscription_status, trial_ends_at, subscription_ends_at, deleted_at, created_at")
+      .select("id, name, status, subscription_status, account_type, trial_ends_at, subscription_ends_at, deleted_at, created_at, users(email, phone, full_name, role), students(count)")
       .order("created_at", { ascending: false });
 
     if (error) {
       throw new Error(error.message);
     }
-    return (data as AdminTenantSummary[]) || [];
+    return ((data || []) as Record<string, any>[]).map((t) => this.mapTenantRow(t));
   }
 
   async getOverviewCounts(): Promise<AdminOverviewMetrics> {
@@ -129,14 +155,14 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
   async getTenant(tenantId: string): Promise<AdminTenantSummary | null> {
     const { data, error } = await this.client
       .from("tenants")
-      .select("id, name, status, subscription_status, trial_ends_at, subscription_ends_at, deleted_at, created_at")
+      .select("id, name, status, subscription_status, account_type, trial_ends_at, subscription_ends_at, deleted_at, created_at, users(email, phone, full_name, role), students(count)")
       .eq("id", tenantId)
       .maybeSingle();
 
     if (error) {
       throw new Error(error.message);
     }
-    return (data as AdminTenantSummary) || null;
+    return data ? this.mapTenantRow(data as Record<string, any>) : null;
   }
 
   async updateTenantSubscription(

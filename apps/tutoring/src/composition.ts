@@ -118,6 +118,7 @@ export interface AppServices {
 export function createCompositionRoot(client?: SupabaseClient): AppServices {
   const effectiveClient = client || supabasePublic;
   const adminClient = getServiceSupabaseClient();
+  const privilegedClient = config.supabaseServiceRoleKey ? adminClient : effectiveClient;
   const messageLogsRepo = new SupabaseMessageLogsRepository(effectiveClient);
 
   return {
@@ -133,10 +134,10 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     students: new StudentsService(new SupabaseStudentsRepository(effectiveClient)),
     groups: new GroupsService(new SupabaseGroupsRepository(effectiveClient)),
     auth: new AuthService(new SupabaseAuthRepository(effectiveClient, adminClient)),
-    adminOps: new AdminOpsService(new SupabaseAdminOpsRepository(adminClient)),
-    businessDashboard: new BusinessDashboardService(new SupabaseBusinessDashboardRepository(adminClient)),
-    telemetry: new TelemetryService(new SupabaseTelemetryRepository(adminClient)),
-    centers: new CentersService(new SupabaseCentersRepository(effectiveClient, adminClient)),
+    adminOps: new AdminOpsService(new SupabaseAdminOpsRepository(privilegedClient)),
+    businessDashboard: new BusinessDashboardService(new SupabaseBusinessDashboardRepository(privilegedClient)),
+    telemetry: new TelemetryService(new SupabaseTelemetryRepository(privilegedClient)),
+    centers: new CentersService(new SupabaseCentersRepository(effectiveClient, privilegedClient)),
     reports: new ReportsService(new SupabaseReportsRepository(effectiveClient), undefined, messageLogsRepo),
     quizzes: new QuizzesService(new SupabaseQuizzesRepository(effectiveClient)),
     tenants: new SupabaseTenantsRepository(effectiveClient),
