@@ -1,15 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
-  "rewrites": [
-    { "source": "/src/(.*)", "destination": "/apps/web/src/$1" },
-    { "source": "/favicon.png", "destination": "/apps/web/favicon.png" },
-    { "source": "/robots.txt", "destination": "/apps/web/robots.txt" },
-    { "source": "/sitemap.xml", "destination": "/apps/web/sitemap.xml" },
-    { "source": "/llms.txt", "destination": "/apps/web/llms.txt" },
-    { "source": "/404.html", "destination": "/apps/web/404.html" },
-    { "source": "/apps/web/(.*)", "destination": "/apps/web/$1" },
-    { "source": "/api/waitlist", "destination": "/api/waitlist.js" },
-    { "source": "/(.*)", "destination": "/apps/web/index.html" }
+  "routes": [
+    {
+      "src": "/(.*)",
+      "status": 308,
+      "headers": {
+        "Location": "https://centerly-platform.vercel.app/$1"
+      }
+    }
   ]
 }
