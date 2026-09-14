@@ -119,7 +119,7 @@ export const authService = {
       body: JSON.stringify(data),
     });
 
-    if (response.user) {
+    if (response.user && response.token) {
       this.setSession(response.user, response.token, response.refresh_token);
       return response;
     }
@@ -131,6 +131,7 @@ export const authService = {
         ...response,
         user: loginRes.user || response.user,
         token: loginRes.token || response.token,
+        refresh_token: loginRes.refresh_token || response.refresh_token,
       };
     }
 

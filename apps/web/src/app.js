@@ -1818,8 +1818,27 @@ class CentrlyApp {
       }
     } catch (err) {
       console.warn('loadRouteData error:', err);
+      const isAuthErr = err.message && (
+        err.message.includes('token') ||
+        err.message.includes('UNAUTHORIZED') ||
+        err.message.includes('401')
+      );
+
+      if (isAuthErr) {
+        // Try refreshing token once and re-attempting route load
+        const refreshed = await authService.tryRefreshSession();
+        if (refreshed) {
+          try {
+            await this.loadRouteData(route);
+            return;
+          } catch (_) {}
+        }
+      }
+
       if (this.routeErrors) {
-        this.routeErrors[route] = err.message || 'حدث خطأ أثناء تحميل البيانات من الخادم. يرجى التحقق من الاتصال والمحاولة مجدداً.';
+        this.routeErrors[route] = isAuthErr
+          ? 'انتهت صلاحية الجلسة. يرجى إعادة تسجيل الدخول لمتابعة العمل بأمان.'
+          : (err.message || 'حدث خطأ أثناء تحميل البيانات من الخادم. يرجى التحقق من الاتصال والمحاولة مجدداً.');
       }
       this.renderMainContent();
     }
@@ -1847,18 +1866,25 @@ class CentrlyApp {
 
   getContentHtml(route) {
     if (this.routeErrors && this.routeErrors[route]) {
+      const isAuthErr = this.routeErrors[route].includes('الجلسة') || this.routeErrors[route].includes('token');
       return `
         <div class="card" style="text-align: center; padding: 2.5rem; border-top: 4px solid var(--centrly-danger); margin: 1rem 0;" dir="rtl">
           <div style="font-size: 2.5rem; margin-bottom: 0.5rem; color: var(--centrly-danger); display: flex; justify-content: center;">
             ${getIcon('risk', 40)}
           </div>
-          <h3 style="color: var(--centrly-danger); font-size: 1.2rem; font-weight: 800; margin: 0 0 0.5rem 0;">تعذر تحميل بيانات هذه الصفحة</h3>
+          <h3 style="color: var(--centrly-danger); font-size: 1.2rem; font-weight: 800; margin: 0 0 0.5rem 0;">${isAuthErr ? 'انتهت صلاحية الجلسة' : 'تعذر تحميل بيانات هذه الصفحة'}</h3>
           <p style="color: var(--centrly-text); font-size: 0.9rem; margin: 0 0 1.25rem 0; line-height: 1.6;">
             ${this.routeErrors[route]}
           </p>
-          <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.retryRoute('${route}')" style="font-weight: 700;">
-            ${getIcon('refresh', 14)} <span>إعادة المحاولة</span>
-          </button>
+          ${isAuthErr ? `
+            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.renderAuth('login')" style="font-weight: 700; padding: 0.5rem 1.5rem;">
+              <span>تسجيل الدخول مجدداً</span>
+            </button>
+          ` : `
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.retryRoute('${route}')" style="font-weight: 700;">
+              ${getIcon('refresh', 14)} <span>إعادة المحاولة</span>
+            </button>
+          `}
         </div>
       `;
     }
