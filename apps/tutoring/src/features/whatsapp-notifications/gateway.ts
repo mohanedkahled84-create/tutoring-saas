@@ -218,28 +218,6 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
     }
   }
 
-  async fetchActiveOpenInstance(): Promise<string | null> {
-    if (!this.apiUrl || !this.apiKey) return null;
-    try {
-      const res = await fetch(`${this.apiUrl}/instance/fetchInstances`, {
-        headers: { apikey: this.apiKey },
-        signal: AbortSignal.timeout(4000),
-      });
-      if (!res.ok) return null;
-      const data = (await res.json()) as any[];
-      if (!Array.isArray(data)) return null;
-      const openInst = data.find(
-        (inst) =>
-          inst.connectionStatus === "open" ||
-          inst.status === "open" ||
-          inst.state === "open"
-      );
-      return openInst?.name || null;
-    } catch {
-      return null;
-    }
-  }
-
   async sendTextMessage(
     instanceName: string,
     recipientNumber: string,
@@ -249,15 +227,14 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
       return { success: true };
     }
 
-    let cleanPhone = recipientNumber.replace(/[\s\-\+\(\)]/g, "");
+    let cleanPhone = recipientNumber.replace(/[\s\-+()]/g, "");
     if (cleanPhone.startsWith("00")) cleanPhone = cleanPhone.slice(2);
     if (cleanPhone.startsWith("01") && cleanPhone.length === 11) {
       cleanPhone = "20" + cleanPhone.slice(1);
     }
 
     try {
-      let activeTarget = instanceName;
-      let res = await fetch(`${this.apiUrl}/message/sendText/${activeTarget}`, {
+      const res = await fetch(`${this.apiUrl}/message/sendText/${instanceName}`, {
         method: "POST",
         headers: {
           apikey: this.apiKey,
@@ -270,36 +247,16 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
         signal: AbortSignal.timeout(10000),
       });
 
-      // If instance does not exist (404) or is not connected, discover any active open instance
-      if (!res.ok && (res.status === 404 || res.status === 400 || res.status === 401)) {
-        const discovered = await this.fetchActiveOpenInstance();
-        if (discovered && discovered !== activeTarget) {
-          activeTarget = discovered;
-          res = await fetch(`${this.apiUrl}/message/sendText/${activeTarget}`, {
-            method: "POST",
-            headers: {
-              apikey: this.apiKey,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              number: cleanPhone,
-              text,
-            }),
-            signal: AbortSignal.timeout(10000),
-          });
-        }
-      }
-
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
-        let friendlyError = "تعذر إرسال رسالة الواتساب: حساب الواتساب غير متصل حالياً أو لم يتم ربطه بعد. يرجى مسح رمز QR من صفحة الإعدادات لتفعيل الإرسال.";
+        let friendlyError = "خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR لربط رقمك أولاً.";
         if (errText.includes("does not exist") || res.status === 404) {
           friendlyError = "حساب الواتساب غير مربوط أو تم حذفه من خادم الواتساب. يرجى فتح الإعدادات ومسح رمز QR لربط جهازك.";
         }
         return { success: false, error: friendlyError };
       }
       return { success: true };
-    } catch (err: unknown) {
+    } catch {
       return {
         success: false,
         error: "تعذر الاتصال بخادم الواتساب. يرجى التأكد من اتصال الإنترنت وحالة حساب الواتساب في الإعدادات.",
@@ -316,7 +273,7 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
       return true;
     }
 
-    let cleanPhone = recipientNumber.replace(/[\s\-\+\(\)]/g, "");
+    let cleanPhone = recipientNumber.replace(/[\s\-+()]/g, "");
     if (cleanPhone.startsWith("00")) cleanPhone = cleanPhone.slice(2);
     if (cleanPhone.startsWith("01") && cleanPhone.length === 11) {
       cleanPhone = "20" + cleanPhone.slice(1);

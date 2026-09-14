@@ -134,11 +134,15 @@ whatsappRouter.get("/status", async (req: AuthenticatedRequest, res: Response): 
   }
 });
 
-whatsappRouter.post(
+  whatsappRouter.post(
   "/test",
   validateBody(testMessageSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const tenantId = req.user?.tenant_id || "default";
+    const tenantId = req.user?.tenant_id;
+    if (!tenantId) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+      return;
+    }
     const requestedTeacherId = (req.body?.teacher_id as string) || (req.query?.teacher_id as string) || undefined;
     const resolution = resolveTargetTeacher(req, requestedTeacherId);
 
@@ -182,7 +186,11 @@ whatsappRouter.post(
       return;
     }
 
-    const tenantId = req.user?.tenant_id || "default";
+    const tenantId = req.user?.tenant_id;
+    if (!tenantId) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+      return;
+    }
     const requestedTeacherId =
       (req.body?.teacher_id as string) || (req.query.teacher_id as string) || undefined;
 
@@ -214,7 +222,11 @@ whatsappRouter.post(
 );
 
 whatsappRouter.get("/qr", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const tenantId = req.user?.tenant_id || "default";
+  const tenantId = req.user?.tenant_id;
+  if (!tenantId) {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
   const requestedTeacherId = (req.query.teacher_id as string) || undefined;
 
   const resolution = resolveTargetTeacher(req, requestedTeacherId);

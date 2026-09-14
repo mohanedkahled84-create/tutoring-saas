@@ -209,7 +209,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
     // 2. Fetch all submissions for current homework
     const { data: submissions, error: subErr } = await supabase
       .from("homework_submissions")
-      .select("id, material_id, student_id, file_url, file_name, file_size, status, teacher_notes, submitted_at, reviewed_at, students(id, name, code, student_code, phone, parent_phone, group_id)")
+      .select("id, material_id, student_id, file_url, file_name, file_size, status, teacher_notes, submitted_at, reviewed_at, students(id, name, code, student_code, student_phone, parent_phone, group_id)")
       .eq("material_id", currentHomework.id)
       .order("submitted_at", { ascending: false });
 
@@ -223,7 +223,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
     // 3. Fetch all enrolled students eligible for this homework
     let studentsQuery = supabase
       .from("students")
-      .select("id, name, code, student_code, phone, parent_phone, group_id")
+      .select("id, name, code, student_code, student_phone, parent_phone, group_id")
       .eq("tenant_id", tenantId);
 
     if (currentHomework.group_id) {
@@ -242,7 +242,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
         id: s.id,
         name: s.name,
         code: s.code || s.student_code || "—",
-        phone: s.phone || s.parent_phone || "",
+        phone: s.student_phone || s.parent_phone || "",
         group_id: s.group_id,
       }));
 
@@ -252,7 +252,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
       student_id: sub.student_id,
       student_name: sub.students?.name || "طالب",
       student_code: sub.students?.code || sub.students?.student_code || "—",
-      student_phone: sub.students?.phone || sub.students?.parent_phone || "",
+      student_phone: sub.students?.student_phone || sub.students?.parent_phone || "",
       file_url: sub.file_url,
       file_name: sub.file_name,
       status: sub.status,

@@ -349,3 +349,54 @@ test("DEV-88: GET /api/whatsapp/qr and /status adhere strictly to snake_case for
     server.close();
   }
 });
+
+test("DEV-88-SEC: HttpEvolutionGateway strictly isolates instances and has ZERO foreign instance discovery", async () => {
+  const gatewaySource = fs.readFileSync(
+    path.resolve(__dirname, "../src/features/whatsapp-notifications/gateway.ts"),
+    "utf8"
+  );
+  assert.ok(
+    !gatewaySource.includes("fetchActiveOpenInstance"),
+    "gateway.ts must NOT have fetchActiveOpenInstance backdoor"
+  );
+  assert.ok(
+    !gatewaySource.includes("discover any active open instance"),
+    "gateway.ts must NOT discover foreign open instances on error"
+  );
+});
+
+test("DEV-88-SEC: WhatsApp router rejects requests missing tenant_id without fallback to default", async () => {
+  const repo = new FakeWhatsAppRepository();
+  const gateway = new FakeEvolutionGateway();
+  const service = new WhatsAppNotificationsService(repo, gateway);
+
+  const app = express();
+  app.use(express.json());
+  app.use((req, _res, next) => {
+    // Missing tenant_id context
+    req.user = { id: "user-unbound", role: "teacher" };
+    req.services = { whatsapp: service };
+    next();
+  });
+  app.use("/api/whatsapp", whatsappRouter);
+
+  const server = app.listen(0);
+  const port = server.address().port;
+
+  try {
+    const qrRes = await fetch(`http://127.0.0.1:${port}/api/whatsapp/qr`);
+    assert.equal(qrRes.status, 403);
+    const qrBody = await qrRes.json();
+    assert.equal(qrBody.error.code, "FORBIDDEN");
+
+    const testRes = await fetch(`http://127.0.0.1:${port}/api/whatsapp/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: "01012345678", message: "test" }),
+    });
+    assert.equal(testRes.status, 403);
+  } finally {
+    server.close();
+  }
+});
+

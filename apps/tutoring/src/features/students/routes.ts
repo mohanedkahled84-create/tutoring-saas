@@ -168,7 +168,7 @@ studentsRouter.post("/:id/send-parent-link", async (req: AuthenticatedRequest, r
 
     let token = student.parent_portal_token;
     if (!token) {
-      token = generateParentPortalToken(student.id, tenantId || "default", 365);
+      token = generateParentPortalToken(student.id, tenantId as string, 365);
     }
 
     const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
@@ -176,12 +176,12 @@ studentsRouter.post("/:id/send-parent-link", async (req: AuthenticatedRequest, r
 
     const whatsAppService = getServices(req).whatsapp;
     const result = await whatsAppService.sendParentPortalLink({
-      tenant_id: tenantId || "default",
+      tenant_id: tenantId as string,
       teacher_id: teacher_id || req.user?.id || null,
       student_id: student.id,
       student_name: student.name,
       parent_phone: parentPhone,
-      teacher_name: teacher_name || (req.user as any)?.name,
+      teacher_name: teacher_name || req.user?.name || req.user?.full_name || undefined,
       portal_url: portalUrl,
     });
 
@@ -240,7 +240,7 @@ studentsRouter.post("/:id/send-student-link", async (req: AuthenticatedRequest, 
 
     let token = student.parent_portal_token;
     if (!token) {
-      token = generateParentPortalToken(student.id, tenantId || "default", 365);
+      token = generateParentPortalToken(student.id, tenantId as string, 365);
     }
 
     const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
@@ -248,12 +248,12 @@ studentsRouter.post("/:id/send-student-link", async (req: AuthenticatedRequest, 
 
     const whatsAppService = getServices(req).whatsapp;
     const result = await whatsAppService.sendStudentPortalLink({
-      tenant_id: tenantId || "default",
+      tenant_id: tenantId as string,
       teacher_id: teacher_id || req.user?.id || null,
       student_id: student.id,
       student_name: student.name,
       student_phone: studentPhone,
-      teacher_name: teacher_name || (req.user as any)?.name,
+      teacher_name: teacher_name || req.user?.name || req.user?.full_name || undefined,
       portal_url: portalUrl,
     });
 
