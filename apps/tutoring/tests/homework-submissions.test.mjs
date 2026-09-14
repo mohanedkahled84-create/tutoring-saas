@@ -50,8 +50,8 @@ test("DEV-HW.2: GET /api/homework/submissions rejects unauthenticated requests w
   assert.equal(data.error.code, "UNAUTHORIZED");
 });
 
-test("DEV-HW.3: POST /api/homework/submit validates required fields", async () => {
-  const res = await fetch(`${baseUrl}/api/homework/submit`, {
+test("DEV-HW.3: POST /api/public/homework/submit validates required fields", async () => {
+  const res = await fetch(`${baseUrl}/api/public/homework/submit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
