@@ -151,7 +151,7 @@ export function renderBillingView(data = {}, user = {}) {
           </div>
 
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <button class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 800; font-size: 0.95rem; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); cursor: pointer;" onclick="window.centrlyApp.openPaymentProofModal('باقة 100 طالب', ${isYearly ? 6469 : 599}, '${isYearly ? 'yearly' : 'monthly'}')">
+            <button class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 800; font-size: 0.95rem; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); cursor: pointer;" onclick="window.centrlyApp.openPlanChoiceModal()">
               تجديد / ترقية الاشتراك الآن
             </button>
           </div>
@@ -160,7 +160,7 @@ export function renderBillingView(data = {}, user = {}) {
       </div>
 
       <!-- Billing Cycle Switch Toggle (Monthly vs Annual with 10% Discount) -->
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 0.5rem;">
+      <div id="pricingPlansSection" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 0.5rem;">
         
         <div style="text-align: center;">
           <h3 style="font-size: 1.35rem; font-weight: 900; color: var(--centrly-ink); margin: 0 0 0.35rem;">
@@ -191,9 +191,9 @@ export function renderBillingView(data = {}, user = {}) {
       <!-- Pricing Plans Comparison Grid -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; align-items: stretch;">
         ${plans.map(plan => {
-          const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
-          const displayPeriod = isYearly ? 'ج.م / سنوياً' : 'ج.م / شهرياً';
-          const buttonAmount = price;
+          const heroAmount = isYearly ? plan.yearlyMonthlyEquivalent : plan.monthlyPrice;
+          const displayPeriod = isYearly ? 'ج.م / شهرياً (فاتورة سنوية)' : 'ج.م / شهرياً';
+          const buttonAmount = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
           const fullPlanName = `${plan.name} (${isYearly ? 'سنوي' : 'شهري'})`;
 
           return `
@@ -221,7 +221,7 @@ export function renderBillingView(data = {}, user = {}) {
                 <div style="margin: 1.25rem 0 0.75rem;">
                   <div style="display: flex; align-items: baseline; gap: 0.4rem;">
                     <span style="font-size: 2.5rem; font-weight: 900; color: ${plan.isPopular ? 'var(--centrly-blue-800)' : 'var(--centrly-ink)'};">
-                      ${Number(price).toLocaleString('ar-EG')}
+                      ${Number(heroAmount).toLocaleString('ar-EG')}
                     </span>
                     <span style="font-size: 0.95rem; font-weight: 700; color: var(--centrly-text);">
                       ${displayPeriod}
@@ -229,12 +229,12 @@ export function renderBillingView(data = {}, user = {}) {
                   </div>
 
                   ${isYearly ? `
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
-                      <span style="font-size: 0.8rem; color: #16a34a; font-weight: 800; background: #ecfdf5; padding: 0.15rem 0.5rem; border-radius: 6px; border: 1px solid #bbf7d0;">
-                        وفر ${Number(plan.yearlySavings).toLocaleString('ar-EG')} ج.م سنوياً
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem; flex-wrap: wrap;">
+                      <span style="font-size: 0.825rem; color: #1e3a8a; font-weight: 800; background: #eff6ff; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #bfdbfe;">
+                        إجمالي: ${Number(plan.yearlyPrice).toLocaleString('ar-EG')} ج.م / سنوياً
                       </span>
-                      <span style="font-size: 0.75rem; color: #64748b;">
-                        (~${Number(plan.yearlyMonthlyEquivalent).toLocaleString('ar-EG')} ج.م/شهر)
+                      <span style="font-size: 0.8rem; color: #16a34a; font-weight: 800; background: #ecfdf5; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #bbf7d0;">
+                        وفرت ${Number(plan.yearlySavings).toLocaleString('ar-EG')} ج.م
                       </span>
                     </div>
                   ` : ''}

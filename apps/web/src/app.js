@@ -350,6 +350,13 @@ class CentrlyApp {
   async init() {
     this.setupModalKeyboardShortcuts();
 
+    // Prevent accidental mouse wheel number changes across all number inputs
+    document.addEventListener('wheel', () => {
+      if (document.activeElement && document.activeElement.type === 'number') {
+        document.activeElement.blur();
+      }
+    }, { passive: true });
+
     // Auto-lock sensitive financial pages when browser tab loses focus or is hidden
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.hasSecurityPin && this.isFinancialUnlocked) {
@@ -489,6 +496,15 @@ class CentrlyApp {
       } else {
         this.currentRoute = (savedRoute && savedRoute !== 'center-dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'dashboard';
       }
+
+      // Check cloud security PIN status for cross-device synchronization
+      try {
+        const pinStatus = await request('/settings/security-pin').catch(() => null);
+        if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
+          this.hasSecurityPin = pinStatus.has_pin;
+          this.isFinancialUnlocked = !this.hasSecurityPin;
+        }
+      } catch (_) {}
 
       this.restoreSessionState();
       this.renderApp();
@@ -758,12 +774,12 @@ class CentrlyApp {
     const isImage = (file.type && file.type.startsWith('image/')) || (file.name && /\.(jpg|jpeg|png|webp|heic|bmp)$/i.test(file.name));
 
     if (!isPdf && !isImage) {
-      alert('يرجى رفع ملف الواجب بصيغة PDF أو صورة واضحة (JPG / PNG / WEBP).');
+      this.showToast('يرجى رفع ملف الواجب بصيغة PDF أو صورة واضحة (JPG / PNG / WEBP).', 'warning');
       return;
     }
 
     if (file.size > 25 * 1024 * 1024) {
-      alert('حجم الملف يتجاوز الحد الأقصى المسموح به (25 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.');
+      this.showToast('حجم الملف يتجاوز الحد الأقصى المسموح به (25 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.', 'warning');
       return;
     }
 
@@ -773,7 +789,7 @@ class CentrlyApp {
       || '';
 
     if (!token) {
-      alert('تعذر التحقق من رمز الطالب. يرجى إعادة فتح رابط الطالب من جديد والمحاولة مرة أخرى.');
+      this.showToast('تعذر التحقق من رمز الطالب. يرجى إعادة فتح رابط الطالب من جديد والمحاولة مرة أخرى.', 'danger');
       return;
     }
 
@@ -822,11 +838,11 @@ class CentrlyApp {
         },
       });
 
-      alert('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة.');
+      this.showToast('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة.', 'success');
       await this.loadStudentPortal(token);
     } catch (subErr) {
       console.error('Homework upload error:', subErr);
-      alert(`فشل رفع الواجب: ${subErr.message || 'حدث خطأ في الاتصال'}`);
+      this.showToast(`فشل رفع الواجب: ${subErr.message || 'حدث خطأ في الاتصال'}`, 'danger');
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -843,6 +859,17 @@ class CentrlyApp {
     } else {
       this.switchAuthTab('login');
     }
+
+    // Auto-dismiss auth error banner when user begins typing
+    const alertBox = document.getElementById('authAlert');
+    const inputs = document.querySelectorAll('#formLogin input, #formSignup input');
+    inputs.forEach(inp => {
+      inp.addEventListener('input', () => {
+        if (alertBox && alertBox.style.display !== 'none') {
+          alertBox.style.display = 'none';
+        }
+      });
+    });
   }
 
   switchAuthTab(tab) {
@@ -1063,6 +1090,13 @@ class CentrlyApp {
 
   async handleLogin(e) {
     e.preventDefault();
+    const btn = e.target?.querySelector?.('button[type="submit"]');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:1rem;height:1rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-left:0.5rem;vertical-align:middle;"></span> جارٍ تسجيل الدخول...';
+    }
+
     const email = document.getElementById('loginEmail')?.value?.trim().toLowerCase() || '';
     const password = document.getElementById('loginPassword')?.value?.trim() || '';
 
@@ -1076,6 +1110,16 @@ class CentrlyApp {
           authService.setUser(this.user);
         }
       } catch (_) {}
+
+      // Check cloud security PIN status for cross-device synchronization
+      try {
+        const pinStatus = await request('/settings/security-pin').catch(() => null);
+        if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
+          this.hasSecurityPin = pinStatus.has_pin;
+          this.isFinancialUnlocked = !this.hasSecurityPin;
+        }
+      } catch (_) {}
+
       const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
       const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
       this.currentRoute = isAdmin ? 'admin-dashboard' : (isCenter ? 'center-dashboard' : 'dashboard');
@@ -1086,11 +1130,23 @@ class CentrlyApp {
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
       this.showAuthAlert(err.message || 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
     }
   }
 
   async handleSignup(e) {
     e.preventDefault();
+    const btn = e.target?.querySelector?.('button[type="submit"]');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:1rem;height:1rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-left:0.5rem;vertical-align:middle;"></span> جارٍ إنشاء الحساب...';
+    }
+
     const accountType = document.getElementById('signupAccountType')?.value || 'teacher';
     let name = '';
     let tenantName = '';
@@ -1099,6 +1155,7 @@ class CentrlyApp {
       const ownerName = document.getElementById('signupCenterOwnerName')?.value?.trim();
       const centerName = document.getElementById('signupCenterName')?.value?.trim();
       if (!ownerName || !centerName) {
+        if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
         this.showAuthAlert('يرجى إدخال اسم المسؤول واسم السنتر التعليمي');
         return;
       }
@@ -1107,6 +1164,7 @@ class CentrlyApp {
     } else {
       name = document.getElementById('signupName')?.value?.trim();
       if (!name) {
+        if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
         this.showAuthAlert('يرجى إدخال اسم المدرس');
         return;
       }
@@ -1119,11 +1177,13 @@ class CentrlyApp {
     const passwordConfirm = document.getElementById('signupPasswordConfirm')?.value?.trim() || '';
 
     if (password.length < 8 || !/\d/.test(password) || !/[A-Z]/.test(password)) {
+      if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
       this.showAuthAlert('كلمة المرور يجب أن تتكون من 8 أحرف على الأقل، وتحتوي على رقم واحد وحرف كبير واحد');
       return;
     }
 
     if (passwordConfirm && password !== passwordConfirm) {
+      if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
       this.showAuthAlert('كلمتا المرور غير متطابقتين. يرجى التأكد وإعادة المحاولة.');
       return;
     }
@@ -1146,6 +1206,11 @@ class CentrlyApp {
       this.startOnboarding();
     } catch (err) {
       this.showAuthAlert(err.message || 'فشل إنشاء الحساب. يرجى التأكد من البيانات والمحاولة مجدداً.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
     }
   }
 
@@ -1974,11 +2039,39 @@ class CentrlyApp {
         }
         case 'settings': {
           try {
-            const billingRes = await request('/billing/status');
-            this.billingState = billingRes;
-            this.saveCache('billingState', this.billingState);
+            const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
+            const [billingRes, quotaRes, statusRes, tplRes] = await Promise.all([
+              request('/billing/status').catch(() => null),
+              request('/whatsapp/quota').catch(() => ({})),
+              request(`/whatsapp/status${teacherParam}`).catch(() => ({ status: 'disconnected' })),
+              request('/templates').catch(() => ({ templates: [] })),
+            ]);
+            if (billingRes) {
+              this.billingState = billingRes;
+              this.saveCache('billingState', this.billingState);
+            }
+            let qrRes = null;
+            if (statusRes?.status !== 'connected') {
+              try {
+                qrRes = await request(`/whatsapp/qr${teacherParam}`).catch(() => null);
+              } catch (err) {
+                console.warn('Initial QR load failed:', err);
+              }
+            }
+            this.whatsappState = {
+              role: this.user?.role,
+              quota: quotaRes || {},
+              status: statusRes?.status || 'disconnected',
+              phone_number: statusRes?.phone_number || '',
+              qr_base64: qrRes?.qr_base64 || null,
+              pairing_code: qrRes?.pairing_code || null,
+              templates: tplRes?.templates || [],
+            };
           } catch (_) {}
           this.renderMainContent();
+          if (this.whatsappState?.status !== 'connected' && this.settingsState?.activeTab === 'whatsapp') {
+            this.startWhatsAppStatusPolling('settings');
+          }
           break;
         }
         case 'whatsapp': {
@@ -3983,6 +4076,7 @@ class CentrlyApp {
           name,
           parent_phone: cleanParentPhone,
           student_phone: cleanStudentPhone,
+          group_id: groupId || null,
         },
       });
 
@@ -3991,6 +4085,24 @@ class CentrlyApp {
           method: 'POST',
           body: { student_id: studentId },
         }).catch(err => console.warn('Enrollment update note:', err));
+      }
+
+      // Update in-memory state and cache immediately
+      if (Array.isArray(this.students)) {
+        const studentIndex = this.students.findIndex(s => s.id === studentId);
+        if (studentIndex !== -1) {
+          const matchedGroup = (this.groups || []).find(g => g.id === groupId);
+          this.students[studentIndex] = {
+            ...this.students[studentIndex],
+            name,
+            parent_phone: cleanParentPhone,
+            student_phone: cleanStudentPhone,
+            group_id: groupId || null,
+            group_name: matchedGroup ? matchedGroup.name : 'مجموعة عامة',
+            groupName: matchedGroup ? matchedGroup.name : 'مجموعة عامة',
+          };
+          this.saveCache('students', this.students);
+        }
       }
 
       this.closeModal();
@@ -4092,9 +4204,21 @@ class CentrlyApp {
             <input type="text" id="newGroupSessionTime" class="form-input" placeholder="04:00 م - 06:00 م" required value="04:00 م - 06:00 م">
           </div>
         </div>
-        <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
-          <input type="number" id="newGroupPrice" class="form-input" min="0" step="5" placeholder="سعر الحصة" required>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
+            <input type="number" id="newGroupPrice" class="form-input" min="0" step="5" placeholder="سعر الحصة" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">تكرار الحصص أسبوعياً *</label>
+            <select id="newGroupSessionsPerWeek" class="form-input">
+              <option value="1" selected>حصة واحدة بالأسبوع (4 حصص شهرياً)</option>
+              <option value="2">حصتان بالأسبوع (8 حصص شهرياً)</option>
+              <option value="3">3 حصص بالأسبوع (12 حصة شهرياً)</option>
+              <option value="4">4 حصص بالأسبوع (16 حصة شهرياً)</option>
+              <option value="5">5 حصص بالأسبوع (20 حصة شهرياً)</option>
+            </select>
+          </div>
         </div>
         
         <!-- 3 Billing Models -->
@@ -4224,9 +4348,21 @@ class CentrlyApp {
             <input type="text" id="editGroupSessionTime" class="form-input" value="${escapeHtml(group.session_time || '04:00 م - 06:00 م')}" required>
           </div>
         </div>
-        <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
-          <input type="number" id="editGroupPrice" class="form-input" min="0" step="5" value="${group.price ?? group.session_price ?? 80}" required>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
+            <input type="number" id="editGroupPrice" class="form-input" min="0" step="5" value="${group.price ?? group.session_price ?? 80}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">تكرار الحصص أسبوعياً *</label>
+            <select id="editGroupSessionsPerWeek" class="form-input">
+              <option value="1" ${(group.sessions_per_week || 1) == 1 ? 'selected' : ''}>حصة واحدة بالأسبوع (4 حصص شهرياً)</option>
+              <option value="2" ${(group.sessions_per_week) == 2 ? 'selected' : ''}>حصتان بالأسبوع (8 حصص شهرياً)</option>
+              <option value="3" ${(group.sessions_per_week) == 3 ? 'selected' : ''}>3 حصص بالأسبوع (12 حصة شهرياً)</option>
+              <option value="4" ${(group.sessions_per_week) == 4 ? 'selected' : ''}>4 حصص بالأسبوع (16 حصة شهرياً)</option>
+              <option value="5" ${(group.sessions_per_week) == 5 ? 'selected' : ''}>5 حصص بالأسبوع (20 حصة شهرياً)</option>
+            </select>
+          </div>
         </div>
         
         <!-- 3 Billing Models -->
@@ -4305,6 +4441,7 @@ class CentrlyApp {
     const day_of_week = document.getElementById('newGroupDayOfWeek')?.value || 'السبت';
     const session_time = document.getElementById('newGroupSessionTime')?.value.trim() || '04:00 م - 06:00 م';
     const price = Number(document.getElementById('newGroupPrice').value) || 0;
+    const sessions_per_week = Number(document.getElementById('newGroupSessionsPerWeek')?.value) || 1;
     const billing_model = document.getElementById('newGroupBillingModel').value;
 
     let center_cut_percentage = 0;
@@ -4339,6 +4476,7 @@ class CentrlyApp {
           room_name: room_name,
           price,
           session_price: price,
+          sessions_per_week,
           billing_model,
           center_cut_percentage,
           fixed_per_student_amount,
@@ -4389,6 +4527,7 @@ class CentrlyApp {
     const day_of_week = document.getElementById('editGroupDayOfWeek')?.value || 'السبت';
     const session_time = document.getElementById('editGroupSessionTime')?.value.trim() || '04:00 م - 06:00 م';
     const price = Number(document.getElementById('editGroupPrice')?.value) || 0;
+    const sessions_per_week = Number(document.getElementById('editGroupSessionsPerWeek')?.value) || 1;
     const billing_model = document.getElementById('editGroupBillingModel')?.value || 'percentage';
 
     let center_cut_percentage = 0;
@@ -4423,6 +4562,7 @@ class CentrlyApp {
           room_name: room_name,
           price,
           session_price: price,
+          sessions_per_week,
           billing_model,
           center_cut_percentage,
           fixed_per_student_amount,
@@ -4441,6 +4581,7 @@ class CentrlyApp {
         cached.room = room_name;
         cached.room_name = room_name;
         cached.price = price;
+        cached.sessions_per_week = sessions_per_week;
         cached.day_of_week = day_of_week;
         cached.session_time = session_time;
       }
@@ -7395,11 +7536,64 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
   }
 
+  openPlanChoiceModal() {
+    const isYearly = (this.billingCycle === 'yearly');
+    const userPlanName = this.billingState?.plan_name || 'باقة 100 طالب';
+    const plans = [
+      { name: 'باقة 100 طالب', monthly: 599, yearly: 6469 },
+      { name: 'باقة 250 طالب', monthly: 899, yearly: 9709 },
+      { name: 'باقة 500 طالب', monthly: 1499, yearly: 16189 },
+    ];
+    const currentMatched = plans.find(p => userPlanName.includes(p.name)) || plans[0];
+    const currentPrice = isYearly ? currentMatched.yearly : currentMatched.monthly;
+
+    const bodyHtml = `
+      <div style="font-family: 'Cairo', sans-serif; text-align: center; padding: 0.5rem 0;">
+        <h4 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem;">
+          ما الذي ترغب في القيام به اليوم؟
+        </h4>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.6;">
+          يمكنك تجديد باقتك الحالية مباشرة بنفس المميزات أو الاطلاع على الباقات الأخرى للترقية لعدد طلاب أكبر.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <!-- Option 1: Renew Current Plan -->
+          <div style="border: 2px solid var(--centrly-blue-700); background: #eff6ff; border-radius: 12px; padding: 1.25rem; text-align: right; cursor: pointer; transition: all 0.2s;" onclick="window.centrlyApp.closeModal(); window.centrlyApp.openPaymentProofModal('${currentMatched.name}', ${currentPrice}, '${isYearly ? 'yearly' : 'monthly'}');">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <strong style="font-size: 1.05rem; color: var(--centrly-blue-800);">تجديد باقتي الحالية (${currentMatched.name})</strong>
+              <span class="badge badge-primary" style="font-weight: 800;">${Number(currentPrice).toLocaleString('ar-EG')} ج.م ${isYearly ? '/ سنوياً' : '/ شهرياً'}</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #475569; margin: 0;">
+              المتابعة بنفس عدد الطلاب الحالي وتمديد فترة الاشتراك فوراً.
+            </p>
+          </div>
+
+          <!-- Option 2: Change / Upgrade Plan -->
+          <div style="border: 1.5px solid #cbd5e1; background: #ffffff; border-radius: 12px; padding: 1.25rem; text-align: right; cursor: pointer; transition: all 0.2s;" onclick="window.centrlyApp.closeModal(); const el = document.getElementById('pricingPlansSection'); if (el) el.scrollIntoView({ behavior: 'smooth' });">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <strong style="font-size: 1.05rem; color: #0f172a;">ترقية أو تغيير الباقة</strong>
+              <span class="badge badge-secondary" style="font-weight: 700;">اختيار سعة جديدة</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #64748b; margin: 0;">
+              استعراض باقات الـ 250 والـ 500 طالب والاشتراك السنوي بخصم 10%.
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.showModal('تجديد أو ترقية الاشتراك', bodyHtml);
+  }
+
   openPaymentProofModal(planName = 'باقة 100 طالب', amount = 599, billingCycle = 'monthly') {
     const existing = document.getElementById('paymentProofModal');
     if (existing) existing.remove();
 
     this.currentProofImageData = null;
+    this.appliedCouponCode = null;
+    this.originalAmount = Number(amount);
+    this.currentEffectiveAmount = Number(amount);
+
     const isYearly = (billingCycle === 'yearly');
     const periodLabel = isYearly ? 'اشتراك سنوي (خصم 10%)' : 'اشتراك شهري';
 
@@ -7409,8 +7603,8 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
           <div class="card-header" style="border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem; margin-bottom: 1rem;">
             <div>
               <h3 class="card-title" style="margin: 0; font-size: 1.15rem; font-weight: 800;">الاشتراك في ${escapeHtml(planName)}</h3>
-              <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
-                المبلغ المطلوب: <strong style="color: var(--centrly-blue-700);">${Number(amount).toLocaleString('ar-EG')} ج.م</strong> (${periodLabel})
+              <p id="proofAmountSummary" style="font-size: 0.85rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
+                المبلغ المطلوب: <strong id="proofDisplayAmount" style="color: var(--centrly-blue-700);">${Number(amount).toLocaleString('ar-EG')} ج.م</strong> (${periodLabel})
               </p>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closePaymentProofModal()" style="border: none; cursor: pointer; padding: 0.35rem 0.6rem; display: flex; align-items: center;">${getIcon('close', 16, '#64748b')}</button>
@@ -7431,9 +7625,24 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
                   نسخ الرقم
                 </button>
               </div>
-              <div style="font-size: 0.775rem; color: #4b5563; margin-top: 0.4rem; line-height: 1.5;">
+              <div id="proofTransferInstruction" style="font-size: 0.775rem; color: #4b5563; margin-top: 0.4rem; line-height: 1.5;">
                 قم بتحويل المبلغ <strong>(${Number(amount).toLocaleString('ar-EG')} ج.م)</strong> إلى هذا الرقم عبر إنستاباي أو من محفظتك، ثم أرفق الاسكرين شوت أدناه.
               </div>
+            </div>
+
+            <!-- Discount Coupon Section -->
+            <div style="margin-bottom: 1rem; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 0.75rem 0.9rem;">
+              <label class="form-label" style="font-weight: 700; font-size: 0.825rem; color: #334155; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+                <span>${getIcon('gift', 14, 'var(--centrly-blue-700)')}</span>
+                <span>لديك كود هدية أو كوبون خصم؟</span>
+              </label>
+              <div style="display: flex; gap: 0.4rem;">
+                <input type="text" id="couponCodeInput" class="form-input" placeholder="اكتب كود الخصم (مثال: CENTR50)" style="flex: 1; text-transform: uppercase; font-weight: 700; font-family: monospace; font-size: 0.85rem;" autocomplete="off">
+                <button type="button" id="btnApplyCoupon" class="btn btn-secondary" onclick="window.centrlyApp.applyCouponCode()" style="font-weight: 800; font-size: 0.825rem; padding: 0.4rem 1rem; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700); cursor: pointer;">
+                  تطبيق
+                </button>
+              </div>
+              <div id="couponFeedback" style="display: none; font-size: 0.78rem; font-weight: 700; margin-top: 0.4rem; padding: 0.3rem 0.5rem; border-radius: 6px;"></div>
             </div>
 
             <!-- Transfer Method Selection -->
@@ -7519,6 +7728,79 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     }, 50);
   }
 
+  async applyCouponCode() {
+    const codeInput = document.getElementById('couponCodeInput');
+    const feedback = document.getElementById('couponFeedback');
+    const applyBtn = document.getElementById('btnApplyCoupon');
+    const displayAmount = document.getElementById('proofDisplayAmount');
+    const transferInstruction = document.getElementById('proofTransferInstruction');
+    const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
+
+    if (!code) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#dc2626';
+        feedback.innerText = 'يرجى إدخال كود الخصم أولاً';
+      }
+      return;
+    }
+
+    if (applyBtn) {
+      applyBtn.disabled = true;
+      applyBtn.innerText = 'تحقق...';
+    }
+
+    try {
+      const res = await request('/billing/validate-coupon', {
+        method: 'POST',
+        body: { code, amount: this.originalAmount },
+      });
+
+      if (res && res.valid) {
+        this.appliedCouponCode = res.gift_code?.code || code;
+        this.currentEffectiveAmount = res.final_amount;
+
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.background = '#ecfdf5';
+          feedback.style.color = '#059669';
+          feedback.innerText = `تم تطبيق الكود (${this.appliedCouponCode}) بنجاح! وفرت ${Number(res.discount_amount).toLocaleString('ar-EG')} ج.م`;
+        }
+
+        if (displayAmount) {
+          displayAmount.innerHTML = `<span style="text-decoration: line-through; color: #94a3b8; font-size: 0.85rem; margin-left: 0.35rem;">${Number(this.originalAmount).toLocaleString('ar-EG')}</span> ${Number(res.final_amount).toLocaleString('ar-EG')} ج.م`;
+        }
+
+        if (transferInstruction) {
+          transferInstruction.innerHTML = `قم بتحويل المبلغ المخفض <strong>(${Number(res.final_amount).toLocaleString('ar-EG')} ج.م)</strong> بعد تطبيق الخصم إلى هذا الرقم، ثم أرفق الاسكرين شوت أدناه.`;
+        }
+
+        if (codeInput) codeInput.disabled = true;
+        if (applyBtn) {
+          applyBtn.disabled = true;
+          applyBtn.innerText = 'مفعّل ✓';
+          applyBtn.style.background = '#10b981';
+          applyBtn.style.color = '#ffffff';
+          applyBtn.style.borderColor = '#10b981';
+        }
+      } else {
+        throw new Error(res?.error?.message || 'كود الخصم غير صالح أو منتهي الصلاحية');
+      }
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#dc2626';
+        feedback.innerText = err.message || 'كود الخصم غير صالح أو منتهي الصلاحية';
+      }
+      if (applyBtn) {
+        applyBtn.disabled = false;
+        applyBtn.innerText = 'تطبيق';
+      }
+    }
+  }
+
   handleProofImageSelected(input) {
     const file = input?.files?.[0];
     if (!file) return;
@@ -7554,8 +7836,10 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         const preview = document.getElementById('proofImagePreview');
         const container = document.getElementById('proofImagePreviewContainer');
         const dropzone = document.getElementById('proofDropzone');
-        if (preview && container) {
+        if (preview) {
           preview.src = compressedDataUrl;
+        }
+        if (container) {
           container.style.display = 'block';
         }
         if (dropzone) {
@@ -7581,6 +7865,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
 
   closePaymentProofModal() {
     this.currentProofImageData = null;
+    this.appliedCouponCode = null;
     const modal = document.getElementById('paymentProofModal');
     if (modal) modal.remove();
   }
@@ -7602,18 +7887,21 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
       btn.innerText = 'جارٍ التأكيد...';
     }
 
+    const effectiveAmount = this.currentEffectiveAmount || Number(amount);
+    const couponTag = this.appliedCouponCode ? `[كود خصم: ${this.appliedCouponCode}]` : '';
     const planTag = `[${planName} - ${billingCycle === 'yearly' ? 'اشتراك سنوي' : 'اشتراك شهري'}]`;
-    const fullNotes = notes ? `${planTag} ${notes}` : planTag;
+    const fullNotes = [planTag, couponTag, notes].filter(Boolean).join(' ');
 
     try {
       await request('/billing/payment-proof', {
         method: 'POST',
         body: JSON.stringify({
-          amount: Number(amount),
+          amount: Number(effectiveAmount),
           payment_method: method,
           reference_number: refNum || null,
           proof_image_url: this.currentProofImageData || null,
           notes: fullNotes,
+          coupon_code: this.appliedCouponCode || null,
         }),
       });
 
@@ -7825,10 +8113,31 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
   promptEditQuizTitle(quizNum) {
     const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
     const currentTitle = quiz?.title || `كويز ${quizNum}`;
-    const newTitle = window.prompt('أدخل اسم الكويز الجديد (أو اتركه فارغاً للرجوع للاسم الافتراضي):', currentTitle);
-    if (newTitle !== null) {
-      this.updateQuizTitle(quizNum, newTitle.trim());
-    }
+    const bodyHtml = `
+      <form id="formEditQuizTitle" onsubmit="event.preventDefault(); window.centrlyApp.confirmEditQuizTitle(${quizNum});">
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="font-weight: 700;">اسم الكويز / الاختبار</label>
+          <input type="text" id="inputEditQuizTitle" class="form-input" value="${escapeHtml(currentTitle)}" placeholder="مثال: كويز الباب الأول" autofocus required>
+          <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.35rem;">
+            أدخل عنواناً مميزاً للكويز لتسهيل تمييزه في تقارير الطلاب.
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 800;">حفظ الاسم</button>
+        </div>
+      </form>
+    `;
+    this.showModal(`تعديل اسم الكويز رقم (${quizNum})`, bodyHtml);
+    setTimeout(() => {
+      document.getElementById('inputEditQuizTitle')?.focus();
+    }, 150);
+  }
+
+  confirmEditQuizTitle(quizNum) {
+    const newTitle = document.getElementById('inputEditQuizTitle')?.value?.trim();
+    this.closeModal();
+    this.updateQuizTitle(quizNum, newTitle);
   }
 
   updateQuizTitle(quizNum, newTitle) {
@@ -8509,7 +8818,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
 
   openSetPinModal() {
     const savedPin = localStorage.getItem('centrly_financial_pin');
-    const hasExisting = Boolean(savedPin);
+    const hasExisting = Boolean(this.hasSecurityPin || savedPin);
     const bodyHtml = `
       <form id="modalSetPinForm" onsubmit="window.centrlyApp.handleSavePinSubmit(event)">
         <div style="text-align: center; margin-bottom: 1.25rem;">
@@ -8518,7 +8827,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
             ${hasExisting ? 'تعديل رمز الأمان (PIN)' : 'تعيين رمز الأمان (PIN)'}
           </h4>
           <p style="font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.5;">
-            ${hasExisting ? 'يرجى كتابة رمز الأمان الحالي أولاً لتأكيد هويتك، ثم إدخال الرمز الجديد.' : 'رمز رقمي سريع من 4 إلى 6 أرقام لحماية أرباحك ومرتبات المساعدين من أي متطفل بجانبك.'}
+            ${hasExisting ? 'يرجى كتابة رمز الأمان الحالي أولاً لتأكيد هويتك، ثم إدخال الرمز الجديد.' : 'رمز رقمي سريع من 4 إلى 6 أرقام لحماية أرباحك ومرتبات المساعدين ومزامنته سحابياً عبر جميع أجهزتك.'}
           </p>
         </div>
 
@@ -8567,7 +8876,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
 
         <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
           <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="submit" class="btn btn-primary" style="font-weight: 800;">${hasExisting ? 'حفظ الرمز الجديد' : 'حفظ وتفعيل الرمز'}</button>
+          <button type="submit" id="btnSubmitSetPin" class="btn btn-primary" style="font-weight: 800;">${hasExisting ? 'حفظ الرمز الجديد' : 'حفظ وتفعيل الرمز'}</button>
         </div>
       </form>
     `;
@@ -8589,14 +8898,15 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     btn.innerHTML = isPass ? '<span style="font-size: 0.75rem; font-weight: 700; color: #2563eb;">إخفاء</span>' : '<span style="font-size: 0.75rem; font-weight: 700; color: #64748b;">إظهار</span>';
   }
 
-  handleSavePinSubmit(e) {
+  async handleSavePinSubmit(e) {
     e.preventDefault();
     const savedPin = localStorage.getItem('centrly_financial_pin');
-    const hasExisting = Boolean(savedPin);
+    const hasExisting = Boolean(this.hasSecurityPin || savedPin);
     const currentPin = document.getElementById('inputCurrentPin')?.value.trim();
     const pin = document.getElementById('inputNewPin')?.value.trim();
     const confirm = document.getElementById('inputConfirmPin')?.value.trim();
     const errEl = document.getElementById('pinErrorMsg');
+    const btn = document.getElementById('btnSubmitSetPin');
 
     const showError = (msg, inputToFocus) => {
       if (errEl) {
@@ -8613,7 +8923,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         showError('يرجى إدخال رمز الأمان الحالي أولاً.', document.getElementById('inputCurrentPin'));
         return;
       }
-      if (currentPin !== savedPin) {
+      if (savedPin && currentPin !== savedPin) {
         showError('رمز الأمان الحالي غير صحيح. يرجى التأكد وإعادة المحاولة.', document.getElementById('inputCurrentPin'));
         const currInput = document.getElementById('inputCurrentPin');
         if (currInput) currInput.value = '';
@@ -8635,17 +8945,35 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
       return;
     }
 
-    localStorage.setItem('centrly_financial_pin', pin);
-    this.hasSecurityPin = true;
-    this.isFinancialUnlocked = true;
-    this.closeModal();
-    this.showToast(hasExisting ? 'تم تحديث رمز الأمان بنجاح.' : 'تم تعيين وتفعيل رمز الأمان بنجاح.', 'success');
-    this.renderMainContent();
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = 'جارٍ الحفظ...';
+    }
+
+    try {
+      await request('/settings/security-pin', {
+        method: 'POST',
+        body: { pin, old_pin: currentPin || undefined }
+      });
+      localStorage.setItem('centrly_financial_pin', pin);
+      this.hasSecurityPin = true;
+      this.isFinancialUnlocked = true;
+      this.closeModal();
+      this.showToast(hasExisting ? 'تم تحديث رمز الأمان ومزامنته سحابياً بنجاح.' : 'تم تعيين وتفعيل رمز الأمان بنجاح.', 'success');
+      this.renderMainContent();
+    } catch (err) {
+      showError(err.message || 'فشل حفظ رمز الأمان. يرجى التأكد من الرمز الحالي وإعادة المحاولة.', document.getElementById('inputCurrentPin'));
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = hasExisting ? 'حفظ الرمز الجديد' : 'حفظ وتفعيل الرمز';
+      }
+    }
   }
 
   promptUnlockFinancials() {
     const savedPin = localStorage.getItem('centrly_financial_pin');
-    if (!savedPin) {
+    if (!this.hasSecurityPin && !savedPin) {
       this.openSetPinModal();
       return;
     }
@@ -8658,7 +8986,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
             إلغاء قفل البيانات المالية
           </h4>
           <p style="font-size: 0.85rem; color: #64748b; margin: 0;">
-            أدخل رمز الـ PIN المكون من ${savedPin.length} أرقام لعرض تفاصيل الأرباح والمرتبات.
+            أدخل رمز الأمان (PIN) المكون من 4 إلى 6 أرقام لعرض تفاصيل الأرباح والمرتبات.
           </p>
         </div>
 
@@ -8672,11 +9000,11 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resetFinancialPinPrompt()" style="font-size: 0.75rem; color: #64748b;">
-            نسيت رمز PIN؟
+            إعادة ضبط الرمز
           </button>
           <div style="display: flex; gap: 0.5rem;">
             <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-            <button type="submit" class="btn btn-primary" style="font-weight: 800;">فتح البيانات الآن</button>
+            <button type="submit" id="btnSubmitUnlockPin" class="btn btn-primary" style="font-weight: 800;">فتح البيانات الآن</button>
           </div>
         </div>
       </form>
@@ -8687,18 +9015,42 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     }, 150);
   }
 
-  handleUnlockPinSubmit(e) {
+  async handleUnlockPinSubmit(e) {
     e.preventDefault();
     const entered = document.getElementById('inputUnlockPin')?.value.trim();
     const savedPin = localStorage.getItem('centrly_financial_pin');
     const errEl = document.getElementById('unlockPinError');
+    const btn = document.getElementById('btnSubmitUnlockPin');
 
-    if (entered === savedPin) {
+    // Fast path: local verification if matched
+    if (savedPin && entered === savedPin) {
       this.isFinancialUnlocked = true;
       this.closeModal();
       this.showToast('تم إلغاء القفل وعرض البيانات بنجاح.', 'success');
       this.renderMainContent();
-    } else {
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = 'جارٍ التحقق...';
+    }
+
+    try {
+      const res = await request('/settings/verify-pin', {
+        method: 'POST',
+        body: { pin: entered }
+      });
+      if (res && res.valid) {
+        localStorage.setItem('centrly_financial_pin', entered);
+        this.isFinancialUnlocked = true;
+        this.closeModal();
+        this.showToast('تم إلغاء القفل وعرض البيانات بنجاح.', 'success');
+        this.renderMainContent();
+        return;
+      }
+      throw new Error('رمز الأمان غير صحيح');
+    } catch (_) {
       if (errEl) {
         errEl.innerText = 'رمز الـ PIN غير صحيح. يرجى المحاولة مرة أخرى.';
         errEl.style.display = 'block';
@@ -8707,6 +9059,11 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
       if (inp) {
         inp.value = '';
         inp.focus();
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = 'فتح البيانات الآن';
       }
     }
   }
@@ -8724,15 +9081,37 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
   }
 
   resetFinancialPinPrompt() {
-    if (confirm('هل ترغب في إعادة ضبط رمز الـ PIN؟ سيتم حذف الرمز القديم وتعيين رمز جديد.')) {
-      localStorage.removeItem('centrly_financial_pin');
-      this.hasSecurityPin = false;
-      this.isFinancialUnlocked = true;
-      this.closeModal();
-      this.showToast('تم حذف رمز PIN السابق. يمكنك الآن تعيين رمز جديد.', 'info');
-      this.renderMainContent();
+    const bodyHtml = `
+      <div style="text-align: center; padding: 0.5rem 0;">
+        <div style="margin-bottom: 0.75rem;">${getIcon('help-circle', 40, '#f59e0b')}</div>
+        <h4 style="margin: 0 0 0.5rem; color: #0f172a; font-weight: 800;">إعادة ضبط رمز الأمان (PIN)</h4>
+        <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          سيتم حذف الرمز السري من حسابك السحابي ومن جميع الأجهزة، لتتمكن من تعيين رمز جديد فوراً.
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="button" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;" onclick="window.centrlyApp.confirmResetFinancialPin()">
+            نعم، إعادة الضبط
+          </button>
+        </div>
+      </div>
+    `;
+    this.showModal('إعادة ضبط رمز الأمان', bodyHtml);
+  }
+
+  async confirmResetFinancialPin() {
+    try {
+      await request('/settings/security-pin', { method: 'DELETE' }).catch(() => null);
+    } catch (_) {}
+    localStorage.removeItem('centrly_financial_pin');
+    this.hasSecurityPin = false;
+    this.isFinancialUnlocked = true;
+    this.closeModal();
+    this.showToast('تم حذف رمز PIN السابق. يمكنك الآن تعيين رمز جديد.', 'info');
+    this.renderMainContent();
+    setTimeout(() => {
       this.openSetPinModal();
-    }
+    }, 200);
   }
 
   // ==========================================================================
@@ -8879,15 +9258,18 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     }
   }
 
-  handleSaveFinancialPin(e) {
+  async handleSaveFinancialPin(e) {
     e.preventDefault();
     const pin = document.getElementById('settingsFinancialPin')?.value?.trim();
 
     if (!pin) {
+      try {
+        await request('/settings/security-pin', { method: 'DELETE' }).catch(() => null);
+      } catch (_) {}
       localStorage.removeItem('centrly_financial_pin');
       this.hasSecurityPin = false;
       this.isFinancialUnlocked = true;
-      this.showToast('تم إلغاء تفعيل الرمز السري للأرباح بنجاح.', 'info');
+      this.showToast('تم إلغاء تفعيل الرمز السري للأرباح بنجاح ومزامنته مع السحابة.', 'info');
       this.renderMainContent();
       return;
     }
@@ -8897,11 +9279,19 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
       return;
     }
 
-    localStorage.setItem('centrly_financial_pin', pin);
-    this.hasSecurityPin = true;
-    this.isFinancialUnlocked = false;
-    this.showToast('تم حفظ الرمز السري للأرباح وتأمين الشاشات المالية بنجاح.', 'success');
-    this.renderMainContent();
+    try {
+      await request('/settings/security-pin', {
+        method: 'POST',
+        body: { pin }
+      });
+      localStorage.setItem('centrly_financial_pin', pin);
+      this.hasSecurityPin = true;
+      this.isFinancialUnlocked = false;
+      this.showToast('تم حفظ الرمز السري للأرباح ومزامنته سحابياً بنجاح لكافة الأجهزة.', 'success');
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(err.message || 'فشل حفظ الرمز السري في السحابة', 'danger');
+    }
   }
 
   // ==========================================================================
@@ -9247,9 +9637,27 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     }
   }
 
-  async deleteMaterial(id, title) {
-    if (!confirm(`هل أنت متأكد من حذف المذكرة ("${title}")؟`)) return;
+  deleteMaterial(id, title) {
+    const bodyHtml = `
+      <div style="text-align: center; padding: 0.5rem 0;">
+        <div style="margin-bottom: 0.75rem;">${getIcon('trash', 40, '#ef4444')}</div>
+        <h4 style="margin: 0 0 0.5rem; color: #0f172a; font-weight: 800;">تأكيد حذف المذكرة</h4>
+        <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          هل أنت متأكد من حذف المذكرة <strong>"${escapeHtml(title)}"</strong>؟ لن يتمكن الطلاب من تحميلها بعد الآن.
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="button" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;" onclick="window.centrlyApp.confirmDeleteMaterial('${id}')">
+            حذف نهائي
+          </button>
+        </div>
+      </div>
+    `;
+    this.showModal('حذف مذكرة', bodyHtml);
+  }
 
+  async confirmDeleteMaterial(id) {
+    this.closeModal();
     try {
       await request(`/materials/${id}`, { method: 'DELETE' });
       this.showToast('تم حذف المذكرة بنجاح', 'success');
@@ -9447,9 +9855,27 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     }
   }
 
-  async deleteTeacherAssistant(id, name) {
-    if (!confirm(`هل أنت متأكد من حذف المساعد ("${name}") من قائمة فريقك؟`)) return;
+  deleteTeacherAssistant(id, name) {
+    const bodyHtml = `
+      <div style="text-align: center; padding: 0.5rem 0;">
+        <div style="margin-bottom: 0.75rem;">${getIcon('trash', 40, '#ef4444')}</div>
+        <h4 style="margin: 0 0 0.5rem; color: #0f172a; font-weight: 800;">تأكيد حذف المساعد</h4>
+        <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          هل أنت متأكد من حذف المساعد <strong>"${escapeHtml(name)}"</strong> من قائمة فريقك؟
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="button" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;" onclick="window.centrlyApp.confirmDeleteTeacherAssistant('${id}', '${escapeHtml(name)}')">
+            حذف نهائي
+          </button>
+        </div>
+      </div>
+    `;
+    this.showModal('حذف مساعد', bodyHtml);
+  }
 
+  async confirmDeleteTeacherAssistant(id, name) {
+    this.closeModal();
     try {
       await request(`/assistants/${id}`, { method: 'DELETE' });
       this.showToast(`تم حذف المساعد (${name}) بنجاح`, 'success');
@@ -9503,27 +9929,63 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     }
   }
 
-  async promptRejectHomework(submissionId, studentName) {
-    const reason = prompt(`هل تريد طلب إعادة حل الواجب للطالب (${studentName})؟\nاكتب ملاحظة أو سبب إعادة الواجب (اختياري):`, 'يرجى إعادة حل الواجب وتصحيحه');
-    if (reason === null) return;
+  promptRejectHomework(submissionId, studentName) {
+    const bodyHtml = `
+      <div style="font-family: 'Cairo', sans-serif;">
+        <p style="font-size: 0.95rem; color: #1e293b; margin-bottom: 1rem; line-height: 1.6;">
+          أنت على وشك طلب إعادة حل الواجب من الطالب <strong style="color: var(--centrly-blue-800);">${escapeHtml(studentName)}</strong>.
+          يمكنك كتابة ملاحظات وتوجيهات للمعلم تظهر للطالب في بوابته:
+        </p>
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <label class="form-label" style="font-weight: 700; color: #334155;">ملاحظات المعلم وأسباب الإعادة (اختياري):</label>
+          <textarea id="rejectHomeworkNotes" class="form-input" rows="3" placeholder="مثال: يرجى إعادة حل المسألة رقم 3 وتوضيح خطوات الحل كاملة..."></textarea>
+        </div>
+      </div>
+    `;
 
-    const note = (reason.trim() || 'يرجى إعادة حل الواجب وتصحيحه');
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="button" id="btnConfirmRejectHw" class="btn" style="background: #ea580c; color: #fff; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; border: none; padding: 0.5rem 1.25rem; border-radius: 8px; cursor: pointer;" onclick="window.centrlyApp.confirmRejectHomework('${escapeHtml(submissionId)}', '${escapeHtml(studentName)}')">
+        <span>تأكيد طلب الإعادة</span>
+      </button>
+    `;
+
+    this.showModal(`طلب إعادة الواجب: ${escapeHtml(studentName)}`, bodyHtml, footerHtml);
+  }
+
+  async confirmRejectHomework(submissionId, studentName) {
+    const notesInput = document.getElementById('rejectHomeworkNotes');
+    const note = notesInput ? notesInput.value.trim() : '';
+    const confirmBtn = document.getElementById('btnConfirmRejectHw');
+
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'جاري الإرسال...';
+    }
 
     try {
       await request(`/homework/submissions/${submissionId}/review`, {
         method: 'PUT',
-        body: { status: 'rejected', teacher_notes: note },
+        body: {
+          status: 'rejected',
+          teacher_notes: note || 'يرجى مراجعة الحل وإعادة إرسال الواجب مرة أخرى.',
+        },
       });
+      this.closeModal();
       this.showToast(`تم طلب إعادة الواجب من الطالب (${studentName}) بنجاح`, 'warning');
       await this.loadRouteData('homework');
     } catch (err) {
       this.showToast(`فشل تحديث حالة الواجب: ${err.message || 'حدث خطأ'}`, 'danger');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'تأكيد طلب الإعادة';
+      }
     }
   }
 
-  async sendHomeworkReminderWhatsApp(studentId, studentName, phone) {
+  async sendHomeworkReminderWhatsApp(studentId, studentName, phone, targetType = 'student') {
     if (!phone) {
-      this.showToast('رقم هاتف الطالب غير متوفر للتذكير عبر واتساب', 'warning');
+      this.showToast(`رقم هاتف ${targetType === 'parent' ? 'ولي الأمر' : 'الطالب'} غير متوفر للتذكير عبر واتساب`, 'warning');
       return;
     }
     const cleanPhone = phone.replace(/[^0-9]/g, '');
@@ -9535,7 +9997,10 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     const cleanSid = String(studentId || '').replace(/-/g, '').slice(0, 8);
     const studentPortalUrl = cleanSid ? `${canonicalOrigin}/s/s${cleanSid}` : `${canonicalOrigin}/parent-portal?portal=student`;
 
-    const message = `أهلاً بك يا ${studentName}، نود تذكيرك بأن لديك واجب مطلوب تسليمه لمادة المعلم (${hwTitle}). يرجى رفع حل الواجب بصيغة PDF عبر بوابتك الخاصة:\n${studentPortalUrl}\n\nبالتوفيق والنجاح دائماً!`;
+    const message = targetType === 'parent'
+      ? `السلام عليكم ورحمة الله، ولي أمر الطالب (${studentName}) المحترم.\nنود إحاطتكم علماً بأن الطالب لم يقم بتسليم الواجب المطلوب (${hwTitle}) حتى الآن.\nيرجى حث الطالب على رفع حل الواجب عبر بوابته الخاصة:\n${studentPortalUrl}\n\nشاكرين تعاونكم المستمر حرصاً على تفوقه!`
+      : `أهلاً بك يا ${studentName}، نود تذكيرك بأن لديك واجب مطلوب تسليمه لمادة المعلم (${hwTitle}). يرجى رفع حل الواجب بصيغة PDF عبر بوابتك الخاصة:\n${studentPortalUrl}\n\nبالتوفيق والنجاح دائماً!`;
+
     const waUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
   }
@@ -9955,11 +10420,27 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     if (modal) modal.remove();
   }
 
-  async handleApproveProof(proofId, extendDays = 30) {
-    if (!confirm(`هل أنت متأكد من اعتماد هذا الإيصال وتفعيل الاشتراك لمدة ${extendDays} يوماً؟`)) {
-      return;
-    }
+  handleApproveProof(proofId, extendDays = 30) {
+    const bodyHtml = `
+      <div style="text-align: center; padding: 0.5rem 0;">
+        <div style="margin-bottom: 0.75rem;">${getIcon('checkCircle', 40, '#10b981')}</div>
+        <h4 style="margin: 0 0 0.5rem; color: #0f172a; font-weight: 800;">تأكيد اعتماد الإيصال</h4>
+        <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          هل أنت متأكد من اعتماد هذا الإيصال وتفعيل الاشتراك لهذا المشترك لمدة <strong>${extendDays} يوماً</strong>؟
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="button" class="btn btn-primary" style="background: #10b981; border-color: #10b981; font-weight: 800;" onclick="window.centrlyApp.confirmApproveProof('${proofId}', ${extendDays})">
+            اعتماد وتفعيل الاشتراك
+          </button>
+        </div>
+      </div>
+    `;
+    this.showModal('اعتماد إيصال سداد', bodyHtml);
+  }
 
+  async confirmApproveProof(proofId, extendDays = 30) {
+    this.closeModal();
     try {
       await request(`/admin/payment-proofs/${proofId}/approve`, {
         method: 'POST',
@@ -9979,9 +10460,33 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     }
   }
 
-  async handleRejectProofPrompt(proofId) {
-    const reason = prompt('يرجى كتابة سبب رفض الإيصال (سيتم إشعار الحساب به):', 'التحويل لم يصل إلى الحساب البنكي أو المحفظة');
-    if (reason === null) return;
+  handleRejectProofPrompt(proofId) {
+    const defaultReason = 'التحويل لم يصل إلى الحساب البنكي أو المحفظة';
+    const bodyHtml = `
+      <form id="formRejectProof" onsubmit="event.preventDefault(); window.centrlyApp.confirmRejectProof('${proofId}');">
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="font-weight: 700;">سبب الرفض (سيتم إشعار الحساب به) *</label>
+          <textarea id="adminRejectReasonInput" class="form-input" rows="3" required style="resize: vertical;">${defaultReason}</textarea>
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;">تأكيد الرفض</button>
+        </div>
+      </form>
+    `;
+    this.showModal('رفض إيصال السداد', bodyHtml);
+    setTimeout(() => {
+      document.getElementById('adminRejectReasonInput')?.focus();
+    }, 150);
+  }
+
+  async confirmRejectProof(proofId) {
+    const reason = document.getElementById('adminRejectReasonInput')?.value?.trim();
+    if (!reason) {
+      this.showToast('يرجى توضيح سبب الرفض', 'warning');
+      return;
+    }
+    this.closeModal();
 
     try {
       await request(`/admin/payment-proofs/${proofId}/reject`, {

@@ -34,10 +34,11 @@ export function calculateStudentSummary(raw: StudentRawPerformanceData): Student
     validGradesCount > 0 ? Math.round((totalNormalizedScore / validGradesCount) * 10) / 10 : 0;
 
   // Overall performance score: 70% weighted quiz performance + 30% attendance rate
+  // If student took 0 quizzes, overall score reflects attendance weighted at 30%
   const overall_score =
     validGradesCount > 0
       ? Math.round((average_score * 0.7 + attendance_rate * 0.3) * 10) / 10
-      : attendance_rate;
+      : Math.round((attendance_rate * 0.3) * 10) / 10;
 
   return {
     student_id: student.id,
@@ -60,12 +61,21 @@ export function calculateStudentSummary(raw: StudentRawPerformanceData): Student
 
 /**
  * Pure ranking function: sorts students descending by performance and assigns leaderboard ranks.
- * 1. Higher overall_score / average_score first
- * 2. Higher attendance_rate as tie-breaker
- * 3. Student name alphabetically as second tie-breaker
+ * 0. Students who took quizzes/exams strictly rank ABOVE students who took 0 quizzes
+ * 1. Higher overall_score first
+ * 2. Higher average quiz score second
+ * 3. Higher attendance_rate as tie-breaker
+ * 4. Student name alphabetically as final tie-breaker
  */
 export function rankStudents(students: StudentPerformanceRecord[]): StudentPerformanceRecord[] {
   const sorted = [...students].sort((a, b) => {
+    // 0. Students who took quizzes/exams strictly rank ABOVE students who took 0 quizzes
+    const aHasQuizzes = (a.total_quizzes || 0) > 0;
+    const bHasQuizzes = (b.total_quizzes || 0) > 0;
+    if (aHasQuizzes !== bHasQuizzes) {
+      return bHasQuizzes ? 1 : -1;
+    }
+
     // 1. Overall score
     if (b.overall_score !== a.overall_score) {
       return b.overall_score - a.overall_score;

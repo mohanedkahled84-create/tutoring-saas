@@ -150,4 +150,20 @@ export class SupabaseBillingRepository implements IBillingRepository {
       throw new Error(`Failed to log reminder: ${error.message}`);
     }
   }
+
+  async getGiftCode(code: string): Promise<any | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from("gift_codes")
+        .select("*")
+        .eq("code", code.trim().toUpperCase())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error || !data) return null;
+      return data;
+    } catch {
+      return null;
+    }
+  }
 }

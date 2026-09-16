@@ -15,7 +15,7 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
   async list(tenantId?: string): Promise<Group[]> {
     let query = this.client
       .from("groups")
-      .select("id, tenant_id, name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name, group_students(student_id)")
+      .select("id, tenant_id, name, price, session_price, sessions_per_week, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name, group_students(student_id)")
       .order("name", { ascending: true });
 
     if (tenantId) {
@@ -27,7 +27,7 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
       // Fallback without join if relational embed fails
       const fallback = await this.client
         .from("groups")
-        .select("id, tenant_id, name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name")
+        .select("id, tenant_id, name, price, session_price, sessions_per_week, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name")
         .order("name", { ascending: true });
       if (fallback.error) {
         throw new Error(fallback.error.message);
@@ -48,7 +48,7 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
   async findById(id: string): Promise<Group | null> {
     const { data, error } = await this.client
       .from("groups")
-      .select("id, tenant_id, name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name, group_students(student_id)")
+      .select("id, tenant_id, name, price, session_price, sessions_per_week, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name, group_students(student_id)")
       .eq("id", id)
       .maybeSingle();
 
@@ -72,6 +72,7 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
       name: data.name,
       price: data.price !== undefined ? data.price : (data.session_price || 0),
       session_price: data.session_price !== undefined ? data.session_price : (data.price || 0),
+      sessions_per_week: data.sessions_per_week || 1,
       billing_model: data.billing_model || "percentage",
       fixed_rent_amount: data.fixed_rent_amount || null,
       center_name: data.center_name || null,
@@ -100,12 +101,15 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
   async update(id: string, data: UpdateGroupDTO): Promise<Group | null> {
     const updatePayload: Record<string, unknown> = {};
     if (data.name !== undefined) updatePayload.name = data.name;
-    if (data.price !== undefined) {
+    if (data.price !== undefined && data.price !== null) {
       updatePayload.price = data.price;
       updatePayload.session_price = data.price;
-    } else if (data.session_price !== undefined) {
+    } else if (data.session_price !== undefined && data.session_price !== null) {
       updatePayload.price = data.session_price;
       updatePayload.session_price = data.session_price;
+    }
+    if (data.sessions_per_week !== undefined && data.sessions_per_week !== null) {
+      updatePayload.sessions_per_week = data.sessions_per_week;
     }
     if (data.billing_model !== undefined) updatePayload.billing_model = data.billing_model;
     if (data.fixed_rent_amount !== undefined) updatePayload.fixed_rent_amount = data.fixed_rent_amount;
@@ -302,6 +306,7 @@ export class FakeGroupsRepository implements IGroupsRepository {
       name: data.name,
       price: data.price !== undefined ? data.price : (data.session_price || 0),
       session_price: data.session_price !== undefined ? data.session_price : (data.price || 0),
+      sessions_per_week: data.sessions_per_week || 1,
       billing_model: data.billing_model || "percentage",
       center_cut_percentage: data.center_cut_percentage ?? null,
       fixed_per_student_amount: data.fixed_per_student_amount ?? null,

@@ -130,7 +130,9 @@ export function renderHomeworkReviewView(homeworkState = {}) {
             </div>
           </div>
 
-          <div class="card" style="margin: 0; background: #fff; border-top: 4px solid #ef4444;">
+          <div class="card" style="margin: 0; background: #fff; border-top: 4px solid #ef4444; cursor: pointer; transition: transform 0.15s ease;" 
+            onclick="window.centrlyApp && window.centrlyApp.switchHomeworkTab ? window.centrlyApp.switchHomeworkTab('missing') : null"
+            title="اضغط للانتقال لقائمة الطلاب المتأخرين وتذكيرهم">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
                 <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
@@ -143,8 +145,9 @@ export function renderHomeworkReviewView(homeworkState = {}) {
               </div>
               <span class="badge badge-danger" style="font-size: 0.8rem; font-weight: 800;">متأخر</span>
             </div>
-            <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.4rem;">
-              متاح تذكيرهم برسالة واتساب بضغطة زر
+            <div style="font-size: 0.75rem; color: #dc2626; margin-top: 0.4rem; font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">
+              <span>اضغط لعرض المتأخرين وتذكيرهم</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             </div>
           </div>
 
@@ -550,16 +553,17 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                     <th>كود الطالب</th>
                     <th>اسم الطالب</th>
                     <th>المجموعة</th>
-                    <th>رقم الهاتف</th>
+                    <th>هاتف الطالب / ولي الأمر</th>
                     <th>الحالة</th>
-                    <th style="text-align: center;">إجراءات التذكير</th>
+                    <th style="text-align: center;">إجراءات التذكير بالواتساب</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${missing.length > 0 ? missing.map(m => {
                     const grp = groups.find(g => g.id === m.group_id);
                     const groupName = grp ? grp.name : '—';
-                    const studentPhone = m.phone || '';
+                    const studentPhone = m.student_phone || m.phone || '';
+                    const parentPhone = m.parent_phone || '';
 
                     return `
                       <tr>
@@ -568,30 +572,44 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                         <td>
                           <span class="badge badge-secondary">${escapeHtml(groupName)}</span>
                         </td>
-                        <td style="font-family: monospace; font-size: 0.85rem; color: #475569;" dir="ltr">
-                          ${escapeHtml(studentPhone || '—')}
+                        <td style="font-family: monospace; font-size: 0.8rem; color: #475569;" dir="ltr">
+                          <div><b style="color: #1e293b;">طالب:</b> ${escapeHtml(studentPhone || '—')}</div>
+                          ${parentPhone ? `<div><b style="color: #64748b;">ولي أمر:</b> ${escapeHtml(parentPhone)}</div>` : ''}
                         </td>
                         <td>
                           <span class="badge badge-danger" style="font-weight: 700;">لم يُسلّم</span>
                         </td>
                         <td style="text-align: center;">
-                          <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                            <!-- Direct WhatsApp Reminder Button -->
-                            <button type="button" class="btn btn-sm btn-secondary" 
-                              onclick="window.centrlyApp && window.centrlyApp.sendHomeworkReminderWhatsApp ? window.centrlyApp.sendHomeworkReminderWhatsApp('${escapeHtml(m.id)}', '${escapeHtml(m.name)}', '${escapeHtml(studentPhone)}') : null"
-                              title="إرسال تذكير عبر واتساب"
-                              style="display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 700; color: #059669; border-color: #a7f3d0; padding: 0.25rem 0.65rem;">
-                              ${getIcon('whatsapp', 14, '#059669')}
-                              <span>تذكير واتساب</span>
-                            </button>
+                          <div style="display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; justify-content: center;">
+                            <!-- Student WhatsApp Reminder -->
+                            ${studentPhone ? `
+                              <button type="button" class="btn btn-sm" 
+                                onclick="window.centrlyApp && window.centrlyApp.sendHomeworkReminderWhatsApp ? window.centrlyApp.sendHomeworkReminderWhatsApp('${escapeHtml(m.id)}', '${escapeHtml(m.name)}', '${escapeHtml(studentPhone)}', 'student') : null"
+                                title="إرسال تذكير للطالب عبر واتساب"
+                                style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 0.25rem 0.55rem; font-size: 0.75rem;">
+                                ${getIcon('whatsapp', 13, '#059669')}
+                                <span>تذكير الطالب</span>
+                              </button>
+                            ` : ''}
+
+                            <!-- Parent WhatsApp Reminder -->
+                            ${parentPhone ? `
+                              <button type="button" class="btn btn-sm" 
+                                onclick="window.centrlyApp && window.centrlyApp.sendHomeworkReminderWhatsApp ? window.centrlyApp.sendHomeworkReminderWhatsApp('${escapeHtml(m.id)}', '${escapeHtml(m.name)}', '${escapeHtml(parentPhone)}', 'parent') : null"
+                                title="إرسال تذكير لولي الأمر عبر واتساب"
+                                style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.25rem 0.55rem; font-size: 0.75rem;">
+                                ${getIcon('whatsapp', 13, '#2563eb')}
+                                <span>تذكير ولي الأمر</span>
+                              </button>
+                            ` : ''}
 
                             <!-- Copy Student Link Button -->
                             <button type="button" class="btn btn-sm btn-secondary" 
                               onclick="window.centrlyApp && window.centrlyApp.copyStudentLink ? window.centrlyApp.copyStudentLink('${escapeHtml(m.id)}') : null"
-                              title="نسخ رابط الطالب لإرساله له"
-                              style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem;">
-                              ${getIcon('link', 13, 'currentColor')}
-                              <span>رابط الطالب</span>
+                              title="نسخ رابط الطالب المباشر"
+                              style="display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.75rem; padding: 0.25rem 0.45rem;">
+                              ${getIcon('link', 12, 'currentColor')}
+                              <span>الرابط</span>
                             </button>
                           </div>
                         </td>

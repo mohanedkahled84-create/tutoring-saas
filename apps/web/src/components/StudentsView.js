@@ -220,7 +220,11 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 <tr>
                   <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>
                   <td style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(s.name || s.full_name || '—')}</td>
-                  <td><span class="badge badge-blue" style="font-weight: 600;">${escapeHtml(displayGroupName)}</span></td>
+                  <td style="max-width: 150px;">
+                    <span class="badge badge-blue" title="${escapeHtml(displayGroupName)}" style="font-weight: 700; display: inline-block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; padding: 0.3rem 0.65rem; border-radius: 8px; font-size: 0.8rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                      ${escapeHtml(displayGroupName)}
+                    </span>
+                  </td>
                   <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; font-weight: 600;">
                     ${escapeHtml(studentPhone || '—')}
                   </td>

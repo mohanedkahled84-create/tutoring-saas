@@ -122,6 +122,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     if (data.parent_portal_sent_at !== undefined) updatePayload.parent_portal_sent_at = data.parent_portal_sent_at;
     if (data.student_portal_sent_at !== undefined) updatePayload.student_portal_sent_at = data.student_portal_sent_at;
     if (data.parent_portal_token !== undefined) updatePayload.parent_portal_token = data.parent_portal_token;
+    if (data.group_id !== undefined) updatePayload.group_id = data.group_id;
 
     const { data: updated, error } = await this.client
       .from("students")
@@ -133,6 +134,23 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     if (error) {
       throw new Error(error.message);
     }
+
+    if (updated && data.group_id) {
+      try {
+        const studentTenantId = (updated as any)?.tenant_id;
+        await this.client
+          .from("group_students")
+          .upsert(
+            {
+              tenant_id: studentTenantId,
+              student_id: id,
+              group_id: data.group_id,
+            },
+            { onConflict: "student_id,group_id" }
+          );
+      } catch {}
+    }
+
     return (updated as Student) || null;
   }
 

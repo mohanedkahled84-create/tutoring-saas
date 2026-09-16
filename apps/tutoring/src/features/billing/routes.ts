@@ -13,12 +13,35 @@ const paymentProofSchema = z.object({
   reference_number: z.string().max(100).optional().nullable(),
   proof_image_url: z.string().optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
+  coupon_code: z.string().max(50).optional().nullable(),
+});
+
+const validateCouponSchema = z.object({
+  code: z.string().min(1, "Coupon code is required").max(50),
+  amount: z.number().positive("Amount must be a positive number"),
 });
 
 function resolveBillingService(req: AuthenticatedRequest): BillingService {
   const services = getServices(req);
   return services.billing as BillingService;
 }
+
+// POST /api/billing/validate-coupon
+billingRouter.post(
+  "/validate-coupon",
+  validateBody(validateCouponSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const service = resolveBillingService(req);
+      const result = await service.validateCoupon(req.body.code, req.body.amount);
+      res.json(result);
+    } catch (err: unknown) {
+      res.status(400).json({
+        error: { code: "INVALID_COUPON", message: (err as Error).message },
+      });
+    }
+  }
+);
 
 // DEV-SL.3: POST /api/billing/payment-proof
 billingRouter.post(

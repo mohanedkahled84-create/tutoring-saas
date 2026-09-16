@@ -111,6 +111,11 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false) {
                     <span>سعر الحصة: ${isAssistant ? '<span class="badge badge-secondary">محجوب للمساعد</span>' : `<b style="color: var(--centrly-ink);">${escapeHtml(g.price ?? g.session_price ?? 0)} ج.م</b>`}</span>
                   </div>
 
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: var(--centrly-blue-700); display: flex;">${getIcon('clock', 16)}</span>
+                    <span>تكرار الحصص: <b style="color: var(--centrly-ink);">${g.sessions_per_week || 1} ${g.sessions_per_week === 2 ? 'حصتان' : ((g.sessions_per_week || 1) > 2 ? `${g.sessions_per_week} حصص` : 'حصة')}/أسبوع (${(g.sessions_per_week || 1) * 4} حصص شهرياً)</b></span>
+                  </div>
+
                   ${g.teacher_name ? `
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                       <span style="color: var(--centrly-blue-700); display: flex;">${getIcon('students', 16)}</span>

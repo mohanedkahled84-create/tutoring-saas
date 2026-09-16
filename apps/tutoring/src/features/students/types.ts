@@ -45,6 +45,7 @@ export interface UpdateStudentDTO {
   parent_portal_token?: string | null;
   parent_portal_sent_at?: string | null;
   student_portal_sent_at?: string | null;
+  group_id?: string | null;
 }
 
 export interface PublicRegisterDTO {

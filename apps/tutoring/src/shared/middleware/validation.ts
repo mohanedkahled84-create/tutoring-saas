@@ -79,6 +79,7 @@ export const updateStudentSchema = z.object({
   fee_override: z.number().positive().optional().nullable(),
   exempt: z.boolean().optional(),
   notes: z.string().max(500).optional().nullable(),
+  group_id: z.string().uuid().optional().nullable(),
 });
 
 export const publicSelfRegisterSchema = z.object({
@@ -95,6 +96,7 @@ export const createGroupSchema = z.object({
   center_name: z.string().max(150).optional().nullable(),
   price: z.number().min(0).optional().default(0),
   session_price: z.number().min(0).optional().default(0),
+  sessions_per_week: z.number().int().min(1).max(7).optional().default(1),
   billing_model: z.enum(["percentage", "fixed_per_student", "fixed_rent"]).optional().default("percentage"),
   center_cut_percentage: z.number().min(0).max(100).optional().default(0),
   fixed_per_student_amount: z.number().min(0).optional().nullable(),
@@ -107,7 +109,23 @@ export const createGroupSchema = z.object({
   schedule: z.string().max(200).optional().nullable(),
 });
 
-export const updateGroupSchema = createGroupSchema.partial();
+export const updateGroupSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  center_name: z.string().max(150).optional().nullable(),
+  price: z.number().min(0).optional(),
+  session_price: z.number().min(0).optional(),
+  sessions_per_week: z.number().int().min(1).max(7).optional().nullable(),
+  billing_model: z.enum(["percentage", "fixed_per_student", "fixed_rent"]).optional(),
+  center_cut_percentage: z.number().min(0).max(100).optional().nullable(),
+  fixed_per_student_amount: z.number().min(0).optional().nullable(),
+  fixed_rent_amount: z.number().min(0).optional().nullable(),
+  teacher_cut_percentage: z.number().min(0).max(100).optional().nullable(),
+  teacher_id: z.string().uuid().optional().nullable(),
+  room_id: z.string().uuid().optional().nullable(),
+  day_of_week: z.string().max(50).optional().nullable(),
+  session_time: z.string().max(100).optional().nullable(),
+  schedule: z.string().max(200).optional().nullable(),
+});
 
 export const enrollStudentSchema = z.object({
   student_id: z.string().uuid("student_id must be a valid UUID"),

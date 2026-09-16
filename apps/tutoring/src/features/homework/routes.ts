@@ -248,6 +248,8 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
         name: s.name,
         code: s.code || s.student_code || "—",
         phone: s.student_phone || s.parent_phone || "",
+        student_phone: s.student_phone || "",
+        parent_phone: s.parent_phone || "",
         group_id: s.group_id,
       }));
 

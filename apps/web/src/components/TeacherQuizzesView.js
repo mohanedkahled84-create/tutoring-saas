@@ -317,6 +317,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
                           value="${escapeHtml(score)}"
                           placeholder="—"
                           style="width: 80px; text-align: center; font-weight: 800; font-family: monospace; font-size: 1rem; border-color: ${isGraded ? 'var(--centrly-success)' : 'var(--centrly-line)'};"
+                          onwheel="this.blur()"
                           oninput="window.centrlyApp.updateStudentQuizScore('${escapeHtml(s.id)}', this.value)"
                         >
                         <span style="font-size: 0.85rem; color: var(--centrly-text); font-weight: 600;">/ ${maxScore}</span>

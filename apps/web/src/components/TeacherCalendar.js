@@ -120,6 +120,12 @@ export function renderTeacherCalendar(data = {}) {
               </div>
             ` : ''}
           </div>
+
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; border-top: 1px solid var(--centrly-line); padding-top: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('sessions')" style="font-size: 0.75rem;">
+              عرض الحصة
+            </button>
+          </div>
         </div>
       `;
     }
@@ -152,6 +158,12 @@ export function renderTeacherCalendar(data = {}) {
                 <span><strong>سبب التأجيل:</strong> ${escapeHtml(session.cancellation_reason)}</span>
               </div>
             ` : ''}
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; border-top: 1px solid var(--centrly-line); padding-top: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('sessions')" style="font-size: 0.75rem;">
+              عرض الحصة
+            </button>
           </div>
         </div>
       `;

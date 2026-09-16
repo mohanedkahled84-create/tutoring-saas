@@ -11,6 +11,7 @@ export interface PaymentProofInput {
   reference_number?: string | null;
   proof_image_url?: string | null;
   notes?: string | null;
+  coupon_code?: string | null;
 }
 
 export interface PaymentProofRecord {
@@ -75,6 +76,7 @@ export interface IBillingRepository {
   isReminderDispatched(idempotencyKey: string): Promise<boolean>;
   getTenantOwnerPhone(tenantId: string): Promise<string | null>;
   getStudentCount?(tenantId: string): Promise<number>;
+  getGiftCode?(code: string): Promise<any | null>;
   insertReminderLog(entry: {
     tenant_id: string;
     idempotency_key: string;

@@ -21,6 +21,7 @@ export interface Group {
   sections_count?: number;
   students_count?: number;
   studentCount?: number;
+  sessions_per_week?: number | null;
 }
 
 export interface EnrolledStudent {
@@ -37,6 +38,7 @@ export interface CreateGroupDTO {
   name: string;
   price?: number;
   session_price?: number;
+  sessions_per_week?: number | null;
   billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
   center_cut_percentage?: number | null;
   fixed_per_student_amount?: number | null;
@@ -54,6 +56,7 @@ export interface CreateSectionDTO {
   section_name: string;
   price?: number;
   session_price?: number;
+  sessions_per_week?: number | null;
   billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
   center_cut_percentage?: number | null;
   fixed_per_student_amount?: number | null;
@@ -67,6 +70,7 @@ export interface UpdateGroupDTO {
   name?: string;
   price?: number;
   session_price?: number;
+  sessions_per_week?: number | null;
   billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
   center_cut_percentage?: number | null;
   fixed_per_student_amount?: number | null;

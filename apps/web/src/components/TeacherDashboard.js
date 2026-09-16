@@ -37,17 +37,19 @@ export function renderTeacherDashboard(
     const studentCount = Number(g.studentCount ?? g.students_count ?? g.student_count ?? fallbackFromStudents ?? 0);
     totalEnrolledStudents += studentCount;
     const price = Number(g.price ?? g.session_price ?? 0);
-    const monthlyRev = price * studentCount * 4;
+    const sessionsPerWeek = Math.max(1, Number(g.sessions_per_week || 1));
+    const monthlySessions = sessionsPerWeek * 4;
+    const monthlyRev = price * studentCount * monthlySessions;
     let netProfit = Math.round(monthlyRev * 0.8);
     let billingModelName = 'نسبة سنتر (20%)';
 
     if (g.billing_model === 'fixed_per_student') {
       const cut = Number(g.fixed_per_student_amount || 0);
-      netProfit = Math.max(0, (price - cut) * studentCount * 4);
+      netProfit = Math.max(0, (price - cut) * studentCount * monthlySessions);
       billingModelName = `أجر ثابت (${cut} ج.م/طالب)`;
     } else if (g.billing_model === 'fixed_rent') {
       const rent = Number(g.fixed_rent_amount || 0);
-      netProfit = Math.max(0, monthlyRev - (rent * 4));
+      netProfit = Math.max(0, monthlyRev - (rent * monthlySessions));
       billingModelName = `إيجار قاعة (${rent} ج.م/حصة)`;
     } else if (g.center_cut_percentage !== undefined && g.center_cut_percentage !== null) {
       const pct = Number(g.center_cut_percentage);
@@ -62,6 +64,8 @@ export function renderTeacherDashboard(
       ...g,
       studentCount,
       price,
+      sessionsPerWeek,
+      monthlySessions,
       monthlyRev,
       netProfit,
       billingModelName,
@@ -83,11 +87,11 @@ export function renderTeacherDashboard(
       if (a.group_id) {
         const matched = groups.find(g => g.id === a.group_id);
         const grpName = matched ? matched.name : 'مجموعة مخصصة';
-        monthlyDeduction = rate * 4;
-        calculationBasis = `4 حصص شهرياً في ${grpName} (${rate.toLocaleString('ar-EG')} ج.م/حصة)`;
+        const sessions = matched ? Math.max(1, Number(matched.sessions_per_week || 1)) * 4 : 4;
+        monthlyDeduction = rate * sessions;
+        calculationBasis = `${sessions} حصص شهرياً في ${grpName} (${rate.toLocaleString('ar-EG')} ج.م/حصة)`;
       } else {
-        const totalGroups = groups.length > 0 ? groups.length : 1;
-        const totalSessions = totalGroups * 4;
+        const totalSessions = groups.reduce((acc, g) => acc + (Math.max(1, Number(g.sessions_per_week || 1)) * 4), 0) || 4;
         monthlyDeduction = rate * totalSessions;
         calculationBasis = `${totalSessions} حصة شهرياً لكافة المجاميع (${rate.toLocaleString('ar-EG')} ج.م/حصة)`;
       }
@@ -322,6 +326,7 @@ export function renderTeacherDashboard(
                   <th>المجموعة</th>
                   <th>السنتر / القاعة</th>
                   <th>سعر الحصة</th>
+                  <th>تكرار الحصص</th>
                   <th>نظام المحاسبة</th>
                   <th>عدد الطلاب</th>
                   <th>الدخل الشهري المقدر</th>
@@ -339,6 +344,10 @@ export function renderTeacherDashboard(
                       <td style="font-weight: 700; color: var(--centrly-ink); font-size: 0.95rem;">${escapeHtml(g.name)}</td>
                       <td><span class="badge badge-blue">${escapeHtml(g.center_name || 'سنتر تعليمي')}</span></td>
                       <td style="font-weight: 700; font-family: monospace;">${pPrice}</td>
+                      <td style="font-size: 0.825rem; font-weight: 700; color: #1e3a8a;">
+                        ${g.sessionsPerWeek} ${g.sessionsPerWeek === 2 ? 'حصتان' : (g.sessionsPerWeek > 2 ? `${g.sessionsPerWeek} حصص` : 'حصة')}/أسبوع
+                        <div style="font-size: 0.72rem; color: #64748b; font-weight: 500;">(${g.monthlySessions} حصص شهرياً)</div>
+                      </td>
                       <td style="font-size: 0.825rem; color: var(--centrly-text);">
                         ${escapeHtml(g.billingModelName)}
                       </td>
@@ -353,7 +362,7 @@ export function renderTeacherDashboard(
                   `;
                 }).join('') : `
                   <tr>
-                    <td colspan="7" style="text-align: center; padding: 2rem; color: var(--centrly-text);">
+                    <td colspan="8" style="text-align: center; padding: 2rem; color: var(--centrly-text);">
                       لا توجد مجاميع نشطة بعد. أنشئ مجموعتك الأولى للبدء في تتبع الأرباح.
                     </td>
                   </tr>

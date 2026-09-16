@@ -229,7 +229,7 @@ export function renderLandingView() {
               style="background: var(--brand-gold); color: var(--brand-navy); font-family: 'Cairo', sans-serif; font-size: 0.875rem; font-weight: 800; padding: 0.5rem 1.25rem; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(231, 163, 48, 0.25); transition: all 0.2s;"
               onmouseover="this.style.backgroundColor='#dba024'; this.style.transform='translateY(-1px)';"
               onmouseout="this.style.backgroundColor='var(--brand-gold)'; this.style.transform='none';">
-              ابدأ مجاناً (7 أيام)
+              ابدأ مجاناً (14 يوماً)
             </button>
           </div>
 
@@ -264,7 +264,7 @@ export function renderLandingView() {
               style="background: var(--brand-navy); border: none; color: #ffffff; font-family: 'Cairo', sans-serif; font-size: 1.05rem; font-weight: 800; padding: 0.85rem 2.25rem; border-radius: 12px; cursor: pointer; box-shadow: 0 8px 20px rgba(23, 45, 112, 0.18); transition: all 0.2s ease;"
               onmouseover="this.style.backgroundColor='var(--brand-blue)'; this.style.transform='translateY(-2px)';"
               onmouseout="this.style.backgroundColor='var(--brand-navy)'; this.style.transform='none';">
-              ابدأ تجربتك المجانية فوراً (7 أيام)
+              ابدأ تجربتك المجانية فوراً (14 يوماً)
             </button>
 
             <button onclick="window.centrlyApp.renderAuth('login')" 
@@ -451,7 +451,7 @@ export function renderLandingView() {
                   style="width: 100%; background: var(--brand-cream); border: 1.5px solid var(--brand-line); color: var(--brand-navy); font-family: 'Cairo', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.75rem; border-radius: 10px; cursor: pointer; transition: all 0.2s;"
                   onmouseover="this.style.backgroundColor='var(--brand-navy)'; this.style.borderColor='var(--brand-navy)'; this.style.color='#ffffff';"
                   onmouseout="this.style.backgroundColor='var(--brand-cream)'; this.style.borderColor='var(--brand-line)'; this.style.color='var(--brand-navy)';">
-                  ابدأ باقة الـ 100 طالب (تجربة 7 أيام)
+                  ابدأ باقة الـ 100 طالب (تجربة 14 يوماً)
                 </button>
               </div>
             </div>
@@ -491,7 +491,7 @@ export function renderLandingView() {
                   style="width: 100%; background: var(--brand-blue); border: none; color: #ffffff; font-family: 'Cairo', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.8rem; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 12px rgba(41, 73, 186, 0.25); transition: all 0.2s;"
                   onmouseover="this.style.backgroundColor='var(--brand-navy)';"
                   onmouseout="this.style.backgroundColor='var(--brand-blue)';">
-                  ابدأ باقة الـ 250 طالب (تجربة 7 أيام)
+                  ابدأ باقة الـ 250 طالب (تجربة 14 يوماً)
                 </button>
               </div>
             </div>
@@ -527,7 +527,7 @@ export function renderLandingView() {
                   style="width: 100%; background: var(--brand-cream); border: 1.5px solid var(--brand-line); color: var(--brand-navy); font-family: 'Cairo', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.75rem; border-radius: 10px; cursor: pointer; transition: all 0.2s;"
                   onmouseover="this.style.backgroundColor='var(--brand-navy)'; this.style.borderColor='var(--brand-navy)'; this.style.color='#ffffff';"
                   onmouseout="this.style.backgroundColor='var(--brand-cream)'; this.style.borderColor='var(--brand-line)'; this.style.color='var(--brand-navy)';">
-                  ابدأ باقة الـ 500 طالب (تجربة 7 أيام)
+                  ابدأ باقة الـ 500 طالب (تجربة 14 يوماً)
                 </button>
               </div>
             </div>
@@ -605,7 +605,7 @@ export function renderLandingView() {
             <!-- Question 4 -->
             <div class="faq-item" id="faqItem4">
               <button type="button" class="faq-question" onclick="window.centrlyApp.toggleFaq(4)">
-                <span>ماذا يحدث بعد انتهاء فترة الـ 7 أيام المجانية؟</span>
+                <span>ماذا يحدث بعد انتهاء فترة الـ 14 يوماً المجانية؟</span>
                 <svg id="faqIcon4" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
               <div class="faq-answer" id="faqAnswer4">
@@ -688,7 +688,7 @@ export function renderLandingView() {
       <!-- ================================================================= -->
       <div class="mobile-sticky-cta">
         <button onclick="window.centrlyApp.renderAuth('signup')" style="flex: 1; background: var(--brand-gold); color: var(--brand-navy); border: none; font-family: 'Cairo', sans-serif; font-size: 0.9rem; font-weight: 800; padding: 0.75rem 0.5rem; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(231, 163, 48, 0.25);">
-          ابدأ مجاناً (7 أيام)
+          ابدأ مجاناً (14 يوماً)
         </button>
         <a href="https://wa.me/201123671177?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D9%88%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D8%B3%D9%86%D8%AA%D8%B1%D9%84%D9%8A" target="_blank" rel="noopener noreferrer" style="background: #16a34a; color: #ffffff; padding: 0.75rem 1rem; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;" title="تواصل واتساب">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>

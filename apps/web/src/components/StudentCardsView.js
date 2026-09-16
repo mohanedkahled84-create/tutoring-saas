@@ -38,24 +38,24 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
             </div>
             <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #ffffff;">كروت الطلاب الذكية والباركود للطباعة</h2>
             <div style="font-size: 0.85rem; color: rgba(255,255,255,0.95); margin-top: 0.6rem; line-height: 1.6; background: rgba(0,0,0,0.15); padding: 0.75rem 1rem; border-radius: 8px;">
-              <strong style="color: #93c5fd;">خيارات طباعة وتصميم كروت الطلاب:</strong>
+              <strong style="color: #93c5fd;">خطوات طلب الكروت البلاستيكية الذكية (PVC):</strong>
               <ol style="margin: 0.35rem 0 0 0; padding-right: 1.2rem; font-size: 0.82rem; color: #f1f5f9;">
-                <li>حدد الطلاب المطلوبين من الجدول بالأسفل (أو اختر "تحديد الكل").</li>
-                <li><b>إذا كان لديك تصميم كارت خاص:</b> اضغط <b>"تنزيل البيانات للتصميم (Excel / CSV)"</b> لرفع الملف على (Canva / Photoshop) وتركيب الأسماء والأكواد على تصميمك وطباعتها.</li>
-                <li><b>إذا أردت طباعة سريعة جاهزة:</b> اضغط <b>"طباعة كروت جاهزة (PDF)"</b> لحفظ أو طباعة الكروت بتنسيق المنصة الافتراضي فوراً.</li>
-                <li><b>لطلب كروت بلاستيكية فاخرة (PVC) مطبوعة من سنترلي:</b> تواصل معنا مباشرة عبر واتساب الإدارة بالزر المجاور.</li>
+                <li>حدد الطلاب المطلوب إصدار كروت لهم من الجدول أدناه (أو اضغط "تحديد الكل").</li>
+                <li>اضغط على زر <b>"تصدير بيانات الكروت (Excel / CSV)"</b> لتحميل ملف الطلاب وأكوادهم بصيغة منظمة.</li>
+                <li>أرسل الملف المُحمّل إلى فريق سنترلي عبر <b>واتساب الإدارة</b> بالزر المجاور لاختيار خامة وجودة الكارت وتأكيد الكمية والطلب.</li>
+                <li>يتم تجهيز وطباعة الكروت البلاستيكية الفاخرة وشحنها مباشرة إلى مقر السنتر أو المعلم في أسرع وقت.</li>
               </ol>
             </div>
           </div>
 
           <!-- Order Plastic Cards WhatsApp Button -->
           <div style="text-align: center;">
-            <a href="https://wa.me/201123671177?text=${encodeURIComponent('السلام عليكم، نزلت ملف كروت الطلاب من سنترلي وعايز اعرف تفاصيل وأسعار طباعة الكروت علشان اطلبها.')}" target="_blank" rel="noopener noreferrer" class="btn" style="background: #25d366; color: #ffffff; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.35); transition: transform 0.2s;">
+            <a href="https://wa.me/201123671177?text=${encodeURIComponent('السلام عليكم، جهزت ملف بيانات كروت الطلاب من سنترلي وعايز أرسله علشان نطلب كروت بلاستيكية PVC.')}" target="_blank" rel="noopener noreferrer" class="btn" style="background: #25d366; color: #ffffff; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.35); transition: transform 0.2s;">
               ${getIcon('whatsapp', 20, '#ffffff')}
               <span style="font-size: 0.95rem;">طلب كروت بلاستيكية (واتساب)</span>
             </a>
             <div style="font-size: 0.72rem; color: rgba(255,255,255,0.8); margin-top: 0.4rem;">
-              تواصل مباشر مع الإدارة لطلب الكروت البلاستيكية بعد تنزيل الملف
+              تواصل مباشر مع الإدارة لإرسال الملف وطلب الكروت
             </div>
           </div>
         </div>
@@ -65,9 +65,9 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
       <div class="card" style="margin: 0;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
           <div>
-            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0;">تحديد الطلاب لإصدار وتنزيل الكروت</h3>
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--centrly-ink); margin: 0;">تحديد الطلاب وتصدير بيانات الكروت</h3>
             <p style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.2rem;">
-              حدد الطلاب أو اختر مجموعة كاملة، ثم اختر تنزيل البيانات لتصميمك الخاص أو الطباعة المباشرة
+              حدد الطلاب المطلوب إصدار كروت لهم ثم صدّر الملف لإرساله للإدارة عبر واتساب
             </p>
           </div>
 
@@ -78,11 +78,7 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
             </div>
             <button class="btn" style="background: #10b981; color: #ffffff; display: flex; align-items: center; gap: 0.45rem; font-weight: 800; padding: 0.5rem 1.1rem; border-radius: 8px; border: none; box-shadow: 0 2px 6px rgba(16,185,129,0.3); cursor: pointer;" onclick="window.centrlyApp.downloadSelectedCardsDataExcel()">
               ${getIcon('download', 18, '#ffffff')}
-              <span>تنزيل البيانات للتصميم (Excel / CSV)</span>
-            </button>
-            <button class="btn btn-primary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 8px;" onclick="window.centrlyApp.downloadSelectedCardsPdf()">
-              ${getIcon('print', 18)}
-              <span>طباعة كروت جاهزة (PDF)</span>
+              <span>تصدير بيانات الكروت (Excel / CSV)</span>
             </button>
             <button class="btn btn-secondary" onclick="window.centrlyApp.selectAllCards(true)">
               تحديد الكل
