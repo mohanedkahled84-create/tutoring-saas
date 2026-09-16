@@ -123,14 +123,17 @@ studentsRouter.get("/:id/parent-link", async (req: AuthenticatedRequest, res: Re
     }
 
     const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const shortParentUrl = buildShortPortalUrl(studentId, "parent", canonicalOrigin);
+    const shortStudentUrl = buildShortPortalUrl(studentId, "student", canonicalOrigin);
     const portalUrl = `/parent-portal?token=${token}`;
-    const fullUrl = `${canonicalOrigin}${portalUrl}`;
 
     res.json({
       student_id: studentId,
       token,
       portal_url: portalUrl,
-      full_url: fullUrl,
+      full_url: shortParentUrl,
+      short_parent_url: shortParentUrl,
+      short_student_url: shortStudentUrl,
       parent_portal_sent_at: student.parent_portal_sent_at || null,
       student_portal_sent_at: student.student_portal_sent_at || null,
       expires_in_days: 365,

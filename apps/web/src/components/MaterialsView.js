@@ -55,7 +55,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
 
       <!-- KPI Summary Cards -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-        <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-blue-700);">
+        <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
           <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">إجمالي الملفات والمذكرات</div>
           <div style="font-size: 1.8rem; font-weight: 900; color: var(--centrly-ink); margin-top: 0.35rem;">
             ${totalMaterials} <span style="font-size: 0.85rem; font-weight: 500;">ملف</span>
@@ -65,7 +65,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
           </div>
         </div>
 
-        <div class="card" style="margin: 0; background: #fff; border-top: 4px solid #059669;">
+        <div class="card" style="margin: 0; border-top: 4px solid #059669;">
           <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">مذكرات وملازم PDF</div>
           <div style="font-size: 1.8rem; font-weight: 900; color: #047857; margin-top: 0.35rem;">
             ${pdfCount} <span style="font-size: 0.85rem; font-weight: 500;">مذكرة</span>
@@ -75,7 +75,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
           </div>
         </div>
 
-        <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-success);">
+        <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-success);">
           <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">نوعية المحتوى</div>
           <div style="font-size: 1rem; font-weight: 800; color: var(--centrly-ink); margin-top: 0.5rem; display: flex; gap: 0.85rem; align-items: center;">
             <span style="display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('file', 14, '#1d4ed8')} ${pdfCount} PDF</span>

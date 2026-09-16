@@ -97,7 +97,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
         ` : ''}
 
         <!-- 1. Today's Scheduled Sessions Section -->
-        <div class="card" style="margin: 0; border: 1px solid var(--centrly-line); background: #ffffff;">
+        <div class="card" style="margin: 0; border: 1px solid var(--centrly-line);">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem;">
             <div>
               <h3 class="card-title" style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; margin: 0; color: var(--centrly-ink);">
@@ -130,7 +130,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                     <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
                       <span>السنتر: <b style="color: var(--centrly-ink);">${escapeHtml(g.center_name || g.centerName || 'السنتر')}</b></span>
                       ${g.room_name || g.room ? `<span>القاعة: <b style="color: var(--centrly-blue-800);">${escapeHtml(g.room_name || g.room)}</b></span>` : ''}
-                      <span>الطلاب: <b style="color: var(--centrly-ink);">${escapeHtml(g.studentCount || g.students_count || 0)} طالب</b></span>
+                      <span>الطلاب: <b style="color: var(--centrly-ink);">${escapeHtml(g.studentCount || g.students_count || (typeof window !== 'undefined' && Array.isArray(window.centrlyApp?.students) ? window.centrlyApp.students.filter(s => s.group_id === g.id || (Array.isArray(s.group_ids) && s.group_ids.includes(g.id))).length : 0) || 0)} طالب</b></span>
                       <span>سعر الحصة: <b style="color: var(--centrly-ink);">${escapeHtml(g.price || 0)} ج.م</b></span>
                     </div>
                   </div>
@@ -160,7 +160,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
 
         <!-- 2. Other Sessions & Groups Section -->
         ${otherGroups.length > 0 ? `
-          <div class="card" style="margin: 0; border: 1px solid var(--centrly-line); background: #ffffff;">
+          <div class="card" style="margin: 0; border: 1px solid var(--centrly-line);">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem;">
               <div>
                 <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem; margin: 0; color: var(--centrly-ink);">
@@ -191,7 +191,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                       <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.4rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
                         <span>السنتر: <b style="color: var(--centrly-ink);">${escapeHtml(g.center_name || g.centerName || 'السنتر')}</b></span>
                         ${g.room_name || g.room ? `<span>القاعة: <b style="color: var(--centrly-blue-800);">${escapeHtml(g.room_name || g.room)}</b></span>` : ''}
-                        <span>الطلاب: <b style="color: var(--centrly-ink);">${escapeHtml(g.studentCount || g.students_count || 0)} طالب</b></span>
+                        <span>الطلاب: <b style="color: var(--centrly-ink);">${escapeHtml(g.studentCount || g.students_count || (typeof window !== 'undefined' && Array.isArray(window.centrlyApp?.students) ? window.centrlyApp.students.filter(s => s.group_id === g.id || (Array.isArray(s.group_ids) && s.group_ids.includes(g.id))).length : 0) || 0)} طالب</b></span>
                       </div>
                     </div>
 

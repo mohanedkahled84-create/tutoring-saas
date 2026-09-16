@@ -31,7 +31,10 @@ export function renderTeacherDashboard(
   let totalEnrolledStudents = 0;
 
   const processedGroups = groups.map(g => {
-    const studentCount = Number(g.student_count ?? g.students_count ?? 0);
+    const fallbackFromStudents = typeof window !== 'undefined' && Array.isArray(window.centrlyApp?.students)
+      ? window.centrlyApp.students.filter(s => s.group_id === g.id || (Array.isArray(s.group_ids) && s.group_ids.includes(g.id))).length
+      : 0;
+    const studentCount = Number(g.studentCount ?? g.students_count ?? g.student_count ?? fallbackFromStudents ?? 0);
     totalEnrolledStudents += studentCount;
     const price = Number(g.price ?? g.session_price ?? 0);
     const monthlyRev = price * studentCount * 4;

@@ -33,22 +33,22 @@
   --radius-full: 9999px;
 }
 
-/* Dark Theme Design Tokens */
+/* Dark Theme Design Tokens (Royal Navy Dark Mode - Eye-Comfort & Centrly Brand Aligned) */
 [data-theme="dark"] {
   --centrly-blue-900: #1e3a8a;
-  --centrly-blue-800: #3b82f6;
-  --centrly-blue-700: #60a5fa;
-  --centrly-blue-600: #93c5fd;
+  --centrly-blue-800: #2563eb;
+  --centrly-blue-700: #3b82f6;
+  --centrly-blue-600: #60a5fa;
   --centrly-blue-100: #172554;
-  --centrly-amber-700: #f59e0b;
-  --centrly-amber-600: #fbbf24;
-  --centrly-amber-500: #fcd34d;
-  --centrly-amber-100: #3b2005;
+  --centrly-amber-700: #d97706;
+  --centrly-amber-600: #f59e0b;
+  --centrly-amber-500: #fbbf24;
+  --centrly-amber-100: #311b05;
   --centrly-ink: #f8fafc;
   --centrly-text: #94a3b8;
-  --centrly-surface: #0a0f1d;
-  --centrly-line: #1e293b;
-  --centrly-white: #111827;
+  --centrly-surface: #0c1427;
+  --centrly-line: #223354;
+  --centrly-white: #141f36;
   --centrly-success: #34d399;
   --centrly-success-light: #064e3b;
   --centrly-warning: #fbbf24;

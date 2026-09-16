@@ -44,10 +44,10 @@ export function renderWhatsAppSettingsView(data = {}) {
 
         <!-- Dynamic QR Connect Area (shown when not connected) -->
         ${!isConnected ? `
-          <div style="background: #fff; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1.25rem; margin-top: 1.25rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
-            <div style="width: 180px; height: 180px; background: #f8fafc; border: 2px dashed var(--centrly-blue-700); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+          <div style="background: var(--centrly-surface); border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1.25rem; margin-top: 1.25rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+            <div style="width: 180px; height: 180px; background: #ffffff; border: 2px dashed var(--centrly-blue-700); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 6px;">
               <img id="settingsQrImage" src="${data.qr_base64 || ''}" alt="WhatsApp QR Code" style="width: 100%; height: 100%; object-fit: contain; ${data.qr_base64 ? '' : 'display: none;'}">
-              <div id="settingsQrLoading" style="font-size: 0.8rem; color: var(--centrly-text); padding: 1rem; text-align: center; ${data.qr_base64 ? 'display: none;' : ''}">
+              <div id="settingsQrLoading" style="font-size: 0.8rem; color: #64748b; padding: 1rem; text-align: center; ${data.qr_base64 ? 'display: none;' : ''}">
                 جارٍ إنشاء رمز QR...
               </div>
             </div>
@@ -58,7 +58,7 @@ export function renderWhatsAppSettingsView(data = {}) {
               </p>
               ${(data.pairing_code && data.pairing_code.length <= 15) ? `
                 <div style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink); margin-bottom: 0.75rem;">
-                  كود الاقتران: <span id="settingsPairingCode" style="font-family: monospace; color: var(--centrly-blue-800); background: #f1f5f9; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line); font-size: 1.05rem; letter-spacing: 2px; font-weight: 800;">${escapeHtml(data.pairing_code)}</span>
+                  كود الاقتران: <span id="settingsPairingCode" style="font-family: monospace; color: var(--centrly-blue-700); background: var(--centrly-white); padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--centrly-line); font-size: 1.05rem; letter-spacing: 2px; font-weight: 800;">${escapeHtml(data.pairing_code)}</span>
                 </div>
               ` : ''}
               <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.refreshWhatsAppQR()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
@@ -84,7 +84,7 @@ export function renderWhatsAppSettingsView(data = {}) {
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
           
-          <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
+          <div style="background: var(--centrly-surface); padding: 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
             <div style="font-weight: 700; color: var(--centrly-blue-700); font-size: 0.9rem; margin-bottom: 0.35rem;">
               1. إرسال هادئ ومتباعد
             </div>
@@ -93,7 +93,7 @@ export function renderWhatsAppSettingsView(data = {}) {
             </div>
           </div>
 
-          <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
+          <div style="background: var(--centrly-surface); padding: 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
             <div style="font-weight: 700; color: var(--centrly-blue-700); font-size: 0.9rem; margin-bottom: 0.35rem;">
               2. حفظ الرقم في جهات الاتصال
             </div>
@@ -102,7 +102,7 @@ export function renderWhatsAppSettingsView(data = {}) {
             </div>
           </div>
 
-          <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
+          <div style="background: var(--centrly-surface); padding: 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
             <div style="font-weight: 700; color: var(--centrly-blue-700); font-size: 0.9rem; margin-bottom: 0.35rem;">
               3. الاعتماد على رابط المتابعة الموحد
             </div>
@@ -132,8 +132,8 @@ export function renderWhatsAppSettingsView(data = {}) {
             نموذج: رسالة ترحيبية عادية
           </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="
-            document.getElementById('testMsgInput').value = 'السلام عليكم ولي أمر الطالب (محمد أحمد).\\nحرصاً على متابعة المستوى الدراسي، رابط بوابة المتابعة المباشرة:\\nhttps://centerly-platform.vercel.app/parent-portal?token=test_demo\\n\\nيرجى حفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان وصول التقارير باستمرار.';
-          " style="font-size: 0.78rem; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
+            document.getElementById('testMsgInput').value = 'السلام عليكم ولي أمر الطالب (محمد أحمد).\\nحرصاً على متابعة المستوى الدراسي، رابط بوابة المتابعة المباشرة:\\nhttps://centerly-platform.vercel.app/p/p12345678\\n\\nيرجى حفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان وصول التقارير باستمرار.';
+          " style="font-size: 0.78rem; background: var(--centrly-surface); color: var(--centrly-blue-700); border-color: var(--centrly-line);">
             نموذج: تجربة رسالة رابط بوابة ولي الأمر (مع تنبيه حفظ الرقم)
           </button>
         </div>
@@ -172,12 +172,12 @@ export function renderWhatsAppSettingsView(data = {}) {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
           
           <!-- Template 1: Parent Portal Invite (Most Important) -->
-          <div style="background: #fafbfc; border: 2px solid #bfdbfe; border-radius: 8px; padding: 1rem; position: relative;">
+          <div style="background: var(--centrly-surface); border: 2px solid var(--centrly-blue-700); border-radius: 8px; padding: 1rem; position: relative;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-weight: 800; font-size: 0.95rem; color: #1d4ed8;">1. رسالة تفعيل بوابة ولي الأمر</span>
+              <span style="font-weight: 800; font-size: 0.95rem; color: var(--centrly-blue-700);">1. رسالة تفعيل بوابة ولي الأمر</span>
               <span class="badge badge-blue">روابط المتابعة</span>
             </div>
-            <div style="background: #fff; border: 1px dashed #93c5fd; border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
+            <div style="background: var(--centrly-white); border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
               السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب ({اسم_الطالب}).<br>
               حرصاً على متابعة مستواه أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة:<br>
               • <strong>{رابط_بوابة_ولي_الأمر}</strong><br>
@@ -187,12 +187,12 @@ export function renderWhatsAppSettingsView(data = {}) {
           </div>
 
           <!-- Template 2: Student Portal & Homework Submission -->
-          <div style="background: #fafbfc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
+          <div style="background: var(--centrly-surface); border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-weight: 800; font-size: 0.95rem; color: #0284c7;">2. رسالة تفعيل بوابة الطالب</span>
-              <span class="badge" style="background: #e0f2fe; color: #0369a1;">بوابة الطالب</span>
+              <span style="font-weight: 800; font-size: 0.95rem; color: var(--centrly-ink);">2. رسالة تفعيل بوابة الطالب</span>
+              <span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #0284c7;">بوابة الطالب</span>
             </div>
-            <div style="background: #fff; border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
+            <div style="background: var(--centrly-white); border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
               مرحباً بك ({اسم_الطالب})،<br>
               تم تفعيل رابط بوابتك التعليمية الخاصة للمذكرات والواجبات:<br>
               • <strong>{رابط_بوابة_الطالب}</strong><br>
@@ -202,12 +202,12 @@ export function renderWhatsAppSettingsView(data = {}) {
           </div>
 
           <!-- Template 3: Absence Alert -->
-          <div style="background: #fafbfc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
+          <div style="background: var(--centrly-surface); border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">3. إشعار غياب عن الحصة</span>
+              <span style="font-weight: 800; font-size: 0.95rem; color: var(--centrly-ink);">3. إشعار غياب عن الحصة</span>
               <span class="badge badge-warning">تنبيه غياب</span>
             </div>
-            <div style="background: #fff; border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
+            <div style="background: var(--centrly-white); border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
               السلام عليكم ولي أمر الطالب <strong>{اسم_الطالب}</strong>،<br>
               نود إحاطتكم علماً بعدم حضوره حصة اليوم لمجموعة <strong>{اسم_المجموعة}</strong> بتاريخ {تاريخ_الحصة}.<br>
               يرجى مراجعة بوابة المتابعة للاطلاع على مذكرة الحصة وتنسيق موعد التعويض:<br>
@@ -216,12 +216,12 @@ export function renderWhatsAppSettingsView(data = {}) {
           </div>
 
           <!-- Template 4: Monthly Report Card -->
-          <div style="background: #fafbfc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
+          <div style="background: var(--centrly-surface); border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-weight: 800; font-size: 0.95rem; color: #059669;">4. إشعار التقرير الشهري ولوحة الشرف</span>
+              <span style="font-weight: 800; font-size: 0.95rem; color: #10b981;">4. إشعار التقرير الشهري ولوحة الشرف</span>
               <span class="badge badge-success">تقارير دورية</span>
             </div>
-            <div style="background: #fff; border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
+            <div style="background: var(--centrly-white); border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
               السلام عليكم ولي أمر الطالب <strong>{اسم_الطالب}</strong>،<br>
               تم رصد وتحديث تقرير التقييم الشامل ودرجات الكويزات لهذا الشهر.<br>
               يمكنكم الاطلاع على التقرير وملاحظات المعلم عبر بوابة المتابعة المباشرة:<br>

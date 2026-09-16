@@ -360,10 +360,10 @@ class CentrlyApp {
       }
     });
 
-    // Check if Short Portal URL is present (/p/:code or /s/:code or ?s=:code or ?p=:code)
+    // Check if Short Portal URL is present (/p/:code or /s/:code or /p:code or /s:code or ?s=:code or ?p=:code)
     const urlParams = new URLSearchParams(window.location.search);
     const pathname = (window.location.pathname || '').trim();
-    const shortMatch = pathname.match(/^\/([ps])\/([a-zA-Z0-9_-]+)$/i);
+    const shortMatch = pathname.match(/^\/([ps])\/?([a-zA-Z0-9_-]+)$/i);
     const queryShortCode = urlParams.get('s') || urlParams.get('p');
     const queryShortType = urlParams.get('s') ? 's' : (urlParams.get('p') ? 'p' : null);
 
@@ -372,7 +372,10 @@ class CentrlyApp {
 
     if (resolvedShortCode) {
       try {
-        const shortData = await request(`/public/short-links/${encodeURIComponent(resolvedShortCode)}`);
+        const queryCode = (resolvedShortCode.startsWith('p') || resolvedShortCode.startsWith('s'))
+          ? resolvedShortCode
+          : `${resolvedShortType || 'p'}${resolvedShortCode}`;
+        const shortData = await request(`/public/short-links/${encodeURIComponent(queryCode)}`);
         if (shortData && shortData.token) {
           if (shortData.portal_type === 'student' || resolvedShortType === 's') {
             await this.loadStudentPortal(shortData.token);
@@ -1408,6 +1411,17 @@ class CentrlyApp {
     // Auto-lock sensitive pages automatically upon changing or switching pages
     if (this.hasSecurityPin && this.isFinancialUnlocked) {
       this.isFinancialUnlocked = false;
+    }
+
+    // Unify WhatsApp & Billing directly inside the master Settings Hub
+    if (route === 'whatsapp') {
+      this.settingsState = this.settingsState || {};
+      this.settingsState.activeTab = 'whatsapp';
+      route = 'settings';
+    } else if (route === 'billing') {
+      this.settingsState = this.settingsState || {};
+      this.settingsState.activeTab = 'subscription';
+      route = 'settings';
     }
 
     const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
@@ -5798,9 +5812,9 @@ class CentrlyApp {
 
     const openDirectFallback = async () => {
       try {
-        const linkRes = await request(`/students/${studentId}/parent-link`);
         const canonicalOrigin = 'https://centerly-platform.vercel.app';
-        const portalUrl = linkRes.full_url || `${canonicalOrigin}${linkRes.portal_url}`;
+        const cleanSid = studentId ? String(studentId).replace(/-/g, '').slice(0, 8) : '';
+        const portalUrl = cleanSid ? `${canonicalOrigin}/p/p${cleanSid}` : `${canonicalOrigin}/parent-portal`;
         const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
         const msg = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (${studentName}).\n\nحرصاً على متابعة المستوى الدراسي لـ (${studentName}) أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:\n\n*رابط المتابعة المباشر:*\n${portalUrl}\n\n*من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول:*\n- متابعة الحضور والغياب لحظياً.\n- درجات الكويزات والامتحانات الدورية.\n- تسليم الواجبات المنزلية وملاحظات المعلم.\n\nمع خالص التمنيات بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
         this.openDirectWhatsAppFallbackModal(studentName, parentPhone, msg, () => {
@@ -5833,12 +5847,11 @@ class CentrlyApp {
           this.renderMainContent();
         }
       } else {
-        const errorMsg = res.error || 'خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR أولاً.';
-        this.showToast(errorMsg, 'danger');
+        // Automatically open instant 1-click Direct WhatsApp modal
+        await openDirectFallback();
       }
     } catch (err) {
-      const errorMsg = err.message || 'خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR أولاً.';
-      this.showToast(errorMsg, 'danger');
+      await openDirectFallback();
     }
   }
 
@@ -5855,12 +5868,9 @@ class CentrlyApp {
 
     const openDirectFallback = async () => {
       try {
-        const linkRes = await request(`/students/${studentId}/parent-link`);
         const canonicalOrigin = 'https://centerly-platform.vercel.app';
-        const basePortalUrl = linkRes.full_url || `${canonicalOrigin}${linkRes.portal_url}`;
-        const studentUrl = basePortalUrl.includes('?') 
-          ? `${basePortalUrl}&portal=student` 
-          : `${basePortalUrl}?portal=student`;
+        const cleanSid = studentId ? String(studentId).replace(/-/g, '').slice(0, 8) : '';
+        const studentUrl = cleanSid ? `${canonicalOrigin}/s/s${cleanSid}` : `${canonicalOrigin}/parent-portal?portal=student`;
         const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
         const msg = `السلام عليكم ورحمة الله وبركاته، الطالب (${studentName}).\n\nيسعدنا تزويدك برابط بوابتك التعليمية الرسمية لمتابعة دروسك وتحميل المذكرات ورفع الواجبات أولاً بأول:\n\n*رابط بوابتك التعليمية المباشر:*\n${studentUrl}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\nمع خالص التمنيات بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
         this.openDirectWhatsAppFallbackModal(studentName, studentPhone, msg, () => {
@@ -5955,7 +5965,7 @@ class CentrlyApp {
 
 حرصاً على متابعة المستوى الدراسي أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:
 *رابط المتابعة المباشر:*
-https://centerly-platform.vercel.app/parent-portal?token=...
+https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق السرعة)
 
 • من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول متابعة درجات الكويزات والحضور والواجبات لحظياً.
 
@@ -9520,14 +9530,10 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     const targetPhone = cleanPhone.startsWith('2') ? cleanPhone : `2${cleanPhone}`;
     const hwTitle = this.homeworkState?.currentHomework?.title || 'الواجب المنزلي';
     
-    // Generate portal link
-    let studentPortalUrl = '';
-    try {
-      const res = await request(`/students/${studentId}/parent-link`);
-      const canonicalOrigin = 'https://centerly-platform.vercel.app';
-      const basePortalUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
-      studentPortalUrl = basePortalUrl.includes('?') ? `${basePortalUrl}&portal=student` : `${basePortalUrl}?portal=student`;
-    } catch (_) {}
+    // Generate short student portal link
+    const canonicalOrigin = 'https://centerly-platform.vercel.app';
+    const cleanSid = String(studentId || '').replace(/-/g, '').slice(0, 8);
+    const studentPortalUrl = cleanSid ? `${canonicalOrigin}/s/s${cleanSid}` : `${canonicalOrigin}/parent-portal?portal=student`;
 
     const message = `أهلاً بك يا ${studentName}، نود تذكيرك بأن لديك واجب مطلوب تسليمه لمادة المعلم (${hwTitle}). يرجى رفع حل الواجب بصيغة PDF عبر بوابتك الخاصة:\n${studentPortalUrl}\n\nبالتوفيق والنجاح دائماً!`;
     const waUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`;

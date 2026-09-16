@@ -188,7 +188,7 @@ export class SupabaseSessionsRepository implements ISessionsRepository {
     const { data: session, error: sessionError } = await this.supabase
       .from("sessions")
       .select(
-        "id, tenant_id, group_id, session_number, session_date, status, created_at, groups(name, price, billing_model)"
+        "id, tenant_id, group_id, session_number, session_date, status, created_at, groups(id, name, price, billing_model)"
       )
       .eq("id", sessionId)
       .single();

@@ -1,13 +1,16 @@
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { renderBillingView } from './BillingView.js?v=3.8.0';
+import { renderWhatsAppSettingsView } from './WhatsAppSettingsView.js';
 
 /**
  * Centrly Teacher Settings & Account Management View
  * Features:
  * 1. Profile & Teaching Info (Name, subject, phone, governorate)
- * 2. Subscription & Plan Quota (Days left, capacity progress bar, Vodafone Cash / InstaPay proof upload)
- * 3. Security & Password (Change password with current password verification + Financial PIN)
- * 4. Appearance & Preferences (Dark mode toggle, barcode audio toggle)
+ * 2. WhatsApp Gateway & Templates (Unified inside Settings)
+ * 3. Subscription & Plan Quota (Unified full pricing & proofs inside Settings)
+ * 4. Security & Password (Current password required + Forgot password link to email + Financial PIN)
+ * 5. Appearance & Preferences (Dark mode toggle, barcode audio toggle)
  */
 
 function formatArabicDate(dateStr) {
@@ -25,8 +28,8 @@ function formatArabicDate(dateStr) {
   }
 }
 
-export function renderTeacherSettingsView(state = {}, user = {}, billing = {}) {
-  const activeTab = state.activeTab || 'profile';
+export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, whatsapp = {}) {
+  const activeTab = state?.activeTab || 'profile';
   const displayName = (user?.full_name || user?.name || '').replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim() || 'محمد خالد';
   const email = user?.email || '';
   const phone = user?.phone || '';
@@ -81,32 +84,39 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}) {
       </div>
 
       <!-- Settings Navigation Tabs -->
-      <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--centrly-line); padding-bottom: 0.5rem; overflow-x: auto;">
+      <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--centrly-line); padding-bottom: 0.65rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
         
         <button type="button" onclick="window.centrlyApp.switchSettingsTab('profile')"
           class="btn ${activeTab === 'profile' ? 'btn-primary' : 'btn-secondary'}"
-          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1.1rem; border-radius: 10px; white-space: nowrap;">
+          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
           ${getIcon('teachers', 16)}
           <span>الملف الشخصي والمادة</span>
         </button>
 
+        <button type="button" onclick="window.centrlyApp.switchSettingsTab('whatsapp')"
+          class="btn ${activeTab === 'whatsapp' ? 'btn-primary' : 'btn-secondary'}"
+          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
+          ${getIcon('whatsapp', 16, activeTab === 'whatsapp' ? '#ffffff' : '#22c55e')}
+          <span>خدمة وربط الواتساب</span>
+        </button>
+
         <button type="button" onclick="window.centrlyApp.switchSettingsTab('subscription')"
           class="btn ${activeTab === 'subscription' ? 'btn-primary' : 'btn-secondary'}"
-          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1.1rem; border-radius: 10px; white-space: nowrap;">
+          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
           ${getIcon('billing', 16)}
           <span>الباقة والاشتراكات</span>
         </button>
 
         <button type="button" onclick="window.centrlyApp.switchSettingsTab('security')"
           class="btn ${activeTab === 'security' ? 'btn-primary' : 'btn-secondary'}"
-          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1.1rem; border-radius: 10px; white-space: nowrap;">
+          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
           ${getIcon('lock', 16)}
           <span>الأمان وكلمة المرور</span>
         </button>
 
         <button type="button" onclick="window.centrlyApp.switchSettingsTab('appearance')"
           class="btn ${activeTab === 'appearance' ? 'btn-primary' : 'btn-secondary'}"
-          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1.1rem; border-radius: 10px; white-space: nowrap;">
+          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
           ${getIcon('gear', 16)}
           <span>المظهر وتفضيلات النظام</span>
         </button>
@@ -158,63 +168,14 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}) {
         </div>
       </div>
 
-      <!-- ================= TAB 2: SUBSCRIPTION ================= -->
+      <!-- ================= TAB 2: WHATSAPP ================= -->
+      <div id="settingsTabWhatsApp" style="display: ${activeTab === 'whatsapp' ? 'block' : 'none'};">
+        ${renderWhatsAppSettingsView(whatsapp)}
+      </div>
+
+      <!-- ================= TAB 3: SUBSCRIPTION ================= -->
       <div id="settingsTabSubscription" style="display: ${activeTab === 'subscription' ? 'block' : 'none'};">
-        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-          
-          <!-- Status Banner -->
-          <div class="card" style="margin: 0; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: #fff; border: none; border-radius: 16px; padding: 1.75rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-              <div>
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
-                  <span class="badge" style="background: ${status === 'active' ? '#10b981' : (status === 'trial' ? '#0284c7' : '#ef4444')}; color: #fff; font-weight: 800; padding: 0.3rem 0.75rem; border-radius: 9999px;">
-                    ${status === 'active' ? 'اشتراك نشط وسارٍ' : (status === 'trial' ? 'فترة تجريبية مجانية' : 'اشتراك منتهي')}
-                  </span>
-                  <span style="font-size: 0.85rem; color: #93c5fd; font-weight: 700;">
-                    ${billing.plan_name || `باقة ${studentLimit} طالب`}
-                  </span>
-                </div>
-                
-                <p style="font-size: 0.9rem; color: #cbd5e1; margin: 0.5rem 0 0 0;">
-                  تاريخ الصلاحية: <strong style="color: #38bdf8;">${formattedDate}</strong>
-                  ${daysRemaining > 0 ? `(متبقي <strong style="color: #fde047;">${daysRemaining} يوماً</strong>)` : ''}
-                </p>
-
-                <!-- Quota Progress -->
-                <div style="margin-top: 1rem; max-width: 440px;">
-                  <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; font-weight: 700; margin-bottom: 0.35rem;">
-                    <span>سعة المقاعد المستخدمة: <strong style="color: #fff;">${currentStudents}</strong> / ${studentLimit} طالب</span>
-                    <span>${quotaPercent}%</span>
-                  </div>
-                  <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.15); border-radius: 9999px; overflow: hidden;">
-                    <div style="width: ${quotaPercent}%; height: 100%; background: ${quotaPercent >= 100 ? '#ef4444' : (quotaPercent >= 85 ? '#f59e0b' : '#10b981')}; border-radius: 9999px;"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <button class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 800; font-size: 0.95rem; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); cursor: pointer;" onclick="window.centrlyApp.openPaymentProofModal('باقة 100 طالب', 599, 'monthly')">
-                  تجديد / ترقية الباقة الآن
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Navigation to Full Billing View -->
-          <div class="card" style="margin: 0; padding: 1.5rem; border-radius: var(--radius-lg); text-align: center;">
-            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink);">
-              هل ترغب في مراجعة كافة خطط الأسعار والاشتراك السنوي بخصم 10%؟
-            </h4>
-            <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1rem 0;">
-              يمكنك الاطلاع على تفاصيل كافة الباقات (100، 250، 500 طالب) وحساب التوفير السنوي من شاشة الاشتراكات المتخصصة.
-            </p>
-            <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.navigate('billing')" style="font-weight: 800; padding: 0.6rem 1.5rem; border-radius: 10px;">
-              ${getIcon('billing', 16)}
-              <span>الانتقال لصفحة الباقات والاشتراكات الكاملة</span>
-            </button>
-          </div>
-
-        </div>
+        ${renderBillingView(billing, user)}
       </div>
 
       <!-- ================= TAB 3: SECURITY ================= -->
@@ -275,14 +236,44 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}) {
                   </div>
                 </div>
 
-                <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem;">
                   <button type="submit" id="btnSettingsUpdatePassword" class="btn btn-primary" style="font-weight: 800; padding: 0.65rem 1.75rem; border-radius: 10px;">
                     <span>تحديث كلمة المرور</span>
+                  </button>
+
+                  <button type="button" onclick="window.centrlyApp.toggleSettingsForgotPanel()" style="background: none; border: none; padding: 0; color: var(--centrly-blue-700); font-size: 0.85rem; font-weight: 700; cursor: pointer; text-decoration: underline; font-family: inherit; display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span>${getIcon('info', 14)}</span>
+                    <span>نسيت كلمة المرور الحالية؟</span>
                   </button>
                 </div>
 
               </div>
             </form>
+
+            <!-- Collapsible Forgot Password by Email Recovery Box -->
+            <div id="settingsForgotPanel" style="display: none; margin-top: 1.5rem; padding: 1.25rem; border-radius: 12px; background: var(--centrly-surface); border: 1.5px solid var(--centrly-line); max-width: 520px;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span>${getIcon('mail', 18, 'var(--centrly-blue-700)')}</span>
+                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--centrly-ink);">
+                  إرسال رابط تأكيد وتعيين كلمة المرور للبريد
+                </h4>
+              </div>
+              <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0 0 1rem 0; line-height: 1.6;">
+                في حال نسيت كلمة المرور الحالية، يمكنك إرسال رابط تأكيد وتعيين مشفر إلى بريدك الإلكتروني المسجل:
+                <strong dir="ltr" style="color: var(--centrly-ink); font-family: monospace;">${escapeHtml(email)}</strong>.
+                عند الضغط على الرابط من بريدك، ستفتح لك نافذة إدخال كلمة المرور الجديدة وتتحدث في المنظومة تلقائياً.
+              </p>
+              <div id="settingsForgotAlert" style="display: none; padding: 0.65rem 0.75rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.825rem;"></div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" id="btnSettingsForgotSubmit" onclick="window.centrlyApp.handleSettingsForgotPassword()" class="btn btn-secondary" style="font-weight: 800; padding: 0.55rem 1.25rem; border-radius: 8px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                  ${getIcon('send', 14)}
+                  <span>إرسال الرابط إلى بريدي الإلكتروني</span>
+                </button>
+                <button type="button" onclick="window.centrlyApp.toggleSettingsForgotPanel()" class="btn btn-secondary" style="font-size: 0.825rem; padding: 0.55rem 0.85rem; border-radius: 8px;">
+                  <span>إلغاء</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Financial PIN Lock Card -->
@@ -321,7 +312,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}) {
         </div>
       </div>
 
-      <!-- ================= TAB 4: APPEARANCE & PREFERENCES ================= -->
+      <!-- ================= TAB 5: APPEARANCE & PREFERENCES ================= -->
       <div id="settingsTabAppearance" style="display: ${activeTab === 'appearance' ? 'block' : 'none'};">
         <div class="card" style="margin: 0; padding: 1.75rem; border-radius: var(--radius-lg);">
           <h3 style="margin: 0 0 0.5rem 0; font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink);">
@@ -369,8 +360,8 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}) {
             </div>
 
             <!-- WhatsApp Manual Notice -->
-            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 1rem 1.25rem; font-size: 0.85rem; color: #1e3a8a; line-height: 1.6;">
-              <strong>ملاحظة هامة بشأن الواتساب:</strong>
+            <div style="background: var(--centrly-surface); border: 1.5px solid var(--centrly-line); border-radius: 12px; padding: 1rem 1.25rem; font-size: 0.85rem; color: var(--centrly-ink); line-height: 1.6;">
+              <strong style="color: var(--centrly-blue-700);">ملاحظة هامة بشأن الواتساب:</strong>
               إرسال رسائل حضور وغياب الحصة يخضع للقرار اليدوي للمعلم ولا يتم إرسال أي رسائل تلقائياً بدون موافقتك الصريحة حمايةً لخصوصية الطلاب وشريحتك من الحظر.
             </div>
 
