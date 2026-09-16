@@ -12,7 +12,7 @@ import { renderGroupsView } from './components/GroupsView.js?v=2.8.0';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.0.0';
-import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=3.0.0';
+import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=4.0.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
 import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
 import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
@@ -3093,24 +3093,32 @@ class CentrlyApp {
     `;
 
     if (type === 'success') {
-      toast.style.background = '#065f46';
+      toast.style.background = '#059669';
       toast.style.color = '#ffffff';
       toast.style.border = '1px solid #10b981';
+      toast.style.boxShadow = '0 10px 25px rgba(5, 150, 105, 0.4)';
+    } else if (type === 'warning') {
+      toast.style.background = '#d97706';
+      toast.style.color = '#ffffff';
+      toast.style.border = '1px solid #f59e0b';
+      toast.style.boxShadow = '0 10px 25px rgba(217, 119, 6, 0.4)';
     } else if (type === 'error' || type === 'danger') {
-      toast.style.background = '#991b1b';
+      toast.style.background = '#dc2626';
       toast.style.color = '#ffffff';
       toast.style.border = '1px solid #ef4444';
+      toast.style.boxShadow = '0 10px 25px rgba(220, 38, 38, 0.4)';
     } else {
-      toast.style.background = '#1e3a8a';
+      toast.style.background = '#1d4ed8';
       toast.style.color = '#ffffff';
       toast.style.border = '1px solid #3b82f6';
+      toast.style.boxShadow = '0 10px 25px rgba(29, 78, 216, 0.4)';
     }
 
     const toastIcon = type === 'success' 
       ? getIcon('check', 16, '#ffffff') 
       : ((type === 'error' || type === 'danger') 
         ? getIcon('close', 16, '#ffffff') 
-        : getIcon('lightbulb', 16, '#ffffff'));
+        : (type === 'warning' ? getIcon('alertTriangle', 16, '#ffffff') : getIcon('lightbulb', 16, '#ffffff')));
 
     toast.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
@@ -9150,7 +9158,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
         method: 'PUT',
         body: { status: 'approved' },
       });
-      this.showToast('تم اعتماد الواجب وحذف الملف لتوفير المساحة وتخفيف الحمل بنجاح!', 'success');
+      this.showToast('تم اعتماد الواجب بنجاح', 'success');
       await this.loadRouteData('homework');
     } catch (err) {
       this.showToast(`فشل اعتماد الواجب: ${err.message || 'حدث خطأ'}`, 'danger');
@@ -9158,15 +9166,17 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   }
 
   async promptRejectHomework(submissionId, studentName) {
-    const reason = prompt(`اكتب ملاحظة أو سبب طلب إعادة الواجب للطالب (${studentName}):`, 'يرجى إعادة حل الأسئلة الناقصة');
+    const reason = prompt(`هل تريد طلب إعادة حل الواجب للطالب (${studentName})؟\nاكتب ملاحظة أو سبب إعادة الواجب (اختياري):`, 'يرجى إعادة حل الواجب وتصحيحه');
     if (reason === null) return;
+
+    const note = (reason.trim() || 'يرجى إعادة حل الواجب وتصحيحه');
 
     try {
       await request(`/homework/submissions/${submissionId}/review`, {
         method: 'PUT',
-        body: { status: 'rejected', teacher_notes: reason.trim() },
+        body: { status: 'rejected', teacher_notes: note },
       });
-      this.showToast('تم تسجيل الملاحظة وتحديث حالة الواجب إلى يحتاج إعادة', 'warning');
+      this.showToast(`تم طلب إعادة الواجب من الطالب (${studentName}) بنجاح`, 'warning');
       await this.loadRouteData('homework');
     } catch (err) {
       this.showToast(`فشل تحديث حالة الواجب: ${err.message || 'حدث خطأ'}`, 'danger');

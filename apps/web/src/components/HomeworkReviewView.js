@@ -243,7 +243,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                   <span>تسليمات الطلاب للواجب (${submitted.length})</span>
                 </h3>
                 <p style="font-size: 0.78rem; color: #64748b; margin: 0.2rem 0 0 0;">
-                  فحص الحلول واعتمادها. عند اعتماد الواجب يتم تفريغ الملف تلقائياً لتوفير المساحة وتخفيف الحمل، مع حفظ السجل كاسم وحالة معتمدة.
+                  فحص حلول الطلاب واعتمادها أو طلب إعادتها بسهولة بضغطة زر، مع رصد مباشر لحالة كل طالب.
                 </p>
               </div>
 
@@ -332,22 +332,22 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                             </td>
                             <td style="text-align: center;">
                               <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                                <!-- Approve Button -->
+                                <!-- Approve Button (Solid Vibrant Green with active click feedback) -->
                                 <button type="button" class="btn btn-sm btn-success" 
                                   onclick="window.centrlyApp && window.centrlyApp.approveHomeworkSubmission ? window.centrlyApp.approveHomeworkSubmission('${escapeHtml(sub.id)}') : null"
-                                  title="اعتماد الواجب وتسجيله وحذف الملف لتوفير التخزين وتخفيف الحمل"
-                                  style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.6rem;">
-                                  ${getIcon('check', 14, '#ffffff')}
+                                  title="اعتماد الواجب"
+                                  style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 800; padding: 0.35rem 0.75rem; font-size: 0.825rem; background: #16a34a !important; color: #ffffff !important; border: 1px solid #15803d !important; border-radius: 0.5rem; cursor: pointer; box-shadow: 0 2px 5px rgba(22, 163, 74, 0.3);">
+                                  ${getIcon('check', 15, '#ffffff')}
                                   <span>موافق / اعتماد</span>
                                 </button>
 
-                                <!-- Reject / Revision Request Button -->
-                                <button type="button" class="btn btn-sm btn-secondary" 
+                                <!-- Request Redo / Revision Button (Distinct Amber/Orange with active click feedback) -->
+                                <button type="button" class="btn btn-sm btn-warning" 
                                   onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
-                                  title="طلب إعادة التسليم مع ملاحظة"
-                                  style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.5rem; color: #dc2626;">
-                                  ${getIcon('edit', 14, '#dc2626')}
-                                  <span>ملاحظة / طلب إعادة</span>
+                                  title="طلب إعادة حل الواجب من الطالب"
+                                  style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 800; padding: 0.35rem 0.75rem; font-size: 0.825rem; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.5rem; cursor: pointer;">
+                                  ${getIcon('refresh', 14, '#c2410c')}
+                                  <span>طلب إعادة الواجب</span>
                                 </button>
                               </div>
                             </td>
@@ -360,18 +360,18 @@ export function renderHomeworkReviewView(homeworkState = {}) {
               `}
             ` : ''}
 
-            <!-- ================= SUB-TAB 2: APPROVED ARCHIVE (اسم وسجل فقط) ================= -->
+            <!-- ================= SUB-TAB 2: APPROVED ARCHIVE (سجل المعتمدين) ================= -->
             ${subTab === 'approved' ? `
               ${approvedSubmissions.length === 0 ? `
                 <div style="text-align: center; padding: 2.5rem 1rem; color: #64748b; background: #f8fafc; border-radius: 0.75rem; border: 1px dashed #cbd5e1; margin-top: 1rem;">
                   <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('inbox', 36, '#94a3b8')}</div>
                   لم يتم اعتماد أي واجب بعد لهذا التكليف.<br>
-                  ستظهر هنا أسماء الطلاب فور اعتماد تسليماتهم وتفريغ ملفاتهم لتوفير التخزين.
+                  ستظهر هنا أسماء الطلاب فور اعتماد تسليماتهم بنجاح.
                 </div>
               ` : `
                 <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.6rem; padding: 0.6rem 0.85rem; margin-top: 0.75rem; margin-bottom: 0.75rem; font-size: 0.825rem; color: #166534; display: flex; align-items: center; gap: 0.45rem;">
                   ${getIcon('check', 16, '#166534')}
-                  <span>تم حذف وتفريغ ملفات هذه الواجبات تلقائياً من السيرفر لتوفير المساحة وتخفيف الحمل، مع حفظ إثبات التسليم والاعتماد كاسم وسجل معتمد.</span>
+                  <span>سجل بأسماء الطلاب الذين تم اعتماد واجباتهم بنجاح. يمكنك الضغط على "طلب إعادة" إذا رغبت في إعادة تكليف الطالب بحل الواجب مجدداً.</span>
                 </div>
                 <div style="overflow-x: auto;">
                   <table class="data-table">
@@ -384,6 +384,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                         <th>تاريخ الاعتماد</th>
                         <th>حالة الواجب</th>
                         <th>ملاحظات المعلم</th>
+                        <th style="text-align: center;">الإجراء</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -404,11 +405,20 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                             <td>
                               <span class="badge badge-success" style="font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.3rem;">
                                 ${getIcon('check', 13, '#ffffff')}
-                                <span>معتمد ومُفرّغ من التخزين</span>
+                                <span>معتمد بنجاح ★</span>
                               </span>
                             </td>
                             <td style="font-size: 0.8rem; color: #475569; max-width: 220px;">
                               ${sub.teacher_notes ? escapeHtml(sub.teacher_notes) : '<span style="color: #94a3b8;">—</span>'}
+                            </td>
+                            <td style="text-align: center;">
+                              <button type="button" class="btn btn-sm btn-warning" 
+                                onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
+                                title="طلب إعادة حل الواجب من الطالب"
+                                style="display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 800; padding: 0.25rem 0.6rem; font-size: 0.75rem; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.45rem; cursor: pointer;">
+                                ${getIcon('refresh', 13, '#c2410c')}
+                                <span>طلب إعادة</span>
+                              </button>
                             </td>
                           </tr>
                         `;
@@ -440,7 +450,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                       const isPending = sub.status === 'pending';
 
                       const statusBadge = isApproved 
-                        ? '<span class="badge badge-success" style="font-weight: 800;">معتمد ومُفرّغ</span>' 
+                        ? '<span class="badge badge-success" style="font-weight: 800;">معتمد</span>' 
                         : (isPending 
                           ? '<span class="badge badge-warning" style="font-weight: 800;">بانتظار الاعتماد</span>' 
                           : '<span class="badge badge-danger" style="font-weight: 800;">يحتاج إعادة</span>');
@@ -462,7 +472,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                                 <span>معاينة الملف</span>
                               </a>
                             ` : (isApproved ? `
-                              <span style="font-size: 0.78rem; color: #059669; font-weight: 700;">تم التفريغ</span>
+                              <span style="font-size: 0.78rem; color: #059669; font-weight: 700;">تم الاعتماد</span>
                             ` : '<span style="font-size: 0.78rem; color: #94a3b8;">—</span>')}
                           </td>
                           <td>${statusBadge}</td>
@@ -470,16 +480,29 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                             ${sub.teacher_notes ? escapeHtml(sub.teacher_notes) : '<span style="color: #94a3b8;">—</span>'}
                           </td>
                           <td style="text-align: center;">
-                            ${isApproved ? `
-                              <span style="color: #059669; font-size: 0.8rem; font-weight: 700;">مكتمل</span>
-                            ` : `
-                              <button type="button" class="btn btn-sm btn-success" 
-                                onclick="window.centrlyApp && window.centrlyApp.approveHomeworkSubmission ? window.centrlyApp.approveHomeworkSubmission('${escapeHtml(sub.id)}') : null"
-                                style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.2rem 0.55rem;">
-                                ${getIcon('check', 13, '#ffffff')}
-                                <span>اعتماد</span>
-                              </button>
-                            `}
+                            <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                              ${isApproved ? `
+                                <button type="button" class="btn btn-sm btn-warning" 
+                                  onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
+                                  style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.55rem; font-size: 0.75rem; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.45rem;">
+                                  ${getIcon('refresh', 12, '#c2410c')}
+                                  <span>طلب إعادة</span>
+                                </button>
+                              ` : `
+                                <button type="button" class="btn btn-sm btn-success" 
+                                  onclick="window.centrlyApp && window.centrlyApp.approveHomeworkSubmission ? window.centrlyApp.approveHomeworkSubmission('${escapeHtml(sub.id)}') : null"
+                                  style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 800; padding: 0.25rem 0.65rem; background: #16a34a !important; color: #ffffff !important; border: 1px solid #15803d !important; border-radius: 0.45rem;">
+                                  ${getIcon('check', 13, '#ffffff')}
+                                  <span>اعتماد</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-warning" 
+                                  onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
+                                  style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.6rem; font-size: 0.78rem; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.45rem;">
+                                  ${getIcon('refresh', 12, '#c2410c')}
+                                  <span>طلب إعادة</span>
+                                </button>
+                              `}
+                            </div>
                           </td>
                         </tr>
                       `;

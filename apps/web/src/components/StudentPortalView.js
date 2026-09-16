@@ -328,7 +328,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                           ` : (isApproved ? `
                             <span style="font-size: 0.78rem; color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
                               ${getIcon('check', 13, '#059669')}
-                              <span>تم اعتماد الواجب بنجاح وحذف الملف لتوفير المساحة</span>
+                              <span>تم اعتماد الواجب بنجاح ★</span>
                             </span>
                           ` : `
                             <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF أو صورة واضحة (الحد الأقصى 25MB)</span>
