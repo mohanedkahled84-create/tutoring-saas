@@ -533,22 +533,21 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
         </div>
 
         <!-- ================= TAB 4: STUDENT BARCODE CARD ================= -->
-        <div id="student-tab-content-card" style="display: ${activeTab === 'card' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem; align-items: center; width: 100%;">
-          <div style="width: 100%; max-width: 480px;">
+        <div id="student-tab-content-card" style="display: ${activeTab === 'card' ? 'flex' : 'none'}; flex-direction: column; gap: 0.85rem; align-items: center; width: 100%;">
+          <div style="width: 100%; max-width: 385px;">
             ${renderStudentBarcodeCardHtml(student)}
           </div>
 
-          <!-- Usage Instructions -->
-          <div style="max-width: 480px; width: 100%; background: #ffffff; border-radius: 0.85rem; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
-            <div style="font-weight: 800; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.45rem; display: flex; align-items: center; gap: 0.4rem;">
-              ${getIcon('lightbulb', 16, '#f59e0b')}
-              <span>طريقة استخدام كارت الحضور الذكي</span>
+          <!-- Sleek Compact Usage Instructions -->
+          <div style="max-width: 385px; width: 100%; background: #ffffff; border-radius: 0.75rem; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="font-weight: 800; font-size: 0.82rem; color: #172D70; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+              ${getIcon('lightbulb', 15, '#f59e0b')}
+              <span>إرشادات استخدام كارت الحضور الذكي</span>
             </div>
-            <ul style="margin: 0; padding-right: 1.2rem; font-size: 0.82rem; color: #475569; line-height: 1.7;">
-              <li>اضغط على <b>تكبير للشاشة</b> لفتح الباركود بحجم كامل وإضاءة عالية لتسهيل مسحه بسكانر السنتر.</li>
-              <li>اضغط على <b>حفظ الكارت (PNG)</b> لتنزيل صورة الكارت بجودة عالية على هاتفك واستخدامه دون اتصال بالإنترنت.</li>
-              <li>يُمسح الكود ضوئياً عند دخولك الحصة ليتم تسجيل حضورك تلقائياً وإشعار ولي أمرك.</li>
-            </ul>
+            <div style="font-size: 0.75rem; color: #475569; line-height: 1.65;">
+              • اضغط <b>تكبير للشاشة</b> لرفع السطوع ومسح الباركود مباشرة عند مدخل القاعة.<br>
+              • اضغط <b>حفظ الكارت (PNG)</b> للاحتفاظ بالبطاقة على هاتفك واستخدامها دون اتصال.
+            </div>
           </div>
         </div>
 

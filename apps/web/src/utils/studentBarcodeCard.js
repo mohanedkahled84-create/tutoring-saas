@@ -89,76 +89,85 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
   const centerName = student.center_name && student.center_name !== teacherName ? student.center_name : "";
 
   // Full-size, high-contrast Code 128 barcode for instant scanner readability
-  const barcodeSvg = generateBarcode128Svg(studentCode, { height: 80, unitWidth: 2.3 });
+  const barcodeSvg = generateBarcode128Svg(studentCode, { height: 72, unitWidth: 2.2 });
   const cardId = "student-card-" + Math.random().toString(36).substring(2, 9);
   const studentJsonAttr = JSON.stringify(student).replace(/"/g, "&quot;");
 
   return `
-    <div class="student-id-card-wrapper" style="direction: rtl; font-family: 'Cairo', system-ui, -apple-system, sans-serif; width: 100%; max-width: 440px; margin: 0 auto;">
-      <!-- Elegant Modern Student ID Card -->
+    <div class="student-id-card-wrapper" style="direction: rtl; font-family: 'Cairo', system-ui, -apple-system, sans-serif; width: 100%; max-width: 385px; margin: 0 auto;">
+      <!-- Elegant Modern Student ID Card with Centrly Identity -->
       <div id="${cardId}" class="centrly-student-card" style="
-        background: linear-gradient(135deg, #0b1528 0%, #172d70 60%, #1e3a8a 100%);
-        border: 1.5px solid rgba(147, 197, 253, 0.35);
-        border-radius: 1.1rem;
-        padding: 1.15rem 1.25rem;
+        background: linear-gradient(145deg, #101c44 0%, #172D70 55%, #1e3a8a 100%);
+        border: 1.5px solid rgba(245, 158, 11, 0.45);
+        border-radius: 1.15rem;
+        padding: 1rem 1.15rem 0.95rem;
         color: #ffffff;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
+        box-shadow: 0 10px 28px rgba(16, 28, 68, 0.4), 0 0 16px rgba(245, 158, 11, 0.1);
         position: relative;
         overflow: hidden;
       ">
-        <!-- Ambient Decorative Glow -->
-        <div style="position: absolute; top: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+        <!-- Ambient Decorative Gold & Blue Auras -->
+        <div style="position: absolute; top: -25px; left: -25px; width: 110px; height: 110px; background: radial-gradient(circle, rgba(245, 158, 11, 0.2) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+        <div style="position: absolute; bottom: -30px; right: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
 
-        <!-- 1. Top Header: Teacher & Center Branding + Verified Badge -->
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 0.65rem; position: relative; z-index: 2;">
+        <!-- 1. Top Header: Centrly Brand Badge, Teacher/Center Name, Verified Badge -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 0.65rem; position: relative; z-index: 2;">
           <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <div style="width: 32px; height: 32px; background: rgba(59, 130, 246, 0.25); border: 1px solid rgba(147, 197, 253, 0.4); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-              ${getIcon('gradCap', 18, '#93c5fd')}
+            <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #1e3a8a, #2563eb); border: 1.5px solid rgba(245, 158, 11, 0.6); border-radius: 9px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(23, 45, 112, 0.4); flex-shrink: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" fill="#F59E0B"/>
+                <path d="M12 15L3 10.09L12 5.18L21 10.09L12 15Z" fill="#FFFFFF" fill-opacity="0.95"/>
+              </svg>
             </div>
             <div>
-              <div style="font-size: 0.95rem; font-weight: 900; color: #ffffff; line-height: 1.2;">
+              <div style="font-family: 'Changa', 'Cairo', sans-serif; font-size: 1rem; font-weight: 800; color: #ffffff; line-height: 1.2;">
                 ${escapeHtml(teacherName)}
               </div>
-              <div style="font-size: 0.72rem; color: #93c5fd; font-weight: 600;">
-                ${centerName ? `${escapeHtml(centerName)} • ` : ''}بطاقة الحضور والباركود الذكي
+              <div style="font-size: 0.7rem; color: #cbd5e1; font-weight: 600; margin-top: 1px;">
+                <span style="color: #F59E0B; font-weight: 700;">سنترلي | Centrly</span> • ${centerName ? `${escapeHtml(centerName)} • ` : ''}بطاقة الطالب الذكية
               </div>
             </div>
           </div>
 
-          <div style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.45); color: #34d399; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.35rem;">
-            <span style="display:inline-block; width: 6px; height: 6px; background: #34d399; border-radius: 50%;"></span>
+          <div style="background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.5); color: #34d399; font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap;">
+            <span style="display:inline-block; width: 5px; height: 5px; background: #34d399; border-radius: 50%; box-shadow: 0 0 6px #34d399;"></span>
             <span>كارت معتمد</span>
           </div>
         </div>
 
         <!-- 2. Student Info Details -->
-        <div style="margin-bottom: 0.85rem; position: relative; z-index: 2;">
-          <div style="font-size: 0.72rem; color: #93c5fd; font-weight: 700;">اسم الطالب</div>
-          <div style="font-size: 1.25rem; font-weight: 900; color: #ffffff; line-height: 1.2; margin: 0.15rem 0 0.4rem;">
+        <div style="margin-bottom: 0.75rem; position: relative; z-index: 2;">
+          <div style="font-size: 0.7rem; color: #FCD34D; font-weight: 700; letter-spacing: 0.3px;">اسم الطالب</div>
+          <div style="font-family: 'Changa', 'Cairo', sans-serif; font-size: 1.28rem; font-weight: 900; color: #ffffff; line-height: 1.2; margin: 0.1rem 0 0.4rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
             ${escapeHtml(studentName)}
           </div>
           <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-            <span style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 0.2rem 0.6rem; border-radius: 0.4rem; font-size: 0.75rem; font-weight: 700; color: #e2e8f0;">
+            <span style="background: rgba(245, 158, 11, 0.18); border: 1px solid rgba(245, 158, 11, 0.45); padding: 0.2rem 0.6rem; border-radius: 0.45rem; font-size: 0.75rem; font-weight: 800; color: #FDE68A;">
               ${escapeHtml(groupName)}
             </span>
-            <span style="background: rgba(59, 130, 246, 0.3); border: 1px solid rgba(59, 130, 246, 0.6); padding: 0.2rem 0.6rem; border-radius: 0.4rem; font-size: 0.75rem; font-family: monospace; font-weight: 900; color: #bfdbfe;">
+            <span style="background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.25); padding: 0.2rem 0.6rem; border-radius: 0.45rem; font-size: 0.75rem; font-family: monospace; font-weight: 900; color: #ffffff;">
               كود: ${escapeHtml(studentCode)}
             </span>
           </div>
         </div>
 
         <!-- 3. Full-Size Scannable Barcode Box -->
-        <div style="background: #ffffff; border-radius: 0.75rem; padding: 0.75rem 0.85rem 0.5rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.25); position: relative; z-index: 2;">
+        <div style="background: #ffffff; border-radius: 0.75rem; padding: 0.65rem 0.75rem 0.45rem; text-align: center; box-shadow: 0 4px 14px rgba(0,0,0,0.22); border: 1px solid #e2e8f0; position: relative; z-index: 2;">
           <div style="width: 100%; overflow: hidden; display: flex; justify-content: center; align-items: center;">
             ${barcodeSvg}
           </div>
-          <div style="font-family: monospace; font-size: 1.05rem; font-weight: 900; letter-spacing: 3px; color: #0f172a; margin-top: 0.35rem; direction: ltr;">
+          <div style="font-family: 'Changa', monospace; font-size: 1.15rem; font-weight: 900; letter-spacing: 4px; color: #172D70; margin-top: 0.3rem; direction: ltr;">
             ${escapeHtml(studentCode)}
+          </div>
+          <div style="font-size: 0.68rem; font-weight: 700; color: #64748b; margin-top: 0.2rem; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+            <span style="color: #F59E0B;">★</span>
+            <span>منظومة سنترلي التعليمية • كود دخول ذكي معتمد</span>
+            <span style="color: #F59E0B;">★</span>
           </div>
         </div>
 
         <!-- 4. Card Action Buttons -->
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-top: 0.85rem; padding-top: 0.65rem; border-top: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 2;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 2;">
           <button type="button" 
             onclick="window.centrlyBarcodeCard && window.centrlyBarcodeCard.openFullscreen ? window.centrlyBarcodeCard.openFullscreen(${studentJsonAttr}) : null" 
             style="
@@ -166,8 +175,8 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
               background: rgba(255,255,255,0.12);
               color: #ffffff;
               border: 1px solid rgba(255,255,255,0.25);
-              border-radius: 0.5rem;
-              padding: 0.45rem 0.65rem;
+              border-radius: 0.55rem;
+              padding: 0.5rem 0.65rem;
               font-size: 0.78rem;
               font-weight: 700;
               font-family: inherit;
@@ -176,6 +185,7 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
               align-items: center;
               justify-content: center;
               gap: 0.35rem;
+              transition: all 0.15s ease;
             ">
             ${getIcon('expand', 14, '#ffffff')}
             <span>تكبير للشاشة</span>
@@ -185,11 +195,11 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
             onclick="window.centrlyBarcodeCard && window.centrlyBarcodeCard.downloadCardPng ? window.centrlyBarcodeCard.downloadCardPng(${studentJsonAttr}) : null" 
             style="
               flex: 1;
-              background: #2563eb;
+              background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
               color: #ffffff;
               border: none;
-              border-radius: 0.5rem;
-              padding: 0.45rem 0.75rem;
+              border-radius: 0.55rem;
+              padding: 0.5rem 0.75rem;
               font-size: 0.78rem;
               font-weight: 800;
               font-family: inherit;
@@ -198,7 +208,8 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
               align-items: center;
               justify-content: center;
               gap: 0.35rem;
-              box-shadow: 0 2px 6px rgba(37,99,235,0.35);
+              box-shadow: 0 3px 10px rgba(245, 158, 11, 0.35);
+              transition: all 0.15s ease;
             ">
             ${getIcon('download', 14, '#ffffff')}
             <span>حفظ الكارت (PNG)</span>
@@ -228,112 +239,120 @@ export function downloadStudentCardAsPng(student = {}, options = {}) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  // 1. Background Luxury Gradient
+  // 1. Background Luxury Deep Royal Navy Gradient
   const grad = ctx.createLinearGradient(0, 0, width, height);
-  grad.addColorStop(0, "#0b1528");
-  grad.addColorStop(0.45, "#172d70");
+  grad.addColorStop(0, "#101c44");
+  grad.addColorStop(0.5, "#172D70");
   grad.addColorStop(1, "#1e3a8a");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 
-  // Decorative ambient circles
+  // Decorative ambient circles (Warm gold & royal blue)
   ctx.beginPath();
-  ctx.arc(80, 80, 200, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(59, 130, 246, 0.08)";
+  ctx.arc(100, 100, 260, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(245, 158, 11, 0.08)";
   ctx.fill();
 
   ctx.beginPath();
-  ctx.arc(width - 80, height - 80, 240, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(37, 99, 235, 0.06)";
+  ctx.arc(width - 100, height - 100, 300, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(37, 99, 235, 0.12)";
   ctx.fill();
 
-  // Subtle outer border
-  ctx.strokeStyle = "rgba(147, 197, 253, 0.4)";
+  // Centrly Gold Accent Border
+  ctx.strokeStyle = "rgba(245, 158, 11, 0.55)";
   ctx.lineWidth = 4;
-  ctx.strokeRect(16, 16, width - 32, height - 32);
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(20, 20, width - 40, height - 40, 24);
+    ctx.stroke();
+  } else {
+    ctx.strokeRect(20, 20, width - 40, height - 40);
+  }
 
   // 2. Header
   ctx.direction = "rtl";
-  ctx.fillStyle = "#93c5fd";
+  ctx.fillStyle = "#F59E0B";
   ctx.font = "bold 24px Cairo, Tahoma, sans-serif";
   ctx.textAlign = "right";
-  const headerBrand = teacherName ? (teacherName + " • بطاقة الطالب الذكية") : "بطاقة الطالب الذكية المعتمدة";
-  ctx.fillText(headerBrand, width - 60, 68);
+  ctx.fillText("سنترلي | Centrly • بطاقة الطالب الذكية", width - 60, 68);
 
   ctx.direction = "ltr";
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.font = "16px monospace";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+  ctx.font = "bold 16px monospace";
   ctx.textAlign = "left";
-  ctx.fillText("Student Digital ID • Official Access Pass", 60, 68);
+  ctx.fillText("Official Digital Access Card", 60, 68);
 
   // Header Divider
-  ctx.strokeStyle = "rgba(255,255,255,0.15)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(245, 158, 11, 0.25)";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(60, 90);
-  ctx.lineTo(width - 60, 90);
+  ctx.moveTo(60, 88);
+  ctx.lineTo(width - 60, 88);
   ctx.stroke();
 
-  // 3. Teacher Name Banner (Explicitly shown)
-  ctx.fillStyle = "rgba(255,255,255,0.1)";
+  // 3. Teacher Name Banner
+  ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
   if (ctx.roundRect) {
     ctx.beginPath();
-    ctx.roundRect(60, 110, width - 120, 64, 12);
+    ctx.roundRect(60, 105, width - 120, 64, 12);
     ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.strokeStyle = "rgba(245, 158, 11, 0.35)";
     ctx.lineWidth = 1.5;
     ctx.stroke();
   } else {
-    ctx.fillRect(60, 110, width - 120, 64);
+    ctx.fillRect(60, 105, width - 120, 64);
   }
 
   ctx.direction = "rtl";
-  ctx.fillStyle = "#60a5fa";
-  ctx.font = "bold 22px Cairo, Tahoma, sans-serif";
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "bold 24px Cairo, Tahoma, sans-serif";
   ctx.textAlign = "right";
-  ctx.fillText("المعلم: " + teacherName, width - 85, 150);
+  ctx.fillText(teacherName, width - 85, 146);
 
   if (centerName) {
-    ctx.fillStyle = "#cbd5e1";
-    ctx.font = "20px Cairo, Tahoma, sans-serif";
+    ctx.fillStyle = "#FDE68A";
+    ctx.font = "bold 20px Cairo, Tahoma, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(centerName, 85, 150);
+    ctx.fillText(centerName, 85, 146);
   }
 
   // 4. Student Name & Meta Info
   ctx.direction = "rtl";
-  ctx.fillStyle = "#93c5fd";
+  ctx.fillStyle = "#FCD34D";
   ctx.font = "bold 18px Cairo, Tahoma, sans-serif";
   ctx.textAlign = "right";
-  ctx.fillText("اسم الطالب", width - 60, 215);
+  ctx.fillText("اسم الطالب", width - 60, 210);
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 38px Cairo, Tahoma, sans-serif";
-  ctx.fillText(studentName, width - 60, 260);
+  ctx.fillText(studentName, width - 60, 255);
 
   // Group and Code badges
-  ctx.fillStyle = "#e2e8f0";
+  ctx.fillStyle = "#FDE68A";
   ctx.font = "bold 20px Cairo, Tahoma, sans-serif";
   ctx.textAlign = "right";
-  ctx.fillText("المجموعة: " + groupName, width - 60, 305);
+  ctx.fillText("المجموعة: " + groupName, width - 60, 300);
 
   ctx.direction = "ltr";
-  ctx.fillStyle = "#bfdbfe";
+  ctx.fillStyle = "#FFFFFF";
   ctx.font = "bold 20px monospace";
   ctx.textAlign = "left";
-  ctx.fillText("كود الطالب: " + studentCode, 60, 305);
+  ctx.fillText("كود الطالب: " + studentCode, 60, 300);
 
   // 5. White Barcode Container Box
   const boxX = 60;
-  const boxY = 330;
+  const boxY = 325;
   const boxW = width - 120;
-  const boxH = 300;
+  const boxH = 305;
 
   ctx.fillStyle = "#ffffff";
   if (ctx.roundRect) {
     ctx.beginPath();
     ctx.roundRect(boxX, boxY, boxW, boxH, 16);
     ctx.fill();
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 2;
+    ctx.stroke();
   } else {
     ctx.fillRect(boxX, boxY, boxW, boxH);
   }
@@ -343,8 +362,7 @@ export function downloadStudentCardAsPng(student = {}, options = {}) {
   const barcodeHeight = 150;
   const barcodeY = boxY + 28;
 
-  // Calculate unit width so barcode fits nicely centered in white box
-  let totalUnits = 20; // 10 quiet zone left + 10 quiet zone right
+  let totalUnits = 20;
   for (let i = 0; i < patternStr.length; i++) {
     totalUnits += parseInt(patternStr[i], 10);
   }
@@ -366,7 +384,7 @@ export function downloadStudentCardAsPng(student = {}, options = {}) {
 
   // Student Code Text below Barcode
   ctx.direction = "ltr";
-  ctx.fillStyle = "#0f172a";
+  ctx.fillStyle = "#172D70";
   ctx.font = "bold 36px monospace";
   ctx.textAlign = "center";
   ctx.fillText(studentCode, boxX + boxW / 2, barcodeY + barcodeHeight + 45);
@@ -374,18 +392,18 @@ export function downloadStudentCardAsPng(student = {}, options = {}) {
   ctx.direction = "rtl";
   ctx.fillStyle = "#64748b";
   ctx.font = "bold 18px Cairo, Tahoma, sans-serif";
-  ctx.fillText("أبرز هذا الباركود لمسؤول الحضور عند مدخل الحصة", boxX + boxW / 2, barcodeY + barcodeHeight + 80);
+  ctx.fillText("★ منظومة سنترلي التعليمية • كود دخول ذكي معتمد ★", boxX + boxW / 2, barcodeY + barcodeHeight + 82);
 
   // 6. Footer
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
   ctx.font = "16px Cairo, Tahoma, sans-serif";
   ctx.textAlign = "right";
-  const footerBrand = teacherName + (centerName ? " • " + centerName : "");
+  const footerBrand = "منظومة سنترلي للحلول التعليمية (Centrly SaaS) • " + teacherName + (centerName ? " • " + centerName : "");
   ctx.fillText(footerBrand, width - 60, height - 35);
 
   ctx.direction = "ltr";
   ctx.textAlign = "left";
-  ctx.fillText("Official Digital ID • Authorized Access", 60, height - 35);
+  ctx.fillText("Official Authorized Access Card", 60, height - 35);
 
   // 7. Trigger Direct Download
   try {
@@ -425,7 +443,7 @@ export function openFullscreenBarcodeModal(student = {}) {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(15, 23, 42, 0.95);
+    background: rgba(16, 28, 68, 0.96);
     backdrop-filter: blur(8px);
     z-index: 99999;
     display: flex;
@@ -439,10 +457,10 @@ export function openFullscreenBarcodeModal(student = {}) {
   modal.innerHTML = `
     <div style="
       background: #ffffff;
-      border-radius: 1.5rem;
-      max-width: 520px;
+      border-radius: 1.25rem;
+      max-width: 500px;
       width: 100%;
-      padding: 2rem 1.5rem;
+      padding: 1.75rem 1.5rem;
       text-align: center;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
       position: relative;
@@ -466,22 +484,22 @@ export function openFullscreenBarcodeModal(student = {}) {
         ${getIcon('close', 18, '#475569')}
       </button>
 
-      <div style="font-size: 0.8rem; font-weight: 800; color: #2563eb; margin-bottom: 0.35rem;">
-        ${escapeHtml(teacherName)} • كارت الباركود المباشر
+      <div style="font-size: 0.8rem; font-weight: 800; color: #F59E0B; margin-bottom: 0.35rem;">
+        سنترلي | Centrly • كارت الباركود المباشر
       </div>
       
-      <h3 style="font-size: 1.35rem; font-weight: 900; color: #0f172a; margin: 0 0 0.25rem 0;">
+      <h3 style="font-size: 1.35rem; font-weight: 900; color: #172D70; margin: 0 0 0.25rem 0;">
         ${escapeHtml(studentName)}
       </h3>
 
       <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.25rem;">
-        المعلم: <b style="color: #0f172a;">${escapeHtml(teacherName)}</b>
+        المعلم: <b style="color: #172D70;">${escapeHtml(teacherName)}</b>
       </div>
 
       <!-- Extra Large Crisp Barcode -->
       <div style="
         background: #ffffff;
-        border: 2px dashed #94a3b8;
+        border: 2px dashed #cbd5e1;
         border-radius: 1rem;
         padding: 1.5rem 1rem;
         margin-bottom: 1rem;
@@ -489,18 +507,18 @@ export function openFullscreenBarcodeModal(student = {}) {
         <div style="width: 100%; overflow: hidden; display: flex; justify-content: center; align-items: center;">
           ${barcodeSvg}
         </div>
-        <div style="font-family: monospace; font-size: 1.5rem; font-weight: 900; letter-spacing: 4px; color: #0f172a; margin-top: 0.75rem; direction: ltr;">
+        <div style="font-family: 'Changa', monospace; font-size: 1.5rem; font-weight: 900; letter-spacing: 4px; color: #172D70; margin-top: 0.75rem; direction: ltr;">
           ${escapeHtml(studentCode)}
         </div>
       </div>
 
-      <div style="font-size: 0.85rem; font-weight: 700; color: #16a34a; margin-bottom: 1.25rem;">
+      <div style="font-size: 0.82rem; font-weight: 700; color: #16a34a; margin-bottom: 1.25rem;">
         ارفع سطوع شاشة الهاتف لتسهيل المسح الضوئي عند مدخل القاعة
       </div>
 
       <div style="display: flex; gap: 0.75rem; justify-content: center;">
         <button onclick="window.centrlyBarcodeCard.downloadCardPng(${studentJsonAttr})" style="
-          background: #2563eb;
+          background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
           color: white;
           border: none;
           padding: 0.65rem 1.25rem;
@@ -511,6 +529,7 @@ export function openFullscreenBarcodeModal(student = {}) {
           display: inline-flex;
           align-items: center;
           gap: 0.4rem;
+          box-shadow: 0 3px 10px rgba(245, 158, 11, 0.35);
         ">
           ${getIcon('download', 16, '#ffffff')}
           <span>حفظ الصورة في الهاتف</span>

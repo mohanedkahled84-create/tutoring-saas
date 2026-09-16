@@ -202,7 +202,9 @@ export function renderBusinessOwnerDashboard(data = {}) {
                   <div style="font-weight: 700; font-size: 0.9rem; color: var(--centrly-ink);">${s.name}</div>
                   <div style="font-size: 0.75rem; color: var(--centrly-text);">${new Date(s.created_at).toLocaleDateString('ar-EG')}</div>
                 </div>
-                <span class="badge ${s.status === 'active' ? 'badge-success' : 'badge-primary'}">${s.status}</span>
+                <span class="badge ${s.subscription_status === 'active' ? 'badge-success' : (s.subscription_status === 'pending_verification' ? 'badge-warning' : 'badge-primary')}" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;">
+                  ${s.subscription_status === 'active' ? 'اشتراك نشط' : (s.subscription_status === 'pending_verification' ? 'بانتظار التحويل' : 'فترة تجريبية')}
+                </span>
               </div>
             `).join('') : `
               <div style="padding: 1rem; text-align: center; color: var(--centrly-text); font-size: 0.825rem;">

@@ -10,8 +10,8 @@ import { renderSessionsView } from './components/SessionsView.js';
 import { renderStudentsView } from './components/StudentsView.js?v=2.8.0';
 import { renderGroupsView } from './components/GroupsView.js?v=2.8.0';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
-import { renderParentPortalView } from './components/ParentPortalView.js?v=2.9.0';
-import { renderStudentPortalView } from './components/StudentPortalView.js?v=2.9.0';
+import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
+import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.0.0';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=3.0.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
 import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
@@ -33,7 +33,7 @@ import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsVie
 import { renderAdminTenantsView } from './components/AdminTenantsView.js';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
-import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js?v=2.9.0';
+import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js?v=3.0.0';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
 
 class CentrlyApp {
@@ -281,6 +281,9 @@ class CentrlyApp {
           };
           if (proofsRes) this.adminProofsData = proofsRes;
           if (tenantsRes) this.adminTenantsData = tenantsRes;
+          if (['admin-dashboard', 'admin-proofs', 'admin-tenants'].includes(this.currentRoute)) {
+            this.renderMainContent();
+          }
         }
       } catch (_) {}
       return;
@@ -411,6 +414,7 @@ class CentrlyApp {
       this.renderApp();
       this.prefetchCoreData();
       await this.loadRouteData(this.currentRoute);
+      this.renderMainContent();
     }
   }
 
@@ -1265,12 +1269,13 @@ class CentrlyApp {
             const activeCount = tenants.filter(t => t.subscription_status === 'active').length;
             const trialCount = tenants.filter(t => t.subscription_status === 'trial').length;
             const expiredCount = tenants.filter(t => ['expired', 'past_due', 'deactivated'].includes(t.subscription_status)).length;
+            const mrrValue = activeCount > 0 ? (activeCount * 899) : (overview.mrr_egp || 0);
             this.adminOverviewData = {
               overview: {
                 total_tenants: tenants.length || overview.total_tenants || 0,
                 active_tenants: activeCount || overview.active_tenants || 0,
                 trial_tenants: trialCount || overview.trial_tenants || 0,
-                mrr_egp: (activeCount * 599) || overview.mrr_egp || 0,
+                mrr_egp: mrrValue,
                 total_students: overview.total_students || 0,
                 total_sessions: overview.total_sessions || 0,
                 whatsapp: overview.whatsapp || { total_sent: 0, total_failed: 0, estimated_cost_egp: 0 },
@@ -1287,10 +1292,13 @@ class CentrlyApp {
                 details: `تنتهي التجربة في: ${t.trial_ends_at ? new Date(t.trial_ends_at).toLocaleDateString('ar-EG') : 'قريباً'}`,
               })),
             };
+            this.adminProofsData = proofsRes;
+            this.adminTenantsData = tenantsRes;
           } catch (err) {
             console.warn('admin-dashboard load error', err);
             this.adminOverviewData = {};
           }
+          this.renderMainContent();
           break;
         }
         case 'admin-proofs': {
@@ -1301,6 +1309,7 @@ class CentrlyApp {
             console.warn('admin-proofs load error', err);
             this.adminProofsData = { payment_proofs: [] };
           }
+          this.renderMainContent();
           break;
         }
         case 'admin-tenants': {
@@ -1311,6 +1320,7 @@ class CentrlyApp {
             console.warn('admin-tenants load error', err);
             this.adminTenantsData = { tenants: [] };
           }
+          this.renderMainContent();
           break;
         }
         case 'calendar': {
