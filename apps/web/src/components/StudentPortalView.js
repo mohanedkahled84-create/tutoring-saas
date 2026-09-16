@@ -84,27 +84,30 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           </p>
         </div>
 
-        <!-- Student Barcode Card (Centrly Brand Identity, High-Resolution Code 128, Teacher Name) -->
-        ${renderStudentBarcodeCardHtml(student)}
-
-        <!-- 3-Tab Navigation Bar (Prioritizing Materials & Homework first) -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
+        <!-- 4-Tab Navigation Bar (Materials, Quizzes, Attendance, Barcode ID Card) -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('materials') : null" id="student-tab-btn-materials"
-            style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('materials', 16, activeTab === 'materials' ? '#1e3a8a' : '#64748b')}
-            <span>الواجبات والماتريال</span>
+            style="padding: 0.65rem 0.35rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: ${activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('materials', 15, activeTab === 'materials' ? '#1e3a8a' : '#64748b')}
+            <span>المذكرات والواجب</span>
           </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('quizzes') : null" id="student-tab-btn-quizzes"
-            style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'quizzes' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'quizzes' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'quizzes' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('chart', 16, activeTab === 'quizzes' ? '#1e3a8a' : '#64748b')}
+            style="padding: 0.65rem 0.35rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: ${activeTab === 'quizzes' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'quizzes' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'quizzes' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('chart', 15, activeTab === 'quizzes' ? '#1e3a8a' : '#64748b')}
             <span>الكويزات (${quizzes.length})</span>
           </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('attendance') : null" id="student-tab-btn-attendance"
-            style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('calendar', 16, activeTab === 'attendance' ? '#1e3a8a' : '#64748b')}
+            style="padding: 0.65rem 0.35rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('calendar', 15, activeTab === 'attendance' ? '#1e3a8a' : '#64748b')}
             <span>الحضور والغياب</span>
+          </button>
+
+          <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('card') : null" id="student-tab-btn-card"
+            style="padding: 0.65rem 0.35rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: ${activeTab === 'card' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'card' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'card' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('barcode', 15, activeTab === 'card' ? '#1e3a8a' : '#64748b')}
+            <span>كارت الحضور</span>
           </button>
         </div>
 
@@ -529,6 +532,26 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
         </div>
 
+        <!-- ================= TAB 4: STUDENT BARCODE CARD ================= -->
+        <div id="student-tab-content-card" style="display: ${activeTab === 'card' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem; align-items: center; width: 100%;">
+          <div style="width: 100%; max-width: 480px;">
+            ${renderStudentBarcodeCardHtml(student)}
+          </div>
+
+          <!-- Usage Instructions -->
+          <div style="max-width: 480px; width: 100%; background: #ffffff; border-radius: 0.85rem; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
+            <div style="font-weight: 800; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.45rem; display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('lightbulb', 16, '#f59e0b')}
+              <span>طريقة استخدام كارت الحضور الذكي</span>
+            </div>
+            <ul style="margin: 0; padding-right: 1.2rem; font-size: 0.82rem; color: #475569; line-height: 1.7;">
+              <li>اضغط على <b>تكبير للشاشة</b> لفتح الباركود بحجم كامل وإضاءة عالية لتسهيل مسحه بسكانر السنتر.</li>
+              <li>اضغط على <b>حفظ الكارت (PNG)</b> لتنزيل صورة الكارت بجودة عالية على هاتفك واستخدامه دون اتصال بالإنترنت.</li>
+              <li>يُمسح الكود ضوئياً عند دخولك الحصة ليتم تسجيل حضورك تلقائياً وإشعار ولي أمرك.</li>
+            </ul>
+          </div>
+        </div>
+
         <!-- Student Portal Security & Integrity Note -->
         <div style="text-align: center; padding: 1rem 0; font-size: 0.75rem; color: #94a3b8; line-height: 1.6;">
           رابطك الشخصي لمتابعة دراستك • تتحدث البيانات والدرجات تلقائياً<br>
@@ -543,7 +566,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 // Global helper for switching tabs in student portal
 if (typeof window !== 'undefined') {
   window.switchStudentPortalTab = function(tabName) {
-    const tabs = ['materials', 'quizzes', 'attendance'];
+    const tabs = ['materials', 'quizzes', 'attendance', 'card'];
     tabs.forEach(t => {
       const content = document.getElementById('student-tab-content-' + t);
       const btn = document.getElementById('student-tab-btn-' + t);

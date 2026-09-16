@@ -1,6 +1,5 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
-import { renderStudentBarcodeCardHtml } from "../utils/studentBarcodeCard.js";
 
 /**
  * Centrly Parent Web Portal Component (DEV-34 & DEV-PORTAL)
@@ -71,27 +70,6 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           <p style="font-size: 0.8rem; color: #64748b; margin: 0.4rem 0 0 0;">
             تقرير الحضور والغياب، درجات الكويزات، ومتابعة تسليم الواجبات المنزلية
           </p>
-        </div>
-
-        <!-- Student Barcode Card for Parent (Downloadable & Screen-ready) -->
-        <div style="background: #fff; border-radius: 1rem; padding: 1rem 1.15rem; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
-          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="const c = document.getElementById('parentPortalBarcodeCardSection'); if(c) c.style.display = c.style.display === 'none' ? 'block' : 'none';">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <div style="width: 32px; height: 32px; background: #eff6ff; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #2563eb;">
-                ${getIcon('barcode', 18, '#2563eb')}
-              </div>
-              <div>
-                <div style="font-size: 0.88rem; font-weight: 800; color: #0f172a;">كارت الحضور والباركود الذكي للطالب</div>
-                <div style="font-size: 0.72rem; color: #64748b;">لحفظ صورة الكارت على الهاتف ومسحه عند الحضور</div>
-              </div>
-            </div>
-            <button type="button" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 0.4rem; padding: 0.2rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #334155; cursor: pointer;">
-              عرض / إخفاء
-            </button>
-          </div>
-          <div id="parentPortalBarcodeCardSection" style="margin-top: 0.85rem;">
-            ${renderStudentBarcodeCardHtml(student)}
-          </div>
         </div>
 
         <!-- 3-Tab Navigation Bar: Attendance, Quizzes, Homework Tracking -->

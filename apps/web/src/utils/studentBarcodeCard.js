@@ -88,118 +88,119 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
   const teacherName = student.teacher_name || options.teacherName || student.center_name || "معلم المادة";
   const centerName = student.center_name && student.center_name !== teacherName ? student.center_name : "";
 
-  // Compact, high-contrast Code 128 barcode
-  const barcodeSvg = generateBarcode128Svg(studentCode, { height: 48, unitWidth: 2.1 });
+  // Full-size, high-contrast Code 128 barcode for instant scanner readability
+  const barcodeSvg = generateBarcode128Svg(studentCode, { height: 80, unitWidth: 2.3 });
   const cardId = "student-card-" + Math.random().toString(36).substring(2, 9);
   const studentJsonAttr = JSON.stringify(student).replace(/"/g, "&quot;");
 
   return `
-    <div class="student-id-card-wrapper" style="direction: rtl; font-family: 'Cairo', system-ui, -apple-system, sans-serif;">
-      <!-- Compact Teacher-Branded Card Container -->
+    <div class="student-id-card-wrapper" style="direction: rtl; font-family: 'Cairo', system-ui, -apple-system, sans-serif; width: 100%; max-width: 440px; margin: 0 auto;">
+      <!-- Elegant Modern Student ID Card -->
       <div id="${cardId}" class="centrly-student-card" style="
         background: linear-gradient(135deg, #0b1528 0%, #172d70 60%, #1e3a8a 100%);
         border: 1.5px solid rgba(147, 197, 253, 0.35);
-        border-radius: 1rem;
-        padding: 0.9rem 1.1rem;
+        border-radius: 1.1rem;
+        padding: 1.15rem 1.25rem;
         color: #ffffff;
-        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.18);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
         position: relative;
         overflow: hidden;
       ">
         <!-- Ambient Decorative Glow -->
-        <div style="position: absolute; top: -30px; left: -30px; width: 100px; height: 100px; background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+        <div style="position: absolute; top: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
 
-        <!-- 1. Top Header: Teacher Branding (Primary Identity) & Status Badge -->
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 0.5rem; position: relative; z-index: 2;">
-          <div style="display: flex; align-items: center; gap: 0.45rem;">
-            <div style="width: 28px; height: 28px; background: rgba(59, 130, 246, 0.25); border: 1px solid rgba(147, 197, 253, 0.4); border-radius: 7px; display: flex; align-items: center; justify-content: center;">
-              ${getIcon('gradCap', 16, '#93c5fd')}
+        <!-- 1. Top Header: Teacher & Center Branding + Verified Badge -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 0.65rem; position: relative; z-index: 2;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="width: 32px; height: 32px; background: rgba(59, 130, 246, 0.25); border: 1px solid rgba(147, 197, 253, 0.4); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              ${getIcon('gradCap', 18, '#93c5fd')}
             </div>
             <div>
-              <div style="font-size: 0.92rem; font-weight: 900; color: #ffffff; line-height: 1.2;">
+              <div style="font-size: 0.95rem; font-weight: 900; color: #ffffff; line-height: 1.2;">
                 ${escapeHtml(teacherName)}
               </div>
-              <div style="font-size: 0.7rem; color: #93c5fd; font-weight: 600;">
-                ${centerName ? `${escapeHtml(centerName)} • ` : ''}بطاقة الحضور الذكية
+              <div style="font-size: 0.72rem; color: #93c5fd; font-weight: 600;">
+                ${centerName ? `${escapeHtml(centerName)} • ` : ''}بطاقة الحضور والباركود الذكي
               </div>
             </div>
           </div>
 
-          <div style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.45); color: #34d399; font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.3rem;">
-            <span style="display:inline-block; width: 5px; height: 5px; background: #34d399; border-radius: 50%;"></span>
+          <div style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.45); color: #34d399; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <span style="display:inline-block; width: 6px; height: 6px; background: #34d399; border-radius: 50%;"></span>
             <span>كارت معتمد</span>
           </div>
         </div>
 
-        <!-- 2. Middle Row: Student Info & Scannable Barcode (Side-by-side) -->
-        <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.85rem; align-items: center; position: relative; z-index: 2;">
-          <!-- Student Info -->
-          <div>
-            <div style="font-size: 0.7rem; color: #93c5fd; font-weight: 700;">اسم الطالب</div>
-            <div style="font-size: 1.15rem; font-weight: 900; color: #ffffff; line-height: 1.2; margin: 0.1rem 0 0.35rem;">
-              ${escapeHtml(studentName)}
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-              <span style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 0.15rem 0.5rem; border-radius: 0.35rem; font-size: 0.725rem; font-weight: 700; color: #e2e8f0;">
-                ${escapeHtml(groupName)}
-              </span>
-              <span style="background: rgba(59, 130, 246, 0.3); border: 1px solid rgba(59, 130, 246, 0.6); padding: 0.15rem 0.5rem; border-radius: 0.35rem; font-size: 0.725rem; font-family: monospace; font-weight: 900; color: #bfdbfe;">
-                كود: ${escapeHtml(studentCode)}
-              </span>
-            </div>
+        <!-- 2. Student Info Details -->
+        <div style="margin-bottom: 0.85rem; position: relative; z-index: 2;">
+          <div style="font-size: 0.72rem; color: #93c5fd; font-weight: 700;">اسم الطالب</div>
+          <div style="font-size: 1.25rem; font-weight: 900; color: #ffffff; line-height: 1.2; margin: 0.15rem 0 0.4rem;">
+            ${escapeHtml(studentName)}
           </div>
-
-          <!-- Barcode Showcase Box (High contrast, compact) -->
-          <div style="background: #ffffff; border-radius: 0.65rem; padding: 0.45rem 0.65rem 0.35rem; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.25); min-width: 135px; max-width: 185px;">
-            <div style="width: 100%; overflow: hidden; display: flex; justify-content: center; align-items: center;">
-              ${barcodeSvg}
-            </div>
-            <div style="font-family: monospace; font-size: 0.95rem; font-weight: 900; letter-spacing: 2px; color: #0f172a; margin-top: 0.15rem; direction: ltr;">
-              ${escapeHtml(studentCode)}
-            </div>
+          <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+            <span style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 0.2rem 0.6rem; border-radius: 0.4rem; font-size: 0.75rem; font-weight: 700; color: #e2e8f0;">
+              ${escapeHtml(groupName)}
+            </span>
+            <span style="background: rgba(59, 130, 246, 0.3); border: 1px solid rgba(59, 130, 246, 0.6); padding: 0.2rem 0.6rem; border-radius: 0.4rem; font-size: 0.75rem; font-family: monospace; font-weight: 900; color: #bfdbfe;">
+              كود: ${escapeHtml(studentCode)}
+            </span>
           </div>
         </div>
 
-        <!-- 3. Bottom Action Buttons (Integrated & Compact) -->
-        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; margin-top: 0.7rem; padding-top: 0.55rem; border-top: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 2;">
+        <!-- 3. Full-Size Scannable Barcode Box -->
+        <div style="background: #ffffff; border-radius: 0.75rem; padding: 0.75rem 0.85rem 0.5rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.25); position: relative; z-index: 2;">
+          <div style="width: 100%; overflow: hidden; display: flex; justify-content: center; align-items: center;">
+            ${barcodeSvg}
+          </div>
+          <div style="font-family: monospace; font-size: 1.05rem; font-weight: 900; letter-spacing: 3px; color: #0f172a; margin-top: 0.35rem; direction: ltr;">
+            ${escapeHtml(studentCode)}
+          </div>
+        </div>
+
+        <!-- 4. Card Action Buttons -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-top: 0.85rem; padding-top: 0.65rem; border-top: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 2;">
           <button type="button" 
             onclick="window.centrlyBarcodeCard && window.centrlyBarcodeCard.openFullscreen ? window.centrlyBarcodeCard.openFullscreen(${studentJsonAttr}) : null" 
             style="
+              flex: 1;
               background: rgba(255,255,255,0.12);
               color: #ffffff;
               border: 1px solid rgba(255,255,255,0.25);
-              border-radius: 0.45rem;
-              padding: 0.3rem 0.65rem;
-              font-size: 0.75rem;
+              border-radius: 0.5rem;
+              padding: 0.45rem 0.65rem;
+              font-size: 0.78rem;
               font-weight: 700;
               font-family: inherit;
               cursor: pointer;
               display: inline-flex;
               align-items: center;
-              gap: 0.3rem;
+              justify-content: center;
+              gap: 0.35rem;
             ">
-            ${getIcon('expand', 13, '#ffffff')}
-            <span>تكبير الباركود للشاشة</span>
+            ${getIcon('expand', 14, '#ffffff')}
+            <span>تكبير للشاشة</span>
           </button>
 
           <button type="button" 
             onclick="window.centrlyBarcodeCard && window.centrlyBarcodeCard.downloadCardPng ? window.centrlyBarcodeCard.downloadCardPng(${studentJsonAttr}) : null" 
             style="
+              flex: 1;
               background: #2563eb;
               color: #ffffff;
               border: none;
-              border-radius: 0.45rem;
-              padding: 0.3rem 0.75rem;
-              font-size: 0.75rem;
+              border-radius: 0.5rem;
+              padding: 0.45rem 0.75rem;
+              font-size: 0.78rem;
               font-weight: 800;
               font-family: inherit;
               cursor: pointer;
               display: inline-flex;
               align-items: center;
-              gap: 0.3rem;
-              box-shadow: 0 1px 4px rgba(37,99,235,0.3);
+              justify-content: center;
+              gap: 0.35rem;
+              box-shadow: 0 2px 6px rgba(37,99,235,0.35);
             ">
-            ${getIcon('download', 13, '#ffffff')}
+            ${getIcon('download', 14, '#ffffff')}
             <span>حفظ الكارت (PNG)</span>
           </button>
         </div>

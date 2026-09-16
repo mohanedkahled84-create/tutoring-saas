@@ -10,8 +10,8 @@ import { renderSessionsView } from './components/SessionsView.js';
 import { renderStudentsView } from './components/StudentsView.js?v=2.8.0';
 import { renderGroupsView } from './components/GroupsView.js?v=2.8.0';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
-import { renderParentPortalView } from './components/ParentPortalView.js?v=2.7.0';
-import { renderStudentPortalView } from './components/StudentPortalView.js?v=2.7.0';
+import { renderParentPortalView } from './components/ParentPortalView.js?v=2.9.0';
+import { renderStudentPortalView } from './components/StudentPortalView.js?v=2.9.0';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=2.7.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
 import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
@@ -33,7 +33,7 @@ import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsVie
 import { renderAdminTenantsView } from './components/AdminTenantsView.js';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
-import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js';
+import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js?v=2.9.0';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
 
 class CentrlyApp {
