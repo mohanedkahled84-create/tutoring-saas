@@ -12,7 +12,7 @@ import { renderGroupsView } from './components/GroupsView.js?v=2.8.0';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=2.9.0';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=2.9.0';
-import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=2.7.0';
+import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=3.0.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
 import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
 import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
@@ -1879,6 +1879,7 @@ class CentrlyApp {
           let selectedMaterialId = this.homeworkState?.selectedMaterialId || (hwAssignments[0]?.id || '');
           let selectedGroupId = this.homeworkState?.selectedGroupId || 'all';
           let activeTab = this.homeworkState?.activeTab || 'submitted';
+          let subTab = this.homeworkState?.subTab || 'pending';
 
           let submissionsData = { assignments: hwAssignments, submitted: [], missing: [] };
           if (selectedMaterialId) {
@@ -1902,6 +1903,7 @@ class CentrlyApp {
             selectedMaterialId,
             selectedGroupId,
             activeTab,
+            subTab,
             submitted: submissionsData.submitted || [],
             missing: submissionsData.missing || [],
           };
@@ -9123,6 +9125,12 @@ https://centerly-platform.vercel.app/parent-portal?token=...
   switchHomeworkTab(tabName) {
     if (!this.homeworkState) this.homeworkState = {};
     this.homeworkState.activeTab = tabName;
+    this.renderMainContent();
+  }
+
+  switchHomeworkSubTab(subTabName) {
+    if (!this.homeworkState) this.homeworkState = {};
+    this.homeworkState.subTab = subTabName;
     this.renderMainContent();
   }
 

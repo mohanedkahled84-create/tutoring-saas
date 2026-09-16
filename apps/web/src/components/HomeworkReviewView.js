@@ -22,8 +22,11 @@ export function renderHomeworkReviewView(homeworkState = {}) {
 
   const totalEligible = submitted.length + missing.length;
   const submissionRate = totalEligible > 0 ? Math.round((submitted.length / totalEligible) * 100) : 0;
-  const approvedCount = submitted.filter(s => s.status === 'approved').length;
-  const pendingCount = submitted.filter(s => s.status === 'pending').length;
+  const pendingSubmissions = submitted.filter(s => s.status !== 'approved');
+  const approvedSubmissions = submitted.filter(s => s.status === 'approved');
+  const subTab = homeworkState.subTab || (pendingSubmissions.length > 0 ? 'pending' : (approvedSubmissions.length > 0 ? 'approved' : 'pending'));
+  const approvedCount = approvedSubmissions.length;
+  const pendingCount = pendingSubmissions.length;
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
@@ -233,103 +236,265 @@ export function renderHomeworkReviewView(homeworkState = {}) {
         <!-- ================= TAB 1: SUBMITTED STUDENTS (مين سلّم) ================= -->
         ${activeTab === 'submitted' ? `
           <div class="card" style="margin: 0;">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-              <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.4rem; margin: 0;">
-                ${getIcon('inbox', 18, 'var(--centrly-blue-700)')}
-                <span>قائمة الطلاب الذين قاموا برفع الواجب (${submitted.length})</span>
-              </h3>
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.4rem; margin: 0;">
+                  ${getIcon('inbox', 18, 'var(--centrly-blue-700)')}
+                  <span>تسليمات الطلاب للواجب (${submitted.length})</span>
+                </h3>
+                <p style="font-size: 0.78rem; color: #64748b; margin: 0.2rem 0 0 0;">
+                  فحص الحلول واعتمادها. عند اعتماد الواجب يتم تفريغ الملف تلقائياً لتوفير المساحة وتخفيف الحمل، مع حفظ السجل كاسم وحالة معتمدة.
+                </p>
+              </div>
+
+              <!-- Sub-tab Filter Pill Buttons -->
+              <div style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 0.6rem; gap: 3px;">
+                <button type="button" class="btn btn-sm ${subTab === 'pending' ? 'btn-primary' : 'btn-secondary'}"
+                  onclick="window.centrlyApp && window.centrlyApp.switchHomeworkSubTab ? window.centrlyApp.switchHomeworkSubTab('pending') : null"
+                  style="border: none; border-radius: 0.45rem; font-weight: 800; font-size: 0.8rem; padding: 0.35rem 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem; ${subTab === 'pending' ? 'box-shadow: 0 1px 3px rgba(0,0,0,0.1);' : 'background: transparent; color: #475569;'}">
+                  ${getIcon('clock', 13, subTab === 'pending' ? '#ffffff' : '#d97706')}
+                  <span>بانتظار الاعتماد (${pendingSubmissions.length})</span>
+                </button>
+
+                <button type="button" class="btn btn-sm ${subTab === 'approved' ? 'btn-primary' : 'btn-secondary'}"
+                  onclick="window.centrlyApp && window.centrlyApp.switchHomeworkSubTab ? window.centrlyApp.switchHomeworkSubTab('approved') : null"
+                  style="border: none; border-radius: 0.45rem; font-weight: 800; font-size: 0.8rem; padding: 0.35rem 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem; ${subTab === 'approved' ? 'box-shadow: 0 1px 3px rgba(0,0,0,0.1);' : 'background: transparent; color: #475569;'}">
+                  ${getIcon('check', 13, subTab === 'approved' ? '#ffffff' : '#059669')}
+                  <span>سجل المعتمدين (${approvedSubmissions.length})</span>
+                </button>
+
+                <button type="button" class="btn btn-sm ${subTab === 'all' ? 'btn-primary' : 'btn-secondary'}"
+                  onclick="window.centrlyApp && window.centrlyApp.switchHomeworkSubTab ? window.centrlyApp.switchHomeworkSubTab('all') : null"
+                  style="border: none; border-radius: 0.45rem; font-weight: 700; font-size: 0.8rem; padding: 0.35rem 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem; ${subTab === 'all' ? 'box-shadow: 0 1px 3px rgba(0,0,0,0.1);' : 'background: transparent; color: #475569;'}">
+                  <span>الكل (${submitted.length})</span>
+                </button>
+              </div>
             </div>
 
-            <div style="overflow-x: auto; margin-top: 0.75rem;">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>كود الطالب</th>
-                    <th>اسم الطالب</th>
-                    <th>تاريخ ووقت التسليم</th>
-                    <th>ملف الواجب (PDF)</th>
-                    <th>حالة المراجعة</th>
-                    <th>ملاحظات المعلم</th>
-                    <th style="text-align: center;">الإجراءات والاعتماد</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${submitted.length > 0 ? submitted.map(sub => {
-                    const isApproved = sub.status === 'approved';
-                    const isPending = sub.status === 'pending';
-                    const isRejected = sub.status === 'rejected';
-
-                    const statusBadge = isApproved 
-                      ? '<span class="badge badge-success" style="font-weight: 800;">معتمد</span>' 
-                      : (isPending 
-                        ? '<span class="badge badge-warning" style="font-weight: 800;">قيد المراجعة</span>' 
-                        : '<span class="badge badge-danger" style="font-weight: 800;">يحتاج إعادة</span>');
-
-                    const formattedDate = sub.submitted_at 
-                      ? new Date(sub.submitted_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) 
-                      : '—';
-
-                    return `
+            <!-- ================= SUB-TAB 1: PENDING REVIEW ================= -->
+            ${subTab === 'pending' ? `
+              ${pendingSubmissions.length === 0 ? `
+                <div style="text-align: center; padding: 3rem 1rem; color: #64748b; background: #f8fafc; border-radius: 0.75rem; border: 1px dashed #cbd5e1; margin-top: 1rem;">
+                  <div style="display: flex; justify-content: center; margin-bottom: 0.75rem;">${getIcon('check', 42, '#10b981')}</div>
+                  <h4 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0 0 0.35rem 0;">رائع! تمت مراجعة واعتماد جميع الواجبات</h4>
+                  <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 1.25rem 0;">لا توجد أي تسليمات معلقة تنتظر الفحص حالياً.</p>
+                  ${approvedSubmissions.length > 0 ? `
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp && window.centrlyApp.switchHomeworkSubTab ? window.centrlyApp.switchHomeworkSubTab('approved') : null" style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem;">
+                      ${getIcon('check', 14, '#059669')}
+                      <span>عرض سجل الواجبات المعتمدة (${approvedSubmissions.length} طالب)</span>
+                    </button>
+                  ` : ''}
+                </div>
+              ` : `
+                <div style="overflow-x: auto; margin-top: 0.75rem;">
+                  <table class="data-table">
+                    <thead>
                       <tr>
-                        <td style="font-family: monospace; font-weight: 700;">${escapeHtml(sub.student_code)}</td>
-                        <td style="font-weight: 800; color: #0f172a;">${escapeHtml(sub.student_name)}</td>
-                        <td style="font-size: 0.8rem; color: #64748b; font-family: monospace;">${escapeHtml(formattedDate)}</td>
-                        <td>
-                          ${sub.file_url ? `
-                            <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
-                              style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
-                              ${getIcon('file', 14, '#1d4ed8')}
-                              <span>معاينة ملف الواجب</span>
-                            </a>
-                          ` : (isApproved ? `
-                            <span style="display: inline-flex; align-items: center; gap: 0.3rem; background: #f0fdf4; color: #15803d; padding: 0.25rem 0.6rem; border-radius: 0.4rem; border: 1px solid #bbf7d0; font-size: 0.78rem; font-weight: 700;" title="تم فحص الواجب وتفريغ الملف من السيرفر بنجاح لتخفيف الحمل وتوفير التخزين">
-                              ${getIcon('check', 13, '#15803d')}
-                              <span>تم الاعتماد وتفريغ المساحة</span>
-                            </span>
-                          ` : `
-                            <span style="font-size: 0.78rem; color: #94a3b8;">لا يوجد ملف مرفق</span>
-                          `)}
-                        </td>
-                        <td>${statusBadge}</td>
-                        <td style="font-size: 0.8rem; color: #475569; max-width: 200px;">
-                          ${sub.teacher_notes ? escapeHtml(sub.teacher_notes) : '<span style="color: #94a3b8;">—</span>'}
-                        </td>
-                        <td style="text-align: center;">
-                          <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                            <!-- Approve Button -->
-                            <button type="button" class="btn btn-sm ${isApproved ? 'btn-secondary' : 'btn-success'}" 
-                              onclick="${isApproved ? 'return false;' : `window.centrlyApp && window.centrlyApp.approveHomeworkSubmission ? window.centrlyApp.approveHomeworkSubmission('${escapeHtml(sub.id)}') : null`}"
-                              ${isApproved ? 'disabled' : ''}
-                              title="${isApproved ? 'تم اعتماد الواجب وحذف الملف من الذاكرة لتخفيف الحمل' : 'اعتماد الواجب وتسجيله وحذف الملف لتوفير التخزين'}"
-                              style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.6rem; ${isApproved ? 'opacity: 0.7; cursor: default;' : ''}">
-                              ${getIcon('check', 14, 'currentColor')}
-                              <span>${isApproved ? 'معتمد ومُفرّغ' : 'موافق / اعتماد'}</span>
-                            </button>
+                        <th>كود الطالب</th>
+                        <th>اسم الطالب</th>
+                        <th>تاريخ ووقت التسليم</th>
+                        <th>ملف الواجب (PDF)</th>
+                        <th>حالة المراجعة</th>
+                        <th>ملاحظات المعلم</th>
+                        <th style="text-align: center;">الإجراءات والاعتماد</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${pendingSubmissions.map(sub => {
+                        const isRejected = sub.status === 'rejected';
+                        const statusBadge = isRejected 
+                          ? '<span class="badge badge-danger" style="font-weight: 800;">يحتاج إعادة</span>'
+                          : '<span class="badge badge-warning" style="font-weight: 800;">بانتظار الاعتماد</span>';
 
-                            <!-- Reject / Revision Request Button -->
-                            <button type="button" class="btn btn-sm btn-secondary" 
-                              onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
-                              title="طلب إعادة التسليم مع ملاحظة"
-                              style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.5rem; color: #dc2626;">
-                              ${getIcon('edit', 14, '#dc2626')}
-                              <span>ملاحظة / رفض</span>
-                            </button>
-                          </div>
+                        const formattedDate = sub.submitted_at 
+                          ? new Date(sub.submitted_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) 
+                          : '—';
+
+                        return `
+                          <tr>
+                            <td style="font-family: monospace; font-weight: 700;">${escapeHtml(sub.student_code)}</td>
+                            <td style="font-weight: 800; color: #0f172a;">${escapeHtml(sub.student_name)}</td>
+                            <td style="font-size: 0.8rem; color: #64748b; font-family: monospace;">${escapeHtml(formattedDate)}</td>
+                            <td>
+                              ${sub.file_url ? `
+                                <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
+                                  style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
+                                  ${getIcon('file', 14, '#1d4ed8')}
+                                  <span>معاينة ملف الواجب</span>
+                                </a>
+                              ` : `
+                                <span style="font-size: 0.78rem; color: #94a3b8;">لا يوجد ملف مرفق</span>
+                              `}
+                            </td>
+                            <td>${statusBadge}</td>
+                            <td style="font-size: 0.8rem; color: #475569; max-width: 200px;">
+                              ${sub.teacher_notes ? escapeHtml(sub.teacher_notes) : '<span style="color: #94a3b8;">—</span>'}
+                            </td>
+                            <td style="text-align: center;">
+                              <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                                <!-- Approve Button -->
+                                <button type="button" class="btn btn-sm btn-success" 
+                                  onclick="window.centrlyApp && window.centrlyApp.approveHomeworkSubmission ? window.centrlyApp.approveHomeworkSubmission('${escapeHtml(sub.id)}') : null"
+                                  title="اعتماد الواجب وتسجيله وحذف الملف لتوفير التخزين وتخفيف الحمل"
+                                  style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.6rem;">
+                                  ${getIcon('check', 14, '#ffffff')}
+                                  <span>موافق / اعتماد</span>
+                                </button>
+
+                                <!-- Reject / Revision Request Button -->
+                                <button type="button" class="btn btn-sm btn-secondary" 
+                                  onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
+                                  title="طلب إعادة التسليم مع ملاحظة"
+                                  style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.5rem; color: #dc2626;">
+                                  ${getIcon('edit', 14, '#dc2626')}
+                                  <span>ملاحظة / طلب إعادة</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        `;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              `}
+            ` : ''}
+
+            <!-- ================= SUB-TAB 2: APPROVED ARCHIVE (اسم وسجل فقط) ================= -->
+            ${subTab === 'approved' ? `
+              ${approvedSubmissions.length === 0 ? `
+                <div style="text-align: center; padding: 2.5rem 1rem; color: #64748b; background: #f8fafc; border-radius: 0.75rem; border: 1px dashed #cbd5e1; margin-top: 1rem;">
+                  <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('inbox', 36, '#94a3b8')}</div>
+                  لم يتم اعتماد أي واجب بعد لهذا التكليف.<br>
+                  ستظهر هنا أسماء الطلاب فور اعتماد تسليماتهم وتفريغ ملفاتهم لتوفير التخزين.
+                </div>
+              ` : `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.6rem; padding: 0.6rem 0.85rem; margin-top: 0.75rem; margin-bottom: 0.75rem; font-size: 0.825rem; color: #166534; display: flex; align-items: center; gap: 0.45rem;">
+                  ${getIcon('check', 16, '#166534')}
+                  <span>تم حذف وتفريغ ملفات هذه الواجبات تلقائياً من السيرفر لتوفير المساحة وتخفيف الحمل، مع حفظ إثبات التسليم والاعتماد كاسم وسجل معتمد.</span>
+                </div>
+                <div style="overflow-x: auto;">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 40px; text-align: center;">#</th>
+                        <th>كود الطالب</th>
+                        <th>اسم الطالب</th>
+                        <th>تاريخ ووقت التسليم</th>
+                        <th>تاريخ الاعتماد</th>
+                        <th>حالة الواجب</th>
+                        <th>ملاحظات المعلم</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${approvedSubmissions.map((sub, idx) => {
+                        const formattedDate = sub.submitted_at 
+                          ? new Date(sub.submitted_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) 
+                          : '—';
+                        const reviewedDate = sub.reviewed_at 
+                          ? new Date(sub.reviewed_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) 
+                          : '—';
+                        return `
+                          <tr>
+                            <td style="text-align: center; color: #94a3b8; font-weight: 700; font-size: 0.8rem;">${idx + 1}</td>
+                            <td style="font-family: monospace; font-weight: 700; color: #1e293b;">${escapeHtml(sub.student_code)}</td>
+                            <td style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">${escapeHtml(sub.student_name)}</td>
+                            <td style="font-size: 0.8rem; color: #64748b; font-family: monospace;">${escapeHtml(formattedDate)}</td>
+                            <td style="font-size: 0.8rem; color: #059669; font-family: monospace; font-weight: 700;">${escapeHtml(reviewedDate)}</td>
+                            <td>
+                              <span class="badge badge-success" style="font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                ${getIcon('check', 13, '#ffffff')}
+                                <span>معتمد ومُفرّغ من التخزين</span>
+                              </span>
+                            </td>
+                            <td style="font-size: 0.8rem; color: #475569; max-width: 220px;">
+                              ${sub.teacher_notes ? escapeHtml(sub.teacher_notes) : '<span style="color: #94a3b8;">—</span>'}
+                            </td>
+                          </tr>
+                        `;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              `}
+            ` : ''}
+
+            <!-- ================= SUB-TAB 3: ALL SUBMISSIONS ================= -->
+            ${subTab === 'all' ? `
+              <div style="overflow-x: auto; margin-top: 0.75rem;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>كود الطالب</th>
+                      <th>اسم الطالب</th>
+                      <th>تاريخ ووقت التسليم</th>
+                      <th>ملف الواجب</th>
+                      <th>حالة المراجعة</th>
+                      <th>ملاحظات المعلم</th>
+                      <th style="text-align: center;">الإجراء</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${submitted.length > 0 ? submitted.map(sub => {
+                      const isApproved = sub.status === 'approved';
+                      const isPending = sub.status === 'pending';
+
+                      const statusBadge = isApproved 
+                        ? '<span class="badge badge-success" style="font-weight: 800;">معتمد ومُفرّغ</span>' 
+                        : (isPending 
+                          ? '<span class="badge badge-warning" style="font-weight: 800;">بانتظار الاعتماد</span>' 
+                          : '<span class="badge badge-danger" style="font-weight: 800;">يحتاج إعادة</span>');
+
+                      const formattedDate = sub.submitted_at 
+                        ? new Date(sub.submitted_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) 
+                        : '—';
+
+                      return `
+                        <tr>
+                          <td style="font-family: monospace; font-weight: 700;">${escapeHtml(sub.student_code)}</td>
+                          <td style="font-weight: 800; color: #0f172a;">${escapeHtml(sub.student_name)}</td>
+                          <td style="font-size: 0.8rem; color: #64748b; font-family: monospace;">${escapeHtml(formattedDate)}</td>
+                          <td>
+                            ${sub.file_url ? `
+                              <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
+                                style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
+                                ${getIcon('file', 14, '#1d4ed8')}
+                                <span>معاينة الملف</span>
+                              </a>
+                            ` : (isApproved ? `
+                              <span style="font-size: 0.78rem; color: #059669; font-weight: 700;">تم التفريغ</span>
+                            ` : '<span style="font-size: 0.78rem; color: #94a3b8;">—</span>')}
+                          </td>
+                          <td>${statusBadge}</td>
+                          <td style="font-size: 0.8rem; color: #475569; max-width: 200px;">
+                            ${sub.teacher_notes ? escapeHtml(sub.teacher_notes) : '<span style="color: #94a3b8;">—</span>'}
+                          </td>
+                          <td style="text-align: center;">
+                            ${isApproved ? `
+                              <span style="color: #059669; font-size: 0.8rem; font-weight: 700;">مكتمل</span>
+                            ` : `
+                              <button type="button" class="btn btn-sm btn-success" 
+                                onclick="window.centrlyApp && window.centrlyApp.approveHomeworkSubmission ? window.centrlyApp.approveHomeworkSubmission('${escapeHtml(sub.id)}') : null"
+                                style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.2rem 0.55rem;">
+                                ${getIcon('check', 13, '#ffffff')}
+                                <span>اعتماد</span>
+                              </button>
+                            `}
+                          </td>
+                        </tr>
+                      `;
+                    }).join('') : `
+                      <tr>
+                        <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: #64748b;">
+                          لم يقم أي طالب بتسليم هذا الواجب بعد.
                         </td>
                       </tr>
-                    `;
-                  }).join('') : `
-                    <tr>
-                      <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: #64748b;">
-                        <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('inbox', 36, '#94a3b8')}</div>
-                        لم يقم أي طالب بتسليم هذا الواجب بعد.<br>
-                        يمكنك الاطلاع على قائمة الطلاب المتأخرين من التبويب المجاور وتذكيرهم عبر الواتساب.
-                      </td>
-                    </tr>
-                  `}
-                </tbody>
-              </table>
-            </div>
+                    `}
+                  </tbody>
+                </table>
+              </div>
+            ` : ''}
+
           </div>
         ` : `
           <!-- ================= TAB 2: MISSING STUDENTS (مين لسه) ================= -->

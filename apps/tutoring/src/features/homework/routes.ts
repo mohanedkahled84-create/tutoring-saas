@@ -210,7 +210,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
     // 2. Fetch all submissions for current homework
     const { data: submissions, error: subErr } = await supabase
       .from("homework_submissions")
-      .select("id, material_id, student_id, file_url, file_name, file_size, status, teacher_notes, submitted_at, reviewed_at, students(id, name, code, student_code, student_phone, parent_phone, group_id)")
+      .select("id, material_id, student_id, file_url, file_name, file_size, status, teacher_notes, submitted_at, reviewed_at")
       .eq("material_id", currentHomework.id)
       .order("submitted_at", { ascending: false });
 
@@ -221,20 +221,24 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
 
     const submittedStudentsMap = new Set((submissions || []).map((s: any) => s.student_id));
 
-    // 3. Fetch all enrolled students eligible for this homework
-    let studentsQuery = supabase
+    // 3. Fetch all tenant students to reliably resolve student details
+    const { data: allTenantStudents } = await supabase
       .from("students")
       .select("id, name, code, student_code, student_phone, parent_phone, group_id")
       .eq("tenant_id", tenantId);
 
-    if (currentHomework.group_id) {
-      studentsQuery = studentsQuery.eq("group_id", currentHomework.group_id);
-    } else if (requestedGroupId && requestedGroupId !== "all") {
-      studentsQuery = studentsQuery.eq("group_id", requestedGroupId);
-    }
+    const studentMap = new Map<string, any>((allTenantStudents || []).map((s: any) => [s.id, s]));
 
-    const { data: allEligibleStudents } = await studentsQuery;
-    const eligibleStudents: any[] = allEligibleStudents || [];
+    // Eligible students for this homework (group-filtered if assignment has group_id)
+    const eligibleStudents: any[] = (allTenantStudents || []).filter((s: any) => {
+      if (currentHomework.group_id) {
+        return s.group_id === currentHomework.group_id;
+      }
+      if (requestedGroupId && requestedGroupId !== "all") {
+        return s.group_id === requestedGroupId;
+      }
+      return true;
+    });
 
     // Missing students: enrolled but not in submittedStudentsMap
     const missing = eligibleStudents
@@ -248,19 +252,23 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
       }));
 
     // Formatted submitted students list
-    const submitted = (submissions || []).map((sub: any) => ({
-      id: sub.id,
-      student_id: sub.student_id,
-      student_name: sub.students?.name || "طالب",
-      student_code: sub.students?.code || sub.students?.student_code || "—",
-      student_phone: sub.students?.student_phone || sub.students?.parent_phone || "",
-      file_url: sub.file_url,
-      file_name: sub.file_name,
-      status: sub.status,
-      teacher_notes: sub.teacher_notes,
-      submitted_at: sub.submitted_at,
-      reviewed_at: sub.reviewed_at,
-    }));
+    const submitted = (submissions || []).map((sub: any) => {
+      const student = studentMap.get(sub.student_id) || sub.students || {};
+      return {
+        id: sub.id,
+        student_id: sub.student_id,
+        student_name: student.name || sub.students?.name || "طالب",
+        student_code: student.student_code || student.code || sub.students?.student_code || sub.students?.code || "—",
+        student_phone: student.student_phone || student.parent_phone || sub.students?.student_phone || sub.students?.parent_phone || "",
+        file_url: sub.file_url,
+        file_name: sub.file_name,
+        file_size: sub.file_size,
+        status: sub.status,
+        teacher_notes: sub.teacher_notes,
+        submitted_at: sub.submitted_at,
+        reviewed_at: sub.reviewed_at,
+      };
+    });
 
     res.json({
       assignments,
@@ -344,6 +352,7 @@ homeworkRouter.put("/submissions/:id/review", async (req: AuthenticatedRequest, 
     if (status === "approved") {
       updatePayload.file_url = null;
       updatePayload.file_purged = true;
+      updatePayload.file_size = 0;
     }
 
     const { data: updated, error } = await supabase
