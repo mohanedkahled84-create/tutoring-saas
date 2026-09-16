@@ -213,8 +213,9 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 const parentPhone = s.parentPhone || s.parent_phone;
                 const pToken = s.parent_portal_token || s.parentPortalToken || '';
                 const canonicalOrigin = 'https://centerly-platform.vercel.app';
-                const parentPortalUrl = pToken ? `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}` : '';
-                const studentPortalUrl = pToken ? `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}&portal=student` : '';
+                const cleanSid = String(s.id || '').replace(/-/g, '').toLowerCase().slice(0, 8);
+                const parentPortalUrl = cleanSid ? `${canonicalOrigin}/p/p${cleanSid}` : (pToken ? `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}` : '');
+                const studentPortalUrl = cleanSid ? `${canonicalOrigin}/s/s${cleanSid}` : (pToken ? `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}&portal=student` : '');
                 return `
                 <tr>
                   <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>

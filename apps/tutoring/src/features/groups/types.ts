@@ -19,6 +19,8 @@ export interface Group {
   is_section?: boolean;
   section_name?: string | null;
   sections_count?: number;
+  students_count?: number;
+  studentCount?: number;
 }
 
 export interface EnrolledStudent {

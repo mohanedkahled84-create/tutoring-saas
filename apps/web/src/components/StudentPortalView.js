@@ -45,6 +45,27 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
   const quizzes = portalData.quizzes || [];
   const materials = portalData.materials || [];
   const homeworkMaterials = materials.filter(m => m.is_homework);
+  const approvedHomeworks = homeworkMaterials.filter(m => m.submission_status === 'approved');
+  const pendingOrRedoHomeworks = homeworkMaterials.filter(m => m.submission_status !== 'approved');
+
+  // Sort materials: Redo requested first, then pending/unsubmitted homeworks, then study materials, then approved homeworks at bottom
+  const sortedMaterials = [...materials].sort((a, b) => {
+    const aIsApproved = a.is_homework && a.submission_status === 'approved';
+    const bIsApproved = b.is_homework && b.submission_status === 'approved';
+    const aIsRejected = a.is_homework && a.submission_status === 'rejected';
+    const bIsRejected = b.is_homework && b.submission_status === 'rejected';
+
+    if (aIsRejected && !bIsRejected) return -1;
+    if (!aIsRejected && bIsRejected) return 1;
+
+    if (a.is_homework && !aIsApproved && (!b.is_homework || bIsApproved)) return -1;
+    if ((!a.is_homework || aIsApproved) && b.is_homework && !bIsApproved) return 1;
+
+    if (!a.is_homework && bIsApproved) return -1;
+    if (aIsApproved && !b.is_homework) return 1;
+
+    return 0;
+  });
 
   return `
     <div style="min-height: 100vh; background-color: #f8fafc; padding: 1rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
@@ -89,7 +110,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('materials') : null" id="student-tab-btn-materials"
             style="padding: 0.65rem 0.35rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: ${activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
             ${getIcon('materials', 15, activeTab === 'materials' ? '#1e3a8a' : '#64748b')}
-            <span>المذكرات والواجب</span>
+            <span>المذكرات والواجب ${homeworkMaterials.length > 0 ? `(${approvedHomeworks.length}/${homeworkMaterials.length})` : `(${materials.length})`}</span>
           </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('quizzes') : null" id="student-tab-btn-quizzes"
@@ -127,15 +148,15 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
             </div>
 
             <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
-                ${getIcon('check', 13, '#10b981')}
-                <span>تم الاعتماد</span>
+              <div style="font-size: 0.75rem; font-weight: 700; color: #059669; display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+                ${getIcon('check', 13, '#059669')}
+                <span>الواجبات المسلّمة</span>
               </div>
-              <div style="font-size: 1.6rem; font-weight: 900; color: #10b981; margin-top: 0.2rem;">
-                ${escapeHtml(summary.homework_done_count || 0)}
+              <div style="font-size: 1.6rem; font-weight: 900; color: #059669; margin-top: 0.2rem;">
+                ${approvedHomeworks.length} <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">/ ${homeworkMaterials.length}</span>
               </div>
-              <div style="font-size: 0.725rem; color: #10b981; font-weight: 700; margin-top: 0.2rem;">
-                واجبات معتمدة
+              <div style="font-size: 0.725rem; color: #059669; font-weight: 700; margin-top: 0.2rem;">
+                ${homeworkMaterials.length > 0 && approvedHomeworks.length === homeworkMaterials.length ? 'تم تسليم كافة الواجبات ★' : `تم تسليم ${approvedHomeworks.length} واجب بنجاح`}
               </div>
             </div>
 
@@ -147,7 +168,6 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
               <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
                 ملف متاح للتحميل
               </div>
-            </div>
           </div>
 
           <!-- Free PDF Helper & Conversion Guide Accordion -->
@@ -178,21 +198,29 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
           <!-- Materials & Homework Cards List -->
           <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
               <div>
                 <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
                   ${getIcon('homework', 18, 'var(--centrly-blue-700)')}
                   <span>الواجبات والمذكرات الدراسية</span>
                 </h2>
                 <p style="font-size: 0.75rem; color: #64748b; margin: 0.2rem 0 0 0;">
-                  تأكد من تسليم واجباتك قبل الموعد النهائي لتسجيل درجاتك
+                  تأكد من تسليم واجباتك أولاً بأول لتسجيل درجاتك والتزامك
                 </p>
               </div>
-              <span class="badge badge-blue" style="font-weight: 700;">${materials.length} ملف</span>
+              <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                ${homeworkMaterials.length > 0 ? `
+                  <span style="font-size: 0.8rem; font-weight: 800; color: #15803d; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 0.3rem 0.65rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                    ${getIcon('check', 14, '#15803d')}
+                    <span>سَلّمت: <b>${approvedHomeworks.length}</b> من <b>${homeworkMaterials.length}</b> واجب</span>
+                  </span>
+                ` : ''}
+                <span class="badge badge-blue" style="font-weight: 700;">${materials.length} ملف</span>
+              </div>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 1rem;">
-              ${materials.length > 0 ? materials.map(m => {
+              ${sortedMaterials.length > 0 ? sortedMaterials.map(m => {
                 const isPdf = m.type === 'pdf';
                 const isVideo = m.type === 'video';
                 const typeBadge = isPdf 
@@ -207,8 +235,17 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                 const isRejected = status === 'rejected';
                 const isUnsubmitted = status === 'unsubmitted' || status === 'missing';
 
+                const cardBg = isApproved ? '#fafdfb' : (isRejected ? '#fffafa' : '#f8fafc');
+                const cardBorder = isApproved ? '#bbf7d0' : (isRejected ? '#fca5a5' : '#e2e8f0');
+
+                const hwTag = isApproved 
+                  ? `<span style="font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 0.35rem; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('check', 12, '#059669')} <span>واجب معتمد ★</span></span>`
+                  : (isRejected 
+                    ? `<span style="font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 0.35rem; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('alertTriangle', 12, '#dc2626')} <span>مطلوب إعادة التسليم</span></span>`
+                    : `<span style="font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 0.35rem; background: #fef3c7; color: #b45309; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('homework', 12, '#b45309')} <span>واجب منزلي مطلوب</span></span>`);
+
                 return `
-                  <div style="padding: 1.1rem; border-radius: 0.85rem; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.75rem;">
+                  <div style="padding: 1.1rem; border-radius: 0.85rem; background: ${cardBg}; border: 1px solid ${cardBorder}; display: flex; flex-direction: column; gap: 0.65rem;">
                     
                     <!-- Top row: Title and Tags -->
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
@@ -217,12 +254,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                           <span style="font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 0.35rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
                             ${typeBadge}
                           </span>
-                          ${m.is_homework ? `
-                            <span style="font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 0.35rem; background: #fef3c7; color: #b45309; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 0.25rem;">
-                              ${getIcon('homework', 12, '#b45309')}
-                              <span>واجب منزلي مطلوب</span>
-                            </span>
-                          ` : ''}
+                          ${m.is_homework ? hwTag : ''}
                         </div>
                         <h3 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0;">
                           ${escapeHtml(m.title)}
@@ -279,87 +311,97 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                       </div>
                     ` : ''}
 
-                    <!-- Homework Submission Box (Only if is_homework) -->
+                    <!-- Homework Submission Section (Only if is_homework) -->
                     ${m.is_homework ? `
-                      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0.65rem; padding: 0.85rem; margin-top: 0.2rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
-                          <div style="font-size: 0.825rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.35rem;">
-                            ${getIcon('upload', 14, '#0f172a')}
-                            <span>حالة تسليمك للواجب:</span>
+                      ${isApproved ? `
+                        <!-- Approved State: Minimal, compact, clean banner. The big upload box disappears to avoid clutter! -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.6rem; padding: 0.55rem 0.85rem; margin-top: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+                          <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 800; color: #15803d;">
+                            ${getIcon('check', 16, '#15803d')}
+                            <span>تم تسليم الواجب واعتماده بنجاح من المعلم ★</span>
                           </div>
-                          
-                          <div>
-                            ${isApproved ? `
-                              <span style="font-size: 0.75rem; font-weight: 800; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 0.25rem 0.65rem; border-radius: 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem;">
-                                ${getIcon('check', 13, '#059669')}
-                                <span>معتمد من المعلم</span>
-                              </span>
-                            ` : (isPending ? `
-                              <span style="font-size: 0.75rem; font-weight: 800; background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 0.25rem 0.65rem; border-radius: 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem;">
-                                ${getIcon('clock', 13, '#d97706')}
-                                <span>تم الرفع (قيد المراجعة)</span>
-                              </span>
-                            ` : (isRejected ? `
-                              <span style="font-size: 0.75rem; font-weight: 800; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; padding: 0.25rem 0.65rem; border-radius: 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem;">
-                                ${getIcon('alertTriangle', 13, '#dc2626')}
-                                <span>يحتاج إعادة تسليم</span>
-                              </span>
-                            ` : `
-                              <span style="font-size: 0.75rem; font-weight: 800; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; padding: 0.25rem 0.65rem; border-radius: 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem;">
-                                <span>لم يُسلّم بعد</span>
-                              </span>
-                            `))}
-                          </div>
+                          <span style="font-size: 0.75rem; font-weight: 700; color: #166534; background: #dcfce7; padding: 0.2rem 0.55rem; border-radius: 0.35rem; border: 1px solid #86efac;">
+                            واجب مكتمل
+                          </span>
                         </div>
-
-                        ${m.teacher_feedback ? `
-                          <div style="font-size: 0.8rem; background: #fff7ed; border-right: 3px solid #ea580c; padding: 0.45rem 0.65rem; border-radius: 0.35rem; color: #9a3412; margin-bottom: 0.6rem;">
-                            <b>ملاحظة المعلم:</b> ${escapeHtml(m.teacher_feedback)}
-                          </div>
-                        ` : ''}
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem;">
-                          ${m.submission_url ? `
-                            <a href="${escapeHtml(m.submission_url)}" target="_blank" rel="noopener noreferrer"
-                              style="font-size: 0.8rem; color: #2563eb; font-weight: 700; text-decoration: underline; display: inline-flex; align-items: center; gap: 0.25rem;">
-                              ${getIcon('file', 14, '#2563eb')}
-                              <span>معاينة ملفك المرفوع (${escapeHtml(m.submitted_at ? m.submitted_at.slice(0, 10) : 'مرفوع')})</span>
-                            </a>
-                          ` : (isApproved ? `
-                            <span style="font-size: 0.78rem; color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
-                              ${getIcon('check', 13, '#059669')}
-                              <span>تم اعتماد الواجب بنجاح ★</span>
-                            </span>
-                          ` : `
-                            <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF أو صورة واضحة (الحد الأقصى 25MB)</span>
-                          `)}
-
-                          <!-- File Upload Trigger (PDF or Images) -->
-                          <div>
-                            <input type="file" id="hw-file-input-${escapeHtml(m.id)}" accept="application/pdf,image/*,.pdf,.jpg,.jpeg,.png,.webp,.heic" style="display: none;" 
-                              onchange="window.centrlyApp && window.centrlyApp.handleStudentHomeworkUpload ? window.centrlyApp.handleStudentHomeworkUpload('${escapeHtml(m.id)}', this.files[0]) : null">
+                      ` : `
+                        <!-- Unsubmitted, Pending, or Revision Requested: Full Submission Box with Upload Button & Teacher Notes -->
+                        <div style="background: #ffffff; border: 1px solid ${isRejected ? '#fca5a5' : '#e2e8f0'}; border-radius: 0.65rem; padding: 0.85rem; margin-top: 0.2rem;">
+                          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <div style="font-size: 0.825rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.35rem;">
+                              ${getIcon('upload', 14, '#0f172a')}
+                              <span>حالة تسليمك للواجب:</span>
+                            </div>
                             
-                            ${isApproved ? `
-                              <button type="button" disabled
-                                style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 0.45rem 0.9rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem; cursor: default;">
-                                ${getIcon('check', 14, '#059669')}
-                                <span>الواجب معتمد ومكتمل</span>
-                              </button>
-                            ` : `
-                              <button type="button" onclick="document.getElementById('hw-file-input-${escapeHtml(m.id)}').click()" id="hw-upload-btn-${escapeHtml(m.id)}"
-                                style="background: #059669; color: #ffffff; border: 1px solid #059669; padding: 0.45rem 0.9rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s; box-shadow: 0 2px 6px rgba(5,150,105,0.2);">
-                                ${getIcon('upload', 14, '#ffffff')}
-                                <span>${isPending ? 'تعديل / رفع نسخة أحدث' : 'رفع حل الواجب (PDF أو صورة)'}</span>
-                              </button>
-                            `}
+                            <div>
+                              ${isPending ? `
+                                <span style="font-size: 0.75rem; font-weight: 800; background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 0.25rem 0.65rem; border-radius: 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                  ${getIcon('clock', 13, '#d97706')}
+                                  <span>تم الرفع (قيد مراجعة المعلم)</span>
+                                </span>
+                              ` : (isRejected ? `
+                                <span style="font-size: 0.75rem; font-weight: 800; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; padding: 0.25rem 0.65rem; border-radius: 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                  ${getIcon('alertTriangle', 13, '#dc2626')}
+                                  <span>المعلم طلب إعادة التسليم</span>
+                                </span>
+                              ` : `
+                                <span style="font-size: 0.75rem; font-weight: 800; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; padding: 0.25rem 0.65rem; border-radius: 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                  <span>لم يُسلّم بعد</span>
+                                </span>
+                              `)}
+                            </div>
                           </div>
+
+                          ${isRejected ? `
+                            <div style="font-size: 0.825rem; background: #fff7ed; border-right: 3px solid #ea580c; border: 1px solid #fed7aa; padding: 0.55rem 0.75rem; border-radius: 0.4rem; color: #9a3412; margin-bottom: 0.65rem;">
+                              <div style="font-weight: 800; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.2rem;">
+                                ${getIcon('alertTriangle', 14, '#ea580c')}
+                                <span>توجيه وملاحظة المعلم لإعادة الحل:</span>
+                              </div>
+                              <div>${escapeHtml(m.teacher_feedback || 'يرجى إعادة حل الواجب وتصحيحه ورفع الحل من جديد.')}</div>
+                            </div>
+                          ` : (m.teacher_feedback ? `
+                            <div style="font-size: 0.8rem; background: #fff7ed; border-right: 3px solid #ea580c; padding: 0.45rem 0.65rem; border-radius: 0.35rem; color: #9a3412; margin-bottom: 0.6rem;">
+                              <b>ملاحظة المعلم:</b> ${escapeHtml(m.teacher_feedback)}
+                            </div>
+                          ` : '')}
+
+                          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem;">
+                            ${m.submission_url ? `
+                              <a href="${escapeHtml(m.submission_url)}" target="_blank" rel="noopener noreferrer"
+                                style="font-size: 0.8rem; color: #2563eb; font-weight: 700; text-decoration: underline; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                ${getIcon('file', 14, '#2563eb')}
+                                <span>معاينة ملفك المرفوع (${escapeHtml(m.submitted_at ? m.submitted_at.slice(0, 10) : 'مرفوع')})</span>
+                              </a>
+                            ` : `
+                              <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF أو صورة واضحة (الحد الأقصى 25MB)</span>
+                            `}
+
+                            <!-- File Upload Trigger (PDF or Images) -->
+                            <div>
+                              <input type="file" id="hw-file-input-${escapeHtml(m.id)}" accept="application/pdf,image/*,.pdf,.jpg,.jpeg,.png,.webp,.heic" style="display: none;" 
+                                onchange="window.centrlyApp && window.centrlyApp.handleStudentHomeworkUpload ? window.centrlyApp.handleStudentHomeworkUpload('${escapeHtml(m.id)}', this.files[0]) : null">
+                              
+                              <button type="button" onclick="document.getElementById('hw-file-input-${escapeHtml(m.id)}').click()" id="hw-upload-btn-${escapeHtml(m.id)}"
+                                style="background: ${isRejected ? '#dc2626' : '#059669'}; color: #ffffff; border: 1px solid ${isRejected ? '#b91c1c' : '#059669'}; padding: 0.45rem 0.95rem; border-radius: 0.5rem; font-size: 0.825rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s; box-shadow: 0 2px 6px ${isRejected ? 'rgba(220,38,38,0.3)' : 'rgba(5,150,105,0.25)'};">
+                                ${getIcon('upload', 14, '#ffffff')}
+                                <span>${isRejected ? 'رفع حل الواجب الجديد (إعادة التسليم)' : (isPending ? 'تعديل / رفع نسخة أحدث' : 'رفع حل الواجب (PDF أو صورة)')}</span>
+                              </button>
+                            </div>
+                          </div>
+
                         </div>
 
-                      </div>
+                        <!-- Notebook Instructions only if NOT approved -->
+                        <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #1e40af; background: #eff6ff; padding: 0.45rem 0.75rem; border-radius: 0.45rem; border: 1px solid #bfdbfe; margin-top: 0.25rem;">
+                          ${getIcon('edit', 14, '#1e40af')}
+                          <span><b>طريقة التسليم:</b> قم بحل الأسئلة في كشكولك بخط واضح، ثم صوّر الصفحات بكاميرا الموبايل وارفع الصورة أو ملف الـ PDF عبر زر الرفع أعلاه مباشرة.</span>
+                        </div>
+                      `}
                     ` : ''}
 
-                    <!-- Download study material button or notebook instructions -->
-                    ${m.url && m.url !== '#' && m.url.trim().length > 0 ? `
+                    <!-- Download study material button if not homework -->
+                    ${m.url && m.url !== '#' && m.url.trim().length > 0 && !m.is_homework ? `
                       <div style="display: flex; justify-content: flex-end; margin-top: 0.25rem;">
                         <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer"
                           style="display: inline-flex; align-items: center; gap: 0.4rem; background: #1d4ed8; color: #ffffff; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.825rem; font-weight: 700; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
@@ -367,12 +409,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                           <span>${actionText}</span>
                         </a>
                       </div>
-                    ` : (m.is_homework ? `
-                      <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #1e40af; background: #eff6ff; padding: 0.45rem 0.75rem; border-radius: 0.45rem; border: 1px solid #bfdbfe; margin-top: 0.25rem;">
-                        ${getIcon('edit', 14, '#1e40af')}
-                        <span><b>طريقة التسليم:</b> قم بحل الأسئلة في كشكولك بخط واضح، ثم صوّر الصفحات بكاميرا الموبايل وارفع الصورة أو ملف الـ PDF عبر زر الرفع أعلاه مباشرة.</span>
-                      </div>
-                    ` : '')}
+                    ` : ''}
 
                   </div>
                 `;

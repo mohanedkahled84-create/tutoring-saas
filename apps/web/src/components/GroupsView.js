@@ -103,7 +103,7 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false) {
 
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <span style="color: var(--centrly-blue-700); display: flex;">${getIcon('students', 16)}</span>
-                    <span>الطلاب المقيدون: <b style="color: var(--centrly-ink);">${escapeHtml(g.studentCount ?? g.students_count ?? 0)} طالب</b></span>
+                    <span>الطلاب المقيدون: <b style="color: var(--centrly-ink);">${escapeHtml(g.studentCount || g.students_count || ((window.centrlyApp?.students || []).filter(s => s.group_id === g.id || (Array.isArray(s.group_ids) && s.group_ids.includes(g.id))).length) || 0)} طالب</b></span>
                   </div>
 
                   <div style="display: flex; align-items: center; gap: 0.5rem;">

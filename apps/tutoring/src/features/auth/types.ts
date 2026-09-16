@@ -48,12 +48,20 @@ export interface ResetPasswordDTO {
   password: string;
 }
 
+export interface ChangePasswordDTO {
+  token: string;
+  email: string;
+  current_password?: string;
+  new_password: string;
+}
+
 export interface IAuthRepository {
   signIn(email: string, password: string): Promise<LoginResult>;
   refreshToken?(refreshToken: string): Promise<LoginResult>;
   createTenantWithOwner(data: SignupDTO, trialEndsAt: string): Promise<SignupResult>;
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(token: string, newPassword: string): Promise<void>;
+  changePassword?(token: string, email: string, currentPassword: string, newPassword: string): Promise<void>;
 }
 
 export interface TenantSettings {

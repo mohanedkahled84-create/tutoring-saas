@@ -4,6 +4,7 @@ import {
   SignupDTO,
   SignupResult,
   ResetPasswordDTO,
+  ChangePasswordDTO,
   IAuthRepository,
 } from "./types.js";
 import { validatePasswordStrength } from "../../shared/middleware/auth.js";
@@ -52,12 +53,13 @@ export class AuthService {
   }
 
   async login(dto: LoginDTO): Promise<LoginResult> {
-    if (!dto.email || !dto.password) {
+    const email = dto.email ? dto.email.trim().toLowerCase() : "";
+    const password = dto.password ? dto.password.trim() : "";
+    if (!email || !password) {
       throw new Error("MISSING_CREDENTIALS");
     }
 
-    const key = dto.email.toLowerCase().trim();
-    const bruteCheck = checkBruteForce(key);
+    const bruteCheck = checkBruteForce(email);
     if (!bruteCheck.allowed) {
       const err = new Error(`Too many failed login attempts. Account temporarily locked for ${bruteCheck.waitTimeMinutes} minutes.`);
       (err as Error & { code?: string }).code = "ACCOUNT_LOCKED";
@@ -65,11 +67,11 @@ export class AuthService {
     }
 
     try {
-      const result = await this.repo.signIn(dto.email, dto.password);
-      resetLoginAttempts(key);
+      const result = await this.repo.signIn(email, password);
+      resetLoginAttempts(email);
       return result;
     } catch (err: unknown) {
-      recordFailedLogin(key);
+      recordFailedLogin(email);
       throw err;
     }
   }
@@ -97,11 +99,18 @@ export class AuthService {
       account_type?: "teacher" | "center";
     }) => Promise<void>
   ): Promise<SignupResult> {
-    if (!dto.email || !dto.password || !dto.tenant_name) {
+    const normalizedDto: SignupDTO = {
+      ...dto,
+      email: dto.email ? dto.email.trim().toLowerCase() : "",
+      password: dto.password ? dto.password.trim() : "",
+      tenant_name: dto.tenant_name ? dto.tenant_name.trim() : "",
+    };
+
+    if (!normalizedDto.email || !normalizedDto.password || !normalizedDto.tenant_name) {
       throw new Error("MISSING_SIGNUP_FIELDS");
     }
 
-    const pwdCheck = this.validatePassword(dto.password);
+    const pwdCheck = this.validatePassword(normalizedDto.password);
     if (!pwdCheck.valid) {
       const err = new Error(pwdCheck.reason || "Weak password");
       (err as Error & { code?: string }).code = "WEAK_PASSWORD";
@@ -109,18 +118,18 @@ export class AuthService {
     }
 
     const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-    const result = await this.repo.createTenantWithOwner(dto, trialEnds);
+    const result = await this.repo.createTenantWithOwner(normalizedDto, trialEnds);
 
     if (onNewSignup) {
       onNewSignup({
-        teacher_name: dto.full_name || dto.email,
-        teacher_email: dto.email,
-        teacher_phone: dto.phone,
-        tenant_name: dto.tenant_name,
-        subject: dto.subject,
-        governorate: dto.governorate,
+        teacher_name: normalizedDto.full_name || normalizedDto.email,
+        teacher_email: normalizedDto.email,
+        teacher_phone: normalizedDto.phone,
+        tenant_name: normalizedDto.tenant_name,
+        subject: normalizedDto.subject,
+        governorate: normalizedDto.governorate,
         trial_ends_at: trialEnds,
-        account_type: dto.account_type,
+        account_type: normalizedDto.account_type,
       }).catch(() => {});
     }
 
@@ -128,10 +137,11 @@ export class AuthService {
   }
 
   async forgotPassword(email: string): Promise<void> {
-    if (!email) {
+    const normalizedEmail = email ? email.trim().toLowerCase() : "";
+    if (!normalizedEmail) {
       throw new Error("MISSING_EMAIL");
     }
-    await this.repo.requestPasswordReset(email);
+    await this.repo.requestPasswordReset(normalizedEmail);
   }
 
   async resetPassword(dto: ResetPasswordDTO): Promise<void> {
@@ -147,5 +157,24 @@ export class AuthService {
     }
 
     await this.repo.resetPassword(dto.token, dto.password);
+  }
+
+  async changePassword(dto: ChangePasswordDTO): Promise<void> {
+    if (!dto.token || !dto.new_password) {
+      throw new Error("MISSING_PASSWORD_FIELDS");
+    }
+
+    const pwdCheck = this.validatePassword(dto.new_password);
+    if (!pwdCheck.valid) {
+      const err = new Error(pwdCheck.reason || "Weak password");
+      (err as Error & { code?: string }).code = "WEAK_PASSWORD";
+      throw err;
+    }
+
+    if (typeof this.repo.changePassword === "function") {
+      await this.repo.changePassword(dto.token, dto.email, dto.current_password || "", dto.new_password);
+    } else {
+      await this.repo.resetPassword(dto.token, dto.new_password);
+    }
   }
 }

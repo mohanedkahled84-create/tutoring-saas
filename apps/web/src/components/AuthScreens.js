@@ -36,18 +36,23 @@ export function renderAuthScreens() {
         <form id="formLogin" onsubmit="window.centrlyApp.handleLogin(event)">
           <div class="form-group">
             <label class="form-label">البريد الإلكتروني</label>
-            <input type="email" id="loginEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr">
+            <input type="email" id="loginEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username email">
           </div>
           <div class="form-group">
             <label class="form-label">كلمة المرور</label>
             <div style="position: relative;">
-              <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;">
+              <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="current-password">
               <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('loginPassword', this)" title="إظهار/إخفاء كلمة المرور" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px; display: flex; align-items: center; justify-content: center;">
                 ${getIcon('eye', 18)}
               </button>
             </div>
           </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <div style="display: flex; justify-content: flex-start; margin-top: 0.25rem; margin-bottom: 0.85rem;">
+            <button type="button" onclick="window.centrlyApp.openForgotPasswordModal()" style="background: none; border: none; padding: 0; color: var(--centrly-blue-700); font-size: 0.8rem; font-weight: 700; cursor: pointer; text-decoration: underline; font-family: inherit;">
+              نسيت كلمة المرور؟
+            </button>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
             <span>دخول إلى المنظومة</span>
           </button>
         </form>
@@ -81,16 +86,16 @@ export function renderAuthScreens() {
 
           <div class="form-group">
             <label class="form-label">البريد الإلكتروني *</label>
-            <input type="email" id="signupEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr">
+            <input type="email" id="signupEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="email">
           </div>
           <div class="form-group">
             <label class="form-label">رقم الواتساب (مصري) *</label>
-            <input type="tel" id="signupPhone" class="form-input" placeholder="01012345678" required dir="ltr">
+            <input type="tel" id="signupPhone" class="form-input" placeholder="01012345678" required dir="ltr" autocomplete="tel">
           </div>
           <div class="form-group">
             <label class="form-label">كلمة المرور *</label>
             <div style="position: relative;">
-              <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" oninput="window.centrlyApp.validatePasswordLive(this.value)">
+              <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" oninput="window.centrlyApp.validatePasswordLive(this.value)" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
               <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('signupPassword', this)" title="إظهار/إخفاء كلمة المرور" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px; display: flex; align-items: center; justify-content: center;">
                 ${getIcon('eye', 18)}
               </button>
@@ -116,7 +121,7 @@ export function renderAuthScreens() {
           <div class="form-group">
             <label class="form-label">تأكيد كلمة المرور *</label>
             <div style="position: relative;">
-              <input type="password" id="signupPasswordConfirm" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;">
+              <input type="password" id="signupPasswordConfirm" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
               <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('signupPasswordConfirm', this)" title="إظهار/إخفاء كلمة المرور" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px; display: flex; align-items: center; justify-content: center;">
                 ${getIcon('eye', 18)}
               </button>
@@ -132,6 +137,66 @@ export function renderAuthScreens() {
             <span>إنشاء حساب وبدء التجربة المجانية</span>
           </button>
         </form>
+      </div>
+
+      <!-- Forgot Password Modal -->
+      <div id="forgotPasswordModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
+        <div class="card modal-dialog" style="max-width: 420px; width: 100%; padding: 1.75rem; border-radius: var(--radius-lg); position: relative; box-shadow: var(--shadow-lg);" onclick="event.stopPropagation()">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink);">استعادة كلمة المرور</h3>
+            <button type="button" onclick="window.centrlyApp.closeForgotPasswordModal()" style="background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+              ${getIcon('close', 20)}
+            </button>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--centrly-text); line-height: 1.6; margin-top: 0; margin-bottom: 1.25rem;">
+            أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً آمناً لتعيين كلمة مرور جديدة لحسابك.
+          </p>
+          <div id="forgotPasswordAlert" style="display: none; padding: 0.65rem 0.75rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.825rem;"></div>
+          <form id="formForgotPassword" onsubmit="window.centrlyApp.handleForgotPassword(event)">
+            <div class="form-group">
+              <label class="form-label">البريد الإلكتروني المسجل</label>
+              <input type="email" id="forgotEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="email">
+            </div>
+            <button type="submit" id="forgotSubmitBtn" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem; font-weight: 700;">
+              <span>إرسال رابط الاستعادة</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Reset Password Modal (When opened with recovery token) -->
+      <div id="resetPasswordModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
+        <div class="card modal-dialog" style="max-width: 420px; width: 100%; padding: 1.75rem; border-radius: var(--radius-lg); position: relative; box-shadow: var(--shadow-lg);" onclick="event.stopPropagation()">
+          <h3 style="margin: 0 0 0.5rem 0; font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink);">تعيين كلمة المرور الجديدة</h3>
+          <p style="font-size: 0.85rem; color: var(--centrly-text); line-height: 1.6; margin-top: 0; margin-bottom: 1rem;">
+            أدخل كلمة المرور الجديدة للحساب. يجب أن تحتوي على 8 أحرف على الأقل، ورقم، وحرف كبير.
+          </p>
+          <div id="resetPasswordAlert" style="display: none; padding: 0.65rem 0.75rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.825rem;"></div>
+          <form id="formResetPassword" onsubmit="window.centrlyApp.handleResetPasswordSubmit(event)">
+            <input type="hidden" id="resetPasswordToken" value="">
+            <div class="form-group">
+              <label class="form-label">كلمة المرور الجديدة</label>
+              <div style="position: relative;">
+                <input type="password" id="resetNewPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
+                <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('resetNewPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+                  ${getIcon('eye', 18)}
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+              <div style="position: relative;">
+                <input type="password" id="resetConfirmPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
+                <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('resetConfirmPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+                  ${getIcon('eye', 18)}
+                </button>
+              </div>
+            </div>
+            <button type="submit" id="resetSubmitBtn" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem; font-weight: 700;">
+              <span>حفظ وتحديث كلمة المرور</span>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   `;

@@ -8,7 +8,8 @@ export const authRouter = Router();
 
 // POST /api/auth/login - Rate-limited, brute-force protected login
 authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body;
+  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const password = typeof req.body.password === "string" ? req.body.password.trim() : "";
 
   if (!email || !password) {
     res.status(400).json({ error: { code: "BAD_REQUEST", message: "Email and password are required" } });
@@ -204,6 +205,47 @@ authRouter.post("/reset-password", authRateLimiter, async (req: AuthenticatedReq
     }
     const message = err instanceof Error ? err.message : "Password reset failed";
     res.status(400).json({ error: { code: "RESET_FAILED", message } });
+  }
+});
+
+// DEV-PR.2: POST /api/auth/change-password - Change password for authenticated user
+authRouter.post("/change-password", authenticateUser, authRateLimiter, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const token = req.token;
+  const email = req.user?.email || "";
+  const { current_password, new_password, password } = req.body;
+  const targetNewPassword = new_password || password;
+
+  if (!targetNewPassword) {
+    res.status(400).json({
+      error: { code: "BAD_REQUEST", message: "new_password is required" },
+    });
+    return;
+  }
+
+  try {
+    const authService = getServices(req).auth;
+    await authService.changePassword({
+      token: token || "",
+      email,
+      current_password,
+      new_password: targetNewPassword,
+    });
+
+    res.json({
+      success: true,
+      message: "تم تحديث كلمة المرور بنجاح.",
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error && (err as Error & { code?: string }).code === "WEAK_PASSWORD") {
+      res.status(400).json({ error: { code: "WEAK_PASSWORD", message: err.message } });
+      return;
+    }
+    const msg = err instanceof Error ? err.message : "Failed to change password";
+    if (msg.includes("CURRENT_PASSWORD_INCORRECT") || msg.includes("Invalid login credentials")) {
+      res.status(400).json({ error: { code: "CURRENT_PASSWORD_INCORRECT", message: "كلمة المرور الحالية غير صحيحة" } });
+      return;
+    }
+    res.status(400).json({ error: { code: "CHANGE_PASSWORD_FAILED", message: msg } });
   }
 });
 

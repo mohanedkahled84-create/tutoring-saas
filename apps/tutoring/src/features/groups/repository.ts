@@ -15,7 +15,7 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
   async list(tenantId?: string): Promise<Group[]> {
     let query = this.client
       .from("groups")
-      .select("id, tenant_id, name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name")
+      .select("id, tenant_id, name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name, group_students(student_id)")
       .order("name", { ascending: true });
 
     if (tenantId) {
@@ -24,22 +24,46 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
 
     const { data, error } = await query;
     if (error) {
-      throw new Error(error.message);
+      // Fallback without join if relational embed fails
+      const fallback = await this.client
+        .from("groups")
+        .select("id, tenant_id, name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name")
+        .order("name", { ascending: true });
+      if (fallback.error) {
+        throw new Error(fallback.error.message);
+      }
+      return (fallback.data as Group[]) || [];
     }
-    return (data as Group[]) || [];
+    return ((data as any[]) || []).map((g) => {
+      const gs = g.group_students;
+      const count = Array.isArray(gs) ? gs.length : 0;
+      return {
+        ...g,
+        students_count: count,
+        studentCount: count,
+      };
+    }) as Group[];
   }
 
   async findById(id: string): Promise<Group | null> {
     const { data, error } = await this.client
       .from("groups")
-      .select("id, tenant_id, name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name")
+      .select("id, tenant_id, name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name, group_students(student_id)")
       .eq("id", id)
       .maybeSingle();
 
     if (error) {
       throw new Error(error.message);
     }
-    return (data as Group) || null;
+    if (!data) return null;
+    const raw: any = data;
+    const gs = raw.group_students;
+    const count = Array.isArray(gs) ? gs.length : 0;
+    return {
+      ...raw,
+      students_count: count,
+      studentCount: count,
+    } as Group;
   }
 
   async create(tenantId: string | undefined, data: CreateGroupDTO): Promise<Group> {

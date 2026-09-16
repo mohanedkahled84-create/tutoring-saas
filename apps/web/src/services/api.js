@@ -3,12 +3,17 @@
  * Handles authenticated API calls to backend endpoints.
  */
 
-const isLocalhost = typeof window !== 'undefined' && 
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const hostname = typeof window !== 'undefined' ? (window.location.hostname || '') : '';
+const isLocalHost = hostname === 'localhost' || 
+  hostname === '127.0.0.1' || 
+  hostname.startsWith('192.168.') || 
+  hostname.startsWith('10.') || 
+  /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+  hostname.endsWith('.local');
 
 export const API_BASE_URL = (typeof window !== 'undefined' && window.__CENTRLY_API_URL__) || (
-  isLocalhost
-    ? 'http://localhost:3000/api'
+  isLocalHost
+    ? (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1' ? `http://${hostname}:3000/api` : 'http://localhost:3000/api')
     : 'https://tutoring-backend-production-c8dd.up.railway.app/api'
 );
 

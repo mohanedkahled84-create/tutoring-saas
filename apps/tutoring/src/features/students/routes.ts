@@ -7,7 +7,7 @@ import {
   updateStudentSchema,
   publicSelfRegisterSchema,
 } from "../../shared/middleware/validation.js";
-import { generateParentPortalToken } from "../../shared/utils/tokens.js";
+import { generateParentPortalToken, buildShortPortalUrl } from "../../shared/utils/tokens.js";
 
 export const studentsRouter = Router();
 export const importRouter = Router();
@@ -172,7 +172,7 @@ studentsRouter.post("/:id/send-parent-link", async (req: AuthenticatedRequest, r
     }
 
     const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
-    const portalUrl = `${canonicalOrigin}/parent-portal?token=${token}`;
+    const portalUrl = buildShortPortalUrl(student.id, "parent", canonicalOrigin);
 
     const whatsAppService = getServices(req).whatsapp;
     const result = await whatsAppService.sendParentPortalLink({
@@ -244,7 +244,7 @@ studentsRouter.post("/:id/send-student-link", async (req: AuthenticatedRequest, 
     }
 
     const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
-    const portalUrl = `${canonicalOrigin}/parent-portal?token=${token}&portal=student`;
+    const portalUrl = buildShortPortalUrl(student.id, "student", canonicalOrigin);
 
     const whatsAppService = getServices(req).whatsapp;
     const result = await whatsAppService.sendStudentPortalLink({
@@ -329,7 +329,7 @@ studentsRouter.post("/batch-send-parent-links", async (req: AuthenticatedRequest
         student_id: s.id,
         student_name: s.name,
         parent_phone: s.parent_phone,
-        portal_url: `${canonicalOrigin}/parent-portal?token=${token}`,
+        portal_url: buildShortPortalUrl(s.id, "parent", canonicalOrigin),
         token,
       };
     });

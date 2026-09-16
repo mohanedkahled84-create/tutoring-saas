@@ -42,7 +42,12 @@ export function renderNavbar(user) {
         ${isAdmin ? '<span class="badge" style="background: #1e293b; color: #f8fafc; font-weight: 700; border: 1px solid #334155;">لوحة المؤسس المستقلة (Centrly HQ)</span>' : '<span class="badge badge-blue">سحابي • RTL مفعّل</span>'}
       </div>
 
-      <div class="topbar-actions">
+      <div class="topbar-actions" style="display: flex; align-items: center; gap: 0.85rem;">
+        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="window.centrlyApp.toggleTheme()" title="تبديل الوضع الليلي / النهاري" style="width: 38px; height: 38px; border-radius: var(--radius-md); border: 1.5px solid var(--centrly-line); background: var(--centrly-surface); color: var(--centrly-ink); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+          ${(typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark')
+            ? getIcon('sun', 18, '#fbbf24')
+            : getIcon('moon', 18, 'var(--centrly-blue-700)')}
+        </button>
         <div style="text-align: left;">
           <div style="font-weight: 700; font-size: 0.875rem;">${displayName}</div>
           <div style="font-size: 0.75rem; color: var(--centrly-text);">${roleName}</div>

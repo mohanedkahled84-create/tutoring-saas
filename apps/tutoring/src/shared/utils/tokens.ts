@@ -52,6 +52,28 @@ export function verifyParentPortalToken(
 }
 
 /**
+ * Derives a clean, deterministic, tamper-resistant short code from student ID.
+ * Example: 'p16766044' for parent portal, 's16766044' for student portal.
+ */
+export function deriveShortCode(studentId: string, type: "parent" | "student"): string {
+  const cleanId = String(studentId || "").replace(/-/g, "").toLowerCase();
+  const prefix = type === "student" ? "s" : "p";
+  return `${prefix}${cleanId.slice(0, 8)}`;
+}
+
+/**
+ * Returns the ultra-short canonical URL for the student or parent portal.
+ */
+export function buildShortPortalUrl(
+  studentId: string,
+  type: "parent" | "student",
+  canonicalOrigin = "https://centerly-platform.vercel.app"
+): string {
+  const code = deriveShortCode(studentId, type);
+  return `${canonicalOrigin}/${type === "student" ? "s" : "p"}/${code}`;
+}
+
+/**
  * DEV-76: Generates a single-use, tamper-proof HMAC-signed invite token for teachers and assistants.
  */
 export interface InviteTokenPayload {

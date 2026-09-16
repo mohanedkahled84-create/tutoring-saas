@@ -5,6 +5,8 @@ import path from "node:path";
 import {
   generateParentPortalToken,
   verifyParentPortalToken,
+  deriveShortCode,
+  buildShortPortalUrl,
 } from "../dist/shared/utils/tokens.js";
 import { generateParentPortalInviteMessage } from "../dist/features/whatsapp-notifications/service.js";
 import { DEFAULT_TENANT_SETTINGS } from "../dist/features/auth/settingsRoutes.js";
@@ -93,6 +95,22 @@ test("DEV-PORTAL.3: generateParentPortalInviteMessage creates natural, respectfu
   assert.ok(msg.includes("https://centerly-platform.vercel.app/parent-portal?token=test-123"));
   assert.ok(msg.includes("رابط المتابعة"));
   assert.ok(msg.includes("مستر أحمد"));
+});
+
+test("DEV-SHORT-LINKS: deriveShortCode and buildShortPortalUrl generate ultra-short URLs", () => {
+  const studentId = "16766044-de26-4c0e-a0fb-06b18d22cff4";
+  const parentCode = deriveShortCode(studentId, "parent");
+  const studentCode = deriveShortCode(studentId, "student");
+
+  assert.equal(parentCode, "p16766044");
+  assert.equal(studentCode, "s16766044");
+
+  const parentUrl = buildShortPortalUrl(studentId, "parent");
+  const studentUrl = buildShortPortalUrl(studentId, "student");
+
+  assert.equal(parentUrl, "https://centerly-platform.vercel.app/p/p16766044");
+  assert.equal(studentUrl, "https://centerly-platform.vercel.app/s/s16766044");
+  assert.ok(parentUrl.length < 50);
 });
 
 // ============================================================================

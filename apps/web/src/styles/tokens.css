@@ -33,6 +33,35 @@
   --radius-full: 9999px;
 }
 
+/* Dark Theme Design Tokens */
+[data-theme="dark"] {
+  --centrly-blue-900: #1e3a8a;
+  --centrly-blue-800: #3b82f6;
+  --centrly-blue-700: #60a5fa;
+  --centrly-blue-600: #93c5fd;
+  --centrly-blue-100: #172554;
+  --centrly-amber-700: #f59e0b;
+  --centrly-amber-600: #fbbf24;
+  --centrly-amber-500: #fcd34d;
+  --centrly-amber-100: #3b2005;
+  --centrly-ink: #f8fafc;
+  --centrly-text: #94a3b8;
+  --centrly-surface: #0a0f1d;
+  --centrly-line: #1e293b;
+  --centrly-white: #111827;
+  --centrly-success: #34d399;
+  --centrly-success-light: #064e3b;
+  --centrly-warning: #fbbf24;
+  --centrly-warning-light: #451a03;
+  --centrly-danger: #f87171;
+  --centrly-danger-light: #450a0a;
+  --centrly-info: #60a5fa;
+  --centrly-info-light: #172554;
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+}
+
 * {
   box-sizing: border-box;
 }

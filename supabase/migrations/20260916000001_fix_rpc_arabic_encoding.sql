@@ -1,5 +1,5 @@
--- 20260914000002_dev_parent_portal_rpc_teacher_name.sql
--- Update get_parent_portal_payload to return teacher_name in student object
+-- 20260916000001_fix_rpc_arabic_encoding.sql
+-- Fix corrupted Arabic text encoding in get_parent_portal_payload RPC
 
 CREATE OR REPLACE FUNCTION public.get_parent_portal_payload(
   p_token text,

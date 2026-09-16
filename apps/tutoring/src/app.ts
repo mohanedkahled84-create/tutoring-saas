@@ -45,6 +45,9 @@ export function createApp(): Express {
   const defaultAllowedOrigins = [
     "https://centrly.app",
     "https://www.centrly.app",
+    "https://centerly-platform.vercel.app",
+    "https://centrly-platform.vercel.app",
+    "https://centerly-app.vercel.app",
     "http://localhost:3000",
     "http://localhost:5000",
     "http://localhost:5173",
@@ -59,7 +62,8 @@ export function createApp(): Express {
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || configuredOrigins.includes(origin)) {
+        const isLocalNetwork = origin && /^http:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin);
+        if (!origin || configuredOrigins.includes(origin) || isLocalNetwork) {
           callback(null, true);
         } else {
           const corsErr: Error & { statusCode?: number; code?: string } = new Error("CORS: Origin not allowed");

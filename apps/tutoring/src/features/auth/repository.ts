@@ -185,6 +185,19 @@ export class SupabaseAuthRepository implements IAuthRepository {
       throw new Error(error?.message || "Password reset failed");
     }
   }
+
+  async changePassword(token: string, email: string, currentPassword: string, newPassword: string): Promise<void> {
+    if (currentPassword && email) {
+      const { error: signInError } = await this.publicClient.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: currentPassword,
+      });
+      if (signInError) {
+        throw new Error("CURRENT_PASSWORD_INCORRECT");
+      }
+    }
+    await this.resetPassword(token, newPassword);
+  }
 }
 
 export class FakeAuthRepository implements IAuthRepository {
@@ -252,6 +265,16 @@ export class FakeAuthRepository implements IAuthRepository {
       throw new Error("Invalid token");
     }
     const user = this.users[0];
+    if (user) {
+      user.password = newPassword;
+    }
+  }
+
+  async changePassword(_token: string, email: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = this.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) || this.users[0];
+    if (user && currentPassword && user.password && user.password !== currentPassword) {
+      throw new Error("CURRENT_PASSWORD_INCORRECT");
+    }
     if (user) {
       user.password = newPassword;
     }

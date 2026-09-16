@@ -1,5 +1,5 @@
 import { authService } from './services/auth.js';
-import { request } from './services/api.js';
+import { request, API_BASE_URL } from './services/api.js';
 import { renderSidebar } from './components/Sidebar.js';
 import { renderNavbar } from './components/Navbar.js';
 import { renderAuthScreens } from './components/AuthScreens.js';
@@ -31,6 +31,7 @@ import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.
 import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js';
+import { renderTeacherSettingsView } from './components/TeacherSettingsView.js';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js?v=3.0.0';
@@ -137,7 +138,42 @@ class CentrlyApp {
     this.isFinancialUnlocked = !this.hasSecurityPin;
     this.hideFinancialNumbers = false;
     this.routeLoadingState = {};
+    this.settingsState = { activeTab: 'profile', barcodeAudio: true };
+    this.currentTheme = 'light';
     this.restoreCachedData();
+    this.initTheme();
+  }
+
+  initTheme() {
+    try {
+      const savedTheme = localStorage.getItem('centrly_theme') || 
+        (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      this.setTheme(savedTheme);
+    } catch (_) {
+      this.setTheme('light');
+    }
+  }
+
+  setTheme(theme) {
+    this.currentTheme = theme;
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', theme);
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) {
+        btn.innerHTML = theme === 'dark' ? getIcon('sun', 18, '#fbbf24') : getIcon('moon', 18, 'var(--centrly-blue-700)');
+      }
+    }
+    try {
+      localStorage.setItem('centrly_theme', theme);
+    } catch (_) {}
+  }
+
+  toggleTheme() {
+    const next = this.currentTheme === 'dark' ? 'light' : 'dark';
+    this.setTheme(next);
+    if (this.currentRoute === 'settings') {
+      this.renderMainContent();
+    }
   }
 
   saveCache(key, data) {
@@ -194,6 +230,7 @@ class CentrlyApp {
       case 'groups':
         return Boolean(this.groups && this.groups.length > 0);
       case 'billing':
+      case 'settings':
         return Boolean(this.billingState);
       case 'materials':
         return Boolean(this.materials && this.materials.length > 0);
@@ -323,8 +360,33 @@ class CentrlyApp {
       }
     });
 
-    // Check if Portal token is present in URL (Student vs Parent Portal)
+    // Check if Short Portal URL is present (/p/:code or /s/:code or ?s=:code or ?p=:code)
     const urlParams = new URLSearchParams(window.location.search);
+    const pathname = (window.location.pathname || '').trim();
+    const shortMatch = pathname.match(/^\/([ps])\/([a-zA-Z0-9_-]+)$/i);
+    const queryShortCode = urlParams.get('s') || urlParams.get('p');
+    const queryShortType = urlParams.get('s') ? 's' : (urlParams.get('p') ? 'p' : null);
+
+    const resolvedShortCode = shortMatch ? shortMatch[2] : queryShortCode;
+    const resolvedShortType = shortMatch ? shortMatch[1].toLowerCase() : queryShortType;
+
+    if (resolvedShortCode) {
+      try {
+        const shortData = await request(`/public/short-links/${encodeURIComponent(resolvedShortCode)}`);
+        if (shortData && shortData.token) {
+          if (shortData.portal_type === 'student' || resolvedShortType === 's') {
+            await this.loadStudentPortal(shortData.token);
+          } else {
+            await this.loadParentPortal(shortData.token);
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn('Could not resolve short portal link:', err);
+      }
+    }
+
+    // Check if Portal token is present in URL (Student vs Parent Portal)
     const portalToken = urlParams.get('token');
     const portalType = urlParams.get('portal');
     if (portalToken) {
@@ -332,6 +394,21 @@ class CentrlyApp {
         await this.loadStudentPortal(portalToken);
       } else {
         await this.loadParentPortal(portalToken);
+      }
+      return;
+    }
+
+    // Check for password recovery hash / query (from Supabase password reset email)
+    const hash = window.location.hash || '';
+    const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+    const isRecovery = hashParams.get('type') === 'recovery' || urlParams.get('type') === 'recovery';
+    const recoveryToken = hashParams.get('access_token') || urlParams.get('token');
+
+    if (isRecovery && recoveryToken) {
+      this.renderAuth('login');
+      this.openResetPasswordModal(recoveryToken);
+      if (window.history?.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
       }
       return;
     }
@@ -858,10 +935,133 @@ class CentrlyApp {
     }
   }
 
+  openForgotPasswordModal() {
+    const modal = document.getElementById('forgotPasswordModal');
+    if (modal) modal.style.display = 'flex';
+    const alertBox = document.getElementById('forgotPasswordAlert');
+    if (alertBox) alertBox.style.display = 'none';
+  }
+
+  closeForgotPasswordModal() {
+    const modal = document.getElementById('forgotPasswordModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async handleForgotPassword(e) {
+    e.preventDefault();
+    const emailInput = document.getElementById('forgotEmail');
+    const alertBox = document.getElementById('forgotPasswordAlert');
+    const btn = document.getElementById('btnSubmitForgotPassword');
+    const email = emailInput?.value?.trim().toLowerCase();
+    if (!email) return;
+
+    try {
+      if (btn) { btn.disabled = true; btn.innerText = 'جاري الإرسال...'; }
+      await authService.forgotPassword(email);
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#f0fdf4';
+        alertBox.style.color = '#15803d';
+        alertBox.style.border = '1px solid #bbf7d0';
+        alertBox.innerText = 'تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني بنجاح. يرجى فحص صندوق الوارد ورسائل البريد المزعج (Spam).';
+      }
+      if (emailInput) emailInput.value = '';
+    } catch (err) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.style.border = '1px solid #fecaca';
+        alertBox.innerText = err.message || 'تعذر إرسال رابط الاستعادة، يرجى التأكد من البريد والمحاولة ثانية.';
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerText = 'إرسال رابط الاستعادة'; }
+    }
+  }
+
+  openResetPasswordModal(token) {
+    const modal = document.getElementById('resetPasswordModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      const tokenInput = document.getElementById('resetPasswordToken');
+      if (tokenInput) tokenInput.value = token;
+      const alertBox = document.getElementById('resetPasswordAlert');
+      if (alertBox) alertBox.style.display = 'none';
+    }
+  }
+
+  closeResetPasswordModal() {
+    const modal = document.getElementById('resetPasswordModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async handleResetPasswordSubmit(e) {
+    e.preventDefault();
+    const token = document.getElementById('resetPasswordToken')?.value?.trim();
+    const newPassword = document.getElementById('resetNewPassword')?.value?.trim();
+    const confirmPassword = document.getElementById('resetConfirmPassword')?.value?.trim();
+    const alertBox = document.getElementById('resetPasswordAlert');
+    const btn = document.getElementById('btnSubmitResetPassword');
+
+    if (!newPassword || !confirmPassword) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = 'يرجى إدخال وتأكيد كلمة المرور الجديدة';
+      }
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = 'كلمتا المرور غير متطابقتين';
+      }
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = 'يجب ألا تقل كلمة المرور عن 8 أحرف';
+      }
+      return;
+    }
+
+    try {
+      if (btn) { btn.disabled = true; btn.innerText = 'جاري الحفظ...'; }
+      await authService.resetPassword(token, newPassword);
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#f0fdf4';
+        alertBox.style.color = '#15803d';
+        alertBox.innerText = 'تم تحديث كلمة المرور بنجاح! يمكنك الآن تسجيل الدخول.';
+      }
+      setTimeout(() => {
+        this.closeResetPasswordModal();
+        this.renderAuth('login');
+      }, 1500);
+    } catch (err) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = err.message || 'فشل تحديث كلمة المرور، قد يكون الرابط منتهي الصلاحية.';
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerText = 'تعيين كلمة المرور والدخول'; }
+    }
+  }
+
   async handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
+    const email = document.getElementById('loginEmail')?.value?.trim().toLowerCase() || '';
+    const password = document.getElementById('loginPassword')?.value?.trim() || '';
 
     try {
       const res = await authService.login(email, password);
@@ -910,10 +1110,10 @@ class CentrlyApp {
       tenantName = `${name} - منظومة تعليمية`;
     }
 
-    const email = document.getElementById('signupEmail').value.trim();
-    const phone = document.getElementById('signupPhone').value.trim();
-    const password = document.getElementById('signupPassword').value;
-    const passwordConfirm = document.getElementById('signupPasswordConfirm')?.value;
+    const email = document.getElementById('signupEmail')?.value?.trim().toLowerCase() || '';
+    const phone = document.getElementById('signupPhone')?.value?.trim() || '';
+    const password = document.getElementById('signupPassword')?.value?.trim() || '';
+    const passwordConfirm = document.getElementById('signupPasswordConfirm')?.value?.trim() || '';
 
     if (password.length < 8 || !/\d/.test(password) || !/[A-Z]/.test(password)) {
       this.showAuthAlert('كلمة المرور يجب أن تتكون من 8 أحرف على الأقل، وتحتوي على رقم واحد وحرف كبير واحد');
@@ -1584,29 +1784,43 @@ class CentrlyApp {
         }
         case 'groups': {
           const isCenterOwner = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-          const promises = [request('/groups').catch(() => [])];
+          const promises = [
+            request('/groups').catch(() => []),
+            (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students),
+          ];
           if (isCenterOwner) {
             promises.push(request('/centers/teachers').catch(() => ({ teachers: [] })));
             promises.push(request('/centers/rooms').catch(() => ({ rooms: [] })));
           }
 
-          const [grpRes, teachersRes, roomsRes] = await Promise.all(promises);
+          const [grpRes, studRes, teachersRes, roomsRes] = await Promise.all(promises);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          if (studRes) {
+            const fetchedStudents = Array.isArray(studRes) ? studRes : (studRes.students || []);
+            if (fetchedStudents.length > 0) {
+              this.students = fetchedStudents;
+              this.saveCache('students', this.students);
+            }
+          }
 
           if (isCenterOwner) {
             this.centerTeachers = teachersRes?.teachers || (Array.isArray(teachersRes) ? teachersRes : []);
             this.centerRooms = roomsRes?.rooms || (Array.isArray(roomsRes) ? roomsRes : []);
-
-            this.groups = this.groups.map(g => {
-              const matchedTeacher = this.centerTeachers.find(t => t.id === g.teacher_id);
-              const matchedRoom = this.centerRooms.find(r => r.id === g.room_id);
-              return {
-                ...g,
-                teacher_name: matchedTeacher ? matchedTeacher.name : g.teacher_name,
-                room_name: matchedRoom ? matchedRoom.name : g.room_name,
-              };
-            });
           }
+
+          this.groups = this.groups.map(g => {
+            const matchedTeacher = isCenterOwner ? this.centerTeachers.find(t => t.id === g.teacher_id) : null;
+            const matchedRoom = isCenterOwner ? this.centerRooms.find(r => r.id === g.room_id) : null;
+            const enrolled = (this.students || []).filter(s => s.group_id === g.id || (Array.isArray(s.group_ids) && s.group_ids.includes(g.id)));
+            const count = enrolled.length || g.students_count || g.studentCount || 0;
+            return {
+              ...g,
+              teacher_name: matchedTeacher ? matchedTeacher.name : g.teacher_name,
+              room_name: matchedRoom ? matchedRoom.name : g.room_name,
+              students_count: count,
+              studentCount: count,
+            };
+          });
           this.saveCache('groups', this.groups);
           this.renderMainContent();
           break;
@@ -1744,6 +1958,15 @@ class CentrlyApp {
           this.renderMainContent();
           break;
         }
+        case 'settings': {
+          try {
+            const billingRes = await request('/billing/status');
+            this.billingState = billingRes;
+            this.saveCache('billingState', this.billingState);
+          } catch (_) {}
+          this.renderMainContent();
+          break;
+        }
         case 'whatsapp': {
           const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
           const [quotaRes, statusRes, tplRes] = await Promise.all([
@@ -1796,8 +2019,8 @@ class CentrlyApp {
           this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
 
           const todayStr = new Date().toISOString().split('T')[0];
-          // If the active session is from a previous date, purge it immediately so user sees standby hub
-          if (this.sessionState?.id && (this.sessionState.session_date && this.sessionState.session_date !== todayStr)) {
+          // If the active session has ended, or is stale (not in_progress) from an old date, clean it up
+          if (this.sessionState?.id && this.sessionState.status !== 'in_progress' && (this.sessionState.session_date && this.sessionState.session_date !== todayStr)) {
             this.sessionState = {
               id: null,
               status: 'scheduled',
@@ -1818,7 +2041,8 @@ class CentrlyApp {
             try {
               const serverSessionRes = await request(`/sessions/${this.sessionState.id}`).catch(() => null);
               const fetchedStatus = serverSessionRes?.session?.status || serverSessionRes?.status;
-              if (!serverSessionRes || serverSessionRes.error || fetchedStatus === 'ended' || fetchedStatus === 'cancelled') {
+              // ONLY end session if server positively returned that the session has ended or cancelled!
+              if (serverSessionRes && !serverSessionRes.error && (fetchedStatus === 'ended' || fetchedStatus === 'cancelled')) {
                 this.sessionState = {
                   id: null,
                   status: 'scheduled',
@@ -2061,6 +2285,8 @@ class CentrlyApp {
         return renderRiskWatchlistView(this.watchlistData || this.dashboardData?.atRiskStudents || []);
       case 'billing':
         return renderBillingView(this.billingState || {}, this.user || {});
+      case 'settings':
+        return renderTeacherSettingsView(this.settingsState, this.user, this.billingState);
       case 'whatsapp':
         return renderWhatsAppSettingsView(this.whatsappState || {});
       case 'activity-logs': {
@@ -5532,101 +5758,31 @@ class CentrlyApp {
   }
 
   async copyParentLink(studentId) {
-    const student = (this.students || []).find(s => s.id === studentId);
     const canonicalOrigin = 'https://centerly-platform.vercel.app';
-    const pToken = student?.parent_portal_token || student?.parentPortalToken;
-    if (pToken) {
-      const fullUrl = `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}`;
-      await this.copyToClipboard(fullUrl, 'تم نسخ رابط متابعة ولي الأمر بنجاح!', 'رابط متابعة ولي الأمر');
-      return;
-    }
-
-    try {
-      const res = await request(`/students/${studentId}/parent-link`);
-      const fullUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
-      if (student) student.parent_portal_token = res.token;
-      await this.copyToClipboard(fullUrl, 'تم نسخ رابط متابعة ولي الأمر بنجاح!', 'رابط متابعة ولي الأمر');
-    } catch (err) {
-      this.showToast(`تعذر الحصول على رابط ولي الأمر: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
-    }
+    const cleanSid = String(studentId || '').replace(/-/g, '').toLowerCase().slice(0, 8);
+    const shortUrl = `${canonicalOrigin}/p/p${cleanSid}`;
+    await this.copyToClipboard(shortUrl, 'تم نسخ رابط متابعة ولي الأمر المختصر بنجاح!', 'رابط متابعة ولي الأمر');
   }
 
   async previewParentPortal(studentId) {
-    const student = (this.students || []).find(s => s.id === studentId);
     const canonicalOrigin = 'https://centerly-platform.vercel.app';
-    const pToken = student?.parent_portal_token || student?.parentPortalToken;
-    if (pToken) {
-      const fullUrl = `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}`;
-      window.open(fullUrl, '_blank');
-      return;
-    }
-
-    const newTab = window.open('about:blank', '_blank');
-    try {
-      const res = await request(`/students/${studentId}/parent-link`);
-      const fullUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
-      if (student) student.parent_portal_token = res.token;
-      if (newTab) {
-        newTab.location.href = fullUrl;
-      } else {
-        window.open(fullUrl, '_blank');
-      }
-    } catch (err) {
-      if (newTab) newTab.close();
-      this.showToast(`تعذر فتح رابط المعاينة: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
-    }
+    const cleanSid = String(studentId || '').replace(/-/g, '').toLowerCase().slice(0, 8);
+    const shortUrl = `${canonicalOrigin}/p/p${cleanSid}`;
+    window.open(shortUrl, '_blank');
   }
 
   async copyStudentLink(studentId) {
-    const student = (this.students || []).find(s => s.id === studentId);
     const canonicalOrigin = 'https://centerly-platform.vercel.app';
-    const pToken = student?.parent_portal_token || student?.parentPortalToken;
-    if (pToken) {
-      const studentUrl = `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}&portal=student`;
-      await this.copyToClipboard(studentUrl, 'تم نسخ رابط بوابة الطالب بنجاح!', 'رابط بوابة الطالب');
-      return;
-    }
-
-    try {
-      const res = await request(`/students/${studentId}/parent-link`);
-      const basePortalUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
-      const studentUrl = basePortalUrl.includes('?') 
-        ? `${basePortalUrl}&portal=student` 
-        : `${basePortalUrl}?portal=student`;
-      if (student) student.parent_portal_token = res.token;
-      await this.copyToClipboard(studentUrl, 'تم نسخ رابط بوابة الطالب بنجاح!', 'رابط بوابة الطالب');
-    } catch (err) {
-      this.showToast(`تعذر الحصول على رابط الطالب: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
-    }
+    const cleanSid = String(studentId || '').replace(/-/g, '').toLowerCase().slice(0, 8);
+    const shortUrl = `${canonicalOrigin}/s/s${cleanSid}`;
+    await this.copyToClipboard(shortUrl, 'تم نسخ رابط بوابة الطالب المختصر بنجاح!', 'رابط بوابة الطالب');
   }
 
   async previewStudentPortal(studentId) {
-    const student = (this.students || []).find(s => s.id === studentId);
     const canonicalOrigin = 'https://centerly-platform.vercel.app';
-    const pToken = student?.parent_portal_token || student?.parentPortalToken;
-    if (pToken) {
-      const studentUrl = `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}&portal=student`;
-      window.open(studentUrl, '_blank');
-      return;
-    }
-
-    const newTab = window.open('about:blank', '_blank');
-    try {
-      const res = await request(`/students/${studentId}/parent-link`);
-      const basePortalUrl = res.full_url || `${canonicalOrigin}${res.portal_url}`;
-      const studentUrl = basePortalUrl.includes('?') 
-        ? `${basePortalUrl}&portal=student` 
-        : `${basePortalUrl}?portal=student`;
-      if (student) student.parent_portal_token = res.token;
-      if (newTab) {
-        newTab.location.href = studentUrl;
-      } else {
-        window.open(studentUrl, '_blank');
-      }
-    } catch (err) {
-      if (newTab) newTab.close();
-      this.showToast(`تعذر فتح رابط المعاينة: ${err.message || 'تأكد من اتصال الخادم'}`, 'danger');
-    }
+    const cleanSid = String(studentId || '').replace(/-/g, '').toLowerCase().slice(0, 8);
+    const shortUrl = `${canonicalOrigin}/s/s${cleanSid}`;
+    window.open(shortUrl, '_blank');
   }
 
   async sendSingleParentLink(studentId) {
@@ -5892,11 +6048,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       return;
     }
     try {
-      const baseUrl = window.__CENTRLY_API_URL__ || (
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-          ? 'http://localhost:3000/api'
-          : 'https://tutoring-backend-production-c8dd.up.railway.app/api'
-      );
+      const baseUrl = API_BASE_URL;
       const token = authService.getToken();
       const res = await fetch(`${baseUrl}/groups/${targetGroupId}/barcode-sheet`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
@@ -6070,11 +6222,12 @@ https://centerly-platform.vercel.app/parent-portal?token=...
 
     let serverSession = null;
 
-    // 1. Check if there is already an in_progress session on the server for this group
+    // 1. Check if there is already an in_progress session on the server for this group FOR TODAY
+    const todayStr = new Date().toISOString().split('T')[0];
     try {
       const activeRes = await request('/sessions?status=in_progress').catch(() => null);
       const activeList = Array.isArray(activeRes) ? activeRes : (activeRes?.sessions || []);
-      const existing = activeList.find(s => s.group_id === cleanId);
+      const existing = activeList.find(s => s.group_id === cleanId && s.session_date === todayStr);
       if (existing) {
         serverSession = existing;
       }
@@ -6092,7 +6245,6 @@ https://centerly-platform.vercel.app/parent-portal?token=...
           const maxNum = Math.max(...pastList.map(s => Number(s.session_number) || 0));
           nextNum = maxNum + 1;
         }
-        const todayStr = new Date().toISOString().split('T')[0];
         const createRes = await request('/sessions', {
           method: 'POST',
           body: {
@@ -6111,13 +6263,20 @@ https://centerly-platform.vercel.app/parent-portal?token=...
     }
 
     // Fetch group students to pre-populate roster as "غائب" (absent)
-    let groupStudents = (this.students || []).filter(s => s.group_id === cleanId);
+    let groupStudents = (this.students || []).filter(s => s.group_id === cleanId || (Array.isArray(s.group_ids) && s.group_ids.includes(cleanId)));
     if (groupStudents.length === 0) {
       try {
         const studRes = await request(`/students?group_id=${cleanId}`).catch(() => null);
         if (studRes) {
           const list = Array.isArray(studRes) ? studRes : (studRes.students || []);
-          if (list.length > 0) groupStudents = list;
+          if (list.length > 0) {
+            groupStudents = list;
+            list.forEach(st => {
+              if (!this.students.find(existing => existing.id === st.id)) {
+                this.students.push(st);
+              }
+            });
+          }
         }
       } catch (err) {
         console.warn('Could not fetch group students for roster prefill:', err);
@@ -6145,7 +6304,7 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       id: sessionId,
       status: 'in_progress',
       session_number: serverSession?.session_number || 1,
-      session_date: serverSession?.session_date || new Date().toISOString().split('T')[0],
+      session_date: todayStr,
       room: assignedRoom || serverSession?.room || '',
       group: grp || (serverSession?.groups ? serverSession.groups : { id: cleanId, name: 'حصة دراسية', price: 100 }),
       attendanceList: preRoster,
@@ -8564,6 +8723,175 @@ https://centerly-platform.vercel.app/parent-portal?token=...
       this.renderMainContent();
       this.openSetPinModal();
     }
+  }
+
+  // ==========================================================================
+  // Settings & Security Actions
+  // ==========================================================================
+
+  switchSettingsTab(tab) {
+    this.settingsState.activeTab = tab;
+    this.renderMainContent();
+  }
+
+  async handleSaveTeacherProfile(e) {
+    e.preventDefault();
+    const name = document.getElementById('settingsTeacherName')?.value?.trim();
+    const subject = document.getElementById('settingsSubject')?.value?.trim();
+    const phone = document.getElementById('settingsPhone')?.value?.trim();
+    const btn = document.getElementById('saveProfileBtn');
+
+    if (!name) {
+      this.showToast('يرجى إدخال اسم المعلم الشائع.', 'danger');
+      return;
+    }
+
+    try {
+      if (btn) { btn.disabled = true; btn.innerText = 'جاري الحفظ...'; }
+      this.user = {
+        ...this.user,
+        name,
+        full_name: name,
+        subject,
+        phone,
+      };
+      authService.setUser(this.user);
+
+      try {
+        await request('/settings', {
+          method: 'PUT',
+          body: JSON.stringify({
+            teacher_name: name,
+            subject,
+            phone,
+          }),
+        });
+      } catch (_) {}
+
+      this.showToast('تم حفظ بيانات الملف الشخصي بنجاح.', 'success');
+      this.renderApp();
+    } catch (err) {
+      this.showToast(err.message || 'حدث خطأ أثناء حفظ البيانات.', 'danger');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerText = 'حفظ التعديلات'; }
+    }
+  }
+
+  validateSettingsPasswordLive(pwd) {
+    const p = pwd || '';
+    const hasLen = p.length >= 8;
+    const hasNum = /\d/.test(p);
+    const hasUp = /[A-Z]/.test(p);
+
+    const ruleLen = document.getElementById('ruleSettingsLen');
+    const ruleNum = document.getElementById('ruleSettingsNum');
+    const ruleUp = document.getElementById('ruleSettingsUp');
+
+    if (ruleLen) {
+      ruleLen.style.color = hasLen ? 'var(--centrly-success)' : '#94a3b8';
+      ruleLen.style.fontWeight = hasLen ? '700' : '400';
+    }
+    if (ruleNum) {
+      ruleNum.style.color = hasNum ? 'var(--centrly-success)' : '#94a3b8';
+      ruleNum.style.fontWeight = hasNum ? '700' : '400';
+    }
+    if (ruleUp) {
+      ruleUp.style.color = hasUp ? 'var(--centrly-success)' : '#94a3b8';
+      ruleUp.style.fontWeight = hasUp ? '700' : '400';
+    }
+  }
+
+  async handleSettingsChangePassword(e) {
+    e.preventDefault();
+    const currentPassword = document.getElementById('settingsCurrentPassword')?.value;
+    const newPassword = document.getElementById('settingsNewPassword')?.value;
+    const confirmPassword = document.getElementById('settingsConfirmPassword')?.value;
+    const alertBox = document.getElementById('settingsPasswordAlert');
+    const btn = document.getElementById('btnSettingsUpdatePassword');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = 'يرجى ملء جميع حقول كلمة المرور';
+      }
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = 'كلمتا المرور غير متطابقتين';
+      }
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = 'يجب ألا تقل كلمة المرور عن 8 أحرف';
+      }
+      return;
+    }
+
+    try {
+      if (btn) { btn.disabled = true; btn.innerText = 'جاري التحديث...'; }
+      const res = await request('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#f0fdf4';
+        alertBox.style.color = '#15803d';
+        alertBox.innerText = res.message || 'تم تحديث كلمة المرور بنجاح.';
+      }
+      this.showToast('تم تغيير كلمة المرور بنجاح.', 'success');
+      document.getElementById('formSettingsChangePassword')?.reset();
+    } catch (err) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = err.message || 'فشل تحديث كلمة المرور. يرجى التأكد من صحة كلمة المرور الحالية.';
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerText = 'تحديث كلمة المرور'; }
+    }
+  }
+
+  handleSaveFinancialPin(e) {
+    e.preventDefault();
+    const pin = document.getElementById('settingsFinancialPin')?.value?.trim();
+
+    if (!pin) {
+      localStorage.removeItem('centrly_financial_pin');
+      this.hasSecurityPin = false;
+      this.isFinancialUnlocked = true;
+      this.showToast('تم إلغاء تفعيل الرمز السري للأرباح بنجاح.', 'info');
+      this.renderMainContent();
+      return;
+    }
+
+    if (!/^\d{4,6}$/.test(pin)) {
+      this.showToast('يجب أن يتكون الرمز السري من 4 إلى 6 أرقام فقط.', 'danger');
+      return;
+    }
+
+    localStorage.setItem('centrly_financial_pin', pin);
+    this.hasSecurityPin = true;
+    this.isFinancialUnlocked = false;
+    this.showToast('تم حفظ الرمز السري للأرباح وتأمين الشاشات المالية بنجاح.', 'success');
+    this.renderMainContent();
   }
 
   // ==========================================================================
