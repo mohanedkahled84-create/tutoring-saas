@@ -97,11 +97,47 @@ publicRouter.get("/short-links/:code", async (req: Request, res: Response): Prom
 
   const supabase = getServiceSupabaseClient();
 
-  // 1. Direct query from short_links table
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc("resolve_portal_short_code", { p_code: code });
+    if (!rpcError && rpcData) {
+      const resolved = typeof rpcData === "string" ? JSON.parse(rpcData) : rpcData;
+      let token = resolved.token;
+      if (!token && resolved.student_id && resolved.tenant_id) {
+        token = generateParentPortalToken(resolved.student_id, resolved.tenant_id, 365);
+        try {
+          await supabase.from("short_links").upsert(
+            {
+              code: resolved.code || code,
+              tenant_id: resolved.tenant_id,
+              student_id: resolved.student_id,
+              portal_type: resolved.portal_type || "parent",
+              token,
+            },
+            { onConflict: "code" }
+          );
+        } catch (_) {}
+      }
+
+      if (token) {
+        res.json({
+          code: resolved.code || code,
+          token,
+          portal_type: resolved.portal_type || "parent",
+          student_id: resolved.student_id,
+          student_name: resolved.student_name,
+        });
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn("resolve_portal_short_code RPC error:", err);
+  }
+
+  // Fallback direct short_links query
   try {
     const { data, error } = await supabase
       .from("short_links")
-      .select("code, token, portal_type, student_id, tenant_id")
+      .select("code, token, portal_type, student_id")
       .eq("code", code)
       .maybeSingle();
 
@@ -114,54 +150,7 @@ publicRouter.get("/short-links/:code", async (req: Request, res: Response): Prom
       });
       return;
     }
-  } catch (err) {
-    console.warn("short_links lookup error:", err);
-  }
-
-  // 2. Fallback: match by student UUID prefix
-  const isStudentPortal = code.toLowerCase().startsWith("s");
-  const portalType = isStudentPortal ? "student" : "parent";
-  const hexPrefix = code.replace(/^[ps]/i, "").toLowerCase();
-
-  if (hexPrefix.length >= 6) {
-    try {
-      const { data: students, error: studError } = await supabase
-        .from("students")
-        .select("id, tenant_id, name")
-        .ilike("id", `${hexPrefix}%`)
-        .limit(2);
-
-      if (!studError && students && students.length === 1) {
-        const student = students[0];
-        const token = generateParentPortalToken(student.id, student.tenant_id, 365);
-
-        // Cache into short_links table
-        try {
-          await supabase.from("short_links").upsert(
-            {
-              code,
-              tenant_id: student.tenant_id,
-              student_id: student.id,
-              portal_type: portalType,
-              token,
-            },
-            { onConflict: "code" }
-          );
-        } catch (_) {}
-
-        res.json({
-          code,
-          token,
-          portal_type: portalType,
-          student_id: student.id,
-          student_name: student.name,
-        });
-        return;
-      }
-    } catch (err) {
-      console.warn("Fallback student lookup error:", err);
-    }
-  }
+  } catch (_) {}
 
   res.status(404).json({
     error: { code: "NOT_FOUND", message: "رابط المتابعة غير صحيح أو غير موجود" },
