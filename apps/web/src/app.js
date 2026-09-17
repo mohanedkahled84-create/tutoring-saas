@@ -10344,7 +10344,8 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     }, 50);
   }
 
-  openTenantOverrideModal(tenantId, tenantName, currentStatus) {
+  openTenantOverrideModal(tenantId, tenantName, currentStatus, currentTier = 'growth') {
+    const tier = (currentTier || 'growth').toLowerCase();
     const bodyHtml = `
       <form id="tenantOverrideForm" onsubmit="window.centrlyApp.handleSaveTenantOverride(event, '${tenantId}')">
         <div style="margin-bottom: 1.25rem;">
@@ -10354,6 +10355,15 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
           <p style="font-size: 0.825rem; color: #64748b; margin: 0;">
             الحالة الحالية: <strong style="color: var(--centrly-blue-700);">${currentStatus}</strong>
           </p>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">خطة / باقة المشترك</label>
+          <select id="overrideTier" class="form-select" style="width: 100%;">
+            <option value="starter" ${tier === 'starter' || tier.includes('100') ? 'selected' : ''}>باقة 100 طالب (Starter - سعة 100)</option>
+            <option value="growth" ${tier === 'growth' || tier.includes('250') ? 'selected' : ''}>باقة 250 طالب (Growth - سعة 250)</option>
+            <option value="pro" ${tier === 'pro' || tier.includes('500') ? 'selected' : ''}>باقة 500 طالب (Pro - سعة 500)</option>
+          </select>
         </div>
 
         <div class="form-group" style="margin-bottom: 1rem;">
@@ -10368,9 +10378,9 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
 
         <div class="form-group" style="margin-bottom: 1.25rem;">
           <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">تمديد الصلاحية لعدد أيام إضافي</label>
-          <input type="number" id="overrideExtendDays" class="form-input" placeholder="عدد الأيام الإضافية" min="1" max="730" value="30">
+          <input type="number" id="overrideExtendDays" class="form-input" placeholder="عدد الأيام الإضافية" min="0" max="730" value="30">
           <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.35rem;">
-            سيتم إضافة هذه الأيام فوق الصلاحية الحالية أو من تاريخ اليوم.
+            سيتم إضافة هذه الأيام فوق الصلاحية الحالية أو من تاريخ اليوم (0 لعدم زيادة الأيام).
           </div>
         </div>
 
@@ -10382,13 +10392,14 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         </div>
       </form>
     `;
-    this.showModal('تعديل صلاحية المشترك', bodyHtml);
+    this.showModal('تعديل صلاحية وخطة المشترك', bodyHtml);
   }
 
   async handleSaveTenantOverride(e, tenantId) {
     e.preventDefault();
     const status = document.getElementById('overrideStatus')?.value || 'active';
-    const extendDays = Number(document.getElementById('overrideExtendDays')?.value || 30);
+    const tier = document.getElementById('overrideTier')?.value || 'growth';
+    const extendDays = Number(document.getElementById('overrideExtendDays')?.value || 0);
     const btn = document.getElementById('btnSubmitOverride');
     if (btn) {
       btn.disabled = true;
@@ -10400,7 +10411,8 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         method: 'POST',
         body: JSON.stringify({
           status,
-          extend_days: extendDays,
+          tier,
+          extend_days: extendDays > 0 ? extendDays : undefined,
         }),
       });
 
@@ -10449,6 +10461,8 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
       btn.disabled = true;
       btn.innerHTML = '<span>جارٍ الحفظ...</span>';
     }
+
+    try {
       await request('/settings', {
         method: 'PUT',
         body: JSON.stringify({

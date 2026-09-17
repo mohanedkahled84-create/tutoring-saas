@@ -50,7 +50,7 @@ export class SupabaseBillingRepository implements IBillingRepository {
   async getTenantBilling(tenantId: string): Promise<TenantBillingInfo | null> {
     const { data, error } = await this.supabase
       .from("tenants")
-      .select("id, name, subscription_status, trial_ends_at, subscription_ends_at")
+      .select("id, name, subscription_status, trial_ends_at, subscription_ends_at, subscription_tier, settings")
       .eq("id", tenantId)
       .single();
 

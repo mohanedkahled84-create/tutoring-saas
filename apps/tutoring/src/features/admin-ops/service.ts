@@ -43,15 +43,38 @@ export class AdminOpsService {
     const days = extendDays > 0 ? extendDays : 30;
     const newEnds = new Date(currentEnds.getTime() + days * 24 * 60 * 60 * 1000);
 
+    // Detect target tier and student capacity from proof notes or amount
+    const notes = proof.admin_notes || "";
+    const amt = Number(proof.amount || 0);
+    let targetTier = tenant?.subscription_tier || "starter";
+    let targetLimit = 100;
+    let targetPlanName = "باقة 100 طالب";
+
+    if (notes.includes("250") || amt === 899 || amt === 9709) {
+      targetTier = "growth";
+      targetLimit = 250;
+      targetPlanName = "باقة 250 طالب";
+    } else if (notes.includes("500") || amt === 1499 || amt === 16189) {
+      targetTier = "pro";
+      targetLimit = 500;
+      targetPlanName = "باقة 500 طالب";
+    } else if (notes.includes("100") || amt === 599 || amt === 6469) {
+      targetTier = "starter";
+      targetLimit = 100;
+      targetPlanName = "باقة 100 طالب";
+    }
+
     const updatedTenant = await this.repo.approvePaymentProof(
       proofId,
       proof.tenant_id,
       adminId,
-      newEnds.toISOString()
+      newEnds.toISOString(),
+      targetTier,
+      { students_limit: targetLimit, plan_name: targetPlanName, plan_id: `plan_${targetLimit}` }
     );
 
     return {
-      message: `Payment proof approved successfully. Tenant subscription activated for ${days} days.`,
+      message: `Payment proof approved successfully. Tenant subscription activated for ${days} days on ${targetPlanName}.`,
       subscription_ends_at: newEnds.toISOString(),
       tenant: updatedTenant,
     };
@@ -85,6 +108,32 @@ export class AdminOpsService {
     if (dto.status) updatePayload.subscription_status = dto.status;
     if (dto.soft_delete) updatePayload.deleted_at = new Date().toISOString();
     if (dto.soft_delete === false) updatePayload.deleted_at = null;
+
+    const requestedTier = dto.tier || dto.subscription_tier || dto.plan;
+    if (requestedTier) {
+      const lower = requestedTier.toLowerCase();
+      let limit = 100;
+      let name = "باقة 100 طالب";
+      let tier = "starter";
+      if (lower.includes("250") || lower === "growth") {
+        limit = 250;
+        name = "باقة 250 طالب";
+        tier = "growth";
+      } else if (lower.includes("500") || lower === "pro") {
+        limit = 500;
+        name = "باقة 500 طالب";
+        tier = "pro";
+      }
+      updatePayload.subscription_tier = tier;
+      const tenant = await this.repo.getTenant(tenantId);
+      const existingSettings = (tenant as any)?.settings || {};
+      updatePayload.settings = {
+        ...existingSettings,
+        students_limit: limit,
+        plan_name: name,
+        plan_id: `plan_${limit}`,
+      };
+    }
 
     if (dto.extend_days && typeof dto.extend_days === "number") {
       const tenant = await this.repo.getTenant(tenantId);

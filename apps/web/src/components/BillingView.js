@@ -43,8 +43,11 @@ export function renderBillingView(data = {}, user = {}) {
   }
 
   const currentStudents = data.students_count || (window.centrlyApp?.students?.length || 0);
-  const studentLimit = data.students_limit || 100;
+  const tier = (data.subscription_tier || '').toLowerCase();
+  const fallbackLimit = (tier === 'growth' || tier.includes('250')) ? 250 : (tier === 'pro' || tier.includes('500')) ? 500 : 100;
+  const studentLimit = data.students_limit || fallbackLimit;
   const quotaPercent = Math.min(100, Math.round((currentStudents / studentLimit) * 100));
+  const planName = data.plan_name || (studentLimit === 250 ? 'باقة 250 طالب' : studentLimit === 500 ? 'باقة 500 طالب' : 'باقة 100 طالب');
 
   const isYearly = (window.centrlyApp?.billingCycle === 'yearly');
 
@@ -122,7 +125,7 @@ export function renderBillingView(data = {}, user = {}) {
             <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
               ${statusBadgeHtml}
               <span style="font-size: 0.85rem; color: #93c5fd; font-weight: 700;">
-                ${data.plan_name || 'باقة 100 طالب (شاملة كافة الميزات)'}
+                ${planName} (شاملة كافة الميزات)
               </span>
             </div>
             
@@ -195,22 +198,50 @@ export function renderBillingView(data = {}, user = {}) {
           const displayPeriod = isYearly ? 'ج.م / شهرياً (فاتورة سنوية)' : 'ج.م / شهرياً';
           const buttonAmount = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
           const fullPlanName = `${plan.name} (${isYearly ? 'سنوي' : 'شهري'})`;
+          const isCurrentPlan = (plan.capacity === studentLimit);
+
+          let cardBorder = 'border: 1.5px solid var(--centrly-line);';
+          if (isCurrentPlan) {
+            cardBorder = 'border: 2.5px solid #10b981; box-shadow: 0 12px 30px rgba(16,185,129,0.18);';
+          } else if (plan.isPopular) {
+            cardBorder = 'border: 2.5px solid var(--centrly-blue-700); box-shadow: 0 12px 30px rgba(37,99,235,0.12);';
+          }
+
+          let topPill = '';
+          if (isCurrentPlan) {
+            topPill = `
+              <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #10b981, #059669); color: #fff; padding: 0.25rem 1rem; border-radius: 9999px; font-size: 0.775rem; font-weight: 800; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">
+                باقتك الحالية
+              </div>
+            `;
+          } else if (plan.isPopular) {
+            topPill = `
+              <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, var(--centrly-blue-700), var(--centrly-blue-900)); color: #fff; padding: 0.25rem 1rem; border-radius: 9999px; font-size: 0.775rem; font-weight: 800; box-shadow: 0 2px 8px rgba(37,99,235,0.3);">
+                الأكثر طلباً للمعلمين
+              </div>
+            `;
+          }
+
+          let buttonText = `اشترك في ${plan.name}`;
+          if (isCurrentPlan) {
+            buttonText = `تجديد باقتي الحالية (${plan.name})`;
+          } else if (plan.capacity > studentLimit) {
+            buttonText = `ترقية إلى ${plan.name} (${isYearly ? 'سنوياً' : 'شهرياً'})`;
+          } else {
+            buttonText = `تغيير إلى ${plan.name} (${isYearly ? 'سنوياً' : 'شهرياً'})`;
+          }
 
           return `
-            <div class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between; border-radius: 16px; position: relative; transition: transform 0.2s, box-shadow 0.2s; ${plan.isPopular ? 'border: 2.5px solid var(--centrly-blue-700); box-shadow: 0 12px 30px rgba(37,99,235,0.12);' : 'border: 1.5px solid var(--centrly-line);'}">
+            <div class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between; border-radius: 16px; position: relative; transition: transform 0.2s, box-shadow 0.2s; ${cardBorder}">
               
-              ${plan.isPopular ? `
-                <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, var(--centrly-blue-700), var(--centrly-blue-900)); color: #fff; padding: 0.25rem 1rem; border-radius: 9999px; font-size: 0.775rem; font-weight: 800; box-shadow: 0 2px 8px rgba(37,99,235,0.3);">
-                  الأكثر طلباً للمعلمين
-                </div>
-              ` : ''}
+              ${topPill}
 
               <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: ${plan.isPopular ? '0.5rem' : '0'};">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: ${(isCurrentPlan || plan.isPopular) ? '0.5rem' : '0'};">
                   <h3 style="font-size: 1.25rem; font-weight: 900; color: var(--centrly-ink); margin: 0;">
                     ${plan.name}
                   </h3>
-                  ${!plan.isPopular ? `<span style="background: #f1f5f9; color: #475569; font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">${plan.badgeText}</span>` : ''}
+                  ${isCurrentPlan ? `<span style="background: #dcfce7; color: #166534; font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">مفعّلة الآن</span>` : (!plan.isPopular ? `<span style="background: #f1f5f9; color: #475569; font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 6px;">${plan.badgeText}</span>` : '')}
                 </div>
                 
                 <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.4rem 0 1rem; line-height: 1.5;">
@@ -220,7 +251,7 @@ export function renderBillingView(data = {}, user = {}) {
                 <!-- Pricing Display -->
                 <div style="margin: 1.25rem 0 0.75rem;">
                   <div style="display: flex; align-items: baseline; gap: 0.4rem;">
-                    <span style="font-size: 2.5rem; font-weight: 900; color: ${plan.isPopular ? 'var(--centrly-blue-800)' : 'var(--centrly-ink)'};">
+                    <span style="font-size: 2.5rem; font-weight: 900; color: ${isCurrentPlan ? '#10b981' : (plan.isPopular ? 'var(--centrly-blue-800)' : 'var(--centrly-ink)')};">
                       ${Number(heroAmount).toLocaleString('ar-EG')}
                     </span>
                     <span style="font-size: 0.95rem; font-weight: 700; color: var(--centrly-text);">
@@ -241,7 +272,7 @@ export function renderBillingView(data = {}, user = {}) {
                 </div>
 
                 <!-- Capacity Badge -->
-                <div style="background: ${plan.isPopular ? '#eff6ff' : '#f8fafc'}; border: 1px solid ${plan.isPopular ? '#bfdbfe' : '#e2e8f0'}; color: ${plan.isPopular ? '#1e3a8a' : '#334155'}; font-size: 0.9rem; font-weight: 800; padding: 0.65rem 0.85rem; border-radius: 8px; text-align: center; margin: 1.25rem 0 1rem;">
+                <div style="background: ${isCurrentPlan ? '#f0fdf4' : (plan.isPopular ? '#eff6ff' : '#f8fafc')}; border: 1px solid ${isCurrentPlan ? '#bbf7d0' : (plan.isPopular ? '#bfdbfe' : '#e2e8f0')}; color: ${isCurrentPlan ? '#166534' : (plan.isPopular ? '#1e3a8a' : '#334155')}; font-size: 0.9rem; font-weight: 800; padding: 0.65rem 0.85rem; border-radius: 8px; text-align: center; margin: 1.25rem 0 1rem;">
                   سعة الطلاب: حتى ${plan.capacity} طالباً
                 </div>
 
@@ -255,10 +286,10 @@ export function renderBillingView(data = {}, user = {}) {
               </div>
 
               <div>
-                <button class="btn ${plan.isPopular ? 'btn-primary' : 'btn-secondary'}" 
-                  style="width: 100%; font-weight: 800; padding: 0.75rem; border-radius: 10px; font-size: 0.95rem; ${plan.isPopular ? 'background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);' : ''}" 
+                <button class="btn ${isCurrentPlan ? 'btn-secondary' : (plan.isPopular ? 'btn-primary' : 'btn-secondary')}" 
+                  style="width: 100%; font-weight: 800; padding: 0.75rem; border-radius: 10px; font-size: 0.95rem; ${isCurrentPlan ? 'background: #10b981; color: #fff; border: none;' : (plan.isPopular ? 'background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);' : '')}" 
                   onclick="window.centrlyApp.openPaymentProofModal('${fullPlanName}', ${buttonAmount}, '${isYearly ? 'yearly' : 'monthly'}')">
-                  اشترك في ${plan.name} (${isYearly ? 'سنوياً' : 'شهرياً'})
+                  ${buttonText}
                 </button>
               </div>
 

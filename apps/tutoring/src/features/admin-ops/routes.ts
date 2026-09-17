@@ -103,7 +103,7 @@ adminRouter.post(
   "/tenants/:id/subscription",
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { id: tenantId } = req.params;
-    const { status, extend_days, soft_delete } = req.body;
+    const { status, extend_days, soft_delete, tier, subscription_tier, plan } = req.body;
 
     try {
       const adminOpsService = getServices(req).adminOps;
@@ -111,6 +111,7 @@ adminRouter.post(
         status,
         extend_days,
         soft_delete,
+        tier: tier || subscription_tier || plan,
       });
       res.json({ message: "Tenant subscription updated successfully", tenant });
     } catch (err: unknown) {

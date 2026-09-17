@@ -74,6 +74,40 @@ export class BillingService {
       ? await this.repository.getStudentCount(tenantId)
       : 0;
 
+    // Resolve dynamic student capacity and plan name
+    let studentsLimit = 100;
+    let planName = "باقة 100 طالب";
+
+    const settings = tenant.settings || {};
+    if (typeof settings.students_limit === "number" && settings.students_limit > 0) {
+      studentsLimit = settings.students_limit;
+      planName = settings.plan_name || `باقة ${studentsLimit} طالب`;
+    } else {
+      const tier = (tenant.subscription_tier || "").toLowerCase();
+      if (tier === "growth" || tier === "plan_250" || tier.includes("250")) {
+        studentsLimit = 250;
+        planName = "باقة 250 طالب";
+      } else if (tier === "pro" || tier === "plan_500" || tier.includes("500")) {
+        studentsLimit = 500;
+        planName = "باقة 500 طالب";
+      } else if (tier === "starter" || tier === "plan_100" || tier.includes("100")) {
+        studentsLimit = 100;
+        planName = "باقة 100 طالب";
+      } else if (proofs && proofs.length > 0) {
+        // Inspect latest approved proof or most recent submitted proof
+        const latestRelevant = proofs.find(p => p.status === "approved") || proofs[0];
+        const notes = (latestRelevant.admin_notes || "").toLowerCase();
+        const amt = Number(latestRelevant.amount || 0);
+        if (notes.includes("250") || amt === 899 || amt === 9709) {
+          studentsLimit = 250;
+          planName = "باقة 250 طالب";
+        } else if (notes.includes("500") || amt === 1499 || amt === 16189) {
+          studentsLimit = 500;
+          planName = "باقة 500 طالب";
+        }
+      }
+    }
+
     return {
       subscription_status: tenant.subscription_status,
       trial_ends_at: tenant.trial_ends_at,
@@ -81,8 +115,9 @@ export class BillingService {
       days_remaining: daysRemaining,
       payment_proofs: proofs,
       students_count: studentCount,
-      students_limit: 100,
-      plan_name: "باقة 100 طالب",
+      students_limit: studentsLimit,
+      plan_name: planName,
+      subscription_tier: tenant.subscription_tier || (studentsLimit === 250 ? "growth" : studentsLimit === 500 ? "pro" : "starter"),
     };
   }
 

@@ -21,11 +21,29 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
       ? rawStudents[0].count
       : undefined;
 
+    const tier = (row.subscription_tier || "").toLowerCase();
+    const settings = row.settings || {};
+    let limit = 100;
+    let planName = "باقة 100 طالب";
+    if (typeof settings.students_limit === "number" && settings.students_limit > 0) {
+      limit = settings.students_limit;
+      planName = settings.plan_name || `باقة ${limit} طالب`;
+    } else if (tier === "growth" || tier.includes("250")) {
+      limit = 250;
+      planName = "باقة 250 طالب";
+    } else if (tier === "pro" || tier.includes("500")) {
+      limit = 500;
+      planName = "باقة 500 طالب";
+    }
+
     return {
       id: row.id,
       name: row.name,
       status: row.status,
       subscription_status: row.subscription_status,
+      subscription_tier: row.subscription_tier || tier,
+      students_limit: limit,
+      plan_name: planName,
       account_type: row.account_type || (ownerUser?.role === "center_owner" ? "center" : "teacher"),
       email: ownerUser?.email || undefined,
       phone: ownerUser?.phone || undefined,
@@ -41,7 +59,7 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
   async listAllTenants(): Promise<AdminTenantSummary[]> {
     const { data, error } = await this.client
       .from("tenants")
-      .select("id, name, status, subscription_status, account_type, trial_ends_at, subscription_ends_at, deleted_at, created_at, users(email, phone, full_name, role), students(count)")
+      .select("id, name, status, subscription_status, subscription_tier, settings, account_type, trial_ends_at, subscription_ends_at, deleted_at, created_at, users(email, phone, full_name, role), students(count)")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -99,7 +117,9 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
     proofId: string,
     tenantId: string,
     adminId: string,
-    newEndsAt: string
+    newEndsAt: string,
+    targetTier?: string,
+    planSettings?: Record<string, any>
   ): Promise<AdminTenantSummary> {
     const now = new Date().toISOString();
 
@@ -112,12 +132,22 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
       })
       .eq("id", proofId);
 
+    const updatePayload: Record<string, unknown> = {
+      subscription_status: "active",
+      subscription_ends_at: newEndsAt,
+    };
+    if (targetTier) {
+      updatePayload.subscription_tier = targetTier;
+    }
+    if (planSettings) {
+      const existing = await this.getTenant(tenantId);
+      const prevSettings = (existing as any)?.settings || {};
+      updatePayload.settings = { ...prevSettings, ...planSettings };
+    }
+
     const { data: updatedTenant, error: tenantUpdateErr } = await this.client
       .from("tenants")
-      .update({
-        subscription_status: "active",
-        subscription_ends_at: newEndsAt,
-      })
+      .update(updatePayload)
       .eq("id", tenantId)
       .select()
       .single();

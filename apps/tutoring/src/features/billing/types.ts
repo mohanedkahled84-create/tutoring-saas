@@ -34,6 +34,8 @@ export interface TenantBillingInfo {
   subscription_status: string;
   trial_ends_at?: string | null;
   subscription_ends_at?: string | null;
+  subscription_tier?: string | null;
+  settings?: Record<string, any> | null;
 }
 
 export interface TenantBillingStatus {
@@ -45,6 +47,7 @@ export interface TenantBillingStatus {
   students_count?: number;
   students_limit?: number;
   plan_name?: string;
+  subscription_tier?: string | null;
 }
 
 export interface ReminderResult {

@@ -1,4 +1,4 @@
-﻿import { getIcon } from '../utils/icons.js';
+import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
 /**
@@ -206,17 +206,22 @@ export function renderAdminTenantsView(data = {}, currentFilter = 'all', searchQ
                         ${formatArabicDate(expiryDate)}
                       </td>
 
-                      <!-- Students -->
-                      <td style="padding: 0.85rem 1rem; font-weight: 800; color: var(--centrly-blue-800);">
-                        ${t.students_count !== undefined ? t.students_count : '—'}
+                      <!-- Students & Plan -->
+                      <td style="padding: 0.85rem 1rem;">
+                        <div style="font-weight: 800; color: var(--centrly-blue-800);">
+                          ${t.students_count !== undefined ? t.students_count : '0'} / ${t.students_limit || (t.subscription_tier === 'growth' ? 250 : t.subscription_tier === 'pro' ? 500 : 100)} طالب
+                        </div>
+                        <div style="font-size: 0.75rem; color: #475569; font-weight: 700; margin-top: 0.2rem;">
+                          ${t.plan_name || (t.subscription_tier === 'growth' ? 'باقة 250 طالب' : t.subscription_tier === 'pro' ? 'باقة 500 طالب' : 'باقة 100 طالب')}
+                        </div>
                       </td>
 
                       <!-- Actions -->
                       <td style="padding: 0.85rem 1rem; text-align: left;">
                         <div style="display: flex; gap: 0.35rem; justify-content: flex-end;">
-                          <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openTenantOverrideModal('${t.id}', '${escapeHtml(t.name)}', '${status}')" style="font-weight: 800; font-size: 0.775rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                          <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openTenantOverrideModal('${t.id}', '${escapeHtml(t.name)}', '${status}', '${t.subscription_tier || 'growth'}')" style="font-weight: 800; font-size: 0.775rem; display: inline-flex; align-items: center; gap: 0.3rem;">
                             ${getIcon('gear', 12)}
-                            <span>تعديل الصلاحية</span>
+                            <span>تعديل الصلاحية والخطة</span>
                           </button>
                         </div>
                       </td>

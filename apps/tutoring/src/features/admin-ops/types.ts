@@ -8,6 +8,9 @@ export interface AdminTenantSummary {
   phone?: string;
   full_name?: string;
   students_count?: number;
+  students_limit?: number;
+  plan_name?: string;
+  subscription_tier?: string;
   trial_ends_at?: string | null;
   subscription_ends_at?: string | null;
   deleted_at?: string | null;
@@ -43,6 +46,9 @@ export interface TenantSubscriptionOverrideDTO {
   status?: string;
   extend_days?: number;
   soft_delete?: boolean;
+  tier?: string;
+  subscription_tier?: string;
+  plan?: string;
 }
 
 export interface NewSignupAlertPayload {
