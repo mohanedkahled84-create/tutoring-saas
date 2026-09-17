@@ -192,7 +192,7 @@ export function renderAuthScreens() {
                 </button>
               </div>
             </div>
-            <button type="submit" id="resetSubmitBtn" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem; font-weight: 700;">
+            <button type="submit" id="btnSubmitResetPassword" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem; font-weight: 700;">
               <span>حفظ وتحديث كلمة المرور</span>
             </button>
           </form>

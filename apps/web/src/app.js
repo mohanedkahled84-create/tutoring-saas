@@ -2,7 +2,7 @@ import { authService } from './services/auth.js';
 import { request, API_BASE_URL } from './services/api.js';
 import { renderSidebar } from './components/Sidebar.js';
 import { renderNavbar } from './components/Navbar.js';
-import { renderAuthScreens } from './components/AuthScreens.js';
+import { renderAuthScreens } from './components/AuthScreens.js?v=4.7.0';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
@@ -31,7 +31,7 @@ import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.
 import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js';
-import { renderTeacherSettingsView } from './components/TeacherSettingsView.js';
+import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.7.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js?v=3.0.0';
@@ -9110,186 +9110,6 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
   }
 
   // ==========================================================================
-  // Settings & Security Actions
-  // ==========================================================================
-
-  switchSettingsTab(tab) {
-    this.settingsState.activeTab = tab;
-    this.renderMainContent();
-  }
-
-  async handleSaveTeacherProfile(e) {
-    e.preventDefault();
-    const name = document.getElementById('settingsTeacherName')?.value?.trim();
-    const subject = document.getElementById('settingsSubject')?.value?.trim();
-    const phone = document.getElementById('settingsPhone')?.value?.trim();
-    const btn = document.getElementById('saveProfileBtn');
-
-    if (!name) {
-      this.showToast('يرجى إدخال اسم المعلم الشائع.', 'danger');
-      return;
-    }
-
-    try {
-      if (btn) { btn.disabled = true; btn.innerText = 'جاري الحفظ...'; }
-      this.user = {
-        ...this.user,
-        name,
-        full_name: name,
-        subject,
-        phone,
-      };
-      authService.setUser(this.user);
-
-      try {
-        await request('/settings', {
-          method: 'PUT',
-          body: JSON.stringify({
-            teacher_name: name,
-            subject,
-            phone,
-          }),
-        });
-      } catch (_) {}
-
-      this.showToast('تم حفظ بيانات الملف الشخصي بنجاح.', 'success');
-      this.renderApp();
-    } catch (err) {
-      this.showToast(err.message || 'حدث خطأ أثناء حفظ البيانات.', 'danger');
-    } finally {
-      if (btn) { btn.disabled = false; btn.innerText = 'حفظ التعديلات'; }
-    }
-  }
-
-  validateSettingsPasswordLive(pwd) {
-    const p = pwd || '';
-    const hasLen = p.length >= 8;
-    const hasNum = /\d/.test(p);
-    const hasUp = /[A-Z]/.test(p);
-
-    const ruleLen = document.getElementById('ruleSettingsLen');
-    const ruleNum = document.getElementById('ruleSettingsNum');
-    const ruleUp = document.getElementById('ruleSettingsUp');
-
-    if (ruleLen) {
-      ruleLen.style.color = hasLen ? 'var(--centrly-success)' : '#94a3b8';
-      ruleLen.style.fontWeight = hasLen ? '700' : '400';
-    }
-    if (ruleNum) {
-      ruleNum.style.color = hasNum ? 'var(--centrly-success)' : '#94a3b8';
-      ruleNum.style.fontWeight = hasNum ? '700' : '400';
-    }
-    if (ruleUp) {
-      ruleUp.style.color = hasUp ? 'var(--centrly-success)' : '#94a3b8';
-      ruleUp.style.fontWeight = hasUp ? '700' : '400';
-    }
-  }
-
-  async handleSettingsChangePassword(e) {
-    e.preventDefault();
-    const currentPassword = document.getElementById('settingsCurrentPassword')?.value;
-    const newPassword = document.getElementById('settingsNewPassword')?.value;
-    const confirmPassword = document.getElementById('settingsConfirmPassword')?.value;
-    const alertBox = document.getElementById('settingsPasswordAlert');
-    const btn = document.getElementById('btnSettingsUpdatePassword');
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      if (alertBox) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fef2f2';
-        alertBox.style.color = '#b91c1c';
-        alertBox.innerText = 'يرجى ملء جميع حقول كلمة المرور';
-      }
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      if (alertBox) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fef2f2';
-        alertBox.style.color = '#b91c1c';
-        alertBox.innerText = 'كلمتا المرور غير متطابقتين';
-      }
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      if (alertBox) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fef2f2';
-        alertBox.style.color = '#b91c1c';
-        alertBox.innerText = 'يجب ألا تقل كلمة المرور عن 8 أحرف';
-      }
-      return;
-    }
-
-    try {
-      if (btn) { btn.disabled = true; btn.innerText = 'جاري التحديث...'; }
-      const res = await request('/auth/change-password', {
-        method: 'POST',
-        body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
-        }),
-      });
-
-      if (alertBox) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#f0fdf4';
-        alertBox.style.color = '#15803d';
-        alertBox.innerText = res.message || 'تم تحديث كلمة المرور بنجاح.';
-      }
-      this.showToast('تم تغيير كلمة المرور بنجاح.', 'success');
-      document.getElementById('formSettingsChangePassword')?.reset();
-    } catch (err) {
-      if (alertBox) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#fef2f2';
-        alertBox.style.color = '#b91c1c';
-        alertBox.innerText = err.message || 'فشل تحديث كلمة المرور. يرجى التأكد من صحة كلمة المرور الحالية.';
-      }
-    } finally {
-      if (btn) { btn.disabled = false; btn.innerText = 'تحديث كلمة المرور'; }
-    }
-  }
-
-  async handleSaveFinancialPin(e) {
-    e.preventDefault();
-    const pin = document.getElementById('settingsFinancialPin')?.value?.trim();
-
-    if (!pin) {
-      try {
-        await request('/settings/security-pin', { method: 'DELETE' }).catch(() => null);
-      } catch (_) {}
-      localStorage.removeItem('centrly_financial_pin');
-      this.hasSecurityPin = false;
-      this.isFinancialUnlocked = true;
-      this.showToast('تم إلغاء تفعيل الرمز السري للأرباح بنجاح ومزامنته مع السحابة.', 'info');
-      this.renderMainContent();
-      return;
-    }
-
-    if (!/^\d{4,6}$/.test(pin)) {
-      this.showToast('يجب أن يتكون الرمز السري من 4 إلى 6 أرقام فقط.', 'danger');
-      return;
-    }
-
-    try {
-      await request('/settings/security-pin', {
-        method: 'POST',
-        body: { pin }
-      });
-      localStorage.setItem('centrly_financial_pin', pin);
-      this.hasSecurityPin = true;
-      this.isFinancialUnlocked = false;
-      this.showToast('تم حفظ الرمز السري للأرباح ومزامنته سحابياً بنجاح لكافة الأجهزة.', 'success');
-      this.renderMainContent();
-    } catch (err) {
-      this.showToast(err.message || 'فشل حفظ الرمز السري في السحابة', 'danger');
-    }
-  }
-
-  // ==========================================================================
   // Study Materials & Homework Actions
   // ==========================================================================
 
@@ -10629,11 +10449,14 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
       btn.disabled = true;
       btn.innerHTML = '<span>جارٍ الحفظ...</span>';
     }
-    try {
-      await request('/teachers/profile', {
+      await request('/settings', {
         method: 'PUT',
-        body: JSON.stringify({ name, subject, phone })
-      }).catch(async () => ({ success: true }));
+        body: JSON.stringify({
+          teacher_name: name,
+          subject,
+          phone,
+        }),
+      }).catch(() => null);
 
       if (this.user) {
         if (name) this.user.name = name;
@@ -10641,7 +10464,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         if (phone) this.user.phone = phone;
         authService.setUser(this.user);
       }
-      this.showToast('تم حفظ بيانات المعلم بنجاح', 'success');
+      this.showToast('تم حفظ بيانات الملف الشخصي بنجاح', 'success');
       this.renderApp();
     } catch (err) {
       this.showToast(err.message || 'تعذر حفظ البيانات', 'danger');
@@ -10788,24 +10611,40 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     ruleUp.innerHTML = (hasUp ? '✓ ' : '• ') + 'حرف كبير واحد على الأقل (A-Z)';
   }
 
-  handleSaveFinancialPin(e) {
+  async handleSaveFinancialPin(e) {
     if (e) e.preventDefault();
     const pin = document.getElementById('settingsFinancialPin')?.value?.trim();
-    if (pin && pin.length >= 4) {
-      localStorage.setItem('centrly_financial_pin', pin);
-      this.hasSecurityPin = true;
-      this.isFinancialUnlocked = false;
-      this.showToast('تم تفعيل وقفل الرمز السري بنجاح', 'success');
-    } else if (!pin) {
+
+    if (!pin) {
+      try {
+        await request('/settings/security-pin', { method: 'DELETE' }).catch(() => null);
+      } catch (_) {}
       localStorage.removeItem('centrly_financial_pin');
       this.hasSecurityPin = false;
       this.isFinancialUnlocked = true;
-      this.showToast('تم تعطيل الرمز السري بنجاح', 'info');
-    } else {
-      this.showToast('يجب أن يتكون الرمز السري من 4 أرقام على الأقل', 'warning');
+      this.showToast('تم تعطيل الرمز السري للأرباح بنجاح ومزامنته مع السحابة.', 'info');
+      this.renderMainContent();
       return;
     }
-    this.renderApp();
+
+    if (!/^\d{4,6}$/.test(pin)) {
+      this.showToast('يجب أن يتكون الرمز السري من 4 إلى 6 أرقام فقط.', 'danger');
+      return;
+    }
+
+    try {
+      await request('/settings/security-pin', {
+        method: 'POST',
+        body: { pin }
+      }).catch(() => null);
+      localStorage.setItem('centrly_financial_pin', pin);
+      this.hasSecurityPin = true;
+      this.isFinancialUnlocked = false;
+      this.showToast('تم حفظ وقفل الرمز السري للأرباح بنجاح ومزامنته سحابياً.', 'success');
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(err.message || 'فشل حفظ الرمز السري', 'danger');
+    }
   }
 
   togglePasswordVisibility(inputId, btnEl) {

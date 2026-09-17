@@ -174,8 +174,9 @@ export class SupabaseAuthRepository implements IAuthRepository {
     };
   }
 
-  async requestPasswordReset(email: string): Promise<void> {
-    await this.publicClient.auth.resetPasswordForEmail(email.trim().toLowerCase());
+  async requestPasswordReset(email: string, redirectTo?: string): Promise<void> {
+    const options = redirectTo ? { redirectTo } : undefined;
+    await this.publicClient.auth.resetPasswordForEmail(email.trim().toLowerCase(), options);
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
@@ -256,7 +257,7 @@ export class FakeAuthRepository implements IAuthRepository {
     };
   }
 
-  async requestPasswordReset(_email: string): Promise<void> {
+  async requestPasswordReset(_email: string, _redirectTo?: string): Promise<void> {
     // Simulated no-op
   }
 

@@ -136,12 +136,12 @@ export class AuthService {
     return result;
   }
 
-  async forgotPassword(email: string): Promise<void> {
+  async forgotPassword(email: string, redirectTo?: string): Promise<void> {
     const normalizedEmail = email ? email.trim().toLowerCase() : "";
     if (!normalizedEmail) {
       throw new Error("MISSING_EMAIL");
     }
-    await this.repo.requestPasswordReset(normalizedEmail);
+    await this.repo.requestPasswordReset(normalizedEmail, redirectTo);
   }
 
   async resetPassword(dto: ResetPasswordDTO): Promise<void> {

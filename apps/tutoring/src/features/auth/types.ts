@@ -59,7 +59,7 @@ export interface IAuthRepository {
   signIn(email: string, password: string): Promise<LoginResult>;
   refreshToken?(refreshToken: string): Promise<LoginResult>;
   createTenantWithOwner(data: SignupDTO, trialEndsAt: string): Promise<SignupResult>;
-  requestPasswordReset(email: string): Promise<void>;
+  requestPasswordReset(email: string, redirectTo?: string): Promise<void>;
   resetPassword(token: string, newPassword: string): Promise<void>;
   changePassword?(token: string, email: string, currentPassword: string, newPassword: string): Promise<void>;
 }

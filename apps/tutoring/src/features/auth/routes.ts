@@ -167,8 +167,12 @@ authRouter.post("/forgot-password", authRateLimiter, async (req: Request, res: R
   }
 
   try {
+    const { redirectTo } = req.body;
+    const reqOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : undefined);
+    const targetRedirect = redirectTo || (reqOrigin ? `${reqOrigin}/` : "https://centrly-platform.vercel.app/");
+
     const authService = getServices(req as AuthenticatedRequest).auth;
-    await authService.forgotPassword(email);
+    await authService.forgotPassword(email, targetRedirect);
 
     res.json({
       message: "If that email is registered, a password recovery link has been sent.",

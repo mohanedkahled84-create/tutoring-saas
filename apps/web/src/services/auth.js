@@ -149,9 +149,10 @@ export const authService = {
   },
 
   async forgotPassword(email) {
+    const origin = typeof window !== 'undefined' && window.location ? window.location.origin : 'https://centrly-platform.vercel.app';
     return await request('/auth/forgot-password', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, redirectTo: `${origin}/` }),
     });
   },
 

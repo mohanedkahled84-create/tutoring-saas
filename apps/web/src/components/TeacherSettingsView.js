@@ -183,95 +183,121 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           
           <!-- Change Password Card -->
           <div class="card" style="margin: 0; padding: 1.75rem; border-radius: var(--radius-lg);">
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-              <span>${getIcon('lock', 20, 'var(--centrly-blue-700)')}</span>
-              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">
-                تغيير كلمة المرور
-              </h3>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; border-bottom: 1.5px solid var(--centrly-line); padding-bottom: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(37,99,235,0.1); display: flex; align-items: center; justify-content: center;">
+                  ${getIcon('lock', 22, 'var(--centrly-blue-700)')}
+                </div>
+                <div>
+                  <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink);">
+                    إدارة وأمان كلمة المرور
+                  </h3>
+                  <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.2rem 0 0 0;">
+                    تغيير كلمة المرور باشتراط كلمة المرور القديمة، أو طلب رابط استعادة فوري عبر بريدك الإلكتروني في حال نسيتها.
+                  </p>
+                </div>
+              </div>
             </div>
-            <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1.25rem 0;">
-              لتغيير كلمة المرور، يرجى كتابة كلمة المرور الحالية أولاً لضمان الأمان، ثم كلمة المرور الجديدة.
-            </p>
 
-            <div id="settingsPasswordAlert" style="display: none; padding: 0.65rem 0.75rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.825rem;"></div>
+            <div id="settingsPasswordAlert" style="display: none; padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; font-size: 0.85rem;"></div>
 
-            <form id="formSettingsChangePassword" onsubmit="window.centrlyApp.handleSettingsChangePassword(event)">
-              <div style="max-width: 440px; display: flex; flex-direction: column; gap: 1rem;">
-                
-                <div class="form-group" style="margin: 0;">
-                  <label class="form-label" style="font-weight: 700;">كلمة المرور الحالية *</label>
-                  <div style="position: relative;">
-                    <input type="password" id="settingsCurrentPassword" class="form-input" required placeholder="••••••••" dir="ltr" style="padding-left: 2.5rem;">
-                    <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('settingsCurrentPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
-                      ${getIcon('eye', 18)}
-                    </button>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1.25rem; align-items: stretch;">
+              
+              <!-- Option 1: Change using Old Password -->
+              <div style="background: var(--centrly-surface); border: 1.5px solid var(--centrly-line); border-radius: 14px; padding: 1.35rem; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--centrly-blue-700); color: #fff; font-size: 0.8rem; font-weight: 800;">1</span>
+                    <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--centrly-ink);">
+                      تغيير كلمة المرور (بمعرفة القديمة)
+                    </h4>
                   </div>
+
+                  <form id="formSettingsChangePassword" onsubmit="window.centrlyApp.handleSettingsChangePassword(event)">
+                    <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                      
+                      <div class="form-group" style="margin: 0;">
+                        <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">كلمة المرور الحالية (القديمة) *</label>
+                        <div style="position: relative;">
+                          <input type="password" id="settingsCurrentPassword" class="form-input" required placeholder="••••••••" dir="ltr" style="padding-left: 2.5rem;">
+                          <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('settingsCurrentPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+                            ${getIcon('eye', 18)}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin: 0;">
+                        <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">كلمة المرور الجديدة *</label>
+                        <div style="position: relative;">
+                          <input type="password" id="settingsNewPassword" class="form-input" required placeholder="••••••••" dir="ltr" style="padding-left: 2.5rem;" oninput="window.centrlyApp.validateSettingsPasswordLive(this.value)">
+                          <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('settingsNewPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+                            ${getIcon('eye', 18)}
+                          </button>
+                        </div>
+
+                        <!-- Live Criteria -->
+                        <div id="settingsPwdChecklist" style="margin-top: 0.4rem; background: #fff; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.45rem 0.65rem; font-size: 0.725rem;">
+                          <div id="ruleSettingsLen" style="color: #94a3b8;">• 8 أحرف أو أكثر</div>
+                          <div id="ruleSettingsNum" style="color: #94a3b8; margin-top: 2px;">• رقم واحد على الأقل (0-9)</div>
+                          <div id="ruleSettingsUp" style="color: #94a3b8; margin-top: 2px;">• حرف كبير واحد على الأقل (A-Z)</div>
+                        </div>
+                      </div>
+
+                      <div class="form-group" style="margin: 0;">
+                        <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">تأكيد كلمة المرور الجديدة *</label>
+                        <div style="position: relative;">
+                          <input type="password" id="settingsConfirmPassword" class="form-input" required placeholder="••••••••" dir="ltr" style="padding-left: 2.5rem;">
+                          <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('settingsConfirmPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+                            ${getIcon('eye', 18)}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style="margin-top: 0.35rem;">
+                        <button type="submit" id="btnSettingsUpdatePassword" class="btn btn-primary" style="width: 100%; font-weight: 800; padding: 0.65rem 1.25rem; border-radius: 10px;">
+                          <span>تحديث كلمة المرور</span>
+                        </button>
+                      </div>
+
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              <!-- Option 2: Forgot Password Recovery via Email -->
+              <div style="background: rgba(37,99,235,0.03); border: 1.5px dashed var(--centrly-blue-700); border-radius: 14px; padding: 1.35rem; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #f59e0b; color: #fff; font-size: 0.8rem; font-weight: 800;">2</span>
+                    <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--centrly-ink);">
+                      نسيت كلمة المرور القديمة؟
+                    </h4>
+                  </div>
+
+                  <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0 0 1rem 0; line-height: 1.6;">
+                    إذا كنت لا تتذكر كلمة المرور الحالية، يمكنك إرسال رابط تأكيد وتعيين فوري إلى بريدك الإلكتروني المسجل:
+                  </p>
+
+                  <div style="background: #fff; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.6rem 0.85rem; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>${getIcon('mail', 18, 'var(--centrly-blue-700)')}</span>
+                    <strong dir="ltr" style="font-size: 0.85rem; color: var(--centrly-ink); word-break: break-all;">${escapeHtml(email || 'لا يوجد بريد مسجل')}</strong>
+                  </div>
+
+                  <p style="font-size: 0.775rem; color: #64748b; margin: 0 0 1rem 0; line-height: 1.5;">
+                    💡 عند الضغط على الزر، يُرسل لك رابط مباشر وآمن إلى بريدك. بالضغط عليه تفتح لك نافذة إدخال كلمة المرور الجديدة وتُحفظ في المنظومة تلقائياً دون الحاجة لكلمة المرور القديمة.
+                  </p>
+
+                  <div id="settingsForgotAlert" style="display: none; padding: 0.65rem 0.75rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.825rem;"></div>
                 </div>
 
-                <div class="form-group" style="margin: 0;">
-                  <label class="form-label" style="font-weight: 700;">كلمة المرور الجديدة *</label>
-                  <div style="position: relative;">
-                    <input type="password" id="settingsNewPassword" class="form-input" required placeholder="••••••••" dir="ltr" style="padding-left: 2.5rem;" oninput="window.centrlyApp.validateSettingsPasswordLive(this.value)">
-                    <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('settingsNewPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
-                      ${getIcon('eye', 18)}
-                    </button>
-                  </div>
-
-                  <!-- Live Criteria -->
-                  <div id="settingsPwdChecklist" style="margin-top: 0.5rem; background: var(--centrly-surface); border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.75rem;">
-                    <div id="ruleSettingsLen" style="color: #94a3b8;">• 8 أحرف أو أكثر</div>
-                    <div id="ruleSettingsNum" style="color: #94a3b8; margin-top: 2px;">• رقم واحد على الأقل (0-9)</div>
-                    <div id="ruleSettingsUp" style="color: #94a3b8; margin-top: 2px;">• حرف كبير واحد على الأقل (A-Z)</div>
-                  </div>
-                </div>
-
-                <div class="form-group" style="margin: 0;">
-                  <label class="form-label" style="font-weight: 700;">تأكيد كلمة المرور الجديدة *</label>
-                  <div style="position: relative;">
-                    <input type="password" id="settingsConfirmPassword" class="form-input" required placeholder="••••••••" dir="ltr" style="padding-left: 2.5rem;">
-                    <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('settingsConfirmPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
-                      ${getIcon('eye', 18)}
-                    </button>
-                  </div>
-                </div>
-
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem;">
-                  <button type="submit" id="btnSettingsUpdatePassword" class="btn btn-primary" style="font-weight: 800; padding: 0.65rem 1.75rem; border-radius: 10px;">
-                    <span>تحديث كلمة المرور</span>
+                <div>
+                  <button type="button" id="btnSettingsForgotSubmit" onclick="window.centrlyApp.handleSettingsForgotPassword()" class="btn btn-secondary" style="width: 100%; font-weight: 800; padding: 0.65rem 1.25rem; border-radius: 10px; font-size: 0.875rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700);">
+                    ${getIcon('send', 16, 'var(--centrly-blue-700)')}
+                    <span>إرسال رابط التعيين إلى بريدي الإلكتروني</span>
                   </button>
-
-                  <button type="button" onclick="window.centrlyApp.toggleSettingsForgotPanel()" style="background: none; border: none; padding: 0; color: var(--centrly-blue-700); font-size: 0.85rem; font-weight: 700; cursor: pointer; text-decoration: underline; font-family: inherit; display: inline-flex; align-items: center; gap: 0.35rem;">
-                    <span>${getIcon('info', 14)}</span>
-                    <span>نسيت كلمة المرور الحالية؟</span>
-                  </button>
                 </div>
+              </div>
 
-              </div>
-            </form>
-
-            <!-- Collapsible Forgot Password by Email Recovery Box -->
-            <div id="settingsForgotPanel" style="display: none; margin-top: 1.5rem; padding: 1.25rem; border-radius: 12px; background: var(--centrly-surface); border: 1.5px solid var(--centrly-line); max-width: 520px;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                <span>${getIcon('mail', 18, 'var(--centrly-blue-700)')}</span>
-                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--centrly-ink);">
-                  إرسال رابط تأكيد وتعيين كلمة المرور للبريد
-                </h4>
-              </div>
-              <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0 0 1rem 0; line-height: 1.6;">
-                في حال نسيت كلمة المرور الحالية، يمكنك إرسال رابط تأكيد وتعيين مشفر إلى بريدك الإلكتروني المسجل:
-                <strong dir="ltr" style="color: var(--centrly-ink); font-family: monospace;">${escapeHtml(email)}</strong>.
-                عند الضغط على الرابط من بريدك، ستفتح لك نافذة إدخال كلمة المرور الجديدة وتتحدث في المنظومة تلقائياً.
-              </p>
-              <div id="settingsForgotAlert" style="display: none; padding: 0.65rem 0.75rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.825rem;"></div>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button type="button" id="btnSettingsForgotSubmit" onclick="window.centrlyApp.handleSettingsForgotPassword()" class="btn btn-secondary" style="font-weight: 800; padding: 0.55rem 1.25rem; border-radius: 8px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
-                  ${getIcon('send', 14)}
-                  <span>إرسال الرابط إلى بريدي الإلكتروني</span>
-                </button>
-                <button type="button" onclick="window.centrlyApp.toggleSettingsForgotPanel()" class="btn btn-secondary" style="font-size: 0.825rem; padding: 0.55rem 0.85rem; border-radius: 8px;">
-                  <span>إلغاء</span>
-                </button>
-              </div>
             </div>
           </div>
 
