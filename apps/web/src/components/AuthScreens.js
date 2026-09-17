@@ -70,17 +70,17 @@ export function renderAuthScreens() {
           <!-- Dynamic Role Fields -->
           <div id="roleFieldsTeacher" class="form-group">
             <label class="form-label">اسم المدرس *</label>
-            <input type="text" id="signupName" class="form-input" placeholder="أ. محمد خالد" required>
+            <input type="text" id="signupName" class="form-input" placeholder="اسم المدرس بالكامل" required>
           </div>
 
           <div id="roleFieldsCenter" style="display: none;">
             <div class="form-group">
               <label class="form-label">اسم مسؤول السنتر *</label>
-              <input type="text" id="signupCenterOwnerName" class="form-input" placeholder="أ. أحمد محمود">
+              <input type="text" id="signupCenterOwnerName" class="form-input" placeholder="اسم مسؤول السنتر بالكامل">
             </div>
             <div class="form-group">
               <label class="form-label">اسم السنتر التعليمي *</label>
-              <input type="text" id="signupCenterName" class="form-input" placeholder="سنتر التفوق التعليمي">
+              <input type="text" id="signupCenterName" class="form-input" placeholder="اسم السنتر التعليمي">
             </div>
           </div>
 
@@ -90,7 +90,7 @@ export function renderAuthScreens() {
           </div>
           <div class="form-group">
             <label class="form-label">رقم الواتساب (مصري) *</label>
-            <input type="tel" id="signupPhone" class="form-input" placeholder="01012345678" required dir="ltr" autocomplete="tel">
+            <input type="tel" id="signupPhone" class="form-input" placeholder="رقم الهاتف" required dir="ltr" autocomplete="tel">
           </div>
           <div class="form-group">
             <label class="form-label">كلمة المرور *</label>

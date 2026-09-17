@@ -5752,7 +5752,7 @@ class CentrlyApp {
 
         <div class="form-group">
           <label class="form-label" style="font-weight: 700;">رقم هاتف ${recipientTitle}:</label>
-          <input type="tel" id="fallbackParentPhone" class="form-input" dir="ltr" value="${escapeHtml(phone || '')}" placeholder="01012345678" oninput="window.centrlyApp.updateDirectFallbackLink()">
+          <input type="tel" id="fallbackParentPhone" class="form-input" dir="ltr" value="${escapeHtml(phone || '')}" placeholder="رقم الهاتف" oninput="window.centrlyApp.updateDirectFallbackLink()">
         </div>
 
         <div class="form-group">
@@ -6269,7 +6269,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
           <div style="font-size: 0.78rem; color: var(--centrly-text); margin-bottom: 0.4rem;">
             اكتب كل طالب في سطر بالترتيب: <code>اسم الطالب, رقم ولي الأمر, رقم هاتف الطالب (اختياري)</code>
           </div>
-          <textarea id="importCsvText" class="form-input" rows="6" placeholder="أحمد محمد, 01012345678, 01123456789\nمحمود علي, 01223344556\nعمر خالد, 01555443322" style="font-family: monospace; font-size: 0.85rem;" dir="ltr"></textarea>
+          <textarea id="importCsvText" class="form-input" rows="6" placeholder="اسم الطالب, رقم ولي الأمر, رقم هاتف الطالب" style="font-family: inherit; font-size: 0.85rem;" dir="rtl"></textarea>
         </div>
         <div class="form-group">
           <label class="form-label" style="font-weight: 700;">أو رفع ملف CSV من جهازك:</label>
@@ -6775,7 +6775,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
       <form id="modalAddTeacherForm" onsubmit="window.centrlyApp.handleModalAddTeacherSubmit(event)">
         <div class="form-group" style="margin-bottom: 0.75rem;">
           <label class="form-label">اسم المعلم بالكامل *</label>
-          <input type="text" id="modalTeacherName" class="form-input" placeholder="أ. محمد أحمد" required>
+          <input type="text" id="modalTeacherName" class="form-input" placeholder="اسم المعلم بالكامل" required>
         </div>
         <div class="form-group" style="margin-bottom: 0.75rem;">
           <label class="form-label">رقم الهاتف *</label>
@@ -6783,7 +6783,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         </div>
         <div class="form-group" style="margin-bottom: 0.75rem;">
           <label class="form-label">المادة الدراسية</label>
-          <input type="text" id="modalTeacherSubject" class="form-input" placeholder="فيزياء، كيمياء...">
+          <input type="text" id="modalTeacherSubject" class="form-input" placeholder="المادة الدراسية">
         </div>
         <div class="form-group" style="margin-bottom: 0.75rem;">
           <label class="form-label">نظام المحاسبة الافتراضي</label>
@@ -7632,7 +7632,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
                 <span>لديك كود هدية أو كوبون خصم؟</span>
               </label>
               <div style="display: flex; gap: 0.4rem;">
-                <input type="text" id="couponCodeInput" class="form-input" placeholder="اكتب كود الخصم (مثال: CENTR50)" style="flex: 1; text-transform: uppercase; font-weight: 700; font-family: monospace; font-size: 0.85rem;" autocomplete="off">
+                <input type="text" id="couponCodeInput" class="form-input" placeholder="اكتب كود الخصم" style="flex: 1; text-transform: uppercase; font-weight: 700; font-family: monospace; font-size: 0.85rem;" autocomplete="off">
                 <button type="button" id="btnApplyCoupon" class="btn btn-secondary" onclick="window.centrlyApp.applyCouponCode()" style="font-weight: 800; font-size: 0.825rem; padding: 0.4rem 1rem; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700); cursor: pointer;">
                   تطبيق
                 </button>
@@ -8112,7 +8112,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
       <form id="formEditQuizTitle" onsubmit="event.preventDefault(); window.centrlyApp.confirmEditQuizTitle(${quizNum});">
         <div class="form-group" style="margin-bottom: 1.25rem;">
           <label class="form-label" style="font-weight: 700;">اسم الكويز / الاختبار</label>
-          <input type="text" id="inputEditQuizTitle" class="form-input" value="${escapeHtml(currentTitle)}" placeholder="مثال: كويز الباب الأول" autofocus required>
+          <input type="text" id="inputEditQuizTitle" class="form-input" value="${escapeHtml(currentTitle)}" placeholder="اسم الكويز / الاختبار" autofocus required>
           <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.35rem;">
             أدخل عنواناً مميزاً للكويز لتسهيل تمييزه في تقارير الطلاب.
           </div>
@@ -8844,7 +8844,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         <div class="form-group" style="margin-bottom: 1rem;">
           <label class="form-label" style="font-weight: 700;">${hasExisting ? 'رمز الأمان الجديد (4-6 أرقام) *' : 'رمز الأمان (4-6 أرقام) *'}</label>
           <div style="position: relative;">
-            <input type="password" id="inputNewPin" class="form-input" placeholder="مثال: 1234" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required
+            <input type="password" id="inputNewPin" class="form-input" placeholder="••••" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required
               style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900;"
               autocomplete="off" ${hasExisting ? '' : 'autofocus'}>
             <button type="button" onclick="window.centrlyApp.togglePinVisibility('inputNewPin', this)"
@@ -9307,7 +9307,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
       <form id="modalAddMaterialForm" onsubmit="window.centrlyApp.handleAddMaterialSubmit(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">عنوان المذكرة أو المحتوى التعليمي *</label>
-          <input type="text" id="modalMatTitle" class="form-input" placeholder="مثال: مذكرة مراجعة الباب الأول / فيديو شرح الدرس الثاني" required>
+          <input type="text" id="modalMatTitle" class="form-input" placeholder="عنوان المذكرة أو المحتوى التعليمي" required>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
@@ -9672,7 +9672,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
       <form id="modalAddTeacherAssistantForm" onsubmit="window.centrlyApp.handleAddTeacherAssistantSubmit(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">اسم المساعد (الأسستنت) *</label>
-          <input type="text" id="modalTA_Name" class="form-input" placeholder="مثال: أحمد محمد" required>
+          <input type="text" id="modalTA_Name" class="form-input" placeholder="اسم المساعد" required>
         </div>
 
         <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -9933,7 +9933,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         </p>
         <div class="form-group" style="margin-bottom: 0.5rem;">
           <label class="form-label" style="font-weight: 700; color: #334155;">ملاحظات المعلم وأسباب الإعادة (اختياري):</label>
-          <textarea id="rejectHomeworkNotes" class="form-input" rows="3" placeholder="مثال: يرجى إعادة حل المسألة رقم 3 وتوضيح خطوات الحل كاملة..."></textarea>
+          <textarea id="rejectHomeworkNotes" class="form-input" rows="3" placeholder="اكتب ملاحظات وتوجيهات الإعادة للطالب..."></textarea>
         </div>
       </div>
     `;
@@ -10024,7 +10024,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         <!-- Title -->
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">عنوان الواجب *</label>
-          <input type="text" id="modalHwTitle" class="form-input" placeholder="مثال: واجب الحصة 4 - تمارين الباب الأول" required>
+          <input type="text" id="modalHwTitle" class="form-input" placeholder="عنوان الواجب المنزلي" required>
         </div>
 
         <!-- Target Group & Due Date -->
@@ -10073,7 +10073,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
               <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">(Ctrl + Enter للحفظ السريع)</span>
             </label>
             <textarea id="modalHwDescriptionText" class="form-input" rows="5" 
-              placeholder="اكتب هنا نص الواجب بحرية كاملة...&#10;مثال: حل التمارين ص 45 إلى 48 الأسئلة 1 و 3 و 5، بالإضافة لكتابة مسألة الباب الأول في الكشكول بخط واضح." 
+              placeholder="اكتب هنا تفاصيل الواجب والصفحات والأسئلة المطلوبة..." 
               style="line-height: 1.6; resize: vertical;"></textarea>
           </div>
         </div>
@@ -10114,7 +10114,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
 
           <div class="form-group" style="margin-bottom: 0.5rem;">
             <label class="form-label" style="font-weight: 700; color: #334155;">تعليمات أو ملاحظات إضافية على الملف (اختياري)</label>
-            <textarea id="modalHwDescriptionPdf" class="form-input" rows="2" placeholder="مثال: حل التمارين المحددة في الملف، أو أي تنويه للطلاب..." style="line-height: 1.5; resize: vertical;"></textarea>
+            <textarea id="modalHwDescriptionPdf" class="form-input" rows="2" placeholder="اكتب أي ملاحظات أو تعليمات إضافية للطلاب حول الملف..." style="line-height: 1.5; resize: vertical;"></textarea>
           </div>
         </div>
 
@@ -10130,7 +10130,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
 
           <div class="form-group" style="margin-bottom: 0.5rem;">
             <label class="form-label" style="font-weight: 700; color: #334155;">تعليمات أو ملاحظات على الرابط (اختياري)</label>
-            <textarea id="modalHwDescriptionLink" class="form-input" rows="2" placeholder="مثال: افتح الرابط واقرأ الأمثلة ثم حل التدريبات المرفقة..." style="line-height: 1.5; resize: vertical;"></textarea>
+            <textarea id="modalHwDescriptionLink" class="form-input" rows="2" placeholder="اكتب أي ملاحظات أو تعليمات إضافية للطلاب حول الرابط..." style="line-height: 1.5; resize: vertical;"></textarea>
           </div>
         </div>
 
@@ -10548,7 +10548,7 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
 
         <div class="form-group" style="margin-bottom: 1.25rem;">
           <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">تمديد الصلاحية لعدد أيام إضافي</label>
-          <input type="number" id="overrideExtendDays" class="form-input" placeholder="عدد الأيام (مثلاً: 14 أو 30 أو 365)" min="1" max="730" value="30">
+          <input type="number" id="overrideExtendDays" class="form-input" placeholder="عدد الأيام الإضافية" min="1" max="730" value="30">
           <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.35rem;">
             سيتم إضافة هذه الأيام فوق الصلاحية الحالية أو من تاريخ اليوم.
           </div>

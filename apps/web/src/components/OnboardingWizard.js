@@ -99,7 +99,7 @@ export function renderOnboardingWizard(step = 1, state = {}) {
             </h3>
             <div class="form-group">
               <label class="form-label">اسم المجموعة / الصف الدراسي</label>
-              <input type="text" id="obGroupName" class="form-input" value="${defaultState.groupName}" placeholder="مثال: الصف الثالث الثانوي - سنتر الأوائل">
+              <input type="text" id="obGroupName" class="form-input" value="${defaultState.groupName}" placeholder="اسم المجموعة الدراسية">
             </div>
             <div class="form-group">
               <label class="form-label">سعر الحصة للطالب (جنيه مصري)</label>
@@ -242,7 +242,7 @@ export function renderOnboardingWizard(step = 1, state = {}) {
             <div style="max-width: 420px; margin: 0 auto 1.5rem; text-align: right; background: var(--centrly-surface); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--centrly-line);">
               <label class="form-label" style="font-size: 0.8rem;">إرسال رسالة تجريبية لهاتفك للتحقق:</label>
               <div style="display: flex; gap: 0.5rem;">
-                <input type="tel" id="obTestPhone" class="form-input" placeholder="01012345678" dir="ltr" style="font-size: 0.85rem;">
+                <input type="tel" id="obTestPhone" class="form-input" placeholder="رقم الهاتف للتجربة" dir="ltr" style="font-size: 0.85rem;">
                 <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendTestWhatsAppMessage()">
                   إرسال تجربة
                 </button>

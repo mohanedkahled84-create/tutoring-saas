@@ -137,12 +137,12 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
               
               <div class="form-group">
                 <label class="form-label" style="font-weight: 700;">اسم المعلم الشائع (كما يظهر للطلاب)</label>
-                <input type="text" id="settingsTeacherName" class="form-input" value="${escapeHtml(displayName)}" required placeholder="أ. محمد خالد">
+                <input type="text" id="settingsTeacherName" class="form-input" value="${escapeHtml(displayName)}" required placeholder="اسم المعلم بالكامل">
               </div>
 
               <div class="form-group">
                 <label class="form-label" style="font-weight: 700;">المادة التعليمية</label>
-                <input type="text" id="settingsSubject" class="form-input" value="${escapeHtml(subject)}" placeholder="مثال: الفيزياء، الرياضيات، الكيمياء">
+                <input type="text" id="settingsSubject" class="form-input" value="${escapeHtml(subject)}" placeholder="المادة التعليمية">
               </div>
 
               <div class="form-group">
@@ -293,7 +293,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                   <label class="form-label" style="font-weight: 700;">
                     ${hasPin ? 'تغيير الرمز السري الحالي (أو اترك فارغاً للتعطيل)' : 'تعيين رمز سري جديد للأرباح'}
                   </label>
-                  <input type="password" id="settingsFinancialPin" class="form-input" placeholder="مثال: 1234" maxlength="6" dir="ltr">
+                  <input type="password" id="settingsFinancialPin" class="form-input" placeholder="••••" maxlength="6" dir="ltr">
                   <span style="font-size: 0.725rem; color: #94a3b8; margin-top: 0.25rem; display: block;">
                     ${hasPin ? 'الرمز مفعل حالياً. إذا قمت بمسحه وضغط حفظ سيتم تعطيل القفل.' : 'الرمز غير مفعل حالياً.'}
                   </span>

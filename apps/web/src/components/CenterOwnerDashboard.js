@@ -442,17 +442,17 @@ export function renderCenterOwnerDashboard(state = {}) {
             <form onsubmit="window.centrlyApp.handleAddTeacherSubmit(event)" style="display: flex; flex-direction: column; gap: 0.85rem;">
               <div>
                 <label style="font-size: 0.8rem; font-weight: 700;">اسم المدرس:</label>
-                <input type="text" id="obTeacherName" placeholder="أ. محمد أحمد" class="form-input" required>
+                <input type="text" id="obTeacherName" placeholder="اسم المدرس بالكامل" class="form-input" required>
               </div>
 
               <div>
                 <label style="font-size: 0.8rem; font-weight: 700;">رقم الهاتف (الواتساب):</label>
-                <input type="tel" id="obTeacherPhone" placeholder="01012345678" class="form-input" required>
+                <input type="tel" id="obTeacherPhone" placeholder="رقم الهاتف" class="form-input" required>
               </div>
 
               <div>
                 <label style="font-size: 0.8rem; font-weight: 700;">المواد الدراسية (مفصولة بفواصل):</label>
-                <input type="text" id="obTeacherSubjects" placeholder="فيزياء، كيمياء" class="form-input" value="فيزياء">
+                <input type="text" id="obTeacherSubjects" placeholder="المواد الدراسية" class="form-input" value="فيزياء">
               </div>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
@@ -505,7 +505,7 @@ export function renderCenterOwnerDashboard(state = {}) {
 
               <div>
                 <label style="font-size: 0.8rem; font-weight: 700;">رقم الهاتف:</label>
-                <input type="tel" id="obAssistantPhone" placeholder="01234567890" class="form-input" required>
+                <input type="tel" id="obAssistantPhone" placeholder="رقم الهاتف" class="form-input" required>
               </div>
 
               <div>

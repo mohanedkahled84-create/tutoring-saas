@@ -141,7 +141,7 @@ export function renderWhatsAppSettingsView(data = {}) {
         <form id="whatsappTestForm" onsubmit="window.centrlyApp.sendTestWhatsAppMessage(event)" style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end;">
           <div class="form-group" style="flex: 1; min-width: 240px; margin: 0;">
             <label class="form-label" style="font-weight: 700;">رقم الهاتف (مع كود الدولة أو محلي)</label>
-            <input type="tel" id="testPhoneInput" class="form-input" placeholder="01012345678" dir="ltr" required>
+            <input type="tel" id="testPhoneInput" class="form-input" placeholder="رقم الهاتف للتجربة" dir="ltr" required>
           </div>
           <div class="form-group" style="flex: 2; min-width: 280px; margin: 0;">
             <label class="form-label" style="font-weight: 700;">نص الرسالة الاختبارية</label>
