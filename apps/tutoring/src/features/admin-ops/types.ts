@@ -95,12 +95,14 @@ export interface IAdminOpsRepository {
   listAllTenants(): Promise<AdminTenantSummary[]>;
   getOverviewCounts(): Promise<AdminOverviewMetrics>;
   listPaymentProofs(status?: string): Promise<PaymentProofAdminItem[]>;
-  getPaymentProof(id: string): Promise<{ id: string; tenant_id: string; status: string } | null>;
+  getPaymentProof(id: string): Promise<{ id: string; tenant_id: string; status: string; admin_notes?: string | null; amount?: number | null } | null>;
   approvePaymentProof(
     proofId: string,
     tenantId: string,
     adminId: string,
-    newEndsAt: string
+    newEndsAt: string,
+    targetTier?: string,
+    planSettings?: Record<string, any>
   ): Promise<AdminTenantSummary>;
   rejectPaymentProof(
     proofId: string,

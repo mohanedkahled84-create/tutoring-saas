@@ -100,10 +100,10 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
     return (data as unknown as PaymentProofAdminItem[]) || [];
   }
 
-  async getPaymentProof(id: string): Promise<{ id: string; tenant_id: string; status: string } | null> {
+  async getPaymentProof(id: string): Promise<{ id: string; tenant_id: string; status: string; admin_notes?: string | null; amount?: number | null } | null> {
     const { data, error } = await this.client
       .from("payment_proofs")
-      .select("id, tenant_id, status")
+      .select("id, tenant_id, status, admin_notes, amount")
       .eq("id", id)
       .maybeSingle();
 
