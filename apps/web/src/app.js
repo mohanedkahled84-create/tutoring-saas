@@ -145,35 +145,29 @@ class CentrlyApp {
   }
 
   initTheme() {
+    this.currentTheme = 'light';
     try {
-      const savedTheme = localStorage.getItem('centrly_theme') || 
-        (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      this.setTheme(savedTheme);
-    } catch (_) {
-      this.setTheme('light');
+      localStorage.removeItem('centrly_theme');
+    } catch (_) {}
+    if (typeof document !== 'undefined') {
+      document.documentElement.removeAttribute('data-theme');
+      document.documentElement.setAttribute('data-theme', 'light');
     }
   }
 
-  setTheme(theme) {
-    this.currentTheme = theme;
+  setTheme(theme = 'light') {
+    this.currentTheme = 'light';
     if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', theme);
-      const btn = document.getElementById('themeToggleBtn');
-      if (btn) {
-        btn.innerHTML = theme === 'dark' ? getIcon('sun', 18, '#fbbf24') : getIcon('moon', 18, 'var(--centrly-blue-700)');
-      }
+      document.documentElement.removeAttribute('data-theme');
+      document.documentElement.setAttribute('data-theme', 'light');
     }
     try {
-      localStorage.setItem('centrly_theme', theme);
+      localStorage.removeItem('centrly_theme');
     } catch (_) {}
   }
 
   toggleTheme() {
-    const next = this.currentTheme === 'dark' ? 'light' : 'dark';
-    this.setTheme(next);
-    if (this.currentRoute === 'settings') {
-      this.renderMainContent();
-    }
+    this.setTheme('light');
   }
 
   saveCache(key, data) {
@@ -2393,7 +2387,7 @@ class CentrlyApp {
       case 'billing':
         return renderBillingView(this.billingState || {}, this.user || {});
       case 'settings':
-        return renderTeacherSettingsView(this.settingsState, this.user, this.billingState);
+        return renderTeacherSettingsView(this.settingsState, this.user, this.billingState || {}, this.whatsappState || {});
       case 'whatsapp':
         return renderWhatsAppSettingsView(this.whatsappState || {});
       case 'activity-logs': {
@@ -4108,6 +4102,7 @@ class CentrlyApp {
       this.closeModal();
       this.showToast(`تم تحديث بيانات الطالب (${name}) بنجاح!`, 'success');
       await this.loadRouteData(this.currentRoute);
+      this.renderMainContent();
     } catch (err) {
       if (feedback) {
         feedback.style.display = 'block';
@@ -10602,6 +10597,226 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         btn.disabled = false;
         btn.innerText = 'حفظ وتطبيق التعديل';
       }
+    }
+  }
+
+  // ==========================================================================
+  // Teacher Settings & Management Actions
+  // ==========================================================================
+
+  switchSettingsTab(tab) {
+    if (!this.settingsState) this.settingsState = {};
+    this.settingsState.activeTab = tab;
+
+    if (tab === 'whatsapp') {
+      if (this.whatsappState?.status !== 'connected') {
+        this.startWhatsAppStatusPolling('settings');
+      }
+    } else {
+      this.stopWhatsAppStatusPolling();
+    }
+
+    this.renderMainContent();
+  }
+
+  async handleSaveTeacherProfile(e) {
+    if (e) e.preventDefault();
+    const name = document.getElementById('settingsTeacherName')?.value?.trim();
+    const subject = document.getElementById('settingsSubject')?.value?.trim();
+    const phone = document.getElementById('settingsPhone')?.value?.trim();
+    const btn = document.getElementById('saveProfileBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>جارٍ الحفظ...</span>';
+    }
+    try {
+      await request('/teachers/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ name, subject, phone })
+      }).catch(async () => ({ success: true }));
+
+      if (this.user) {
+        if (name) this.user.name = name;
+        if (subject) this.user.subject = subject;
+        if (phone) this.user.phone = phone;
+        authService.setUser(this.user);
+      }
+      this.showToast('تم حفظ بيانات المعلم بنجاح', 'success');
+      this.renderApp();
+    } catch (err) {
+      this.showToast(err.message || 'تعذر حفظ البيانات', 'danger');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>حفظ التعديلات</span>';
+      }
+    }
+  }
+
+  async handleSettingsChangePassword(e) {
+    if (e) e.preventDefault();
+    const currentPassword = document.getElementById('settingsCurrentPassword')?.value?.trim();
+    const newPassword = document.getElementById('settingsNewPassword')?.value?.trim();
+    const confirmPassword = document.getElementById('settingsConfirmPassword')?.value?.trim();
+    const alertBox = document.getElementById('settingsPasswordAlert');
+    const btn = document.getElementById('btnSettingsUpdatePassword');
+
+    const showAlert = (msg, isError = true) => {
+      if (!alertBox) return;
+      alertBox.style.display = 'block';
+      alertBox.style.background = isError ? '#fee2e2' : '#dcfce7';
+      alertBox.style.border = isError ? '1px solid #fca5a5' : '1px solid #86efac';
+      alertBox.style.color = isError ? '#991b1b' : '#166534';
+      alertBox.innerHTML = msg;
+    };
+
+    if (!currentPassword) {
+      showAlert('يرجى كتابة كلمة المرور الحالية للتأكد من هويتك.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      showAlert('يجب أن تكون كلمة المرور الجديدة 8 أحرف على الأقل.');
+      return;
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      showAlert('يجب أن تحتوي كلمة المرور على رقم واحد على الأقل (0-9).');
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      showAlert('يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل (A-Z).');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showAlert('كلمة المرور الجديدة غير متطابقة مع التأكيد.');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>جارٍ التحديث...</span>';
+    }
+
+    try {
+      await request('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+      showAlert('تم تحديث كلمة المرور بنجاح!', false);
+      const form = document.getElementById('formSettingsChangePassword');
+      if (form) form.reset();
+      this.showToast('تم تغيير كلمة المرور بنجاح', 'success');
+    } catch (err) {
+      const msg = err.message || 'تعذر تغيير كلمة المرور';
+      if (msg.includes('CURRENT_PASSWORD_INCORRECT') || msg.includes('الحالية غير صحيحة')) {
+        showAlert('كلمة المرور الحالية غير صحيحة. إذا كنت لا تذكرها، اضغط على "نسيت كلمة المرور الحالية؟" بالأسفل لإرسال رابط تعيين إلى بريدك.');
+      } else {
+        showAlert(msg);
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>تحديث كلمة المرور</span>';
+      }
+    }
+  }
+
+  toggleSettingsForgotPanel() {
+    const panel = document.getElementById('settingsForgotPanel');
+    if (panel) {
+      panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'block' : 'none';
+    }
+  }
+
+  async handleSettingsForgotPassword() {
+    const alertBox = document.getElementById('settingsForgotAlert');
+    const btn = document.getElementById('btnSettingsForgotSubmit');
+    const email = this.user?.email;
+
+    const showAlert = (msg, isError = true) => {
+      if (!alertBox) return;
+      alertBox.style.display = 'block';
+      alertBox.style.background = isError ? '#fee2e2' : '#dcfce7';
+      alertBox.style.border = isError ? '1px solid #fca5a5' : '1px solid #86efac';
+      alertBox.style.color = isError ? '#991b1b' : '#166534';
+      alertBox.innerHTML = msg;
+    };
+
+    if (!email) {
+      showAlert('لم يتم العثور على بريد إلكتروني مسجل لهذا الحساب.');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>جارٍ إرسال الرابط...</span>';
+    }
+
+    try {
+      await authService.forgotPassword(email);
+      showAlert(`تم إرسال رابط تأكيد وتعيين كلمة المرور الجديدة إلى بريدك الإلكتروني: <strong>${escapeHtml(email)}</strong>.<br>يرجى فحص صندوق الوارد (أو مجلد Spam)، والضغط على الرابط لتسجيل كلمة المرور الجديدة وتحديثها في النظام تلقائياً.`, false);
+      this.showToast('تم إرسال رابط استعادة كلمة المرور إلى بريدك', 'success');
+    } catch (err) {
+      showAlert(err.message || 'تعذر إرسال رابط استعادة كلمة المرور.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>إعادة إرسال الرابط</span>';
+      }
+    }
+  }
+
+  validateSettingsPasswordLive(val) {
+    const ruleLen = document.getElementById('ruleSettingsLen');
+    const ruleNum = document.getElementById('ruleSettingsNum');
+    const ruleUp = document.getElementById('ruleSettingsUp');
+    if (!ruleLen || !ruleNum || !ruleUp) return;
+
+    const hasLen = val && val.length >= 8;
+    const hasNum = /[0-9]/.test(val);
+    const hasUp = /[A-Z]/.test(val);
+
+    ruleLen.style.color = hasLen ? '#10b981' : '#94a3b8';
+    ruleLen.innerHTML = (hasLen ? '✓ ' : '• ') + '8 أحرف أو أكثر';
+
+    ruleNum.style.color = hasNum ? '#10b981' : '#94a3b8';
+    ruleNum.innerHTML = (hasNum ? '✓ ' : '• ') + 'رقم واحد على الأقل (0-9)';
+
+    ruleUp.style.color = hasUp ? '#10b981' : '#94a3b8';
+    ruleUp.innerHTML = (hasUp ? '✓ ' : '• ') + 'حرف كبير واحد على الأقل (A-Z)';
+  }
+
+  handleSaveFinancialPin(e) {
+    if (e) e.preventDefault();
+    const pin = document.getElementById('settingsFinancialPin')?.value?.trim();
+    if (pin && pin.length >= 4) {
+      localStorage.setItem('centrly_financial_pin', pin);
+      this.hasSecurityPin = true;
+      this.isFinancialUnlocked = false;
+      this.showToast('تم تفعيل وقفل الرمز السري بنجاح', 'success');
+    } else if (!pin) {
+      localStorage.removeItem('centrly_financial_pin');
+      this.hasSecurityPin = false;
+      this.isFinancialUnlocked = true;
+      this.showToast('تم تعطيل الرمز السري بنجاح', 'info');
+    } else {
+      this.showToast('يجب أن يتكون الرمز السري من 4 أرقام على الأقل', 'warning');
+      return;
+    }
+    this.renderApp();
+  }
+
+  togglePasswordVisibility(inputId, btnEl) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (btnEl) btnEl.style.opacity = '1';
+    } else {
+      input.type = 'password';
+      if (btnEl) btnEl.style.opacity = '0.6';
     }
   }
 }

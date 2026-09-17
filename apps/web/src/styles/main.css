@@ -352,7 +352,7 @@ input[type="submit"]:active {
 
 .data-table th {
   background-color: #f8fafc;
-  color: var(--centrly-ink);
+  color: var(--centrly-text);
   font-weight: 700;
   padding: 0.85rem 1rem;
   border-bottom: 2px solid var(--centrly-line);
@@ -368,7 +368,7 @@ input[type="submit"]:active {
 }
 
 .data-table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: #f1f5f9;
 }
 
 .data-table tbody tr:last-child td {
@@ -617,148 +617,4 @@ input[type="submit"]:active {
   flex-direction: column;
 }
 
-/* ==========================================================================
-   Dark Theme Enhancements
-   ========================================================================== */
-[data-theme="dark"] body {
-  background-color: var(--centrly-surface);
-  color: var(--centrly-ink);
-}
 
-[data-theme="dark"] .card {
-  background-color: var(--centrly-white) !important;
-  border-color: var(--centrly-line) !important;
-  color: var(--centrly-ink);
-}
-
-[data-theme="dark"] .card-header {
-  border-color: var(--centrly-line) !important;
-}
-
-[data-theme="dark"] .card-title,
-[data-theme="dark"] h1,
-[data-theme="dark"] h2,
-[data-theme="dark"] h3,
-[data-theme="dark"] h4,
-[data-theme="dark"] h5,
-[data-theme="dark"] h6 {
-  color: var(--centrly-ink) !important;
-}
-
-/* Neutralize hardcoded inline whites in dark mode */
-[data-theme="dark"] div[style*="background: #fff"],
-[data-theme="dark"] div[style*="background:#fff"],
-[data-theme="dark"] div[style*="background: #ffffff"],
-[data-theme="dark"] div[style*="background:#ffffff"],
-[data-theme="dark"] div[style*="background: white"] {
-  background-color: var(--centrly-white) !important;
-  border-color: var(--centrly-line) !important;
-  color: var(--centrly-ink) !important;
-}
-
-[data-theme="dark"] div[style*="background: #f8fafc"],
-[data-theme="dark"] div[style*="background: #f1f5f9"],
-[data-theme="dark"] div[style*="background: #eff6ff"] {
-  background-color: #0e172c !important;
-  border-color: var(--centrly-line) !important;
-  color: var(--centrly-ink) !important;
-}
-
-[data-theme="dark"] .app-sidebar,
-[data-theme="dark"] .app-topbar {
-  background-color: #0e1830 !important;
-  border-color: var(--centrly-line) !important;
-}
-
-[data-theme="dark"] .sidebar-header {
-  border-color: var(--centrly-line);
-}
-
-[data-theme="dark"] .nav-link {
-  color: var(--centrly-text);
-}
-
-[data-theme="dark"] .nav-link:hover {
-  background-color: rgba(59, 130, 246, 0.15);
-  color: var(--centrly-blue-600);
-}
-
-[data-theme="dark"] .nav-link.active {
-  background-color: rgba(59, 130, 246, 0.2);
-  color: var(--centrly-blue-600);
-}
-
-[data-theme="dark"] .form-input,
-[data-theme="dark"] .form-select {
-  background-color: #0c1427 !important;
-  color: #f8fafc !important;
-  border-color: var(--centrly-line) !important;
-}
-
-[data-theme="dark"] .form-input:focus,
-[data-theme="dark"] .form-select:focus {
-  border-color: var(--centrly-blue-700) !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
-}
-
-[data-theme="dark"] .btn-secondary {
-  background-color: #1a2744;
-  color: #f8fafc;
-  border-color: #2b3e6b;
-}
-
-[data-theme="dark"] .btn-secondary:hover {
-  background-color: #23355d;
-}
-
-[data-theme="dark"] .table-th {
-  background-color: #101c36;
-  color: #94a3b8;
-  border-color: var(--centrly-line);
-}
-
-[data-theme="dark"] .table-td {
-  border-color: var(--centrly-line);
-  color: var(--centrly-ink);
-}
-
-[data-theme="dark"] .modal-dialog {
-  background-color: var(--centrly-white) !important;
-  border-color: var(--centrly-line) !important;
-  color: var(--centrly-ink) !important;
-}
-
-[data-theme="dark"] .badge-secondary {
-  background-color: #1e293b;
-  color: #cbd5e1;
-}
-
-[data-theme="dark"] .skeleton-box {
-  background: #1e293b;
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-}
-
-/* Theme Toggle Button in Navbar */
-.theme-toggle-btn {
-  background: transparent;
-  border: 1px solid var(--centrly-line);
-  border-radius: var(--radius-md);
-  padding: 0.4rem 0.6rem;
-  color: var(--centrly-text);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.theme-toggle-btn:hover {
-  background-color: var(--centrly-blue-100);
-  color: var(--centrly-blue-700);
-  border-color: var(--centrly-blue-700);
-}

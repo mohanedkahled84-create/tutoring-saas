@@ -54,7 +54,6 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
     }
   }
 
-  const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
   const hasPin = Boolean(localStorage.getItem('centrly_financial_pin'));
 
   return `
@@ -118,7 +117,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           class="btn ${activeTab === 'appearance' ? 'btn-primary' : 'btn-secondary'}"
           style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
           ${getIcon('gear', 16)}
-          <span>المظهر وتفضيلات النظام</span>
+          <span>تفضيلات المنظومة</span>
         </button>
 
       </div>
@@ -316,32 +315,13 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
       <div id="settingsTabAppearance" style="display: ${activeTab === 'appearance' ? 'block' : 'none'};">
         <div class="card" style="margin: 0; padding: 1.75rem; border-radius: var(--radius-lg);">
           <h3 style="margin: 0 0 0.5rem 0; font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink);">
-            المظهر وتفضيلات الاستخدام
+            تفضيلات المنظومة والاستخدام
           </h3>
           <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1.5rem 0;">
-            تخصيص نمط العرض الليلي وأصوات التحضير في الحصة.
+            تخصيص تنبيهات الحضور وأصوات مسح الباركود في الحصص.
           </p>
 
           <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 600px;">
-            
-            <!-- Dark Mode Control -->
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1.5px solid var(--centrly-line); border-radius: 12px; background: var(--centrly-surface);">
-              <div>
-                <div style="font-weight: 800; color: var(--centrly-ink); font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
-                  <span>${getIcon(isDark ? 'sun' : 'moon', 18)}</span>
-                  <span>الوضع الليلي (Dark Mode)</span>
-                </div>
-                <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem;">
-                  مريح للعين أثناء رصد درجات الكويزات والتحضير ليلاً.
-                </div>
-              </div>
-
-              <div>
-                <button type="button" class="btn ${isDark ? 'btn-primary' : 'btn-secondary'}" onclick="window.centrlyApp.toggleTheme()" style="font-weight: 800; font-size: 0.85rem; border-radius: 8px;">
-                  <span>${isDark ? 'الوضع النهاري' : 'الوضع الليلي'}</span>
-                </button>
-              </div>
-            </div>
 
             <!-- Barcode Sound Toggle -->
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1.5px solid var(--centrly-line); border-radius: 12px; background: var(--centrly-surface);">
