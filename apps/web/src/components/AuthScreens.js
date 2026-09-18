@@ -96,7 +96,7 @@ export function renderAuthScreens() {
             <label class="form-label">كلمة المرور *</label>
             <div style="position: relative;">
               <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" oninput="window.centrlyApp.validatePasswordLive(this.value)" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
-              <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('signupPassword', this)" title="إظهار/إخفاء كلمة المرور" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px; display: flex; align-items: center; justify-content: center;">
+              <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('signupPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                 ${getIcon('eye', 18)}
               </button>
             </div>
@@ -122,7 +122,7 @@ export function renderAuthScreens() {
             <label class="form-label">تأكيد كلمة المرور *</label>
             <div style="position: relative;">
               <input type="password" id="signupPasswordConfirm" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
-              <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('signupPasswordConfirm', this)" title="إظهار/إخفاء كلمة المرور" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px; display: flex; align-items: center; justify-content: center;">
+              <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('signupPasswordConfirm', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                 ${getIcon('eye', 18)}
               </button>
             </div>
