@@ -32,12 +32,13 @@ import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.
 import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js';
-import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.8.1';
+import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.8.5';
 import { renderCouponsView } from './components/CouponsView.js?v=4.7.6';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js?v=3.0.0';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
+import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
 
 class CentrlyApp {
   constructor() {
@@ -9898,9 +9899,10 @@ https://centerly-platform.vercel.app/p/p16766044
         <div class="form-group" style="margin-bottom: 1rem;">
           <label class="form-label" style="font-weight: 700;">رمز الأمان الحالي (القديم) *</label>
           <div style="position: relative;">
-            <input type="password" id="inputCurrentPin" class="form-input" placeholder="أدخل الرمز الحالي" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required
+            <input type="password" id="inputCurrentPin" class="form-input" placeholder="أدخل الرمز الحالي" maxlength="6" inputmode="numeric" required
               style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
-              autocomplete="off" autofocus>
+              autocomplete="off" autofocus
+              oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\\D/g, '')">
             <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputCurrentPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
               ${getIcon('eye', 18)}
             </button>
@@ -9911,9 +9913,10 @@ https://centerly-platform.vercel.app/p/p16766044
         <div class="form-group" style="margin-bottom: 1rem;">
           <label class="form-label" style="font-weight: 700;">${hasExisting ? 'رمز الأمان الجديد (4-6 أرقام) *' : 'رمز الأمان (4-6 أرقام) *'}</label>
           <div style="position: relative;">
-            <input type="password" id="inputNewPin" class="form-input" placeholder="••••" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required
+            <input type="password" id="inputNewPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" required
               style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
-              autocomplete="off" ${hasExisting ? '' : 'autofocus'}>
+              autocomplete="off" ${hasExisting ? '' : 'autofocus'}
+              oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\\D/g, '')">
             <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputNewPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
               ${getIcon('eye', 18)}
             </button>
@@ -9923,9 +9926,10 @@ https://centerly-platform.vercel.app/p/p16766044
         <div class="form-group" style="margin-bottom: 1.25rem;">
           <label class="form-label" style="font-weight: 700;">${hasExisting ? 'تأكيد رمز الأمان الجديد *' : 'تأكيد رمز الأمان *'}</label>
           <div style="position: relative;">
-            <input type="password" id="inputConfirmPin" class="form-input" placeholder="أعد إدخال الرمز" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required
+            <input type="password" id="inputConfirmPin" class="form-input" placeholder="أعد إدخال الرمز" maxlength="6" inputmode="numeric" required
               style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
-              autocomplete="off">
+              autocomplete="off"
+              oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\\D/g, '')">
             <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputConfirmPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
               ${getIcon('eye', 18)}
             </button>
@@ -9960,11 +9964,11 @@ https://centerly-platform.vercel.app/p/p16766044
 
   async handleSavePinSubmit(e) {
     e.preventDefault();
-    const savedPin = localStorage.getItem('centrly_financial_pin');
+    const savedPin = normalizeDigits(localStorage.getItem('centrly_financial_pin'));
     const hasExisting = Boolean(this.hasSecurityPin || savedPin);
-    const currentPin = document.getElementById('inputCurrentPin')?.value.trim();
-    const pin = document.getElementById('inputNewPin')?.value.trim();
-    const confirm = document.getElementById('inputConfirmPin')?.value.trim();
+    const currentPin = normalizeDigits(document.getElementById('inputCurrentPin')?.value);
+    const pin = normalizeDigits(document.getElementById('inputNewPin')?.value);
+    const confirm = normalizeDigits(document.getElementById('inputConfirmPin')?.value);
     const errEl = document.getElementById('pinErrorMsg');
     const btn = document.getElementById('btnSubmitSetPin');
 
@@ -10059,7 +10063,8 @@ https://centerly-platform.vercel.app/p/p16766044
           <div style="position: relative;">
             <input type="password" id="inputUnlockPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" autofocus required
               style="text-align: center; letter-spacing: 0.5rem; font-size: 1.5rem; font-weight: 900; padding-left: 2.5rem;"
-              autocomplete="off">
+              autocomplete="off"
+              oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\\D/g, '')">
             <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputUnlockPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
               ${getIcon('eye', 18)}
             </button>
@@ -10087,10 +10092,18 @@ https://centerly-platform.vercel.app/p/p16766044
 
   async handleUnlockPinSubmit(e) {
     e.preventDefault();
-    const entered = document.getElementById('inputUnlockPin')?.value.trim();
-    const savedPin = localStorage.getItem('centrly_financial_pin');
+    const entered = normalizeDigits(document.getElementById('inputUnlockPin')?.value);
+    const savedPin = normalizeDigits(localStorage.getItem('centrly_financial_pin'));
     const errEl = document.getElementById('unlockPinError');
     const btn = document.getElementById('btnSubmitUnlockPin');
+
+    if (!entered || entered.length < 4) {
+      if (errEl) {
+        errEl.innerText = 'يرجى إدخال رمز الأمان المكون من 4 إلى 6 أرقام.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
 
     // Fast path: local verification if matched
     if (savedPin && entered === savedPin) {
@@ -10125,15 +10138,24 @@ https://centerly-platform.vercel.app/p/p16766044
         this.renderApp();
         return;
       }
-      throw new Error('رمز الأمان غير صحيح');
-    } catch (_) {
+      
+      // Explicit invalid PIN response
       if (errEl) {
-        errEl.innerText = 'رمز الـ PIN غير صحيح. يرجى المحاولة مرة أخرى.';
+        errEl.innerText = 'رمز الـ PIN غير صحيح. يرجى التأكد وإعادة المحاولة.';
         errEl.style.display = 'block';
       }
       const inp = document.getElementById('inputUnlockPin');
       if (inp) {
         inp.value = '';
+        inp.focus();
+      }
+    } catch (err) {
+      if (errEl) {
+        errEl.innerText = err.message || 'تعذر التحقق من الرمز السري، يرجى التأكد من اتصال الإنترنت.';
+        errEl.style.display = 'block';
+      }
+      const inp = document.getElementById('inputUnlockPin');
+      if (inp) {
         inp.focus();
       }
     } finally {
@@ -11713,7 +11735,7 @@ https://centerly-platform.vercel.app/p/p16766044
 
   async handleSaveFinancialPin(e) {
     if (e) e.preventDefault();
-    const pin = document.getElementById('settingsFinancialPin')?.value?.trim();
+    const pin = normalizeDigits(document.getElementById('settingsFinancialPin')?.value);
 
     if (!pin) {
       this.showToast('يرجى كتابة رمز الأمان المكون من 4 إلى 6 أرقام لحفظه وتأمينه.', 'warning');

@@ -350,7 +350,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                   <div class="form-group" style="margin: 0;">
                     <label class="form-label" style="font-weight: 700;">تعيين رمز أمان سحابي جديد (4 إلى 6 أرقام) *</label>
                     <div style="position: relative;">
-                      <input type="password" id="settingsFinancialPin" class="form-input" placeholder="••••" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required dir="ltr" style="letter-spacing: 0.3rem; font-weight: 800; font-size: 1.1rem; text-align: center; padding-left: 2.5rem;">
+                      <input type="password" id="settingsFinancialPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" required dir="ltr" style="letter-spacing: 0.3rem; font-weight: 800; font-size: 1.1rem; text-align: center; padding-left: 2.5rem;" oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\D/g, '')">
                       <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('settingsFinancialPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
                         ${getIcon('eye', 18)}
                       </button>

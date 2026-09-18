@@ -140,7 +140,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     centers: new CentersService(new SupabaseCentersRepository(effectiveClient, privilegedClient)),
     reports: new ReportsService(new SupabaseReportsRepository(effectiveClient), undefined, messageLogsRepo),
     quizzes: new QuizzesService(new SupabaseQuizzesRepository(effectiveClient)),
-    tenants: new SupabaseTenantsRepository(effectiveClient),
+    tenants: new SupabaseTenantsRepository(effectiveClient, privilegedClient),
     messageLogs: messageLogsRepo,
     _client: effectiveClient,
   };

@@ -7,6 +7,14 @@ import { getServices } from "../../composition.js";
 
 export const settingsRouter = Router();
 
+export function normalizeDigits(str: unknown): string {
+  if (!str && str !== 0) return "";
+  return String(str)
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+    .trim();
+}
+
 export const DEFAULT_TENANT_SETTINGS = {
   homework_submission: "in_session" as const,
   auto_notification: true,
@@ -94,12 +102,18 @@ settingsRouter.put(
 );
 
 const setPinSchema = z.object({
-  pin: z.string().regex(/^\d{4,6}$/, "PIN must be 4 to 6 digits"),
+  pin: z
+    .string()
+    .transform((val) => normalizeDigits(val))
+    .pipe(z.string().regex(/^\d{4,6}$/, "PIN must be 4 to 6 digits")),
   old_pin: z.string().optional().nullable(),
 });
 
 const verifyPinSchema = z.object({
-  pin: z.string().min(1, "PIN is required"),
+  pin: z
+    .string()
+    .min(1, "PIN is required")
+    .transform((val) => normalizeDigits(val)),
 });
 
 // GET /api/settings/security-pin - Check if user account or tenant has configured financial security PIN
@@ -123,7 +137,7 @@ settingsRouter.get("/security-pin", async (req: AuthenticatedRequest, res: Respo
       const userPin = await tenantsRepo.getUserPin(userId).catch(() => null);
       if (userPin) {
         if (req.user) {
-          req.user.financial_pin = userPin;
+          req.user.financial_pin = normalizeDigits(userPin);
           req.user.has_security_pin = true;
         }
         res.json({ has_pin: true });
@@ -135,7 +149,7 @@ settingsRouter.get("/security-pin", async (req: AuthenticatedRequest, res: Respo
       const settings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
       if (settings?.financial_pin) {
         if (req.user) {
-          req.user.financial_pin = String(settings.financial_pin);
+          req.user.financial_pin = normalizeDigits(settings.financial_pin);
           req.user.has_security_pin = true;
         }
         res.json({ has_pin: true });
@@ -164,26 +178,28 @@ settingsRouter.post(
     try {
       const tenantsRepo = getServices(req).tenants;
 
-      let existingPin: string | null = req.user?.financial_pin || null;
+      let existingPin: string | null = req.user?.financial_pin ? normalizeDigits(req.user.financial_pin) : null;
       if (!existingPin && userId && typeof tenantsRepo.getUserPin === "function") {
-        existingPin = await tenantsRepo.getUserPin(userId).catch(() => null);
+        const uPin = await tenantsRepo.getUserPin(userId).catch(() => null);
+        if (uPin) existingPin = normalizeDigits(uPin);
       }
       let existingSettings: any = null;
       if (tenantId) {
         existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
         if (!existingPin && existingSettings?.financial_pin) {
-          existingPin = existingSettings.financial_pin;
+          existingPin = normalizeDigits(existingSettings.financial_pin);
         }
       }
 
       if (existingPin && req.body.old_pin) {
-        if (existingPin !== req.body.old_pin) {
+        const cleanOldPin = normalizeDigits(req.body.old_pin);
+        if (existingPin !== cleanOldPin) {
           res.status(400).json({ error: { code: "INVALID_OLD_PIN", message: "الرقم السري الحالي غير صحيح" } });
           return;
         }
       }
 
-      const newPin = req.body.pin;
+      const newPin = normalizeDigits(req.body.pin);
 
       // 1. Persist directly to user account in repository
       if (userId && typeof tenantsRepo.setUserPin === "function") {
@@ -226,18 +242,22 @@ settingsRouter.post(
 
     try {
       const tenantsRepo = getServices(req).tenants;
-      let savedPin: string | null = req.user?.financial_pin || null;
+      let savedPin: string | null = req.user?.financial_pin ? normalizeDigits(req.user.financial_pin) : null;
 
       if (!savedPin && userId && typeof tenantsRepo.getUserPin === "function") {
-        savedPin = await tenantsRepo.getUserPin(userId).catch(() => null);
+        const uPin = await tenantsRepo.getUserPin(userId).catch(() => null);
+        if (uPin) savedPin = normalizeDigits(uPin);
       }
 
       if (!savedPin && tenantId) {
         const existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
-        savedPin = (existingSettings as any)?.financial_pin || null;
+        if ((existingSettings as any)?.financial_pin) {
+          savedPin = normalizeDigits((existingSettings as any).financial_pin);
+        }
       }
 
-      const isValid = Boolean(savedPin && savedPin === req.body.pin);
+      const cleanInputPin = normalizeDigits(req.body.pin);
+      const isValid = Boolean(savedPin && cleanInputPin && savedPin === cleanInputPin);
       res.json({ valid: isValid });
     } catch (err: unknown) {
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
@@ -250,7 +270,7 @@ const deletePinSchema = z
     pin: z.string().optional().nullable(),
   })
   .optional()
-  .default({});
+  .default({ pin: undefined });
 
 // DELETE /api/settings/security-pin - Remove financial security PIN
 settingsRouter.delete(
@@ -267,17 +287,23 @@ settingsRouter.delete(
     try {
       const tenantsRepo = getServices(req).tenants;
 
-      let savedPin: string | null = req.user?.financial_pin || null;
+      let savedPin: string | null = req.user?.financial_pin ? normalizeDigits(req.user.financial_pin) : null;
       if (!savedPin && userId && typeof tenantsRepo.getUserPin === "function") {
-        savedPin = await tenantsRepo.getUserPin(userId).catch(() => null);
+        const uPin = await tenantsRepo.getUserPin(userId).catch(() => null);
+        if (uPin) savedPin = normalizeDigits(uPin);
       }
       let existingSettings: any = null;
       if (!savedPin && tenantId) {
         existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
-        savedPin = (existingSettings as any)?.financial_pin || null;
+        if ((existingSettings as any)?.financial_pin) {
+          savedPin = normalizeDigits((existingSettings as any).financial_pin);
+        }
       }
 
-      if (req.body?.pin && savedPin && savedPin !== req.body.pin) {
+      const cleanInputPin = req.body?.pin ? normalizeDigits(req.body.pin) : null;
+      const cleanSavedPin = savedPin ? normalizeDigits(savedPin) : null;
+
+      if (cleanInputPin && cleanSavedPin && cleanSavedPin !== cleanInputPin) {
         res.status(400).json({ error: { code: "INVALID_PIN", message: "الرقم السري الحالي غير صحيح" } });
         return;
       }

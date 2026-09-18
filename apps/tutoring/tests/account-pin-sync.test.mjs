@@ -73,6 +73,26 @@ test('SEC-PIN: Account-Level Security PIN synchronization across mobile and desk
     const body4 = await res4.json();
     assert.equal(body4.valid, true, 'Correct PIN must unlock sensitive views on mobile');
 
+    // 4b. Entering PIN on Mobile Phone using Arabic keyboard (١٢٣٤)
+    const res4b = await fetch(`${baseUrl}/api/settings/verify-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: '١٢٣٤' }),
+    });
+    assert.equal(res4b.status, 200);
+    const body4b = await res4b.json();
+    assert.equal(body4b.valid, true, 'Arabic numerals (١٢٣٤) must automatically normalize and unlock on mobile');
+
+    // 4c. Entering PIN on Mobile Phone using Persian keyboard (۱۲۳۴)
+    const res4c = await fetch(`${baseUrl}/api/settings/verify-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: '۱۲۳۴' }),
+    });
+    assert.equal(res4c.status, 200);
+    const body4c = await res4c.json();
+    assert.equal(body4c.valid, true, 'Persian numerals (۱۲۳۴) must automatically normalize and unlock on mobile');
+
     // 5. Entering incorrect PIN on Mobile Phone
     const res5 = await fetch(`${baseUrl}/api/settings/verify-pin`, {
       method: 'POST',
