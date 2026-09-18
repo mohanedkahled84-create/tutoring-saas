@@ -209,10 +209,10 @@ export function renderAdminTenantsView(data = {}, currentFilter = 'all', searchQ
                       <!-- Students & Plan -->
                       <td style="padding: 0.85rem 1rem;">
                         <div style="font-weight: 800; color: var(--centrly-blue-800);">
-                          ${t.students_count !== undefined ? t.students_count : '0'} / ${t.students_limit || (t.subscription_tier === 'growth' ? 250 : t.subscription_tier === 'pro' ? 500 : 100)} طالب
+                          ${t.students_count !== undefined ? t.students_count : '0'} / ${t.students_limit || (t.subscription_tier === 'growth' ? 750 : t.subscription_tier === 'pro' ? 1500 : 300)} طالب
                         </div>
                         <div style="font-size: 0.75rem; color: #475569; font-weight: 700; margin-top: 0.2rem;">
-                          ${t.plan_name || (t.subscription_tier === 'growth' ? 'باقة 250 طالب' : t.subscription_tier === 'pro' ? 'باقة 500 طالب' : 'باقة 100 طالب')}
+                          ${t.plan_name || (t.subscription_tier === 'growth' ? 'باقة 750 طالب' : t.subscription_tier === 'pro' ? 'باقة 1500 طالب' : 'باقة 300 طالب')}
                         </div>
                       </td>
 

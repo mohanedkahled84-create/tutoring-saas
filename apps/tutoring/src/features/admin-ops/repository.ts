@@ -273,16 +273,18 @@ export class FakeAdminOpsRepository implements IAdminOpsRepository {
     return [...this.paymentProofs];
   }
 
-  async getPaymentProof(id: string): Promise<{ id: string; tenant_id: string; status: string } | null> {
+  async getPaymentProof(id: string): Promise<{ id: string; tenant_id: string; status: string; admin_notes?: string | null; amount?: number | null } | null> {
     const proof = this.paymentProofs.find((p) => p.id === id);
-    return proof ? { id: proof.id, tenant_id: proof.tenant_id, status: proof.status } : null;
+    return proof ? { id: proof.id, tenant_id: proof.tenant_id, status: proof.status, admin_notes: proof.admin_notes, amount: proof.amount } : null;
   }
 
   async approvePaymentProof(
     proofId: string,
     tenantId: string,
     _adminId: string,
-    newEndsAt: string
+    newEndsAt: string,
+    targetTier?: string,
+    planSettings?: Record<string, any>
   ): Promise<AdminTenantSummary> {
     const proof = this.paymentProofs.find((p) => p.id === proofId);
     if (proof) proof.status = "approved";
@@ -295,11 +297,21 @@ export class FakeAdminOpsRepository implements IAdminOpsRepository {
         status: "active",
         subscription_status: "active",
         subscription_ends_at: newEndsAt,
+        subscription_tier: targetTier || "starter",
+        students_limit: planSettings?.students_limit,
+        plan_name: planSettings?.plan_name,
+        settings: planSettings || {},
       };
       this.tenants.push(tenant);
     } else {
       tenant.subscription_status = "active";
       tenant.subscription_ends_at = newEndsAt;
+      if (targetTier) tenant.subscription_tier = targetTier;
+      if (planSettings) {
+        tenant.settings = { ...(tenant.settings || {}), ...planSettings };
+        if (planSettings.students_limit) tenant.students_limit = planSettings.students_limit;
+        if (planSettings.plan_name) tenant.plan_name = planSettings.plan_name;
+      }
     }
     return { ...tenant };
   }

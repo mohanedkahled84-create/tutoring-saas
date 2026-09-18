@@ -16,7 +16,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
 
   const currentCount = studentList.length;
   const billingData = billing || window.centrlyApp?.billingState || {};
-  const studentLimit = billingData.students_limit || 100;
+  const studentLimit = billingData.students_limit || 300;
   const ratio = studentLimit > 0 ? (currentCount / studentLimit) : 0;
   const isApproaching = ratio >= 0.85 && ratio < 1.0;
   const isReachedOrExceeded = currentCount >= studentLimit;
@@ -55,7 +55,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
               <div>
                 <div style="font-weight: 800; color: #991b1b; font-size: 0.95rem;">تم إيقاف إضافة طلاب جدد مؤقتاً (استنفاد المقاعد وانتهاء مهلة السماح)</div>
                 <div style="font-size: 0.825rem; color: #b91c1c; margin-top: 0.2rem;">
-                  لقد استهلكت كامل سعة باقتك (${currentCount} من ${studentLimit} طالب) وانتهت فترة السماح المحددة بـ 3 أيام. لمتابعة تسجيل طلاب جدد، يرجى الترقية إلى باقة 250 أو 500 طالب.
+                  لقد استهلكت كامل سعة باقتك (${currentCount} من ${studentLimit} طالب) وانتهت فترة السماح المحددة بـ 3 أيام. لمتابعة تسجيل طلاب جدد، يرجى الترقية إلى باقة 750 أو 1500 طالب.
                 </div>
               </div>
             </div>

@@ -44,48 +44,48 @@ export function renderBillingView(data = {}, user = {}) {
 
   const currentStudents = data.students_count || (window.centrlyApp?.students?.length || 0);
   const tier = (data.subscription_tier || '').toLowerCase();
-  const fallbackLimit = (tier === 'growth' || tier.includes('250')) ? 250 : (tier === 'pro' || tier.includes('500')) ? 500 : 100;
+  const fallbackLimit = (tier === 'growth' || tier.includes('750') || tier.includes('250')) ? 750 : (tier === 'pro' || tier.includes('1500') || tier.includes('500')) ? 1500 : 300;
   const studentLimit = data.students_limit || fallbackLimit;
   const quotaPercent = Math.min(100, Math.round((currentStudents / studentLimit) * 100));
-  const planName = data.plan_name || (studentLimit === 250 ? 'باقة 250 طالب' : studentLimit === 500 ? 'باقة 500 طالب' : 'باقة 100 طالب');
+  const planName = data.plan_name || (studentLimit === 750 ? 'باقة 750 طالب' : studentLimit === 1500 ? 'باقة 1500 طالب' : (studentLimit === 250 ? 'باقة 250 طالب' : studentLimit === 500 ? 'باقة 500 طالب' : 'باقة 300 طالب'));
 
   const isYearly = (window.centrlyApp?.billingCycle === 'yearly');
 
-  // Plan pricing configurations (All features included in all plans)
+  // Plan pricing configurations (All features included in all plans - 20% annual discount)
   const plans = [
     {
-      id: 'plan_100',
-      name: 'باقة 100 طالب',
+      id: 'plan_300',
+      name: 'باقة 300 طالب',
       subtitle: 'للبدايات والمجموعات التأسيسية',
-      capacity: 100,
-      monthlyPrice: 599,
-      yearlyPrice: 6469, // 599 * 12 * 0.9 = 6469.2
-      yearlyMonthlyEquivalent: 539,
-      yearlySavings: 719,
+      capacity: 300,
+      monthlyPrice: 399,
+      yearlyPrice: 3830, // 399 * 12 * 0.8 = 3830.4 -> 3830 EGP
+      yearlyMonthlyEquivalent: 319,
+      yearlySavings: 958,
       isPopular: false,
       badgeText: 'للبدايات والمجموعات',
     },
     {
-      id: 'plan_250',
-      name: 'باقة 250 طالب',
+      id: 'plan_750',
+      name: 'باقة 750 طالب',
       subtitle: 'مثالية للمعلم النشط والمجموعات الكبيرة',
-      capacity: 250,
-      monthlyPrice: 899,
-      yearlyPrice: 9709, // 899 * 12 * 0.9 = 9709.2
-      yearlyMonthlyEquivalent: 809,
-      yearlySavings: 1079,
+      capacity: 750,
+      monthlyPrice: 799,
+      yearlyPrice: 7670, // 799 * 12 * 0.8 = 7670.4 -> 7670 EGP
+      yearlyMonthlyEquivalent: 639,
+      yearlySavings: 1918,
       isPopular: true,
       badgeText: 'الأكثر طلباً للمعلمين',
     },
     {
-      id: 'plan_500',
-      name: 'باقة 500 طالب',
+      id: 'plan_1500',
+      name: 'باقة 1500 طالب',
       subtitle: 'للسناتر وكبار المدرسين والمجاميع الضخمة',
-      capacity: 500,
-      monthlyPrice: 1499,
-      yearlyPrice: 16189, // 1499 * 12 * 0.9 = 16189.2
-      yearlyMonthlyEquivalent: 1349,
-      yearlySavings: 1799,
+      capacity: 1500,
+      monthlyPrice: 1299,
+      yearlyPrice: 12470, // 1299 * 12 * 0.8 = 12470.4 -> 12470 EGP
+      yearlyMonthlyEquivalent: 1039,
+      yearlySavings: 3118,
       isPopular: false,
       badgeText: 'للسناتر وكبار المدرسين',
     }
@@ -185,7 +185,7 @@ export function renderBillingView(data = {}, user = {}) {
             onclick="window.centrlyApp.setBillingCycle('yearly')" 
             style="font-family: 'Cairo', sans-serif; font-size: 0.925rem; font-weight: 800; padding: 0.55rem 1.4rem; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.4rem; ${isYearly ? 'background: var(--centrly-blue-700); color: #ffffff; box-shadow: 0 2px 8px rgba(37,99,235,0.25);' : 'background: transparent; color: #64748b;'}">
             <span>اشتراك سنوي</span>
-            <span style="background: #10b981; color: #fff; font-size: 0.725rem; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 800;">خصم 10%</span>
+            <span style="background: #10b981; color: #fff; font-size: 0.725rem; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 800;">خصم 20%</span>
           </button>
         </div>
 
@@ -298,11 +298,11 @@ export function renderBillingView(data = {}, user = {}) {
         }).join('')}
       </div>
 
-      <!-- Custom Enterprise Tier for >500 Students -->
+      <!-- Custom Enterprise Tier for >1500 Students -->
       <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 14px; padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.25rem;">
         <div style="flex: 1; min-width: 260px;">
           <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--centrly-ink); margin: 0 0 0.35rem;">
-            لديك أكثر من 500 طالب أو عدة فروع لسنترك؟
+            لديك أكثر من 1500 طالب أو عدة فروع لسنترك؟
           </h4>
           <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0; line-height: 1.6;">
             نوفر باقات مخصصة للأعداد الكبرى والسناتر التعليمية مع تخصيص السيرفرات وإمكانية ربط فروع متعددة ونسب أرباح السنتر وخصومات سنوية مميزة.

@@ -414,25 +414,28 @@ export function renderLandingView() {
               اختر الباقة المناسبة لسعة طلابك
             </h2>
             <p style="font-size: 1rem; color: var(--brand-text); margin: 0; line-height: 1.7;">
-              جميع الميزات المذكورة أعلاه متوفرة بالكامل في كل الباقات. الاختلاف الوحيد هو عدد الطلاب وسعر الاشتراك.
+              جميع الميزات المذكورة أعلاه متوفرة بالكامل في كل الباقات بلا استثناء. الاختلاف الوحيد هو عدد الطلاب!
             </p>
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; font-weight: 800; font-size: 0.875rem; padding: 0.4rem 1rem; border-radius: 9999px; border: 1.5px solid #a7f3d0; margin-top: 0.85rem;">
+              <span>🎉 وفر 20% كاملة عند اختيار الاشتراك السنوي</span>
+            </div>
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1.75rem; align-items: stretch;">
             
-            <!-- Plan 1: 100 Students -->
+            <!-- Plan 1: 300 Students -->
             <div class="pricing-card" style="background: var(--brand-surface); border: 1.5px solid var(--brand-line); border-radius: 18px; padding: 2.25rem 1.75rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s;">
               <div>
-                <div style="font-size: 1.2rem; font-weight: 800; color: var(--brand-navy);">باقة 100 طالب</div>
+                <div style="font-size: 1.2rem; font-weight: 800; color: var(--brand-navy);">باقة 300 طالب</div>
                 <div style="font-size: 0.85rem; color: var(--brand-muted); margin-top: 0.25rem;">للبدايات والمجموعات الفردية</div>
                 
                 <div style="margin: 1.5rem 0; display: flex; align-items: baseline; gap: 0.35rem;">
-                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-navy);">599</span>
+                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-navy);">399</span>
                   <span style="font-size: 0.95rem; font-weight: 700; color: var(--brand-muted);">جنيه / شهرياً</span>
                 </div>
 
                 <div style="background: var(--brand-pale); color: var(--brand-blue); font-size: 0.875rem; font-weight: 800; padding: 0.5rem 0.75rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
-                  سعة حتى 100 طالب مسجل
+                  سعة حتى 300 طالب مسجل
                 </div>
 
                 <div style="border-top: 1px solid var(--brand-line); padding-top: 1.25rem; font-size: 0.875rem; color: var(--brand-text); line-height: 1.8;">
@@ -451,28 +454,28 @@ export function renderLandingView() {
                   style="width: 100%; background: var(--brand-cream); border: 1.5px solid var(--brand-line); color: var(--brand-navy); font-family: 'Cairo', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.75rem; border-radius: 10px; cursor: pointer; transition: all 0.2s;"
                   onmouseover="this.style.backgroundColor='var(--brand-navy)'; this.style.borderColor='var(--brand-navy)'; this.style.color='#ffffff';"
                   onmouseout="this.style.backgroundColor='var(--brand-cream)'; this.style.borderColor='var(--brand-line)'; this.style.color='var(--brand-navy)';">
-                  ابدأ باقة الـ 100 طالب (تجربة 14 يوماً)
+                  ابدأ باقة الـ 300 طالب (تجربة 14 يوماً)
                 </button>
               </div>
             </div>
 
-            <!-- Plan 2: 250 Students (Prominent) -->
+            <!-- Plan 2: 750 Students (Prominent) -->
             <div class="pricing-card" style="background: var(--brand-surface); border: 2px solid var(--brand-blue); border-radius: 18px; padding: 2.25rem 1.75rem; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 8px 24px rgba(41, 73, 186, 0.08); transition: all 0.2s;">
               <div style="position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: var(--brand-blue); color: #ffffff; font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.85rem; border-radius: 9999px;">
                 الأكثر طلباً للمعلمين
               </div>
 
               <div>
-                <div style="font-size: 1.25rem; font-weight: 800; color: var(--brand-blue);">باقة 250 طالب</div>
+                <div style="font-size: 1.25rem; font-weight: 800; color: var(--brand-blue);">باقة 750 طالب</div>
                 <div style="font-size: 0.85rem; color: var(--brand-muted); margin-top: 0.25rem;">للمجموعات الكبيرة وأصحاب الفرق</div>
                 
                 <div style="margin: 1.5rem 0; display: flex; align-items: baseline; gap: 0.35rem;">
-                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-blue);">899</span>
+                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-blue);">799</span>
                   <span style="font-size: 0.95rem; font-weight: 700; color: var(--brand-muted);">جنيه / شهرياً</span>
                 </div>
 
                 <div style="background: var(--brand-green-light); color: var(--brand-green); font-size: 0.875rem; font-weight: 800; padding: 0.5rem 0.75rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
-                  سعة حتى 250 طالب مسجل
+                  سعة حتى 750 طالب مسجل
                 </div>
 
                 <div style="border-top: 1px solid var(--brand-line); padding-top: 1.25rem; font-size: 0.875rem; color: var(--brand-text); line-height: 1.8;">
@@ -491,24 +494,24 @@ export function renderLandingView() {
                   style="width: 100%; background: var(--brand-blue); border: none; color: #ffffff; font-family: 'Cairo', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.8rem; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 12px rgba(41, 73, 186, 0.25); transition: all 0.2s;"
                   onmouseover="this.style.backgroundColor='var(--brand-navy)';"
                   onmouseout="this.style.backgroundColor='var(--brand-blue)';">
-                  ابدأ باقة الـ 250 طالب (تجربة 14 يوماً)
+                  ابدأ باقة الـ 750 طالب (تجربة 14 يوماً)
                 </button>
               </div>
             </div>
 
-            <!-- Plan 3: 500 Students -->
+            <!-- Plan 3: 1500 Students -->
             <div class="pricing-card" style="background: var(--brand-surface); border: 1.5px solid var(--brand-line); border-radius: 18px; padding: 2.25rem 1.75rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s;">
               <div>
-                <div style="font-size: 1.2rem; font-weight: 800; color: var(--brand-navy);">باقة 500 طالب</div>
+                <div style="font-size: 1.2rem; font-weight: 800; color: var(--brand-navy);">باقة 1500 طالب</div>
                 <div style="font-size: 0.85rem; color: var(--brand-muted); margin-top: 0.25rem;">للسناتر والمراكز التعليمية</div>
                 
                 <div style="margin: 1.5rem 0; display: flex; align-items: baseline; gap: 0.35rem;">
-                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-navy);">1,499</span>
+                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-navy);">1,299</span>
                   <span style="font-size: 0.95rem; font-weight: 700; color: var(--brand-muted);">جنيه / شهرياً</span>
                 </div>
 
                 <div style="background: var(--brand-pale); color: var(--brand-navy); font-size: 0.875rem; font-weight: 800; padding: 0.5rem 0.75rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
-                  سعة حتى 500 طالب مسجل
+                  سعة حتى 1500 طالب مسجل
                 </div>
 
                 <div style="border-top: 1px solid var(--brand-line); padding-top: 1.25rem; font-size: 0.875rem; color: var(--brand-text); line-height: 1.8;">
@@ -527,7 +530,7 @@ export function renderLandingView() {
                   style="width: 100%; background: var(--brand-cream); border: 1.5px solid var(--brand-line); color: var(--brand-navy); font-family: 'Cairo', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.75rem; border-radius: 10px; cursor: pointer; transition: all 0.2s;"
                   onmouseover="this.style.backgroundColor='var(--brand-navy)'; this.style.borderColor='var(--brand-navy)'; this.style.color='#ffffff';"
                   onmouseout="this.style.backgroundColor='var(--brand-cream)'; this.style.borderColor='var(--brand-line)'; this.style.color='var(--brand-navy)';">
-                  ابدأ باقة الـ 500 طالب (تجربة 14 يوماً)
+                  ابدأ باقة الـ 1500 طالب (تجربة 14 يوماً)
                 </button>
               </div>
             </div>
@@ -537,10 +540,10 @@ export function renderLandingView() {
           <!-- Enterprise Callout -->
           <div style="margin-top: 2rem; background: var(--brand-surface); border: 1.5px dashed var(--brand-line); border-radius: 14px; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
             <div>
-              <div style="font-size: 0.95rem; font-weight: 800; color: var(--brand-navy);">لديك أكثر من 500 طالب أو عدة فروع لسنترك؟</div>
+              <div style="font-size: 0.95rem; font-weight: 800; color: var(--brand-navy);">لديك أكثر من 1500 طالب أو عدة فروع لسنترك؟</div>
               <div style="font-size: 0.8rem; color: var(--brand-text); margin-top: 0.2rem;">نوفر باقات مخصصة للأعداد الكبرى بسيرفرات خاصة مع دعم مباشر.</div>
             </div>
-            <a href="https://wa.me/201123671177?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D9%85%D9%84%20%D9%85%D8%AC%D9%85%D9%88%D8%B9%D8%A9%20%D9%81%D9%88%D9%82%20500%20%D8%B7%D8%A7%D9%84%D8%A8%20%D9%88%D9%85%D8%AD%D8%AA%D8%A7%D8%AC%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%A7%D9%84%D8%AA%D9%81%D8%A7%D8%B5%D9%8A%D9%84%20%D9%88%D8%A7%D9%84%D8%A3%D8%B3%D8%B9%D8%A7%D8%B1." target="_blank" rel="noopener noreferrer" style="background: var(--brand-navy); color: #ffffff; text-decoration: none; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--brand-navy-light)';" onmouseout="this.style.backgroundColor='var(--brand-navy)';">
+            <a href="https://wa.me/201123671177?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D9%85%D9%84%20%D9%85%D8%AC%D9%85%D9%88%D8%B9%D8%A9%20%D9%81%D9%88%D9%82%201500%20%D8%B7%D8%A7%D9%84%D8%A8%20%D9%88%D9%85%D8%AD%D8%AA%D8%A7%D8%AC%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%A7%D9%84%D8%AA%D9%81%D8%A7%D8%B5%D9%8A%D9%84%20%D9%88%D8%A7%D9%84%D8%A3%D8%B3%D8%B9%D8%A7%D8%B1." target="_blank" rel="noopener noreferrer" style="background: var(--brand-navy); color: #ffffff; text-decoration: none; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--brand-navy-light)';" onmouseout="this.style.backgroundColor='var(--brand-navy)';">
               <span>طلب التفاصيل</span>
             </a>
           </div>

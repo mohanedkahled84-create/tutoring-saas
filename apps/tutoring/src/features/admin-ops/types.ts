@@ -11,6 +11,7 @@ export interface AdminTenantSummary {
   students_limit?: number;
   plan_name?: string;
   subscription_tier?: string;
+  settings?: Record<string, any>;
   trial_ends_at?: string | null;
   subscription_ends_at?: string | null;
   deleted_at?: string | null;

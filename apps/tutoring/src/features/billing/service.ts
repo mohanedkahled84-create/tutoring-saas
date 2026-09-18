@@ -78,8 +78,8 @@ export class BillingService {
       : 0;
 
     // Resolve dynamic student capacity and plan name
-    let studentsLimit = 100;
-    let planName = "باقة 100 طالب";
+    let studentsLimit = 300;
+    let planName = "باقة 300 طالب";
 
     const settings = tenant.settings || {};
     if (typeof settings.students_limit === "number" && settings.students_limit > 0) {
@@ -87,13 +87,22 @@ export class BillingService {
       planName = settings.plan_name || `باقة ${studentsLimit} طالب`;
     } else {
       const tier = (tenant.subscription_tier || "").toLowerCase();
-      if (tier === "growth" || tier === "plan_250" || tier.includes("250")) {
+      if (tier === "growth" || tier === "plan_750" || tier.includes("750")) {
+        studentsLimit = 750;
+        planName = "باقة 750 طالب";
+      } else if (tier === "pro" || tier === "plan_1500" || tier.includes("1500")) {
+        studentsLimit = 1500;
+        planName = "باقة 1500 طالب";
+      } else if (tier === "starter" || tier === "plan_300" || tier.includes("300")) {
+        studentsLimit = 300;
+        planName = "باقة 300 طالب";
+      } else if (tier === "plan_250" || tier.includes("250")) {
         studentsLimit = 250;
         planName = "باقة 250 طالب";
-      } else if (tier === "pro" || tier === "plan_500" || tier.includes("500")) {
+      } else if (tier === "plan_500" || tier.includes("500")) {
         studentsLimit = 500;
         planName = "باقة 500 طالب";
-      } else if (tier === "starter" || tier === "plan_100" || tier.includes("100")) {
+      } else if (tier === "plan_100" || tier.includes("100")) {
         studentsLimit = 100;
         planName = "باقة 100 طالب";
       } else if (proofs && proofs.length > 0) {
@@ -101,12 +110,24 @@ export class BillingService {
         const latestRelevant = proofs.find(p => p.status === "approved") || proofs[0];
         const notes = (latestRelevant.admin_notes || "").toLowerCase();
         const amt = Number(latestRelevant.amount || 0);
-        if (notes.includes("250") || amt === 899 || amt === 9709) {
+        if (notes.includes("750") || amt === 799 || amt === 7670) {
+          studentsLimit = 750;
+          planName = "باقة 750 طالب";
+        } else if (notes.includes("1500") || amt === 1299 || amt === 12470) {
+          studentsLimit = 1500;
+          planName = "باقة 1500 طالب";
+        } else if (notes.includes("300") || amt === 399 || amt === 3830) {
+          studentsLimit = 300;
+          planName = "باقة 300 طالب";
+        } else if (notes.includes("250") || amt === 899 || amt === 9709) {
           studentsLimit = 250;
           planName = "باقة 250 طالب";
         } else if (notes.includes("500") || amt === 1499 || amt === 16189) {
           studentsLimit = 500;
           planName = "باقة 500 طالب";
+        } else if (notes.includes("100") || amt === 599 || amt === 6469) {
+          studentsLimit = 100;
+          planName = "باقة 100 طالب";
         }
       }
     }
@@ -120,7 +141,7 @@ export class BillingService {
       students_count: studentCount,
       students_limit: studentsLimit,
       plan_name: planName,
-      subscription_tier: tenant.subscription_tier || (studentsLimit === 250 ? "growth" : studentsLimit === 500 ? "pro" : "starter"),
+      subscription_tier: tenant.subscription_tier || (studentsLimit >= 1500 ? "pro" : studentsLimit >= 750 ? "growth" : "starter"),
     };
   }
 

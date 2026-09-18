@@ -47,10 +47,22 @@ export class AdminOpsService {
     const notes = proof.admin_notes || "";
     const amt = Number(proof.amount || 0);
     let targetTier = tenant?.subscription_tier || "starter";
-    let targetLimit = 100;
-    let targetPlanName = "باقة 100 طالب";
+    let targetLimit = 300;
+    let targetPlanName = "باقة 300 طالب";
 
-    if (notes.includes("250") || amt === 899 || amt === 9709) {
+    if (notes.includes("750") || amt === 799 || amt === 7670) {
+      targetTier = "growth";
+      targetLimit = 750;
+      targetPlanName = "باقة 750 طالب";
+    } else if (notes.includes("1500") || amt === 1299 || amt === 12470) {
+      targetTier = "pro";
+      targetLimit = 1500;
+      targetPlanName = "باقة 1500 طالب";
+    } else if (notes.includes("300") || amt === 399 || amt === 3830) {
+      targetTier = "starter";
+      targetLimit = 300;
+      targetPlanName = "باقة 300 طالب";
+    } else if (notes.includes("250") || amt === 899 || amt === 9709) {
       targetTier = "growth";
       targetLimit = 250;
       targetPlanName = "باقة 250 طالب";
@@ -112,17 +124,33 @@ export class AdminOpsService {
     const requestedTier = dto.tier || dto.subscription_tier || dto.plan;
     if (requestedTier) {
       const lower = requestedTier.toLowerCase();
-      let limit = 100;
-      let name = "باقة 100 طالب";
+      let limit = 300;
+      let name = "باقة 300 طالب";
       let tier = "starter";
-      if (lower.includes("250") || lower === "growth") {
+      if (lower.includes("750") || lower === "growth") {
+        limit = 750;
+        name = "باقة 750 طالب";
+        tier = "growth";
+      } else if (lower.includes("1500") || lower === "pro") {
+        limit = 1500;
+        name = "باقة 1500 طالب";
+        tier = "pro";
+      } else if (lower.includes("300") || lower === "starter") {
+        limit = 300;
+        name = "باقة 300 طالب";
+        tier = "starter";
+      } else if (lower.includes("250")) {
         limit = 250;
         name = "باقة 250 طالب";
         tier = "growth";
-      } else if (lower.includes("500") || lower === "pro") {
+      } else if (lower.includes("500")) {
         limit = 500;
         name = "باقة 500 طالب";
         tier = "pro";
+      } else if (lower.includes("100")) {
+        limit = 100;
+        name = "باقة 100 طالب";
+        tier = "starter";
       }
       updatePayload.subscription_tier = tier;
       const tenant = await this.repo.getTenant(tenantId);

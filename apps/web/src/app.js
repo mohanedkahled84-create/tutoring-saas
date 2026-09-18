@@ -300,7 +300,7 @@ class CentrlyApp {
               total_tenants: tenants.length || overview.total_tenants || 0,
               active_tenants: activeCount || overview.active_tenants || 0,
               trial_tenants: trialCount || overview.trial_tenants || 0,
-              mrr_egp: (activeCount * 599) || overview.mrr_egp || 0,
+              mrr_egp: (activeCount * 799) || overview.mrr_egp || 0,
               total_students: overview.total_students || 0,
               total_sessions: overview.total_sessions || 0,
               whatsapp: overview.whatsapp || { total_sent: 0, total_failed: 0, estimated_cost_egp: 0 },
@@ -2785,7 +2785,7 @@ class CentrlyApp {
   }
 
   async saveInlineNewStudentAndAttend() {
-    const studentLimit = this.billingState?.students_limit || 100;
+    const studentLimit = this.billingState?.students_limit || 300;
     const currentCount = (this.students || []).length;
     if (currentCount >= studentLimit) {
       const storageKey = 'centrly_quota_exceeded_timestamp';
@@ -4427,7 +4427,7 @@ class CentrlyApp {
 
   // Functional Add Student Modal (DEV-89: Student Phone Mandatory)
   openAddStudentModal() {
-    const studentLimit = this.billingState?.students_limit || 100;
+    const studentLimit = this.billingState?.students_limit || 300;
     const currentCount = (this.students || []).length;
     if (currentCount >= studentLimit) {
       const storageKey = 'centrly_quota_exceeded_timestamp';
@@ -6892,7 +6892,7 @@ https://centerly-platform.vercel.app/p/p16766044
   filterLogs() {}
 
   openImportModal() {
-    const studentLimit = this.billingState?.students_limit || 100;
+    const studentLimit = this.billingState?.students_limit || 300;
     const currentCount = (this.students || []).length;
     if (currentCount >= studentLimit) {
       const storageKey = 'centrly_quota_exceeded_timestamp';
@@ -8165,7 +8165,7 @@ https://centerly-platform.vercel.app/p/p16766044
           <p style="font-size: 0.9rem; color: #475569; line-height: 1.6; margin: 0 0 1.25rem 0;">
             لقد استهلكت كامل سعة الطلاب المتاحة في باقتك (<strong>${currentCount} من أصل ${limit} طالب</strong>) وتجاوزت فترة السماح المحددة بـ 3 أيام.
             <br>
-            لمواصلة إضافة الطلاب الجدد، يرجى ترقية باقتك إلى باقة أعلى (250 أو 500 طالب).
+            لمواصلة إضافة الطلاب الجدد، يرجى ترقية باقتك إلى باقة أعلى (750 أو 1500 طالب).
           </p>
           <div style="display: flex; gap: 0.75rem; justify-content: center;">
             <button class="btn btn-secondary" onclick="document.getElementById('quotaBlockedModal')?.remove()">إغلاق</button>
@@ -8182,17 +8182,17 @@ https://centerly-platform.vercel.app/p/p16766044
 
   contactEnterpriseWhatsApp() {
     const phone = '201010979708';
-    const message = encodeURIComponent('السلام عليكم، عايز أعمل مجموعة فوق 500 طالب ومحتاج أعرف التفاصيل والأسعار.');
+    const message = encodeURIComponent('السلام عليكم، عايز أعمل باقة فوق 1500 طالب ومحتاج أعرف التفاصيل والأسعار.');
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
   }
 
   openPlanChoiceModal() {
     const isYearly = (this.billingCycle === 'yearly');
-    const userPlanName = this.billingState?.plan_name || 'باقة 100 طالب';
+    const userPlanName = this.billingState?.plan_name || 'باقة 300 طالب';
     const plans = [
-      { name: 'باقة 100 طالب', monthly: 599, yearly: 6469 },
-      { name: 'باقة 250 طالب', monthly: 899, yearly: 9709 },
-      { name: 'باقة 500 طالب', monthly: 1499, yearly: 16189 },
+      { name: 'باقة 300 طالب', monthly: 399, yearly: 3830 },
+      { name: 'باقة 750 طالب', monthly: 799, yearly: 7670 },
+      { name: 'باقة 1500 طالب', monthly: 1299, yearly: 12470 },
     ];
     const currentMatched = plans.find(p => userPlanName.includes(p.name)) || plans[0];
     const currentPrice = isYearly ? currentMatched.yearly : currentMatched.monthly;
@@ -8225,7 +8225,7 @@ https://centerly-platform.vercel.app/p/p16766044
               <span class="badge badge-secondary" style="font-weight: 700;">اختيار سعة جديدة</span>
             </div>
             <p style="font-size: 0.8rem; color: #64748b; margin: 0;">
-              استعراض باقات الـ 250 والـ 500 طالب والاشتراك السنوي بخصم 10%.
+              استعراض باقات الـ 750 والـ 1500 طالب والاشتراك السنوي بخصم 20%.
             </p>
           </div>
         </div>
@@ -8235,7 +8235,7 @@ https://centerly-platform.vercel.app/p/p16766044
     this.showModal('تجديد أو ترقية الاشتراك', bodyHtml);
   }
 
-  openPaymentProofModal(planName = 'باقة 100 طالب', amount = 599, billingCycle = 'monthly') {
+  openPaymentProofModal(planName = 'باقة 300 طالب', amount = 399, billingCycle = 'monthly') {
     const existing = document.getElementById('paymentProofModal');
     if (existing) existing.remove();
 
@@ -8245,7 +8245,7 @@ https://centerly-platform.vercel.app/p/p16766044
     this.currentEffectiveAmount = Number(amount);
 
     const isYearly = (billingCycle === 'yearly');
-    const periodLabel = isYearly ? 'اشتراك سنوي (خصم 10%)' : 'اشتراك شهري';
+    const periodLabel = isYearly ? 'اشتراك سنوي (خصم 20%)' : 'اشتراك شهري';
 
     const modalHtml = `
       <div id="paymentProofModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 9999; padding: 1rem; overflow-y: auto;" dir="rtl">
@@ -11278,9 +11278,9 @@ https://centerly-platform.vercel.app/p/p16766044
         <div class="form-group" style="margin-bottom: 1rem;">
           <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">خطة / باقة المشترك</label>
           <select id="overrideTier" class="form-select" style="width: 100%;">
-            <option value="starter" ${tier === 'starter' || tier.includes('100') ? 'selected' : ''}>باقة 100 طالب (Starter - سعة 100)</option>
-            <option value="growth" ${tier === 'growth' || tier.includes('250') ? 'selected' : ''}>باقة 250 طالب (Growth - سعة 250)</option>
-            <option value="pro" ${tier === 'pro' || tier.includes('500') ? 'selected' : ''}>باقة 500 طالب (Pro - سعة 500)</option>
+            <option value="starter" ${tier === 'starter' || tier.includes('300') || tier.includes('100') ? 'selected' : ''}>باقة 300 طالب (Starter - سعة 300)</option>
+            <option value="growth" ${tier === 'growth' || tier.includes('750') || tier.includes('250') ? 'selected' : ''}>باقة 750 طالب (Growth - سعة 750)</option>
+            <option value="pro" ${tier === 'pro' || tier.includes('1500') || tier.includes('500') ? 'selected' : ''}>باقة 1500 طالب (Pro - سعة 1500)</option>
           </select>
         </div>
 

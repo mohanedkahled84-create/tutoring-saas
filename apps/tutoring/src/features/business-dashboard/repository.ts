@@ -1,4 +1,4 @@
-﻿import { SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient } from "@supabase/supabase-js";
 import {
   BusinessDashboardData,
   IBusinessDashboardRepository,
@@ -42,8 +42,8 @@ export class SupabaseBusinessDashboardRepository implements IBusinessDashboardRe
     const failedCount = allMsgs.filter((m) => m.status === "failed").length;
     const estimatedCost = Math.round(sentCount * 0.05 * 100) / 100; // ~0.05 EGP per message
 
-    // MRR: Estimated 300 EGP per active paid tenant
-    const mrrEgp = activeTenants * 300;
+    // MRR: Estimated 399 EGP base per active paid tenant
+    const mrrEgp = activeTenants * 399;
 
     // At-Risk churn signals
     const now = Date.now();

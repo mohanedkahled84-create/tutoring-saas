@@ -41,7 +41,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
   const rawDate = billing.subscription_ends_at || billing.trial_ends_at || '';
   const formattedDate = formatArabicDate(rawDate);
   const currentStudents = billing.students_count || (window.centrlyApp?.students?.length || 0);
-  const studentLimit = billing.students_limit || 100;
+  const studentLimit = billing.students_limit || 300;
   const quotaPercent = Math.min(100, Math.round((currentStudents / studentLimit) * 100));
 
   let daysRemaining = typeof billing.days_remaining === 'number' ? billing.days_remaining : null;
