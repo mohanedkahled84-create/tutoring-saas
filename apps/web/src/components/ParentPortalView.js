@@ -51,11 +51,18 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
               <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%;"></span>
               محدّث لحظياً
             </span>
-            <button onclick="window.centrlyApp && window.centrlyApp.reloadParentPortal ? window.centrlyApp.reloadParentPortal() : window.location.reload()" 
-              style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #334155; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
-              ${getIcon('refresh', 13, '#334155')}
-              <span>تحديث البيانات</span>
-            </button>
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <button onclick="window.centrlyApp && window.centrlyApp.reloadParentPortal ? window.centrlyApp.reloadParentPortal() : window.location.reload()" 
+                style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #334155; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
+                ${getIcon('refresh', 13, '#334155')}
+                <span>تحديث البيانات</span>
+              </button>
+              <button onclick="window.centrlyApp && window.centrlyApp.handlePortalLogout ? window.centrlyApp.handlePortalLogout() : (window.location.href='/portal')" 
+                style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #b91c1c; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="تسجيل الخروج">
+                ${getIcon('logout', 13, '#b91c1c')}
+                <span>خروج</span>
+              </button>
+            </div>
           </div>
 
           <div class="brand-logo-badge" style="margin: 0 auto 0.5rem; width: 44px; height: 44px; font-size: 1.25rem;">سـ</div>

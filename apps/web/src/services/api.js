@@ -49,8 +49,8 @@ export async function request(endpoint, options = {}) {
 
     if (!res.ok) {
       if (res.status === 401) {
-        // Attempt silent session refresh if refresh token is available
-        const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/refresh') || endpoint.includes('/auth/signup');
+        // Attempt silent session refresh if refresh token is available (skip for auth and public endpoints)
+        const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/refresh') || endpoint.includes('/auth/signup') || endpoint.startsWith('/public/');
         if (!isAuthEndpoint && !options._retry) {
           const refreshToken = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_refresh_token') : null;
           if (refreshToken) {

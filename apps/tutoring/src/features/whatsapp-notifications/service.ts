@@ -1076,6 +1076,8 @@ export class WhatsAppNotificationsService {
     student_name: string;
     parent_phone: string;
     teacher_name?: string;
+    subject_name?: string;
+    portal_password?: string;
     portal_url: string;
   }): Promise<{
     success: boolean;
@@ -1084,7 +1086,7 @@ export class WhatsAppNotificationsService {
     recipient: string;
     gateway_sent: boolean;
   }> {
-    const { tenant_id, teacher_id, student_name, parent_phone, teacher_name, portal_url } = params;
+    const { tenant_id, teacher_id, student_name, parent_phone, teacher_name, subject_name, portal_password, portal_url } = params;
     const cleanPhone = (parent_phone || "").replace(/[\s\-\(\)\.]/g, "");
     if (!cleanPhone) {
       return {
@@ -1121,6 +1123,9 @@ export class WhatsAppNotificationsService {
     const messageText = generateParentPortalInviteMessage({
       student_name,
       teacher_name: teacher_name || undefined,
+      subject_name: subject_name || undefined,
+      parent_phone: cleanPhone,
+      portal_password: portal_password || undefined,
       portal_url,
     });
 
@@ -1150,6 +1155,8 @@ export class WhatsAppNotificationsService {
     student_name: string;
     student_phone: string;
     teacher_name?: string;
+    subject_name?: string;
+    portal_password?: string;
     portal_url: string;
   }): Promise<{
     success: boolean;
@@ -1158,7 +1165,7 @@ export class WhatsAppNotificationsService {
     recipient: string;
     gateway_sent: boolean;
   }> {
-    const { tenant_id, teacher_id, student_name, student_phone, teacher_name, portal_url } = params;
+    const { tenant_id, teacher_id, student_name, student_phone, teacher_name, subject_name, portal_password, portal_url } = params;
     const cleanPhone = (student_phone || "").replace(/[\s\-\(\)\.]/g, "");
     if (!cleanPhone) {
       return {
@@ -1195,6 +1202,9 @@ export class WhatsAppNotificationsService {
     const messageText = generateStudentPortalInviteMessage({
       student_name,
       teacher_name: teacher_name || undefined,
+      subject_name: subject_name || undefined,
+      student_phone: cleanPhone,
+      portal_password: portal_password || undefined,
       portal_url,
     });
 
@@ -1221,11 +1231,14 @@ export class WhatsAppNotificationsService {
     tenant_id: string;
     teacher_id?: string | null;
     teacher_name?: string;
+    subject_name?: string;
     students: Array<{
       student_id: string;
       student_name: string;
       parent_phone: string;
       portal_url: string;
+      portal_password?: string;
+      subject_name?: string;
     }>;
     pacingDelayMs?: number;
   }): Promise<{
@@ -1241,7 +1254,7 @@ export class WhatsAppNotificationsService {
       message_text?: string;
     }>;
   }> {
-    const { tenant_id, teacher_id, teacher_name, students, pacingDelayMs } = params;
+    const { tenant_id, teacher_id, teacher_name, subject_name, students, pacingDelayMs } = params;
     const results: Array<any> = [];
     let sentCount = 0;
     let failedCount = 0;
@@ -1272,6 +1285,8 @@ export class WhatsAppNotificationsService {
           student_name: item.student_name,
           parent_phone: item.parent_phone,
           teacher_name,
+          subject_name: item.subject_name || subject_name,
+          portal_password: item.portal_password,
           portal_url: item.portal_url,
         });
 
@@ -1327,6 +1342,7 @@ export class WhatsAppNotificationsService {
     tenant_id: string;
     teacher_id?: string | null;
     teacher_name?: string;
+    subject_name?: string;
     students: Array<{
       student_id: string;
       student_name: string;
@@ -1334,6 +1350,8 @@ export class WhatsAppNotificationsService {
       parent_phone?: string | null;
       student_portal_url: string;
       parent_portal_url: string;
+      portal_password?: string;
+      subject_name?: string;
     }>;
     pacingDelayMs?: number;
   }): Promise<{
@@ -1352,7 +1370,7 @@ export class WhatsAppNotificationsService {
       delay_applied_ms?: number;
     }>;
   }> {
-    const { tenant_id, teacher_id, teacher_name, students, pacingDelayMs } = params;
+    const { tenant_id, teacher_id, teacher_name, subject_name, students, pacingDelayMs } = params;
 
     // Hard cap at 24 students max per batch/day to guarantee 100% WhatsApp safety
     const safeStudentList = (students || []).slice(0, 24);
@@ -1389,6 +1407,8 @@ export class WhatsAppNotificationsService {
             student_name: item.student_name,
             student_phone: item.student_phone,
             teacher_name,
+            subject_name: item.subject_name || subject_name,
+            portal_password: item.portal_password,
             portal_url: item.student_portal_url,
           });
           if (sRes.success) {
@@ -1420,6 +1440,8 @@ export class WhatsAppNotificationsService {
             student_name: item.student_name,
             parent_phone: item.parent_phone,
             teacher_name,
+            subject_name: item.subject_name || subject_name,
+            portal_password: item.portal_password,
             portal_url: item.parent_portal_url,
           });
           if (pRes.success) {
@@ -2036,6 +2058,9 @@ export function generateQuizScoreMessage(options: QuizMessageOptions): string {
 export function generateParentPortalInviteMessage(params: {
   student_name: string;
   teacher_name?: string;
+  subject_name?: string;
+  parent_phone?: string;
+  portal_password?: string;
   portal_url: string;
 }): string {
   const student = (params.student_name || "").trim() || "الطالب";
@@ -2043,23 +2068,31 @@ export function generateParentPortalInviteMessage(params: {
   const teacher = rawTeacher.startsWith("مستر") || rawTeacher.startsWith("أ.") || rawTeacher.startsWith("أستاذ")
     ? rawTeacher
     : `مستر ${rawTeacher}`;
+  const subjectStr = params.subject_name ? `مادة ${params.subject_name}` : "المادة";
   const url = params.portal_url;
 
   const greetings = [
-    `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (${student}).`,
-    `تحياتنا الطيبة لولي أمر الطالب (${student})، السلام عليكم ورحمة الله وبركاته.`,
+    `أهلاً بحضرتك ولي أمر الطالب (${student})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح! 🌟`,
+    `السلام عليكم ورحمة الله وبركاته، تحياتنا الطيبة لولي أمر الطالب (${student}).`,
     `السلام عليكم ورحمة الله، أهلاً بحضرتك ولي أمر الطالب (${student}).`,
-    `تحية تربوية كريمة لولي أمر الطالب (${student})، السلام عليكم ورحمة الله.`,
+    `تحياتنا لولي أمر الطالب (${student}) ونتمنى له دوام التميز والتقدم!`,
   ];
   const greeting = greetings[Math.floor(Math.random() * greetings.length)];
 
   const intros = [
-    `حرصاً على متابعة المستوى الدراسي لـ (${student}) أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:`,
-    `لمتابعة مستوى وتفوق نجلكم (${student}) بصفة مستمرة، إليكم رابط المتابعة الإلكتروني الخاص به:`,
-    `تيسيراً على حضراتكم في متابعة أداء الطالب (${student})، نقدم لكم الرابط المباشر لملف المتابعة الخاص به:`,
-    `في إطار حرصنا على الشفافية والتواصل الدائم، نرفق لحضراتكم رابط المتابعة الأكاديمية الخاص بـ (${student}):`,
+    `يسعدنا تزويدكم ببيانات بوابة المتابعة الخاصة بـ ${subjectStr} مع ${teacher}:`,
+    `حرصاً على متابعة المستوى الدراسي لـ (${student}) أولاً بأول في ${subjectStr} مع ${teacher}:`,
+    `في إطار حرصنا على التواصل والتفوق المستمر، إليكم حساب المتابعة لـ ${subjectStr} مع ${teacher}:`,
+    `تيسيراً على حضراتكم في متابعة أداء الطالب (${student})، نرفق لكم حساب المتابعة في ${subjectStr}:`,
   ];
   const intro = intros[Math.floor(Math.random() * intros.length)];
+
+  const saveAlerts = [
+    `📌 *تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.`,
+    `📌 *خطوة ضرورية:* نرجو *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط ولتصلك كافة الإشعارات والتقارير بانتظام.`,
+    `📌 *ملاحظة هامة:* فضلاً *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط المباشر واستلام إفادات الدرجات والغياب فور رصدها.`,
+  ];
+  const saveAlert = saveAlerts[Math.floor(Math.random() * saveAlerts.length)];
 
   const closings = [
     `مع خالص تمنياتنا للطالب (${student}) بدوام التفوق والنجاح.\nمع تحيات: ${teacher}`,
@@ -2069,21 +2102,27 @@ export function generateParentPortalInviteMessage(params: {
   ];
   const closing = closings[Math.floor(Math.random() * closings.length)];
 
+  const credentialsBlock = params.portal_password
+    ? `🌐 *رابط بوابة المتابعة:*
+${url}
+
+📱 *اسم الدخول (رقم هاتفك):* ${params.parent_phone || "رقم هاتفك المسجل"}
+🔑 *كلمة المرور:* ${params.portal_password}`
+    : `*رابط المتابعة المباشر:*
+${url}`;
+
   return `${greeting}
 
 ${intro}
 
-⚠️ *خطوة هامة وأساسية لتفعيل الرابط:*
-يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط (Clickable) ومباشراً، ولضمان استلام إشعارات وتقارير الطالب أولاً بأول دون انقطاع.
+${credentialsBlock}
 
-*رابط المتابعة المباشر:*
-${url}
+*من خلال هذه البوابة يمكنكم في أي وقت:*
+- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.
+- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.
+- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.
 
-*من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول:*
-- متابعة تسجيل الحضور والغياب لحظياً مع كل حصة.
-- الاطلاع على درجات الكويزات والامتحانات الدورية فور رصدها.
-- متابعة الالتزام بتسليم وحل الواجبات المنزلية.
-- قراءة ملاحظات وتوجيهات المعلم المباشرة.
+${saveAlert}
 
 ${closing}`;
 }
@@ -2094,6 +2133,9 @@ ${closing}`;
 export function generateStudentPortalInviteMessage(params: {
   student_name: string;
   teacher_name?: string;
+  subject_name?: string;
+  student_phone?: string;
+  portal_password?: string;
   portal_url: string;
 }): string {
   const student = (params.student_name || "").trim() || "الطالب";
@@ -2101,21 +2143,31 @@ export function generateStudentPortalInviteMessage(params: {
   const teacher = rawTeacher.startsWith("مستر") || rawTeacher.startsWith("أ.") || rawTeacher.startsWith("أستاذ")
     ? rawTeacher
     : `مستر ${rawTeacher}`;
+  const subjectStr = params.subject_name ? `مادة ${params.subject_name}` : "دروسك";
   const url = params.portal_url;
 
   const greetings = [
-    `السلام عليكم ورحمة الله وبركاته، الطالب (${student}).`,
-    `أهلاً بك يا (${student})، السلام عليكم ورحمة الله وبركاته.`,
-    `تحياتنا الطيبة لك يا (${student}).`,
+    `أهلاً بك يا (${student})، نتمنى لك كل التوفيق والتميز دائماً! 🚀`,
+    `السلام عليكم ورحمة الله وبركاته، عزيزنا الطالب (${student}).`,
+    `تحياتنا الطيبة لك يا (${student}) وأهلاً بك معنا!`,
+    `أهلاً بك يا (${student}) في رحلة التفوق والنجاح! 🌟`,
   ];
   const greeting = greetings[Math.floor(Math.random() * greetings.length)];
 
   const intros = [
-    `يسعدنا تزويدك برابط بوابة الطالب الرسمية الخاصة بك لمتابعة دروسك وتسليم واجباتك أولاً بأول:`,
-    `إليك الرابط المباشر لمنصتك التعليمية الخاصة لتحميل المذكرات ومتابعة الواجبات ورفع الحلول:`,
-    `حرصاً على تنظيم مذاكرتك وتفوقك، هذا هو رابط بوابتك التعليمية الرسمية:`,
+    `تم تفعيل بوابتك التعليمية لمتابعة ${subjectStr} مع ${teacher}:`,
+    `إليك حساب بوابتك التعليمية الرسمية لمتابعة ${subjectStr} وتسليم واجباتك أولاً بأول:`,
+    `حرصاً على تنظيم مذاكرتك وتفوقك، إليك بيانات بوابتك التعليمية مع ${teacher}:`,
+    `يسعدنا تزويدك بحساب بوابتك الخاصة لتحميل المذكرات ومتابعة تقييماتك في ${subjectStr}:`,
   ];
   const intro = intros[Math.floor(Math.random() * intros.length)];
+
+  const saveAlerts = [
+    `📌 *تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والمذكرات الجديدة.`,
+    `📌 *خطوة ضرورية:* نرجو *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط واستلام إشعارات الحصص والواجبات أولاً بأول.`,
+    `📌 *ملاحظة:* احرص على *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لضمان فتح الروابط مباشرة واستلام تنبيهات المادة باستمرار.`,
+  ];
+  const saveAlert = saveAlerts[Math.floor(Math.random() * saveAlerts.length)];
 
   const closings = [
     `مع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacher}`,
@@ -2124,26 +2176,32 @@ export function generateStudentPortalInviteMessage(params: {
   ];
   const closing = closings[Math.floor(Math.random() * closings.length)];
 
+  const credentialsBlock = params.portal_password
+    ? `🌐 *رابط بوابتك التعليمية:*
+${url}
+
+📱 *اسم الدخول (رقم هاتفك):* ${params.student_phone || "رقم هاتفك المسجل"}
+🔑 *كلمة المرور:* ${params.portal_password}`
+    : `*رابط بوابتك التعليمية المباشر:*
+${url}`;
+
   return `${greeting}
 
 ${intro}
 
-⚠️ *خطوة هامة وأساسية لتفعيل الرابط:*
-يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط (Clickable) ومباشراً، ولتصلك تنبيهات الحصص والمذكرات الجديدة أولاً بأول.
-
-*رابط بوابتك التعليمية المباشر:*
-${url}
+${credentialsBlock}
 
 *من خلال هذه البوابة يمكنك في أي وقت:*
 - تحميل المذكرات وملازم الشرح وملفات الـ PDF.
 - معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.
-- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها من المعلم.
+- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.
 - الاطلاع على درجات الكويزات وسجل حضورك.
 
-*ملحوظة:* احفظ هذا الرابط في المفضلة للرجوع إليه دائماً.
+${saveAlert}
 
 ${closing}`;
 }
+
 
 // Daily Volume Tracking (DEV-36)
 interface DailyQuotaRecord {

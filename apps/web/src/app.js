@@ -12,6 +12,7 @@ import { renderGroupsView } from './components/GroupsView.js?v=2.8.0';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.0.0';
+import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.0.0';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=4.0.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js';
 import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
@@ -409,6 +410,25 @@ class CentrlyApp {
       return;
     }
 
+    // DEV-PORTAL: Unified Portal Route (/portal or ?view=portal)
+    const cleanPath = (window.location.pathname || '').trim().replace(/\/+$/, '');
+    if (cleanPath === '/portal' || urlParams.get('view') === 'portal' || (urlParams.get('portal') === 'login' && !portalToken)) {
+      const cachedPortalToken = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||
+                                (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_token'));
+      const cachedPortalRole = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_role')) ||
+                               (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_role'));
+      if (cachedPortalToken) {
+        if (cachedPortalRole === 'student') {
+          await this.loadStudentPortal(cachedPortalToken);
+        } else {
+          await this.loadParentPortal(cachedPortalToken);
+        }
+        return;
+      }
+      this.renderPortalLogin();
+      return;
+    }
+
     // Check for password recovery hash / query (from Supabase password reset email)
     const hash = window.location.hash || '';
     const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
@@ -746,6 +766,104 @@ class CentrlyApp {
     } else {
       window.location.reload();
     }
+  }
+
+  // DEV-PORTAL: Unified Student & Parent Portal Login & Session Handlers
+  renderPortalLogin(errorMessage = '') {
+    this.currentRoute = 'portal';
+    const appEl = document.getElementById('app');
+    if (appEl) {
+      appEl.innerHTML = renderUnifiedPortalLoginView(errorMessage);
+    }
+    if (window.history?.replaceState && window.location.pathname !== '/portal') {
+      window.history.replaceState(null, '', '/portal');
+    }
+  }
+
+  togglePortalPasswordVisibility() {
+    this.togglePasswordVisibility('portalPassword');
+  }
+
+  async handlePortalLogin(event) {
+    if (event && event.preventDefault) event.preventDefault();
+    const identInput = document.getElementById('portalIdentifier');
+    const passInput = document.getElementById('portalPassword');
+    const rememberCheckbox = document.getElementById('portalRememberMe');
+    const submitBtn = document.getElementById('portalSubmitBtn');
+    const spinner = document.getElementById('portalSubmitSpinner');
+    const alertEl = document.getElementById('portalLoginAlert');
+
+    const identifier = identInput ? identInput.value.trim() : '';
+    const password = passInput ? passInput.value.trim() : '';
+    const rememberMe = rememberCheckbox ? rememberCheckbox.checked : true;
+
+    if (!identifier || !password) {
+      if (alertEl) {
+        alertEl.style.display = 'block';
+        alertEl.textContent = 'يرجى كتابة رقم الهاتف أو كود الطالب وكلمة المرور';
+      }
+      return;
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline';
+    if (alertEl) alertEl.style.display = 'none';
+
+    try {
+      const res = await request('/public/portal/login', {
+        method: 'POST',
+        body: { identifier, password },
+      });
+
+      if (res && res.success && res.token) {
+        if (rememberMe) {
+          try {
+            localStorage.setItem('centrly_portal_token', res.token);
+            localStorage.setItem('centrly_portal_role', res.role || 'parent');
+          } catch (_) {}
+        } else {
+          try {
+            sessionStorage.setItem('centrly_portal_token', res.token);
+            sessionStorage.setItem('centrly_portal_role', res.role || 'parent');
+          } catch (_) {}
+        }
+
+        this.showToast('مرحباً بك! تم تسجيل الدخول بنجاح', 'success');
+
+        if (res.role === 'student') {
+          await this.loadStudentPortal(res.token);
+        } else {
+          await this.loadParentPortal(res.token);
+        }
+      } else {
+        throw new Error(res?.error?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البيانات.');
+      }
+    } catch (err) {
+      const errorMsg = err?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البيانات.';
+      if (alertEl) {
+        alertEl.style.display = 'block';
+        alertEl.textContent = errorMsg;
+      } else {
+        this.renderPortalLogin(errorMsg);
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+    }
+  }
+
+  handlePortalLogout() {
+    try {
+      localStorage.removeItem('centrly_portal_token');
+      localStorage.removeItem('centrly_portal_role');
+      sessionStorage.removeItem('centrly_portal_token');
+      sessionStorage.removeItem('centrly_portal_role');
+      sessionStorage.removeItem('centrly_student_portal_token');
+    } catch (_) {}
+    this._parentPortalToken = null;
+    this._studentPortalToken = null;
+    this.showToast('تم تسجيل الخروج بنجاح', 'info');
+    this.renderPortalLogin();
   }
 
   downloadStudentCardPng(student) {

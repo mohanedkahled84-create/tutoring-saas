@@ -174,8 +174,14 @@ studentsRouter.post("/:id/send-parent-link", async (req: AuthenticatedRequest, r
       token = generateParentPortalToken(student.id, tenantId as string, 365);
     }
 
+    let portalPassword = student.portal_password;
+    if (!portalPassword) {
+      portalPassword = Math.floor(100000 + Math.random() * 900000).toString();
+      await studentsService.updateStudent(student.id, { portal_password: portalPassword }).catch(() => {});
+    }
+
     const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
-    const portalUrl = buildShortPortalUrl(student.id, "parent", canonicalOrigin);
+    const portalUrl = `${canonicalOrigin}/portal`;
 
     const whatsAppService = getServices(req).whatsapp;
     const result = await whatsAppService.sendParentPortalLink({
@@ -185,6 +191,8 @@ studentsRouter.post("/:id/send-parent-link", async (req: AuthenticatedRequest, r
       student_name: student.name,
       parent_phone: parentPhone,
       teacher_name: teacher_name || req.user?.name || req.user?.full_name || undefined,
+      subject_name: (req.body?.subject_name || (req.user as any)?.subject_name) || undefined,
+      portal_password: portalPassword,
       portal_url: portalUrl,
     });
 
@@ -193,6 +201,7 @@ studentsRouter.post("/:id/send-parent-link", async (req: AuthenticatedRequest, r
       await studentsService.updateStudent(student.id, {
         parent_portal_sent_at: now,
         parent_portal_token: token,
+        portal_password: portalPassword,
       });
 
       res.json({
@@ -246,8 +255,14 @@ studentsRouter.post("/:id/send-student-link", async (req: AuthenticatedRequest, 
       token = generateParentPortalToken(student.id, tenantId as string, 365);
     }
 
+    let portalPassword = student.portal_password;
+    if (!portalPassword) {
+      portalPassword = Math.floor(100000 + Math.random() * 900000).toString();
+      await studentsService.updateStudent(student.id, { portal_password: portalPassword }).catch(() => {});
+    }
+
     const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
-    const portalUrl = buildShortPortalUrl(student.id, "student", canonicalOrigin);
+    const portalUrl = `${canonicalOrigin}/portal`;
 
     const whatsAppService = getServices(req).whatsapp;
     const result = await whatsAppService.sendStudentPortalLink({
@@ -257,6 +272,8 @@ studentsRouter.post("/:id/send-student-link", async (req: AuthenticatedRequest, 
       student_name: student.name,
       student_phone: studentPhone,
       teacher_name: teacher_name || req.user?.name || req.user?.full_name || undefined,
+      subject_name: (req.body?.subject_name || (req.user as any)?.subject_name) || undefined,
+      portal_password: portalPassword,
       portal_url: portalUrl,
     });
 
@@ -265,6 +282,7 @@ studentsRouter.post("/:id/send-student-link", async (req: AuthenticatedRequest, 
       await studentsService.updateStudent(student.id, {
         student_portal_sent_at: now,
         parent_portal_token: token,
+        portal_password: portalPassword,
       });
 
       res.json({
@@ -323,16 +341,23 @@ studentsRouter.post("/batch-send-parent-links", async (req: AuthenticatedRequest
     }
 
     const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const subjectName = req.body?.subject_name || (req.user as any)?.subject_name || undefined;
     const studentsPayload = targetStudents.map((s) => {
       let token = s.parent_portal_token;
       if (!token) {
         token = generateParentPortalToken(s.id, tenantId || "default", 365);
       }
+      let portalPassword = s.portal_password;
+      if (!portalPassword) {
+        portalPassword = Math.floor(100000 + Math.random() * 900000).toString();
+      }
       return {
         student_id: s.id,
         student_name: s.name,
         parent_phone: s.parent_phone,
-        portal_url: buildShortPortalUrl(s.id, "parent", canonicalOrigin),
+        portal_password: portalPassword,
+        subject_name: subjectName,
+        portal_url: `${canonicalOrigin}/portal`,
         token,
       };
     });
@@ -342,6 +367,7 @@ studentsRouter.post("/batch-send-parent-links", async (req: AuthenticatedRequest
       tenant_id: tenantId || "default",
       teacher_id: teacher_id || req.user?.id || null,
       teacher_name: teacher_name || (req.user as any)?.name,
+      subject_name: subjectName,
       students: studentsPayload,
       pacingDelayMs: pacing_delay_ms,
     });
@@ -351,10 +377,12 @@ studentsRouter.post("/batch-send-parent-links", async (req: AuthenticatedRequest
     for (const r of batchRes.results) {
       if (r.status === "sent") {
         const item = studentsPayload.find((p) => p.student_id === r.student_id);
-        await studentsService.updateStudent(r.student_id, {
+        const updates: Record<string, any> = {
           parent_portal_sent_at: now,
-          parent_portal_token: item?.token,
-        }).catch(() => {});
+        };
+        if (item?.token) updates.parent_portal_token = item.token;
+        if (item?.portal_password) updates.portal_password = item.portal_password;
+        await studentsService.updateStudent(r.student_id, updates).catch(() => {});
       }
     }
 
@@ -410,18 +438,25 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
     targetStudents = targetStudents.slice(0, 24);
 
     const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const subjectName = req.body?.subject_name || (req.user as any)?.subject_name || undefined;
     const studentsPayload = targetStudents.map((s) => {
       let token = s.parent_portal_token;
       if (!token) {
         token = generateParentPortalToken(s.id, tenantId || "default", 365);
+      }
+      let portalPassword = s.portal_password;
+      if (!portalPassword) {
+        portalPassword = Math.floor(100000 + Math.random() * 900000).toString();
       }
       return {
         student_id: s.id,
         student_name: s.name,
         student_phone: s.student_phone || undefined,
         parent_phone: s.parent_phone || undefined,
-        student_portal_url: buildShortPortalUrl(s.id, "student", canonicalOrigin),
-        parent_portal_url: buildShortPortalUrl(s.id, "parent", canonicalOrigin),
+        portal_password: portalPassword,
+        subject_name: subjectName,
+        student_portal_url: `${canonicalOrigin}/portal`,
+        parent_portal_url: `${canonicalOrigin}/portal`,
         token,
       };
     });
@@ -436,6 +471,7 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
         tenant_id: tenantId || "default",
         teacher_id: teacher_id || req.user?.id || null,
         teacher_name: teacher_name || (req.user as any)?.name,
+        subject_name: subjectName,
         students: studentsPayload,
         pacingDelayMs: pacing_delay_ms,
       });
@@ -447,6 +483,7 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
         if (r.student_sent) updates.student_portal_sent_at = now;
         if (r.parent_sent) updates.parent_portal_sent_at = now;
         if (item?.token) updates.parent_portal_token = item.token;
+        if (item?.portal_password) updates.portal_password = item.portal_password;
         if (Object.keys(updates).length > 0) {
           await studentsService.updateStudent(r.student_id, updates).catch(() => {});
         }
@@ -470,6 +507,7 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
           tenant_id: tenantId || "default",
           teacher_id: teacher_id || req.user?.id || null,
           teacher_name: teacher_name || (req.user as any)?.name,
+          subject_name: subjectName,
           students: studentsPayload,
           pacingDelayMs: pacing_delay_ms,
         });
@@ -481,6 +519,7 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
           if (r.student_sent) updates.student_portal_sent_at = now;
           if (r.parent_sent) updates.parent_portal_sent_at = now;
           if (item?.token) updates.parent_portal_token = item.token;
+          if (item?.portal_password) updates.portal_password = item.portal_password;
           if (Object.keys(updates).length > 0) {
             await studentsService.updateStudent(r.student_id, updates).catch(() => {});
           }

@@ -2,6 +2,9 @@ import { Router, Response, Request } from "express";
 import { validateBody, publicSelfRegisterSchema } from "../middleware/validation.js";
 import { getServiceSupabaseClient } from "../../supabase.js";
 import { verifyParentPortalToken, generateParentPortalToken } from "../utils/tokens.js";
+import { getServices } from "../../composition.js";
+import { AuthenticatedRequest } from "../types/index.js";
+import { authRateLimiter } from "../middleware/rateLimit.js";
 
 export const publicRouter = Router();
 
@@ -170,5 +173,85 @@ publicRouter.get("/s/:code", async (req: Request, res: Response): Promise<void> 
   const canonicalOrigin = "https://centerly-platform.vercel.app";
   res.redirect(`${canonicalOrigin}/s/${code}`);
 });
+
+// DEV-PORTAL: POST /api/public/portal/login - Authenticate student/parent from /portal
+publicRouter.post("/portal/login", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  const identifier = typeof req.body.identifier === "string" ? req.body.identifier.trim() : "";
+  const password = typeof req.body.password === "string" ? req.body.password.trim() : "";
+
+  if (!identifier || !password) {
+    res.status(400).json({
+      error: { code: "BAD_REQUEST", message: "يرجى إدخال رقم الهاتف أو كود الطالب وكلمة المرور" },
+    });
+    return;
+  }
+
+  try {
+    const studentsService = getServices(req as AuthenticatedRequest).students;
+    const result = await studentsService.authenticatePortalUser({ identifier, password });
+    res.json(result);
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      if (err.message === "INVALID_CREDENTIALS") {
+        res.status(401).json({
+          error: { code: "INVALID_CREDENTIALS", message: "رقم الهاتف أو كلمة المرور غير صحيحة" },
+        });
+        return;
+      }
+      if (err.message === "MISSING_CREDENTIALS") {
+        res.status(400).json({
+          error: { code: "BAD_REQUEST", message: "يرجى كتابة رقم الهاتف وكلمة المرور" },
+        });
+        return;
+      }
+    }
+    const msg = err instanceof Error ? err.message : "Internal error";
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: msg } });
+  }
+});
+
+// DEV-PORTAL: POST /api/public/portal/change-password - Change portal password
+publicRouter.post("/portal/change-password", async (req: Request, res: Response): Promise<void> => {
+  const studentId = typeof req.body.student_id === "string" ? req.body.student_id.trim() : "";
+  const oldPassword = typeof req.body.old_password === "string" ? req.body.old_password.trim() : "";
+  const newPassword = typeof req.body.new_password === "string" ? req.body.new_password.trim() : "";
+
+  if (!studentId || !newPassword) {
+    res.status(400).json({
+      error: { code: "BAD_REQUEST", message: "بيانات تغيير كلمة المرور غير مكتملة" },
+    });
+    return;
+  }
+
+  try {
+    const studentsService = getServices(req as AuthenticatedRequest).students;
+    await studentsService.changePortalPassword(studentId, oldPassword, newPassword);
+    res.json({ success: true, message: "تم تغيير كلمة المرور بنجاح" });
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      if (err.message === "INVALID_OLD_PASSWORD") {
+        res.status(401).json({
+          error: { code: "INVALID_OLD_PASSWORD", message: "كلمة المرور الحالية غير صحيحة" },
+        });
+        return;
+      }
+      if (err.message === "PASSWORD_TOO_SHORT") {
+        res.status(400).json({
+          error: { code: "PASSWORD_TOO_SHORT", message: "كلمة المرور يجب ألا تقل عن 4 خانات" },
+        });
+        return;
+      }
+      if (err.message === "STUDENT_NOT_FOUND") {
+        res.status(404).json({
+          error: { code: "NOT_FOUND", message: "الطالب غير موجود" },
+        });
+        return;
+      }
+    }
+    const msg = err instanceof Error ? err.message : "Internal error";
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: msg } });
+  }
+});
+
 
 
