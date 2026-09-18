@@ -1066,13 +1066,40 @@ class CentrlyApp {
     }
   }
 
-  togglePasswordVisibility(inputId, btn) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
+  togglePasswordVisibility(inputId, btnEl, event) {
+    if (event) {
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+      if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    }
+    const input = typeof inputId === 'string' ? document.getElementById(inputId) : inputId;
+    if (!input) {
+      console.warn('[Centrly] togglePasswordVisibility: input not found for id:', inputId);
+      return;
+    }
     const isPassword = input.type === 'password';
-    input.type = isPassword ? 'text' : 'password';
+    const newType = isPassword ? 'text' : 'password';
+    input.type = newType;
+    try {
+      input.setAttribute('type', newType);
+    } catch (_) {}
+
+    // Find and update button element
+    const btn = btnEl?.closest?.('button') || btnEl || input.parentElement?.querySelector('button');
     if (btn) {
       btn.innerHTML = getIcon(isPassword ? 'eyeOff' : 'eye', 18);
+      btn.title = isPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور';
+      btn.setAttribute('aria-label', isPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+      btn.style.opacity = '1';
+    }
+
+    // Preserve focus and cursor position if currently focused
+    if (document.activeElement === input) {
+      try {
+        if (input.setSelectionRange && input.value) {
+          const len = input.value.length;
+          input.setSelectionRange(len, len);
+        }
+      } catch (_) {}
     }
   }
 
@@ -9854,11 +9881,10 @@ https://centerly-platform.vercel.app/p/p16766044
           <label class="form-label" style="font-weight: 700;">رمز الأمان الحالي (القديم) *</label>
           <div style="position: relative;">
             <input type="password" id="inputCurrentPin" class="form-input" placeholder="أدخل الرمز الحالي" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required
-              style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900;"
+              style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
               autocomplete="off" autofocus>
-            <button type="button" onclick="window.centrlyApp.togglePinVisibility('inputCurrentPin', this)"
-              style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b;">
-              <span style="font-size: 0.75rem; font-weight: 700;">إظهار</span>
+            <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputCurrentPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
+              ${getIcon('eye', 18)}
             </button>
           </div>
         </div>
@@ -9868,11 +9894,10 @@ https://centerly-platform.vercel.app/p/p16766044
           <label class="form-label" style="font-weight: 700;">${hasExisting ? 'رمز الأمان الجديد (4-6 أرقام) *' : 'رمز الأمان (4-6 أرقام) *'}</label>
           <div style="position: relative;">
             <input type="password" id="inputNewPin" class="form-input" placeholder="••••" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required
-              style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900;"
+              style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
               autocomplete="off" ${hasExisting ? '' : 'autofocus'}>
-            <button type="button" onclick="window.centrlyApp.togglePinVisibility('inputNewPin', this)"
-              style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b;">
-              <span style="font-size: 0.75rem; font-weight: 700;">إظهار</span>
+            <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputNewPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
+              ${getIcon('eye', 18)}
             </button>
           </div>
         </div>
@@ -9881,11 +9906,10 @@ https://centerly-platform.vercel.app/p/p16766044
           <label class="form-label" style="font-weight: 700;">${hasExisting ? 'تأكيد رمز الأمان الجديد *' : 'تأكيد رمز الأمان *'}</label>
           <div style="position: relative;">
             <input type="password" id="inputConfirmPin" class="form-input" placeholder="أعد إدخال الرمز" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required
-              style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900;"
+              style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
               autocomplete="off">
-            <button type="button" onclick="window.centrlyApp.togglePinVisibility('inputConfirmPin', this)"
-              style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b;">
-              <span style="font-size: 0.75rem; font-weight: 700;">إظهار</span>
+            <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputConfirmPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
+              ${getIcon('eye', 18)}
             </button>
           </div>
         </div>
@@ -10014,9 +10038,14 @@ https://centerly-platform.vercel.app/p/p16766044
         </div>
 
         <div class="form-group" style="margin-bottom: 1.25rem;">
-          <input type="password" id="inputUnlockPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" autofocus required
-            style="text-align: center; letter-spacing: 0.5rem; font-size: 1.5rem; font-weight: 900;"
-            autocomplete="off">
+          <div style="position: relative;">
+            <input type="password" id="inputUnlockPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" autofocus required
+              style="text-align: center; letter-spacing: 0.5rem; font-size: 1.5rem; font-weight: 900; padding-left: 2.5rem;"
+              autocomplete="off">
+            <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputUnlockPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
+              ${getIcon('eye', 18)}
+            </button>
+          </div>
         </div>
 
         <div id="unlockPinError" style="display: none; color: #ef4444; font-size: 0.85rem; font-weight: 700; margin-bottom: 1rem; text-align: center;"></div>
@@ -11698,67 +11727,31 @@ https://centerly-platform.vercel.app/p/p16766044
     }
   }
 
-  togglePasswordVisibility(inputId, btnEl, event) {
-    if (event) {
-      if (typeof event.preventDefault === 'function') event.preventDefault();
-      if (typeof event.stopPropagation === 'function') event.stopPropagation();
-    }
-    const input = document.getElementById(inputId);
-    if (!input) {
-      console.warn('[Centrly] togglePasswordVisibility: input not found for id:', inputId);
-      return;
-    }
-    const isPassword = input.type === 'password';
-    const newType = isPassword ? 'text' : 'password';
-    input.type = newType;
-    try {
-      input.setAttribute('type', newType);
-    } catch (_) {}
-
-    // Find and update button element
-    const btn = btnEl || input.parentElement?.querySelector('button');
-    if (btn) {
-      btn.innerHTML = getIcon(isPassword ? 'eyeOff' : 'eye', 18);
-      btn.title = isPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور';
-      btn.setAttribute('aria-label', isPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
-      btn.style.opacity = '1';
-    }
-
-    // Keep cursor at end of input
-    try {
-      input.focus();
-      if (input.setSelectionRange && input.value) {
-        const len = input.value.length;
-        input.setSelectionRange(len, len);
-      }
-    } catch (_) {}
-  }
-
   togglePinVisibility(inputId, btnEl, event) {
-    if (event) {
-      if (typeof event.preventDefault === 'function') event.preventDefault();
-      if (typeof event.stopPropagation === 'function') event.stopPropagation();
-    }
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    const isPassword = input.type === 'password';
-    const newType = isPassword ? 'text' : 'password';
-    input.type = newType;
-    try {
-      input.setAttribute('type', newType);
-    } catch (_) {}
-
-    if (btnEl) {
+    if (btnEl && btnEl.querySelector('span')) {
+      if (event) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+      }
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const isPassword = input.type === 'password';
+      const newType = isPassword ? 'text' : 'password';
+      input.type = newType;
+      try { input.setAttribute('type', newType); } catch (_) {}
       const span = btnEl.querySelector('span') || btnEl;
       span.innerText = isPassword ? 'إخفاء' : 'إظهار';
-    }
-    try {
-      input.focus();
-      if (input.setSelectionRange && input.value) {
-        const len = input.value.length;
-        input.setSelectionRange(len, len);
+      if (document.activeElement === input) {
+        try {
+          if (input.setSelectionRange && input.value) {
+            const len = input.value.length;
+            input.setSelectionRange(len, len);
+          }
+        } catch (_) {}
       }
-    } catch (_) {}
+    } else {
+      this.togglePasswordVisibility(inputId, btnEl, event);
+    }
   }
 }
 

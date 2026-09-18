@@ -178,7 +178,7 @@ export function renderAuthScreens() {
               <label class="form-label">كلمة المرور الجديدة</label>
               <div style="position: relative;">
                 <input type="password" id="resetNewPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
-                <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('resetNewPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+                <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('resetNewPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                   ${getIcon('eye', 18)}
                 </button>
               </div>
@@ -187,7 +187,7 @@ export function renderAuthScreens() {
               <label class="form-label">تأكيد كلمة المرور الجديدة</label>
               <div style="position: relative;">
                 <input type="password" id="resetConfirmPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
-                <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('resetConfirmPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+                <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('resetConfirmPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                   ${getIcon('eye', 18)}
                 </button>
               </div>

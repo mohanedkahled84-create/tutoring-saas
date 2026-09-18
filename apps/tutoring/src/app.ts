@@ -50,6 +50,9 @@ export function createApp(): Express {
     "https://centerly-platform.vercel.app",
     "https://centrly-platform.vercel.app",
     "https://centerly-app.vercel.app",
+    "https://centrly-platform-mohaned-khaled1.vercel.app",
+    "https://centerly-platform-mohaned-khaled1.vercel.app",
+    "https://web-gules-xi-53.vercel.app",
     "http://localhost:3000",
     "http://localhost:5000",
     "http://localhost:5173",
@@ -65,7 +68,12 @@ export function createApp(): Express {
     cors({
       origin: (origin, callback) => {
         const isLocalNetwork = origin && /^http:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin);
-        if (!origin || configuredOrigins.includes(origin) || isLocalNetwork) {
+        const isAllowedDomainPattern = origin && (
+          /^https:\/\/([a-z0-9-]+\.)*centerly-eg\.com$/i.test(origin) ||
+          /^https:\/\/([a-z0-9-]+\.)*centrly\.app$/i.test(origin) ||
+          /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i.test(origin)
+        );
+        if (!origin || configuredOrigins.includes(origin) || defaultAllowedOrigins.includes(origin) || isLocalNetwork || isAllowedDomainPattern) {
           callback(null, true);
         } else {
           const corsErr: Error & { statusCode?: number; code?: string } = new Error("CORS: Origin not allowed");

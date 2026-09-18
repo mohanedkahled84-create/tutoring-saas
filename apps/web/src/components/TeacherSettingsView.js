@@ -219,7 +219,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                         <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">كلمة المرور الحالية (القديمة) *</label>
                         <div style="position: relative;">
                           <input type="password" id="settingsCurrentPassword" class="form-input" required placeholder="••••••••" dir="ltr" style="padding-left: 2.5rem;">
-                          <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('settingsCurrentPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+                          <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('settingsCurrentPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                             ${getIcon('eye', 18)}
                           </button>
                         </div>
@@ -229,7 +229,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                         <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">كلمة المرور الجديدة *</label>
                         <div style="position: relative;">
                           <input type="password" id="settingsNewPassword" class="form-input" required placeholder="••••••••" dir="ltr" style="padding-left: 2.5rem;" oninput="window.centrlyApp.validateSettingsPasswordLive(this.value)">
-                          <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('settingsNewPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+                          <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('settingsNewPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                             ${getIcon('eye', 18)}
                           </button>
                         </div>
@@ -246,7 +246,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                         <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">تأكيد كلمة المرور الجديدة *</label>
                         <div style="position: relative;">
                           <input type="password" id="settingsConfirmPassword" class="form-input" required placeholder="••••••••" dir="ltr" style="padding-left: 2.5rem;">
-                          <button type="button" onclick="window.centrlyApp.togglePasswordVisibility('settingsConfirmPassword', this)" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--centrly-text); padding: 4px;">
+                          <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('settingsConfirmPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                             ${getIcon('eye', 18)}
                           </button>
                         </div>
@@ -349,7 +349,12 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                 <div style="max-width: 440px; display: flex; flex-direction: column; gap: 1rem;">
                   <div class="form-group" style="margin: 0;">
                     <label class="form-label" style="font-weight: 700;">تعيين رمز أمان سحابي جديد (4 إلى 6 أرقام) *</label>
-                    <input type="password" id="settingsFinancialPin" class="form-input" placeholder="••••" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required dir="ltr" style="letter-spacing: 0.3rem; font-weight: 800; font-size: 1.1rem; text-align: center;">
+                    <div style="position: relative;">
+                      <input type="password" id="settingsFinancialPin" class="form-input" placeholder="••••" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required dir="ltr" style="letter-spacing: 0.3rem; font-weight: 800; font-size: 1.1rem; text-align: center; padding-left: 2.5rem;">
+                      <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('settingsFinancialPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
+                        ${getIcon('eye', 18)}
+                      </button>
+                    </div>
                     <span style="font-size: 0.75rem; color: #64748b; margin-top: 0.35rem; display: block;">
                       أدخل من 4 إلى 6 أرقام سرية لتأمين كافة شاشاتك المالية عبر جميع الأجهزة.
                     </span>

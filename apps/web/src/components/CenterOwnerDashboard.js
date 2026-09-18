@@ -481,7 +481,12 @@ export function renderCenterOwnerDashboard(state = {}) {
               <div id="teacherDirectPassBox" style="display: none;">
                 <label style="font-size: 0.8rem; font-weight: 700;">البريد وكلمة المرور المؤقتة:</label>
                 <input type="email" id="obTeacherEmail" placeholder="teacher@example.com" class="form-input" style="margin-bottom: 0.4rem;">
-                <input type="password" id="obTeacherPassword" placeholder="كلمة المرور (8 أحرف فأكثر)" class="form-input">
+                <div style="position: relative;">
+                  <input type="password" id="obTeacherPassword" placeholder="كلمة المرور (8 أحرف فأكثر)" class="form-input" style="padding-left: 2.5rem;">
+                  <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('obTeacherPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
+                    ${getIcon('eye', 18)}
+                  </button>
+                </div>
               </div>
 
               <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">

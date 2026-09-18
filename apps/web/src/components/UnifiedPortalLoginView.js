@@ -98,9 +98,11 @@ export function renderUnifiedPortalLoginView(errorMessage = '') {
               >
               <button 
                 type="button" 
-                onclick="window.centrlyApp && window.centrlyApp.togglePortalPasswordVisibility ? window.centrlyApp.togglePortalPasswordVisibility() : null" 
+                class="password-toggle-btn"
+                onclick="window.centrlyApp ? (window.centrlyApp.togglePasswordVisibility ? window.centrlyApp.togglePasswordVisibility('portalPassword', this, event) : window.centrlyApp.togglePortalPasswordVisibility(this, event)) : null" 
+                onmousedown="event.preventDefault()"
                 title="إظهار/إخفاء كلمة المرور" 
-                style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; align-items: center; justify-content: center;"
+                aria-label="إظهار/إخفاء كلمة المرور"
               >
                 ${getIcon('eye', 18)}
               </button>
