@@ -47,8 +47,8 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
     {
       category: 'الإدارة والماليات',
       routes: [
-        { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
         { id: 'center-assistants', title: 'المساعدين وفريق الاستقبال', icon: 'assistants' },
+        { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
         { id: 'activity-logs', title: 'تسويات المدرسين والماليات', icon: 'billing' },
       ],
     },
@@ -89,8 +89,8 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
     {
       category: 'الإدارة وفريق العمل',
       routes: [
-        { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
         { id: 'assistants', title: 'إدارة المساعدين (الأسستنت)', icon: 'assistants' },
+        { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
       ],
     },
   ];

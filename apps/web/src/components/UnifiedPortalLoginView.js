@@ -8,7 +8,13 @@ import { escapeHtml } from '../utils/escapeHtml.js';
  * Authenticates against /api/public/portal/login
  */
 
-export function renderUnifiedPortalLoginView(errorMessage = '') {
+export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifier = '') {
+  let presetIdentifier = initialIdentifier;
+  if (!presetIdentifier && typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    presetIdentifier = params.get('phone') || params.get('user') || params.get('identifier') || '';
+  }
+
   const alertHtml = errorMessage
     ? `<div id="portalLoginAlert" style="padding: 0.75rem 1rem; border-radius: 0.65rem; margin-bottom: 1.25rem; font-size: 0.85rem; font-weight: 600; background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; display: flex; align-items: center; gap: 0.5rem;">
         ${getIcon('alert', 18, '#b91c1c')}
@@ -58,6 +64,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '') {
                 id="portalIdentifier" 
                 name="identifier"
                 class="form-input" 
+                value="${escapeHtml(presetIdentifier)}"
                 placeholder="010xxxxxxxx أو كود الطالب" 
                 required 
                 dir="ltr" 

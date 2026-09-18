@@ -214,10 +214,9 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 const displayGroupName = s.groupName || s.group_name || matchedGroup?.name || 'مجموعة عامة';
                 const studentPhone = s.studentPhone || s.student_phone;
                 const parentPhone = s.parentPhone || s.parent_phone;
-                const pToken = s.parent_portal_token || s.parentPortalToken || '';
                 const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-platform.vercel.app') : 'https://centerly-platform.vercel.app';
-                const parentPortalUrl = pToken ? `${canonicalOrigin}/?token=${encodeURIComponent(pToken)}` : `${canonicalOrigin}/portal`;
-                const studentPortalUrl = pToken ? `${canonicalOrigin}/?token=${encodeURIComponent(pToken)}&portal=student` : `${canonicalOrigin}/portal`;
+                const parentPortalUrl = parentPhone ? `${canonicalOrigin}/portal?phone=${encodeURIComponent(parentPhone)}` : `${canonicalOrigin}/portal`;
+                const studentPortalUrl = studentPhone ? `${canonicalOrigin}/portal?phone=${encodeURIComponent(studentPhone)}` : `${canonicalOrigin}/portal`;
                 const portalPassword = s.portal_password || s.portalPassword || '';
                 return `
                 <tr>

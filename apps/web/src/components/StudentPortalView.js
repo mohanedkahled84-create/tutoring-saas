@@ -175,6 +175,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
               <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
                 ملف متاح للتحميل
               </div>
+            </div>
           </div>
 
           <!-- Free PDF Helper & Conversion Guide Accordion -->
