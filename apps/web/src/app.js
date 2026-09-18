@@ -137,7 +137,11 @@ class CentrlyApp {
     this.materialsGroupId = 'all';
     this.teacherAssistants = [];
     const cachedHasPin = localStorage.getItem('centrly_has_security_pin');
-    this.hasSecurityPin = cachedHasPin !== null ? cachedHasPin === 'true' : Boolean(localStorage.getItem('centrly_financial_pin'));
+    const cachedUser = authService.getUser();
+    this.hasSecurityPin = (cachedUser && typeof cachedUser.has_security_pin === 'boolean')
+      ? cachedUser.has_security_pin
+      : (cachedHasPin !== null ? cachedHasPin === 'true' : Boolean(localStorage.getItem('centrly_financial_pin')));
+    // Cross-Device Security: If account has a PIN, protected views are ALWAYS locked by default
     this.isFinancialUnlocked = !this.hasSecurityPin;
     this.hideFinancialNumbers = false;
     this.routeLoadingState = {};
@@ -494,12 +498,28 @@ class CentrlyApp {
         this.currentRoute = (savedRoute && savedRoute !== 'center-dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'dashboard';
       }
 
-      // Check cloud security PIN status for cross-device synchronization
+      // Cross-Device Account-Level Security: Sync PIN status from user profile and cloud
+      if (typeof this.user?.has_security_pin === 'boolean') {
+        this.hasSecurityPin = this.user.has_security_pin;
+        if (this.hasSecurityPin) {
+          this.isFinancialUnlocked = false;
+          try {
+            localStorage.setItem('centrly_has_security_pin', 'true');
+          } catch (_) {}
+        }
+      }
+
       try {
         const pinStatus = await request('/settings/security-pin').catch(() => null);
         if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
           this.hasSecurityPin = pinStatus.has_pin;
-          this.isFinancialUnlocked = !this.hasSecurityPin;
+          if (this.hasSecurityPin) {
+            this.isFinancialUnlocked = false;
+          }
+          if (this.user) {
+            this.user.has_security_pin = pinStatus.has_pin;
+            authService.setUser(this.user);
+          }
           try {
             localStorage.setItem('centrly_has_security_pin', pinStatus.has_pin ? 'true' : 'false');
           } catch (_) {}
@@ -1125,12 +1145,29 @@ class CentrlyApp {
         }
       } catch (_) {}
 
+      // Cross-Device Security: Bind PIN status directly from account profile
+      if (typeof this.user?.has_security_pin === 'boolean') {
+        this.hasSecurityPin = this.user.has_security_pin;
+        if (this.hasSecurityPin) {
+          this.isFinancialUnlocked = false;
+          try {
+            localStorage.setItem('centrly_has_security_pin', 'true');
+          } catch (_) {}
+        }
+      }
+
       // Check cloud security PIN status for cross-device synchronization
       try {
         const pinStatus = await request('/settings/security-pin').catch(() => null);
         if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
           this.hasSecurityPin = pinStatus.has_pin;
-          this.isFinancialUnlocked = !this.hasSecurityPin;
+          if (this.hasSecurityPin) {
+            this.isFinancialUnlocked = false;
+          }
+          if (this.user) {
+            this.user.has_security_pin = pinStatus.has_pin;
+            authService.setUser(this.user);
+          }
           try {
             localStorage.setItem('centrly_has_security_pin', pinStatus.has_pin ? 'true' : 'false');
           } catch (_) {}
@@ -9819,6 +9856,10 @@ https://centerly-platform.vercel.app/p/p16766044
       localStorage.setItem('centrly_has_security_pin', 'true');
       this.hasSecurityPin = true;
       this.isFinancialUnlocked = true;
+      if (this.user) {
+        this.user.has_security_pin = true;
+        authService.setUser(this.user);
+      }
       this.closeModal();
       this.showToast(hasExisting ? 'تم تحديث رمز الأمان ومزامنته سحابياً بنجاح.' : 'تم تعيين وتفعيل رمز الأمان بنجاح.', 'success');
       this.renderApp();
@@ -9905,7 +9946,12 @@ https://centerly-platform.vercel.app/p/p16766044
       if (res && res.valid) {
         localStorage.setItem('centrly_financial_pin', entered);
         localStorage.setItem('centrly_has_security_pin', 'true');
+        this.hasSecurityPin = true;
         this.isFinancialUnlocked = true;
+        if (this.user) {
+          this.user.has_security_pin = true;
+          authService.setUser(this.user);
+        }
         this.closeModal();
         this.showToast('تم إلغاء القفل وعرض البيانات بنجاح.', 'success');
         this.renderApp();
@@ -9969,6 +10015,10 @@ https://centerly-platform.vercel.app/p/p16766044
     localStorage.setItem('centrly_has_security_pin', 'false');
     this.hasSecurityPin = false;
     this.isFinancialUnlocked = true;
+    if (this.user) {
+      this.user.has_security_pin = false;
+      authService.setUser(this.user);
+    }
     this.closeModal();
     this.showToast('تم حذف رمز PIN السابق. يمكنك الآن تعيين رمز جديد.', 'info');
     this.renderApp();
@@ -11498,15 +11548,7 @@ https://centerly-platform.vercel.app/p/p16766044
     const pin = document.getElementById('settingsFinancialPin')?.value?.trim();
 
     if (!pin) {
-      try {
-        await request('/settings/security-pin', { method: 'DELETE' });
-      } catch (_) {}
-      localStorage.removeItem('centrly_financial_pin');
-      localStorage.setItem('centrly_has_security_pin', 'false');
-      this.hasSecurityPin = false;
-      this.isFinancialUnlocked = true;
-      this.showToast('تم تعطيل الرمز السري للأرباح بنجاح ومزامنته مع السحابة.', 'info');
-      this.renderApp();
+      this.showToast('يرجى كتابة رمز الأمان المكون من 4 إلى 6 أرقام لحفظه وتأمينه.', 'warning');
       return;
     }
 
@@ -11524,7 +11566,11 @@ https://centerly-platform.vercel.app/p/p16766044
       localStorage.setItem('centrly_has_security_pin', 'true');
       this.hasSecurityPin = true;
       this.isFinancialUnlocked = false;
-      this.showToast('تم حفظ وقفل الرمز السري للأرباح بنجاح ومزامنته سحابياً.', 'success');
+      if (this.user) {
+        this.user.has_security_pin = true;
+        authService.setUser(this.user);
+      }
+      this.showToast('تم حفظ وتأمين الرمز السري للأرباح بنجاح ومزامنته سحابياً مع حسابك.', 'success');
       this.renderApp();
     } catch (err) {
       this.showToast(err.message || 'فشل حفظ الرمز السري', 'danger');

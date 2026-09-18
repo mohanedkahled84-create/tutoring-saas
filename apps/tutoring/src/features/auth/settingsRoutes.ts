@@ -102,17 +102,48 @@ const verifyPinSchema = z.object({
   pin: z.string().min(1, "PIN is required"),
 });
 
-// GET /api/settings/security-pin - Check if tenant has configured financial security PIN
+// GET /api/settings/security-pin - Check if user account or tenant has configured financial security PIN
 settingsRouter.get("/security-pin", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const userId = req.user?.id;
   const tenantId = req.user?.tenant_id;
-  if (!tenantId) {
-    res.status(400).json({ error: { code: "TENANT_CONTEXT_REQUIRED", message: "No tenant context" } });
+  if (!userId && !tenantId) {
+    res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
     return;
   }
+
   try {
+    if (req.user?.financial_pin) {
+      res.json({ has_pin: true });
+      return;
+    }
+
     const tenantsRepo = getServices(req).tenants;
-    const settings = await tenantsRepo.getTenantSettings(tenantId);
-    res.json({ has_pin: Boolean(settings?.financial_pin) });
+
+    if (userId && typeof tenantsRepo.getUserPin === "function") {
+      const userPin = await tenantsRepo.getUserPin(userId).catch(() => null);
+      if (userPin) {
+        if (req.user) {
+          req.user.financial_pin = userPin;
+          req.user.has_security_pin = true;
+        }
+        res.json({ has_pin: true });
+        return;
+      }
+    }
+
+    if (tenantId) {
+      const settings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
+      if (settings?.financial_pin) {
+        if (req.user) {
+          req.user.financial_pin = String(settings.financial_pin);
+          req.user.has_security_pin = true;
+        }
+        res.json({ has_pin: true });
+        return;
+      }
+    }
+
+    res.json({ has_pin: false });
   } catch {
     res.json({ has_pin: false });
   }
@@ -123,27 +154,58 @@ settingsRouter.post(
   "/security-pin",
   validateBody(setPinSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
     const tenantId = req.user?.tenant_id;
-    if (!tenantId) {
-      res.status(400).json({ error: { code: "TENANT_CONTEXT_REQUIRED", message: "No tenant context" } });
+    if (!userId && !tenantId) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
       return;
     }
+
     try {
       const tenantsRepo = getServices(req).tenants;
-      const existingSettings = await tenantsRepo.getTenantSettings(tenantId);
-      if (existingSettings?.financial_pin && req.body.old_pin) {
-        if (existingSettings.financial_pin !== req.body.old_pin) {
+
+      let existingPin: string | null = req.user?.financial_pin || null;
+      if (!existingPin && userId && typeof tenantsRepo.getUserPin === "function") {
+        existingPin = await tenantsRepo.getUserPin(userId).catch(() => null);
+      }
+      let existingSettings: any = null;
+      if (tenantId) {
+        existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
+        if (!existingPin && existingSettings?.financial_pin) {
+          existingPin = existingSettings.financial_pin;
+        }
+      }
+
+      if (existingPin && req.body.old_pin) {
+        if (existingPin !== req.body.old_pin) {
           res.status(400).json({ error: { code: "INVALID_OLD_PIN", message: "الرقم السري الحالي غير صحيح" } });
           return;
         }
       }
-      const mergedSettings = {
-        ...DEFAULT_TENANT_SETTINGS,
-        ...(existingSettings || {}),
-        financial_pin: req.body.pin,
-      };
-      await tenantsRepo.updateTenantSettings(tenantId, mergedSettings as any);
-      res.json({ success: true, message: "تم تعيين وتأمين الرقم السري بنجاح عبر السحابة وكافة الأجهزة" });
+
+      const newPin = req.body.pin;
+
+      // 1. Persist directly to user account in repository
+      if (userId && typeof tenantsRepo.setUserPin === "function") {
+        await tenantsRepo.setUserPin(userId, newPin);
+      }
+
+      // 2. Also persist to tenant settings for backward compatibility
+      if (tenantId) {
+        const mergedSettings = {
+          ...DEFAULT_TENANT_SETTINGS,
+          ...(existingSettings || {}),
+          financial_pin: newPin,
+        };
+        await tenantsRepo.updateTenantSettings(tenantId, mergedSettings as any).catch(() => null);
+      }
+
+      if (req.user) {
+        req.user.financial_pin = newPin;
+        req.user.has_security_pin = true;
+      }
+
+      res.json({ success: true, message: "تم تعيين وتأمين الرقم السري بنجاح وربطه بحسابك سحابياً عبر كافة الأجهزة" });
     } catch (err: unknown) {
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
@@ -155,15 +217,26 @@ settingsRouter.post(
   "/verify-pin",
   validateBody(verifyPinSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
     const tenantId = req.user?.tenant_id;
-    if (!tenantId) {
-      res.status(400).json({ error: { code: "TENANT_CONTEXT_REQUIRED", message: "No tenant context" } });
+    if (!userId && !tenantId) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
       return;
     }
+
     try {
       const tenantsRepo = getServices(req).tenants;
-      const existingSettings = await tenantsRepo.getTenantSettings(tenantId);
-      const savedPin = (existingSettings as any)?.financial_pin;
+      let savedPin: string | null = req.user?.financial_pin || null;
+
+      if (!savedPin && userId && typeof tenantsRepo.getUserPin === "function") {
+        savedPin = await tenantsRepo.getUserPin(userId).catch(() => null);
+      }
+
+      if (!savedPin && tenantId) {
+        const existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
+        savedPin = (existingSettings as any)?.financial_pin || null;
+      }
+
       const isValid = Boolean(savedPin && savedPin === req.body.pin);
       res.json({ valid: isValid });
     } catch (err: unknown) {
@@ -184,21 +257,49 @@ settingsRouter.delete(
   "/security-pin",
   validateBody(deletePinSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
     const tenantId = req.user?.tenant_id;
-    if (!tenantId) {
-      res.status(400).json({ error: { code: "TENANT_CONTEXT_REQUIRED", message: "No tenant context" } });
+    if (!userId && !tenantId) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
       return;
     }
+
     try {
       const tenantsRepo = getServices(req).tenants;
-      const existingSettings = await tenantsRepo.getTenantSettings(tenantId);
-      if (req.body?.pin && (existingSettings as any)?.financial_pin && (existingSettings as any).financial_pin !== req.body.pin) {
+
+      let savedPin: string | null = req.user?.financial_pin || null;
+      if (!savedPin && userId && typeof tenantsRepo.getUserPin === "function") {
+        savedPin = await tenantsRepo.getUserPin(userId).catch(() => null);
+      }
+      let existingSettings: any = null;
+      if (!savedPin && tenantId) {
+        existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
+        savedPin = (existingSettings as any)?.financial_pin || null;
+      }
+
+      if (req.body?.pin && savedPin && savedPin !== req.body.pin) {
         res.status(400).json({ error: { code: "INVALID_PIN", message: "الرقم السري الحالي غير صحيح" } });
         return;
       }
-      const mergedSettings = { ...existingSettings };
-      delete (mergedSettings as any).financial_pin;
-      await tenantsRepo.updateTenantSettings(tenantId, mergedSettings as any);
+
+      if (userId && typeof tenantsRepo.setUserPin === "function") {
+        await tenantsRepo.setUserPin(userId, null);
+      }
+
+      if (tenantId) {
+        if (!existingSettings) {
+          existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
+        }
+        const mergedSettings = { ...existingSettings };
+        delete (mergedSettings as any).financial_pin;
+        await tenantsRepo.updateTenantSettings(tenantId, mergedSettings as any).catch(() => null);
+      }
+
+      if (req.user) {
+        req.user.financial_pin = null;
+        req.user.has_security_pin = false;
+      }
+
       res.json({ success: true, message: "تم إزالة الرقم السري بنجاح" });
     } catch (err: unknown) {
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });

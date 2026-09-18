@@ -100,4 +100,6 @@ export interface TenantSettings {
 export interface ITenantsRepository {
   getTenantSettings(tenantId: string): Promise<TenantSettings | null>;
   updateTenantSettings(tenantId: string, settings: TenantSettings): Promise<TenantSettings>;
+  getUserPin?(userId: string): Promise<string | null>;
+  setUserPin?(userId: string, pin: string | null): Promise<void>;
 }

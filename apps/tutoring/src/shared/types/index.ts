@@ -19,6 +19,8 @@ export interface UserContext {
   role: UserRole;
   teacher_id?: string | null;
   assistant_id?: string | null;
+  financial_pin?: string | null;
+  has_security_pin?: boolean;
 }
 
 export interface AuthenticatedRequest extends Request {

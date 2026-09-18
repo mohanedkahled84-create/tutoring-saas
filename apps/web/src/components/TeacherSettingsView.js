@@ -54,7 +54,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
     }
   }
 
-  const hasPin = Boolean(securityState?.hasPin !== undefined ? securityState.hasPin : (window.centrlyApp?.hasSecurityPin || localStorage.getItem('centrly_financial_pin')));
+  const hasPin = Boolean(securityState?.hasPin !== undefined ? securityState.hasPin : (window.centrlyApp?.hasSecurityPin || user?.has_security_pin || localStorage.getItem('centrly_has_security_pin') === 'true' || localStorage.getItem('centrly_financial_pin')));
   const isUnlocked = Boolean(securityState?.isUnlocked !== undefined ? securityState.isUnlocked : window.centrlyApp?.isFinancialUnlocked);
 
   return `
@@ -302,35 +302,67 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
 
           <!-- Financial PIN Lock Card -->
           <div class="card" style="margin: 0; padding: 1.75rem; border-radius: var(--radius-lg);">
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-              <span>${getIcon('lock', 20, '#f59e0b')}</span>
-              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">
-                رمز الأمان السحابي (Security PIN)
-              </h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span>${getIcon('lock', 22, hasPin ? '#10b981' : '#f59e0b')}</span>
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">
+                  رمز الأمان السحابي (Security PIN)
+                </h3>
+              </div>
+              ${hasPin ? `
+                <span class="badge" style="background: rgba(16,185,129,0.15); color: #047857; border: 1px solid #10b981; font-weight: 800; padding: 0.35rem 0.75rem; border-radius: 8px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                  ✓ مفعل ومربوط بحسابك عبر كافة الأجهزة
+                </span>
+              ` : `
+                <span class="badge" style="background: rgba(245,158,11,0.15); color: #b45309; border: 1px solid #f59e0b; font-weight: 800; padding: 0.35rem 0.75rem; border-radius: 8px; font-size: 0.8rem;">
+                  غير مفعل حالياً
+                </span>
+              `}
             </div>
+
             <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1.25rem 0; line-height: 1.6;">
-              يقوم هذا الرمز السحابي بقفل الإعدادات، والبيانات المالية، والأرباح، ومرتبات المساعدين تلقائياً عبر جميع أجهزتك (الموبايل واللابتوب) بنفس الرمز لمنع أي شخص بجانبك من رؤيتها.
+              يقوم هذا الرمز السحابي بقفل الإعدادات، والبيانات المالية، والأرباح، ومرتبات المساعدين تلقائياً ومزامنته بحسابك السحابي، بحيث يفتح الحساب من أي جهاز (موبايل، لابتوب) مقفلاً بنفس الرمز لحماية خصوصيتك التامة.
             </p>
 
-            <form onsubmit="window.centrlyApp.handleSaveFinancialPin(event)">
-              <div style="max-width: 440px; display: flex; flex-direction: column; gap: 1rem;">
-                <div class="form-group" style="margin: 0;">
-                  <label class="form-label" style="font-weight: 700;">
-                    ${hasPin ? 'تغيير رمز الأمان الحالي (أو اترك فارغاً للتعطيل)' : 'تعيين رمز أمان سحابي جديد'}
-                  </label>
-                  <input type="password" id="settingsFinancialPin" class="form-input" placeholder="••••" maxlength="6" dir="ltr">
-                  <span style="font-size: 0.75rem; color: ${hasPin ? '#16a34a' : '#94a3b8'}; margin-top: 0.25rem; display: block; font-weight: 700;">
-                    ${hasPin ? '✓ الرمز مفعل ومحمي سحابياً عبر كافة الأجهزة. لتغييره، أدخل الرمز الجديد واضغط حفظ، أو اتركه فارغاً للتعطيل.' : 'الرمز غير مفعل حالياً.'}
-                  </span>
-                </div>
-
+            ${hasPin ? `
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                 <div>
-                  <button type="submit" class="btn btn-secondary" style="font-weight: 800; padding: 0.65rem 1.75rem; border-radius: 10px;">
-                    <span>حفظ رمز الأمان</span>
+                  <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                    حالة الحماية: مقفلة ومؤمنة سحابياً
+                  </div>
+                  <div style="font-size: 0.8rem; color: #64748b;">
+                    يمكنك تعديل رمز الأمان (PIN) أو إعادة ضبطه في أي وقت.
+                  </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-primary" onclick="window.centrlyApp.openSetPinModal()" style="font-weight: 800; font-size: 0.85rem; padding: 0.55rem 1.15rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    ${getIcon('edit', 14)}
+                    <span>تعديل رمز الأمان</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.resetFinancialPinPrompt()" style="font-weight: 700; font-size: 0.85rem; padding: 0.55rem 1rem; color: #ef4444; border-color: #fecaca; background: #fff;">
+                    <span>إلغاء تفعيل الرمز</span>
                   </button>
                 </div>
               </div>
-            </form>
+            ` : `
+              <form onsubmit="window.centrlyApp.handleSaveFinancialPin(event)">
+                <div style="max-width: 440px; display: flex; flex-direction: column; gap: 1rem;">
+                  <div class="form-group" style="margin: 0;">
+                    <label class="form-label" style="font-weight: 700;">تعيين رمز أمان سحابي جديد (4 إلى 6 أرقام) *</label>
+                    <input type="password" id="settingsFinancialPin" class="form-input" placeholder="••••" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required dir="ltr" style="letter-spacing: 0.3rem; font-weight: 800; font-size: 1.1rem; text-align: center;">
+                    <span style="font-size: 0.75rem; color: #64748b; margin-top: 0.35rem; display: block;">
+                      أدخل من 4 إلى 6 أرقام سرية لتأمين كافة شاشاتك المالية عبر جميع الأجهزة.
+                    </span>
+                  </div>
+
+                  <div>
+                    <button type="submit" class="btn btn-primary" style="font-weight: 800; padding: 0.65rem 1.75rem; border-radius: 10px;">
+                      <span>حفظ وتفعيل رمز الأمان</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            `}
           </div>
 
         </div>

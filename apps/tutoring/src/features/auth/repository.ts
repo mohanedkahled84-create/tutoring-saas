@@ -613,10 +613,35 @@ export class SupabaseTenantsRepository implements ITenantsRepository {
 
     return (data?.settings as TenantSettings) || settings;
   }
+
+  async getUserPin(userId: string): Promise<string | null> {
+    const { data, error } = await this.client
+      .from("users")
+      .select("financial_pin")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error && process.env.NODE_ENV !== "test" && !error.message.includes("fetch failed")) {
+      throw new Error(error.message);
+    }
+    return data?.financial_pin || null;
+  }
+
+  async setUserPin(userId: string, pin: string | null): Promise<void> {
+    const { error } = await this.client
+      .from("users")
+      .update({ financial_pin: pin })
+      .eq("id", userId);
+
+    if (error && process.env.NODE_ENV !== "test" && !error.message.includes("fetch failed")) {
+      throw new Error(error.message);
+    }
+  }
 }
 
 export class FakeTenantsRepository implements ITenantsRepository {
   public tenantSettings: Map<string, TenantSettings> = new Map();
+  public userPins: Map<string, string | null> = new Map();
 
   async getTenantSettings(tenantId: string): Promise<TenantSettings | null> {
     return this.tenantSettings.get(tenantId) || null;
@@ -625,5 +650,17 @@ export class FakeTenantsRepository implements ITenantsRepository {
   async updateTenantSettings(tenantId: string, settings: TenantSettings): Promise<TenantSettings> {
     this.tenantSettings.set(tenantId, settings);
     return settings;
+  }
+
+  async getUserPin(userId: string): Promise<string | null> {
+    return this.userPins.get(userId) || null;
+  }
+
+  async setUserPin(userId: string, pin: string | null): Promise<void> {
+    if (pin === null) {
+      this.userPins.delete(userId);
+    } else {
+      this.userPins.set(userId, pin);
+    }
   }
 }

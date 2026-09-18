@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { getServices } from "../../composition.js";
 import { extractToken, authenticateUser } from "../../shared/middleware/auth.js";
+import { getScopedSupabaseClient } from "../../supabase.js";
 import { authRateLimiter } from "../../shared/middleware/rateLimit.js";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { dispatchAdminAlertWebhook } from "../admin-ops/index.js";
@@ -35,9 +36,35 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
       maxAge: result.expires_in * 1000,
     });
 
+    let hasSecurityPin = false;
+    try {
+      const client = getScopedSupabaseClient(result.token);
+      const { data: uRec } = await client
+        .from("users")
+        .select("financial_pin, tenant_id")
+        .eq("id", result.user.id)
+        .maybeSingle();
+
+      if (uRec?.financial_pin) {
+        hasSecurityPin = true;
+      } else if (uRec?.tenant_id) {
+        const { data: tRec } = await client
+          .from("tenants")
+          .select("settings")
+          .eq("id", uRec.tenant_id)
+          .maybeSingle();
+        if (tRec?.settings?.financial_pin) {
+          hasSecurityPin = true;
+        }
+      }
+    } catch (_) {}
+
     res.json({
       message: "Login successful",
-      user: result.user,
+      user: {
+        ...result.user,
+        has_security_pin: hasSecurityPin,
+      },
       token: result.token,
       refresh_token: result.refresh_token,
       expires_in: result.expires_in,
