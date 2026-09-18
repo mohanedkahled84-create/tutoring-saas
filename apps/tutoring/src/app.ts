@@ -43,6 +43,8 @@ export function createApp(): Express {
 
   // DEV-24 & Security Hardening: Strict CORS origin allowlist with credentials
   const defaultAllowedOrigins = [
+    "https://centerly-eg.com",
+    "https://www.centerly-eg.com",
     "https://centrly.app",
     "https://www.centrly.app",
     "https://centerly-platform.vercel.app",
