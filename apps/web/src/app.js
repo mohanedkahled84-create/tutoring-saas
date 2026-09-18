@@ -780,8 +780,8 @@ class CentrlyApp {
     }
   }
 
-  togglePortalPasswordVisibility() {
-    this.togglePasswordVisibility('portalPassword');
+  togglePortalPasswordVisibility(btn, event) {
+    this.togglePasswordVisibility('portalPassword', btn, event);
   }
 
   async handlePortalLogin(event) {
@@ -6663,10 +6663,10 @@ class CentrlyApp {
     const openDirectFallback = async () => {
       try {
         const canonicalOrigin = 'https://centerly-platform.vercel.app';
-        const cleanSid = studentId ? String(studentId).replace(/-/g, '').slice(0, 8) : '';
-        const portalUrl = cleanSid ? `${canonicalOrigin}/p/p${cleanSid}` : `${canonicalOrigin}/parent-portal`;
+        const portalUrl = `${canonicalOrigin}/portal`;
+        const pass = student?.portal_password || '123456';
         const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
-        const msg = `السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (${studentName}).\n\nحرصاً على متابعة المستوى الدراسي لـ (${studentName}) أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:\n\n*رابط المتابعة المباشر:*\n${portalUrl}\n\n*من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول:*\n- متابعة الحضور والغياب لحظياً.\n- درجات الكويزات والامتحانات الدورية.\n- تسليم الواجبات المنزلية وملاحظات المعلم.\n\nمع خالص التمنيات بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
+        const msg = `أهلاً بحضرتك ولي أمر الطالب (${studentName})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح! 🌟\n\nيسعدنا تزويدكم ببيانات بوابة المتابعة مع ${teacherName}:\n\n🌐 *رابط بوابة المتابعة:*\n${portalUrl}\n\n📱 *اسم الدخول (رقم هاتفك):* ${parentPhone}\n🔑 *كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنكم في أي وقت:*\n- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.\n- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.\n- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.\n\n📌 *تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.\n\nمع خالص تمنياتنا للطالب (${studentName}) بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
         this.openDirectWhatsAppFallbackModal(studentName, parentPhone, msg, () => {
           if (student) {
             student.parent_portal_sent_at = new Date().toISOString();
@@ -6719,10 +6719,10 @@ class CentrlyApp {
     const openDirectFallback = async () => {
       try {
         const canonicalOrigin = 'https://centerly-platform.vercel.app';
-        const cleanSid = studentId ? String(studentId).replace(/-/g, '').slice(0, 8) : '';
-        const studentUrl = cleanSid ? `${canonicalOrigin}/s/s${cleanSid}` : `${canonicalOrigin}/parent-portal?portal=student`;
+        const studentUrl = `${canonicalOrigin}/portal`;
+        const pass = student?.portal_password || '123456';
         const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
-        const msg = `السلام عليكم ورحمة الله وبركاته، الطالب (${studentName}).\n\nيسعدنا تزويدك برابط بوابتك التعليمية الرسمية لمتابعة دروسك وتحميل المذكرات ورفع الواجبات أولاً بأول:\n\n*رابط بوابتك التعليمية المباشر:*\n${studentUrl}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\nمع خالص التمنيات بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
+        const msg = `أهلاً بك يا (${studentName})، نتمنى لك كل التوفيق والتميز دائماً! 🚀\n\nتم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع ${teacherName}:\n\n🌐 *رابط بوابتك التعليمية:*\n${studentUrl}\n\n📱 *اسم الدخول (رقم هاتفك):* ${studentPhone}\n🔑 *كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\n📌 *تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والواجبات أولاً بأول.\n\nمع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
         this.openDirectWhatsAppFallbackModal(studentName, studentPhone, msg, () => {
           if (student) {
             student.student_portal_sent_at = new Date().toISOString();
@@ -11694,16 +11694,67 @@ https://centerly-platform.vercel.app/p/p16766044
     }
   }
 
-  togglePasswordVisibility(inputId, btnEl) {
+  togglePasswordVisibility(inputId, btnEl, event) {
+    if (event) {
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+      if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    }
+    const input = document.getElementById(inputId);
+    if (!input) {
+      console.warn('[Centrly] togglePasswordVisibility: input not found for id:', inputId);
+      return;
+    }
+    const isPassword = input.type === 'password';
+    const newType = isPassword ? 'text' : 'password';
+    input.type = newType;
+    try {
+      input.setAttribute('type', newType);
+    } catch (_) {}
+
+    // Find and update button element
+    const btn = btnEl || input.parentElement?.querySelector('button');
+    if (btn) {
+      btn.innerHTML = getIcon(isPassword ? 'eyeOff' : 'eye', 18);
+      btn.title = isPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور';
+      btn.setAttribute('aria-label', isPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+      btn.style.opacity = '1';
+    }
+
+    // Keep cursor at end of input
+    try {
+      input.focus();
+      if (input.setSelectionRange && input.value) {
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+      }
+    } catch (_) {}
+  }
+
+  togglePinVisibility(inputId, btnEl, event) {
+    if (event) {
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+      if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    }
     const input = document.getElementById(inputId);
     if (!input) return;
-    if (input.type === 'password') {
-      input.type = 'text';
-      if (btnEl) btnEl.style.opacity = '1';
-    } else {
-      input.type = 'password';
-      if (btnEl) btnEl.style.opacity = '0.6';
+    const isPassword = input.type === 'password';
+    const newType = isPassword ? 'text' : 'password';
+    input.type = newType;
+    try {
+      input.setAttribute('type', newType);
+    } catch (_) {}
+
+    if (btnEl) {
+      const span = btnEl.querySelector('span') || btnEl;
+      span.innerText = isPassword ? 'إخفاء' : 'إظهار';
     }
+    try {
+      input.focus();
+      if (input.setSelectionRange && input.value) {
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+      }
+    } catch (_) {}
   }
 }
 
