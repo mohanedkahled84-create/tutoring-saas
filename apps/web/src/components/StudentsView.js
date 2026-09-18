@@ -249,7 +249,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                       <!-- Parent Link Row -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
                         <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; width: 35px;">الأمر:</span>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ بيانات دخول ورابط ولي الأمر" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رسالة واتساب كاملة لولي الأمر جاهزة للإرسال اليدوي" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem;">
                           ${getIcon('copy', 12)}
                           <span>نسخ</span>
                         </button>
@@ -265,7 +265,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                       <!-- Student Link Row -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
                         <span style="font-size: 0.65rem; color: #1d4ed8; font-weight: 700; width: 35px;">الطالب:</span>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyStudentLink('${escapeHtml(s.id)}')" title="نسخ بيانات دخول ورابط الطالب" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyStudentLink('${escapeHtml(s.id)}')" title="نسخ رسالة واتساب كاملة للطالب جاهزة للإرسال اليدوي" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;">
                           ${getIcon('copy', 12)}
                           <span>نسخ</span>
                         </button>

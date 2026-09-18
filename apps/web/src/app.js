@@ -6650,12 +6650,19 @@ class CentrlyApp {
 
   async copyParentLink(studentId) {
     const student = (this.students || []).find(s => s.id === studentId);
-    const phone = student?.parent_phone || student?.parentPhone || 'رقم ولي الأمر';
-    const pass = student?.portal_password || student?.portalPassword || '';
-    const passLine = pass ? `\n🔑 كلمة المرور: ${pass}` : '';
+    const parentPhone = student?.parent_phone || student?.parentPhone || 'رقم ولي الأمر';
+    const studentName = student?.name || student?.full_name || 'الطالب';
+    const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
     const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-platform.vercel.app') : 'https://centerly-platform.vercel.app';
-    const textToCopy = `🌐 رابط بوابة المتابعة: ${canonicalOrigin}/portal\n📱 اسم الدخول (رقم الهاتف): ${phone}${passLine}`;
-    await this.copyToClipboard(textToCopy, 'تم نسخ بيانات دخول ورابط ولي الأمر بنجاح!', 'بيانات الدخول');
+    const portalUrl = `${canonicalOrigin}/portal`;
+    const rawTeacher = this.user?.name || 'المعلم';
+    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
+      ? rawTeacher
+      : `مستر ${rawTeacher}`;
+
+    const textToCopy = `أهلاً بحضرتك ولي أمر الطالب (${studentName})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح! 🌟\n\nيسعدنا تزويدكم ببيانات بوابة المتابعة مع ${teacherName}:\n\n🌐 *رابط بوابة المتابعة:*\n${portalUrl}\n\n📱 *اسم الدخول (رقم هاتفك):* ${parentPhone}\n🔑 *كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنكم في أي وقت:*\n- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.\n- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.\n- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.\n\n📌 *تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.\n\nمع خالص تمنياتنا للطالب (${studentName}) بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
+
+    await this.copyToClipboard(textToCopy, `تم نسخ رسالة واتساب الكاملة لولي أمر (${studentName}) بنجاح!`, 'رسالة واتساب ولي الأمر');
   }
 
   async previewParentPortal(studentId) {
@@ -6668,12 +6675,19 @@ class CentrlyApp {
 
   async copyStudentLink(studentId) {
     const student = (this.students || []).find(s => s.id === studentId);
-    const phone = student?.student_phone || student?.studentPhone || 'رقم الطالب';
-    const pass = student?.portal_password || student?.portalPassword || '';
-    const passLine = pass ? `\n🔑 كلمة المرور: ${pass}` : '';
+    const studentPhone = student?.student_phone || student?.studentPhone || 'رقم الطالب';
+    const studentName = student?.name || student?.full_name || 'الطالب';
+    const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
     const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-platform.vercel.app') : 'https://centerly-platform.vercel.app';
-    const textToCopy = `🌐 رابط بوابتك التعليمية: ${canonicalOrigin}/portal\n📱 اسم الدخول (رقم الهاتف): ${phone}${passLine}`;
-    await this.copyToClipboard(textToCopy, 'تم نسخ بيانات دخول ورابط الطالب بنجاح!', 'بيانات الدخول');
+    const portalUrl = `${canonicalOrigin}/portal`;
+    const rawTeacher = this.user?.name || 'المعلم';
+    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
+      ? rawTeacher
+      : `مستر ${rawTeacher}`;
+
+    const textToCopy = `أهلاً بك يا (${studentName})، نتمنى لك كل التوفيق والتميز دائماً! 🚀\n\nتم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع ${teacherName}:\n\n🌐 *رابط بوابتك التعليمية:*\n${portalUrl}\n\n📱 *اسم الدخول (رقم هاتفك):* ${studentPhone}\n🔑 *كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\n📌 *تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والواجبات أولاً بأول.\n\nمع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
+
+    await this.copyToClipboard(textToCopy, `تم نسخ رسالة واتساب الكاملة للطالب (${studentName}) بنجاح!`, 'رسالة واتساب الطالب');
   }
 
   async previewStudentPortal(studentId) {
