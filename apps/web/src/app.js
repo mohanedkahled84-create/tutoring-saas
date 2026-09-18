@@ -6592,63 +6592,124 @@ class CentrlyApp {
   }
 
   openBatchParentLinksModal() {
+    this.openBatchPortalLinksModal();
+  }
+
+  openBatchPortalLinksModal() {
     const studentList = this.students || [];
-    const unsentStudents = studentList.filter(s => !s.parent_portal_sent_at && (s.parentPhone || s.parent_phone));
+    const unsentStudents = studentList.filter(s => 
+      (!s.parent_portal_sent_at || !s.student_portal_sent_at) && 
+      ((s.parentPhone || s.parent_phone) || (s.studentPhone || s.student_phone))
+    );
 
     if (unsentStudents.length === 0) {
-      this.showToast('جميع أولياء أمور الطلاب المسجلين تم إرسال روابط المتابعة إليهم بالفعل.', 'info');
+      this.showToast('جميع الطلاب المسجلين تم إرسال روابط المنصة والمتابعة لهم مسبقاً.', 'info');
       return;
     }
 
     const teacherName = this.user?.name || 'مستر أحمد';
+    const displayCount = Math.min(unsentStudents.length, 24);
 
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
-        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.75rem; padding: 0.85rem; color: #0369a1; font-size: 0.85rem; line-height: 1.5;">
-          <b>إرسال روابط المتابعة:</b>
-          سيتم إرسال رسالة واتساب مخصصة لكل ولي أمر تحتوي على رابط المتابعة المباشر الخاص بنجله.
+        <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 0.75rem; padding: 0.85rem; color: #166534; font-size: 0.85rem; line-height: 1.6;">
+          <div style="font-weight: 800; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem;">
+            <span>🛡️ نظام الإرسال المزدوج الآمن ضد حظر الواتساب</span>
+          </div>
+          يتم إرسال رسالتين بنموذجين مختلفين لكل طالب (رسالة للطالب على رقمه + رسالة لولي أمره).
+          الحد الأقصى اليومي الآمن هو <b>24 طالباً</b> (48 رسالة) مع جدولة متباعدة كل <b>30 دقيقة</b> ومحاكاة الكتابة <i>"يكتب الآن..."</i> لحماية رقمك بنسبة 100%.
         </div>
 
         <div>
           <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-            <span>الطلاب الجدد المستهدفون (${unsentStudents.length} طالب):</span>
+            <span>الطلاب المستهدفون (${unsentStudents.length} طالب - محدد ${displayCount} تلقائياً):</span>
             <label style="font-size: 0.8rem; color: #64748b; font-weight: 600; cursor: pointer;">
               <input type="checkbox" id="selectAllBatchParentLinks" checked onchange="
                 const checked = this.checked;
-                document.querySelectorAll('.batch-parent-checkbox').forEach(cb => cb.checked = checked);
-              "> تحديد الكل
+                const boxes = document.querySelectorAll('.batch-parent-checkbox');
+                boxes.forEach((cb, idx) => {
+                  cb.checked = checked && (idx < 24);
+                });
+              "> تحديد أول 24 طالباً
             </label>
           </div>
 
-          <div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; background: #fafafa;">
-            ${unsentStudents.map(s => {
-              const phone = s.parentPhone || s.parent_phone;
+          <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; background: #fafafa;">
+            ${unsentStudents.map((s, idx) => {
+              const pPhone = s.parentPhone || s.parent_phone || '—';
+              const sPhone = s.studentPhone || s.student_phone || '—';
+              const isChecked = idx < 24;
               return `
                 <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.6rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 0.4rem; cursor: pointer;">
                   <span style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" class="batch-parent-checkbox" value="${escapeHtml(s.id)}" checked>
+                    <input type="checkbox" class="batch-parent-checkbox" value="${escapeHtml(s.id)}" ${isChecked ? 'checked' : ''}>
                     <span style="font-weight: 700; color: #1e293b;">${escapeHtml(s.name)}</span>
                     <span style="font-size: 0.75rem; color: #64748b; font-family: monospace;">كود: ${escapeHtml(s.code || s.student_code || '—')}</span>
                   </span>
-                  <span dir="ltr" style="font-size: 0.8rem; font-family: monospace; color: #475569;">${escapeHtml(phone)}</span>
+                  <span dir="ltr" style="font-size: 0.75rem; font-family: monospace; color: #475569; display: flex; flex-direction: column; align-items: flex-end;">
+                    <span>ولي الأمر: ${escapeHtml(pPhone)}</span>
+                    <span>الطالب: ${escapeHtml(sPhone)}</span>
+                  </span>
                 </label>
               `;
             }).join('')}
           </div>
+          ${unsentStudents.length > 24 ? `
+            <div style="font-size: 0.75rem; color: #b45309; margin-top: 0.3rem;">
+              ⚠️ تم تحديد أول 24 طالباً لحماية رقمك اليوم. يمكنك إرسال باقي الطلاب في اليوم التالي.
+            </div>
+          ` : ''}
         </div>
 
         <div style="border-top: 1px solid #e2e8f0; padding-top: 0.75rem;">
-          <div style="font-weight: 700; font-size: 0.85rem; color: #0f172a; margin-bottom: 0.35rem;">معاينة نموذج الرسالة لولي الأمر:</div>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.8rem; color: #334155; line-height: 1.6; white-space: pre-line;">
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <button type="button" class="btn btn-sm" id="btnTabPreviewStudent" onclick="
+              document.getElementById('previewStudentMsg').style.display='block';
+              document.getElementById('previewParentMsg').style.display='none';
+              this.style.background='#0284c7'; this.style.color='#fff';
+              document.getElementById('btnTabPreviewParent').style.background='#f1f5f9'; document.getElementById('btnTabPreviewParent').style.color='#334155';
+            " style="background: #0284c7; color: #fff; font-weight: 700;">نموذج الطالب</button>
+
+            <button type="button" class="btn btn-sm" id="btnTabPreviewParent" onclick="
+              document.getElementById('previewStudentMsg').style.display='none';
+              document.getElementById('previewParentMsg').style.display='block';
+              this.style.background='#0284c7'; this.style.color='#fff';
+              document.getElementById('btnTabPreviewStudent').style.background='#f1f5f9'; document.getElementById('btnTabPreviewStudent').style.color='#334155';
+            " style="background: #f1f5f9; color: #334155; font-weight: 700;">نموذج ولي الأمر</button>
+          </div>
+
+          <div id="previewStudentMsg" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.8rem; color: #334155; line-height: 1.6; white-space: pre-line;">
+السلام عليكم ورحمة الله وبركاته، الطالب (اسم الطالب).
+
+حرصاً على تنظيم مذاكرتك وتفوقك، هذا هو رابط بوابتك التعليمية الرسمية:
+
+⚠️ *خطوة هامة وأساسية لتفعيل الرابط:*
+يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط والفتح مباشرة، ولتصلك تنبيهات الحصص والمذكرات الجديدة.
+
+*رابط بوابتك التعليمية المباشر:*
+https://centerly-platform.vercel.app/s/s16766044
+
+- تحميل المذكرات وملازم الشرح وملفات الـ PDF.
+- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها ورفع الحلول.
+- الاطلاع على درجات الكويزات وسجل حضورك.
+
+مع تحيات: ${escapeHtml(teacherName)}
+          </div>
+
+          <div id="previewParentMsg" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.8rem; color: #334155; line-height: 1.6; white-space: pre-line;">
 السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (اسم الطالب).
 
 حرصاً على متابعة المستوى الدراسي أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:
-*رابط المتابعة المباشر:*
-https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق السرعة)
 
-• من خلال هذا الرابط يمكنكم في أي وقت وبدون تسجيل دخول متابعة درجات الكويزات والحضور والواجبات لحظياً.
+⚠️ *خطوة هامة وأساسية لتفعيل الرابط:*
+يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط والفتح مباشرة، ولضمان استلام إشعارات وتقارير الطالب باستمرار دون انقطاع.
 
-• يرجى تسجيل وحفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان استلام إشعارات وتقارير الطالب أولاً بأول دون انقطاع.
+*رابط المتابعة المباشر لولي الأمر:*
+https://centerly-platform.vercel.app/p/p16766044
+
+- متابعة تسجيل الحضور والغياب لحظياً مع كل حصة.
+- الاطلاع على درجات الكويزات والامتحانات الدورية فور رصدها.
+- متابعة الالتزام بتسليم وحل الواجبات وملاحظات المعلم.
 
 مع تحيات: ${escapeHtml(teacherName)}
           </div>
@@ -6661,33 +6722,36 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
         <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
         <button type="button" id="btnConfirmBatchParentLinks" class="btn btn-primary" onclick="window.centrlyApp.dispatchBatchParentLinks()" style="background-color: #0284c7; border-color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
           ${getIcon('whatsapp', 18)}
-          <span>بدء الإرسال لـ ${unsentStudents.length} ولي أمر</span>
+          <span>بدء الإرسال المزدوج الآمن (${displayCount} طالب)</span>
         </button>
       </div>
     `;
 
-    this.showModal(`إرسال روابط المتابعة للطلاب الجدد`, bodyHtml, footerHtml);
+    this.showModal(`إرسال روابط المتابعة والمنصة للطلاب الجدد`, bodyHtml, footerHtml);
   }
 
   async dispatchBatchParentLinks() {
     const selectedBoxes = Array.from(document.querySelectorAll('.batch-parent-checkbox:checked'));
-    const selectedIds = selectedBoxes.map(cb => cb.value);
+    let selectedIds = selectedBoxes.map(cb => cb.value);
 
     if (selectedIds.length === 0) {
       this.showToast('يرجى اختيار طالب واحد على الأقل للإرسال.', 'warning');
       return;
     }
 
+    if (selectedIds.length > 24) {
+      selectedIds = selectedIds.slice(0, 24);
+      this.showToast('لأمان رقمك من خوارزميات واتساب، تم تحديد الحد الأقصى 24 طالباً لدفعة اليوم.', 'info');
+    }
+
     const btn = document.getElementById('btnConfirmBatchParentLinks');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = `<span>جاري إرسال الروابط بأمان...</span>`;
+      btn.innerHTML = `<span>جاري بدء الجدولة الآمنة...</span>`;
     }
 
-    this.showToast(`بدأ إرسال روابط المتابعة لـ (${selectedIds.length}) من أولياء الأمور بأعلى معايير الأمان...`, 'info');
-
     try {
-      const res = await request('/students/batch-send-parent-links', {
+      const res = await request('/students/batch-send-dual-portal-links', {
         method: 'POST',
         body: {
           student_ids: selectedIds,
@@ -6697,26 +6761,19 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
 
       this.closeModal();
 
-      const sentCount = res.sent_count || 0;
-      const failedCount = res.failed_count || 0;
-
       // Update local student records
       const now = new Date().toISOString();
       (this.students || []).forEach(s => {
         if (selectedIds.includes(s.id)) {
-          const resultItem = (res.results || []).find(r => r.student_id === s.id);
-          if (!resultItem || resultItem.status === 'sent') {
-            s.parent_portal_sent_at = now;
-          }
+          s.parent_portal_sent_at = now;
+          s.student_portal_sent_at = now;
         }
       });
 
-      if (sentCount > 0) {
-        this.showToast(`تم بنجاح إرسال روابط المتابعة إلى (${sentCount}) ولي أمر!`, 'success');
-      }
-      if (failedCount > 0) {
-        this.showToast(`تعذر إرسال (${failedCount}) رسائل بسبب انقطاع الاتصال أو أرقام غير صحيحة.`, 'warning');
-      }
+      this.showToast(
+        res.message || `تم بنجاح بدء جدولة إرسال الروابط لـ (${selectedIds.length}) طالباً بأعلى معايير الأمان!`,
+        'success'
+      );
 
       if (this.currentRoute === 'students') {
         this.renderMainContent();

@@ -8,7 +8,12 @@ import {
   deriveShortCode,
   buildShortPortalUrl,
 } from "../dist/shared/utils/tokens.js";
-import { generateParentPortalInviteMessage } from "../dist/features/whatsapp-notifications/service.js";
+import {
+  generateParentPortalInviteMessage,
+  generateStudentPortalInviteMessage,
+  WhatsAppNotificationsService,
+} from "../dist/features/whatsapp-notifications/service.js";
+import { FakeEvolutionGateway } from "../dist/features/whatsapp-notifications/gateway.js";
 import { DEFAULT_TENANT_SETTINGS } from "../dist/features/auth/settingsRoutes.js";
 import { app } from "../dist/app.js";
 
@@ -84,7 +89,7 @@ test("DEV-34: GET /api/public/parent-portal rejects missing or invalid token", a
   assert.equal(body.error.code, "UNAUTHORIZED");
 });
 
-test("DEV-PORTAL.3: generateParentPortalInviteMessage creates natural, respectful message with portal URL", () => {
+test("DEV-PORTAL.3: generateParentPortalInviteMessage creates natural, respectful message with portal URL and contact saving prompt", () => {
   const msg = generateParentPortalInviteMessage({
     student_name: "زياد أحمد",
     teacher_name: "مستر أحمد",
@@ -95,6 +100,51 @@ test("DEV-PORTAL.3: generateParentPortalInviteMessage creates natural, respectfu
   assert.ok(msg.includes("https://centerly-platform.vercel.app/parent-portal?token=test-123"));
   assert.ok(msg.includes("رابط المتابعة"));
   assert.ok(msg.includes("مستر أحمد"));
+  assert.ok(msg.includes("حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً"), "Must instruct parent to save phone number first");
+});
+
+test("DEV-PORTAL.4: generateStudentPortalInviteMessage creates tailored student message with contact saving prompt", () => {
+  const msg = generateStudentPortalInviteMessage({
+    student_name: "زياد أحمد",
+    teacher_name: "مستر أحمد",
+    portal_url: "https://centerly-platform.vercel.app/s/s16766044",
+  });
+  assert.ok(msg);
+  assert.ok(msg.includes("زياد أحمد"));
+  assert.ok(msg.includes("https://centerly-platform.vercel.app/s/s16766044"));
+  assert.ok(msg.includes("بوابتك التعليمية"));
+  assert.ok(msg.includes("حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً"), "Must instruct student to save phone number first");
+});
+
+test("DEV-PORTAL.5: batchSendDualPortalLinks sends dual messages and enforces 24-student cap", async () => {
+  const fakeGateway = new FakeEvolutionGateway();
+  const service = new WhatsAppNotificationsService(null, fakeGateway);
+
+  // Generate 30 mock students (exceeding 24 cap)
+  const mockStudents = Array.from({ length: 30 }, (_, i) => ({
+    student_id: `student-${i + 1}`,
+    student_name: `طالب ${i + 1}`,
+    student_phone: `010000000${(i + 1).toString().padStart(2, "0")}`,
+    parent_phone: `011000000${(i + 1).toString().padStart(2, "0")}`,
+    student_portal_url: `https://centerly-platform.vercel.app/s/s${i + 1}`,
+    parent_portal_url: `https://centerly-platform.vercel.app/p/p${i + 1}`,
+  }));
+
+  const res = await service.batchSendDualPortalLinks({
+    tenant_id: "test-tenant",
+    teacher_name: "مستر أحمد",
+    students: mockStudents,
+    pacingDelayMs: 0, // Instant for fast testing
+  });
+
+  assert.equal(res.total, 30, "Total requested was 30");
+  assert.equal(res.students_processed, 24, "Must be capped to 24 students max per batch/day");
+  assert.equal(res.student_messages_sent, 24, "Must dispatch 24 student messages");
+  assert.equal(res.parent_messages_sent, 24, "Must dispatch 24 parent messages");
+  assert.equal(res.failed_count, 0);
+  assert.equal(res.results.length, 24);
+  assert.ok(res.results[0].student_sent);
+  assert.ok(res.results[0].parent_sent);
 });
 
 test("DEV-SHORT-LINKS: deriveShortCode and buildShortPortalUrl generate ultra-short URLs", () => {

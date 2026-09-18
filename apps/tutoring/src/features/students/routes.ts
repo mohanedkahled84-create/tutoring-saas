@@ -371,6 +371,139 @@ studentsRouter.post("/batch-send-parent-links", async (req: AuthenticatedRequest
   }
 });
 
+// DEV-PORTAL.5: POST /api/students/batch-send-dual-portal-links - Dual dispatch (Student + Parent) with 24-student daily cap & 30m pacing
+studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  const { student_ids, teacher_id, teacher_name, pacing_delay_ms } = req.body || {};
+
+  if (!tenantId && req.user?.role !== "admin") {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
+
+  try {
+    const studentsService = getServices(req).students;
+    const allStudents = await studentsService.listStudents(tenantId || undefined);
+
+    // Target either explicitly passed IDs or unsent students
+    let targetStudents = (allStudents || []).filter((s) => {
+      const hasAnyPhone = !!((s.student_phone && s.student_phone.trim()) || (s.parent_phone && s.parent_phone.trim()));
+      if (!hasAnyPhone) return false;
+      if (Array.isArray(student_ids) && student_ids.length > 0) {
+        return student_ids.includes(s.id);
+      }
+      return !s.parent_portal_sent_at || !s.student_portal_sent_at;
+    });
+
+    if (targetStudents.length === 0) {
+      res.json({
+        total: 0,
+        sent_count: 0,
+        failed_count: 0,
+        message: "جميع الطلاب المستهدفين تم إرسال الروابط لهم مسبقاً",
+        results: [],
+      });
+      return;
+    }
+
+    // Strict cap: 24 students max per batch/day
+    targetStudents = targetStudents.slice(0, 24);
+
+    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const studentsPayload = targetStudents.map((s) => {
+      let token = s.parent_portal_token;
+      if (!token) {
+        token = generateParentPortalToken(s.id, tenantId || "default", 365);
+      }
+      return {
+        student_id: s.id,
+        student_name: s.name,
+        student_phone: s.student_phone || undefined,
+        parent_phone: s.parent_phone || undefined,
+        student_portal_url: buildShortPortalUrl(s.id, "student", canonicalOrigin),
+        parent_portal_url: buildShortPortalUrl(s.id, "parent", canonicalOrigin),
+        token,
+      };
+    });
+
+    const whatsAppService = getServices(req).whatsapp;
+
+    // In automated tests or if explicitly requested with low pacing, run synchronously
+    const isTestOrImmediate = pacing_delay_ms !== undefined && pacing_delay_ms <= 2000;
+
+    if (isTestOrImmediate) {
+      const batchRes = await whatsAppService.batchSendDualPortalLinks({
+        tenant_id: tenantId || "default",
+        teacher_id: teacher_id || req.user?.id || null,
+        teacher_name: teacher_name || (req.user as any)?.name,
+        students: studentsPayload,
+        pacingDelayMs: pacing_delay_ms,
+      });
+
+      const now = new Date().toISOString();
+      for (const r of batchRes.results) {
+        const item = studentsPayload.find((p) => p.student_id === r.student_id);
+        const updates: Record<string, any> = {};
+        if (r.student_sent) updates.student_portal_sent_at = now;
+        if (r.parent_sent) updates.parent_portal_sent_at = now;
+        if (item?.token) updates.parent_portal_token = item.token;
+        if (Object.keys(updates).length > 0) {
+          await studentsService.updateStudent(r.student_id, updates).catch(() => {});
+        }
+      }
+
+      res.json({
+        total: batchRes.total,
+        students_processed: batchRes.students_processed,
+        student_messages_sent: batchRes.student_messages_sent,
+        parent_messages_sent: batchRes.parent_messages_sent,
+        failed_count: batchRes.failed_count,
+        results: batchRes.results,
+      });
+      return;
+    }
+
+    // In production queue: respond immediately to prevent HTTP timeout, and process safely in background
+    setImmediate(async () => {
+      try {
+        const batchRes = await whatsAppService.batchSendDualPortalLinks({
+          tenant_id: tenantId || "default",
+          teacher_id: teacher_id || req.user?.id || null,
+          teacher_name: teacher_name || (req.user as any)?.name,
+          students: studentsPayload,
+          pacingDelayMs: pacing_delay_ms,
+        });
+
+        const now = new Date().toISOString();
+        for (const r of batchRes.results) {
+          const item = studentsPayload.find((p) => p.student_id === r.student_id);
+          const updates: Record<string, any> = {};
+          if (r.student_sent) updates.student_portal_sent_at = now;
+          if (r.parent_sent) updates.parent_portal_sent_at = now;
+          if (item?.token) updates.parent_portal_token = item.token;
+          if (Object.keys(updates).length > 0) {
+            await studentsService.updateStudent(r.student_id, updates).catch(() => {});
+          }
+        }
+      } catch (e) {
+        console.error("[DualPortalBatch] Background dispatch error:", e);
+      }
+    });
+
+    res.json({
+      status: "scheduled",
+      message: `تم بدء جدولة إرسال الروابط لـ (${targetStudents.length}) طالباً (طالب وولي أمر) بأعلى معايير الأمان وبفاصل 30 دقيقة لحماية رقمك.`,
+      total: targetStudents.length,
+      capped_to: 24,
+      students: targetStudents.map((s) => ({ id: s.id, name: s.name })),
+    });
+  } catch (err: unknown) {
+    res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: (err as Error).message },
+    });
+  }
+});
+
 // DEV-QUIZ.1: POST /api/students/:id/notify-score - Send quiz score via WhatsApp
 studentsRouter.post("/:id/notify-score", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id;

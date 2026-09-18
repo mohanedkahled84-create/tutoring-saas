@@ -289,7 +289,7 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
         body: JSON.stringify({
           number: cleanPhone,
           presence,
-          delay: 1200,
+          delay: 10000,
         }),
         signal: AbortSignal.timeout(4000),
       }).catch(() => null);

@@ -9,7 +9,10 @@ import { getIcon } from "../utils/icons.js";
 
 export function renderStudentsView(students = [], groups = [], isLoading = false, billing = {}) {
   const studentList = students || [];
-  const unsentCount = studentList.filter(s => !s.parent_portal_sent_at && (s.parentPhone || s.parent_phone)).length;
+  const unsentCount = studentList.filter(s => 
+    (!s.parent_portal_sent_at || !s.student_portal_sent_at) && 
+    ((s.parentPhone || s.parent_phone) || (s.studentPhone || s.student_phone))
+  ).length;
 
   const currentCount = studentList.length;
   const billingData = billing || window.centrlyApp?.billingState || {};
@@ -127,9 +130,9 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-            <button class="btn btn-primary" onclick="window.centrlyApp.openBatchParentLinksModal()" style="display: flex; align-items: center; gap: 0.4rem; background-color: #0284c7; border-color: #0284c7; font-weight: 700;" title="إرسال رابط المتابعة للطلاب الجدد عبر واتساب">
+            <button class="btn btn-primary" onclick="window.centrlyApp.openBatchPortalLinksModal()" style="display: flex; align-items: center; gap: 0.4rem; background-color: #0284c7; border-color: #0284c7; font-weight: 700;" title="إرسال روابط المتابعة والمنصة للطلاب الجدد عبر واتساب (طالب وولي أمر)">
               ${getIcon('whatsapp', 18)}
-              <span>إرسال الرابط للطلاب الجدد</span>
+              <span>إرسال الروابط للطلاب الجدد</span>
               ${unsentCount > 0 
                 ? `<span style="background: #ef4444; color: #fff; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 9999px; font-weight: 900;">${unsentCount}</span>` 
                 : `<span style="background: #10b981; color: #fff; font-size: 0.75rem; padding: 0.15rem 0.45rem; border-radius: 9999px; display: inline-flex; align-items: center;">${getIcon('check', 10, '#fff')}</span>`}

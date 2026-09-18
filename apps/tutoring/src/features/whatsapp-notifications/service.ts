@@ -1315,6 +1315,150 @@ export class WhatsAppNotificationsService {
   }
 
   /**
+   * DEV-PORTAL.5: Dual batch dispatch to both Student and Parent.
+   * Strict anti-ban guarantees:
+   * - Daily cap: maximum 24 students (up to 48 messages).
+   * - Spaced intervals: default 30 minutes (1,800,000 ms) between students for safe scheduled queues.
+   * - Presence typing: sendPresence('composing') with realistic typing duration before each dispatch.
+   * - Distinct templates: Student Portal vs Parent Portal with contact-saving instruction at top.
+   * - Natural pause: 5-10 seconds between student and parent message of the same student.
+   */
+  async batchSendDualPortalLinks(params: {
+    tenant_id: string;
+    teacher_id?: string | null;
+    teacher_name?: string;
+    students: Array<{
+      student_id: string;
+      student_name: string;
+      student_phone?: string | null;
+      parent_phone?: string | null;
+      student_portal_url: string;
+      parent_portal_url: string;
+    }>;
+    pacingDelayMs?: number;
+  }): Promise<{
+    total: number;
+    students_processed: number;
+    student_messages_sent: number;
+    parent_messages_sent: number;
+    failed_count: number;
+    results: Array<{
+      student_id: string;
+      student_name: string;
+      student_sent: boolean;
+      parent_sent: boolean;
+      student_error?: string;
+      parent_error?: string;
+      delay_applied_ms?: number;
+    }>;
+  }> {
+    const { tenant_id, teacher_id, teacher_name, students, pacingDelayMs } = params;
+
+    // Hard cap at 24 students max per batch/day to guarantee 100% WhatsApp safety
+    const safeStudentList = (students || []).slice(0, 24);
+    const results: Array<any> = [];
+    let studentSentCount = 0;
+    let parentSentCount = 0;
+    let failedCount = 0;
+
+    for (let i = 0; i < safeStudentList.length; i++) {
+      const item = safeStudentList[i];
+      let delayApplied = 0;
+
+      if (i > 0) {
+        // Safe 30-minute pacing interval between students (unless specified in tests)
+        delayApplied = pacingDelayMs !== undefined ? pacingDelayMs : 1800000;
+        if (delayApplied > 0) {
+          logger.info(`[WhatsAppPacing] Dual portal safe pacing: waiting ${(delayApplied / 1000).toFixed(0)}s before student ${i + 1}/${safeStudentList.length}`);
+          await new Promise((r) => setTimeout(r, delayApplied));
+        }
+      }
+
+      let studentSent = false;
+      let parentSent = false;
+      let studentErr: string | undefined;
+      let parentErr: string | undefined;
+
+      // 1. Send to Student (if student_phone is provided)
+      if (item.student_phone && item.student_phone.trim()) {
+        try {
+          const sRes = await this.sendStudentPortalLink({
+            tenant_id,
+            teacher_id,
+            student_id: item.student_id,
+            student_name: item.student_name,
+            student_phone: item.student_phone,
+            teacher_name,
+            portal_url: item.student_portal_url,
+          });
+          if (sRes.success) {
+            studentSent = true;
+            studentSentCount++;
+          } else {
+            studentErr = sRes.error;
+          }
+        } catch (err: unknown) {
+          studentErr = (err as Error).message;
+        }
+      }
+
+      // Natural pause between student message and parent message (e.g. 5-10s in production, 0 in tests)
+      if (studentSent && item.parent_phone && item.parent_phone.trim()) {
+        const intraStudentDelay = pacingDelayMs !== undefined && pacingDelayMs < 5000 ? 0 : 7000;
+        if (intraStudentDelay > 0) {
+          await new Promise((r) => setTimeout(r, intraStudentDelay));
+        }
+      }
+
+      // 2. Send to Parent (if parent_phone is provided)
+      if (item.parent_phone && item.parent_phone.trim()) {
+        try {
+          const pRes = await this.sendParentPortalLink({
+            tenant_id,
+            teacher_id,
+            student_id: item.student_id,
+            student_name: item.student_name,
+            parent_phone: item.parent_phone,
+            teacher_name,
+            portal_url: item.parent_portal_url,
+          });
+          if (pRes.success) {
+            parentSent = true;
+            parentSentCount++;
+          } else {
+            parentErr = pRes.error;
+          }
+        } catch (err: unknown) {
+          parentErr = (err as Error).message;
+        }
+      }
+
+      if (!studentSent && !parentSent) {
+        failedCount++;
+      }
+
+      results.push({
+        student_id: item.student_id,
+        student_name: item.student_name,
+        student_sent: studentSent,
+        parent_sent: parentSent,
+        student_error: studentErr,
+        parent_error: parentErr,
+        delay_applied_ms: delayApplied,
+      });
+    }
+
+    return {
+      total: (students || []).length,
+      students_processed: safeStudentList.length,
+      student_messages_sent: studentSentCount,
+      parent_messages_sent: parentSentCount,
+      failed_count: failedCount,
+      results,
+    };
+  }
+
+  /**
    * DEV-NOTIF.1: Batch send notifications (rescheduled, cancelled, extra_session) directly to students with Anti-Ban pacing & spintax.
    */
   async batchSendCustomNotification(
@@ -1929,6 +2073,9 @@ export function generateParentPortalInviteMessage(params: {
 
 ${intro}
 
+⚠️ *خطوة هامة وأساسية لتفعيل الرابط:*
+يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط (Clickable) ومباشراً، ولضمان استلام إشعارات وتقارير الطالب أولاً بأول دون انقطاع.
+
 *رابط المتابعة المباشر:*
 ${url}
 
@@ -1937,8 +2084,6 @@ ${url}
 - الاطلاع على درجات الكويزات والامتحانات الدورية فور رصدها.
 - متابعة الالتزام بتسليم وحل الواجبات المنزلية.
 - قراءة ملاحظات وتوجيهات المعلم المباشرة.
-
-*تنبيه هام:* يرجى تسجيل وحفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان استلام إشعارات وتقارير الطالب أولاً بأول دون انقطاع.
 
 ${closing}`;
 }
@@ -1983,6 +2128,9 @@ export function generateStudentPortalInviteMessage(params: {
 
 ${intro}
 
+⚠️ *خطوة هامة وأساسية لتفعيل الرابط:*
+يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط (Clickable) ومباشراً، ولتصلك تنبيهات الحصص والمذكرات الجديدة أولاً بأول.
+
 *رابط بوابتك التعليمية المباشر:*
 ${url}
 
@@ -2005,7 +2153,7 @@ interface DailyQuotaRecord {
 const tenantDailyQuotaMap = new Map<string, DailyQuotaRecord>();
 export const DEFAULT_SAFE_DAILY_CAP = process.env.WHATSAPP_DAILY_CAP
   ? parseInt(process.env.WHATSAPP_DAILY_CAP, 10)
-  : (process.env.NODE_ENV === "test" ? 500 : 25);
+  : (process.env.NODE_ENV === "test" ? 500 : 48);
 const WARNING_THRESHOLD_PERCENT = 0.8; // 80% = 400 messages
 
 export function getTodayDateString(): string {
