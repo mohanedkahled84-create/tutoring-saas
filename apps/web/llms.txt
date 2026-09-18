@@ -6,7 +6,7 @@ Centrly (سنترلي) is an all-in-one cloud management software (SaaS) built s
 
 ## Key Features
 - **Barcode Attendance Tracking**: High-speed, continuous camera barcode scanning via mobile or desktop webcam with 0.1s instant detection and audio feedback. No dedicated hardware needed.
-- **WhatsApp Anti-Ban Messaging**: Intelligent message spintax phrasing rotation, randomized jitter delays, and simulated human typing to safely dispatch attendance and quiz score reports to parents directly without risk of number bans.
+- **WhatsApp Parent Messaging**: Automated message personalization, scheduled dispatches, and interactive reports to send attendance and quiz scores directly to parents effortlessly.
 - **Smart Student ID Cards**: Ready-to-print PDF card sheets and Excel/CSV data exports compatible with Canva and Photoshop for PVC card production.
 - **Interactive Parent Portal (No-App)**: One-click interactive web portal for parents to monitor attendance records, grades, and homework without downloading any mobile apps.
 - **Room & Session Management**: Conflict detection, timetable scheduling, and assistant payroll calculations.

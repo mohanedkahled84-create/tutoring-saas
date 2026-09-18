@@ -21,6 +21,7 @@ export interface Student {
   parent_portal_token?: string | null;
   parent_portal_sent_at?: string | null;
   student_portal_sent_at?: string | null;
+  portal_password?: string | null;
 }
 
 export interface CreateStudentDTO {
@@ -32,6 +33,7 @@ export interface CreateStudentDTO {
   notes?: string | null;
   fee_override?: number | null;
   exempt?: boolean;
+  portal_password?: string | null;
 }
 
 export interface UpdateStudentDTO {
@@ -46,6 +48,7 @@ export interface UpdateStudentDTO {
   parent_portal_sent_at?: string | null;
   student_portal_sent_at?: string | null;
   group_id?: string | null;
+  portal_password?: string | null;
 }
 
 export interface PublicRegisterDTO {
@@ -54,6 +57,7 @@ export interface PublicRegisterDTO {
   parent_phone: string;
   student_phone?: string | null;
   group_id: string;
+  portal_password?: string | null;
 }
 
 export interface BulkImportPayload {
@@ -68,9 +72,29 @@ export interface GroupRecord {
   tenant_id?: string;
 }
 
+export interface PortalLoginDTO {
+  identifier: string;
+  password: string;
+}
+
+export interface PortalLoginResult {
+  success: boolean;
+  token: string;
+  student: {
+    id: string;
+    name: string;
+    code: string;
+    parent_phone?: string;
+    student_phone?: string;
+    tenant_id: string;
+  };
+  role: "parent" | "student";
+}
+
 export interface IStudentsRepository {
   list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]>;
   findById(id: string): Promise<Student | null>;
+  findByIdentifier(identifier: string): Promise<Student | null>;
   create(tenantId: string | undefined, student: Partial<Student>): Promise<Student>;
   update(id: string, data: UpdateStudentDTO): Promise<Student | null>;
   delete(id: string): Promise<void>;
@@ -78,3 +102,4 @@ export interface IStudentsRepository {
   findGroupById(groupId: string): Promise<GroupRecord | null>;
   enrollStudentInGroup(tenantId: string | undefined, studentId: string, groupId: string): Promise<void>;
 }
+

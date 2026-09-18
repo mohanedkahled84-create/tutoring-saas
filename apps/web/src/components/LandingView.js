@@ -255,7 +255,7 @@ export function renderLandingView() {
 
           <!-- Subtitle -->
           <p style="font-size: clamp(1rem, 2vw, 1.2rem); color: var(--brand-text); max-width: 820px; margin: 0 auto 2.25rem; line-height: 1.75; font-weight: 600;">
-            تسجيل حضور بالباركود السريع في ثوانٍ، كروت ذكية وطباعة فورية، رسائل واتساب آلية لأولياء الأمور بدرجات الكويزات بدون حظر، وبوابة متابعة تفاعلية لكل طالب بدون الحاجة لتحميل أي تطبيقات.
+            تسجيل حضور بالباركود السريع في ثوانٍ، كروت ذكية وطباعة فورية، رسائل واتساب آلية وتلقائية لأولياء الأمور بدرجات الكويزات والحضور، وبوابة متابعة تفاعلية لكل طالب بدون الحاجة لتحميل أي تطبيقات.
           </p>
 
           <!-- Dual Hero CTAs -->
@@ -344,13 +344,10 @@ export function renderLandingView() {
               <div style="width: 44px; height: 44px; background: var(--brand-green-light); color: var(--brand-green); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
               </div>
-              <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--brand-navy); margin: 0 0 0.5rem;">رسائل واتساب فائقة الحماية من الحظر</h3>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--brand-navy); margin: 0 0 0.5rem;">رسائل واتساب وتقارير آلية فورية</h3>
               <p style="font-size: 0.875rem; color: var(--brand-text); line-height: 1.7; margin: 0;">
-                تنويع تلقائي لصياغة الرسائل وفواصل زمنية عشوائية ذكية مع محاكاة الكتابة الحية لضمان إرسال التقارير بأمان تام لخطك.
+                إرسال تقارير الحضور والغياب ودرجات الكويزات لأولياء الأمور تلقائياً بنقرة واحدة، لتوفير وقتك وتعزيز التواصل باحترافية وسلاسة تامة.
               </p>
-              <div style="font-size: 0.75rem; color: var(--brand-muted); margin-top: 0.6rem; line-height: 1.5; border-top: 1px dashed var(--brand-line); padding-top: 0.5rem;">
-                * تنبيه وإخلاء مسؤولية: الضغط المتواصل أو إرسال رسائل مكثفة قد يُعرّض الرقم للإغلاق من شركة واتساب، والمنصة تخلي مسؤوليتها عن أي حظر للرقم.
-              </div>
             </div>
 
             <!-- Feature 3 -->
@@ -586,11 +583,11 @@ export function renderLandingView() {
             <!-- Question 2 -->
             <div class="faq-item" id="faqItem2">
               <button type="button" class="faq-question" onclick="window.centrlyApp.toggleFaq(2)">
-                <span>كيف تحمون حساب الواتساب الخاص بالمعلم أو المركز من الحظر؟</span>
+                <span>كيف تعمل ميزة إرسال تقارير الواتساب لأولياء الأمور؟</span>
                 <svg id="faqIcon2" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
               <div class="faq-answer" id="faqAnswer2">
-                تعتمد سنترلي آلية إرسال ذكية تضع فواصل زمنية عشوائية وتشفير قوالب ديناميكية متوافقة مع سياسات الاستخدام العادل، مع توجيهات إرشادية كاملة لضمان أمان رقمك واستمرارية الإرسال لأولياء الأمور دون مضايقة خوارزميات ميتا.
+                بمجرد رصد الحضور أو تسجيل درجات الاختبارات، يمكنك إرسال رسائل مخصصة لكل ولي أمر فوراً بضغطة زر واحدة تشمل تفاصيل مستوى الطالب ورابط مباشر لتقريره التفاعلي، بدون أي مجهود يدوي.
               </div>
             </div>
 
@@ -612,7 +609,7 @@ export function renderLandingView() {
                 <svg id="faqIcon4" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
               <div class="faq-answer" id="faqAnswer4">
-                يمكنك اختيار الترقية إلى الباقة الأنسب لعدد طلابك (100، 250، أو 500 طالب) ومتابعة العمل بكامل بياناتك السابقة دون أي فقد، ولن يتم خصم أي مبالغ تلقائياً حيث لا نطلب بيانات بطاقة ائتمانية للتسجيل في التجربة.
+                يمكنك اختيار الترقية إلى الباقة الأنسب لعدد طلابك (300، 750، أو 1500 طالب) ومتابعة العمل بكامل بياناتك السابقة دون أي فقد، ولن يتم خصم أي مبالغ تلقائياً حيث لا نطلب بيانات بطاقة ائتمانية للتسجيل في التجربة.
               </div>
             </div>
 

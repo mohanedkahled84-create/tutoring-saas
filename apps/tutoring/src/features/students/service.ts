@@ -6,6 +6,8 @@ import {
   BulkImportPayload,
   ImportResult,
   IStudentsRepository,
+  PortalLoginDTO,
+  PortalLoginResult,
 } from "./types.js";
 import {
   parseCSV,
@@ -41,6 +43,8 @@ export class StudentsService {
       codeToUse = String(nextSerial);
     }
 
+    const autoPassword = data.portal_password || String(Math.floor(100000 + Math.random() * 900000));
+
     const student = await this.repo.create(tenantId, {
       name: data.name,
       parent_phone: data.parent_phone,
@@ -50,6 +54,7 @@ export class StudentsService {
       notes: data.notes || null,
       fee_override: data.fee_override ?? null,
       exempt: data.exempt ?? false,
+      portal_password: autoPassword,
     });
 
     if (student?.id && tenantId) {
@@ -196,6 +201,7 @@ export class StudentsService {
       }
 
       try {
+        const autoPassword = String(Math.floor(100000 + Math.random() * 900000));
         const student = await this.repo.create(tenantId, {
           name,
           parent_phone: parentPhone,
@@ -205,6 +211,7 @@ export class StudentsService {
           fee_override: feeOverride,
           exempt: isExempt,
           notes: mapped.notes || null,
+          portal_password: autoPassword,
         });
 
         await this.repo.enrollStudentInGroup(tenantId, student.id, groupId);
@@ -231,4 +238,73 @@ export class StudentsService {
       imported_students: importedStudents,
     };
   }
+
+  /**
+   * DEV-PORTAL: Authenticate student or parent from unified /portal entry
+   */
+  async authenticatePortalUser(dto: PortalLoginDTO): Promise<PortalLoginResult> {
+    const rawIdentifier = (dto.identifier || "").trim();
+    const rawPassword = (dto.password || "").trim();
+
+    if (!rawIdentifier || !rawPassword) {
+      throw new Error("MISSING_CREDENTIALS");
+    }
+
+    const student = await this.repo.findByIdentifier(rawIdentifier);
+    if (!student) {
+      throw new Error("INVALID_CREDENTIALS");
+    }
+
+    const storedPassword = student.portal_password;
+    if (!storedPassword || storedPassword !== rawPassword) {
+      throw new Error("INVALID_CREDENTIALS");
+    }
+
+    const cleanIdent = rawIdentifier.replace(/[\s\-\(\)\.]/g, "");
+    const cleanStudentPhone = (student.student_phone || "").replace(/[\s\-\(\)\.]/g, "");
+
+    let role: "parent" | "student" = "parent";
+    if (cleanStudentPhone && cleanIdent === cleanStudentPhone) {
+      role = "student";
+    }
+
+    const token = generateParentPortalToken(student.id, student.tenant_id, 365);
+
+    return {
+      success: true,
+      token,
+      student: {
+        id: student.id,
+        name: student.name,
+        code: student.student_code || student.code || "",
+        parent_phone: student.parent_phone,
+        student_phone: student.student_phone || undefined,
+        tenant_id: student.tenant_id,
+      },
+      role,
+    };
+  }
+
+  /**
+   * DEV-PORTAL: Change portal password
+   */
+  async changePortalPassword(studentId: string, oldPassword: string, newPassword: string): Promise<void> {
+    const student = await this.repo.findById(studentId);
+    if (!student) {
+      throw new Error("STUDENT_NOT_FOUND");
+    }
+
+    if (student.portal_password && student.portal_password !== oldPassword.trim()) {
+      throw new Error("INVALID_OLD_PASSWORD");
+    }
+
+    if (!newPassword || newPassword.trim().length < 4) {
+      throw new Error("PASSWORD_TOO_SHORT");
+    }
+
+    await this.repo.update(studentId, {
+      portal_password: newPassword.trim(),
+    });
+  }
 }
+

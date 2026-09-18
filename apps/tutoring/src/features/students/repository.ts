@@ -92,6 +92,26 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     return student;
   }
 
+  async findByIdentifier(identifier: string): Promise<Student | null> {
+    const raw = identifier.trim();
+    if (!raw) return null;
+    const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, "");
+
+    const { data, error } = await this.client
+      .from("students")
+      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
+      .or(`code.eq.${raw},student_code.eq.${raw},parent_phone.eq.${cleanPhone},student_phone.eq.${cleanPhone}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    const student = data as Student;
+    if (!student.parent_portal_token && student.id && student.tenant_id) {
+      student.parent_portal_token = generateParentPortalToken(student.id, student.tenant_id, 365);
+    }
+    return student;
+  }
+
   async create(tenantId: string | undefined, student: Partial<Student>): Promise<Student> {
     const payload: Record<string, unknown> = {
       ...student,
@@ -123,6 +143,8 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     if (data.student_portal_sent_at !== undefined) updatePayload.student_portal_sent_at = data.student_portal_sent_at;
     if (data.parent_portal_token !== undefined) updatePayload.parent_portal_token = data.parent_portal_token;
     if (data.group_id !== undefined) updatePayload.group_id = data.group_id;
+    if (data.portal_password !== undefined) updatePayload.portal_password = data.portal_password;
+
 
     const { data: updated, error } = await this.client
       .from("students")
@@ -280,6 +302,23 @@ export class FakeStudentsRepository implements IStudentsRepository {
     return student ? { ...student } : null;
   }
 
+  async findByIdentifier(identifier: string): Promise<Student | null> {
+    const raw = identifier.trim();
+    if (!raw) return null;
+    const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, "");
+    const student = this.students.find((s) => {
+      const sParentPhone = (s.parent_phone || "").replace(/[\s\-\(\)\.]/g, "");
+      const sStudentPhone = (s.student_phone || "").replace(/[\s\-\(\)\.]/g, "");
+      return (
+        s.code === raw ||
+        s.student_code === raw ||
+        (cleanPhone.length >= 6 && sParentPhone === cleanPhone) ||
+        (cleanPhone.length >= 6 && sStudentPhone === cleanPhone)
+      );
+    });
+    return student ? { ...student } : null;
+  }
+
   async create(tenantId: string | undefined, student: Partial<Student>): Promise<Student> {
     const newStudent: Student = {
       id: student.id || `std-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -292,11 +331,13 @@ export class FakeStudentsRepository implements IStudentsRepository {
       fee_override: student.fee_override ?? null,
       exempt: student.exempt ?? false,
       notes: student.notes || null,
+      portal_password: student.portal_password || null,
       created_at: student.created_at || new Date().toISOString(),
     };
     this.students.push(newStudent);
     return { ...newStudent };
   }
+
 
   async update(id: string, data: UpdateStudentDTO): Promise<Student | null> {
     const idx = this.students.findIndex((s) => s.id === id);

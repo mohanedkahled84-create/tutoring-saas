@@ -2197,7 +2197,7 @@ export function getDailyQuotaStatus(tenantId: string, dailyCap = DEFAULT_SAFE_DA
     cap_reached: isCapReached,
     approaching_cap: isApproachingCap,
     warning: isApproachingCap
-      ? `تنبيه: اقترب حسابك من الحد اليومي الآمن (${sentToday}/${dailyCap} رسالة اليوم). يُنصح بجدولة الإرسال لتجنب حظر الرقم من واتساب.`
+      ? `تنبيه: اقترب حسابك من الحد اليومي الموصى به (${sentToday}/${dailyCap} رسالة اليوم). يُنصح بجدولة الإرسال للحفاظ على استقرار الخدمة وسلاستها.`
       : undefined,
   };
 }
