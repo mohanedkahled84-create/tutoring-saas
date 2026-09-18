@@ -65,9 +65,9 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
               <span>${getIcon('gear', 24, '#fcd34d')}</span>
-              <h2 style="margin: 0; font-size: 1.4rem; font-weight: 900; color: #fff;">
-                إعدادات الحساب والمنظومة
-              </h2>
+                <h2 style="margin: 0; font-size: 1.4rem; font-weight: 900; color: #fff;">
+                  الإعدادات والاشتراك
+                </h2>
             </div>
             <p style="font-size: 0.875rem; color: #cbd5e1; margin: 0;">
               تعديل بيانات المعلم، إدارة باقة الاشتراك، والأمان وكلمة المرور.
