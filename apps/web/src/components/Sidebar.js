@@ -48,7 +48,6 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       category: 'الإدارة والماليات',
       routes: [
         { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
-        { id: 'coupons', title: 'أكواد الخصم والكوبونات', icon: 'billing' },
         { id: 'center-assistants', title: 'المساعدين وفريق الاستقبال', icon: 'assistants' },
         { id: 'activity-logs', title: 'تسويات المدرسين والماليات', icon: 'billing' },
       ],
@@ -88,10 +87,9 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       ],
     },
     {
-      category: 'الإعدادات وفريق العمل',
+      category: 'الإدارة وفريق العمل',
       routes: [
         { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
-        { id: 'coupons', title: 'أكواد الخصم والكوبونات', icon: 'billing' },
         { id: 'assistants', title: 'إدارة المساعدين (الأسستنت)', icon: 'assistants' },
       ],
     },

@@ -2,7 +2,6 @@ import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { renderBillingView } from './BillingView.js?v=3.8.0';
 import { renderWhatsAppSettingsView } from './WhatsAppSettingsView.js';
-import { renderCouponsView } from './CouponsView.js';
 
 /**
  * Centrly Teacher Settings & Account Management View
@@ -113,13 +112,6 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           <span>الباقة والاشتراكات</span>
         </button>
 
-        <button type="button" onclick="window.centrlyApp.switchSettingsTab('coupons')"
-          class="btn ${activeTab === 'coupons' ? 'btn-primary' : 'btn-secondary'}"
-          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
-          ${getIcon('billing', 16)}
-          <span>أكواد الخصم والكوبونات</span>
-        </button>
-
         <button type="button" onclick="window.centrlyApp.switchSettingsTab('security')"
           class="btn ${activeTab === 'security' ? 'btn-primary' : 'btn-secondary'}"
           style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
@@ -184,12 +176,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
         ${renderBillingView(billing, user)}
       </div>
 
-      <!-- ================= TAB 4: COUPONS ================= -->
-      <div id="settingsTabCoupons" style="display: ${activeTab === 'coupons' ? 'block' : 'none'};">
-        ${renderCouponsView(typeof window !== 'undefined' && window.centrlyApp?.giftCodes ? window.centrlyApp.giftCodes : [], user)}
-      </div>
-
-      <!-- ================= TAB 5: SECURITY ================= -->
+      <!-- ================= TAB 4: SECURITY ================= -->
       <div id="settingsTabSecurity" style="display: ${activeTab === 'security' ? 'block' : 'none'};">
         <div style="display: flex; flex-direction: column; gap: 1.5rem;">
           

@@ -1635,9 +1635,12 @@ class CentrlyApp {
     }
 
     const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
     const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'coupons', 'activity-logs'];
     if (isAdmin && !adminRoutes.includes(route)) {
       route = 'admin-dashboard';
+    } else if (!isAdmin && adminRoutes.includes(route)) {
+      route = isCenter ? 'center-dashboard' : 'dashboard';
     }
 
     this.currentRoute = route;
@@ -1749,6 +1752,11 @@ class CentrlyApp {
           break;
         }
         case 'coupons': {
+          const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+          if (!isAdmin) {
+            this.navigate((this.user?.role === 'center_owner' || this.user?.account_type === 'center') ? 'center-dashboard' : 'dashboard');
+            return;
+          }
           await this.loadCoupons();
           this.renderMainContent();
           break;
@@ -2145,8 +2153,6 @@ class CentrlyApp {
             atRiskStudents: atRisk,
             topPerformers: leaderboard,
           };
-          await this.loadCoupons();
-          this.dashboardData.giftCodes = this.giftCodes || [];
           this.saveCache('dashboardData', this.dashboardData);
           this.saveCache('students', students);
           this.saveCache('groups', groups);
@@ -2220,7 +2226,6 @@ class CentrlyApp {
               pairing_code: qrRes?.pairing_code || null,
               templates: tplRes?.templates || [],
             };
-            await this.loadCoupons();
           } catch (_) {}
           this.renderMainContent();
           if (this.whatsappState?.status !== 'connected' && this.settingsState?.activeTab === 'whatsapp') {
@@ -2482,8 +2487,19 @@ class CentrlyApp {
         return renderAdminPaymentProofsView(this.adminProofsData || {}, this.adminProofsFilter || 'pending');
       case 'admin-tenants':
         return renderAdminTenantsView(this.adminTenantsData || {}, this.adminTenantsFilter || 'all', this.adminTenantsSearchQuery || '');
-      case 'coupons':
+      case 'coupons': {
+        const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+        if (!isAdmin) {
+          return (this.user?.role === 'center_owner' || this.user?.account_type === 'center')
+            ? renderCenterOwnerDashboard(this.centerDashboardState)
+            : renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
+                hasPin: this.hasSecurityPin,
+                isUnlocked: this.isFinancialUnlocked,
+                hideNumbers: this.hideFinancialNumbers,
+              });
+        }
         return renderCouponsView(this.giftCodes || [], this.user || {});
+      }
       case 'dashboard':
         return renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
           hasPin: this.hasSecurityPin,
@@ -8526,14 +8542,16 @@ https://centerly-platform.vercel.app/p/p16766044
   // ==========================================================================
 
   async loadCoupons() {
+    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    if (!isAdmin) {
+      this.giftCodes = [];
+      return;
+    }
     try {
-      const res = await request('/billing/gift-codes').catch(async () => {
-        return await request('/admin/gift-codes').catch(() => ({ gift_codes: [] }));
+      const res = await request('/admin/gift-codes').catch(async () => {
+        return await request('/billing/gift-codes').catch(() => ({ gift_codes: [] }));
       });
       this.giftCodes = Array.isArray(res?.gift_codes) ? res.gift_codes : [];
-      if (this.dashboardData) {
-        this.dashboardData.giftCodes = this.giftCodes;
-      }
     } catch (err) {
       console.warn('Failed to load gift codes:', err);
       this.giftCodes = [];
@@ -8541,6 +8559,12 @@ https://centerly-platform.vercel.app/p/p16766044
   }
 
   openCreateCouponModal() {
+    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    if (!isAdmin) {
+      this.showToast('عذراً، إدارة أكواد الخصم متاحة فقط لمدير المنصة.', 'warning');
+      return;
+    }
+
     const existing = document.getElementById('createCouponModal');
     if (existing) existing.remove();
 
@@ -8711,6 +8735,8 @@ https://centerly-platform.vercel.app/p/p16766044
   }
 
   async toggleCouponStatus(id, newStatus) {
+    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    if (!isAdmin) return;
     try {
       await request(`/billing/gift-codes/${id}`, {
         method: 'PATCH',
@@ -8731,6 +8757,8 @@ https://centerly-platform.vercel.app/p/p16766044
   }
 
   async deleteCoupon(id, code) {
+    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    if (!isAdmin) return;
     if (!confirm(`هل أنت متأكد من حذف كود الخصم (${code}) نهائياً؟`)) {
       return;
     }
