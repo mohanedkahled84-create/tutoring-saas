@@ -1,6 +1,7 @@
 import { getIcon } from '../utils/icons.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
-export function renderNavbar(user) {
+export function renderNavbar(user, activeSessionSummary = null) {
   const isAdmin = user?.role === 'admin' || user?.is_superadmin;
 
   // Resolve raw name prioritizing full_name, name, teacher_name
@@ -35,11 +36,26 @@ export function renderNavbar(user) {
 
   return `
     <header class="app-topbar">
-      <div style="display: flex; align-items: center; gap: 1rem;">
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
         <button class="btn btn-secondary btn-sm" id="sidebarToggle" onclick="window.centrlyApp.toggleSidebar()" style="align-items: center; justify-content: center; padding: 0.4rem 0.6rem;">
           ${getIcon('menu', 20)}
         </button>
         ${isAdmin ? '<span class="badge" style="background: #1e293b; color: #f8fafc; font-weight: 700; border: 1px solid #334155;">لوحة المؤسس المستقلة (Centrly HQ)</span>' : '<span class="badge badge-blue">سحابي • RTL مفعّل</span>'}
+
+        <div id="navLiveSessionBadgeContainer">
+          ${activeSessionSummary ? `
+            <button 
+              type="button" 
+              onclick="window.centrlyApp.navigate('sessions')" 
+              class="btn btn-sm"
+              style="display: inline-flex; align-items: center; gap: 0.45rem; background: #fef2f2; color: #b91c1c; border: 1.5px solid #f87171; border-radius: 9999px; padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 800; cursor: pointer; animation: centrlyPulse 2s infinite;"
+              title="حصة نشطة حالياً - اضغط للمتابعة ورصد الحضور"
+            >
+              <span style="width: 9px; height: 9px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+              <span>حصة جارية: <b>${escapeHtml(activeSessionSummary.groupName)}</b> (${activeSessionSummary.attendeeCount || 0} حضور)</span>
+            </button>
+          ` : ''}
+        </div>
       </div>
 
       <div class="topbar-actions" style="display: flex; align-items: center; gap: 0.85rem;">

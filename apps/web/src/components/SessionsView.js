@@ -34,6 +34,29 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
     return `
       <div style="display: flex; flex-direction: column; gap: 1.5rem;">
         
+        <!-- Cross-Device Ongoing Session Detected Alert -->
+        ${(sessionState.ongoingServerSessions && sessionState.ongoingServerSessions.length > 0) ? `
+          <div class="card" style="margin: 0; border: 2px solid #ef4444; background: #fef2f2; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.12);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span style="width: 14px; height: 14px; border-radius: 50%; background: #ef4444; display: inline-block; box-shadow: 0 0 0 0 rgba(239,68,68,0.7); animation: centrlyPulse 1.8s infinite;"></span>
+                <div>
+                  <div style="font-weight: 800; color: #991b1b; font-size: 1.05rem;">
+                    توجد حصة جارية بالفعل تم بدؤها من جهاز آخر!
+                  </div>
+                  <div style="font-size: 0.85rem; color: #b91c1c; margin-top: 0.25rem;">
+                    المجموعة: <b>${escapeHtml(sessionState.ongoingServerSessions[0].group_name || sessionState.ongoingServerSessions[0].groups?.name || 'المجموعة الدراسية')}</b> • يمكنك استئنافها ومزامنة رصد الحضور بالباركود فوراً.
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-primary" onclick="window.centrlyApp.syncAndResumeServerSession('${escapeHtml(sessionState.ongoingServerSessions[0].id)}').then(() => window.centrlyApp.renderMainContent())" style="background: #dc2626; border-color: #dc2626; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.25rem;">
+                ${getIcon('sessions', 16, '#ffffff')}
+                <span>الانضمام ومتابعة رصد الحضور الآن</span>
+              </button>
+            </div>
+          </div>
+        ` : ''}
+
         <!-- Standby Header -->
         <div class="card" style="margin: 0;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">

@@ -501,6 +501,20 @@ class CentrlyApp {
       } catch (_) {}
 
       this.restoreSessionState();
+
+      // Cross-Device Sync: Check server for active session if local state is empty
+      if (!this.sessionState?.id) {
+        try {
+          const activeSessions = await request('/sessions?status=in_progress').catch(() => null);
+          const activeList = Array.isArray(activeSessions) ? activeSessions : (activeSessions?.sessions || []);
+          if (activeList.length > 0) {
+            await this.syncAndResumeServerSession(activeList[0].id);
+          }
+        } catch (_) {}
+      } else if (this.sessionState?.status === 'in_progress') {
+        this.startLiveSessionSync();
+      }
+
       this.renderApp();
       this.prefetchCoreData();
       await this.loadRouteData(this.currentRoute);
@@ -2131,47 +2145,31 @@ class CentrlyApp {
             };
             localStorage.removeItem('centrly_active_session_state');
             localStorage.removeItem('centrly_active_session_id');
+            this.stopLiveSessionSync();
           }
 
-          // Do not auto-hijack into arbitrary in_progress session; let the teacher select group from standby hub
-          if (!this.sessionState.id) {
+          // Cross-Device Real-Time Sync:
+          // 1. If NO active session in local state, check server for in_progress session and auto-resume it!
+          if (!this.sessionState?.id) {
             const todaySessions = await request('/sessions?status=in_progress').catch(() => []);
-            this.ongoingServerSessions = Array.isArray(todaySessions) ? todaySessions : (todaySessions.sessions || []);
+            const activeList = Array.isArray(todaySessions) ? todaySessions : (todaySessions?.sessions || []);
+            this.ongoingServerSessions = activeList;
+            if (activeList.length > 0) {
+              await this.syncAndResumeServerSession(activeList[0].id);
+            } else if (this.sessionState) {
+              this.sessionState.ongoingServerSessions = [];
+            }
+          } else if (!String(this.sessionState.id).startsWith('sess-')) {
+            // 2. If active session is loaded, pull latest server attendance and status
+            await this.syncAndResumeServerSession(this.sessionState.id);
           }
-          if (this.sessionState.id && !String(this.sessionState.id).startsWith('sess-')) {
-            try {
-              const serverSessionRes = await request(`/sessions/${this.sessionState.id}`).catch(() => null);
-              const fetchedStatus = serverSessionRes?.session?.status || serverSessionRes?.status;
-              // ONLY end session if server positively returned that the session has ended or cancelled!
-              if (serverSessionRes && !serverSessionRes.error && (fetchedStatus === 'ended' || fetchedStatus === 'cancelled')) {
-                this.sessionState = {
-                  id: null,
-                  status: 'scheduled',
-                  group: null,
-                  attendanceList: [],
-                  financials: { totalRevenue: 0, attendeeCount: 0, absentCount: 0, exemptCount: 0, makeupCount: 0 },
-                };
-                localStorage.removeItem('centrly_active_session_state');
-                localStorage.removeItem('centrly_active_session_id');
-              } else if (serverSessionRes?.attendance && Array.isArray(serverSessionRes.attendance)) {
-                serverSessionRes.attendance.forEach(serverAtt => {
-                  const local = (this.sessionState.attendanceList || []).find(a => a.student_id === serverAtt.student_id);
-                  if (local) {
-                    if (serverAtt.wa_status === 'failed') {
-                      local.deliveryStatus = 'failed';
-                      local.wa_status = 'failed';
-                      local.sent = false;
-                    } else if (serverAtt.wa_status === 'sent' || serverAtt.sent) {
-                      local.deliveryStatus = 'delivered';
-                      local.wa_status = 'sent';
-                      local.sent = true;
-                    }
-                  }
-                });
-              }
-            } catch (_) {}
+
+          if (this.sessionState?.status === 'in_progress') {
+            this.startLiveSessionSync();
           }
+
           this.renderMainContent();
+          this.updateNavbarBadge();
           if (this.sessionState?.status === 'in_progress') {
             this.focusScanInput();
           }
@@ -2291,7 +2289,7 @@ class CentrlyApp {
       <div class="app-container">
         ${renderSidebar(this.currentRoute, this.user)}
         <div class="app-main">
-          ${renderNavbar(this.user)}
+          ${renderNavbar(this.user, this.getActiveSessionSummary())}
           <main class="content-body" id="mainContent">
             ${this.getContentHtml(this.currentRoute)}
           </main>
@@ -2723,9 +2721,29 @@ class CentrlyApp {
 
     this.playScanBeep('success');
     this.persistSessionState();
+    this.updateNavbarBadge();
     this.showToast(isMakeup ? `تم تسجيل حضور تعويضي للطالب: ${student.name}` : `تم رصد حضور الطالب: ${student.name}`, 'success');
     this.renderMainContent();
     this.focusScanInput();
+
+    // Cross-Device Real-Time Sync: Push attendance record to backend immediately
+    const sid = this.sessionState?.id;
+    if (sid && !String(sid).startsWith('sess-')) {
+      const hwStatus = (homework && homework !== 'none') ? homework : null;
+      request(`/sessions/${sid}/attendance`, {
+        method: 'POST',
+        body: {
+          records: [{
+            student_id: student.id,
+            attended: true,
+            comment: null,
+            homework_status: hwStatus,
+            is_makeup: Boolean(isMakeup),
+            quiz_score: null,
+          }],
+        },
+      }).catch(err => console.warn('Real-time attendance record background sync error:', err));
+    }
   }
 
   updateAttendanceQuizScore(attendanceId, score) {
@@ -2733,15 +2751,39 @@ class CentrlyApp {
     if (item) {
       item.quiz_score = score !== '' && score !== null ? Number(score) : null;
       this.persistSessionState();
+      const sid = this.sessionState?.id;
+      if (sid && !String(sid).startsWith('sess-') && item.student_id) {
+        if (item.quiz_score !== null) {
+          request(`/sessions/${sid}/quiz-scores/${item.student_id}`, {
+            method: 'PUT',
+            body: { score: item.quiz_score, max_score: 20 },
+          }).catch(err => console.warn('Quiz score sync failed:', err));
+        }
+      }
     }
   }
 
   updateAttendanceHomework(attendanceId, newStatus) {
-    const item = (this.sessionState.attendanceList || []).find(a => a.id === attendanceId);
+    const item = (this.sessionState.attendanceList || []).find(a => a.id === attendanceId || a.student_id === attendanceId);
     if (item) {
       item.homework = newStatus;
       this.persistSessionState();
       this.showToast('تم تحديث حالة الواجب', 'info');
+      const sid = this.sessionState?.id;
+      if (sid && !String(sid).startsWith('sess-') && item.student_id) {
+        request(`/sessions/${sid}/attendance`, {
+          method: 'POST',
+          body: {
+            records: [{
+              student_id: item.student_id,
+              attended: Boolean(item.attended),
+              homework_status: (newStatus && newStatus !== 'none') ? newStatus : null,
+              is_makeup: Boolean(item.is_makeup),
+              quiz_score: item.quiz_score,
+            }],
+          },
+        }).catch(err => console.warn('Homework status sync failed:', err));
+      }
     }
   }
 
@@ -3593,6 +3635,324 @@ class CentrlyApp {
     }
   }
 
+  getActiveSessionSummary() {
+    if (this.sessionState?.id && this.sessionState.status === 'in_progress') {
+      return {
+        id: this.sessionState.id,
+        groupName: this.sessionState.group?.name || 'حصة جارية',
+        attendeeCount: this.sessionState.financials?.attendeeCount || 0,
+      };
+    }
+    return null;
+  }
+
+  updateNavbarBadge() {
+    const container = document.getElementById('navLiveSessionBadgeContainer');
+    if (!container) return;
+    const summary = this.getActiveSessionSummary();
+    if (summary) {
+      container.innerHTML = `
+        <button 
+          type="button" 
+          onclick="window.centrlyApp.navigate('sessions')" 
+          class="btn btn-sm"
+          style="display: inline-flex; align-items: center; gap: 0.45rem; background: #fef2f2; color: #b91c1c; border: 1.5px solid #f87171; border-radius: 9999px; padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 800; cursor: pointer; animation: centrlyPulse 2s infinite;"
+          title="حصة نشطة حالياً - اضغط للمتابعة ورصد الحضور"
+        >
+          <span style="width: 9px; height: 9px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+          <span>حصة جارية: <b>${escapeHtml(summary.groupName)}</b> (${summary.attendeeCount || 0} حضور)</span>
+        </button>
+      `;
+    } else {
+      container.innerHTML = '';
+    }
+  }
+
+  async syncAndResumeServerSession(sessionId) {
+    if (!sessionId) return null;
+    try {
+      const res = await request(`/sessions/${sessionId}`).catch(() => null);
+      if (!res || !res.session) return null;
+      const s = res.session;
+      if (s.status === 'ended' || s.status === 'cancelled') {
+        if (this.sessionState?.id === sessionId) {
+          this.sessionState = {
+            id: null,
+            status: 'scheduled',
+            group: null,
+            attendanceList: [],
+            financials: { totalRevenue: 0, attendeeCount: 0, absentCount: 0, exemptCount: 0, makeupCount: 0 },
+          };
+          localStorage.removeItem('centrly_active_session_state');
+          localStorage.removeItem('centrly_active_session_id');
+        }
+        this.stopLiveSessionSync();
+        this.updateNavbarBadge();
+        return null;
+      }
+
+      // Ensure groups are loaded
+      if (!this.groups || this.groups.length === 0) {
+        const gRes = await request('/groups').catch(() => []);
+        this.groups = Array.isArray(gRes) ? gRes : (gRes.groups || []);
+      }
+      const grp = (this.groups || []).find(g => g.id === s.group_id) || s.groups || { id: s.group_id, name: 'حصة دراسية', price: 100 };
+
+      // Ensure students are loaded
+      if (!this.students || this.students.length === 0) {
+        const studRes = await request('/students').catch(() => []);
+        this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
+      }
+
+      let groupStudents = (this.students || []).filter(st => st.group_id === s.group_id || (Array.isArray(st.group_ids) && st.group_ids.includes(s.group_id)));
+      if (groupStudents.length === 0) {
+        try {
+          const grpStudRes = await request(`/students?group_id=${s.group_id}`).catch(() => null);
+          const list = Array.isArray(grpStudRes) ? grpStudRes : (grpStudRes?.students || []);
+          if (list.length > 0) {
+            groupStudents = list;
+            list.forEach(st => {
+              if (!this.students.find(existing => existing.id === st.id)) {
+                this.students.push(st);
+              }
+            });
+          }
+        } catch (_) {}
+      }
+
+      const serverAttendance = Array.isArray(res.attendance) ? res.attendance : [];
+      const serverQuizScores = Array.isArray(res.quiz_scores) ? res.quiz_scores : [];
+
+      // Build roster starting with group students
+      const rosterMap = new Map();
+      groupStudents.forEach(st => {
+        rosterMap.set(st.id, {
+          id: st.id,
+          student_id: st.id,
+          code: st.code || st.student_code || (st.id ? st.id.slice(0, 4) : '—'),
+          name: st.name,
+          phone: st.phone || st.student_phone,
+          parent_phone: st.parent_phone,
+          attended: false,
+          homework: 'none',
+          quiz_score: null,
+          comment: '',
+          time: '',
+          deliveryStatus: 'pending',
+          sent: false,
+          is_makeup: false,
+          fee: st.exempt ? 0 : (st.fee_override ?? (grp?.price || 0)),
+        });
+      });
+
+      // Merge server attendance records
+      serverAttendance.forEach(att => {
+        const studentInfo = (this.students || []).find(st => st.id === att.student_id);
+        const existing = rosterMap.get(att.student_id);
+        const fee = studentInfo?.exempt ? 0 : (studentInfo?.fee_override ?? (grp?.price || 0));
+
+        let delivery = 'pending';
+        if (att.wa_status === 'sent' || att.sent) delivery = 'delivered';
+        else if (att.wa_status === 'failed') delivery = 'failed';
+
+        const record = {
+          id: att.id || att.student_id,
+          student_id: att.student_id,
+          code: studentInfo?.code || studentInfo?.student_code || (att.student_id ? att.student_id.slice(0, 4) : '—'),
+          name: studentInfo?.name || att.student_name || 'طالب مسجل',
+          phone: studentInfo?.phone || studentInfo?.student_phone || '',
+          parent_phone: studentInfo?.parent_phone || att.parent_phone || '',
+          attended: Boolean(att.attended),
+          homework: (att.homework_status && att.homework_status !== 'none') ? att.homework_status : (existing?.homework || 'none'),
+          quiz_score: (att.quiz_score !== undefined && att.quiz_score !== null) ? Number(att.quiz_score) : (existing?.quiz_score ?? null),
+          comment: att.comment || existing?.comment || '',
+          time: att.time || (att.created_at ? new Date(att.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : (existing?.time || '')),
+          deliveryStatus: delivery,
+          wa_status: att.wa_status || null,
+          sent: Boolean(att.sent || att.wa_status === 'sent'),
+          is_makeup: Boolean(att.is_makeup),
+          fee,
+        };
+        rosterMap.set(att.student_id, record);
+      });
+
+      // Merge quiz scores if any
+      serverQuizScores.forEach(qs => {
+        const existing = rosterMap.get(qs.student_id);
+        if (existing && qs.score !== undefined && qs.score !== null) {
+          existing.quiz_score = Number(qs.score);
+        }
+      });
+
+      const fullRoster = Array.from(rosterMap.values());
+      // Sort: attendees first, then absent
+      fullRoster.sort((a, b) => {
+        if (a.attended === b.attended) return 0;
+        return a.attended ? -1 : 1;
+      });
+
+      const attendees = fullRoster.filter(r => r.attended);
+      const absent = fullRoster.filter(r => !r.attended);
+      const makeup = fullRoster.filter(r => r.attended && r.is_makeup);
+      const totalRev = attendees.reduce((acc, cur) => acc + (cur.fee || 0), 0);
+
+      this.sessionState = {
+        id: s.id,
+        status: s.status,
+        session_number: s.session_number || 1,
+        session_date: s.session_date || new Date().toISOString().split('T')[0],
+        room: s.room || grp.room || grp.room_name || '',
+        group: grp,
+        attendanceList: fullRoster,
+        financials: {
+          totalRevenue: totalRev,
+          attendeeCount: attendees.length,
+          absentCount: absent.length,
+          exemptCount: fullRoster.filter(r => r.fee === 0).length,
+          makeupCount: makeup.length,
+        },
+      };
+
+      this.persistSessionState();
+      this.startLiveSessionSync();
+      this.updateNavbarBadge();
+      return this.sessionState;
+    } catch (err) {
+      console.warn('Failed to sync and resume server session:', err);
+      return null;
+    }
+  }
+
+  startLiveSessionSync() {
+    this.stopLiveSessionSync();
+    if (!this.sessionState?.id || this.sessionState.status !== 'in_progress') return;
+
+    this._sessionSyncInterval = setInterval(() => {
+      this.pollLiveSessionUpdates();
+    }, 4000);
+
+    if (!this._visibilityListenerAttached) {
+      this._visibilityListenerAttached = true;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && this.sessionState?.id && this.sessionState.status === 'in_progress') {
+          this.pollLiveSessionUpdates();
+        }
+      });
+      window.addEventListener('focus', () => {
+        if (this.sessionState?.id && this.sessionState.status === 'in_progress') {
+          this.pollLiveSessionUpdates();
+        }
+      });
+    }
+  }
+
+  stopLiveSessionSync() {
+    if (this._sessionSyncInterval) {
+      clearInterval(this._sessionSyncInterval);
+      this._sessionSyncInterval = null;
+    }
+  }
+
+  async pollLiveSessionUpdates() {
+    const sid = this.sessionState?.id;
+    if (!sid || String(sid).startsWith('sess-') || this.sessionState.status !== 'in_progress') {
+      return;
+    }
+    try {
+      const res = await request(`/sessions/${sid}`).catch(() => null);
+      if (!res) return;
+
+      const serverStatus = res.session?.status || res.status;
+      if (serverStatus === 'ended' || serverStatus === 'cancelled') {
+        this.stopLiveSessionSync();
+        this.sessionState.status = serverStatus;
+        this.persistSessionState();
+        this.showToast(`تم إنهاء الحصة من جهاز آخر (${serverStatus === 'ended' ? 'اكتملت الحصة' : 'أُلغيت'})`, 'info');
+        if (this.currentRoute === 'sessions') {
+          this.renderMainContent();
+        }
+        this.updateNavbarBadge();
+        return;
+      }
+
+      // Merge server attendance changes
+      const serverAttendance = Array.isArray(res.attendance) ? res.attendance : [];
+      let hasChanges = false;
+      const currentList = this.sessionState.attendanceList || [];
+
+      serverAttendance.forEach(sAtt => {
+        const local = currentList.find(a => a.student_id === sAtt.student_id);
+        if (local) {
+          if (!local.attended && sAtt.attended) {
+            local.attended = true;
+            local.time = sAtt.time || (sAtt.created_at ? new Date(sAtt.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : local.time);
+            local.is_makeup = Boolean(sAtt.is_makeup);
+            if (sAtt.homework_status) local.homework = sAtt.homework_status;
+            if (sAtt.quiz_score !== null && sAtt.quiz_score !== undefined) local.quiz_score = sAtt.quiz_score;
+            hasChanges = true;
+          }
+          if (sAtt.wa_status === 'sent' && local.deliveryStatus !== 'delivered') {
+            local.deliveryStatus = 'delivered';
+            local.wa_status = 'sent';
+            local.sent = true;
+            hasChanges = true;
+          } else if (sAtt.wa_status === 'failed' && local.deliveryStatus !== 'failed') {
+            local.deliveryStatus = 'failed';
+            local.wa_status = 'failed';
+            hasChanges = true;
+          }
+        } else if (sAtt.attended) {
+          const studentInfo = (this.students || []).find(st => st.id === sAtt.student_id);
+          const fee = studentInfo?.exempt ? 0 : (studentInfo?.fee_override ?? (this.sessionState.group?.price || 0));
+          currentList.unshift({
+            id: sAtt.id || sAtt.student_id,
+            student_id: sAtt.student_id,
+            code: studentInfo?.code || studentInfo?.student_code || (sAtt.student_id ? sAtt.student_id.slice(0, 4) : '—'),
+            name: studentInfo?.name || sAtt.student_name || 'طالب مسجل',
+            phone: studentInfo?.phone || studentInfo?.student_phone || '',
+            parent_phone: studentInfo?.parent_phone || sAtt.parent_phone || '',
+            attended: true,
+            homework: sAtt.homework_status || 'none',
+            quiz_score: sAtt.quiz_score ?? null,
+            comment: sAtt.comment || '',
+            time: sAtt.time || (sAtt.created_at ? new Date(sAtt.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : ''),
+            deliveryStatus: (sAtt.wa_status === 'sent' || sAtt.sent) ? 'delivered' : 'pending',
+            wa_status: sAtt.wa_status || null,
+            sent: Boolean(sAtt.sent || sAtt.wa_status === 'sent'),
+            is_makeup: Boolean(sAtt.is_makeup),
+            fee,
+          });
+          hasChanges = true;
+        }
+      });
+
+      if (hasChanges) {
+        const attendees = currentList.filter(r => r.attended);
+        const absent = currentList.filter(r => !r.attended);
+        const makeup = currentList.filter(r => r.attended && r.is_makeup);
+        const price = this.sessionState.group?.price || 0;
+        const totalRev = attendees.reduce((acc, cur) => acc + (cur.fee ?? (cur.exempt ? 0 : price)), 0);
+
+        this.sessionState.financials = {
+          totalRevenue: totalRev,
+          attendeeCount: attendees.length,
+          absentCount: absent.length,
+          exemptCount: currentList.filter(r => r.fee === 0 || r.exempt).length,
+          makeupCount: makeup.length,
+        };
+        this.persistSessionState();
+        this.updateNavbarBadge();
+        if (this.currentRoute === 'sessions') {
+          const activeInput = document.activeElement;
+          const isTyping = activeInput && (activeInput.id === 'scanStudentCode' || activeInput.tagName === 'INPUT' || activeInput.tagName === 'TEXTAREA');
+          if (!isTyping) {
+            this.renderMainContent();
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
   // Session Finalization & Note Choice (DEV-Feedback)
   endActiveSession() {
     this.openEndSessionConfirmModal();
@@ -3687,6 +4047,8 @@ class CentrlyApp {
 
       this.sessionState.status = 'ended';
       this.persistSessionState();
+      this.stopLiveSessionSync();
+      this.updateNavbarBadge();
       this.showToast('تم إنهاء الحصة وتثبيت كشف الحضور بنجاح.', 'success');
       this.renderMainContent();
     } catch (err) {
@@ -3694,6 +4056,8 @@ class CentrlyApp {
       if (err.message && (err.message.includes('Session not found') || err.message.includes('NOT_FOUND'))) {
         this.sessionState.status = 'ended';
         this.persistSessionState();
+        this.stopLiveSessionSync();
+        this.updateNavbarBadge();
         this.showToast('تم إنهاء الحصة وتثبيت كشف الحضور بنجاح.', 'success');
         this.renderMainContent();
         return;
@@ -3718,6 +4082,8 @@ class CentrlyApp {
     };
     localStorage.removeItem('centrly_active_session_state');
     localStorage.removeItem('centrly_active_session_id');
+    this.stopLiveSessionSync();
+    this.updateNavbarBadge();
     this.showToast('تم إغلاق الحصة بنجاح، يمكنك الآن بدء حصة جديدة.', 'info');
     this.renderMainContent();
   }
@@ -3729,6 +4095,8 @@ class CentrlyApp {
     }
     this.sessionState.status = 'in_progress';
     this.persistSessionState();
+    this.startLiveSessionSync();
+    this.updateNavbarBadge();
     this.showToast('تم تفعيل الحصة بنجاح! رصد الحضور متاح الآن.', 'success');
     this.renderMainContent();
     this.focusScanInput();
@@ -6464,6 +6832,8 @@ https://centerly-platform.vercel.app/p/p12345678 (رابط مختصر فائق �
     };
 
     this.persistSessionState();
+    this.startLiveSessionSync();
+    this.updateNavbarBadge();
     this.navigate('sessions');
   }
   viewGroupDetails(groupId) {
