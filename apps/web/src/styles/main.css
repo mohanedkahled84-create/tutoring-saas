@@ -309,6 +309,47 @@ input[type="submit"]:active {
   box-shadow: 0 0 0 3px rgba(70, 101, 211, 0.15);
 }
 
+/* Password Visibility Toggle Button */
+.password-toggle-btn {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  outline: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  color: var(--centrly-text);
+  padding: 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.password-toggle-btn:hover {
+  color: var(--centrly-blue-700);
+  background-color: rgba(70, 101, 211, 0.08);
+}
+
+.password-toggle-btn:focus,
+.password-toggle-btn:focus-visible,
+.password-toggle-btn:active {
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: rgba(70, 101, 211, 0.12);
+}
+
+.password-toggle-btn svg {
+  display: block;
+  pointer-events: none;
+}
+
 /* Badges */
 .badge {
   display: inline-flex;

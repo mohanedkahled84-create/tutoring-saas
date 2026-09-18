@@ -215,10 +215,10 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 const studentPhone = s.studentPhone || s.student_phone;
                 const parentPhone = s.parentPhone || s.parent_phone;
                 const pToken = s.parent_portal_token || s.parentPortalToken || '';
-                const canonicalOrigin = 'https://centerly-platform.vercel.app';
-                const cleanSid = String(s.id || '').replace(/-/g, '').toLowerCase().slice(0, 8);
-                const parentPortalUrl = cleanSid ? `${canonicalOrigin}/p/p${cleanSid}` : (pToken ? `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}` : '');
-                const studentPortalUrl = cleanSid ? `${canonicalOrigin}/s/s${cleanSid}` : (pToken ? `${canonicalOrigin}/parent-portal?token=${encodeURIComponent(pToken)}&portal=student` : '');
+                const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-platform.vercel.app') : 'https://centerly-platform.vercel.app';
+                const parentPortalUrl = pToken ? `${canonicalOrigin}/?token=${encodeURIComponent(pToken)}` : `${canonicalOrigin}/portal`;
+                const studentPortalUrl = pToken ? `${canonicalOrigin}/?token=${encodeURIComponent(pToken)}&portal=student` : `${canonicalOrigin}/portal`;
+                const portalPassword = s.portal_password || s.portalPassword || '';
                 return `
                 <tr>
                   <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>
@@ -238,11 +238,19 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                     ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride || s.fee_override ? `<span class="badge badge-warning">خصم: ${escapeHtml(s.feeOverride || s.fee_override)} ج.م</span>` : '<span style="color:var(--centrly-text); font-size:0.85rem;">أساسي</span>')}
                   </td>
                   <td>
-                    <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 155px;">
+                    <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 165px;">
+                      <!-- Password Badge -->
+                      ${portalPassword ? `
+                        <div style="font-size: 0.72rem; color: #475569; font-weight: 700; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0.15rem 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+                          <span style="color: #64748b;">🔑 كلمة المرور:</span>
+                          <span style="font-family: monospace; color: #1e3a8a; font-weight: 800; letter-spacing: 1px;">${escapeHtml(portalPassword)}</span>
+                        </div>
+                      ` : ''}
+
                       <!-- Parent Link Row -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
                         <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; width: 35px;">الأمر:</span>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رابط متابعة ولي الأمر" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ بيانات دخول ورابط ولي الأمر" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem;">
                           ${getIcon('copy', 12)}
                           <span>نسخ</span>
                         </button>
@@ -250,7 +258,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                           ${getIcon('whatsapp', 12)}
                           <span>إرسال</span>
                         </button>
-                        <a class="btn btn-secondary btn-sm" href="${parentPortalUrl || '#'}" ${parentPortalUrl ? 'target="_blank" rel="noopener noreferrer"' : `onclick="event.preventDefault(); window.centrlyApp.previewParentPortal('${escapeHtml(s.id)}');"`} title="معاينة بوابة ولي الأمر" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700); text-decoration: none;">
+                        <a class="btn btn-secondary btn-sm" href="${parentPortalUrl}" target="_blank" rel="noopener noreferrer" title="معاينة بوابة ولي الأمر" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700); text-decoration: none;">
                           ${getIcon('link', 12)}
                         </a>
                       </div>
@@ -258,7 +266,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                       <!-- Student Link Row -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
                         <span style="font-size: 0.65rem; color: #1d4ed8; font-weight: 700; width: 35px;">الطالب:</span>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyStudentLink('${escapeHtml(s.id)}')" title="نسخ رابط بوابة الطالب (الماتريال والواجبات)" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyStudentLink('${escapeHtml(s.id)}')" title="نسخ بيانات دخول ورابط الطالب" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;">
                           ${getIcon('copy', 12)}
                           <span>نسخ</span>
                         </button>
@@ -266,7 +274,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                           ${getIcon('whatsapp', 12)}
                           <span>إرسال</span>
                         </button>
-                        <a class="btn btn-secondary btn-sm" href="${studentPortalUrl || '#'}" ${studentPortalUrl ? 'target="_blank" rel="noopener noreferrer"' : `onclick="event.preventDefault(); window.centrlyApp.previewStudentPortal('${escapeHtml(s.id)}');"`} title="معاينة بوابة الطالب (رفع الواجبات والماتريال)" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: #1d4ed8; text-decoration: none;">
+                        <a class="btn btn-secondary btn-sm" href="${studentPortalUrl}" target="_blank" rel="noopener noreferrer" title="معاينة بوابة الطالب (رفع الواجبات والماتريال)" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: #1d4ed8; text-decoration: none;">
                           ${getIcon('link', 12)}
                         </a>
                       </div>

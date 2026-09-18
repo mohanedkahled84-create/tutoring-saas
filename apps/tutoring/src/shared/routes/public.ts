@@ -155,6 +155,38 @@ publicRouter.get("/short-links/:code", async (req: Request, res: Response): Prom
     }
   } catch (_) {}
 
+  // Fallback direct student lookup by deterministic UUID prefix
+  try {
+    const isStudent = code.toLowerCase().startsWith("s");
+    const portalType = isStudent ? "student" : "parent";
+    const rawHex = code.toLowerCase().replace(/^[ps]+/, "");
+    if (/^[0-9a-f]{4,8}$/i.test(rawHex)) {
+      const lowerBound = `${rawHex.padEnd(8, "0")}-0000-0000-0000-000000000000`;
+      const upperBound = `${rawHex.padEnd(8, "f")}-ffff-ffff-ffff-ffffffffffff`;
+      const { data: matchedStudents } = await supabase
+        .from("students")
+        .select("id, tenant_id, name, parent_portal_token")
+        .gte("id", lowerBound)
+        .lte("id", upperBound)
+        .limit(1);
+
+      if (matchedStudents && matchedStudents.length > 0) {
+        const student = matchedStudents[0];
+        const token = student.parent_portal_token || generateParentPortalToken(student.id, student.tenant_id, 365);
+        res.json({
+          code,
+          token,
+          portal_type: portalType,
+          student_id: student.id,
+          student_name: student.name,
+        });
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn("Deterministic short link fallback resolution error:", err);
+  }
+
   res.status(404).json({
     error: { code: "NOT_FOUND", message: "رابط المتابعة غير صحيح أو غير موجود" },
   });

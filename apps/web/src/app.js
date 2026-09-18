@@ -6622,31 +6622,35 @@ class CentrlyApp {
   }
 
   async copyParentLink(studentId) {
-    const canonicalOrigin = 'https://centerly-platform.vercel.app';
-    const cleanSid = String(studentId || '').replace(/-/g, '').toLowerCase().slice(0, 8);
-    const shortUrl = `${canonicalOrigin}/p/p${cleanSid}`;
-    await this.copyToClipboard(shortUrl, 'تم نسخ رابط متابعة ولي الأمر المختصر بنجاح!', 'رابط متابعة ولي الأمر');
+    const student = (this.students || []).find(s => s.id === studentId);
+    const phone = student?.parent_phone || student?.parentPhone || 'رقم ولي الأمر';
+    const pass = student?.portal_password || student?.portalPassword || '';
+    const passLine = pass ? `\n🔑 كلمة المرور: ${pass}` : '';
+    const textToCopy = `🌐 رابط بوابة المتابعة: https://centerly-platform.vercel.app/portal\n📱 اسم الدخول (رقم الهاتف): ${phone}${passLine}`;
+    await this.copyToClipboard(textToCopy, 'تم نسخ بيانات دخول ورابط ولي الأمر بنجاح!', 'بيانات الدخول');
   }
 
   async previewParentPortal(studentId) {
-    const canonicalOrigin = 'https://centerly-platform.vercel.app';
-    const cleanSid = String(studentId || '').replace(/-/g, '').toLowerCase().slice(0, 8);
-    const shortUrl = `${canonicalOrigin}/p/p${cleanSid}`;
-    window.open(shortUrl, '_blank');
+    const student = (this.students || []).find(s => s.id === studentId);
+    const token = student?.parent_portal_token || student?.parentPortalToken;
+    const url = token ? `/?token=${encodeURIComponent(token)}` : `/portal`;
+    window.open(url, '_blank');
   }
 
   async copyStudentLink(studentId) {
-    const canonicalOrigin = 'https://centerly-platform.vercel.app';
-    const cleanSid = String(studentId || '').replace(/-/g, '').toLowerCase().slice(0, 8);
-    const shortUrl = `${canonicalOrigin}/s/s${cleanSid}`;
-    await this.copyToClipboard(shortUrl, 'تم نسخ رابط بوابة الطالب المختصر بنجاح!', 'رابط بوابة الطالب');
+    const student = (this.students || []).find(s => s.id === studentId);
+    const phone = student?.student_phone || student?.studentPhone || 'رقم الطالب';
+    const pass = student?.portal_password || student?.portalPassword || '';
+    const passLine = pass ? `\n🔑 كلمة المرور: ${pass}` : '';
+    const textToCopy = `🌐 رابط بوابتك التعليمية: https://centerly-platform.vercel.app/portal\n📱 اسم الدخول (رقم الهاتف): ${phone}${passLine}`;
+    await this.copyToClipboard(textToCopy, 'تم نسخ بيانات دخول ورابط الطالب بنجاح!', 'بيانات الدخول');
   }
 
   async previewStudentPortal(studentId) {
-    const canonicalOrigin = 'https://centerly-platform.vercel.app';
-    const cleanSid = String(studentId || '').replace(/-/g, '').toLowerCase().slice(0, 8);
-    const shortUrl = `${canonicalOrigin}/s/s${cleanSid}`;
-    window.open(shortUrl, '_blank');
+    const student = (this.students || []).find(s => s.id === studentId);
+    const token = student?.parent_portal_token || student?.parentPortalToken;
+    const url = token ? `/?token=${encodeURIComponent(token)}&portal=student` : `/portal`;
+    window.open(url, '_blank');
   }
 
   async sendSingleParentLink(studentId) {

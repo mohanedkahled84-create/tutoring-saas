@@ -13,7 +13,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   async list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]> {
     let q = this.client
       .from("students")
-      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, created_at, group_students(group_id, groups(id, name))")
+      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at, group_students(group_id, groups(id, name))")
       .order("created_at", { ascending: false });
 
     if (tenantId) {
@@ -32,7 +32,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       // Fallback to direct select if relational join fails
       const fallback = await this.client
         .from("students")
-        .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, created_at")
+        .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
         .order("created_at", { ascending: false });
       if (fallback.error) {
         throw new Error(fallback.error.message);
@@ -61,6 +61,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
         parent_portal_sent_at: s.parent_portal_sent_at || null,
         student_portal_sent_at: s.student_portal_sent_at || null,
         parent_portal_token: portalToken,
+        portal_password: s.portal_password || null,
         created_at: s.created_at,
         group_id: primaryGs?.group_id || null,
         group_name: grp?.name || null,
@@ -77,7 +78,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   async findById(id: string): Promise<Student | null> {
     const { data, error } = await this.client
       .from("students")
-      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, created_at")
+      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
       .eq("id", id)
       .maybeSingle();
 
