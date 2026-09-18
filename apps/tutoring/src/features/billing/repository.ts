@@ -4,6 +4,9 @@ import {
   PaymentProofInput,
   PaymentProofRecord,
   TenantBillingInfo,
+  GiftCodeRecord,
+  CreateGiftCodeInput,
+  UpdateGiftCodeInput,
 } from "./types.js";
 
 export class SupabaseBillingRepository implements IBillingRepository {
@@ -164,6 +167,70 @@ export class SupabaseBillingRepository implements IBillingRepository {
       return data;
     } catch {
       return null;
+    }
+  }
+
+  async listGiftCodes(): Promise<GiftCodeRecord[]> {
+    const { data, error } = await this.supabase
+      .from("gift_codes")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to list gift codes: ${error.message}`);
+    }
+    return (data || []) as GiftCodeRecord[];
+  }
+
+  async createGiftCode(input: CreateGiftCodeInput): Promise<GiftCodeRecord> {
+    const cleanCode = input.code.trim().toUpperCase();
+    const { data, error } = await this.supabase
+      .from("gift_codes")
+      .insert({
+        code: cleanCode,
+        discount_percent: typeof input.discount_percent === "number" ? input.discount_percent : null,
+        discount_amount: typeof input.discount_amount === "number" ? input.discount_amount : null,
+        max_uses: typeof input.max_uses === "number" ? input.max_uses : 1000,
+        times_used: 0,
+        expires_at: input.expires_at || null,
+        is_active: input.is_active !== undefined ? input.is_active : true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create gift code: ${error.message}`);
+    }
+    return data as GiftCodeRecord;
+  }
+
+  async updateGiftCode(id: string, updates: UpdateGiftCodeInput): Promise<GiftCodeRecord> {
+    const patch: Record<string, any> = {};
+    if (updates.is_active !== undefined) patch.is_active = updates.is_active;
+    if (updates.max_uses !== undefined) patch.max_uses = updates.max_uses;
+    if (updates.expires_at !== undefined) patch.expires_at = updates.expires_at;
+
+    const { data, error } = await this.supabase
+      .from("gift_codes")
+      .update(patch)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update gift code: ${error.message}`);
+    }
+    return data as GiftCodeRecord;
+  }
+
+  async deleteGiftCode(id: string): Promise<void> {
+    const { error } = await this.supabase
+      .from("gift_codes")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      throw new Error(`Failed to delete gift code: ${error.message}`);
     }
   }
 }

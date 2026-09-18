@@ -66,6 +66,33 @@ export interface DispatchRemindersSummary {
   results: ReminderResult[];
 }
 
+export interface GiftCodeRecord {
+  id: string;
+  code: string;
+  discount_percent: number | null;
+  discount_amount: number | null;
+  max_uses: number | null;
+  times_used: number;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface CreateGiftCodeInput {
+  code: string;
+  discount_percent?: number | null;
+  discount_amount?: number | null;
+  max_uses?: number | null;
+  expires_at?: string | null;
+  is_active?: boolean;
+}
+
+export interface UpdateGiftCodeInput {
+  is_active?: boolean;
+  max_uses?: number | null;
+  expires_at?: string | null;
+}
+
 export interface IBillingRepository {
   createPaymentProof(
     tenantId: string,
@@ -80,6 +107,10 @@ export interface IBillingRepository {
   getTenantOwnerPhone(tenantId: string): Promise<string | null>;
   getStudentCount?(tenantId: string): Promise<number>;
   getGiftCode?(code: string): Promise<any | null>;
+  listGiftCodes?(): Promise<GiftCodeRecord[]>;
+  createGiftCode?(input: CreateGiftCodeInput): Promise<GiftCodeRecord>;
+  updateGiftCode?(id: string, updates: UpdateGiftCodeInput): Promise<GiftCodeRecord>;
+  deleteGiftCode?(id: string): Promise<void>;
   insertReminderLog(entry: {
     tenant_id: string;
     idempotency_key: string;

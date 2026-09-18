@@ -2,6 +2,7 @@ import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { renderBillingView } from './BillingView.js?v=3.8.0';
 import { renderWhatsAppSettingsView } from './WhatsAppSettingsView.js';
+import { renderCouponsView } from './CouponsView.js';
 
 /**
  * Centrly Teacher Settings & Account Management View
@@ -27,7 +28,7 @@ function formatArabicDate(dateStr) {
   }
 }
 
-export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, whatsapp = {}) {
+export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, whatsapp = {}, securityState = { hasPin: false, isUnlocked: true }) {
   let activeTab = state?.activeTab || 'profile';
   if (activeTab === 'appearance') activeTab = 'profile';
   const displayName = (user?.full_name || user?.name || '').replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim() || 'محمد خالد';
@@ -54,7 +55,8 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
     }
   }
 
-  const hasPin = Boolean(localStorage.getItem('centrly_financial_pin'));
+  const hasPin = Boolean(securityState?.hasPin !== undefined ? securityState.hasPin : (window.centrlyApp?.hasSecurityPin || localStorage.getItem('centrly_financial_pin')));
+  const isUnlocked = Boolean(securityState?.isUnlocked !== undefined ? securityState.isUnlocked : window.centrlyApp?.isFinancialUnlocked);
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem; font-family: 'Cairo', sans-serif;" dir="rtl">
@@ -78,6 +80,11 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
             <div style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); padding: 0.4rem 0.85rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700;">
               <span>${escapeHtml(user?.tenant_name || 'حساب تعليمي')}</span>
             </div>
+            ${hasPin ? `
+              <span class="badge" style="background: ${isUnlocked ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.25)'}; color: #fff; border: 1px solid ${isUnlocked ? '#34d399' : '#f87171'}; font-size: 0.75rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem;">
+                ${isUnlocked ? '✓ تم فك القفل' : getIcon('lock', 13, '#ffffff') + ' مقفل برمز PIN'}
+              </span>
+            ` : ''}
           </div>
         </div>
       </div>
@@ -104,6 +111,13 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
           ${getIcon('billing', 16)}
           <span>الباقة والاشتراكات</span>
+        </button>
+
+        <button type="button" onclick="window.centrlyApp.switchSettingsTab('coupons')"
+          class="btn ${activeTab === 'coupons' ? 'btn-primary' : 'btn-secondary'}"
+          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
+          ${getIcon('billing', 16)}
+          <span>أكواد الخصم والكوبونات</span>
         </button>
 
         <button type="button" onclick="window.centrlyApp.switchSettingsTab('security')"
@@ -170,7 +184,12 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
         ${renderBillingView(billing, user)}
       </div>
 
-      <!-- ================= TAB 3: SECURITY ================= -->
+      <!-- ================= TAB 4: COUPONS ================= -->
+      <div id="settingsTabCoupons" style="display: ${activeTab === 'coupons' ? 'block' : 'none'};">
+        ${renderCouponsView(typeof window !== 'undefined' && window.centrlyApp?.giftCodes ? window.centrlyApp.giftCodes : [], user)}
+      </div>
+
+      <!-- ================= TAB 5: SECURITY ================= -->
       <div id="settingsTabSecurity" style="display: ${activeTab === 'security' ? 'block' : 'none'};">
         <div style="display: flex; flex-direction: column; gap: 1.5rem;">
           
@@ -299,22 +318,22 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
               <span>${getIcon('lock', 20, '#f59e0b')}</span>
               <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">
-                الرمز السري لحماية الأرباح (Financial PIN)
+                رمز الأمان السحابي (Security PIN)
               </h3>
             </div>
             <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1.25rem 0; line-height: 1.6;">
-              يقوم هذا الرمز السري بقفل شاشات الأرباح، نصيب السنتر، ومرتبات المساعدين تلقائياً برقم سري (4 إلى 6 أرقام)، حتى لا يراها أحد عند الجلوس بجوارك.
+              يقوم هذا الرمز السحابي بقفل الإعدادات، والبيانات المالية، والأرباح، ومرتبات المساعدين تلقائياً عبر جميع أجهزتك (الموبايل واللابتوب) بنفس الرمز لمنع أي شخص بجانبك من رؤيتها.
             </p>
 
             <form onsubmit="window.centrlyApp.handleSaveFinancialPin(event)">
               <div style="max-width: 440px; display: flex; flex-direction: column; gap: 1rem;">
                 <div class="form-group" style="margin: 0;">
                   <label class="form-label" style="font-weight: 700;">
-                    ${hasPin ? 'تغيير الرمز السري الحالي (أو اترك فارغاً للتعطيل)' : 'تعيين رمز سري جديد للأرباح'}
+                    ${hasPin ? 'تغيير رمز الأمان الحالي (أو اترك فارغاً للتعطيل)' : 'تعيين رمز أمان سحابي جديد'}
                   </label>
                   <input type="password" id="settingsFinancialPin" class="form-input" placeholder="••••" maxlength="6" dir="ltr">
-                  <span style="font-size: 0.725rem; color: #94a3b8; margin-top: 0.25rem; display: block;">
-                    ${hasPin ? 'الرمز مفعل حالياً. إذا قمت بمسحه وضغط حفظ سيتم تعطيل القفل.' : 'الرمز غير مفعل حالياً.'}
+                  <span style="font-size: 0.75rem; color: ${hasPin ? '#16a34a' : '#94a3b8'}; margin-top: 0.25rem; display: block; font-weight: 700;">
+                    ${hasPin ? '✓ الرمز مفعل ومحمي سحابياً عبر كافة الأجهزة. لتغييره، أدخل الرمز الجديد واضغط حفظ، أو اتركه فارغاً للتعطيل.' : 'الرمز غير مفعل حالياً.'}
                   </span>
                 </div>
 

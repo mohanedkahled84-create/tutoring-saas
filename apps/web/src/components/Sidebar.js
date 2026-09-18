@@ -1,7 +1,7 @@
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
-export function renderSidebar(currentRoute = 'sessions', user = {}) {
+export function renderSidebar(currentRoute = 'sessions', user = {}, securityState = { hasPin: false, isUnlocked: true }) {
   const isCenterOwner = user?.role === 'center_owner' || user?.account_type === 'center';
   const isAdmin = user?.role === 'admin' || user?.is_superadmin;
 
@@ -13,6 +13,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}) {
         { id: 'admin-dashboard', title: 'لوحة الإحصائيات والأرباح', icon: 'dashboard' },
         { id: 'admin-proofs', title: 'مراجعة إيصالات الدفع', icon: 'billing' },
         { id: 'admin-tenants', title: 'المشتركين والمعلمين والسناتر', icon: 'teachers' },
+        { id: 'coupons', title: 'أكواد الخصم والكوبونات', icon: 'billing' },
       ],
     },
     {
@@ -47,6 +48,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}) {
       category: 'الإدارة والماليات',
       routes: [
         { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
+        { id: 'coupons', title: 'أكواد الخصم والكوبونات', icon: 'billing' },
         { id: 'center-assistants', title: 'المساعدين وفريق الاستقبال', icon: 'assistants' },
         { id: 'activity-logs', title: 'تسويات المدرسين والماليات', icon: 'billing' },
       ],
@@ -89,6 +91,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}) {
       category: 'الإعدادات وفريق العمل',
       routes: [
         { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
+        { id: 'coupons', title: 'أكواد الخصم والكوبونات', icon: 'billing' },
         { id: 'assistants', title: 'إدارة المساعدين (الأسستنت)', icon: 'assistants' },
       ],
     },
@@ -136,6 +139,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}) {
             <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;">
               ${sec.routes.map(r => {
                 const isActive = currentRoute === r.id;
+                const isLocked = Boolean(securityState?.hasPin && !securityState?.isUnlocked && ['assistants', 'dashboard', 'reports'].includes(r.id));
                 return `
                   <button class="nav-link ${isActive ? 'active' : ''}" onclick="window.centrlyApp.navigate('${r.id}')" 
                     style="position: relative; display: flex; align-items: center; gap: 0.7rem; background: ${isActive ? '#eff6ff' : 'transparent'}; border-radius: 8px; padding: 0.55rem 0.75rem; border: none; width: 100%; cursor: pointer; text-align: right; transition: background 0.15s ease;">
@@ -145,6 +149,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}) {
                     <span style="font-weight: ${isActive ? '800' : '600'}; color: ${isActive ? 'var(--centrly-blue-800)' : '#334155'}; font-size: 0.875rem; flex: 1;">
                       ${escapeHtml(r.title)}
                     </span>
+                    ${isLocked ? `<span title="محمي برمز الأمان (PIN)" style="display: inline-flex; align-items: center; margin-right: 0.35rem; opacity: 0.85;">${getIcon('lock', 13, '#f59e0b')}</span>` : ''}
                     ${isActive ? `<span class="active-indicator" style="width: 3.5px; height: 18px; border-radius: 4px; background: var(--centrly-blue-700); position: absolute; right: 0;"></span>` : ''}
                   </button>
                 `;

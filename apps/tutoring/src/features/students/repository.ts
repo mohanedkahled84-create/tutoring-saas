@@ -135,23 +135,35 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       throw new Error(error.message);
     }
 
-    if (updated && data.group_id) {
+    if (updated && data.group_id !== undefined) {
       try {
         const studentTenantId = (updated as any)?.tenant_id;
+        // Enforce 1 student = 1 group: Remove student from any previous group first
         await this.client
           .from("group_students")
-          .upsert(
-            {
+          .delete()
+          .eq("student_id", id);
+
+        if (data.group_id) {
+          await this.client
+            .from("group_students")
+            .insert({
               tenant_id: studentTenantId,
               student_id: id,
               group_id: data.group_id,
-            },
-            { onConflict: "student_id,group_id" }
-          );
-      } catch {}
+            });
+        }
+      } catch (err) {
+        console.error("[SupabaseStudentsRepository.update] Group enrollment sync error:", err);
+      }
     }
 
-    return (updated as Student) || null;
+    if (!updated) return null;
+    const resStudent: Student = {
+      ...(updated as Student),
+      group_id: data.group_id !== undefined ? (data.group_id || null) : ((updated as any)?.group_id || null),
+    };
+    return resStudent;
   }
 
   async delete(id: string): Promise<void> {
@@ -206,6 +218,14 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     studentId: string,
     groupId: string
   ): Promise<void> {
+    // Enforce 1 student = 1 group: Remove student from any previous group first
+    try {
+      await this.client
+        .from("group_students")
+        .delete()
+        .eq("student_id", studentId);
+    } catch (_) {}
+
     const { error } = await this.client.from("group_students").insert({
       tenant_id: tenantId,
       student_id: studentId,
@@ -215,6 +235,13 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     if (error) {
       throw new Error(error.message);
     }
+
+    try {
+      await this.client
+        .from("students")
+        .update({ group_id: groupId })
+        .eq("id", studentId);
+    } catch (_) {}
   }
 }
 
@@ -282,6 +309,18 @@ export class FakeStudentsRepository implements IStudentsRepository {
       student_code: data.code !== undefined ? data.code : existing.student_code,
     };
     this.students[idx] = updated;
+
+    if (data.group_id !== undefined) {
+      this.groupEnrollments = this.groupEnrollments.filter((e) => e.student_id !== id);
+      if (data.group_id) {
+        this.groupEnrollments.push({
+          tenant_id: existing.tenant_id,
+          student_id: id,
+          group_id: data.group_id,
+        });
+      }
+    }
+
     return { ...updated };
   }
 
@@ -318,10 +357,13 @@ export class FakeStudentsRepository implements IStudentsRepository {
     studentId: string,
     groupId: string
   ): Promise<void> {
+    this.groupEnrollments = this.groupEnrollments.filter((e) => e.student_id !== studentId);
     this.groupEnrollments.push({
       tenant_id: tenantId,
       student_id: studentId,
       group_id: groupId,
     });
+    const s = this.students.find((x) => x.id === studentId);
+    if (s) s.group_id = groupId;
   }
 }

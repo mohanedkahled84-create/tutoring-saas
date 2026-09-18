@@ -120,3 +120,51 @@ adminRouter.post(
     }
   }
 );
+
+// Admin-level Gift Codes Management
+adminRouter.get("/gift-codes", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const billingService = getServices(req).billing;
+    const codes = await billingService.listGiftCodes();
+    res.json({ gift_codes: codes });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to list gift codes";
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+  }
+});
+
+adminRouter.post("/gift-codes", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const billingService = getServices(req).billing;
+    const code = await billingService.createGiftCode(req.body);
+    res.status(201).json({ message: "Gift code created successfully", gift_code: code });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to create gift code";
+    res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+  }
+});
+
+adminRouter.patch("/gift-codes/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const billingService = getServices(req).billing;
+    const code = await billingService.updateGiftCode(id, req.body);
+    res.json({ message: "Gift code updated successfully", gift_code: code });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to update gift code";
+    res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+  }
+});
+
+adminRouter.delete("/gift-codes/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const billingService = getServices(req).billing;
+    await billingService.deleteGiftCode(id);
+    res.json({ message: "Gift code deleted successfully" });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to delete gift code";
+    res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+  }
+});
+

@@ -167,6 +167,14 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
     groupId: string,
     studentId: string
   ): Promise<{ id: string; group_id: string; student_id: string }> {
+    // Enforce 1 student = 1 group: Remove student from any previous group first
+    try {
+      await this.client
+        .from("group_students")
+        .delete()
+        .eq("student_id", studentId);
+    } catch (_) {}
+
     const { data, error } = await this.client
       .from("group_students")
       .insert({
@@ -180,6 +188,15 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
     if (error) {
       throw new Error(error.message);
     }
+
+    // Keep students.group_id in sync
+    try {
+      await this.client
+        .from("students")
+        .update({ group_id: groupId })
+        .eq("id", studentId);
+    } catch (_) {}
+
     return data as { id: string; group_id: string; student_id: string };
   }
 
@@ -193,6 +210,15 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
     if (error) {
       throw new Error(error.message);
     }
+
+    // Clear group_id if it matched this group
+    try {
+      await this.client
+        .from("students")
+        .update({ group_id: null })
+        .eq("id", studentId)
+        .eq("group_id", groupId);
+    } catch (_) {}
   }
 
   async listSections(parentGroupId: string): Promise<Group[]> {
@@ -349,6 +375,7 @@ export class FakeGroupsRepository implements IGroupsRepository {
     groupId: string,
     studentId: string
   ): Promise<{ id: string; group_id: string; student_id: string }> {
+    this.enrollments = this.enrollments.filter((e) => e.student_id !== studentId);
     const enrollment = {
       id: `enr-${Date.now()}`,
       tenant_id: tenantId,

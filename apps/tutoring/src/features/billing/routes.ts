@@ -2,10 +2,20 @@ import { Router, Response } from "express";
 import { z } from "zod";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { validateBody } from "../../shared/middleware/validation.js";
+import { requireOwnerOrAdmin } from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
 import { BillingService } from "./service.js";
 
 export const billingRouter = Router();
+
+const createGiftCodeSchema = z.object({
+  code: z.string().min(2, "رمز الكود يجب أن يتكون من حرفين على الأقل").max(50),
+  discount_percent: z.number().min(1).max(100).optional().nullable(),
+  discount_amount: z.number().positive().optional().nullable(),
+  max_uses: z.number().int().positive().optional().nullable(),
+  expires_at: z.string().optional().nullable(),
+  is_active: z.boolean().optional(),
+});
 
 const paymentProofSchema = z.object({
   amount: z.number().positive("Amount must be a positive number"),
@@ -97,3 +107,71 @@ billingRouter.get("/status", async (req: AuthenticatedRequest, res: Response): P
     });
   }
 });
+
+// GET /api/billing/gift-codes - List all promo & gift codes
+billingRouter.get(
+  "/gift-codes",
+  requireOwnerOrAdmin,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const service = resolveBillingService(req);
+      const codes = await service.listGiftCodes();
+      res.json({ gift_codes: codes });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to list gift codes";
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+    }
+  }
+);
+
+// POST /api/billing/gift-codes - Create a new promo & gift code
+billingRouter.post(
+  "/gift-codes",
+  requireOwnerOrAdmin,
+  validateBody(createGiftCodeSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const service = resolveBillingService(req);
+      const code = await service.createGiftCode(req.body);
+      res.status(201).json({ message: "Gift code created successfully", gift_code: code });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create gift code";
+      res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+    }
+  }
+);
+
+// PATCH /api/billing/gift-codes/:id - Update or toggle status of a promo & gift code
+billingRouter.patch(
+  "/gift-codes/:id",
+  requireOwnerOrAdmin,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { id } = req.params;
+    try {
+      const service = resolveBillingService(req);
+      const code = await service.updateGiftCode(id, req.body);
+      res.json({ message: "Gift code updated successfully", gift_code: code });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to update gift code";
+      res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+    }
+  }
+);
+
+// DELETE /api/billing/gift-codes/:id - Delete a promo & gift code
+billingRouter.delete(
+  "/gift-codes/:id",
+  requireOwnerOrAdmin,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { id } = req.params;
+    try {
+      const service = resolveBillingService(req);
+      await service.deleteGiftCode(id);
+      res.json({ message: "Gift code deleted successfully" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete gift code";
+      res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+    }
+  }
+);
+

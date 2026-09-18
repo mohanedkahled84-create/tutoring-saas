@@ -192,7 +192,7 @@ settingsRouter.delete(
     try {
       const tenantsRepo = getServices(req).tenants;
       const existingSettings = await tenantsRepo.getTenantSettings(tenantId);
-      if ((existingSettings as any)?.financial_pin && (existingSettings as any).financial_pin !== req.body.pin) {
+      if (req.body?.pin && (existingSettings as any)?.financial_pin && (existingSettings as any).financial_pin !== req.body.pin) {
         res.status(400).json({ error: { code: "INVALID_PIN", message: "الرقم السري الحالي غير صحيح" } });
         return;
       }

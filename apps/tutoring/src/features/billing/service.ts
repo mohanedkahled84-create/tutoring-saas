@@ -6,6 +6,9 @@ import {
   TenantBillingStatus,
   DispatchRemindersSummary,
   ReminderResult,
+  GiftCodeRecord,
+  CreateGiftCodeInput,
+  UpdateGiftCodeInput,
 } from "./types.js";
 
 /**
@@ -300,5 +303,68 @@ export class BillingService {
       final_amount: finalAmount,
       message: `تم تطبيق كود الخصم بنجاح! وفرت ${discount.toLocaleString("ar-EG")} ج.م`,
     };
+  }
+
+  async listGiftCodes(): Promise<GiftCodeRecord[]> {
+    if (typeof this.repository.listGiftCodes === "function") {
+      return await this.repository.listGiftCodes();
+    }
+    return [];
+  }
+
+  async createGiftCode(input: CreateGiftCodeInput): Promise<GiftCodeRecord> {
+    const cleanCode = (input.code || "").trim().toUpperCase();
+    if (!cleanCode) {
+      throw new Error("يرجى إدخال رمز كود الخصم");
+    }
+
+    const hasPercent = typeof input.discount_percent === "number" && input.discount_percent > 0;
+    const hasAmount = typeof input.discount_amount === "number" && input.discount_amount > 0;
+
+    if (!hasPercent && !hasAmount) {
+      throw new Error("يرجى تحديد نسبة الخصم (%) أو قيمة الخصم بالجنيه");
+    }
+
+    if (hasPercent && (input.discount_percent! <= 0 || input.discount_percent! > 100)) {
+      throw new Error("نسبة الخصم يجب أن تكون بين 1% و 100%");
+    }
+
+    if (typeof this.repository.createGiftCode === "function") {
+      return await this.repository.createGiftCode({
+        code: cleanCode,
+        discount_percent: hasPercent ? input.discount_percent : null,
+        discount_amount: hasAmount ? input.discount_amount : null,
+        max_uses: typeof input.max_uses === "number" ? input.max_uses : 1000,
+        expires_at: input.expires_at || null,
+        is_active: input.is_active !== undefined ? input.is_active : true,
+      });
+    }
+
+    throw new Error("Repository does not support creating gift codes");
+  }
+
+  async updateGiftCode(id: string, updates: UpdateGiftCodeInput): Promise<GiftCodeRecord> {
+    if (!id) {
+      throw new Error("معرف كود الخصم مطلوب");
+    }
+
+    if (typeof this.repository.updateGiftCode === "function") {
+      return await this.repository.updateGiftCode(id, updates);
+    }
+
+    throw new Error("Repository does not support updating gift codes");
+  }
+
+  async deleteGiftCode(id: string): Promise<void> {
+    if (!id) {
+      throw new Error("معرف كود الخصم مطلوب");
+    }
+
+    if (typeof this.repository.deleteGiftCode === "function") {
+      await this.repository.deleteGiftCode(id);
+      return;
+    }
+
+    throw new Error("Repository does not support deleting gift codes");
   }
 }

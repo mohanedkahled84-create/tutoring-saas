@@ -56,3 +56,34 @@ test("DEV-68: GroupsService - Student enrollment and barcode students compilatio
   const afterRemove = await service.getGroup(group.id);
   assert.equal(afterRemove?.students.length, 0);
 });
+
+test("DEV-SINGLE-GROUP: Enrolling student into Group 2 automatically unenrolls them from Group 1", async () => {
+  const repo = new FakeGroupsRepository();
+  const service = new GroupsService(repo);
+
+  const group1 = await service.createGroup("tenant-1", { name: "مجموعة 1" });
+  const group2 = await service.createGroup("tenant-1", { name: "مجموعة 2" });
+
+  repo.students.push({
+    id: "std-99",
+    name: "عمر جمال",
+    parent_phone: "01011113333",
+    student_code: "1099",
+  });
+
+  // 1. Enroll in group 1
+  await service.enrollStudent("tenant-1", group1.id, "std-99");
+  const g1Enrollments = await service.getGroup(group1.id);
+  assert.equal(g1Enrollments?.students.length, 1);
+  assert.equal(g1Enrollments?.students[0].id, "std-99");
+
+  // 2. Enroll same student into group 2
+  await service.enrollStudent("tenant-1", group2.id, "std-99");
+  const g1AfterMove = await service.getGroup(group1.id);
+  const g2AfterMove = await service.getGroup(group2.id);
+
+  // Must strictly be in Group 2 ONLY (0 in Group 1, 1 in Group 2)
+  assert.equal(g1AfterMove?.students.length, 0, "Student must be removed from Group 1");
+  assert.equal(g2AfterMove?.students.length, 1, "Student must be present in Group 2");
+  assert.equal(g2AfterMove?.students[0].id, "std-99");
+});

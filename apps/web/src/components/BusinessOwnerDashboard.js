@@ -62,6 +62,10 @@ export function renderBusinessOwnerDashboard(data = {}) {
               ${getIcon('teachers', 14)}
               <span>إدارة المشتركين</span>
             </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('coupons')" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); color: #fff; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700;">
+              ${getIcon('billing', 14)}
+              <span>أكواد الخصم</span>
+            </button>
             <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.refreshBusinessDashboard()" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff; display: inline-flex; align-items: center; gap: 0.35rem;">
               ${getIcon('refresh', 14)}
               <span>تحديث</span>
@@ -158,6 +162,34 @@ export function renderBusinessOwnerDashboard(data = {}) {
           <div style="padding: 0.5rem 1rem; border-radius: 6px; background: #fef2f2; border: 1px solid #fecaca;">
             <span style="font-size: 0.8rem; color: #991b1b;">منتهي (Expired):</span>
             <b style="color: #b91c1c; margin-right: 0.35rem;">${subs.expired}</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- Promo & Gift Codes Management Banner -->
+      <div class="card" style="margin: 0; background: #fff; border: 1.5px solid #dbeafe; border-radius: 12px; padding: 1.15rem 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="width: 40px; height: 40px; border-radius: 10px; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700);">
+              ${getIcon('billing', 20, 'var(--centrly-blue-700)')}
+            </span>
+            <div>
+              <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">
+                أكواد الخصم والبروموكود (Centrly Promo Codes)
+              </div>
+              <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
+                إدارة أكواد الخصم المئوية والنقدية، ومتابعة معدلات الاستخدام، وإنشاء حملات الخصم للمشتركين.
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.openCreateCouponModal()" style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem;">
+              ${getIcon('plus', 14)}
+              <span>إنشاء كود خصم جديد</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('coupons')" style="font-weight: 700;">
+              عرض كافة الأكواد (${(typeof window !== 'undefined' && window.centrlyApp?.giftCodes ? window.centrlyApp.giftCodes : []).length} كود)
+            </button>
           </div>
         </div>
       </div>
