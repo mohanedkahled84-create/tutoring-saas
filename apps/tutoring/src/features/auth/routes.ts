@@ -3,22 +3,30 @@ import { getServices } from "../../composition.js";
 import { extractToken, authenticateUser } from "../../shared/middleware/auth.js";
 import { authRateLimiter } from "../../shared/middleware/rateLimit.js";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
+import { dispatchAdminAlertWebhook } from "../admin-ops/index.js";
 
 export const authRouter = Router();
 
 // POST /api/auth/login - Rate-limited, brute-force protected login
 authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
-  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const rawIdentifier =
+    typeof req.body.email === "string"
+      ? req.body.email.trim()
+      : typeof req.body.identifier === "string"
+      ? req.body.identifier.trim()
+      : typeof req.body.phone === "string"
+      ? req.body.phone.trim()
+      : "";
   const password = typeof req.body.password === "string" ? req.body.password.trim() : "";
 
-  if (!email || !password) {
-    res.status(400).json({ error: { code: "BAD_REQUEST", message: "Email and password are required" } });
+  if (!rawIdentifier || !password) {
+    res.status(400).json({ error: { code: "BAD_REQUEST", message: "Email or phone and password are required" } });
     return;
   }
 
   try {
     const authService = getServices(req as AuthenticatedRequest).auth;
-    const result = await authService.login({ email, password });
+    const result = await authService.login({ email: rawIdentifier, password });
 
     res.cookie("access_token", result.token, {
       httpOnly: true,
@@ -36,12 +44,23 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
     });
   } catch (err: unknown) {
     if (err instanceof Error) {
+      if ((err as Error & { code?: string }).code === "EMAIL_NOT_VERIFIED") {
+        const unverifiedEmail = (err as Error & { email?: string }).email || rawIdentifier;
+        res.status(403).json({
+          error: {
+            code: "EMAIL_NOT_VERIFIED",
+            message: "يرجى تأكيد بريدك الإلكتروني أولاً قبل تسجيل الدخول. تم إرسال رمز التحقق إلى بريدك.",
+            email: unverifiedEmail,
+          },
+        });
+        return;
+      }
       if ((err as Error & { code?: string }).code === "ACCOUNT_LOCKED") {
         res.status(429).json({ error: { code: "ACCOUNT_LOCKED", message: err.message } });
         return;
       }
       if (err.message === "INVALID_CREDENTIALS") {
-        res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" } });
+        res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "البريد الإلكتروني أو رقم الهاتف أو كلمة المرور غير صحيحة" } });
         return;
       }
     }
@@ -117,33 +136,25 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
         if (adminOpsService && typeof adminOpsService.alertFounder === "function") {
           await adminOpsService.alertFounder(payload);
         }
+        dispatchAdminAlertWebhook({
+          event_type: "new_signup",
+          teacher_name: payload.teacher_name,
+          teacher_email: payload.teacher_email,
+          teacher_phone: payload.teacher_phone,
+          tenant_name: payload.tenant_name,
+          account_type: payload.account_type,
+          subject: payload.subject,
+          governorate: payload.governorate,
+          trial_ends_at: payload.trial_ends_at,
+          created_at: new Date().toISOString(),
+        }).catch(() => {});
       }
     );
 
-    // SEC-HOTFIX: Attempt immediate login so signup response contains token and sets httpOnly cookie
-    try {
-      const loginRes = await authService.login({ email, password });
-      res.cookie("access_token", loginRes.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: loginRes.expires_in * 1000,
-      });
-      res.status(201).json({
-        message: "Signup successful. Your 14-day free trial is active.",
-        user: result.user,
-        tenant: result.tenant,
-        token: loginRes.token,
-        refresh_token: loginRes.refresh_token,
-        expires_in: loginRes.expires_in,
-      });
-      return;
-    } catch {
-      // Fall back to base signup response
-    }
-
     res.status(201).json({
-      message: "Signup successful. Your 14-day free trial is active.",
+      message: "تم إنشاء الحساب بنجاح. يرجى تأكيد بريدك الإلكتروني للمتابعة.",
+      requires_verification: true,
+      email: email.trim().toLowerCase(),
       user: result.user,
       tenant: result.tenant,
     });
@@ -154,6 +165,71 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
     }
     const message = err instanceof Error ? err.message : "Signup failed";
     res.status(400).json({ error: { code: "AUTH_ERROR", message } });
+  }
+});
+
+// POST /api/auth/verify-email - Verify 6-digit OTP code and activate session
+authRouter.post("/verify-email", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const code = typeof req.body.code === "string" ? req.body.code.trim() : "";
+  const password = typeof req.body.password === "string" ? req.body.password.trim() : undefined;
+
+  if (!email || !code) {
+    res.status(400).json({
+      error: { code: "BAD_REQUEST", message: "البريد الإلكتروني ورمز التحقق مطلوبان" },
+    });
+    return;
+  }
+
+  try {
+    const authService = getServices(req as AuthenticatedRequest).auth;
+    const result = await authService.verifyEmail({ email, code, password });
+
+    if (result.token) {
+      res.cookie("access_token", result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: (result.expires_in || 3600) * 1000,
+      });
+    }
+
+    res.json({
+      message: result.message,
+      verified: true,
+      user: result.user,
+      token: result.token,
+      refresh_token: result.refresh_token,
+      expires_in: result.expires_in,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "فشل التحقق من البريد الإلكتروني";
+    res.status(400).json({ error: { code: "VERIFICATION_FAILED", message } });
+  }
+});
+
+// POST /api/auth/resend-verification - Resend OTP code with rate limit cooldown
+authRouter.post("/resend-verification", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+
+  if (!email) {
+    res.status(400).json({
+      error: { code: "BAD_REQUEST", message: "البريد الإلكتروني مطلوب" },
+    });
+    return;
+  }
+
+  try {
+    const authService = getServices(req as AuthenticatedRequest).auth;
+    const result = await authService.resendVerification({ email });
+
+    res.json({
+      message: result.message,
+      success: true,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "تعذر إعادة إرسال الرمز";
+    res.status(400).json({ error: { code: "RESEND_FAILED", message } });
   }
 });
 

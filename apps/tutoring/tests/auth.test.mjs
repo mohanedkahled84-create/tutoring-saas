@@ -77,3 +77,89 @@ test("DEV-68: AuthService - Brute force locks out after 5 consecutive failures",
 
   resetLoginAttempts(email);
 });
+
+test("AUTH-VERIFY: Unverified email blocks login and requires OTP verification", async () => {
+  const repo = new FakeAuthRepository();
+  const service = new AuthService(repo);
+
+  const email = "unverified@domain.com";
+  const password = "ValidPassword123!";
+  const phone = "01098765432";
+
+  // Simulate signup creating an unconfirmed user
+  repo.users.push({
+    id: "user-unverified",
+    email,
+    password,
+    phone,
+    tenant_id: "tenant-unverified",
+    role: "owner",
+    email_confirmed: false,
+  });
+
+  repo.verifications.set(email, {
+    code: "123456",
+    expires_at: Date.now() + 15 * 60 * 1000,
+    verified: false,
+    attempts: 0,
+    created_at: Date.now(),
+  });
+
+  // 1. Attempt login with unverified email should be blocked with EMAIL_NOT_VERIFIED
+  await assert.rejects(
+    async () => {
+      await service.login({ email, password });
+    },
+    (err) => err.code === "EMAIL_NOT_VERIFIED"
+  );
+
+  // 2. Wrong OTP code fails
+  await assert.rejects(
+    async () => {
+      await service.verifyEmail({ email, code: "999999" });
+    },
+    { message: "رمز التحقق غير صحيح. يرجى التأكد وإعادة المحاولة." }
+  );
+
+  // 3. Correct OTP code succeeds and confirms email
+  const verifyRes = await service.verifyEmail({ email, code: "123456" });
+  assert.equal(verifyRes.verified, true);
+
+  // 4. Now login with email succeeds
+  const loginRes = await service.login({ email, password });
+  assert.ok(loginRes.token);
+  assert.equal(loginRes.user.email, email);
+
+  // 5. Login using phone number (01098765432) also succeeds
+  const phoneLoginRes = await service.login({ email: phone, password });
+  assert.ok(phoneLoginRes.token);
+  assert.equal(phoneLoginRes.user.email, email);
+});
+
+test("AUTH-RESEND: Resend verification code updates the OTP and delivers new code", async () => {
+  const repo = new FakeAuthRepository();
+  const service = new AuthService(repo);
+  const email = "resend-test@domain.com";
+
+  repo.verifications.set(email, {
+    code: "111111",
+    expires_at: Date.now() + 15 * 60 * 1000,
+    verified: false,
+    attempts: 0,
+    created_at: Date.now(),
+  });
+
+  const resendRes = await service.resendVerification({ email });
+  assert.equal(resendRes.success, true);
+
+  // Old code 111111 should fail, new code 654321 should succeed
+  await assert.rejects(
+    async () => {
+      await service.verifyEmail({ email, code: "111111" });
+    }
+  );
+
+  const verifyRes = await service.verifyEmail({ email, code: "654321" });
+  assert.equal(verifyRes.verified, true);
+});
+

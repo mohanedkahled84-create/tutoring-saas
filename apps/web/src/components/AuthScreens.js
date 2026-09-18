@@ -35,8 +35,8 @@ export function renderAuthScreens() {
         <!-- Login Form -->
         <form id="formLogin" onsubmit="window.centrlyApp.handleLogin(event)">
           <div class="form-group">
-            <label class="form-label">البريد الإلكتروني</label>
-            <input type="email" id="loginEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username email">
+            <label class="form-label">البريد الإلكتروني أو رقم الهاتف</label>
+            <input type="text" id="loginEmail" class="form-input" placeholder="example@email.com أو 010xxxxxxxx" required dir="ltr" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username">
           </div>
           <div class="form-group">
             <label class="form-label">كلمة المرور</label>
@@ -201,3 +201,69 @@ export function renderAuthScreens() {
     </div>
   `;
 }
+
+export function renderEmailVerificationScreen({ email = '', note = '' } = {}) {
+  const safeEmail = email ? email.replace(/[<>"'&]/g, '') : '';
+  const safeNote = note ? note.replace(/[<>"'&]/g, '') : '';
+
+  return `
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: var(--centrly-surface); padding: 1.5rem;">
+      <div class="card" style="max-width: 460px; width: 100%; padding: 2.25rem; box-shadow: var(--shadow-lg); text-align: center; position: relative;">
+        
+        <!-- Header Brand / Logo -->
+        <div style="margin: 0 auto 1.25rem; width: 68px; height: 68px; background: linear-gradient(135deg, #0f766e, #0d9488); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px rgba(13, 148, 136, 0.25);">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="16" x="2" y="4" rx="2"/>
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+          </svg>
+        </div>
+
+        <h2 style="font-family: 'Changa', sans-serif; font-size: 1.6rem; font-weight: 800; margin: 0 0 0.5rem 0; color: var(--centrly-ink);">
+          تأكيد بريدك الإلكتروني
+        </h2>
+
+        <p style="font-size: 0.9rem; color: var(--centrly-text); line-height: 1.6; margin-top: 0; margin-bottom: 0.5rem;">
+          أرسلنا رمز تحقق سري (OTP) إلى بريدك الإلكتروني:
+        </p>
+        
+        <div style="display: inline-block; background: #f8fafc; border: 1px solid var(--centrly-line); padding: 0.4rem 1rem; border-radius: 8px; font-weight: 700; color: #0f766e; font-family: monospace; font-size: 0.95rem; margin-bottom: 1.25rem;" dir="ltr">
+          ${safeEmail}
+        </div>
+
+        <div id="verificationAlert" style="${safeNote ? 'display: block; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'display: none;'} padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; font-size: 0.85rem; font-weight: 600; line-height: 1.5;">
+          ${safeNote}
+        </div>
+
+        <!-- Verification Form -->
+        <form id="formVerifyEmail" onsubmit="window.centrlyApp.handleVerifyEmailSubmit(event)">
+          <input type="hidden" id="verificationEmailInput" value="${safeEmail}">
+          <div class="form-group" style="margin-bottom: 1.5rem; text-align: center;">
+            <label class="form-label" style="text-align: center; display: block; font-weight: 700; margin-bottom: 0.6rem; font-size: 0.9rem; color: var(--centrly-ink);">
+              أدخل رمز التحقق المكون من 6 أرقام
+            </label>
+            <input type="text" id="verifyOtpCode" class="form-input" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" placeholder="••••••" required dir="ltr" style="font-size: 2rem; letter-spacing: 0.65rem; text-align: center; font-weight: 800; font-family: monospace; height: 60px; border-radius: 12px; border: 2px solid #0d9488; background: #fafafa;" autocomplete="one-time-code" autofocus>
+            <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.4rem;">
+              صلاحية الرمز 15 دقيقة فقط
+            </div>
+          </div>
+
+          <button type="submit" id="btnVerifySubmit" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem; font-weight: 800; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, #0f766e, #0d9488); border: none;">
+            <span>تأكيد الحساب والبدء</span>
+          </button>
+        </form>
+
+        <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--centrly-line); display: flex; flex-direction: column; gap: 0.85rem;">
+          <button type="button" id="btnResendOtp" onclick="window.centrlyApp.handleResendOtp()" style="background: none; border: none; color: #0d9488; font-size: 0.875rem; font-weight: 700; cursor: pointer; text-decoration: underline; font-family: inherit;">
+            لم يصلك الرمز؟ إعادة الإرسال
+          </button>
+
+          <button type="button" onclick="window.centrlyApp.renderAuth('login')" style="background: none; border: none; color: var(--centrly-text); font-size: 0.825rem; cursor: pointer; font-family: inherit;">
+            العودة لصفحة تسجيل الدخول
+          </button>
+        </div>
+
+      </div>
+    </div>
+  `;
+}
+

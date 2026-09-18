@@ -5,6 +5,8 @@ import { validateBody } from "../../shared/middleware/validation.js";
 import { requireOwnerOrAdmin } from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
 import { BillingService } from "./service.js";
+import { dispatchAdminAlertWebhook } from "../admin-ops/index.js";
+
 
 export const billingRouter = Router();
 
@@ -69,6 +71,19 @@ billingRouter.post(
     try {
       const service = resolveBillingService(req);
       const proof = await service.submitPaymentProof(tenantId, userId, req.body);
+
+      dispatchAdminAlertWebhook({
+        event_type: "payment_proof_submitted",
+        teacher_name: req.user?.full_name || req.user?.name || req.user?.email || "معلم",
+        tenant_name: req.user?.name || undefined,
+        amount: Number(proof.amount),
+        payment_method: proof.payment_method,
+        reference_number: proof.reference_number || undefined,
+        proof_image_url: proof.proof_image_url || undefined,
+        admin_notes: proof.admin_notes || undefined,
+        admin_dashboard_url: "https://centrly.app/admin",
+        created_at: proof.created_at || new Date().toISOString(),
+      }).catch(() => {});
 
       res.status(201).json({
         message:

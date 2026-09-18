@@ -2,7 +2,7 @@ import { authService } from './services/auth.js';
 import { request, API_BASE_URL } from './services/api.js';
 import { renderSidebar } from './components/Sidebar.js?v=4.7.2';
 import { renderNavbar } from './components/Navbar.js';
-import { renderAuthScreens } from './components/AuthScreens.js?v=4.7.0';
+import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.7.8';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
@@ -1111,11 +1111,11 @@ class CentrlyApp {
       btn.innerHTML = '<span style="display:inline-block;width:1rem;height:1rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-left:0.5rem;vertical-align:middle;"></span> جارٍ تسجيل الدخول...';
     }
 
-    const email = document.getElementById('loginEmail')?.value?.trim().toLowerCase() || '';
+    const rawIdentifier = document.getElementById('loginEmail')?.value?.trim() || '';
     const password = document.getElementById('loginPassword')?.value?.trim() || '';
 
     try {
-      const res = await authService.login(email, password);
+      const res = await authService.login(rawIdentifier, password);
       this.user = res.user;
       try {
         const meRes = await request('/auth/me');
@@ -1146,6 +1146,11 @@ class CentrlyApp {
       this.renderApp();
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
+      if (err.code === 'EMAIL_NOT_VERIFIED' || err.message?.includes('EMAIL_NOT_VERIFIED') || err.message?.includes('تأكيد بريدك')) {
+        const unverifiedEmail = err.email || rawIdentifier;
+        this.renderEmailVerificationView(unverifiedEmail, password, 'يرجى تأكيد بريدك الإلكتروني أولاً للمتابعة. تم إرسال رمز التحقق إلى بريدك.');
+        return;
+      }
       this.showAuthAlert(err.message || 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.');
     } finally {
       if (btn) {
@@ -1214,6 +1219,12 @@ class CentrlyApp {
         phone,
         account_type: accountType,
       });
+
+      if (res.requires_verification) {
+        this.renderEmailVerificationView(email, password, 'تم إنشاء الحساب بنجاح! تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
+        return;
+      }
+
       this.user = {
         ...(res.user || {}),
         full_name: name || res.user?.full_name,
@@ -1227,6 +1238,123 @@ class CentrlyApp {
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = origHtml;
+      }
+    }
+  }
+
+  renderEmailVerificationView(email, password = '', note = '') {
+    window.scrollTo(0, 0);
+    document.title = 'تأكيد البريد الإلكتروني | سنترلي';
+    this.pendingVerification = { email, password };
+    document.getElementById('app').innerHTML = renderEmailVerificationScreen({ email, note });
+  }
+
+  showVerificationAlert(message, type = 'error') {
+    const alertBox = document.getElementById('verificationAlert');
+    if (!alertBox) return;
+    alertBox.innerText = message;
+    alertBox.style.display = 'block';
+    if (type === 'success') {
+      alertBox.style.backgroundColor = '#f0fdf4';
+      alertBox.style.color = '#166534';
+      alertBox.style.borderColor = '#bbf7d0';
+    } else {
+      alertBox.style.backgroundColor = '#fef2f2';
+      alertBox.style.color = '#991b1b';
+      alertBox.style.borderColor = '#fecaca';
+    }
+  }
+
+  async handleVerifyEmailSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnVerifySubmit');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:1rem;height:1rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-left:0.5rem;vertical-align:middle;"></span> جارٍ التأكيد...';
+    }
+
+    const email = document.getElementById('verificationEmailInput')?.value?.trim() || this.pendingVerification?.email || '';
+    const code = document.getElementById('verifyOtpCode')?.value?.trim() || '';
+    const password = this.pendingVerification?.password || '';
+
+    if (!code || code.length !== 6) {
+      if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+      this.showVerificationAlert('يرجى إدخال رمز التحقق المكون من 6 أرقام');
+      return;
+    }
+
+    try {
+      const res = await authService.verifyEmail(email, code, password);
+      this.showVerificationAlert(res.message || 'تم تأكيد البريد الإلكتروني بنجاح!', 'success');
+
+      if (res.user && res.token) {
+        this.user = res.user;
+        try {
+          const meRes = await request('/auth/me');
+          if (meRes?.user) {
+            this.user = { ...res.user, ...meRes.user };
+            authService.setUser(this.user);
+          }
+        } catch (_) {}
+        setTimeout(() => {
+          this.startOnboarding();
+        }, 800);
+      } else {
+        setTimeout(() => {
+          this.renderAuth('login');
+          const emailInput = document.getElementById('loginEmail');
+          if (emailInput) emailInput.value = email;
+          this.showAuthAlert('تم تأكيد حسابك بنجاح! يمكنك الآن تسجيل الدخول.');
+        }, 1200);
+      }
+    } catch (err) {
+      this.showVerificationAlert(err.message || 'رمز التحقق غير صحيح أو انتهت صلاحيته.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  }
+
+  async handleResendOtp() {
+    const btn = document.getElementById('btnResendOtp');
+    const email = document.getElementById('verificationEmailInput')?.value?.trim() || this.pendingVerification?.email || '';
+
+    if (!email) {
+      this.showVerificationAlert('لم يتم العثور على البريد الإلكتروني.');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = 'جارٍ إرسال رمز جديد...';
+    }
+
+    try {
+      const res = await authService.resendVerification(email);
+      this.showVerificationAlert(res.message || 'تم إرسال رمز جديد إلى بريدك بنجاح.', 'success');
+
+      let timeLeft = 60;
+      if (btn) {
+        btn.disabled = true;
+        const interval = setInterval(() => {
+          timeLeft -= 1;
+          if (timeLeft <= 0) {
+            clearInterval(interval);
+            btn.disabled = false;
+            btn.innerText = 'لم يصلك الرمز؟ إعادة الإرسال';
+          } else {
+            btn.innerText = `إعادة الإرسال بعد (${timeLeft} ثانية)`;
+          }
+        }, 1000);
+      }
+    } catch (err) {
+      this.showVerificationAlert(err.message || 'تعذر إعادة إرسال الرمز. يرجى الانتظار قليلاً.');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = 'لم يصلك الرمز؟ إعادة الإرسال';
       }
     }
   }

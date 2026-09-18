@@ -92,10 +92,10 @@ export const authService = {
     }
   },
 
-  async login(email, password) {
+  async login(identifier, password) {
     const response = await request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: identifier, identifier, password }),
     });
 
     if (response.user) {
@@ -119,23 +119,43 @@ export const authService = {
       body: JSON.stringify(data),
     });
 
+    // If backend requires email confirmation (mandatory Resend OTP), return immediately
+    if (response.requires_verification) {
+      return response;
+    }
+
     if (response.user && response.token) {
       this.setSession(response.user, response.token, response.refresh_token);
       return response;
     }
 
-    // Auto-login to establish authenticated session before onboarding starts
-    if (data.email && data.password) {
-      const loginRes = await this.login(data.email, data.password);
-      return {
-        ...response,
-        user: loginRes.user || response.user,
-        token: loginRes.token || response.token,
-        refresh_token: loginRes.refresh_token || response.refresh_token,
-      };
-    }
-
     return response;
+  },
+
+  async verifyEmail(email, code, password) {
+    const response = await request('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ email, code, password }),
+    });
+
+    if (response.user && response.token) {
+      this.setSession(response.user, response.token, response.refresh_token);
+      try {
+        const profile = await request('/auth/me');
+        if (profile?.user) {
+          response.user = { ...response.user, ...profile.user };
+        }
+      } catch (_) {}
+      this.setSession(response.user, response.token, response.refresh_token);
+    }
+    return response;
+  },
+
+  async resendVerification(email) {
+    return await request('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
   },
 
   async getProfile() {

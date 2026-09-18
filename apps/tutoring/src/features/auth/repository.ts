@@ -4,24 +4,75 @@ import {
   LoginResult,
   SignupDTO,
   SignupResult,
+  VerifyEmailDTO,
+  VerifyEmailResult,
+  ResendVerificationDTO,
   IAuthRepository,
   TenantSettings,
   ITenantsRepository,
 } from "./types.js";
+import { defaultEmailVerificationService, EmailVerificationService } from "./emailService.js";
 
 export class SupabaseAuthRepository implements IAuthRepository {
   constructor(
     private readonly publicClient: SupabaseClient,
-    private readonly adminClient: SupabaseClient
+    private readonly adminClient: SupabaseClient,
+    private readonly emailService: EmailVerificationService = defaultEmailVerificationService
   ) {}
 
-  async signIn(email: string, password: string): Promise<LoginResult> {
+  async signIn(emailOrPhone: string, password: string): Promise<LoginResult> {
+    const rawIdentifier = emailOrPhone.trim();
+    let targetEmail = rawIdentifier.toLowerCase();
+
+    // 1. Phone number resolution if identifier is not an email
+    if (!rawIdentifier.includes("@")) {
+      const { data: resolvedEmail, error: phoneErr } = await this.publicClient.rpc(
+        "get_email_by_phone",
+        { p_phone: rawIdentifier }
+      );
+
+      if (phoneErr || !resolvedEmail) {
+        throw new Error("INVALID_CREDENTIALS");
+      }
+      targetEmail = String(resolvedEmail).trim().toLowerCase();
+    }
+
+    // 2. Mandatory email verification check before login
+    try {
+      const { data: isConfirmed } = await this.publicClient.rpc("is_email_confirmed", {
+        p_email: targetEmail,
+      });
+
+      if (isConfirmed === false) {
+        const err = new Error("EMAIL_NOT_VERIFIED");
+        (err as Error & { code?: string; email?: string }).code = "EMAIL_NOT_VERIFIED";
+        (err as Error & { code?: string; email?: string }).email = targetEmail;
+        throw err;
+      }
+    } catch (checkErr: unknown) {
+      if ((checkErr as Error & { code?: string })?.code === "EMAIL_NOT_VERIFIED") {
+        throw checkErr;
+      }
+      // If RPC is unavailable or fails non-critically, proceed to Supabase signInWithPassword
+    }
+
+    // 3. Authenticate with Supabase Auth
     const { data, error } = await this.publicClient.auth.signInWithPassword({
-      email,
+      email: targetEmail,
       password,
     });
 
     if (error || !data.session || !data.user) {
+      if (
+        error?.message &&
+        (error.message.toLowerCase().includes("email not confirmed") ||
+          error.message.toLowerCase().includes("email_not_confirmed"))
+      ) {
+        const err = new Error("EMAIL_NOT_VERIFIED");
+        (err as Error & { code?: string; email?: string }).code = "EMAIL_NOT_VERIFIED";
+        (err as Error & { code?: string; email?: string }).email = targetEmail;
+        throw err;
+      }
       throw new Error("INVALID_CREDENTIALS");
     }
 
@@ -83,6 +134,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
       );
 
       if (!directErr && directData?.user_id) {
+        await this.sendAndRecordOtp(data.email, data.full_name);
         return {
           user: {
             id: directData.user_id,
@@ -156,6 +208,8 @@ export class SupabaseAuthRepository implements IAuthRepository {
       throw new Error(rpcErr?.message || "Failed to initialize organization profile");
     }
 
+    await this.sendAndRecordOtp(data.email, data.full_name);
+
     return {
       user: {
         id: userId,
@@ -171,6 +225,163 @@ export class SupabaseAuthRepository implements IAuthRepository {
         trial_ends_at: trialEndsAt,
         subscription_status: rpcData.subscription_status || "trial",
       },
+    };
+  }
+
+  private async sendAndRecordOtp(email: string, fullName?: string): Promise<string> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+    try {
+      await this.publicClient
+        .from("email_verifications")
+        .delete()
+        .eq("email", normalizedEmail);
+
+      await this.publicClient.from("email_verifications").insert({
+        email: normalizedEmail,
+        code,
+        expires_at: expiresAt,
+        attempts: 0,
+      });
+
+      await this.emailService.sendVerificationEmail({
+        email: normalizedEmail,
+        code,
+        fullName,
+      });
+    } catch {
+      // Non-critical logging - ensure signup doesn't crash if verification record write encounters error
+    }
+
+    return code;
+  }
+
+  async verifyEmail(dto: VerifyEmailDTO): Promise<VerifyEmailResult> {
+    const email = dto.email.trim().toLowerCase();
+    const code = dto.code.trim();
+
+    if (!email || !code) {
+      throw new Error("البريد الإلكتروني ورمز التحقق مطلوبان.");
+    }
+
+    const { data: record, error: fetchErr } = await this.publicClient
+      .from("email_verifications")
+      .select("*")
+      .eq("email", email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchErr || !record) {
+      throw new Error("لم يتم العثور على رمز تحقق لهذا البريد. يرجى طلب رمز جديد.");
+    }
+
+    if (record.verified_at) {
+      await this.publicClient.rpc("confirm_user_email_direct", { p_email: email });
+      if (dto.password) {
+        const loginRes = await this.signIn(email, dto.password);
+        return {
+          verified: true,
+          message: "تم تأكيد البريد الإلكتروني بنجاح.",
+          user: loginRes.user,
+          token: loginRes.token,
+          refresh_token: loginRes.refresh_token,
+          expires_in: loginRes.expires_in,
+        };
+      }
+      return {
+        verified: true,
+        message: "البريد الإلكتروني مؤكد بالفعل. يمكنك تسجيل الدخول الآن.",
+      };
+    }
+
+    if (record.attempts >= 5) {
+      throw new Error("تم تجاوز الحد الأقصى للمحاولات الخاطئة. يرجى طلب رمز تحقق جديد.");
+    }
+
+    if (new Date(record.expires_at).getTime() < Date.now()) {
+      throw new Error("انتهت صلاحية رمز التحقق. يرجى طلب رمز جديد.");
+    }
+
+    if (record.code !== code) {
+      await this.publicClient
+        .from("email_verifications")
+        .update({ attempts: (record.attempts || 0) + 1 })
+        .eq("id", record.id);
+      throw new Error("رمز التحقق غير صحيح. يرجى التأكد وإعادة المحاولة.");
+    }
+
+    await this.publicClient
+      .from("email_verifications")
+      .update({ verified_at: new Date().toISOString() })
+      .eq("id", record.id);
+
+    const { error: confirmErr } = await this.publicClient.rpc(
+      "confirm_user_email_direct",
+      { p_email: email }
+    );
+
+    if (confirmErr) {
+      throw new Error("حدث خطأ أثناء تأكيد الحساب. يرجى المحاولة لاحقاً.");
+    }
+
+    if (dto.password) {
+      const loginRes = await this.signIn(email, dto.password);
+      return {
+        verified: true,
+        message: "تم تأكيد البريد الإلكتروني بنجاح.",
+        user: loginRes.user,
+        token: loginRes.token,
+        refresh_token: loginRes.refresh_token,
+        expires_in: loginRes.expires_in,
+      };
+    }
+
+    return {
+      verified: true,
+      message: "تم تأكيد البريد الإلكتروني بنجاح! يمكنك الآن تسجيل الدخول.",
+    };
+  }
+
+  async resendVerification(dto: ResendVerificationDTO): Promise<{ success: boolean; message: string }> {
+    const email = dto.email.trim().toLowerCase();
+    if (!email) {
+      throw new Error("البريد الإلكتروني مطلوب.");
+    }
+
+    const { data: lastRecord } = await this.publicClient
+      .from("email_verifications")
+      .select("created_at")
+      .eq("email", email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lastRecord?.created_at) {
+      const elapsedMs = Date.now() - new Date(lastRecord.created_at).getTime();
+      if (elapsedMs < 60 * 1000) {
+        const waitSeconds = Math.ceil((60 * 1000 - elapsedMs) / 1000);
+        throw new Error(`يرجى الانتظار ${waitSeconds} ثانية قبل طلب رمز جديد.`);
+      }
+    }
+
+    let fullName: string | undefined;
+    try {
+      const { data: userRec } = await this.publicClient
+        .from("users")
+        .select("full_name")
+        .eq("email", email)
+        .maybeSingle();
+      if (userRec?.full_name) fullName = userRec.full_name;
+    } catch {}
+
+    await this.sendAndRecordOtp(email, fullName);
+
+    return {
+      success: true,
+      message: "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني بنجاح.",
     };
   }
 
@@ -202,14 +413,33 @@ export class SupabaseAuthRepository implements IAuthRepository {
 }
 
 export class FakeAuthRepository implements IAuthRepository {
-  public users: Array<{ id: string; email: string; password: string; tenant_id: string; role: string }> = [];
+  public users: Array<{ id: string; email: string; password: string; tenant_id: string; role: string; phone?: string; email_confirmed?: boolean }> = [];
   public tenants: Array<{ id: string; name: string; trial_ends_at: string; subscription_status: string }> = [];
+  public verifications: Map<string, { code: string; expires_at: number; verified: boolean; attempts: number; created_at: number }> = new Map();
 
-  async signIn(email: string, password: string): Promise<LoginResult> {
-    const user = this.users.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+  async signIn(emailOrPhone: string, password: string): Promise<LoginResult> {
+    const raw = emailOrPhone.trim();
+    let targetEmail = raw.toLowerCase();
+
+    if (!raw.includes("@")) {
+      const foundByPhone = this.users.find((u) => u.phone === raw || u.phone === `+20${raw.replace(/^0/, "")}`);
+      if (foundByPhone) {
+        targetEmail = foundByPhone.email.toLowerCase();
+      }
+    }
+
+    const user = this.users.find((u) => u.email.toLowerCase() === targetEmail && u.password === password);
     if (!user) {
       throw new Error("INVALID_CREDENTIALS");
     }
+
+    if (user.email_confirmed === false) {
+      const err = new Error("EMAIL_NOT_VERIFIED");
+      (err as Error & { code?: string; email?: string }).code = "EMAIL_NOT_VERIFIED";
+      (err as Error & { code?: string; email?: string }).email = targetEmail;
+      throw err;
+    }
+
     return {
       user: { id: user.id, email: user.email, name: (user as any).full_name || null, full_name: (user as any).full_name || null },
       token: `mock-jwt-token-${user.id}`,
@@ -248,12 +478,71 @@ export class FakeAuthRepository implements IAuthRepository {
       password: data.password,
       tenant_id: tenantId,
       role: userRole,
+      phone: data.phone,
+      email_confirmed: true, // Default true in tests unless explicitly unconfirmed
     };
     this.users.push(user);
+
+    // Record mock verification OTP
+    this.verifications.set(data.email.toLowerCase(), {
+      code: "123456",
+      expires_at: Date.now() + 15 * 60 * 1000,
+      verified: false,
+      attempts: 0,
+      created_at: Date.now(),
+    });
 
     return {
       user: { id: userId, email: data.email, role: userRole, name: data.full_name || null, full_name: data.full_name || null },
       tenant,
+    };
+  }
+
+  async verifyEmail(dto: VerifyEmailDTO): Promise<VerifyEmailResult> {
+    const email = dto.email.trim().toLowerCase();
+    const code = dto.code.trim();
+    const record = this.verifications.get(email);
+
+    if (!record || record.code !== code) {
+      throw new Error("رمز التحقق غير صحيح. يرجى التأكد وإعادة المحاولة.");
+    }
+
+    record.verified = true;
+    const user = this.users.find((u) => u.email.toLowerCase() === email);
+    if (user) {
+      user.email_confirmed = true;
+    }
+
+    if (dto.password && user) {
+      const loginRes = await this.signIn(email, dto.password);
+      return {
+        verified: true,
+        message: "تم تأكيد البريد الإلكتروني بنجاح.",
+        user: loginRes.user,
+        token: loginRes.token,
+        refresh_token: loginRes.refresh_token,
+        expires_in: loginRes.expires_in,
+      };
+    }
+
+    return {
+      verified: true,
+      message: "تم تأكيد البريد الإلكتروني بنجاح! يمكنك الآن تسجيل الدخول.",
+    };
+  }
+
+  async resendVerification(dto: ResendVerificationDTO): Promise<{ success: boolean; message: string }> {
+    const email = dto.email.trim().toLowerCase();
+    this.verifications.set(email, {
+      code: "654321",
+      expires_at: Date.now() + 15 * 60 * 1000,
+      verified: false,
+      attempts: 0,
+      created_at: Date.now(),
+    });
+    return {
+      success: true,
+      message: "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني بنجاح.",
     };
   }
 
