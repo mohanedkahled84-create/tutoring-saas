@@ -10,7 +10,6 @@ import { renderWhatsAppSettingsView } from './WhatsAppSettingsView.js';
  * 2. WhatsApp Gateway & Templates (Unified inside Settings)
  * 3. Subscription & Plan Quota (Unified full pricing & proofs inside Settings)
  * 4. Security & Password (Current password required + Forgot password link to email + Financial PIN)
- * 5. Appearance & Preferences (Dark mode toggle, barcode audio toggle)
  */
 
 function formatArabicDate(dateStr) {
@@ -29,7 +28,8 @@ function formatArabicDate(dateStr) {
 }
 
 export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, whatsapp = {}) {
-  const activeTab = state?.activeTab || 'profile';
+  let activeTab = state?.activeTab || 'profile';
+  if (activeTab === 'appearance') activeTab = 'profile';
   const displayName = (user?.full_name || user?.name || '').replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim() || 'محمد خالد';
   const email = user?.email || '';
   const phone = user?.phone || '';
@@ -70,7 +70,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
               </h2>
             </div>
             <p style="font-size: 0.875rem; color: #cbd5e1; margin: 0;">
-              تعديل بيانات المعلم، إدارة باقة الاشتراك، الأمان وكلمة المرور، وتخصيص تفضيلات المنصة.
+              تعديل بيانات المعلم، إدارة باقة الاشتراك، والأمان وكلمة المرور.
             </p>
           </div>
 
@@ -111,13 +111,6 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
           ${getIcon('lock', 16)}
           <span>الأمان وكلمة المرور</span>
-        </button>
-
-        <button type="button" onclick="window.centrlyApp.switchSettingsTab('appearance')"
-          class="btn ${activeTab === 'appearance' ? 'btn-primary' : 'btn-secondary'}"
-          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
-          ${getIcon('gear', 16)}
-          <span>تفضيلات المنظومة</span>
         </button>
 
       </div>
@@ -334,44 +327,6 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
             </form>
           </div>
 
-        </div>
-      </div>
-
-      <!-- ================= TAB 5: APPEARANCE & PREFERENCES ================= -->
-      <div id="settingsTabAppearance" style="display: ${activeTab === 'appearance' ? 'block' : 'none'};">
-        <div class="card" style="margin: 0; padding: 1.75rem; border-radius: var(--radius-lg);">
-          <h3 style="margin: 0 0 0.5rem 0; font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink);">
-            تفضيلات المنظومة والاستخدام
-          </h3>
-          <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1.5rem 0;">
-            تخصيص تنبيهات الحضور وأصوات مسح الباركود في الحصص.
-          </p>
-
-          <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 600px;">
-
-            <!-- Barcode Sound Toggle -->
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1.5px solid var(--centrly-line); border-radius: 12px; background: var(--centrly-surface);">
-              <div>
-                <div style="font-weight: 800; color: var(--centrly-ink); font-size: 0.95rem;">
-                  صوت التنبيه عند مسح الباركود (Beep Audio)
-                </div>
-                <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.25rem;">
-                  إصدار صوت خفيف عند تسجيل حضور الطالب بنجاح عبر الباركود.
-                </div>
-              </div>
-
-              <div>
-                <input type="checkbox" id="settingsBarcodeAudio" checked style="width: 20px; height: 20px; cursor: pointer;">
-              </div>
-            </div>
-
-            <!-- WhatsApp Manual Notice -->
-            <div style="background: var(--centrly-surface); border: 1.5px solid var(--centrly-line); border-radius: 12px; padding: 1rem 1.25rem; font-size: 0.85rem; color: var(--centrly-ink); line-height: 1.6;">
-              <strong style="color: var(--centrly-blue-700);">ملاحظة هامة بشأن الواتساب:</strong>
-              إرسال رسائل حضور وغياب الحصة يخضع للقرار اليدوي للمعلم ولا يتم إرسال أي رسائل تلقائياً بدون موافقتك الصريحة حمايةً لخصوصية الطلاب وشريحتك من الحظر.
-            </div>
-
-          </div>
         </div>
       </div>
 

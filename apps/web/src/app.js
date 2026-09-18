@@ -31,7 +31,7 @@ import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.
 import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js';
-import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.7.0';
+import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.7.1';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js?v=3.0.0';
