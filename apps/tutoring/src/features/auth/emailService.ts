@@ -84,7 +84,14 @@ export class EmailVerificationService {
 
   constructor(apiKey?: string, fromEmail?: string) {
     this.resendApiKey = apiKey || config.resendApiKey || process.env.RESEND_API_KEY || "";
-    this.fromEmail = fromEmail || process.env.RESEND_FROM_EMAIL || "Centrly <onboarding@resend.dev>";
+    const envFrom = process.env.RESEND_FROM_EMAIL;
+    if (fromEmail) {
+      this.fromEmail = fromEmail;
+    } else if (envFrom && !envFrom.includes("resend.dev")) {
+      this.fromEmail = envFrom;
+    } else {
+      this.fromEmail = "Centrly <no-reply@centerly-eg.com>";
+    }
   }
 
   async sendVerificationEmail(options: SendVerificationEmailOptions): Promise<SendEmailResult> {
