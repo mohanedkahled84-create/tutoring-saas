@@ -7,7 +7,7 @@ import { getIcon } from "../utils/icons.js";
  * Clean vector icons, mandatory student phone, cards navigation, and direct parent notes.
  */
 
-export function renderStudentsView(students = [], groups = [], isLoading = false, billing = {}) {
+export function renderStudentsView(students = [], groups = [], isLoading = false, billing = {}, hasLoaded = true) {
   const studentList = students || [];
   const unsentCount = studentList.filter(s => 
     (!s.parent_portal_sent_at || !s.student_portal_sent_at) && 
@@ -121,7 +121,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 <span>دليل الطلاب وقاعدة البيانات</span>
               </h2>
               <span style="background: ${isReachedOrExceeded ? '#fee2e2' : '#f1f5f9'}; color: ${isReachedOrExceeded ? '#b91c1c' : '#334155'}; font-size: 0.8rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 9999px; border: 1px solid ${isReachedOrExceeded ? '#fca5a5' : '#cbd5e1'};">
-                المقاعد: ${currentCount} / ${studentLimit} طالب
+                ${(!hasLoaded || isLoading) ? 'المقاعد: جارٍ التحميل...' : `المقاعد: ${currentCount} / ${studentLimit} طالب`}
               </span>
             </div>
             <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
@@ -185,7 +185,15 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
               </tr>
             </thead>
             <tbody>
-              ${(isLoading && studentList.length === 0) ? `
+              ${((isLoading || !hasLoaded) && studentList.length === 0) ? `
+                <tr>
+                  <td colspan="8" style="text-align: center; padding: 1.75rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; color: var(--centrly-blue-700); font-weight: 700; font-size: 0.95rem;">
+                      <span class="centrly-spinner" style="width: 22px; height: 22px; border-width: 3px;"></span>
+                      <span>جارٍ تحميل بيانات الطلاب والمجموعات من السحابة...</span>
+                    </div>
+                  </td>
+                </tr>
                 ${[1, 2, 3, 4, 5].map(() => `
                   <tr class="skeleton-row">
                     <td><span class="skeleton-box" style="width: 55px; height: 18px;"></span></td>

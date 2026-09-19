@@ -108,6 +108,26 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, "");
 
     const db = this.privilegedClient || this.client;
+
+    // 1. Try secure RPC function (runs as SECURITY DEFINER to cleanly bypass RLS for public portal login)
+    try {
+      if (typeof db.rpc === "function") {
+        const { data: rpcData, error: rpcError } = await db.rpc("get_student_for_portal", {
+          p_identifier: raw,
+        });
+        if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
+          const student = rpcData[0] as Student;
+          if (!student.parent_portal_token && student.id && student.tenant_id) {
+            student.parent_portal_token = generateParentPortalToken(student.id, student.tenant_id, 365);
+          }
+          return student;
+        }
+      }
+    } catch (_) {
+      // Fall through to direct table query
+    }
+
+    // 2. Direct table query fallback
     const { data, error } = await db
       .from("students")
       .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")

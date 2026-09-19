@@ -35,9 +35,10 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       ],
     },
     {
-      category: 'المدرسين والطلاب',
+      category: 'المدرسين وفريق العمل والطلاب',
       routes: [
         { id: 'center-teachers', title: 'المدرسين المعتمدين', icon: 'teachers' },
+        { id: 'center-assistants', title: 'المساعدين وفريق الاستقبال', icon: 'assistants' },
         { id: 'groups', title: 'مجاميع السنتر الدراسية', icon: 'groups' },
         { id: 'students', title: 'دليل الطلاب والتسجيل', icon: 'students' },
         { id: 'calendar', title: 'جدول السنتر الشامل', icon: 'calendar' },
@@ -47,7 +48,6 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
     {
       category: 'الإدارة والماليات',
       routes: [
-        { id: 'center-assistants', title: 'المساعدين وفريق الاستقبال', icon: 'assistants' },
         { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
         { id: 'activity-logs', title: 'تسويات المدرسين والماليات', icon: 'billing' },
       ],
@@ -70,10 +70,11 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       ],
     },
     {
-      category: 'إدارة الطلاب والمجاميع',
+      category: 'إدارة الطلاب والمجاميع وفريق العمل',
       routes: [
         { id: 'students', title: 'دليل طلابي', icon: 'students' },
         { id: 'groups', title: 'مجاميعي الدراسية', icon: 'groups' },
+        { id: 'assistants', title: 'إدارة المساعدين (الأسستنت)', icon: 'assistants' },
         { id: 'calendar', title: 'جدول الحصص والتقويم', icon: 'calendar' },
         { id: 'student-cards', title: 'طلب كروت الطلاب', icon: 'cards' },
       ],
@@ -87,9 +88,8 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       ],
     },
     {
-      category: 'الإدارة وفريق العمل',
+      category: 'الإعدادات والاشتراك',
       routes: [
-        { id: 'assistants', title: 'إدارة المساعدين (الأسستنت)', icon: 'assistants' },
         { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
       ],
     },

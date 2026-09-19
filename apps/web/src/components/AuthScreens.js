@@ -42,7 +42,7 @@ export function renderAuthScreens() {
             <label class="form-label">كلمة المرور</label>
             <div style="position: relative;">
               <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="current-password">
-              <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('loginPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
+              <button type="button" class="password-toggle-btn" onclick="(window.centrlyApp?.togglePasswordVisibility || window.togglePasswordVisibility)?.('loginPassword', this, event)" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                 ${getIcon('eye', 18)}
               </button>
             </div>
@@ -96,7 +96,7 @@ export function renderAuthScreens() {
             <label class="form-label">كلمة المرور *</label>
             <div style="position: relative;">
               <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" oninput="window.centrlyApp.validatePasswordLive(this.value)" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
-              <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('signupPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
+              <button type="button" class="password-toggle-btn" onclick="(window.centrlyApp?.togglePasswordVisibility || window.togglePasswordVisibility)?.('signupPassword', this, event)" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                 ${getIcon('eye', 18)}
               </button>
             </div>
@@ -122,7 +122,7 @@ export function renderAuthScreens() {
             <label class="form-label">تأكيد كلمة المرور *</label>
             <div style="position: relative;">
               <input type="password" id="signupPasswordConfirm" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
-              <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('signupPasswordConfirm', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
+              <button type="button" class="password-toggle-btn" onclick="(window.centrlyApp?.togglePasswordVisibility || window.togglePasswordVisibility)?.('signupPasswordConfirm', this, event)" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                 ${getIcon('eye', 18)}
               </button>
             </div>
@@ -178,7 +178,7 @@ export function renderAuthScreens() {
               <label class="form-label">كلمة المرور الجديدة</label>
               <div style="position: relative;">
                 <input type="password" id="resetNewPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
-                <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('resetNewPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
+                <button type="button" class="password-toggle-btn" onclick="(window.centrlyApp?.togglePasswordVisibility || window.togglePasswordVisibility)?.('resetNewPassword', this, event)" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                   ${getIcon('eye', 18)}
                 </button>
               </div>
@@ -187,7 +187,7 @@ export function renderAuthScreens() {
               <label class="form-label">تأكيد كلمة المرور الجديدة</label>
               <div style="position: relative;">
                 <input type="password" id="resetConfirmPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
-                <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('resetConfirmPassword', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
+                <button type="button" class="password-toggle-btn" onclick="(window.centrlyApp?.togglePasswordVisibility || window.togglePasswordVisibility)?.('resetConfirmPassword', this, event)" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
                   ${getIcon('eye', 18)}
                 </button>
               </div>

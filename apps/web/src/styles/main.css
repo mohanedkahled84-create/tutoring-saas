@@ -315,10 +315,13 @@ input[type="submit"]:active {
   left: 8px;
   top: 50%;
   transform: translateY(-50%);
-  background: transparent;
-  border: none;
+  background: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
   outline: none !important;
   box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
   cursor: pointer;
   color: var(--centrly-text);
   padding: 6px;
@@ -334,15 +337,16 @@ input[type="submit"]:active {
 
 .password-toggle-btn:hover {
   color: var(--centrly-blue-700);
-  background-color: rgba(70, 101, 211, 0.08);
+  background-color: rgba(70, 101, 211, 0.08) !important;
 }
 
 .password-toggle-btn:focus,
 .password-toggle-btn:focus-visible,
 .password-toggle-btn:active {
   outline: none !important;
+  border: none !important;
   box-shadow: none !important;
-  background-color: rgba(70, 101, 211, 0.12);
+  background-color: rgba(70, 101, 211, 0.12) !important;
 }
 
 .password-toggle-btn svg {
