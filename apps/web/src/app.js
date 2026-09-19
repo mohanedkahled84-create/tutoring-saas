@@ -10062,29 +10062,29 @@ https://centerly-platform.vercel.app/p/p16766044
   // Security PIN Protection (Sensitive Financials & Salaries)
   // ==========================================================================
 
-  openSetPinModal() {
+  openSetPinModal(forceExisting = false) {
     const savedPin = localStorage.getItem('centrly_financial_pin');
-    const hasExisting = Boolean(this.hasSecurityPin || savedPin);
+    const hasExisting = Boolean(forceExisting || this.hasSecurityPin || savedPin || this.user?.has_security_pin);
     const bodyHtml = `
       <form id="modalSetPinForm" onsubmit="window.centrlyApp.handleSavePinSubmit(event)">
         <div style="text-align: center; margin-bottom: 1.25rem;">
           <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('lock', 36, '#2563eb')}</div>
           <h4 style="margin: 0 0 0.4rem; color: #0f172a; font-weight: 800;">
-            ${hasExisting ? 'تعديل رمز الأمان (PIN)' : 'تعيين رمز الأمان (PIN)'}
+            ${hasExisting ? 'تعديل أو إعادة ضبط رمز الأمان (PIN)' : 'تعيين رمز الأمان (PIN)'}
           </h4>
           <p style="font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.5;">
-            ${hasExisting ? 'يرجى كتابة رمز الأمان الحالي أولاً لتأكيد هويتك، ثم إدخال الرمز الجديد.' : 'رمز رقمي سريع من 4 إلى 6 أرقام لحماية أرباحك ومرتبات المساعدين ومزامنته سحابياً عبر جميع أجهزتك.'}
+            ${hasExisting ? 'لتأكيد هويتك وحماية بياناتك، يرجى كتابة رمز الأمان الحالي أو كلمة مرور حسابك، ثم إدخال الرمز الجديد.' : 'رمز رقمي سريع من 4 إلى 6 أرقام لحماية أرباحك ومرتبات المساعدين ومزامنته سحابياً عبر جميع أجهزتك.'}
           </p>
         </div>
 
         ${hasExisting ? `
         <div class="form-group" style="margin-bottom: 1rem;">
-          <label class="form-label" style="font-weight: 700;">رمز الأمان الحالي (القديم) *</label>
+          <label class="form-label" style="font-weight: 700;">رمز الأمان الحالي أو كلمة مرور حسابك *</label>
           <div style="position: relative;">
-            <input type="password" id="inputCurrentPin" class="form-input" placeholder="أدخل الرمز الحالي" maxlength="6" inputmode="numeric" required
-              style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
-              autocomplete="off" autofocus
-              oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\\D/g, '')">
+            <input type="password" id="inputCurrentPin" class="form-input" placeholder="أدخل الرمز الحالي أو كلمة مرور حسابك" maxlength="64" required
+              style="text-align: center; font-size: 1.15rem; font-weight: 800; padding-left: 2.5rem; letter-spacing: 0.15rem;"
+              autocomplete="current-password" autofocus
+              oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776))">
             <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputCurrentPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
               ${getIcon('eye', 18)}
             </button>
@@ -10097,7 +10097,7 @@ https://centerly-platform.vercel.app/p/p16766044
           <div style="position: relative;">
             <input type="password" id="inputNewPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" required
               style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
-              autocomplete="off" ${hasExisting ? '' : 'autofocus'}
+              autocomplete="new-password" ${hasExisting ? '' : 'autofocus'}
               oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\\D/g, '')">
             <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputNewPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
               ${getIcon('eye', 18)}
@@ -10108,9 +10108,9 @@ https://centerly-platform.vercel.app/p/p16766044
         <div class="form-group" style="margin-bottom: 1.25rem;">
           <label class="form-label" style="font-weight: 700;">${hasExisting ? 'تأكيد رمز الأمان الجديد *' : 'تأكيد رمز الأمان *'}</label>
           <div style="position: relative;">
-            <input type="password" id="inputConfirmPin" class="form-input" placeholder="أعد إدخال الرمز" maxlength="6" inputmode="numeric" required
+            <input type="password" id="inputConfirmPin" class="form-input" placeholder="أعد إدخال الرمز الجديد" maxlength="6" inputmode="numeric" required
               style="text-align: center; letter-spacing: 0.4rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
-              autocomplete="off"
+              autocomplete="new-password"
               oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\\D/g, '')">
             <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputConfirmPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
               ${getIcon('eye', 18)}
@@ -10122,11 +10122,11 @@ https://centerly-platform.vercel.app/p/p16766044
 
         <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
           <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="submit" id="btnSubmitSetPin" class="btn btn-primary" style="font-weight: 800;">${hasExisting ? 'حفظ الرمز الجديد' : 'حفظ وتفعيل الرمز'}</button>
+          <button type="submit" id="btnSubmitSetPin" class="btn btn-primary" style="font-weight: 800;">${hasExisting ? 'حفظ وتأكيد الرمز' : 'حفظ وتفعيل الرمز'}</button>
         </div>
       </form>
     `;
-    this.showModal(hasExisting ? 'تعديل رمز الأمان (PIN)' : 'تعيين رمز الأمان لأول مرة', bodyHtml);
+    this.showModal(hasExisting ? 'تعديل أو إعادة ضبط رمز الأمان (PIN)' : 'تعيين رمز الأمان لأول مرة', bodyHtml);
     setTimeout(() => {
       if (hasExisting) {
         document.getElementById('inputCurrentPin')?.focus();
@@ -10146,11 +10146,13 @@ https://centerly-platform.vercel.app/p/p16766044
 
   async handleSavePinSubmit(e) {
     e.preventDefault();
-    const savedPin = normalizeDigits(localStorage.getItem('centrly_financial_pin'));
-    const hasExisting = Boolean(this.hasSecurityPin || savedPin);
-    const currentPin = normalizeDigits(document.getElementById('inputCurrentPin')?.value);
-    const pin = normalizeDigits(document.getElementById('inputNewPin')?.value);
-    const confirm = normalizeDigits(document.getElementById('inputConfirmPin')?.value);
+    const hasExisting = Boolean(document.getElementById('inputCurrentPin'));
+    const rawCurrent = document.getElementById('inputCurrentPin')?.value || '';
+    const currentPinOrPass = rawCurrent.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).trim();
+    const rawNew = document.getElementById('inputNewPin')?.value || '';
+    const pin = normalizeDigits(rawNew);
+    const rawConfirm = document.getElementById('inputConfirmPin')?.value || '';
+    const confirm = normalizeDigits(rawConfirm);
     const errEl = document.getElementById('pinErrorMsg');
     const btn = document.getElementById('btnSubmitSetPin');
 
@@ -10165,17 +10167,11 @@ https://centerly-platform.vercel.app/p/p16766044
     };
 
     if (hasExisting) {
-      if (!currentPin) {
-        showError('يرجى إدخال رمز الأمان الحالي أولاً.', document.getElementById('inputCurrentPin'));
+      if (!currentPinOrPass) {
+        showError('يرجى إدخال رمز الأمان الحالي أو كلمة مرور حسابك لتأكيد هويتك أولاً.', document.getElementById('inputCurrentPin'));
         return;
       }
-      if (savedPin && currentPin !== savedPin) {
-        showError('رمز الأمان الحالي غير صحيح. يرجى التأكد وإعادة المحاولة.', document.getElementById('inputCurrentPin'));
-        const currInput = document.getElementById('inputCurrentPin');
-        if (currInput) currInput.value = '';
-        return;
-      }
-      if (pin === currentPin) {
+      if (pin === currentPinOrPass) {
         showError('رمز الأمان الجديد يجب أن يكون مختلفاً عن الرمز القديم.', document.getElementById('inputNewPin'));
         return;
       }
@@ -10193,13 +10189,13 @@ https://centerly-platform.vercel.app/p/p16766044
 
     if (btn) {
       btn.disabled = true;
-      btn.innerText = 'جارٍ الحفظ...';
+      btn.innerText = 'جارٍ التحقق والحفظ...';
     }
 
     try {
       await request('/settings/security-pin', {
         method: 'POST',
-        body: { pin, old_pin: currentPin || undefined }
+        body: { pin, old_pin: currentPinOrPass, account_password: currentPinOrPass }
       });
       localStorage.setItem('centrly_financial_pin', pin);
       localStorage.setItem('centrly_has_security_pin', 'true');
@@ -10210,14 +10206,14 @@ https://centerly-platform.vercel.app/p/p16766044
         authService.setUser(this.user);
       }
       this.closeModal();
-      this.showToast(hasExisting ? 'تم تحديث رمز الأمان ومزامنته سحابياً بنجاح.' : 'تم تعيين وتفعيل رمز الأمان بنجاح.', 'success');
+      this.showToast(hasExisting ? 'تم تأكيد هويتك وتحديث رمز الأمان بنجاح ومزامنته سحابياً.' : 'تم تعيين وتفعيل رمز الأمان بنجاح.', 'success');
       this.renderApp();
     } catch (err) {
-      showError(err.message || 'فشل حفظ رمز الأمان. يرجى التأكد من الرمز الحالي وإعادة المحاولة.', document.getElementById('inputCurrentPin'));
+      showError(err.message || 'رمز الأمان الحالي أو كلمة مرور الحساب غير صحيحة. لا يمكن تغيير الرمز دون إثبات هويتك.', document.getElementById('inputCurrentPin'));
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerText = hasExisting ? 'حفظ الرمز الجديد' : 'حفظ وتفعيل الرمز';
+        btn.innerText = hasExisting ? 'حفظ وتأكيد الرمز' : 'حفظ وتفعيل الرمز';
       }
     }
   }
@@ -10364,42 +10360,8 @@ https://centerly-platform.vercel.app/p/p16766044
   }
 
   resetFinancialPinPrompt() {
-    const bodyHtml = `
-      <div style="text-align: center; padding: 0.5rem 0;">
-        <div style="margin-bottom: 0.75rem;">${getIcon('help-circle', 40, '#f59e0b')}</div>
-        <h4 style="margin: 0 0 0.5rem; color: #0f172a; font-weight: 800;">إعادة ضبط رمز الأمان (PIN)</h4>
-        <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">
-          سيتم حذف الرمز السري من حسابك السحابي ومن جميع الأجهزة، لتتمكن من تعيين رمز جديد فوراً.
-        </p>
-        <div style="display: flex; gap: 0.75rem; justify-content: center;">
-          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="button" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;" onclick="window.centrlyApp.confirmResetFinancialPin()">
-            نعم، إعادة الضبط
-          </button>
-        </div>
-      </div>
-    `;
-    this.showModal('إعادة ضبط رمز الأمان', bodyHtml);
-  }
-
-  async confirmResetFinancialPin() {
-    try {
-      await request('/settings/security-pin', { method: 'DELETE' }).catch(() => null);
-    } catch (_) {}
-    localStorage.removeItem('centrly_financial_pin');
-    localStorage.setItem('centrly_has_security_pin', 'false');
-    this.hasSecurityPin = false;
-    this.isFinancialUnlocked = true;
-    if (this.user) {
-      this.user.has_security_pin = false;
-      authService.setUser(this.user);
-    }
-    this.closeModal();
-    this.showToast('تم حذف رمز PIN السابق. يمكنك الآن تعيين رمز جديد.', 'info');
-    this.renderApp();
-    setTimeout(() => {
-      this.openSetPinModal();
-    }, 200);
+    // Open the secure PIN update modal with identity verification required (old PIN or account password)
+    this.openSetPinModal(true);
   }
 
   // ==========================================================================

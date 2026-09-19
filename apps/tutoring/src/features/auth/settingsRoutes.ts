@@ -108,6 +108,7 @@ const setPinSchema = z.object({
     .transform((val) => normalizeDigits(val))
     .pipe(z.string().regex(/^\d{4,6}$/, "PIN must be 4 to 6 digits")),
   old_pin: z.string().optional().nullable(),
+  account_password: z.string().optional().nullable(),
 });
 
 const verifyPinSchema = z.object({
@@ -189,10 +190,39 @@ settingsRouter.post(
         }
       }
 
-      if (existingPin && req.body.old_pin) {
-        const cleanOldPin = normalizeDigits(req.body.old_pin);
-        if (existingPin !== cleanOldPin) {
-          res.status(400).json({ error: { code: "INVALID_OLD_PIN", message: "الرقم السري الحالي غير صحيح" } });
+      // If user/tenant already has a PIN, require verification of identity (either old PIN or account password)
+      if (existingPin) {
+        const inputOldPin = req.body.old_pin ? normalizeDigits(req.body.old_pin) : "";
+        const inputPassword = (req.body.account_password || req.body.old_pin || "").trim();
+
+        let isVerified = false;
+
+        // 1. Direct match with current PIN
+        if (inputOldPin && existingPin === inputOldPin) {
+          isVerified = true;
+        }
+
+        // 2. Direct match with user's account password via Supabase Auth
+        if (!isVerified && req.user?.email && inputPassword.length >= 4) {
+          try {
+            const authClient = req.supabase || supabasePublic;
+            const { error: authErr } = await authClient.auth.signInWithPassword({
+              email: req.user.email,
+              password: inputPassword,
+            });
+            if (!authErr) {
+              isVerified = true;
+            }
+          } catch (_) {}
+        }
+
+        if (!isVerified) {
+          res.status(400).json({
+            error: {
+              code: "INVALID_CREDENTIALS",
+              message: "رمز الأمان الحالي أو كلمة مرور حسابك غير صحيحة. يرجى تأكيد هويتك أولاً لتتمكن من تغيير الرمز.",
+            },
+          });
           return;
         }
       }
@@ -300,9 +330,10 @@ settingsRouter.post(
 const deletePinSchema = z
   .object({
     pin: z.string().optional().nullable(),
+    password: z.string().optional().nullable(),
   })
   .optional()
-  .default({ pin: undefined });
+  .default({ pin: undefined, password: undefined });
 
 // DELETE /api/settings/security-pin - Remove financial security PIN
 settingsRouter.delete(
@@ -332,12 +363,37 @@ settingsRouter.delete(
         }
       }
 
-      const cleanInputPin = req.body?.pin ? normalizeDigits(req.body.pin) : null;
-      const cleanSavedPin = savedPin ? normalizeDigits(savedPin) : null;
+      // If a PIN exists, require verification of identity before deleting
+      if (savedPin) {
+        const inputPin = req.body?.pin ? normalizeDigits(req.body.pin) : "";
+        const inputPassword = (req.body?.password || req.body?.pin || "").trim();
 
-      if (cleanInputPin && cleanSavedPin && cleanSavedPin !== cleanInputPin) {
-        res.status(400).json({ error: { code: "INVALID_PIN", message: "الرقم السري الحالي غير صحيح" } });
-        return;
+        let isVerified = false;
+        if (inputPin && savedPin === inputPin) {
+          isVerified = true;
+        }
+        if (!isVerified && req.user?.email && inputPassword.length >= 4) {
+          try {
+            const authClient = req.supabase || supabasePublic;
+            const { error: authErr } = await authClient.auth.signInWithPassword({
+              email: req.user.email,
+              password: inputPassword,
+            });
+            if (!authErr) {
+              isVerified = true;
+            }
+          } catch (_) {}
+        }
+
+        if (!isVerified) {
+          res.status(400).json({
+            error: {
+              code: "INVALID_CREDENTIALS",
+              message: "يجب إدخال رمز الأمان الحالي أو كلمة مرور حسابك لتأكيد هويتك قبل حذف الرمز.",
+            },
+          });
+          return;
+        }
       }
 
       if (userId && typeof tenantsRepo.setUserPin === "function") {
