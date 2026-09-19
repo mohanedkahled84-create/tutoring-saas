@@ -7,8 +7,8 @@ import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
-import { renderStudentsView } from './components/StudentsView.js?v=4.8.9';
-import { renderGroupsView } from './components/GroupsView.js?v=4.8.7';
+import { renderStudentsView } from './components/StudentsView.js?v=4.8.12';
+import { renderGroupsView } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.0.0';
@@ -20,7 +20,7 @@ import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
 import { renderBillingView } from './components/BillingView.js?v=3.8.0';
 import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
 import { renderStudentCardsView } from './components/StudentCardsView.js';
-import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=4.8.7';
+import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=4.8.12';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -2778,46 +2778,20 @@ class CentrlyApp {
     if (el) el.innerHTML = this.getContentHtml(this.currentRoute);
   }
 
-  renderRouteLoading(route) {
-    const routeTitles = {
-      'students': { title: 'جارٍ تحميل دليل الطلاب...', subtitle: 'يتم الآن جلب بيانات الطلاب وأرقام الهواتف والمجموعات من السحابة' },
-      'groups': { title: 'جارٍ تحميل المجاميع الدراسية...', subtitle: 'يتم الآن جلب مواعيد الحصص والقاعات وأنظمة المحاسبة' },
-      'quizzes': { title: 'جارٍ تحميل الكويزات والامتحانات...', subtitle: 'يتم الآن استخراج نماذج الكويزات ودرجات الطلاب' },
-      'homework': { title: 'جارٍ تحميل تسليمات الواجبات...', subtitle: 'يتم الآن جلب ملفات الواجبات المرفوعة من الطلاب' },
-      'materials': { title: 'جارٍ تحميل المذكرات والماتريال...', subtitle: 'يتم الآن جلب مذكرات وملفات الـ PDF الدراسية' },
-      'reports': { title: 'جارٍ إعداد التقارير ولوحة الشرف...', subtitle: 'يتم الآن احتساب معدلات الحضور والدرجات وإحصائيات الشهر' },
-      'assistants': { title: 'جارٍ تحميل بيانات فريق العمل...', subtitle: 'يتم الآن جلب صلاحيات وسجلات المساعدين' },
-      'dashboard': { title: 'جارٍ تحميل لوحة المعلم والأرباح...', subtitle: 'يتم الآن جلب التقارير المالية ومعدلات الحضور' },
-      'calendar': { title: 'جارٍ تحميل جدول الحصص والتقويم...', subtitle: 'يتم الآن تنظيم مواعيد الحصص الأسبوعية والإضافية' },
-      'student-cards': { title: 'جارٍ إعداد كروت الطلاب...', subtitle: 'يتم الآن تجهيز بيانات وأكواد باركود الطلاب' },
-      'center-dashboard': { title: 'جارٍ تحميل لوحة إدارة السنتر...', subtitle: 'يتم الآن استخراج إحصائيات القاعات وتسويات المدرسين' },
-      'center-sessions': { title: 'جارٍ تحميل حصص السنتر...', subtitle: 'يتم الآن جلب الحصص الجارية والقادمة بالقاعات' },
-      'center-teachers': { title: 'جارٍ تحميل المدرسين المعتمدين...', subtitle: 'يتم الآن جلب قائمة المدرسين والمجاميع بالسنتر' },
-      'center-assistants': { title: 'جارٍ تحميل فريق الاستقبال...', subtitle: 'يتم الآن جلب بيانات ومساعدي السنتر' },
-      'center-rooms': { title: 'جارٍ تحميل قاعات السنتر...', subtitle: 'يتم الآن جلب سعة وجداول القاعات' },
-    };
-
-    const info = routeTitles[route] || {
-      title: 'جارٍ تحميل البيانات من السحابة...',
-      subtitle: 'يرجى الانتظار لحظات ريثما يتم جلب ومزامنة أحدث البيانات',
-    };
-
+  renderRouteLoading() {
     return `
-      <div class="card" style="margin: 0; min-height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3.5rem 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.02);" dir="rtl">
-        <div style="position: relative; width: 64px; height: 64px; margin-bottom: 1.5rem;">
-          <div style="width: 64px; height: 64px; border: 4px solid #e0e7ff; border-top: 4px solid var(--centrly-blue-700, #1e3a8a); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-          <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700, #1e3a8a);">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-          </div>
-        </div>
-        <h3 style="font-size: 1.15rem; font-weight: 800; color: #1e293b; margin: 0 0 0.5rem 0; font-family: 'Cairo', sans-serif;">${info.title}</h3>
-        <p style="font-size: 0.875rem; color: #64748b; margin: 0 0 1.5rem 0; max-width: 420px; line-height: 1.6;">${info.subtitle}</p>
-        
-        <div style="width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 0.65rem; opacity: 0.65;">
-          <div class="skeleton-box" style="height: 16px; width: 100%; border-radius: 6px;"></div>
-          <div class="skeleton-box" style="height: 16px; width: 85%; border-radius: 6px; margin: 0 auto;"></div>
-          <div class="skeleton-box" style="height: 16px; width: 65%; border-radius: 6px; margin: 0 auto;"></div>
-        </div>
+      <div class="centrly-sleek-loader-wrap">
+        <svg class="centrly-sleek-spinner" viewBox="0 0 50 50">
+          <defs>
+            <linearGradient id="centrlySleekGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#1e3a8a" />
+              <stop offset="50%" stop-color="#2563eb" />
+              <stop offset="100%" stop-color="#60a5fa" />
+            </linearGradient>
+          </defs>
+          <circle class="spinner-track" cx="25" cy="25" r="20" fill="none" stroke-width="3.5" />
+          <circle class="spinner-head" cx="25" cy="25" r="20" fill="none" stroke="url(#centrlySleekGradient)" stroke-width="3.5" />
+        </svg>
       </div>
     `;
   }

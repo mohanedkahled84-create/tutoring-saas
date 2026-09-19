@@ -187,10 +187,19 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
             <tbody>
               ${((isLoading || !hasLoaded) && studentList.length === 0) ? `
                 <tr>
-                  <td colspan="8" style="text-align: center; padding: 1.75rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; color: var(--centrly-blue-700); font-weight: 700; font-size: 0.95rem;">
-                      <span class="centrly-spinner" style="width: 22px; height: 22px; border-width: 3px;"></span>
-                      <span>جارٍ تحميل بيانات الطلاب والمجموعات من السحابة...</span>
+                  <td colspan="8" style="text-align: center; padding: 2rem 1rem; background: #ffffff; border-bottom: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; justify-content: center;">
+                      <svg class="centrly-sleek-spinner" viewBox="0 0 50 50" style="width: 36px; height: 36px;">
+                        <defs>
+                          <linearGradient id="centrlySleekGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#1e3a8a" />
+                            <stop offset="50%" stop-color="#2563eb" />
+                            <stop offset="100%" stop-color="#60a5fa" />
+                          </linearGradient>
+                        </defs>
+                        <circle class="spinner-track" cx="25" cy="25" r="20" fill="none" stroke-width="3.5" />
+                        <circle class="spinner-head" cx="25" cy="25" r="20" fill="none" stroke="url(#centrlySleekGradient)" stroke-width="3.5" />
+                      </svg>
                     </div>
                   </td>
                 </tr>

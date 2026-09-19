@@ -34,10 +34,19 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
       </div>
 
       ${((isLoading || !hasLoaded) && groupList.length === 0) ? `
-        <!-- Groups Loading Banner & Skeleton Grid -->
-        <div class="card" style="margin: 0; padding: 1.5rem; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
-          <span class="centrly-spinner" style="width: 22px; height: 22px; border-width: 3px;"></span>
-          <span style="font-weight: 700; color: var(--centrly-blue-700); font-size: 0.95rem;">جارٍ تحميل بيانات المجاميع الدراسية ومواعيد الحصص...</span>
+        <!-- Groups Loading Sleek Spinner & Skeleton Grid -->
+        <div style="display: flex; align-items: center; justify-content: center; padding: 2rem 1rem;">
+          <svg class="centrly-sleek-spinner" viewBox="0 0 50 50">
+            <defs>
+              <linearGradient id="centrlySleekGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#1e3a8a" />
+                <stop offset="50%" stop-color="#2563eb" />
+                <stop offset="100%" stop-color="#60a5fa" />
+              </linearGradient>
+            </defs>
+            <circle class="spinner-track" cx="25" cy="25" r="20" fill="none" stroke-width="3.5" />
+            <circle class="spinner-head" cx="25" cy="25" r="20" fill="none" stroke="url(#centrlySleekGradient)" stroke-width="3.5" />
+          </svg>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
           ${[1, 2, 3].map(() => `
