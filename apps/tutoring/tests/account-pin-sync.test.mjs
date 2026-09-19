@@ -125,7 +125,63 @@ test('SEC-PIN: Account-Level Security PIN synchronization across mobile and desk
     assert.equal(res7.status, 200);
     const body7 = await res7.json();
     assert.equal(body7.valid, true, 'Laptop must recognize updated account PIN 5678');
+
+    // 8. Attempting to unlock with account password MUST BE REJECTED (only PIN unlocks locked pages)
+    const resPassUnlock = await fetch(`${baseUrl}/api/settings/verify-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: 'MyStrongAccountPassword123' }),
+    });
+    assert.equal(resPassUnlock.status, 200);
+    const bodyPassUnlock = await resPassUnlock.json();
+    assert.equal(bodyPassUnlock.valid, false, 'Unlocking with account password must strictly be rejected');
+
+    // 9. Attempting to reset PIN with only account password MUST BE REJECTED
+    const resPassReset = await fetch(`${baseUrl}/api/settings/security-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: '9999', old_pin: 'wrong_old_pin' }),
+    });
+    assert.equal(resPassReset.status, 400);
+    const bodyPassReset = await resPassReset.json();
+    assert.equal(bodyPassReset.error.code, 'INVALID_CREDENTIALS');
+
+    // 10. Requesting PIN reset code to registered account email
+    const resReqReset = await fetch(`${baseUrl}/api/settings/security-pin/request-reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    assert.equal(resReqReset.status, 200);
+    const bodyReqReset = await resReqReset.json();
+    assert.equal(bodyReqReset.success, true);
+    assert.match(bodyReqReset.email, /mo\*\*\*.*@gmail\.com/);
+
+    // 11. Reading the generated OTP code from the store and resetting PIN
+    const { pinResetOtpStore } = await import('../dist/features/auth/settingsRoutes.js');
+    const otpRecord = pinResetOtpStore.get('mohanedkahled84@gmail.com');
+    assert.ok(otpRecord && otpRecord.code, 'OTP code must be generated for account email');
+
+    const resEmailReset = await fetch(`${baseUrl}/api/settings/security-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: '9090', email_code: otpRecord.code }),
+    });
+    assert.equal(resEmailReset.status, 200);
+    const bodyEmailReset = await resEmailReset.json();
+    assert.equal(bodyEmailReset.success, true);
+
+    // 12. Verifying the account PIN is now updated to 9090 and unlocks
+    const resVerifyFinal = await fetch(`${baseUrl}/api/settings/verify-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: '9090' }),
+    });
+    assert.equal(resVerifyFinal.status, 200);
+    const bodyVerifyFinal = await resVerifyFinal.json();
+    assert.equal(bodyVerifyFinal.valid, true, 'New PIN 9090 set via email verification must unlock');
   } finally {
     server.close();
   }
 });
+

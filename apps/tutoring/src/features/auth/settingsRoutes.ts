@@ -5,6 +5,7 @@ import { validateBody } from "../../shared/middleware/validation.js";
 import { requireCenterOwnerOrAdmin } from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
 import { supabasePublic } from "../../supabase.js";
+import { defaultEmailVerificationService } from "./emailService.js";
 
 export const settingsRouter = Router();
 
@@ -102,18 +103,142 @@ settingsRouter.put(
   }
 );
 
+interface PinResetOtpRecord {
+  code: string;
+  email: string;
+  expiresAt: number;
+  attempts: number;
+}
+export const pinResetOtpStore = new Map<string, PinResetOtpRecord>();
+
 const setPinSchema = z.object({
   pin: z
     .string()
     .transform((val) => normalizeDigits(val))
-    .pipe(z.string().regex(/^\d{4,6}$/, "PIN must be 4 to 6 digits")),
+    .pipe(z.string().regex(/^\d{4,6}$/, "يجب أن يتكون رمز الأمان من 4 إلى 6 أرقام فقط")),
   old_pin: z.string().optional().nullable(),
-  account_password: z.string().optional().nullable(),
+  email_code: z.string().optional().nullable(),
 });
 
 const verifyPinSchema = z.object({
-  pin: z.string().min(1, "PIN or password is required"),
+  pin: z.string().min(1, "رمز الأمان مطلوب"),
 });
+
+const requestResetSchema = z.object({}).optional().default({});
+
+// POST /api/settings/security-pin/request-reset - Send OTP to user's registered email to reset financial PIN
+settingsRouter.post(
+  "/security-pin/request-reset",
+  validateBody(requestResetSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
+    const tenantId = req.user?.tenant_id;
+    let userEmail = (req.user?.email || "").trim().toLowerCase();
+
+    if (!userId && !tenantId) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      return;
+    }
+
+    try {
+      // If userEmail is not on req.user, look it up in users table
+      if (!userEmail && userId) {
+        const { data: userRec } = await supabasePublic
+          .from("users")
+          .select("email, full_name")
+          .eq("id", userId)
+          .maybeSingle();
+        if (userRec?.email) {
+          userEmail = userRec.email.trim().toLowerCase();
+        }
+      }
+
+      if (!userEmail) {
+        res.status(400).json({
+          error: {
+            code: "NO_EMAIL_ON_ACCOUNT",
+            message: "لا يوجد بريد إلكتروني مسجل لهذا الحساب لإرسال كود التحقق إليه. يرجى التواصل مع الدعم الفني.",
+          },
+        });
+        return;
+      }
+
+      // Check cooldown (60 seconds between OTP requests)
+      const existingOtp = pinResetOtpStore.get(userEmail);
+      if (existingOtp && Date.now() < existingOtp.expiresAt) {
+        const elapsedMs = 15 * 60 * 1000 - (existingOtp.expiresAt - Date.now());
+        if (elapsedMs < 60 * 1000) {
+          const waitSeconds = Math.ceil((60 * 1000 - elapsedMs) / 1000);
+          res.status(429).json({
+            error: {
+              code: "RATE_LIMITED",
+              message: `يرجى الانتظار ${waitSeconds} ثانية قبل طلب كود تحقق جديد.`,
+            },
+          });
+          return;
+        }
+      }
+
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = Date.now() + 15 * 60 * 1000;
+
+      pinResetOtpStore.set(userEmail, { code, email: userEmail, expiresAt, attempts: 0 });
+      if (userId) {
+        pinResetOtpStore.set(userId, { code, email: userEmail, expiresAt, attempts: 0 });
+      }
+
+      // Record in Supabase email_verifications table
+      try {
+        await supabasePublic.from("email_verifications").insert({
+          email: userEmail,
+          code,
+          expires_at: new Date(expiresAt).toISOString(),
+          attempts: 0,
+        });
+      } catch (_) {}
+
+      // Send email via defaultEmailVerificationService (Resend)
+      let sentViaResend = false;
+      try {
+        const resendResult = await defaultEmailVerificationService.sendPinResetEmail({
+          email: userEmail,
+          code,
+          fullName: (req.user as any)?.full_name || (req.user as any)?.name || (req.user as any)?.tenant_name,
+        });
+        if (resendResult?.success) {
+          sentViaResend = true;
+        }
+      } catch (_) {}
+
+      // If Resend was not configured or skipped, also send via Supabase Auth signInWithOtp
+      if (!sentViaResend) {
+        try {
+          await supabasePublic.auth.signInWithOtp({
+            email: userEmail,
+            options: { shouldCreateUser: false },
+          });
+        } catch (_) {}
+      }
+
+      // Mask email for security display (e.g. mo***84@gmail.com)
+      const atIndex = userEmail.indexOf("@");
+      let maskedEmail = userEmail;
+      if (atIndex > 2) {
+        const prefix = userEmail.substring(0, 2);
+        const suffix = userEmail.substring(atIndex - 1);
+        maskedEmail = `${prefix}***${suffix}`;
+      }
+
+      res.json({
+        success: true,
+        email: maskedEmail,
+        message: `تم إرسال كود التحقق (6 أرقام) إلى بريدك الإلكتروني (${maskedEmail}) بنجاح. صالح لمدة 15 دقيقة.`,
+      });
+    } catch (err: unknown) {
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
+    }
+  }
+);
 
 // GET /api/settings/security-pin - Check if user account or tenant has configured financial security PIN
 settingsRouter.get("/security-pin", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -190,37 +315,79 @@ settingsRouter.post(
         }
       }
 
-      // If user/tenant already has a PIN, require verification of identity (either old PIN or account password)
+      // If user/tenant already has a PIN, require verification of identity (EITHER Old PIN OR Email OTP - NEVER account password!)
       if (existingPin) {
         const inputOldPin = req.body.old_pin ? normalizeDigits(req.body.old_pin) : "";
-        const inputPassword = (req.body.account_password || req.body.old_pin || "").trim();
+        const inputEmailCode = req.body.email_code ? normalizeDigits(req.body.email_code) : "";
 
         let isVerified = false;
 
-        // 1. Direct match with current PIN
+        // 1. Direct match with current/old PIN
         if (inputOldPin && existingPin === inputOldPin) {
           isVerified = true;
         }
 
-        // 2. Direct match with user's account password via Supabase Auth
-        if (!isVerified && req.user?.email && inputPassword.length >= 4) {
-          try {
-            const authClient = req.supabase || supabasePublic;
-            const { error: authErr } = await authClient.auth.signInWithPassword({
-              email: req.user.email,
-              password: inputPassword,
-            });
-            if (!authErr) {
+        // 2. Verification via Email OTP code
+        if (!isVerified && inputEmailCode) {
+          const userEmail = (req.user?.email || "").trim().toLowerCase();
+          const userKey = userEmail || userId || "";
+
+          // Check in-memory store
+          const memRec = pinResetOtpStore.get(userKey) || (userId ? pinResetOtpStore.get(userId) : null) || (userEmail ? pinResetOtpStore.get(userEmail) : null);
+          if (memRec && Date.now() < memRec.expiresAt) {
+            if (memRec.code === inputEmailCode) {
               isVerified = true;
+              pinResetOtpStore.delete(userKey);
+              if (userId) pinResetOtpStore.delete(userId);
+              if (userEmail) pinResetOtpStore.delete(userEmail);
+            } else {
+              memRec.attempts = (memRec.attempts || 0) + 1;
             }
-          } catch (_) {}
+          }
+
+          // Check email_verifications table in Supabase
+          if (!isVerified && userEmail) {
+            try {
+              const { data: dbRec } = await supabasePublic
+                .from("email_verifications")
+                .select("*")
+                .eq("email", userEmail)
+                .eq("code", inputEmailCode)
+                .gt("expires_at", new Date().toISOString())
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (dbRec) {
+                isVerified = true;
+                await supabasePublic
+                  .from("email_verifications")
+                  .update({ verified_at: new Date().toISOString() })
+                  .eq("id", dbRec.id);
+              }
+            } catch (_) {}
+          }
+
+          // Check Supabase Auth verifyOtp
+          if (!isVerified && userEmail) {
+            try {
+              const { data: verifyData, error: verifyErr } = await supabasePublic.auth.verifyOtp({
+                email: userEmail,
+                token: inputEmailCode,
+                type: "email",
+              });
+              if (!verifyErr && verifyData?.user) {
+                isVerified = true;
+              }
+            } catch (_) {}
+          }
         }
 
         if (!isVerified) {
           res.status(400).json({
             error: {
               code: "INVALID_CREDENTIALS",
-              message: "رمز الأمان الحالي أو كلمة مرور حسابك غير صحيحة. يرجى تأكيد هويتك أولاً لتتمكن من تغيير الرمز.",
+              message: "الرمز القديم أو كود التحقق من الإيميل غير صحيح. يرجى إدخال الرمز القديم أو طلب كود تحقق جديد إلى بريدك الإلكتروني.",
             },
           });
           return;
@@ -256,7 +423,7 @@ settingsRouter.post(
   }
 );
 
-// POST /api/settings/verify-pin - Verify financial security PIN or account password
+// POST /api/settings/verify-pin - Verify financial security PIN
 settingsRouter.post(
   "/verify-pin",
   validateBody(verifyPinSchema),
@@ -288,27 +455,13 @@ settingsRouter.post(
       const rawInput = (req.body.pin || "").trim();
       const cleanInputDigits = normalizeDigits(rawInput);
 
-      // 1. Direct match with user's PIN or tenant's PIN
-      let isValid = Boolean(
+      // Verify strictly against user's PIN or tenant's PIN - NEVER accept account password!
+      const isValid = Boolean(
         (userPin && cleanInputDigits && userPin === cleanInputDigits) ||
         (tenantPin && cleanInputDigits && tenantPin === cleanInputDigits)
       );
 
-      // 2. Fallback: If not matched and user has email, check if rawInput is the user's account password
-      if (!isValid && req.user?.email && rawInput.length >= 4) {
-        try {
-          const authClient = req.supabase || supabasePublic;
-          const { error: authErr } = await authClient.auth.signInWithPassword({
-            email: req.user.email,
-            password: rawInput,
-          });
-          if (!authErr) {
-            isValid = true;
-          }
-        } catch (_) {}
-      }
-
-      // 3. Auto-unify user's PIN in database if validated
+      // Auto-unify user's PIN in database if validated
       if (isValid && userId && typeof tenantsRepo.setUserPin === "function") {
         const syncPin = tenantPin || (cleanInputDigits.length >= 4 && cleanInputDigits.length <= 6 ? cleanInputDigits : null);
         if (syncPin && userPin !== syncPin) {
@@ -329,11 +482,12 @@ settingsRouter.post(
 
 const deletePinSchema = z
   .object({
+    old_pin: z.string().optional().nullable(),
+    email_code: z.string().optional().nullable(),
     pin: z.string().optional().nullable(),
-    password: z.string().optional().nullable(),
   })
   .optional()
-  .default({ pin: undefined, password: undefined });
+  .default({ old_pin: undefined, email_code: undefined, pin: undefined });
 
 // DELETE /api/settings/security-pin - Remove financial security PIN
 settingsRouter.delete(
@@ -363,33 +517,31 @@ settingsRouter.delete(
         }
       }
 
-      // If a PIN exists, require verification of identity before deleting
+      // If a PIN exists, require verification of identity (old PIN or email code) before deleting
       if (savedPin) {
-        const inputPin = req.body?.pin ? normalizeDigits(req.body.pin) : "";
-        const inputPassword = (req.body?.password || req.body?.pin || "").trim();
+        const inputOldPin = req.body?.old_pin || req.body?.pin ? normalizeDigits(req.body?.old_pin || req.body?.pin) : "";
+        const inputEmailCode = req.body?.email_code ? normalizeDigits(req.body?.email_code) : "";
 
         let isVerified = false;
-        if (inputPin && savedPin === inputPin) {
+        if (inputOldPin && savedPin === inputOldPin) {
           isVerified = true;
         }
-        if (!isVerified && req.user?.email && inputPassword.length >= 4) {
-          try {
-            const authClient = req.supabase || supabasePublic;
-            const { error: authErr } = await authClient.auth.signInWithPassword({
-              email: req.user.email,
-              password: inputPassword,
-            });
-            if (!authErr) {
-              isVerified = true;
-            }
-          } catch (_) {}
+
+        if (!isVerified && inputEmailCode) {
+          const userEmail = (req.user?.email || "").trim().toLowerCase();
+          const userKey = userEmail || userId || "";
+          const memRec = pinResetOtpStore.get(userKey) || (userId ? pinResetOtpStore.get(userId) : null) || (userEmail ? pinResetOtpStore.get(userEmail) : null);
+          if (memRec && Date.now() < memRec.expiresAt && memRec.code === inputEmailCode) {
+            isVerified = true;
+            pinResetOtpStore.delete(userKey);
+          }
         }
 
         if (!isVerified) {
           res.status(400).json({
             error: {
               code: "INVALID_CREDENTIALS",
-              message: "يجب إدخال رمز الأمان الحالي أو كلمة مرور حسابك لتأكيد هويتك قبل حذف الرمز.",
+              message: "يجب إدخال الرمز القديم الصحيح أو كود التحقق من الإيميل لتأكيد هويتك قبل حذف الرمز.",
             },
           });
           return;

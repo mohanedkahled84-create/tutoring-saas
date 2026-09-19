@@ -339,8 +339,8 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                     ${getIcon('edit', 14)}
                     <span>تعديل رمز الأمان</span>
                   </button>
-                  <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.resetFinancialPinPrompt()" style="font-weight: 700; font-size: 0.85rem; padding: 0.55rem 1rem; color: #ef4444; border-color: #fecaca; background: #fff;">
-                    <span>إلغاء تفعيل الرمز</span>
+                  <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.resetFinancialPinPrompt()" style="font-weight: 700; font-size: 0.85rem; padding: 0.55rem 1rem; color: #2563eb; border-color: #bfdbfe; background: #eff6ff;">
+                    <span>إعادة ضبط عبر الإيميل</span>
                   </button>
                 </div>
               </div>
