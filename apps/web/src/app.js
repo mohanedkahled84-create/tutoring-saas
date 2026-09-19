@@ -11,7 +11,7 @@ import { renderStudentsView } from './components/StudentsView.js?v=4.8.12';
 import { renderGroupsView } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
-import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.0.0';
+import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.9.4';
 import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.8';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=4.0.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js?v=4.8.1';
@@ -1922,7 +1922,6 @@ class CentrlyApp {
     if (!backdrop) {
       backdrop = document.createElement('div');
       backdrop.id = 'appSidebarBackdrop';
-      backdrop.style.cssText = 'display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); z-index: 999; touch-action: none;';
       backdrop.onclick = () => this.toggleSidebar(true);
       backdrop.addEventListener('touchmove', (e) => {
         if (e.cancelable) e.preventDefault();
@@ -1932,12 +1931,12 @@ class CentrlyApp {
     const isOpening = !forceClose && sidebar && !sidebar.classList.contains('open');
     if (isOpening) {
       sidebar.classList.add('open');
-      backdrop.style.display = 'block';
+      backdrop.classList.add('active');
       document.body.classList.add('sidebar-open');
       document.documentElement.classList.add('sidebar-open');
     } else {
       if (sidebar) sidebar.classList.remove('open');
-      backdrop.style.display = 'none';
+      backdrop.classList.remove('active');
       document.body.classList.remove('sidebar-open');
       document.documentElement.classList.remove('sidebar-open');
     }
@@ -2764,7 +2763,26 @@ class CentrlyApp {
     }
   }
 
-  renderApp() {
+  renderApp(force = false) {
+    const appEl = document.getElementById('app');
+    const mainContentEl = document.getElementById('mainContent');
+    const appContainer = document.querySelector('.app-container');
+
+    if (!force && appEl && mainContentEl && appContainer) {
+      document.querySelectorAll('.app-sidebar .nav-link').forEach(btn => {
+        const onclickAttr = btn.getAttribute('onclick') || '';
+        const match = onclickAttr.match(/navigate\('([^']+)'\)/);
+        const btnRoute = match ? match[1] : '';
+        const isActive = btnRoute === this.currentRoute;
+        btn.classList.toggle('active', isActive);
+        btn.style.background = isActive ? '#eff6ff' : 'transparent';
+      });
+
+      this.renderMainContent();
+      this.updateNavbarBadge();
+      return;
+    }
+
     const html = `
       <div class="app-container">
         ${renderSidebar(this.currentRoute, this.user, { hasPin: this.hasSecurityPin, isUnlocked: this.isFinancialUnlocked })}
@@ -2776,7 +2794,7 @@ class CentrlyApp {
         </div>
       </div>
     `;
-    document.getElementById('app').innerHTML = html;
+    if (appEl) appEl.innerHTML = html;
   }
 
   renderMainContent() {
@@ -3430,6 +3448,17 @@ class CentrlyApp {
     }, 100);
   }
 
+  async ensureHtml5QrcodeLoaded() {
+    if (typeof Html5Qrcode !== 'undefined') return true;
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = './src/vendor/html5-qrcode.min.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  }
+
   async startCameraScanner(mode = 'session') {
     unlockAudio();
     if (typeof Html5Qrcode === 'undefined') {
@@ -3441,8 +3470,9 @@ class CentrlyApp {
           </div>
         `;
       }
-      return;
+      await this.ensureHtml5QrcodeLoaded();
     }
+    if (typeof Html5Qrcode === 'undefined') return;
 
     try {
       if (this._activeHtml5QrCode) {

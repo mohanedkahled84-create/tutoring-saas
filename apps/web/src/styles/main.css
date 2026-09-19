@@ -220,9 +220,8 @@ a.btn:active,
 .icon-btn:active,
 input[type="button"]:active,
 input[type="submit"]:active {
-  transform: scale(0.94) translateY(1.5px) !important;
-  filter: brightness(0.90) contrast(1.05) !important;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.28) !important;
+  transform: scale(0.97) !important;
+  opacity: 0.9 !important;
 }
 
 .btn-primary {
@@ -549,6 +548,23 @@ button.password-toggle-btn:active {
   display: none;
 }
 
+#appSidebarBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: none;
+  will-change: opacity;
+}
+
+#appSidebarBackdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* Responsive Drawer & Comprehensive Mobile Optimizations */
 @media (max-width: 768px) {
   /* Prevent background screen from scrolling when mobile sidebar is open */
@@ -564,7 +580,7 @@ button.password-toggle-btn:active {
   }
   .app-sidebar {
     position: fixed;
-    right: -320px;
+    right: 0;
     top: 0;
     bottom: 0;
     width: min(295px, 85vw);
@@ -572,18 +588,23 @@ button.password-toggle-btn:active {
     height: 100dvh;
     max-height: 100dvh;
     z-index: 1000;
-    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: none;
+    transform: translate3d(105%, 0, 0);
+    will-change: transform;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: -4px 0 25px rgba(0, 0, 0, 0.18);
     display: flex;
     flex-direction: column;
     overflow: hidden !important;
     overscroll-behavior: contain;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
+    visibility: hidden;
+    pointer-events: none;
   }
   .app-sidebar.open {
-    right: 0;
-    box-shadow: -6px 0 35px rgba(0, 0, 0, 0.35);
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    pointer-events: auto;
   }
   .app-sidebar .mobile-close-btn {
     display: inline-flex !important;
