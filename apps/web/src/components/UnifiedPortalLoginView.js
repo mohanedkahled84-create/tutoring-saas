@@ -65,18 +65,16 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
             type="button" 
             id="portalTabParent" 
             onclick="window.centrlyApp && window.centrlyApp.switchPortalLoginRole ? window.centrlyApp.switchPortalLoginRole('parent') : null"
-            style="flex: 1; padding: 0.65rem 0.5rem; border: none; border-radius: 0.55rem; font-family: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: ${!isStudent ? '#ffffff' : 'transparent'}; color: ${!isStudent ? '#1e3a8a' : '#64748b'}; box-shadow: ${!isStudent ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};"
+            style="flex: 1; padding: 0.65rem 0.5rem; border: none; border-radius: 0.55rem; font-family: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; background: ${!isStudent ? '#ffffff' : 'transparent'}; color: ${!isStudent ? '#1e3a8a' : '#64748b'}; box-shadow: ${!isStudent ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};"
           >
-            <span>👨‍👩‍👧</span>
             <span>ولي أمر</span>
           </button>
           <button 
             type="button" 
             id="portalTabStudent" 
             onclick="window.centrlyApp && window.centrlyApp.switchPortalLoginRole ? window.centrlyApp.switchPortalLoginRole('student') : null"
-            style="flex: 1; padding: 0.65rem 0.5rem; border: none; border-radius: 0.55rem; font-family: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: ${isStudent ? '#ffffff' : 'transparent'}; color: ${isStudent ? '#1d4ed8' : '#64748b'}; box-shadow: ${isStudent ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};"
+            style="flex: 1; padding: 0.65rem 0.5rem; border: none; border-radius: 0.55rem; font-family: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; background: ${isStudent ? '#ffffff' : 'transparent'}; color: ${isStudent ? '#1d4ed8' : '#64748b'}; box-shadow: ${isStudent ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};"
           >
-            <span>👨‍🎓</span>
             <span>طالب</span>
           </button>
         </div>
@@ -166,14 +164,14 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
             onmouseout="this.style.opacity='1'"
           >
             <span id="portalSubmitBtnText">${isStudent ? 'دخول بوابة الطالب' : 'دخول بوابة ولي الأمر'}</span>
-            <span id="portalSubmitSpinner" style="display: none;">⏳</span>
+            <span id="portalSubmitSpinner" class="centrly-spinner" style="display: none; width: 14px; height: 14px; border-width: 2px; border-color: rgba(255,255,255,0.4); border-top-color: #fff;"></span>
           </button>
         </form>
 
         <!-- Informational Callout -->
         <div style="margin-top: 1.5rem; background: #f1f5f9; border-radius: 0.75rem; padding: 0.9rem; border: 1px dashed #cbd5e1; font-size: 0.775rem; color: #475569; line-height: 1.6;">
           <div style="display: flex; align-items: flex-start; gap: 0.4rem; margin-bottom: 0.35rem;">
-            <span style="color: #2563eb; font-weight: 800;">💡</span>
+            ${getIcon('info', 16, '#2563eb')}
             <span style="font-weight: 700; color: #1e293b;">أين تجد كلمة المرور؟</span>
           </div>
           <div>

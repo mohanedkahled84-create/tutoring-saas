@@ -12,7 +12,7 @@ import { renderGroupsView } from './components/GroupsView.js?v=4.8.6';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.0.0';
-import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.5';
+import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.6';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=4.0.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js?v=4.8.1';
 import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
