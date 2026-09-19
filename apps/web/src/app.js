@@ -10237,16 +10237,16 @@ https://centerly-platform.vercel.app/p/p16766044
             إلغاء قفل البيانات المالية
           </h4>
           <p style="font-size: 0.85rem; color: #64748b; margin: 0;">
-            أدخل رمز الأمان (PIN) المكون من 4 إلى 6 أرقام لعرض تفاصيل الأرباح والمرتبات.
+            أدخل رمز الأمان (PIN) أو كلمة مرور حسابك لعرض تفاصيل الأرباح والمرتبات.
           </p>
         </div>
 
         <div class="form-group" style="margin-bottom: 1.25rem;">
           <div style="position: relative;">
-            <input type="password" id="inputUnlockPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" autofocus required
-              style="text-align: center; letter-spacing: 0.5rem; font-size: 1.5rem; font-weight: 900; padding-left: 2.5rem;"
-              autocomplete="off"
-              oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\\D/g, '')">
+            <input type="password" id="inputUnlockPin" class="form-input" placeholder="رمز PIN أو كلمة مرور الحساب" maxlength="64" autofocus required
+              style="text-align: center; font-size: 1.2rem; font-weight: 800; padding-left: 2.5rem; letter-spacing: 0.15rem;"
+              autocomplete="current-password"
+              oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776))">
             <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('inputUnlockPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
               ${getIcon('eye', 18)}
             </button>
@@ -10274,14 +10274,15 @@ https://centerly-platform.vercel.app/p/p16766044
 
   async handleUnlockPinSubmit(e) {
     e.preventDefault();
-    const entered = normalizeDigits(document.getElementById('inputUnlockPin')?.value);
+    const rawVal = document.getElementById('inputUnlockPin')?.value || '';
+    const entered = rawVal.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).trim();
     const savedPin = normalizeDigits(localStorage.getItem('centrly_financial_pin'));
     const errEl = document.getElementById('unlockPinError');
     const btn = document.getElementById('btnSubmitUnlockPin');
 
     if (!entered || entered.length < 4) {
       if (errEl) {
-        errEl.innerText = 'يرجى إدخال رمز الأمان المكون من 4 إلى 6 أرقام.';
+        errEl.innerText = 'يرجى إدخال رمز الأمان أو كلمة المرور (4 خانات على الأقل).';
         errEl.style.display = 'block';
       }
       return;
@@ -10307,7 +10308,9 @@ https://centerly-platform.vercel.app/p/p16766044
         body: { pin: entered }
       });
       if (res && res.valid) {
-        localStorage.setItem('centrly_financial_pin', entered);
+        if (/^\d{4,6}$/.test(entered)) {
+          localStorage.setItem('centrly_financial_pin', entered);
+        }
         localStorage.setItem('centrly_has_security_pin', 'true');
         this.hasSecurityPin = true;
         this.isFinancialUnlocked = true;
@@ -10323,7 +10326,7 @@ https://centerly-platform.vercel.app/p/p16766044
       
       // Explicit invalid PIN response
       if (errEl) {
-        errEl.innerText = 'رمز الـ PIN غير صحيح. يرجى التأكد وإعادة المحاولة.';
+        errEl.innerText = 'رمز الـ PIN أو كلمة المرور غير صحيحة. يرجى التأكد وإعادة المحاولة أو النقر على "إعادة ضبط الرمز".';
         errEl.style.display = 'block';
       }
       const inp = document.getElementById('inputUnlockPin');

@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { validateBody } from "../../shared/middleware/validation.js";
 import { requireCenterOwnerOrAdmin } from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
+import { supabasePublic } from "../../supabase.js";
 
 export const settingsRouter = Router();
 
@@ -110,10 +111,7 @@ const setPinSchema = z.object({
 });
 
 const verifyPinSchema = z.object({
-  pin: z
-    .string()
-    .min(1, "PIN is required")
-    .transform((val) => normalizeDigits(val)),
+  pin: z.string().min(1, "PIN or password is required"),
 });
 
 // GET /api/settings/security-pin - Check if user account or tenant has configured financial security PIN
@@ -228,7 +226,7 @@ settingsRouter.post(
   }
 );
 
-// POST /api/settings/verify-pin - Verify financial security PIN
+// POST /api/settings/verify-pin - Verify financial security PIN or account password
 settingsRouter.post(
   "/verify-pin",
   validateBody(verifyPinSchema),
@@ -242,22 +240,56 @@ settingsRouter.post(
 
     try {
       const tenantsRepo = getServices(req).tenants;
-      let savedPin: string | null = req.user?.financial_pin ? normalizeDigits(req.user.financial_pin) : null;
+      let userPin: string | null = req.user?.financial_pin ? normalizeDigits(req.user.financial_pin) : null;
 
-      if (!savedPin && userId && typeof tenantsRepo.getUserPin === "function") {
+      if (!userPin && userId && typeof tenantsRepo.getUserPin === "function") {
         const uPin = await tenantsRepo.getUserPin(userId).catch(() => null);
-        if (uPin) savedPin = normalizeDigits(uPin);
+        if (uPin) userPin = normalizeDigits(uPin);
       }
 
-      if (!savedPin && tenantId) {
+      let tenantPin: string | null = null;
+      if (tenantId) {
         const existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
         if ((existingSettings as any)?.financial_pin) {
-          savedPin = normalizeDigits((existingSettings as any).financial_pin);
+          tenantPin = normalizeDigits((existingSettings as any).financial_pin);
         }
       }
 
-      const cleanInputPin = normalizeDigits(req.body.pin);
-      const isValid = Boolean(savedPin && cleanInputPin && savedPin === cleanInputPin);
+      const rawInput = (req.body.pin || "").trim();
+      const cleanInputDigits = normalizeDigits(rawInput);
+
+      // 1. Direct match with user's PIN or tenant's PIN
+      let isValid = Boolean(
+        (userPin && cleanInputDigits && userPin === cleanInputDigits) ||
+        (tenantPin && cleanInputDigits && tenantPin === cleanInputDigits)
+      );
+
+      // 2. Fallback: If not matched and user has email, check if rawInput is the user's account password
+      if (!isValid && req.user?.email && rawInput.length >= 4) {
+        try {
+          const authClient = req.supabase || supabasePublic;
+          const { error: authErr } = await authClient.auth.signInWithPassword({
+            email: req.user.email,
+            password: rawInput,
+          });
+          if (!authErr) {
+            isValid = true;
+          }
+        } catch (_) {}
+      }
+
+      // 3. Auto-unify user's PIN in database if validated
+      if (isValid && userId && typeof tenantsRepo.setUserPin === "function") {
+        const syncPin = tenantPin || (cleanInputDigits.length >= 4 && cleanInputDigits.length <= 6 ? cleanInputDigits : null);
+        if (syncPin && userPin !== syncPin) {
+          await tenantsRepo.setUserPin(userId, syncPin).catch(() => null);
+          if (req.user) {
+            req.user.financial_pin = syncPin;
+            req.user.has_security_pin = true;
+          }
+        }
+      }
+
       res.json({ valid: isValid });
     } catch (err: unknown) {
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
