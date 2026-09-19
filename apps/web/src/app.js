@@ -11,7 +11,7 @@ import { renderStudentsView } from './components/StudentsView.js?v=4.8.12';
 import { renderGroupsView } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
-import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.9.4';
+import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.9.5';
 import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.8';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=4.0.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js?v=4.8.1';
@@ -583,7 +583,7 @@ class CentrlyApp {
   // Official Landing / Welcome Page
   renderLanding() {
     window.scrollTo(0, 0);
-    document.title = 'سنترلي | Centrly - المنظومة السحابية الأذكى لإدارة المعلمين والمراكز التعليمية';
+    document.title = 'سنترلي | Centrly - المنظومة الأذكى لإدارة المعلمين والمراكز التعليمية';
     document.getElementById('app').innerHTML = renderLandingView();
     this.initCookieConsent();
   }
@@ -602,7 +602,7 @@ class CentrlyApp {
         <p>مرحباً بك في منصة <b>سنترلي (Centrly)</b>. باستخدامك لخدماتنا عبر هذا الموقع أو الاشتراك في باقاتنا، فإنك توافق على الالتزام الكامل بهذه الشروط والأحكام. إذا كنت لا توافق على أي بند، يرجى التوقف عن استخدام المنصة.</p>
         
         <h4 style="color: #1e3a8a; font-weight: 800;">2. وصف الخدمة</h4>
-        <p>سنترلي هي منصة برمجية سحابية (SaaS) مصممة لإدارة وتطوير شؤون المعلمين المستقلين والمراكز التعليمية، وتشمل تسجيل حضور الطلاب عبر الباركود، وإصدار كروت الطلاب، وأتمتة إشعارات أولياء الأمور عبر الواتساب، ورصد الكويزات وبوابة المتابعة التفاعلية لولي الأمر.</p>
+        <p>سنترلي هي منصة برمجية مصممة لإدارة وتطوير شؤون المعلمين المستقلين والمراكز التعليمية، وتشمل تسجيل حضور الطلاب عبر الباركود، وإصدار كروت الطلاب، وأتمتة إشعارات أولياء الأمور عبر الواتساب، ورصد الكويزات وبوابة المتابعة التفاعلية لولي الأمر.</p>
 
         <h4 style="color: #1e3a8a; font-weight: 800;">3. حسابات المستخدمين والمسؤولية</h4>
         <p>أنت مسؤول مسؤولية كاملة عن الحفاظ على سرية بيانات تسجيل الدخول الخاصة بحسابك، وعن أي نشاط يصدر من خلاله. يتعهد المعلم أو إدارة السنتر بعدم استخدام الخدمة في أي غرض مخالف للقوانين المعمول بها في جمهورية مصر العربية.</p>
@@ -625,7 +625,7 @@ class CentrlyApp {
         <p>نحن نحترم خصوصيتك وخصوصية بيانات طلابك بأعلى المعايير. نجمع فقط البيانات الضرورية لتشغيل الخدمة بكفاءة (مثل: اسم المعلم، أرقام هواتف الطلاب وأولياء الأمور، وسجلات الحضور والدرجات).</p>
 
         <h4 style="color: #1e3a8a; font-weight: 800;">2. سرية وأمان البيانات المشفرة</h4>
-        <p>تُخزّن جميع البيانات في قواعد بيانات سحابية مشفرة ومؤمنة بأحدث بروتوكولات الحماية (RLS Encryption). نحن نلتزم التزاماً قاطعاً بعدم بيع أو تأجير أو مشاركة أي بيانات تخص طلابك أو أرقام هواتفهم مع أي طرف ثالث أو استخدامها لأي أغراض إعلانية.</p>
+        <p>تُخزّن جميع البيانات في قواعد بيانات مشفرة ومؤمنة بأحدث بروتوكولات الحماية (RLS Encryption). نحن نلتزم التزاماً قاطعاً بعدم بيع أو تأجير أو مشاركة أي بيانات تخص طلابك أو أرقام هواتفهم مع أي طرف ثالث أو استخدامها لأي أغراض إعلانية.</p>
 
         <h4 style="color: #1e3a8a; font-weight: 800;">3. إشعارات الواتساب</h4>
         <p>يتم إرسال الرسائل بناءً على طلب وتوجيه المعلم أو السنتر لإخطار أولياء الأمور فقط بمواعيد الحصص وحالة الحضور والدرجات، مع الالتزام التام بسياسات الاستخدام العادل.</p>
@@ -659,7 +659,7 @@ class CentrlyApp {
         <h4 style="color: #1e3a8a; margin-top: 0; font-weight: 800;">بيانات التواصل المعتمدة لدى سنترلي:</h4>
         <p>يسعدنا تقديم الدعم الفني والإجابة على أي استفسارات للمعلمين وأصحاب السناتر في مصر:</p>
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem; line-height: 2.3; margin-top: 1rem;">
-          <b>• الاسم التجاري الرسمي:</b> سنترلي للحلول التعليمية والبرمجيات (Centrly SaaS)<br>
+          <b>• الاسم التجاري الرسمي:</b> سنترلي للحلول التعليمية والبرمجيات (Centrly)<br>
           <b>• المقر والعنوان:</b> جمهورية مصر العربية — القاهرة<br>
           <b>• البريد الإلكتروني الرسمي:</b> <a href="mailto:mohanedabdulhalim@gmail.com" style="color: #2563eb; font-weight: 700; text-decoration: none;">mohanedabdulhalim@gmail.com</a><br>
           <b>• الهاتف والواتساب المباشر:</b> <a href="https://wa.me/201123671177?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D9%88%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D9%85%D9%86%D8%B5%D8%A9%20%D8%B3%D9%86%D8%AA%D8%B1%D9%84%D9%8A%20%D9%84%D8%A5%D8%AF%D8%A7%D8%B1%D8%A9%20%D8%A7%D9%84%D8%AD%D8%B5%D8%B5%20%D9%88%D8%A7%D9%84%D8%B7%D9%84%D8%A7%D8%A8" target="_blank" rel="noopener noreferrer" dir="ltr" style="font-weight: 800; color: #16a34a; text-decoration: none;">01123671177 (+20 112 367 1177)</a><br>

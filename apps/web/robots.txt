@@ -1,8 +1,13 @@
-# Robots.txt for Centrly SaaS (سنترلي)
+# Robots.txt for Centrly (سنترلي)
 User-agent: *
 Allow: /
+Allow: /favicon.ico
+Allow: /favicon.png
+Allow: /favicon-*.png
+Allow: /apple-touch-icon.png
 Disallow: /api/
 Disallow: /dashboard/
 Disallow: /admin/
 
-Sitemap: https://centerly-platform.vercel.app/sitemap.xml
+Sitemap: https://centerly-eg.com/sitemap.xml
+

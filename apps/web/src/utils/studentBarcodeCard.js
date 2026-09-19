@@ -398,7 +398,7 @@ export function downloadStudentCardAsPng(student = {}, options = {}) {
   ctx.fillStyle = "rgba(255,255,255,0.7)";
   ctx.font = "16px Cairo, Tahoma, sans-serif";
   ctx.textAlign = "right";
-  const footerBrand = "منظومة سنترلي للحلول التعليمية (Centrly SaaS) • " + teacherName + (centerName ? " • " + centerName : "");
+  const footerBrand = "منظومة سنترلي للحلول التعليمية (Centrly) • " + teacherName + (centerName ? " • " + centerName : "");
   ctx.fillText(footerBrand, width - 60, height - 35);
 
   ctx.direction = "ltr";

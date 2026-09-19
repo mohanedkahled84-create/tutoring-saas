@@ -245,7 +245,7 @@ export function renderLandingView() {
           <!-- Official Tag -->
           <div style="display: inline-flex; align-items: center; gap: 8px; background: var(--brand-green-light); border: 1px solid #C9EBD8; color: var(--brand-green); font-size: 13px; font-weight: 700; padding: 6px 16px; border-radius: 9999px; margin-bottom: 1.5rem;">
             <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="var(--brand-green)"/></svg>
-            <span>المنظومة السحابية المعتمدة لإدارة المعلمين والمراكز التعليمية في مصر</span>
+            <span>المنظومة المعتمدة لإدارة المعلمين والمراكز التعليمية في مصر</span>
           </div>
 
           <!-- Main Catchy Headline -->
@@ -760,7 +760,7 @@ export function renderLandingView() {
                 </div>
               </div>
               <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.7; margin: 0;">
-                المنظومة السحابية الذكية لإدارة المعلمين والمراكز التعليمية، تتبع الحضور بالباركود، كروت الطلاب، وأتمتة الواتساب.
+                المنظومة الذكية لإدارة المعلمين والمراكز التعليمية، تتبع الحضور بالباركود، كروت الطلاب، وأتمتة الواتساب.
               </p>
             </div>
 
@@ -776,7 +776,7 @@ export function renderLandingView() {
           </div>
 
           <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; font-size: 0.8rem; color: #94a3b8;">
-            <div>جميع الحقوق محفوظة © ${new Date().getFullYear()} لمنصة سنترلي (Centrly SaaS)</div>
+            <div>جميع الحقوق محفوظة © ${new Date().getFullYear()} لمنظومة سنترلي (Centrly)</div>
             <div style="display: flex; gap: 1rem;">
               <button onclick="window.centrlyApp.renderAuth('login')" style="background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 0.8rem; font-family: 'Cairo', sans-serif;">تسجيل الدخول</button>
               <span>•</span>
