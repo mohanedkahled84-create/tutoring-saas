@@ -8,7 +8,10 @@ import {
 import { generateParentPortalToken } from "../../shared/utils/tokens.js";
 
 export class SupabaseStudentsRepository implements IStudentsRepository {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(
+    private readonly client: SupabaseClient,
+    private readonly privilegedClient?: SupabaseClient
+  ) {}
 
   async list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]> {
     let q = this.client
@@ -43,30 +46,35 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     const mapped: Student[] = ((data as any[]) || []).map((s) => {
       const rawGs = s.group_students;
       const gsList = Array.isArray(rawGs) ? rawGs : (rawGs ? [rawGs] : []);
-      const matchedGs = groupId ? gsList.find((g: any) => g.group_id === groupId) : gsList[0];
-      const primaryGs = matchedGs || gsList[0];
-      const grp = primaryGs?.groups;
-      const portalToken = s.parent_portal_token || (s.id && s.tenant_id ? generateParentPortalToken(s.id, s.tenant_id, 365) : null);
-      return {
+      const primaryGroup = gsList[0]?.groups;
+      const allGroupIds = gsList.map((g: any) => g.group_id).filter(Boolean);
+
+      const studentObj: Student = {
         id: s.id,
         tenant_id: s.tenant_id,
-        code: s.code,
-        student_code: s.student_code,
+        code: s.code || s.student_code,
+        student_code: s.student_code || s.code,
         name: s.name,
         parent_phone: s.parent_phone,
         student_phone: s.student_phone,
         fee_override: s.fee_override,
         exempt: s.exempt,
         notes: s.notes,
-        parent_portal_sent_at: s.parent_portal_sent_at || null,
-        student_portal_sent_at: s.student_portal_sent_at || null,
-        parent_portal_token: portalToken,
-        portal_password: s.portal_password || null,
+        parent_portal_sent_at: s.parent_portal_sent_at,
+        student_portal_sent_at: s.student_portal_sent_at,
+        parent_portal_token: s.parent_portal_token,
+        portal_password: s.portal_password,
         created_at: s.created_at,
-        group_id: primaryGs?.group_id || null,
-        group_name: grp?.name || null,
-        group_ids: gsList.map((g: any) => g.group_id).filter(Boolean),
+        group_id: s.group_id || (primaryGroup?.id ?? undefined),
+        group_name: primaryGroup?.name ?? undefined,
+        group_ids: allGroupIds.length > 0 ? allGroupIds : (s.group_id ? [s.group_id] : []),
       };
+
+      if (!studentObj.parent_portal_token && studentObj.id && studentObj.tenant_id) {
+        studentObj.parent_portal_token = generateParentPortalToken(studentObj.id, studentObj.tenant_id, 365);
+      }
+
+      return studentObj;
     });
 
     if (groupId) {
@@ -76,7 +84,8 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   }
 
   async findById(id: string): Promise<Student | null> {
-    const { data, error } = await this.client
+    const db = this.privilegedClient || this.client;
+    const { data, error } = await db
       .from("students")
       .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
       .eq("id", id)
@@ -98,7 +107,8 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     if (!raw) return null;
     const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, "");
 
-    const { data, error } = await this.client
+    const db = this.privilegedClient || this.client;
+    const { data, error } = await db
       .from("students")
       .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
       .or(`code.eq.${raw},student_code.eq.${raw},parent_phone.eq.${cleanPhone},student_phone.eq.${cleanPhone}`)
@@ -147,7 +157,8 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     if (data.portal_password !== undefined) updatePayload.portal_password = data.portal_password;
 
 
-    const { data: updated, error } = await this.client
+    const db = this.privilegedClient || this.client;
+    const { data: updated, error } = await db
       .from("students")
       .update(updatePayload)
       .eq("id", id)

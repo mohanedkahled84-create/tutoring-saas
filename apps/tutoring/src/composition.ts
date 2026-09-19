@@ -131,7 +131,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
       new HttpEvolutionGateway(config.evolutionApiUrl, config.evolutionApiKey)
     ),
     billing: new BillingService(new SupabaseBillingRepository(effectiveClient)),
-    students: new StudentsService(new SupabaseStudentsRepository(effectiveClient)),
+    students: new StudentsService(new SupabaseStudentsRepository(effectiveClient, privilegedClient)),
     groups: new GroupsService(new SupabaseGroupsRepository(effectiveClient)),
     auth: new AuthService(new SupabaseAuthRepository(effectiveClient, adminClient)),
     adminOps: new AdminOpsService(new SupabaseAdminOpsRepository(privilegedClient)),
