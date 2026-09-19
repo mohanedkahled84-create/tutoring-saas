@@ -11,7 +11,7 @@ import { getIcon } from "../utils/icons.js";
  * - View class average, highest score, and grading completion percentage
  */
 
-export function renderTeacherQuizzesView(state = {}, groups = [], students = []) {
+export function renderTeacherQuizzesView(state = {}, groups = [], students = [], isLoading = false, hasLoaded = true) {
   const selectedGroupId = state.selectedGroupId || (groups[0]?.id || '');
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
   const groupStudents = (students || []).filter(s => {
@@ -271,7 +271,27 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [])
               </tr>
             </thead>
             <tbody>
-              ${groupStudents.length > 0 ? groupStudents.map(s => {
+              ${((isLoading || !hasLoaded) && groupStudents.length === 0) ? `
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 1.75rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; color: var(--centrly-blue-700); font-weight: 700; font-size: 0.95rem;">
+                      <span class="centrly-spinner" style="width: 22px; height: 22px; border-width: 3px;"></span>
+                      <span>جارٍ تحميل بيانات كويزات ودرجات المجموعة...</span>
+                    </div>
+                  </td>
+                </tr>
+                ${[1, 2, 3, 4, 5].map(() => `
+                  <tr class="skeleton-row">
+                    <td><span class="skeleton-box" style="width: 50px; height: 18px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 130px; height: 18px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 110px; height: 18px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 60px; height: 24px; border-radius: 6px; margin: 0 auto;"></span></td>
+                    <td><span class="skeleton-box" style="width: 70px; height: 20px; border-radius: 10px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 90px; height: 18px;"></span></td>
+                    <td><span class="skeleton-box" style="width: 80px; height: 24px; border-radius: 6px; margin: 0 auto;"></span></td>
+                  </tr>
+                `).join('')}
+              ` : groupStudents.length > 0 ? groupStudents.map(s => {
                 const score = currentScores[s.id] !== undefined && currentScores[s.id] !== null ? currentScores[s.id] : '';
                 const isGraded = score !== '';
                 const maxScore = currentQuiz.maxScore || 10;

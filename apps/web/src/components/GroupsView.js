@@ -6,7 +6,7 @@ import { getIcon } from "../utils/icons.js";
  * Clean vector icons, 3 billing models, schedule day/time, and quick action buttons.
  */
 
-export function renderGroupsView(groups = [], user = {}, isLoading = false) {
+export function renderGroupsView(groups = [], user = {}, isLoading = false, hasLoaded = true) {
   const isAssistant = user?.role === 'assistant';
   const groupList = groups || [];
 
@@ -33,8 +33,12 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false) {
         </div>
       </div>
 
-      ${(isLoading && groupList.length === 0) ? `
-        <!-- Groups Skeleton Grid -->
+      ${((isLoading || !hasLoaded) && groupList.length === 0) ? `
+        <!-- Groups Loading Banner & Skeleton Grid -->
+        <div class="card" style="margin: 0; padding: 1.5rem; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+          <span class="centrly-spinner" style="width: 22px; height: 22px; border-width: 3px;"></span>
+          <span style="font-weight: 700; color: var(--centrly-blue-700); font-size: 0.95rem;">جارٍ تحميل بيانات المجاميع الدراسية ومواعيد الحصص...</span>
+        </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
           ${[1, 2, 3].map(() => `
             <div class="skeleton-card" style="min-height: 240px; justify-content: space-between;">
