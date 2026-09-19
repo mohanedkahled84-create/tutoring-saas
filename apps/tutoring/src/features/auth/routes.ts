@@ -41,21 +41,12 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
       const client = getScopedSupabaseClient(result.token);
       const { data: uRec } = await client
         .from("users")
-        .select("financial_pin, tenant_id")
+        .select("financial_pin_hash, tenant_id")
         .eq("id", result.user.id)
         .maybeSingle();
 
-      if (uRec?.financial_pin) {
+      if (uRec?.financial_pin_hash) {
         hasSecurityPin = true;
-      } else if (uRec?.tenant_id) {
-        const { data: tRec } = await client
-          .from("tenants")
-          .select("settings")
-          .eq("id", uRec.tenant_id)
-          .maybeSingle();
-        if (tRec?.settings?.financial_pin) {
-          hasSecurityPin = true;
-        }
       }
     } catch (_) {}
 
@@ -114,7 +105,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
       const client = getScopedSupabaseClient(result.token);
       const { data: uRec } = await client
         .from("users")
-        .select("id, tenant_id, role, full_name, teacher_id, assistant_id, financial_pin")
+        .select("id, tenant_id, role, full_name, teacher_id, assistant_id, financial_pin_hash")
         .eq("id", result.user.id)
         .maybeSingle();
 
@@ -127,17 +118,15 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
           result.user.name = uRec.full_name;
           result.user.full_name = uRec.full_name;
         }
-        if (uRec.financial_pin) {
+        if (uRec.financial_pin_hash) {
           hasSecurityPin = true;
-        } else if (uRec.tenant_id) {
+        }
+        if (uRec.tenant_id) {
           const { data: tRec } = await client
             .from("tenants")
-            .select("settings, account_type")
+            .select("account_type")
             .eq("id", uRec.tenant_id)
             .maybeSingle();
-          if (tRec?.settings?.financial_pin) {
-            hasSecurityPin = true;
-          }
           if (tRec?.account_type) {
             (result.user as any).account_type = tRec.account_type;
           }
@@ -416,6 +405,6 @@ authRouter.post("/logout", (_req: Request, res: Response): void => {
 // GET /api/auth/me - Return authenticated user profile
 authRouter.get("/me", authenticateUser, (req: AuthenticatedRequest, res: Response): void => {
   // Never return a verification secret, even if an older session still carries it.
-  const { financial_pin: _financialPin, ...safeUser } = req.user || {};
+  const { financial_pin: _financialPin, ...safeUser } = (req.user || {}) as Record<string, unknown>;
   res.json({ user: safeUser });
 });

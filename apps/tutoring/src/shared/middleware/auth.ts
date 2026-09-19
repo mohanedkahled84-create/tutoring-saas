@@ -58,7 +58,7 @@ export async function authenticateUser(
     const userClient = getScopedSupabaseClient(token);
     const { data: userRecord, error: userError } = await userClient
       .from("users")
-      .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, financial_pin")
+      .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, financial_pin_hash")
       .eq("id", userId)
       .single();
 
@@ -83,22 +83,8 @@ export async function authenticateUser(
     }
 
     // 3. Attach user context and scoped client
-    const fullName = (userRecord as any)?.full_name || authData.user.user_metadata?.full_name || null;
-    let financialPin = (userRecord as any)?.financial_pin || authData.user.user_metadata?.financial_pin || null;
-
-    // Fallback: check tenant settings if user does not have pin on profile directly
-    if (!financialPin && userRecord.tenant_id) {
-      try {
-        const { data: tData } = await userClient
-          .from("tenants")
-          .select("settings")
-          .eq("id", userRecord.tenant_id)
-          .maybeSingle();
-        if (tData?.settings?.financial_pin) {
-          financialPin = tData.settings.financial_pin;
-        }
-      } catch (_) {}
-    }
+    const fullName = (userRecord as { full_name?: string | null })?.full_name || authData.user.user_metadata?.full_name || null;
+    const hasSecurityPin = Boolean((userRecord as { financial_pin_hash?: string | null })?.financial_pin_hash);
 
     req.user = {
       id: userId,
@@ -109,7 +95,8 @@ export async function authenticateUser(
       role: userRecord.role as UserRole,
       teacher_id: userRecord.teacher_id,
       assistant_id: userRecord.assistant_id,
-      has_security_pin: Boolean(financialPin),
+      financial_pin: null,
+      has_security_pin: hasSecurityPin,
     };
     req.token = token;
     req.supabase = userClient;
