@@ -17,6 +17,14 @@ import {
 } from "./import.js";
 import { generateParentPortalToken } from "../../shared/utils/tokens.js";
 
+function normalizeDigits(str: unknown): string {
+  if (!str && str !== 0) return "";
+  return String(str)
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+    .trim();
+}
+
 export class StudentsService {
   constructor(private readonly repo: IStudentsRepository) {}
 
@@ -243,19 +251,19 @@ export class StudentsService {
    * DEV-PORTAL: Authenticate student or parent from unified /portal entry
    */
   async authenticatePortalUser(dto: PortalLoginDTO): Promise<PortalLoginResult> {
-    const rawIdentifier = (dto.identifier || "").trim();
-    const rawPassword = (dto.password || "").trim();
+    const rawIdentifier = normalizeDigits(dto.identifier || "").trim();
+    const rawPassword = normalizeDigits(dto.password || "").trim();
 
     if (!rawIdentifier || !rawPassword) {
       throw new Error("MISSING_CREDENTIALS");
     }
 
-    const student = await this.repo.findByIdentifier(rawIdentifier);
+    const student = await this.repo.findByIdentifier(rawIdentifier, rawPassword);
     if (!student) {
       throw new Error("INVALID_CREDENTIALS");
     }
 
-    const storedPassword = student.portal_password;
+    const storedPassword = student.portal_password ? normalizeDigits(student.portal_password).trim() : "";
     if (!storedPassword || storedPassword !== rawPassword) {
       throw new Error("INVALID_CREDENTIALS");
     }

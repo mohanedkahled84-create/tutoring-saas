@@ -102,7 +102,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     return student;
   }
 
-  async findByIdentifier(identifier: string): Promise<Student | null> {
+  async findByIdentifier(identifier: string, password?: string): Promise<Student | null> {
     const raw = identifier.trim();
     if (!raw) return null;
     const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, "");
@@ -114,6 +114,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       if (typeof db.rpc === "function") {
         const { data: rpcData, error: rpcError } = await db.rpc("get_student_for_portal", {
           p_identifier: raw,
+          p_password: password ? password.trim() : null,
         });
         if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
           const student = rpcData[0] as Student;
@@ -128,12 +129,16 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     }
 
     // 2. Direct table query fallback
-    const { data, error } = await db
+    let q = db
       .from("students")
       .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
-      .or(`code.eq.${raw},student_code.eq.${raw},parent_phone.eq.${cleanPhone},student_phone.eq.${cleanPhone}`)
-      .limit(1)
-      .maybeSingle();
+      .or(`code.eq.${raw},student_code.eq.${raw},parent_phone.eq.${cleanPhone},student_phone.eq.${cleanPhone}`);
+
+    if (password) {
+      q = q.eq("portal_password", password.trim());
+    }
+
+    const { data, error } = await q.limit(1).maybeSingle();
 
     if (error || !data) return null;
     const student = data as Student;
@@ -334,10 +339,25 @@ export class FakeStudentsRepository implements IStudentsRepository {
     return student ? { ...student } : null;
   }
 
-  async findByIdentifier(identifier: string): Promise<Student | null> {
+  async findByIdentifier(identifier: string, password?: string): Promise<Student | null> {
     const raw = identifier.trim();
     if (!raw) return null;
     const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, "");
+
+    if (password) {
+      const matchWithPass = this.students.find((s) => {
+        const sParentPhone = (s.parent_phone || "").replace(/[\s\-\(\)\.]/g, "");
+        const sStudentPhone = (s.student_phone || "").replace(/[\s\-\(\)\.]/g, "");
+        const identMatch =
+          s.code === raw ||
+          s.student_code === raw ||
+          (cleanPhone.length >= 6 && sParentPhone === cleanPhone) ||
+          (cleanPhone.length >= 6 && sStudentPhone === cleanPhone);
+        return identMatch && s.portal_password === password.trim();
+      });
+      if (matchWithPass) return { ...matchWithPass };
+    }
+
     const student = this.students.find((s) => {
       const sParentPhone = (s.parent_phone || "").replace(/[\s\-\(\)\.]/g, "");
       const sStudentPhone = (s.student_phone || "").replace(/[\s\-\(\)\.]/g, "");

@@ -109,6 +109,42 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
     const authService = getServices(req as AuthenticatedRequest).auth;
     const result = await authService.refresh(refresh_token);
 
+    let hasSecurityPin = false;
+    try {
+      const client = getScopedSupabaseClient(result.token);
+      const { data: uRec } = await client
+        .from("users")
+        .select("id, tenant_id, role, full_name, teacher_id, assistant_id, financial_pin")
+        .eq("id", result.user.id)
+        .maybeSingle();
+
+      if (uRec) {
+        if (uRec.role) (result.user as any).role = uRec.role;
+        if (uRec.tenant_id) (result.user as any).tenant_id = uRec.tenant_id;
+        if (uRec.teacher_id) (result.user as any).teacher_id = uRec.teacher_id;
+        if (uRec.assistant_id) (result.user as any).assistant_id = uRec.assistant_id;
+        if (uRec.full_name) {
+          result.user.name = uRec.full_name;
+          result.user.full_name = uRec.full_name;
+        }
+        if (uRec.financial_pin) {
+          hasSecurityPin = true;
+        } else if (uRec.tenant_id) {
+          const { data: tRec } = await client
+            .from("tenants")
+            .select("settings, account_type")
+            .eq("id", uRec.tenant_id)
+            .maybeSingle();
+          if (tRec?.settings?.financial_pin) {
+            hasSecurityPin = true;
+          }
+          if (tRec?.account_type) {
+            (result.user as any).account_type = tRec.account_type;
+          }
+        }
+      }
+    } catch (_) {}
+
     res.cookie("access_token", result.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -118,7 +154,10 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
 
     res.json({
       message: "Token refreshed successfully",
-      user: result.user,
+      user: {
+        ...result.user,
+        has_security_pin: hasSecurityPin,
+      },
       token: result.token,
       refresh_token: result.refresh_token,
       expires_in: result.expires_in,

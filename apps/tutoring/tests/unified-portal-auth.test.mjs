@@ -149,6 +149,58 @@ test("DEV-PORTAL: authenticatePortalUser correctly authenticates and determines 
   );
 });
 
+test("DEV-PORTAL: distinguishes multiple students sharing same phone number by password and normalizes Arabic digits", async () => {
+  const repo = new FakeStudentsRepository();
+  const service = new StudentsService(repo);
+
+  const sharedPhone = "01123671177";
+
+  const studentA = await service.createStudent("tenant-1", {
+    name: "مهند خالد",
+    phone: sharedPhone,
+    student_phone: sharedPhone,
+  });
+
+  const studentB = await service.createStudent("tenant-1", {
+    name: "احمد محمود",
+    phone: sharedPhone,
+    student_phone: sharedPhone,
+  });
+
+  // Ensure passwords differ
+  if (studentA.portal_password === studentB.portal_password) {
+    studentB.portal_password = "987654";
+  }
+
+  // Student A logs in with shared phone and Student A's password
+  const authA = await service.authenticatePortalUser({
+    identifier: sharedPhone,
+    password: studentA.portal_password,
+  });
+  assert.equal(authA.success, true);
+  assert.equal(authA.student.id, studentA.id);
+  assert.equal(authA.student.name, "مهند خالد");
+
+  // Student B logs in with shared phone and Student B's password
+  const authB = await service.authenticatePortalUser({
+    identifier: sharedPhone,
+    password: studentB.portal_password,
+  });
+  assert.equal(authB.success, true);
+  assert.equal(authB.student.id, studentB.id);
+  assert.equal(authB.student.name, "احمد محمود");
+
+  // Logging in with Arabic / Eastern digits (e.g. ٠١١٢٣٦٧١١٧٧)
+  const arabicPhone = "٠١١٢٣٦٧١١٧٧";
+  const arabicPassA = studentA.portal_password.replace(/\d/g, (d) => String.fromCharCode(1632 + Number(d)));
+  const authArabic = await service.authenticatePortalUser({
+    identifier: arabicPhone,
+    password: arabicPassA,
+  });
+  assert.equal(authArabic.success, true);
+  assert.equal(authArabic.student.id, studentA.id);
+});
+
 test("DEV-PORTAL: changePortalPassword updates password and verifies old vs new", async () => {
   const repo = new FakeStudentsRepository();
   const service = new StudentsService(repo);

@@ -17,6 +17,80 @@ export const API_BASE_URL = (typeof window !== 'undefined' && window.__CENTRLY_A
     : 'https://tutoring-backend-production-c8dd.up.railway.app/api'
 );
 
+let activeRefreshPromise = null;
+
+/**
+ * Mutex-protected silent token refresh.
+ * Serializes concurrent refresh calls so multiple parallel requests await the same refresh operation.
+ */
+export async function performSilentRefresh() {
+  if (activeRefreshPromise) {
+    return activeRefreshPromise;
+  }
+
+  activeRefreshPromise = (async () => {
+    try {
+      const refreshToken = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_refresh_token')) ||
+                            (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_refresh_token'));
+      if (!refreshToken) {
+        return null;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.token) {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('centrly_token', data.token);
+            if (data.refresh_token) localStorage.setItem('centrly_refresh_token', data.refresh_token);
+            localStorage.setItem('centrly_logged_in', '1');
+          }
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('centrly_token', data.token);
+            if (data.refresh_token) sessionStorage.setItem('centrly_refresh_token', data.refresh_token);
+            sessionStorage.setItem('centrly_logged_in', '1');
+          }
+        } catch (_) {}
+        return data;
+      }
+
+      // Only invalidate session if server explicitly rejects refresh token as invalid/revoked
+      if (res.status === 401 || res.status === 400) {
+        const errMsg = String(data?.error?.message || data?.message || '').toLowerCase();
+        if (errMsg.includes('invalid_refresh_token') || errMsg.includes('not valid') || errMsg.includes('revoked')) {
+          try {
+            if (typeof localStorage !== 'undefined') {
+              localStorage.removeItem('centrly_token');
+              localStorage.removeItem('centrly_refresh_token');
+              localStorage.removeItem('centrly_logged_in');
+            }
+            if (typeof sessionStorage !== 'undefined') {
+              sessionStorage.removeItem('centrly_token');
+              sessionStorage.removeItem('centrly_refresh_token');
+              sessionStorage.removeItem('centrly_logged_in');
+            }
+          } catch (_) {}
+        }
+      }
+
+      return null;
+    } catch (err) {
+      console.warn('Silent refresh network exception:', err);
+      return null;
+    } finally {
+      activeRefreshPromise = null;
+    }
+  })();
+
+  return activeRefreshPromise;
+}
+
 export async function request(endpoint, options = {}) {
   let body = options.body;
   if (body && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof Blob)) {
@@ -29,7 +103,8 @@ export async function request(endpoint, options = {}) {
   };
 
   try {
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_token') : null;
+    const token = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_token')) ||
+                  (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_token'));
     if (token && !headers['Authorization'] && !headers['authorization']) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -52,41 +127,25 @@ export async function request(endpoint, options = {}) {
         // Attempt silent session refresh if refresh token is available (skip for auth and public endpoints)
         const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/refresh') || endpoint.includes('/auth/signup') || endpoint.startsWith('/public/');
         if (!isAuthEndpoint && !options._retry) {
-          const refreshToken = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_refresh_token') : null;
-          if (refreshToken) {
-            try {
-              const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refresh_token: refreshToken }),
-              });
-              const refreshData = await refreshRes.json();
-              if (refreshRes.ok && refreshData.token) {
-                localStorage.setItem('centrly_token', refreshData.token);
-                if (refreshData.refresh_token) {
-                  localStorage.setItem('centrly_refresh_token', refreshData.refresh_token);
-                }
-                const retryHeaders = {
-                  ...headers,
-                  'Authorization': `Bearer ${refreshData.token}`,
-                };
-                return await request(endpoint, {
-                  ...options,
-                  headers: retryHeaders,
-                  _retry: true,
-                });
-              }
-            } catch (refErr) {
-              console.warn('Session refresh attempt failed:', refErr);
-            }
+          const refreshData = await performSilentRefresh();
+          if (refreshData && refreshData.token) {
+            const retryHeaders = {
+              ...headers,
+              'Authorization': `Bearer ${refreshData.token}`,
+            };
+            return await request(endpoint, {
+              ...options,
+              headers: retryHeaders,
+              _retry: true,
+            });
           }
         }
 
-        // Remove only the expired token; keep user data and logged_in flag
-        // so the caller (e.g. init) can decide gracefully what to do
+        // Remove only the expired access token; keep refresh_token, user data, and logged_in flag
+        // so the session remains persistent across page reloads
         try {
-          localStorage.removeItem('centrly_token');
-          localStorage.removeItem('centrly_refresh_token');
+          if (typeof localStorage !== 'undefined') localStorage.removeItem('centrly_token');
+          if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('centrly_token');
         } catch (_) {}
       }
 

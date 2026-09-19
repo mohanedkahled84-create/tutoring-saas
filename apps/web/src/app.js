@@ -1,18 +1,18 @@
-import { authService } from './services/auth.js';
-import { request, API_BASE_URL } from './services/api.js';
-import { renderSidebar } from './components/Sidebar.js?v=4.8.6';
+import { authService } from './services/auth.js?v=4.8.7';
+import { request, API_BASE_URL } from './services/api.js?v=4.8.7';
+import { renderSidebar } from './components/Sidebar.js?v=4.8.7';
 import { renderNavbar } from './components/Navbar.js';
-import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.8.6';
+import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.8.7';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
-import { renderStudentsView } from './components/StudentsView.js?v=4.8.6';
-import { renderGroupsView } from './components/GroupsView.js?v=4.8.6';
+import { renderStudentsView } from './components/StudentsView.js?v=4.8.7';
+import { renderGroupsView } from './components/GroupsView.js?v=4.8.7';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.0.0';
-import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.6';
+import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.7';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=4.0.0';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js?v=4.8.1';
 import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
@@ -20,13 +20,13 @@ import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
 import { renderBillingView } from './components/BillingView.js?v=3.8.0';
 import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
 import { renderStudentCardsView } from './components/StudentCardsView.js';
-import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=4.8.6';
+import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=4.8.7';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
 import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
-import { renderLandingView } from './components/LandingView.js?v=4.8.6';
+import { renderLandingView } from './components/LandingView.js?v=4.8.7';
 import { renderMaterialsView } from './components/MaterialsView.js?v=2.9.0';
 import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.js?v=2.1.0';
 import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js';
@@ -459,125 +459,115 @@ class CentrlyApp {
       } else {
         this.renderLanding();
       }
-    } else {
-      this.user = authService.getUser();
+      return;
+    }
 
-      // If token expired but we have a cached session, try silent refresh first
-      if (!hasToken && hasCachedSession) {
-        const refreshed = await authService.tryRefreshSession();
-        if (!refreshed) {
-          // Refresh failed completely - clear session and show login
-          authService.clearSession();
-          this.renderAuth('login');
-          return;
+    // User is authenticated (has cached user profile and/or valid token)
+    this.user = authService.getUser();
+
+    // Clean up any lingering view=login or view=signup query params from address bar
+    if (urlParams.has('view')) {
+      const v = urlParams.get('view');
+      if (v === 'login' || v === 'signup') {
+        urlParams.delete('view');
+        const remainingQuery = urlParams.toString();
+        const cleanUrl = window.location.pathname + (remainingQuery ? `?${remainingQuery}` : '');
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', cleanUrl);
         }
       }
+    }
 
-      // Try to fetch fresh profile from server
-      try {
-        const me = await authService.getProfile().catch(() => null);
+    // Background session verification and silent refresh (never blocks initial render or kicks user)
+    if (!hasToken && hasCachedSession) {
+      authService.tryRefreshSession().then((refreshed) => {
+        if (refreshed) {
+          authService.getProfile().then(me => {
+            if (me?.user) {
+              this.user = { ...this.user, ...me.user };
+              authService.setUser(this.user);
+            }
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    } else {
+      // Revalidate fresh profile in the background without blocking render or kicking user
+      authService.getProfile().then(me => {
         if (me?.user) {
           this.user = { ...this.user, ...me.user };
           authService.setUser(this.user);
         }
-      } catch (_) {
-        // getProfile failed (e.g. network error or token just expired)
-      }
+      }).catch(() => {});
+    }
 
-      // If getProfile's 401 handler wiped the token, try one explicit refresh
-      if (!authService.getToken()) {
-        const refreshed = await authService.tryRefreshSession();
-        if (!refreshed) {
-          // No valid token and refresh failed - must re-login
-          authService.clearSession();
-          this.renderAuth('login');
-          return;
-        }
-        // Refresh succeeded - retry profile fetch with fresh token
+    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
+    const savedRoute = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_current_route')) ||
+                       (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_current_route'));
+    const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'coupons', 'activity-logs'];
+
+    if (isAdmin) {
+      this.currentRoute = (savedRoute && adminRoutes.includes(savedRoute)) ? savedRoute : 'admin-dashboard';
+    } else if (isCenter) {
+      this.currentRoute = (savedRoute && savedRoute !== 'dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'center-dashboard';
+    } else {
+      this.currentRoute = (savedRoute && savedRoute !== 'center-dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'dashboard';
+    }
+
+    // Cross-Device Account-Level Security: Sync PIN status from user profile and storage
+    if (typeof this.user?.has_security_pin === 'boolean') {
+      this.hasSecurityPin = this.user.has_security_pin;
+      if (this.hasSecurityPin) {
+        this.isFinancialUnlocked = false;
         try {
-          const me = await authService.getProfile().catch(() => null);
-          if (me?.user) {
-            this.user = { ...this.user, ...me.user };
-            authService.setUser(this.user);
-          }
+          localStorage.setItem('centrly_has_security_pin', 'true');
         } catch (_) {}
       }
+    }
 
-      // If we still have no user data at all, redirect to login
-      if (!this.user) {
-        authService.clearSession();
-        this.renderAuth('login');
-        return;
-      }
-
-      const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
-      const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-      const savedRoute = localStorage.getItem('centrly_current_route');
-      const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'coupons', 'activity-logs'];
-
-      if (isAdmin) {
-        this.currentRoute = (savedRoute && adminRoutes.includes(savedRoute)) ? savedRoute : 'admin-dashboard';
-      } else if (isCenter) {
-        this.currentRoute = (savedRoute && savedRoute !== 'dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'center-dashboard';
-      } else {
-        this.currentRoute = (savedRoute && savedRoute !== 'center-dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'dashboard';
-      }
-
-      // Cross-Device Account-Level Security: Sync PIN status from user profile and cloud
-      if (typeof this.user?.has_security_pin === 'boolean') {
-        this.hasSecurityPin = this.user.has_security_pin;
+    try {
+      const pinStatus = await request('/settings/security-pin').catch(() => null);
+      if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
+        this.hasSecurityPin = pinStatus.has_pin;
         if (this.hasSecurityPin) {
           this.isFinancialUnlocked = false;
-          try {
-            localStorage.setItem('centrly_has_security_pin', 'true');
-          } catch (_) {}
         }
+        if (this.user) {
+          this.user.has_security_pin = pinStatus.has_pin;
+          authService.setUser(this.user);
+        }
+        try {
+          localStorage.setItem('centrly_has_security_pin', pinStatus.has_pin ? 'true' : 'false');
+        } catch (_) {}
       }
+    } catch (_) {}
 
+    this.restoreSessionState();
+
+    // Cross-Device Sync: Check server for active session if local state is empty
+    if (!this.sessionState?.id) {
       try {
-        const pinStatus = await request('/settings/security-pin').catch(() => null);
-        if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
-          this.hasSecurityPin = pinStatus.has_pin;
-          if (this.hasSecurityPin) {
-            this.isFinancialUnlocked = false;
-          }
-          if (this.user) {
-            this.user.has_security_pin = pinStatus.has_pin;
-            authService.setUser(this.user);
-          }
-          try {
-            localStorage.setItem('centrly_has_security_pin', pinStatus.has_pin ? 'true' : 'false');
-          } catch (_) {}
+        const activeSessions = await request('/sessions?status=in_progress').catch(() => null);
+        const activeList = Array.isArray(activeSessions) ? activeSessions : (activeSessions?.sessions || []);
+        if (activeList.length > 0) {
+          await this.syncAndResumeServerSession(activeList[0].id);
         }
       } catch (_) {}
+    } else if (this.sessionState?.status === 'in_progress') {
+      this.startLiveSessionSync();
+    }
 
-      this.restoreSessionState();
-
-      // Cross-Device Sync: Check server for active session if local state is empty
-      if (!this.sessionState?.id) {
-        try {
-          const activeSessions = await request('/sessions?status=in_progress').catch(() => null);
-          const activeList = Array.isArray(activeSessions) ? activeSessions : (activeSessions?.sessions || []);
-          if (activeList.length > 0) {
-            await this.syncAndResumeServerSession(activeList[0].id);
-          }
-        } catch (_) {}
-      } else if (this.sessionState?.status === 'in_progress') {
-        this.startLiveSessionSync();
-      }
-
-      this.routeLoadingState[this.currentRoute] = !this.hasRouteData(this.currentRoute);
-      this.studentsLoading = this.currentRoute === 'students';
-      this.renderApp();
-      this.prefetchCoreData();
-      try {
-        await this.loadRouteData(this.currentRoute);
-      } finally {
-        this.routeLoadingState[this.currentRoute] = false;
-        this.dataLoadedState[this.currentRoute] = true;
-        this.studentsLoading = false;
-        this.renderMainContent();
-      }
+    this.routeLoadingState[this.currentRoute] = !this.hasRouteData(this.currentRoute);
+    this.studentsLoading = this.currentRoute === 'students' && (!Array.isArray(this.students) || this.students.length === 0);
+    this.renderApp();
+    this.prefetchCoreData();
+    try {
+      await this.loadRouteData(this.currentRoute);
+    } finally {
+      this.routeLoadingState[this.currentRoute] = false;
+      this.dataLoadedState[this.currentRoute] = true;
+      this.studentsLoading = false;
+      this.renderMainContent();
     }
   }
 
@@ -859,8 +849,8 @@ class CentrlyApp {
     const alertEl = document.getElementById('portalLoginAlert');
     const roleInput = document.getElementById('portalRole');
 
-    const identifier = identInput ? identInput.value.trim() : '';
-    const password = passInput ? passInput.value.trim() : '';
+    const identifier = identInput ? normalizeDigits(identInput.value).trim() : '';
+    const password = passInput ? normalizeDigits(passInput.value).trim() : '';
     const role = roleInput ? roleInput.value : 'parent';
     const rememberMe = rememberCheckbox ? rememberCheckbox.checked : true;
 
@@ -1390,8 +1380,20 @@ class CentrlyApp {
       const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
       this.currentRoute = isAdmin ? 'admin-dashboard' : (isCenter ? 'center-dashboard' : 'dashboard');
       try {
-        localStorage.setItem('centrly_current_route', this.currentRoute);
+        if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_current_route', this.currentRoute);
+        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_current_route', this.currentRoute);
       } catch (_) {}
+
+      // Scrub view=login from browser address bar
+      try {
+        if (window.history && window.history.replaceState) {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('view');
+          const cleanUrl = url.pathname + (url.search ? url.search : '');
+          window.history.replaceState(null, '', cleanUrl);
+        }
+      } catch (_) {}
+
       this.renderApp();
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
@@ -11940,6 +11942,10 @@ window.togglePasswordVisibility = (inputId, btnEl, event) => {
     return window.centrlyApp.togglePasswordVisibility(inputId, btnEl, event);
   }
 };
-window.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', () => {
+    window.centrlyApp.init();
+  });
+} else {
   window.centrlyApp.init();
-});
+}
