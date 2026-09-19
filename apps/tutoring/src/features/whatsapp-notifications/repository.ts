@@ -83,7 +83,7 @@ export class SupabaseWhatsAppNotificationsRepository implements IWhatsAppNotific
         if (data) {
           return {
             status: data.instance_status || "connected",
-            phone_number: "+201099887766",
+            phone_number: null,
             gateway: "Evolution API v2.1",
             latency_ms: 110,
             daily_quota: {
@@ -100,7 +100,7 @@ export class SupabaseWhatsAppNotificationsRepository implements IWhatsAppNotific
 
     return {
       status: "connected",
-      phone_number: "+201099887766",
+      phone_number: null,
       gateway: "Evolution API v2.1",
       latency_ms: 110,
       daily_quota: {

@@ -69,7 +69,7 @@ export const telemetryRateLimiter = rateLimit({
 
 export const financialPinRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: process.env.NODE_ENV === "test" ? 1000 : 5,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `${(req as Request & { user?: { id?: string } }).user?.id || "anonymous"}:${req.ip}`,

@@ -18,7 +18,7 @@ import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js
 import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
 import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
 import { renderBillingView } from './components/BillingView.js?v=3.8.0';
-import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
+import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView } from './components/StudentCardsView.js';
 import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=4.8.12';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
@@ -8376,7 +8376,7 @@ https://centerly-platform.vercel.app/p/p16766044
             const badge = document.getElementById('settingsWaBadge');
             if (badge) {
               badge.className = 'badge badge-success';
-              badge.textContent = `الخادم متصل وجاهز ${status.phone_number ? `(${status.phone_number})` : ''}`;
+              badge.innerHTML = `<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#10b981"/></svg> متصل`;
             }
             await this.loadRouteData('whatsapp');
           }

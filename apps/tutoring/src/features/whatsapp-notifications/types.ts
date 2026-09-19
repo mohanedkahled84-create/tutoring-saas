@@ -107,7 +107,7 @@ export function buildInstanceName(tenantId: string, teacherId: string): string {
 export interface WhatsAppConnectionStatus {
   instance_name?: string;
   status: string;
-  phone_number: string;
+  phone_number?: string | null;
   gateway: string;
   latency_ms: number;
   daily_quota: {

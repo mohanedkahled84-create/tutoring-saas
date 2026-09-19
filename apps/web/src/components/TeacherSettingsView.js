@@ -1,7 +1,7 @@
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { renderBillingView } from './BillingView.js?v=3.8.0';
-import { renderWhatsAppSettingsView } from './WhatsAppSettingsView.js';
+import { renderWhatsAppSettingsView } from './WhatsAppSettingsView.js?v=4.9.6';
 
 /**
  * Centrly Teacher Settings & Account Management View

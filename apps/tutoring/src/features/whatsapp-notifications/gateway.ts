@@ -150,7 +150,6 @@ export class HttpEvolutionGateway implements IEvolutionGateway {
       return {
         instance_name: instanceName,
         status: "connected",
-        phone_number: "+201099887766",
         latency_ms: 110,
       };
     }
@@ -341,7 +340,7 @@ export class FakeEvolutionGateway implements IEvolutionGateway {
         status: val.status || "connected",
         qr_base64: null,
         pairing_code: null,
-        phone_number: val.phone_number || "+201012345678",
+        phone_number: val.phone_number || undefined,
       });
     }
   }
@@ -403,7 +402,7 @@ export class FakeEvolutionGateway implements IEvolutionGateway {
     return {
       instance_name: instanceName,
       status,
-      phone_number: inst?.phone_number || "+201012345678",
+      phone_number: inst?.phone_number || undefined,
       latency_ms: 45,
     };
   }
