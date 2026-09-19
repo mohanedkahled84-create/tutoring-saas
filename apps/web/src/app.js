@@ -1,14 +1,14 @@
 import { authService } from './services/auth.js';
 import { request, API_BASE_URL } from './services/api.js';
-import { renderSidebar } from './components/Sidebar.js?v=4.8.2';
+import { renderSidebar } from './components/Sidebar.js?v=4.8.6';
 import { renderNavbar } from './components/Navbar.js';
-import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.8.1';
+import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.8.6';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
-import { renderStudentsView } from './components/StudentsView.js?v=2.8.0';
-import { renderGroupsView } from './components/GroupsView.js?v=2.8.0';
+import { renderStudentsView } from './components/StudentsView.js?v=4.8.6';
+import { renderGroupsView } from './components/GroupsView.js?v=4.8.6';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.0.0';
@@ -20,13 +20,13 @@ import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
 import { renderBillingView } from './components/BillingView.js?v=3.8.0';
 import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js';
 import { renderStudentCardsView } from './components/StudentCardsView.js';
-import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=2.6.0';
+import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=4.8.6';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
 import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
-import { renderLandingView } from './components/LandingView.js?v=2.8.0';
+import { renderLandingView } from './components/LandingView.js?v=4.8.6';
 import { renderMaterialsView } from './components/MaterialsView.js?v=2.9.0';
 import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.js?v=2.1.0';
 import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js';
@@ -147,6 +147,7 @@ class CentrlyApp {
     this.isFinancialUnlocked = !this.hasSecurityPin;
     this.hideFinancialNumbers = false;
     this.routeLoadingState = {};
+    this.dataLoadedState = {};
     this.settingsState = { activeTab: 'profile', barcodeAudio: true };
     this.currentTheme = 'light';
     this.restoreCachedData();
@@ -338,14 +339,17 @@ class CentrlyApp {
       if (studRes) {
         this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
         this.saveCache('students', this.students);
+        this.dataLoadedState['students'] = true;
       }
       if (grpRes) {
         this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
         this.saveCache('groups', this.groups);
+        this.dataLoadedState['groups'] = true;
       }
       if (billingRes) {
         this.billingState = billingRes;
         this.saveCache('billingState', this.billingState);
+        this.dataLoadedState['billing'] = true;
       }
     } catch (_) {}
   }
@@ -562,10 +566,18 @@ class CentrlyApp {
         this.startLiveSessionSync();
       }
 
+      this.routeLoadingState[this.currentRoute] = !this.hasRouteData(this.currentRoute);
+      this.studentsLoading = this.currentRoute === 'students';
       this.renderApp();
       this.prefetchCoreData();
-      await this.loadRouteData(this.currentRoute);
-      this.renderMainContent();
+      try {
+        await this.loadRouteData(this.currentRoute);
+      } finally {
+        this.routeLoadingState[this.currentRoute] = false;
+        this.dataLoadedState[this.currentRoute] = true;
+        this.studentsLoading = false;
+        this.renderMainContent();
+      }
     }
   }
 
@@ -1900,6 +1912,7 @@ class CentrlyApp {
       await this.loadRouteData(route);
     } finally {
       this.routeLoadingState[route] = false;
+      this.dataLoadedState[route] = true;
       this.finishProgressBar();
       this.renderMainContent();
     }
@@ -2692,6 +2705,50 @@ class CentrlyApp {
     if (el) el.innerHTML = this.getContentHtml(this.currentRoute);
   }
 
+  renderRouteLoading(route) {
+    const routeTitles = {
+      'students': { title: 'جارٍ تحميل دليل الطلاب...', subtitle: 'يتم الآن جلب بيانات الطلاب وأرقام الهواتف والمجموعات من السحابة' },
+      'groups': { title: 'جارٍ تحميل المجاميع الدراسية...', subtitle: 'يتم الآن جلب مواعيد الحصص والقاعات وأنظمة المحاسبة' },
+      'quizzes': { title: 'جارٍ تحميل الكويزات والامتحانات...', subtitle: 'يتم الآن استخراج نماذج الكويزات ودرجات الطلاب' },
+      'homework': { title: 'جارٍ تحميل تسليمات الواجبات...', subtitle: 'يتم الآن جلب ملفات الواجبات المرفوعة من الطلاب' },
+      'materials': { title: 'جارٍ تحميل المذكرات والماتريال...', subtitle: 'يتم الآن جلب مذكرات وملفات الـ PDF الدراسية' },
+      'reports': { title: 'جارٍ إعداد التقارير ولوحة الشرف...', subtitle: 'يتم الآن احتساب معدلات الحضور والدرجات وإحصائيات الشهر' },
+      'assistants': { title: 'جارٍ تحميل بيانات فريق العمل...', subtitle: 'يتم الآن جلب صلاحيات وسجلات المساعدين' },
+      'dashboard': { title: 'جارٍ تحميل لوحة المعلم والأرباح...', subtitle: 'يتم الآن جلب التقارير المالية ومعدلات الحضور' },
+      'calendar': { title: 'جارٍ تحميل جدول الحصص والتقويم...', subtitle: 'يتم الآن تنظيم مواعيد الحصص الأسبوعية والإضافية' },
+      'student-cards': { title: 'جارٍ إعداد كروت الطلاب...', subtitle: 'يتم الآن تجهيز بيانات وأكواد باركود الطلاب' },
+      'center-dashboard': { title: 'جارٍ تحميل لوحة إدارة السنتر...', subtitle: 'يتم الآن استخراج إحصائيات القاعات وتسويات المدرسين' },
+      'center-sessions': { title: 'جارٍ تحميل حصص السنتر...', subtitle: 'يتم الآن جلب الحصص الجارية والقادمة بالقاعات' },
+      'center-teachers': { title: 'جارٍ تحميل المدرسين المعتمدين...', subtitle: 'يتم الآن جلب قائمة المدرسين والمجاميع بالسنتر' },
+      'center-assistants': { title: 'جارٍ تحميل فريق الاستقبال...', subtitle: 'يتم الآن جلب بيانات ومساعدي السنتر' },
+      'center-rooms': { title: 'جارٍ تحميل قاعات السنتر...', subtitle: 'يتم الآن جلب سعة وجداول القاعات' },
+    };
+
+    const info = routeTitles[route] || {
+      title: 'جارٍ تحميل البيانات من السحابة...',
+      subtitle: 'يرجى الانتظار لحظات ريثما يتم جلب ومزامنة أحدث البيانات',
+    };
+
+    return `
+      <div class="card" style="margin: 0; min-height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3.5rem 1.5rem; border-radius: 16px; border: 1px solid #e2e8f0; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.02);" dir="rtl">
+        <div style="position: relative; width: 64px; height: 64px; margin-bottom: 1.5rem;">
+          <div style="width: 64px; height: 64px; border: 4px solid #e0e7ff; border-top: 4px solid var(--centrly-blue-700, #1e3a8a); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+          <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700, #1e3a8a);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          </div>
+        </div>
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: #1e293b; margin: 0 0 0.5rem 0; font-family: 'Cairo', sans-serif;">${info.title}</h3>
+        <p style="font-size: 0.875rem; color: #64748b; margin: 0 0 1.5rem 0; max-width: 420px; line-height: 1.6;">${info.subtitle}</p>
+        
+        <div style="width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 0.65rem; opacity: 0.65;">
+          <div class="skeleton-box" style="height: 16px; width: 100%; border-radius: 6px;"></div>
+          <div class="skeleton-box" style="height: 16px; width: 85%; border-radius: 6px; margin: 0 auto;"></div>
+          <div class="skeleton-box" style="height: 16px; width: 65%; border-radius: 6px; margin: 0 auto;"></div>
+        </div>
+      </div>
+    `;
+  }
+
   getContentHtml(route) {
     if (this.routeErrors && this.routeErrors[route]) {
       const isAuthErr = this.routeErrors[route].includes('الجلسة') || this.routeErrors[route].includes('token');
@@ -2715,6 +2772,13 @@ class CentrlyApp {
           `}
         </div>
       `;
+    }
+
+    const isRouteFetching = Boolean(this.routeLoadingState[route]);
+    const hasData = this.hasRouteData(route);
+
+    if (isRouteFetching && !hasData) {
+      return this.renderRouteLoading(route);
     }
 
     switch (route) {
@@ -2764,13 +2828,25 @@ class CentrlyApp {
       case 'center-rooms':
         return renderCenterRoomsView(this.centerRooms);
       case 'quizzes':
-        return renderTeacherQuizzesView(this.quizzesState, this.groups, this.students);
+        return renderTeacherQuizzesView(
+          this.quizzesState, 
+          this.groups, 
+          this.students, 
+          isRouteFetching, 
+          Boolean(this.dataLoadedState['quizzes'])
+        );
       case 'calendar':
         return renderTeacherCalendar(this.calendarState);
       case 'sessions':
         return renderSessionsView(this.sessionState, this.user, this.groups);
       case 'students':
-        return renderStudentsView(this.students, this.groups, this.studentsLoading || Boolean(this.routeLoadingState['students']), this.billingState);
+        return renderStudentsView(
+          this.students, 
+          this.groups, 
+          this.studentsLoading || isRouteFetching, 
+          this.billingState, 
+          Boolean(this.dataLoadedState['students'])
+        );
       case 'student-cards':
         return renderStudentCardsView(this.students, this.groups, this.user);
       case 'reports':
@@ -2780,7 +2856,12 @@ class CentrlyApp {
           hideNumbers: this.hideFinancialNumbers,
         });
       case 'groups':
-        return renderGroupsView(this.groups, this.user, Boolean(this.routeLoadingState['groups']));
+        return renderGroupsView(
+          this.groups, 
+          this.user, 
+          isRouteFetching, 
+          Boolean(this.dataLoadedState['groups'])
+        );
       case 'risk-watchlist':
         return renderRiskWatchlistView(this.watchlistData || this.dashboardData?.atRiskStudents || []);
       case 'billing':
@@ -11854,6 +11935,11 @@ https://centerly-platform.vercel.app/p/p16766044
 }
 
 window.centrlyApp = new CentrlyApp();
+window.togglePasswordVisibility = (inputId, btnEl, event) => {
+  if (window.centrlyApp) {
+    return window.centrlyApp.togglePasswordVisibility(inputId, btnEl, event);
+  }
+};
 window.addEventListener('DOMContentLoaded', () => {
   window.centrlyApp.init();
 });
