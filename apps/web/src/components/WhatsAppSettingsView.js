@@ -20,7 +20,7 @@ export function renderWhatsAppSettingsView(data = {}) {
               <span>${getIcon('whatsapp', 24, 'var(--centrly-blue-700)')}</span>
               <h2 class="card-title" style="margin: 0; font-size: 1.25rem;">إعدادات خدمة واتساب</h2>
               <span class="badge ${isConnected ? 'badge-success' : 'badge-warning'}" id="settingsWaBadge">
-                ${isConnected ? `${getIcon('dotSuccess', 8)} الخادم متصل وجاهز ${data.phone_number ? `(${data.phone_number})` : ''}` : `${getIcon('dotWarning', 8)} بانتظار مسح رمز QR`}
+                ${isConnected ? `${getIcon('dotSuccess', 8)} متصل` : `${getIcon('dotWarning', 8)} بانتظار مسح رمز QR`}
               </span>
             </div>
             <p style="font-size: 0.85rem; color: var(--centrly-text); margin-top: 0.35rem; line-height: 1.6;">

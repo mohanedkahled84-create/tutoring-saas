@@ -415,6 +415,7 @@ authRouter.post("/logout", (_req: Request, res: Response): void => {
 
 // GET /api/auth/me - Return authenticated user profile
 authRouter.get("/me", authenticateUser, (req: AuthenticatedRequest, res: Response): void => {
-  res.json({ user: req.user });
+  // Never return a verification secret, even if an older session still carries it.
+  const { financial_pin: _financialPin, ...safeUser } = req.user || {};
+  res.json({ user: safeUser });
 });
-

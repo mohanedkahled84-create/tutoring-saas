@@ -5,6 +5,8 @@ import { getServiceSupabaseClient } from "../../supabase.js";
 import { config } from "../../shared/config/index.js";
 import { verifyParentPortalToken } from "../../shared/utils/tokens.js";
 import { logger } from "../../shared/utils/logger.js";
+import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
+import { attendanceRateLimiter } from "../../shared/middleware/rateLimit.js";
 
 export const homeworkRouter = Router();
 export const publicHomeworkRouter = Router();
@@ -30,7 +32,7 @@ const reviewHomeworkSchema = z.object({
  * Public Endpoint: POST /api/public/homework/submit
  * Student uploads/submits their homework PDF
  */
-publicHomeworkRouter.post("/submit", async (req: Request, res: Response): Promise<void> => {
+publicHomeworkRouter.post("/submit", attendanceRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const parsed = submitHomeworkSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: { code: "VALIDATION_ERROR", details: parsed.error.issues } });
@@ -91,19 +93,22 @@ publicHomeworkRouter.post("/submit", async (req: Request, res: Response): Promis
       }
 
       const base64Clean = file_data.replace(/^data:[^;]+;base64,/, "");
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64Clean) || base64Clean.length % 4 !== 0) {
+        res.status(400).json({ error: { code: "INVALID_FILE", message: "صيغة الملف غير صالحة" } });
+        return;
+      }
       const fileBuffer = Buffer.from(base64Clean, "base64");
-      const ext = contentType.includes("jpeg") || contentType.includes("jpg") ? ".jpg"
-        : contentType.includes("png") ? ".png"
-        : contentType.includes("webp") ? ".webp"
-        : ".pdf";
-      const rawCleanName = (file_name || "homework").replace(/[^a-zA-Z0-9._-]/g, "_");
-      const cleanFileName = rawCleanName.includes(".") ? rawCleanName : `${rawCleanName}${ext}`;
-      const storagePath = `${tenantId}/${material_id}/${studentId}_${Date.now()}_${cleanFileName}`;
+      const validation = validateFileUpload({ buffer: fileBuffer, originalFilename: file_name || "homework.pdf", declaredMimeType: contentType, maxSizeBytes: 5 * 1024 * 1024 });
+      if (!validation.isValid || !validation.sanitizedFilename || !validation.detectedMimeType) {
+        res.status(400).json({ error: { code: "INVALID_FILE", message: "الملف مرفوض: " + (validation.error || "نوع غير مدعوم") } });
+        return;
+      }
+      const storagePath = `${tenantId}/${material_id}/${studentId}_${Date.now()}_${validation.sanitizedFilename}`;
 
       const { error: uploadError } = await supabase.storage
         .from("homework-submissions")
         .upload(storagePath, fileBuffer, {
-          contentType,
+          contentType: validation.detectedMimeType,
           upsert: true,
         });
 

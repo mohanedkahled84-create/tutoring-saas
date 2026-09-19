@@ -109,7 +109,6 @@ export async function authenticateUser(
       role: userRecord.role as UserRole,
       teacher_id: userRecord.teacher_id,
       assistant_id: userRecord.assistant_id,
-      financial_pin: financialPin,
       has_security_pin: Boolean(financialPin),
     };
     req.token = token;
