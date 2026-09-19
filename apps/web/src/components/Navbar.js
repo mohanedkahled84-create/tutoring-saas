@@ -40,7 +40,7 @@ export function renderNavbar(user, activeSessionSummary = null) {
         <button class="btn btn-secondary btn-sm" id="sidebarToggle" onclick="window.centrlyApp.toggleSidebar()" style="align-items: center; justify-content: center; padding: 0.4rem 0.6rem;">
           ${getIcon('menu', 20)}
         </button>
-        ${isAdmin ? '<span class="badge" style="background: #1e293b; color: #f8fafc; font-weight: 700; border: 1px solid #334155;">لوحة المؤسس المستقلة (Centrly HQ)</span>' : '<span class="badge badge-blue">سحابي • RTL مفعّل</span>'}
+        ${isAdmin ? '<span class="badge" style="background: #1e293b; color: #f8fafc; font-weight: 700; border: 1px solid #334155;">لوحة المؤسس المستقلة (Centrly HQ)</span>' : ''}
 
         <div id="navLiveSessionBadgeContainer">
           ${activeSessionSummary ? `
