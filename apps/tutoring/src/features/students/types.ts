@@ -75,6 +75,7 @@ export interface GroupRecord {
 export interface PortalLoginDTO {
   identifier: string;
   password: string;
+  role?: "parent" | "student";
 }
 
 export interface PortalLoginResult {

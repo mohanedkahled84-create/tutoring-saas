@@ -264,7 +264,9 @@ export class StudentsService {
     const cleanStudentPhone = (student.student_phone || "").replace(/[\s\-\(\)\.]/g, "");
 
     let role: "parent" | "student" = "parent";
-    if (cleanStudentPhone && cleanIdent === cleanStudentPhone) {
+    if (dto.role === "student" || dto.role === "parent") {
+      role = dto.role;
+    } else if (cleanStudentPhone && cleanIdent === cleanStudentPhone) {
       role = "student";
     }
 

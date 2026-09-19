@@ -137,7 +137,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
             <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;">
               ${sec.routes.map(r => {
                 const isActive = currentRoute === r.id;
-                const isLocked = Boolean(securityState?.hasPin && !securityState?.isUnlocked && ['assistants', 'dashboard', 'reports'].includes(r.id));
+                const isLocked = Boolean(securityState?.hasPin && !securityState?.isUnlocked && ['assistants', 'dashboard'].includes(r.id));
                 return `
                   <button class="nav-link ${isActive ? 'active' : ''}" onclick="window.centrlyApp.navigate('${r.id}')" 
                     style="position: relative; display: flex; align-items: center; gap: 0.7rem; background: ${isActive ? '#eff6ff' : 'transparent'}; border-radius: 8px; padding: 0.55rem 0.75rem; border: none; width: 100%; cursor: pointer; text-align: right; transition: background 0.15s ease;">

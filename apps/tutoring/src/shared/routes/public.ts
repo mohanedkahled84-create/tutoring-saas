@@ -210,6 +210,7 @@ publicRouter.get("/s/:code", async (req: Request, res: Response): Promise<void> 
 publicRouter.post("/portal/login", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const identifier = typeof req.body.identifier === "string" ? req.body.identifier.trim() : "";
   const password = typeof req.body.password === "string" ? req.body.password.trim() : "";
+  const role = req.body.role === "student" || req.body.role === "parent" ? req.body.role : undefined;
 
   if (!identifier || !password) {
     res.status(400).json({
@@ -220,7 +221,7 @@ publicRouter.post("/portal/login", authRateLimiter, async (req: Request, res: Re
 
   try {
     const studentsService = getServices(req as AuthenticatedRequest).students;
-    const result = await studentsService.authenticatePortalUser({ identifier, password });
+    const result = await studentsService.authenticatePortalUser({ identifier, password, role });
     res.json(result);
   } catch (err: unknown) {
     if (err instanceof Error) {

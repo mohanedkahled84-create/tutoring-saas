@@ -254,8 +254,8 @@ export function renderLandingView() {
           </h1>
 
           <!-- Subtitle -->
-          <p style="font-size: clamp(1rem, 2vw, 1.2rem); color: var(--brand-text); max-width: 820px; margin: 0 auto 2.25rem; line-height: 1.75; font-weight: 600;">
-            تسجيل حضور بالباركود السريع في ثوانٍ، كروت ذكية وطباعة فورية، رسائل واتساب آلية وتلقائية لأولياء الأمور بدرجات الكويزات والحضور، وبوابة متابعة تفاعلية لكل طالب بدون الحاجة لتحميل أي تطبيقات.
+          <p style="font-size: clamp(1rem, 2vw, 1.2rem); color: var(--brand-text); max-width: 840px; margin: 0 auto 2.25rem; line-height: 1.8; font-weight: 600;">
+            تسجيل حضور بالباركود السريع، كروت ذكية وطباعة فورية، رسائل واتساب آلية، وبوابة متابعة ذكية ومتكاملة للطالب وولي الأمر لمتابعة الحضور والدرجات ورفع الواجبات وملفات الـ PDF وتحميل المذكرات مباشرة بدون الحاجة لتحميل أي تطبيقات.
           </p>
 
           <!-- Dual Hero CTAs -->
@@ -287,7 +287,7 @@ export function renderLandingView() {
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span>دعم فني مصري على مدار الساعة</span>
+              <span>بوابة رفع الواجبات والمتابعة</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -373,13 +373,13 @@ export function renderLandingView() {
             </div>
 
             <!-- Feature 5 -->
-            <div class="feature-card" style="background: var(--brand-cream); border: 1px solid var(--brand-line); border-radius: 16px; padding: 1.75rem; transition: all 0.2s;">
-              <div style="width: 44px; height: 44px; background: var(--brand-green-light); color: var(--brand-green); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+            <div class="feature-card" style="background: var(--brand-cream); border: 1.5px solid #bfdbfe; border-radius: 16px; padding: 1.75rem; transition: all 0.2s; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.06);">
+              <div style="width: 44px; height: 44px; background: #eff6ff; color: #1d4ed8; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
-              <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--brand-navy); margin: 0 0 0.5rem;">بوابة متابعة ولي الأمر التفاعلية</h3>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--brand-navy); margin: 0 0 0.5rem;">بوابة متابعة الطالب وولي الأمر ورفع الواجبات</h3>
               <p style="font-size: 0.875rem; color: var(--brand-text); line-height: 1.7; margin: 0;">
-                رابط مباشر ومشفّر لكل طالب، يفتحه ولي الأمر من أي متصفح هاتف لمتابعة الحضور والغياب والدرجات بدون أي كلمات سر أو تطبيقات.
+                رابط متابعة مخصص وسهل الفتح لكل طالب وولي أمر عبر المتصفح: يتيح للطالب رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة تصحيحها، وتحميل مذكرات الشرح، كما يتيح لولي الأمر متابعة فورية للحضور والغياب وكشف درجات الكويزات الدورية.
               </p>
             </div>
 
@@ -396,6 +396,110 @@ export function renderLandingView() {
 
           </div>
 
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- 3.5 DEDICATED STUDENT & PARENT PORTAL SHOWCASE                    -->
+      <!-- ================================================================= -->
+      <section style="padding: 4.5rem 1.25rem; background: linear-gradient(180deg, #FFFFFF 0%, #F0F7FF 100%); border-bottom: 1px solid var(--brand-line);">
+        <div style="max-width: 1100px; margin: 0 auto;">
+          <div style="text-align: center; max-width: 780px; margin: 0 auto 3rem;">
+            <div style="display: inline-flex; align-items: center; gap: 8px; background: #DBEAFE; color: #1E40AF; font-size: 13px; font-weight: 800; padding: 6px 16px; border-radius: 9999px; margin-bottom: 1rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span>رابط متابعة مخصص لكل طالب وولي أمر — بدون تحميل أي تطبيقات</span>
+            </div>
+            <h2 style="font-size: clamp(1.6rem, 3.2vw, 2.4rem); font-weight: 900; color: var(--brand-navy); margin: 0.5rem 0 0.75rem; line-height: 1.3;">
+              بوابة الطالب وولي الأمر الذكية: رفع الواجبات ومتابعة الحضور والدرجات
+            </h2>
+            <p style="font-size: 1.05rem; color: var(--brand-text); margin: 0; line-height: 1.75; font-weight: 600;">
+              بمجرد تسجيل الطالب، يحصل فوراً على رابط ذكي بكلمة مرور آمنة، ليبقى الطالب وولي الأمر على دراية مستمرة بكل حصة وواجب ودرجة.
+            </p>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;">
+            
+            <!-- Student Experience Card -->
+            <div style="background: #FFFFFF; border: 1.5px solid #BFDBFE; border-radius: 20px; padding: 2.25rem 2rem; box-shadow: 0 10px 30px rgba(37, 99, 235, 0.08); display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                  <div style="width: 50px; height: 50px; background: #EFF6FF; color: #1D4ED8; border-radius: 14px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                  </div>
+                  <span style="background: #DBEAFE; color: #1E40AF; font-size: 0.8rem; font-weight: 800; padding: 4px 12px; border-radius: 20px;">بوابة الطالب</span>
+                </div>
+
+                <h3 style="font-size: 1.3rem; font-weight: 900; color: var(--brand-navy); margin: 0 0 0.75rem;">تجربة تعليمية متكاملة للطالب</h3>
+                <p style="font-size: 0.9rem; color: var(--brand-text); line-height: 1.7; margin: 0 0 1.5rem;">
+                  يدخل الطالب برقم هاتفه وكلمة مروره الخاصة من أي هاتف أو جهاز كمبيوتر دون الحاجة لتحميل تطبيقات ثقيلة:
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 0.9rem; font-size: 0.9rem; color: #1E293B;">
+                  <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+                    <span style="color: #10B981; font-weight: 900; font-size: 1.1rem; line-height: 1.2;">✓</span>
+                    <div><strong>رفع الواجبات وملفات الـ PDF:</strong> إمكانية رفع حلول الواجبات والصور مباشرة من الهاتف مع تأكيد التسليم ومتابعة تصحيح المعلم.</div>
+                  </div>
+                  <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+                    <span style="color: #10B981; font-weight: 900; font-size: 1.1rem; line-height: 1.2;">✓</span>
+                    <div><strong>تحميل المذكرات والملازم:</strong> تنزيل مذكرات الشرح وملخصات الدروس والواجبات بنقرة واحدة في أي وقت.</div>
+                  </div>
+                  <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+                    <span style="color: #10B981; font-weight: 900; font-size: 1.1rem; line-height: 1.2;">✓</span>
+                    <div><strong>كشف درجات الكويزات:</strong> متابعة نتائج الامتحانات الدورية ومستواه الأكاديمي أولاً بأول.</div>
+                  </div>
+                  <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+                    <span style="color: #10B981; font-weight: 900; font-size: 1.1rem; line-height: 1.2;">✓</span>
+                    <div><strong>سجل الحضور الذاتي:</strong> معرفة سجل حضوره وغيابه وتأكيد التزامه بالحصص.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #E2E8F0; text-align: center;">
+                <span style="color: #64748B; font-size: 0.825rem; font-weight: 700;">تسليم الواجب ومراجعته أصبح رقمياً وسريعاً بنسبة 100%</span>
+              </div>
+            </div>
+
+            <!-- Parent Experience Card -->
+            <div style="background: #FFFFFF; border: 1.5px solid #BBF7D0; border-radius: 20px; padding: 2.25rem 2rem; box-shadow: 0 10px 30px rgba(5, 150, 105, 0.08); display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                  <div style="width: 50px; height: 50px; background: #ECFDF5; color: #059669; border-radius: 14px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </div>
+                  <span style="background: #DCFCE7; color: #166534; font-size: 0.8rem; font-weight: 800; padding: 4px 12px; border-radius: 20px;">بوابة ولي الأمر</span>
+                </div>
+
+                <h3 style="font-size: 1.3rem; font-weight: 900; color: var(--brand-navy); margin: 0 0 0.75rem;">اطمئنان وشفافية كاملة لولي الأمر</h3>
+                <p style="font-size: 0.9rem; color: var(--brand-text); line-height: 1.7; margin: 0 0 1.5rem;">
+                  رابط مخصص بضغطة واحدة من الواتساب يتيح لولي الأمر متابعة ابنه بدقة دون الحاجة للاتصال أو السؤال:
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 0.9rem; font-size: 0.9rem; color: #1E293B;">
+                  <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+                    <span style="color: #10B981; font-weight: 900; font-size: 1.1rem; line-height: 1.2;">✓</span>
+                    <div><strong>تنبيه فوري بالحضور والغياب:</strong> معرفة وقت دخول الطالب القاعة بالدقيقة بمجرد مسح الباركود.</div>
+                  </div>
+                  <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+                    <span style="color: #10B981; font-weight: 900; font-size: 1.1rem; line-height: 1.2;">✓</span>
+                    <div><strong>متابعة الواجبات المنزلية:</strong> معرفة هل سلّم الطالب الواجب كاملاً أم ناقصاً أم لم يسلّم مع ملاحظات المعلم.</div>
+                  </div>
+                  <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+                    <span style="color: #10B981; font-weight: 900; font-size: 1.1rem; line-height: 1.2;">✓</span>
+                    <div><strong>كشف درجات الكويزات الدورية:</strong> الاطلاع على تقييمات الامتحانات وترتيب الطالب ومعدل تقدمه.</div>
+                  </div>
+                  <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+                    <span style="color: #10B981; font-weight: 900; font-size: 1.1rem; line-height: 1.2;">✓</span>
+                    <div><strong>رسائل واتساب منسقة وتلقائية:</strong> نسخ أو إرسال تقرير المتابعة بضغطة زر واحدة إلى واتساب ولي الأمر.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #E2E8F0; text-align: center;">
+                <span style="color: #64748B; font-size: 0.825rem; font-weight: 700;">تعزيز ثقة أولياء الأمور واحترافية معلمي سنترلي المعتمدين</span>
+              </div>
+            </div>
+
+          </div>
         </div>
       </section>
 

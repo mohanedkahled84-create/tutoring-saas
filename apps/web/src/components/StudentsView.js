@@ -215,8 +215,8 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 const studentPhone = s.studentPhone || s.student_phone;
                 const parentPhone = s.parentPhone || s.parent_phone;
                 const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-platform.vercel.app') : 'https://centerly-platform.vercel.app';
-                const parentPortalUrl = parentPhone ? `${canonicalOrigin}/portal?phone=${encodeURIComponent(parentPhone)}` : `${canonicalOrigin}/portal`;
-                const studentPortalUrl = studentPhone ? `${canonicalOrigin}/portal?phone=${encodeURIComponent(studentPhone)}` : `${canonicalOrigin}/portal`;
+                const parentPortalUrl = parentPhone ? `${canonicalOrigin}/portal?role=parent&phone=${encodeURIComponent(parentPhone)}` : `${canonicalOrigin}/portal?role=parent`;
+                const studentPortalUrl = studentPhone ? `${canonicalOrigin}/portal?role=student&phone=${encodeURIComponent(studentPhone)}` : `${canonicalOrigin}/portal?role=student`;
                 const portalPassword = s.portal_password || s.portalPassword || (s.code ? String(s.code).padStart(6, '0') : '');
                 return `
                 <tr>

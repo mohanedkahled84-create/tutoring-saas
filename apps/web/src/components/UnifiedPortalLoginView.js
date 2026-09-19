@@ -4,16 +4,26 @@ import { escapeHtml } from '../utils/escapeHtml.js';
 /**
  * Centrly Unified Student & Parent Portal Login View
  * Route: /portal
- * Clean, lightweight, mobile-first login interface for students and parents.
+ * Clean, lightweight, mobile-first login interface with dedicated tabs for Students and Parents.
  * Authenticates against /api/public/portal/login
  */
 
 export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifier = '') {
   let presetIdentifier = initialIdentifier;
-  if (!presetIdentifier && typeof window !== 'undefined') {
+  let currentRole = 'parent';
+
+  if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
-    presetIdentifier = params.get('phone') || params.get('user') || params.get('identifier') || '';
+    if (!presetIdentifier) {
+      presetIdentifier = params.get('phone') || params.get('user') || params.get('identifier') || '';
+    }
+    const roleParam = params.get('role');
+    if (roleParam === 'student') {
+      currentRole = 'student';
+    }
   }
+
+  const isStudent = currentRole === 'student';
 
   const alertHtml = errorMessage
     ? `<div id="portalLoginAlert" style="padding: 0.75rem 1rem; border-radius: 0.65rem; margin-bottom: 1.25rem; font-size: 0.85rem; font-weight: 600; background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; display: flex; align-items: center; gap: 0.5rem;">
@@ -37,16 +47,38 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
         </div>
 
         <!-- Header -->
-        <div style="text-align: center; margin-bottom: 1.75rem;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
           <div style="margin: 0 auto 0.75rem; width: 56px; height: 56px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); border-radius: 1rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25); color: #fff; font-size: 1.5rem; font-weight: 900;">
             سـ
           </div>
-          <h1 style="font-size: 1.35rem; font-weight: 800; margin: 0 0 0.35rem 0; color: #0f172a;">
-            بوابة الطلاب وأولياء الأمور
+          <h1 id="portalHeadingText" style="font-size: 1.35rem; font-weight: 800; margin: 0 0 0.35rem 0; color: #0f172a;">
+            ${isStudent ? 'بوابة الطالب' : 'بوابة ولي الأمر'}
           </h1>
-          <p style="font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.5;">
-            سجّل دخولك لمتابعة الحضور، الواجبات، الكويزات وتحميل المذكرات
+          <p id="portalSubheadingText" style="font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.5;">
+            ${isStudent ? 'سجّل دخولك لتحميل المذكرات، تسليم الواجبات، ومتابعة درجاتك' : 'سجّل دخولك لمتابعة الحضور والغياب، الدرجات، والواجبات'}
           </p>
+        </div>
+
+        <!-- Account Type Switcher Tabs -->
+        <div style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 0.75rem; margin-bottom: 1.5rem; gap: 4px; border: 1px solid #e2e8f0;">
+          <button 
+            type="button" 
+            id="portalTabParent" 
+            onclick="window.centrlyApp && window.centrlyApp.switchPortalLoginRole ? window.centrlyApp.switchPortalLoginRole('parent') : null"
+            style="flex: 1; padding: 0.65rem 0.5rem; border: none; border-radius: 0.55rem; font-family: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: ${!isStudent ? '#ffffff' : 'transparent'}; color: ${!isStudent ? '#1e3a8a' : '#64748b'}; box-shadow: ${!isStudent ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};"
+          >
+            <span>👨‍👩‍👧</span>
+            <span>ولي أمر</span>
+          </button>
+          <button 
+            type="button" 
+            id="portalTabStudent" 
+            onclick="window.centrlyApp && window.centrlyApp.switchPortalLoginRole ? window.centrlyApp.switchPortalLoginRole('student') : null"
+            style="flex: 1; padding: 0.65rem 0.5rem; border: none; border-radius: 0.55rem; font-family: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: ${isStudent ? '#ffffff' : 'transparent'}; color: ${isStudent ? '#1d4ed8' : '#64748b'}; box-shadow: ${isStudent ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};"
+          >
+            <span>👨‍🎓</span>
+            <span>طالب</span>
+          </button>
         </div>
 
         ${alertHtml}
@@ -54,9 +86,11 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
         <!-- Login Form -->
         <form id="portalLoginForm" onsubmit="window.centrlyApp && window.centrlyApp.handlePortalLogin ? window.centrlyApp.handlePortalLogin(event) : event.preventDefault()">
           
+          <input type="hidden" id="portalRole" name="role" value="${isStudent ? 'student' : 'parent'}">
+
           <div style="margin-bottom: 1.15rem;">
-            <label for="portalIdentifier" style="display: block; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
-              رقم الهاتف أو كود الطالب
+            <label id="portalIdentifierLabel" for="portalIdentifier" style="display: block; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
+              ${isStudent ? 'رقم هاتف الطالب أو كود الطالب' : 'رقم هاتف ولي الأمر أو كود الطالب'}
             </label>
             <div style="position: relative;">
               <input 
@@ -77,8 +111,8 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
                 onblur="this.style.borderColor='#cbd5e1'"
               >
             </div>
-            <span style="display: block; font-size: 0.75rem; color: #94a3b8; margin-top: 0.3rem;">
-              يمكنك كتابة رقم هاتف الطالب أو ولي الأمر أو كود الطالب
+            <span id="portalIdentifierHelp" style="display: block; font-size: 0.75rem; color: #94a3b8; margin-top: 0.3rem;">
+              ${isStudent ? 'اكتب رقم هاتفك المسجل لدى المعلم أو كودك الشخصي' : 'اكتب رقم هاتف ولي الأمر أو كود الطالب'}
             </span>
           </div>
 
@@ -131,7 +165,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
             onmouseover="this.style.opacity='0.95'"
             onmouseout="this.style.opacity='1'"
           >
-            <span>دخول إلى البوابة</span>
+            <span id="portalSubmitBtnText">${isStudent ? 'دخول بوابة الطالب' : 'دخول بوابة ولي الأمر'}</span>
             <span id="portalSubmitSpinner" style="display: none;">⏳</span>
           </button>
         </form>
