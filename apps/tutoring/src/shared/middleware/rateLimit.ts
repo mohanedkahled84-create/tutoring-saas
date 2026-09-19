@@ -66,3 +66,14 @@ export const telemetryRateLimiter = rateLimit({
     });
   },
 });
+
+export const financialPinRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${(req as Request & { user?: { id?: string } }).user?.id || "anonymous"}:${req.ip}`,
+  handler: (_req: Request, res: Response) => {
+    res.status(429).json({ error: { code: "PIN_RATE_LIMITED", message: "تم إيقاف محاولات رمز الأمان مؤقتًا. حاول لاحقًا." } });
+  },
+});

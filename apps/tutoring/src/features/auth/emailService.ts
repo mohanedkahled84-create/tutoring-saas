@@ -33,6 +33,7 @@ export function formatVerificationEmailHtml(code: string, fullName?: string): st
           <!-- Header Banner -->
           <tr>
             <td style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%); padding: 32px 24px; text-align: center;">
+              <img src="https://centerly-eg.com/favicon.png" alt="Centrly Logo" width="54" height="54" style="width: 54px; height: 54px; border-radius: 12px; margin-bottom: 12px; display: inline-block; vertical-align: middle; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
               <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">Centrly | سنترلي</h1>
               <p style="color: #ccfbf1; margin: 6px 0 0 0; font-size: 14px; font-weight: 500;">المنصة الذكية لإدارة المدرسين والمراكز التعليمية</p>
             </td>
@@ -221,6 +222,7 @@ export function formatPinResetEmailHtml(code: string, fullName?: string): string
           <!-- Header Banner -->
           <tr>
             <td style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 32px 24px; text-align: center;">
+              <img src="https://centerly-eg.com/favicon.png" alt="Centrly Logo" width="54" height="54" style="width: 54px; height: 54px; border-radius: 12px; margin-bottom: 12px; display: inline-block; vertical-align: middle; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
               <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">Centrly | سنترلي</h1>
               <p style="color: #dbeafe; margin: 6px 0 0 0; font-size: 14px; font-weight: 500;">حماية وأمان الحسابات والبيانات المالية</p>
             </td>

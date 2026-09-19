@@ -6,6 +6,7 @@ import { requireCenterOwnerOrAdmin } from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
 import { supabasePublic } from "../../supabase.js";
 import { defaultEmailVerificationService } from "./emailService.js";
+import { financialPinRateLimiter } from "../../shared/middleware/rateLimit.js";
 
 export const settingsRouter = Router();
 
@@ -426,6 +427,7 @@ settingsRouter.post(
 // POST /api/settings/verify-pin - Verify financial security PIN
 settingsRouter.post(
   "/verify-pin",
+  financialPinRateLimiter,
   validateBody(verifyPinSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const userId = req.user?.id;

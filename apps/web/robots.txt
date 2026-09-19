@@ -5,6 +5,8 @@ Allow: /favicon.ico
 Allow: /favicon.png
 Allow: /favicon-*.png
 Allow: /apple-touch-icon.png
+Allow: /og-image.png
+Allow: /site.webmanifest
 Disallow: /api/
 Disallow: /dashboard/
 Disallow: /admin/
