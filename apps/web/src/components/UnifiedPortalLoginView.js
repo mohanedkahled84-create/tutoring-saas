@@ -118,7 +118,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
             <label for="portalPassword" style="display: block; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
               كلمة المرور
             </label>
-            <div style="position: relative;">
+            <div style="position: relative; display: flex; align-items: center;">
               <input 
                 type="password" 
                 id="portalPassword" 
@@ -127,7 +127,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
                 placeholder="••••••" 
                 required 
                 dir="ltr" 
-                style="width: 100%; box-sizing: border-box; padding-top: 0.75rem; padding-bottom: 0.75rem; padding-right: 0.9rem; padding-left: 2.85rem !important; border: 1.5px solid #cbd5e1; border-radius: 0.65rem; font-size: 0.95rem; font-family: inherit; letter-spacing: 2px; outline: none; transition: border-color 0.2s;"
+                style="width: 100%; display: block; box-sizing: border-box; padding-top: 0.75rem; padding-bottom: 0.75rem; padding-right: 0.9rem; padding-left: 2.85rem !important; border: 1.5px solid #cbd5e1; border-radius: 0.65rem; font-size: 0.95rem; font-family: inherit; letter-spacing: 2px; outline: none; transition: border-color 0.2s;"
                 onfocus="this.style.borderColor='#2563eb'"
                 onblur="this.style.borderColor='#cbd5e1'"
                 autocapitalize="none" 
@@ -142,7 +142,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
                 onmousedown="event.preventDefault()"
                 title="إظهار/إخفاء كلمة المرور" 
                 aria-label="إظهار/إخفاء كلمة المرور"
-                style="left: 8px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; z-index: 10;"
+                style="position: absolute !important; left: 8px !important; top: 0 !important; bottom: 0 !important; margin: auto 0 !important; width: 32px !important; height: 32px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; z-index: 10 !important; transform: none !important; padding: 0 !important;"
               >
                 ${getIcon('eye', 18)}
               </button>

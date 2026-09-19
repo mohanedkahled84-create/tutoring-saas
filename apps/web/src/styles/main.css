@@ -194,7 +194,7 @@ input[type="submit"] {
   cursor: pointer;
 }
 
-button:active,
+button:active:not(.password-toggle-btn),
 .btn:active,
 a.btn:active,
 .nav-link:active,
@@ -293,6 +293,7 @@ input[type="submit"]:active {
 }
 
 .form-input, .form-select, .form-textarea {
+  display: block;
   padding: 0.6rem 0.85rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--centrly-line);
@@ -301,6 +302,7 @@ input[type="submit"]:active {
   font-family: var(--font-family-arabic);
   font-size: 0.875rem;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .form-input:focus, .form-select:focus, .form-textarea:focus {
@@ -309,48 +311,67 @@ input[type="submit"]:active {
   box-shadow: 0 0 0 3px rgba(70, 101, 211, 0.15);
 }
 
-/* Password Visibility Toggle Button */
-.password-toggle-btn {
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
+/* Password Visibility Toggle Button - Locked Dead-Center */
+.password-toggle-btn,
+button.password-toggle-btn {
+  position: absolute !important;
+  left: 8px !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  margin-top: auto !important;
+  margin-bottom: auto !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 32px !important;
+  height: 32px !important;
+  transform: none !important;
   background: transparent !important;
   border: none !important;
   border-width: 0 !important;
   outline: none !important;
   box-shadow: none !important;
+  filter: none !important;
   -webkit-appearance: none !important;
   appearance: none !important;
   cursor: pointer;
   color: var(--centrly-text);
-  padding: 6px;
+  padding: 0 !important;
   border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  z-index: 10 !important;
   transition: color 0.15s ease, background-color 0.15s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.password-toggle-btn:hover {
+.password-toggle-btn:hover,
+button.password-toggle-btn:hover {
   color: var(--centrly-blue-700);
   background-color: rgba(70, 101, 211, 0.08) !important;
+  transform: none !important;
+  filter: none !important;
 }
 
 .password-toggle-btn:focus,
 .password-toggle-btn:focus-visible,
-.password-toggle-btn:active {
+.password-toggle-btn:active,
+button.password-toggle-btn:focus,
+button.password-toggle-btn:focus-visible,
+button.password-toggle-btn:active {
   outline: none !important;
   border: none !important;
   box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
   background-color: rgba(70, 101, 211, 0.12) !important;
 }
 
 .password-toggle-btn svg {
   display: block;
+  margin: auto;
   pointer-events: none;
 }
 
