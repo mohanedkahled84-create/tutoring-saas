@@ -1,6 +1,6 @@
 import { authService } from './services/auth.js?v=4.8.7';
 import { request, API_BASE_URL } from './services/api.js?v=4.8.7';
-import { renderSidebar } from './components/Sidebar.js?v=4.8.7';
+import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
 import { renderNavbar } from './components/Navbar.js';
 import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.8.7';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
@@ -1916,16 +1916,24 @@ class CentrlyApp {
     if (!backdrop) {
       backdrop = document.createElement('div');
       backdrop.id = 'appSidebarBackdrop';
-      backdrop.style.cssText = 'display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(2px); z-index: 999;';
+      backdrop.style.cssText = 'display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); z-index: 999; touch-action: none;';
       backdrop.onclick = () => this.toggleSidebar(true);
+      backdrop.addEventListener('touchmove', (e) => {
+        if (e.cancelable) e.preventDefault();
+      }, { passive: false });
       document.body.appendChild(backdrop);
     }
-    if (forceClose || (sidebar && sidebar.classList.contains('open'))) {
-      if (sidebar) sidebar.classList.remove('open');
-      backdrop.style.display = 'none';
-    } else if (sidebar) {
+    const isOpening = !forceClose && sidebar && !sidebar.classList.contains('open');
+    if (isOpening) {
       sidebar.classList.add('open');
       backdrop.style.display = 'block';
+      document.body.classList.add('sidebar-open');
+      document.documentElement.classList.add('sidebar-open');
+    } else {
+      if (sidebar) sidebar.classList.remove('open');
+      backdrop.style.display = 'none';
+      document.body.classList.remove('sidebar-open');
+      document.documentElement.classList.remove('sidebar-open');
     }
   }
 
