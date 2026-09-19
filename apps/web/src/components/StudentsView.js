@@ -222,9 +222,9 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 const displayGroupName = s.groupName || s.group_name || matchedGroup?.name || 'مجموعة عامة';
                 const studentPhone = s.studentPhone || s.student_phone;
                 const parentPhone = s.parentPhone || s.parent_phone;
-                const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-platform.vercel.app') : 'https://centerly-platform.vercel.app';
-                const parentPortalUrl = parentPhone ? `${canonicalOrigin}/portal?role=parent&phone=${encodeURIComponent(parentPhone)}` : `${canonicalOrigin}/portal?role=parent`;
-                const studentPortalUrl = studentPhone ? `${canonicalOrigin}/portal?role=student&phone=${encodeURIComponent(studentPhone)}` : `${canonicalOrigin}/portal?role=student`;
+                const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
+                const parentPortalUrl = `${canonicalOrigin}/portal`;
+                const studentPortalUrl = `${canonicalOrigin}/portal`;
                 const portalPassword = s.portal_password || s.portalPassword || (s.code ? String(s.code).padStart(6, '0') : '');
                 return `
                 <tr>
@@ -249,7 +249,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                       <!-- Password Badge -->
                       ${portalPassword ? `
                         <div style="font-size: 0.72rem; color: #1e3a8a; font-weight: 800; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; padding: 0.2rem 0.45rem; display: flex; align-items: center; justify-content: space-between;">
-                          <span style="color: #1e40af; font-size: 0.7rem;">🔑 كلمة المرور:</span>
+                          <span style="color: #1e40af; font-size: 0.7rem;">كلمة المرور:</span>
                           <span style="font-family: monospace; color: #1e3a8a; font-weight: 800; letter-spacing: 1.5px; font-size: 0.78rem;">${escapeHtml(portalPassword)}</span>
                         </div>
                       ` : ''}

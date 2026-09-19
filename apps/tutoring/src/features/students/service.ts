@@ -270,9 +270,16 @@ export class StudentsService {
 
     const cleanIdent = rawIdentifier.replace(/[\s\-\(\)\.]/g, "");
     const cleanStudentPhone = (student.student_phone || "").replace(/[\s\-\(\)\.]/g, "");
+    const cleanParentPhone = (student.parent_phone || "").replace(/[\s\-\(\)\.]/g, "");
 
     let role: "parent" | "student" = "parent";
-    if (dto.role === "student" || dto.role === "parent") {
+    // 1. If student phone and parent phone are distinct, auto-detect strictly by phone match:
+    if (cleanStudentPhone && cleanIdent === cleanStudentPhone && cleanIdent !== cleanParentPhone) {
+      role = "student";
+    } else if (cleanParentPhone && cleanIdent === cleanParentPhone && cleanIdent !== cleanStudentPhone) {
+      role = "parent";
+    } else if (dto.role === "student" || dto.role === "parent") {
+      // 2. If phone is shared between student & parent or identifier is student code, respect user's tab choice:
       role = dto.role;
     } else if (cleanStudentPhone && cleanIdent === cleanStudentPhone) {
       role = "student";

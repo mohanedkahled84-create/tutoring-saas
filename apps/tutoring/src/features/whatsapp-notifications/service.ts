@@ -2072,10 +2072,10 @@ export function generateParentPortalInviteMessage(params: {
   const url = params.portal_url;
 
   const greetings = [
-    `أهلاً بحضرتك ولي أمر الطالب (${student})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح! 🌟`,
+    `أهلاً بحضرتك ولي أمر الطالب (${student})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح.`,
     `السلام عليكم ورحمة الله وبركاته، تحياتنا الطيبة لولي أمر الطالب (${student}).`,
     `السلام عليكم ورحمة الله، أهلاً بحضرتك ولي أمر الطالب (${student}).`,
-    `تحياتنا لولي أمر الطالب (${student}) ونتمنى له دوام التميز والتقدم!`,
+    `تحياتنا لولي أمر الطالب (${student}) ونتمنى له دوام التميز والتقدم.`,
   ];
   const greeting = greetings[Math.floor(Math.random() * greetings.length)];
 
@@ -2088,9 +2088,9 @@ export function generateParentPortalInviteMessage(params: {
   const intro = intros[Math.floor(Math.random() * intros.length)];
 
   const saveAlerts = [
-    `📌 *تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.`,
-    `📌 *خطوة ضرورية:* نرجو *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط ولتصلك كافة الإشعارات والتقارير بانتظام.`,
-    `📌 *ملاحظة هامة:* فضلاً *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط المباشر واستلام إفادات الدرجات والغياب فور رصدها.`,
+    `*تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.`,
+    `*خطوة ضرورية:* نرجو *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط ولتصلك كافة الإشعارات والتقارير بانتظام.`,
+    `*ملاحظة هامة:* فضلاً *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط المباشر واستلام إفادات الدرجات والغياب فور رصدها.`,
   ];
   const saveAlert = saveAlerts[Math.floor(Math.random() * saveAlerts.length)];
 
@@ -2103,11 +2103,11 @@ export function generateParentPortalInviteMessage(params: {
   const closing = closings[Math.floor(Math.random() * closings.length)];
 
   const credentialsBlock = params.portal_password
-    ? `🌐 *رابط بوابة المتابعة:*
+    ? `*رابط بوابة المتابعة:*
 ${url}
 
-📱 *اسم الدخول (رقم هاتفك):* ${params.parent_phone || "رقم هاتفك المسجل"}
-🔑 *كلمة المرور:* ${params.portal_password}`
+*اسم الدخول (رقم هاتفك):* ${params.parent_phone || "رقم هاتفك المسجل"}
+*كلمة المرور:* ${params.portal_password}`
     : `*رابط المتابعة المباشر:*
 ${url}`;
 
@@ -2147,10 +2147,10 @@ export function generateStudentPortalInviteMessage(params: {
   const url = params.portal_url;
 
   const greetings = [
-    `أهلاً بك يا (${student})، نتمنى لك كل التوفيق والتميز دائماً! 🚀`,
+    `أهلاً بك يا (${student})، نتمنى لك كل التوفيق والتميز دائماً.`,
     `السلام عليكم ورحمة الله وبركاته، عزيزنا الطالب (${student}).`,
-    `تحياتنا الطيبة لك يا (${student}) وأهلاً بك معنا!`,
-    `أهلاً بك يا (${student}) في رحلة التفوق والنجاح! 🌟`,
+    `تحياتنا الطيبة لك يا (${student}) وأهلاً بك معنا.`,
+    `أهلاً بك يا (${student}) في رحلة التفوق والنجاح.`,
   ];
   const greeting = greetings[Math.floor(Math.random() * greetings.length)];
 
@@ -2163,9 +2163,9 @@ export function generateStudentPortalInviteMessage(params: {
   const intro = intros[Math.floor(Math.random() * intros.length)];
 
   const saveAlerts = [
-    `📌 *تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والمذكرات الجديدة.`,
-    `📌 *خطوة ضرورية:* نرجو *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط واستلام إشعارات الحصص والواجبات أولاً بأول.`,
-    `📌 *ملاحظة:* احرص على *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لضمان فتح الروابط مباشرة واستلام تنبيهات المادة باستمرار.`,
+    `*تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والمذكرات الجديدة.`,
+    `*خطوة ضرورية:* نرجو *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط واستلام إشعارات الحصص والواجبات أولاً بأول.`,
+    `*ملاحظة:* احرص على *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لضمان فتح الروابط مباشرة واستلام تنبيهات المادة باستمرار.`,
   ];
   const saveAlert = saveAlerts[Math.floor(Math.random() * saveAlerts.length)];
 
@@ -2177,11 +2177,11 @@ export function generateStudentPortalInviteMessage(params: {
   const closing = closings[Math.floor(Math.random() * closings.length)];
 
   const credentialsBlock = params.portal_password
-    ? `🌐 *رابط بوابتك التعليمية:*
+    ? `*رابط بوابتك التعليمية:*
 ${url}
 
-📱 *اسم الدخول (رقم هاتفك):* ${params.student_phone || "رقم هاتفك المسجل"}
-🔑 *كلمة المرور:* ${params.portal_password}`
+*اسم الدخول (رقم هاتفك):* ${params.student_phone || "رقم هاتفك المسجل"}
+*كلمة المرور:* ${params.portal_password}`
     : `*رابط بوابتك التعليمية المباشر:*
 ${url}`;
 

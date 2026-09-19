@@ -7,7 +7,7 @@ import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
-import { renderStudentsView } from './components/StudentsView.js?v=4.8.7';
+import { renderStudentsView } from './components/StudentsView.js?v=4.8.9';
 import { renderGroupsView } from './components/GroupsView.js?v=4.8.7';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
@@ -415,14 +415,23 @@ class CentrlyApp {
       return;
     }
 
-    // DEV-PORTAL: Unified Portal Route (/portal or ?view=portal)
+    // DEV-PORTAL: Unified Portal Route (/portal or ?view=portal or cached portal session)
     const cleanPath = (window.location.pathname || '').trim().replace(/\/+$/, '');
-    if (cleanPath === '/portal' || urlParams.get('view') === 'portal' || (urlParams.get('portal') === 'login' && !portalToken)) {
-      const cachedPortalToken = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||
-                                (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_token'));
-      const cachedPortalRole = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_role')) ||
-                               (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_role'));
+    const isPortalRoute = cleanPath === '/portal' || urlParams.get('view') === 'portal' || (urlParams.get('portal') === 'login' && !portalToken);
+
+    const cachedPortalToken = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||
+                              (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_token'));
+    const cachedPortalRole = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_role')) ||
+                             (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_role'));
+
+    if (isPortalRoute || (!portalToken && !this.user && !authService.hasSession() && cachedPortalToken && cleanPath === '')) {
       if (cachedPortalToken) {
+        try {
+          if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
+            window.history.replaceState(null, '', '/portal');
+          }
+        } catch (_) {}
+
         if (cachedPortalRole === 'student') {
           await this.loadStudentPortal(cachedPortalToken);
         } else {
@@ -727,11 +736,40 @@ class CentrlyApp {
   async loadParentPortal(token) {
     this._parentPortalToken = token;
     try {
-      const data = await request(`/public/parent-portal?token=${token}`);
+      if (typeof localStorage !== 'undefined' && token) {
+        localStorage.setItem('centrly_portal_token', token);
+        localStorage.setItem('centrly_portal_role', 'parent');
+      }
+      if (typeof sessionStorage !== 'undefined' && token) {
+        sessionStorage.setItem('centrly_portal_token', token);
+        sessionStorage.setItem('centrly_portal_role', 'parent');
+      }
+      if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
+        window.history.replaceState(null, '', '/portal');
+      }
+    } catch (_) {}
+
+    try {
+      const data = await request(`/public/parent-portal?token=${encodeURIComponent(token)}`);
+      if (data && (data.error || !data.student)) {
+        throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة ولي الأمر');
+      }
       document.getElementById('app').innerHTML = renderParentPortalView(data);
     } catch (err) {
+      const msg = err?.message || '';
+      const isExpired = msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED') || msg.includes('401');
+      if (isExpired) {
+        try {
+          localStorage.removeItem('centrly_portal_token');
+          localStorage.removeItem('centrly_portal_role');
+          sessionStorage.removeItem('centrly_portal_token');
+          sessionStorage.removeItem('centrly_portal_role');
+        } catch (_) {}
+        this.renderPortalLogin('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً');
+        return;
+      }
       document.getElementById('app').innerHTML = renderParentPortalView({
-        error: err.message || 'تعذر تحميل بيانات بوابة ولي الأمر. يرجى التحقق من صحة الرابط.',
+        error: msg || 'تعذر تحميل بيانات بوابة ولي الأمر. يرجى التحقق من صحة الرابط.',
       });
     }
   }
@@ -748,16 +786,40 @@ class CentrlyApp {
   async loadStudentPortal(token) {
     this._studentPortalToken = token;
     try {
-      if (token && typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('centrly_student_portal_token', token);
+      if (typeof localStorage !== 'undefined' && token) {
+        localStorage.setItem('centrly_portal_token', token);
+        localStorage.setItem('centrly_portal_role', 'student');
+      }
+      if (typeof sessionStorage !== 'undefined' && token) {
+        sessionStorage.setItem('centrly_portal_token', token);
+        sessionStorage.setItem('centrly_portal_role', 'student');
+      }
+      if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
+        window.history.replaceState(null, '', '/portal');
       }
     } catch (_) {}
+
     try {
-      const data = await request(`/public/parent-portal?token=${token}`);
+      const data = await request(`/public/parent-portal?token=${encodeURIComponent(token)}`);
+      if (data && (data.error || !data.student)) {
+        throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة الطالب');
+      }
       document.getElementById('app').innerHTML = renderStudentPortalView(data);
     } catch (err) {
+      const msg = err?.message || '';
+      const isExpired = msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED') || msg.includes('401');
+      if (isExpired) {
+        try {
+          localStorage.removeItem('centrly_portal_token');
+          localStorage.removeItem('centrly_portal_role');
+          sessionStorage.removeItem('centrly_portal_token');
+          sessionStorage.removeItem('centrly_portal_role');
+        } catch (_) {}
+        this.renderPortalLogin('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً');
+        return;
+      }
       document.getElementById('app').innerHTML = renderStudentPortalView({
-        error: err.message || 'تعذر تحميل بيانات بوابة الطالب. يرجى التحقق من صحة الرابط.',
+        error: msg || 'تعذر تحميل بيانات بوابة الطالب. يرجى التحقق من صحة الرابط.',
       });
     }
   }
@@ -873,19 +935,20 @@ class CentrlyApp {
       });
 
       if (res && res.success && res.token) {
-        if (rememberMe) {
-          try {
-            localStorage.setItem('centrly_portal_token', res.token);
-            localStorage.setItem('centrly_portal_role', res.role || 'parent');
-          } catch (_) {}
-        } else {
-          try {
-            sessionStorage.setItem('centrly_portal_token', res.token);
-            sessionStorage.setItem('centrly_portal_role', res.role || 'parent');
-          } catch (_) {}
-        }
+        try {
+          localStorage.setItem('centrly_portal_token', res.token);
+          localStorage.setItem('centrly_portal_role', res.role || 'parent');
+          sessionStorage.setItem('centrly_portal_token', res.token);
+          sessionStorage.setItem('centrly_portal_role', res.role || 'parent');
+        } catch (_) {}
 
         this.showToast('مرحباً بك! تم تسجيل الدخول بنجاح', 'success');
+
+        try {
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', '/portal');
+          }
+        } catch (_) {}
 
         if (res.role === 'student') {
           await this.loadStudentPortal(res.token);
@@ -6791,16 +6854,14 @@ class CentrlyApp {
     const parentPhone = student?.parent_phone || student?.parentPhone || 'رقم ولي الأمر';
     const studentName = student?.name || student?.full_name || 'الطالب';
     const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
-    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-platform.vercel.app') : 'https://centerly-platform.vercel.app';
-    const portalUrl = parentPhone && parentPhone !== 'رقم ولي الأمر'
-      ? `${canonicalOrigin}/portal?role=parent&phone=${encodeURIComponent(parentPhone)}`
-      : `${canonicalOrigin}/portal?role=parent`;
+    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
+    const portalUrl = `${canonicalOrigin}/portal`;
     const rawTeacher = this.user?.name || 'المعلم';
     const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
       ? rawTeacher
       : `مستر ${rawTeacher}`;
 
-    const textToCopy = `أهلاً بحضرتك ولي أمر الطالب (${studentName})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح! 🌟\n\nيسعدنا تزويدكم ببيانات بوابة المتابعة مع ${teacherName}:\n\n🌐 *رابط بوابة المتابعة:*\n${portalUrl}\n\n📱 *اسم الدخول (رقم هاتفك):* ${parentPhone}\n🔑 *كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنكم في أي وقت:*\n- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.\n- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.\n- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.\n\n📌 *تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.\n\nمع خالص تمنياتنا للطالب (${studentName}) بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
+    const textToCopy = `أهلاً بحضرتك ولي أمر الطالب (${studentName})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح!\n\nيسعدنا تزويدكم ببيانات بوابة المتابعة مع ${teacherName}:\n\n*رابط بوابة المتابعة:*\n${portalUrl}\n\n*اسم الدخول (رقم هاتفك):* ${parentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنكم في أي وقت:*\n- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.\n- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.\n- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.\n\n*تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.\n\nمع خالص تمنياتنا للطالب (${studentName}) بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
 
     await this.copyToClipboard(textToCopy, `تم نسخ رسالة واتساب الكاملة لولي أمر (${studentName}) بنجاح!`, 'رسالة واتساب ولي الأمر');
   }
@@ -6808,8 +6869,8 @@ class CentrlyApp {
   async previewParentPortal(studentId) {
     const student = (this.students || []).find(s => s.id === studentId);
     const phone = student?.parent_phone || student?.parentPhone || '';
-    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-platform.vercel.app') : 'https://centerly-platform.vercel.app';
-    const url = phone ? `${canonicalOrigin}/portal?role=parent&phone=${encodeURIComponent(phone)}` : `${canonicalOrigin}/portal?role=parent`;
+    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
+    const url = phone ? `${canonicalOrigin}/portal?role=parent&phone=${encodeURIComponent(phone)}` : `${canonicalOrigin}/portal`;
     window.open(url, '_blank');
   }
 
@@ -6818,16 +6879,14 @@ class CentrlyApp {
     const studentPhone = student?.student_phone || student?.studentPhone || 'رقم الطالب';
     const studentName = student?.name || student?.full_name || 'الطالب';
     const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
-    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-platform.vercel.app') : 'https://centerly-platform.vercel.app';
-    const portalUrl = studentPhone && studentPhone !== 'رقم الطالب'
-      ? `${canonicalOrigin}/portal?role=student&phone=${encodeURIComponent(studentPhone)}`
-      : `${canonicalOrigin}/portal?role=student`;
+    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
+    const portalUrl = `${canonicalOrigin}/portal`;
     const rawTeacher = this.user?.name || 'المعلم';
     const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
       ? rawTeacher
       : `مستر ${rawTeacher}`;
 
-    const textToCopy = `أهلاً بك يا (${studentName})، نتمنى لك كل التوفيق والتميز دائماً! 🚀\n\nتم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع ${teacherName}:\n\n🌐 *رابط بوابتك التعليمية:*\n${portalUrl}\n\n📱 *اسم الدخول (رقم هاتفك):* ${studentPhone}\n🔑 *كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\n📌 *تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والواجبات أولاً بأول.\n\nمع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
+    const textToCopy = `أهلاً بك يا (${studentName})، نتمنى لك كل التوفيق والتميز دائماً!\n\nتم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع ${teacherName}:\n\n*رابط بوابتك التعليمية:*\n${portalUrl}\n\n*اسم الدخول (رقم هاتفك):* ${studentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\n*تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والواجبات أولاً بأول.\n\nمع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
 
     await this.copyToClipboard(textToCopy, `تم نسخ رسالة واتساب الكاملة للطالب (${studentName}) بنجاح!`, 'رسالة واتساب الطالب');
   }
@@ -6835,8 +6894,8 @@ class CentrlyApp {
   async previewStudentPortal(studentId) {
     const student = (this.students || []).find(s => s.id === studentId);
     const phone = student?.student_phone || student?.studentPhone || '';
-    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-platform.vercel.app') : 'https://centerly-platform.vercel.app';
-    const url = phone ? `${canonicalOrigin}/portal?role=student&phone=${encodeURIComponent(phone)}` : `${canonicalOrigin}/portal?role=student`;
+    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
+    const url = phone ? `${canonicalOrigin}/portal?role=student&phone=${encodeURIComponent(phone)}` : `${canonicalOrigin}/portal`;
     window.open(url, '_blank');
   }
 
@@ -6853,11 +6912,11 @@ class CentrlyApp {
 
     const openDirectFallback = async () => {
       try {
-        const canonicalOrigin = 'https://centerly-platform.vercel.app';
-        const portalUrl = `${canonicalOrigin}/portal?role=parent&phone=${encodeURIComponent(parentPhone)}`;
+        const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
+        const portalUrl = `${canonicalOrigin}/portal`;
         const pass = student?.portal_password || '123456';
         const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
-        const msg = `أهلاً بحضرتك ولي أمر الطالب (${studentName})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح! 🌟\n\nيسعدنا تزويدكم ببيانات بوابة المتابعة مع ${teacherName}:\n\n🌐 *رابط بوابة المتابعة:*\n${portalUrl}\n\n📱 *اسم الدخول (رقم هاتفك):* ${parentPhone}\n🔑 *كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنكم في أي وقت:*\n- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.\n- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.\n- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.\n\n📌 *تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.\n\nمع خالص تمنياتنا للطالب (${studentName}) بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
+        const msg = `أهلاً بحضرتك ولي أمر الطالب (${studentName})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح!\n\nيسعدنا تزويدكم ببيانات بوابة المتابعة مع ${teacherName}:\n\n*رابط بوابة المتابعة:*\n${portalUrl}\n\n*اسم الدخول (رقم هاتفك):* ${parentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنكم في أي وقت:*\n- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.\n- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.\n- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.\n\n*تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.\n\nمع خالص تمنياتنا للطالب (${studentName}) بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
         this.openDirectWhatsAppFallbackModal(studentName, parentPhone, msg, () => {
           if (student) {
             student.parent_portal_sent_at = new Date().toISOString();
@@ -6909,11 +6968,11 @@ class CentrlyApp {
 
     const openDirectFallback = async () => {
       try {
-        const canonicalOrigin = 'https://centerly-platform.vercel.app';
-        const studentUrl = `${canonicalOrigin}/portal?role=student&phone=${encodeURIComponent(studentPhone)}`;
+        const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
+        const studentUrl = `${canonicalOrigin}/portal`;
         const pass = student?.portal_password || '123456';
         const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
-        const msg = `أهلاً بك يا (${studentName})، نتمنى لك كل التوفيق والتميز دائماً! 🚀\n\nتم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع ${teacherName}:\n\n🌐 *رابط بوابتك التعليمية:*\n${studentUrl}\n\n📱 *اسم الدخول (رقم هاتفك):* ${studentPhone}\n🔑 *كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\n📌 *تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والواجبات أولاً بأول.\n\nمع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
+        const msg = `أهلاً بك يا (${studentName})، نتمنى لك كل التوفيق والتميز دائماً!\n\nتم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع ${teacherName}:\n\n*رابط بوابتك التعليمية:*\n${studentUrl}\n\n*اسم الدخول (رقم هاتفك):* ${studentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\n*تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والواجبات أولاً بأول.\n\nمع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
         this.openDirectWhatsAppFallbackModal(studentName, studentPhone, msg, () => {
           if (student) {
             student.student_portal_sent_at = new Date().toISOString();

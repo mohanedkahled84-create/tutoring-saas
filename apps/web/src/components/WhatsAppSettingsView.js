@@ -178,11 +178,11 @@ export function renderWhatsAppSettingsView(data = {}) {
               <span class="badge badge-blue">روابط المتابعة</span>
             </div>
             <div style="background: var(--centrly-white); border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
-              أهلاً بحضرتك ولي أمر الطالب (<strong>{اسم_الطالب}</strong>)، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح! 🌟<br>
+              أهلاً بحضرتك ولي أمر الطالب (<strong>{اسم_الطالب}</strong>)، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح!<br>
               يسعدنا تزويدكم ببيانات بوابة المتابعة الخاصة بمتابعة مستواه مع <strong>{اسم_المعلم}</strong>:<br><br>
-              🌐 <strong>رابط بوابة المتابعة:</strong> https://centerly-platform.vercel.app/portal<br>
-              📱 <strong>اسم الدخول (رقم هاتفك):</strong> {رقم_ولي_الأمر}<br>
-              🔑 <strong>كلمة المرور:</strong> {كلمة_المرور_تلقائياً}<br><br>
+              <strong>رابط بوابة المتابعة:</strong> https://centerly-eg.com/portal<br>
+              <strong>اسم الدخول (رقم هاتفك):</strong> {رقم_ولي_الأمر}<br>
+              <strong>كلمة المرور:</strong> {كلمة_المرور_تلقائياً}<br><br>
               • من خلال هذه البوابة يمكنكم متابعة تسجيل الحضور والغياب فور دخول الحصة، درجات الكويزات، وحالة الواجبات أولاً بأول.<br>
               • <strong>تنبيه هام:</strong> يرجى حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات بانتظام.
             </div>
@@ -195,11 +195,11 @@ export function renderWhatsAppSettingsView(data = {}) {
               <span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #0284c7;">بوابة الطالب</span>
             </div>
             <div style="background: var(--centrly-white); border: 1px dashed var(--centrly-line); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; line-height: 1.7; color: var(--centrly-ink);">
-              أهلاً بك يا (<strong>{اسم_الطالب}</strong>)، نتمنى لك كل التوفيق والتميز دائماً! 🚀<br>
+              أهلاً بك يا (<strong>{اسم_الطالب}</strong>)، نتمنى لك كل التوفيق والتميز دائماً!<br>
               تم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع <strong>{اسم_المعلم}</strong>:<br><br>
-              🌐 <strong>رابط بوابتك التعليمية:</strong> https://centerly-platform.vercel.app/portal<br>
-              📱 <strong>اسم الدخول (رقم هاتفك):</strong> {رقم_هاتف_الطالب}<br>
-              🔑 <strong>كلمة المرور:</strong> {كلمة_المرور_تلقائياً}<br><br>
+              <strong>رابط بوابتك التعليمية:</strong> https://centerly-eg.com/portal<br>
+              <strong>اسم الدخول (رقم هاتفك):</strong> {رقم_هاتف_الطالب}<br>
+              <strong>كلمة المرور:</strong> {كلمة_المرور_تلقائياً}<br><br>
               • من خلال هذه البوابة يمكنك تحميل المذكرات وملازم الشرح، رفع حلول الواجبات بصيغة PDF، والاطلاع على درجات كويزاتك.<br>
               • <strong>تنبيه:</strong> يرجى حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً لتفعيل الرابط واستلام تنبيهات الحصص والواجبات أولاً بأول.
             </div>

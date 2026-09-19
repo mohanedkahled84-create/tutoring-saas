@@ -101,8 +101,8 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
 
   return `
     <aside class="app-sidebar" id="appSidebar">
-      <div class="sidebar-header" style="position: relative;">
-        <div class="brand-logo-badge" style="background: linear-gradient(135deg, #1e3a8a, #2563eb); border-radius: 10px; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
+      <div class="sidebar-header" style="position: relative; flex-shrink: 0;">
+        <div class="brand-logo-badge" style="background: linear-gradient(135deg, #1e3a8a, #2563eb); border-radius: 10px; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(37,99,235,0.3); flex-shrink: 0;">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" fill="#F59E0B"/>
             <path d="M12 15L3 10.09L12 5.18L21 10.09L12 15Z" fill="#FFFFFF" fill-opacity="0.95"/>
@@ -127,7 +127,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
         </button>
       </div>
 
-      <nav class="sidebar-nav" style="padding: 0.5rem 0.6rem; overflow-y: auto;">
+      <nav class="sidebar-nav" style="padding: 0.5rem 0.6rem; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; flex: 1 1 0%; min-height: 0;">
         ${sections.map((sec, secIdx) => `
           <div class="sidebar-section" style="${secIdx > 0 ? 'margin-top: 0.85rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;' : ''}">
             <div style="font-size: 0.68rem; font-weight: 800; color: #94a3b8; padding: 0.3rem 0.6rem; display: flex; align-items: center; justify-content: space-between; letter-spacing: 0.02em;">
@@ -157,7 +157,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
         `).join('')}
       </nav>
 
-      <div style="padding: 0.85rem 1rem; border-top: 1px solid var(--centrly-line);">
+      <div class="sidebar-footer" style="padding: 0.85rem 1rem; border-top: 1px solid var(--centrly-line); flex-shrink: 0; background: var(--centrly-white);">
         <button class="btn btn-secondary btn-sm" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onclick="window.centrlyApp.promptLogout()">
           ${getIcon('close', 16)}
           <span>تسجيل الخروج</span>

@@ -18,7 +18,11 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   z-index: 40;
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 .sidebar-header {
@@ -27,6 +31,7 @@
   align-items: center;
   gap: 0.75rem;
   border-bottom: 1px solid var(--centrly-line);
+  flex-shrink: 0;
 }
 
 .brand-logo-badge {
@@ -38,17 +43,15 @@
   align-items: center;
   justify-content: center;
   color: var(--centrly-white);
-  font-weight: 900;
-  font-size: 1.25rem;
-  font-family: var(--font-family-heading);
+  font-weight: 700;
   box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
 }
 
 .brand-name {
-  font-size: 1.1rem;
   font-weight: 800;
+  font-size: 1.15rem;
   color: var(--centrly-ink);
-  font-family: var(--font-family-heading);
   line-height: 1.2;
 }
 
@@ -62,8 +65,21 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  overflow-y: auto;
-  flex-grow: 1;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+}
+
+.sidebar-footer {
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--centrly-line);
+  flex-shrink: 0;
+  background: var(--centrly-white);
 }
 
 .nav-link {
@@ -535,25 +551,53 @@ button.password-toggle-btn:active {
 
 /* Responsive Drawer & Comprehensive Mobile Optimizations */
 @media (max-width: 768px) {
+  /* Prevent background screen from scrolling when mobile sidebar is open */
+  body.sidebar-open,
+  html.sidebar-open {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    touch-action: none !important;
+  }
+
   #sidebarToggle {
     display: inline-flex !important;
   }
   .app-sidebar {
     position: fixed;
-    right: -290px;
+    right: -320px;
     top: 0;
     bottom: 0;
+    width: min(295px, 85vw);
     height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     z-index: 1000;
     transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden !important;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
   .app-sidebar.open {
     right: 0;
-    box-shadow: -6px 0 25px rgba(0, 0, 0, 0.2);
+    box-shadow: -6px 0 35px rgba(0, 0, 0, 0.35);
   }
   .app-sidebar .mobile-close-btn {
     display: inline-flex !important;
+  }
+  .app-sidebar .sidebar-nav {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    padding-bottom: 2rem !important;
   }
 
   /* Prevent iOS Safari from automatically zooming into inputs on focus */
