@@ -20,24 +20,8 @@ export class SupabaseAuthRepository implements IAuthRepository {
     private readonly emailService: EmailVerificationService = defaultEmailVerificationService
   ) {}
 
-  async signIn(emailOrPhone: string, password: string): Promise<LoginResult> {
-    const rawIdentifier = emailOrPhone.trim();
-    let targetEmail = rawIdentifier.toLowerCase();
-
-    // 1. Phone number resolution if identifier is not an email
-    if (!rawIdentifier.includes("@")) {
-      const { data: resolvedEmail, error: phoneErr } = await this.publicClient.rpc(
-        "get_email_by_phone",
-        { p_phone: rawIdentifier }
-      );
-
-      if (phoneErr || !resolvedEmail) {
-        throw new Error("INVALID_CREDENTIALS");
-      }
-      targetEmail = String(resolvedEmail).trim().toLowerCase();
-    }
-
-    // 2. Mandatory email verification check before login
+  private async _authenticateWithEmail(targetEmail: string, password: string): Promise<LoginResult> {
+    // 1. Mandatory email verification check before login
     try {
       const { data: isConfirmed } = await this.publicClient.rpc("is_email_confirmed", {
         p_email: targetEmail,
@@ -56,7 +40,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
       // If RPC is unavailable or fails non-critically, proceed to Supabase signInWithPassword
     }
 
-    // 3. Authenticate with Supabase Auth
+    // 2. Authenticate with Supabase Auth
     const { data, error } = await this.publicClient.auth.signInWithPassword({
       email: targetEmail,
       password,
@@ -88,6 +72,99 @@ export class SupabaseAuthRepository implements IAuthRepository {
       refresh_token: data.session.refresh_token,
       expires_in: data.session.expires_in,
     };
+  }
+
+  async signIn(emailOrPhone: string, password: string): Promise<LoginResult> {
+    const rawIdentifier = (emailOrPhone || "").trim();
+    if (!rawIdentifier) {
+      throw new Error("INVALID_CREDENTIALS");
+    }
+
+    // 1. Direct email authentication
+    if (rawIdentifier.includes("@")) {
+      return await this._authenticateWithEmail(rawIdentifier.toLowerCase(), password);
+    }
+
+    // 2. Phone number resolution: normalize Arabic digits
+    const cleanPhone = rawIdentifier
+      .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632))
+      .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+      .trim();
+
+    const candidateEmails: string[] = [];
+
+    // Query RPC get_emails_by_phone to get all accounts linked to this phone
+    try {
+      const { data: emailsData, error: emailsErr } = await this.publicClient.rpc(
+        "get_emails_by_phone",
+        { p_phone: cleanPhone }
+      );
+      if (!emailsErr && Array.isArray(emailsData)) {
+        for (const row of emailsData) {
+          const em = typeof row === "string" ? row : (row as any)?.email;
+          if (em && !candidateEmails.includes(em.toLowerCase())) {
+            candidateEmails.push(em.toLowerCase());
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Fallback: get_email_by_phone
+    if (candidateEmails.length === 0) {
+      try {
+        const { data: singleEmail } = await this.publicClient.rpc(
+          "get_email_by_phone",
+          { p_phone: cleanPhone }
+        );
+        if (singleEmail) {
+          const em = String(singleEmail).trim().toLowerCase();
+          if (em && !candidateEmails.includes(em)) {
+            candidateEmails.push(em);
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Direct query fallback on users table via adminClient
+    if (candidateEmails.length === 0 && this.adminClient) {
+      try {
+        const digitsOnly = cleanPhone.replace(/\D/g, "");
+        const { data: dbUsers } = await this.adminClient
+          .from("users")
+          .select("email, phone")
+          .not("phone", "is", null);
+
+        if (Array.isArray(dbUsers)) {
+          for (const u of dbUsers) {
+            const uPhoneDigits = String(u.phone || "").replace(/\D/g, "");
+            if (uPhoneDigits && (uPhoneDigits === digitsOnly || uPhoneDigits.endsWith(digitsOnly) || digitsOnly.endsWith(uPhoneDigits))) {
+              if (u.email && !candidateEmails.includes(u.email.toLowerCase())) {
+                candidateEmails.push(u.email.toLowerCase());
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (candidateEmails.length === 0) {
+      throw new Error("INVALID_CREDENTIALS");
+    }
+
+    // Attempt login with each candidate email matching the phone number
+    let lastError: any = null;
+    for (const targetEmail of candidateEmails) {
+      try {
+        return await this._authenticateWithEmail(targetEmail, password);
+      } catch (err) {
+        lastError = err;
+        if ((err as any)?.code === "EMAIL_NOT_VERIFIED") {
+          throw err;
+        }
+      }
+    }
+
+    throw lastError || new Error("INVALID_CREDENTIALS");
   }
 
   async refreshToken(refreshToken: string): Promise<LoginResult> {
@@ -422,9 +499,21 @@ export class FakeAuthRepository implements IAuthRepository {
     let targetEmail = raw.toLowerCase();
 
     if (!raw.includes("@")) {
-      const foundByPhone = this.users.find((u) => u.phone === raw || u.phone === `+20${raw.replace(/^0/, "")}`);
-      if (foundByPhone) {
-        targetEmail = foundByPhone.email.toLowerCase();
+      const clean = raw
+        .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632))
+        .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+        .trim();
+      const matchingUsers = this.users.filter(
+        (u) =>
+          u.phone === clean ||
+          u.phone === `+20${clean.replace(/^0/, "")}` ||
+          (u.phone && clean && u.phone.replace(/\D/g, "") === clean.replace(/\D/g, ""))
+      );
+      const matched = matchingUsers.find((u) => u.password === password);
+      if (matched) {
+        targetEmail = matched.email.toLowerCase();
+      } else if (matchingUsers.length > 0) {
+        targetEmail = matchingUsers[0].email.toLowerCase();
       }
     }
 

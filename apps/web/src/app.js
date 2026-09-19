@@ -1396,7 +1396,13 @@ class CentrlyApp {
       btn.innerHTML = '<span style="display:inline-block;width:1rem;height:1rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-left:0.5rem;vertical-align:middle;"></span> جارٍ تسجيل الدخول...';
     }
 
-    const rawIdentifier = document.getElementById('loginEmail')?.value?.trim() || '';
+    let rawIdentifier = document.getElementById('loginEmail')?.value?.trim() || '';
+    if (!rawIdentifier.includes('@')) {
+      rawIdentifier = rawIdentifier
+        .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632))
+        .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+        .trim();
+    }
     const password = document.getElementById('loginPassword')?.value?.trim() || '';
 
     try {
