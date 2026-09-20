@@ -2145,10 +2145,8 @@ class CentrlyApp {
 
     const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-    const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'coupons', 'activity-logs'];
-    if (isAdmin && !adminRoutes.includes(route)) {
-      route = 'admin-dashboard';
-    } else if (!isAdmin && adminRoutes.includes(route)) {
+    const dedicatedAdminOnlyRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants'];
+    if (!isAdmin && dedicatedAdminOnlyRoutes.includes(route)) {
       route = isCenter ? 'center-dashboard' : 'dashboard';
     }
 
@@ -2262,11 +2260,6 @@ class CentrlyApp {
           break;
         }
         case 'coupons': {
-          const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
-          if (!isAdmin) {
-            this.navigate((this.user?.role === 'center_owner' || this.user?.account_type === 'center') ? 'center-dashboard' : 'dashboard');
-            return;
-          }
           await this.loadCoupons();
           this.renderMainContent();
           break;
@@ -2660,6 +2653,8 @@ class CentrlyApp {
             ? repRes.leaderboard.slice(0, 5)
             : [];
 
+          await this.loadCoupons().catch(() => {});
+
           this.dashboardData = {
             stats: {
               totalStudents: students.length,
@@ -2675,6 +2670,7 @@ class CentrlyApp {
             assistants: assistants,
             atRiskStudents: atRisk,
             topPerformers: leaderboard,
+            giftCodes: this.giftCodes || [],
           };
           this.saveCache('dashboardData', this.dashboardData);
           this.saveCache('students', students);
@@ -3059,19 +3055,8 @@ class CentrlyApp {
         return renderAdminPaymentProofsView(this.adminProofsData || {}, this.adminProofsFilter || 'pending');
       case 'admin-tenants':
         return renderAdminTenantsView(this.adminTenantsData || {}, this.adminTenantsFilter || 'all', this.adminTenantsSearchQuery || '');
-      case 'coupons': {
-        const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
-        if (!isAdmin) {
-          return (this.user?.role === 'center_owner' || this.user?.account_type === 'center')
-            ? renderCenterOwnerDashboard(this.centerDashboardState)
-            : renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
-                hasPin: this.hasSecurityPin,
-                isUnlocked: this.isFinancialUnlocked,
-                hideNumbers: this.hideFinancialNumbers,
-              });
-        }
+      case 'coupons':
         return renderCouponsView(this.giftCodes || [], this.user || {});
-      }
       case 'dashboard':
         return renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
           hasPin: this.hasSecurityPin,
@@ -8977,9 +8962,16 @@ https://centerly-platform.vercel.app/p/p16766044
     if (existing) existing.remove();
 
     this.currentProofImageData = null;
-    this.appliedCouponCode = null;
     this.originalAmount = Number(amount);
-    this.currentEffectiveAmount = Number(amount);
+    let effective = Number(amount);
+    if (this.appliedCouponData) {
+      if (this.appliedCouponData.discount_percent) {
+        effective = Math.max(0, Math.round(Number(amount) * (1 - (this.appliedCouponData.discount_percent / 100))));
+      } else if (this.appliedCouponData.discount_amount) {
+        effective = Math.max(0, Number(amount) - Number(this.appliedCouponData.discount_amount));
+      }
+    }
+    this.currentEffectiveAmount = effective;
 
     const isYearly = (billingCycle === 'yearly');
     const periodLabel = isYearly ? 'اشتراك سنوي (خصم 20%)' : 'اشتراك شهري';
@@ -8991,7 +8983,7 @@ https://centerly-platform.vercel.app/p/p16766044
             <div>
               <h3 class="card-title" style="margin: 0; font-size: 1.15rem; font-weight: 800;">الاشتراك في ${escapeHtml(planName)}</h3>
               <p id="proofAmountSummary" style="font-size: 0.85rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
-                المبلغ المطلوب: <strong id="proofDisplayAmount" style="color: var(--centrly-blue-700);">${Number(amount).toLocaleString('ar-EG')} ج.م</strong> (${periodLabel})
+                المبلغ المطلوب: <strong id="proofDisplayAmount" style="color: var(--centrly-blue-700);">${this.appliedCouponData ? `<span style="text-decoration: line-through; color: #94a3b8; font-size: 0.85rem; margin-left: 0.35rem;">${Number(amount).toLocaleString('ar-EG')}</span> ${Number(effective).toLocaleString('ar-EG')} ج.م` : `${Number(amount).toLocaleString('ar-EG')} ج.م`}</strong> (${periodLabel})
               </p>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closePaymentProofModal()" style="border: none; cursor: pointer; padding: 0.35rem 0.6rem; display: flex; align-items: center;">${getIcon('close', 16, '#64748b')}</button>
@@ -9013,7 +9005,7 @@ https://centerly-platform.vercel.app/p/p16766044
                 </button>
               </div>
               <div id="proofTransferInstruction" style="font-size: 0.775rem; color: #4b5563; margin-top: 0.4rem; line-height: 1.5;">
-                قم بتحويل المبلغ <strong>(${Number(amount).toLocaleString('ar-EG')} ج.م)</strong> إلى هذا الرقم عبر إنستاباي أو من محفظتك، ثم أرفق الاسكرين شوت أدناه.
+                قم بتحويل المبلغ ${this.appliedCouponData ? 'المخفض ' : ''}<strong>(${Number(effective).toLocaleString('ar-EG')} ج.م)</strong> إلى هذا الرقم عبر إنستاباي أو من محفظتك، ثم أرفق الاسكرين شوت أدناه.
               </div>
             </div>
 
@@ -9024,12 +9016,14 @@ https://centerly-platform.vercel.app/p/p16766044
                 <span>لديك كود هدية أو كوبون خصم؟</span>
               </label>
               <div style="display: flex; gap: 0.4rem;">
-                <input type="text" id="couponCodeInput" class="form-input" placeholder="اكتب كود الخصم" style="flex: 1; text-transform: uppercase; font-weight: 700; font-family: monospace; font-size: 0.85rem;" autocomplete="off">
-                <button type="button" id="btnApplyCoupon" class="btn btn-secondary" onclick="window.centrlyApp.applyCouponCode()" style="font-weight: 800; font-size: 0.825rem; padding: 0.4rem 1rem; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700); cursor: pointer;">
-                  تطبيق
+                <input type="text" id="couponCodeInput" class="form-input" placeholder="اكتب كود الخصم" style="flex: 1; text-transform: uppercase; font-weight: 700; font-family: monospace; font-size: 0.85rem;" autocomplete="off" value="${escapeHtml(this.appliedCouponCode || '')}" ${this.appliedCouponData ? 'disabled' : ''}>
+                <button type="button" id="btnApplyCoupon" class="btn btn-secondary" onclick="window.centrlyApp.applyCouponCode()" style="font-weight: 800; font-size: 0.825rem; padding: 0.4rem 1rem; border-color: var(--centrly-blue-700); color: ${this.appliedCouponData ? '#ffffff' : 'var(--centrly-blue-700)'}; background: ${this.appliedCouponData ? '#10b981' : 'transparent'}; cursor: pointer;" ${this.appliedCouponData ? 'disabled' : ''}>
+                  ${this.appliedCouponData ? 'مفعّل ✓' : 'تطبيق'}
                 </button>
               </div>
-              <div id="couponFeedback" style="display: none; font-size: 0.78rem; font-weight: 700; margin-top: 0.4rem; padding: 0.3rem 0.5rem; border-radius: 6px;"></div>
+              <div id="couponFeedback" style="${this.appliedCouponData ? 'display: block; background: #ecfdf5; color: #059669;' : 'display: none;'} font-size: 0.78rem; font-weight: 700; margin-top: 0.4rem; padding: 0.3rem 0.5rem; border-radius: 6px;">
+                ${this.appliedCouponData ? `تم تطبيق الكود (${escapeHtml(this.appliedCouponCode)}) بنجاح!` : ''}
+              </div>
             </div>
 
             <!-- Transfer Method Selection -->
@@ -9146,6 +9140,7 @@ https://centerly-platform.vercel.app/p/p16766044
 
       if (res && res.valid) {
         this.appliedCouponCode = res.gift_code?.code || code;
+        this.appliedCouponData = res.gift_code || { code, discount_percent: res.discount_percent, discount_amount: res.discount_amount };
         this.currentEffectiveAmount = res.final_amount;
 
         if (feedback) {
@@ -9184,6 +9179,71 @@ https://centerly-platform.vercel.app/p/p16766044
       if (applyBtn) {
         applyBtn.disabled = false;
         applyBtn.innerText = 'تطبيق';
+      }
+    }
+  }
+
+  async applyBillingCouponFromView() {
+    const input = document.getElementById('billingDiscountCodeInput');
+    const feedback = document.getElementById('billingDiscountFeedback');
+    const applyBtn = document.getElementById('btnApplyBillingDiscount');
+    const rawCode = (input ? input.value : '').trim().toUpperCase();
+
+    if (!rawCode) {
+      this.showToast('يرجى كتابة كود الخصم أولاً', 'warning');
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#dc2626';
+        feedback.style.borderColor = '#fecaca';
+        feedback.innerText = 'يرجى إدخال كود الخصم أولاً';
+      }
+      return;
+    }
+
+    if (applyBtn) {
+      applyBtn.disabled = true;
+      applyBtn.innerText = 'جاري التحقق...';
+    }
+
+    try {
+      const res = await request('/billing/validate-coupon', {
+        method: 'POST',
+        body: { code: rawCode, amount: 499 },
+      });
+
+      if (res && res.valid) {
+        this.appliedCouponCode = res.gift_code?.code || rawCode;
+        this.appliedCouponData = res.gift_code || { code: rawCode, discount_percent: res.discount_percent || 20, discount_amount: res.discount_amount };
+        const discountLabel = this.appliedCouponData.discount_percent 
+          ? `${this.appliedCouponData.discount_percent}%` 
+          : `${this.appliedCouponData.discount_amount || res.discount_amount} ج.م`;
+
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.background = '#ecfdf5';
+          feedback.style.color = '#065f46';
+          feedback.style.borderColor = '#a7f3d0';
+          feedback.innerText = `تم تفعيل كود الخصم (${this.appliedCouponCode}) بنجاح! خصم بقيمة ${discountLabel} على كافة الباقات.`;
+        }
+        this.showToast(`تم تفعيل كود الخصم (${this.appliedCouponCode}) بنجاح!`, 'success');
+        this.renderMainContent();
+      } else {
+        throw new Error(res?.error?.message || 'كود الخصم غير صالح أو منتهي الصلاحية');
+      }
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#dc2626';
+        feedback.style.borderColor = '#fecaca';
+        feedback.innerText = err.message || 'كود الخصم غير صالح أو منتهي الصلاحية';
+      }
+      this.showToast(err.message || 'كود الخصم غير صالح', 'error');
+    } finally {
+      if (applyBtn) {
+        applyBtn.disabled = false;
+        applyBtn.innerText = 'تطبيق الخصم';
       }
     }
   }
@@ -9316,14 +9376,9 @@ https://centerly-platform.vercel.app/p/p16766044
   // ==========================================================================
 
   async loadCoupons() {
-    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
-    if (!isAdmin) {
-      this.giftCodes = [];
-      return;
-    }
     try {
-      const res = await request('/admin/gift-codes').catch(async () => {
-        return await request('/billing/gift-codes').catch(() => ({ gift_codes: [] }));
+      const res = await request('/billing/gift-codes').catch(async () => {
+        return await request('/admin/gift-codes').catch(() => ({ gift_codes: [] }));
       });
       this.giftCodes = Array.isArray(res?.gift_codes) ? res.gift_codes : [];
     } catch (err) {
@@ -9333,12 +9388,6 @@ https://centerly-platform.vercel.app/p/p16766044
   }
 
   openCreateCouponModal() {
-    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
-    if (!isAdmin) {
-      this.showToast('عذراً، إدارة أكواد الخصم متاحة فقط لمدير المنصة.', 'warning');
-      return;
-    }
-
     const existing = document.getElementById('createCouponModal');
     if (existing) existing.remove();
 
@@ -9509,8 +9558,6 @@ https://centerly-platform.vercel.app/p/p16766044
   }
 
   async toggleCouponStatus(id, newStatus) {
-    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
-    if (!isAdmin) return;
     try {
       await request(`/billing/gift-codes/${id}`, {
         method: 'PATCH',
@@ -9531,8 +9578,6 @@ https://centerly-platform.vercel.app/p/p16766044
   }
 
   async deleteCoupon(id, code) {
-    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
-    if (!isAdmin) return;
     if (!confirm(`هل أنت متأكد من حذف كود الخصم (${code}) نهائياً؟`)) {
       return;
     }
@@ -12273,6 +12318,10 @@ https://centerly-platform.vercel.app/p/p16766044
       }
     } else {
       this.stopWhatsAppStatusPolling();
+    }
+
+    if (tab === 'coupons') {
+      this.loadCoupons().then(() => this.renderMainContent());
     }
 
     this.renderMainContent();

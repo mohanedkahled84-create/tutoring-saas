@@ -125,10 +125,11 @@ export function renderTeacherDashboard(
   const finalTeacherProfit = Math.max(0, grossTeacherProfit - totalAssistantSalaries);
   const finalTotalStudents = (Number(stats.totalStudents) > 0) ? stats.totalStudents : totalEnrolledStudents;
 
-  const displayRev = hideNumbers ? '••••••' : `${finalMonthlyRevenue.toLocaleString('ar-EG')} ج.م`;
-  const displayCenterCut = hideNumbers ? '••••••' : `${totalCenterCut.toLocaleString('ar-EG')} ج.م`;
-  const displayAssistants = hideNumbers ? '••••••' : `${totalAssistantSalaries.toLocaleString('ar-EG')} ج.م`;
-  const displayProfit = hideNumbers ? '••••••' : `${finalTeacherProfit.toLocaleString('ar-EG')} ج.م`;
+  const isFinancialHidden = hideNumbers || (hasPin && !isUnlocked);
+  const displayRev = isFinancialHidden ? '••••••' : `${finalMonthlyRevenue.toLocaleString('ar-EG')} ج.م`;
+  const displayCenterCut = isFinancialHidden ? '••••••' : `${totalCenterCut.toLocaleString('ar-EG')} ج.م`;
+  const displayAssistants = isFinancialHidden ? '••••••' : `${totalAssistantSalaries.toLocaleString('ar-EG')} ج.م`;
+  const displayProfit = isFinancialHidden ? '••••••' : `${finalTeacherProfit.toLocaleString('ar-EG')} ج.م`;
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
@@ -159,15 +160,22 @@ export function renderTeacherDashboard(
                 <span>تعيين رمز PIN للأرباح</span>
               </button>
             ` : `
-              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleHideFinancialNumbers()" style="font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
-                <span>${hideNumbers ? getIcon('eye', 14) : getIcon('eyeOff', 14)}</span>
-                <span>${hideNumbers ? 'إظهار الأرقام' : 'إخفاء الأرقام'}</span>
-              </button>
+              ${!isUnlocked ? `
+                <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.promptUnlockFinancials()" style="font-weight: 800; display: flex; align-items: center; gap: 0.35rem;">
+                  ${getIcon('lock', 14)}
+                  <span>إدخال رمز PIN لفتح الأرباح</span>
+                </button>
+              ` : `
+                <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleHideFinancialNumbers()" style="font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
+                  <span>${hideNumbers ? getIcon('eye', 14) : getIcon('eyeOff', 14)}</span>
+                  <span>${hideNumbers ? 'إظهار الأرقام' : 'إخفاء الأرقام'}</span>
+                </button>
 
-              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.lockFinancials()" style="font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
-                <span>${getIcon('lock', 14)}</span>
-                <span>قفل الأرباح</span>
-              </button>
+                <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.lockFinancials()" style="font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
+                  <span>${getIcon('lock', 14)}</span>
+                  <span>قفل الأرباح</span>
+                </button>
+              `}
 
               <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openSetPinModal()" style="font-weight: 700; display: flex; align-items: center; justify-content: center;" title="تغيير رمز PIN">
                 ${getIcon('edit', 14)}
@@ -200,40 +208,81 @@ export function renderTeacherDashboard(
         </div>
       </div>
 
-      ${hasPin && !isUnlocked ? `
-        <!-- Locked Financials Box -->
-        <div class="card" style="margin: 0; padding: 2.5rem 1.5rem; text-align: center; background: #fff;">
-          <div style="max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
-            <div style="width: 56px; height: 56px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1d4ed8;">
-              ${getIcon('lock', 28, '#1d4ed8')}
+      <!-- Promo & Discount Codes Card -->
+      <div class="card" style="margin: 0; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.15rem 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700); border: 1px solid #dbeafe;">
+              ${getIcon('billing', 22, 'var(--centrly-blue-700)')}
             </div>
-            <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">الأرباح المالية مقفلة</h3>
-            <p style="font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.6;">
-              أدخل رمز الأمان (PIN) للاطلاع على إجمالي الدخل وصافي أرباحك ومستحقات السنتر.
-            </p>
-            <button class="btn btn-primary" onclick="window.centrlyApp.promptUnlockFinancials()" style="padding: 0.65rem 1.75rem; font-size: 0.9rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem; margin-top: 0.35rem;">
-              ${getIcon('lock', 16)}
-              <span>إدخال رمز PIN لفتح الأرباح</span>
+            <div>
+              <div style="font-weight: 800; font-size: 0.98rem; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
+                <span>أكواد الخصم والبروموكود (Promotional Codes)</span>
+                <span class="badge badge-success" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">مفعلة وتعمل فوراً</span>
+              </div>
+              <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
+                أنشئ أكواد خصم بنسب مئوية (%) أو مبالغ نقدية (ج.م) لتخفيض قيمة الاشتراك، وانسخها لمشاركتها مباشرة.
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.openCreateCouponModal()" style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem;">
+              ${getIcon('plus', 14)}
+              <span>إنشاء كود خصم جديد</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('coupons')" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;">
+              <span>إدارة كافة الأكواد</span>
+              ${getIcon('arrowRight', 12)}
             </button>
           </div>
         </div>
-      ` : `
-        <!-- Financial & Operations KPI Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-          
-          <!-- 1. Total Estimated Revenue -->
-          <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-success);">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">إجمالي الدخل المقدر (شهري)</span>
-              <span style="color: var(--centrly-success);">${getIcon('billing', 20)}</span>
-            </div>
-            <div style="font-size: 1.75rem; font-weight: 900; color: var(--centrly-success); margin-top: 0.4rem;">
-              ${displayRev}
-            </div>
-            <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.35rem;">
-              محسوب من إجمالي اشتراكات الطلاب
-            </div>
+
+        <!-- Active Quick Codes Strip -->
+        <div style="margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px dashed #e2e8f0; display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+          <span style="font-size: 0.78rem; font-weight: 700; color: #475569;">الأكواد النشطة حالياً:</span>
+          ${(() => {
+            const rawCodes = Array.isArray(data.giftCodes) ? data.giftCodes : (typeof window !== 'undefined' && Array.isArray(window.centrlyApp?.giftCodes) ? window.centrlyApp.giftCodes : []);
+            const activeOnes = rawCodes.filter(c => c.is_active !== false);
+            if (activeOnes.length === 0) {
+              return `
+                <span style="font-size: 0.78rem; color: #94a3b8;">
+                  لا توجد أكواد نشطة بعد. اضغط "إنشاء كود خصم جديد" بالأعلى لبدء التخفيضات.
+                </span>
+              `;
+            }
+            return activeOnes.slice(0, 4).map(c => {
+              const val = c.discount_percent ? `${c.discount_percent}%` : `${c.discount_amount} ج.م`;
+              return `
+                <div style="display: inline-flex; align-items: center; gap: 0.35rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.25rem 0.6rem;">
+                  <span style="font-family: monospace; font-weight: 900; font-size: 0.85rem; color: #1e3a8a;">${escapeHtml(c.code)}</span>
+                  <span class="badge badge-blue" style="font-size: 0.68rem; padding: 0.1rem 0.35rem;">${val}</span>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyCouponCode('${escapeHtml(c.code)}')" style="padding: 0.15rem 0.35rem; font-size: 0.7rem; border: none; background: transparent; cursor: pointer;" title="نسخ الكود">
+                    ${getIcon('copy', 12)}
+                  </button>
+                </div>
+              `;
+            }).join('') + (activeOnes.length > 4 ? `<button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.navigate('coupons')" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;">+${activeOnes.length - 4} أكواد أخرى</button>` : '');
+          })()}
+        </div>
+      </div>
+
+      <!-- Financial & Operations KPI Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        
+        <!-- 1. Total Estimated Revenue -->
+        <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-success);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">إجمالي الدخل المقدر (شهري)</span>
+            <span style="color: var(--centrly-success);">${getIcon('billing', 20)}</span>
           </div>
+          <div style="font-size: 1.75rem; font-weight: 900; color: var(--centrly-success); margin-top: 0.4rem;">
+            ${displayRev}
+          </div>
+          <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.35rem;">
+            ${isFinancialHidden ? `<span style="color: #d97706; font-weight: 700; cursor: pointer;" onclick="window.centrlyApp.promptUnlockFinancials()">🔒 مقفل بالـ PIN (اضغط لإظهاره)</span>` : 'محسوب من إجمالي اشتراكات الطلاب'}
+          </div>
+        </div>
 
           <!-- 2. Center Cut & Rent Dues -->
           <div class="card" style="margin: 0; background: #fff; border-top: 4px solid #f59e0b;">
@@ -335,9 +384,9 @@ export function renderTeacherDashboard(
               </thead>
               <tbody>
                 ${processedGroups.length > 0 ? processedGroups.map(g => {
-                  const pRev = hideNumbers ? '••••••' : `${g.monthlyRev.toLocaleString('ar-EG')} ج.م`;
-                  const pProfit = hideNumbers ? '••••••' : `${g.netProfit.toLocaleString('ar-EG')} ج.م`;
-                  const pPrice = hideNumbers ? '••••••' : `${escapeHtml(g.price)} ج.م`;
+                  const pRev = isFinancialHidden ? '••••••' : `${g.monthlyRev.toLocaleString('ar-EG')} ج.م`;
+                  const pProfit = isFinancialHidden ? '••••••' : `${g.netProfit.toLocaleString('ar-EG')} ج.م`;
+                  const pPrice = `${escapeHtml(g.price)} ج.م`;
 
                   return `
                     <tr>
@@ -405,8 +454,8 @@ export function renderTeacherDashboard(
               </thead>
               <tbody>
                 ${processedAssistants.length > 0 ? processedAssistants.map(a => {
-                  const pRate = hideNumbers ? '••••••' : `${a.rate.toLocaleString('ar-EG')} ج.م`;
-                  const pDeduction = hideNumbers ? '••••••' : `${a.monthlyDeduction.toLocaleString('ar-EG')} ج.م`;
+                  const pRate = isFinancialHidden ? '••••••' : `${a.rate.toLocaleString('ar-EG')} ج.م`;
+                  const pDeduction = isFinancialHidden ? '••••••' : `${a.monthlyDeduction.toLocaleString('ar-EG')} ج.م`;
 
                   return `
                     <tr>
@@ -455,7 +504,6 @@ export function renderTeacherDashboard(
             </table>
           </div>
         </div>
-      `}
 
     </div>
   `;

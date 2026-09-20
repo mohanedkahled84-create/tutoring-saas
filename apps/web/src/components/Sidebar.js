@@ -49,6 +49,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       category: 'الإدارة والماليات',
       routes: [
         { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
+        { id: 'coupons', title: 'أكواد الخصم والبروموكود', icon: 'billing' },
         { id: 'activity-logs', title: 'تسويات المدرسين والماليات', icon: 'billing' },
       ],
     },
@@ -91,6 +92,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       category: 'الإعدادات والاشتراك',
       routes: [
         { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
+        { id: 'coupons', title: 'أكواد الخصم والبروموكود', icon: 'billing' },
       ],
     },
   ];
