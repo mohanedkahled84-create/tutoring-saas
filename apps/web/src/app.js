@@ -10301,7 +10301,7 @@ https://centerly-platform.vercel.app/p/p16766044
       </div>
       ` : ''}
 
-      <form id="modalSetPinForm" onsubmit="window.centrlyApp.handleSavePinSubmit(event)">
+      <form id="modalSetPinForm" novalidate onsubmit="window.centrlyApp.handleSavePinSubmit(event)">
         
         <!-- SECTION 1: Old PIN Mode -->
         <div id="sectionPinOld" style="display: ${!hasExisting || this._currentPinTab === 'old_pin' ? 'block' : 'none'};">
@@ -10328,7 +10328,7 @@ https://centerly-platform.vercel.app/p/p16766044
           <div class="form-group" style="margin-bottom: 1rem;">
             <label class="form-label" style="font-weight: 700;">${hasExisting ? 'رمز الأمان الجديد (4-6 أرقام) *' : 'رمز الأمان (4-6 أرقام) *'}</label>
             <div style="position: relative;">
-              <input type="password" id="inputNewPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" required
+              <input type="password" id="inputNewPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric"
                 style="text-align: center; letter-spacing: 0.35rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
                 autocomplete="new-password" ${hasExisting ? '' : 'autofocus'}
                 oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\\D/g, '')">
@@ -10341,7 +10341,7 @@ https://centerly-platform.vercel.app/p/p16766044
           <div class="form-group" style="margin-bottom: 1.25rem;">
             <label class="form-label" style="font-weight: 700;">${hasExisting ? 'تأكيد رمز الأمان الجديد *' : 'تأكيد رمز الأمان *'}</label>
             <div style="position: relative;">
-              <input type="password" id="inputConfirmPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" required
+              <input type="password" id="inputConfirmPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric"
                 style="text-align: center; letter-spacing: 0.35rem; font-size: 1.3rem; font-weight: 900; padding-left: 2.5rem;"
                 autocomplete="new-password"
                 oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\\D/g, '')">
@@ -10409,7 +10409,7 @@ https://centerly-platform.vercel.app/p/p16766044
 
         <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
           <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="submit" id="btnSubmitSetPin" class="btn btn-primary" style="font-weight: 800;">
+          <button type="submit" id="btnSubmitSetPin" onclick="window.centrlyApp.handleSavePinSubmit(event)" class="btn btn-primary" style="font-weight: 800;">
             ${hasExisting ? 'حفظ وتأكيد الرمز' : 'حفظ وتفعيل الرمز'}
           </button>
         </div>
@@ -10502,11 +10502,15 @@ https://centerly-platform.vercel.app/p/p16766044
   }
 
   async handleSavePinSubmit(e) {
-    e.preventDefault();
-    const isEmailMode = this._currentPinTab === 'email';
+    if (e && e.preventDefault) e.preventDefault();
+    const secEmail = document.getElementById('sectionPinEmail');
+    const isEmailMode = this._currentPinTab === 'email' || (secEmail && secEmail.style.display !== 'none');
     const hasExisting = Boolean(document.getElementById('btnTabPinOld') || document.getElementById('inputCurrentPin'));
     const errEl = document.getElementById('pinErrorMsg');
     const btn = document.getElementById('btnSubmitSetPin');
+    if (errEl) errEl.style.display = 'none';
+
+    const cleanDigits = (val) => normalizeDigits(val || '').replace(/\s+/g, '').replace(/\D/g, '');
 
     const showError = (msg, inputToFocus) => {
       if (errEl) {
@@ -10520,11 +10524,11 @@ https://centerly-platform.vercel.app/p/p16766044
 
     if (isEmailMode) {
       const rawCode = document.getElementById('inputEmailOtpCode')?.value || '';
-      const email_code = normalizeDigits(rawCode);
+      const email_code = cleanDigits(rawCode);
       const rawNew = document.getElementById('inputEmailNewPin')?.value || '';
-      const pin = normalizeDigits(rawNew);
+      const pin = cleanDigits(rawNew);
       const rawConfirm = document.getElementById('inputEmailConfirmPin')?.value || '';
-      const confirm = normalizeDigits(rawConfirm);
+      const confirm = cleanDigits(rawConfirm);
 
       if (!email_code || email_code.length !== 6) {
         showError('يرجى إدخال كود التحقق المكون من 6 أرقام المرسل لبريدك الإلكتروني.', document.getElementById('inputEmailOtpCode'));
@@ -10542,11 +10546,11 @@ https://centerly-platform.vercel.app/p/p16766044
       payload = { pin, email_code };
     } else {
       const rawCurrent = document.getElementById('inputCurrentPin')?.value || '';
-      const old_pin = normalizeDigits(rawCurrent);
+      const old_pin = cleanDigits(rawCurrent);
       const rawNew = document.getElementById('inputNewPin')?.value || '';
-      const pin = normalizeDigits(rawNew);
+      const pin = cleanDigits(rawNew);
       const rawConfirm = document.getElementById('inputConfirmPin')?.value || '';
-      const confirm = normalizeDigits(rawConfirm);
+      const confirm = cleanDigits(rawConfirm);
 
       if (hasExisting) {
         if (!old_pin || old_pin.length < 4 || old_pin.length > 6) {
