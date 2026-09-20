@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServiceSupabaseClient } from "../../supabase.js";
 import { config } from "../../shared/config/index.js";
+import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
 
 export const materialsRouter = Router();
 
@@ -61,30 +62,59 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
     const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
     let finalUrl = url ? url.trim() : "";
 
-    // If file_data (base64) provided, upload directly to Supabase Storage 'homework-submissions'
+    // If file_data (base64) provided, validate magic bytes and upload securely (C-05)
     if (file_data) {
-      const base64Clean = file_data.replace(/^data:application\/pdf;base64,/, "").replace(/^data:.*;base64,/, "");
+      let contentType = "application/pdf";
+      const mimeMatch = file_data.match(/^data:([^;]+);base64,/);
+      if (mimeMatch && mimeMatch[1]) {
+        contentType = mimeMatch[1].toLowerCase();
+      }
+
+      const base64Clean = file_data.replace(/^data:[^;]+;base64,/, "");
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64Clean) || base64Clean.length % 4 !== 0) {
+        res.status(400).json({ error: { code: "INVALID_FILE", message: "صيغة الملف غير صالحة" } });
+        return;
+      }
       const fileBuffer = Buffer.from(base64Clean, "base64");
-      const cleanFileName = (file_name || "homework.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
-      const storagePath = `materials/${tenantId}/${Date.now()}_${cleanFileName}`;
+
+      const validation = validateFileUpload({
+        buffer: fileBuffer,
+        originalFilename: file_name || "material.pdf",
+        declaredMimeType: contentType,
+        maxSizeBytes: 10 * 1024 * 1024,
+      });
+
+      if (!validation.isValid || !validation.sanitizedFilename || !validation.detectedMimeType) {
+        res.status(400).json({ error: { code: "INVALID_FILE", message: "الملف مرفوض: " + (validation.error || "نوع غير مدعوم") } });
+        return;
+      }
+
+      const storagePath = `materials/${tenantId}/${Date.now()}_${validation.sanitizedFilename}`;
 
       const { error: uploadError } = await supabase.storage
         .from("homework-submissions")
         .upload(storagePath, fileBuffer, {
-          contentType: "application/pdf",
+          contentType: validation.detectedMimeType,
           upsert: true,
         });
 
       if (uploadError) {
-        res.status(500).json({ error: { code: "STORAGE_ERROR", message: "تعذر رفع ملف الـ PDF إلى السحابة: " + uploadError.message } });
+        res.status(500).json({ error: { code: "STORAGE_ERROR", message: "تعذر رفع الملف إلى السحابة: " + uploadError.message } });
         return;
       }
 
-      const { data: publicUrlData } = supabase.storage
+      const { data: signedUrlData, error: signedUrlErr } = await supabase.storage
         .from("homework-submissions")
-        .getPublicUrl(storagePath);
+        .createSignedUrl(storagePath, 86400);
 
-      finalUrl = publicUrlData.publicUrl;
+      if (signedUrlErr || !signedUrlData?.signedUrl) {
+        const { data: publicUrlData } = supabase.storage
+          .from("homework-submissions")
+          .getPublicUrl(storagePath);
+        finalUrl = publicUrlData.publicUrl;
+      } else {
+        finalUrl = signedUrlData.signedUrl;
+      }
     }
 
     const { data, error } = await supabase

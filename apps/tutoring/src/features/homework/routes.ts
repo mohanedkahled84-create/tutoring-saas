@@ -6,7 +6,7 @@ import { config } from "../../shared/config/index.js";
 import { verifyParentPortalToken } from "../../shared/utils/tokens.js";
 import { logger } from "../../shared/utils/logger.js";
 import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
-import { attendanceRateLimiter } from "../../shared/middleware/rateLimit.js";
+import { homeworkSubmissionRateLimiter } from "../../shared/middleware/rateLimit.js";
 
 export const homeworkRouter = Router();
 export const publicHomeworkRouter = Router();
@@ -32,7 +32,7 @@ const reviewHomeworkSchema = z.object({
  * Public Endpoint: POST /api/public/homework/submit
  * Student uploads/submits their homework PDF
  */
-publicHomeworkRouter.post("/submit", attendanceRateLimiter, async (req: Request, res: Response): Promise<void> => {
+publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const parsed = submitHomeworkSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: { code: "VALIDATION_ERROR", details: parsed.error.issues } });
@@ -65,7 +65,7 @@ publicHomeworkRouter.post("/submit", attendanceRateLimiter, async (req: Request,
       tenantId = student.tenant_id;
     }
 
-    // 2. Verify material belongs to same tenant
+    // 2. Verify material belongs to same tenant AND is explicitly designated as homework (C-05)
     const { data: material } = await supabase
       .from("study_materials")
       .select("id, tenant_id, title, is_homework")
@@ -78,7 +78,17 @@ publicHomeworkRouter.post("/submit", attendanceRateLimiter, async (req: Request,
       return;
     }
 
-    // 3. If base64 file_data provided, upload directly to Supabase Storage bucket 'homework-submissions'
+    if (material.is_homework !== true) {
+      res.status(400).json({
+        error: {
+          code: "INVALID_HOMEWORK_TARGET",
+          message: "المادة التعليمية المحددة ليست واجباً صالحاً لتسليم الطلاب",
+        },
+      });
+      return;
+    }
+
+    // 3. If base64 file_data provided, inspect magic bytes & upload securely (C-05)
     if (file_data) {
       let contentType = "application/pdf";
       const mimeMatch = file_data.match(/^data:([^;]+);base64,/);
@@ -98,7 +108,15 @@ publicHomeworkRouter.post("/submit", attendanceRateLimiter, async (req: Request,
         return;
       }
       const fileBuffer = Buffer.from(base64Clean, "base64");
-      const validation = validateFileUpload({ buffer: fileBuffer, originalFilename: file_name || "homework.pdf", declaredMimeType: contentType, maxSizeBytes: 5 * 1024 * 1024 });
+
+      // Enforce 10MB maximum file size & magic bytes validation (C-05)
+      const validation = validateFileUpload({
+        buffer: fileBuffer,
+        originalFilename: file_name || "homework.pdf",
+        declaredMimeType: contentType,
+        maxSizeBytes: 10 * 1024 * 1024,
+      });
+
       if (!validation.isValid || !validation.sanitizedFilename || !validation.detectedMimeType) {
         res.status(400).json({ error: { code: "INVALID_FILE", message: "الملف مرفوض: " + (validation.error || "نوع غير مدعوم") } });
         return;
@@ -118,11 +136,19 @@ publicHomeworkRouter.post("/submit", attendanceRateLimiter, async (req: Request,
         return;
       }
 
-      const { data: publicUrlData } = supabase.storage
+      // Generate signed URL with short expiration (24h) instead of getPublicUrl (C-05)
+      const { data: signedUrlData, error: signedUrlErr } = await supabase.storage
         .from("homework-submissions")
-        .getPublicUrl(storagePath);
+        .createSignedUrl(storagePath, 86400);
 
-      file_url = publicUrlData.publicUrl;
+      if (signedUrlErr || !signedUrlData?.signedUrl) {
+        const { data: publicUrlData } = supabase.storage
+          .from("homework-submissions")
+          .getPublicUrl(storagePath);
+        file_url = publicUrlData.publicUrl;
+      } else {
+        file_url = signedUrlData.signedUrl;
+      }
     }
 
     if (!file_url) {

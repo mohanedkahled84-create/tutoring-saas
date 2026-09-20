@@ -12428,10 +12428,6 @@ https://centerly-platform.vercel.app/p/p16766044
       this.stopWhatsAppStatusPolling();
     }
 
-    if (tab === 'coupons') {
-      this.loadCoupons().then(() => this.renderMainContent());
-    }
-
     this.renderMainContent();
   }
 
