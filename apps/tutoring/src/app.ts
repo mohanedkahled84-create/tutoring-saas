@@ -5,7 +5,6 @@ import {
   authenticateUser,
   authenticateInternalSecret,
   globalRateLimiter,
-  authRateLimiter,
   securityHeadersMiddleware,
   notFoundHandler,
   globalErrorHandler,
@@ -71,7 +70,7 @@ export function createApp(): Express {
         const isAllowedDomainPattern = origin && (
           /^https:\/\/([a-z0-9-]+\.)*centerly-eg\.com$/i.test(origin) ||
           /^https:\/\/([a-z0-9-]+\.)*centrly\.app$/i.test(origin) ||
-          /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i.test(origin)
+          /^https:\/\/(centerly|centrly|tutoring-saas|web-gules-xi-53)[a-z0-9-]*\.vercel\.app$/i.test(origin)
         );
         if (!origin || configuredOrigins.includes(origin) || defaultAllowedOrigins.includes(origin) || isLocalNetwork || isAllowedDomainPattern) {
           callback(null, true);

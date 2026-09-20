@@ -4,18 +4,49 @@
  */
 
 const hostname = typeof window !== 'undefined' ? (window.location.hostname || '') : '';
-const isLocalHost = hostname === 'localhost' || 
-  hostname === '127.0.0.1' || 
-  hostname.startsWith('192.168.') || 
-  hostname.startsWith('10.') || 
-  /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
-  hostname.endsWith('.local');
 
-export const API_BASE_URL = (typeof window !== 'undefined' && window.__CENTRLY_API_URL__) || (
-  isLocalHost
-    ? (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1' ? `http://${hostname}:3000/api` : 'http://localhost:3000/api')
-    : 'https://tutoring-backend-production-c8dd.up.railway.app/api'
-);
+/**
+ * C-06: Resolve API base URL strictly separating staging and production.
+ * Staging / preview / unknown hostnames NEVER fall back to production Railway.
+ */
+export function resolveApiBaseUrl(targetHostname = '', envObj = {}) {
+  const envApiUrl = (typeof window !== 'undefined' && window.__CENTRLY_API_URL__) ||
+    envObj.VITE_API_BASE_URL ||
+    (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL);
+  if (envApiUrl) {
+    return envApiUrl;
+  }
+
+  const host = (targetHostname || (typeof window !== 'undefined' ? window.location.hostname : '') || '').toLowerCase();
+
+  const isLocalHost = host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host.startsWith('192.168.') ||
+    host.startsWith('10.') ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    host.endsWith('.local');
+
+  if (isLocalHost) {
+    return (host && host !== 'localhost' && host !== '127.0.0.1')
+      ? `http://${host}:3000/api`
+      : 'http://localhost:3000/api';
+  }
+
+  // Official production domains -> Production backend
+  const isProductionDomain = host === 'centerly-eg.com' ||
+    host === 'www.centerly-eg.com' ||
+    host === 'centrly.app' ||
+    host === 'www.centrly.app';
+
+  if (isProductionDomain) {
+    return 'https://tutoring-backend-production-c8dd.up.railway.app/api';
+  }
+
+  // Any preview, staging, vercel.app, or untrusted host MUST use staging backend - NEVER production
+  return 'https://tutoring-backend-staging.up.railway.app/api';
+}
+
+export const API_BASE_URL = resolveApiBaseUrl(hostname);
 
 let activeRefreshPromise = null;
 

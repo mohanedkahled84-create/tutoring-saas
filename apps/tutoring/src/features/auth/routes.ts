@@ -41,11 +41,11 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
       const client = getScopedSupabaseClient(result.token);
       const { data: uRec } = await client
         .from("users")
-        .select("financial_pin, tenant_id")
+        .select("financial_pin_hash, tenant_id")
         .eq("id", result.user.id)
         .maybeSingle();
 
-      if (uRec?.financial_pin) {
+      if ((uRec as any)?.financial_pin_hash) {
         hasSecurityPin = true;
       } else if (uRec?.tenant_id) {
         const { data: tRec } = await client
@@ -114,7 +114,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
       const client = getScopedSupabaseClient(result.token);
       const { data: uRec } = await client
         .from("users")
-        .select("id, tenant_id, role, full_name, teacher_id, assistant_id, financial_pin")
+        .select("id, tenant_id, role, full_name, teacher_id, assistant_id, financial_pin_hash")
         .eq("id", result.user.id)
         .maybeSingle();
 
@@ -127,7 +127,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
           result.user.name = uRec.full_name;
           result.user.full_name = uRec.full_name;
         }
-        if (uRec.financial_pin) {
+        if ((uRec as any).financial_pin_hash) {
           hasSecurityPin = true;
         } else if (uRec.tenant_id) {
           const { data: tRec } = await client

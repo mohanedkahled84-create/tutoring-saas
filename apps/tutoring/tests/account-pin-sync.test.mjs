@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import { FakeTenantsRepository } from '../dist/features/auth/repository.js';
 import { settingsRouter } from '../dist/features/auth/settingsRoutes.js';
 
@@ -50,9 +51,10 @@ test('SEC-PIN: Account-Level Security PIN synchronization across mobile and desk
     const body2 = await res2.json();
     assert.equal(body2.success, true);
 
-    // Verify PIN is saved in repository directly on the user account
-    const savedUserPin = await fakeTenantsRepo.getUserPin('user-teacher-mohaned-123');
-    assert.equal(savedUserPin, '1234', 'User account in repository must store PIN 1234');
+    // Verify PIN is saved as bcrypt hash in repository directly on the user account
+    const savedUserPinSecurity = await fakeTenantsRepo.getUserPinSecurity('user-teacher-mohaned-123');
+    assert.ok(savedUserPinSecurity && savedUserPinSecurity.hash, 'User account in repository must store PIN hash');
+    assert.ok(await bcrypt.compare('1234', savedUserPinSecurity.hash), 'PIN hash must match 1234');
 
     // 3. Opening account on Mobile Phone (Device B) - Completely fresh device without localStorage
     currentUser.financial_pin = null;
@@ -113,8 +115,9 @@ test('SEC-PIN: Account-Level Security PIN synchronization across mobile and desk
     const body6 = await res6.json();
     assert.equal(body6.success, true);
 
-    const updatedUserPin = await fakeTenantsRepo.getUserPin('user-teacher-mohaned-123');
-    assert.equal(updatedUserPin, '5678', 'User account must have updated PIN 5678');
+    const updatedUserPinSecurity = await fakeTenantsRepo.getUserPinSecurity('user-teacher-mohaned-123');
+    assert.ok(updatedUserPinSecurity && updatedUserPinSecurity.hash, 'User account must have updated PIN hash');
+    assert.ok(await bcrypt.compare('5678', updatedUserPinSecurity.hash), 'User account must have updated PIN hash matching 5678');
 
     // 7. Verifying Laptop (Device A) now unlocks with updated PIN 5678
     const res7 = await fetch(`${baseUrl}/api/settings/verify-pin`, {

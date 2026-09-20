@@ -12,7 +12,7 @@ export class QuizzesService {
     notes_map: Record<number, Record<string, string>>;
     delivery_status_map: Record<number, Record<string, string>>;
   }> {
-    let quizzes = await this.repository.listQuizzes(tenantId, groupId);
+    const quizzes = await this.repository.listQuizzes(tenantId, groupId);
 
     // If no quizzes exist yet for this group, initialize default 3 starter quizzes
     if (quizzes.length === 0 && groupId) {

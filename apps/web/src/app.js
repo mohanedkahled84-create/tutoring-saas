@@ -138,11 +138,12 @@ class CentrlyApp {
     this.materials = [];
     this.materialsGroupId = 'all';
     this.teacherAssistants = [];
+    try { localStorage.removeItem('centrly_financial_pin'); } catch (_) {}
     const cachedHasPin = localStorage.getItem('centrly_has_security_pin');
     const cachedUser = authService.getUser();
     this.hasSecurityPin = (cachedUser && typeof cachedUser.has_security_pin === 'boolean')
       ? cachedUser.has_security_pin
-      : (cachedHasPin !== null ? cachedHasPin === 'true' : Boolean(localStorage.getItem('centrly_financial_pin')));
+      : (cachedHasPin !== null ? cachedHasPin === 'true' : false);
     // Cross-Device Security: If account has a PIN, protected views are ALWAYS locked by default
     this.isFinancialUnlocked = !this.hasSecurityPin;
     this.hideFinancialNumbers = false;
@@ -10099,8 +10100,7 @@ https://centerly-platform.vercel.app/p/p16766044
   // ==========================================================================
 
   openSetPinModal(forceExisting = false, initialTab = 'old_pin') {
-    const savedPin = localStorage.getItem('centrly_financial_pin');
-    const hasExisting = Boolean(forceExisting || this.hasSecurityPin || savedPin || this.user?.has_security_pin);
+    const hasExisting = Boolean(forceExisting || this.hasSecurityPin || this.user?.has_security_pin);
     this._currentPinTab = hasExisting ? initialTab : 'old_pin';
     const userEmail = this.user?.email || '';
 
@@ -10415,7 +10415,6 @@ https://centerly-platform.vercel.app/p/p16766044
         method: 'POST',
         body: payload
       });
-      localStorage.setItem('centrly_financial_pin', payload.pin);
       localStorage.setItem('centrly_has_security_pin', 'true');
       this.hasSecurityPin = true;
       this.isFinancialUnlocked = true;
@@ -10437,8 +10436,7 @@ https://centerly-platform.vercel.app/p/p16766044
   }
 
   promptUnlockFinancials() {
-    const savedPin = localStorage.getItem('centrly_financial_pin');
-    if (!this.hasSecurityPin && !savedPin) {
+    if (!this.hasSecurityPin) {
       this.openSetPinModal();
       return;
     }
@@ -10490,7 +10488,6 @@ https://centerly-platform.vercel.app/p/p16766044
     e.preventDefault();
     const rawVal = document.getElementById('inputUnlockPin')?.value || '';
     const entered = normalizeDigits(rawVal);
-    const savedPin = normalizeDigits(localStorage.getItem('centrly_financial_pin'));
     const errEl = document.getElementById('unlockPinError');
     const btn = document.getElementById('btnSubmitUnlockPin');
 
@@ -10499,15 +10496,6 @@ https://centerly-platform.vercel.app/p/p16766044
         errEl.innerText = 'يرجى إدخال رمز الأمان المكون من 4 إلى 6 أرقام فقط.';
         errEl.style.display = 'block';
       }
-      return;
-    }
-
-    // Fast path: local verification if matched
-    if (savedPin && entered === savedPin) {
-      this.isFinancialUnlocked = true;
-      this.closeModal();
-      this.showToast('تم إلغاء القفل وعرض البيانات بنجاح.', 'success');
-      this.renderApp();
       return;
     }
 
@@ -10522,7 +10510,6 @@ https://centerly-platform.vercel.app/p/p16766044
         body: { pin: entered }
       });
       if (res && res.valid) {
-        localStorage.setItem('centrly_financial_pin', entered);
         localStorage.setItem('centrly_has_security_pin', 'true');
         this.hasSecurityPin = true;
         this.isFinancialUnlocked = true;
@@ -12115,7 +12102,7 @@ https://centerly-platform.vercel.app/p/p16766044
         method: 'POST',
         body: { pin }
       });
-      localStorage.setItem('centrly_financial_pin', pin);
+      try { localStorage.removeItem('centrly_financial_pin'); } catch (_) {}
       localStorage.setItem('centrly_has_security_pin', 'true');
       this.hasSecurityPin = true;
       this.isFinancialUnlocked = false;

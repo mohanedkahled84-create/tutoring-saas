@@ -24,7 +24,7 @@ interface QuizScoreReportRow {
   created_at?: string;
 }
 
-interface StudentReportRow {
+interface _StudentReportRow {
   id: string;
   name: string;
   code?: string | null;
@@ -51,7 +51,7 @@ export class SupabaseReportsRepository implements IReportsRepository {
 
     try {
       // 2. Fetch students for tenant (and optional group)
-      let studentsQuery = this.client
+      const studentsQuery = this.client
         .from("students")
         .select("id, name, code, student_code, parent_phone, student_phone, group_id, group_students(group_id, groups(id, name))")
         .eq("tenant_id", tenantId);

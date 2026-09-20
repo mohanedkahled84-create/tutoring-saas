@@ -10,6 +10,7 @@ import {
   IAuthRepository,
   TenantSettings,
   ITenantsRepository,
+  UserPinSecurityData,
 } from "./types.js";
 import { defaultEmailVerificationService, EmailVerificationService } from "./emailService.js";
 
@@ -537,7 +538,7 @@ export class FakeAuthRepository implements IAuthRepository {
     };
   }
 
-  async refreshToken(refreshToken: string): Promise<LoginResult> {
+  async refreshToken(_refreshToken: string): Promise<LoginResult> {
     return {
       user: { id: "mock-user", email: "mock@centrly.app", name: "Mock User", full_name: "Mock User" },
       token: `mock-refreshed-jwt-${Date.now()}`,
@@ -733,59 +734,77 @@ export class SupabaseTenantsRepository implements ITenantsRepository {
   }
 
   async getUserPin(userId: string): Promise<string | null> {
-    const { data, error } = await this.client
-      .from("users")
-      .select("financial_pin")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (data?.financial_pin) {
-      return data.financial_pin;
-    }
-
-    if (this.adminClient) {
-      try {
-        const adminRes = await this.adminClient
-          .from("users")
-          .select("financial_pin")
-          .eq("id", userId)
-          .maybeSingle();
-        if (adminRes.data?.financial_pin) {
-          return adminRes.data.financial_pin;
-        }
-      } catch (_) {}
-    }
-
-    if (error && process.env.NODE_ENV !== "test" && !error.message.includes("fetch failed")) {
-      throw new Error(error.message);
-    }
-    return null;
+    const sec = await this.getUserPinSecurity(userId);
+    return sec?.hash || null;
   }
 
   async setUserPin(userId: string, pin: string | null): Promise<void> {
-    const { error } = await this.client
-      .from("users")
-      .update({ financial_pin: pin })
-      .eq("id", userId);
+    await this.setUserPinHash(userId, pin);
+  }
 
-    if (this.adminClient) {
-      try {
-        await this.adminClient
-          .from("users")
-          .update({ financial_pin: pin })
-          .eq("id", userId);
-      } catch (_) {}
-    }
+  async getUserPinSecurity(userId: string): Promise<UserPinSecurityData | null> {
+    const client = this.adminClient || this.client;
+    const { data, error } = await client
+      .from("users")
+      .select("financial_pin_hash, failed_pin_attempts, pin_locked_until")
+      .eq("id", userId)
+      .maybeSingle();
 
     if (error && process.env.NODE_ENV !== "test" && !error.message.includes("fetch failed")) {
       throw new Error(error.message);
     }
+
+    if (!data) return null;
+    return {
+      hash: data.financial_pin_hash || null,
+      failed_attempts: data.failed_pin_attempts || 0,
+      locked_until: data.pin_locked_until || null,
+    };
+  }
+
+  async setUserPinHash(userId: string, hash: string | null): Promise<void> {
+    const client = this.adminClient || this.client;
+    const { error } = await client
+      .from("users")
+      .update({
+        financial_pin_hash: hash,
+        failed_pin_attempts: 0,
+        pin_locked_until: null,
+      })
+      .eq("id", userId);
+
+    if (error && process.env.NODE_ENV !== "test" && !error.message.includes("fetch failed")) {
+      throw new Error(error.message);
+    }
+  }
+
+  async recordFailedPinAttempt(userId: string, attempts: number, lockUntil: string | null): Promise<void> {
+    const client = this.adminClient || this.client;
+    await client
+      .from("users")
+      .update({
+        failed_pin_attempts: attempts,
+        pin_locked_until: lockUntil,
+      })
+      .eq("id", userId);
+  }
+
+  async resetFailedPinAttempts(userId: string): Promise<void> {
+    const client = this.adminClient || this.client;
+    await client
+      .from("users")
+      .update({
+        failed_pin_attempts: 0,
+        pin_locked_until: null,
+      })
+      .eq("id", userId);
   }
 }
 
 export class FakeTenantsRepository implements ITenantsRepository {
   public tenantSettings: Map<string, TenantSettings> = new Map();
   public userPins: Map<string, string | null> = new Map();
+  public userPinSecurity: Map<string, UserPinSecurityData> = new Map();
 
   async getTenantSettings(tenantId: string): Promise<TenantSettings | null> {
     return this.tenantSettings.get(tenantId) || null;
@@ -805,6 +824,38 @@ export class FakeTenantsRepository implements ITenantsRepository {
       this.userPins.delete(userId);
     } else {
       this.userPins.set(userId, pin);
+    }
+  }
+
+  async getUserPinSecurity(userId: string): Promise<UserPinSecurityData | null> {
+    return this.userPinSecurity.get(userId) || null;
+  }
+
+  async setUserPinHash(userId: string, hash: string | null): Promise<void> {
+    if (!hash) {
+      this.userPinSecurity.delete(userId);
+    } else {
+      this.userPinSecurity.set(userId, {
+        hash,
+        failed_attempts: 0,
+        locked_until: null,
+      });
+    }
+  }
+
+  async recordFailedPinAttempt(userId: string, attempts: number, lockUntil: string | null): Promise<void> {
+    const current = this.userPinSecurity.get(userId) || { hash: null, failed_attempts: 0, locked_until: null };
+    current.failed_attempts = attempts;
+    current.locked_until = lockUntil;
+    this.userPinSecurity.set(userId, current);
+  }
+
+  async resetFailedPinAttempts(userId: string): Promise<void> {
+    const current = this.userPinSecurity.get(userId);
+    if (current) {
+      current.failed_attempts = 0;
+      current.locked_until = null;
+      this.userPinSecurity.set(userId, current);
     }
   }
 }

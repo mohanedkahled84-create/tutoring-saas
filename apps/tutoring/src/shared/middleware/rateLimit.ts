@@ -66,3 +66,34 @@ export const telemetryRateLimiter = rateLimit({
     });
   },
 });
+
+// C-04: Security PIN verification and modification rate limiter
+export const financialPinRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  keyGenerator: (req) => `${(req as Request & { user?: { id?: string } }).user?.id || "anonymous"}:${req.ip}`,
+  handler: (_req: Request, res: Response) => {
+    res.status(429).json({ error: { code: "PIN_RATE_LIMITED", message: "تم إيقاف محاولات رمز الأمان مؤقتًا. حاول لاحقًا." } });
+  },
+});
+
+// C-05: Rate limiter for public homework upload / submission (5 requests/minute per IP)
+export const homeworkSubmissionRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: process.env.NODE_ENV === "test" ? 1000 : 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  handler: (_req: Request, res: Response) => {
+    res.status(429).json({
+      error: {
+        code: "RATE_LIMITED",
+        message: "تم تجاوز الحد المسموح لتسليم الواجبات (5 محاولات في الدقيقة). يرجى الانتظار دقيقة وإعادة المحاولة.",
+      },
+    });
+  },
+});
+

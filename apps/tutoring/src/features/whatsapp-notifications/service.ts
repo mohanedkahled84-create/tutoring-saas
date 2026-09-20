@@ -650,7 +650,6 @@ export class WhatsAppNotificationsService {
     message_text: string;
   }): Promise<{ success: boolean; error?: string; gateway_sent: boolean }> {
     const { tenant_id, teacher_id, recipient_phone, message_text } = params;
-    let gatewaySent = false;
 
     if (this.gateway?.sendTextMessage && recipient_phone) {
       const actualTeacherId = teacher_id || "default";
@@ -675,7 +674,6 @@ export class WhatsAppNotificationsService {
         }
 
         if (gwRes.success) {
-          gatewaySent = true;
           incrementTenantDailyCount(tenant_id, 1);
           recordHealthSuccess(tenant_id);
           return { success: true, gateway_sent: true };
@@ -698,7 +696,6 @@ export class WhatsAppNotificationsService {
     } else {
       // In test or non-gateway environment
       if (process.env.NODE_ENV === "test") {
-        gatewaySent = true;
         incrementTenantDailyCount(tenant_id, 1);
         recordHealthSuccess(tenant_id);
         return { success: true, gateway_sent: true };
@@ -742,7 +739,7 @@ export class WhatsAppNotificationsService {
     const {
       tenant_id,
       teacher_id,
-      student_id,
+      student_id: _student_id,
       student_name,
       parent_phone,
       student_phone,
@@ -1613,7 +1610,6 @@ export class WhatsAppNotificationsService {
       }
 
       // 5. Send via Gateway through teacher instance with fallback
-      let delivered = false;
       if (this.gateway?.sendTextMessage) {
         const actualTeacherId = options.teacher_id || "default";
         const primaryInstance = buildInstanceName(tenantId, actualTeacherId);
@@ -1625,7 +1621,6 @@ export class WhatsAppNotificationsService {
             gwRes = await this.gateway.sendTextMessage(fallbackInstance, item.phone, text);
           }
           if (gwRes.success) {
-            delivered = true;
             sentCount += 1;
             incrementTenantDailyCount(tenantId, 1);
             recordHealthSuccess(tenantId);
