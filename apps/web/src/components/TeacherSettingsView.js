@@ -55,7 +55,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
     }
   }
 
-  const hasPin = Boolean(securityState?.hasPin !== undefined ? securityState.hasPin : (window.centrlyApp?.hasSecurityPin || user?.has_security_pin || localStorage.getItem('centrly_has_security_pin') === 'true' || localStorage.getItem('centrly_financial_pin')));
+  const hasPin = Boolean(securityState?.hasPin !== undefined ? securityState.hasPin : (window.centrlyApp?.hasSecurityPin || user?.has_security_pin || localStorage.getItem('centrly_has_security_pin') === 'true'));
   const isUnlocked = Boolean(securityState?.isUnlocked !== undefined ? securityState.isUnlocked : window.centrlyApp?.isFinancialUnlocked);
 
   return `

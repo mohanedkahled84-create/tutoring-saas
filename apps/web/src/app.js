@@ -142,7 +142,8 @@ class CentrlyApp {
     const cachedUser = authService.getUser();
     this.hasSecurityPin = (cachedUser && typeof cachedUser.has_security_pin === 'boolean')
       ? cachedUser.has_security_pin
-      : (cachedHasPin !== null ? cachedHasPin === 'true' : Boolean(localStorage.getItem('centrly_financial_pin')));
+      : (cachedHasPin !== null ? cachedHasPin === 'true' : false);
+    try { localStorage.removeItem('centrly_financial_pin'); } catch (_) {}
     // Cross-Device Security: If account has a PIN, protected views are ALWAYS locked by default
     this.isFinancialUnlocked = !this.hasSecurityPin;
     this.hideFinancialNumbers = false;
@@ -2309,6 +2310,10 @@ class CentrlyApp {
           break;
         }
         case 'coupons': {
+          if (this.user?.role !== 'admin' && !this.user?.is_superadmin) {
+            this.navigate('dashboard');
+            break;
+          }
           await this.loadCoupons();
           this.renderMainContent();
           break;
@@ -3105,6 +3110,13 @@ class CentrlyApp {
       case 'admin-tenants':
         return renderAdminTenantsView(this.adminTenantsData || {}, this.adminTenantsFilter || 'all', this.adminTenantsSearchQuery || '');
       case 'coupons':
+        if (this.user?.role !== 'admin' && !this.user?.is_superadmin) {
+          return renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
+            hasPin: this.hasSecurityPin,
+            isUnlocked: this.isFinancialUnlocked,
+            hideNumbers: this.hideFinancialNumbers,
+          });
+        }
         return renderCouponsView(this.giftCodes || [], this.user || {});
       case 'dashboard':
         return renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
@@ -10599,8 +10611,7 @@ https://centerly-platform.vercel.app/p/p16766044
   // ==========================================================================
 
   openSetPinModal(forceExisting = false, initialTab = 'old_pin') {
-    const savedPin = localStorage.getItem('centrly_financial_pin');
-    const hasExisting = Boolean(forceExisting || this.hasSecurityPin || savedPin || this.user?.has_security_pin);
+    const hasExisting = Boolean(forceExisting || this.hasSecurityPin || this.user?.has_security_pin);
     this._currentPinTab = hasExisting ? initialTab : 'old_pin';
     const userEmail = this.user?.email || '';
 
@@ -10919,7 +10930,6 @@ https://centerly-platform.vercel.app/p/p16766044
         method: 'POST',
         body: payload
       });
-      localStorage.setItem('centrly_financial_pin', payload.pin);
       localStorage.setItem('centrly_has_security_pin', 'true');
       this.hasSecurityPin = true;
       this.isFinancialUnlocked = true;
@@ -10941,8 +10951,7 @@ https://centerly-platform.vercel.app/p/p16766044
   }
 
   promptUnlockFinancials() {
-    const savedPin = localStorage.getItem('centrly_financial_pin');
-    if (!this.hasSecurityPin && !savedPin) {
+    if (!this.hasSecurityPin) {
       this.openSetPinModal();
       return;
     }
@@ -10994,7 +11003,6 @@ https://centerly-platform.vercel.app/p/p16766044
     e.preventDefault();
     const rawVal = document.getElementById('inputUnlockPin')?.value || '';
     const entered = normalizeDigits(rawVal);
-    const savedPin = normalizeDigits(localStorage.getItem('centrly_financial_pin'));
     const errEl = document.getElementById('unlockPinError');
     const btn = document.getElementById('btnSubmitUnlockPin');
 
@@ -11003,15 +11011,6 @@ https://centerly-platform.vercel.app/p/p16766044
         errEl.innerText = 'يرجى إدخال رمز الأمان المكون من 4 إلى 6 أرقام فقط.';
         errEl.style.display = 'block';
       }
-      return;
-    }
-
-    // Fast path: local verification if matched
-    if (savedPin && entered === savedPin) {
-      this.isFinancialUnlocked = true;
-      this.closeModal();
-      this.showToast('تم إلغاء القفل وعرض البيانات بنجاح.', 'success');
-      this.renderApp();
       return;
     }
 
@@ -11026,7 +11025,6 @@ https://centerly-platform.vercel.app/p/p16766044
         body: { pin: entered }
       });
       if (res && res.valid) {
-        localStorage.setItem('centrly_financial_pin', entered);
         localStorage.setItem('centrly_has_security_pin', 'true');
         this.hasSecurityPin = true;
         this.isFinancialUnlocked = true;
@@ -11042,7 +11040,9 @@ https://centerly-platform.vercel.app/p/p16766044
       
       // Explicit invalid PIN response
       if (errEl) {
-        errEl.innerText = 'رمز الأمان غير صحيح. يمكنك إعادة المحاولة أو النقر على "نسيت الرمز؟ إعادة ضبط" للتعيين عبر البريد الإلكتروني.';
+        const remaining = res?.error?.remaining_attempts;
+        const remainingNote = (typeof remaining === 'number' && remaining > 0) ? ` (متبقي ${remaining} محاولات قبل القفل)` : '';
+        errEl.innerText = (res?.error?.message || 'رمز الأمان غير صحيح.') + remainingNote + ' يمكنك إعادة المحاولة أو النقر على "نسيت الرمز؟ إعادة ضبط" للتعيين عبر البريد الإلكتروني.';
         errEl.style.display = 'block';
       }
       const inp = document.getElementById('inputUnlockPin');
@@ -11052,7 +11052,12 @@ https://centerly-platform.vercel.app/p/p16766044
       }
     } catch (err) {
       if (errEl) {
-        errEl.innerText = err.message || 'تعذر التحقق من الرمز السري، يرجى التأكد من اتصال الإنترنت.';
+        const isLocked = err.status === 423 || String(err.message || '').includes('PIN_LOCKED');
+        if (isLocked) {
+          errEl.innerText = err.message || 'تم تجاوز الحد الأقصى للمحاولات الخاطئة (5 محاولات). تم قفل إدخال الرمز مؤقتاً لمدة 15 دقيقة.';
+        } else {
+          errEl.innerText = err.message || 'تعذر التحقق من الرمز السري، يرجى التأكد من اتصال الإنترنت.';
+        }
         errEl.style.display = 'block';
       }
       const inp = document.getElementById('inputUnlockPin');
@@ -12626,7 +12631,6 @@ https://centerly-platform.vercel.app/p/p16766044
         method: 'POST',
         body: { pin }
       });
-      localStorage.setItem('centrly_financial_pin', pin);
       localStorage.setItem('centrly_has_security_pin', 'true');
       this.hasSecurityPin = true;
       this.isFinancialUnlocked = false;
