@@ -161,7 +161,14 @@ export async function request(endpoint, options = {}) {
       } else if (data.message) {
         errMsg = data.message;
       }
-      throw new Error(errMsg);
+      const err = new Error(errMsg);
+      if (data.error && typeof data.error === 'object') {
+        if (data.error.code) err.code = data.error.code;
+        if (data.error.email) err.email = data.error.email;
+      }
+      err.status = res.status;
+      err.data = data;
+      throw err;
     }
 
     return data;

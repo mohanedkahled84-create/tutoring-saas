@@ -226,8 +226,18 @@ export function renderEmailVerificationScreen({ email = '', note = '' } = {}) {
           أرسلنا رمز تحقق سري (OTP) إلى بريدك الإلكتروني:
         </p>
         
-        <div style="display: inline-block; background: #f8fafc; border: 1px solid var(--centrly-line); padding: 0.4rem 1rem; border-radius: 8px; font-weight: 700; color: #0f766e; font-family: monospace; font-size: 0.95rem; margin-bottom: 1.25rem;" dir="ltr">
+        <div style="display: inline-block; background: #f8fafc; border: 1px solid var(--centrly-line); padding: 0.4rem 1rem; border-radius: 8px; font-weight: 700; color: #0f766e; font-family: monospace; font-size: 0.95rem; margin-bottom: 0.6rem;" dir="ltr">
           ${safeEmail}
+        </div>
+
+        <div style="margin-bottom: 1.25rem;">
+          <button type="button" onclick="window.centrlyApp.handleReturnToEditEmail()" style="background: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; padding: 0.45rem 0.9rem; border-radius: 8px; font-size: 0.825rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; font-family: inherit; transition: all 0.2s;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            <span>البريد الإلكتروني غير صحيح؟ تعديل البريد والبيانات</span>
+          </button>
         </div>
 
         <div id="verificationAlert" style="${safeNote ? 'display: block; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'display: none;'} padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; font-size: 0.85rem; font-weight: 600; line-height: 1.5;">
@@ -255,6 +265,10 @@ export function renderEmailVerificationScreen({ email = '', note = '' } = {}) {
         <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--centrly-line); display: flex; flex-direction: column; gap: 0.85rem;">
           <button type="button" id="btnResendOtp" onclick="window.centrlyApp.handleResendOtp()" style="background: none; border: none; color: #0d9488; font-size: 0.875rem; font-weight: 700; cursor: pointer; text-decoration: underline; font-family: inherit;">
             لم يصلك الرمز؟ إعادة الإرسال
+          </button>
+
+          <button type="button" onclick="window.centrlyApp.handleReturnToEditEmail()" style="background: none; border: none; color: #0284c7; font-size: 0.85rem; font-weight: 700; cursor: pointer; text-decoration: underline; font-family: inherit;">
+            البريد الإلكتروني غير صحيح؟ تعديل البيانات والبريد
           </button>
 
           <button type="button" onclick="window.centrlyApp.renderAuth('login')" style="background: none; border: none; color: var(--centrly-text); font-size: 0.825rem; cursor: pointer; font-family: inherit;">

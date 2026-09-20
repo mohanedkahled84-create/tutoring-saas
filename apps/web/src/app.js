@@ -1,8 +1,8 @@
 import { authService } from './services/auth.js?v=4.8.7';
-import { request, API_BASE_URL } from './services/api.js?v=4.8.7';
+import { request, API_BASE_URL } from './services/api.js?v=4.8.8';
 import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
 import { renderNavbar } from './components/Navbar.js?v=4.8.11';
-import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.8.7';
+import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.8.8';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
@@ -1545,8 +1545,14 @@ class CentrlyApp {
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
       if (err.code === 'EMAIL_NOT_VERIFIED' || err.message?.includes('EMAIL_NOT_VERIFIED') || err.message?.includes('تأكيد بريدك')) {
-        const unverifiedEmail = err.email || rawIdentifier;
-        this.renderEmailVerificationView(unverifiedEmail, password, 'يرجى تأكيد بريدك الإلكتروني أولاً للمتابعة. تم إرسال رمز التحقق إلى بريدك.');
+        const unverifiedEmail = err.email || (rawIdentifier.includes('@') ? rawIdentifier : '');
+        const loginPhone = rawIdentifier.includes('@') ? '' : rawIdentifier;
+        const fallbackSignupData = {
+          email: unverifiedEmail,
+          phone: loginPhone,
+          password: password,
+        };
+        this.renderEmailVerificationView(unverifiedEmail, password, 'يرجى تأكيد بريدك الإلكتروني أولاً للمتابعة. تم إرسال رمز التحقق إلى بريدك.', fallbackSignupData);
         return;
       }
       this.showAuthAlert(err.message || 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.');
@@ -1608,6 +1614,26 @@ class CentrlyApp {
       return;
     }
 
+    const ownerName = document.getElementById('signupCenterOwnerName')?.value?.trim() || '';
+    const centerName = document.getElementById('signupCenterName')?.value?.trim() || '';
+
+    this.signupFormData = {
+      accountType,
+      name,
+      ownerName,
+      centerName,
+      tenantName,
+      email,
+      phone,
+      password,
+      passwordConfirm,
+    };
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('centrly_signup_form_data', JSON.stringify(this.signupFormData));
+      }
+    } catch (_) {}
+
     try {
       const res = await authService.signup({
         email,
@@ -1619,7 +1645,7 @@ class CentrlyApp {
       });
 
       if (res.requires_verification) {
-        this.renderEmailVerificationView(email, password, 'تم إنشاء الحساب بنجاح! تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
+        this.renderEmailVerificationView(email, password, 'تم إنشاء الحساب بنجاح! تم إرسال رمز التحقق إلى بريدك الإلكتروني.', this.signupFormData);
         return;
       }
 
@@ -1640,11 +1666,70 @@ class CentrlyApp {
     }
   }
 
-  renderEmailVerificationView(email, password = '', note = '') {
+  renderEmailVerificationView(email, password = '', note = '', signupData = null) {
     window.scrollTo(0, 0);
     document.title = 'تأكيد البريد الإلكتروني | سنترلي';
-    this.pendingVerification = { email, password };
+    const effectiveSignupData = signupData || this.signupFormData || null;
+    this.pendingVerification = { email, password, signupData: effectiveSignupData };
     document.getElementById('app').innerHTML = renderEmailVerificationScreen({ email, note });
+  }
+
+  handleReturnToEditEmail() {
+    let data = this.pendingVerification?.signupData || this.signupFormData;
+    if (!data) {
+      try {
+        const raw = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_signup_form_data');
+        if (raw) data = JSON.parse(raw);
+      } catch (_) {}
+    }
+    data = data || {};
+
+    this.renderAuth('signup');
+
+    setTimeout(() => {
+      if (data.accountType) {
+        const typeSelect = document.getElementById('signupAccountType');
+        if (typeSelect) {
+          typeSelect.value = data.accountType;
+          this.onAccountTypeChange(data.accountType);
+        }
+      }
+      if (data.accountType === 'center') {
+        const ownerInput = document.getElementById('signupCenterOwnerName');
+        if (ownerInput && (data.ownerName || data.name)) ownerInput.value = data.ownerName || data.name;
+        const centerInput = document.getElementById('signupCenterName');
+        if (centerInput && (data.centerName || data.tenantName)) centerInput.value = data.centerName || data.tenantName;
+      } else {
+        const nameInput = document.getElementById('signupName');
+        if (nameInput && data.name) nameInput.value = data.name;
+      }
+
+      const emailInput = document.getElementById('signupEmail');
+      if (emailInput) {
+        emailInput.value = data.email || this.pendingVerification?.email || '';
+        emailInput.focus();
+        emailInput.select();
+      }
+
+      const phoneInput = document.getElementById('signupPhone');
+      if (phoneInput && data.phone) phoneInput.value = data.phone;
+
+      const pwd = data.password || this.pendingVerification?.password;
+      const pwdInput = document.getElementById('signupPassword');
+      if (pwdInput && pwd) {
+        pwdInput.value = pwd;
+        this.validatePasswordLive(pwd);
+      }
+
+      const pwdConfirm = data.passwordConfirm || pwd;
+      const pwdConfirmInput = document.getElementById('signupPasswordConfirm');
+      if (pwdConfirmInput && pwdConfirm) {
+        pwdConfirmInput.value = pwdConfirm;
+      }
+
+      const termsCheck = document.getElementById('signupTermsConsent');
+      if (termsCheck) termsCheck.checked = true;
+    }, 50);
   }
 
   showVerificationAlert(message, type = 'error') {

@@ -64,6 +64,12 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
     if (err instanceof Error) {
       if ((err as Error & { code?: string }).code === "EMAIL_NOT_VERIFIED") {
         const unverifiedEmail = (err as Error & { email?: string }).email || rawIdentifier;
+        try {
+          const authService = getServices(req as AuthenticatedRequest).auth;
+          await authService.resendVerification({ email: unverifiedEmail }).catch((resendErr) => {
+            console.warn("[Auth Login] Automatic OTP resend on unverified login skipped/failed:", resendErr?.message);
+          });
+        } catch (_) {}
         res.status(403).json({
           error: {
             code: "EMAIL_NOT_VERIFIED",
