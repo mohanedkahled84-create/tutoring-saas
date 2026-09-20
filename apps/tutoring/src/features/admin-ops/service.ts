@@ -50,19 +50,19 @@ export class AdminOpsService {
     let targetLimit = 300;
     let targetPlanName = "باقة 300 طالب";
 
-    if (notes.includes("750") || amt === 799 || amt === 7670) {
+    if (notes.includes("750") || amt === 899 || amt === 8630 || amt === 799 || amt === 7670) {
       targetTier = "growth";
       targetLimit = 750;
       targetPlanName = "باقة 750 طالب";
-    } else if (notes.includes("1500") || amt === 1299 || amt === 12470) {
+    } else if (notes.includes("1500") || amt === 1399 || amt === 13430 || amt === 1299 || amt === 12470) {
       targetTier = "pro";
       targetLimit = 1500;
       targetPlanName = "باقة 1500 طالب";
-    } else if (notes.includes("300") || amt === 399 || amt === 3830) {
+    } else if (notes.includes("300") || amt === 499 || amt === 4790 || amt === 399 || amt === 3830) {
       targetTier = "starter";
       targetLimit = 300;
       targetPlanName = "باقة 300 طالب";
-    } else if (notes.includes("250") || amt === 899 || amt === 9709) {
+    } else if (notes.includes("250") || amt === 9709) {
       targetTier = "growth";
       targetLimit = 250;
       targetPlanName = "باقة 250 طالب";

@@ -110,16 +110,16 @@ export class BillingService {
         const latestRelevant = proofs.find(p => p.status === "approved") || proofs[0];
         const notes = (latestRelevant.admin_notes || "").toLowerCase();
         const amt = Number(latestRelevant.amount || 0);
-        if (notes.includes("750") || amt === 799 || amt === 7670) {
+        if (notes.includes("750") || amt === 899 || amt === 8630 || amt === 799 || amt === 7670) {
           studentsLimit = 750;
           planName = "باقة 750 طالب";
-        } else if (notes.includes("1500") || amt === 1299 || amt === 12470) {
+        } else if (notes.includes("1500") || amt === 1399 || amt === 13430 || amt === 1299 || amt === 12470) {
           studentsLimit = 1500;
           planName = "باقة 1500 طالب";
-        } else if (notes.includes("300") || amt === 399 || amt === 3830) {
+        } else if (notes.includes("300") || amt === 499 || amt === 4790 || amt === 399 || amt === 3830) {
           studentsLimit = 300;
           planName = "باقة 300 طالب";
-        } else if (notes.includes("250") || amt === 899 || amt === 9709) {
+        } else if (notes.includes("250") || amt === 9709) {
           studentsLimit = 250;
           planName = "باقة 250 طالب";
         } else if (notes.includes("500") || amt === 1499 || amt === 16189) {

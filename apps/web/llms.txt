@@ -12,9 +12,9 @@ Centrly (سنترلي) is an all-in-one management software built specifically f
 - **Room & Session Management**: Conflict detection, timetable scheduling, and assistant payroll calculations.
 
 ## Pricing Plans (EGP)
-- **300 Students Plan**: 399 EGP / month (3,830 EGP / year with 20% annual discount)
-- **750 Students Plan**: 799 EGP / month (Most Popular - 7,670 EGP / year with 20% annual discount)
-- **1500 Students Plan**: 1,299 EGP / month (12,470 EGP / year with 20% annual discount)
+- **300 Students Plan**: 499 EGP / month (4,790 EGP / year with 20% annual discount)
+- **750 Students Plan**: 899 EGP / month (Most Popular - 8,630 EGP / year with 20% annual discount)
+- **1500 Students Plan**: 1,399 EGP / month (13,430 EGP / year with 20% annual discount)
 - **Enterprise & Centers**: Custom quote for 1,500+ students and multi-branch centers.
 All plans include all features with 100% full access, 20% discount on annual billing, and 7-day free trial.
 

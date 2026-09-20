@@ -8927,9 +8927,9 @@ https://centerly-platform.vercel.app/p/p16766044
     const isYearly = (this.billingCycle === 'yearly');
     const userPlanName = this.billingState?.plan_name || 'باقة 300 طالب';
     const plans = [
-      { name: 'باقة 300 طالب', monthly: 399, yearly: 3830 },
-      { name: 'باقة 750 طالب', monthly: 799, yearly: 7670 },
-      { name: 'باقة 1500 طالب', monthly: 1299, yearly: 12470 },
+      { name: 'باقة 300 طالب', monthly: 499, yearly: 4790 },
+      { name: 'باقة 750 طالب', monthly: 899, yearly: 8630 },
+      { name: 'باقة 1500 طالب', monthly: 1399, yearly: 13430 },
     ];
     const currentMatched = plans.find(p => userPlanName.includes(p.name)) || plans[0];
     const currentPrice = isYearly ? currentMatched.yearly : currentMatched.monthly;
@@ -8972,7 +8972,7 @@ https://centerly-platform.vercel.app/p/p16766044
     this.showModal('تجديد أو ترقية الاشتراك', bodyHtml);
   }
 
-  openPaymentProofModal(planName = 'باقة 300 طالب', amount = 399, billingCycle = 'monthly') {
+  openPaymentProofModal(planName = 'باقة 300 طالب', amount = 499, billingCycle = 'monthly') {
     const existing = document.getElementById('paymentProofModal');
     if (existing) existing.remove();
 

@@ -110,7 +110,7 @@ settingsRouter.put(
       if (req.body.subject !== undefined) userUpdates.subject = req.body.subject.trim();
 
       if (Object.keys(userUpdates).length > 0 && req.user?.id) {
-        const client = req.supabase || getScopedSupabaseClient(req.token);
+        const client = req.supabase || (req.token ? getScopedSupabaseClient(req.token) : supabasePublic);
         await client.from("users").update(userUpdates).eq("id", req.user.id);
 
         // Also update teacher in public.teachers if teacher record exists

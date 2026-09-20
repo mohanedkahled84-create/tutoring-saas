@@ -58,10 +58,10 @@ export function renderBillingView(data = {}, user = {}) {
       name: 'باقة 300 طالب',
       subtitle: 'للبدايات والمجموعات التأسيسية',
       capacity: 300,
-      monthlyPrice: 399,
-      yearlyPrice: 3830, // 399 * 12 * 0.8 = 3830.4 -> 3830 EGP
-      yearlyMonthlyEquivalent: 319,
-      yearlySavings: 958,
+      monthlyPrice: 499,
+      yearlyPrice: 4790, // 499 * 12 * 0.8 = 4790.4 -> 4790 EGP
+      yearlyMonthlyEquivalent: 399,
+      yearlySavings: 1198,
       isPopular: false,
       badgeText: 'للبدايات والمجموعات',
     },
@@ -70,10 +70,10 @@ export function renderBillingView(data = {}, user = {}) {
       name: 'باقة 750 طالب',
       subtitle: 'مثالية للمعلم النشط والمجموعات الكبيرة',
       capacity: 750,
-      monthlyPrice: 799,
-      yearlyPrice: 7670, // 799 * 12 * 0.8 = 7670.4 -> 7670 EGP
-      yearlyMonthlyEquivalent: 639,
-      yearlySavings: 1918,
+      monthlyPrice: 899,
+      yearlyPrice: 8630, // 899 * 12 * 0.8 = 8630.4 -> 8630 EGP
+      yearlyMonthlyEquivalent: 719,
+      yearlySavings: 2158,
       isPopular: true,
       badgeText: 'الأكثر طلباً للمعلمين',
     },
@@ -82,10 +82,10 @@ export function renderBillingView(data = {}, user = {}) {
       name: 'باقة 1500 طالب',
       subtitle: 'للسناتر وكبار المدرسين والمجاميع الضخمة',
       capacity: 1500,
-      monthlyPrice: 1299,
-      yearlyPrice: 12470, // 1299 * 12 * 0.8 = 12470.4 -> 12470 EGP
-      yearlyMonthlyEquivalent: 1039,
-      yearlySavings: 3118,
+      monthlyPrice: 1399,
+      yearlyPrice: 13430, // 1399 * 12 * 0.8 = 13430.4 -> 13430 EGP
+      yearlyMonthlyEquivalent: 1119,
+      yearlySavings: 3358,
       isPopular: false,
       badgeText: 'للسناتر وكبار المدرسين',
     }

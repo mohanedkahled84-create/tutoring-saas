@@ -531,7 +531,7 @@ export function renderLandingView() {
                 <div style="font-size: 0.85rem; color: var(--brand-muted); margin-top: 0.25rem;">للبدايات والمجموعات الفردية</div>
                 
                 <div style="margin: 1.5rem 0; display: flex; align-items: baseline; gap: 0.35rem;">
-                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-navy);">399</span>
+                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-navy);">499</span>
                   <span style="font-size: 0.95rem; font-weight: 700; color: var(--brand-muted);">جنيه / شهرياً</span>
                 </div>
 
@@ -571,7 +571,7 @@ export function renderLandingView() {
                 <div style="font-size: 0.85rem; color: var(--brand-muted); margin-top: 0.25rem;">للمجموعات الكبيرة وأصحاب الفرق</div>
                 
                 <div style="margin: 1.5rem 0; display: flex; align-items: baseline; gap: 0.35rem;">
-                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-blue);">799</span>
+                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-blue);">899</span>
                   <span style="font-size: 0.95rem; font-weight: 700; color: var(--brand-muted);">جنيه / شهرياً</span>
                 </div>
 
@@ -607,7 +607,7 @@ export function renderLandingView() {
                 <div style="font-size: 0.85rem; color: var(--brand-muted); margin-top: 0.25rem;">للسناتر والمراكز التعليمية</div>
                 
                 <div style="margin: 1.5rem 0; display: flex; align-items: baseline; gap: 0.35rem;">
-                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-navy);">1,299</span>
+                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-navy);">1,399</span>
                   <span style="font-size: 0.95rem; font-weight: 700; color: var(--brand-muted);">جنيه / شهرياً</span>
                 </div>
 
