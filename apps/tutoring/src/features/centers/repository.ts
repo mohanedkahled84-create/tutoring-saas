@@ -338,13 +338,18 @@ export class SupabaseCentersRepository implements ICentersRepository {
   } | null> {
     const { data, error } = await this.adminClient
       .from("students")
-      .select("id, name, barcode, phone")
+      .select("id, name, student_code, student_phone")
       .eq("tenant_id", tenantId)
-      .eq("barcode", barcode)
+      .eq("student_code", barcode)
       .single();
 
     if (error || !data) return null;
-    return data;
+    return {
+      id: data.id,
+      name: data.name,
+      barcode: data.student_code || barcode,
+      phone: data.student_phone || undefined,
+    };
   }
 
   async getStudentEnrollments(tenantId: string, studentId: string): Promise<EnrollmentModel[]> {
@@ -469,10 +474,10 @@ export class SupabaseCentersRepository implements ICentersRepository {
     // 2. Query attendance for these sessions
     const { data: attendance } = await this.adminClient
       .from("attendance")
-      .select("session_id, status")
+      .select("session_id, attended")
       .eq("tenant_id", tenantId)
       .in("session_id", sessionIds)
-      .in("status", ["present", "late"]);
+      .eq("attended", true);
 
     let totalRevenue = 0;
     const studentCount = (attendance || []).length;

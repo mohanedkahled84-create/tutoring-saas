@@ -24,7 +24,8 @@ export class SupabaseAuthRepository implements IAuthRepository {
   private async _authenticateWithEmail(targetEmail: string, password: string): Promise<LoginResult> {
     // 1. Mandatory email verification check before login
     try {
-      const { data: isConfirmed } = await this.publicClient.rpc("is_email_confirmed", {
+      const clientForRpc = this.adminClient || this.publicClient;
+      const { data: isConfirmed } = await clientForRpc.rpc("is_email_confirmed", {
         p_email: targetEmail,
       });
 
