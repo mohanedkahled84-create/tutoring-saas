@@ -103,10 +103,18 @@ export async function request(endpoint, options = {}) {
   };
 
   try {
-    const token = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_token')) ||
-                  (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_token'));
-    if (token && !headers['Authorization'] && !headers['authorization']) {
-      headers['Authorization'] = `Bearer ${token}`;
+    const isAuthGuestEndpoint = endpoint.includes('/auth/login') ||
+                                endpoint.includes('/auth/signup') ||
+                                endpoint.includes('/auth/verify-email') ||
+                                endpoint.includes('/auth/forgot-password') ||
+                                endpoint.includes('/auth/reset-password') ||
+                                endpoint.startsWith('/public/');
+    if (!isAuthGuestEndpoint) {
+      const token = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_token')) ||
+                    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_token'));
+      if (token && !headers['Authorization'] && !headers['authorization']) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
   } catch (_) {
     // localStorage might be unavailable or restricted

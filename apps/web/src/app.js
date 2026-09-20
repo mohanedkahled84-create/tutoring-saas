@@ -1246,10 +1246,14 @@ class CentrlyApp {
     }
   }
 
-  showAuthAlert(msg, type = 'danger') {
+  showAuthAlert(msg, type = 'danger', isHtml = false) {
     const alertBox = document.getElementById('authAlert');
     if (!alertBox) return;
-    alertBox.textContent = msg;
+    if (isHtml) {
+      alertBox.innerHTML = msg;
+    } else {
+      alertBox.textContent = msg;
+    }
     alertBox.style.display = 'block';
     if (type === 'danger') {
       alertBox.className = 'badge-danger';
@@ -1260,6 +1264,18 @@ class CentrlyApp {
       alertBox.style.backgroundColor = 'var(--centrly-success-light)';
       alertBox.style.color = 'var(--centrly-success)';
     }
+  }
+
+  switchToLoginWithEmail(email) {
+    this.switchAuthTab('login');
+    setTimeout(() => {
+      const emailInput = document.getElementById('loginIdentifier') || document.getElementById('loginEmail');
+      if (emailInput && email) {
+        emailInput.value = email;
+        const pwdInput = document.getElementById('loginPassword');
+        if (pwdInput) pwdInput.focus();
+      }
+    }, 60);
   }
 
   togglePasswordVisibility(inputId, btnEl, event) {
@@ -1564,7 +1580,13 @@ class CentrlyApp {
         this.renderEmailVerificationView(unverifiedEmail, password, 'يرجى تأكيد بريدك الإلكتروني أولاً للمتابعة. تم إرسال رمز التحقق إلى بريدك.', fallbackSignupData);
         return;
       }
-      this.showAuthAlert(err.message || 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.');
+      let loginMsg = err.message || '';
+      if (loginMsg === 'INVALID_CREDENTIALS' || loginMsg.includes('INVALID_CREDENTIALS') || err.status === 401) {
+        loginMsg = 'البريد الإلكتروني أو رقم الهاتف أو كلمة المرور غير صحيحة.';
+      } else if (loginMsg.includes('Failed to fetch') || loginMsg.includes('NetworkError') || loginMsg.includes('Bearer token')) {
+        loginMsg = 'تعذر الاتصال بالخادم حالياً. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
+      }
+      this.showAuthAlert(loginMsg || 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.');
     } finally {
       if (btn) {
         btn.disabled = false;
@@ -1671,7 +1693,34 @@ class CentrlyApp {
       authService.setUser(this.user);
       this.startOnboarding();
     } catch (err) {
-      this.showAuthAlert(err.message || 'فشل إنشاء الحساب. يرجى التأكد من البيانات والمحاولة مجدداً.');
+      const errMsg = err.message || '';
+      const isAlreadyExists = err.code === 'USER_ALREADY_EXISTS' ||
+                              errMsg.includes('مسجل بالفعل') ||
+                              errMsg.toLowerCase().includes('already exists') ||
+                              errMsg.toLowerCase().includes('already registered') ||
+                              errMsg.toLowerCase().includes('user_already_exists');
+      const isPhoneExists = err.code === 'PHONE_ALREADY_EXISTS' ||
+                            errMsg.includes('بحساب آخر') ||
+                            errMsg.toLowerCase().includes('phone_already_exists');
+
+      if (isAlreadyExists) {
+        const safeEmail = (email || '').replace(/'/g, "\\'");
+        const friendlyHtml = `
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.6rem; text-align:right;">
+            <span style="line-height:1.5;">يوجد حساب مسجل بالفعل بهذا البريد الإلكتروني. جرب تسجيل الدخول بدلاً من ذلك.</span>
+            <button type="button" onclick="window.centrlyApp.switchToLoginWithEmail('${safeEmail}')" style="background:#2563eb; color:#ffffff; border:none; border-radius:6px; padding:0.35rem 0.85rem; font-size:0.8rem; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+              تسجيل الدخول الآن ←
+            </button>
+          </div>
+        `;
+        this.showAuthAlert(friendlyHtml, 'danger', true);
+      } else if (isPhoneExists) {
+        this.showAuthAlert('رقم الهاتف هذا مسجل بالفعل بحساب آخر. يرجى استخدام رقم هاتف آخر أو تسجيل الدخول.');
+      } else if (errMsg.includes('Bearer token') || errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) {
+        this.showAuthAlert('تعذر الاتصال بالخادم حالياً. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.');
+      } else {
+        this.showAuthAlert(errMsg || 'فشل إنشاء الحساب. يرجى التأكد من البيانات والمحاولة مجدداً.');
+      }
     } finally {
       if (btn) {
         btn.disabled = false;

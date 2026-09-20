@@ -1,4 +1,5 @@
 import express, { Express } from "express";
+import * as Sentry from "@sentry/node";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import {
@@ -137,6 +138,16 @@ export function createApp(): Express {
 
   // DEV-WPA.1: Protected Internal Automation routes (shared-secret auth)
   app.use("/internal", authenticateInternalSecret, internalRouter);
+
+  // Sentry verification test endpoint (available in non-production)
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/api/debug-sentry", () => {
+      throw new Error("Sentry verification test error from Centerly Backend!");
+    });
+  }
+
+  // DEV-ERRM.1: Sentry error handler must be registered before other error middleware
+  Sentry.setupExpressErrorHandler(app);
 
   // DEV-ERRM.1: Uniform 404 handler and global error handling middleware
   app.use(notFoundHandler);

@@ -238,7 +238,15 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
       res.status(400).json({ error: { code: "WEAK_PASSWORD", message: err.message } });
       return;
     }
-    const message = err instanceof Error ? err.message : "Signup failed";
+    if (err instanceof Error && ((err as Error & { code?: string }).code === "USER_ALREADY_EXISTS" || err.message.includes("مسجل بالفعل"))) {
+      res.status(400).json({ error: { code: "USER_ALREADY_EXISTS", message: "هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول بدلاً من ذلك." } });
+      return;
+    }
+    if (err instanceof Error && ((err as Error & { code?: string }).code === "PHONE_ALREADY_EXISTS" || err.message.includes("بحساب آخر"))) {
+      res.status(400).json({ error: { code: "PHONE_ALREADY_EXISTS", message: "رقم الهاتف هذا مسجل بالفعل بحساب آخر." } });
+      return;
+    }
+    const message = err instanceof Error ? err.message : "فشل إنشاء الحساب";
     res.status(400).json({ error: { code: "AUTH_ERROR", message } });
   }
 });

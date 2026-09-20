@@ -34,6 +34,7 @@ export const envSchema = z.object({
   EVOLUTION_API_KEY: z.string().optional().default(""),
   EVOLUTION_INSTANCE_NAME: z.string().optional().default("centrly-main"),
   N8N_ADMIN_ALERT_WEBHOOK_URL: z.string().url().optional().or(z.literal("")).default("https://mohaned1.rooyai.com/webhook/centrly-admin-alerts"),
+  SENTRY_DSN: z.string().optional().default(""),
   // DEV-71: Feature Flags (Default false for MVP-override / in-progress features)
   FEATURE_BUSINESS_DASHBOARD: booleanFlag,
   FEATURE_BEHAVIOR_TRACKING: booleanFlag,
@@ -102,6 +103,7 @@ export const config = {
   evolutionApiKey: env.EVOLUTION_API_KEY,
   evolutionInstanceName: env.EVOLUTION_INSTANCE_NAME,
   n8nAdminAlertWebhookUrl: env.N8N_ADMIN_ALERT_WEBHOOK_URL,
+  sentryDsn: env.SENTRY_DSN,
   features: {
     businessDashboard: env.FEATURE_BUSINESS_DASHBOARD,
     behaviorTracking: env.FEATURE_BEHAVIOR_TRACKING,

@@ -1,3 +1,4 @@
+import "./instrument.js";
 import { app } from "./app.js";
 import { config } from "./shared/config/index.js";
 

@@ -217,19 +217,44 @@ export class SupabaseAuthRepository implements IAuthRepository {
         };
       }
 
-      if (directErr?.message && directErr.message.includes("USER_ALREADY_EXISTS")) {
-        throw new Error("هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول بدلاً من ذلك.");
-      }
-      if (directErr?.message && directErr.message.includes("PHONE_ALREADY_EXISTS")) {
-        throw new Error("رقم الهاتف هذا مسجل بالفعل بحساب آخر.");
+      if (directErr) {
+        const errMsg = directErr.message || "";
+        if (
+          errMsg.includes("USER_ALREADY_EXISTS") ||
+          errMsg.includes("already registered") ||
+          errMsg.includes("users_email_partial_key") ||
+          (errMsg.includes("duplicate key value") && errMsg.includes("email"))
+        ) {
+          const err = new Error("هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول بدلاً من ذلك.");
+          (err as Error & { code?: string }).code = "USER_ALREADY_EXISTS";
+          throw err;
+        }
+        if (
+          errMsg.includes("PHONE_ALREADY_EXISTS") ||
+          errMsg.includes("رقم الهاتف هذا مسجل بالفعل") ||
+          errMsg.includes("users_phone_key")
+        ) {
+          const err = new Error("رقم الهاتف هذا مسجل بالفعل بحساب آخر.");
+          (err as Error & { code?: string }).code = "PHONE_ALREADY_EXISTS";
+          throw err;
+        }
+        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+          throw new Error(errMsg || "فشل إنشاء الحساب. يرجى التأكد من البيانات والمحاولة مجدداً.");
+        }
       }
     } catch (err: unknown) {
-      if (err instanceof Error && (err.message.includes("مسجل بالفعل") || err.message.includes("بحساب آخر"))) {
+      if (err instanceof Error && (err.message.includes("مسجل بالفعل") || err.message.includes("بحساب آخر") || (err as any).code)) {
+        throw err;
+      }
+      if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
         throw err;
       }
     }
 
     // 2. Fallback: administrative user creation (admin.createUser does NOT trigger Supabase emails) + register_tenant_owner
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("تعذر إتمام التسجيل حالياً. يرجى المحاولة مرة أخرى.");
+    }
     let userId: string = "";
     try {
       const { data: adminUserData, error: adminUserErr } = await this.adminClient.auth.admin.createUser({

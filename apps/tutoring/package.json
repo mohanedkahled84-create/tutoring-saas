@@ -16,6 +16,7 @@
     "format:check": "prettier --check \"src/**/*.ts\""
   },
   "dependencies": {
+    "@sentry/node": "^10.75.0",
     "@supabase/supabase-js": "^2.49.1",
     "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.23.1",
