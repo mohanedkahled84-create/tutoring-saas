@@ -22,6 +22,6 @@
   "teachers": ["id", "tenant_id", "user_id", "name", "phone", "subjects", "revenue_model", "revenue_value", "status", "invite_token", "created_at", "updated_at"],
   "telemetry_events": ["id", "tenant_id", "event_name", "properties", "session_id", "page_path", "created_at"],
   "tenants": ["id", "name", "status", "created_at", "subscription_status", "trial_ends_at", "subscription_ends_at", "deleted_at", "account_type", "subscription_tier", "settings"],
-  "users": ["id", "tenant_id", "role", "email", "created_at", "teacher_id", "assistant_id", "full_name", "phone", "financial_pin_hash", "failed_pin_attempts", "pin_locked_until"],
+  "users": ["id", "tenant_id", "role", "email", "created_at", "teacher_id", "assistant_id", "full_name", "phone", "subject", "financial_pin_hash", "failed_pin_attempts", "pin_locked_until"],
   "whatsapp_connections": ["id", "tenant_id", "provider", "instance_url", "instance_status", "api_key_secret_id", "connected_at", "created_at", "sent_today", "last_sent_date", "daily_limit", "teacher_id", "is_legacy_exempt"]
 }

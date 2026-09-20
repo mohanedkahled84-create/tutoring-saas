@@ -2,7 +2,7 @@ import { authService } from './services/auth.js?v=4.8.7';
 import { request, API_BASE_URL } from './services/api.js?v=4.8.8';
 import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
 import { renderNavbar } from './components/Navbar.js?v=4.8.11';
-import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.8.8';
+import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.9';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
@@ -32,7 +32,7 @@ import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.
 import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js';
-import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.8.5';
+import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.9.9';
 import { renderCouponsView } from './components/CouponsView.js?v=4.7.6';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
@@ -1331,12 +1331,21 @@ class CentrlyApp {
   onAccountTypeChange(type) {
     const teacherGroup = document.getElementById('roleFieldsTeacher');
     const centerGroup = document.getElementById('roleFieldsCenter');
+    const signupName = document.getElementById('signupName');
+    const ownerName = document.getElementById('signupCenterOwnerName');
+    const centerName = document.getElementById('signupCenterName');
     if (type === 'center') {
       if (teacherGroup) teacherGroup.style.display = 'none';
       if (centerGroup) centerGroup.style.display = 'block';
+      if (signupName) signupName.required = false;
+      if (ownerName) ownerName.required = true;
+      if (centerName) centerName.required = true;
     } else {
       if (teacherGroup) teacherGroup.style.display = 'block';
       if (centerGroup) centerGroup.style.display = 'none';
+      if (signupName) signupName.required = true;
+      if (ownerName) ownerName.required = false;
+      if (centerName) centerName.required = false;
     }
   }
 
@@ -1616,6 +1625,7 @@ class CentrlyApp {
 
     const ownerName = document.getElementById('signupCenterOwnerName')?.value?.trim() || '';
     const centerName = document.getElementById('signupCenterName')?.value?.trim() || '';
+    const subject = document.getElementById('signupSubject')?.value?.trim() || '';
 
     this.signupFormData = {
       accountType,
@@ -1625,6 +1635,7 @@ class CentrlyApp {
       tenantName,
       email,
       phone,
+      subject,
       password,
       passwordConfirm,
     };
@@ -1641,6 +1652,7 @@ class CentrlyApp {
         full_name: name,
         tenant_name: tenantName,
         phone,
+        subject,
         account_type: accountType,
       });
 
@@ -1653,6 +1665,8 @@ class CentrlyApp {
         ...(res.user || {}),
         full_name: name || res.user?.full_name,
         name: name || res.user?.name,
+        phone: phone || res.user?.phone,
+        subject: subject || res.user?.subject,
       };
       authService.setUser(this.user);
       this.startOnboarding();
@@ -1702,6 +1716,8 @@ class CentrlyApp {
       } else {
         const nameInput = document.getElementById('signupName');
         if (nameInput && data.name) nameInput.value = data.name;
+        const subjectInput = document.getElementById('signupSubject');
+        if (subjectInput && data.subject) subjectInput.value = data.subject;
       }
 
       const emailInput = document.getElementById('signupEmail');
@@ -2693,12 +2709,17 @@ class CentrlyApp {
         case 'settings': {
           try {
             const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
-            const [billingRes, quotaRes, statusRes, tplRes] = await Promise.all([
+            const [billingRes, quotaRes, statusRes, tplRes, meRes] = await Promise.all([
               request('/billing/status').catch(() => null),
               request('/whatsapp/quota').catch(() => ({})),
               request(`/whatsapp/status${teacherParam}`).catch(() => ({ status: 'disconnected' })),
               request('/templates').catch(() => ({ templates: [] })),
+              request('/auth/me').catch(() => null),
             ]);
+            if (meRes?.user) {
+              this.user = { ...this.user, ...meRes.user };
+              authService.setUser(this.user);
+            }
             if (billingRes) {
               this.billingState = billingRes;
               this.saveCache('billingState', this.billingState);
@@ -12095,8 +12116,8 @@ https://centerly-platform.vercel.app/p/p16766044
   async handleSaveTeacherProfile(e) {
     if (e) e.preventDefault();
     const name = document.getElementById('settingsTeacherName')?.value?.trim();
-    const subject = document.getElementById('settingsSubject')?.value?.trim();
-    const phone = document.getElementById('settingsPhone')?.value?.trim();
+    const subject = document.getElementById('settingsSubject')?.value?.trim() || '';
+    const phone = document.getElementById('settingsPhone')?.value?.trim() || '';
     const btn = document.getElementById('saveProfileBtn');
     if (btn) {
       btn.disabled = true;
@@ -12111,12 +12132,15 @@ https://centerly-platform.vercel.app/p/p16766044
           subject,
           phone,
         }),
-      }).catch(() => null);
+      });
 
       if (this.user) {
-        if (name) this.user.name = name;
-        if (subject) this.user.subject = subject;
-        if (phone) this.user.phone = phone;
+        if (name) {
+          this.user.name = name;
+          this.user.full_name = name;
+        }
+        this.user.subject = subject;
+        this.user.phone = phone;
         authService.setUser(this.user);
       }
       this.showToast('تم حفظ بيانات الملف الشخصي بنجاح', 'success');

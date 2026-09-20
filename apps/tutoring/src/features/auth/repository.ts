@@ -63,12 +63,16 @@ export class SupabaseAuthRepository implements IAuthRepository {
     }
 
     const fullName = (data.user.user_metadata?.full_name as string) || null;
+    const phone = (data.user.user_metadata?.phone as string) || null;
+    const subject = (data.user.user_metadata?.subject as string) || null;
     return {
       user: {
         id: data.user.id,
         email: data.user.email,
         name: fullName,
         full_name: fullName,
+        phone,
+        subject,
       },
       token: data.session.access_token,
       refresh_token: data.session.refresh_token,
@@ -187,6 +191,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
           p_tenant_name: data.tenant_name,
           p_account_type: accountType,
           p_trial_ends_at: trialEndsAt,
+          p_subject: data.subject || "",
         }
       );
 
@@ -199,6 +204,8 @@ export class SupabaseAuthRepository implements IAuthRepository {
             role: directData.role || userRole,
             name: data.full_name || null,
             full_name: data.full_name || null,
+            phone: directData.phone || data.phone || null,
+            subject: directData.subject || data.subject || null,
           },
           tenant: {
             id: directData.tenant_id,
@@ -229,7 +236,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
         email: data.email,
         password: data.password,
         email_confirm: false,
-        user_metadata: { full_name: data.full_name, phone: data.phone },
+        user_metadata: { full_name: data.full_name, phone: data.phone, subject: data.subject },
       });
 
       if (adminUserErr) {
@@ -260,6 +267,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
         p_tenant_name: data.tenant_name,
         p_account_type: accountType,
         p_trial_ends_at: trialEndsAt,
+        p_subject: data.subject || "",
       }
     );
 
@@ -279,6 +287,8 @@ export class SupabaseAuthRepository implements IAuthRepository {
         role: userRole,
         name: data.full_name || null,
         full_name: data.full_name || null,
+        phone: data.phone || null,
+        subject: data.subject || null,
       },
       tenant: {
         id: rpcData.tenant_id,
@@ -532,7 +542,14 @@ export class FakeAuthRepository implements IAuthRepository {
     }
 
     return {
-      user: { id: user.id, email: user.email, name: (user as any).full_name || null, full_name: (user as any).full_name || null },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: (user as any).full_name || null,
+        full_name: (user as any).full_name || null,
+        phone: (user as any).phone || null,
+        subject: (user as any).subject || null,
+      },
       token: `mock-jwt-token-${user.id}`,
       refresh_token: `mock-refresh-token-${user.id}`,
       expires_in: 3600,
@@ -569,7 +586,9 @@ export class FakeAuthRepository implements IAuthRepository {
       password: data.password,
       tenant_id: tenantId,
       role: userRole,
+      full_name: data.full_name,
       phone: data.phone,
+      subject: data.subject,
       email_confirmed: true, // Default true in tests unless explicitly unconfirmed
     };
     this.users.push(user);
@@ -584,7 +603,15 @@ export class FakeAuthRepository implements IAuthRepository {
     });
 
     return {
-      user: { id: userId, email: data.email, role: userRole, name: data.full_name || null, full_name: data.full_name || null },
+      user: {
+        id: userId,
+        email: data.email,
+        role: userRole,
+        name: data.full_name || null,
+        full_name: data.full_name || null,
+        phone: data.phone || null,
+        subject: data.subject || null,
+      },
       tenant,
     };
   }

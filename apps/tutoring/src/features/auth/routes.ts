@@ -37,16 +37,20 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
     });
 
     let hasSecurityPin = false;
+    let dbUser: any = null;
     try {
       const client = getScopedSupabaseClient(result.token);
       const { data: uRec } = await client
         .from("users")
-        .select("financial_pin_hash, tenant_id")
+        .select("id, financial_pin_hash, tenant_id, full_name, phone, subject, role")
         .eq("id", result.user.id)
         .maybeSingle();
 
-      if (uRec?.financial_pin_hash) {
-        hasSecurityPin = true;
+      if (uRec) {
+        dbUser = uRec;
+        if (uRec.financial_pin_hash) {
+          hasSecurityPin = true;
+        }
       }
     } catch (_) {}
 
@@ -54,6 +58,14 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
       message: "Login successful",
       user: {
         ...result.user,
+        ...(dbUser ? {
+          name: dbUser.full_name || result.user.name,
+          full_name: dbUser.full_name || result.user.full_name,
+          phone: dbUser.phone || (result.user as any)?.phone,
+          subject: dbUser.subject || (result.user as any)?.subject,
+          role: dbUser.role || (result.user as any)?.role,
+          tenant_id: dbUser.tenant_id || (result.user as any)?.tenant_id,
+        } : {}),
         has_security_pin: hasSecurityPin,
       },
       token: result.token,
@@ -111,7 +123,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
       const client = getScopedSupabaseClient(result.token);
       const { data: uRec } = await client
         .from("users")
-        .select("id, tenant_id, role, full_name, teacher_id, assistant_id, financial_pin_hash")
+        .select("id, tenant_id, role, full_name, phone, subject, teacher_id, assistant_id, financial_pin_hash")
         .eq("id", result.user.id)
         .maybeSingle();
 
@@ -124,6 +136,8 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
           result.user.name = uRec.full_name;
           result.user.full_name = uRec.full_name;
         }
+        if (uRec.phone) (result.user as any).phone = uRec.phone;
+        if (uRec.subject) (result.user as any).subject = uRec.subject;
         if (uRec.financial_pin_hash) {
           hasSecurityPin = true;
         }
@@ -255,10 +269,35 @@ authRouter.post("/verify-email", authRateLimiter, async (req: Request, res: Resp
       });
     }
 
+    let verifiedUser: any = result.user;
+    if (result.token && result.user?.id) {
+      try {
+        const client = getScopedSupabaseClient(result.token);
+        const { data: uRec } = await client
+          .from("users")
+          .select("id, tenant_id, role, full_name, phone, subject, teacher_id, assistant_id, financial_pin_hash")
+          .eq("id", result.user.id)
+          .maybeSingle();
+
+        if (uRec) {
+          verifiedUser = {
+            ...result.user,
+            name: uRec.full_name || result.user.name,
+            full_name: uRec.full_name || result.user.full_name,
+            phone: uRec.phone || (result.user as any)?.phone,
+            subject: uRec.subject || (result.user as any)?.subject,
+            role: uRec.role || (result.user as any)?.role,
+            tenant_id: uRec.tenant_id || (result.user as any)?.tenant_id,
+            has_security_pin: Boolean(uRec.financial_pin_hash),
+          };
+        }
+      } catch (_) {}
+    }
+
     res.json({
       message: result.message,
       verified: true,
-      user: result.user,
+      user: verifiedUser,
       token: result.token,
       refresh_token: result.refresh_token,
       expires_in: result.expires_in,

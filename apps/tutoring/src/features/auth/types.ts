@@ -9,6 +9,10 @@ export interface LoginResult {
     email?: string;
     name?: string | null;
     full_name?: string | null;
+    phone?: string | null;
+    subject?: string | null;
+    tenant_id?: string | null;
+    role?: string | null;
   };
   token: string;
   refresh_token?: string;
@@ -33,6 +37,8 @@ export interface SignupResult {
     role?: string;
     name?: string | null;
     full_name?: string | null;
+    phone?: string | null;
+    subject?: string | null;
   };
   tenant: {
     id: string;

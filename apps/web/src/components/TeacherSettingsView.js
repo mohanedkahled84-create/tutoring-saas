@@ -141,7 +141,26 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
 
               <div class="form-group">
                 <label class="form-label" style="font-weight: 700;">المادة التعليمية</label>
-                <input type="text" id="settingsSubject" class="form-input" value="${escapeHtml(subject)}" placeholder="المادة التعليمية">
+                <input type="text" id="settingsSubject" class="form-input" value="${escapeHtml(subject)}" placeholder="المادة التعليمية" list="profileSubjectsList" autocomplete="off">
+                <datalist id="profileSubjectsList">
+                  <option value="لغة عربية">
+                  <option value="رياضيات">
+                  <option value="لغة إنجليزية">
+                  <option value="فيزياء">
+                  <option value="كيمياء">
+                  <option value="أحياء">
+                  <option value="جيولوجيا">
+                  <option value="تاريخ">
+                  <option value="جغرافيا">
+                  <option value="فلسفة ومنطق">
+                  <option value="علم نفس واجتماع">
+                  <option value="لغة فرنسية">
+                  <option value="لغة ألمانية">
+                  <option value="لغة إيطالية">
+                  <option value="دراسات اجتماعية">
+                  <option value="علوم">
+                  <option value="حاسب آلي / تكنولوجيا">
+                </datalist>
               </div>
 
               <div class="form-group">

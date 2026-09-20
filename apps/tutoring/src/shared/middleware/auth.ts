@@ -88,7 +88,7 @@ export async function authenticateUser(
     if (!userRecord && !userRowNotFound) {
       const { data: directProfile, error: userError } = await userClient
         .from("users")
-        .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, financial_pin_hash")
+        .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, phone, subject, financial_pin_hash")
         .eq("id", userId)
         .single();
 
@@ -140,6 +140,8 @@ export async function authenticateUser(
 
     // 3. Attach user context and scoped client
     const fullName = (userRecord as { full_name?: string | null })?.full_name || authData.user.user_metadata?.full_name || null;
+    const phone = (userRecord as { phone?: string | null })?.phone || (authData.user.user_metadata?.phone as string) || null;
+    const subject = (userRecord as { subject?: string | null })?.subject || (authData.user.user_metadata?.subject as string) || null;
     const hasSecurityPin = Boolean((userRecord as { financial_pin_hash?: string | null })?.financial_pin_hash);
 
     req.user = {
@@ -147,6 +149,8 @@ export async function authenticateUser(
       email: email || userRecord.email,
       name: fullName,
       full_name: fullName,
+      phone,
+      subject,
       tenant_id: userRecord.tenant_id,
       role: userRecord.role as UserRole,
       teacher_id: userRecord.teacher_id,

@@ -29,6 +29,9 @@ const updateSettingsSchema = z.object({
   homework_submission: z.enum(["in_session", "online_before_session"]).optional(),
   auto_notification: z.boolean().optional(),
   enable_top_performers: z.boolean().optional(),
+  teacher_name: z.string().optional(),
+  subject: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 // GET /api/settings - Get tenant workflow settings
@@ -52,6 +55,14 @@ settingsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
       settings: {
         ...DEFAULT_TENANT_SETTINGS,
         ...(settings || {}),
+        subject: req.user?.subject || (settings as any)?.subject || "",
+      },
+      user: {
+        id: req.user?.id,
+        name: req.user?.name || req.user?.full_name,
+        full_name: req.user?.full_name,
+        phone: req.user?.phone || "",
+        subject: req.user?.subject || (settings as any)?.subject || "",
       },
     });
   } catch (_err: unknown) {
@@ -92,9 +103,36 @@ settingsRouter.put(
 
       const updated = await tenantsRepo.updateTenantSettings(tenantId, mergedSettings);
 
+      // Also update user profile in public.users if teacher_name, phone, or subject are passed
+      const userUpdates: Record<string, string> = {};
+      if (req.body.teacher_name !== undefined) userUpdates.full_name = req.body.teacher_name.trim();
+      if (req.body.phone !== undefined) userUpdates.phone = normalizeDigits(req.body.phone);
+      if (req.body.subject !== undefined) userUpdates.subject = req.body.subject.trim();
+
+      if (Object.keys(userUpdates).length > 0 && req.user?.id) {
+        const client = req.supabase || getScopedSupabaseClient(req.token);
+        await client.from("users").update(userUpdates).eq("id", req.user.id);
+
+        // Also update teacher in public.teachers if teacher record exists
+        const teacherUpdates: Record<string, any> = {};
+        if (userUpdates.full_name) teacherUpdates.name = userUpdates.full_name;
+        if (userUpdates.phone) teacherUpdates.phone = userUpdates.phone;
+        if (userUpdates.subject) teacherUpdates.subjects = [userUpdates.subject];
+        if (Object.keys(teacherUpdates).length > 0) {
+          await client.from("teachers").update(teacherUpdates).eq("user_id", req.user.id);
+        }
+      }
+
       res.json({
         message: "Settings updated successfully",
         settings: updated || mergedSettings,
+        user: {
+          id: req.user?.id,
+          name: userUpdates.full_name ?? req.user?.name,
+          full_name: userUpdates.full_name ?? req.user?.full_name,
+          phone: userUpdates.phone ?? req.user?.phone,
+          subject: userUpdates.subject ?? req.user?.subject,
+        },
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to update tenant settings";

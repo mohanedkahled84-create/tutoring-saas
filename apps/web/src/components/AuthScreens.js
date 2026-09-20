@@ -68,9 +68,34 @@ export function renderAuthScreens() {
           </div>
 
           <!-- Dynamic Role Fields -->
-          <div id="roleFieldsTeacher" class="form-group">
-            <label class="form-label">اسم المدرس *</label>
-            <input type="text" id="signupName" class="form-input" placeholder="اسم المدرس بالكامل" required>
+          <div id="roleFieldsTeacher">
+            <div class="form-group">
+              <label class="form-label">اسم المدرس *</label>
+              <input type="text" id="signupName" class="form-input" placeholder="اسم المدرس بالكامل" required>
+            </div>
+            <div class="form-group" style="margin-top: 0.85rem;">
+              <label class="form-label">المادة التعليمية</label>
+              <input type="text" id="signupSubject" class="form-input" placeholder="مثال: لغة عربية، رياضيات، فيزياء..." list="signupSubjectsList" autocomplete="off">
+              <datalist id="signupSubjectsList">
+                <option value="لغة عربية">
+                <option value="رياضيات">
+                <option value="لغة إنجليزية">
+                <option value="فيزياء">
+                <option value="كيمياء">
+                <option value="أحياء">
+                <option value="جيولوجيا">
+                <option value="تاريخ">
+                <option value="جغرافيا">
+                <option value="فلسفة ومنطق">
+                <option value="علم نفس واجتماع">
+                <option value="لغة فرنسية">
+                <option value="لغة ألمانية">
+                <option value="لغة إيطالية">
+                <option value="دراسات اجتماعية">
+                <option value="علوم">
+                <option value="حاسب آلي / تكنولوجيا">
+              </datalist>
+            </div>
           </div>
 
           <div id="roleFieldsCenter" style="display: none;">
