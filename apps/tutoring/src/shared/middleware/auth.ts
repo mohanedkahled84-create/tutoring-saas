@@ -17,6 +17,12 @@ export function extractToken(req: AuthenticatedRequest): string | null {
   return null;
 }
 
+// Exported client resolver to allow deterministic testing and mocking
+export const authClientResolver = {
+  supabasePublic,
+  getScopedSupabaseClient,
+};
+
 // DEV-AUTH.1: Authenticate token and resolve tenant context
 export async function authenticateUser(
   req: AuthenticatedRequest,
@@ -38,7 +44,7 @@ export async function authenticateUser(
 
   try {
     // 1. Verify token with Supabase Auth
-    const { data: authData, error: authError } = await supabasePublic.auth.getUser(token);
+    const { data: authData, error: authError } = await authClientResolver.supabasePublic.auth.getUser(token);
 
     if (authError || !authData.user) {
       res.status(401).json({
@@ -55,37 +61,68 @@ export async function authenticateUser(
     const email = authData.user.email;
 
     // 2. Resolve role & tenant from public.users
-    const userClient = getScopedSupabaseClient(token);
+    const userClient = authClientResolver.getScopedSupabaseClient(token);
     let userRecord: any = null;
+    let lastDbError: any = null;
+    let userRowNotFound = false;
 
     // Fast, rock-solid resolution via SECURITY DEFINER RPC
     try {
-      const { data: rpcProfile, error: rpcError } = await supabasePublic.rpc("get_user_profile", {
+      const { data: rpcProfile, error: rpcError } = await authClientResolver.supabasePublic.rpc("get_user_profile", {
         p_user_id: userId,
       });
-      if (!rpcError && rpcProfile) {
-        userRecord = rpcProfile;
+      if (!rpcError) {
+        if (rpcProfile) {
+          userRecord = rpcProfile;
+        } else {
+          userRowNotFound = true;
+        }
+      } else {
+        lastDbError = rpcError;
       }
-    } catch (_) {}
+    } catch (err) {
+      lastDbError = err;
+    }
 
-    // Fallback: direct query via token-scoped client
-    if (!userRecord) {
+    // Fallback: direct query via token-scoped client if not resolved yet
+    if (!userRecord && !userRowNotFound) {
       const { data: directProfile, error: userError } = await userClient
         .from("users")
         .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, financial_pin_hash")
         .eq("id", userId)
         .single();
+
       if (userError) {
-        console.error(`[auth.middleware] Failed to resolve user profile for ${userId}:`, userError);
+        if (userError.code === "PGRST116" || (userError.message && userError.message.includes("0 rows"))) {
+          userRowNotFound = true;
+        } else {
+          lastDbError = userError;
+          console.error(`[auth.middleware] Database error resolving user profile for ${userId}:`, userError);
+        }
+      } else if (directProfile) {
+        userRecord = directProfile;
+        userRowNotFound = false;
+        lastDbError = null;
       }
-      userRecord = directProfile;
     }
 
     if (!userRecord) {
-      res.status(403).json({
+      if (userRowNotFound) {
+        res.status(403).json({
+          error: {
+            code: "NO_PROFILE",
+            message: "لا يوجد ملف مستخدم مرتبط بهذا الحساب أو الحساب غير مفعل",
+          },
+        });
+        return;
+      }
+
+      // Any other DB / PostgREST error -> 503 AUTH_BACKEND_ERROR
+      console.error(`[auth.middleware] Backend DB error resolving profile for ${userId}:`, lastDbError);
+      res.status(503).json({
         error: {
-          code: "FORBIDDEN",
-          message: "User account exists but has no application profile or is inactive",
+          code: "AUTH_BACKEND_ERROR",
+          message: "تعذر التحقق من بيانات الحساب مؤقتاً بسبب خطأ في الخادم. يرجى المحاولة بعد قليل.",
         },
       });
       return;

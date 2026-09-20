@@ -94,9 +94,9 @@ export class SupabaseAuthRepository implements IAuthRepository {
 
     const candidateEmails: string[] = [];
 
-    // Query RPC get_emails_by_phone to get all accounts linked to this phone
+    // Query RPC get_emails_by_phone via adminClient (service-role restricted)
     try {
-      const { data: emailsData, error: emailsErr } = await this.publicClient.rpc(
+      const { data: emailsData, error: emailsErr } = await this.adminClient.rpc(
         "get_emails_by_phone",
         { p_phone: cleanPhone }
       );
@@ -110,10 +110,10 @@ export class SupabaseAuthRepository implements IAuthRepository {
       }
     } catch (_) {}
 
-    // Fallback: get_email_by_phone
+    // Fallback: get_email_by_phone via adminClient
     if (candidateEmails.length === 0) {
       try {
-        const { data: singleEmail } = await this.publicClient.rpc(
+        const { data: singleEmail } = await this.adminClient.rpc(
           "get_email_by_phone",
           { p_phone: cleanPhone }
         );
@@ -121,28 +121,6 @@ export class SupabaseAuthRepository implements IAuthRepository {
           const em = String(singleEmail).trim().toLowerCase();
           if (em && !candidateEmails.includes(em)) {
             candidateEmails.push(em);
-          }
-        }
-      } catch (_) {}
-    }
-
-    // Direct query fallback on users table via adminClient
-    if (candidateEmails.length === 0 && this.adminClient) {
-      try {
-        const digitsOnly = cleanPhone.replace(/\D/g, "");
-        const { data: dbUsers } = await this.adminClient
-          .from("users")
-          .select("email, phone")
-          .not("phone", "is", null);
-
-        if (Array.isArray(dbUsers)) {
-          for (const u of dbUsers) {
-            const uPhoneDigits = String(u.phone || "").replace(/\D/g, "");
-            if (uPhoneDigits && (uPhoneDigits === digitsOnly || uPhoneDigits.endsWith(digitsOnly) || digitsOnly.endsWith(uPhoneDigits))) {
-              if (u.email && !candidateEmails.includes(u.email.toLowerCase())) {
-                candidateEmails.push(u.email.toLowerCase());
-              }
-            }
           }
         }
       } catch (_) {}
@@ -271,7 +249,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
       throw new Error("تعذر إنشاء حساب المستخدم في النظام. يرجى المحاولة مرة أخرى.");
     }
 
-    const { data: rpcData, error: rpcErr } = await this.publicClient.rpc(
+    const { data: rpcData, error: rpcErr } = await this.adminClient.rpc(
       "register_tenant_owner",
       {
         p_user_id: userId,
@@ -285,6 +263,9 @@ export class SupabaseAuthRepository implements IAuthRepository {
     );
 
     if (rpcErr || !rpcData) {
+      if (userId && this.adminClient) {
+        await this.adminClient.auth.admin.deleteUser(userId).catch(() => {});
+      }
       throw new Error(rpcErr?.message || "Failed to initialize organization profile");
     }
 
