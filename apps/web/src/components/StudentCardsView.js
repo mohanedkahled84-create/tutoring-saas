@@ -1,11 +1,12 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import { renderStudentBarcodeCardHtml } from "../utils/studentBarcodeCard.js";
 
 /**
  * Centrly Student Cards Printing Component (DEV-89)
  * Name: طباعة كروت الطلاب
  * Features:
- *  - Interactive live card preview with Centrly branding
+ *  - Interactive live card preview with Centrly V2 flat branding (Front Only)
  *  - Upsell banner for plastic PVC ID cards linking to WhatsApp 01123671177
  *  - Selective batch printing (all, by group, or selected checkboxes)
  */
@@ -15,50 +16,71 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
   const groupList = groups || [];
   const defaultStudent = studentList[0] || {
     id: 'sample',
-    name: 'يوسف محمود علي رضوان',
-    code: 'STU-1042',
-    student_code: 'STU-1042',
+    name: 'أحمد محمود',
+    code: '1005',
+    student_code: '1005',
     parent_phone: '01012345678',
     student_phone: '01123456789',
   };
 
   const teacherOrCenterName = user?.name || (user?.account_type === 'center' ? 'سنتر التفوق التعليمي' : 'أ. محمد خالد');
   const userRoleTitle = user?.account_type === 'center' ? 'السنتر التعليمي' : 'مدرس المادة';
+  const sampleGroupName = groupList.find(g => g.id === defaultStudent.group_id)?.name || defaultStudent.group_name || 'فيزياء — تالتة ثانوي';
+
+  const sampleStudentObj = {
+    name: defaultStudent.name,
+    student_code: defaultStudent.code || defaultStudent.student_code || '1005',
+    code: defaultStudent.code || defaultStudent.student_code || '1005',
+    group_name: sampleGroupName,
+    teacher_name: teacherOrCenterName,
+  };
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" id="studentCardsContainer">
       
-      <!-- Top Header & Direct Plastic Card Order Banner -->
-      <div class="card" style="margin: 0; background: linear-gradient(135deg, #1e3a8a, #1e40af); color: #ffffff; border: none; box-shadow: 0 10px 25px rgba(30,58,138,0.25);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
-          <div style="max-width: 680px;">
-            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.15); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600; margin-bottom: 0.6rem;">
+      <!-- Top Section: Direct Plastic Card Order Banner & Live Card Preview -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; align-items: stretch;">
+        
+        <!-- Plastic Card Order Info Banner -->
+        <div class="card" style="margin: 0; background: linear-gradient(135deg, #172D70, #1e3a8a); color: #ffffff; border: none; box-shadow: 0 10px 25px rgba(23,45,112,0.25); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.15); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 0.6rem;">
               <span>${getIcon('cards', 16, '#ffffff')}</span>
-              <span>طباعة كروت الطلاب والباركود الذكي</span>
+              <span>بطاقات الحضور الذكية (CR80 القياسية)</span>
             </div>
-            <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #ffffff;">كروت الطلاب الذكية والباركود للطباعة</h2>
-            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.95); margin-top: 0.6rem; line-height: 1.6; background: rgba(0,0,0,0.15); padding: 0.75rem 1rem; border-radius: 8px;">
-              <strong style="color: #93c5fd;">خطوات طلب الكروت البلاستيكية الذكية (PVC):</strong>
+            <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #ffffff;">كروت الطلاب الذكية والباركود المعتمد</h2>
+            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.95); margin-top: 0.6rem; line-height: 1.6; background: rgba(0,0,0,0.2); padding: 0.75rem 1rem; border-radius: 8px;">
+              <strong style="color: #FDE68A;">خطوات طلب الكروت البلاستيكية الذكية (PVC):</strong>
               <ol style="margin: 0.35rem 0 0 0; padding-right: 1.2rem; font-size: 0.82rem; color: #f1f5f9;">
                 <li>حدد الطلاب المطلوب إصدار كروت لهم من الجدول أدناه (أو اضغط "تحديد الكل").</li>
                 <li>اضغط على زر <b>"تصدير بيانات الكروت (Excel / CSV)"</b> لتحميل ملف الطلاب وأكوادهم بصيغة منظمة.</li>
-                <li>أرسل الملف المُحمّل إلى فريق سنترلي عبر <b>واتساب الإدارة</b> بالزر المجاور لاختيار خامة وجودة الكارت وتأكيد الكمية والطلب.</li>
+                <li>أرسل الملف المُحمّل إلى فريق سنترلي عبر <b>واتساب الإدارة</b> بالزر أدناه لاختيار خامة وجودة الكارت وتأكيد الكمية والطلب.</li>
                 <li>يتم تجهيز وطباعة الكروت البلاستيكية الفاخرة وشحنها مباشرة إلى مقر السنتر أو المعلم في أسرع وقت.</li>
               </ol>
             </div>
           </div>
 
           <!-- Order Plastic Cards WhatsApp Button -->
-          <div style="text-align: center;">
-            <a href="https://wa.me/201123671177?text=${encodeURIComponent('السلام عليكم، جهزت ملف بيانات كروت الطلاب من سنترلي وعايز أرسله علشان نطلب كروت بلاستيكية PVC.')}" target="_blank" rel="noopener noreferrer" class="btn" style="background: #25d366; color: #ffffff; font-weight: 800; padding: 0.85rem 1.4rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.35); transition: transform 0.2s;">
+          <div style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <a href="https://wa.me/201123671177?text=${encodeURIComponent('السلام عليكم، جهزت ملف بيانات كروت الطلاب من سنترلي وعايز أرسله علشان نطلب كروت بلاستيكية PVC.')}" target="_blank" rel="noopener noreferrer" class="btn" style="background: #25d366; color: #ffffff; font-weight: 800; padding: 0.75rem 1.35rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.35); transition: transform 0.2s;">
               ${getIcon('whatsapp', 20, '#ffffff')}
-              <span style="font-size: 0.95rem;">طلب كروت بلاستيكية (واتساب)</span>
+              <span style="font-size: 0.92rem;">طلب كروت بلاستيكية (واتساب)</span>
             </a>
-            <div style="font-size: 0.72rem; color: rgba(255,255,255,0.8); margin-top: 0.4rem;">
-              تواصل مباشر مع الإدارة لإرسال الملف وطلب الكروت
-            </div>
+            <span style="font-size: 0.75rem; color: rgba(255,255,255,0.85);">
+              طباعة بلاستيكية PVC عالية الجودة ومقاومة للماء
+            </span>
           </div>
         </div>
+
+        <!-- Live V2 Card Preview (Front Only) -->
+        <div class="card" style="margin: 0; background: #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1.5px solid #e2e8f0;">
+          <div style="font-size: 0.82rem; font-weight: 800; color: #172D70; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #E7A330;"></span>
+            <span>معاينة مباشرة لتصميم الكارت الجديد (V2 - ألوان مسطحة)</span>
+          </div>
+          ${renderStudentBarcodeCardHtml(sampleStudentObj)}
+        </div>
+
       </div>
 
       <!-- Selective Printing Controls & Student Table -->

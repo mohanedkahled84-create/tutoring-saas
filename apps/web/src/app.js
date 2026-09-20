@@ -19,7 +19,7 @@ import { renderStudentReportsView } from './components/StudentReportsView.js?v=2
 import { renderRiskWatchlistView } from './components/RiskWatchlistView.js';
 import { renderBillingView } from './components/BillingView.js?v=3.8.0';
 import { renderWhatsAppSettingsView } from './components/WhatsAppSettingsView.js?v=4.9.6';
-import { renderStudentCardsView } from './components/StudentCardsView.js';
+import { renderStudentCardsView } from './components/StudentCardsView.js?v=4.0.0';
 import { renderTeacherQuizzesView } from './components/TeacherQuizzesView.js?v=4.8.12';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
@@ -36,7 +36,7 @@ import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v
 import { renderCouponsView } from './components/CouponsView.js?v=4.7.6';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
-import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js?v=3.0.0';
+import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js?v=4.0.0';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
 import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
 
@@ -5917,122 +5917,93 @@ class CentrlyApp {
   }
 
   previewSpecificCard(name, code, group, phone) {
-    const teacherName = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'المدرس');
-    const initial = name ? name.charAt(0) : 'ط';
-    const bodyHtml = `
-      <div style="display: flex; justify-content: center; padding: 0.5rem 0;">
-        <div style="width: 100%; max-width: 380px; border: 2px solid #0f172a; border-radius: 14px; padding: 16px 18px; background: #fff; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
-            <div>
-              <div style="font-size: 14px; font-weight: 800; color: #1e3a8a;">سنترلي | Centrly</div>
-              <div style="font-size: 10px; color: #475569;">كارت حضور ذكي</div>
-            </div>
-            <div style="text-align: left;">
-              <div style="font-size: 11px; font-weight: 700; color: #0f172a;">${escapeHtml(teacherName)}</div>
-              <div style="font-size: 10px; color: #475569;">${escapeHtml(group || 'المجموعة')}</div>
-            </div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
-            <div style="width: 46px; height: 46px; border-radius: 8px; background: #f1f5f9; border: 1.5px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #1e3a8a;">
-              ${escapeHtml(initial)}
-            </div>
-            <div>
-              <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${escapeHtml(name)}</div>
-              <div style="font-size: 10px; color: #475569; margin-top: 2px;">هاتف: ${escapeHtml(phone || '—')}</div>
-            </div>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 8px; padding: 8px 12px; border: 1px solid #e2e8f0;">
-            <div style="display: flex; gap: 2px; height: 24px; align-items: center;">
-              <span style="background: #000; width:2px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:1px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:3px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:1px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:2px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:4px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:1px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:3px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:2px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:1px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:2px; height:100%; display:inline-block;"></span>
-              <span style="background: #000; width:3px; height:100%; display:inline-block;"></span>
-            </div>
-            <div style="text-align: left;">
-              <div style="font-family: monospace; font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #0f172a;">${escapeHtml(code)}</div>
-              <div style="font-size: 8px; color: #64748b;">Scan to Attend</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+    const studentObj = {
+      name,
+      student_code: code,
+      code,
+      group_name: group,
+      teacher_name: this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'معلم المادة'),
+      center_name: this.user?.account_type === 'center' ? this.user?.name : '',
+    };
+    const bodyHtml = renderStudentBarcodeCardHtml(studentObj);
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
+      <button type="button" class="btn" style="background-color: #E7A330; color: #0f172a; font-weight: 800; border: none; cursor: pointer;" onclick="window.centrlyBarcodeCard.downloadCardPng(${JSON.stringify(studentObj).replace(/"/g, '&quot;')})">تحميل كصورة (PNG)</button>
       <button type="button" class="btn btn-primary" onclick="window.centrlyApp.printSingleCard('${escapeHtml(name)}', '${escapeHtml(code)}', '${escapeHtml(group)}', '${escapeHtml(phone)}')">
-        ${getIcon('printer', 16)} <span>طباعة الكارت الآن</span>
+        ${getIcon('printer', 16)} <span>طباعة الكارت</span>
       </button>
     `;
-    this.showModal(`معاينة كارت الطالب: ${name}`, bodyHtml, footerHtml);
+    this.showModal(`معاينة كارت الطالب: ${escapeHtml(name)}`, bodyHtml, footerHtml);
   }
 
   printSingleCard(name, code, group, phone) {
-    const teacherName = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'المدرس');
+    const teacherName = this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'معلم المادة');
+    const barcodeSvg = generateBarcode128Svg(code, { height: 38, unitWidth: 2.0 });
     const printHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
       <head>
         <meta charset="utf-8">
         <title>طباعة كارت - ${escapeHtml(name)}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800;900&family=Changa:wght@700;800;900&display=swap" rel="stylesheet">
         <style>
           @page { size: auto; margin: 10mm; }
-          body { font-family: 'Cairo', 'Changa', sans-serif; margin: 0; padding: 20px; background: #fff; color: #000; display: flex; justify-content: center; }
-          .card {
-            border: 2px solid #0f172a; border-radius: 12px; padding: 14px 16px;
-            width: 320px; height: 190px; box-sizing: border-box; display: flex; flex-direction: column;
-            justify-content: space-between; page-break-inside: avoid; background: #fff;
+          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { font-family: 'Cairo', Tahoma, sans-serif; margin: 0; padding: 20px; background: #fff; display: flex; justify-content: center; }
+          .id-card {
+            width: 85.6mm; height: 54mm; background-color: #172D70; border: 2px solid #2949BA;
+            border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
+            page-break-inside: avoid; color: #ffffff;
           }
-          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 6px; }
-          .logo { font-size: 14px; font-weight: 800; color: #1e3a8a; }
-          .sub { font-size: 10px; color: #475569; }
-          .body { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
-          .avatar { width: 44px; height: 44px; border-radius: 8px; background: #f1f5f9; border: 1.5px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; }
-          .name { font-size: 14px; font-weight: 800; color: #0f172a; }
-          .meta { font-size: 10px; color: #475569; margin-top: 3px; }
-          .footer { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 6px; padding: 6px 10px; border: 1px solid #e2e8f0; }
-          .barcode-bars { display: flex; gap: 2px; height: 22px; align-items: center; }
-          .barcode-bars span { background: #000; height: 100%; display: inline-block; }
-          .code { font-family: monospace; font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #0f172a; }
+          .hdr { background-color: #2949BA; padding: 5px 12px; display: flex; justify-content: space-between; align-items: center; }
+          .logo { font-family: 'Changa', 'Cairo', sans-serif; font-size: 16px; font-weight: 900; color: #fff; }
+          .hdr-title { font-size: 10px; font-weight: 800; text-align: left; }
+          .hdr-sub { font-size: 7px; color: #E8EDFF; font-weight: 900; }
+          .divider { height: 2.5px; background-color: #E7A330; }
+          .body { padding: 5px 12px; display: flex; flex-direction: column; justify-content: space-around; flex-grow: 1; }
+          .lbl { font-size: 8px; color: #E8EDFF; font-weight: 700; }
+          .s-name { font-family: 'Changa', 'Cairo', sans-serif; font-size: 15px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .pill { background-color: #1f3688; border: 1px solid #2e4ebd; border-radius: 6px; padding: 3px 8px; display: flex; justify-content: space-between; font-size: 9px; font-weight: 700; }
+          .b-box { background: #fff; border-radius: 8px; padding: 4px 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+          .code-box { background-color: #E7A330; border-radius: 6px; padding: 2px 6px; text-align: center; min-width: 60px; }
+          .code-box-lbl { font-size: 7px; font-weight: 900; color: #0f172a; line-height: 1; }
+          .code-box-val { font-family: monospace; font-size: 13px; font-weight: 900; color: #020617; }
+          .ftr { background-color: #122359; color: #cbd5e1; font-size: 7.5px; font-weight: 700; text-align: center; padding: 3px; }
         </style>
       </head>
       <body>
-        <div class="card">
-          <div class="header">
-            <div>
-              <div class="logo">سنترلي | Centrly</div>
-              <div class="sub">كارت حضور ذكي</div>
+        <div class="id-card">
+          <div>
+            <div class="hdr">
+              <div class="logo"><span>سنتر</span><span style="color: #E7A330;">لـ</span><span>ي</span></div>
+              <div class="hdr-title">
+                <div>بطاقة حضور الطالب</div>
+                <div class="hdr-sub">STUDENT ID</div>
+              </div>
             </div>
-            <div style="text-align: left;">
-              <div style="font-size: 11px; font-weight: 700;">${escapeHtml(teacherName)}</div>
-              <div class="sub">${escapeHtml(group || 'المجموعة')}</div>
-            </div>
+            <div class="divider"></div>
           </div>
           <div class="body">
-            <div class="avatar">${name?.charAt(0) || 'ط'}</div>
             <div>
-              <div class="name">${escapeHtml(name)}</div>
-              <div class="meta">هاتف: ${escapeHtml(phone || '—')}</div>
+              <div class="lbl">اسم الطالب</div>
+              <div class="s-name">${escapeHtml(name)}</div>
+            </div>
+            <div class="pill">
+              <div><span style="color: #E7A330;">المدرّس:</span> ${escapeHtml(teacherName)}</div>
+              <div><span style="color: #E7A330;">المادة:</span> ${escapeHtml(group || 'عامة')}</div>
+            </div>
+            <div class="b-box">
+              <div style="flex-grow: 1; text-align: center;">
+                <div style="font-size: 7px; color: #475569; font-weight: 700; margin-bottom: 2px;">امسح الباركود لتسجيل الحضور</div>
+                <div style="width: 100%; display: flex; justify-content: center;">${barcodeSvg}</div>
+              </div>
+              <div class="code-box">
+                <div class="code-box-lbl">رقم الطالب</div>
+                <div class="code-box-val">${escapeHtml(code)}</div>
+              </div>
             </div>
           </div>
-          <div class="footer">
-            <div class="barcode-bars">
-              <span style="width:2px;"></span><span style="width:1px;"></span><span style="width:3px;"></span>
-              <span style="width:1px;"></span><span style="width:2px;"></span><span style="width:4px;"></span>
-              <span style="width:1px;"></span><span style="width:3px;"></span><span style="width:2px;"></span>
-              <span style="width:1px;"></span><span style="width:2px;"></span><span style="width:3px;"></span>
-            </div>
-            <div style="text-align: left;">
-              <div class="code">${escapeHtml(code)}</div>
-              <div style="font-size: 8px; color: #64748b;">Scan to Attend</div>
-            </div>
-          </div>
+          <div class="ftr">مخصصة للحضور — استخدمها في بداية كل حصة</div>
         </div>
         <script>
           window.onload = function() { window.print(); };
@@ -10242,26 +10213,41 @@ https://centerly-platform.vercel.app/p/p16766044
     }
 
     const cardsHtml = targetStudents.map(st => {
-      const barcodeSvg = generateBarcode128Svg(st.code, { height: 46, unitWidth: 2.0 });
+      const barcodeSvg = generateBarcode128Svg(st.code, { height: 36, unitWidth: 1.8 });
 
       return `
         <div class="card-box">
-          <div class="card-header">
-            <div class="org-name">${escapeHtml(orgName)}</div>
-            <div class="card-badge">كارت حضور ذكي</div>
+          <div>
+            <div class="card-header">
+              <div class="wordmark"><span>سنتر</span><span style="color: #E7A330;">لـ</span><span>ي</span></div>
+              <div class="header-left">
+                <div class="card-title">بطاقة حضور الطالب</div>
+                <div class="card-sub">STUDENT ID</div>
+              </div>
+            </div>
+            <div class="amber-stripe"></div>
           </div>
           <div class="card-body">
-            <div class="student-name">${escapeHtml(st.name)}</div>
-            <div class="student-meta">
-              <span>المجموعة: <b>${escapeHtml(st.group)}</b></span>
-              ${st.phone ? `<span>الهاتف: <b dir="ltr">${escapeHtml(st.phone)}</b></span>` : ''}
+            <div>
+              <div class="student-lbl">اسم الطالب</div>
+              <div class="student-name">${escapeHtml(st.name)}</div>
             </div>
-            <div class="barcode-container">
-              ${barcodeSvg}
-              <div class="barcode-code">${escapeHtml(st.code)}</div>
+            <div class="info-pill">
+              <div><span style="color: #E7A330;">المدرّس:</span> ${escapeHtml(orgName)}</div>
+              <div><span style="color: #E7A330;">المادة:</span> ${escapeHtml(st.group || 'عامة')}</div>
+            </div>
+            <div class="barcode-box">
+              <div class="barcode-inner">
+                <div class="barcode-prompt">امسح الباركود لتسجيل الحضور</div>
+                <div class="barcode-svg-wrap">${barcodeSvg}</div>
+              </div>
+              <div class="code-badge">
+                <div class="code-badge-lbl">رقم الطالب</div>
+                <div class="code-badge-val">${escapeHtml(st.code)}</div>
+              </div>
             </div>
           </div>
-          <div class="card-footer">منصة سنترلي الذكية • Centrly</div>
+          <div class="card-footer">مخصصة للحضور — استخدمها في بداية كل حصة</div>
         </div>
       `;
     }).join('');
@@ -10272,9 +10258,9 @@ https://centerly-platform.vercel.app/p/p16766044
       <head>
         <meta charset="utf-8">
         <title>كروت الطلاب للطباعة - سنترلي (${targetStudents.length} طالب)</title>
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Changa:wght@700;800;900&display=swap" rel="stylesheet">
         <style>
-          * { box-sizing: border-box; margin: 0; padding: 0; }
+          * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           body {
             font-family: 'Cairo', Tahoma, Arial, sans-serif;
             background: #f1f5f9;
@@ -10282,7 +10268,7 @@ https://centerly-platform.vercel.app/p/p16766044
             color: #0f172a;
           }
           .no-print-bar {
-            background: #1e3a8a;
+            background: #172D70;
             color: white;
             padding: 12px 20px;
             border-radius: 8px;
@@ -10292,99 +10278,167 @@ https://centerly-platform.vercel.app/p/p16766044
             align-items: center;
           }
           .print-btn {
-            background: #22c55e;
-            color: white;
+            background: #E7A330;
+            color: #0f172a;
             border: none;
             padding: 8px 18px;
             border-radius: 6px;
             font-size: 15px;
-            font-weight: 700;
+            font-weight: 800;
             cursor: pointer;
             font-family: inherit;
           }
           .cards-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            grid-template-columns: repeat(2, 85.6mm);
+            gap: 8mm;
+            justify-content: center;
           }
           .card-box {
-            background: white;
-            border: 2px solid #0f172a;
+            width: 85.6mm;
+            height: 54mm;
+            background-color: #172D70;
+            border: 1.5px solid #2949BA;
             border-radius: 12px;
-            padding: 14px;
-            page-break-inside: avoid;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 190px;
+            page-break-inside: avoid;
+            box-shadow: 0 4px 12px rgba(23,45,112,0.15);
+            color: #ffffff;
           }
           .card-header {
+            background-color: #2949BA;
+            padding: 4px 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 6px;
           }
-          .org-name {
-            font-size: 13px;
+          .wordmark {
+            font-family: 'Changa', 'Cairo', sans-serif;
+            font-size: 15px;
+            font-weight: 900;
+            color: #ffffff;
+          }
+          .header-left {
+            text-align: left;
+          }
+          .card-title {
+            font-size: 9px;
             font-weight: 800;
-            color: #1e3a8a;
+            color: #ffffff;
+            line-height: 1.2;
           }
-          .card-badge {
-            background: #e0f2fe;
-            color: #0369a1;
-            font-size: 10px;
+          .card-sub {
+            font-size: 6.5px;
+            font-weight: 900;
+            color: #E8EDFF;
+            letter-spacing: 0.5px;
+          }
+          .amber-stripe {
+            width: 100%;
+            height: 2.5px;
+            background-color: #E7A330;
+          }
+          .card-body {
+            padding: 4px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            flex-grow: 1;
+            gap: 3px;
+          }
+          .student-lbl {
+            font-size: 7.5px;
             font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 4px;
+            color: #E8EDFF;
           }
           .student-name {
-            font-size: 16px;
-            font-weight: 800;
-            color: #0f172a;
-            margin-top: 6px;
+            font-family: 'Changa', 'Cairo', sans-serif;
+            font-size: 13.5px;
+            font-weight: 900;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
           }
-          .student-meta {
-            font-size: 11px;
-            color: #64748b;
-            margin-top: 4px;
+          .info-pill {
+            background-color: #1f3688;
+            border: 1px solid #2e4ebd;
+            border-radius: 5px;
+            padding: 2.5px 6px;
             display: flex;
-            gap: 15px;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 8px;
+            font-weight: 700;
+            color: #ffffff;
           }
-          .barcode-container {
-            margin-top: 8px;
-            text-align: center;
-            background: #f8fafc;
-            padding: 6px;
+          .barcode-box {
+            background-color: #ffffff;
             border-radius: 6px;
-            border: 1px dashed #cbd5e1;
+            padding: 3px 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 5px;
           }
-          .barcode-code {
-            font-family: monospace;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 2px;
+          .barcode-inner {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+          }
+          .barcode-prompt {
+            font-size: 6.5px;
+            color: #475569;
+            font-weight: 700;
+            margin-bottom: 1px;
+          }
+          .barcode-svg-wrap {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+          }
+          .code-badge {
+            background-color: #E7A330;
+            border-radius: 5px;
+            padding: 2px 5px;
+            text-align: center;
+            min-width: 55px;
+            flex-shrink: 0;
+          }
+          .code-badge-lbl {
+            font-size: 6.5px;
+            font-weight: 900;
             color: #0f172a;
-            margin-top: 2px;
+            line-height: 1;
+          }
+          .code-badge-val {
+            font-family: monospace;
+            font-size: 11.5px;
+            font-weight: 900;
+            color: #020617;
+            line-height: 1.2;
           }
           .card-footer {
-            font-size: 9px;
-            color: #94a3b8;
+            background-color: #122359;
+            color: #cbd5e1;
+            font-size: 7px;
+            font-weight: 700;
             text-align: center;
-            margin-top: 6px;
-            border-top: 1px solid #f1f5f9;
-            padding-top: 4px;
+            padding: 2px;
           }
           @media print {
             body { background: white; padding: 0; }
             .no-print-bar { display: none; }
             .cards-grid {
-              grid-template-columns: repeat(2, 1fr);
-              gap: 10mm;
+              gap: 4mm;
             }
             .card-box {
-              border: 1.5pt solid #000;
               box-shadow: none;
             }
             @page {
