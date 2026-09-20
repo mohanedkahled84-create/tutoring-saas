@@ -1,10 +1,11 @@
+import bcrypt from "bcryptjs";
 import { Router, Response } from "express";
 import { z } from "zod";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { validateBody } from "../../shared/middleware/validation.js";
 import { requireCenterOwnerOrAdmin } from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
-import { supabasePublic } from "../../supabase.js";
+import { supabasePublic, getScopedSupabaseClient } from "../../supabase.js";
 import { defaultEmailVerificationService } from "./emailService.js";
 import { financialPinRateLimiter } from "../../shared/middleware/rateLimit.js";
 
@@ -241,48 +242,32 @@ settingsRouter.post(
   }
 );
 
-// GET /api/settings/security-pin - Check if user account or tenant has configured financial security PIN
+// GET /api/settings/security-pin - Check if user account has configured financial security PIN
 settingsRouter.get("/security-pin", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.user?.id;
-  const tenantId = req.user?.tenant_id;
-  if (!userId && !tenantId) {
+  if (!userId) {
     res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
     return;
   }
 
   try {
-    if (req.user?.financial_pin) {
+    if (req.user?.has_security_pin) {
       res.json({ has_pin: true });
       return;
     }
 
     const tenantsRepo = getServices(req).tenants;
+    let hasPin = false;
 
-    if (userId && typeof tenantsRepo.getUserPin === "function") {
-      const userPin = await tenantsRepo.getUserPin(userId).catch(() => null);
-      if (userPin) {
-        if (req.user) {
-          req.user.financial_pin = normalizeDigits(userPin);
-          req.user.has_security_pin = true;
-        }
-        res.json({ has_pin: true });
-        return;
+    if (typeof tenantsRepo.getUserPinSecurity === "function") {
+      const pinSec = await tenantsRepo.getUserPinSecurity(userId).catch(() => null);
+      if (pinSec?.hash) {
+        hasPin = true;
+        if (req.user) req.user.has_security_pin = true;
       }
     }
 
-    if (tenantId) {
-      const settings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
-      if (settings?.financial_pin) {
-        if (req.user) {
-          req.user.financial_pin = normalizeDigits(settings.financial_pin);
-          req.user.has_security_pin = true;
-        }
-        res.json({ has_pin: true });
-        return;
-      }
-    }
-
-    res.json({ has_pin: false });
+    res.json({ has_pin: hasPin });
   } catch {
     res.json({ has_pin: false });
   }
@@ -302,29 +287,19 @@ settingsRouter.post(
 
     try {
       const tenantsRepo = getServices(req).tenants;
+      const pinSec = (userId && typeof tenantsRepo.getUserPinSecurity === "function")
+        ? await tenantsRepo.getUserPinSecurity(userId).catch(() => null)
+        : null;
 
-      let existingPin: string | null = req.user?.financial_pin ? normalizeDigits(req.user.financial_pin) : null;
-      if (!existingPin && userId && typeof tenantsRepo.getUserPin === "function") {
-        const uPin = await tenantsRepo.getUserPin(userId).catch(() => null);
-        if (uPin) existingPin = normalizeDigits(uPin);
-      }
-      let existingSettings: any = null;
-      if (tenantId) {
-        existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
-        if (!existingPin && existingSettings?.financial_pin) {
-          existingPin = normalizeDigits(existingSettings.financial_pin);
-        }
-      }
-
-      // If user/tenant already has a PIN, require verification of identity (EITHER Old PIN OR Email OTP - NEVER account password!)
-      if (existingPin) {
+      // If user already has a PIN configured, require verification of identity (Old PIN or Email OTP)
+      if (pinSec?.hash) {
         const inputOldPin = req.body.old_pin ? normalizeDigits(req.body.old_pin) : "";
         const inputEmailCode = req.body.email_code ? normalizeDigits(req.body.email_code) : "";
 
         let isVerified = false;
 
-        // 1. Direct match with current/old PIN
-        if (inputOldPin && existingPin === inputOldPin) {
+        // 1. Direct bcrypt match with current PIN
+        if (inputOldPin && await bcrypt.compare(inputOldPin, pinSec.hash)) {
           isVerified = true;
         }
 
@@ -396,24 +371,24 @@ settingsRouter.post(
       }
 
       const newPin = normalizeDigits(req.body.pin);
+      const hashedPin = await bcrypt.hash(newPin, 10);
 
-      // 1. Persist directly to user account in repository
-      if (userId && typeof tenantsRepo.setUserPin === "function") {
-        await tenantsRepo.setUserPin(userId, newPin);
+      // 1. Persist hash directly to user account in repository
+      if (userId && typeof tenantsRepo.setUserPinHash === "function") {
+        await tenantsRepo.setUserPinHash(userId, hashedPin);
       }
 
-      // 2. Also persist to tenant settings for backward compatibility
+      // 2. Clean up any plaintext financial_pin from tenant settings
       if (tenantId) {
-        const mergedSettings = {
-          ...DEFAULT_TENANT_SETTINGS,
-          ...(existingSettings || {}),
-          financial_pin: newPin,
-        };
-        await tenantsRepo.updateTenantSettings(tenantId, mergedSettings as any).catch(() => null);
+        const existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
+        if (existingSettings && (existingSettings as any).financial_pin) {
+          const mergedSettings = { ...existingSettings };
+          delete (mergedSettings as any).financial_pin;
+          await tenantsRepo.updateTenantSettings(tenantId, mergedSettings as any).catch(() => null);
+        }
       }
 
       if (req.user) {
-        req.user.financial_pin = newPin;
         req.user.has_security_pin = true;
       }
 
@@ -432,50 +407,105 @@ settingsRouter.post(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const userId = req.user?.id;
     const tenantId = req.user?.tenant_id;
-    if (!userId && !tenantId) {
+    if (!userId) {
       res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
       return;
     }
 
     try {
       const tenantsRepo = getServices(req).tenants;
-      let userPin: string | null = req.user?.financial_pin ? normalizeDigits(req.user.financial_pin) : null;
+      const pinSec = typeof tenantsRepo.getUserPinSecurity === "function"
+        ? await tenantsRepo.getUserPinSecurity(userId).catch(() => null)
+        : null;
 
-      if (!userPin && userId && typeof tenantsRepo.getUserPin === "function") {
-        const uPin = await tenantsRepo.getUserPin(userId).catch(() => null);
-        if (uPin) userPin = normalizeDigits(uPin);
+      if (!pinSec?.hash) {
+        res.status(400).json({ error: { code: "PIN_NOT_CONFIGURED", message: "لم يتم تعيين رمز أمان مالي بعد" } });
+        return;
       }
 
-      let tenantPin: string | null = null;
-      if (tenantId) {
-        const existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
-        if ((existingSettings as any)?.financial_pin) {
-          tenantPin = normalizeDigits((existingSettings as any).financial_pin);
+      // Check brute-force lockout (C-04)
+      if (pinSec.locked_until) {
+        const lockTime = new Date(pinSec.locked_until).getTime();
+        const now = Date.now();
+        if (lockTime > now) {
+          const remainingSec = Math.ceil((lockTime - now) / 1000);
+          res.status(423).json({
+            valid: false,
+            error: {
+              code: "PIN_LOCKED",
+              message: `تم قفل إدخال رمز الأمان مؤقتاً بسبب تكرار المحاولات الخاطئة. يرجى الانتظار ${Math.ceil(remainingSec / 60)} دقيقة.`,
+              locked_until: pinSec.locked_until,
+              retry_after_seconds: remainingSec,
+            },
+          });
+          return;
         }
       }
 
       const rawInput = (req.body.pin || "").trim();
       const cleanInputDigits = normalizeDigits(rawInput);
 
-      // Verify strictly against user's PIN or tenant's PIN - NEVER accept account password!
-      const isValid = Boolean(
-        (userPin && cleanInputDigits && userPin === cleanInputDigits) ||
-        (tenantPin && cleanInputDigits && tenantPin === cleanInputDigits)
-      );
+      const isValid = cleanInputDigits ? await bcrypt.compare(cleanInputDigits, pinSec.hash) : false;
 
-      // Auto-unify user's PIN in database if validated
-      if (isValid && userId && typeof tenantsRepo.setUserPin === "function") {
-        const syncPin = tenantPin || (cleanInputDigits.length >= 4 && cleanInputDigits.length <= 6 ? cleanInputDigits : null);
-        if (syncPin && userPin !== syncPin) {
-          await tenantsRepo.setUserPin(userId, syncPin).catch(() => null);
-          if (req.user) {
-            req.user.financial_pin = syncPin;
-            req.user.has_security_pin = true;
-          }
+      if (isValid) {
+        // Reset failed attempts on success
+        if (typeof tenantsRepo.resetFailedPinAttempts === "function") {
+          await tenantsRepo.resetFailedPinAttempts(userId).catch(() => null);
         }
+        res.json({ valid: true });
+        return;
       }
 
-      res.json({ valid: isValid });
+      // Failed attempt tracking & lockout after 5 failures
+      const currentAttempts = (pinSec.failed_attempts || 0) + 1;
+      let lockUntil: string | null = null;
+      if (currentAttempts >= 5) {
+        lockUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      }
+
+      if (typeof tenantsRepo.recordFailedPinAttempt === "function") {
+        await tenantsRepo.recordFailedPinAttempt(userId, currentAttempts, lockUntil).catch(() => null);
+      }
+
+      // Security audit log entry
+      if (tenantId) {
+        try {
+          const client = req.token ? getScopedSupabaseClient(req.token) : null;
+          if (client) {
+            await client.from("activity_logs").insert({
+              tenant_id: tenantId,
+              actor_user_id: userId,
+              action_type: "financial_pin_failed",
+              entity_type: "user",
+              entity_id: userId,
+              before_value: { failed_attempts: currentAttempts },
+              after_value: { locked: Boolean(lockUntil), locked_until: lockUntil },
+            });
+          }
+        } catch (_) {}
+      }
+
+      if (lockUntil) {
+        res.status(423).json({
+          valid: false,
+          error: {
+            code: "PIN_LOCKED",
+            message: "تم تجاوز الحد الأقصى للمحاولات الخاطئة (5 محاولات). تم قفل إدخال الرمز لمدة 15 دقيقة.",
+            locked_until: lockUntil,
+            retry_after_seconds: 900,
+          },
+        });
+        return;
+      }
+
+      res.status(200).json({
+        valid: false,
+        error: {
+          code: "INVALID_PIN",
+          message: "رمز الأمان غير صحيح",
+          remaining_attempts: Math.max(0, 5 - currentAttempts),
+        },
+      });
     } catch (err: unknown) {
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
     }
@@ -498,34 +528,41 @@ settingsRouter.delete(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const userId = req.user?.id;
     const tenantId = req.user?.tenant_id;
-    if (!userId && !tenantId) {
+    if (!userId) {
       res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
       return;
     }
 
     try {
       const tenantsRepo = getServices(req).tenants;
+      const pinSec = typeof tenantsRepo.getUserPinSecurity === "function"
+        ? await tenantsRepo.getUserPinSecurity(userId).catch(() => null)
+        : null;
 
-      let savedPin: string | null = req.user?.financial_pin ? normalizeDigits(req.user.financial_pin) : null;
-      if (!savedPin && userId && typeof tenantsRepo.getUserPin === "function") {
-        const uPin = await tenantsRepo.getUserPin(userId).catch(() => null);
-        if (uPin) savedPin = normalizeDigits(uPin);
-      }
-      let existingSettings: any = null;
-      if (!savedPin && tenantId) {
-        existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
-        if ((existingSettings as any)?.financial_pin) {
-          savedPin = normalizeDigits((existingSettings as any).financial_pin);
+      // Check brute-force lockout (C-04)
+      if (pinSec?.locked_until) {
+        const lockTime = new Date(pinSec.locked_until).getTime();
+        if (lockTime > Date.now()) {
+          const remainingSec = Math.ceil((lockTime - Date.now()) / 1000);
+          res.status(423).json({
+            error: {
+              code: "PIN_LOCKED",
+              message: `تم قفل إدخال رمز الأمان مؤقتاً بسبب تكرار المحاولات الخاطئة. يرجى الانتظار ${Math.ceil(remainingSec / 60)} دقيقة.`,
+              locked_until: pinSec.locked_until,
+              retry_after_seconds: remainingSec,
+            },
+          });
+          return;
         }
       }
 
       // If a PIN exists, require verification of identity (old PIN or email code) before deleting
-      if (savedPin) {
+      if (pinSec?.hash) {
         const inputOldPin = req.body?.old_pin || req.body?.pin ? normalizeDigits(req.body?.old_pin || req.body?.pin) : "";
         const inputEmailCode = req.body?.email_code ? normalizeDigits(req.body?.email_code) : "";
 
         let isVerified = false;
-        if (inputOldPin && savedPin === inputOldPin) {
+        if (inputOldPin && await bcrypt.compare(inputOldPin, pinSec.hash)) {
           isVerified = true;
         }
 
@@ -550,21 +587,20 @@ settingsRouter.delete(
         }
       }
 
-      if (userId && typeof tenantsRepo.setUserPin === "function") {
-        await tenantsRepo.setUserPin(userId, null);
+      if (typeof tenantsRepo.setUserPinHash === "function") {
+        await tenantsRepo.setUserPinHash(userId, null);
       }
 
       if (tenantId) {
-        if (!existingSettings) {
-          existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
+        const existingSettings = await tenantsRepo.getTenantSettings(tenantId).catch(() => null);
+        if (existingSettings && (existingSettings as any).financial_pin) {
+          const mergedSettings = { ...existingSettings };
+          delete (mergedSettings as any).financial_pin;
+          await tenantsRepo.updateTenantSettings(tenantId, mergedSettings as any).catch(() => null);
         }
-        const mergedSettings = { ...existingSettings };
-        delete (mergedSettings as any).financial_pin;
-        await tenantsRepo.updateTenantSettings(tenantId, mergedSettings as any).catch(() => null);
       }
 
       if (req.user) {
-        req.user.financial_pin = null;
         req.user.has_security_pin = false;
       }
 

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import { FakeTenantsRepository } from '../dist/features/auth/repository.js';
 import { settingsRouter } from '../dist/features/auth/settingsRoutes.js';
 
@@ -50,9 +51,10 @@ test('SEC-PIN: Account-Level Security PIN synchronization across mobile and desk
     const body2 = await res2.json();
     assert.equal(body2.success, true);
 
-    // Verify PIN is saved in repository directly on the user account
+    // Verify PIN is saved in repository directly on the user account securely hashed (C-03)
     const savedUserPin = await fakeTenantsRepo.getUserPin('user-teacher-mohaned-123');
-    assert.equal(savedUserPin, '1234', 'User account in repository must store PIN 1234');
+    assert.ok(savedUserPin && savedUserPin !== '1234', 'PIN must NOT be stored in plaintext');
+    assert.ok(bcrypt.compareSync('1234', savedUserPin), 'User account in repository must securely store hashed PIN 1234');
 
     // 3. Opening account on Mobile Phone (Device B) - Completely fresh device without localStorage
     currentUser.financial_pin = null;
@@ -114,7 +116,8 @@ test('SEC-PIN: Account-Level Security PIN synchronization across mobile and desk
     assert.equal(body6.success, true);
 
     const updatedUserPin = await fakeTenantsRepo.getUserPin('user-teacher-mohaned-123');
-    assert.equal(updatedUserPin, '5678', 'User account must have updated PIN 5678');
+    assert.ok(updatedUserPin && updatedUserPin !== '5678', 'Updated PIN must NOT be stored in plaintext');
+    assert.ok(bcrypt.compareSync('5678', updatedUserPin), 'User account must have securely updated hashed PIN 5678');
 
     // 7. Verifying Laptop (Device A) now unlocks with updated PIN 5678
     const res7 = await fetch(`${baseUrl}/api/settings/verify-pin`, {

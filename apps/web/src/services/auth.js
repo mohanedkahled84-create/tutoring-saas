@@ -61,11 +61,45 @@ export const authService = {
 
   clearSession() {
     try {
-      const keys = ['centrly_token', 'centrly_refresh_token', 'centrly_access_token', 'centrly_logged_in', 'centrly_user', 'centrly_current_route'];
-      keys.forEach(k => {
+      const specificKeys = [
+        'centrly_token',
+        'centrly_refresh_token',
+        'centrly_access_token',
+        'centrly_logged_in',
+        'centrly_user',
+        'centrly_current_route',
+        'centrly_has_security_pin',
+        'centrly_financial_pin',
+        'centrly_active_session_state',
+        'centrly_active_session_id',
+      ];
+      specificKeys.forEach(k => {
         if (typeof localStorage !== 'undefined') localStorage.removeItem(k);
         if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(k);
       });
+
+      // Clear all tenant and data caches from browser storage
+      if (typeof localStorage !== 'undefined') {
+        const toRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('centrly_cache_') || k.startsWith('centrly_tenant_'))) {
+            toRemove.push(k);
+          }
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
+      }
+
+      if (typeof sessionStorage !== 'undefined') {
+        const toRemove = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const k = sessionStorage.key(i);
+          if (k && (k.startsWith('centrly_cache_') || k.startsWith('centrly_tenant_'))) {
+            toRemove.push(k);
+          }
+        }
+        toRemove.forEach(k => sessionStorage.removeItem(k));
+      }
     } catch (_) {}
   },
 

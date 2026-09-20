@@ -54,15 +54,34 @@ export async function authenticateUser(
     const userId = authData.user.id;
     const email = authData.user.email;
 
-    // 2. Resolve role & tenant from public.users using token-scoped client
+    // 2. Resolve role & tenant from public.users
     const userClient = getScopedSupabaseClient(token);
-    const { data: userRecord, error: userError } = await userClient
-      .from("users")
-      .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, financial_pin_hash")
-      .eq("id", userId)
-      .single();
+    let userRecord: any = null;
 
-    if (userError || !userRecord) {
+    // Fast, rock-solid resolution via SECURITY DEFINER RPC
+    try {
+      const { data: rpcProfile, error: rpcError } = await supabasePublic.rpc("get_user_profile", {
+        p_user_id: userId,
+      });
+      if (!rpcError && rpcProfile) {
+        userRecord = rpcProfile;
+      }
+    } catch (_) {}
+
+    // Fallback: direct query via token-scoped client
+    if (!userRecord) {
+      const { data: directProfile, error: userError } = await userClient
+        .from("users")
+        .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, financial_pin_hash")
+        .eq("id", userId)
+        .single();
+      if (userError) {
+        console.error(`[auth.middleware] Failed to resolve user profile for ${userId}:`, userError);
+      }
+      userRecord = directProfile;
+    }
+
+    if (!userRecord) {
       res.status(403).json({
         error: {
           code: "FORBIDDEN",
@@ -95,7 +114,6 @@ export async function authenticateUser(
       role: userRecord.role as UserRole,
       teacher_id: userRecord.teacher_id,
       assistant_id: userRecord.assistant_id,
-      financial_pin: null,
       has_security_pin: hasSecurityPin,
     };
     req.token = token;

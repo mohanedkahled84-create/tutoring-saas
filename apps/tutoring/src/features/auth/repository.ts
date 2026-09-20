@@ -10,6 +10,7 @@ import {
   IAuthRepository,
   TenantSettings,
   ITenantsRepository,
+  UserPinSecurityData,
 } from "./types.js";
 import { defaultEmailVerificationService, EmailVerificationService } from "./emailService.js";
 
@@ -834,14 +835,17 @@ export class FakeTenantsRepository implements ITenantsRepository {
   }
 
   async getUserPin(userId: string): Promise<string | null> {
-    return this.userPins.get(userId) || null;
+    const sec = this.userPinSecurity.get(userId);
+    return sec?.hash || this.userPins.get(userId) || null;
   }
 
   async setUserPin(userId: string, pin: string | null): Promise<void> {
     if (pin === null) {
       this.userPins.delete(userId);
+      this.userPinSecurity.delete(userId);
     } else {
       this.userPins.set(userId, pin);
+      this.userPinSecurity.set(userId, { hash: pin, failed_attempts: 0, locked_until: null });
     }
   }
 

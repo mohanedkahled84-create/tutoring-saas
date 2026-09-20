@@ -180,15 +180,84 @@ class CentrlyApp {
     this.setTheme('light');
   }
 
+  getCachePrefix() {
+    const user = this.user || authService.getUser();
+    if (!user || !user.id) return null;
+    const tenantId = user.tenant_id || user.id;
+    return `centrly_cache_${tenantId}_`;
+  }
+
+  purgeLegacyCaches() {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      const legacyKeys = [
+        'centrly_cache_students',
+        'centrly_cache_groups',
+        'centrly_cache_dashboardData',
+        'centrly_cache_billingState',
+        'centrly_cache_materials',
+        'centrly_cache_teacherAssistants',
+        'centrly_cache_centerTeachers',
+        'centrly_cache_centerAssistants',
+        'centrly_cache_centerRooms',
+      ];
+      legacyKeys.forEach(k => localStorage.removeItem(k));
+    } catch (_) {}
+  }
+
+  resetTenantState() {
+    this.students = [];
+    this.groups = [];
+    this.dashboardData = null;
+    this.calendarSessions = [];
+    this.calendarState = {
+      view: 'week',
+      selectedGroup: 'all',
+      dateLabel: 'جدول الحصص والتقويم الأسبوعي',
+      weekOffset: 0,
+      sessions: [],
+      groups: [],
+    };
+    this.reportsState = {
+      activeTab: 'academic',
+      period: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
+      leaderboard: [],
+      groups: [],
+      assistants: [],
+      students: [],
+      selectedGroupId: '',
+      searchQuery: '',
+      total_students: 0,
+      average_attendance_rate: 0,
+      average_score: 0,
+      isSubmittingBulk: false,
+    };
+    this.watchlistData = [];
+    this.billingState = null;
+    this.whatsappState = null;
+    this.routeErrors = {};
+    this.materials = [];
+    this.teacherAssistants = [];
+    this.routeLoadingState = {};
+    this.dataLoadedState = {};
+    this.centerTeachers = [];
+    this.centerAssistants = [];
+    this.centerRooms = [];
+  }
+
   saveCache(key, data) {
     try {
-      localStorage.setItem(`centrly_cache_${key}`, JSON.stringify(data));
+      const prefix = this.getCachePrefix();
+      if (!prefix) return;
+      localStorage.setItem(`${prefix}${key}`, JSON.stringify(data));
     } catch (_) {}
   }
 
   loadCache(key, defaultValue = null) {
     try {
-      const raw = localStorage.getItem(`centrly_cache_${key}`);
+      const prefix = this.getCachePrefix();
+      if (!prefix) return defaultValue;
+      const raw = localStorage.getItem(`${prefix}${key}`);
       return raw ? JSON.parse(raw) : defaultValue;
     } catch (_) {
       return defaultValue;
@@ -197,6 +266,12 @@ class CentrlyApp {
 
   restoreCachedData() {
     try {
+      this.purgeLegacyCaches();
+      const prefix = this.getCachePrefix();
+      if (!prefix) {
+        this.resetTenantState();
+        return;
+      }
       const cachedGroups = this.loadCache('groups', null);
       if (cachedGroups && Array.isArray(cachedGroups) && cachedGroups.length > 0) {
         this.groups = cachedGroups;
@@ -1123,6 +1198,7 @@ class CentrlyApp {
   }
 
   renderAuth(tab = 'login') {
+    this.resetTenantState();
     window.scrollTo(0, 0);
     document.title = tab === 'signup' ? 'إنشاء حساب جديد | سنترلي' : 'تسجيل الدخول | سنترلي';
     document.getElementById('app').innerHTML = renderAuthScreens();
@@ -1407,6 +1483,7 @@ class CentrlyApp {
 
     try {
       const res = await authService.login(rawIdentifier, password);
+      this.resetTenantState();
       this.user = res.user;
       try {
         const meRes = await request('/auth/me');
@@ -1415,6 +1492,7 @@ class CentrlyApp {
           authService.setUser(this.user);
         }
       } catch (_) {}
+      this.restoreCachedData();
 
       // Cross-Device Security: Bind PIN status directly from account profile
       if (typeof this.user?.has_security_pin === 'boolean') {
@@ -1609,6 +1687,7 @@ class CentrlyApp {
       this.showVerificationAlert(res.message || 'تم تأكيد البريد الإلكتروني بنجاح!', 'success');
 
       if (res.user && res.token) {
+        this.resetTenantState();
         this.user = res.user;
         try {
           const meRes = await request('/auth/me');
@@ -1617,6 +1696,7 @@ class CentrlyApp {
             authService.setUser(this.user);
           }
         } catch (_) {}
+        this.restoreCachedData();
         setTimeout(() => {
           this.startOnboarding();
         }, 800);
@@ -1913,6 +1993,7 @@ class CentrlyApp {
 
   async logout() {
     this.stopWhatsAppStatusPolling();
+    this.resetTenantState();
     await authService.logout();
   }
 
