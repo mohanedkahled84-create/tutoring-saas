@@ -24,7 +24,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
 
     availableGroups.forEach(g => {
       const gDay = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || '';
-      if (gDay === todayArabic) {
+      if (gDay.includes(todayArabic)) {
         todayGroups.push(g);
       } else {
         otherGroups.push(g);

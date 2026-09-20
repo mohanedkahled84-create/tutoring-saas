@@ -2291,24 +2291,37 @@ class CentrlyApp {
           };
 
           // 1. Recurring weekly classes for all teacher groups (pure schedule of class times)
-          const recurringGroupSessions = (this.groups || []).map(g => {
-            const day = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || 'السبت';
-            let time = g.session_time || '04:00 م - 06:00 م';
-            if (g.schedule && g.schedule.includes('•')) {
-              time = g.schedule.split('•')[1].trim();
+          const recurringGroupSessions = [];
+          (this.groups || []).forEach(g => {
+            const rawDay = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || 'السبت';
+            const matchedDays = arabicDayNames.filter(d => rawDay.includes(d));
+            const daysToUse = matchedDays.length > 0 ? matchedDays : [rawDay];
+
+            let time1 = g.session_time || '04:00 م - 06:00 م';
+            let time2 = time1;
+            if (g.session_time && g.session_time.includes('/')) {
+              const parts = g.session_time.split('/').map(s => s.trim());
+              time1 = parts[0] || time1;
+              time2 = parts[1] || time1;
+            } else if (g.schedule && g.schedule.includes('•') && !g.session_time) {
+              time1 = g.schedule.split('•')[1].trim();
+              time2 = time1;
             }
-            return {
-              id: `rec-${g.id}`,
-              group_id: g.id,
-              group_name: g.name,
-              center_name: g.center_name || g.centerName || 'سنتر تعليمي',
-              day_name: day,
-              time: time,
-              date: 'موعد أسبوعي ثابت',
-              is_recurring: true,
-              status: 'recurring',
-              price: g.price || 0,
-            };
+
+            daysToUse.forEach((dName, idx) => {
+              recurringGroupSessions.push({
+                id: `rec-${g.id}-${idx}`,
+                group_id: g.id,
+                group_name: g.name,
+                center_name: g.center_name || g.centerName || 'سنتر تعليمي',
+                day_name: dName,
+                time: idx === 1 ? time2 : time1,
+                date: 'موعد أسبوعي ثابت',
+                is_recurring: true,
+                status: 'recurring',
+                price: g.price || 0,
+              });
+            });
           });
 
           // 2. Extra sessions (حصص إضافية)
@@ -5330,8 +5343,23 @@ class CentrlyApp {
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
           <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
+            <input type="number" id="newGroupPrice" class="form-input" min="0" step="5" placeholder="سعر الحصة" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">تكرار الحصص أسبوعياً *</label>
+            <select id="newGroupSessionsPerWeek" class="form-input" onchange="window.centrlyApp.onSessionsPerWeekChange(this.value, 'new')">
+              <option value="1" selected>حصة واحدة بالأسبوع (4 حصص شهرياً)</option>
+              <option value="2">حصتان بالأسبوع (8 حصص شهرياً)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Schedule Container for 1 Session / Week -->
+        <div id="newGroupScheduleSingle" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="form-group">
             <label class="form-label" style="font-weight: 700;">يوم الحصة الأسبوعي *</label>
-            <select id="newGroupDayOfWeek" class="form-input" required>
+            <select id="newGroupDayOfWeek" class="form-input">
               <option value="السبت">السبت</option>
               <option value="الأحد">الأحد</option>
               <option value="الإثنين">الإثنين</option>
@@ -5343,23 +5371,50 @@ class CentrlyApp {
           </div>
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">توقيت الحصة *</label>
-            <input type="text" id="newGroupSessionTime" class="form-input" placeholder="04:00 م - 06:00 م" required value="04:00 م - 06:00 م">
+            <input type="text" id="newGroupSessionTime" class="form-input" placeholder="04:00 م - 06:00 م" value="04:00 م - 06:00 م">
           </div>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
-            <input type="number" id="newGroupPrice" class="form-input" min="0" step="5" placeholder="سعر الحصة" required>
+
+        <!-- Schedule Container for 2 Sessions / Week -->
+        <div id="newGroupScheduleDouble" style="display: none; flex-direction: column; gap: 0.75rem; margin-bottom: 0.85rem; background: #f8fafc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.85rem;">
+          <div style="font-size: 0.825rem; font-weight: 700; color: var(--centrly-blue-700); margin-bottom: 0.25rem;">
+            مواعيد الحصتين في الأسبوع:
           </div>
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">تكرار الحصص أسبوعياً *</label>
-            <select id="newGroupSessionsPerWeek" class="form-input">
-              <option value="1" selected>حصة واحدة بالأسبوع (4 حصص شهرياً)</option>
-              <option value="2">حصتان بالأسبوع (8 حصص شهرياً)</option>
-              <option value="3">3 حصص بالأسبوع (12 حصة شهرياً)</option>
-              <option value="4">4 حصص بالأسبوع (16 حصة شهرياً)</option>
-              <option value="5">5 حصص بالأسبوع (20 حصة شهرياً)</option>
-            </select>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الأول *</label>
+              <select id="newGroupDay1" class="form-input">
+                <option value="السبت" selected>السبت</option>
+                <option value="الأحد">الأحد</option>
+                <option value="الإثنين">الإثنين</option>
+                <option value="الثلاثاء">الثلاثاء</option>
+                <option value="الأربعاء">الأربعاء</option>
+                <option value="الخميس">الخميس</option>
+                <option value="الجمعة">الجمعة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">توقيت الحصة الأولى *</label>
+              <input type="text" id="newGroupTime1" class="form-input" placeholder="04:00 م - 06:00 م" value="04:00 م - 06:00 م">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الثاني *</label>
+              <select id="newGroupDay2" class="form-input">
+                <option value="السبت">السبت</option>
+                <option value="الأحد">الأحد</option>
+                <option value="الإثنين">الإثنين</option>
+                <option value="الثلاثاء" selected>الثلاثاء</option>
+                <option value="الأربعاء">الأربعاء</option>
+                <option value="الخميس">الخميس</option>
+                <option value="الجمعة">الجمعة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">توقيت الحصة الثانية *</label>
+              <input type="text" id="newGroupTime2" class="form-input" placeholder="04:00 م - 06:00 م" value="04:00 م - 06:00 م">
+            </div>
           </div>
         </div>
         
@@ -5416,6 +5471,20 @@ class CentrlyApp {
     if (fRentGroup) fRentGroup.style.display = model === 'fixed_rent' ? 'block' : 'none';
   }
 
+  onSessionsPerWeekChange(value, mode = 'new') {
+    const singleContainer = document.getElementById(`${mode}GroupScheduleSingle`);
+    const doubleContainer = document.getElementById(`${mode}GroupScheduleDouble`);
+    if (!singleContainer || !doubleContainer) return;
+
+    if (String(value) === '2') {
+      singleContainer.style.display = 'none';
+      doubleContainer.style.display = 'flex';
+    } else {
+      singleContainer.style.display = 'grid';
+      doubleContainer.style.display = 'none';
+    }
+  }
+
   openEditGroupModal(groupId) {
     const group = (this.groups || []).find(g => g.id === groupId);
     if (!group) {
@@ -5436,8 +5505,29 @@ class CentrlyApp {
     `).join('');
 
     const days = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
-    const currentDay = group.day_of_week || 'السبت';
-    const dayOptions = days.map(d => `<option value="${d}" ${d === currentDay ? 'selected' : ''}>${d}</option>`).join('');
+    const sessionsPerWeek = Number(group.sessions_per_week) === 2 ? 2 : 1;
+
+    // Parse existing days and times
+    const matchedDays = days.filter(d => (group.day_of_week && group.day_of_week.includes(d)) || (group.schedule && group.schedule.includes(d)));
+    const day1 = matchedDays[0] || (group.day_of_week && group.day_of_week.split('،')[0].trim()) || 'السبت';
+    const day2 = matchedDays[1] || (day1 === 'السبت' ? 'الثلاثاء' : (day1 === 'الأحد' ? 'الأربعاء' : 'الخميس'));
+
+    let time1 = '04:00 م - 06:00 م';
+    let time2 = '04:00 م - 06:00 م';
+    if (group.session_time) {
+      if (group.session_time.includes('/')) {
+        const parts = group.session_time.split('/').map(s => s.trim());
+        time1 = parts[0] || time1;
+        time2 = parts[1] || time1;
+      } else {
+        time1 = group.session_time;
+        time2 = group.session_time;
+      }
+    }
+
+    const singleDayOptions = days.map(d => `<option value="${d}" ${d === day1 ? 'selected' : ''}>${d}</option>`).join('');
+    const day1Options = days.map(d => `<option value="${d}" ${d === day1 ? 'selected' : ''}>${d}</option>`).join('');
+    const day2Options = days.map(d => `<option value="${d}" ${d === day2 ? 'selected' : ''}>${d}</option>`).join('');
 
     const currentModel = group.billing_model || 'percentage';
 
@@ -5480,30 +5570,60 @@ class CentrlyApp {
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
           <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">يوم الحصة الأسبوعي *</label>
-            <select id="editGroupDayOfWeek" class="form-input" required>
-              ${dayOptions}
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">توقيت الحصة *</label>
-            <input type="text" id="editGroupSessionTime" class="form-input" value="${escapeHtml(group.session_time || '04:00 م - 06:00 م')}" required>
-          </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
-          <div class="form-group">
             <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
             <input type="number" id="editGroupPrice" class="form-input" min="0" step="5" value="${group.price ?? group.session_price ?? 80}" required>
           </div>
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">تكرار الحصص أسبوعياً *</label>
-            <select id="editGroupSessionsPerWeek" class="form-input">
-              <option value="1" ${(group.sessions_per_week || 1) == 1 ? 'selected' : ''}>حصة واحدة بالأسبوع (4 حصص شهرياً)</option>
-              <option value="2" ${(group.sessions_per_week) == 2 ? 'selected' : ''}>حصتان بالأسبوع (8 حصص شهرياً)</option>
-              <option value="3" ${(group.sessions_per_week) == 3 ? 'selected' : ''}>3 حصص بالأسبوع (12 حصة شهرياً)</option>
-              <option value="4" ${(group.sessions_per_week) == 4 ? 'selected' : ''}>4 حصص بالأسبوع (16 حصة شهرياً)</option>
-              <option value="5" ${(group.sessions_per_week) == 5 ? 'selected' : ''}>5 حصص بالأسبوع (20 حصة شهرياً)</option>
+            <select id="editGroupSessionsPerWeek" class="form-input" onchange="window.centrlyApp.onSessionsPerWeekChange(this.value, 'edit')">
+              <option value="1" ${sessionsPerWeek === 1 ? 'selected' : ''}>حصة واحدة بالأسبوع (4 حصص شهرياً)</option>
+              <option value="2" ${sessionsPerWeek === 2 ? 'selected' : ''}>حصتان بالأسبوع (8 حصص شهرياً)</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Schedule Container for 1 Session / Week -->
+        <div id="editGroupScheduleSingle" style="display: ${sessionsPerWeek === 1 ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">يوم الحصة الأسبوعي *</label>
+            <select id="editGroupDayOfWeek" class="form-input">
+              ${singleDayOptions}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">توقيت الحصة *</label>
+            <input type="text" id="editGroupSessionTime" class="form-input" value="${escapeHtml(time1)}">
+          </div>
+        </div>
+
+        <!-- Schedule Container for 2 Sessions / Week -->
+        <div id="editGroupScheduleDouble" style="display: ${sessionsPerWeek === 2 ? 'flex' : 'none'}; flex-direction: column; gap: 0.75rem; margin-bottom: 0.85rem; background: #f8fafc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.85rem;">
+          <div style="font-size: 0.825rem; font-weight: 700; color: var(--centrly-blue-700); margin-bottom: 0.25rem;">
+            مواعيد الحصتين في الأسبوع:
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الأول *</label>
+              <select id="editGroupDay1" class="form-input">
+                ${day1Options}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">توقيت الحصة الأولى *</label>
+              <input type="text" id="editGroupTime1" class="form-input" value="${escapeHtml(time1)}" placeholder="04:00 م - 06:00 م">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الثاني *</label>
+              <select id="editGroupDay2" class="form-input">
+                ${day2Options}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">توقيت الحصة الثانية *</label>
+              <input type="text" id="editGroupTime2" class="form-input" value="${escapeHtml(time2)}" placeholder="04:00 م - 06:00 م">
+            </div>
           </div>
         </div>
         
@@ -5580,11 +5700,33 @@ class CentrlyApp {
       room_name = document.getElementById('newGroupRoomName')?.value.trim() || undefined;
     }
 
-    const day_of_week = document.getElementById('newGroupDayOfWeek')?.value || 'السبت';
-    const session_time = document.getElementById('newGroupSessionTime')?.value.trim() || '04:00 م - 06:00 م';
     const price = Number(document.getElementById('newGroupPrice').value) || 0;
     const sessions_per_week = Number(document.getElementById('newGroupSessionsPerWeek')?.value) || 1;
     const billing_model = document.getElementById('newGroupBillingModel').value;
+
+    let day_of_week = 'السبت';
+    let session_time = '04:00 م - 06:00 م';
+    let schedule = '';
+
+    if (sessions_per_week === 2) {
+      const day1 = document.getElementById('newGroupDay1')?.value || 'السبت';
+      const time1 = document.getElementById('newGroupTime1')?.value?.trim() || '04:00 م - 06:00 م';
+      const day2 = document.getElementById('newGroupDay2')?.value || 'الثلاثاء';
+      const time2 = document.getElementById('newGroupTime2')?.value?.trim() || '04:00 م - 06:00 م';
+
+      day_of_week = `${day1}، ${day2}`;
+      if (time1 === time2) {
+        session_time = time1;
+        schedule = `${day1} و${day2} • ${time1}`;
+      } else {
+        session_time = `${time1} / ${time2}`;
+        schedule = `${day1} (${time1}) • ${day2} (${time2})`;
+      }
+    } else {
+      day_of_week = document.getElementById('newGroupDayOfWeek')?.value || 'السبت';
+      session_time = document.getElementById('newGroupSessionTime')?.value?.trim() || '04:00 م - 06:00 م';
+      schedule = `${day_of_week} • ${session_time}`;
+    }
 
     let center_cut_percentage = 0;
     let fixed_per_student_amount = null;
@@ -5625,7 +5767,7 @@ class CentrlyApp {
           fixed_rent_amount,
           day_of_week,
           session_time,
-          schedule: `${day_of_week} • ${session_time}`,
+          schedule,
         },
       });
 
@@ -5666,11 +5808,33 @@ class CentrlyApp {
       room_name = document.getElementById('editGroupRoomName')?.value.trim() || undefined;
     }
 
-    const day_of_week = document.getElementById('editGroupDayOfWeek')?.value || 'السبت';
-    const session_time = document.getElementById('editGroupSessionTime')?.value.trim() || '04:00 م - 06:00 م';
     const price = Number(document.getElementById('editGroupPrice')?.value) || 0;
     const sessions_per_week = Number(document.getElementById('editGroupSessionsPerWeek')?.value) || 1;
     const billing_model = document.getElementById('editGroupBillingModel')?.value || 'percentage';
+
+    let day_of_week = 'السبت';
+    let session_time = '04:00 م - 06:00 م';
+    let schedule = '';
+
+    if (sessions_per_week === 2) {
+      const day1 = document.getElementById('editGroupDay1')?.value || 'السبت';
+      const time1 = document.getElementById('editGroupTime1')?.value?.trim() || '04:00 م - 06:00 م';
+      const day2 = document.getElementById('editGroupDay2')?.value || 'الثلاثاء';
+      const time2 = document.getElementById('editGroupTime2')?.value?.trim() || '04:00 م - 06:00 م';
+
+      day_of_week = `${day1}، ${day2}`;
+      if (time1 === time2) {
+        session_time = time1;
+        schedule = `${day1} و${day2} • ${time1}`;
+      } else {
+        session_time = `${time1} / ${time2}`;
+        schedule = `${day1} (${time1}) • ${day2} (${time2})`;
+      }
+    } else {
+      day_of_week = document.getElementById('editGroupDayOfWeek')?.value || 'السبت';
+      session_time = document.getElementById('editGroupSessionTime')?.value?.trim() || '04:00 م - 06:00 م';
+      schedule = `${day_of_week} • ${session_time}`;
+    }
 
     let center_cut_percentage = 0;
     let fixed_per_student_amount = null;
@@ -5711,7 +5875,7 @@ class CentrlyApp {
           fixed_rent_amount,
           day_of_week,
           session_time,
-          schedule: `${day_of_week} • ${session_time}`,
+          schedule,
         },
       });
 
@@ -5726,6 +5890,7 @@ class CentrlyApp {
         cached.sessions_per_week = sessions_per_week;
         cached.day_of_week = day_of_week;
         cached.session_time = session_time;
+        cached.schedule = schedule;
       }
 
       this.closeModal();
@@ -6249,7 +6414,7 @@ class CentrlyApp {
     const allGroups = this.groups || [];
     const otherGroups = allGroups.filter(g => {
       const gDay = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || '';
-      return gDay !== todayArabic;
+      return !gDay.includes(todayArabic);
     });
 
     const displayGroups = otherGroups.length > 0 ? otherGroups : allGroups;
