@@ -7439,9 +7439,9 @@ class CentrlyApp {
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 0.75rem; padding: 0.85rem; color: #166534; font-size: 0.85rem; line-height: 1.6;">
           <div style="font-weight: 800; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem;">
-            <span>⚡ نظام الإرسال المزدوج الذكي للرسائل والتقارير</span>
+            <span>⚡ نظام الإرسال المزدوج الذكي ومحاكاة الكتابة</span>
           </div>
-          يتم إرسال رسالتين بنموذجين مخصصين لكل طالب (رسالة للطالب على رقمه + رسالة لولي أمره) لضمان وصول التقارير بسلاسة وتنظيم فائق.
+          يُرسل رابط المنصة للطالب أولاً، ثم يُرسل رابط المتابعة لولي الأمر تلقائياً بعد 15 دقيقة. يظهر لولي الأمر إشعار "يكتب الآن..." لمدة 5 دقائق قبل استلام الرسالة، مع تنويع وصياغة متغيرة تلقائياً (Spintax) لكل رسالة لحماية رقمك تماماً من خوارزميات الحظر.
         </div>
 
         <div>
@@ -7536,6 +7536,10 @@ https://centerly-eg.com/p/p16766044
 - متابعة الالتزام بتسليم وحل الواجبات وملاحظات المعلم.
 
 مع تحيات: ${escapeHtml(teacherName)}
+          </div>
+
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
+            <span>💡 صياغة متغيرة تلقائياً: يتم تدوير التحية والمقدمة والخاتمة لكل طالب وولي أمر لحماية حسابك من التكرار.</span>
           </div>
         </div>
       </div>

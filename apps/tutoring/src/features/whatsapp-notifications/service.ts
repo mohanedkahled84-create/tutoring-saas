@@ -1338,11 +1338,11 @@ export class WhatsAppNotificationsService {
   /**
    * DEV-PORTAL.5: Dual batch dispatch to both Student and Parent.
    * Strict anti-ban guarantees:
-   * - Daily cap: maximum 24 students (up to 48 messages).
-   * - Spaced intervals: default 30 minutes (1,800,000 ms) between students for safe scheduled queues.
-   * - Presence typing: sendPresence('composing') with realistic typing duration before each dispatch.
-   * - Distinct templates: Student Portal vs Parent Portal with contact-saving instruction at top.
-   * - Natural pause: 5-10 seconds between student and parent message of the same student.
+   * - Daily cap: maximum 24 students (up to 48 messages) in test mode or specified limit.
+   * - Order of dispatch: Send student portal link first.
+   * - 15-minute gap: 15 minutes after student message, send portal link to parent.
+   * - 5-minute typing simulation: 5 minutes prior to parent message, pulse 'composing' presence.
+   * - Dynamic templates: Auto-rotated Spintax phrasing for greetings, intros, and closings.
    */
   async batchSendDualPortalLinks(params: {
     tenant_id: string;
@@ -1360,7 +1360,11 @@ export class WhatsAppNotificationsService {
       subject_name?: string;
     }>;
     pacingDelayMs?: number;
+    parentDelayMs?: number;
+    typingDurationMs?: number;
     maxStudentsPerBatch?: number;
+    onStudentSent?: (studentId: string) => Promise<void> | void;
+    onParentSent?: (studentId: string) => Promise<void> | void;
   }): Promise<{
     total: number;
     students_processed: number;
@@ -1377,7 +1381,19 @@ export class WhatsAppNotificationsService {
       delay_applied_ms?: number;
     }>;
   }> {
-    const { tenant_id, teacher_id, teacher_name, subject_name, students, pacingDelayMs, maxStudentsPerBatch } = params;
+    const {
+      tenant_id,
+      teacher_id,
+      teacher_name,
+      subject_name,
+      students,
+      pacingDelayMs,
+      parentDelayMs,
+      typingDurationMs,
+      maxStudentsPerBatch,
+      onStudentSent,
+      onParentSent,
+    } = params;
 
     // In unit tests, cap to 24 if unspecified for test compatibility; in production allow full batch (up to 200)
     const defaultCap = process.env.NODE_ENV === "test" ? 24 : 200;
@@ -1388,12 +1404,133 @@ export class WhatsAppNotificationsService {
     let parentSentCount = 0;
     let failedCount = 0;
 
+    const isTestOrFast = process.env.NODE_ENV === "test" || (pacingDelayMs !== undefined && pacingDelayMs <= 2000);
+
+    // Parent delay: 15 minutes in production (900,000 ms), 0 in fast/test mode unless explicitly passed
+    const effectiveParentDelayMs = parentDelayMs !== undefined
+      ? Math.max(0, parentDelayMs)
+      : (isTestOrFast ? 0 : 15 * 60 * 1000);
+
+    // Typing duration: 5 minutes in production (300,000 ms), 0 in fast/test mode unless explicitly passed
+    const effectiveTypingDurationMs = typingDurationMs !== undefined
+      ? Math.min(Math.max(0, typingDurationMs), effectiveParentDelayMs)
+      : (effectiveParentDelayMs === 0 ? 0 : Math.min(5 * 60 * 1000, effectiveParentDelayMs));
+
+    // Fast-path for instant execution (e.g. tests or zero delay specified)
+    if (effectiveParentDelayMs === 0) {
+      for (let i = 0; i < safeStudentList.length; i++) {
+        const item = safeStudentList[i];
+        let delayApplied = 0;
+
+        if (i > 0) {
+          delayApplied = pacingDelayMs !== undefined ? pacingDelayMs : (2500 + Math.floor(Math.random() * 2000));
+          if (delayApplied > 0) {
+            await new Promise((r) => setTimeout(r, delayApplied));
+          }
+        }
+
+        let studentSent = false;
+        let parentSent = false;
+        let studentErr: string | undefined;
+        let parentErr: string | undefined;
+
+        // 1. Send to Student (if student_phone is provided)
+        if (item.student_phone && item.student_phone.trim()) {
+          try {
+            const sRes = await this.sendStudentPortalLink({
+              tenant_id,
+              teacher_id,
+              student_id: item.student_id,
+              student_name: item.student_name,
+              student_phone: item.student_phone,
+              teacher_name,
+              subject_name: item.subject_name || subject_name,
+              portal_password: item.portal_password,
+              portal_url: item.student_portal_url,
+            });
+            if (sRes.success) {
+              studentSent = true;
+              studentSentCount++;
+              if (onStudentSent) {
+                await Promise.resolve(onStudentSent(item.student_id)).catch(() => {});
+              }
+            } else {
+              studentErr = sRes.error;
+            }
+          } catch (err: unknown) {
+            studentErr = (err as Error).message;
+          }
+        }
+
+        // Natural pause between student message and parent message (1.2s - 2.0s in production, 0 in fast tests)
+        if (studentSent && item.parent_phone && item.parent_phone.trim()) {
+          const intraStudentDelay = pacingDelayMs !== undefined && pacingDelayMs < 2000 ? 0 : (1200 + Math.floor(Math.random() * 800));
+          if (intraStudentDelay > 0) {
+            await new Promise((r) => setTimeout(r, intraStudentDelay));
+          }
+        }
+
+        // 2. Send to Parent (if parent_phone is provided)
+        if (item.parent_phone && item.parent_phone.trim()) {
+          try {
+            const pRes = await this.sendParentPortalLink({
+              tenant_id,
+              teacher_id,
+              student_id: item.student_id,
+              student_name: item.student_name,
+              parent_phone: item.parent_phone,
+              teacher_name,
+              subject_name: item.subject_name || subject_name,
+              portal_password: item.portal_password,
+              portal_url: item.parent_portal_url,
+            });
+            if (pRes.success) {
+              parentSent = true;
+              parentSentCount++;
+              if (onParentSent) {
+                await Promise.resolve(onParentSent(item.student_id)).catch(() => {});
+              }
+            } else {
+              parentErr = pRes.error;
+            }
+          } catch (err: unknown) {
+            parentErr = (err as Error).message;
+          }
+        }
+
+        if (!studentSent && !parentSent) {
+          failedCount++;
+        }
+
+        results.push({
+          student_id: item.student_id,
+          student_name: item.student_name,
+          student_sent: studentSent,
+          parent_sent: parentSent,
+          student_error: studentErr,
+          parent_error: parentErr,
+          delay_applied_ms: delayApplied,
+        });
+      }
+
+      return {
+        total: (students || []).length,
+        students_processed: safeStudentList.length,
+        student_messages_sent: studentSentCount,
+        parent_messages_sent: parentSentCount,
+        failed_count: failedCount,
+        results,
+      };
+    }
+
+    // Delayed parent dispatch mode: send to student first, wait, simulate 5m typing, then send to parent
+    const parentScheduledTasks: Array<Promise<void>> = [];
+
     for (let i = 0; i < safeStudentList.length; i++) {
       const item = safeStudentList[i];
       let delayApplied = 0;
 
       if (i > 0) {
-        // Safe natural human pacing interval (2.5s - 4.5s) between students
         delayApplied = pacingDelayMs !== undefined ? pacingDelayMs : (2500 + Math.floor(Math.random() * 2000));
         if (delayApplied > 0) {
           logger.info(`[WhatsAppPacing] Dual portal safe pacing: waiting ${(delayApplied / 1000).toFixed(1)}s before student ${i + 1}/${safeStudentList.length}`);
@@ -1402,11 +1539,9 @@ export class WhatsAppNotificationsService {
       }
 
       let studentSent = false;
-      let parentSent = false;
       let studentErr: string | undefined;
-      let parentErr: string | undefined;
 
-      // 1. Send to Student (if student_phone is provided)
+      // 1. Send to Student
       if (item.student_phone && item.student_phone.trim()) {
         try {
           const sRes = await this.sendStudentPortalLink({
@@ -1423,6 +1558,9 @@ export class WhatsAppNotificationsService {
           if (sRes.success) {
             studentSent = true;
             studentSentCount++;
+            if (onStudentSent) {
+              await Promise.resolve(onStudentSent(item.student_id)).catch(() => {});
+            }
           } else {
             studentErr = sRes.error;
           }
@@ -1431,53 +1569,83 @@ export class WhatsAppNotificationsService {
         }
       }
 
-      // Natural pause between student message and parent message (1.2s - 2.0s in production, 0 in fast tests)
-      if (studentSent && item.parent_phone && item.parent_phone.trim()) {
-        const intraStudentDelay = pacingDelayMs !== undefined && pacingDelayMs < 2000 ? 0 : (1200 + Math.floor(Math.random() * 800));
-        if (intraStudentDelay > 0) {
-          await new Promise((r) => setTimeout(r, intraStudentDelay));
-        }
-      }
+      const studentSentTime = Date.now();
 
-      // 2. Send to Parent (if parent_phone is provided)
-      if (item.parent_phone && item.parent_phone.trim()) {
-        try {
-          const pRes = await this.sendParentPortalLink({
-            tenant_id,
-            teacher_id,
-            student_id: item.student_id,
-            student_name: item.student_name,
-            parent_phone: item.parent_phone,
-            teacher_name,
-            subject_name: item.subject_name || subject_name,
-            portal_password: item.portal_password,
-            portal_url: item.parent_portal_url,
-          });
-          if (pRes.success) {
-            parentSent = true;
-            parentSentCount++;
-          } else {
-            parentErr = pRes.error;
-          }
-        } catch (err: unknown) {
-          parentErr = (err as Error).message;
-        }
-      }
-
-      if (!studentSent && !parentSent) {
-        failedCount++;
-      }
-
-      results.push({
+      const resultEntry = {
         student_id: item.student_id,
         student_name: item.student_name,
         student_sent: studentSent,
-        parent_sent: parentSent,
+        parent_sent: false,
         student_error: studentErr,
-        parent_error: parentErr,
+        parent_error: undefined as string | undefined,
         delay_applied_ms: delayApplied,
-      });
+      };
+      results.push(resultEntry);
+
+      // Schedule parent dispatch relative to this student's send time
+      if (item.parent_phone && item.parent_phone.trim()) {
+        const cleanParentPhone = item.parent_phone.replace(/[\s\-\(\)\.]/g, "");
+        const actualTeacherId = teacher_id || "default";
+        const primaryInstance = buildInstanceName(tenant_id, actualTeacherId);
+
+        const parentTask = async () => {
+          const parentSendTargetTime = studentSentTime + effectiveParentDelayMs;
+          const typingStartTargetTime = parentSendTargetTime - effectiveTypingDurationMs;
+
+          // 1. Wait until typing simulation start time (e.g. 10 minutes in)
+          const waitBeforeTyping = typingStartTargetTime - Date.now();
+          if (waitBeforeTyping > 0) {
+            logger.info(`[WhatsAppDualPortal] Waiting ${(waitBeforeTyping / 1000).toFixed(1)}s before typing presence for parent of ${item.student_name}`);
+            await new Promise((r) => setTimeout(r, waitBeforeTyping));
+          }
+
+          // 2. Typing presence simulation ("يكتب الآن...") for effectiveTypingDurationMs (e.g. 5 minutes)
+          logger.info(`[WhatsAppDualPortal] Starting typing simulation for parent of ${item.student_name} (${(effectiveTypingDurationMs / 1000).toFixed(0)}s total)`);
+          while (Date.now() < parentSendTargetTime) {
+            if (this.gateway?.sendPresence) {
+              await this.gateway.sendPresence(primaryInstance, cleanParentPhone, "composing").catch(() => {});
+            }
+            const remainingMs = parentSendTargetTime - Date.now();
+            if (remainingMs <= 0) break;
+            const pulseWait = Math.min(remainingMs, 16000 + Math.floor(Math.random() * 4000));
+            await new Promise((r) => setTimeout(r, pulseWait));
+          }
+
+          // 3. Send parent portal message
+          try {
+            const pRes = await this.sendParentPortalLink({
+              tenant_id,
+              teacher_id,
+              student_id: item.student_id,
+              student_name: item.student_name,
+              parent_phone: cleanParentPhone,
+              teacher_name,
+              subject_name: item.subject_name || subject_name,
+              portal_password: item.portal_password,
+              portal_url: item.parent_portal_url,
+            });
+            if (pRes.success) {
+              resultEntry.parent_sent = true;
+              parentSentCount++;
+              if (onParentSent) {
+                await Promise.resolve(onParentSent(item.student_id)).catch(() => {});
+              }
+            } else {
+              resultEntry.parent_error = pRes.error;
+            }
+          } catch (err: unknown) {
+            resultEntry.parent_error = (err as Error).message;
+          }
+        };
+
+        parentScheduledTasks.push(parentTask());
+      }
     }
+
+    // Await all scheduled parent deliveries to complete
+    await Promise.all(parentScheduledTasks);
+
+    failedCount = results.filter((r) => !r.student_sent && !r.parent_sent).length;
 
     return {
       total: (students || []).length,
@@ -1719,6 +1887,14 @@ interface SpintaxRotationState {
   studentQuizGreetingIdx: number;
   studentQuizBodyIdx: number;
   studentQuizClosingIdx: number;
+  parentPortalGreetingIdx: number;
+  parentPortalIntroIdx: number;
+  parentPortalSaveAlertIdx: number;
+  parentPortalClosingIdx: number;
+  studentPortalGreetingIdx: number;
+  studentPortalIntroIdx: number;
+  studentPortalSaveAlertIdx: number;
+  studentPortalClosingIdx: number;
 }
 
 const spintaxState: SpintaxRotationState = {
@@ -1736,6 +1912,14 @@ const spintaxState: SpintaxRotationState = {
   studentQuizGreetingIdx: -1,
   studentQuizBodyIdx: -1,
   studentQuizClosingIdx: -1,
+  parentPortalGreetingIdx: -1,
+  parentPortalIntroIdx: -1,
+  parentPortalSaveAlertIdx: -1,
+  parentPortalClosingIdx: -1,
+  studentPortalGreetingIdx: -1,
+  studentPortalIntroIdx: -1,
+  studentPortalSaveAlertIdx: -1,
+  studentPortalClosingIdx: -1,
 };
 
 function getRotatedIndex(arrayLength: number, lastIdx: number): number {
@@ -2085,31 +2269,43 @@ export function generateParentPortalInviteMessage(params: {
     `السلام عليكم ورحمة الله وبركاته، تحياتنا الطيبة لولي أمر الطالب (${student}).`,
     `السلام عليكم ورحمة الله، أهلاً بحضرتك ولي أمر الطالب (${student}).`,
     `تحياتنا لولي أمر الطالب (${student}) ونتمنى له دوام التميز والتقدم.`,
+    `مرحباً بحضرتك ولي أمر الطالب (${student})، نسأل الله له التوفيق والسداد دائماً.`,
+    `تحية طيبة لحضرتك، ولي أمر الطالب المتميز (${student}).`,
   ];
-  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+  spintaxState.parentPortalGreetingIdx = getRotatedIndex(greetings.length, spintaxState.parentPortalGreetingIdx);
+  const greeting = greetings[spintaxState.parentPortalGreetingIdx];
 
   const intros = [
     `يسعدنا تزويدكم ببيانات بوابة المتابعة الخاصة بـ ${subjectStr} مع ${teacher}:`,
     `حرصاً على متابعة المستوى الدراسي لـ (${student}) أولاً بأول في ${subjectStr} مع ${teacher}:`,
     `في إطار حرصنا على التواصل والتفوق المستمر، إليكم حساب المتابعة لـ ${subjectStr} مع ${teacher}:`,
     `تيسيراً على حضراتكم في متابعة أداء الطالب (${student})، نرفق لكم حساب المتابعة في ${subjectStr}:`,
+    `لمتابعة حضور ودرجات وواجبات الطالب (${student}) بصفة دورية، تم تفعيل بوابة المتابعة المباشرة مع ${teacher}:`,
+    `يسرنا مشاركة بيانات الدخول لبوابة المتابعة الخاصة بالطالب (${student}) في ${subjectStr}:`,
   ];
-  const intro = intros[Math.floor(Math.random() * intros.length)];
+  spintaxState.parentPortalIntroIdx = getRotatedIndex(intros.length, spintaxState.parentPortalIntroIdx);
+  const intro = intros[spintaxState.parentPortalIntroIdx];
 
   const saveAlerts = [
     `*تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.`,
     `*خطوة ضرورية:* نرجو *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط ولتصلك كافة الإشعارات والتقارير بانتظام.`,
     `*ملاحظة هامة:* فضلاً *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط المباشر واستلام إفادات الدرجات والغياب فور رصدها.`,
+    `*تنبيه لتفعيل الرابط:* احرص على *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يظهر الرابط قابلاً للضغط وتصلك رسائل المتابعة الدورية.`,
+    `*برجاء الانتباه:* يتطلب تفعيل الرابط الأزرق *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً*، ولضمان عدم انقطاع رسائل التقارير.`,
   ];
-  const saveAlert = saveAlerts[Math.floor(Math.random() * saveAlerts.length)];
+  spintaxState.parentPortalSaveAlertIdx = getRotatedIndex(saveAlerts.length, spintaxState.parentPortalSaveAlertIdx);
+  const saveAlert = saveAlerts[spintaxState.parentPortalSaveAlertIdx];
 
   const closings = [
     `مع خالص تمنياتنا للطالب (${student}) بدوام التفوق والنجاح.\nمع تحيات: ${teacher}`,
     `نسأل الله له كامل التوفيق والتميز دائماً.\nمع تحيات: ${teacher}`,
     `شاكرين لحضراتكم حسن المتابعة والاهتمام.\nمع تحيات: ${teacher}`,
     `مع أطيب التمنيات بمستقبل مشرق ومتميز.\nمع تحيات: ${teacher}`,
+    `دمتم ودام أبناؤكم في أعلى مراتب النجاح والتفوق.\nمع تحيات: ${teacher}`,
+    `تقبلوا فائق احترامنا وتقديرنا لحرصكم الدائم.\nمع تحيات: ${teacher}`,
   ];
-  const closing = closings[Math.floor(Math.random() * closings.length)];
+  spintaxState.parentPortalClosingIdx = getRotatedIndex(closings.length, spintaxState.parentPortalClosingIdx);
+  const closing = closings[spintaxState.parentPortalClosingIdx];
 
   const credentialsBlock = params.portal_password
     ? `*رابط بوابة المتابعة:*
@@ -2160,30 +2356,43 @@ export function generateStudentPortalInviteMessage(params: {
     `السلام عليكم ورحمة الله وبركاته، عزيزنا الطالب (${student}).`,
     `تحياتنا الطيبة لك يا (${student}) وأهلاً بك معنا.`,
     `أهلاً بك يا (${student}) في رحلة التفوق والنجاح.`,
+    `مرحباً بك يا بطل (${student})، مستعدون لعام دراسي مليء بالنجاح.`,
+    `يا هلا بـ (${student})، كل الدعم لك لتحقيق أعلى الدرجات.`,
   ];
-  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+  spintaxState.studentPortalGreetingIdx = getRotatedIndex(greetings.length, spintaxState.studentPortalGreetingIdx);
+  const greeting = greetings[spintaxState.studentPortalGreetingIdx];
 
   const intros = [
     `تم تفعيل بوابتك التعليمية لمتابعة ${subjectStr} مع ${teacher}:`,
     `إليك حساب بوابتك التعليمية الرسمية لمتابعة ${subjectStr} وتسليم واجباتك أولاً بأول:`,
     `حرصاً على تنظيم مذاكرتك وتفوقك، إليك بيانات بوابتك التعليمية مع ${teacher}:`,
     `يسعدنا تزويدك بحساب بوابتك الخاصة لتحميل المذكرات ومتابعة تقييماتك في ${subjectStr}:`,
+    `منصتك التعليمية الخاصة بمادة ${subjectStr} مع ${teacher} جاهزة الآن للدخول:`,
+    `لتسهيل تحميل المذكرات ومتابعة الواجبات، إليك بيانات حسابك في المنصة:`,
   ];
-  const intro = intros[Math.floor(Math.random() * intros.length)];
+  spintaxState.studentPortalIntroIdx = getRotatedIndex(intros.length, spintaxState.studentPortalIntroIdx);
+  const intro = intros[spintaxState.studentPortalIntroIdx];
 
   const saveAlerts = [
     `*تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والمذكرات الجديدة.`,
     `*خطوة ضرورية:* نرجو *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الرابط واستلام إشعارات الحصص والواجبات أولاً بأول.`,
     `*ملاحظة:* احرص على *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لضمان فتح الروابط مباشرة واستلام تنبيهات المادة باستمرار.`,
+    `*هام جداً:* احفظ هذا الرقم باسم ${teacher}، وتأكد من *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يعمل الرابط معك مباشرة وتصلك ملفات الشرح فور نزولها.`,
+    `*خطوة مهمة:* تأكد من *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* لتفعيل الضغط على الرابط واستلام إشعارات الامتحانات والواجبات.`,
   ];
-  const saveAlert = saveAlerts[Math.floor(Math.random() * saveAlerts.length)];
+  spintaxState.studentPortalSaveAlertIdx = getRotatedIndex(saveAlerts.length, spintaxState.studentPortalSaveAlertIdx);
+  const saveAlert = saveAlerts[spintaxState.studentPortalSaveAlertIdx];
 
   const closings = [
     `مع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacher}`,
     `نسأل الله لك كامل النجاح والتوفيق.\nمع تحيات: ${teacher}`,
     `تمنياتنا لك بمستقبل مشرق وتفوق مستمر.\nمع تحيات: ${teacher}`,
+    `شد حيلك ومستعدين لأعلى الدرجات بإذن الله.\nمع تحيات: ${teacher}`,
+    `بالتوفيق والاجتهاد دائماً يا بطل.\nمع تحيات: ${teacher}`,
+    `واثقون في قدراتك وتميزك دائماً.\nمع تحيات: ${teacher}`,
   ];
-  const closing = closings[Math.floor(Math.random() * closings.length)];
+  spintaxState.studentPortalClosingIdx = getRotatedIndex(closings.length, spintaxState.studentPortalClosingIdx);
+  const closing = closings[spintaxState.studentPortalClosingIdx];
 
   const credentialsBlock = params.portal_password
     ? `*رابط بوابتك التعليمية:*

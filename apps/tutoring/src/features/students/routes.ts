@@ -402,7 +402,7 @@ studentsRouter.post("/batch-send-parent-links", async (req: AuthenticatedRequest
 // DEV-PORTAL.5: POST /api/students/batch-send-dual-portal-links - Dual dispatch (Student + Parent) with 24-student daily cap & 30m pacing
 studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id;
-  const { student_ids, teacher_id, teacher_name, pacing_delay_ms } = req.body || {};
+  const { student_ids, teacher_id, teacher_name, pacing_delay_ms, parent_delay_ms, typing_duration_ms } = req.body || {};
 
   if (!tenantId && req.user?.role !== "admin") {
     res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
@@ -474,7 +474,21 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
         subject_name: subjectName,
         students: studentsPayload,
         pacingDelayMs: pacing_delay_ms,
+        parentDelayMs: parent_delay_ms,
+        typingDurationMs: typing_duration_ms,
         maxStudentsPerBatch: Math.max(200, studentsPayload.length),
+        onStudentSent: async (studentId) => {
+          const now = new Date().toISOString();
+          const item = studentsPayload.find((p) => p.student_id === studentId);
+          const updates: Record<string, any> = { student_portal_sent_at: now };
+          if (item?.token) updates.parent_portal_token = item.token;
+          if (item?.portal_password) updates.portal_password = item.portal_password;
+          await studentsService.updateStudent(studentId, updates).catch(() => {});
+        },
+        onParentSent: async (studentId) => {
+          const now = new Date().toISOString();
+          await studentsService.updateStudent(studentId, { parent_portal_sent_at: now }).catch(() => {});
+        },
       });
 
       const now = new Date().toISOString();
@@ -511,7 +525,21 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
           subject_name: subjectName,
           students: studentsPayload,
           pacingDelayMs: pacing_delay_ms,
+          parentDelayMs: parent_delay_ms,
+          typingDurationMs: typing_duration_ms,
           maxStudentsPerBatch: Math.max(200, studentsPayload.length),
+          onStudentSent: async (studentId) => {
+            const now = new Date().toISOString();
+            const item = studentsPayload.find((p) => p.student_id === studentId);
+            const updates: Record<string, any> = { student_portal_sent_at: now };
+            if (item?.token) updates.parent_portal_token = item.token;
+            if (item?.portal_password) updates.portal_password = item.portal_password;
+            await studentsService.updateStudent(studentId, updates).catch(() => {});
+          },
+          onParentSent: async (studentId) => {
+            const now = new Date().toISOString();
+            await studentsService.updateStudent(studentId, { parent_portal_sent_at: now }).catch(() => {});
+          },
         });
 
         const now = new Date().toISOString();
@@ -533,9 +561,9 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
 
     res.json({
       status: "scheduled",
-      message: `تم بدء جدولة إرسال الروابط لـ (${targetStudents.length}) طالباً (طالب وولي أمر) بأعلى معايير الأمان وبفاصل 30 دقيقة لحماية رقمك.`,
+      message: `تم بدء جدولة إرسال الروابط لـ (${targetStudents.length}) طالباً بأمان: يُرسل للطالب أولاً ثم لولي الأمر بعد 15 دقيقة مع محاكاة كتابة لمدة 5 دقائق وصياغة متغيرة تلقائياً لحماية رقمك.`,
       total: targetStudents.length,
-      capped_to: 24,
+      capped_to: targetStudents.length,
       students: targetStudents.map((s) => ({ id: s.id, name: s.name })),
     });
   } catch (err: unknown) {
