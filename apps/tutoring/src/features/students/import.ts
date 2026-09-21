@@ -25,10 +25,17 @@ export interface ImportResult {
   }>;
 }
 
-// Clean phone number: remove all non-digits except leading +
+// Clean phone number: remove all non-digits except leading +, and convert Arabic-Indic digits
 export function normalizePhoneNumber(phone?: string | null): string {
   if (!phone) return "";
   let clean = phone.trim().replace(/[\s\-().]/g, "");
+
+  // Convert Arabic-Indic digits (٠-٩) to standard ASCII (0-9)
+  const arabicDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+  for (let i = 0; i < 10; i++) {
+    clean = clean.replaceAll(arabicDigits[i], String(i));
+  }
+
   // Normalize Egyptian numbers
   if (clean.startsWith("+20")) clean = clean.slice(3);
   else if (clean.startsWith("0020")) clean = clean.slice(4);
@@ -110,37 +117,87 @@ export function mapRowToStudent(
 
   // Default header alias dictionary
   const aliasMap: Record<string, string[]> = {
-    name: ["name", "student_name", "الاسم", "اسم الطالب", "طالب", "الاسم ثلاثي"],
+    name: [
+      "name",
+      "student_name",
+      "student name",
+      "الاسم",
+      "اسم الطالب",
+      "طالب",
+      "الاسم ثلاثي",
+      "الاسم رباعي",
+      "اسم الطالب ثلاثي",
+      "اسم الطالب رباعي",
+      "full name",
+      "fullname",
+    ],
     parent_phone: [
       "parent_phone",
       "parent_mobile",
+      "parent phone",
+      "parent mobile",
       "ولي الامر",
       "ولي الأمر",
       "موبايل ولي الأمر",
+      "موبايل ولي الامر",
       "هاتف ولي الأمر",
+      "هاتف ولي الامر",
       "تليفون ولي الأمر",
+      "تليفون ولي الامر",
+      "تلفون ولي الأمر",
+      "تلفون ولي الامر",
       "رقم ولي الامر",
+      "رقم ولي الأمر",
+      "رقم تليفون ولي الامر",
+      "رقم تليفون ولي الأمر",
+      "رقم هاتف ولي الامر",
+      "رقم هاتف ولي الأمر",
+      "رقم الاب",
+      "هاتف الاب",
+      "تليفون الاب",
+      "موبايل الاب",
+      "رقم الام",
+      "هاتف الام",
+      "father_phone",
+      "father phone",
     ],
     student_phone: [
       "student_phone",
+      "student phone",
+      "student_mobile",
+      "student mobile",
       "mobile",
       "phone",
       "موبايل الطالب",
       "هاتف الطالب",
       "تليفون الطالب",
+      "تلفون الطالب",
       "رقم الطالب",
+      "رقم تليفون الطالب",
+      "رقم هاتف الطالب",
+      "رقم موبايل الطالب",
+      "رقم الهاتف",
+      "رقم التليفون",
+      "رقم الموبايل",
+      "الهاتف",
+      "الموبايل",
+      "التليفون",
     ],
     code: [
       "code",
       "student_code",
+      "student code",
       "serial",
+      "id",
       "كود",
       "الكود",
       "كود الطالب",
       "مسلسل",
       "الرقم التعريفي",
+      "رقم الجلوس",
+      "رقم الطالب التعريفي",
     ],
-    fee_override: ["fee_override", "price", "fee", "سعر خاص", "قيمة الحصة", "مصاريف"],
+    fee_override: ["fee_override", "price", "fee", "سعر خاص", "قيمة الحصة", "مصاريف", "سعر الحصة", "السعر"],
     exempt: ["exempt", "معفي", "منحة", "اعفاء", "إعفاء"],
     notes: ["notes", "ملاحظات", "ملاحظة"],
   };
