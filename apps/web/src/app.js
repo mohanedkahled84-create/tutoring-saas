@@ -5367,9 +5367,9 @@ class CentrlyApp {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 700;">القاعة المخصصة *</label>
-              <select id="newGroupRoomId" class="form-input" required>
-                <option value="">-- اختر القاعة --</option>
+              <label class="form-label" style="font-weight: 700;">القاعة المخصصة (اختياري)</label>
+              <select id="newGroupRoomId" class="form-input">
+                <option value="">-- بدون قاعة محددة (اختياري) --</option>
                 ${roomOptions}
               </select>
             </div>
@@ -5377,12 +5377,12 @@ class CentrlyApp {
         ` : `
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
             <div class="form-group">
-              <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر</label>
-              <input type="text" id="newGroupCenter" class="form-input" placeholder="اسم السنتر أو المقر">
+              <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر (اختياري)</label>
+              <input type="text" id="newGroupCenter" class="form-input" placeholder="اسم السنتر أو المقر (اختياري)">
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 700;">القاعة المخصصة</label>
-              <input type="text" id="newGroupRoomName" class="form-input" placeholder="اسم أو رقم القاعة">
+              <label class="form-label" style="font-weight: 700;">القاعة المخصصة (اختياري)</label>
+              <input type="text" id="newGroupRoomName" class="form-input" placeholder="اسم أو رقم القاعة (اختياري)">
             </div>
           </div>
         `}
@@ -5594,9 +5594,9 @@ class CentrlyApp {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 700;">القاعة المخصصة *</label>
-              <select id="editGroupRoomId" class="form-input" required>
-                <option value="">-- اختر القاعة --</option>
+              <label class="form-label" style="font-weight: 700;">القاعة المخصصة (اختياري)</label>
+              <select id="editGroupRoomId" class="form-input">
+                <option value="">-- بدون قاعة محددة (اختياري) --</option>
                 ${roomOptions}
               </select>
             </div>
@@ -5604,12 +5604,12 @@ class CentrlyApp {
         ` : `
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
             <div class="form-group">
-              <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر</label>
-              <input type="text" id="editGroupCenter" class="form-input" value="${escapeHtml(group.center_name || group.centerName || '')}" placeholder="اسم السنتر أو المقر">
+              <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر (اختياري)</label>
+              <input type="text" id="editGroupCenter" class="form-input" value="${escapeHtml(group.center_name || group.centerName || '')}" placeholder="اسم السنتر أو المقر (اختياري)">
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 700;">القاعة المخصصة</label>
-              <input type="text" id="editGroupRoomName" class="form-input" value="${escapeHtml(group.room || group.room_name || '')}" placeholder="اسم أو رقم القاعة">
+              <label class="form-label" style="font-weight: 700;">القاعة المخصصة (اختياري)</label>
+              <input type="text" id="editGroupRoomName" class="form-input" value="${escapeHtml(group.room || group.room_name || '')}" placeholder="اسم أو رقم القاعة (اختياري)">
             </div>
           </div>
         `}
@@ -6388,8 +6388,8 @@ class CentrlyApp {
           </select>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">القاعة المخصصة للحصة</label>
-          <input type="text" id="startSessionRoom" class="form-input" value="${escapeHtml(defaultRoom)}" placeholder="اسم أو رقم القاعة (يمكن تعديلها الآن)">
+          <label class="form-label" style="font-weight: 700;">القاعة المخصصة للحصة (اختياري)</label>
+          <input type="text" id="startSessionRoom" class="form-input" value="${escapeHtml(defaultRoom)}" placeholder="اسم أو رقم القاعة (اختياري)">
         </div>
       </form>
     `;
@@ -6731,8 +6731,8 @@ class CentrlyApp {
           <input type="text" id="editSessionTopic" class="form-input" value="${escapeHtml(this.sessionState.topic || this.sessionState.extra_topic || '')}" placeholder="عنوان أو موضوع الحصة">
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">القاعة المخصصة للحصة</label>
-          <input type="text" id="editSessionRoom" class="form-input" value="${escapeHtml(currentRoom)}" placeholder="اسم أو رقم القاعة">
+          <label class="form-label" style="font-weight: 700;">القاعة المخصصة للحصة (اختياري)</label>
+          <input type="text" id="editSessionRoom" class="form-input" value="${escapeHtml(currentRoom)}" placeholder="اسم أو رقم القاعة (اختياري)">
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">توقيت الحصة</label>
@@ -8078,9 +8078,10 @@ https://centerly-eg.com/p/p16766044
           </select>
         </div>
         <div class="form-group" style="margin-bottom: 1rem;">
-          <label class="form-label">القاعة المخصصة *</label>
-          <select id="centerModalRoomSelect" class="form-select" required>
-            ${roomOptions || '<option value="">لا توجد قاعات</option>'}
+          <label class="form-label">القاعة المخصصة (اختياري)</label>
+          <select id="centerModalRoomSelect" class="form-select">
+            <option value="">بدون قاعة محددة (اختياري)</option>
+            ${roomOptions || ''}
           </select>
         </div>
         <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem;">
