@@ -122,15 +122,16 @@ export function renderLandingView() {
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(255, 255, 255, 0.97);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.98);
             border-top: 1px solid var(--brand-line);
             box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.06);
             padding: 0.65rem 1rem;
             z-index: 999;
             align-items: center;
             gap: 0.65rem;
+            transform: translateZ(0);
+            will-change: transform;
+            backface-visibility: hidden;
           }
           .landing-page {
             padding-bottom: 70px !important;
@@ -196,7 +197,7 @@ export function renderLandingView() {
       <!-- ================================================================= -->
       <!-- 1. FIXED TOP NAVIGATION BAR (LOCKED ON SCROLL)                    -->
       <!-- ================================================================= -->
-      <header id="landingNav" style="position: fixed; top: 0; left: 0; right: 0; height: 74px; z-index: 1000; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--brand-line); box-shadow: 0 2px 10px rgba(23, 45, 112, 0.04); display: flex; align-items: center;">
+      <header id="landingNav" style="position: fixed; top: 0; left: 0; right: 0; height: 74px; z-index: 1000; background: rgba(255, 255, 255, 0.98); border-bottom: 1px solid var(--brand-line); box-shadow: 0 2px 10px rgba(23, 45, 112, 0.04); display: flex; align-items: center; transform: translateZ(0); will-change: transform; backface-visibility: hidden;">
         <div style="width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
           
           <!-- Official Brand Wordmark & Icon -->
