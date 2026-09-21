@@ -2,7 +2,7 @@ import { authService } from './services/auth.js?v=4.8.7';
 import { request, API_BASE_URL } from './services/api.js?v=4.8.8';
 import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
 import { renderNavbar } from './components/Navbar.js?v=4.8.11';
-import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.9';
+import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.20';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';

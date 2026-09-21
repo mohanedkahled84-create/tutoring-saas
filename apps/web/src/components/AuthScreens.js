@@ -59,15 +59,9 @@ export function renderAuthScreens() {
 
         <!-- Signup Form -->
         <form id="formSignup" style="display: none;" onsubmit="window.centrlyApp.handleSignup(event)">
-          <div class="form-group">
-            <label class="form-label">نوع الحساب</label>
-            <select id="signupAccountType" class="form-select" onchange="window.centrlyApp.onAccountTypeChange(this.value)">
-              <option value="teacher">مدرس فردي (Solo Teacher)</option>
-              <option value="center">سنتر تعليمي (Educational Center)</option>
-            </select>
-          </div>
+          <input type="hidden" id="signupAccountType" value="teacher">
 
-          <!-- Dynamic Role Fields -->
+          <!-- Teacher Fields -->
           <div id="roleFieldsTeacher">
             <div class="form-group">
               <label class="form-label">اسم المدرس *</label>
@@ -95,17 +89,6 @@ export function renderAuthScreens() {
                 <option value="علوم">
                 <option value="حاسب آلي / تكنولوجيا">
               </datalist>
-            </div>
-          </div>
-
-          <div id="roleFieldsCenter" style="display: none;">
-            <div class="form-group">
-              <label class="form-label">اسم مسؤول السنتر *</label>
-              <input type="text" id="signupCenterOwnerName" class="form-input" placeholder="اسم مسؤول السنتر بالكامل">
-            </div>
-            <div class="form-group">
-              <label class="form-label">اسم السنتر التعليمي *</label>
-              <input type="text" id="signupCenterName" class="form-input" placeholder="اسم السنتر التعليمي">
             </div>
           </div>
 

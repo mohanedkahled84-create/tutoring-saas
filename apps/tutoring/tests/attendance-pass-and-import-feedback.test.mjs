@@ -83,3 +83,22 @@ test("BACKEND: normalizePhoneNumber in import.ts formats 10-digit numbers correc
   assert.equal(normalizedWith20, "01123456789");
   assert.equal(isValidEgyptianPhone(normalizedWith20), true);
 });
+
+test("AUTH: AuthScreens.js removes center field and account type selection from signup form", () => {
+  const filePath = path.resolve(__dirname, "../../web/src/components/AuthScreens.js");
+  const content = fs.readFileSync(filePath, "utf-8");
+
+  assert.ok(!content.includes('<select id="signupAccountType"'), "Account type select dropdown must be removed");
+  assert.ok(!content.includes('value="center"'), "Center option must be removed from signup");
+  assert.ok(!content.includes('id="roleFieldsCenter"'), "Center role fields block must be removed");
+  assert.ok(!content.includes('id="signupCenterName"'), "Center name input field must be removed");
+  assert.ok(!content.includes('id="signupCenterOwnerName"'), "Center owner name input field must be removed");
+
+  assert.ok(
+    content.includes('<input type="hidden" id="signupAccountType" value="teacher">'),
+    "Must include hidden input signupAccountType with default value teacher"
+  );
+  assert.ok(content.includes('id="signupName"'), "Must retain teacher name input");
+  assert.ok(content.includes('id="signupSubject"'), "Must retain teacher subject input");
+});
+
