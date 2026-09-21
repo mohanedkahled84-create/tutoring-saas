@@ -671,11 +671,26 @@ class CentrlyApp {
     }
   }
 
+  getAppEl() {
+    let appEl = document.getElementById('app');
+    if (!appEl && typeof document !== 'undefined') {
+      appEl = document.createElement('div');
+      appEl.id = 'app';
+      if (document.body) {
+        document.body.appendChild(appEl);
+      }
+    }
+    return appEl;
+  }
+
   // Official Landing / Welcome Page
   renderLanding() {
     window.scrollTo(0, 0);
     document.title = 'سنترلي | Centrly - المنظومة الأذكى لإدارة المعلمين والمراكز التعليمية';
-    document.getElementById('app').innerHTML = renderLandingView();
+    const appEl = this.getAppEl();
+    if (appEl) {
+      appEl.innerHTML = renderLandingView();
+    }
     this.initCookieConsent();
   }
 
@@ -845,7 +860,8 @@ class CentrlyApp {
       if (data && (data.error || !data.student)) {
         throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة ولي الأمر');
       }
-      document.getElementById('app').innerHTML = renderParentPortalView(data);
+      const appEl = this.getAppEl();
+      if (appEl) appEl.innerHTML = renderParentPortalView(data);
     } catch (err) {
       const msg = err?.message || '';
       const isExpired = msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED') || msg.includes('401');
@@ -859,9 +875,12 @@ class CentrlyApp {
         this.renderPortalLogin('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً');
         return;
       }
-      document.getElementById('app').innerHTML = renderParentPortalView({
-        error: msg || 'تعذر تحميل بيانات بوابة ولي الأمر. يرجى التحقق من صحة الرابط.',
-      });
+      const appEl = this.getAppEl();
+      if (appEl) {
+        appEl.innerHTML = renderParentPortalView({
+          error: msg || 'تعذر تحميل بيانات بوابة ولي الأمر. يرجى التحقق من صحة الرابط.',
+        });
+      }
     }
   }
 
@@ -895,7 +914,8 @@ class CentrlyApp {
       if (data && (data.error || !data.student)) {
         throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة الطالب');
       }
-      document.getElementById('app').innerHTML = renderStudentPortalView(data);
+      const appEl = this.getAppEl();
+      if (appEl) appEl.innerHTML = renderStudentPortalView(data);
     } catch (err) {
       const msg = err?.message || '';
       const isExpired = msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED') || msg.includes('401');
@@ -909,9 +929,12 @@ class CentrlyApp {
         this.renderPortalLogin('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً');
         return;
       }
-      document.getElementById('app').innerHTML = renderStudentPortalView({
-        error: msg || 'تعذر تحميل بيانات بوابة الطالب. يرجى التحقق من صحة الرابط.',
-      });
+      const appEl = this.getAppEl();
+      if (appEl) {
+        appEl.innerHTML = renderStudentPortalView({
+          error: msg || 'تعذر تحميل بيانات بوابة الطالب. يرجى التحقق من صحة الرابط.',
+        });
+      }
     }
   }
 
@@ -927,7 +950,7 @@ class CentrlyApp {
   // DEV-PORTAL: Unified Student & Parent Portal Login & Session Handlers
   renderPortalLogin(errorMessage = '') {
     this.currentRoute = 'portal';
-    const appEl = document.getElementById('app');
+    const appEl = this.getAppEl();
     if (appEl) {
       appEl.innerHTML = renderUnifiedPortalLoginView(errorMessage);
     }
@@ -1216,8 +1239,8 @@ class CentrlyApp {
   renderAuth(tab = 'login') {
     this.resetTenantState();
     window.scrollTo(0, 0);
-    document.title = tab === 'signup' ? 'إنشاء حساب جديد | سنترلي' : 'تسجيل الدخول | سنترلي';
-    document.getElementById('app').innerHTML = renderAuthScreens();
+    const appEl = this.getAppEl();
+    if (appEl) appEl.innerHTML = renderAuthScreens();
     if (tab === 'signup') {
       this.switchAuthTab('signup');
     } else {
@@ -1748,9 +1771,8 @@ class CentrlyApp {
   renderEmailVerificationView(email, password = '', note = '', signupData = null) {
     window.scrollTo(0, 0);
     document.title = 'تأكيد البريد الإلكتروني | سنترلي';
-    const effectiveSignupData = signupData || this.signupFormData || null;
-    this.pendingVerification = { email, password, signupData: effectiveSignupData };
-    document.getElementById('app').innerHTML = renderEmailVerificationScreen({ email, note });
+    const appEl = this.getAppEl();
+    if (appEl) appEl.innerHTML = renderEmailVerificationScreen({ email, note });
   }
 
   handleReturnToEditEmail() {
@@ -1930,7 +1952,8 @@ class CentrlyApp {
   // ==========================================================================
   startOnboarding() {
     this.onboardingStep = 1;
-    document.getElementById('app').innerHTML = renderOnboardingWizard(this.onboardingStep, this.onboardingState);
+    const appEl = this.getAppEl();
+    if (appEl) appEl.innerHTML = renderOnboardingWizard(this.onboardingStep, this.onboardingState);
   }
 
   nextOnboardingStep(step) {
@@ -1948,7 +1971,8 @@ class CentrlyApp {
     }
 
     this.onboardingStep = step;
-    document.getElementById('app').innerHTML = renderOnboardingWizard(this.onboardingStep, this.onboardingState);
+    const appEl = this.getAppEl();
+    if (appEl) appEl.innerHTML = renderOnboardingWizard(this.onboardingStep, this.onboardingState);
 
     if (step === 4) {
       this.initOnboardingStep4();
@@ -3029,7 +3053,7 @@ class CentrlyApp {
   }
 
   renderApp(force = false) {
-    const appEl = document.getElementById('app');
+    const appEl = this.getAppEl();
     const mainContentEl = document.getElementById('mainContent');
     const appContainer = document.querySelector('.app-container');
 

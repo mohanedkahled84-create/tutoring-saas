@@ -27,7 +27,20 @@ export interface PaymentProofWebhookPayload {
   created_at?: string;
 }
 
-export type AdminAlertPayload = NewSignupWebhookPayload | PaymentProofWebhookPayload;
+export interface TrialReminderWebhookPayload {
+  event_type: "trial_reminder";
+  teacher_name?: string;
+  teacher_phone: string;
+  tenant_name?: string;
+  threshold: "5_days_before" | "expiry_day";
+  message?: string;
+  expiry_date?: string;
+}
+
+export type AdminAlertPayload =
+  | NewSignupWebhookPayload
+  | PaymentProofWebhookPayload
+  | TrialReminderWebhookPayload;
 
 /**
  * Dispatches an event to the n8n Admin Alert Webhook asynchronously (non-blocking).

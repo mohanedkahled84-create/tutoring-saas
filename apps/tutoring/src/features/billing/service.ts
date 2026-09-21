@@ -1,4 +1,5 @@
 import { logger } from "../../shared/utils/logger.js";
+import { dispatchAdminAlertWebhook } from "../admin-ops/index.js";
 import {
   IBillingRepository,
   PaymentProofInput,
@@ -194,21 +195,24 @@ export class BillingService {
         const recipientPhone =
           (await this.repository.getTenantOwnerPhone(tenant.id)) || "01000000000";
 
+        const teacherDisplayName = tenant.name ? tenant.name.trim() : "أستاذنا";
+
         const formattedMessage =
           threshold === "5_days_before"
             ? [
-                `*تذكير باقتراب موعد تجديد الاشتراك*`,
-                `أهلاً بك أستاذنا في منصة إدارة الدروس (${tenant.name})،`,
-                `نود تذكيركم بأن اشتراككم الحالي سينتهي خلال *5 أيام* بتاريخ: ${expiryDate.toLocaleDateString("ar-EG")}.`,
-                `لضمان استمرار عمل مسح الباركود وإرسال رسائل الواتساب لأولياء الأمور دون انقطاع، يرجى التجديد عبر تحويل قيمة الاشتراك (InstaPay / Vodafone Cash) ورفع إيصال التحويل من لوحة التحكم:`,
-                `• رابط رفع الإيصال: /api/billing/payment-proof`,
+                `ازيك يا مستر ${teacherDisplayName}، يارب تكون بخير.`,
+                ``,
+                `حابب افكر حضرتك ان فاضل 5 ايام على نهاية الفترة التجريبية لحسابك على Centrly.`,
+                `طمنا ايه اخبار تجربتك للمنصة؟ ولو حابب تكمل معانا، قولي عشان ابعت لحضرتك تفاصيل الباقات وطرق التجديد. ولو محتاج اي مساعدة انا تحت امرك.`,
               ].join("\n")
             : [
-                `*تنبيه: اشتراكك ينتهي اليوم!*`,
-                `أهلاً بك أستاذنا في منصة إدارة الدروس (${tenant.name})،`,
-                `نلفت انتباهكم إلى أن اليوم هو الموعد الأخير لاشتراككم الحالي (${expiryDate.toLocaleDateString("ar-EG")}).`,
-                `لتجنب تعليق إدخال درجات الطلاب وإرسال الإشعارات، يرجى سداد الاشتراك وإرفاق صورة التحويل اليوم.`,
-                `• رابط رفع الإيصال: /api/billing/payment-proof`,
+                `مساء الخير يا مستر ${teacherDisplayName}.`,
+                ``,
+                `حابب افكر حضرتك ان النهاردة بتنتهي الـ 14 يوم تجربة مجانية على المنصة.`,
+                `لو حابب تستمر معانا، جهزت لحضرتك كود خصم خاص 20% وهو CENTR20 وتقدر تجدد من هنا:`,
+                `https://centrly.app/pricing`,
+                ``,
+                `لو عندك اي استفسار او حابب تسأل عن اي حاجة قبل ما تجدد، ابعتلي هنا وانا في خدمتك علطول.`,
               ].join("\n");
 
         try {
@@ -219,6 +223,17 @@ export class BillingService {
             message: formattedMessage,
           });
 
+          // Dispatch reminder event to n8n webhook (asynchronously/non-blocking)
+          await dispatchAdminAlertWebhook({
+            event_type: "trial_reminder",
+            teacher_name: teacherDisplayName,
+            teacher_phone: recipientPhone,
+            tenant_name: tenant.name,
+            threshold,
+            message: formattedMessage,
+            expiry_date: expiryDateStr,
+          });
+
           dispatchedCount += 1;
           results.push({
             tenant_id: tenant.id,
@@ -227,7 +242,7 @@ export class BillingService {
             idempotency_key: idempotencyKey,
             status: "dispatched",
           });
-          logger.info(`[BillingService] Logged ${threshold} reminder for ${tenant.name}`);
+          logger.info(`[BillingService] Logged & dispatched ${threshold} reminder for ${tenant.name}`);
         } catch (err: unknown) {
           results.push({
             tenant_id: tenant.id,

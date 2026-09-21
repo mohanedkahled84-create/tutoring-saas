@@ -112,4 +112,15 @@ test("WEB SYNTAX: studentBarcodeCard.js and AuthScreens.js import cleanly withou
   assert.ok(typeof authModule.renderAuthScreens === "function", "renderAuthScreens must be a function");
 });
 
+test("WEB DOM: apps/web/index.html and root index.html must contain <div id=\"app\"></div>", () => {
+  const webIndexPath = path.resolve(__dirname, "../../web/index.html");
+  const webContent = fs.readFileSync(webIndexPath, "utf-8");
+  assert.ok(webContent.includes('<div id="app"></div>'), "apps/web/index.html must contain <div id=\"app\"></div>");
+
+  const rootIndexPath = path.resolve(__dirname, "../../../index.html");
+  const rootContent = fs.readFileSync(rootIndexPath, "utf-8");
+  assert.ok(rootContent.includes('<div id="app"></div>'), "Root index.html must contain <div id=\"app\"></div>");
+});
+
+
 

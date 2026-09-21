@@ -1,4 +1,4 @@
-﻿import test from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
 import { dispatchAdminAlertWebhook } from "../dist/features/admin-ops/adminAlertWebhook.js";
 
@@ -75,3 +75,29 @@ test("dispatchAdminAlertWebhook: non-blocking on fetch failure (returns false wi
   const result = await dispatchAdminAlertWebhook(payload, failingFetch);
   assert.equal(result, false);
 });
+
+test("dispatchAdminAlertWebhook: successfully dispatches trial_reminder payload", async () => {
+  let calledPayload = null;
+
+  const mockFetch = async (_url, options) => {
+    calledPayload = JSON.parse(options.body);
+    return { ok: true, status: 200 };
+  };
+
+  const payload = {
+    event_type: "trial_reminder",
+    teacher_name: "مستر طارق",
+    teacher_phone: "01110392398",
+    tenant_name: "سنتر الأوائل",
+    threshold: "expiry_day",
+    message: "مساء الخير يا مستر طارق...",
+  };
+
+  const result = await dispatchAdminAlertWebhook(payload, mockFetch);
+  assert.equal(result, true);
+  assert.equal(calledPayload.event_type, "trial_reminder");
+  assert.equal(calledPayload.threshold, "expiry_day");
+  assert.equal(calledPayload.teacher_phone, "01110392398");
+  assert.ok(calledPayload.message.includes("مساء الخير"));
+});
+
