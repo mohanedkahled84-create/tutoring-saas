@@ -544,6 +544,40 @@ button.password-toggle-btn:active {
   background-color: #fafbfc;
 }
 
+/* Live Session Topbar Badge */
+.nav-live-session-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1.5px solid #f87171;
+  border-radius: 9999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  animation: centrlyPulse 2s infinite;
+  white-space: nowrap;
+}
+
+.nav-live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.nav-live-text-desktop {
+  display: inline;
+}
+
+.nav-live-text-mobile {
+  display: none;
+}
+
 #sidebarToggle {
   display: none;
 }
@@ -577,6 +611,8 @@ button.password-toggle-btn:active {
 
   #sidebarToggle {
     display: inline-flex !important;
+    flex-shrink: 0 !important;
+    z-index: 10;
   }
   .app-sidebar {
     position: fixed;
@@ -637,7 +673,49 @@ button.password-toggle-btn:active {
     padding: 0.85rem 0.65rem !important;
   }
   .app-topbar {
-    padding: 0 0.85rem !important;
+    height: 56px;
+    padding: 0 0.65rem !important;
+    gap: 0.4rem !important;
+    overflow: visible;
+  }
+  .topbar-start {
+    gap: 0.4rem !important;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .nav-live-text-desktop {
+    display: none !important;
+  }
+  .nav-live-text-mobile {
+    display: inline !important;
+  }
+  .nav-live-session-btn {
+    padding: 0.25rem 0.55rem !important;
+    font-size: 0.75rem !important;
+    gap: 0.3rem !important;
+    max-width: 135px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 1;
+  }
+  .topbar-user-role {
+    display: none !important;
+  }
+  .topbar-user-name {
+    max-width: 85px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.78rem !important;
+  }
+  .topbar-actions {
+    gap: 0.45rem !important;
+    flex-shrink: 0 !important;
+  }
+  .topbar-admin-badge {
+    display: none !important;
   }
   .card {
     padding: 1rem 0.85rem !important;

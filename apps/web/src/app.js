@@ -1,7 +1,7 @@
 import { authService } from './services/auth.js?v=4.8.7';
 import { request, API_BASE_URL } from './services/api.js?v=4.8.8';
 import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
-import { renderNavbar } from './components/Navbar.js?v=4.8.11';
+import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=4.9.24';
 import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.20';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
@@ -4678,22 +4678,7 @@ class CentrlyApp {
     const container = document.getElementById('navLiveSessionBadgeContainer');
     if (!container) return;
     const summary = this.getActiveSessionSummary();
-    if (summary) {
-      container.innerHTML = `
-        <button 
-          type="button" 
-          onclick="window.centrlyApp.navigate('sessions')" 
-          class="btn btn-sm"
-          style="display: inline-flex; align-items: center; gap: 0.45rem; background: #fef2f2; color: #b91c1c; border: 1.5px solid #f87171; border-radius: 9999px; padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 800; cursor: pointer; animation: centrlyPulse 2s infinite;"
-          title="حصة نشطة حالياً - اضغط للمتابعة ورصد الحضور"
-        >
-          <span style="width: 9px; height: 9px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
-          <span>حصة جارية: <b>${escapeHtml(summary.groupName)}</b> (${summary.attendeeCount || 0} حضور)</span>
-        </button>
-      `;
-    } else {
-      container.innerHTML = '';
-    }
+    container.innerHTML = summary ? renderNavLiveBadgeHtml(summary) : '';
   }
 
   async syncAndResumeServerSession(sessionId) {

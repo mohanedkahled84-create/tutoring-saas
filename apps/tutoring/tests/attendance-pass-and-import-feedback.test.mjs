@@ -148,5 +148,23 @@ test("OFFLINE-ATTENDANCE: SessionsView.js displays offline indicator and toggle 
   assert.ok(content.includes("toggleStudentAttendance"), "SessionsView status badge must call toggleStudentAttendance");
 });
 
+test("NAVBAR-MOBILE: sidebarToggle is non-wrapping, flex-shrink 0, and live badge is responsive", () => {
+  const navbarPath = path.resolve(__dirname, "../../web/src/components/Navbar.js");
+  const navbarContent = fs.readFileSync(navbarPath, "utf-8");
 
+  assert.ok(navbarContent.includes("renderNavLiveBadgeHtml"), "Navbar.js must export renderNavLiveBadgeHtml");
+  assert.ok(navbarContent.includes("flex-wrap: nowrap;"), "Topbar container must not wrap items");
+  assert.ok(navbarContent.includes("id=\"sidebarToggle\""), "Navbar must contain sidebarToggle");
+  assert.ok(navbarContent.includes("flex-shrink: 0;"), "sidebarToggle must have flex-shrink: 0");
 
+  const cssPath = path.resolve(__dirname, "../../web/src/styles/main.css");
+  const cssContent = fs.readFileSync(cssPath, "utf-8");
+  assert.ok(/#sidebarToggle\s*\{\s*display:\s*inline-flex\s*!important;\s*flex-shrink:\s*0\s*!important;/i.test(cssContent), "main.css must enforce inline-flex and flex-shrink 0 for sidebarToggle on mobile");
+  assert.ok(cssContent.includes(".nav-live-session-btn"), "main.css must define .nav-live-session-btn");
+  assert.ok(cssContent.includes(".nav-live-text-mobile"), "main.css must define mobile compact live badge text");
+  assert.ok(cssContent.includes(".nav-live-text-desktop"), "main.css must define desktop live badge text");
+
+  const appPath = path.resolve(__dirname, "../../web/src/app.js");
+  const appContent = fs.readFileSync(appPath, "utf-8");
+  assert.ok(appContent.includes("renderNavLiveBadgeHtml"), "app.js must import and use renderNavLiveBadgeHtml");
+});

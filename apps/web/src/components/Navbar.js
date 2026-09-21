@@ -36,37 +36,53 @@ export function renderNavbar(user, activeSessionSummary = null) {
 
   return `
     <header class="app-topbar">
-      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-        <button class="btn btn-secondary btn-sm" id="sidebarToggle" onclick="window.centrlyApp.toggleSidebar()" style="align-items: center; justify-content: center; padding: 0.4rem 0.6rem;">
+      <div class="topbar-start" style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: nowrap; min-width: 0;">
+        <button 
+          class="btn btn-secondary btn-sm" 
+          id="sidebarToggle" 
+          onclick="window.centrlyApp.toggleSidebar()" 
+          style="align-items: center; justify-content: center; padding: 0.45rem 0.65rem; flex-shrink: 0; min-width: 38px; height: 38px;"
+          aria-label="القائمة الرئيسية"
+          title="القائمة الرئيسية"
+        >
           ${getIcon('menu', 20)}
         </button>
-        ${isAdmin ? '<span class="badge" style="background: #1e293b; color: #f8fafc; font-weight: 700; border: 1px solid #334155;">لوحة المؤسس المستقلة (Centrly HQ)</span>' : ''}
+        ${isAdmin ? '<span class="badge topbar-admin-badge" style="background: #1e293b; color: #f8fafc; font-weight: 700; border: 1px solid #334155; flex-shrink: 0;">لوحة المؤسس (Centrly HQ)</span>' : ''}
 
-        <div id="navLiveSessionBadgeContainer">
-          ${activeSessionSummary ? `
-            <button 
-              type="button" 
-              onclick="window.centrlyApp.navigate('sessions')" 
-              class="btn btn-sm"
-              style="display: inline-flex; align-items: center; gap: 0.45rem; background: #fef2f2; color: #b91c1c; border: 1.5px solid #f87171; border-radius: 9999px; padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 800; cursor: pointer; animation: centrlyPulse 2s infinite;"
-              title="حصة نشطة حالياً - اضغط للمتابعة ورصد الحضور"
-            >
-              <span style="width: 9px; height: 9px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
-              <span>حصة جارية: <b>${escapeHtml(activeSessionSummary.groupName)}</b> (${activeSessionSummary.attendeeCount || 0} حضور)</span>
-            </button>
-          ` : ''}
+        <div id="navLiveSessionBadgeContainer" style="display: inline-flex; align-items: center; min-width: 0;">
+          ${activeSessionSummary ? renderNavLiveBadgeHtml(activeSessionSummary) : ''}
         </div>
       </div>
 
-      <div class="topbar-actions" style="display: flex; align-items: center; gap: 0.85rem;">
-        <div style="text-align: left;">
-          <div style="font-weight: 700; font-size: 0.875rem;">${displayName}</div>
-          <div style="font-size: 0.75rem; color: var(--centrly-text);">${roleName}</div>
+      <div class="topbar-actions" style="display: flex; align-items: center; gap: 0.65rem; flex-shrink: 0;">
+        <div class="topbar-user-info" style="text-align: left;">
+          <div class="topbar-user-name" style="font-weight: 700; font-size: 0.875rem; white-space: nowrap;">${displayName}</div>
+          <div class="topbar-user-role" style="font-size: 0.72rem; color: var(--centrly-text); white-space: nowrap;">${roleName}</div>
         </div>
-        <div style="width: 38px; height: 38px; border-radius: var(--radius-full); background-color: var(--centrly-blue-100); color: var(--centrly-blue-800); display: flex; align-items: center; justify-content: center; font-weight: 700;">
+        <div class="topbar-avatar" style="width: 38px; height: 38px; border-radius: var(--radius-full); background-color: var(--centrly-blue-100); color: var(--centrly-blue-800); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">
           ${avatarLetter}
         </div>
       </div>
     </header>
   `;
 }
+
+export function renderNavLiveBadgeHtml(activeSessionSummary) {
+  if (!activeSessionSummary) return '';
+  const groupName = escapeHtml(activeSessionSummary.groupName || 'حصة جارية');
+  const count = activeSessionSummary.attendeeCount || 0;
+
+  return `
+    <button 
+      type="button" 
+      onclick="window.centrlyApp.navigate('sessions')" 
+      class="btn btn-sm nav-live-session-btn"
+      title="حصة نشطة حالياً: ${groupName} (${count} حضور) - اضغط للمتابعة ورصد الحضور"
+    >
+      <span class="nav-live-dot"></span>
+      <span class="nav-live-text-desktop">حصة جارية: <b>${groupName}</b> (${count} حضور)</span>
+      <span class="nav-live-text-mobile">حصة جارية (${count})</span>
+    </button>
+  `;
+}
+
