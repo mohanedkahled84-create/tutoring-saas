@@ -122,5 +122,31 @@ test("WEB DOM: apps/web/index.html and root index.html must contain <div id=\"ap
   assert.ok(rootContent.includes('<div id="app"></div>'), "Root index.html must contain <div id=\"app\"></div>");
 });
 
+test("OFFLINE-ATTENDANCE: app.js contains persistent queue methods and non-destructive sync", () => {
+  const appPath = path.resolve(__dirname, "../../web/src/app.js");
+  const appContent = fs.readFileSync(appPath, "utf-8");
+
+  assert.ok(appContent.includes("getOfflineAttendanceQueue()"), "Must define getOfflineAttendanceQueue");
+  assert.ok(appContent.includes("saveOfflineAttendanceQueue("), "Must define saveOfflineAttendanceQueue");
+  assert.ok(appContent.includes("enqueueOfflineAttendance("), "Must define enqueueOfflineAttendance");
+  assert.ok(appContent.includes("flushOfflineAttendanceQueue()"), "Must define flushOfflineAttendanceQueue");
+  assert.ok(appContent.includes("toggleStudentAttendance("), "Must define toggleStudentAttendance");
+
+  // Verify non-destructive sync in syncAndResumeServerSession
+  assert.ok(appContent.includes("localAttendanceMap"), "syncAndResumeServerSession must preserve localAttendanceMap");
+  assert.ok(appContent.includes("isLocallyAttended"), "syncAndResumeServerSession must check isLocallyAttended");
+  assert.ok(appContent.includes("window.addEventListener('online'"), "Must listen for online event");
+  assert.ok(appContent.includes("window.addEventListener('offline'"), "Must listen for offline event");
+});
+
+test("OFFLINE-ATTENDANCE: SessionsView.js displays offline indicator and toggle button", () => {
+  const sessionsViewPath = path.resolve(__dirname, "../../web/src/components/SessionsView.js");
+  const content = fs.readFileSync(sessionsViewPath, "utf-8");
+
+  assert.ok(content.includes("isBrowserOffline"), "SessionsView must check isBrowserOffline");
+  assert.ok(content.includes("وضع عدم الاتصال (Offline Mode)"), "SessionsView must show offline mode banner");
+  assert.ok(content.includes("toggleStudentAttendance"), "SessionsView status badge must call toggleStudentAttendance");
+});
+
 
 

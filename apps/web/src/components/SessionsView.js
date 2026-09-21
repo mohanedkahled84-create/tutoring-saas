@@ -266,8 +266,38 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
     makeupCount: 0,
   };
 
+  const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+  const pendingOfflineCount = (window.centrlyApp?.getOfflineAttendanceQueue?.() || [])
+    .filter(q => q.session_id === sessionState.id).length;
+
   return `
     <div class="sessions-container" style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
+      ${isBrowserOffline ? `
+        <div class="card" style="margin: 0; background: #fffbeb; border: 1.5px solid #fcd34d; padding: 0.75rem 1rem; border-radius: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: #92400e; font-weight: 700; font-size: 0.88rem;">
+              <span style="font-size: 1.2rem;">⚡</span>
+              <span><strong>وضع عدم الاتصال (Offline Mode):</strong> رصد الحضور بالباركود والكود يعمل بكامل كفاءته بدون إنترنت، وكافة البيانات محفوظة بأمان على جهازك وسيتم مزامنتها مع السيرفر تلقائياً فور عودة الشبكة.</span>
+            </div>
+            <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700;">محفوظ محلياً</span>
+          </div>
+        </div>
+      ` : ''}
+
+      ${(!isBrowserOffline && pendingOfflineCount > 0) ? `
+        <div class="card" style="margin: 0; background: #eff6ff; border: 1.5px solid #93c5fd; padding: 0.65rem 1rem; border-radius: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: #1e40af; font-weight: 700; font-size: 0.88rem;">
+              <span style="font-size: 1.1rem;">🔄</span>
+              <span>توجد <b>${pendingOfflineCount}</b> عملية حضور مسجلة بانتظار استكمال المزامنة مع السيرفر...</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary" onclick="window.centrlyApp.flushOfflineAttendanceQueue()" style="font-size: 0.75rem; padding: 0.3rem 0.75rem; font-weight: 700; cursor: pointer;">
+              مزامنة الآن ⚡
+            </button>
+          </div>
+        </div>
+      ` : ''}
+
       <!-- Session Header & Quick Controls -->
       <div class="card" style="margin: 0; border-right: 4px solid var(--centrly-blue);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
@@ -508,9 +538,15 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                     ${a.is_makeup ? '<span class="badge badge-warning" style="font-size: 0.65rem; margin-right: 0.35rem;">تعويضي</span>' : ''}
                   </td>
                   <td>
-                    <span class="badge ${a.attended ? 'badge-success' : 'badge-danger'}">
-                      ${a.attended ? 'حاضر' : 'غائب'}
-                    </span>
+                    <button 
+                      type="button" 
+                      onclick="window.centrlyApp.toggleStudentAttendance('${escapeHtml(a.student_id || a.id)}')"
+                      class="badge ${a.attended ? 'badge-success' : 'badge-danger'}" 
+                      style="cursor: pointer; border: none; font-size: 0.85rem; padding: 0.35rem 0.75rem; font-family: inherit; font-weight: 700; transition: transform 0.15s ease;"
+                      title="اضغط للتبديل السريع بين حاضر وغائب"
+                    >
+                      ${a.attended ? 'حاضر ✓' : 'غائب ✕'}
+                    </button>
                   </td>
                   <td style="color: var(--centrly-text); font-size: 0.85rem;">
                     ${(a.comment && a.comment !== 'حصة تعويضية' && !a.comment.startsWith('حصة تعويضية')) ? `<span style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; color: var(--centrly-ink);">${escapeHtml(a.comment)}</span>` : '<span style="color: #94a3b8;">لا توجد</span>'}

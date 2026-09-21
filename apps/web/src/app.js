@@ -450,6 +450,25 @@ class CentrlyApp {
       }
     });
 
+    // Offline / Online network listeners for resilient attendance recording
+    window.addEventListener('online', () => {
+      this.showToast('عادت شبكة الإنترنت! جاري مزامنة الحضور المسجل مع السيرفر...', 'info');
+      this.flushOfflineAttendanceQueue();
+      if (this.sessionState?.id && this.sessionState.status === 'in_progress') {
+        this.pollLiveSessionUpdates();
+      }
+      if (this.currentRoute === 'sessions') {
+        this.renderMainContent();
+      }
+    });
+
+    window.addEventListener('offline', () => {
+      this.showToast('انقطع اتصال الإنترنت. تم تفعيل وضع عدم الاتصال (Offline Mode) تلقائياً، يمكنك الاستمرار في رصد الحضور وسيتم حفظه بأمان.', 'warning');
+      if (this.currentRoute === 'sessions') {
+        this.renderMainContent();
+      }
+    });
+
     // Check if Short Portal URL is present (/p/:code or /s/:code or /p:code or /s:code or ?s=:code or ?p=:code)
     const urlParams = new URLSearchParams(window.location.search);
     const pathname = (window.location.pathname || '').trim();
@@ -643,6 +662,7 @@ class CentrlyApp {
     } catch (_) {}
 
     this.restoreSessionState();
+    this.flushOfflineAttendanceQueue();
 
     // Cross-Device Sync: Check server for active session if local state is empty
     if (!this.sessionState?.id) {
@@ -3567,23 +3587,65 @@ class CentrlyApp {
     this.renderMainContent();
     this.focusScanInput();
 
-    // Cross-Device Real-Time Sync: Push attendance record to backend immediately
+    // Cross-Device Real-Time Sync & Persistent Offline Queue
     const sid = this.sessionState?.id;
-    if (sid && !String(sid).startsWith('sess-')) {
+    if (sid) {
       const hwStatus = (homework && homework !== 'none') ? homework : null;
-      request(`/sessions/${sid}/attendance`, {
-        method: 'POST',
-        body: {
-          records: [{
-            student_id: student.id,
-            attended: true,
-            comment: null,
-            homework_status: hwStatus,
-            is_makeup: Boolean(isMakeup),
-            quiz_score: null,
-          }],
-        },
-      }).catch(err => console.warn('Real-time attendance record background sync error:', err));
+      this.enqueueOfflineAttendance(sid, {
+        student_id: student.id,
+        attended: true,
+        comment: null,
+        homework_status: hwStatus,
+        is_makeup: Boolean(isMakeup),
+        quiz_score: null,
+      });
+      this.flushOfflineAttendanceQueue();
+    }
+  }
+
+  toggleStudentAttendance(studentId) {
+    if (!this.sessionState || this.sessionState.status !== 'in_progress') return;
+    const item = (this.sessionState.attendanceList || []).find(a => a.student_id === studentId || a.id === studentId);
+    if (!item) return;
+
+    const newAttended = !item.attended;
+    const student = (this.students || []).find(s => s.id === item.student_id) || item;
+    const fee = student.exempt ? 0 : (student.fee_override ?? (this.sessionState.group?.price || 0));
+
+    if (newAttended) {
+      item.attended = true;
+      if (!item.time) {
+        const now = new Date();
+        item.time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      }
+      this.sessionState.financials.attendeeCount += 1;
+      this.sessionState.financials.absentCount = Math.max(0, this.sessionState.financials.absentCount - 1);
+      this.sessionState.financials.totalRevenue += fee;
+      this.playScanBeep('success');
+      this.showToast(`تم تسجيل حضور الطالب: ${item.name} ✅`, 'success');
+    } else {
+      item.attended = false;
+      this.sessionState.financials.attendeeCount = Math.max(0, this.sessionState.financials.attendeeCount - 1);
+      this.sessionState.financials.absentCount += 1;
+      this.sessionState.financials.totalRevenue = Math.max(0, this.sessionState.financials.totalRevenue - fee);
+      this.showToast(`تم تغيير حالة الطالب إلى غائب: ${item.name}`, 'info');
+    }
+
+    this.persistSessionState();
+    this.updateNavbarBadge();
+    this.renderMainContent();
+
+    const sid = this.sessionState.id;
+    if (sid && item.student_id) {
+      this.enqueueOfflineAttendance(sid, {
+        student_id: item.student_id,
+        attended: newAttended,
+        comment: item.comment || null,
+        homework_status: (item.homework && item.homework !== 'none') ? item.homework : null,
+        is_makeup: Boolean(item.is_makeup),
+        quiz_score: item.quiz_score ?? null,
+      });
+      this.flushOfflineAttendanceQueue();
     }
   }
 
@@ -3593,8 +3655,16 @@ class CentrlyApp {
       item.quiz_score = score !== '' && score !== null ? Number(score) : null;
       this.persistSessionState();
       const sid = this.sessionState?.id;
-      if (sid && !String(sid).startsWith('sess-') && item.student_id) {
-        if (item.quiz_score !== null) {
+      if (sid && item.student_id) {
+        this.enqueueOfflineAttendance(sid, {
+          student_id: item.student_id,
+          attended: Boolean(item.attended),
+          comment: item.comment || null,
+          homework_status: (item.homework && item.homework !== 'none') ? item.homework : null,
+          is_makeup: Boolean(item.is_makeup),
+          quiz_score: item.quiz_score,
+        });
+        if (!String(sid).startsWith('sess-') && item.quiz_score !== null) {
           request(`/sessions/${sid}/quiz-scores/${item.student_id}`, {
             method: 'PUT',
             body: { score: item.quiz_score, max_score: 20 },
@@ -3611,19 +3681,16 @@ class CentrlyApp {
       this.persistSessionState();
       this.showToast('تم تحديث حالة الواجب', 'info');
       const sid = this.sessionState?.id;
-      if (sid && !String(sid).startsWith('sess-') && item.student_id) {
-        request(`/sessions/${sid}/attendance`, {
-          method: 'POST',
-          body: {
-            records: [{
-              student_id: item.student_id,
-              attended: Boolean(item.attended),
-              homework_status: (newStatus && newStatus !== 'none') ? newStatus : null,
-              is_makeup: Boolean(item.is_makeup),
-              quiz_score: item.quiz_score,
-            }],
-          },
-        }).catch(err => console.warn('Homework status sync failed:', err));
+      if (sid && item.student_id) {
+        this.enqueueOfflineAttendance(sid, {
+          student_id: item.student_id,
+          attended: Boolean(item.attended),
+          comment: item.comment || null,
+          homework_status: (newStatus && newStatus !== 'none') ? newStatus : null,
+          is_makeup: Boolean(item.is_makeup),
+          quiz_score: item.quiz_score,
+        });
+        this.flushOfflineAttendanceQueue();
       }
     }
   }
@@ -4475,6 +4542,113 @@ class CentrlyApp {
     });
   }
 
+  getOfflineAttendanceQueue() {
+    try {
+      const data = localStorage.getItem('centrly_offline_attendance_queue');
+      return data ? JSON.parse(data) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  saveOfflineAttendanceQueue(queue) {
+    try {
+      if (!queue || queue.length === 0) {
+        localStorage.removeItem('centrly_offline_attendance_queue');
+      } else {
+        localStorage.setItem('centrly_offline_attendance_queue', JSON.stringify(queue));
+      }
+    } catch (e) {
+      console.warn('Failed to save offline attendance queue:', e);
+    }
+  }
+
+  enqueueOfflineAttendance(sessionId, record) {
+    if (!sessionId || !record || !record.student_id) return;
+    try {
+      const queue = this.getOfflineAttendanceQueue();
+      const filtered = queue.filter(
+        item => !(item.session_id === sessionId && item.student_id === record.student_id)
+      );
+      filtered.push({
+        session_id: sessionId,
+        student_id: record.student_id,
+        attended: Boolean(record.attended),
+        comment: record.comment || null,
+        homework_status: (record.homework_status && record.homework_status !== 'none') ? record.homework_status : null,
+        is_makeup: Boolean(record.is_makeup),
+        quiz_score: record.quiz_score ?? null,
+        timestamp: Date.now(),
+      });
+      this.saveOfflineAttendanceQueue(filtered);
+    } catch (e) {
+      console.warn('Enqueue offline attendance error:', e);
+    }
+  }
+
+  async flushOfflineAttendanceQueue() {
+    if (this._isFlushingAttendanceQueue) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
+    const queue = this.getOfflineAttendanceQueue();
+    if (queue.length === 0) return;
+
+    this._isFlushingAttendanceQueue = true;
+    try {
+      const bySession = {};
+      queue.forEach(item => {
+        if (!bySession[item.session_id]) bySession[item.session_id] = [];
+        bySession[item.session_id].push(item);
+      });
+
+      const remaining = [];
+      let totalSynced = 0;
+
+      for (const [sessionId, items] of Object.entries(bySession)) {
+        if (String(sessionId).startsWith('sess-')) {
+          remaining.push(...items);
+          continue;
+        }
+
+        try {
+          const records = items.map(item => ({
+            student_id: item.student_id,
+            attended: Boolean(item.attended),
+            comment: item.comment || null,
+            homework_status: (item.homework_status && item.homework_status !== 'none') ? item.homework_status : null,
+            is_makeup: Boolean(item.is_makeup),
+            quiz_score: item.quiz_score ?? null,
+          }));
+
+          const res = await request(`/sessions/${sessionId}/attendance`, {
+            method: 'POST',
+            body: { records },
+          });
+
+          if (res && (res.message || res.count !== undefined || Array.isArray(res.attendance))) {
+            totalSynced += items.length;
+          } else {
+            remaining.push(...items);
+          }
+        } catch (err) {
+          console.warn(`Failed to flush offline queue for session ${sessionId}:`, err);
+          remaining.push(...items);
+        }
+      }
+
+      this.saveOfflineAttendanceQueue(remaining);
+
+      if (totalSynced > 0) {
+        this.showToast(`تمت مزامنة ${totalSynced} عملية حضور مسجلة بنجاح مع السيرفر بعد عودة الاتصال ✅`, 'success');
+        if (this.currentRoute === 'sessions') {
+          this.renderMainContent();
+        }
+      }
+    } finally {
+      this._isFlushingAttendanceQueue = false;
+    }
+  }
+
   persistSessionState() {
     try {
       if (this.sessionState && this.sessionState.id && this.sessionState.status === 'in_progress') {
@@ -4524,6 +4698,7 @@ class CentrlyApp {
 
   async syncAndResumeServerSession(sessionId) {
     if (!sessionId) return null;
+    await this.flushOfflineAttendanceQueue();
     try {
       const res = await request(`/sessions/${sessionId}`).catch(() => null);
       if (!res || !res.session) return null;
@@ -4577,9 +4752,40 @@ class CentrlyApp {
       const serverAttendance = Array.isArray(res.attendance) ? res.attendance : [];
       const serverQuizScores = Array.isArray(res.quiz_scores) ? res.quiz_scores : [];
 
+      // Collect local attendance state and offline queue to ensure NO local scans are lost
+      const localAttendanceMap = new Map();
+      (this.sessionState?.attendanceList || []).forEach(localAtt => {
+        if (localAtt.student_id) {
+          localAttendanceMap.set(localAtt.student_id, localAtt);
+        }
+      });
+      try {
+        const savedStateStr = localStorage.getItem('centrly_active_session_state');
+        if (savedStateStr) {
+          const parsedSaved = JSON.parse(savedStateStr);
+          if (parsedSaved && parsedSaved.id === sessionId && Array.isArray(parsedSaved.attendanceList)) {
+            parsedSaved.attendanceList.forEach(savedAtt => {
+              if (savedAtt.student_id && !localAttendanceMap.has(savedAtt.student_id)) {
+                localAttendanceMap.set(savedAtt.student_id, savedAtt);
+              }
+            });
+          }
+        }
+      } catch (_) {}
+
+      const pendingQueue = this.getOfflineAttendanceQueue().filter(q => q.session_id === sessionId);
+      const pendingQueueMap = new Map();
+      pendingQueue.forEach(q => {
+        pendingQueueMap.set(q.student_id, q);
+      });
+
       // Build roster starting with group students
       const rosterMap = new Map();
       groupStudents.forEach(st => {
+        const local = localAttendanceMap.get(st.id);
+        const queued = pendingQueueMap.get(st.id);
+        const isLocallyAttended = Boolean((local && local.attended) || (queued && queued.attended));
+
         rosterMap.set(st.id, {
           id: st.id,
           student_id: st.id,
@@ -4587,16 +4793,23 @@ class CentrlyApp {
           name: st.name,
           phone: st.phone || st.student_phone,
           parent_phone: st.parent_phone,
-          attended: false,
-          homework: 'none',
-          quiz_score: null,
-          comment: '',
-          time: '',
-          deliveryStatus: 'pending',
-          sent: false,
-          is_makeup: false,
+          attended: isLocallyAttended,
+          homework: queued?.homework_status || local?.homework || 'none',
+          quiz_score: queued?.quiz_score ?? local?.quiz_score ?? null,
+          comment: queued?.comment || local?.comment || '',
+          time: local?.time || '',
+          deliveryStatus: local?.deliveryStatus || 'pending',
+          sent: Boolean(local?.sent),
+          is_makeup: Boolean(queued?.is_makeup ?? local?.is_makeup ?? false),
           fee: st.exempt ? 0 : (st.fee_override ?? (grp?.price || 0)),
         });
+      });
+
+      // Preserve students that were added or makeup from other groups in local state
+      localAttendanceMap.forEach((local, studentId) => {
+        if (!rosterMap.has(studentId)) {
+          rosterMap.set(studentId, { ...local });
+        }
       });
 
       // Merge server attendance records
@@ -4609,25 +4822,40 @@ class CentrlyApp {
         if (att.wa_status === 'sent' || att.sent) delivery = 'delivered';
         else if (att.wa_status === 'failed') delivery = 'failed';
 
+        // Crucial: preserve local attendance if locally marked present!
+        const attendedStatus = Boolean(att.attended) || Boolean(existing?.attended);
+
         const record = {
           id: att.id || att.student_id,
           student_id: att.student_id,
-          code: studentInfo?.code || studentInfo?.student_code || (att.student_id ? att.student_id.slice(0, 4) : '—'),
-          name: studentInfo?.name || att.student_name || 'طالب مسجل',
-          phone: studentInfo?.phone || studentInfo?.student_phone || '',
-          parent_phone: studentInfo?.parent_phone || att.parent_phone || '',
-          attended: Boolean(att.attended),
+          code: studentInfo?.code || studentInfo?.student_code || (att.student_id ? att.student_id.slice(0, 4) : (existing?.code || '—')),
+          name: studentInfo?.name || att.student_name || existing?.name || 'طالب مسجل',
+          phone: studentInfo?.phone || studentInfo?.student_phone || existing?.phone || '',
+          parent_phone: studentInfo?.parent_phone || att.parent_phone || existing?.parent_phone || '',
+          attended: attendedStatus,
           homework: (att.homework_status && att.homework_status !== 'none') ? att.homework_status : (existing?.homework || 'none'),
           quiz_score: (att.quiz_score !== undefined && att.quiz_score !== null) ? Number(att.quiz_score) : (existing?.quiz_score ?? null),
           comment: att.comment || existing?.comment || '',
           time: att.time || (att.created_at ? new Date(att.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : (existing?.time || '')),
           deliveryStatus: delivery,
-          wa_status: att.wa_status || null,
-          sent: Boolean(att.sent || att.wa_status === 'sent'),
-          is_makeup: Boolean(att.is_makeup),
+          wa_status: att.wa_status || existing?.wa_status || null,
+          sent: Boolean(att.sent || att.wa_status === 'sent' || existing?.sent),
+          is_makeup: Boolean(att.is_makeup ?? existing?.is_makeup ?? false),
           fee,
         };
         rosterMap.set(att.student_id, record);
+
+        // If attended locally but server didn't have it, ensure it is in the offline queue to be synced!
+        if (attendedStatus && !att.attended) {
+          this.enqueueOfflineAttendance(sessionId, {
+            student_id: att.student_id,
+            attended: true,
+            comment: record.comment,
+            homework_status: record.homework,
+            is_makeup: record.is_makeup,
+            quiz_score: record.quiz_score,
+          });
+        }
       });
 
       // Merge quiz scores if any
@@ -4639,6 +4867,21 @@ class CentrlyApp {
       });
 
       const fullRoster = Array.from(rosterMap.values());
+
+      // Ensure any locally attended student not yet recorded on server is queued for sync
+      fullRoster.forEach(r => {
+        if (r.attended && !serverAttendance.some(sa => sa.student_id === r.student_id && sa.attended)) {
+          this.enqueueOfflineAttendance(sessionId, {
+            student_id: r.student_id,
+            attended: true,
+            comment: r.comment,
+            homework_status: r.homework,
+            is_makeup: r.is_makeup,
+            quiz_score: r.quiz_score,
+          });
+        }
+      });
+
       // Sort: attendees first, then absent
       fullRoster.sort((a, b) => {
         if (a.attended === b.attended) return 0;
@@ -4670,6 +4913,7 @@ class CentrlyApp {
       this.persistSessionState();
       this.startLiveSessionSync();
       this.updateNavbarBadge();
+      this.flushOfflineAttendanceQueue();
       return this.sessionState;
     } catch (err) {
       console.warn('Failed to sync and resume server session:', err);
@@ -4711,6 +4955,9 @@ class CentrlyApp {
     const sid = this.sessionState?.id;
     if (!sid || String(sid).startsWith('sess-') || this.sessionState.status !== 'in_progress') {
       return;
+    }
+    if (this.getOfflineAttendanceQueue().length > 0) {
+      await this.flushOfflineAttendanceQueue();
     }
     try {
       const res = await request(`/sessions/${sid}`).catch(() => null);
@@ -4847,6 +5094,7 @@ class CentrlyApp {
 
   async finalizeEndSession() {
     this.closeModal();
+    await this.flushOfflineAttendanceQueue();
     try {
       const currentId = this.sessionState?.id;
       let realSessionId = currentId;
@@ -4984,26 +5232,22 @@ class CentrlyApp {
     const item = this.sessionState.attendanceList.find(a => a.student_id === studentCodeOrId || a.code === studentCodeOrId);
     if (item) {
       item.comment = note;
+      this.persistSessionState();
     }
     this.closeModal();
     this.renderMainContent();
 
-    if (this.sessionState.id && item) {
-      try {
-        await request(`/sessions/${this.sessionState.id}/attendance`, {
-          method: 'POST',
-          body: {
-            records: [{
-              student_id: item.student_id || studentCodeOrId,
-              attended: Boolean(item.attended),
-              comment: note,
-              homework_status: (item.homework && item.homework !== 'none') ? item.homework : null,
-            }],
-          },
-        });
-      } catch (err) {
-        console.warn('Failed to sync note to backend:', err);
-      }
+    const sid = this.sessionState.id;
+    if (sid && item && item.student_id) {
+      this.enqueueOfflineAttendance(sid, {
+        student_id: item.student_id || studentCodeOrId,
+        attended: Boolean(item.attended),
+        comment: note,
+        homework_status: (item.homework && item.homework !== 'none') ? item.homework : null,
+        is_makeup: Boolean(item.is_makeup),
+        quiz_score: item.quiz_score,
+      });
+      this.flushOfflineAttendanceQueue();
     }
   }
 
@@ -5055,23 +5299,22 @@ class CentrlyApp {
             attended: Boolean(item.attended),
             comment: note,
             homework_status: (item.homework && item.homework !== 'none') ? item.homework : null,
+            is_makeup: Boolean(item.is_makeup),
+            quiz_score: item.quiz_score,
           });
         }
       }
     });
 
+    this.persistSessionState();
     this.closeModal();
     this.renderMainContent();
 
     if (this.sessionState.id && recordsToSync.length > 0) {
-      try {
-        await request(`/sessions/${this.sessionState.id}/attendance`, {
-          method: 'POST',
-          body: { records: recordsToSync },
-        });
-      } catch (err) {
-        console.warn('Failed to sync batch notes to backend:', err);
-      }
+      recordsToSync.forEach(r => {
+        this.enqueueOfflineAttendance(this.sessionState.id, r);
+      });
+      this.flushOfflineAttendanceQueue();
     }
   }
 
@@ -8634,7 +8877,9 @@ https://centerly-eg.com/p/p16766044
       const activeList = Array.isArray(activeRes) ? activeRes : (activeRes?.sessions || []);
       const existing = activeList.find(s => s.group_id === cleanId && s.session_date === todayStr);
       if (existing) {
-        serverSession = existing;
+        await this.syncAndResumeServerSession(existing.id);
+        this.navigate('sessions');
+        return;
       }
     } catch (err) {
       console.warn('Check active sessions error:', err);
