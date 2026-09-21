@@ -38,9 +38,8 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" id="studentCardsContainer">
       
-      <!-- Top Section: Direct Plastic Card Order Banner & Live Card Preview -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; align-items: stretch;">
-        
+      <!-- Top Section: Direct Plastic Card Order Banner -->
+      <div>
         <!-- Plastic Card Order Info Banner -->
         <div class="card" style="margin: 0; background: linear-gradient(135deg, #172D70, #1e3a8a); color: #ffffff; border: none; box-shadow: 0 10px 25px rgba(23,45,112,0.25); display: flex; flex-direction: column; justify-content: space-between;">
           <div>
@@ -71,16 +70,6 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
             </span>
           </div>
         </div>
-
-        <!-- Live V2 Card Preview (Front Only) -->
-        <div class="card" style="margin: 0; background: #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1.5px solid #e2e8f0;">
-          <div style="font-size: 0.82rem; font-weight: 800; color: #172D70; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #E7A330;"></span>
-            <span>معاينة مباشرة لتصميم الكارت الجديد (V2 - ألوان مسطحة)</span>
-          </div>
-          ${renderStudentBarcodeCardHtml(sampleStudentObj)}
-        </div>
-
       </div>
 
       <!-- Selective Printing Controls & Student Table -->
@@ -137,7 +126,6 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
                 <th>المجموعة</th>
                 <th>رقم هاتف الطالب</th>
                 <th>رقم ولي الأمر</th>
-                <th>معاينة</th>
               </tr>
             </thead>
             <tbody>
@@ -155,17 +143,11 @@ export function renderStudentCardsView(students = [], groups = [], user = {}) {
                   <td><span class="badge badge-blue">${escapeHtml(groupName)}</span></td>
                   <td dir="ltr" style="text-align: right; font-family: monospace;">${escapeHtml(s.student_phone || '—')}</td>
                   <td dir="ltr" style="text-align: right; font-family: monospace;">${escapeHtml(s.parent_phone || '—')}</td>
-                  <td>
-                    <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.previewSpecificCard('${escapeHtml(s.name)}', '${escapeHtml(sCode)}', '${escapeHtml(groupName)}', '${escapeHtml(s.student_phone || s.parent_phone || '')}')" style="display: flex; align-items: center; gap: 0.35rem;">
-                      ${getIcon('eye', 14)}
-                      <span>معاينة</span>
-                    </button>
-                  </td>
                 </tr>
                 `;
               }).join('') : `
                 <tr>
-                  <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                  <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
                     لا يوجد طلاب مسجلون حالياً. توجه إلى "دليل الطلاب والتسجيل" لإضافة الطلاب أولاً.
                   </td>
                 </tr>

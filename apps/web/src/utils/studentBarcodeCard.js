@@ -101,7 +101,10 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
   const studentCode = student.student_code || student.code || "—";
   const studentName = student.name || "طالب";
   const groupName = (student.group_name || student.group || "").trim();
-  const subjectName = (student.subject_name || student.subject || "").trim();
+  let subjectName = (student.subject_name || student.subject || "").trim();
+  if (subjectName.includes("مجموع") || subjectName === groupName) {
+    subjectName = "";
+  }
   const rawTeacherName = student.teacher_name || options.teacherName || student.center_name || "معلم المادة";
   const cleanTeacherName = cleanTeacherNameString(rawTeacherName);
 
@@ -114,6 +117,107 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
     groupLabel = "المادة";
     groupDisplayText = subjectName;
   }
+
+/**
+ * Renders a clean, lightweight Attendance Pass screen (Zero plastic card styling)
+ * Contains:
+ * - Prominent screenshot instruction banner (احفظ هذه الشاشة سكرين شوت للدخول للدرس)
+ * - Student Name
+ * - Student Code in high-visibility badge
+ * - Clean high-contrast Barcode
+ * - Teacher and Group info
+ * - Fullscreen & Download buttons
+ */
+export function renderStudentAttendancePassHtml(student = {}, options = {}) {
+  const studentCode = student.student_code || student.code || "—";
+  const studentName = student.name || "طالب";
+  const groupName = (student.group_name || student.group || "").trim();
+  let subjectName = (student.subject_name || student.subject || "").trim();
+  if (subjectName.includes("مجموع") || subjectName === groupName) {
+    subjectName = "";
+  }
+  const rawTeacherName = student.teacher_name || options.teacherName || student.center_name || "معلم المادة";
+  const cleanTeacherName = cleanTeacherNameString(rawTeacherName);
+
+  // High-contrast Code 128 barcode for instant scanner readability
+  const barcodeSvg = generateBarcode128Svg(studentCode, { height: 50, unitWidth: 2.2 });
+  const studentJsonAttr = JSON.stringify(student).replace(/"/g, "&quot;");
+
+  return `
+    <div class="student-attendance-pass" style="direction: rtl; font-family: 'Cairo', system-ui, -apple-system, sans-serif; width: 100%; max-width: 420px; margin: 0 auto; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem 1.25rem 1rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); box-sizing: border-box;">
+      
+      <!-- Top Screenshot Banner Note -->
+      <div style="background: #fef3c7; border: 1.5px dashed #f59e0b; border-radius: 12px; padding: 0.65rem 0.85rem; margin-bottom: 1.15rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-align: center;">
+        <span style="font-size: 1.25rem; flex-shrink: 0;">📸</span>
+        <div style="font-size: 0.84rem; font-weight: 800; color: #92400e; line-height: 1.45;">
+          احفظ هذه الشاشة (سكرين شوت) للدخول بها إلى الدرس
+        </div>
+      </div>
+
+      <!-- Student Name -->
+      <div style="text-align: center; margin-bottom: 0.75rem;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-bottom: 0.2rem;">اسم الطالب</div>
+        <div style="font-family: 'Cairo', 'Changa', sans-serif; font-size: 1.45rem; font-weight: 900; color: #0f172a; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          ${escapeHtml(studentName)}
+        </div>
+      </div>
+
+      <!-- Student Code Badge -->
+      <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+        <div style="background: #f1f5f9; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 0.35rem 1.25rem; display: inline-flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 0.82rem; font-weight: 700; color: #475569;">كود الطالب:</span>
+          <span style="font-family: monospace; font-size: 1.4rem; font-weight: 900; color: #1e3a8a; letter-spacing: 1px;">${escapeHtml(studentCode)}</span>
+        </div>
+      </div>
+
+      <!-- High-Contrast Clean Barcode Box -->
+      <div style="background: #ffffff; border: 2px solid #0f172a; border-radius: 12px; padding: 0.85rem 0.6rem 0.65rem; margin-bottom: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;">
+        <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; margin-bottom: 0.45rem;">امسح الباركود لتسجيل الحضور</div>
+        <div style="width: 100%; display: flex; justify-content: center; overflow: hidden;">
+          ${barcodeSvg}
+        </div>
+      </div>
+
+      <!-- Teacher & Group Info Strip -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.6rem 0.85rem; margin-bottom: 1rem; display: flex; justify-content: space-around; align-items: center; font-size: 0.8rem; color: #334155; flex-wrap: wrap; gap: 0.5rem; text-align: center;">
+        <div>
+          <span style="color: #64748b;">المدرّس:</span>
+          <strong style="color: #0f172a; margin-right: 0.25rem;">${escapeHtml(cleanTeacherName)}</strong>
+        </div>
+        ${subjectName ? `
+          <div>
+            <span style="color: #64748b;">المادة:</span>
+            <strong style="color: #0f172a; margin-right: 0.25rem;">${escapeHtml(subjectName)}</strong>
+          </div>
+        ` : ''}
+        <div>
+          <span style="color: #64748b;">المجموعة:</span>
+          <strong style="color: #0f172a; margin-right: 0.25rem;">${escapeHtml(groupName || 'عامة')}</strong>
+        </div>
+      </div>
+
+      <!-- Action Buttons (Fullscreen / Download) -->
+      <div style="display: flex; gap: 0.5rem; justify-content: center;">
+        <button type="button" 
+          onclick="window.centrlyBarcodeCard && window.centrlyBarcodeCard.openFullscreen ? window.centrlyBarcodeCard.openFullscreen(${studentJsonAttr}) : null" 
+          class="btn btn-secondary btn-sm"
+          style="flex: 1; font-weight: 700; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.55rem 0.75rem; border-radius: 8px;">
+          ${getIcon('expand', 14)}
+          <span>تكبير للشاشة</span>
+        </button>
+
+        <button type="button" 
+          onclick="window.centrlyBarcodeCard && window.centrlyBarcodeCard.downloadCardPng ? window.centrlyBarcodeCard.downloadCardPng(${studentJsonAttr}) : null" 
+          class="btn btn-sm"
+          style="flex: 1; background-color: #2563eb; color: #ffffff; font-weight: 800; font-size: 0.78rem; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.55rem 0.75rem; border-radius: 8px; cursor: pointer;">
+          ${getIcon('download', 14, '#ffffff')}
+          <span>حفظ الباركود (صورة)</span>
+        </button>
+      </div>
+
+    </div>
+  `;
+}
 
   // High-contrast Code 128 barcode for instant scanner readability
   const barcodeSvg = generateBarcode128Svg(studentCode, { height: 40, unitWidth: 2.0 });
@@ -607,5 +711,6 @@ if (typeof window !== "undefined") {
   window.centrlyBarcodeCard = {
     downloadCardPng: downloadStudentCardAsPng,
     openFullscreen: openFullscreenBarcodeModal,
+    renderAttendancePass: renderStudentAttendancePassHtml,
   };
 }

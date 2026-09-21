@@ -1,6 +1,6 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
-import { renderStudentBarcodeCardHtml } from "../utils/studentBarcodeCard.js";
+import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js";
 
 /**
  * Centrly Student Web Portal Component
@@ -162,7 +162,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('card') : null" id="student-tab-btn-card"
             style="padding: 0.65rem 0.35rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: ${activeTab === 'card' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'card' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'card' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
             ${getIcon('barcode', 15, activeTab === 'card' ? '#1e3a8a' : '#64748b')}
-            <span>كارت الحضور</span>
+            <span>باركود الحضور</span>
           </button>
         </div>
 
@@ -710,22 +710,10 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
         </div>
 
-        <!-- ================= TAB 4: STUDENT BARCODE CARD ================= -->
+        <!-- ================= TAB 4: STUDENT ATTENDANCE BARCODE PASS ================= -->
         <div id="student-tab-content-card" style="display: ${activeTab === 'card' ? 'flex' : 'none'}; flex-direction: column; gap: 0.85rem; align-items: center; width: 100%;">
-          <div style="width: 100%; max-width: 385px;">
-            ${renderStudentBarcodeCardHtml(student)}
-          </div>
-
-          <!-- Sleek Compact Usage Instructions -->
-          <div style="max-width: 385px; width: 100%; background: #ffffff; border-radius: 0.75rem; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-            <div style="font-weight: 800; font-size: 0.82rem; color: #172D70; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
-              ${getIcon('lightbulb', 15, '#f59e0b')}
-              <span>إرشادات استخدام كارت الحضور الذكي</span>
-            </div>
-            <div style="font-size: 0.75rem; color: #475569; line-height: 1.65;">
-              • اضغط <b>تكبير للشاشة</b> لرفع السطوع ومسح الباركود مباشرة عند مدخل القاعة.<br>
-              • اضغط <b>حفظ الكارت (PNG)</b> للاحتفاظ بالبطاقة على هاتفك واستخدامها دون اتصال.
-            </div>
+          <div style="width: 100%; max-width: 420px;">
+            ${renderStudentAttendancePassHtml(student)}
           </div>
         </div>
 

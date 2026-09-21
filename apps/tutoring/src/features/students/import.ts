@@ -39,8 +39,9 @@ export function normalizePhoneNumber(phone?: string | null): string {
   // Normalize Egyptian numbers
   if (clean.startsWith("+20")) clean = clean.slice(3);
   else if (clean.startsWith("0020")) clean = clean.slice(4);
+  else if (clean.startsWith("+2")) clean = clean.slice(2);
   else if (clean.startsWith("20") && clean.length === 12) clean = clean.slice(2);
-  if (!clean.startsWith("0") && clean.length === 10) clean = "0" + clean;
+  if (!clean.startsWith("0") && clean.length === 10 && /^[1][0125]/.test(clean)) clean = "0" + clean;
   return clean;
 }
 

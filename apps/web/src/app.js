@@ -36,7 +36,7 @@ import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v
 import { renderCouponsView } from './components/CouponsView.js?v=4.7.6';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
-import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.0.0';
+import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.0.0';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
 import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
 
@@ -6002,15 +6002,14 @@ class CentrlyApp {
       teacher_name: this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'معلم المادة'),
       center_name: this.user?.account_type === 'center' ? this.user?.name : '',
     };
-    const bodyHtml = renderStudentBarcodeCardHtml(studentObj);
+    const bodyHtml = renderStudentAttendancePassHtml(studentObj);
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
-      <button type="button" class="btn" style="background-color: #E7A330; color: #0f172a; font-weight: 800; border: none; cursor: pointer;" onclick="window.centrlyBarcodeCard.downloadCardPng(${JSON.stringify(studentObj).replace(/"/g, '&quot;')})">تحميل كصورة (PNG)</button>
-      <button type="button" class="btn btn-primary" onclick="window.centrlyApp.printSingleCard('${escapeHtml(name)}', '${escapeHtml(code)}', '${escapeHtml(group)}', '${escapeHtml(phone)}')">
-        ${getIcon('printer', 16)} <span>طباعة الكارت</span>
+      <button type="button" class="btn btn-primary" onclick="window.centrlyBarcodeCard.downloadCardPng(${JSON.stringify(studentObj).replace(/"/g, '&quot;')})">
+        ${getIcon('download', 16)} <span>تحميل الباركود (صورة)</span>
       </button>
     `;
-    this.showModal(`معاينة كارت الطالب: ${escapeHtml(name)}`, bodyHtml, footerHtml);
+    this.showModal(`باركود حضور الطالب: ${escapeHtml(name)}`, bodyHtml, footerHtml, '480px');
   }
 
   printSingleCard(name, code, group, phone) {
@@ -7676,6 +7675,10 @@ https://centerly-eg.com/p/p16766044
     } else if (digits.startsWith('20') && digits.length === 12) {
       digits = '0' + digits.slice(2);
     }
+    // Auto-fix 10-digit Egyptian numbers that lost leading 0 in Excel (e.g. 1012345678, 11..., 12..., 15...)
+    if (!digits.startsWith('0') && digits.length === 10 && /^[1][0125]/.test(digits)) {
+      digits = '0' + digits;
+    }
     return digits;
   }
 
@@ -8454,8 +8457,32 @@ https://centerly-eg.com/p/p16766044
       return;
     }
 
-    this.closeModal();
-    this.showToast(`جارٍ استيراد (${validStudents.length}) طالب إلى المجموعة دفعة واحدة...`, 'info');
+    // Show active in-modal loading spinner so the user sees continuous progress
+    const modalBody = document.querySelector('#centrlyModal .modal-body') || document.querySelector('.modal-body');
+    const modalFooter = document.querySelector('#centrlyModal .modal-footer') || document.querySelector('.modal-footer');
+    if (modalBody) {
+      modalBody.innerHTML = `
+        <div style="text-align: center; padding: 3rem 1.5rem;">
+          <div class="spinner" style="width: 52px; height: 52px; border-width: 4px; margin: 0 auto 1.5rem auto; border-color: #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem;">
+            جاري استيراد وحفظ بيانات الطلاب...
+          </h3>
+          <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 1.5rem;">
+            يتم الآن معالجة (${validStudents.length}) طالب وتسجيلهم في قاعدة البيانات وتوليد أكوادهم وباركود الحضور. يُرجى الانتظار وعدم إغلاق الصفحة.
+          </p>
+          <div style="background: #e2e8f0; border-radius: 9999px; height: 8px; width: 280px; margin: 0 auto; overflow: hidden; position: relative;">
+            <div style="background: #2563eb; height: 100%; width: 100%; border-radius: 9999px; animation: pulse 1.5s ease-in-out infinite;"></div>
+          </div>
+        </div>
+      `;
+    }
+    if (modalFooter) {
+      modalFooter.innerHTML = `
+        <button type="button" class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed; font-weight: 700;">
+          جاري الحفظ في النظام... ⏳
+        </button>
+      `;
+    }
 
     try {
       const res = await request(`/groups/${groupId}/students/import`, {
@@ -8465,23 +8492,99 @@ https://centerly-eg.com/p/p16766044
         },
       });
 
-      const importedCount = res?.imported_count ?? validStudents.length;
+      const importedCount = res?.imported_count ?? 0;
       const skippedCount = (res?.skipped_count ?? 0) + skippedRows.length;
 
-      if (skippedCount > 0) {
-        this.showToast(`تم استيراد (${importedCount}) طالب بنجاح! تم تخطي (${skippedCount}) سجل لعدم اكتمال بياناتها.`, 'success');
-      } else {
+      if (importedCount > 0) {
+        // Success state inside modal
+        if (modalBody) {
+          modalBody.innerHTML = `
+            <div style="text-align: center; padding: 2.5rem 1.5rem;">
+              <div style="font-size: 3.5rem; margin-bottom: 0.75rem;">🎉</div>
+              <h3 style="font-size: 1.35rem; font-weight: 900; color: #16a34a; margin-bottom: 0.5rem;">
+                تم استيراد وإضافة (${importedCount}) طالب بنجاح!
+              </h3>
+              <p style="font-size: 0.9rem; color: #475569; margin-bottom: 1rem;">
+                تم تسجيل كافة بيانات الطلاب وتوليد أكوادهم وباركود الحضور الخاص بهم بنجاح.
+              </p>
+              ${skippedCount > 0 ? `
+                <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 10px; padding: 0.75rem 1rem; color: #92400e; font-size: 0.85rem; font-weight: 700; margin-top: 0.5rem; text-align: right;">
+                  ⚠️ تم تخطي (${skippedCount}) سجل لعدم اكتمال بياناتها أو تكرارها.
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }
+        if (modalFooter) {
+          modalFooter.innerHTML = `
+            <button type="button" class="btn btn-primary" onclick="window.centrlyApp.closeModal()" style="font-weight: 800; padding: 0.6rem 2.5rem;">
+              تم ومتابعة ✓
+            </button>
+          `;
+        }
+
         this.showToast(`تم استيراد وإضافة (${importedCount}) طالب بنجاح! 🎉`, 'success');
-      }
 
-      // Add imported students to local state for immediate UI update
-      if (Array.isArray(res?.imported_students) && res.imported_students.length > 0) {
-        this.students = [...res.imported_students, ...(this.students || [])];
-      }
+        if (Array.isArray(res?.imported_students) && res.imported_students.length > 0) {
+          this.students = [...res.imported_students, ...(this.students || [])];
+        }
 
-      await this.loadRouteData('students');
+        await this.loadRouteData('students');
+      } else {
+        // Zero students imported: detailed diagnostic feedback
+        const errorsList = (res?.errors || []).slice(0, 5).map(e => `<li>صف ${e.row}: ${escapeHtml(e.error)}</li>`).join('');
+        if (modalBody) {
+          modalBody.innerHTML = `
+            <div style="text-align: center; padding: 2rem 1.5rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+              <h3 style="font-size: 1.25rem; font-weight: 900; color: #dc2626; margin-bottom: 0.5rem;">
+                لم يتم استيراد أي طالب (0 طالب)
+              </h3>
+              <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 1rem; line-height: 1.5;">
+                تعذر حفظ السجلات في قاعدة البيانات. يُرجى مراجعة الأعمدة والتأكد من تحديد عمود اسم الطالب وعمود رقم ولي الأمر بشكل صحيح.
+              </p>
+              ${errorsList ? `
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 0.75rem 1rem; text-align: right; font-size: 0.82rem; color: #b91c1c; margin-bottom: 1rem;">
+                  <div style="font-weight: 700; margin-bottom: 0.3rem;">أمثلة على تنبيهات الفحص:</div>
+                  <ul style="margin: 0; padding-right: 1.25rem;">${errorsList}</ul>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }
+        if (modalFooter) {
+          modalFooter.innerHTML = `
+            <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+            <button type="button" class="btn btn-primary" onclick="window.centrlyApp.renderColumnMappingModal()" style="font-weight: 700;">
+              ← رجوع وتعديل مطابقة الأعمدة
+            </button>
+          `;
+        }
+        this.showToast('لم يتم إضافة أي طالب. يرجى مراجعة مطابقة الأعمدة.', 'warning');
+      }
     } catch (err) {
       console.error('Import students bulk error:', err);
+      if (modalBody) {
+        modalBody.innerHTML = `
+          <div style="text-align: center; padding: 2rem 1.5rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">❌</div>
+            <h3 style="font-size: 1.25rem; font-weight: 900; color: #dc2626; margin-bottom: 0.5rem;">
+              حدث خطأ أثناء الاستيراد
+            </h3>
+            <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 1rem;">
+              ${escapeHtml(err.message || 'تعذر الاتصال بالخادم لحفظ الطلاب')}
+            </p>
+          </div>
+        `;
+      }
+      if (modalFooter) {
+        modalFooter.innerHTML = `
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
+          <button type="button" class="btn btn-primary" onclick="window.centrlyApp.renderColumnMappingModal()" style="font-weight: 700;">
+            ← إعادة المحاولة
+          </button>
+        `;
+      }
       this.showToast('حدث خطأ أثناء الاستيراد: ' + (err.message || 'تعذر حفظ الطلاب'), 'danger');
     }
   }
@@ -11356,22 +11459,6 @@ https://centerly-eg.com/p/p16766044
     });
   }
 
-  previewSpecificCard(name, code, group, phone) {
-    const studentObj = {
-      name,
-      student_code: code,
-      code,
-      group_name: group,
-      teacher_name: this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'معلم المادة'),
-      center_name: this.user?.account_type === 'center' ? this.user?.name : '',
-    };
-    const bodyHtml = renderStudentBarcodeCardHtml(studentObj);
-    const footerHtml = `
-      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
-      <button type="button" class="btn btn-primary" onclick="window.centrlyBarcodeCard.downloadCardPng(${JSON.stringify(studentObj).replace(/"/g, '&quot;')})">تحميل كصورة (PNG)</button>
-    `;
-    this.showModal(`معاينة كارت الطالب: ${escapeHtml(name)}`, bodyHtml, footerHtml);
-  }
 
   openCardsWhatsAppDispatchModal() {
     this.downloadSelectedCardsPdf();

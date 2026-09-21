@@ -154,7 +154,8 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       tenant_id: tenantId,
     };
 
-    const { data, error } = await this.client
+    const db = this.privilegedClient || this.client;
+    const { data, error } = await db
       .from("students")
       .insert(payload)
       .select()
@@ -277,15 +278,16 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     studentId: string,
     groupId: string
   ): Promise<void> {
+    const db = this.privilegedClient || this.client;
     // Enforce 1 student = 1 group: Remove student from any previous group first
     try {
-      await this.client
+      await db
         .from("group_students")
         .delete()
         .eq("student_id", studentId);
     } catch (_) {}
 
-    const { error } = await this.client.from("group_students").insert({
+    const { error } = await db.from("group_students").insert({
       tenant_id: tenantId,
       student_id: studentId,
       group_id: groupId,
@@ -296,7 +298,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     }
 
     try {
-      await this.client
+      await db
         .from("students")
         .update({ group_id: groupId })
         .eq("id", studentId);

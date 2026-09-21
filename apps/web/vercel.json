@@ -6,25 +6,6 @@
     "centerly-platform.vercel.app"
   ],
   "outputDirectory": ".",
-  "headers": [
-    {
-      "source": "/(src|favicon.*|apple-touch-icon.*|site.webmanifest)(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(self), microphone=(), geolocation=(), payment=()" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://*.railway.app; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com" }
-      ]
-    }
-  ],
   "routes": [
     {
       "src": "/(.*)",
@@ -129,6 +110,31 @@
       "headers": {
         "Location": "https://centerly-eg.com/$1"
       }
+    },
+    {
+      "src": "/src/(.*)",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      },
+      "continue": true
+    },
+    {
+      "src": "/(.*\\.(?:png|ico|jpg|jpeg|svg|webp|woff2|woff|ttf|webmanifest))",
+      "headers": {
+        "Cache-Control": "public, max-age=604800, stale-while-revalidate=2592000"
+      },
+      "continue": true
+    },
+    {
+      "src": "/(.*)",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(self), microphone=(), geolocation=(), payment=()",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://*.railway.app; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com"
+      },
+      "continue": true
     },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
