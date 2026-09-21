@@ -66,25 +66,13 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
     }
 
     // 2. Verify material belongs to same tenant AND is explicitly designated as homework (C-05)
-    const { data: material } = await supabase
-      .from("study_materials")
-      .select("id, tenant_id, title, is_homework")
-      .eq("id", material_id)
-      .eq("tenant_id", tenantId)
-      .maybeSingle();
+    const { data: isTargetValid } = await supabase.rpc("verify_homework_target", {
+      p_material_id: material_id,
+      p_tenant_id: tenantId,
+    });
 
-    if (!material) {
+    if (!isTargetValid) {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "الواجب غير موجود أو لا ينتمي لنفس المعلم" } });
-      return;
-    }
-
-    if (material.is_homework !== true) {
-      res.status(400).json({
-        error: {
-          code: "INVALID_HOMEWORK_TARGET",
-          message: "المادة التعليمية المحددة ليست واجباً صالحاً لتسليم الطلاب",
-        },
-      });
       return;
     }
 
@@ -156,27 +144,16 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       return;
     }
 
-    // 4. Upsert submission record
-    const { data: submission, error: submitErr } = await supabase
-      .from("homework_submissions")
-      .upsert(
-        {
-          tenant_id: tenantId,
-          material_id: material_id,
-          student_id: studentId,
-          file_url,
-          file_name: file_name || "homework.pdf",
-          file_size: file_size || 0,
-          status: "pending",
-          submitted_at: new Date().toISOString(),
-        },
-        { onConflict: "material_id,student_id" }
-      )
-      .select("*")
-      .single();
+    // 4. Upsert submission record via secure RPC
+    const { data: submission, error: submitErr } = await supabase.rpc("submit_homework_portal", {
+      p_portal_token: token,
+      p_material_id: material_id,
+      p_file_url: file_url,
+      p_file_name: file_name || "homework.pdf",
+    });
 
-    if (submitErr) {
-      logger.error(`[Homework] Submit error: ${submitErr.message}`);
+    if (submitErr || !submission) {
+      logger.error(`[Homework] Submit error: ${submitErr?.message || "Failed to persist submission"}`);
       res.status(500).json({ error: { code: "DB_ERROR", message: "فشل حفظ بيانات الواجب" } });
       return;
     }

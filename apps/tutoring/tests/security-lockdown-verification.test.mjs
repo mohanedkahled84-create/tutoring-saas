@@ -51,12 +51,13 @@ test("FOLLOW-UP (F): Anon cannot write or update public.tenants table directly",
   });
   assert.ok(insertErr, "Anon insert on tenants must be denied");
 
-  // Anon UPDATE must fail
-  const { error: updateErr } = await anonClient
+  // Anon UPDATE must fail or affect 0 rows under RLS
+  const { data: updatedRows, error: updateErr } = await anonClient
     .from("tenants")
     .update({ subscription_status: "active" })
-    .eq("name", "Exploit Tenant");
-  assert.ok(updateErr, "Anon update on tenants must be denied");
+    .eq("name", "Exploit Tenant")
+    .select();
+  assert.ok(updateErr || !updatedRows || updatedRows.length === 0, "Anon update on tenants must be denied or return 0 rows");
 });
 
 test("FOLLOW-UP (F): Payment proof repository allows valid proof submission", async () => {

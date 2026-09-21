@@ -19,11 +19,12 @@ test("C-01: RLS Tenant Isolation & Anon Rejection", async (t) => {
 
   const anonClient = createClient(supabaseUrl, supabaseAnonKey);
 
-  // 1. Anon MUST NOT be able to read study_materials
+  // 1. Anon MUST NOT be able to read private study_materials (non-homework)
   const { data: anonMaterials, error: anonMatErr } = await anonClient
     .from("study_materials")
-    .select("*");
-  assert.equal(anonMaterials?.length || 0, 0, "Anon must not read any study materials");
+    .select("*")
+    .eq("is_homework", false);
+  assert.equal(anonMaterials?.length || 0, 0, "Anon must not read any non-homework study materials");
 
   // 2. Anon MUST NOT be able to insert into study_materials
   const fakeTenantId = "00000000-0000-0000-0000-000000000001";

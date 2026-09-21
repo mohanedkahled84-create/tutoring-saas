@@ -19,15 +19,24 @@ assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Prom
 
   try {
     const supabase = getSupabase(req);
+    let assistants: any[] = [];
     const { data, error } = await supabase
       .from("assistants")
       .select("*")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (!error && Array.isArray(data)) {
+      assistants = data;
+    } else {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc("list_assistants_secure", {
+        p_tenant_id: tenantId,
+      });
+      if (rpcErr) throw rpcErr;
+      assistants = Array.isArray(rpcData) ? rpcData : [];
+    }
 
-    res.json({ assistants: data || [], count: (data || []).length });
+    res.json({ assistants, count: assistants.length });
   } catch (err: unknown) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
   }
@@ -67,7 +76,11 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
       }
     }
 
-    const { data, error } = await supabase
+    let createdAssistant: any = null;
+    let insertError: any = null;
+
+    // Try direct insert first
+    const { data: directData, error: directErr } = await supabase
       .from("assistants")
       .insert({
         tenant_id: tenantId,
@@ -83,11 +96,34 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
         status: "active",
       })
       .select()
-      .single();
+      .maybeSingle();
 
-    if (error) throw error;
+    if (!directErr && directData) {
+      createdAssistant = directData;
+    } else {
+      insertError = directErr;
+      // Fallback to secure RPC
+      const { data: rpcRow, error: rpcErr } = await supabase.rpc("create_assistant_secure", {
+        p_tenant_id: tenantId,
+        p_name: name.trim(),
+        p_phone: phone.trim(),
+        p_assistant_type: "assistant_to_teacher",
+        p_teacher_id: resolvedTeacherId,
+        p_can_view_financials: false,
+        p_status: "active",
+        p_salary: salaryVal,
+        p_role_type: role_type || "both",
+        p_group_id: cleanGroupId,
+        p_salary_model: salary_model || "monthly",
+      });
 
-    res.status(201).json({ success: true, assistant: data });
+      if (rpcErr || !rpcRow) {
+        throw new Error(rpcErr ? rpcErr.message : (insertError?.message || "Failed to create assistant"));
+      }
+      createdAssistant = rpcRow;
+    }
+
+    res.status(201).json({ success: true, assistant: createdAssistant });
   } catch (err: unknown) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
   }
@@ -104,6 +140,8 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
   }
 
   const { name, phone, role_type, group_id, salary_model, status } = req.body;
+  const cleanGroupId = group_id && typeof group_id === "string" && group_id.trim().length > 0 ? group_id.trim() : null;
+  const salaryVal = Number(req.body.salary ?? req.body.salary_amount) || 0;
 
   try {
     const supabase = getSupabase(req);
@@ -112,25 +150,49 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
     if (phone) updates.phone = phone.trim();
     if (role_type) updates.role_type = role_type;
     if (group_id !== undefined) {
-      updates.group_id = group_id && typeof group_id === "string" && group_id.trim().length > 0 ? group_id.trim() : null;
+      updates.group_id = cleanGroupId;
     }
     if (salary_model) updates.salary_model = salary_model;
     if (req.body.salary !== undefined || req.body.salary_amount !== undefined) {
-      updates.salary = Number(req.body.salary ?? req.body.salary_amount) || 0;
+      updates.salary = salaryVal;
     }
     if (status) updates.status = status;
 
-    const { data, error } = await supabase
+    let updatedAssistant: any = null;
+    let updateError: any = null;
+
+    const { data: directData, error: directErr } = await supabase
       .from("assistants")
       .update(updates)
       .eq("id", id)
       .eq("tenant_id", tenantId)
       .select()
-      .single();
+      .maybeSingle();
 
-    if (error) throw error;
+    if (!directErr && directData) {
+      updatedAssistant = directData;
+    } else {
+      updateError = directErr;
+      const { data: rpcRow, error: rpcErr } = await supabase.rpc("update_assistant_secure", {
+        p_id: id,
+        p_tenant_id: tenantId,
+        p_name: name ? name.trim() : undefined,
+        p_phone: phone ? phone.trim() : undefined,
+        p_role_type: role_type || undefined,
+        p_group_id: cleanGroupId,
+        p_clear_group: group_id === null || group_id === "",
+        p_salary_model: salary_model || undefined,
+        p_salary: (req.body.salary !== undefined || req.body.salary_amount !== undefined) ? salaryVal : undefined,
+        p_status: status || undefined,
+      });
 
-    res.json({ success: true, assistant: data });
+      if (rpcErr || !rpcRow) {
+        throw new Error(rpcErr ? rpcErr.message : (updateError?.message || "Failed to update assistant"));
+      }
+      updatedAssistant = rpcRow;
+    }
+
+    res.json({ success: true, assistant: updatedAssistant });
   } catch (err: unknown) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
   }
@@ -148,13 +210,19 @@ assistantsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response)
 
   try {
     const supabase = getSupabase(req);
-    const { error } = await supabase
+    const { error: directErr } = await supabase
       .from("assistants")
       .delete()
       .eq("id", id)
       .eq("tenant_id", tenantId);
 
-    if (error) throw error;
+    if (directErr) {
+      const { error: rpcErr } = await supabase.rpc("delete_assistant_secure", {
+        p_id: id,
+        p_tenant_id: tenantId,
+      });
+      if (rpcErr) throw rpcErr;
+    }
 
     res.json({ success: true, message: "تم حذف المساعد بنجاح" });
   } catch (err: unknown) {
