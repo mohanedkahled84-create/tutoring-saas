@@ -1,6 +1,11 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServiceSupabaseClient } from "../../supabase.js";
+import { config } from "../../shared/config/index.js";
+
+function getSupabase(req: AuthenticatedRequest) {
+  return (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
+}
 
 export const assistantsRouter = Router();
 
@@ -13,7 +18,7 @@ assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Prom
   }
 
   try {
-    const supabase = getServiceSupabaseClient();
+    const supabase = getSupabase(req);
     const { data, error } = await supabase
       .from("assistants")
       .select("*")
@@ -46,7 +51,7 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
   }
 
   try {
-    const supabase = getServiceSupabaseClient();
+    const supabase = getSupabase(req);
 
     // Safely resolve teacher_id against teachers table foreign key
     let resolvedTeacherId: string | null = null;
@@ -101,7 +106,7 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
   const { name, phone, role_type, group_id, salary_model, status } = req.body;
 
   try {
-    const supabase = getServiceSupabaseClient();
+    const supabase = getSupabase(req);
     const updates: Record<string, any> = {};
     if (name) updates.name = name.trim();
     if (phone) updates.phone = phone.trim();
@@ -142,7 +147,7 @@ assistantsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response)
   }
 
   try {
-    const supabase = getServiceSupabaseClient();
+    const supabase = getSupabase(req);
     const { error } = await supabase
       .from("assistants")
       .delete()
