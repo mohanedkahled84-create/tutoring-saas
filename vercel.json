@@ -27,6 +27,10 @@
       "headers": {
         "Location": "https://centerly-eg.com/$1"
       }
+    },
+    {
+      "src": "/src/(.*)",
+      "dest": "/apps/web/src/$1"
     }
   ]
 }
