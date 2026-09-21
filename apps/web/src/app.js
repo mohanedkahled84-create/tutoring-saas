@@ -36,7 +36,7 @@ import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v
 import { renderCouponsView } from './components/CouponsView.js?v=4.7.6';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
-import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml } from './utils/studentBarcodeCard.js?v=4.0.0';
+import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.0.0';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
 import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
 
@@ -5998,7 +5998,8 @@ class CentrlyApp {
   }
 
   printSingleCard(name, code, group, phone) {
-    const teacherName = this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'معلم المادة');
+    const rawTeacherName = this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'معلم المادة');
+    const teacherName = cleanTeacherNameString(rawTeacherName);
     const barcodeSvg = generateBarcode128Svg(code, { height: 38, unitWidth: 2.0 });
     const printHtml = `
       <!DOCTYPE html>
@@ -6024,7 +6025,7 @@ class CentrlyApp {
           .body { padding: 5px 12px; display: flex; flex-direction: column; justify-content: space-around; flex-grow: 1; }
           .lbl { font-size: 8px; color: #E8EDFF; font-weight: 700; }
           .s-name { font-family: 'Changa', 'Cairo', sans-serif; font-size: 15px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-          .pill { background-color: #1f3688; border: 1px solid #2e4ebd; border-radius: 6px; padding: 3px 8px; display: flex; justify-content: space-between; font-size: 9px; font-weight: 700; }
+          .pill { background-color: #1f3688; border: 1px solid #2e4ebd; border-radius: 6px; padding: 3px 8px; display: flex; flex-direction: column; gap: 2px; font-size: 8px; font-weight: 700; }
           .b-box { background: #fff; border-radius: 8px; padding: 4px 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
           .code-box { background-color: #E7A330; border-radius: 6px; padding: 2px 6px; text-align: center; min-width: 60px; }
           .code-box-lbl { font-size: 7px; font-weight: 900; color: #0f172a; line-height: 1; }
@@ -6051,7 +6052,7 @@ class CentrlyApp {
             </div>
             <div class="pill">
               <div><span style="color: #E7A330;">المدرّس:</span> ${escapeHtml(teacherName)}</div>
-              <div><span style="color: #E7A330;">المادة:</span> ${escapeHtml(group || 'عامة')}</div>
+              <div><span style="color: #E7A330;">المجموعة:</span> ${escapeHtml(group || 'عامة')}</div>
             </div>
             <div class="b-box">
               <div style="flex-grow: 1; text-align: center;">
@@ -10265,7 +10266,8 @@ https://centerly-eg.com/p/p16766044
       });
     }
 
-    const orgName = this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'منظومة المعلم');
+    const rawOrgName = this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'معلم المادة');
+    const orgName = cleanTeacherNameString(rawOrgName);
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -10295,7 +10297,7 @@ https://centerly-eg.com/p/p16766044
             </div>
             <div class="info-pill">
               <div><span style="color: #E7A330;">المدرّس:</span> ${escapeHtml(orgName)}</div>
-              <div><span style="color: #E7A330;">المادة:</span> ${escapeHtml(st.group || 'عامة')}</div>
+              <div><span style="color: #E7A330;">المجموعة:</span> ${escapeHtml(st.group || 'عامة')}</div>
             </div>
             <div class="barcode-box">
               <div class="barcode-inner">
@@ -10431,9 +10433,9 @@ https://centerly-eg.com/p/p16766044
             border-radius: 5px;
             padding: 2.5px 6px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 8px;
+            flex-direction: column;
+            gap: 2px;
+            font-size: 7.5px;
             font-weight: 700;
             color: #ffffff;
           }

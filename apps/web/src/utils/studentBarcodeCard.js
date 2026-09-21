@@ -78,6 +78,21 @@ export function generateBarcode128Svg(text, options = {}) {
 }
 
 /**
+ * Cleans the teacher's name by stripping system suffixes like "- منظومة تعليمية", "- منظومة...", "- سنترلي...", etc.
+ */
+export function cleanTeacherNameString(rawName) {
+  let name = String(rawName || "").trim();
+  if (!name || name === "معلم المادة" || name === "أستاذ المادة") {
+    return "معلم المادة";
+  }
+  // Strip any corporate or system suffix
+  name = name.replace(/\s*[-–—|]\s*(منظومة|منظر|سنترلي|أكاديمية|سنتر|منصه|منصة).*/i, "")
+             .replace(/\s*[-–—|]\s*.*منظومة.*/i, "")
+             .trim();
+  return name || rawName || "معلم المادة";
+}
+
+/**
  * Renders the complete, responsive Student Barcode ID Card HTML (V2 CR80 Landscape)
  * Flat colors only (Navy #172D70, Royal Blue #2949BA, Amber #E7A330, White).
  * Strictly renders FRONT ONLY for site and preview modals as requested.
@@ -85,18 +100,29 @@ export function generateBarcode128Svg(text, options = {}) {
 export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
   const studentCode = student.student_code || student.code || "—";
   const studentName = student.name || "طالب";
-  const groupName = student.group_name || student.group || "المجموعة الدراسية";
-  const teacherName = student.teacher_name || options.teacherName || student.center_name || "معلم المادة";
-  const centerName = student.center_name && student.center_name !== teacherName ? student.center_name : "";
+  const groupName = (student.group_name || student.group || "").trim();
+  const subjectName = (student.subject_name || student.subject || "").trim();
+  const rawTeacherName = student.teacher_name || options.teacherName || student.center_name || "معلم المادة";
+  const cleanTeacherName = cleanTeacherNameString(rawTeacherName);
+
+  let groupLabel = "المجموعة";
+  let groupDisplayText = groupName || "المجموعة الدراسية";
+
+  if (subjectName && groupName && subjectName !== groupName) {
+    groupDisplayText = `${groupName} • المادة: ${subjectName}`;
+  } else if (subjectName && !groupName) {
+    groupLabel = "المادة";
+    groupDisplayText = subjectName;
+  }
 
   // High-contrast Code 128 barcode for instant scanner readability
-  const barcodeSvg = generateBarcode128Svg(studentCode, { height: 42, unitWidth: 2.0 });
+  const barcodeSvg = generateBarcode128Svg(studentCode, { height: 40, unitWidth: 2.0 });
   const cardId = "student-card-" + Math.random().toString(36).substring(2, 9);
   const studentJsonAttr = JSON.stringify(student).replace(/"/g, "&quot;");
 
   return `
     <div class="student-id-card-wrapper" style="direction: rtl; font-family: 'Cairo', system-ui, -apple-system, sans-serif; width: 100%; max-width: 440px; margin: 0 auto;">
-      <!-- V2 Bold Student Attendance ID Card (Front Only - CR80 Landscape 85.6 x 54 mm) -->
+      <!-- V2 Bold Student Attendance ID Card (Front Only - CR80 Landscape) -->
       <div id="${cardId}" class="centrly-student-card" style="
         background-color: #172D70;
         border: 2px solid #2949BA;
@@ -107,13 +133,14 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        aspect-ratio: 85.6 / 54;
+        min-height: 236px;
+        aspect-ratio: 85.6 / 55;
         box-sizing: border-box;
         box-shadow: 0 10px 25px rgba(23, 45, 112, 0.25);
       ">
         <!-- 1. Top Header: Solid Royal Blue #2949BA + Flat Amber Stripe #E7A330 -->
         <div>
-          <div style="background-color: #2949BA; padding: 0.65rem 1rem 0.55rem; display: flex; justify-content: space-between; align-items: center;">
+          <div style="background-color: #2949BA; padding: 0.55rem 1rem 0.45rem; display: flex; justify-content: space-between; align-items: center;">
             <!-- Right: Arabic Wordmark "سنترلي" with amber "ل" -->
             <div style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1;">
               <div style="font-family: 'Changa', 'Cairo', sans-serif; font-size: 1.35rem; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">
@@ -134,31 +161,30 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
         </div>
 
         <!-- 2. Body Details (Solid Navy #172D70) -->
-        <div style="padding: 0.5rem 1rem 0.6rem; display: flex; flex-direction: column; justify-content: space-around; flex-grow: 1; gap: 0.45rem;">
+        <div style="padding: 0.45rem 0.85rem 0.55rem; display: flex; flex-direction: column; justify-content: space-between; flex-grow: 1; gap: 0.35rem;">
           
           <!-- Student Name Block -->
           <div>
-            <div style="font-size: 0.68rem; font-weight: 700; color: #E8EDFF; opacity: 0.9; margin-bottom: 2px;">اسم الطالب</div>
+            <div style="font-size: 0.62rem; font-weight: 700; color: #E8EDFF; opacity: 0.9; margin-bottom: 1px;">اسم الطالب</div>
             <div style="font-family: 'Changa', 'Cairo', sans-serif; font-size: 1.25rem; font-weight: 900; color: #ffffff; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               ${escapeHtml(studentName)}
             </div>
           </div>
 
-          <!-- Teacher & Subject/Group Pill (Flat Royal Blue Panel) -->
-          <div style="background-color: #1f3688; border: 1px solid #2e4ebd; border-radius: 8px; padding: 0.35rem 0.65rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; font-weight: 700;">
-            <div style="display: flex; align-items: center; gap: 0.3rem; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-              <span style="color: #E7A330;">المدرّس:</span>
-              <span>${escapeHtml(teacherName)}</span>
+          <!-- Teacher & Group Info (Vertical Stacked Panel - Underneath each other) -->
+          <div style="background-color: #1f3688; border: 1px solid #2e4ebd; border-radius: 8px; padding: 0.35rem 0.65rem; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.72rem; font-weight: 700;">
+            <div style="display: flex; align-items: center; gap: 0.35rem; color: #ffffff; min-width: 0;">
+              <span style="color: #E7A330; flex-shrink: 0;">المدرّس:</span>
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(cleanTeacherName)}</span>
             </div>
-            <div style="width: 1px; height: 12px; background-color: rgba(255,255,255,0.3); margin: 0 0.35rem; flex-shrink: 0;"></div>
-            <div style="display: flex; align-items: center; gap: 0.3rem; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-              <span style="color: #E7A330;">المادة:</span>
-              <span>${escapeHtml(groupName)}</span>
+            <div style="display: flex; align-items: center; gap: 0.35rem; color: #ffffff; min-width: 0;">
+              <span style="color: #E7A330; flex-shrink: 0;">${groupLabel}:</span>
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(groupDisplayText)}</span>
             </div>
           </div>
 
           <!-- 3. High-Contrast Barcode & Student Code Strip -->
-          <div style="background-color: #ffffff; border-radius: 10px; padding: 0.4rem 0.55rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;">
+          <div style="background-color: #ffffff; border-radius: 10px; padding: 0.35rem 0.55rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;">
             <!-- Barcode Area -->
             <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;">
               <span style="font-size: 0.58rem; font-weight: 700; color: #475569; margin-bottom: 2px;">امسح الباركود لتسجيل الحضور</span>
@@ -174,11 +200,6 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
             </div>
           </div>
 
-        </div>
-
-        <!-- 4. Bottom Instruction Strip -->
-        <div style="background-color: #122359; color: #cbd5e1; font-size: 0.62rem; font-weight: 700; text-align: center; padding: 0.25rem 0.5rem; border-top: 1px solid #1e3a8a;">
-          مخصصة للحضور — استخدمها في بداية كل حصة
         </div>
       </div>
 
@@ -211,9 +232,20 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
 export function downloadStudentCardAsPng(student = {}, options = {}) {
   const studentCode = student.student_code || student.code || "0000";
   const studentName = student.name || "طالب";
-  const groupName = student.group_name || student.group || "المجموعة الدراسية";
-  const teacherName = student.teacher_name || options.teacherName || student.center_name || "معلم المادة";
-  const centerName = student.center_name && student.center_name !== teacherName ? student.center_name : "";
+  const groupName = (student.group_name || student.group || "").trim();
+  const subjectName = (student.subject_name || student.subject || "").trim();
+  const rawTeacherName = student.teacher_name || options.teacherName || student.center_name || "معلم المادة";
+  const cleanTeacherName = cleanTeacherNameString(rawTeacherName);
+
+  let groupLabel = "المجموعة";
+  let groupDisplayText = groupName || "المجموعة الدراسية";
+
+  if (subjectName && groupName && subjectName !== groupName) {
+    groupDisplayText = `${groupName} • المادة: ${subjectName}`;
+  } else if (subjectName && !groupName) {
+    groupLabel = "المادة";
+    groupDisplayText = subjectName;
+  }
 
   const canvas = document.createElement("canvas");
   // Exact CR80 landscape ratio 85.6mm x 53.98mm (1.5857 : 1)
@@ -279,17 +311,17 @@ export function downloadStudentCardAsPng(student = {}, options = {}) {
   ctx.textAlign = "right";
   ctx.fillStyle = "#E8EDFF";
   ctx.font = "bold 20px Cairo, Tahoma, sans-serif";
-  ctx.fillText("اسم الطالب", width - 60, 205);
+  ctx.fillText("اسم الطالب", width - 60, 195);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 44px Cairo, Tahoma, sans-serif";
-  ctx.fillText(studentName, width - 60, 260);
+  ctx.font = "bold 42px Cairo, Tahoma, sans-serif";
+  ctx.fillText(studentName, width - 60, 248);
 
-  // 4. Teacher & Subject Panel (Solid #1f3688 with #2e4ebd border)
+  // 4. Teacher & Group Panel (Solid #1f3688 with #2e4ebd border - Stacked Vertically)
   const panelX = 60;
-  const panelY = 295;
+  const panelY = 275;
   const panelW = width - 120;
-  const panelH = 65;
+  const panelH = 92;
 
   ctx.fillStyle = "#1f3688";
   if (ctx.roundRect) {
@@ -303,20 +335,22 @@ export function downloadStudentCardAsPng(student = {}, options = {}) {
     ctx.fillRect(panelX, panelY, panelW, panelH);
   }
 
+  // Row 1: Teacher Name
   ctx.direction = "rtl";
   ctx.textAlign = "right";
-  ctx.font = "bold 22px Cairo, Tahoma, sans-serif";
+  ctx.font = "bold 21px Cairo, Tahoma, sans-serif";
   ctx.fillStyle = "#E7A330";
-  ctx.fillText("المدرّس: ", width - 90, panelY + 42);
+  ctx.fillText("المدرّس: ", width - 90, panelY + 35);
   const tLabelW = ctx.measureText("المدرّس: ").width;
   ctx.fillStyle = "#ffffff";
-  ctx.fillText(teacherName, width - 90 - tLabelW, panelY + 42);
+  ctx.fillText(cleanTeacherName, width - 90 - tLabelW, panelY + 35);
 
-  ctx.textAlign = "left";
+  // Row 2: Group / Subject Name
   ctx.fillStyle = "#E7A330";
-  ctx.fillText("المادة: ", 90 + ctx.measureText(groupName).width + 10, panelY + 42);
+  ctx.fillText(`${groupLabel}: `, width - 90, panelY + 72);
+  const gLabelW = ctx.measureText(`${groupLabel}: `).width;
   ctx.fillStyle = "#ffffff";
-  ctx.fillText(groupName, 90, panelY + 42);
+  ctx.fillText(groupDisplayText, width - 90 - gLabelW, panelY + 72);
 
   // 5. White Barcode Container Box
   const boxX = 60;
@@ -423,7 +457,20 @@ export function downloadStudentCardAsPng(student = {}, options = {}) {
 export function openFullscreenBarcodeModal(student = {}) {
   const studentCode = student.student_code || student.code || "0000";
   const studentName = student.name || "طالب";
-  const teacherName = student.teacher_name || "معلم المادة";
+  const groupName = (student.group_name || student.group || "").trim();
+  const subjectName = (student.subject_name || student.subject || "").trim();
+  const rawTeacherName = student.teacher_name || student.center_name || "معلم المادة";
+  const cleanTeacherName = cleanTeacherNameString(rawTeacherName);
+
+  let groupLabel = "المجموعة";
+  let groupDisplayText = groupName || "المجموعة الدراسية";
+
+  if (subjectName && groupName && subjectName !== groupName) {
+    groupDisplayText = `${groupName} • المادة: ${subjectName}`;
+  } else if (subjectName && !groupName) {
+    groupLabel = "المادة";
+    groupDisplayText = subjectName;
+  }
 
   const modalId = "centrly-barcode-fullscreen-modal";
   const existing = document.getElementById(modalId);
@@ -488,8 +535,9 @@ export function openFullscreenBarcodeModal(student = {}) {
           ${escapeHtml(studentName)}
         </h3>
 
-        <div style="font-size: 0.85rem; color: #E8EDFF; margin-bottom: 1.25rem;">
-          المعلم: <b style="color: #E7A330;">${escapeHtml(teacherName)}</b>
+        <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; color: #E8EDFF; margin-bottom: 1.25rem;">
+          <div>المعلم: <b style="color: #E7A330;">${escapeHtml(cleanTeacherName)}</b></div>
+          <div>${escapeHtml(groupLabel)}: <b style="color: #E7A330;">${escapeHtml(groupDisplayText)}</b></div>
         </div>
 
         <!-- High-Contrast Barcode White Panel -->
