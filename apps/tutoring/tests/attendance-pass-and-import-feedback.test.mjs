@@ -102,3 +102,14 @@ test("AUTH: AuthScreens.js removes center field and account type selection from 
   assert.ok(content.includes('id="signupSubject"'), "Must retain teacher subject input");
 });
 
+test("WEB SYNTAX: studentBarcodeCard.js and AuthScreens.js import cleanly without syntax errors", async () => {
+  const cardModule = await import("../../web/src/utils/studentBarcodeCard.js");
+  assert.ok(typeof cardModule.renderStudentBarcodeCardHtml === "function", "renderStudentBarcodeCardHtml must be a function");
+  assert.ok(typeof cardModule.renderStudentAttendancePassHtml === "function", "renderStudentAttendancePassHtml must be a function");
+  assert.ok(typeof cardModule.generateBarcode128Svg === "function", "generateBarcode128Svg must be a function");
+
+  const authModule = await import("../../web/src/components/AuthScreens.js");
+  assert.ok(typeof authModule.renderAuthScreens === "function", "renderAuthScreens must be a function");
+});
+
+
