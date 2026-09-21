@@ -113,6 +113,8 @@ export function renderBillingView(data = {}, user = {}) {
 
   const teacherName = user?.name || window.centrlyApp?.user?.name || 'الأستاذ محمد خالد';
 
+  const isPaidActive = (status === 'active') && (daysRemaining > 0);
+
   return `
     <div style="display: flex; flex-direction: column; gap: 1.75rem; font-family: 'Cairo', sans-serif;" dir="rtl">
       
@@ -125,7 +127,7 @@ export function renderBillingView(data = {}, user = {}) {
             <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
               ${statusBadgeHtml}
               <span style="font-size: 0.85rem; color: #93c5fd; font-weight: 700;">
-                ${planName} (شاملة كافة الميزات)
+                ${isPaidActive ? `${planName} (شاملة كافة الميزات)` : 'فترة تجريبية مجانية (كافة ميزات المنصة متاحة)'}
               </span>
             </div>
             
@@ -154,8 +156,8 @@ export function renderBillingView(data = {}, user = {}) {
           </div>
 
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <button class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 800; font-size: 0.95rem; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); cursor: pointer;" onclick="window.centrlyApp.openPlanChoiceModal()">
-              تجديد / ترقية الاشتراك الآن
+            <button class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 800; font-size: 0.95rem; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); cursor: pointer;" onclick="const el = document.getElementById('pricingPlansSection'); if (el) { el.scrollIntoView({ behavior: 'smooth' }); } else { window.centrlyApp.openPlanChoiceModal(); }">
+              ${isPaidActive ? 'تجديد / ترقية الاشتراك الآن' : 'اختيار باقة والاشتراك الآن'}
             </button>
           </div>
 
@@ -227,7 +229,7 @@ export function renderBillingView(data = {}, user = {}) {
           const displayPeriod = isYearly ? 'ج.م / شهرياً (فاتورة سنوية)' : 'ج.م / شهرياً';
           const buttonAmount = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
           const fullPlanName = `${plan.name} (${isYearly ? 'سنوي' : 'شهري'})`;
-          const isCurrentPlan = (plan.capacity === studentLimit);
+          const isCurrentPlan = isPaidActive && (plan.capacity === studentLimit);
 
           let cardBorder = 'border: 1.5px solid var(--centrly-line);';
           if (isCurrentPlan) {
@@ -254,10 +256,12 @@ export function renderBillingView(data = {}, user = {}) {
           let buttonText = `اشترك في ${plan.name}`;
           if (isCurrentPlan) {
             buttonText = `تجديد باقتي الحالية (${plan.name})`;
-          } else if (plan.capacity > studentLimit) {
+          } else if (isPaidActive && plan.capacity > studentLimit) {
             buttonText = `ترقية إلى ${plan.name} (${isYearly ? 'سنوياً' : 'شهرياً'})`;
-          } else {
+          } else if (isPaidActive) {
             buttonText = `تغيير إلى ${plan.name} (${isYearly ? 'سنوياً' : 'شهرياً'})`;
+          } else {
+            buttonText = `اشترك في ${plan.name} (${isYearly ? 'سنوياً' : 'شهرياً'})`;
           }
 
           return `

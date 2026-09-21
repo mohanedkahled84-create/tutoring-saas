@@ -9667,6 +9667,16 @@ https://centerly-eg.com/p/p16766044
   }
 
   openPlanChoiceModal() {
+    const status = this.billingState?.subscription_status || this.billingState?.status || 'trial';
+    const isPaidActive = (status === 'active');
+    if (!isPaidActive) {
+      const el = document.getElementById('pricingPlansSection');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+
     const isYearly = (this.billingCycle === 'yearly');
     const userPlanName = this.billingState?.plan_name || 'باقة 300 طالب';
     const plans = [
@@ -9730,6 +9740,7 @@ https://centerly-eg.com/p/p16766044
       }
     }
     this.currentEffectiveAmount = effective;
+    const isFree = (effective <= 0);
 
     const isYearly = (billingCycle === 'yearly');
     const periodLabel = isYearly ? 'اشتراك سنوي (خصم 20%)' : 'اشتراك شهري';
@@ -9749,8 +9760,8 @@ https://centerly-eg.com/p/p16766044
 
           <form onsubmit="window.centrlyApp.handleSubmitPaymentProof(event, ${amount}, '${planName}', '${billingCycle}')">
             
-            <!-- Transfer Number Card -->
-            <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 1rem;">
+            <!-- Transfer Number Card (hidden if 100% free) -->
+            <div id="proofTransferCard" style="${isFree ? 'display: none;' : 'display: block;'} background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 1rem;">
               <div style="font-size: 0.825rem; color: #166534; font-weight: 700; margin-bottom: 0.35rem;">
                 رقم التحويل (إنستاباي أو محفظة إلكترونية):
               </div>
@@ -9764,6 +9775,19 @@ https://centerly-eg.com/p/p16766044
               </div>
               <div id="proofTransferInstruction" style="font-size: 0.775rem; color: #4b5563; margin-top: 0.4rem; line-height: 1.5;">
                 قم بتحويل المبلغ ${this.appliedCouponData ? 'المخفض ' : ''}<strong>(${Number(effective).toLocaleString('ar-EG')} ج.م)</strong> إلى هذا الرقم عبر إنستاباي أو من محفظتك، ثم أرفق الاسكرين شوت أدناه.
+              </div>
+            </div>
+
+            <!-- Free 100% Celebration Banner (shown if 100% free) -->
+            <div id="proofFreeBanner" style="${isFree ? 'display: block;' : 'display: none;'} background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.75rem;">🎉</span>
+                <div>
+                  <div style="font-weight: 800; color: #065f46; font-size: 0.95rem;">الاشتراك مجاني بالكامل (خصم 100%)</div>
+                  <div style="font-size: 0.8rem; color: #047857; margin-top: 0.2rem; line-height: 1.5;">
+                    تم تطبيق كود الخصم بنجاح! لا يتطلب الاشتراك أي تحويل مالي أو إرفاق اسكرين شوت.
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -9784,17 +9808,17 @@ https://centerly-eg.com/p/p16766044
               </div>
             </div>
 
-            <!-- Transfer Method Selection -->
-            <div class="form-group" style="margin-bottom: 0.85rem;">
+            <!-- Transfer Method Selection (hidden if free) -->
+            <div id="proofMethodGroup" class="form-group" style="${isFree ? 'display: none;' : 'display: block;'} margin-bottom: 0.85rem;">
               <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">طريقة التحويل المستخدمة</label>
-              <select id="proofPaymentMethod" class="form-input" style="width: 100%;" required>
+              <select id="proofPaymentMethod" class="form-input" style="width: 100%;">
                 <option value="instapay">إنستاباي (InstaPay)</option>
                 <option value="vodafone_cash">محفظة إلكترونية (فودافون كاش / محافظ المحمول)</option>
               </select>
             </div>
 
-            <!-- Screenshot Upload (Primary) -->
-            <div class="form-group" style="margin-bottom: 0.85rem;">
+            <!-- Screenshot Upload (Primary) (hidden if free) -->
+            <div id="proofScreenshotGroup" class="form-group" style="${isFree ? 'display: none;' : 'display: block;'} margin-bottom: 0.85rem;">
               <label class="form-label" style="font-weight: 700; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
                 <span>إرفاق الاسكرين شوت (صورة إيصال التحويل)</span>
                 <span style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">مطلوب</span>
@@ -9819,16 +9843,16 @@ https://centerly-eg.com/p/p16766044
               </div>
             </div>
 
-            <!-- Optional reference or notes -->
-            <div class="form-group" style="margin-bottom: 1rem;">
+            <!-- Optional reference or notes (hidden if free) -->
+            <div id="proofRefGroup" class="form-group" style="${isFree ? 'display: none;' : 'display: block;'} margin-bottom: 1rem;">
               <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">رقم المحفظة المحول منها أو رقم العملية (اختياري)</label>
               <input type="text" id="proofRefNumber" class="form-input" placeholder="رقم هاتفك المحول منه أو رقم العملية..." dir="ltr">
             </div>
 
             <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
               <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closePaymentProofModal()">إلغاء</button>
-              <button type="submit" id="btnSubmitProof" class="btn btn-primary" style="font-weight: 700;">
-                تأكيد وإرسال الإيصال
+              <button type="submit" id="btnSubmitProof" class="btn btn-primary" style="font-weight: 800; ${isFree ? 'background: #10b981; border-color: #10b981;' : ''}">
+                ${isFree ? 'تأكيد الاشتراك مجاناً 🎉' : 'تأكيد وإرسال الإيصال'}
               </button>
             </div>
           </form>
@@ -9900,6 +9924,7 @@ https://centerly-eg.com/p/p16766044
         this.appliedCouponCode = res.gift_code?.code || code;
         this.appliedCouponData = res.gift_code || { code, discount_percent: res.discount_percent, discount_amount: res.discount_amount };
         this.currentEffectiveAmount = res.final_amount;
+        const isFree = (Number(res.final_amount) <= 0);
 
         if (feedback) {
           feedback.style.display = 'block';
@@ -9912,8 +9937,39 @@ https://centerly-eg.com/p/p16766044
           displayAmount.innerHTML = `<span style="text-decoration: line-through; color: #94a3b8; font-size: 0.85rem; margin-left: 0.35rem;">${Number(this.originalAmount).toLocaleString('ar-EG')}</span> ${Number(res.final_amount).toLocaleString('ar-EG')} ج.م`;
         }
 
-        if (transferInstruction) {
-          transferInstruction.innerHTML = `قم بتحويل المبلغ المخفض <strong>(${Number(res.final_amount).toLocaleString('ar-EG')} ج.م)</strong> بعد تطبيق الخصم إلى هذا الرقم، ثم أرفق الاسكرين شوت أدناه.`;
+        const transferCard = document.getElementById('proofTransferCard');
+        const freeBanner = document.getElementById('proofFreeBanner');
+        const methodGroup = document.getElementById('proofMethodGroup');
+        const screenshotGroup = document.getElementById('proofScreenshotGroup');
+        const refGroup = document.getElementById('proofRefGroup');
+        const submitBtn = document.getElementById('btnSubmitProof');
+
+        if (isFree) {
+          if (transferCard) transferCard.style.display = 'none';
+          if (freeBanner) freeBanner.style.display = 'block';
+          if (methodGroup) methodGroup.style.display = 'none';
+          if (screenshotGroup) screenshotGroup.style.display = 'none';
+          if (refGroup) refGroup.style.display = 'none';
+          if (submitBtn) {
+            submitBtn.innerText = 'تأكيد الاشتراك مجاناً 🎉';
+            submitBtn.style.background = '#10b981';
+            submitBtn.style.borderColor = '#10b981';
+          }
+          this.removeProofImage();
+        } else {
+          if (transferCard) transferCard.style.display = 'block';
+          if (freeBanner) freeBanner.style.display = 'none';
+          if (methodGroup) methodGroup.style.display = 'block';
+          if (screenshotGroup) screenshotGroup.style.display = 'block';
+          if (refGroup) refGroup.style.display = 'block';
+          if (submitBtn) {
+            submitBtn.innerText = 'تأكيد وإرسال الإيصال';
+            submitBtn.style.background = '';
+            submitBtn.style.borderColor = '';
+          }
+          if (transferInstruction) {
+            transferInstruction.innerHTML = `قم بتحويل المبلغ المخفض <strong>(${Number(res.final_amount).toLocaleString('ar-EG')} ج.م)</strong> بعد تطبيق الخصم إلى هذا الرقم، ثم أرفق الاسكرين شوت أدناه.`;
+          }
         }
 
         if (codeInput) codeInput.disabled = true;
@@ -10077,22 +10133,24 @@ https://centerly-eg.com/p/p16766044
 
   async handleSubmitPaymentProof(e, amount, planName = 'باقة 100 طالب', billingCycle = 'monthly') {
     e.preventDefault();
-    const method = document.getElementById('proofPaymentMethod')?.value || 'instapay';
-    const refNum = document.getElementById('proofRefNumber')?.value?.trim();
+    const effectiveAmount = this.currentEffectiveAmount !== undefined ? this.currentEffectiveAmount : Number(amount);
+    const isFree = (Number(effectiveAmount) <= 0);
+
+    const method = isFree ? 'coupon' : (document.getElementById('proofPaymentMethod')?.value || 'instapay');
+    const refNum = isFree ? (this.appliedCouponCode || 'FREE_COUPON') : document.getElementById('proofRefNumber')?.value?.trim();
     const notes = document.getElementById('proofNotes')?.value?.trim() || null;
     const btn = document.getElementById('btnSubmitProof');
 
-    if (!this.currentProofImageData && !refNum) {
+    if (!isFree && !this.currentProofImageData && !refNum) {
       this.showToast('يرجى إرفاق صورة إيصال التحويل (الاسكرين شوت)', 'danger');
       return;
     }
 
     if (btn) {
       btn.disabled = true;
-      btn.innerText = 'جارٍ التأكيد...';
+      btn.innerText = isFree ? 'جارٍ تفعيل الاشتراك...' : 'جارٍ التأكيد...';
     }
 
-    const effectiveAmount = this.currentEffectiveAmount || Number(amount);
     const couponTag = this.appliedCouponCode ? `[كود خصم: ${this.appliedCouponCode}]` : '';
     const planTag = `[${planName} - ${billingCycle === 'yearly' ? 'اشتراك سنوي' : 'اشتراك شهري'}]`;
     const fullNotes = [planTag, couponTag, notes].filter(Boolean).join(' ');
@@ -10115,7 +10173,11 @@ https://centerly-eg.com/p/p16766044
       this.billingState.status = 'pending';
 
       this.closePaymentProofModal();
-      this.showToast('تم استلام إيصال التحويل بنجاح! الحالة الآن قيد المراجعة (Pending).', 'success');
+      if (isFree) {
+        this.showToast('تم تسجيل وتفعيل الاشتراك المجاني بنجاح! 🎉', 'success');
+      } else {
+        this.showToast('تم استلام إيصال التحويل بنجاح! الحالة الآن قيد المراجعة (Pending).', 'success');
+      }
       this.renderMainContent();
       try {
         await this.loadRouteData('billing');
@@ -10124,7 +10186,7 @@ https://centerly-eg.com/p/p16766044
       this.showToast(`فشل تسجيل إيصال الدفع: ${err.message || 'خطأ في الخادم'}`, 'danger');
       if (btn) {
         btn.disabled = false;
-        btn.innerText = 'تأكيد وإرسال الإيصال';
+        btn.innerText = isFree ? 'تأكيد الاشتراك مجاناً 🎉' : 'تأكيد وإرسال الإيصال';
       }
     }
   }

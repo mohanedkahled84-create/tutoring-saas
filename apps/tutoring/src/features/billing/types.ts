@@ -3,6 +3,7 @@ export type PaymentMethod =
   | "vodafone_cash"
   | "bank_transfer"
   | "cash"
+  | "coupon"
   | "other";
 
 export interface PaymentProofInput {

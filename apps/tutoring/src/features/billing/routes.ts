@@ -20,8 +20,8 @@ const createGiftCodeSchema = z.object({
 });
 
 const paymentProofSchema = z.object({
-  amount: z.number().positive("Amount must be a positive number"),
-  payment_method: z.enum(["instapay", "vodafone_cash", "bank_transfer", "cash", "other"]),
+  amount: z.number().min(0, "Amount must be a non-negative number"),
+  payment_method: z.enum(["instapay", "vodafone_cash", "bank_transfer", "cash", "coupon", "other"]),
   reference_number: z.string().max(100).optional().nullable(),
   proof_image_url: z.string().optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
