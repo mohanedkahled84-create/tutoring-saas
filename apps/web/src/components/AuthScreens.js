@@ -280,6 +280,9 @@ export function renderEmailVerificationScreen({ email = '', note = '' } = {}) {
             <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.4rem;">
               صلاحية الرمز 15 دقيقة فقط
             </div>
+            <div style="font-size: 0.785rem; color: #475569; margin-top: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.45rem 0.75rem; line-height: 1.4; text-align: center;">
+              💡 إذا لم تجد الرسالة في صندوق الوارد، يرجى مراجعة مجلد <strong>الرسائل غير المرغوب فيها (Spam)</strong> أو العروض الترويجية.
+            </div>
           </div>
 
           <button type="submit" id="btnVerifySubmit" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem; font-weight: 800; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, #0f766e, #0d9488); border: none;">
