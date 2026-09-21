@@ -84,13 +84,13 @@ export class EmailVerificationService {
 
   constructor(apiKey?: string, fromEmail?: string) {
     this.resendApiKey = apiKey || config.resendApiKey || process.env.RESEND_API_KEY || "";
-    const envFrom = process.env.RESEND_FROM_EMAIL;
+    const envFrom = process.env.RESEND_FROM_EMAIL || config.resendFromEmail;
     if (fromEmail) {
       this.fromEmail = fromEmail;
     } else if (envFrom && !envFrom.includes("resend.dev")) {
       this.fromEmail = envFrom;
     } else {
-      this.fromEmail = "Centrly <no-reply@centerly-eg.com>";
+      this.fromEmail = "Centrly <noreply@centerly-eg.com>";
     }
   }
 
