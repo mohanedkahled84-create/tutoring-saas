@@ -353,7 +353,7 @@ authRouter.post("/forgot-password", authRateLimiter, async (req: Request, res: R
   try {
     const { redirectTo } = req.body;
     const reqOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : undefined);
-    const targetRedirect = redirectTo || (reqOrigin ? `${reqOrigin}/` : "https://centrly-platform.vercel.app/");
+    const targetRedirect = redirectTo || (reqOrigin ? `${reqOrigin}/` : "https://centerly-eg.com/");
 
     const authService = getServices(req as AuthenticatedRequest).auth;
     await authService.forgotPassword(email, targetRedirect);

@@ -132,7 +132,7 @@ export function renderWhatsAppSettingsView(data = {}) {
             نموذج: رسالة ترحيبية عادية
           </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="
-            document.getElementById('testMsgInput').value = 'السلام عليكم ولي أمر الطالب (محمد أحمد).\\nحرصاً على متابعة المستوى الدراسي، رابط بوابة المتابعة المباشرة:\\nhttps://centerly-platform.vercel.app/p/p12345678\\n\\nيرجى حفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان وصول التقارير باستمرار.';
+            document.getElementById('testMsgInput').value = 'السلام عليكم ولي أمر الطالب (محمد أحمد).\\nحرصاً على متابعة المستوى الدراسي، رابط بوابة المتابعة المباشرة:\\nhttps://centerly-eg.com/p/p12345678\\n\\nيرجى حفظ هذا الرقم في جهات اتصالكم لتفعيل الروابط ولضمان وصول التقارير باستمرار.';
           " style="font-size: 0.78rem; background: var(--centrly-surface); color: var(--centrly-blue-700); border-color: var(--centrly-line);">
             نموذج: تجربة رسالة رابط بوابة ولي الأمر (مع تنبيه حفظ الرقم)
           </button>

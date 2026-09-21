@@ -67,7 +67,7 @@ export function deriveShortCode(studentId: string, type: "parent" | "student"): 
 export function buildShortPortalUrl(
   studentId: string,
   type: "parent" | "student",
-  canonicalOrigin = "https://centerly-platform.vercel.app"
+  canonicalOrigin = "https://centerly-eg.com"
 ): string {
   const code = deriveShortCode(studentId, type);
   return `${canonicalOrigin}/${type === "student" ? "s" : "p"}/${code}`;

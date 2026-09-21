@@ -1,6 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "alias": [
+    "centerly-eg.com",
+    "www.centerly-eg.com",
     "centerly-platform.vercel.app"
   ],
   "outputDirectory": ".",
@@ -29,12 +31,25 @@
       "has": [
         {
           "type": "host",
+          "value": "centerly-platform.vercel.app"
+        }
+      ],
+      "status": 308,
+      "headers": {
+        "Location": "https://centerly-eg.com/$1"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "has": [
+        {
+          "type": "host",
           "value": "centrly-platform.vercel.app"
         }
       ],
       "status": 308,
       "headers": {
-        "Location": "https://centerly-platform.vercel.app/$1"
+        "Location": "https://centerly-eg.com/$1"
       }
     },
     {
@@ -47,7 +62,7 @@
       ],
       "status": 308,
       "headers": {
-        "Location": "https://centerly-platform.vercel.app/$1"
+        "Location": "https://centerly-eg.com/$1"
       }
     },
     {
@@ -60,7 +75,7 @@
       ],
       "status": 308,
       "headers": {
-        "Location": "https://centerly-platform.vercel.app/$1"
+        "Location": "https://centerly-eg.com/$1"
       }
     },
     {
@@ -73,7 +88,7 @@
       ],
       "status": 308,
       "headers": {
-        "Location": "https://centerly-platform.vercel.app/$1"
+        "Location": "https://centerly-eg.com/$1"
       }
     },
     {
@@ -86,7 +101,7 @@
       ],
       "status": 308,
       "headers": {
-        "Location": "https://centerly-platform.vercel.app/$1"
+        "Location": "https://centerly-eg.com/$1"
       }
     },
     {
@@ -99,7 +114,7 @@
       ],
       "status": 308,
       "headers": {
-        "Location": "https://centerly-platform.vercel.app/$1"
+        "Location": "https://centerly-eg.com/$1"
       }
     },
     {
@@ -112,7 +127,7 @@
       ],
       "status": 308,
       "headers": {
-        "Location": "https://centerly-platform.vercel.app/$1"
+        "Location": "https://centerly-eg.com/$1"
       }
     },
     { "handle": "filesystem" },

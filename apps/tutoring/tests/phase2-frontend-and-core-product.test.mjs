@@ -93,11 +93,11 @@ test("DEV-PORTAL.3: generateParentPortalInviteMessage creates natural, respectfu
   const msg = generateParentPortalInviteMessage({
     student_name: "زياد أحمد",
     teacher_name: "مستر أحمد",
-    portal_url: "https://centerly-platform.vercel.app/parent-portal?token=test-123",
+    portal_url: "https://centerly-eg.com/parent-portal?token=test-123",
   });
   assert.ok(msg);
   assert.ok(msg.includes("زياد أحمد"));
-  assert.ok(msg.includes("https://centerly-platform.vercel.app/parent-portal?token=test-123"));
+  assert.ok(msg.includes("https://centerly-eg.com/parent-portal?token=test-123"));
   assert.ok(msg.includes("رابط المتابعة"));
   assert.ok(msg.includes("مستر أحمد"));
   assert.ok(msg.includes("حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً"), "Must instruct parent to save phone number first");
@@ -107,11 +107,11 @@ test("DEV-PORTAL.4: generateStudentPortalInviteMessage creates tailored student 
   const msg = generateStudentPortalInviteMessage({
     student_name: "زياد أحمد",
     teacher_name: "مستر أحمد",
-    portal_url: "https://centerly-platform.vercel.app/s/s16766044",
+    portal_url: "https://centerly-eg.com/s/s16766044",
   });
   assert.ok(msg);
   assert.ok(msg.includes("زياد أحمد"));
-  assert.ok(msg.includes("https://centerly-platform.vercel.app/s/s16766044"));
+  assert.ok(msg.includes("https://centerly-eg.com/s/s16766044"));
   assert.ok(msg.includes("بوابتك التعليمية"));
   assert.ok(msg.includes("حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً"), "Must instruct student to save phone number first");
 });
@@ -126,8 +126,8 @@ test("DEV-PORTAL.5: batchSendDualPortalLinks sends dual messages and enforces 24
     student_name: `طالب ${i + 1}`,
     student_phone: `010000000${(i + 1).toString().padStart(2, "0")}`,
     parent_phone: `011000000${(i + 1).toString().padStart(2, "0")}`,
-    student_portal_url: `https://centerly-platform.vercel.app/s/s${i + 1}`,
-    parent_portal_url: `https://centerly-platform.vercel.app/p/p${i + 1}`,
+    student_portal_url: `https://centerly-eg.com/s/s${i + 1}`,
+    parent_portal_url: `https://centerly-eg.com/p/p${i + 1}`,
   }));
 
   const res = await service.batchSendDualPortalLinks({
@@ -158,8 +158,8 @@ test("DEV-SHORT-LINKS: deriveShortCode and buildShortPortalUrl generate ultra-sh
   const parentUrl = buildShortPortalUrl(studentId, "parent");
   const studentUrl = buildShortPortalUrl(studentId, "student");
 
-  assert.equal(parentUrl, "https://centerly-platform.vercel.app/p/p16766044");
-  assert.equal(studentUrl, "https://centerly-platform.vercel.app/s/s16766044");
+  assert.equal(parentUrl, "https://centerly-eg.com/p/p16766044");
+  assert.equal(studentUrl, "https://centerly-eg.com/s/s16766044");
   assert.ok(parentUrl.length < 50);
 });
 

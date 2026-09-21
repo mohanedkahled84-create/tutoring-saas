@@ -195,14 +195,14 @@ publicRouter.get("/short-links/:code", async (req: Request, res: Response): Prom
 // GET /api/public/p/:code - Direct 302 Redirect for Parent Portal
 publicRouter.get("/p/:code", async (req: Request, res: Response): Promise<void> => {
   const code = (req.params.code || "").trim();
-  const canonicalOrigin = "https://centerly-platform.vercel.app";
+  const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-eg.com";
   res.redirect(`${canonicalOrigin}/p/${code}`);
 });
 
 // GET /api/public/s/:code - Direct 302 Redirect for Student Portal
 publicRouter.get("/s/:code", async (req: Request, res: Response): Promise<void> => {
   const code = (req.params.code || "").trim();
-  const canonicalOrigin = "https://centerly-platform.vercel.app";
+  const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-eg.com";
   res.redirect(`${canonicalOrigin}/s/${code}`);
 });
 

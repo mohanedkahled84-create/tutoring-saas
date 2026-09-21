@@ -7494,7 +7494,7 @@ class CentrlyApp {
 يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط والفتح مباشرة، ولتصلك تنبيهات الحصص والمذكرات الجديدة.
 
 *رابط بوابتك التعليمية المباشر:*
-https://centerly-platform.vercel.app/s/s16766044
+https://centerly-eg.com/s/s16766044
 
 - تحميل المذكرات وملازم الشرح وملفات الـ PDF.
 - معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها ورفع الحلول.
@@ -7512,7 +7512,7 @@ https://centerly-platform.vercel.app/s/s16766044
 يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط والفتح مباشرة، ولضمان استلام إشعارات وتقارير الطالب باستمرار دون انقطاع.
 
 *رابط المتابعة المباشر لولي الأمر:*
-https://centerly-platform.vercel.app/p/p16766044
+https://centerly-eg.com/p/p16766044
 
 - متابعة تسجيل الحضور والغياب لحظياً مع كل حصة.
 - الاطلاع على درجات الكويزات والامتحانات الدورية فور رصدها.
@@ -11788,7 +11788,7 @@ https://centerly-platform.vercel.app/p/p16766044
     const hwTitle = this.homeworkState?.currentHomework?.title || 'الواجب المنزلي';
     
     // Generate short student portal link
-    const canonicalOrigin = 'https://centerly-platform.vercel.app';
+    const canonicalOrigin = 'https://centerly-eg.com';
     const cleanSid = String(studentId || '').replace(/-/g, '').slice(0, 8);
     const studentPortalUrl = cleanSid ? `${canonicalOrigin}/s/s${cleanSid}` : `${canonicalOrigin}/parent-portal?portal=student`;
 

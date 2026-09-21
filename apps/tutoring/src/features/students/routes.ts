@@ -122,7 +122,7 @@ studentsRouter.get("/:id/parent-link", async (req: AuthenticatedRequest, res: Re
       await studentsService.updateStudent(studentId, { parent_portal_token: token }).catch(() => {});
     }
 
-    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-eg.com";
     const shortParentUrl = buildShortPortalUrl(studentId, "parent", canonicalOrigin);
     const shortStudentUrl = buildShortPortalUrl(studentId, "student", canonicalOrigin);
     const portalUrl = `/parent-portal?token=${token}`;
@@ -180,7 +180,7 @@ studentsRouter.post("/:id/send-parent-link", async (req: AuthenticatedRequest, r
       await studentsService.updateStudent(student.id, { portal_password: portalPassword }).catch(() => {});
     }
 
-    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-eg.com";
     const portalUrl = `${canonicalOrigin}/portal`;
 
     const whatsAppService = getServices(req).whatsapp;
@@ -261,7 +261,7 @@ studentsRouter.post("/:id/send-student-link", async (req: AuthenticatedRequest, 
       await studentsService.updateStudent(student.id, { portal_password: portalPassword }).catch(() => {});
     }
 
-    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-eg.com";
     const portalUrl = `${canonicalOrigin}/portal`;
 
     const whatsAppService = getServices(req).whatsapp;
@@ -340,7 +340,7 @@ studentsRouter.post("/batch-send-parent-links", async (req: AuthenticatedRequest
       return;
     }
 
-    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-eg.com";
     const subjectName = req.body?.subject_name || (req.user as any)?.subject_name || undefined;
     const studentsPayload = targetStudents.map((s) => {
       let token = s.parent_portal_token;
@@ -437,7 +437,7 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
     // Strict cap: 24 students max per batch/day
     targetStudents = targetStudents.slice(0, 24);
 
-    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-platform.vercel.app";
+    const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-eg.com";
     const subjectName = req.body?.subject_name || (req.user as any)?.subject_name || undefined;
     const studentsPayload = targetStudents.map((s) => {
       let token = s.parent_portal_token;
