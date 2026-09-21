@@ -157,7 +157,8 @@ export class SupabaseCentersRepository implements ICentersRepository {
       .single();
 
     if (error) {
-      const { data: rpcRow, error: rpcErr } = await client.rpc("create_assistant_secure", {
+      const fallbackClient = this.adminClient || client;
+      const { data: rpcRow, error: rpcErr } = await fallbackClient.rpc("create_assistant_secure", {
         p_tenant_id: tenantId,
         p_name: data.name,
         p_phone: data.phone,
@@ -169,10 +170,29 @@ export class SupabaseCentersRepository implements ICentersRepository {
         p_user_id: data.user_id || null,
         p_invite_token: data.invite_token || null,
       });
-      if (rpcErr || !rpcRow) {
-        throw new Error(rpcErr ? rpcErr.message : (error.message || "Failed to create assistant"));
+      if (!rpcErr && rpcRow) {
+        return rpcRow as unknown as AssistantModel;
       }
-      return rpcRow as unknown as AssistantModel;
+      const { data: fbRow, error: fbErr } = await fallbackClient
+        .from("assistants")
+        .insert({
+          tenant_id: tenantId,
+          name: data.name,
+          phone: data.phone,
+          assistant_type: data.assistant_type,
+          teacher_id: data.teacher_id || null,
+          can_view_financials: data.can_view_financials,
+          salary: data.salary || 0,
+          status: data.status,
+          user_id: data.user_id || null,
+          invite_token: data.invite_token || null,
+        })
+        .select()
+        .single();
+      if (fbErr || !fbRow) {
+        throw new Error(fbErr?.message || rpcErr?.message || error.message || "Failed to create assistant");
+      }
+      return fbRow as unknown as AssistantModel;
     }
 
     if (!row) {

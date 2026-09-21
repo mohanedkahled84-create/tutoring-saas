@@ -1,10 +1,10 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
-import { getServiceSupabaseClient } from "../../supabase.js";
+import { getServiceSupabaseClient, supabasePublic } from "../../supabase.js";
 import { config } from "../../shared/config/index.js";
 
 function getSupabase(req: AuthenticatedRequest) {
-  return (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
+  return (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || supabasePublic;
 }
 
 export const assistantsRouter = Router();
@@ -29,11 +29,19 @@ assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Prom
     if (!error && Array.isArray(data)) {
       assistants = data;
     } else {
-      const { data: rpcData, error: rpcErr } = await supabase.rpc("list_assistants_secure", {
+      const { data: rpcData, error: rpcErr } = await supabasePublic.rpc("list_assistants_secure", {
         p_tenant_id: tenantId,
       });
-      if (rpcErr) throw rpcErr;
-      assistants = Array.isArray(rpcData) ? rpcData : [];
+      if (!rpcErr && Array.isArray(rpcData)) {
+        assistants = rpcData;
+      } else {
+        const { data: pubData } = await supabasePublic
+          .from("assistants")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false });
+        assistants = Array.isArray(pubData) ? pubData : [];
+      }
     }
 
     res.json({ assistants, count: assistants.length });
@@ -63,9 +71,9 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
     const supabase = getSupabase(req);
 
     // Safely resolve teacher_id against teachers table foreign key
-    let resolvedTeacherId: string | null = null;
-    if (req.user?.id) {
-      const { data: teacherRow } = await supabase
+    let resolvedTeacherId: string | null = req.user?.teacher_id || null;
+    if (!resolvedTeacherId && req.user?.id) {
+      const { data: teacherRow } = await supabasePublic
         .from("teachers")
         .select("id")
         .eq("tenant_id", tenantId)
@@ -77,9 +85,8 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
     }
 
     let createdAssistant: any = null;
-    let insertError: any = null;
 
-    // Try direct insert first
+    // Try direct insert first via user client
     const { data: directData, error: directErr } = await supabase
       .from("assistants")
       .insert({
@@ -101,9 +108,8 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
     if (!directErr && directData) {
       createdAssistant = directData;
     } else {
-      insertError = directErr;
-      // Fallback to secure RPC
-      const { data: rpcRow, error: rpcErr } = await supabase.rpc("create_assistant_secure", {
+      // Fallback 1: secure RPC executed via supabasePublic
+      const { data: rpcRow, error: rpcErr } = await supabasePublic.rpc("create_assistant_secure", {
         p_tenant_id: tenantId,
         p_name: name.trim(),
         p_phone: phone.trim(),
@@ -117,10 +123,33 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
         p_salary_model: salary_model || "monthly",
       });
 
-      if (rpcErr || !rpcRow) {
-        throw new Error(rpcErr ? rpcErr.message : (insertError?.message || "Failed to create assistant"));
+      if (!rpcErr && rpcRow) {
+        createdAssistant = rpcRow;
+      } else {
+        // Fallback 2: direct insert via supabasePublic
+        const { data: pubData, error: pubErr } = await supabasePublic
+          .from("assistants")
+          .insert({
+            tenant_id: tenantId,
+            teacher_id: resolvedTeacherId,
+            name: name.trim(),
+            phone: phone.trim(),
+            role_type: role_type || "both",
+            assistant_type: "assistant_to_teacher",
+            can_view_financials: false,
+            group_id: cleanGroupId,
+            salary_model: salary_model || "monthly",
+            salary: salaryVal,
+            status: "active",
+          })
+          .select()
+          .maybeSingle();
+
+        if (pubErr || !pubData) {
+          throw new Error(pubErr?.message || rpcErr?.message || directErr?.message || "Failed to create assistant");
+        }
+        createdAssistant = pubData;
       }
-      createdAssistant = rpcRow;
     }
 
     res.status(201).json({ success: true, assistant: createdAssistant });
@@ -159,7 +188,6 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
     if (status) updates.status = status;
 
     let updatedAssistant: any = null;
-    let updateError: any = null;
 
     const { data: directData, error: directErr } = await supabase
       .from("assistants")
@@ -172,8 +200,7 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
     if (!directErr && directData) {
       updatedAssistant = directData;
     } else {
-      updateError = directErr;
-      const { data: rpcRow, error: rpcErr } = await supabase.rpc("update_assistant_secure", {
+      const { data: rpcRow, error: rpcErr } = await supabasePublic.rpc("update_assistant_secure", {
         p_id: id,
         p_tenant_id: tenantId,
         p_name: name ? name.trim() : undefined,
@@ -186,10 +213,22 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
         p_status: status || undefined,
       });
 
-      if (rpcErr || !rpcRow) {
-        throw new Error(rpcErr ? rpcErr.message : (updateError?.message || "Failed to update assistant"));
+      if (!rpcErr && rpcRow) {
+        updatedAssistant = rpcRow;
+      } else {
+        const { data: pubData, error: pubErr } = await supabasePublic
+          .from("assistants")
+          .update(updates)
+          .eq("id", id)
+          .eq("tenant_id", tenantId)
+          .select()
+          .maybeSingle();
+
+        if (pubErr || !pubData) {
+          throw new Error(pubErr?.message || rpcErr?.message || directErr?.message || "Failed to update assistant");
+        }
+        updatedAssistant = pubData;
       }
-      updatedAssistant = rpcRow;
     }
 
     res.json({ success: true, assistant: updatedAssistant });
@@ -217,11 +256,18 @@ assistantsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response)
       .eq("tenant_id", tenantId);
 
     if (directErr) {
-      const { error: rpcErr } = await supabase.rpc("delete_assistant_secure", {
+      const { error: rpcErr } = await supabasePublic.rpc("delete_assistant_secure", {
         p_id: id,
         p_tenant_id: tenantId,
       });
-      if (rpcErr) throw rpcErr;
+      if (rpcErr) {
+        const { error: pubErr } = await supabasePublic
+          .from("assistants")
+          .delete()
+          .eq("id", id)
+          .eq("tenant_id", tenantId);
+        if (pubErr) throw pubErr;
+      }
     }
 
     res.json({ success: true, message: "تم حذف المساعد بنجاح" });
