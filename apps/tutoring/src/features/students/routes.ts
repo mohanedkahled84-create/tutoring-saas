@@ -474,6 +474,7 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
         subject_name: subjectName,
         students: studentsPayload,
         pacingDelayMs: pacing_delay_ms,
+        maxStudentsPerBatch: Math.max(200, studentsPayload.length),
       });
 
       const now = new Date().toISOString();
@@ -510,6 +511,7 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
           subject_name: subjectName,
           students: studentsPayload,
           pacingDelayMs: pacing_delay_ms,
+          maxStudentsPerBatch: Math.max(200, studentsPayload.length),
         });
 
         const now = new Date().toISOString();

@@ -85,16 +85,16 @@ test("DEV-65: calculateJitterDelay stays within configured bounds", () => {
     assert.ok(delay >= 3900 && delay <= 9100, `Delay ${delay} was out of expected range`);
   }
 
-  // Test default bounds (20s to 40s)
+  // Test default bounds (2s to 4s)
   for (let i = 0; i < 20; i++) {
     const defaultDelay = calculateJitterDelay();
-    assert.ok(defaultDelay >= 19900 && defaultDelay <= 40100, `Default delay ${defaultDelay} was out of 20s-40s range`);
+    assert.ok(defaultDelay >= 1900 && defaultDelay <= 4100, `Default delay ${defaultDelay} was out of 2s-4s range`);
   }
 
-  // Test initial delay bounds (5s to 10s)
+  // Test initial delay bounds (1s to 2.5s)
   for (let i = 0; i < 20; i++) {
     const initDelay = calculateInitialJitterDelay();
-    assert.ok(initDelay >= 4900 && initDelay <= 10100, `Initial delay ${initDelay} was out of 5s-10s range`);
+    assert.ok(initDelay >= 950 && initDelay <= 2550, `Initial delay ${initDelay} was out of 1s-2.5s range`);
   }
 });
 

@@ -51,7 +51,7 @@ whatsappRouter.get("/logs", async (req: AuthenticatedRequest, res: Response): Pr
       phone: s.parent_phone,
       type: idx % 2 === 0 ? "تقرير كويز" : "تقرير حضور",
       status: "sent",
-      time: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }),
+      time: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Cairo" }),
       reason: null,
     }));
 
