@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
-import { getServiceSupabaseClient } from "../../supabase.js";
+import { getServiceSupabaseClient, supabasePublic } from "../../supabase.js";
 import { config } from "../../shared/config/index.js";
 import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
 
@@ -155,7 +155,22 @@ materialsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response):
   }
 
   try {
-    const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
+    const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || supabasePublic;
+
+    // Purge any storage files associated with this homework material
+    try {
+      const bucketName = "homework-submissions";
+      const folderPrefix = `${tenantId}/${id}`;
+      const { data: folderFiles } = await supabasePublic.storage
+        .from(bucketName)
+        .list(folderPrefix);
+
+      if (Array.isArray(folderFiles) && folderFiles.length > 0) {
+        const paths = folderFiles.map((f: any) => `${folderPrefix}/${f.name}`);
+        await supabasePublic.storage.from(bucketName).remove(paths).catch(() => {});
+      }
+    } catch (_) {}
+
     const { error } = await supabase
       .from("study_materials")
       .delete()

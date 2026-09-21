@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
-import { getServiceSupabaseClient } from "../../supabase.js";
+import { getServiceSupabaseClient, supabasePublic } from "../../supabase.js";
 import { config } from "../../shared/config/index.js";
 import { verifyParentPortalToken } from "../../shared/utils/tokens.js";
 import { logger } from "../../shared/utils/logger.js";
@@ -75,6 +75,31 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       res.status(404).json({ error: { code: "NOT_FOUND", message: "الواجب غير موجود أو لا ينتمي لنفس المعلم" } });
       return;
     }
+
+    // Clean up any previous uploaded file for this student/material before saving new one
+    try {
+      const { data: priorSub } = await supabase
+        .from("homework_submissions")
+        .select("file_url")
+        .eq("material_id", material_id)
+        .eq("student_id", studentId)
+        .maybeSingle();
+
+      if (priorSub?.file_url) {
+        const bucketName = "homework-submissions";
+        const marker = `/${bucketName}/`;
+        let oldPath = "";
+        if (priorSub.file_url.includes(marker)) {
+          oldPath = priorSub.file_url.substring(priorSub.file_url.indexOf(marker) + marker.length).split("?")[0];
+        } else if (!priorSub.file_url.startsWith("http")) {
+          oldPath = priorSub.file_url;
+        }
+        if (oldPath) {
+          const clientForStorage = supabasePublic || supabase;
+          await clientForStorage.storage.from(bucketName).remove([decodeURIComponent(oldPath)]).catch(() => {});
+        }
+      }
+    } catch (_) {}
 
     // 3. If base64 file_data provided, inspect magic bytes & upload securely (C-05)
     if (file_data) {
@@ -323,27 +348,54 @@ homeworkRouter.put("/submissions/:id/review", async (req: AuthenticatedRequest, 
       return;
     }
 
-    // 2. If approved, purge the physical file from Supabase Storage to lighten memory and storage load
-    if (status === "approved" && existingSub.file_url) {
+    // 2. If approved, purge the physical file and any student files from Supabase Storage
+    if (status === "approved") {
       try {
         const bucketName = "homework-submissions";
-        const marker = `/${bucketName}/`;
-        let storagePath = "";
-        if (existingSub.file_url.includes(marker)) {
-          storagePath = existingSub.file_url.substring(existingSub.file_url.indexOf(marker) + marker.length).split("?")[0];
-        } else if (!existingSub.file_url.startsWith("http")) {
-          storagePath = existingSub.file_url;
+        const filesToDelete: string[] = [];
+
+        // Add the direct file URL path if present
+        if (existingSub.file_url) {
+          const marker = `/${bucketName}/`;
+          let storagePath = "";
+          if (existingSub.file_url.includes(marker)) {
+            storagePath = existingSub.file_url.substring(existingSub.file_url.indexOf(marker) + marker.length).split("?")[0];
+          } else if (!existingSub.file_url.startsWith("http")) {
+            storagePath = existingSub.file_url;
+          }
+          if (storagePath) {
+            filesToDelete.push(decodeURIComponent(storagePath));
+          }
         }
 
-        if (storagePath) {
-          const cleanPath = decodeURIComponent(storagePath);
-          const { error: removeErr } = await supabase.storage
+        // Also search folder ${tenantId}/${existingSub.material_id} for any files belonging to this student
+        if (tenantId && existingSub.material_id && existingSub.student_id) {
+          const folderPrefix = `${tenantId}/${existingSub.material_id}`;
+          const { data: folderFiles } = await supabasePublic.storage
             .from(bucketName)
-            .remove([cleanPath]);
+            .list(folderPrefix);
+
+          if (Array.isArray(folderFiles)) {
+            for (const f of folderFiles) {
+              if (f.name && f.name.startsWith(`${existingSub.student_id}_`)) {
+                filesToDelete.push(`${folderPrefix}/${f.name}`);
+              }
+            }
+          }
+        }
+
+        // Deduplicate and remove all from storage
+        const uniquePaths = Array.from(new Set(filesToDelete));
+        if (uniquePaths.length > 0) {
+          const storageClient = supabasePublic || supabase;
+          const { error: removeErr } = await storageClient.storage
+            .from(bucketName)
+            .remove(uniquePaths);
+
           if (removeErr) {
-            logger.warn(`[Homework] Warning removing file from storage: ${removeErr.message}`);
+            logger.warn(`[Homework] Warning removing files from storage: ${removeErr.message}`);
           } else {
-            logger.info(`[Homework] File removed from storage after approval: ${cleanPath}`);
+            logger.info(`[Homework] Successfully purged ${uniquePaths.length} file(s) from storage after approval: ${uniquePaths.join(", ")}`);
           }
         }
       } catch (storageErr) {
