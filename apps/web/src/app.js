@@ -534,7 +534,7 @@ class CentrlyApp {
       return;
     }
 
-    const hasToken = authService.isAuthenticated();
+    let hasToken = authService.isAuthenticated();
     const hasCachedSession = authService.hasSession();
 
     if (!hasToken && !hasCachedSession) {
@@ -547,8 +547,37 @@ class CentrlyApp {
       return;
     }
 
-    // User is authenticated (has cached user profile and/or valid token)
+    // If access token is expired or missing, but session / refresh token exists, refresh it synchronously BEFORE making route requests
+    if (!hasToken && hasCachedSession) {
+      try {
+        const refreshed = await authService.tryRefreshSession();
+        if (refreshed) {
+          hasToken = true;
+        }
+      } catch (err) {
+        console.warn('Silent refresh on init encountered error:', err);
+      }
+    }
+
+    // Retrieve active cached or refreshed user profile
     this.user = authService.getUser();
+
+    // If user profile is missing but token is valid, fetch fresh profile from /auth/me
+    if (!this.user && hasToken) {
+      try {
+        const me = await authService.getProfile();
+        if (me?.user) {
+          this.user = me.user;
+          authService.setUser(this.user);
+        }
+      } catch (_) {}
+    }
+
+    // Safety fallback: only if completely unable to resolve any user or session credentials
+    if (!this.user && !hasToken && !authService.hasSession()) {
+      this.renderLanding();
+      return;
+    }
 
     // Clean up any lingering view=login or view=signup query params from address bar
     if (urlParams.has('view')) {
@@ -563,27 +592,13 @@ class CentrlyApp {
       }
     }
 
-    // Background session verification and silent refresh (never blocks initial render or kicks user)
-    if (!hasToken && hasCachedSession) {
-      authService.tryRefreshSession().then((refreshed) => {
-        if (refreshed) {
-          authService.getProfile().then(me => {
-            if (me?.user) {
-              this.user = { ...this.user, ...me.user };
-              authService.setUser(this.user);
-            }
-          }).catch(() => {});
-        }
-      }).catch(() => {});
-    } else {
-      // Revalidate fresh profile in the background without blocking render or kicking user
-      authService.getProfile().then(me => {
-        if (me?.user) {
-          this.user = { ...this.user, ...me.user };
-          authService.setUser(this.user);
-        }
-      }).catch(() => {});
-    }
+    // Revalidate fresh profile in the background without blocking render or kicking user
+    authService.getProfile().then(me => {
+      if (me?.user) {
+        this.user = { ...this.user, ...me.user };
+        authService.setUser(this.user);
+      }
+    }).catch(() => {});
 
     const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';

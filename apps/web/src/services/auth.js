@@ -103,25 +103,57 @@ export const authService = {
     } catch (_) {}
   },
 
-  isAuthenticated() {
-    // Requires both logged_in flag and an active token
+  isTokenExpired(token) {
+    if (!token) return true;
     try {
-      const loggedIn = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_logged_in') === '1') ||
-                       (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_logged_in') === '1');
+      const parts = token.split('.');
+      if (parts.length !== 3) return false;
+      const base64Url = parts[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      const parsed = JSON.parse(jsonPayload);
+      if (!parsed.exp) return false;
+      // Buffer of 30 seconds before expiration
+      return Date.now() >= (parsed.exp * 1000 - 30000);
+    } catch (_) {
+      return false;
+    }
+  },
+
+  isAuthenticated() {
+    try {
       const token = this.getToken();
-      return Boolean(loggedIn && token);
+      if (!token) return false;
+      return !this.isTokenExpired(token);
     } catch (_) {
       return false;
     }
   },
 
   hasSession() {
-    // Returns true if we have cached user data even without a valid token
+    // Returns true if cached user data or valid credentials exist across page reloads
     try {
+      const user = this.getUser();
+      const token = this.getToken();
+      const refreshToken = this.getRefreshToken();
       const loggedIn = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_logged_in') === '1') ||
                        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_logged_in') === '1');
-      const user = this.getUser();
-      return Boolean(loggedIn && user);
+      const hasAny = Boolean(user || token || refreshToken || loggedIn);
+      if (hasAny) {
+        // Self-heal the logged_in flag if it was cleared or missing
+        if (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_logged_in') !== '1') {
+          localStorage.setItem('centrly_logged_in', '1');
+        }
+        if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_logged_in') !== '1') {
+          sessionStorage.setItem('centrly_logged_in', '1');
+        }
+      }
+      return hasAny;
     } catch (_) {
       return false;
     }
@@ -130,7 +162,13 @@ export const authService = {
   async tryRefreshSession() {
     try {
       const refreshData = await performSilentRefresh();
-      return Boolean(refreshData && refreshData.token);
+      if (refreshData && refreshData.token) {
+        const currentUser = this.getUser() || {};
+        const mergedUser = refreshData.user ? { ...currentUser, ...refreshData.user } : currentUser;
+        this.setSession(mergedUser, refreshData.token, refreshData.refresh_token);
+        return true;
+      }
+      return false;
     } catch (_) {
       return false;
     }

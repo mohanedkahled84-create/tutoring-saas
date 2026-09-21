@@ -50,30 +50,42 @@ export async function performSilentRefresh() {
             localStorage.setItem('centrly_token', data.token);
             if (data.refresh_token) localStorage.setItem('centrly_refresh_token', data.refresh_token);
             localStorage.setItem('centrly_logged_in', '1');
+            if (data.user) {
+              const prevStr = localStorage.getItem('centrly_user');
+              const prev = prevStr ? JSON.parse(prevStr) : {};
+              localStorage.setItem('centrly_user', JSON.stringify({ ...prev, ...data.user }));
+            }
           }
           if (typeof sessionStorage !== 'undefined') {
             sessionStorage.setItem('centrly_token', data.token);
             if (data.refresh_token) sessionStorage.setItem('centrly_refresh_token', data.refresh_token);
             sessionStorage.setItem('centrly_logged_in', '1');
+            if (data.user) {
+              const prevStr = sessionStorage.getItem('centrly_user');
+              const prev = prevStr ? JSON.parse(prevStr) : {};
+              sessionStorage.setItem('centrly_user', JSON.stringify({ ...prev, ...data.user }));
+            }
           }
         } catch (_) {}
         return data;
       }
 
-      // Only invalidate session if server explicitly rejects refresh token as invalid/revoked
+      // Only invalidate tokens if server explicitly rejects refresh token as permanently revoked/invalid
       if (res.status === 401 || res.status === 400) {
-        const errMsg = String(data?.error?.message || data?.message || '').toLowerCase();
-        if (errMsg.includes('invalid_refresh_token') || errMsg.includes('not valid') || errMsg.includes('revoked')) {
+        const errMsg = String(data?.error?.message || data?.message || data?.error || '').toLowerCase();
+        const isExplicitRevocation = errMsg.includes('invalid_refresh_token') ||
+                                     errMsg.includes('already used') ||
+                                     errMsg.includes('token not found') ||
+                                     errMsg.includes('refresh token revoked');
+        if (isExplicitRevocation) {
           try {
             if (typeof localStorage !== 'undefined') {
               localStorage.removeItem('centrly_token');
               localStorage.removeItem('centrly_refresh_token');
-              localStorage.removeItem('centrly_logged_in');
             }
             if (typeof sessionStorage !== 'undefined') {
               sessionStorage.removeItem('centrly_token');
               sessionStorage.removeItem('centrly_refresh_token');
-              sessionStorage.removeItem('centrly_logged_in');
             }
           } catch (_) {}
         }
@@ -148,13 +160,6 @@ export async function request(endpoint, options = {}) {
             });
           }
         }
-
-        // Remove only the expired access token; keep refresh_token, user data, and logged_in flag
-        // so the session remains persistent across page reloads
-        try {
-          if (typeof localStorage !== 'undefined') localStorage.removeItem('centrly_token');
-          if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('centrly_token');
-        } catch (_) {}
       }
 
       let errMsg = `Request failed with status ${res.status}`;
