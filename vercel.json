@@ -111,6 +111,22 @@
       "dest": "/apps/web/src/$1"
     },
     {
+      "src": "/portal/?$",
+      "dest": "/portal.html"
+    },
+    {
+      "src": "/portal/(.*)",
+      "dest": "/portal.html"
+    },
+    {
+      "src": "/p/(.*)",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/s/(.*)",
+      "dest": "/index.html"
+    },
+    {
       "src": "/apps/web/src/(.*)",
       "headers": {
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
