@@ -254,4 +254,40 @@ test("DEV-SL.3: SupabaseAdminOpsRepository - getTenant maps single tenant owner 
   assert.equal(tenant.students_count, 120);
 });
 
+test("DEV-HQ: AdminOpsService - purgeTestData safely cleans test accounts and test proofs", async () => {
+  const repo = new FakeAdminOpsRepository();
+  const service = new AdminOpsService(repo);
+
+  repo.tenants = [
+    { id: "t-real-1", name: "أستاذ أحمد طارق - لغة عربية", status: "active", subscription_status: "active" },
+    { id: "t-test-1", name: "سنتر التجربة والاختبار", status: "active", subscription_status: "trial" },
+    { id: "t-test-2", name: "Test Chemistry Academy", status: "trial", subscription_status: "trial" },
+  ];
+
+  repo.paymentProofs = [
+    { id: "p-1", tenant_id: "t-real-1", amount: 899, payment_method: "instapay", status: "approved", created_at: "2026-09-01" },
+    { id: "p-2", tenant_id: "t-test-1", amount: 100, payment_method: "vodafone_cash", status: "rejected", created_at: "2026-09-02" },
+    { id: "p-3", tenant_id: "t-test-2", amount: 1, payment_method: "instapay", status: "pending", admin_notes: "test payment", created_at: "2026-09-02" },
+  ];
+
+  const result = await service.purgeTestData("admin-123");
+
+  assert.equal(result.deleted_tenants_count, 2);
+  assert.equal(result.deleted_proofs_count, 2);
+  assert.equal(repo.tenants.length, 1);
+  assert.equal(repo.tenants[0].name, "أستاذ أحمد طارق - لغة عربية");
+  assert.equal(repo.paymentProofs.length, 1);
+  assert.equal(repo.paymentProofs[0].id, "p-1");
+});
+
+test("DEV-HQ: AdminOpsService - testWebhookAlert dispatches test notification successfully", async () => {
+  const repo = new FakeAdminOpsRepository();
+  const service = new AdminOpsService(repo);
+
+  const res = await service.testWebhookAlert("admin-123");
+  assert.equal(res.success, true);
+  assert.ok(res.message.includes("إشعار تجريبي"));
+  assert.equal(repo.messageLogs.length, 1);
+});
+
 
