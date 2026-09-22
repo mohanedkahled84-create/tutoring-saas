@@ -112,14 +112,21 @@ test("WEB SYNTAX: studentBarcodeCard.js and AuthScreens.js import cleanly withou
   assert.ok(typeof authModule.renderAuthScreens === "function", "renderAuthScreens must be a function");
 });
 
-test("WEB DOM: apps/web/index.html and root index.html must contain <div id=\"app\"></div>", () => {
+test("WEB DOM: apps/web/index.html and root index.html must contain <div id=\"app\"></div> and <base href=\"/\">", () => {
   const webIndexPath = path.resolve(__dirname, "../../web/index.html");
   const webContent = fs.readFileSync(webIndexPath, "utf-8");
   assert.ok(webContent.includes('<div id="app"></div>'), "apps/web/index.html must contain <div id=\"app\"></div>");
+  assert.ok(webContent.includes('<base href="/">'), "apps/web/index.html must contain <base href=\"/\">");
 
   const rootIndexPath = path.resolve(__dirname, "../../../index.html");
   const rootContent = fs.readFileSync(rootIndexPath, "utf-8");
   assert.ok(rootContent.includes('<div id="app"></div>'), "Root index.html must contain <div id=\"app\"></div>");
+  assert.ok(rootContent.includes('<base href="/">'), "Root index.html must contain <base href=\"/\">");
+
+  const vercelPath = path.resolve(__dirname, "../../../vercel.json");
+  const vercelConfig = JSON.parse(fs.readFileSync(vercelPath, "utf-8"));
+  const hasFallback = vercelConfig.routes && vercelConfig.routes.some(r => r.src === "/(.*)" && r.dest === "/index.html");
+  assert.ok(hasFallback, "vercel.json must have SPA fallback route to /index.html for /portal to work");
 });
 
 test("OFFLINE-ATTENDANCE: app.js contains persistent queue methods and non-destructive sync", () => {
