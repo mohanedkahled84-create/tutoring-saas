@@ -204,10 +204,9 @@ test("IMPORT-GROUP-SELECTION: Sheet import and add student modals support group 
   const appPath = path.resolve(__dirname, "../../web/src/app.js");
   const appContent = fs.readFileSync(appPath, "utf-8");
 
-  // Helper renderGroupOptionsForImport exists and provides choices
   assert.ok(appContent.includes("renderGroupOptionsForImport(selectedGroupId"), "app.js must define renderGroupOptionsForImport");
   assert.ok(appContent.includes("value=\"__NEW_GROUP__\""), "Group options must include __NEW_GROUP__ choice");
-  assert.ok(appContent.includes("➕ إضافة مجموعة جديدة"), "Group options must display + New Group option label");
+  assert.ok(appContent.includes("إضافة مجموعة جديدة الآن..."), "Group options must display + New Group option label");
 
   // Step 1 modal includes dropdown and quick creator
   assert.ok(appContent.includes("id=\"importGroupId\""), "Step 1 must have importGroupId select element");

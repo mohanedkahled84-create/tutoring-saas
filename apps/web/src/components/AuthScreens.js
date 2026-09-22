@@ -69,26 +69,7 @@ export function renderAuthScreens() {
             </div>
             <div class="form-group" style="margin-top: 0.85rem;">
               <label class="form-label">المادة التعليمية</label>
-              <input type="text" id="signupSubject" class="form-input" placeholder="مثال: لغة عربية، رياضيات، فيزياء..." list="signupSubjectsList" autocomplete="off">
-              <datalist id="signupSubjectsList">
-                <option value="لغة عربية">
-                <option value="رياضيات">
-                <option value="لغة إنجليزية">
-                <option value="فيزياء">
-                <option value="كيمياء">
-                <option value="أحياء">
-                <option value="جيولوجيا">
-                <option value="تاريخ">
-                <option value="جغرافيا">
-                <option value="فلسفة ومنطق">
-                <option value="علم نفس واجتماع">
-                <option value="لغة فرنسية">
-                <option value="لغة ألمانية">
-                <option value="لغة إيطالية">
-                <option value="دراسات اجتماعية">
-                <option value="علوم">
-                <option value="حاسب آلي / تكنولوجيا">
-              </datalist>
+              <input type="text" id="signupSubject" class="form-input" placeholder="اكتب المادة التعليمية (مثال: لغة عربية، فيزياء، رياضيات...)" autocomplete="off">
             </div>
           </div>
 

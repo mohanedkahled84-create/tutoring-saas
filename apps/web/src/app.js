@@ -644,9 +644,19 @@ class CentrlyApp {
       }
     }
 
-    try {
-      const pinStatus = await request('/settings/security-pin').catch(() => null);
+    this.restoreSessionState();
+    this.flushOfflineAttendanceQueue();
+
+    this.routeLoadingState[this.currentRoute] = !this.hasRouteData(this.currentRoute);
+    this.studentsLoading = this.currentRoute === 'students' && (!Array.isArray(this.students) || this.students.length === 0);
+    this.renderApp();
+    this.prefetchCoreData();
+    this.startProactiveSessionRefresher();
+
+    // Async background security PIN check without blocking initial render
+    request('/settings/security-pin').then(pinStatus => {
       if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
+        const changed = this.hasSecurityPin !== pinStatus.has_pin;
         this.hasSecurityPin = pinStatus.has_pin;
         if (this.hasSecurityPin) {
           this.isFinancialUnlocked = false;
@@ -658,30 +668,25 @@ class CentrlyApp {
         try {
           localStorage.setItem('centrly_has_security_pin', pinStatus.has_pin ? 'true' : 'false');
         } catch (_) {}
+        if (changed && this.currentRoute === 'finance') {
+          this.renderMainContent();
+        }
       }
-    } catch (_) {}
+    }).catch(() => {});
 
-    this.restoreSessionState();
-    this.flushOfflineAttendanceQueue();
-
-    // Cross-Device Sync: Check server for active session if local state is empty
+    // Async background active session sync without blocking initial render
     if (!this.sessionState?.id) {
-      try {
-        const activeSessions = await request('/sessions?status=in_progress').catch(() => null);
+      request('/sessions?status=in_progress').then(async (activeSessions) => {
         const activeList = Array.isArray(activeSessions) ? activeSessions : (activeSessions?.sessions || []);
         if (activeList.length > 0) {
           await this.syncAndResumeServerSession(activeList[0].id);
+          this.renderMainContent();
         }
-      } catch (_) {}
+      }).catch(() => {});
     } else if (this.sessionState?.status === 'in_progress') {
       this.startLiveSessionSync();
     }
 
-    this.routeLoadingState[this.currentRoute] = !this.hasRouteData(this.currentRoute);
-    this.studentsLoading = this.currentRoute === 'students' && (!Array.isArray(this.students) || this.students.length === 0);
-    this.renderApp();
-    this.prefetchCoreData();
-    this.startProactiveSessionRefresher();
     try {
       await this.loadRouteData(this.currentRoute);
     } finally {
@@ -8284,14 +8289,14 @@ https://centerly-eg.com/p/p16766044
   renderGroupOptionsForImport(selectedGroupId = null) {
     const groups = this.groups || [];
     let html = `<option value="">-- اختر المجموعة التي تريد إضافة الطلاب إليها --</option>`;
-    html += `<option value="__NEW_GROUP__" style="font-weight: 700; color: #2563eb; background: #eff6ff;">➕ إضافة مجموعة جديدة الآن...</option>`;
+    html += `<option value="__NEW_GROUP__" style="font-weight: 700; color: #2563eb; background: #eff6ff;">+ إضافة مجموعة جديدة الآن...</option>`;
     if (groups.length > 0) {
       html += `<optgroup label="المجموعات المسجلة لديك (${groups.length}):">`;
       groups.forEach(g => {
         const isSelected = String(g.id) === String(selectedGroupId) ? 'selected' : '';
         const center = g.center_name || g.centerName ? ` (${escapeHtml(g.center_name || g.centerName)})` : '';
         const schedule = g.day_of_week ? ` • ${escapeHtml(g.day_of_week)}` : '';
-        html += `<option value="${escapeHtml(g.id)}" ${isSelected}>📚 ${escapeHtml(g.name)}${center}${schedule}</option>`;
+        html += `<option value="${escapeHtml(g.id)}" ${isSelected}>${escapeHtml(g.name)}${center}${schedule}</option>`;
       });
       html += `</optgroup>`;
     }
