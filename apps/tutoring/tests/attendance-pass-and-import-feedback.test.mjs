@@ -125,8 +125,9 @@ test("WEB DOM: apps/web/index.html and root index.html must contain <div id=\"ap
 
   const vercelPath = path.resolve(__dirname, "../../../vercel.json");
   const vercelConfig = JSON.parse(fs.readFileSync(vercelPath, "utf-8"));
-  const hasFallback = vercelConfig.routes && vercelConfig.routes.some(r => r.src === "/(.*)" && r.dest === "/index.html");
-  assert.ok(hasFallback, "vercel.json must have SPA fallback route to /index.html for /portal to work");
+  const hasFallback = (vercelConfig.routes && vercelConfig.routes.some(r => r.dest === "/index.html")) ||
+                      (vercelConfig.rewrites && vercelConfig.rewrites.some(r => r.destination === "/index.html"));
+  assert.ok(hasFallback, "vercel.json must have SPA fallback rewrite to /index.html for /portal to work");
 });
 
 test("OFFLINE-ATTENDANCE: app.js contains persistent queue methods and non-destructive sync", () => {

@@ -1,167 +1,173 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "cleanUrls": true,
-  "routes": [
+  "redirects": [
     {
-      "src": "/(.*)",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "centerly-app.vercel.app"
         }
       ],
-      "status": 308,
-      "headers": {
-        "Location": "https://centerly-eg.com/$1"
-      }
+      "destination": "https://centerly-eg.com/$1",
+      "permanent": true
     },
     {
-      "src": "/(.*)",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "centerly-platform.vercel.app"
         }
       ],
-      "status": 308,
-      "headers": {
-        "Location": "https://centerly-eg.com/$1"
-      }
+      "destination": "https://centerly-eg.com/$1",
+      "permanent": true
     },
     {
-      "src": "/(.*)",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "centrly-platform.vercel.app"
         }
       ],
-      "status": 308,
-      "headers": {
-        "Location": "https://centerly-eg.com/$1"
-      }
+      "destination": "https://centerly-eg.com/$1",
+      "permanent": true
     },
     {
-      "src": "/(.*)",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "centrly.vercel.app"
         }
       ],
-      "status": 308,
-      "headers": {
-        "Location": "https://centerly-eg.com/$1"
-      }
+      "destination": "https://centerly-eg.com/$1",
+      "permanent": true
     },
     {
-      "src": "/(.*)",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "centrly-app.vercel.app"
         }
       ],
-      "status": 308,
-      "headers": {
-        "Location": "https://centerly-eg.com/$1"
-      }
+      "destination": "https://centerly-eg.com/$1",
+      "permanent": true
     },
     {
-      "src": "/(.*)",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "web-gules-xi-53.vercel.app"
         }
       ],
-      "status": 308,
-      "headers": {
-        "Location": "https://centerly-eg.com/$1"
-      }
+      "destination": "https://centerly-eg.com/$1",
+      "permanent": true
     },
     {
-      "src": "/(.*)",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "centrly-platform-mohaned-khaled1.vercel.app"
         }
       ],
-      "status": 308,
-      "headers": {
-        "Location": "https://centerly-eg.com/$1"
-      }
+      "destination": "https://centerly-eg.com/$1",
+      "permanent": true
     },
     {
-      "src": "/(.*)",
+      "source": "/(.*)",
       "has": [
         {
           "type": "host",
           "value": "centerly-platform-mohaned-khaled1.vercel.app"
         }
       ],
-      "status": 308,
-      "headers": {
-        "Location": "https://centerly-eg.com/$1"
-      }
+      "destination": "https://centerly-eg.com/$1",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/apps/web/src/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
     },
     {
-      "src": "/src/(.*)",
-      "dest": "/apps/web/src/$1"
+      "source": "/src/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
     },
     {
-      "src": "/portal/?$",
-      "dest": "/portal.html"
+      "source": "/(.*\\.(?:png|ico|jpg|jpeg|svg|webp|woff2|woff|ttf|webmanifest))",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=2592000"
+        }
+      ]
     },
     {
-      "src": "/portal/(.*)",
-      "dest": "/portal.html"
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(), geolocation=(), payment=()"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://*.railway.app; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/src/:path*",
+      "destination": "/apps/web/src/:path*"
     },
     {
-      "src": "/p/(.*)",
-      "dest": "/index.html"
+      "source": "/portal",
+      "destination": "/index.html"
     },
     {
-      "src": "/s/(.*)",
-      "dest": "/index.html"
+      "source": "/portal/:path*",
+      "destination": "/index.html"
     },
     {
-      "src": "/apps/web/src/(.*)",
-      "headers": {
-        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
-      },
-      "continue": true
+      "source": "/p/:path*",
+      "destination": "/index.html"
     },
     {
-      "src": "/src/(.*)",
-      "headers": {
-        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
-      },
-      "continue": true
+      "source": "/s/:path*",
+      "destination": "/index.html"
     },
     {
-      "src": "/(.*\\.(?:png|ico|jpg|jpeg|svg|webp|woff2|woff|ttf|webmanifest))",
-      "headers": {
-        "Cache-Control": "public, max-age=604800, stale-while-revalidate=2592000"
-      },
-      "continue": true
-    },
-    {
-      "src": "/(.*)",
-      "headers": {
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "Referrer-Policy": "strict-origin-when-cross-origin",
-        "Permissions-Policy": "camera=(self), microphone=(), geolocation=(), payment=()",
-        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://*.railway.app; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com"
-      },
-      "continue": true
-    },
-    { "handle": "filesystem" },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/((?!api/|apps/).*)",
+      "destination": "/index.html"
     }
   ]
 }
