@@ -4,7 +4,13 @@ import { config } from "./shared/config/index.js";
 // Anonymous / public client
 export const supabasePublic: SupabaseClient = createClient(
   config.supabaseUrl,
-  config.supabaseAnonKey
+  config.supabaseAnonKey,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
 );
 
 // Factory function to get client scoped to a user JWT token (enforces RLS)

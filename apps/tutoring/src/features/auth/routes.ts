@@ -172,8 +172,29 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
       expires_in: result.expires_in,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Failed to refresh session token";
-    res.status(401).json({ error: { code: "UNAUTHORIZED", message } });
+    const rawMsg = err instanceof Error ? err.message : "Failed to refresh session token";
+    const lower = rawMsg.toLowerCase();
+    const isExplicitRevocation = lower.includes("invalid") || lower.includes("expired") || lower.includes("revoked") || lower.includes("already used") || lower.includes("not found");
+
+    if (isExplicitRevocation) {
+      res.status(401).json({
+        error: {
+          code: "UNAUTHORIZED",
+          message: "INVALID_REFRESH_TOKEN",
+          details: rawMsg,
+        },
+      });
+      return;
+    }
+
+    console.error(`[Auth /refresh] Transient refresh error: ${rawMsg}`);
+    res.status(500).json({
+      error: {
+        code: "REFRESH_TEMPORARY_FAILURE",
+        message: "Unable to refresh session due to temporary server error. Please retry.",
+        details: rawMsg,
+      },
+    });
   }
 });
 

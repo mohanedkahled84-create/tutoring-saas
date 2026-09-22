@@ -1,7 +1,7 @@
-import { authService } from './services/auth.js?v=4.8.7';
-import { request, API_BASE_URL } from './services/api.js?v=4.8.8';
+import { authService } from './services/auth.js?v=4.9.25';
+import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.25';
 import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
-import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=4.9.24';
+import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=4.9.25';
 import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.20';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
@@ -681,6 +681,7 @@ class CentrlyApp {
     this.studentsLoading = this.currentRoute === 'students' && (!Array.isArray(this.students) || this.students.length === 0);
     this.renderApp();
     this.prefetchCoreData();
+    this.startProactiveSessionRefresher();
     try {
       await this.loadRouteData(this.currentRoute);
     } finally {
@@ -689,6 +690,58 @@ class CentrlyApp {
       this.studentsLoading = false;
       this.renderMainContent();
     }
+  }
+
+  startProactiveSessionRefresher() {
+    if (this._sessionRefresherInitialized) return;
+    this._sessionRefresherInitialized = true;
+
+    const checkAndRefresh = async () => {
+      if (!authService.hasSession()) return;
+      const token = authService.getToken();
+      if (!token) {
+        try { await authService.tryRefreshSession(); } catch (_) {}
+        return;
+      }
+
+      // Proactively refresh if token will expire within 15 minutes (900 seconds)
+      if (isJwtExpired(token, 900)) {
+        try {
+          await authService.tryRefreshSession();
+        } catch (err) {
+          console.warn('[ProactiveSessionRefresher] Background refresh deferred:', err);
+        }
+      }
+    };
+
+    // Run periodic check every 3 minutes
+    if (this._sessionRefreshTimer) clearInterval(this._sessionRefreshTimer);
+    this._sessionRefreshTimer = setInterval(checkAndRefresh, 3 * 60 * 1000);
+
+    // Immediate check when window regains focus or browser tab becomes visible
+    window.addEventListener('focus', checkAndRefresh);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        checkAndRefresh();
+      }
+    });
+
+    // Cross-tab synchronization via storage events
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'centrly_user' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && parsed.id) {
+            this.user = parsed;
+          }
+        } catch (_) {}
+      } else if (e.key === 'centrly_token' && e.newValue) {
+        checkAndRefresh();
+      }
+    });
+
+    // Initial check right after bootstrap
+    setTimeout(checkAndRefresh, 1000);
   }
 
   getAppEl() {
@@ -1625,6 +1678,7 @@ class CentrlyApp {
         }
       } catch (_) {}
 
+      this.startProactiveSessionRefresher();
       this.renderApp();
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
@@ -3064,7 +3118,8 @@ class CentrlyApp {
       }
 
       if (this.routeErrors) {
-        this.routeErrors[route] = isAuthErr
+        const hasRefresh = Boolean(authService.getRefreshToken());
+        this.routeErrors[route] = (isAuthErr && !hasRefresh)
           ? 'انتهت صلاحية الجلسة. يرجى إعادة تسجيل الدخول لمتابعة العمل بأمان.'
           : (err.message || 'حدث خطأ أثناء تحميل البيانات من الخادم. يرجى التحقق من الاتصال والمحاولة مجدداً.');
       }

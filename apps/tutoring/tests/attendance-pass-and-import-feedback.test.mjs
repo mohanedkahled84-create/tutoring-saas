@@ -168,3 +168,27 @@ test("NAVBAR-MOBILE: sidebarToggle is non-wrapping, flex-shrink 0, and live badg
   const appContent = fs.readFileSync(appPath, "utf-8");
   assert.ok(appContent.includes("renderNavLiveBadgeHtml"), "app.js must import and use renderNavLiveBadgeHtml");
 });
+
+test("SESSION-RESILIENCE: Proactive session refresher, Web Lock deduplication, and stateless Supabase client", () => {
+  const appPath = path.resolve(__dirname, "../../web/src/app.js");
+  const appContent = fs.readFileSync(appPath, "utf-8");
+
+  assert.ok(appContent.includes("startProactiveSessionRefresher()"), "app.js must define and call startProactiveSessionRefresher");
+  assert.ok(appContent.includes("isJwtExpired(token, 900)"), "Proactive refresher must check expiration buffer");
+  assert.ok(appContent.includes("window.addEventListener('focus'"), "Must check on window focus");
+  assert.ok(appContent.includes("window.addEventListener('storage'"), "Must sync across tabs on storage event");
+
+  const apiPath = path.resolve(__dirname, "../../web/src/services/api.js");
+  const apiContent = fs.readFileSync(apiPath, "utf-8");
+  assert.ok(apiContent.includes("export function isJwtExpired"), "api.js must export isJwtExpired");
+  assert.ok(apiContent.includes("centrly_auth_refresh_lock"), "api.js must use Web Locks for multi-tab deduplication");
+
+  const supabasePath = path.resolve(__dirname, "../src/supabase.ts");
+  const supabaseContent = fs.readFileSync(supabasePath, "utf-8");
+  assert.ok(/supabasePublic[\s\S]*persistSession:\s*false/.test(supabaseContent), "supabasePublic must be stateless with persistSession: false");
+
+  const routesPath = path.resolve(__dirname, "../src/features/auth/routes.ts");
+  const routesContent = fs.readFileSync(routesPath, "utf-8");
+  assert.ok(routesContent.includes("REFRESH_TEMPORARY_FAILURE"), "Auth refresh route must not return 401 on transient server errors");
+});
+

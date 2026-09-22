@@ -157,7 +157,11 @@ export class SupabaseAuthRepository implements IAuthRepository {
     });
 
     if (error || !data.session || !data.user) {
-      throw new Error("INVALID_REFRESH_TOKEN");
+      const rawMsg = error?.message || "INVALID_REFRESH_TOKEN";
+      console.warn(`[SupabaseAuthRepository.refreshToken] Refresh session failed: ${rawMsg}`);
+      const lower = rawMsg.toLowerCase();
+      const isInvalid = lower.includes("invalid") || lower.includes("expired") || lower.includes("revoked") || lower.includes("already used") || lower.includes("not found");
+      throw new Error(isInvalid ? "INVALID_REFRESH_TOKEN" : rawMsg);
     }
 
     const fullName = (data.user.user_metadata?.full_name as string) || null;

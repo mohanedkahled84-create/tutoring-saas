@@ -1,4 +1,4 @@
-import { request, API_BASE_URL, performSilentRefresh } from './api.js';
+import { request, API_BASE_URL, performSilentRefresh, isJwtExpired } from './api.js';
 
 export const authService = {
   getUser() {
@@ -23,8 +23,9 @@ export const authService = {
 
   getToken() {
     try {
-      return (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_token')) ||
-             (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_token')) || null;
+      const local = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_token') : null;
+      if (local) return local;
+      return (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_token')) || null;
     } catch (_) {
       return null;
     }
@@ -32,8 +33,9 @@ export const authService = {
 
   getRefreshToken() {
     try {
-      return (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_refresh_token')) ||
-             (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_refresh_token')) || null;
+      const local = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_refresh_token') : null;
+      if (local) return local;
+      return (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_refresh_token')) || null;
     } catch (_) {
       return null;
     }
@@ -104,25 +106,7 @@ export const authService = {
   },
 
   isTokenExpired(token) {
-    if (!token) return true;
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) return false;
-      const base64Url = parts[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      const parsed = JSON.parse(jsonPayload);
-      if (!parsed.exp) return false;
-      // Buffer of 30 seconds before expiration
-      return Date.now() >= (parsed.exp * 1000 - 30000);
-    } catch (_) {
-      return false;
-    }
+    return isJwtExpired(token, 30);
   },
 
   isAuthenticated() {

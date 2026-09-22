@@ -20,8 +20,117 @@ export const API_BASE_URL = (typeof window !== 'undefined' && window.__CENTRLY_A
 let activeRefreshPromise = null;
 
 /**
- * Mutex-protected silent token refresh.
- * Serializes concurrent refresh calls so multiple parallel requests await the same refresh operation.
+ * Validates if a JWT token is expired with a customizable safety buffer.
+ */
+export function isJwtExpired(token, bufferSeconds = 30) {
+  if (!token) return true;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const parsed = JSON.parse(jsonPayload);
+    if (!parsed.exp) return false;
+    return Date.now() >= (parsed.exp * 1000 - bufferSeconds * 1000);
+  } catch (_) {
+    return false;
+  }
+}
+
+async function _executeSilentRefreshCore() {
+  try {
+    // 1. Cross-Tab Deduplication: Check if another tab already refreshed the token in localStorage
+    const currentToken = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_token') : null;
+    if (currentToken && !isJwtExpired(currentToken, 60)) {
+      const currentRefresh = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_refresh_token') : null;
+      const userStr = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_user') : null;
+      let parsedUser = null;
+      try { parsedUser = userStr ? JSON.parse(userStr) : null; } catch (_) {}
+      return {
+        token: currentToken,
+        refresh_token: currentRefresh,
+        user: parsedUser,
+      };
+    }
+
+    const refreshToken = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_refresh_token')) ||
+                          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_refresh_token'));
+    if (!refreshToken) {
+      return null;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.token) {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('centrly_token', data.token);
+          if (data.refresh_token) localStorage.setItem('centrly_refresh_token', data.refresh_token);
+          localStorage.setItem('centrly_logged_in', '1');
+          if (data.user) {
+            const prevStr = localStorage.getItem('centrly_user');
+            const prev = prevStr ? JSON.parse(prevStr) : {};
+            localStorage.setItem('centrly_user', JSON.stringify({ ...prev, ...data.user }));
+          }
+        }
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('centrly_token', data.token);
+          if (data.refresh_token) sessionStorage.setItem('centrly_refresh_token', data.refresh_token);
+          sessionStorage.setItem('centrly_logged_in', '1');
+          if (data.user) {
+            const prevStr = sessionStorage.getItem('centrly_user');
+            const prev = prevStr ? JSON.parse(prevStr) : {};
+            sessionStorage.setItem('centrly_user', JSON.stringify({ ...prev, ...data.user }));
+          }
+        }
+      } catch (_) {}
+      return data;
+    }
+
+    // Only invalidate tokens if server explicitly rejects refresh token as permanently revoked/invalid (401)
+    if (res.status === 401) {
+      const errMsg = String(data?.error?.message || data?.message || data?.error || '').toLowerCase();
+      const isExplicitRevocation = errMsg.includes('invalid_refresh_token') ||
+                                   errMsg.includes('already used') ||
+                                   errMsg.includes('token not found') ||
+                                   errMsg.includes('refresh token revoked');
+      if (isExplicitRevocation) {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem('centrly_token');
+            localStorage.removeItem('centrly_refresh_token');
+          }
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.removeItem('centrly_token');
+            sessionStorage.removeItem('centrly_refresh_token');
+          }
+        } catch (_) {}
+      }
+    }
+
+    // On 500, 502, 503, network drop: PRESERVE refresh token so session is NOT destroyed prematurely
+    return null;
+  } catch (err) {
+    console.warn('Silent refresh network exception:', err);
+    return null;
+  }
+}
+
+/**
+ * Mutex and Web-Lock protected silent token refresh.
+ * Coordinates across tabs and concurrent promises to prevent token family revocation.
  */
 export async function performSilentRefresh() {
   if (activeRefreshPromise) {
@@ -30,71 +139,15 @@ export async function performSilentRefresh() {
 
   activeRefreshPromise = (async () => {
     try {
-      const refreshToken = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_refresh_token')) ||
-                            (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_refresh_token'));
-      if (!refreshToken) {
-        return null;
+      if (typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request) {
+        return await navigator.locks.request('centrly_auth_refresh_lock', { timeout: 10000 }, async () => {
+          return await _executeSilentRefreshCore();
+        }).catch(err => {
+          console.warn('[performSilentRefresh] Web Lock fallback:', err);
+          return _executeSilentRefreshCore();
+        });
       }
-
-      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.token) {
-        try {
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('centrly_token', data.token);
-            if (data.refresh_token) localStorage.setItem('centrly_refresh_token', data.refresh_token);
-            localStorage.setItem('centrly_logged_in', '1');
-            if (data.user) {
-              const prevStr = localStorage.getItem('centrly_user');
-              const prev = prevStr ? JSON.parse(prevStr) : {};
-              localStorage.setItem('centrly_user', JSON.stringify({ ...prev, ...data.user }));
-            }
-          }
-          if (typeof sessionStorage !== 'undefined') {
-            sessionStorage.setItem('centrly_token', data.token);
-            if (data.refresh_token) sessionStorage.setItem('centrly_refresh_token', data.refresh_token);
-            sessionStorage.setItem('centrly_logged_in', '1');
-            if (data.user) {
-              const prevStr = sessionStorage.getItem('centrly_user');
-              const prev = prevStr ? JSON.parse(prevStr) : {};
-              sessionStorage.setItem('centrly_user', JSON.stringify({ ...prev, ...data.user }));
-            }
-          }
-        } catch (_) {}
-        return data;
-      }
-
-      // Only invalidate tokens if server explicitly rejects refresh token as permanently revoked/invalid
-      if (res.status === 401 || res.status === 400) {
-        const errMsg = String(data?.error?.message || data?.message || data?.error || '').toLowerCase();
-        const isExplicitRevocation = errMsg.includes('invalid_refresh_token') ||
-                                     errMsg.includes('already used') ||
-                                     errMsg.includes('token not found') ||
-                                     errMsg.includes('refresh token revoked');
-        if (isExplicitRevocation) {
-          try {
-            if (typeof localStorage !== 'undefined') {
-              localStorage.removeItem('centrly_token');
-              localStorage.removeItem('centrly_refresh_token');
-            }
-            if (typeof sessionStorage !== 'undefined') {
-              sessionStorage.removeItem('centrly_token');
-              sessionStorage.removeItem('centrly_refresh_token');
-            }
-          } catch (_) {}
-        }
-      }
-
-      return null;
-    } catch (err) {
-      console.warn('Silent refresh network exception:', err);
-      return null;
+      return await _executeSilentRefreshCore();
     } finally {
       activeRefreshPromise = null;
     }
