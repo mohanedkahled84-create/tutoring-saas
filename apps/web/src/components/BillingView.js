@@ -193,35 +193,6 @@ export function renderBillingView(data = {}, user = {}) {
 
       </div>
 
-      <!-- Promo / Discount Code Voucher Box in BillingView -->
-      <div class="card" style="margin: 0.5rem 0 0; background: #ffffff; border: 1.5px dashed var(--centrly-blue-700); border-radius: 14px; padding: 1.15rem 1.35rem; box-shadow: 0 4px 12px rgba(37,99,235,0.06);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <span style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #eff6ff; color: var(--centrly-blue-700); border: 1px solid #bfdbfe; flex-shrink: 0;">
-              ${getIcon('gift', 20, 'var(--centrly-blue-700)')}
-            </span>
-            <div>
-              <div style="font-weight: 800; font-size: 0.98rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
-                <span>لديك كود خصم أو بروموكود اشتراك؟</span>
-                <span class="badge badge-blue" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">تخفيض فوري</span>
-              </div>
-              <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.15rem;">
-                أدخل الكود لتخفيض قيمة الاشتراك فوراً عند الدفع وتطبيق التخفيض على جميع الباقات.
-              </div>
-            </div>
-          </div>
-          <div style="display: flex; gap: 0.5rem; min-width: 280px; flex: 1; max-width: 400px;">
-            <input type="text" id="billingDiscountCodeInput" class="form-input" placeholder="اكتب كود الخصم هنا (مثال: CENTERLY)" style="text-transform: uppercase; font-weight: 800; font-family: monospace; font-size: 0.9rem;" autocomplete="off" value="${escapeHtml(window.centrlyApp?.appliedCouponCode || '')}">
-            <button type="button" id="btnApplyBillingDiscount" class="btn btn-primary" onclick="window.centrlyApp.applyBillingCouponFromView()" style="font-weight: 800; font-size: 0.875rem; padding: 0.55rem 1.4rem; white-space: nowrap; cursor: pointer;">
-              تطبيق الخصم
-            </button>
-          </div>
-        </div>
-        <div id="billingDiscountFeedback" style="${window.centrlyApp?.appliedCouponData ? 'display: block;' : 'display: none;'} margin-top: 0.75rem; font-size: 0.85rem; font-weight: 700; padding: 0.5rem 0.85rem; border-radius: 8px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0;">
-          ${window.centrlyApp?.appliedCouponData ? `تم تفعيل كود الخصم (${escapeHtml(window.centrlyApp.appliedCouponCode)}): خصم بقيمة ${window.centrlyApp.appliedCouponData.discount_percent ? `${window.centrlyApp.appliedCouponData.discount_percent}%` : `${window.centrlyApp.appliedCouponData.discount_amount} ج.م`} على قيمة الاشتراك!` : ''}
-        </div>
-      </div>
-
       <!-- Pricing Plans Comparison Grid -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; align-items: stretch;">
         ${plans.map(plan => {

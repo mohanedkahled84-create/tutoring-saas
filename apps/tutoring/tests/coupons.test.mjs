@@ -122,6 +122,17 @@ test("DEV-COUPONS: validateCoupon accurately computes discounts for created code
   assert.equal(resFixed.valid, true);
   assert.equal(resFixed.discount_amount, 50);
   assert.equal(resFixed.final_amount, 350);
+
+  // Validate 100% discount with numeric string (e.g. from Postgres numeric column)
+  await service.createGiftCode({
+    code: "CEN100",
+    discount_percent: "100",
+  });
+  const res100 = await service.validateCoupon("CEN100", 499);
+  assert.equal(res100.valid, true);
+  assert.equal(res100.discount_percent, 100);
+  assert.equal(res100.discount_amount, 499);
+  assert.equal(res100.final_amount, 0);
 });
 
 test("DEV-COUPONS: list, toggle, and delete lifecycle of promo codes", async () => {

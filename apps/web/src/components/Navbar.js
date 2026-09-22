@@ -50,7 +50,7 @@ export function renderNavbar(user, activeSessionSummary = null) {
         ${isAdmin ? '<span class="badge topbar-admin-badge" style="background: #1e293b; color: #f8fafc; font-weight: 700; border: 1px solid #334155; flex-shrink: 0;">لوحة المؤسس (Centrly HQ)</span>' : ''}
 
         <div id="navLiveSessionBadgeContainer" style="display: inline-flex; align-items: center; min-width: 0;">
-          ${activeSessionSummary ? renderNavLiveBadgeHtml(activeSessionSummary) : ''}
+          ${(activeSessionSummary && !isAdmin) ? renderNavLiveBadgeHtml(activeSessionSummary) : ''}
         </div>
       </div>
 

@@ -123,7 +123,13 @@ export function renderBusinessOwnerDashboard(data = {}) {
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
         
         <!-- 1. All-Time Collected Real Cash -->
-        <div class="card" style="margin: 0; border-top: 4px solid #10b981; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div class="card" 
+          onclick="window.centrlyApp.openRevenueDetailsModal('all_time')"
+          style="margin: 0; border-top: 4px solid #10b981; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;"
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(16, 185, 129, 0.15)'"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.03)'"
+          title="اضغط لعرض تفاصيل التحويلات والإيصالات المعتمدة"
+        >
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">إجمالي النقدية المحصلة (كاش فعلي)</span>
             <span style="color: #10b981; display: flex;">${getIcon('billing', 18)}</span>
@@ -131,14 +137,23 @@ export function renderBusinessOwnerDashboard(data = {}) {
           <div style="font-size: 1.85rem; font-weight: 900; color: #047857; margin: 0.35rem 0; font-family: monospace;">
             ${(overview.total_collected_egp || 0).toLocaleString('ar-EG')} <span style="font-size: 0.95rem; font-family: 'Cairo'; font-weight: 700;">ج.م</span>
           </div>
-          <div style="font-size: 0.75rem; color: #64748b; display: flex; align-items: center; gap: 0.3rem;">
-            ${getIcon('check', 12, '#10b981')}
-            <span>من واقع <strong>${overview.approved_proofs_count || 0}</strong> إيصال دفع معتمد حتى اللحظة</span>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #64748b;">
+            <span style="display: flex; align-items: center; gap: 0.3rem;">
+              ${getIcon('check', 12, '#10b981')}
+              <span>من واقع <strong>${overview.approved_proofs_count || 0}</strong> إيصال دفع</span>
+            </span>
+            <span class="badge" style="background: #ecfdf5; color: #047857; font-size: 0.7rem; font-weight: 800; padding: 2px 7px; border-radius: 6px;">عرض التفاصيل 🔍</span>
           </div>
         </div>
 
         <!-- 2. This Month's Real Collected Cash -->
-        <div class="card" style="margin: 0; border-top: 4px solid #0284c7; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div class="card" 
+          onclick="window.centrlyApp.openRevenueDetailsModal('this_month')"
+          style="margin: 0; border-top: 4px solid #0284c7; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;"
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(2, 132, 199, 0.15)'"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.03)'"
+          title="اضغط لعرض تفاصيل تحويلات هذا الشهر"
+        >
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">أرباح هذا الشهر (${currentMonthName})</span>
             <span style="color: #0284c7; display: flex;">${getIcon('activity', 18)}</span>
@@ -146,8 +161,9 @@ export function renderBusinessOwnerDashboard(data = {}) {
           <div style="font-size: 1.85rem; font-weight: 900; color: #0369a1; margin: 0.35rem 0; font-family: monospace;">
             ${(overview.this_month_collected_egp || 0).toLocaleString('ar-EG')} <span style="font-size: 0.95rem; font-family: 'Cairo'; font-weight: 700;">ج.م</span>
           </div>
-          <div style="font-size: 0.75rem; color: #64748b;">
-            صافي مبالغ التحويلات المعتمدة خلال الشهر الجاري
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #64748b;">
+            <span>صافي التحويلات المعتمدة هذا الشهر</span>
+            <span class="badge" style="background: #f0f9ff; color: #0369a1; font-size: 0.7rem; font-weight: 800; padding: 2px 7px; border-radius: 6px;">عرض التفاصيل 🔍</span>
           </div>
         </div>
 
@@ -166,7 +182,13 @@ export function renderBusinessOwnerDashboard(data = {}) {
         </div>
 
         <!-- 4. Expected Next Month Normalized MRR -->
-        <div class="card" style="margin: 0; border-top: 4px solid #d97706; background: linear-gradient(180deg, #fffbeb, #fff); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div class="card" 
+          onclick="window.centrlyApp.openExpectedMrrModal()"
+          style="margin: 0; border-top: 4px solid #d97706; background: linear-gradient(180deg, #fffbeb, #fff); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;"
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(217, 119, 6, 0.15)'"
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.03)'"
+          title="اضغط لعرض تفاصيل وحسبة الإيراد الشهري المتوقع"
+        >
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.8rem; color: #92400e; font-weight: 800;">الأرباح الشهرية القادمة المتوقعة (الإيراد الشهري التقديري)</span>
             <span style="color: #d97706; display: flex;">${getIcon('reports', 18)}</span>
@@ -174,8 +196,9 @@ export function renderBusinessOwnerDashboard(data = {}) {
           <div style="font-size: 1.85rem; font-weight: 900; color: #b45309; margin: 0.35rem 0; font-family: monospace;">
             ${(overview.expected_next_month_mrr || 0).toLocaleString('ar-EG')} <span style="font-size: 0.95rem; font-family: 'Cairo'; font-weight: 700;">ج.م</span>
           </div>
-          <div style="font-size: 0.725rem; color: #b45309; font-weight: 700; line-height: 1.4;">
-            محسوبة بالأسعار الطبيعية للباقات بعد انتهاء فترات الخصم الترويجية
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.725rem; color: #b45309; font-weight: 700;">
+            <span>بالأسعار الطبيعية للباقات بدون خصم</span>
+            <span class="badge" style="background: #fef3c7; color: #92400e; font-size: 0.7rem; font-weight: 800; padding: 2px 7px; border-radius: 6px;">تفاصيل الحسبة 🔍</span>
           </div>
         </div>
 
@@ -246,7 +269,11 @@ export function renderBusinessOwnerDashboard(data = {}) {
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;">
             ${pendingProofs.slice(0, 4).map(proof => {
               const tenantName = proof.tenants?.name || proof.tenant_name || 'مؤسسة تعليمية';
-              const methodLabel = proof.payment_method === 'vodafone_cash' ? 'فودافون كاش' : 'إنستاباي';
+              const notesText = proof.admin_notes || proof.notes || '';
+              const couponMatch = notesText.match(/\[كود خصم:\s*([^\]]+)\]/);
+              const couponInfo = couponMatch ? couponMatch[1].trim() : (proof.payment_method === 'coupon' ? (proof.reference_number || 'كود خصم') : null);
+              const isZeroOrFree = Number(proof.amount || 0) === 0 || proof.payment_method === 'coupon';
+              const methodLabel = proof.payment_method === 'vodafone_cash' ? 'فودافون كاش' : (isZeroOrFree ? 'كود خصم (مجاني)' : 'إنستاباي');
               return `
                 <div style="background: #fff; border: 1.5px solid #fde68a; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
                   <div>
@@ -255,15 +282,22 @@ export function renderBusinessOwnerDashboard(data = {}) {
                         <div style="font-weight: 900; color: #0f172a; font-size: 1rem;">${escapeHtml(tenantName)}</div>
                         <div style="font-size: 0.75rem; color: #64748b;">${formatArabicDate(proof.created_at)}</div>
                       </div>
-                      <div style="font-size: 1.15rem; font-weight: 900; color: #047857; font-family: monospace;">
-                        ${Number(proof.amount || 0).toLocaleString('ar-EG')} ج.م
+                      <div style="font-size: 1.15rem; font-weight: 900; color: ${isZeroOrFree ? '#059669' : '#047857'}; font-family: monospace;">
+                        ${Number(proof.amount || 0).toLocaleString('ar-EG')} ج.م ${isZeroOrFree ? '<span style="font-size: 0.75rem; font-weight: 800; color: #10b981;">(مجاني)</span>' : ''}
                       </div>
                     </div>
 
+                    ${couponInfo ? `
+                      <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 0.35rem 0.5rem; margin-bottom: 0.5rem; font-size: 0.775rem; font-weight: 800; color: #065f46; display: flex; align-items: center; justify-content: space-between;">
+                        <span>🎁 كود الخصم: <strong style="color: #047857;">${escapeHtml(couponInfo)}</strong></span>
+                        <span class="badge" style="background: #10b981; color: #fff; font-size: 0.7rem; padding: 0.1rem 0.4rem;">${isZeroOrFree ? 'خصم 100%' : 'تخفيض'}</span>
+                      </div>
+                    ` : ''}
+
                     <div style="font-size: 0.8rem; color: #334155; margin-bottom: 0.75rem; background: #f8fafc; padding: 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0;">
                       <div><b>الوسيلة:</b> ${methodLabel}</div>
-                      <div><b>المرجع/المحفظة:</b> <span style="font-family: monospace;" dir="ltr">${escapeHtml(proof.reference_number || 'غير مسجل')}</span></div>
-                      ${proof.notes ? `<div><b>ملاحظة:</b> ${escapeHtml(proof.notes)}</div>` : ''}
+                      <div><b>المرجع/المحفظة:</b> <span style="font-family: monospace;" dir="ltr">${escapeHtml(proof.reference_number || (isZeroOrFree ? 'كود خصم' : 'غير مسجل'))}</span></div>
+                      ${notesText ? `<div><b>ملاحظة:</b> ${escapeHtml(notesText)}</div>` : ''}
                     </div>
 
                     ${proof.proof_image_url ? `

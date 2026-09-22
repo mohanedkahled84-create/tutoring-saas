@@ -1,7 +1,7 @@
 import { authService } from './services/auth.js?v=4.9.25';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.25';
 import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
-import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=4.9.25';
+import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.0';
 import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.20';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
@@ -29,7 +29,7 @@ import { renderCenterSettlementsView } from './components/CenterSettlementsView.
 import { renderLandingView } from './components/LandingView.js?v=4.8.7';
 import { renderMaterialsView } from './components/MaterialsView.js?v=2.9.0';
 import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.js?v=2.1.0';
-import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js';
+import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js?v=5.1.0';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js';
 import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.9.9';
@@ -4785,6 +4785,9 @@ class CentrlyApp {
   }
 
   getActiveSessionSummary() {
+    if (this.user?.role === 'admin' || this.currentRoute === 'admin-dashboard' || this.currentRoute === 'admin-tenants' || this.currentRoute === 'admin-proofs') {
+      return null;
+    }
     if (this.sessionState?.id && this.sessionState.status === 'in_progress') {
       return {
         id: this.sessionState.id,
@@ -4798,6 +4801,10 @@ class CentrlyApp {
   updateNavbarBadge() {
     const container = document.getElementById('navLiveSessionBadgeContainer');
     if (!container) return;
+    if (this.user?.role === 'admin') {
+      container.innerHTML = '';
+      return;
+    }
     const summary = this.getActiveSessionSummary();
     container.innerHTML = summary ? renderNavLiveBadgeHtml(summary) : '';
   }
@@ -10672,19 +10679,22 @@ https://centerly-eg.com/p/p16766044
               </div>
             </div>
 
-            <!-- Discount Coupon Section -->
-            <div style="margin-bottom: 1rem; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 0.75rem 0.9rem;">
-              <label class="form-label" style="font-weight: 700; font-size: 0.825rem; color: #334155; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
-                <span>${getIcon('gift', 14, 'var(--centrly-blue-700)')}</span>
-                <span>لديك كود هدية أو كوبون خصم؟</span>
+            <!-- Discount Coupon Section in Payment Modal -->
+            <div style="margin-bottom: 1rem; background: #f8fafc; border: 1.5px dashed var(--centrly-blue-700); border-radius: 12px; padding: 0.85rem 1rem;">
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #1e3a8a; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: flex; align-items: center; gap: 0.4rem;">
+                  ${getIcon('gift', 16, 'var(--centrly-blue-700)')}
+                  <span>لديك كود خصم أو بروموكود اشتراك؟</span>
+                </span>
+                <span class="badge badge-blue" style="font-size: 0.7rem; padding: 0.1rem 0.4rem;">تخفيض فوري</span>
               </label>
               <div style="display: flex; gap: 0.4rem;">
-                <input type="text" id="couponCodeInput" class="form-input" placeholder="اكتب كود الخصم" style="flex: 1; text-transform: uppercase; font-weight: 700; font-family: monospace; font-size: 0.85rem;" autocomplete="off" value="${escapeHtml(this.appliedCouponCode || '')}" ${this.appliedCouponData ? 'disabled' : ''}>
-                <button type="button" id="btnApplyCoupon" class="btn btn-secondary" onclick="window.centrlyApp.applyCouponCode()" style="font-weight: 800; font-size: 0.825rem; padding: 0.4rem 1rem; border-color: var(--centrly-blue-700); color: ${this.appliedCouponData ? '#ffffff' : 'var(--centrly-blue-700)'}; background: ${this.appliedCouponData ? '#10b981' : 'transparent'}; cursor: pointer;" ${this.appliedCouponData ? 'disabled' : ''}>
+                <input type="text" id="couponCodeInput" class="form-input" placeholder="اكتب كود الخصم (مثال: CEN100)" style="flex: 1; text-transform: uppercase; font-weight: 800; font-family: monospace; font-size: 0.875rem;" autocomplete="off" value="${escapeHtml(this.appliedCouponCode || '')}" ${this.appliedCouponData ? 'disabled' : ''} onkeydown="if(event.key==='Enter'){event.preventDefault(); window.centrlyApp.applyCouponCode();}">
+                <button type="button" id="btnApplyCoupon" class="btn btn-secondary" onclick="window.centrlyApp.applyCouponCode()" style="font-weight: 800; font-size: 0.825rem; padding: 0.4rem 1.1rem; border-color: var(--centrly-blue-700); color: ${this.appliedCouponData ? '#ffffff' : 'var(--centrly-blue-700)'}; background: ${this.appliedCouponData ? '#10b981' : 'transparent'}; cursor: pointer;" ${this.appliedCouponData ? 'disabled' : ''}>
                   ${this.appliedCouponData ? 'مفعّل ✓' : 'تطبيق'}
                 </button>
               </div>
-              <div id="couponFeedback" style="${this.appliedCouponData ? 'display: block; background: #ecfdf5; color: #059669;' : 'display: none;'} font-size: 0.78rem; font-weight: 700; margin-top: 0.4rem; padding: 0.3rem 0.5rem; border-radius: 6px;">
+              <div id="couponFeedback" style="${this.appliedCouponData ? 'display: block; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;' : 'display: none;'} font-size: 0.78rem; font-weight: 700; margin-top: 0.4rem; padding: 0.35rem 0.6rem; border-radius: 6px;">
                 ${this.appliedCouponData ? `تم تطبيق الكود (${escapeHtml(this.appliedCouponCode)}) بنجاح!` : ''}
               </div>
             </div>
@@ -11014,6 +11024,15 @@ https://centerly-eg.com/p/p16766044
 
   async handleSubmitPaymentProof(e, amount, planName = 'باقة 100 طالب', billingCycle = 'monthly') {
     e.preventDefault();
+
+    // Auto-apply coupon if user typed it in the modal input but didn't click "تطبيق"
+    const pendingCouponInput = document.getElementById('couponCodeInput')?.value?.trim().toUpperCase();
+    if (pendingCouponInput && !this.appliedCouponCode) {
+      try {
+        await this.applyCouponCode();
+      } catch (_) {}
+    }
+
     const effectiveAmount = this.currentEffectiveAmount !== undefined ? this.currentEffectiveAmount : Number(amount);
     const isFree = (Number(effectiveAmount) <= 0);
 
@@ -11032,7 +11051,9 @@ https://centerly-eg.com/p/p16766044
       btn.innerText = isFree ? 'جارٍ تفعيل الاشتراك...' : 'جارٍ التأكيد...';
     }
 
-    const couponTag = this.appliedCouponCode ? `[كود خصم: ${this.appliedCouponCode}]` : '';
+    const couponTag = this.appliedCouponCode 
+      ? `[كود خصم: ${this.appliedCouponCode}${isFree ? ' (خصم 100%)' : ''}] [المبلغ الأصلي: ${Number(amount)} ج.م]`
+      : '';
     const planTag = `[${planName} - ${billingCycle === 'yearly' ? 'اشتراك سنوي' : 'اشتراك شهري'}]`;
     const fullNotes = [planTag, couponTag, notes].filter(Boolean).join(' ');
 
@@ -14143,6 +14164,360 @@ https://centerly-eg.com/p/p16766044
     } catch (err) {
       this.showToast(`فشل تنظيف البيانات: ${err.message || 'خطأ في الخادم'}`, 'danger');
     }
+  }
+
+  // ==========================================================================
+  // Founder / Superadmin Revenue Breakdown Modals
+  // ==========================================================================
+
+  async openRevenueDetailsModal(mode = 'all_time') {
+    if (!this.adminProofsData?.payment_proofs) {
+      try {
+        this.adminProofsData = await request('/admin/payment-proofs').catch(() => ({ payment_proofs: [] }));
+      } catch (_) {}
+    }
+
+    const proofs = (this.adminProofsData?.payment_proofs || []).filter(p => p.status === 'approved');
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+
+    const isThisMonth = mode === 'this_month';
+    const activeProofs = isThisMonth
+      ? proofs.filter(p => {
+          const d = new Date(p.reviewed_at || p.created_at);
+          return d.getFullYear() === curYear && d.getMonth() === curMonth;
+        })
+      : proofs;
+
+    const totalSum = activeProofs.reduce((acc, p) => acc + Number(p.amount || 0), 0);
+    const avgAmount = activeProofs.length ? Math.round(totalSum / activeProofs.length) : 0;
+    const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const currentMonthName = arabicMonths[curMonth];
+
+    const formatProofDate = (dateStr) => {
+      if (!dateStr) return '—';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString('ar-EG', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      } catch (_) {
+        return dateStr;
+      }
+    };
+
+    const title = isThisMonth 
+      ? `تفاصيل أرباح شهر ${currentMonthName} (المحصل الفعلي) 💰`
+      : 'تفاصيل إجمالي النقدية المحصلة (All-Time Cash In) 💼';
+
+    const renderTableRows = (list) => {
+      if (!list.length) {
+        return `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
+              <div style="margin-bottom: 0.5rem; display: flex; justify-content: center;">${getIcon('check', 32, '#94a3b8')}</div>
+              لا توجد عمليات تحويل معتمدة في هذا النطاق
+            </td>
+          </tr>
+        `;
+      }
+      return list.map((p, idx) => {
+        const clientName = escapeHtml(p.tenants?.name || p.tenant_name || 'مؤسسة تعليمية');
+        const amount = Number(p.amount || 0);
+        let methodLabel = 'إنستاباي (InstaPay)';
+        let methodColor = '#6366f1';
+        if (p.payment_method === 'vodafone_cash') {
+          methodLabel = 'فودافون كاش';
+          methodColor = '#ef4444';
+        } else if (p.payment_method === 'coupon') {
+          methodLabel = 'كوبون مجاني';
+          methodColor = '#10b981';
+        } else if (p.payment_method === 'bank_transfer') {
+          methodLabel = 'تحويل بنكي';
+          methodColor = '#0284c7';
+        }
+
+        const dateStr = formatProofDate(p.created_at);
+        const notes = escapeHtml(p.admin_notes || p.notes || 'لا توجد ملاحظات إضافية');
+        const ref = escapeHtml(p.reference_number || '—');
+        const hasImg = Boolean(p.proof_image_url);
+
+        return `
+          <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 0.85rem 0.65rem; font-weight: 800; color: #0f172a; font-size: 0.875rem;">
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #e0f2fe; color: #0369a1; font-size: 0.72rem; font-weight: 900;">${idx + 1}</span>
+                <span>${clientName}</span>
+              </div>
+            </td>
+            <td style="padding: 0.85rem 0.65rem; font-weight: 900; font-size: 1rem; color: #047857; font-family: monospace;">
+              ${amount.toLocaleString('ar-EG')} <span style="font-size: 0.75rem; font-family: 'Cairo'; font-weight: 700;">ج.م</span>
+            </td>
+            <td style="padding: 0.85rem 0.65rem;">
+              <span class="badge" style="background: ${methodColor}15; color: ${methodColor}; border: 1px solid ${methodColor}30; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px;">
+                ${methodLabel}
+              </span>
+            </td>
+            <td style="padding: 0.85rem 0.65rem; font-family: monospace; font-size: 0.8rem; color: #334155; direction: ltr; text-align: right;">
+              ${ref}
+            </td>
+            <td style="padding: 0.85rem 0.65rem; font-size: 0.78rem; color: #64748b;">
+              <div style="font-weight: 700; color: #1e293b;">${notes}</div>
+              <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">${dateStr}</div>
+            </td>
+            <td style="padding: 0.85rem 0.65rem; text-align: center;">
+              ${hasImg ? `
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openProofFullscreenModal('${p.id}')" style="padding: 0.3rem 0.6rem; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.3rem; border-radius: 6px;" title="عرض إيصال التحويل بملء الشاشة">
+                  ${getIcon('search', 12)}
+                  <span>معاينة</span>
+                </button>
+              ` : '<span style="color: #cbd5e1; font-size: 0.75rem;">بدون إيصال</span>'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1.15rem;">
+        
+        <!-- Filter Tabs & Mode Selector -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; background: #f8fafc; padding: 0.75rem; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-sm ${!isThisMonth ? 'btn-primary' : 'btn-secondary'}" onclick="window.centrlyApp.openRevenueDetailsModal('all_time')" style="font-weight: 800; border-radius: 8px;">
+              إجمالي الكاش الكل (${proofs.length})
+            </button>
+            <button type="button" class="btn btn-sm ${isThisMonth ? 'btn-primary' : 'btn-secondary'}" onclick="window.centrlyApp.openRevenueDetailsModal('this_month')" style="font-weight: 800; border-radius: 8px;">
+              شهر ${currentMonthName} فقط
+            </button>
+          </div>
+          <div style="font-size: 0.78rem; color: #64748b; font-weight: 700;">
+            سجلات نقدية فعلية معتمدة بالإيصالات الرسمية
+          </div>
+        </div>
+
+        <!-- Summary KPIs inside Modal -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+          <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 0.75rem 1rem;">
+            <div style="font-size: 0.75rem; color: #047857; font-weight: 800;">إجمالي المبلغ المحصل</div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #065f46; font-family: monospace; margin-top: 0.15rem;">
+              ${totalSum.toLocaleString('ar-EG')} <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م</span>
+            </div>
+          </div>
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 0.75rem 1rem;">
+            <div style="font-size: 0.75rem; color: #1e40af; font-weight: 800;">عدد العمليات المعتمدة</div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #1e3a8a; font-family: monospace; margin-top: 0.15rem;">
+              ${activeProofs.length} <span style="font-size: 0.85rem; font-family: 'Cairo';">عملية</span>
+            </div>
+          </div>
+          <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 0.75rem 1rem;">
+            <div style="font-size: 0.75rem; color: #6b21a8; font-weight: 800;">متوسط المعاملة</div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #581c87; font-family: monospace; margin-top: 0.15rem;">
+              ${avgAmount.toLocaleString('ar-EG')} <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div style="border: 1px solid #e2e8f0; border-radius: 10px; overflow-x: auto; background: #fff;">
+          <table style="width: 100%; border-collapse: collapse; text-align: right; min-width: 650px;">
+            <thead>
+              <tr style="background: #f1f5f9; border-bottom: 2px solid #e2e8f0; font-size: 0.78rem; color: #475569;">
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">المنظومة / المعلم</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">المبلغ</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">طريقة الدفع</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">رقم العملية / المرجع</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">الباقة والتاريخ</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800; text-align: center;">الإيصال</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderTableRows(activeProofs)}
+            </tbody>
+            <tfoot>
+              <tr style="background: #f8fafc; font-weight: 900; border-top: 2px solid #cbd5e1;">
+                <td style="padding: 0.85rem 0.65rem; color: #0f172a;">الإجمالي النهائي</td>
+                <td style="padding: 0.85rem 0.65rem; color: #047857; font-size: 1.1rem; font-family: monospace;">
+                  ${totalSum.toLocaleString('ar-EG')} ج.م
+                </td>
+                <td colspan="4" style="padding: 0.85rem 0.65rem; color: #64748b; font-size: 0.8rem;">
+                  صافي النقدية المحصلة فعلياً بحساباتك
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+      </div>
+    `;
+
+    const footerHtml = `
+      <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+        <span style="font-size: 0.8rem; color: #64748b;">
+          Centrly HQ Financial Audit
+        </span>
+        <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق النافذة</button>
+      </div>
+    `;
+
+    this.showModal(title, bodyHtml, footerHtml, '840px');
+  }
+
+  async openExpectedMrrModal() {
+    if (!this.adminTenantsData?.tenants) {
+      try {
+        this.adminTenantsData = await request('/admin/tenants').catch(() => ({ tenants: [] }));
+      } catch (_) {}
+    }
+
+    const tenants = this.adminTenantsData?.tenants || [];
+    const activeTenants = tenants.filter(t => t.subscription_status === 'active');
+    
+    let totalExpectedMrr = 0;
+    const clientRows = activeTenants.map((t, idx) => {
+      const tier = (t.subscription_tier || '').toLowerCase();
+      const limit = Number(t.students_limit || t.settings?.students_limit || 0);
+      const planName = t.plan_name || t.settings?.plan_name || (limit >= 1500 ? 'باقة 1500 طالب' : (limit >= 750 ? 'باقة 750 طالب' : 'باقة 300 طالب'));
+      
+      let normalMonthlyPrice = 499;
+      let tierBadge = 'Starter';
+      let tierColor = '#0284c7';
+      if (limit >= 1500 || tier === 'pro' || planName.includes('1500')) {
+        normalMonthlyPrice = 1399;
+        tierBadge = 'Scale';
+        tierColor = '#7c3aed';
+      } else if (limit >= 750 || tier === 'growth' || planName.includes('750')) {
+        normalMonthlyPrice = 899;
+        tierBadge = 'Growth';
+        tierColor = '#2563eb';
+      }
+      totalExpectedMrr += normalMonthlyPrice;
+
+      let renewalDate = 'غير محدد';
+      if (t.subscription_ends_at) {
+        try {
+          const d = new Date(t.subscription_ends_at);
+          renewalDate = d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (_) {}
+      }
+      const clientName = escapeHtml(t.name || 'مؤسسة تعليمية');
+
+      return `
+        <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='transparent'">
+          <td style="padding: 0.85rem 0.65rem; font-weight: 800; color: #0f172a; font-size: 0.875rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #fef3c7; color: #b45309; font-size: 0.72rem; font-weight: 900;">${idx + 1}</span>
+              <span>${clientName}</span>
+            </div>
+          </td>
+          <td style="padding: 0.85rem 0.65rem;">
+            <span class="badge" style="background: ${tierColor}15; color: ${tierColor}; border: 1px solid ${tierColor}30; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px;">
+              ${planName} (${tierBadge})
+            </span>
+          </td>
+          <td style="padding: 0.85rem 0.65rem; font-weight: 900; font-size: 1rem; color: #b45309; font-family: monospace;">
+            ${normalMonthlyPrice.toLocaleString('ar-EG')} <span style="font-size: 0.75rem; font-family: 'Cairo'; font-weight: 700;">ج.م / شهر</span>
+          </td>
+          <td style="padding: 0.85rem 0.65rem; font-size: 0.8rem; color: #475569;">
+            ${renewalDate}
+          </td>
+          <td style="padding: 0.85rem 0.65rem;">
+            <span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px;">
+              نشط (مفعل)
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1.15rem;">
+        
+        <!-- Explanation Banner -->
+        <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 1rem 1.25rem;">
+          <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+            <span style="color: #d97706; display: flex; margin-top: 2px;">${getIcon('reports', 22, '#d97706')}</span>
+            <div>
+              <h4 style="margin: 0 0 0.35rem; color: #92400e; font-weight: 900; font-size: 0.95rem;">
+                كيف يتم احتساب الأرباح الشهرية القادمة (MRR Normalization)؟
+              </h4>
+              <p style="margin: 0; color: #b45309; font-size: 0.825rem; line-height: 1.6;">
+                إذا كان العميل قد اشترك في الشهر الأول بخصم ترويجي أو كود تخفيض، فإن هذا المؤشر يقوم بإعادة احتساب كل عميل بسعر الباقة <strong>الطبيعي الرسمي</strong> الذي سيدفعه في الأشهر التالية بدون خصومات، ليعطيك الرؤية الواقعية للدخل الشهري الثابت المتكرر (MRR).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Official Plan Pricing Reference Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem;">
+          <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 0.75rem; text-align: center;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: #0369a1;">باقة Starter (300 طالب)</div>
+            <div style="font-size: 1.35rem; font-weight: 900; color: #0284c7; font-family: monospace; margin: 0.25rem 0;">499 ج.م</div>
+            <div style="font-size: 0.7rem; color: #64748b;">السعر الطبيعي شهرياً</div>
+          </div>
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 0.75rem; text-align: center;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: #1d4ed8;">باقة Growth (750 طالب)</div>
+            <div style="font-size: 1.35rem; font-weight: 900; color: #2563eb; font-family: monospace; margin: 0.25rem 0;">899 ج.م</div>
+            <div style="font-size: 0.7rem; color: #64748b;">السعر الطبيعي شهرياً</div>
+          </div>
+          <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 0.75rem; text-align: center;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: #6b21a8;">باقة Scale (1500 طالب)</div>
+            <div style="font-size: 1.35rem; font-weight: 900; color: #7c3aed; font-family: monospace; margin: 0.25rem 0;">1,399 ج.م</div>
+            <div style="font-size: 0.7rem; color: #64748b;">السعر الطبيعي شهرياً</div>
+          </div>
+        </div>
+
+        <!-- Subscribed Clients Table -->
+        <div style="border: 1px solid #e2e8f0; border-radius: 10px; overflow-x: auto; background: #fff;">
+          <table style="width: 100%; border-collapse: collapse; text-align: right; min-width: 580px;">
+            <thead>
+              <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; font-size: 0.78rem; color: #475569;">
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">العميل / المنظومة</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">الباقة</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">سعر التجديد الطبيعي</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">تاريخ التجديد القادم</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${clientRows || `
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                    لا يوجد مشتركون نشطون حالياً
+                  </td>
+                </tr>
+              `}
+            </tbody>
+            <tfoot>
+              <tr style="background: #fffbeb; font-weight: 900; border-top: 2px solid #fde68a;">
+                <td style="padding: 0.85rem 0.65rem; color: #92400e;">إجمالي الإيراد الشهري القادم (MRR)</td>
+                <td colspan="4" style="padding: 0.85rem 0.65rem; color: #b45309; font-size: 1.2rem; font-family: monospace;">
+                  ${totalExpectedMrr.toLocaleString('ar-EG')} ج.م / شهرياً
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+      </div>
+    `;
+
+    const footerHtml = `
+      <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+        <span style="font-size: 0.8rem; color: #64748b;">
+          Centrly HQ SaaS Forecast
+        </span>
+        <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق النافذة</button>
+      </div>
+    `;
+
+    this.showModal('تفاصيل الإيراد الشهري المتوقع القادم (MRR) 📈', bodyHtml, footerHtml, '780px');
   }
 
   // ==========================================================================

@@ -34,6 +34,7 @@ export interface PaymentProofAdminItem {
   status: string;
   admin_notes?: string | null;
   created_at: string;
+  reviewed_at?: string | null;
   tenants?: { name: string } | null;
 }
 

@@ -86,7 +86,7 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
   async listPaymentProofs(status?: string): Promise<PaymentProofAdminItem[]> {
     let query = this.client
       .from("payment_proofs")
-      .select("id, tenant_id, amount, payment_method, reference_number, proof_image_url, status, admin_notes, created_at, tenants(name)")
+      .select("id, tenant_id, amount, payment_method, reference_number, proof_image_url, status, admin_notes, created_at, reviewed_at, tenants(name)")
       .order("created_at", { ascending: false });
 
     if (status) {
@@ -313,7 +313,10 @@ export class FakeAdminOpsRepository implements IAdminOpsRepository {
     planSettings?: Record<string, any>
   ): Promise<AdminTenantSummary> {
     const proof = this.paymentProofs.find((p) => p.id === proofId);
-    if (proof) proof.status = "approved";
+    if (proof) {
+      proof.status = "approved";
+      proof.reviewed_at = new Date().toISOString();
+    }
 
     let tenant = this.tenants.find((t) => t.id === tenantId);
     if (!tenant) {

@@ -1,4 +1,4 @@
-﻿import { getIcon } from '../utils/icons.js';
+import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
 /**
@@ -129,7 +129,17 @@ export function renderAdminPaymentProofsView(data = {}, currentFilter = 'pending
             const isPending = proof.status === 'pending';
             const isApproved = proof.status === 'approved';
             const tenantName = proof.tenants?.name || proof.tenant_name || 'مؤسسة تعليمية';
-            const methodLabel = proof.payment_method === 'vodafone_cash' ? 'محفظة إلكترونية (فودافون كاش)' : 'إنستاباي (InstaPay)';
+            const notesText = proof.admin_notes || proof.notes || '';
+            const couponMatch = notesText.match(/\[كود خصم:\s*([^\]]+)\]/);
+            const couponInfo = couponMatch ? couponMatch[1].trim() : (proof.payment_method === 'coupon' ? (proof.reference_number || 'كوبون ترويجي') : null);
+            const isZeroOrFree = Number(proof.amount || 0) === 0 || proof.payment_method === 'coupon';
+
+            let methodLabel = 'إنستاباي (InstaPay)';
+            if (proof.payment_method === 'vodafone_cash') {
+              methodLabel = 'محفظة إلكترونية (فودافون كاش)';
+            } else if (proof.payment_method === 'coupon' || isZeroOrFree) {
+              methodLabel = 'كود خصم ترويجي (مجاني 100%)';
+            }
             const hasImage = Boolean(proof.proof_image_url);
 
             let statusBadge = '';
@@ -161,10 +171,24 @@ export function renderAdminPaymentProofsView(data = {}, currentFilter = 'pending
 
                   <!-- Details Grid -->
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 1rem; background: #f8fafc; padding: 0.75rem; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 0.825rem;">
+                    
+                    ${couponInfo ? `
+                      <div style="grid-column: 1 / -1; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 8px; padding: 0.5rem 0.75rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.45rem; font-weight: 800; color: #065f46; font-size: 0.85rem;">
+                          <span>${getIcon('gift', 16, '#059669')}</span>
+                          <span>كود الخصم: <strong style="font-family: monospace; font-size: 0.95rem; color: #047857; background: #d1fae5; padding: 0.15rem 0.45rem; border-radius: 6px;">${escapeHtml(couponInfo)}</strong></span>
+                        </div>
+                        <span class="badge" style="background: #10b981; color: #fff; font-weight: 800; font-size: 0.725rem; padding: 0.2rem 0.5rem; border-radius: 6px;">
+                          ${isZeroOrFree ? 'خصم 100% (مجاني)' : 'خصم ترويجي'}
+                        </span>
+                      </div>
+                    ` : ''}
+
                     <div>
                       <span style="color: #64748b;">المبلغ المحول:</span>
-                      <div style="font-size: 1.15rem; font-weight: 900; color: var(--centrly-blue-800); margin-top: 0.15rem;">
-                        ${Number(proof.amount || 0).toLocaleString('ar-EG')} ج.م
+                      <div style="font-size: 1.15rem; font-weight: 900; color: ${isZeroOrFree ? '#059669' : 'var(--centrly-blue-800)'}; margin-top: 0.15rem; display: flex; align-items: baseline; gap: 0.35rem;">
+                        <span>${Number(proof.amount || 0).toLocaleString('ar-EG')} ج.م</span>
+                        ${isZeroOrFree ? `<span style="font-size: 0.75rem; font-weight: 800; color: #10b981; background: #ecfdf5; padding: 0.1rem 0.4rem; border-radius: 4px;">(مجاني بالكامل 🎉)</span>` : ''}
                       </div>
                     </div>
                     <div>
@@ -176,14 +200,14 @@ export function renderAdminPaymentProofsView(data = {}, currentFilter = 'pending
                     <div style="grid-column: 1 / -1;">
                       <span style="color: #64748b;">رقم المحفظة / المرجع:</span>
                       <span style="font-weight: 800; font-family: monospace; color: #1e293b; margin-right: 0.35rem; direction: ltr; display: inline-block;">
-                        ${escapeHtml(proof.reference_number || 'غير مسجل')}
+                        ${escapeHtml(proof.reference_number || (isZeroOrFree ? 'تم تطبيق كود الخصم' : 'غير مسجل'))}
                       </span>
                     </div>
-                    ${proof.notes ? `
+                    ${notesText ? `
                       <div style="grid-column: 1 / -1;">
                         <span style="color: #64748b;">الباقة والملاحظات:</span>
-                        <div style="font-weight: 700; color: #0369a1; margin-top: 0.15rem; background: #f0f9ff; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #bae6fd;">
-                          ${escapeHtml(proof.notes)}
+                        <div style="font-weight: 700; color: #0369a1; margin-top: 0.15rem; background: #f0f9ff; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #bae6fd; line-height: 1.5;">
+                          ${escapeHtml(notesText)}
                         </div>
                       </div>
                     ` : ''}

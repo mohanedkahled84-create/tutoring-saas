@@ -109,3 +109,43 @@ test("PAYMENT-PROOF-SCHEMA: Validates 0 amount for 100% coupon without requiring
   assert.equal(parsed.data.payment_method, "coupon");
   assert.equal(parsed.data.proof_image_url, null);
 });
+
+test("BILLING-VIEW: Promo code input is removed from above the pricing plans in BillingView", () => {
+  const trialData = {
+    subscription_status: "trial",
+    trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    students_count: 50,
+    students_limit: 750,
+    days_remaining: 14,
+  };
+  const html = renderBillingView(trialData, { name: "مستر أحمد" });
+  assert.ok(!html.includes("billingDiscountCodeInput"), "Voucher box must not be rendered above plans in BillingView");
+  assert.ok(!html.includes("btnApplyBillingDiscount"), "Apply discount button must not be rendered above plans");
+});
+
+test("ADMIN-PROOFS-VIEW: Renders coupon badge, discount details, and 0 amount for 100% coupon", async () => {
+  const { renderAdminPaymentProofsView } = await import("../../web/src/components/AdminPaymentProofsView.js");
+  const data = {
+    payment_proofs: [
+      {
+        id: "proof-100",
+        tenant_id: "tenant-1",
+        tenant_name: "مستر عمر المحمدي - منظومة تعليمية",
+        amount: 0,
+        payment_method: "coupon",
+        reference_number: "CEN100",
+        admin_notes: "[باقة 300 طالب (شهري) - اشتراك شهري] [كود خصم: CEN100 (خصم 100%)] [المبلغ الأصلي: 499 ج.م]",
+        status: "approved",
+        created_at: new Date().toISOString(),
+      }
+    ]
+  };
+
+  const html = renderAdminPaymentProofsView(data, "all");
+  assert.ok(html.includes("كود الخصم"), "Card must display coupon badge");
+  assert.ok(html.includes("CEN100"), "Card must display the coupon code CEN100");
+  assert.ok(html.includes("خصم 100% (مجاني)"), "Card must display 100% discount badge");
+  assert.ok(html.includes("٠ ج.م") || html.includes("0 ج.م"), "Card must display 0 EGP for net amount");
+  assert.ok(html.includes("مجاني بالكامل"), "Card must display celebration free badge");
+});
+

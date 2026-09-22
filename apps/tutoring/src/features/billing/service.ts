@@ -321,11 +321,18 @@ export class BillingService {
       throw new Error("عفواً، تم استنفاد الحد الأقصى لاستخدام كود الخصم هذا");
     }
 
+    const percentVal = giftCodeRecord.discount_percent !== null && giftCodeRecord.discount_percent !== undefined
+      ? Number(giftCodeRecord.discount_percent)
+      : null;
+    const amountVal = giftCodeRecord.discount_amount !== null && giftCodeRecord.discount_amount !== undefined
+      ? Number(giftCodeRecord.discount_amount)
+      : null;
+
     let discount = 0;
-    if (typeof giftCodeRecord.discount_percent === "number" && giftCodeRecord.discount_percent > 0) {
-      discount = Math.round((amount * giftCodeRecord.discount_percent) / 100);
-    } else if (typeof giftCodeRecord.discount_amount === "number" && giftCodeRecord.discount_amount > 0) {
-      discount = Math.min(amount, giftCodeRecord.discount_amount);
+    if (percentVal !== null && !isNaN(percentVal) && percentVal > 0) {
+      discount = Math.round((amount * percentVal) / 100);
+    } else if (amountVal !== null && !isNaN(amountVal) && amountVal > 0) {
+      discount = Math.min(amount, amountVal);
     }
 
     const finalAmount = Math.max(0, amount - discount);
@@ -333,7 +340,7 @@ export class BillingService {
     return {
       valid: true,
       code: cleanCode,
-      discount_percent: giftCodeRecord.discount_percent || null,
+      discount_percent: percentVal,
       discount_amount: discount,
       original_amount: amount,
       final_amount: finalAmount,
