@@ -361,22 +361,29 @@ export class BillingService {
       throw new Error("يرجى إدخال رمز كود الخصم");
     }
 
-    const hasPercent = typeof input.discount_percent === "number" && input.discount_percent > 0;
-    const hasAmount = typeof input.discount_amount === "number" && input.discount_amount > 0;
+    const percentVal = input.discount_percent !== undefined && input.discount_percent !== null
+      ? Number(input.discount_percent)
+      : null;
+    const amountVal = input.discount_amount !== undefined && input.discount_amount !== null
+      ? Number(input.discount_amount)
+      : null;
+
+    const hasPercent = percentVal !== null && !isNaN(percentVal) && percentVal > 0;
+    const hasAmount = amountVal !== null && !isNaN(amountVal) && amountVal > 0;
 
     if (!hasPercent && !hasAmount) {
       throw new Error("يرجى تحديد نسبة الخصم (%) أو قيمة الخصم بالجنيه");
     }
 
-    if (hasPercent && (input.discount_percent! <= 0 || input.discount_percent! > 100)) {
+    if (hasPercent && (percentVal! <= 0 || percentVal! > 100)) {
       throw new Error("نسبة الخصم يجب أن تكون بين 1% و 100%");
     }
 
     if (typeof this.repository.createGiftCode === "function") {
       return await this.repository.createGiftCode({
         code: cleanCode,
-        discount_percent: hasPercent ? input.discount_percent : null,
-        discount_amount: hasAmount ? input.discount_amount : null,
+        discount_percent: hasPercent ? percentVal : null,
+        discount_amount: hasAmount ? amountVal : null,
         max_uses: typeof input.max_uses === "number" ? input.max_uses : 1000,
         expires_at: input.expires_at || null,
         is_active: input.is_active !== undefined ? input.is_active : true,
