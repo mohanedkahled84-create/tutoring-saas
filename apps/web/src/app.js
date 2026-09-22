@@ -5376,7 +5376,7 @@ class CentrlyApp {
       }
     }
 
-    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${g.name} (${g.center_name || 'السنتر'})</option>`).join('');
+    const groupOptions = this.renderGroupOptionsForImport ? this.renderGroupOptionsForImport() : (this.groups || []).map(g => `<option value="${g.id}">${g.name} (${g.center_name || 'السنتر'})</option>`).join('');
     const bodyHtml = `
       <form id="addStudentModalForm" onsubmit="window.centrlyApp.handleCreateStudent(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -5394,11 +5394,57 @@ class CentrlyApp {
           <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم مصري مكون من 11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015</small>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">المجموعة الأساسية *</label>
-          <select id="newStudentGroup" class="form-input" required>
-            <option value="">-- اختر المجموعة --</option>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <label class="form-label" style="font-weight: 700; margin-bottom: 0;">المجموعة الأساسية *</label>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleQuickAddGroupInSingleStudent()" style="font-size: 0.78rem; font-weight: 700; padding: 0.15rem 0.55rem; color: #2563eb; display: inline-flex; align-items: center; gap: 0.25rem; border-color: #cbd5e1;">
+              ${getIcon('add', 12, '#2563eb')}
+              <span>إضافة مجموعة جديدة</span>
+            </button>
+          </div>
+          <select id="newStudentGroup" class="form-input" required onchange="window.centrlyApp.handleStudentModalGroupChange(this)">
             ${groupOptions}
           </select>
+          <div id="quickGroupCreatorSingleStudent" style="display: none; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <div style="font-weight: 800; color: #166534; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem;">
+                ${getIcon('add', 14, '#16a34a')}
+                <span>إنشاء مجموعة جديدة فوراً واختيارها</span>
+              </div>
+              <button type="button" onclick="window.centrlyApp.cancelQuickAddGroupInSingleStudent()" style="background: none; border: none; font-size: 1.15rem; line-height: 1; cursor: pointer; color: #64748b;" title="إغلاق">&times;</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div>
+                <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">اسم المجموعة *</label>
+                <input type="text" id="quickGroupNameStudent" class="form-input" placeholder="مثال: 1ث أ" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">المقر / السنتر (اختياري)</label>
+                <input type="text" id="quickGroupCenterStudent" class="form-input" placeholder="اسم السنتر" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">سعر الحصة (ج.م) *</label>
+                <input type="number" id="quickGroupPriceStudent" class="form-input" value="50" min="0" step="5" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">يوم الحصة الأسبوعي</label>
+                <select id="quickGroupDayStudent" class="form-input" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
+                  <option value="السبت">السبت</option>
+                  <option value="الأحد">الأحد</option>
+                  <option value="الإثنين">الإثنين</option>
+                  <option value="الثلاثاء">الثلاثاء</option>
+                  <option value="الأربعاء">الأربعاء</option>
+                  <option value="الخميس">الخميس</option>
+                  <option value="الجمعة">الجمعة</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.35rem; margin-top: 0.6rem;">
+              <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="window.centrlyApp.cancelQuickAddGroupInSingleStudent()">إلغاء</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btnSaveQuickGroupStudent" onclick="window.centrlyApp.executeQuickCreateGroupForSingleStudent()" style="background: #16a34a; border-color: #16a34a; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.6rem;">
+                حفظ واختيار المجموعة الآن ✓
+              </button>
+            </div>
+          </div>
         </div>
         <div id="addStudentFeedback" style="display: none; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem; line-height: 1.4;"></div>
       </form>
@@ -5420,6 +5466,16 @@ class CentrlyApp {
     const groupId = document.getElementById('newStudentGroup').value;
     const feedback = document.getElementById('addStudentFeedback');
     const saveBtn = document.getElementById('btnSaveStudent');
+
+    if (!groupId || groupId === '__NEW_GROUP__') {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = 'يرجى اختيار المجموعة الأساسية للطالب أو إنشاء مجموعة جديدة أولاً.';
+      }
+      return;
+    }
 
     const egyptianPhoneRegex = /^01[0125][0-9]{8}$/;
     const cleanParentPhone = parent_phone.replace(/[\s\-().]/g, '');
@@ -5479,6 +5535,103 @@ class CentrlyApp {
       }
       saveBtn.disabled = false;
       saveBtn.textContent = 'إضافة الطالب';
+    }
+  }
+
+  handleStudentModalGroupChange(selectEl) {
+    if (selectEl.value === '__NEW_GROUP__') {
+      this.toggleQuickAddGroupInSingleStudent(true);
+    } else {
+      this.toggleQuickAddGroupInSingleStudent(false);
+    }
+  }
+
+  toggleQuickAddGroupInSingleStudent(forceState = null) {
+    const container = document.getElementById('quickGroupCreatorSingleStudent');
+    if (!container) return;
+    const isVisible = container.style.display !== 'none';
+    const shouldShow = forceState !== null ? forceState : !isVisible;
+    container.style.display = shouldShow ? 'block' : 'none';
+    if (shouldShow) {
+      const nameInput = document.getElementById('quickGroupNameStudent');
+      if (nameInput) setTimeout(() => nameInput.focus(), 80);
+    } else {
+      const sel = document.getElementById('newStudentGroup');
+      if (sel && sel.value === '__NEW_GROUP__') {
+        sel.value = (this.groups && this.groups[0]?.id) || '';
+      }
+    }
+  }
+
+  cancelQuickAddGroupInSingleStudent() {
+    this.toggleQuickAddGroupInSingleStudent(false);
+  }
+
+  async executeQuickCreateGroupForSingleStudent() {
+    const nameInput = document.getElementById('quickGroupNameStudent');
+    const centerInput = document.getElementById('quickGroupCenterStudent');
+    const priceInput = document.getElementById('quickGroupPriceStudent');
+    const dayInput = document.getElementById('quickGroupDayStudent');
+    const saveBtn = document.getElementById('btnSaveQuickGroupStudent');
+
+    const name = nameInput?.value?.trim();
+    if (!name) {
+      this.showToast('يرجى كتابة اسم المجموعة أولاً', 'warning');
+      nameInput?.focus();
+      return;
+    }
+
+    const center_name = centerInput?.value?.trim() || undefined;
+    const price = Number(priceInput?.value) || 0;
+    const day_of_week = dayInput?.value || 'السبت';
+    const schedule = `${day_of_week} • 04:00 م - 06:00 م`;
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'جاري الحفظ... ⏳';
+    }
+
+    try {
+      const res = await request('/groups', {
+        method: 'POST',
+        body: {
+          name,
+          center_name,
+          price,
+          session_price: price,
+          day_of_week,
+          sessions_per_week: 1,
+          billing_model: 'percentage',
+          center_cut_percentage: 20,
+          schedule,
+        },
+      });
+
+      const newGroup = res?.group || res;
+      if (!newGroup || !newGroup.id) {
+        throw new Error('لم يتم استلام بيانات المجموعة من الخادم');
+      }
+
+      if (!this.groups) this.groups = [];
+      this.groups.unshift(newGroup);
+      this.saveCache('groups', this.groups);
+
+      const selStudent = document.getElementById('newStudentGroup');
+      if (selStudent) {
+        selStudent.innerHTML = this.renderGroupOptionsForImport(newGroup.id);
+        selStudent.value = newGroup.id;
+      }
+
+      this.toggleQuickAddGroupInSingleStudent(false);
+      this.showToast(`تم إنشاء مجموعة (${escapeHtml(name)}) واختيارها بنجاح! ✓`, 'success');
+    } catch (err) {
+      console.error('Quick group creation failed:', err);
+      this.showToast(`تعذر إنشاء المجموعة: ${err.message || 'خطأ غير متوقع'}`, 'danger');
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'حفظ واختيار المجموعة الآن ✓';
+      }
     }
   }
 
@@ -8055,6 +8208,140 @@ https://centerly-eg.com/p/p16766044
     return rows;
   }
 
+  renderGroupOptionsForImport(selectedGroupId = null) {
+    const groups = this.groups || [];
+    let html = `<option value="">-- اختر المجموعة التي تريد إضافة الطلاب إليها --</option>`;
+    html += `<option value="__NEW_GROUP__" style="font-weight: 700; color: #2563eb; background: #eff6ff;">➕ إضافة مجموعة جديدة الآن...</option>`;
+    if (groups.length > 0) {
+      html += `<optgroup label="المجموعات المسجلة لديك (${groups.length}):">`;
+      groups.forEach(g => {
+        const isSelected = String(g.id) === String(selectedGroupId) ? 'selected' : '';
+        const center = g.center_name || g.centerName ? ` (${escapeHtml(g.center_name || g.centerName)})` : '';
+        const schedule = g.day_of_week ? ` • ${escapeHtml(g.day_of_week)}` : '';
+        html += `<option value="${escapeHtml(g.id)}" ${isSelected}>📚 ${escapeHtml(g.name)}${center}${schedule}</option>`;
+      });
+      html += `</optgroup>`;
+    }
+    return html;
+  }
+
+  handleImportGroupSelectChange(selectEl, step = 1) {
+    const val = selectEl.value;
+    if (val === '__NEW_GROUP__') {
+      this.toggleQuickAddGroupInImport(step, true);
+    } else {
+      if (this.importWizardState) {
+        this.importWizardState.groupId = val || null;
+      }
+      this.toggleQuickAddGroupInImport(step, false);
+    }
+  }
+
+  toggleQuickAddGroupInImport(step = 1, forceState = null) {
+    const container = document.getElementById(`quickGroupCreatorStep${step}`);
+    if (!container) return;
+    const isVisible = container.style.display !== 'none';
+    const shouldShow = forceState !== null ? forceState : !isVisible;
+    container.style.display = shouldShow ? 'block' : 'none';
+    if (shouldShow) {
+      const nameInput = document.getElementById(`quickGroupName${step}`);
+      if (nameInput) setTimeout(() => nameInput.focus(), 80);
+    } else {
+      const selectEl = document.getElementById(step === 1 ? 'importGroupId' : 'importStep2GroupId');
+      if (selectEl && selectEl.value === '__NEW_GROUP__') {
+        selectEl.value = this.importWizardState?.groupId || '';
+      }
+    }
+  }
+
+  cancelQuickAddGroupInImport(step = 1) {
+    this.toggleQuickAddGroupInImport(step, false);
+  }
+
+  async executeQuickCreateGroupForImport(step = 1) {
+    const nameInput = document.getElementById(`quickGroupName${step}`);
+    const centerInput = document.getElementById(`quickGroupCenter${step}`);
+    const priceInput = document.getElementById(`quickGroupPrice${step}`);
+    const dayInput = document.getElementById(`quickGroupDay${step}`);
+    const saveBtn = document.getElementById(`btnSaveQuickGroup${step}`);
+
+    const name = nameInput?.value?.trim();
+    if (!name) {
+      this.showToast('يرجى كتابة اسم المجموعة أولاً', 'warning');
+      nameInput?.focus();
+      return;
+    }
+
+    const center_name = centerInput?.value?.trim() || undefined;
+    const price = Number(priceInput?.value) || 0;
+    const day_of_week = dayInput?.value || 'السبت';
+    const schedule = `${day_of_week} • 04:00 م - 06:00 م`;
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'جاري الحفظ... ⏳';
+    }
+
+    try {
+      const res = await request('/groups', {
+        method: 'POST',
+        body: {
+          name,
+          center_name,
+          price,
+          session_price: price,
+          day_of_week,
+          sessions_per_week: 1,
+          billing_model: 'percentage',
+          center_cut_percentage: 20,
+          schedule,
+        },
+      });
+
+      const newGroup = res?.group || res;
+      if (!newGroup || !newGroup.id) {
+        throw new Error('لم يتم استلام بيانات المجموعة من الخادم');
+      }
+
+      if (!this.groups) this.groups = [];
+      this.groups.unshift(newGroup);
+      this.saveCache('groups', this.groups);
+
+      if (this.importWizardState) {
+        this.importWizardState.groupId = newGroup.id;
+      }
+
+      const sel1 = document.getElementById('importGroupId');
+      if (sel1) {
+        sel1.innerHTML = this.renderGroupOptionsForImport(newGroup.id);
+        sel1.value = newGroup.id;
+      }
+
+      const sel2 = document.getElementById('importStep2GroupId');
+      if (sel2) {
+        sel2.innerHTML = this.renderGroupOptionsForImport(newGroup.id);
+        sel2.value = newGroup.id;
+      }
+
+      const selStudent = document.getElementById('newStudentGroup');
+      if (selStudent) {
+        selStudent.innerHTML = this.renderGroupOptionsForImport(newGroup.id);
+        selStudent.value = newGroup.id;
+      }
+
+      this.toggleQuickAddGroupInImport(step, false);
+      this.showToast(`تم إنشاء مجموعة (${escapeHtml(name)}) واختيارها بنجاح! ✓`, 'success');
+    } catch (err) {
+      console.error('Quick group creation failed:', err);
+      this.showToast(`تعذر إنشاء المجموعة: ${err.message || 'خطأ غير متوقع'}`, 'danger');
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'حفظ واختيار المجموعة الآن ✓';
+      }
+    }
+  }
+
   openImportModal(initialGroupId = null) {
     const studentLimit = this.billingState?.students_limit || 300;
     const currentCount = (this.students || []).length;
@@ -8072,10 +8359,21 @@ https://centerly-eg.com/p/p16766044
       }
     }
 
+    if (!this.groups || this.groups.length === 0) {
+      request('/groups').then(grpRes => {
+        this.groups = Array.isArray(grpRes) ? grpRes : (grpRes?.groups || []);
+        this.saveCache('groups', this.groups);
+        const sel1 = document.getElementById('importGroupId');
+        if (sel1) sel1.innerHTML = this.renderGroupOptionsForImport(this.importWizardState?.groupId);
+      }).catch(err => console.warn('Failed to load groups for import modal:', err));
+    }
+
+    const targetGroupId = initialGroupId || (this.groups && this.groups.length === 1 ? this.groups[0].id : (initialGroupId || null));
+
     this.importWizardState = {
       file: null,
       fileName: '',
-      groupId: initialGroupId || (this.groups && this.groups[0]?.id) || null,
+      groupId: targetGroupId,
       rawRows: [],
       headers: [],
       dataRows: [],
@@ -8088,11 +8386,6 @@ https://centerly-eg.com/p/p16766044
       },
     };
 
-    const groupOptions = (this.groups || []).map(g => {
-      const selected = String(g.id) === String(this.importWizardState.groupId) ? 'selected' : '';
-      return `<option value="${escapeHtml(g.id)}" ${selected}>${escapeHtml(g.name)}</option>`;
-    }).join('');
-
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1.25rem;">
         <div style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(59, 130, 246, 0.04)); border: 1px solid rgba(37, 99, 235, 0.15); border-radius: 12px; padding: 0.9rem 1.1rem; display: flex; align-items: flex-start; gap: 0.75rem;">
@@ -8102,19 +8395,68 @@ https://centerly-eg.com/p/p16766044
           <div>
             <div style="font-weight: 700; color: #1e3a8a; font-size: 0.95rem; margin-bottom: 0.2rem;">المساعد الذكي لاستيراد الطلاب</div>
             <div style="font-size: 0.82rem; color: #475569; line-height: 1.5;">
-              ارفع ملف Excel أو CSV أو الصق البيانات مباشرة. يمكنك ترتيب وتعيين الأعمدة في الخطوة التالية حتى لو كانت الأعمدة غير مرتبة أو تحتوي على بيانات إضافية.
+              حدد المجموعة المستهدفة أو أنشئ مجموعة جديدة فوراً، ثم ارفع ملف Excel أو CSV أو الصق البيانات مباشرة. يمكنك مراجعة ومطابقة الأعمدة في الخطوة التالية.
             </div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" style="font-weight: 700; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem;">
-            <span>المجموعة المستهدفة لإضافة الطلاب:</span>
-            <span style="color: #dc2626;">*</span>
-          </label>
-          <select id="importGroupId" class="form-select" style="font-weight: 600; font-size: 0.95rem; border-color: #cbd5e1;">
-            ${groupOptions || '<option value="">(لا توجد مجموعات مسجلة)</option>'}
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.35rem;">
+            <label class="form-label" style="font-weight: 700; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0;">
+              <span>المجموعة المستهدفة لإضافة الطلاب:</span>
+              <span style="color: #dc2626;">*</span>
+            </label>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleQuickAddGroupInImport(1)" style="font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; color: #2563eb; border-color: #cbd5e1;">
+              ${getIcon('add', 14, '#2563eb')}
+              <span>إضافة مجموعة جديدة</span>
+            </button>
+          </div>
+          <select id="importGroupId" class="form-select" style="font-weight: 600; font-size: 0.95rem; border-color: #cbd5e1;" onchange="window.centrlyApp.handleImportGroupSelectChange(this, 1)">
+            ${this.renderGroupOptionsForImport(this.importWizardState.groupId)}
           </select>
+
+          <!-- Inline Quick Group Creator for Step 1 -->
+          <div id="quickGroupCreatorStep1" style="display: none; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 0.9rem; margin-top: 0.65rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
+              <div style="font-weight: 800; color: #166534; font-size: 0.9rem; display: flex; align-items: center; gap: 0.35rem;">
+                ${getIcon('add', 16, '#16a34a')}
+                <span>إنشاء مجموعة جديدة فوراً واختيارها</span>
+              </div>
+              <button type="button" onclick="window.centrlyApp.cancelQuickAddGroupInImport(1)" style="background: none; border: none; font-size: 1.25rem; line-height: 1; cursor: pointer; color: #64748b;" title="إغلاق">&times;</button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.6rem;">
+              <div>
+                <label style="font-weight: 700; font-size: 0.8rem; color: #1e293b; display: block; margin-bottom: 0.2rem;">اسم المجموعة *</label>
+                <input type="text" id="quickGroupName1" class="form-input" placeholder="مثال: الصف الأول الثانوي (أ)" style="font-size: 0.85rem;" required>
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.8rem; color: #1e293b; display: block; margin-bottom: 0.2rem;">المقر / السنتر (اختياري)</label>
+                <input type="text" id="quickGroupCenter1" class="form-input" placeholder="اسم السنتر أو القاعة" style="font-size: 0.85rem;">
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.8rem; color: #1e293b; display: block; margin-bottom: 0.2rem;">سعر الحصة (ج.م) *</label>
+                <input type="number" id="quickGroupPrice1" class="form-input" value="50" min="0" step="5" style="font-size: 0.85rem;" required>
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.8rem; color: #1e293b; display: block; margin-bottom: 0.2rem;">يوم الحصة الأسبوعي</label>
+                <select id="quickGroupDay1" class="form-input" style="font-size: 0.85rem;">
+                  <option value="السبت">السبت</option>
+                  <option value="الأحد">الأحد</option>
+                  <option value="الإثنين">الإثنين</option>
+                  <option value="الثلاثاء">الثلاثاء</option>
+                  <option value="الأربعاء">الأربعاء</option>
+                  <option value="الخميس">الخميس</option>
+                  <option value="الجمعة">الجمعة</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.4rem; margin-top: 0.75rem;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.cancelQuickAddGroupInImport(1)">إلغاء</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btnSaveQuickGroup1" onclick="window.centrlyApp.executeQuickCreateGroupForImport(1)" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">
+                حفظ واختيار المجموعة الآن ✓
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -8203,8 +8545,10 @@ https://centerly-eg.com/p/p16766044
 
   async handleImportParseStep() {
     const groupId = document.getElementById('importGroupId')?.value;
-    if (!groupId) {
-      this.showToast('يرجى اختيار المجموعة المستهدفة أولاً', 'warning');
+    if (!groupId || groupId === '__NEW_GROUP__') {
+      this.showToast('يرجى اختيار المجموعة المستهدفة أولاً أو إنشاء مجموعة جديدة للمتابعة', 'warning');
+      const sel = document.getElementById('importGroupId');
+      if (sel) sel.focus();
       return;
     }
     if (this.importWizardState) {
@@ -8489,14 +8833,68 @@ https://centerly-eg.com/p/p16766044
 
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
-        <!-- Top Info Pill -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-          <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #334155;">
-            <span style="background: #e0e7ff; color: #3730a3; padding: 0.2rem 0.6rem; border-radius: 6px; font-weight: 700; font-size: 0.78rem;">المجموعة:</span>
-            <span style="font-weight: 700; color: #1e293b;">${escapeHtml(groupName)}</span>
+        <!-- Target Group Selector & Summary Bar in Step 2 -->
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.75rem 1rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 280px;">
+              <label for="importStep2GroupId" style="font-weight: 700; font-size: 0.85rem; color: #1e293b; white-space: nowrap; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0;">
+                <span>${getIcon('groups', 16, '#2563eb')}</span>
+                <span>المجموعة المستهدفة:</span>
+              </label>
+              <select id="importStep2GroupId" class="form-select" style="font-size: 0.85rem; font-weight: 700; flex: 1;" onchange="window.centrlyApp.handleImportGroupSelectChange(this, 2)">
+                ${this.renderGroupOptionsForImport(groupId)}
+              </select>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleQuickAddGroupInImport(2)" title="إضافة مجموعة جديدة" style="white-space: nowrap; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; color: #2563eb; border-color: #cbd5e1;">
+                ${getIcon('add', 14, '#2563eb')}
+                <span>مجموعة جديدة</span>
+              </button>
+            </div>
+            <div style="font-size: 0.82rem; color: #64748b; white-space: nowrap;">
+              إجمالي الصفوف المقروءة: <strong style="color: #0f172a;">${dataRows.length}</strong> صف
+            </div>
           </div>
-          <div style="font-size: 0.82rem; color: #64748b;">
-            إجمالي الصفوف المقروءة: <strong style="color: #0f172a;">${dataRows.length}</strong> صف
+
+          <!-- Inline Quick Group Creator for Step 2 -->
+          <div id="quickGroupCreatorStep2" style="display: none; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 0.9rem; margin-top: 0.65rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
+              <div style="font-weight: 800; color: #166534; font-size: 0.9rem; display: flex; align-items: center; gap: 0.35rem;">
+                ${getIcon('add', 16, '#16a34a')}
+                <span>إنشاء مجموعة جديدة فوراً واختيارها</span>
+              </div>
+              <button type="button" onclick="window.centrlyApp.cancelQuickAddGroupInImport(2)" style="background: none; border: none; font-size: 1.25rem; line-height: 1; cursor: pointer; color: #64748b;" title="إغلاق">&times;</button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.6rem;">
+              <div>
+                <label style="font-weight: 700; font-size: 0.8rem; color: #1e293b; display: block; margin-bottom: 0.2rem;">اسم المجموعة *</label>
+                <input type="text" id="quickGroupName2" class="form-input" placeholder="مثال: الصف الأول الثانوي (أ)" style="font-size: 0.85rem;" required>
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.8rem; color: #1e293b; display: block; margin-bottom: 0.2rem;">المقر / السنتر (اختياري)</label>
+                <input type="text" id="quickGroupCenter2" class="form-input" placeholder="اسم السنتر أو القاعة" style="font-size: 0.85rem;">
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.8rem; color: #1e293b; display: block; margin-bottom: 0.2rem;">سعر الحصة (ج.م) *</label>
+                <input type="number" id="quickGroupPrice2" class="form-input" value="50" min="0" step="5" style="font-size: 0.85rem;" required>
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.8rem; color: #1e293b; display: block; margin-bottom: 0.2rem;">يوم الحصة الأسبوعي</label>
+                <select id="quickGroupDay2" class="form-input" style="font-size: 0.85rem;">
+                  <option value="السبت">السبت</option>
+                  <option value="الأحد">الأحد</option>
+                  <option value="الإثنين">الإثنين</option>
+                  <option value="الثلاثاء">الثلاثاء</option>
+                  <option value="الأربعاء">الأربعاء</option>
+                  <option value="الخميس">الخميس</option>
+                  <option value="الجمعة">الجمعة</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.4rem; margin-top: 0.75rem;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.cancelQuickAddGroupInImport(2)">إلغاء</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btnSaveQuickGroup2" onclick="window.centrlyApp.executeQuickCreateGroupForImport(2)" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">
+                حفظ واختيار المجموعة الآن ✓
+              </button>
+            </div>
           </div>
         </div>
 
@@ -8708,12 +9106,17 @@ https://centerly-eg.com/p/p16766044
   async executeImportStudents() {
     if (!this.importWizardState) return;
 
-    const { dataRows, mapping, groupId } = this.importWizardState;
+    const step2Select = document.getElementById('importStep2GroupId');
+    const selectedGroupId = step2Select?.value || this.importWizardState.groupId;
 
-    if (!groupId) {
-      this.showToast('المجموعة المستهدفة غير محددة', 'warning');
+    if (!selectedGroupId || selectedGroupId === '__NEW_GROUP__') {
+      this.showToast('يرجى اختيار المجموعة المستهدفة أولاً أو إنشاء مجموعة جديدة للمتابعة', 'warning');
+      if (step2Select) step2Select.focus();
       return;
     }
+
+    this.importWizardState.groupId = selectedGroupId;
+    const { dataRows, mapping, groupId } = this.importWizardState;
 
     const { name: nameCol, parent_phone: parentCol, student_phone: studentCol, code: codeCol, fee: feeCol } = mapping;
 

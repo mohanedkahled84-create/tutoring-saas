@@ -168,3 +168,27 @@ adminRouter.delete("/gift-codes/:id", async (req: AuthenticatedRequest, res: Res
   }
 });
 
+// POST /api/admin/test-webhook - Admin only: test automation alert webhook
+adminRouter.post("/test-webhook", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const adminOpsService = getServices(req).adminOps;
+    const result = await adminOpsService.testWebhookAlert(req.user!.id);
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to test webhook";
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+  }
+});
+
+// POST /api/admin/purge-test-data - Admin only: safely clean test accounts and test payment proofs
+adminRouter.post("/purge-test-data", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const adminOpsService = getServices(req).adminOps;
+    const result = await adminOpsService.purgeTestData(req.user!.id);
+    res.json({ message: "تم تنظيف بيانات التجربة بنجاح", ...result });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to purge test data";
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+  }
+});
+

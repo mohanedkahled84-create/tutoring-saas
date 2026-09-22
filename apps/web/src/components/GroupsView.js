@@ -154,14 +154,18 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
 
               <!-- Action Buttons -->
               <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1.25rem; border-top: 1px solid var(--centrly-line); padding-top: 0.75rem;">
-                <div style="display: flex; gap: 0.4rem;">
-                  <button class="btn btn-primary btn-sm" style="flex: 2; display: flex; align-items: center; justify-content: center; gap: 0.35rem; font-weight: 700;" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}')">
+                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                  <button class="btn btn-primary btn-sm" style="flex: 2; min-width: 110px; display: flex; align-items: center; justify-content: center; gap: 0.35rem; font-weight: 700;" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}')">
                     ${getIcon('sessions', 16)}
                     <span>بدء الحصة</span>
                   </button>
-                  <button class="btn btn-secondary btn-sm" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.35rem;" onclick="window.centrlyApp.viewGroupDetails('${escapeHtml(g.id)}')">
+                  <button class="btn btn-secondary btn-sm" style="flex: 1; min-width: 75px; display: flex; align-items: center; justify-content: center; gap: 0.35rem;" onclick="window.centrlyApp.viewGroupDetails('${escapeHtml(g.id)}')">
                     ${getIcon('students', 14)}
                     <span>الطلاب</span>
+                  </button>
+                  <button class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.78rem; font-weight: 600; padding: 0.25rem 0.55rem; color: #2563eb; border-color: #cbd5e1;" onclick="window.centrlyApp.openImportModal('${escapeHtml(g.id)}')" title="استيراد طلاب من شيت Excel لهذه المجموعة">
+                    ${getIcon('download', 13, '#2563eb')}
+                    <span>استيراد شيت</span>
                   </button>
                 </div>
 

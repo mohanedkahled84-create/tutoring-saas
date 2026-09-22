@@ -192,3 +192,36 @@ test("SESSION-RESILIENCE: Proactive session refresher, Web Lock deduplication, a
   assert.ok(routesContent.includes("REFRESH_TEMPORARY_FAILURE"), "Auth refresh route must not return 401 on transient server errors");
 });
 
+test("IMPORT-GROUP-SELECTION: Sheet import and add student modals support group choice and + New Group creation", () => {
+  const appPath = path.resolve(__dirname, "../../web/src/app.js");
+  const appContent = fs.readFileSync(appPath, "utf-8");
+
+  // Helper renderGroupOptionsForImport exists and provides choices
+  assert.ok(appContent.includes("renderGroupOptionsForImport(selectedGroupId"), "app.js must define renderGroupOptionsForImport");
+  assert.ok(appContent.includes("value=\"__NEW_GROUP__\""), "Group options must include __NEW_GROUP__ choice");
+  assert.ok(appContent.includes("➕ إضافة مجموعة جديدة"), "Group options must display + New Group option label");
+
+  // Step 1 modal includes dropdown and quick creator
+  assert.ok(appContent.includes("id=\"importGroupId\""), "Step 1 must have importGroupId select element");
+  assert.ok(appContent.includes("quickGroupCreatorStep1"), "Step 1 must include quickGroupCreatorStep1 container");
+  assert.ok(appContent.includes("executeQuickCreateGroupForImport(1)"), "Step 1 must allow executing quick group creation");
+
+  // Step 2 modal includes interactive dropdown and quick creator
+  assert.ok(appContent.includes("id=\"importStep2GroupId\""), "Step 2 must have interactive importStep2GroupId select element");
+  assert.ok(appContent.includes("quickGroupCreatorStep2"), "Step 2 must include quickGroupCreatorStep2 container");
+  assert.ok(appContent.includes("executeQuickCreateGroupForImport(2)"), "Step 2 must allow executing quick group creation in Step 2");
+
+  // executeImportStudents dynamically reads from Step 2
+  assert.ok(appContent.includes("document.getElementById('importStep2GroupId')"), "executeImportStudents must read selected group from Step 2");
+
+  // Single student modal also supports quick group creation
+  assert.ok(appContent.includes("quickGroupCreatorSingleStudent"), "Single student modal must have quickGroupCreatorSingleStudent");
+  assert.ok(appContent.includes("executeQuickCreateGroupForSingleStudent()"), "Single student modal must support executeQuickCreateGroupForSingleStudent");
+
+  // GroupsView includes direct import sheet action on cards
+  const groupsViewPath = path.resolve(__dirname, "../../web/src/components/GroupsView.js");
+  const groupsViewContent = fs.readFileSync(groupsViewPath, "utf-8");
+  assert.ok(groupsViewContent.includes("openImportModal('${escapeHtml(g.id)}')"), "GroupsView cards must have direct openImportModal button");
+});
+
+

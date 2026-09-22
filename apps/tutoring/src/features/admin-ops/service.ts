@@ -180,4 +180,26 @@ export class AdminOpsService {
     const formatted = formatNewSignupMessage(payload);
     await this.repo.logFounderAlert(payload, formatted);
   }
+
+  async purgeTestData(adminId: string): Promise<{ deleted_tenants_count: number; deleted_proofs_count: number }> {
+    return this.repo.purgeTestData(adminId);
+  }
+
+  async testWebhookAlert(_adminId: string): Promise<{ success: boolean; message: string }> {
+    const testPayload: NewSignupAlertPayload = {
+      teacher_name: "تجربة ربط الأوتوميشن (Test)",
+      teacher_email: "test-alert@centrly.app",
+      teacher_phone: "01123671177",
+      tenant_name: "سنتر التجربة الأوتوماتيكية",
+      account_type: "teacher",
+      subject: "رياضيات",
+      governorate: "القاهرة",
+      trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+    await this.alertFounder(testPayload);
+    return {
+      success: true,
+      message: "تم إرسال إشعار تجريبي وتسجيله في سجل الأوتوميشن بنجاح!",
+    };
+  }
 }

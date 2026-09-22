@@ -124,4 +124,5 @@ export interface IAdminOpsRepository {
     status: "sent" | "failed";
     error_detail: string;
   }): Promise<void>;
+  purgeTestData(adminId: string): Promise<{ deleted_tenants_count: number; deleted_proofs_count: number }>;
 }

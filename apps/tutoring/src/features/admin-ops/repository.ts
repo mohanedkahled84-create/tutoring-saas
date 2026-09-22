@@ -245,6 +245,32 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
       throw new Error(error.message);
     }
   }
+
+  async purgeTestData(_adminId: string): Promise<{ deleted_tenants_count: number; deleted_proofs_count: number }> {
+    // 1. Clean test/rejected payment proofs
+    const { data: testProofs } = await this.client
+      .from("payment_proofs")
+      .delete()
+      .or("reference_number.ilike.test%,admin_notes.ilike.%test%,status.eq.rejected")
+      .select("id");
+
+    const deletedProofsCount = (testProofs || []).length;
+
+    // 2. Clean test tenants (excluding any tenant with users having role = admin or owner email = founder)
+    const { data: testTenants } = await this.client
+      .from("tenants")
+      .delete()
+      .or("name.ilike.%test%,name.ilike.%تجربة%,name.ilike.%demo%")
+      .not("id", "eq", "7b8b30e0-c7c3-44c6-ac00-d7fc58bcf609")
+      .select("id");
+
+    const deletedTenantsCount = (testTenants || []).length;
+
+    return {
+      deleted_tenants_count: deletedTenantsCount,
+      deleted_proofs_count: deletedProofsCount,
+    };
+  }
 }
 
 export class FakeAdminOpsRepository implements IAdminOpsRepository {
@@ -370,6 +396,25 @@ export class FakeAdminOpsRepository implements IAdminOpsRepository {
     error_detail: string;
   }): Promise<void> {
     this.messageLogs.push({ ...data, message_type: "critical_error_email_alert" });
+  }
+
+  async purgeTestData(_adminId: string): Promise<{ deleted_tenants_count: number; deleted_proofs_count: number }> {
+    const initialTenants = this.tenants.length;
+    this.tenants = this.tenants.filter(
+      (t) => !t.name.toLowerCase().includes("test") && !t.name.includes("تجربة") && !t.name.toLowerCase().includes("demo")
+    );
+    const deletedTenants = initialTenants - this.tenants.length;
+
+    const initialProofs = this.paymentProofs.length;
+    this.paymentProofs = this.paymentProofs.filter(
+      (p) => !(p.admin_notes || "").toLowerCase().includes("test") && p.status !== "rejected"
+    );
+    const deletedProofs = initialProofs - this.paymentProofs.length;
+
+    return {
+      deleted_tenants_count: deletedTenants,
+      deleted_proofs_count: deletedProofs,
+    };
   }
 }
 
