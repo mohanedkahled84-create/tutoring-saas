@@ -2363,29 +2363,95 @@ class CentrlyApp {
             const overview = ovRes.metrics || ovRes || {};
             const proofs = proofsRes.payment_proofs || [];
             const tenants = tenantsRes.tenants || [];
-            const pendingCount = proofs.filter(p => p.status === 'pending').length;
+            
+            const pendingProofs = proofs.filter(p => p.status === 'pending');
+            const approvedProofs = proofs.filter(p => p.status === 'approved');
             const activeCount = tenants.filter(t => t.subscription_status === 'active').length;
             const trialCount = tenants.filter(t => t.subscription_status === 'trial').length;
             const expiredCount = tenants.filter(t => ['expired', 'past_due', 'deactivated'].includes(t.subscription_status)).length;
-            const mrrValue = activeCount > 0 ? (activeCount * 899) : (overview.mrr_egp || 0);
+
+            // 1. Real Cash Collected (All-time from approved payment proofs)
+            const totalCollectedEgp = approvedProofs.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+            // 2. This Month Collected Cash & New Clients
+            const now = new Date();
+            const curYear = now.getFullYear();
+            const curMonth = now.getMonth();
+
+            const thisMonthApprovedProofs = approvedProofs.filter(p => {
+              const d = new Date(p.reviewed_at || p.created_at);
+              return d.getFullYear() === curYear && d.getMonth() === curMonth;
+            });
+            const thisMonthCollectedEgp = thisMonthApprovedProofs.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+            const thisMonthNewTenants = tenants.filter(t => {
+              if (!t.created_at) return false;
+              const d = new Date(t.created_at);
+              return d.getFullYear() === curYear && d.getMonth() === curMonth;
+            });
+            const newClientsThisMonth = thisMonthNewTenants.length;
+
+            // 3. Expected Next Month Normalized MRR (Restores regular plan prices after discounts)
+            let expectedNextMonthMrr = 0;
+            tenants.filter(t => t.subscription_status === 'active').forEach(t => {
+              const tier = (t.subscription_tier || '').toLowerCase();
+              const limit = Number(t.students_limit || t.settings?.students_limit || 0);
+              const planName = (t.plan_name || t.settings?.plan_name || '').toLowerCase();
+              if (limit >= 1500 || tier === 'pro' || planName.includes('1500')) {
+                expectedNextMonthMrr += 1399;
+              } else if (limit >= 750 || tier === 'growth' || planName.includes('750')) {
+                expectedNextMonthMrr += 899;
+              } else {
+                expectedNextMonthMrr += 499;
+              }
+            });
+
+            // 4. Onboarding & Activation Radar for New Clients
+            const activationRadar = tenants.map(t => {
+              const studentCount = Number(t.students_count || 0);
+              let stage = 'no_students';
+              let stageLabel = 'سجل ولم يضف طلاب بعد ⚠️';
+              let stageColor = '#f59e0b';
+              if (studentCount > 0) {
+                stage = 'has_students';
+                stageLabel = `أضاف ${studentCount} طالب ⏳`;
+                stageColor = '#2563eb';
+              }
+              return {
+                ...t,
+                studentCount,
+                stage,
+                stageLabel,
+                stageColor,
+              };
+            });
+
             this.adminOverviewData = {
               overview: {
                 total_tenants: tenants.length || overview.total_tenants || 0,
                 active_tenants: activeCount || overview.active_tenants || 0,
                 trial_tenants: trialCount || overview.trial_tenants || 0,
-                mrr_egp: mrrValue,
+                expired_tenants: expiredCount,
+                total_collected_egp: totalCollectedEgp,
+                approved_proofs_count: approvedProofs.length,
+                this_month_collected_egp: thisMonthCollectedEgp,
+                new_clients_this_month: newClientsThisMonth,
+                expected_next_month_mrr: expectedNextMonthMrr,
                 total_students: overview.total_students || 0,
                 total_sessions: overview.total_sessions || 0,
-                whatsapp: overview.whatsapp || { total_sent: 0, total_failed: 0, estimated_cost_egp: 0 },
+                whatsapp: overview.whatsapp || { total_sent: 0, total_failed: 0, estimated_cost_egp: 0, status: 'active' },
               },
               subscription_breakdown: {
                 active: activeCount,
                 trial: trialCount,
-                pending_verification: pendingCount,
+                pending_verification: pendingProofs.length,
                 expired: expiredCount,
               },
+              pending_proofs: pendingProofs,
+              activation_radar: activationRadar,
               recent_signups: tenants.slice(0, 5),
               at_risk_tenants: tenants.filter(t => t.subscription_status === 'trial').slice(0, 5).map(t => ({
+                tenant_id: t.id,
                 tenant_name: t.name,
                 details: `تنتهي التجربة في: ${t.trial_ends_at ? new Date(t.trial_ends_at).toLocaleDateString('ar-EG') : 'قريباً'}`,
               })),
@@ -13913,15 +13979,23 @@ https://centerly-eg.com/p/p16766044
   }
 
   openTenantOverrideModal(tenantId, tenantName, currentStatus, currentTier = 'growth') {
+    if (!tenantName && this.adminTenantsData?.tenants) {
+      const match = this.adminTenantsData.tenants.find(t => t.id === tenantId);
+      if (match) {
+        tenantName = match.name;
+        currentStatus = match.subscription_status || match.status || 'active';
+        currentTier = match.subscription_tier || 'growth';
+      }
+    }
     const tier = (currentTier || 'growth').toLowerCase();
     const bodyHtml = `
       <form id="tenantOverrideForm" onsubmit="window.centrlyApp.handleSaveTenantOverride(event, '${tenantId}')">
         <div style="margin-bottom: 1.25rem;">
           <h4 style="margin: 0 0 0.35rem; font-weight: 800; color: var(--centrly-ink);">
-            تعديل اشتراك: ${escapeHtml(tenantName)}
+            تعديل اشتراك: ${escapeHtml(tenantName || 'المشترك')}
           </h4>
           <p style="font-size: 0.825rem; color: #64748b; margin: 0;">
-            الحالة الحالية: <strong style="color: var(--centrly-blue-700);">${currentStatus}</strong>
+            الحالة الحالية: <strong style="color: var(--centrly-blue-700);">${currentStatus || 'active'}</strong>
           </p>
         </div>
 
@@ -13997,6 +14071,77 @@ https://centerly-eg.com/p/p16766044
         btn.disabled = false;
         btn.innerText = 'حفظ وتطبيق التعديل';
       }
+    }
+  }
+
+  async extendTenantTrialDirect(tenantId, days = 7) {
+    try {
+      this.showToast('جاري تمديد فترة التجربة للمشترك...', 'info');
+      await request(`/admin/tenants/${tenantId}/subscription`, {
+        method: 'POST',
+        body: JSON.stringify({
+          extend_days: days,
+          status: 'trial',
+        }),
+      });
+      this.showToast(`تم تمديد فترة التجربة بنجاح (+${days} أيام إضافية)!`, 'success');
+      await Promise.all([
+        this.loadRouteData('admin-dashboard'),
+        this.loadRouteData('admin-tenants'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل تمديد التجربة: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  async testAdminWebhook() {
+    try {
+      this.showToast('جاري إرسال إشعار تجريبي لاختبار الـ Webhook...', 'info');
+      const res = await request('/admin/test-webhook', { method: 'POST' });
+      this.showToast(res.message || 'تم إرسال إشعار التجربة بنجاح!', 'success');
+    } catch (err) {
+      this.showToast(`فشل اختبار الـ Webhook: ${err.message || 'تأكد من ضبط المتغيرات'}`, 'danger');
+    }
+  }
+
+  openPurgeTestDataModal() {
+    const bodyHtml = `
+      <div style="text-align: center; padding: 0.5rem 0;">
+        <div style="margin-bottom: 0.75rem;">${getIcon('risk', 44, '#ef4444')}</div>
+        <h4 style="margin: 0 0 0.5rem; color: #991b1b; font-weight: 900;">تصفير وتنظيف بيانات وحسابات التجربة</h4>
+        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.6;">
+          سيقوم هذا الإجراء بحذف الحسابات والإيصالات التجريبية المسجلة سابقاً للبدء بصفحة بيضاء وسجلات نظيفة مع أول عميل حقيقي.
+          <br>
+          <strong style="color: #059669;">حسابك الأساسي كمدير ومؤسس للمنصة آمن تماماً ولن يتأثر.</strong>
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="button" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;" onclick="window.centrlyApp.confirmPurgeTestData()">
+            تأكيد تنظيف بيانات التجربة
+          </button>
+        </div>
+      </div>
+    `;
+    this.showModal('تصفير بيانات التجربة', bodyHtml);
+  }
+
+  async confirmPurgeTestData() {
+    this.closeModal();
+    try {
+      this.showToast('جاري تنظيف بيانات التجربة...', 'info');
+      const res = await request('/admin/purge-test-data', { method: 'POST' });
+      const delTenants = res.deleted_tenants_count ?? 0;
+      const delProofs = res.deleted_proofs_count ?? 0;
+      this.showToast(`تم تنظيف (${delTenants}) حساب تجريبي و (${delProofs}) إيصال تجريبي بنجاح!`, 'success');
+      await Promise.all([
+        this.loadRouteData('admin-dashboard'),
+        this.loadRouteData('admin-tenants'),
+        this.loadRouteData('admin-proofs'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل تنظيف البيانات: ${err.message || 'خطأ في الخادم'}`, 'danger');
     }
   }
 

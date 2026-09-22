@@ -168,7 +168,7 @@ export function renderBusinessOwnerDashboard(data = {}) {
         <!-- 4. Expected Next Month Normalized MRR -->
         <div class="card" style="margin: 0; border-top: 4px solid #d97706; background: linear-gradient(180deg, #fffbeb, #fff); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.8rem; color: #92400e; font-weight: 800;">الأرباح الشهرية القادمة المتوقعة</span>
+            <span style="font-size: 0.8rem; color: #92400e; font-weight: 800;">الأرباح الشهرية القادمة المتوقعة (الإيراد الشهري التقديري)</span>
             <span style="color: #d97706; display: flex;">${getIcon('reports', 18)}</span>
           </div>
           <div style="font-size: 1.85rem; font-weight: 900; color: #b45309; margin: 0.35rem 0; font-family: monospace;">
@@ -207,8 +207,8 @@ export function renderBusinessOwnerDashboard(data = {}) {
 
             <div style="display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.78rem;">
               <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #25D366;"></span>
-              <span style="font-weight: 700; color: #334155;">Evolution WhatsApp:</span>
-              <span style="color: #15803d; font-weight: 800;">${overview.whatsapp.total_sent} رسالة</span>
+              <span style="font-weight: 700; color: #334155;">رسائل الواتساب:</span>
+              <span style="color: #15803d; font-weight: 800;">${overview.whatsapp.total_sent} مرسلة</span>
             </div>
 
             <div style="display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.78rem;">
@@ -405,7 +405,7 @@ export function renderBusinessOwnerDashboard(data = {}) {
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h3 class="card-title" style="font-size: 0.95rem; color: #c2410c; margin: 0; display: flex; align-items: center; gap: 0.35rem; font-weight: 900;">
               ${getIcon('risk', 16, '#c2410c')}
-              <span>حسابات تنتهي تجربتها قريباً (${atRisk.length})</span>
+              <span>إشارات خطر الإلغاء وحسابات تنتهي تجربتها قريباً (${atRisk.length})</span>
             </h3>
             <span class="badge" style="background: #ea580c; color: #fff; font-size: 0.72rem;">تنبيه التجديد</span>
           </div>
@@ -452,6 +452,34 @@ export function renderBusinessOwnerDashboard(data = {}) {
             </button>
           </div>
         </div>
+
+      </div>
+
+      <!-- Subscription Breakdown Bar -->
+      <div class="card" style="margin: 0; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem;">
+        <h3 class="card-title" style="font-size: 0.95rem; font-weight: 900; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+          ${getIcon('reports', 16, '#2563eb')}
+          <span>توزيع الاشتراكات وحالة الحسابات عبر المنصة</span>
+        </h3>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <div style="padding: 0.45rem 0.9rem; border-radius: 6px; background: #ecfdf5; border: 1px solid #a7f3d0; font-size: 0.8rem;">
+            <span style="color: #065f46; font-weight: 700;">باقات نشطة (Active):</span>
+            <b style="color: #047857; margin-right: 0.35rem;">${subs.active}</b>
+          </div>
+          <div style="padding: 0.45rem 0.9rem; border-radius: 6px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 0.8rem;">
+            <span style="color: #1e40af; font-weight: 700;">فترة تجريبية (Trial):</span>
+            <b style="color: #1d4ed8; margin-right: 0.35rem;">${subs.trial}</b>
+          </div>
+          <div style="padding: 0.45rem 0.9rem; border-radius: 6px; background: #fefce8; border: 1px solid #fef08a; font-size: 0.8rem;">
+            <span style="color: #854d0e; font-weight: 700;">بانتظار تأكيد التحويل:</span>
+            <b style="color: #a16207; margin-right: 0.35rem;">${subs.pending_verification}</b>
+          </div>
+          <div style="padding: 0.45rem 0.9rem; border-radius: 6px; background: #fef2f2; border: 1px solid #fecaca; font-size: 0.8rem;">
+            <span style="color: #991b1b; font-weight: 700;">منتهي الصلاحية (Expired):</span>
+            <b style="color: #b91c1c; margin-right: 0.35rem;">${subs.expired}</b>
+          </div>
+        </div>
+      </div>
 
       </div>
 
