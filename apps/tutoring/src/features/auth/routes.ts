@@ -217,13 +217,20 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
     const normalizedAccountType: "teacher" | "center" =
       account_type === "center" ? "center" : "teacher";
 
+    const normalizedPhone = typeof phone === "string"
+      ? phone
+          .trim()
+          .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632))
+          .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+      : undefined;
+
     const result = await authService.signup(
       {
         email,
         password,
         full_name,
         tenant_name,
-        phone,
+        phone: normalizedPhone,
         subject,
         governorate,
         account_type: normalizedAccountType,

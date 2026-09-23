@@ -25,6 +25,10 @@ export function formatVerificationEmailHtml(code: string, fullName?: string): st
   <title>تأكيد بريدك الإلكتروني - Centrly</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; direction: rtl; text-align: right;">
+  <!-- Hidden Preheader for email clients (Gmail / Outlook) -->
+  <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #fff; opacity: 0; mso-hide: all;">
+    رمز تأكيد حسابك في منصة سنترلي هو ${code} - صالح لمدة 15 دقيقة.
+  </div>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 16px;">
     <tr>
       <td align="center">
@@ -60,10 +64,16 @@ export function formatVerificationEmailHtml(code: string, fullName?: string): st
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Footer with anti-spam compliance -->
           <tr>
             <td style="background-color: #f1f5f9; padding: 20px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+              <p style="margin: 0 0 6px 0; color: #64748b; font-size: 12px; font-weight: 600;">
+                منظومة سنترلي التعليمية • جمهورية مصر العربية
+              </p>
+              <p style="margin: 0 0 6px 0; color: #94a3b8; font-size: 11px;">
+                هذه رسالة نظام تلقائية للتحقق من ملكية الحساب. للدعم والمساعدة: support@centerly-eg.com
+              </p>
+              <p style="margin: 0; color: #cbd5e1; font-size: 11px;">
                 © 2026 Centrly Platform. جميع الحقوق محفوظة.
               </p>
             </td>
@@ -111,6 +121,23 @@ export class EmailVerificationService {
 
     try {
       const html = formatVerificationEmailHtml(code, fullName);
+      const greeting = fullName ? `أهلاً بك يا أستاذ ${fullName}` : "أهلاً بك في منصة سنترلي";
+      const plainText = [
+        greeting,
+        "",
+        "شكراً لانضمامك إلى منصة سنترلي! لتأكيد بريدك الإلكتروني وتفعيل حسابك، يرجى إدخال رمز التحقق التالي:",
+        "",
+        `رمز التحقق (OTP): ${code}`,
+        "صالح لمدة 15 دقيقة فقط.",
+        "",
+        "إذا لم تكن قد طلبت إنشاء حساب في منصة سنترلي، يمكنك تجاهل هذا البريد الإلكتروني بأمان.",
+        "",
+        "--",
+        "منظومة سنترلي لإدارة المعلمين والمراكز التعليمية",
+        "جمهورية مصر العربية",
+        "الدعم الفني: support@centerly-eg.com | https://centerly-eg.com"
+      ].join("\n");
+
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -120,9 +147,13 @@ export class EmailVerificationService {
         body: JSON.stringify({
           from: this.fromEmail,
           to: normalizedEmail,
+          reply_to: "support@centerly-eg.com",
           subject: `رمز تأكيد بريدك الإلكتروني في منصة Centrly: ${code}`,
           html,
-          text: `رمز تأكيد حسابك في منصة سنترلي هو: ${code} - صالح لمدة 15 دقيقة.`,
+          text: plainText,
+          headers: {
+            "X-Entity-Ref-ID": `centrly-verify-${Date.now()}-${code}`,
+          },
         }),
       });
 
@@ -168,6 +199,23 @@ export class EmailVerificationService {
 
     try {
       const html = formatPinResetEmailHtml(code, fullName);
+      const greeting = fullName ? `أهلاً بك يا أستاذ ${fullName}` : "أهلاً بك";
+      const plainText = [
+        greeting,
+        "",
+        "تم طلب إعادة تعيين رمز الأمان (PIN) الخاص بالصفحات والبيانات المالية في حسابك على منصة سنترلي.",
+        "",
+        `رمز التحقق (PIN Reset): ${code}`,
+        "صالح لمدة 15 دقيقة فقط.",
+        "",
+        "تنبيه أمني: لا تشارك هذا الرمز مع أي شخص. إذا لم تكن قد طلبت هذا الإجراء، يرجى تجاهل هذا البريد.",
+        "",
+        "--",
+        "منظومة سنترلي لإدارة المعلمين والمراكز التعليمية",
+        "جمهورية مصر العربية",
+        "الدعم الفني: support@centerly-eg.com | https://centerly-eg.com"
+      ].join("\n");
+
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -177,9 +225,13 @@ export class EmailVerificationService {
         body: JSON.stringify({
           from: this.fromEmail,
           to: normalizedEmail,
+          reply_to: "support@centerly-eg.com",
           subject: `رمز إعادة تعيين رمز الأمان (PIN) في منصة Centrly: ${code}`,
           html,
-          text: `رمز إعادة تعيين رمز الأمان للبيانات المالية في سنترلي هو: ${code} - صالح لمدة 15 دقيقة.`,
+          text: plainText,
+          headers: {
+            "X-Entity-Ref-ID": `centrly-pin-${Date.now()}-${code}`,
+          },
         }),
       });
 
@@ -221,6 +273,10 @@ export function formatPinResetEmailHtml(code: string, fullName?: string): string
   <title>رمز إعادة تعيين رمز الأمان - Centrly</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; direction: rtl; text-align: right;">
+  <!-- Hidden Preheader for email clients -->
+  <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #fff; opacity: 0; mso-hide: all;">
+    رمز إعادة تعيين رمز الأمان المالي في سنترلي هو ${code} - صالح لمدة 15 دقيقة.
+  </div>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 16px;">
     <tr>
       <td align="center">
@@ -259,10 +315,16 @@ export function formatPinResetEmailHtml(code: string, fullName?: string): string
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Footer with anti-spam compliance -->
           <tr>
             <td style="background-color: #f1f5f9; padding: 20px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+              <p style="margin: 0 0 6px 0; color: #64748b; font-size: 12px; font-weight: 600;">
+                منظومة سنترلي التعليمية • جمهورية مصر العربية
+              </p>
+              <p style="margin: 0 0 6px 0; color: #94a3b8; font-size: 11px;">
+                هذه رسالة نظام تلقائية للتحقق من ملكية الحساب. للدعم والمساعدة: support@centerly-eg.com
+              </p>
+              <p style="margin: 0; color: #cbd5e1; font-size: 11px;">
                 © 2026 Centrly Platform. جميع الحقوق محفوظة.
               </p>
             </td>

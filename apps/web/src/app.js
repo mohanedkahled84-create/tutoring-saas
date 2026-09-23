@@ -1812,7 +1812,7 @@ class CentrlyApp {
     }
 
     const email = document.getElementById('signupEmail')?.value?.trim().toLowerCase() || '';
-    const phone = document.getElementById('signupPhone')?.value?.trim() || '';
+    const phone = normalizeDigits(document.getElementById('signupPhone')?.value?.trim() || '');
     const password = document.getElementById('signupPassword')?.value?.trim() || '';
     const passwordConfirm = document.getElementById('signupPasswordConfirm')?.value?.trim() || '';
 
