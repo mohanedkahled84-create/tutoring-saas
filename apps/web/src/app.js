@@ -1223,7 +1223,7 @@ class CentrlyApp {
     openFullscreenBarcodeModal(student);
   }
 
-  async compressImageFile(file, maxWidth = 1600, quality = 0.78) {
+  async compressImageFile(file, maxWidth = 1280, quality = 0.68) {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onerror = () => resolve(null);
@@ -1251,8 +1251,15 @@ class CentrlyApp {
               return;
             }
             ctx.drawImage(img, 0, 0, width, height);
-            const compressed = canvas.toDataURL('image/jpeg', quality);
-            const estimatedBytes = Math.round((compressed.length * 3) / 4);
+            let compressed = canvas.toDataURL('image/jpeg', quality);
+            let estimatedBytes = Math.round((compressed.length * 3) / 4);
+
+            // If still over 800KB, perform secondary pass with lower quality for fast network transfer
+            if (estimatedBytes > 800 * 1024) {
+              compressed = canvas.toDataURL('image/jpeg', 0.55);
+              estimatedBytes = Math.round((compressed.length * 3) / 4);
+            }
+
             resolve({
               data: compressed,
               size: estimatedBytes,
@@ -1271,15 +1278,22 @@ class CentrlyApp {
   async handleStudentHomeworkUpload(materialId, file) {
     if (!file) return;
 
+    const fileInput = document.getElementById(`hw-file-input-${materialId}`);
+    const resetFileInput = () => {
+      if (fileInput) fileInput.value = '';
+    };
+
     const isPdf = (file.type && file.type.includes('pdf')) || (file.name && file.name.toLowerCase().endsWith('.pdf'));
     const isImage = (file.type && file.type.startsWith('image/')) || (file.name && /\.(jpg|jpeg|png|webp|heic|bmp)$/i.test(file.name));
 
     if (!isPdf && !isImage) {
+      resetFileInput();
       this.showToast('يرجى رفع ملف الواجب بصيغة PDF أو صورة واضحة (JPG / PNG / WEBP).', 'warning');
       return;
     }
 
     if (file.size > 25 * 1024 * 1024) {
+      resetFileInput();
       this.showToast('حجم الملف يتجاوز الحد الأقصى المسموح به (25 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.', 'warning');
       return;
     }
@@ -1293,6 +1307,7 @@ class CentrlyApp {
       || '';
 
     if (!token) {
+      resetFileInput();
       this.showToast('تعذر التحقق من رمز الطالب أو ولي الأمر. يرجى إعادة فتح الرابط والمحاولة مرة أخرى.', 'danger');
       return;
     }
@@ -1310,8 +1325,8 @@ class CentrlyApp {
       let uploadFileSize = file.size;
 
       if (isImage) {
-        if (btn) btn.innerHTML = '<span>جارٍ ضغط وتحسين الصورة للرفع الفوري...</span>';
-        const compressed = await this.compressImageFile(file, 1600, 0.78);
+        if (btn) btn.innerHTML = '<span>جارٍ تجهيز وضغط الصورة للرفع السريع...</span>';
+        const compressed = await this.compressImageFile(file, 1280, 0.68);
         if (compressed && compressed.data) {
           uploadBase64 = compressed.data;
           uploadFileName = compressed.name;
@@ -1329,20 +1344,52 @@ class CentrlyApp {
         });
       }
 
-      if (btn) btn.innerHTML = '<span>جارٍ حفظ الواجب في السحابة...</span>';
+      if (btn) btn.innerHTML = '<span>جارٍ بدء الرفع (0%)...</span>';
 
-      await request('/public/homework/submit', {
-        method: 'POST',
-        body: {
+      // Upload with real-time percentage progress tracking
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_BASE_URL}/public/homework/submit`);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable && btn) {
+            const percent = Math.min(99, Math.round((evt.loaded / evt.total) * 100));
+            btn.innerHTML = `<span>جارٍ الرفع (${percent}%)...</span>`;
+          }
+        };
+
+        xhr.onload = () => {
+          if (btn) btn.innerHTML = '<span>جارٍ معالجة وحفظ الواجب في السحابة...</span>';
+          let respData = {};
+          try {
+            respData = JSON.parse(xhr.responseText);
+          } catch (_) {}
+
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(respData);
+          } else {
+            const errMsg = respData?.error?.message || `فشل حفظ الواجب (${xhr.status})`;
+            reject(new Error(errMsg));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('انقطع الاتصال بالإنترنت أثناء الرفع'));
+        xhr.ontimeout = () => reject(new Error('استغرق الرفع وقتاً أطول من المتوقع، يرجى المحاولة مرة أخرى'));
+        xhr.timeout = 180000; // 3 minutes timeout
+
+        xhr.send(JSON.stringify({
           token,
           material_id: materialId,
           file_data: uploadBase64,
           file_name: uploadFileName,
           file_size: uploadFileSize,
-        },
+        }));
       });
 
       this.showToast('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة.', 'success');
+      resetFileInput();
+
       const portalRole = (typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_portal_role') : null)
         || (this._parentPortalToken ? 'parent' : 'student');
       if (portalRole === 'parent' && this.loadParentPortal) {
@@ -1353,6 +1400,7 @@ class CentrlyApp {
     } catch (subErr) {
       console.error('Homework upload error:', subErr);
       this.showToast(`فشل رفع الواجب: ${subErr.message || 'حدث خطأ في الاتصال'}`, 'danger');
+      resetFileInput();
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = originalText;

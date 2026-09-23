@@ -76,30 +76,32 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       return;
     }
 
-    // Clean up any previous uploaded file for this student/material before saving new one
-    try {
-      const { data: priorSub } = await supabase
-        .from("homework_submissions")
-        .select("file_url")
-        .eq("material_id", material_id)
-        .eq("student_id", studentId)
-        .maybeSingle();
+    // Clean up previous uploaded file asynchronously in background (non-blocking)
+    (async () => {
+      try {
+        const { data: priorSub } = await supabase
+          .from("homework_submissions")
+          .select("file_url")
+          .eq("material_id", material_id)
+          .eq("student_id", studentId)
+          .maybeSingle();
 
-      if (priorSub?.file_url) {
-        const bucketName = "homework-submissions";
-        const marker = `/${bucketName}/`;
-        let oldPath = "";
-        if (priorSub.file_url.includes(marker)) {
-          oldPath = priorSub.file_url.substring(priorSub.file_url.indexOf(marker) + marker.length).split("?")[0];
-        } else if (!priorSub.file_url.startsWith("http")) {
-          oldPath = priorSub.file_url;
+        if (priorSub?.file_url) {
+          const bucketName = "homework-submissions";
+          const marker = `/${bucketName}/`;
+          let oldPath = "";
+          if (priorSub.file_url.includes(marker)) {
+            oldPath = priorSub.file_url.substring(priorSub.file_url.indexOf(marker) + marker.length).split("?")[0];
+          } else if (!priorSub.file_url.startsWith("http")) {
+            oldPath = priorSub.file_url;
+          }
+          if (oldPath) {
+            const clientForStorage = supabasePublic || supabase;
+            await clientForStorage.storage.from(bucketName).remove([decodeURIComponent(oldPath)]).catch(() => {});
+          }
         }
-        if (oldPath) {
-          const clientForStorage = supabasePublic || supabase;
-          await clientForStorage.storage.from(bucketName).remove([decodeURIComponent(oldPath)]).catch(() => {});
-        }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    })().catch(() => {});
 
     // 3. If base64 file_data provided, inspect magic bytes & upload securely (C-05)
     if (file_data) {
@@ -150,19 +152,11 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
         return;
       }
 
-      // Generate signed URL with short expiration (24h) instead of getPublicUrl (C-05)
-      const { data: signedUrlData, error: signedUrlErr } = await supabase.storage
+      // Fast direct CDN public URL without extra latency
+      const { data: publicUrlData } = supabase.storage
         .from("homework-submissions")
-        .createSignedUrl(storagePath, 86400);
-
-      if (signedUrlErr || !signedUrlData?.signedUrl) {
-        const { data: publicUrlData } = supabase.storage
-          .from("homework-submissions")
-          .getPublicUrl(storagePath);
-        file_url = publicUrlData.publicUrl;
-      } else {
-        file_url = signedUrlData.signedUrl;
-      }
+        .getPublicUrl(storagePath);
+      file_url = publicUrlData.publicUrl;
     }
 
     if (!file_url) {
