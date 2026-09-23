@@ -231,7 +231,7 @@ test("IMPORT-GROUP-SELECTION: Sheet import and add student modals support group 
   assert.ok(groupsViewContent.includes("openImportModal('${escapeHtml(g.id)}')"), "GroupsView cards must have direct openImportModal button");
 });
 
-test("PARENT-PORTAL: ParentPortalView renders both homework and PDF study materials/booklets", async () => {
+test("PARENT-PORTAL: ParentPortalView renders homework monitoring without student upload/download inputs", async () => {
   const { renderParentPortalView } = await import("../../web/src/components/ParentPortalView.js");
   const html = renderParentPortalView({
     student: { name: "مهند خالد", student_code: "1001", group_name: "مجموعه يوم السبت والتلات" },
@@ -244,10 +244,10 @@ test("PARENT-PORTAL: ParentPortalView renders both homework and PDF study materi
     ]
   }, "homework");
 
-  assert.ok(html.includes("Ch3"), "Parent portal must render booklet Ch3");
-  assert.ok(html.includes("واجب شابتر 1"), "Parent portal must render homework");
-  assert.ok(html.includes("المذكرات وملازم الشرح المتاحة"), "Parent portal must have study materials section");
-  assert.ok(html.includes("تحميل / فتح المذكرة"), "Parent portal must offer download button for study material");
+  assert.ok(html.includes("واجب شابتر 1"), "Parent portal must render homework tracking");
+  assert.ok(!html.includes("hw-file-input"), "Parent portal must not render homework upload file input");
+  assert.ok(!html.includes("رفع حل الواجب"), "Parent portal must not have homework upload submission box");
+  assert.ok(!html.includes("المذكرات وملازم الشرح المتاحة"), "Parent portal must not have study materials download section");
 });
 
 

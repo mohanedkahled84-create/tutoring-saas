@@ -10,7 +10,7 @@ import { renderSessionsView } from './components/SessionsView.js';
 import { renderStudentsView } from './components/StudentsView.js?v=4.8.12';
 import { renderGroupsView } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
-import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.1';
+import { renderParentPortalView } from './components/ParentPortalView.js?v=4.1.0';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.9.5';
 import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.8';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=4.0.0';
