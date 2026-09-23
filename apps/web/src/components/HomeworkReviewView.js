@@ -320,11 +320,18 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                             <td style="font-size: 0.8rem; color: #64748b; font-family: monospace;">${escapeHtml(formattedDate)}</td>
                             <td>
                               ${sub.file_url ? `
-                                <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
-                                  style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
-                                  ${getIcon('file', 14, '#1d4ed8')}
-                                  <span>معاينة ملف الواجب</span>
-                                </a>
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                  ${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(sub.file_url) ? `
+                                    <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer" title="اضغط لتكبير صورة الواجب">
+                                      <img src="${escapeHtml(sub.file_url)}" alt="صورة الواجب" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                                    </a>
+                                  ` : ''}
+                                  <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
+                                    style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
+                                    ${getIcon('file', 14, '#1d4ed8')}
+                                    <span>${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(sub.file_url) ? 'معاينة صورة الواجب ↗' : 'معاينة ملف الواجب ↗'}</span>
+                                  </a>
+                                </div>
                               ` : `
                                 <span style="font-size: 0.78rem; color: #94a3b8;">لا يوجد ملف مرفق</span>
                               `}
@@ -469,11 +476,18 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                           <td style="font-size: 0.8rem; color: #64748b; font-family: monospace;">${escapeHtml(formattedDate)}</td>
                           <td>
                             ${sub.file_url ? `
-                              <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
-                                style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
-                                ${getIcon('file', 14, '#1d4ed8')}
-                                <span>معاينة الملف</span>
-                              </a>
+                              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                ${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(sub.file_url) ? `
+                                  <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer" title="اضغط لتكبير صورة الواجب">
+                                    <img src="${escapeHtml(sub.file_url)}" alt="صورة الواجب" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1;">
+                                  </a>
+                                ` : ''}
+                                <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
+                                  style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
+                                  ${getIcon('file', 14, '#1d4ed8')}
+                                  <span>${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(sub.file_url) ? 'معاينة الصورة ↗' : 'معاينة الملف ↗'}</span>
+                                </a>
+                              </div>
                             ` : (isApproved ? `
                               <span style="font-size: 0.78rem; color: #059669; font-weight: 700;">تم الاعتماد</span>
                             ` : '<span style="font-size: 0.78rem; color: #94a3b8;">—</span>')}

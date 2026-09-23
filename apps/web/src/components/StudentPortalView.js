@@ -393,11 +393,18 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
                       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem;">
                         ${m.submission_url ? `
-                          <a href="${escapeHtml(m.submission_url)}" target="_blank" rel="noopener noreferrer"
-                            style="font-size: 0.8rem; color: #2563eb; font-weight: 700; text-decoration: underline; display: inline-flex; align-items: center; gap: 0.25rem;">
-                            ${getIcon('file', 14, '#2563eb')}
-                            <span>معاينة ملفك المرفوع (${escapeHtml(m.submitted_at ? m.submitted_at.slice(0, 10) : 'مرفوع')})</span>
-                          </a>
+                          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            ${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(m.submission_url) ? `
+                              <a href="${escapeHtml(m.submission_url)}" target="_blank" rel="noopener noreferrer" title="اضغط لتكبير صورة الواجب">
+                                <img src="${escapeHtml(m.submission_url)}" alt="صورة الواجب" style="width: 38px; height: 38px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                              </a>
+                            ` : ''}
+                            <a href="${escapeHtml(m.submission_url)}" target="_blank" rel="noopener noreferrer"
+                              style="font-size: 0.8rem; color: #2563eb; font-weight: 700; text-decoration: underline; display: inline-flex; align-items: center; gap: 0.25rem;">
+                              ${getIcon('file', 14, '#2563eb')}
+                              <span>${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(m.submission_url) ? 'معاينة صورة الواجب' : 'معاينة ملفك المرفوع'} (${escapeHtml(m.submitted_at ? m.submitted_at.slice(0, 10) : 'مرفوع')}) ↗</span>
+                            </a>
+                          </div>
                         ` : `
                           <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF أو صورة واضحة (الحد الأقصى 25MB)</span>
                         `}

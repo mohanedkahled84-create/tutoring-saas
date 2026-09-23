@@ -122,12 +122,13 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       }
       const fileBuffer = Buffer.from(base64Clean, "base64");
 
-      // Enforce 10MB maximum file size & magic bytes validation (C-05)
+      const defaultFilename = contentType.startsWith("image/") ? "homework.jpg" : "homework.pdf";
+      // Enforce 25MB maximum file size & magic bytes validation (C-05)
       const validation = validateFileUpload({
         buffer: fileBuffer,
-        originalFilename: file_name || "homework.pdf",
+        originalFilename: file_name || defaultFilename,
         declaredMimeType: contentType,
-        maxSizeBytes: 10 * 1024 * 1024,
+        maxSizeBytes: 25 * 1024 * 1024,
       });
 
       if (!validation.isValid || !validation.sanitizedFilename || !validation.detectedMimeType) {
@@ -169,13 +170,44 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       return;
     }
 
-    // 4. Upsert submission record via secure RPC
-    const { data: submission, error: submitErr } = await supabase.rpc("submit_homework_portal", {
+    // 4. Upsert submission record via secure RPC (with studentId fallback) or direct upsert
+    const fallbackFilename = file_name || (file_data?.startsWith("data:image/") ? "homework.jpg" : "homework.pdf");
+    let submission: any = null;
+    let submitErr: any = null;
+
+    const rpcRes = await supabase.rpc("submit_homework_portal", {
       p_portal_token: token,
       p_material_id: material_id,
       p_file_url: file_url,
-      p_file_name: file_name || "homework.pdf",
+      p_file_name: fallbackFilename,
+      p_student_id: studentId,
     });
+
+    if (rpcRes.error || !rpcRes.data) {
+      logger.warn(`[Homework] submit_homework_portal RPC returned error (${rpcRes.error?.message}), executing direct upsert`);
+      const directRes = await supabase
+        .from("homework_submissions")
+        .upsert(
+          {
+            tenant_id: tenantId,
+            material_id: material_id,
+            student_id: studentId,
+            file_url: file_url,
+            file_name: fallbackFilename,
+            file_size: file_size || null,
+            status: "pending",
+            submitted_at: new Date().toISOString(),
+          },
+          { onConflict: "material_id,student_id" }
+        )
+        .select()
+        .maybeSingle();
+
+      submission = directRes.data;
+      submitErr = directRes.error;
+    } else {
+      submission = rpcRes.data;
+    }
 
     if (submitErr || !submission) {
       logger.error(`[Homework] Submit error: ${submitErr?.message || "Failed to persist submission"}`);
