@@ -307,7 +307,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
       throw new Error(rpcErr?.message || "Failed to initialize organization profile");
     }
 
-    await this.sendAndRecordOtp(data.email, data.full_name);
+    const code = await this.sendAndRecordOtp(data.email, data.full_name);
 
     return {
       user: {
@@ -326,6 +326,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
         trial_ends_at: trialEndsAt,
         subscription_status: rpcData.subscription_status || "trial",
       },
+      otp_code: code,
     };
   }
 
@@ -463,7 +464,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
     };
   }
 
-  async resendVerification(dto: ResendVerificationDTO): Promise<{ success: boolean; message: string }> {
+  async resendVerification(dto: ResendVerificationDTO): Promise<{ success: boolean; message: string; otp_code?: string; phone?: string; full_name?: string }> {
     const email = dto.email.trim().toLowerCase();
     if (!email) {
       throw new Error("البريد الإلكتروني مطلوب.");
@@ -486,20 +487,25 @@ export class SupabaseAuthRepository implements IAuthRepository {
     }
 
     let fullName: string | undefined;
+    let phone: string | undefined;
     try {
       const { data: userRec } = await this.adminClient
         .from("users")
-        .select("full_name")
+        .select("full_name, phone")
         .eq("email", email)
         .maybeSingle();
       if (userRec?.full_name) fullName = userRec.full_name;
+      if (userRec?.phone) phone = userRec.phone;
     } catch {}
 
-    await this.sendAndRecordOtp(email, fullName);
+    const code = await this.sendAndRecordOtp(email, fullName);
 
     return {
       success: true,
-      message: "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني بنجاح.",
+      message: "تم إرسال رمز تحقق جديد إلى الواتساب والبريد الإلكتروني بنجاح.",
+      otp_code: code,
+      phone,
+      full_name: fullName,
     };
   }
 
@@ -642,6 +648,7 @@ export class FakeAuthRepository implements IAuthRepository {
         subject: data.subject || null,
       },
       tenant,
+      otp_code: "123456",
     };
   }
 
@@ -678,7 +685,7 @@ export class FakeAuthRepository implements IAuthRepository {
     };
   }
 
-  async resendVerification(dto: ResendVerificationDTO): Promise<{ success: boolean; message: string }> {
+  async resendVerification(dto: ResendVerificationDTO): Promise<{ success: boolean; message: string; otp_code?: string; phone?: string; full_name?: string }> {
     const email = dto.email.trim().toLowerCase();
     this.verifications.set(email, {
       code: "654321",
@@ -689,7 +696,10 @@ export class FakeAuthRepository implements IAuthRepository {
     });
     return {
       success: true,
-      message: "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني بنجاح.",
+      message: "تم إرسال رمز تحقق جديد إلى الواتساب والبريد الإلكتروني بنجاح.",
+      otp_code: "654321",
+      phone: "01012345678",
+      full_name: "مستخدم تجريبي",
     };
   }
 

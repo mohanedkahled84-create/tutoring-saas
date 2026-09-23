@@ -47,6 +47,7 @@ export interface SignupResult {
     trial_ends_at: string;
     subscription_status: string;
   };
+  otp_code?: string;
 }
 
 export interface ResetPasswordDTO {
@@ -90,7 +91,7 @@ export interface IAuthRepository {
   refreshToken?(refreshToken: string): Promise<LoginResult>;
   createTenantWithOwner(data: SignupDTO, trialEndsAt: string): Promise<SignupResult>;
   verifyEmail(dto: VerifyEmailDTO): Promise<VerifyEmailResult>;
-  resendVerification(dto: ResendVerificationDTO): Promise<{ success: boolean; message: string }>;
+  resendVerification(dto: ResendVerificationDTO): Promise<{ success: boolean; message: string; otp_code?: string; phone?: string; full_name?: string }>;
   requestPasswordReset(email: string, redirectTo?: string): Promise<void>;
   resetPassword(token: string, newPassword: string): Promise<void>;
   changePassword?(token: string, email: string, currentPassword: string, newPassword: string): Promise<void>;

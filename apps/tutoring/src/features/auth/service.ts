@@ -95,7 +95,7 @@ export class AuthService {
     });
   }
 
-  async resendVerification(dto: ResendVerificationDTO): Promise<{ success: boolean; message: string }> {
+  async resendVerification(dto: ResendVerificationDTO): Promise<{ success: boolean; message: string; otp_code?: string; phone?: string; full_name?: string }> {
     const email = dto.email ? dto.email.trim().toLowerCase() : "";
     if (!email) {
       throw new Error("MISSING_EMAIL");
@@ -124,6 +124,7 @@ export class AuthService {
       governorate?: string;
       trial_ends_at?: string;
       account_type?: "teacher" | "center";
+      otp_code?: string;
     }) => Promise<void>
   ): Promise<SignupResult> {
     const normalizedDto: SignupDTO = {
@@ -157,6 +158,7 @@ export class AuthService {
         governorate: normalizedDto.governorate,
         trial_ends_at: trialEnds,
         account_type: normalizedDto.account_type,
+        otp_code: result.otp_code,
       }).catch(() => {});
     }
 

@@ -2,7 +2,7 @@ import { authService } from './services/auth.js?v=4.9.25';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.25';
 import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.0';
-import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.20';
+import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.21';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
@@ -1862,7 +1862,7 @@ class CentrlyApp {
       });
 
       if (res.requires_verification) {
-        this.renderEmailVerificationView(email, password, 'تم إنشاء الحساب بنجاح! تم إرسال رمز التحقق إلى بريدك الإلكتروني.', this.signupFormData);
+        this.renderEmailVerificationView(email, password, 'تم إنشاء الحساب بنجاح! تم إرسال رمز التحقق إلى الواتساب وبريدك الإلكتروني 📲', this.signupFormData);
         return;
       }
 
@@ -2066,7 +2066,7 @@ class CentrlyApp {
 
     try {
       const res = await authService.resendVerification(email);
-      this.showVerificationAlert(res.message || 'تم إرسال رمز جديد إلى بريدك بنجاح.', 'success');
+      this.showVerificationAlert(res.message || 'تم إرسال رمز جديد إلى الواتساب وبريدك بنجاح 📲', 'success');
 
       let timeLeft = 60;
       if (btn) {

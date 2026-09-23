@@ -208,11 +208,11 @@ export function renderEmailVerificationScreen({ email = '', note = '' } = {}) {
         </div>
 
         <h2 style="font-family: 'Changa', sans-serif; font-size: 1.6rem; font-weight: 800; margin: 0 0 0.5rem 0; color: var(--centrly-ink);">
-          تأكيد بريدك الإلكتروني
+          تأكيد وتفعيل حسابك 📲
         </h2>
 
         <p style="font-size: 0.9rem; color: var(--centrly-text); line-height: 1.6; margin-top: 0; margin-bottom: 0.5rem;">
-          أرسلنا رمز تحقق سري (OTP) إلى بريدك الإلكتروني:
+          أرسلنا رمز التحقق المكون من 6 أرقام إلى <strong>واتساب رقم هاتفك</strong> وإلى بريدك الإلكتروني:
         </p>
         
         <div style="display: inline-block; background: #f8fafc; border: 1px solid var(--centrly-line); padding: 0.4rem 1rem; border-radius: 8px; font-weight: 700; color: #0f766e; font-family: monospace; font-size: 0.95rem; margin-bottom: 0.6rem;" dir="ltr">
@@ -244,8 +244,8 @@ export function renderEmailVerificationScreen({ email = '', note = '' } = {}) {
             <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.4rem;">
               صلاحية الرمز 15 دقيقة فقط
             </div>
-            <div style="font-size: 0.785rem; color: #475569; margin-top: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.45rem 0.75rem; line-height: 1.4; text-align: center;">
-              💡 إذا لم تجد الرسالة في صندوق الوارد، يرجى مراجعة مجلد <strong>الرسائل غير المرغوب فيها (Spam)</strong> أو العروض الترويجية.
+            <div style="font-size: 0.8rem; color: #065f46; margin-top: 0.55rem; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.55rem 0.85rem; line-height: 1.5; text-align: center;">
+              📲 <strong>تحقق من واتساب هاتفك الآن:</strong> تم إرسال كود التفعيل في رسالة واتساب، بالإضافة إلى نسخة على بريدك الإلكتروني (راجع مجلد Spam إذا لم يظهر بالوارد).
             </div>
           </div>
 

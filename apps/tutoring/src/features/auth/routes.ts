@@ -78,9 +78,20 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
         const unverifiedEmail = (err as Error & { email?: string }).email || rawIdentifier;
         try {
           const authService = getServices(req as AuthenticatedRequest).auth;
-          await authService.resendVerification({ email: unverifiedEmail }).catch((resendErr) => {
+          const resendRes = await authService.resendVerification({ email: unverifiedEmail }).catch((resendErr) => {
             console.warn("[Auth Login] Automatic OTP resend on unverified login skipped/failed:", resendErr?.message);
+            return undefined;
           });
+          if (resendRes && resendRes.otp_code && resendRes.phone) {
+            dispatchAdminAlertWebhook({
+              event_type: "otp_verification",
+              teacher_name: resendRes.full_name || "أستاذنا",
+              teacher_email: unverifiedEmail,
+              teacher_phone: resendRes.phone,
+              otp_code: resendRes.otp_code,
+              created_at: new Date().toISOString(),
+            }).catch(() => {});
+          }
         } catch (_) {}
         res.status(403).json({
           error: {
@@ -249,13 +260,14 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
           subject: payload.subject,
           governorate: payload.governorate,
           trial_ends_at: payload.trial_ends_at,
+          otp_code: payload.otp_code,
           created_at: new Date().toISOString(),
         }).catch(() => {});
       }
     );
 
     res.status(201).json({
-      message: "تم إنشاء الحساب بنجاح. يرجى تأكيد بريدك الإلكتروني للمتابعة.",
+      message: "تم إنشاء الحساب بنجاح. تم إرسال رمز التحقق إلى الواتساب وبريدك الإلكتروني.",
       requires_verification: true,
       email: email.trim().toLowerCase(),
       user: result.user,
@@ -358,6 +370,17 @@ authRouter.post("/resend-verification", authRateLimiter, async (req: Request, re
   try {
     const authService = getServices(req as AuthenticatedRequest).auth;
     const result = await authService.resendVerification({ email });
+
+    if (result.otp_code && result.phone) {
+      dispatchAdminAlertWebhook({
+        event_type: "otp_verification",
+        teacher_name: result.full_name || "أستاذنا",
+        teacher_email: email,
+        teacher_phone: result.phone,
+        otp_code: result.otp_code,
+        created_at: new Date().toISOString(),
+      }).catch(() => {});
+    }
 
     res.json({
       message: result.message,

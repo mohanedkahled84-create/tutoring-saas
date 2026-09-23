@@ -11,6 +11,7 @@ export interface NewSignupWebhookPayload {
   subject?: string;
   governorate?: string;
   trial_ends_at?: string;
+  otp_code?: string;
   created_at?: string;
 }
 
@@ -37,10 +38,20 @@ export interface TrialReminderWebhookPayload {
   expiry_date?: string;
 }
 
+export interface OtpVerificationWebhookPayload {
+  event_type: "otp_verification";
+  teacher_name?: string;
+  teacher_email: string;
+  teacher_phone?: string;
+  otp_code: string;
+  created_at?: string;
+}
+
 export type AdminAlertPayload =
   | NewSignupWebhookPayload
   | PaymentProofWebhookPayload
-  | TrialReminderWebhookPayload;
+  | TrialReminderWebhookPayload
+  | OtpVerificationWebhookPayload;
 
 /**
  * Dispatches an event to the n8n Admin Alert Webhook asynchronously (non-blocking).
@@ -54,7 +65,8 @@ export async function dispatchAdminAlertWebhook(
 
   // Guard: if running in test environment or mock payload, do NOT call live external webhook
   const isMockPayload =
-    payload.teacher_name === "Expiring Teacher" || payload.tenant_name === "Expiring Teacher";
+    ("teacher_name" in payload && payload.teacher_name === "Expiring Teacher") ||
+    ("tenant_name" in payload && (payload as any).tenant_name === "Expiring Teacher");
 
   if (process.env.NODE_ENV === "test" || isMockPayload) {
     if (fetchFn !== fetch) {
