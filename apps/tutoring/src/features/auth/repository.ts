@@ -200,7 +200,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
       );
 
       if (!directErr && directData?.user_id) {
-        await this.sendAndRecordOtp(data.email, data.full_name);
+        const code = await this.sendAndRecordOtp(data.email, data.full_name);
         return {
           user: {
             id: directData.user_id,
@@ -218,6 +218,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
             trial_ends_at: trialEndsAt,
             subscription_status: directData.subscription_status || "trial",
           },
+          otp_code: code,
         };
       }
 
@@ -497,6 +498,17 @@ export class SupabaseAuthRepository implements IAuthRepository {
       if (userRec?.full_name) fullName = userRec.full_name;
       if (userRec?.phone) phone = userRec.phone;
     } catch {}
+
+    if (!phone) {
+      try {
+        const { data: authUserRes } = await this.adminClient.auth.admin.listUsers({ page: 1, perPage: 100 });
+        const matched = authUserRes?.users?.find((u: any) => u.email?.toLowerCase() === email);
+        if (matched) {
+          phone = matched.phone || (matched.user_metadata as any)?.phone;
+          if (!fullName) fullName = (matched.user_metadata as any)?.full_name || (matched.user_metadata as any)?.name;
+        }
+      } catch {}
+    }
 
     const code = await this.sendAndRecordOtp(email, fullName);
 

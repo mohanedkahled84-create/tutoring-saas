@@ -254,15 +254,17 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
           event_type: "new_signup",
           teacher_name: payload.teacher_name,
           teacher_email: payload.teacher_email,
-          teacher_phone: payload.teacher_phone,
+          teacher_phone: payload.teacher_phone || normalizedPhone,
           tenant_name: payload.tenant_name,
           account_type: payload.account_type,
           subject: payload.subject,
           governorate: payload.governorate,
           trial_ends_at: payload.trial_ends_at,
-          otp_code: payload.otp_code,
+          otp_code: payload.otp_code || (result as any)?.otp_code,
           created_at: new Date().toISOString(),
-        }).catch(() => {});
+        }).catch((webhookErr) => {
+          console.warn("[Auth] Failed to dispatch new_signup webhook:", webhookErr?.message);
+        });
       }
     );
 
