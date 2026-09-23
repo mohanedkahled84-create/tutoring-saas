@@ -231,4 +231,23 @@ test("IMPORT-GROUP-SELECTION: Sheet import and add student modals support group 
   assert.ok(groupsViewContent.includes("openImportModal('${escapeHtml(g.id)}')"), "GroupsView cards must have direct openImportModal button");
 });
 
+test("PARENT-PORTAL: ParentPortalView renders both homework and PDF study materials/booklets", async () => {
+  const { renderParentPortalView } = await import("../../web/src/components/ParentPortalView.js");
+  const html = renderParentPortalView({
+    student: { name: "مهند خالد", student_code: "1001", group_name: "مجموعه يوم السبت والتلات" },
+    summary: { attendance_rate: "100%", attended_count: 5, total_sessions: 5, homework_done_count: 0 },
+    sessions: [],
+    quizzes: [],
+    materials: [
+      { id: "mat-1", title: "Ch3", description: "Ch 3", type: "pdf", is_homework: false, url: "https://example.com/ch3.pdf" },
+      { id: "mat-2", title: "واجب شابتر 1", description: "صفحه 18 سؤال 5 ل سؤال 10", type: "pdf", is_homework: true, url: "" }
+    ]
+  }, "homework");
+
+  assert.ok(html.includes("Ch3"), "Parent portal must render booklet Ch3");
+  assert.ok(html.includes("واجب شابتر 1"), "Parent portal must render homework");
+  assert.ok(html.includes("المذكرات وملازم الشرح المتاحة"), "Parent portal must have study materials section");
+  assert.ok(html.includes("تحميل / فتح المذكرة"), "Parent portal must offer download button for study material");
+});
+
 

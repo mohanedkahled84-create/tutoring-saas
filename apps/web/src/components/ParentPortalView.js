@@ -39,6 +39,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
   const quizzes = portalData.quizzes || [];
   const materials = portalData.materials || [];
   const homeworkList = materials.filter(m => m.is_homework);
+  const studyMaterials = materials.filter(m => !m.is_homework);
 
   return `
     <div style="min-height: 100vh; background-color: #f8fafc; padding: 1rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
@@ -75,11 +76,11 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           </div>
           
           <p style="font-size: 0.8rem; color: #64748b; margin: 0.4rem 0 0 0;">
-            تقرير الحضور والغياب، درجات الكويزات، ومتابعة تسليم الواجبات المنزلية
+            تقرير الحضور والغياب، درجات الكويزات، والواجبات والمذكرات الدراسية
           </p>
         </div>
 
-        <!-- 3-Tab Navigation Bar: Attendance, Quizzes, Homework Tracking -->
+        <!-- 3-Tab Navigation Bar: Attendance, Quizzes, Homework & Materials Tracking -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
           <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('attendance') : null" id="tab-btn-attendance"
             style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
@@ -96,7 +97,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('homework') : null" id="tab-btn-homework"
             style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'homework' || activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'homework' || activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'homework' || activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
             ${getIcon('homework', 16, activeTab === 'homework' || activeTab === 'materials' ? '#1e3a8a' : '#64748b')}
-            <span>الواجبات (${homeworkList.length})</span>
+            <span>الواجبات والمذكرات (${materials.length})</span>
           </button>
         </div>
 
@@ -263,8 +264,8 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
         <!-- ================= TAB 3: HOMEWORK STATUS (الواجب اتسلم ولا لأ فقط) ================= -->
         <div id="tab-content-homework" style="display: ${activeTab === 'homework' || activeTab === 'materials' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
           
-          <!-- Homework KPI Stats for Parent -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
+          <!-- Homework & Materials KPI Stats for Parent -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem;">
             <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
               <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">إجمالي الواجبات</div>
               <div style="font-size: 1.6rem; font-weight: 900; color: #1d4ed8; margin-top: 0.2rem;">
@@ -300,6 +301,21 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                 ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length > 0 ? 'بحاجة لمتابعة ولي الأمر' : 'لا توجد واجبات متأخرة'}
               </div>
             </div>
+
+            ${studyMaterials.length > 0 ? `
+              <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+                  ${getIcon('file', 14, '#8b5cf6')}
+                  <span>مذكرات وملازم PDF</span>
+                </div>
+                <div style="font-size: 1.6rem; font-weight: 900; color: #8b5cf6; margin-top: 0.2rem;">
+                  ${studyMaterials.length}
+                </div>
+                <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
+                  جاهزة للعرض والتحميل
+                </div>
+              </div>
+            ` : ''}
           </div>
 
           <!-- Homework List Section -->
@@ -407,6 +423,65 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
               `}
             </div>
           </div>
+
+          ${studyMaterials.length > 0 ? `
+            <!-- Study Materials & PDF Booklets Section for Parents -->
+            <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                  <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    ${getIcon('materials', 18, '#8b5cf6')}
+                    <span>المذكرات وملازم الشرح المتاحة (${studyMaterials.length})</span>
+                  </h2>
+                  <p style="font-size: 0.75rem; color: #64748b; margin: 0.2rem 0 0 0;">
+                    تحميل المذكرات والشروحات وملفات الـ PDF لمتابعة الطالب
+                  </p>
+                </div>
+                <span class="badge badge-blue" style="font-weight: 700;">${studyMaterials.length} ملف متاح</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                ${studyMaterials.map(m => {
+                  const isPdf = m.type === 'pdf';
+                  const isVideo = m.type === 'video';
+                  const typeBadge = isPdf 
+                    ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('file', 12, '#1d4ed8')} PDF</span>` 
+                    : (isVideo ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('video', 12, '#1d4ed8')} فيديو</span>` : `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('link', 12, '#1d4ed8')} رابط</span>`);
+                  const actionText = isPdf ? 'تحميل / فتح المذكرة' : (isVideo ? 'مشاهدة الفيديو' : 'فتح الرابط');
+
+                  return `
+                    <div style="padding: 0.9rem 1rem; border-radius: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                      <div style="flex: 1; min-width: 180px;">
+                        <div style="margin-bottom: 0.25rem;">
+                          <span style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 0.3rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                            ${typeBadge}
+                          </span>
+                        </div>
+                        <h4 style="font-size: 0.92rem; font-weight: 800; color: #0f172a; margin: 0;">
+                          ${escapeHtml(m.title)}
+                        </h4>
+                        ${m.description ? `
+                          <p style="font-size: 0.78rem; color: #64748b; margin: 0.25rem 0 0 0; line-height: 1.4;">
+                            ${escapeHtml(m.description)}
+                          </p>
+                        ` : ''}
+                      </div>
+
+                      ${(m.url && m.url !== '#') ? `
+                        <div>
+                          <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer" 
+                            style="display: inline-flex; align-items: center; gap: 0.35rem; background: #1d4ed8; color: #ffffff; padding: 0.45rem 0.85rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.8rem; font-weight: 800; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
+                            ${getIcon(isPdf ? 'download' : (isVideo ? 'video' : 'link'), 13, '#ffffff')}
+                            <span>${actionText}</span>
+                          </a>
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
         </div>
 
         <!-- Portal Security & Integrity Note -->

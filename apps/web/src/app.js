@@ -556,7 +556,25 @@ class CentrlyApp {
     let hasToken = authService.isAuthenticated();
     const hasCachedSession = authService.hasSession();
 
+    const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'coupons', 'activity-logs'];
+    const rawRouteParam = urlParams.get('route');
+    const requestedAdminRoute =
+      (rawRouteParam && adminRoutes.includes(rawRouteParam)) ? rawRouteParam :
+      (cleanPath === '/admin' || cleanPath === '/admin/overview' ? 'admin-dashboard' :
+       cleanPath === '/admin/payment-proofs' || cleanPath === '/admin/proofs' ? 'admin-proofs' :
+       cleanPath === '/admin/tenants' ? 'admin-tenants' :
+       cleanPath === '/admin/coupons' ? 'coupons' : null);
+
     if (!hasToken && !hasCachedSession) {
+      if (requestedAdminRoute) {
+        try {
+          sessionStorage.setItem('centrly_redirect_route', requestedAdminRoute);
+          localStorage.setItem('centrly_redirect_route', requestedAdminRoute);
+        } catch (_) {}
+        this.renderAuth('login');
+        return;
+      }
+
       const viewParam = urlParams.get('view');
       if (viewParam === 'login' || viewParam === 'signup') {
         this.renderAuth(viewParam);
@@ -623,10 +641,29 @@ class CentrlyApp {
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
     const savedRoute = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_current_route')) ||
                        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_current_route'));
-    const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'coupons', 'activity-logs'];
+    const redirectRoute = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_redirect_route')) ||
+                          (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_redirect_route'));
 
     if (isAdmin) {
-      this.currentRoute = (savedRoute && adminRoutes.includes(savedRoute)) ? savedRoute : 'admin-dashboard';
+      if (requestedAdminRoute && adminRoutes.includes(requestedAdminRoute)) {
+        this.currentRoute = requestedAdminRoute;
+        try {
+          sessionStorage.setItem('centrly_current_route', requestedAdminRoute);
+          localStorage.setItem('centrly_current_route', requestedAdminRoute);
+          sessionStorage.removeItem('centrly_redirect_route');
+          localStorage.removeItem('centrly_redirect_route');
+        } catch (_) {}
+      } else if (redirectRoute && adminRoutes.includes(redirectRoute)) {
+        this.currentRoute = redirectRoute;
+        try {
+          sessionStorage.setItem('centrly_current_route', redirectRoute);
+          localStorage.setItem('centrly_current_route', redirectRoute);
+          sessionStorage.removeItem('centrly_redirect_route');
+          localStorage.removeItem('centrly_redirect_route');
+        } catch (_) {}
+      } else {
+        this.currentRoute = (savedRoute && adminRoutes.includes(savedRoute)) ? savedRoute : 'admin-dashboard';
+      }
     } else if (isCenter) {
       this.currentRoute = (savedRoute && savedRoute !== 'dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'center-dashboard';
     } else {
@@ -1667,7 +1704,26 @@ class CentrlyApp {
 
       const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
       const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-      this.currentRoute = isAdmin ? 'admin-dashboard' : (isCenter ? 'center-dashboard' : 'dashboard');
+      const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'coupons', 'activity-logs'];
+      const redirectRoute = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_redirect_route')) ||
+                            (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_redirect_route'));
+
+      if (isAdmin) {
+        if (redirectRoute && adminRoutes.includes(redirectRoute)) {
+          this.currentRoute = redirectRoute;
+          try {
+            sessionStorage.removeItem('centrly_redirect_route');
+            localStorage.removeItem('centrly_redirect_route');
+          } catch (_) {}
+        } else {
+          this.currentRoute = 'admin-dashboard';
+        }
+      } else if (isCenter) {
+        this.currentRoute = (redirectRoute && !adminRoutes.includes(redirectRoute)) ? redirectRoute : 'center-dashboard';
+      } else {
+        this.currentRoute = (redirectRoute && !adminRoutes.includes(redirectRoute)) ? redirectRoute : 'dashboard';
+      }
+
       try {
         if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_current_route', this.currentRoute);
         if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_current_route', this.currentRoute);
