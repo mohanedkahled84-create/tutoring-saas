@@ -10,7 +10,7 @@ import { renderSessionsView } from './components/SessionsView.js';
 import { renderStudentsView } from './components/StudentsView.js?v=4.8.12';
 import { renderGroupsView } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
-import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.0';
+import { renderParentPortalView } from './components/ParentPortalView.js?v=4.0.1';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=4.9.5';
 import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.8';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=4.0.0';
@@ -1285,12 +1285,15 @@ class CentrlyApp {
     }
 
     const token = this._studentPortalToken
+      || this._parentPortalToken
+      || (typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_portal_token') : null)
+      || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('centrly_portal_token') : null)
       || new URLSearchParams(window.location.search).get('token')
       || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('centrly_student_portal_token') : null)
       || '';
 
     if (!token) {
-      this.showToast('تعذر التحقق من رمز الطالب. يرجى إعادة فتح رابط الطالب من جديد والمحاولة مرة أخرى.', 'danger');
+      this.showToast('تعذر التحقق من رمز الطالب أو ولي الأمر. يرجى إعادة فتح الرابط والمحاولة مرة أخرى.', 'danger');
       return;
     }
 
@@ -1340,7 +1343,13 @@ class CentrlyApp {
       });
 
       this.showToast('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة.', 'success');
-      await this.loadStudentPortal(token);
+      const portalRole = (typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_portal_role') : null)
+        || (this._parentPortalToken ? 'parent' : 'student');
+      if (portalRole === 'parent' && this.loadParentPortal) {
+        await this.loadParentPortal(token);
+      } else {
+        await this.loadStudentPortal(token);
+      }
     } catch (subErr) {
       console.error('Homework upload error:', subErr);
       this.showToast(`فشل رفع الواجب: ${subErr.message || 'حدث خطأ في الاتصال'}`, 'danger');
@@ -5546,7 +5555,7 @@ class CentrlyApp {
               </div>
               <button type="button" onclick="window.centrlyApp.cancelQuickAddGroupInSingleStudent()" style="background: none; border: none; font-size: 1.15rem; line-height: 1; cursor: pointer; color: #64748b;" title="إغلاق">&times;</button>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+            <div class="modal-form-grid" style="gap: 0.5rem; margin-bottom: 0;">
               <div>
                 <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">اسم المجموعة *</label>
                 <input type="text" id="quickGroupNameStudent" class="form-input" placeholder="مثال: 1ث أ" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
@@ -5968,7 +5977,7 @@ class CentrlyApp {
         </div>
 
         ${isCenterOwner ? `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="modal-form-grid">
             <div class="form-group">
               <label class="form-label" style="font-weight: 700;">المدرس المسؤول *</label>
               <select id="newGroupTeacherId" class="form-input" required>
@@ -5985,7 +5994,7 @@ class CentrlyApp {
             </div>
           </div>
         ` : `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="modal-form-grid">
             <div class="form-group">
               <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر (اختياري)</label>
               <input type="text" id="newGroupCenter" class="form-input" placeholder="اسم السنتر أو المقر (اختياري)">
@@ -5997,7 +6006,7 @@ class CentrlyApp {
           </div>
         `}
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+        <div class="modal-form-grid">
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
             <input type="number" id="newGroupPrice" class="form-input" min="0" step="5" placeholder="سعر الحصة" required>
@@ -6012,7 +6021,7 @@ class CentrlyApp {
         </div>
 
         <!-- Schedule Container for 1 Session / Week -->
-        <div id="newGroupScheduleSingle" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+        <div id="newGroupScheduleSingle" class="modal-form-grid">
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">يوم الحصة الأسبوعي *</label>
             <select id="newGroupDayOfWeek" class="form-input">
@@ -6036,7 +6045,7 @@ class CentrlyApp {
           <div style="font-size: 0.825rem; font-weight: 700; color: var(--centrly-blue-700); margin-bottom: 0.25rem;">
             مواعيد الحصتين في الأسبوع:
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="modal-form-grid" style="margin-bottom: 0;">
             <div class="form-group">
               <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الأول *</label>
               <select id="newGroupDay1" class="form-input">
@@ -6054,7 +6063,7 @@ class CentrlyApp {
               <input type="text" id="newGroupTime1" class="form-input" placeholder="04:00 م - 06:00 م" value="04:00 م - 06:00 م">
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="modal-form-grid" style="margin-bottom: 0;">
             <div class="form-group">
               <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الثاني *</label>
               <select id="newGroupDay2" class="form-input">
@@ -6195,7 +6204,7 @@ class CentrlyApp {
         </div>
 
         ${isCenterOwner ? `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="modal-form-grid">
             <div class="form-group">
               <label class="form-label" style="font-weight: 700;">المدرس المسؤول *</label>
               <select id="editGroupTeacherId" class="form-input" required>
@@ -6212,7 +6221,7 @@ class CentrlyApp {
             </div>
           </div>
         ` : `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+          <div class="modal-form-grid">
             <div class="form-group">
               <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر (اختياري)</label>
               <input type="text" id="editGroupCenter" class="form-input" value="${escapeHtml(group.center_name || group.centerName || '')}" placeholder="اسم السنتر أو المقر (اختياري)">
@@ -6224,7 +6233,7 @@ class CentrlyApp {
           </div>
         `}
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+        <div class="modal-form-grid">
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
             <input type="number" id="editGroupPrice" class="form-input" min="0" step="5" value="${group.price ?? group.session_price ?? 80}" required>
@@ -6239,7 +6248,7 @@ class CentrlyApp {
         </div>
 
         <!-- Schedule Container for 1 Session / Week -->
-        <div id="editGroupScheduleSingle" style="display: ${sessionsPerWeek === 1 ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+        <div id="editGroupScheduleSingle" class="modal-form-grid" style="display: ${sessionsPerWeek === 1 ? 'grid' : 'none'};">
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">يوم الحصة الأسبوعي *</label>
             <select id="editGroupDayOfWeek" class="form-input">
@@ -6257,7 +6266,7 @@ class CentrlyApp {
           <div style="font-size: 0.825rem; font-weight: 700; color: var(--centrly-blue-700); margin-bottom: 0.25rem;">
             مواعيد الحصتين في الأسبوع:
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="modal-form-grid" style="margin-bottom: 0;">
             <div class="form-group">
               <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الأول *</label>
               <select id="editGroupDay1" class="form-input">
@@ -6269,7 +6278,7 @@ class CentrlyApp {
               <input type="text" id="editGroupTime1" class="form-input" value="${escapeHtml(time1)}" placeholder="04:00 م - 06:00 م">
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="modal-form-grid" style="margin-bottom: 0;">
             <div class="form-group">
               <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الثاني *</label>
               <select id="editGroupDay2" class="form-input">
@@ -12846,7 +12855,7 @@ https://centerly-eg.com/p/p16766044
           <input type="text" id="modalMatTitle" class="form-input" placeholder="عنوان المذكرة أو المحتوى التعليمي" required>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+        <div class="modal-form-grid">
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">المجموعة المستهدفة</label>
             <select id="modalMatGroupId" class="form-select">
@@ -13216,7 +13225,7 @@ https://centerly-eg.com/p/p16766044
           <input type="tel" id="modalTA_Phone" class="form-input" placeholder="010..." dir="ltr" required>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+        <div class="modal-form-grid">
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">المجموعة المسندة</label>
             <select id="modalTA_GroupId" class="form-select">
@@ -13235,7 +13244,7 @@ https://centerly-eg.com/p/p16766044
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+        <div class="modal-form-grid" style="margin-bottom: 1.25rem;">
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">نظام المحاسبة *</label>
             <select id="modalTA_SalaryModel" class="form-select" onchange="document.getElementById('modalTA_SalaryLabel').innerText = (this.value === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)')">
@@ -13311,7 +13320,7 @@ https://centerly-eg.com/p/p16766044
           <input type="tel" id="modalEditTA_Phone" class="form-input" value="${escapeHtml(assistant.phone || '')}" dir="ltr" required>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+        <div class="modal-form-grid">
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">المجموعة المسندة</label>
             <select id="modalEditTA_GroupId" class="form-select">
@@ -13330,7 +13339,7 @@ https://centerly-eg.com/p/p16766044
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+        <div class="modal-form-grid" style="margin-bottom: 1.25rem;">
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">نظام المحاسبة *</label>
             <select id="modalEditTA_SalaryModel" class="form-select" onchange="document.getElementById('modalEditTA_SalaryLabel').innerText = (this.value === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)')">
@@ -13564,7 +13573,7 @@ https://centerly-eg.com/p/p16766044
         </div>
 
         <!-- Target Group & Due Date -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.95rem;">
+        <div class="modal-form-grid">
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">المجموعة المستهدفة</label>
             <select id="modalHwGroupId" class="form-select">

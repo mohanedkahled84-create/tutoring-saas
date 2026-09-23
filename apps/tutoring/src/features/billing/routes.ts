@@ -81,7 +81,7 @@ billingRouter.post(
         reference_number: proof.reference_number || undefined,
         proof_image_url: proof.proof_image_url || undefined,
         admin_notes: proof.admin_notes || undefined,
-        admin_dashboard_url: "https://centrly.app/admin",
+        admin_dashboard_url: "https://centerly-eg.com/?route=admin-proofs",
         created_at: proof.created_at || new Date().toISOString(),
       }).catch(() => {});
 

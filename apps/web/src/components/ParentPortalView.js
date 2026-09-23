@@ -318,6 +318,46 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
             ` : ''}
           </div>
 
+          <!-- Free PDF Helper & Conversion Guide Accordion (Collapsible) -->
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.85rem; overflow: hidden; box-shadow: 0 1px 4px rgba(16, 185, 129, 0.05); margin-bottom: 0.85rem;">
+            <button type="button" onclick="window.togglePdfHelper ? window.togglePdfHelper() : null" 
+              style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1.1rem; background: #f0fdf4; border: none; cursor: pointer; text-align: right; transition: background 0.2s;"
+              onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                <div style="color: #166534; display: flex; align-items: center;">${getIcon('lightbulb', 20, '#166534')}</div>
+                <div>
+                  <span style="font-size: 0.88rem; font-weight: 800; color: #166534; display: block;">
+                    مش عارف تحوّل صور حل الكشكول إلى ملف PDF لرفعها؟
+                  </span>
+                  <span style="font-size: 0.73rem; color: #15803d; font-weight: 600;">
+                    (اضغط هنا لمعرفة طريقة دمج وتصوير الواجب في ثوانٍ)
+                  </span>
+                </div>
+              </div>
+              <div id="pdf-helper-arrow" style="color: #166534; transition: transform 0.25s ease; display: flex; align-items: center;">
+                ${getIcon('chevronDown', 18, '#166534')}
+              </div>
+            </button>
+
+            <!-- Collapsible Content (Closed by default) -->
+            <div id="pdf-helper-content" style="display: none; padding: 0.75rem 1.1rem 1rem 1.1rem; border-top: 1px dashed #bbf7d0; background: #ffffff;">
+              <p style="font-size: 0.8rem; color: #15803d; margin: 0 0 0.5rem 0; line-height: 1.5; font-weight: 600;">
+                إذا قمت بتصوير صفحات حل الواجب بكاميرا الهاتف، يمكنك دمجها في ملف PDF واحد مجاناً:
+              </p>
+              <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 0.6rem; padding: 0.65rem 0.85rem; font-size: 0.8rem; color: #1e293b; line-height: 1.8;">
+                <b>1.</b> افتح أداة: 
+                <a href="https://www.ilovepdf.com/jpg_to_pdf" target="_blank" rel="noopener noreferrer" 
+                  style="color: #1d4ed8; font-weight: 800; text-decoration: underline; margin: 0 0.25rem;">
+                  موقع iLovePDF المجاني (تحويل صور JPG إلى PDF)
+                </a>
+                أو استخدم خيار "طباعة كـ PDF" من هاتفك.<br>
+                <b>2.</b> اختر صور صفحات حل الواجب بالترتيب من ألبوم الصور.<br>
+                <b>3.</b> اضغط <b>"تحويل إلى PDF"</b> ثم حمّل الملف الناتج.<br>
+                <b>4.</b> اضغط زر <b>"رفع حل الواجب (PDF أو صورة)"</b> عند الواجب المطلوب أدناه لإرساله للمعلم مباشرة!
+              </div>
+            </div>
+          </div>
+
           <!-- Homework List Section -->
           <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
@@ -327,7 +367,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                   <span>متابعة تسليم الواجبات المنزلية</span>
                 </h2>
                 <p style="font-size: 0.75rem; color: #64748b; margin: 0.2rem 0 0 0;">
-                  توضيح فوري لما تم تسليمه وما لم يقم الطالب بحله بعد
+                  توضيح فوري لما تم تسليمه وما لم يقم الطالب بحله بعد، مع إمكانية رفع الحل مباشرة
                 </p>
               </div>
               <span class="badge badge-blue" style="font-weight: 700;">${homeworkList.length} واجب</span>
@@ -413,6 +453,41 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                         <b>ملاحظة المعلم لولي الأمر:</b> ${escapeHtml(h.teacher_feedback)}
                       </div>
                     ` : ''}
+
+                    <!-- Homework Submission Box with Direct Upload Trigger -->
+                    <div style="background: #ffffff; border: 1px solid ${isRejected ? '#fca5a5' : '#e2e8f0'}; border-radius: 0.65rem; padding: 0.85rem; margin-top: 0.35rem;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <div style="font-size: 0.825rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.35rem;">
+                          ${getIcon('upload', 14, '#0f172a')}
+                          <span>رفع حل الواجب:</span>
+                        </div>
+
+                        <div>
+                          <input type="file" id="hw-file-input-${escapeHtml(h.id)}" accept="application/pdf,image/*,.pdf,.jpg,.jpeg,.png,.webp,.heic" style="display: none;" 
+                            onchange="window.centrlyApp && window.centrlyApp.handleStudentHomeworkUpload ? window.centrlyApp.handleStudentHomeworkUpload('${escapeHtml(h.id)}', this.files[0]) : null">
+                          
+                          <button type="button" onclick="document.getElementById('hw-file-input-${escapeHtml(h.id)}').click()" id="hw-upload-btn-${escapeHtml(h.id)}"
+                            style="background: ${isApproved ? '#15803d' : (isRejected ? '#dc2626' : '#2563eb')}; color: #ffffff; border: none; padding: 0.45rem 0.95rem; border-radius: 0.5rem; font-size: 0.825rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.2s; box-shadow: 0 2px 6px ${isApproved ? 'rgba(21,128,61,0.25)' : (isRejected ? 'rgba(220,38,38,0.25)' : 'rgba(37,99,235,0.25)')};">
+                            ${getIcon('upload', 14, '#ffffff')}
+                            <span>${isApproved ? 'رفع نسخة أخرى (اختياري)' : (isRejected ? 'إعادة رفع حل الواجب' : (isPending ? 'تعديل / رفع نسخة أحدث' : 'رفع حل الواجب (PDF أو صورة)'))}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      ${h.submission_url ? `
+                        <div style="margin-top: 0.5rem; border-top: 1px solid #f1f5f9; padding-top: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem;">
+                          <a href="${escapeHtml(h.submission_url)}" target="_blank" rel="noopener noreferrer"
+                            style="font-size: 0.8rem; color: #2563eb; font-weight: 700; text-decoration: underline; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            ${getIcon('file', 14, '#2563eb')}
+                            <span>معاينة الملف الذي تم رفعه (${escapeHtml(h.submitted_at ? h.submitted_at.slice(0, 10) : 'مرفوع')})</span>
+                          </a>
+                        </div>
+                      ` : `
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.35rem;">
+                          ارفع كشكول أو ورقة إجابة الطالب كملف PDF أو صورة واضحة (الحد الأقصى 25MB)
+                        </div>
+                      `}
+                    </div>
                   </div>
                 `;
               }).join('') : `
@@ -515,6 +590,20 @@ if (typeof window !== 'undefined') {
         btn.style.boxShadow = (t === target) ? '0 2px 6px rgba(0,0,0,0.08)' : 'none';
       }
     });
+  };
+
+  window.togglePdfHelper = function() {
+    const content = document.getElementById('pdf-helper-content');
+    const arrow = document.getElementById('pdf-helper-arrow');
+    if (!content) return;
+    const isHidden = content.style.display === 'none' || !content.style.display;
+    if (isHidden) {
+      content.style.display = 'block';
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+    } else {
+      content.style.display = 'none';
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
   };
 }
 

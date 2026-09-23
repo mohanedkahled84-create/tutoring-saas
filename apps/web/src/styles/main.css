@@ -544,6 +544,41 @@ button.password-toggle-btn:active {
   background-color: #fafbfc;
 }
 
+/* Responsive Modal Form Grids & Overflow Control */
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-dialog {
+  overflow-x: hidden !important;
+  box-sizing: border-box;
+}
+
+.modal-body {
+  overflow-x: hidden !important;
+  box-sizing: border-box;
+}
+
+.modal-body input,
+.modal-body select,
+.modal-body textarea {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 540px) {
+  .modal-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.65rem;
+  }
+}
+
 /* Live Session Topbar Badge */
 .nav-live-session-btn {
   display: inline-flex;
@@ -731,12 +766,30 @@ button.password-toggle-btn:active {
 
   /* Modals full-width & max-height control on mobile */
   .modal-overlay {
-    padding: 0.5rem !important;
+    padding: 0.4rem !important;
+    overflow-x: hidden !important;
   }
   .modal-dialog {
-    max-height: calc(100dvh - 1rem) !important;
+    max-height: calc(100dvh - 0.8rem) !important;
     width: 100% !important;
     margin: auto 0 !important;
+    border-radius: 12px !important;
+    overflow-x: hidden !important;
+  }
+  .modal-header {
+    padding: 0.85rem 1rem !important;
+  }
+  .modal-body {
+    padding: 0.9rem 0.85rem !important;
+    overflow-x: hidden !important;
+  }
+  .modal-footer {
+    padding: 0.75rem 0.85rem !important;
+    flex-wrap: wrap !important;
+  }
+  .modal-footer .btn {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }
 
