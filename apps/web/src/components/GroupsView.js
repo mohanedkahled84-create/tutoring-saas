@@ -82,7 +82,10 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
           ${groupList.map(g => {
             // Determine billing display label
             let billingLabel = 'نسبة مئوية';
-            if (g.billing_model === 'fixed_per_student') {
+            const isNoCenter = g.billing_model === 'no_center' || (g.billing_model === 'percentage' && Number(g.center_cut_percentage) === 0);
+            if (isNoCenter) {
+              billingLabel = 'بدون سنتر (المعلم 100%)';
+            } else if (g.billing_model === 'fixed_per_student') {
               billingLabel = `أجر ثابت: ${g.fixed_per_student_amount || 0} ج.م / طالب للسنتر`;
             } else if (g.billing_model === 'fixed_rent') {
               billingLabel = `إيجار قاعة: ${g.fixed_rent_amount || 0} ج.م / حصة`;
@@ -95,16 +98,16 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
               : (g.schedule || 'حسب جدول المواعيد');
 
             return `
-            <div class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between; border-right: ${g.is_section ? '4px solid #7c3aed' : '4px solid var(--centrly-blue-700)'}; transition: transform 0.2s, box-shadow 0.2s;">
+            <div class="card" style="margin: 0; display: flex; flex-direction: column; justify-content: space-between; border-right: ${g.is_section ? '4px solid #7c3aed' : (isNoCenter ? '4px solid #16a34a' : '4px solid var(--centrly-blue-700)')}; transition: transform 0.2s, box-shadow 0.2s;">
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                   <div>
                     <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink); margin: 0;">${escapeHtml(g.name)}</h3>
                     ${g.is_section ? '<span class="badge" style="background:#ede9fe;color:#7c3aed;margin-top:0.35rem;display:inline-flex;align-items:center;gap:0.3rem;">قسم فرعي</span>' : ''}
                   </div>
-                  <span class="badge badge-blue" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                  <span class="badge" style="display: inline-flex; align-items: center; gap: 0.35rem; ${isNoCenter ? 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'background: var(--centrly-blue-50); color: var(--centrly-blue-700); border: 1px solid var(--centrly-blue-200);'}">
                     ${getIcon('center', 14)}
-                    <span>${escapeHtml(g.centerName || g.center_name || 'السنتر')}</span>
+                    <span>${escapeHtml(g.centerName || g.center_name || (isNoCenter ? 'درس خاص / منزلي' : 'السنتر'))}</span>
                   </span>
                 </div>
 
@@ -144,9 +147,9 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
                   ` : ''}
 
                   ${!isAssistant ? `
-                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.775rem; background: #f8fafc; padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px dashed var(--centrly-line);">
-                      <span style="color: #f59e0b; display: flex;">${getIcon('dotNeutral', 8)}</span>
-                      <span style="color: var(--centrly-ink); font-weight: 600;">نظام السنتر: ${escapeHtml(billingLabel)}</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.775rem; background: ${isNoCenter ? '#f0fdf4' : '#f8fafc'}; padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px dashed ${isNoCenter ? '#bbf7d0' : 'var(--centrly-line)'};">
+                      <span style="color: ${isNoCenter ? '#16a34a' : '#f59e0b'}; display: flex;">${getIcon('dotNeutral', 8)}</span>
+                      <span style="color: ${isNoCenter ? '#166534' : 'var(--centrly-ink)'}; font-weight: 600;">${isNoCenter ? 'نظام المحاسبة: بدون سنتر (صافي المعلم 100%)' : `نظام السنتر: ${escapeHtml(billingLabel)}`}</span>
                     </div>
                   ` : ''}
                 </div>

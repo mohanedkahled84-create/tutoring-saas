@@ -4,7 +4,7 @@ export interface Group {
   name: string;
   price?: number;
   session_price?: number;
-  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
+  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | "no_center" | string;
   center_cut_percentage?: number | null;
   fixed_per_student_amount?: number | null;
   fixed_rent_amount?: number | null;
@@ -39,7 +39,7 @@ export interface CreateGroupDTO {
   price?: number;
   session_price?: number;
   sessions_per_week?: number | null;
-  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
+  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | "no_center" | string;
   center_cut_percentage?: number | null;
   fixed_per_student_amount?: number | null;
   fixed_rent_amount?: number | null;
@@ -57,7 +57,7 @@ export interface CreateSectionDTO {
   price?: number;
   session_price?: number;
   sessions_per_week?: number | null;
-  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
+  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | "no_center" | string;
   center_cut_percentage?: number | null;
   fixed_per_student_amount?: number | null;
   fixed_rent_amount?: number | null;
@@ -71,7 +71,7 @@ export interface UpdateGroupDTO {
   price?: number;
   session_price?: number;
   sessions_per_week?: number | null;
-  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | string;
+  billing_model?: "percentage" | "fixed_per_student" | "fixed_rent" | "no_center" | string;
   center_cut_percentage?: number | null;
   fixed_per_student_amount?: number | null;
   fixed_rent_amount?: number | null;

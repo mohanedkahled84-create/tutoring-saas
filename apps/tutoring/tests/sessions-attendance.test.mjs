@@ -217,6 +217,29 @@ test("DEV-64: SessionsService.generateReceipt calculates revenue split for fixed
   assert.ok(result.formatted_receipt.includes("Smart Center"));
 });
 
+test("DEV-64: SessionsService.generateReceipt calculates revenue split for no_center (private lessons)", async () => {
+  const fakeRepo = new FakeSessionsRepository({
+    sessions: [{ id: "sess-no-center", group_id: "grp-nc", session_number: 1, session_date: "2026-09-01" }],
+    groups: [{ id: "grp-nc", name: "Private Chemistry Group", center_name: "", price: 150, billing_model: "no_center" }],
+    attendees: [
+      { session_id: "sess-no-center", attended: true, students: { name: "S1" } },
+      { session_id: "sess-no-center", attended: true, students: { name: "S2" } },
+      { session_id: "sess-no-center", attended: true, students: { name: "S3" } }, // Total 450 EGP
+    ],
+  });
+
+  const service = new SessionsService(fakeRepo);
+  const result = await service.generateReceipt("tenant-1", "sess-no-center", {
+    send_via_whatsapp: false,
+  });
+
+  assert.equal(result.summary.total_revenue, 450);
+  assert.equal(result.summary.center_share, 0); // 0% center share
+  assert.equal(result.summary.teacher_share, 450); // 100% teacher share
+  assert.ok(result.formatted_receipt.includes("بدون سنتر (صافي المعلم 100%)"));
+  assert.ok(result.formatted_receipt.includes("درس خاص / منزلي (بدون سنتر)"));
+});
+
 test("DEV-64: AttendanceService.scanStudent prevents duplicate check-in", async () => {
   const fakeRepo = new FakeAttendanceRepository({
     students: [{ id: "stu-1", name: "Ziad", student_code: "Z10", tenant_id: "tenant-1" }],

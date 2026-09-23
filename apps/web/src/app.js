@@ -2956,7 +2956,9 @@ class CentrlyApp {
             const monthlyGross = price * count * 4;
             let netProfit = Math.round(monthlyGross * 0.8);
 
-            if (g.billing_model === 'fixed_per_student') {
+            if (g.billing_model === 'no_center' || (g.billing_model === 'percentage' && Number(g.center_cut_percentage) === 0)) {
+              netProfit = monthlyGross;
+            } else if (g.billing_model === 'fixed_per_student') {
               const cut = Number(g.fixed_per_student_amount || 0);
               netProfit = Math.max(0, (price - cut) * count * 4);
             } else if (g.billing_model === 'fixed_rent') {
@@ -6044,8 +6046,8 @@ class CentrlyApp {
         ` : `
           <div class="modal-form-grid">
             <div class="form-group">
-              <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر (اختياري)</label>
-              <input type="text" id="newGroupCenter" class="form-input" placeholder="اسم السنتر أو المقر (اختياري)">
+              <label class="form-label" style="font-weight: 700;">مكان الحصة / المقر (اختياري)</label>
+              <input type="text" id="newGroupCenter" class="form-input" placeholder="اسم السنتر أو منزل الطالب أو المقر (اختياري)">
             </div>
             <div class="form-group">
               <label class="form-label" style="font-weight: 700;">القاعة المخصصة (اختياري)</label>
@@ -6131,18 +6133,30 @@ class CentrlyApp {
           </div>
         </div>
         
-        <!-- 3 Billing Models -->
+        <!-- Billing Models -->
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">نظام محاسبة السنتر *</label>
+          <label class="form-label" style="font-weight: 700;">مقر الحصة ونظام المحاسبة *</label>
           <select id="newGroupBillingModel" class="form-input" onchange="window.centrlyApp.onBillingModelChange(this.value)">
-            <option value="percentage">نسبة مئوية للسنتر على كل طالب (%)</option>
-            <option value="fixed_per_student">أجر ثابت للسنتر على كل طالب (ج.م)</option>
-            <option value="fixed_rent">إيجار قاعة ثابت للحصة بالكامل (ج.م)</option>
+            <option value="no_center" selected>🏠 لا يوجد نسبة للسنتر (درس خاص / في منزل / أونلاين - المعلم 100%)</option>
+            <option value="percentage">🏢 سنتر تعليمي: نسبة مئوية للسنتر على كل طالب (%)</option>
+            <option value="fixed_per_student">🏢 سنتر تعليمي: أجر ثابت للسنتر على كل طالب (ج.م)</option>
+            <option value="fixed_rent">🏢 سنتر تعليمي: إيجار قاعة ثابت للحصة بالكامل (ج.م)</option>
           </select>
         </div>
 
+        <!-- Conditional Info 0: No Center -->
+        <div id="billingNoCenterInfo" class="form-group" style="margin-bottom: 0.85rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem;">
+          <div style="font-size: 0.825rem; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 0.4rem;">
+            <span>🏠</span>
+            <span>مجموعة خاصة أو منزلية (بدون نسبة سنتر):</span>
+          </div>
+          <div style="font-size: 0.775rem; color: #15803d; margin-top: 0.25rem; line-height: 1.5;">
+            لا توجد أي استقطاعات أو عمولات للسنتر. إيراد الحصة بالكامل يُحسب لك كمعلم بنسبة 100%.
+          </div>
+        </div>
+
         <!-- Conditional Input 1: Percentage -->
-        <div id="billingPercentageGroup" class="form-group" style="margin-bottom: 0.85rem;">
+        <div id="billingPercentageGroup" class="form-group" style="margin-bottom: 0.85rem; display: none;">
           <label class="form-label" style="font-weight: 700;">نسبة السنتر على الطالب (%) *</label>
           <input type="number" id="newGroupCenterCut" class="form-input" min="0" max="100" value="20" placeholder="20">
           <small style="color: var(--centrly-text); font-size: 0.75rem;">يحصل السنتر على هذه النسبة من كل تذكرة حضور والباقي للمدرس</small>
@@ -6175,10 +6189,12 @@ class CentrlyApp {
   }
 
   onBillingModelChange(model) {
+    const noCenterInfo = document.getElementById('billingNoCenterInfo');
     const pGroup = document.getElementById('billingPercentageGroup');
     const fStudentGroup = document.getElementById('billingFixedPerStudentGroup');
     const fRentGroup = document.getElementById('billingFixedRentGroup');
 
+    if (noCenterInfo) noCenterInfo.style.display = model === 'no_center' ? 'block' : 'none';
     if (pGroup) pGroup.style.display = model === 'percentage' ? 'block' : 'none';
     if (fStudentGroup) fStudentGroup.style.display = model === 'fixed_per_student' ? 'block' : 'none';
     if (fRentGroup) fRentGroup.style.display = model === 'fixed_rent' ? 'block' : 'none';
@@ -6271,8 +6287,8 @@ class CentrlyApp {
         ` : `
           <div class="modal-form-grid">
             <div class="form-group">
-              <label class="form-label" style="font-weight: 700;">مكان الحصة / السنتر (اختياري)</label>
-              <input type="text" id="editGroupCenter" class="form-input" value="${escapeHtml(group.center_name || group.centerName || '')}" placeholder="اسم السنتر أو المقر (اختياري)">
+              <label class="form-label" style="font-weight: 700;">مكان الحصة / المقر (اختياري)</label>
+              <input type="text" id="editGroupCenter" class="form-input" value="${escapeHtml(group.center_name || group.centerName || '')}" placeholder="اسم السنتر أو منزل الطالب أو المقر (اختياري)">
             </div>
             <div class="form-group">
               <label class="form-label" style="font-weight: 700;">القاعة المخصصة (اختياري)</label>
@@ -6340,14 +6356,26 @@ class CentrlyApp {
           </div>
         </div>
         
-        <!-- 3 Billing Models -->
+        <!-- Billing Models -->
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">نظام محاسبة السنتر *</label>
+          <label class="form-label" style="font-weight: 700;">مقر الحصة ونظام المحاسبة *</label>
           <select id="editGroupBillingModel" class="form-input" onchange="window.centrlyApp.onEditBillingModelChange(this.value)">
-            <option value="percentage" ${currentModel === 'percentage' ? 'selected' : ''}>نسبة مئوية للسنتر على كل طالب (%)</option>
-            <option value="fixed_per_student" ${currentModel === 'fixed_per_student' ? 'selected' : ''}>أجر ثابت للسنتر على كل طالب (ج.م)</option>
-            <option value="fixed_rent" ${currentModel === 'fixed_rent' ? 'selected' : ''}>إيجار قاعة ثابت للحصة بالكامل (ج.م)</option>
+            <option value="no_center" ${currentModel === 'no_center' ? 'selected' : ''}>🏠 لا يوجد نسبة للسنتر (درس خاص / في منزل / أونلاين - المعلم 100%)</option>
+            <option value="percentage" ${currentModel === 'percentage' ? 'selected' : ''}>🏢 سنتر تعليمي: نسبة مئوية للسنتر على كل طالب (%)</option>
+            <option value="fixed_per_student" ${currentModel === 'fixed_per_student' ? 'selected' : ''}>🏢 سنتر تعليمي: أجر ثابت للسنتر على كل طالب (ج.م)</option>
+            <option value="fixed_rent" ${currentModel === 'fixed_rent' ? 'selected' : ''}>🏢 سنتر تعليمي: إيجار قاعة ثابت للحصة بالكامل (ج.م)</option>
           </select>
+        </div>
+
+        <!-- Conditional Info 0: No Center -->
+        <div id="editBillingNoCenterInfo" class="form-group" style="margin-bottom: 0.85rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem; display: ${currentModel === 'no_center' ? 'block' : 'none'};">
+          <div style="font-size: 0.825rem; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 0.4rem;">
+            <span>🏠</span>
+            <span>مجموعة خاصة أو منزلية (بدون نسبة سنتر):</span>
+          </div>
+          <div style="font-size: 0.775rem; color: #15803d; margin-top: 0.25rem; line-height: 1.5;">
+            لا توجد أي استقطاعات أو عمولات للسنتر. إيراد الحصة بالكامل يُحسب لك كمعلم بنسبة 100%.
+          </div>
         </div>
 
         <!-- Conditional Input 1: Percentage -->
@@ -6386,10 +6414,12 @@ class CentrlyApp {
   }
 
   onEditBillingModelChange(model) {
+    const noCenterInfo = document.getElementById('editBillingNoCenterInfo');
     const pGroup = document.getElementById('editBillingPercentageGroup');
     const fStudentGroup = document.getElementById('editBillingFixedPerStudentGroup');
     const fRentGroup = document.getElementById('editBillingFixedRentGroup');
 
+    if (noCenterInfo) noCenterInfo.style.display = model === 'no_center' ? 'block' : 'none';
     if (pGroup) pGroup.style.display = model === 'percentage' ? 'block' : 'none';
     if (fStudentGroup) fStudentGroup.style.display = model === 'fixed_per_student' ? 'block' : 'none';
     if (fRentGroup) fRentGroup.style.display = model === 'fixed_rent' ? 'block' : 'none';
@@ -6445,7 +6475,11 @@ class CentrlyApp {
     let fixed_per_student_amount = null;
     let fixed_rent_amount = null;
 
-    if (billing_model === 'percentage') {
+    if (billing_model === 'no_center') {
+      center_cut_percentage = 0;
+      fixed_per_student_amount = null;
+      fixed_rent_amount = null;
+    } else if (billing_model === 'percentage') {
       center_cut_percentage = Number(document.getElementById('newGroupCenterCut')?.value) || 20;
     } else if (billing_model === 'fixed_per_student') {
       fixed_per_student_amount = Number(document.getElementById('newGroupFixedPerStudent')?.value) || 20;
@@ -6553,7 +6587,11 @@ class CentrlyApp {
     let fixed_per_student_amount = null;
     let fixed_rent_amount = null;
 
-    if (billing_model === 'percentage') {
+    if (billing_model === 'no_center') {
+      center_cut_percentage = 0;
+      fixed_per_student_amount = null;
+      fixed_rent_amount = null;
+    } else if (billing_model === 'percentage') {
       center_cut_percentage = Number(document.getElementById('editGroupCenterCut')?.value) || 20;
     } else if (billing_model === 'fixed_per_student') {
       fixed_per_student_amount = Number(document.getElementById('editGroupFixedPerStudent')?.value) || 20;

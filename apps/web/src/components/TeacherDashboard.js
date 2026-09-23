@@ -43,7 +43,10 @@ export function renderTeacherDashboard(
     let netProfit = Math.round(monthlyRev * 0.8);
     let billingModelName = 'نسبة سنتر (20%)';
 
-    if (g.billing_model === 'fixed_per_student') {
+    if (g.billing_model === 'no_center' || (g.billing_model === 'percentage' && Number(g.center_cut_percentage) === 0)) {
+      netProfit = monthlyRev;
+      billingModelName = 'بدون سنتر (100% للمعلم)';
+    } else if (g.billing_model === 'fixed_per_student') {
       const cut = Number(g.fixed_per_student_amount || 0);
       netProfit = Math.max(0, (price - cut) * studentCount * monthlySessions);
       billingModelName = `أجر ثابت (${cut} ج.م/طالب)`;

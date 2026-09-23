@@ -394,7 +394,10 @@ export class SessionsService {
     let centerShare = 0;
     let teacherShare = totalRevenue;
 
-    if (group.billing_model === "fixed_rent" && group.fixed_rent_amount) {
+    if (group.billing_model === "no_center") {
+      centerShare = 0;
+      teacherShare = totalRevenue;
+    } else if (group.billing_model === "fixed_rent" && group.fixed_rent_amount) {
       centerShare = Math.min(Number(group.fixed_rent_amount), totalRevenue);
       teacherShare = totalRevenue - centerShare;
     } else if (group.billing_model === "percentage") {
@@ -406,14 +409,16 @@ export class SessionsService {
       "*إيصال تصفية الحصة / Session Settlement Receipt*",
       "━━━━━━━━━━━━━━━━━━━━━",
       `• *المجموعة:* ${group.name || ""}`,
-      group.center_name ? `• *السنتر:* ${group.center_name}` : null,
+      group.center_name ? `• *المقر/السنتر:* ${group.center_name}` : (group.billing_model === "no_center" ? `• *المقر:* درس خاص / منزلي (بدون سنتر)` : null),
       `• *التاريخ:* ${session.session_date} | *حصة رقم:* ${session.session_number}`,
       `• *إجمالي الحضور:* ${presentCount} طالب (منهم ${exemptCount} منحة / معفي)`,
       `• *إجمالي الغياب:* ${absentCount} طالب`,
       makeupCount > 0 ? `• *طلاب التعويض:* ${makeupCount} طالب` : null,
       "━━━━━━━━━━━━━━━━━━━━━",
       `• *إجمالي النقدية المحصلة:* ${totalRevenue} ج.م`,
-      `• *حصة السنتر:* ${centerShare} ج.م`,
+      group.billing_model === "no_center"
+        ? `• *نظام المحاسبة:* بدون سنتر (صافي المعلم 100%)`
+        : `• *حصة السنتر:* ${centerShare} ج.م`,
       `• *صافي المعلم:* ${teacherShare} ج.م`,
       "━━━━━━━━━━━━━━━━━━━━━",
       `_تم الاستخراج آلياً بتاريخ ${new Date().toLocaleDateString("ar-EG")}_`,

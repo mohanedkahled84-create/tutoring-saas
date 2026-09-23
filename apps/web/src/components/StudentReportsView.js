@@ -57,7 +57,11 @@ export function renderStudentReportsView(
     let billingModelName = 'نسبة سنتر (20%)';
     let centerCut = Math.round(monthlyGross * 0.2);
 
-    if (g.billing_model === 'fixed_per_student') {
+    if (g.billing_model === 'no_center' || (g.billing_model === 'percentage' && Number(g.center_cut_percentage) === 0)) {
+      netProfit = monthlyGross;
+      centerCut = 0;
+      billingModelName = 'بدون سنتر (100% للمعلم)';
+    } else if (g.billing_model === 'fixed_per_student') {
       const cut = Number(g.fixed_per_student_amount || 0);
       netProfit = Math.max(0, (price - cut) * count * 4);
       centerCut = cut * count * 4;
