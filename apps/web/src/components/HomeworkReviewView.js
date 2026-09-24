@@ -11,6 +11,17 @@ import { getIcon } from "../utils/icons.js";
  * 5. Send one-click WhatsApp homework reminders to missing students
  */
 
+function resolveSafeMaterialUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return '';
+  const trimmed = rawUrl.trim();
+  if (trimmed.includes('/storage/v1/object/sign/homework-submissions/')) {
+    return trimmed
+      .replace('/storage/v1/object/sign/homework-submissions/', '/storage/v1/object/public/homework-submissions/')
+      .split('?')[0];
+  }
+  return trimmed;
+}
+
 export function renderHomeworkReviewView(homeworkState = {}) {
   const assignments = homeworkState.assignments || [];
   const currentHomework = homeworkState.currentHomework || assignments[0] || null;
@@ -201,7 +212,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
 
             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               ${currentHomework.url && currentHomework.url !== '#' ? `
-                <a href="${escapeHtml(currentHomework.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" 
+                <a href="${escapeHtml(resolveSafeMaterialUrl(currentHomework.url))}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" 
                   style="font-size: 0.8rem; padding: 0.4rem 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
                   ${getIcon('file', 14, 'currentColor')}
                   <span>معاينة الملف</span>

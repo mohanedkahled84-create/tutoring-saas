@@ -5,6 +5,7 @@ import { verifyParentPortalToken, generateParentPortalToken } from "../utils/tok
 import { getServices } from "../../composition.js";
 import { AuthenticatedRequest } from "../types/index.js";
 import { authRateLimiter } from "../middleware/rateLimit.js";
+import { normalizeMaterialUrl } from "../../features/materials/routes.js";
 
 export const publicRouter = Router();
 
@@ -80,6 +81,14 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
         error: { code: "UNAUTHORIZED", message: "رابط المتابعة غير صالح أو منتهي الصلاحية. يرجى التواصل مع إدارة السنتر." },
       });
       return;
+    }
+
+    if (portalData && Array.isArray(portalData.materials)) {
+      portalData.materials = portalData.materials.map((m: any) => ({
+        ...m,
+        url: normalizeMaterialUrl(m.url),
+        submission_url: normalizeMaterialUrl(m.submission_url),
+      }));
     }
 
     res.json(portalData);

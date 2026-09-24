@@ -6,6 +6,16 @@ import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
 
 export const materialsRouter = Router();
 
+export function normalizeMaterialUrl(rawUrl?: string | null): string {
+  if (!rawUrl) return "";
+  if (rawUrl.includes("/storage/v1/object/sign/homework-submissions/")) {
+    return rawUrl
+      .replace("/storage/v1/object/sign/homework-submissions/", "/storage/v1/object/public/homework-submissions/")
+      .split("?")[0];
+  }
+  return rawUrl;
+}
+
 // GET /api/materials - List materials for tenant / group
 materialsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id;
@@ -31,7 +41,12 @@ materialsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promi
     const { data, error } = await query;
     if (error) throw error;
 
-    res.json({ materials: data || [], count: (data || []).length });
+    const materials = (data || []).map((m: any) => ({
+      ...m,
+      url: normalizeMaterialUrl(m.url),
+    }));
+
+    res.json({ materials, count: materials.length });
   } catch (err: unknown) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
   }
@@ -103,19 +118,13 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
         return;
       }
 
-      const { data: signedUrlData, error: signedUrlErr } = await supabase.storage
+      const { data: publicUrlData } = supabase.storage
         .from("homework-submissions")
-        .createSignedUrl(storagePath, 86400);
-
-      if (signedUrlErr || !signedUrlData?.signedUrl) {
-        const { data: publicUrlData } = supabase.storage
-          .from("homework-submissions")
-          .getPublicUrl(storagePath);
-        finalUrl = publicUrlData.publicUrl;
-      } else {
-        finalUrl = signedUrlData.signedUrl;
-      }
+        .getPublicUrl(storagePath);
+      finalUrl = publicUrlData.publicUrl;
     }
+
+    finalUrl = normalizeMaterialUrl(finalUrl);
 
     const { data, error } = await supabase
       .from("study_materials")

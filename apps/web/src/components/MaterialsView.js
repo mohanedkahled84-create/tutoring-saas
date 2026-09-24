@@ -11,6 +11,17 @@ import { getIcon } from "../utils/icons.js";
  * - Target specific groups or all groups
  */
 
+function resolveSafeMaterialUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return '';
+  const trimmed = rawUrl.trim();
+  if (trimmed.includes('/storage/v1/object/sign/homework-submissions/')) {
+    return trimmed
+      .replace('/storage/v1/object/sign/homework-submissions/', '/storage/v1/object/public/homework-submissions/')
+      .split('?')[0];
+  }
+  return trimmed;
+}
+
 export function renderMaterialsView(materials = [], groups = [], selectedGroupId = 'all') {
   const materialList = materials || [];
 
@@ -182,7 +193,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
                     </td>
                     <td>
                       ${hasUrl ? `
-                        <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer"
+                        <a href="${escapeHtml(resolveSafeMaterialUrl(m.url))}" target="_blank" rel="noopener noreferrer"
                           style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; font-weight: 700; color: #1d4ed8; text-decoration: none; background: #eff6ff; padding: 0.25rem 0.6rem; border-radius: 0.4rem; border: 1px solid #bfdbfe;">
                           ${getIcon('link', 12, '#1d4ed8')}
                           <span>فتح الرابط</span>

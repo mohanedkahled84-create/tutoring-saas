@@ -12,6 +12,17 @@ import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from ".
  * 5. Attendance History & Teachers Notes
  */
 
+export function resolveSafeMaterialUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return '';
+  const trimmed = rawUrl.trim();
+  if (trimmed.includes('/storage/v1/object/sign/homework-submissions/')) {
+    return trimmed
+      .replace('/storage/v1/object/sign/homework-submissions/', '/storage/v1/object/public/homework-submissions/')
+      .split('?')[0];
+  }
+  return trimmed;
+}
+
 export function renderStudentPortalView(portalData = {}, activeTab = 'materials') {
   if (portalData.error || !portalData.student) {
     return `
@@ -330,15 +341,18 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                           </div>
                         ` : ''}
 
-                        ${(m.url && m.url !== '#') ? `
-                          <div style="margin-top: 0.6rem;">
-                            <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" 
-                              style="display: inline-flex; align-items: center; gap: 0.4rem; background: #2563eb; color: #ffffff; font-weight: 800; text-decoration: none; padding: 0.45rem 0.85rem; border-radius: 0.5rem; font-size: 0.825rem; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
-                              ${getIcon(isPdf ? 'file' : (isVideo ? 'video' : 'link'), 14, '#ffffff')}
-                              <span>فتح / تحميل ملف الواجب المرفق (PDF / الرابط)</span>
-                            </a>
-                          </div>
-                        ` : ''}
+                        ${(() => {
+                          const resolvedHwUrl = resolveSafeMaterialUrl(m.url);
+                          return (resolvedHwUrl && resolvedHwUrl !== '#') ? `
+                            <div style="margin-top: 0.6rem;">
+                              <a href="${escapeHtml(resolvedHwUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" 
+                                style="display: inline-flex; align-items: center; gap: 0.4rem; background: #2563eb; color: #ffffff; font-weight: 800; text-decoration: none; padding: 0.45rem 0.85rem; border-radius: 0.5rem; font-size: 0.825rem; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
+                                ${getIcon(isPdf ? 'file' : (isVideo ? 'video' : 'link'), 14, '#ffffff')}
+                                <span>فتح / تحميل ملف الواجب المرفق (PDF / الرابط)</span>
+                              </a>
+                            </div>
+                          ` : '';
+                        })()}
                       </div>
                     </div>
 
@@ -485,15 +499,18 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                         ` : ''}
                       </div>
 
-                      ${(m.url && m.url !== '#') ? `
-                        <div>
-                          <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener noreferrer" 
-                            style="display: inline-flex; align-items: center; gap: 0.35rem; background: #1d4ed8; color: #ffffff; padding: 0.45rem 0.85rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.8rem; font-weight: 800; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
-                            ${getIcon(isPdf ? 'download' : (isVideo ? 'video' : 'link'), 13, '#ffffff')}
-                            <span>${actionText}</span>
-                          </a>
-                        </div>
-                      ` : ''}
+                      ${(() => {
+                        const resolvedMatUrl = resolveSafeMaterialUrl(m.url);
+                        return (resolvedMatUrl && resolvedMatUrl !== '#') ? `
+                          <div>
+                            <a href="${escapeHtml(resolvedMatUrl)}" target="_blank" rel="noopener noreferrer" 
+                              style="display: inline-flex; align-items: center; gap: 0.35rem; background: #1d4ed8; color: #ffffff; padding: 0.45rem 0.85rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.8rem; font-weight: 800; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
+                              ${getIcon(isPdf ? 'download' : (isVideo ? 'video' : 'link'), 13, '#ffffff')}
+                              <span>${actionText}</span>
+                            </a>
+                          </div>
+                        ` : '';
+                      })()}
                     </div>
                   `;
                 }).join('')}
