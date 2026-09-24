@@ -43,6 +43,16 @@ export function calculateDaysRemaining(
   return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
 }
 
+export function extractTeacherFirstName(rawName?: string | null): string {
+  if (!rawName) return "أستاذنا";
+  const clean = rawName
+    .trim()
+    .replace(/^(مستر|أستاذ|استاذ|دكتور|د\.|م\.|مهندس)\s+/i, "")
+    .trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  return parts.length > 0 ? parts[0] : "أستاذنا";
+}
+
 export class BillingService {
   constructor(private readonly repository: IBillingRepository) {}
 
@@ -195,7 +205,7 @@ export class BillingService {
         const recipientPhone =
           (await this.repository.getTenantOwnerPhone(tenant.id)) || "01000000000";
 
-        const teacherDisplayName = tenant.name ? tenant.name.trim() : "أستاذنا";
+        const teacherDisplayName = extractTeacherFirstName(tenant.name);
 
         const formattedMessage =
           threshold === "5_days_before"
