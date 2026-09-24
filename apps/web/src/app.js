@@ -4,7 +4,7 @@ import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.0';
 import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.21';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
-import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.2.0';
+import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.3.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
 import { renderStudentsView } from './components/StudentsView.js?v=4.8.12';
@@ -2933,12 +2933,13 @@ class CentrlyApp {
         case 'dashboard': {
           const currentMonth = new Date().getMonth() + 1;
           const currentYear = new Date().getFullYear();
-          const [studRes, grpRes, riskRes, repRes, astRes] = await Promise.all([
+          const [studRes, grpRes, riskRes, repRes, astRes, actEarnRes] = await Promise.all([
             request('/students').catch(() => ({ students: [] })),
             request('/groups').catch(() => ({ groups: [] })),
             request('/at-risk').catch(() => ({ watchlist: [] })),
             request(`/reports/monthly?month=${currentMonth}&year=${currentYear}`).catch(() => null),
             request('/assistants').catch(() => ({ assistants: [] })),
+            request(`/sessions/actual-earnings?month=${currentMonth}&year=${currentYear}`).catch(() => null),
           ]);
           const students = Array.isArray(studRes) ? studRes : (studRes.students || []);
           const groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -3019,6 +3020,7 @@ class CentrlyApp {
               teacherProfit: finalTeacherNetProfit,
               pendingMessages: 0,
             },
+            actualEarnings: actEarnRes || null,
             groups: mappedGroups,
             assistants: assistants,
             atRiskStudents: atRisk,

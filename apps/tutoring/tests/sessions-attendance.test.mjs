@@ -78,6 +78,21 @@ class FakeSessionsRepository {
     this.receiptLogs.push({ id, tenantId, idempotencyKey, recipientType, recipientPhone, formattedReceipt });
     return id;
   }
+
+  async getMonthlySessionFinancials(tenantId, fromDate, toDate) {
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    const filteredSessions = this.sessions.filter(s => {
+      const d = new Date(s.session_date);
+      return d >= from && d <= to;
+    });
+
+    return filteredSessions.map(session => {
+      const group = this.groups.find(g => g.id === session.group_id) || {};
+      const attendance = this.attendees.filter(a => a.session_id === session.id);
+      return { session, group, attendance };
+    });
+  }
 }
 
 /**
@@ -281,3 +296,151 @@ test("DEV-64: AttendanceService.syncOfflineBatch handles mixed new and duplicate
   assert.equal(result.synced_count, 1);
   assert.equal(result.failed_count, 0);
 });
+
+test("DEV-ACTUAL-EARNINGS: getMonthlyActualEarnings calculates realized money from attendance with exemptions & overrides", async () => {
+  const fakeRepo = new FakeSessionsRepository({
+    sessions: [
+      {
+        id: "sess-sep-1",
+        group_id: "grp-pct",
+        session_number: 1,
+        session_date: "2026-09-05",
+        status: "ended",
+      },
+      {
+        id: "sess-sep-2",
+        group_id: "grp-rent",
+        session_number: 2,
+        session_date: "2026-09-12",
+        status: "ended",
+      },
+    ],
+    groups: [
+      {
+        id: "grp-pct",
+        name: "Physics Group",
+        center_name: "Al-Amal Center",
+        price: 100,
+        billing_model: "percentage",
+        center_cut_percentage: 20,
+      },
+      {
+        id: "grp-rent",
+        name: "Math Group",
+        center_name: "Al-Nour Center",
+        price: 150,
+        billing_model: "fixed_rent",
+        fixed_rent_amount: 250,
+      },
+    ],
+    attendees: [
+      // sess-sep-1:
+      // student 1: standard price 100
+      { session_id: "sess-sep-1", attended: true, students: { id: "s1", exempt: false, fee_override: null } },
+      // student 2: fee override 75
+      { session_id: "sess-sep-1", attended: true, students: { id: "s2", exempt: false, fee_override: 75 } },
+      // student 3: exempt (0)
+      { session_id: "sess-sep-1", attended: true, students: { id: "s3", exempt: true, fee_override: null } },
+      // student 4: absent (does not pay)
+      { session_id: "sess-sep-1", attended: false, students: { id: "s4", exempt: false, fee_override: null } },
+
+      // sess-sep-2:
+      // 3 students present at 150 = 450 total revenue. Fixed rent = 250. Teacher share = 200.
+      { session_id: "sess-sep-2", attended: true, students: { id: "s5", exempt: false, fee_override: null } },
+      { session_id: "sess-sep-2", attended: true, students: { id: "s6", exempt: false, fee_override: null } },
+      { session_id: "sess-sep-2", attended: true, students: { id: "s7", exempt: false, fee_override: null } },
+    ],
+  });
+
+  const service = new SessionsService(fakeRepo);
+  const result = await service.getMonthlyActualEarnings("tenant-1", 9, 2026);
+
+  assert.equal(result.period, "2026-09");
+  assert.equal(result.month, 9);
+  assert.equal(result.year, 2026);
+  assert.equal(result.completed_sessions_count, 2);
+  assert.equal(result.total_attended_students, 6);
+
+  // Sess 1: revenue = 100 + 75 + 0 = 175. Center cut = 20% of 175 = 35. Teacher share = 140.
+  const s1 = result.sessions.find(s => s.session_id === "sess-sep-1");
+  assert.ok(s1);
+  assert.equal(s1.total_revenue, 175);
+  assert.equal(s1.center_share, 35);
+  assert.equal(s1.teacher_share, 140);
+  assert.equal(s1.present_count, 3);
+  assert.equal(s1.absent_count, 1);
+  assert.equal(s1.exempt_count, 1);
+
+  // Sess 2: revenue = 150 * 3 = 450. Fixed rent = 250. Teacher share = 200.
+  const s2 = result.sessions.find(s => s.session_id === "sess-sep-2");
+  assert.ok(s2);
+  assert.equal(s2.total_revenue, 450);
+  assert.equal(s2.center_share, 250);
+  assert.equal(s2.teacher_share, 200);
+  assert.equal(s2.present_count, 3);
+
+  // Monthly totals:
+  // Actual Revenue: 175 + 450 = 625
+  // Actual Center Cut: 35 + 250 = 285
+  // Actual Teacher Net: 140 + 200 = 340
+  assert.equal(result.actual_revenue, 625);
+  assert.equal(result.actual_center_cut, 285);
+  assert.equal(result.actual_teacher_net, 340);
+});
+
+test("DEV-ACTUAL-EARNINGS: getMonthlyActualEarnings handles no_center and fixed_per_student billing models", async () => {
+  const fakeRepo = new FakeSessionsRepository({
+    sessions: [
+      {
+        id: "sess-nc",
+        group_id: "grp-nc",
+        session_number: 1,
+        session_date: "2026-09-03",
+        status: "ended",
+      },
+      {
+        id: "sess-fps",
+        group_id: "grp-fps",
+        session_number: 1,
+        session_date: "2026-09-04",
+        status: "ended",
+      },
+    ],
+    groups: [
+      {
+        id: "grp-nc",
+        name: "Private Lessons",
+        price: 200,
+        billing_model: "no_center",
+      },
+      {
+        id: "grp-fps",
+        name: "Center Group FPS",
+        price: 120,
+        billing_model: "fixed_per_student",
+        fixed_per_student_amount: 30,
+      },
+    ],
+    attendees: [
+      // Private session: 2 present -> 400 rev, 0 center cut, 400 teacher
+      { session_id: "sess-nc", attended: true, students: { id: "s1" } },
+      { session_id: "sess-nc", attended: true, students: { id: "s2" } },
+
+      // Fixed per student: 4 present -> 480 rev, center cut = 4 * 30 = 120, teacher = 360
+      { session_id: "sess-fps", attended: true, students: { id: "s3" } },
+      { session_id: "sess-fps", attended: true, students: { id: "s4" } },
+      { session_id: "sess-fps", attended: true, students: { id: "s5" } },
+      { session_id: "sess-fps", attended: true, students: { id: "s6" } },
+    ],
+  });
+
+  const service = new SessionsService(fakeRepo);
+  const result = await service.getMonthlyActualEarnings("tenant-1", 9, 2026);
+
+  assert.equal(result.actual_revenue, 400 + 480); // 880
+  assert.equal(result.actual_center_cut, 0 + 120); // 120
+  assert.equal(result.actual_teacher_net, 400 + 360); // 760
+  assert.equal(result.completed_sessions_count, 2);
+  assert.equal(result.total_attended_students, 6);
+});
+

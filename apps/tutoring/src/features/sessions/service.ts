@@ -13,6 +13,8 @@ import {
   ReceiptOptions,
   ReceiptResult,
   QuizScoreRecord,
+  MonthlyActualEarningsResult,
+  CompletedSessionFinancialSummary,
 } from "./types.js";
 
 export class SessionsService {
@@ -453,6 +455,138 @@ export class SessionsService {
         teacher_share: teacherShare,
       },
       logged_message_id: loggedMessageId,
+    };
+  }
+
+  /**
+   * DEV-ACTUAL-FIN: Calculates real realized monthly earnings and per-session breakdown
+   * based on actual student attendance (attended = true), exemptions, overrides, and billing models.
+   */
+  async getMonthlyActualEarnings(
+    tenantId: string,
+    month: number,
+    year: number
+  ): Promise<MonthlyActualEarningsResult> {
+    const formattedMonth = String(month).padStart(2, "0");
+    const startDate = `${year}-${formattedMonth}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${formattedMonth}-${String(lastDay).padStart(2, "0")}`;
+
+    if (!this.repository.getMonthlySessionFinancials) {
+      return {
+        period: `${year}-${formattedMonth}`,
+        month,
+        year,
+        actual_revenue: 0,
+        actual_center_cut: 0,
+        actual_teacher_net: 0,
+        completed_sessions_count: 0,
+        total_attended_students: 0,
+        sessions: [],
+      };
+    }
+
+    const sessionDataList = await this.repository.getMonthlySessionFinancials(
+      tenantId,
+      startDate,
+      endDate
+    );
+
+    let monthActualRevenue = 0;
+    let monthCenterCut = 0;
+    let monthTeacherNet = 0;
+    let completedSessionsCount = 0;
+    let totalAttendedStudents = 0;
+
+    const completedSessions: CompletedSessionFinancialSummary[] = [];
+
+    for (const item of sessionDataList) {
+      const { session, group, attendance } = item;
+      const basePrice = Number(group.price ?? (group as any).session_price) || 0;
+
+      let sessionRevenue = 0;
+      let presentCount = 0;
+      let absentCount = 0;
+      let exemptCount = 0;
+      let makeupCount = 0;
+
+      for (const att of attendance) {
+        if (att.attended) {
+          presentCount += 1;
+          const s = att.students;
+          if (att.is_makeup) makeupCount += 1;
+
+          if (s?.exempt) {
+            exemptCount += 1;
+          } else if (s?.fee_override != null && s.fee_override !== undefined) {
+            sessionRevenue += Number(s.fee_override);
+          } else {
+            sessionRevenue += basePrice;
+          }
+        } else {
+          absentCount += 1;
+        }
+      }
+
+      // Count if session had attendance or was ended
+      if (presentCount > 0 || session.status === "ended" || attendance.length > 0) {
+        completedSessionsCount += 1;
+        totalAttendedStudents += presentCount;
+
+        let centerShare = 0;
+        let teacherShare = sessionRevenue;
+
+        const billingModel = group.billing_model || "percentage";
+        if (billingModel === "no_center") {
+          centerShare = 0;
+          teacherShare = sessionRevenue;
+        } else if (billingModel === "fixed_rent" && group.fixed_rent_amount) {
+          centerShare = Math.min(Number(group.fixed_rent_amount), sessionRevenue);
+          teacherShare = sessionRevenue - centerShare;
+        } else if (billingModel === "fixed_per_student") {
+          const cut = Number((group as any).fixed_per_student_amount || 0);
+          centerShare = cut * presentCount;
+          teacherShare = Math.max(0, sessionRevenue - centerShare);
+        } else if (billingModel === "percentage") {
+          const pct = Number((group as any).center_cut_percentage ?? 20);
+          centerShare = Math.round(sessionRevenue * (pct / 100));
+          teacherShare = sessionRevenue - centerShare;
+        }
+
+        monthActualRevenue += sessionRevenue;
+        monthCenterCut += centerShare;
+        monthTeacherNet += teacherShare;
+
+        completedSessions.push({
+          session_id: session.id,
+          session_date: session.session_date,
+          session_number: session.session_number,
+          group_id: session.group_id,
+          group_name: group.name || "مجموعة دراسية",
+          center_name: group.center_name || null,
+          billing_model: billingModel,
+          present_count: presentCount,
+          absent_count: absentCount,
+          exempt_count: exemptCount,
+          makeup_count: makeupCount,
+          total_revenue: sessionRevenue,
+          center_share: centerShare,
+          teacher_share: teacherShare,
+          status: session.status || "ended",
+        });
+      }
+    }
+
+    return {
+      period: `${year}-${formattedMonth}`,
+      month,
+      year,
+      actual_revenue: monthActualRevenue,
+      actual_center_cut: monthCenterCut,
+      actual_teacher_net: monthTeacherNet,
+      completed_sessions_count: completedSessionsCount,
+      total_attended_students: totalAttendedStudents,
+      sessions: completedSessions,
     };
   }
 }

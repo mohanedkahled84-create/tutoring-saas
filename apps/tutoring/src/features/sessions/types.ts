@@ -217,6 +217,45 @@ export interface ISessionsRepository {
     recipientPhone: string,
     formattedReceipt: string
   ): Promise<string | null>;
+  getMonthlySessionFinancials?(
+    tenantId: string,
+    fromDate: string,
+    toDate: string
+  ): Promise<Array<{
+    session: SessionModel;
+    group: GroupFinancialData;
+    attendance: AttendeeFinancialData[];
+  }>>;
+}
+
+export interface CompletedSessionFinancialSummary {
+  session_id: string;
+  session_date: string;
+  session_number: number;
+  group_id: string;
+  group_name: string;
+  center_name?: string | null;
+  billing_model: string;
+  present_count: number;
+  absent_count: number;
+  exempt_count: number;
+  makeup_count: number;
+  total_revenue: number;
+  center_share: number;
+  teacher_share: number;
+  status: string;
+}
+
+export interface MonthlyActualEarningsResult {
+  period: string; // "YYYY-MM"
+  month: number;
+  year: number;
+  actual_revenue: number;
+  actual_center_cut: number;
+  actual_teacher_net: number;
+  completed_sessions_count: number;
+  total_attended_students: number;
+  sessions: CompletedSessionFinancialSummary[];
 }
 
 export interface CalendarRangeQuery {

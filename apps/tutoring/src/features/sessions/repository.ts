@@ -376,4 +376,59 @@ export class SupabaseSessionsRepository implements ISessionsRepository {
 
     return data as unknown as SessionModel[];
   }
+
+  async getMonthlySessionFinancials(
+    tenantId: string,
+    fromDate: string,
+    toDate: string
+  ): Promise<Array<{
+    session: SessionModel;
+    group: GroupFinancialData;
+    attendance: AttendeeFinancialData[];
+  }>> {
+    // 1. Fetch sessions in the period with group details
+    const { data: sessions, error: sessError } = await this.supabase
+      .from("sessions")
+      .select(
+        "id, tenant_id, group_id, session_number, session_date, status, ended_at, groups(id, name, center_name, price, session_price, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount)"
+      )
+      .eq("tenant_id", tenantId)
+      .gte("session_date", fromDate)
+      .lte("session_date", toDate)
+      .neq("status", "cancelled")
+      .order("session_date", { ascending: false });
+
+    if (sessError || !sessions || sessions.length === 0) {
+      return [];
+    }
+
+    const sessionIds = sessions.map((s) => s.id);
+
+    // 2. Fetch all attendance with student fee details for these sessions
+    const { data: attendanceData } = await this.supabase
+      .from("attendance")
+      .select(
+        "id, session_id, student_id, attended, is_makeup, home_group_id, students(id, name, fee_override, exempt)"
+      )
+      .in("session_id", sessionIds);
+
+    const attendanceBySession = new Map<string, AttendeeFinancialData[]>();
+    for (const att of (attendanceData || [])) {
+      const sessId = (att as any).session_id;
+      if (!attendanceBySession.has(sessId)) {
+        attendanceBySession.set(sessId, []);
+      }
+      attendanceBySession.get(sessId)!.push(att as unknown as AttendeeFinancialData);
+    }
+
+    return sessions.map((s) => {
+      const rawGroup = (s as any).groups;
+      const group = Array.isArray(rawGroup) ? rawGroup[0] : (rawGroup || {});
+      return {
+        session: s as unknown as SessionModel,
+        group: group as GroupFinancialData,
+        attendance: attendanceBySession.get(s.id) || [],
+      };
+    });
+  }
 }

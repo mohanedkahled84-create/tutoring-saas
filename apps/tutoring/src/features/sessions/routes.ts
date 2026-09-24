@@ -218,6 +218,37 @@ sessionsRouter.get(
   }
 );
 
+// GET /api/sessions/actual-earnings - Monthly actual realized earnings from completed sessions
+sessionsRouter.get(
+  "/actual-earnings",
+  requireFinancialAccess,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id;
+    if (!tenantId && req.user?.role !== "admin") {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+      return;
+    }
+
+    try {
+      const now = new Date();
+      const month = req.query.month ? parseInt(String(req.query.month), 10) : now.getMonth() + 1;
+      const year = req.query.year ? parseInt(String(req.query.year), 10) : now.getFullYear();
+
+      const service = resolveSessionsService(req);
+      const result = await service.getMonthlyActualEarnings(tenantId || "", month, year);
+      res.status(200).json(result);
+    } catch (err: unknown) {
+      res.status(500).json({
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Failed to calculate actual earnings",
+          details: (err as Error).message,
+        },
+      });
+    }
+  }
+);
+
 // GET /api/sessions - List sessions for tenant
 sessionsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id;
