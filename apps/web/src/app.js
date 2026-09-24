@@ -5777,7 +5777,8 @@ class CentrlyApp {
     const center_name = centerInput?.value?.trim() || undefined;
     const price = Number(priceInput?.value) || 0;
     const day_of_week = dayInput?.value || 'السبت';
-    const schedule = `${day_of_week} • 04:00 م - 06:00 م`;
+    const session_time = '04:00 م';
+    const schedule = `${day_of_week} • ${session_time}`;
 
     if (saveBtn) {
       saveBtn.disabled = true;
@@ -5793,6 +5794,7 @@ class CentrlyApp {
           price,
           session_price: price,
           day_of_week,
+          session_time,
           sessions_per_week: 1,
           billing_model: 'percentage',
           center_cut_percentage: 20,
@@ -6070,6 +6072,24 @@ class CentrlyApp {
           </div>
         </div>
 
+        <datalist id="commonSessionTimes">
+          <option value="08:00 ص"></option>
+          <option value="09:00 ص"></option>
+          <option value="10:00 ص"></option>
+          <option value="11:00 ص"></option>
+          <option value="12:00 م"></option>
+          <option value="01:00 م"></option>
+          <option value="02:00 م"></option>
+          <option value="03:00 م"></option>
+          <option value="04:00 م"></option>
+          <option value="05:00 م"></option>
+          <option value="06:00 م"></option>
+          <option value="07:00 م"></option>
+          <option value="08:00 م"></option>
+          <option value="09:00 م"></option>
+          <option value="10:00 م"></option>
+        </datalist>
+
         <!-- Schedule Container for 1 Session / Week -->
         <div id="newGroupScheduleSingle" class="modal-form-grid">
           <div class="form-group">
@@ -6085,8 +6105,8 @@ class CentrlyApp {
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">توقيت الحصة *</label>
-            <input type="text" id="newGroupSessionTime" class="form-input" placeholder="04:00 م - 06:00 م" value="04:00 م - 06:00 م">
+            <label class="form-label" style="font-weight: 700;">موعد بداية الحصة *</label>
+            <input type="text" id="newGroupSessionTime" list="commonSessionTimes" class="form-input" placeholder="مثال: 04:00 م" value="04:00 م">
           </div>
         </div>
 
@@ -6109,8 +6129,8 @@ class CentrlyApp {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">توقيت الحصة الأولى *</label>
-              <input type="text" id="newGroupTime1" class="form-input" placeholder="04:00 م - 06:00 م" value="04:00 م - 06:00 م">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">موعد بداية الحصة الأولى *</label>
+              <input type="text" id="newGroupTime1" list="commonSessionTimes" class="form-input" placeholder="مثال: 04:00 م" value="04:00 م">
             </div>
           </div>
           <div class="modal-form-grid" style="margin-bottom: 0;">
@@ -6127,8 +6147,8 @@ class CentrlyApp {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">توقيت الحصة الثانية *</label>
-              <input type="text" id="newGroupTime2" class="form-input" placeholder="04:00 م - 06:00 م" value="04:00 م - 06:00 م">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">موعد بداية الحصة الثانية *</label>
+              <input type="text" id="newGroupTime2" list="commonSessionTimes" class="form-input" placeholder="مثال: 04:00 م" value="04:00 م">
             </div>
           </div>
         </div>
@@ -6241,8 +6261,8 @@ class CentrlyApp {
     const day1 = matchedDays[0] || (group.day_of_week && group.day_of_week.split('،')[0].trim()) || 'السبت';
     const day2 = matchedDays[1] || (day1 === 'السبت' ? 'الثلاثاء' : (day1 === 'الأحد' ? 'الأربعاء' : 'الخميس'));
 
-    let time1 = '04:00 م - 06:00 م';
-    let time2 = '04:00 م - 06:00 م';
+    let time1 = '04:00 م';
+    let time2 = '04:00 م';
     if (group.session_time) {
       if (group.session_time.includes('/')) {
         const parts = group.session_time.split('/').map(s => s.trim());
@@ -6252,6 +6272,13 @@ class CentrlyApp {
         time1 = group.session_time;
         time2 = group.session_time;
       }
+    }
+    // Cleanly extract start time if existing group was saved with a range
+    if (time1 && time1.includes('-')) {
+      time1 = time1.split('-')[0].trim();
+    }
+    if (time2 && time2.includes('-')) {
+      time2 = time2.split('-')[0].trim();
     }
 
     const singleDayOptions = days.map(d => `<option value="${d}" ${d === day1 ? 'selected' : ''}>${d}</option>`).join('');
@@ -6320,8 +6347,8 @@ class CentrlyApp {
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">توقيت الحصة *</label>
-            <input type="text" id="editGroupSessionTime" class="form-input" value="${escapeHtml(time1)}">
+            <label class="form-label" style="font-weight: 700;">موعد بداية الحصة *</label>
+            <input type="text" id="editGroupSessionTime" list="commonSessionTimes" class="form-input" value="${escapeHtml(time1)}" placeholder="مثال: 04:00 م">
           </div>
         </div>
 
@@ -6338,8 +6365,8 @@ class CentrlyApp {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">توقيت الحصة الأولى *</label>
-              <input type="text" id="editGroupTime1" class="form-input" value="${escapeHtml(time1)}" placeholder="04:00 م - 06:00 م">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">موعد بداية الحصة الأولى *</label>
+              <input type="text" id="editGroupTime1" list="commonSessionTimes" class="form-input" value="${escapeHtml(time1)}" placeholder="مثال: 04:00 م">
             </div>
           </div>
           <div class="modal-form-grid" style="margin-bottom: 0;">
@@ -6350,8 +6377,8 @@ class CentrlyApp {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">توقيت الحصة الثانية *</label>
-              <input type="text" id="editGroupTime2" class="form-input" value="${escapeHtml(time2)}" placeholder="04:00 م - 06:00 م">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">موعد بداية الحصة الثانية *</label>
+              <input type="text" id="editGroupTime2" list="commonSessionTimes" class="form-input" value="${escapeHtml(time2)}" placeholder="مثال: 04:00 م">
             </div>
           </div>
         </div>
@@ -6448,14 +6475,14 @@ class CentrlyApp {
     const billing_model = document.getElementById('newGroupBillingModel').value;
 
     let day_of_week = 'السبت';
-    let session_time = '04:00 م - 06:00 م';
+    let session_time = '04:00 م';
     let schedule = '';
 
     if (sessions_per_week === 2) {
       const day1 = document.getElementById('newGroupDay1')?.value || 'السبت';
-      const time1 = document.getElementById('newGroupTime1')?.value?.trim() || '04:00 م - 06:00 م';
+      const time1 = document.getElementById('newGroupTime1')?.value?.trim() || '04:00 م';
       const day2 = document.getElementById('newGroupDay2')?.value || 'الثلاثاء';
-      const time2 = document.getElementById('newGroupTime2')?.value?.trim() || '04:00 م - 06:00 م';
+      const time2 = document.getElementById('newGroupTime2')?.value?.trim() || '04:00 م';
 
       day_of_week = `${day1}، ${day2}`;
       if (time1 === time2) {
@@ -6467,7 +6494,7 @@ class CentrlyApp {
       }
     } else {
       day_of_week = document.getElementById('newGroupDayOfWeek')?.value || 'السبت';
-      session_time = document.getElementById('newGroupSessionTime')?.value?.trim() || '04:00 م - 06:00 م';
+      session_time = document.getElementById('newGroupSessionTime')?.value?.trim() || '04:00 م';
       schedule = `${day_of_week} • ${session_time}`;
     }
 
@@ -6560,14 +6587,14 @@ class CentrlyApp {
     const billing_model = document.getElementById('editGroupBillingModel')?.value || 'percentage';
 
     let day_of_week = 'السبت';
-    let session_time = '04:00 م - 06:00 م';
+    let session_time = '04:00 م';
     let schedule = '';
 
     if (sessions_per_week === 2) {
       const day1 = document.getElementById('editGroupDay1')?.value || 'السبت';
-      const time1 = document.getElementById('editGroupTime1')?.value?.trim() || '04:00 م - 06:00 م';
+      const time1 = document.getElementById('editGroupTime1')?.value?.trim() || '04:00 م';
       const day2 = document.getElementById('editGroupDay2')?.value || 'الثلاثاء';
-      const time2 = document.getElementById('editGroupTime2')?.value?.trim() || '04:00 م - 06:00 م';
+      const time2 = document.getElementById('editGroupTime2')?.value?.trim() || '04:00 م';
 
       day_of_week = `${day1}، ${day2}`;
       if (time1 === time2) {
@@ -6579,7 +6606,7 @@ class CentrlyApp {
       }
     } else {
       day_of_week = document.getElementById('editGroupDayOfWeek')?.value || 'السبت';
-      session_time = document.getElementById('editGroupSessionTime')?.value?.trim() || '04:00 م - 06:00 م';
+      session_time = document.getElementById('editGroupSessionTime')?.value?.trim() || '04:00 م';
       schedule = `${day_of_week} • ${session_time}`;
     }
 
@@ -7439,8 +7466,8 @@ class CentrlyApp {
           <input type="text" id="editSessionRoom" class="form-input" value="${escapeHtml(currentRoom)}" placeholder="اسم أو رقم القاعة (اختياري)">
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">توقيت الحصة</label>
-          <input type="text" id="editSessionTime" class="form-input" value="${escapeHtml(this.sessionState.session_time || this.sessionState.time || '04:00 م - 06:00 م')}">
+          <label class="form-label" style="font-weight: 700;">موعد بداية الحصة</label>
+          <input type="text" id="editSessionTime" list="commonSessionTimes" class="form-input" value="${escapeHtml(this.sessionState.session_time || this.sessionState.time || '04:00 م')}" placeholder="مثال: 04:00 م">
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م)</label>
@@ -7495,8 +7522,8 @@ class CentrlyApp {
           <input type="date" id="extraSessionDate" class="form-input" value="${todayIso}" required>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">الوقت *</label>
-          <input type="text" id="extraSessionTime" class="form-input" value="04:00 م - 06:00 م" required>
+          <label class="form-label" style="font-weight: 700;">موعد بداية الحصة *</label>
+          <input type="text" id="extraSessionTime" list="commonSessionTimes" class="form-input" value="04:00 م" placeholder="مثال: 04:00 م" required>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">موضوع الحصة / الملاحظات *</label>
@@ -8504,7 +8531,8 @@ https://centerly-eg.com/p/p16766044
     const center_name = centerInput?.value?.trim() || undefined;
     const price = Number(priceInput?.value) || 0;
     const day_of_week = dayInput?.value || 'السبت';
-    const schedule = `${day_of_week} • 04:00 م - 06:00 م`;
+    const session_time = '04:00 م';
+    const schedule = `${day_of_week} • ${session_time}`;
 
     if (saveBtn) {
       saveBtn.disabled = true;
@@ -8520,6 +8548,7 @@ https://centerly-eg.com/p/p16766044
           price,
           session_price: price,
           day_of_week,
+          session_time,
           sessions_per_week: 1,
           billing_model: 'percentage',
           center_cut_percentage: 20,
