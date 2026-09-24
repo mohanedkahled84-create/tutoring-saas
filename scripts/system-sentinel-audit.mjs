@@ -107,7 +107,12 @@ async function runAudit() {
   console.log("\n--- 3. Codebase Build & Types Verification ---");
   const tscStart = Date.now();
   try {
-    execSync("npm run build", { cwd: BACKEND_DIR, encoding: "utf8", stdio: "pipe" });
+    execSync("npm run build", {
+      cwd: BACKEND_DIR,
+      encoding: "utf8",
+      stdio: "pipe",
+      env: { ...process.env, NODE_OPTIONS: "--max-old-space-size=4096" },
+    });
     addCheck("Backend TypeScript Build (tsc)", "PASS", "Zero type errors, build compiled cleanly.", Date.now() - tscStart);
   } catch (err) {
     addCheck("Backend TypeScript Build (tsc)", "FAIL", "TypeScript compilation failed! Check for broken contracts or type mismatches.", Date.now() - tscStart);
@@ -152,10 +157,50 @@ async function runAudit() {
     addCheck("OWASP SQL Injection Scan", "WARN", `Scan check error: ${err.message}`);
   }
 
-  // 7. Full Regression Unit Test Suite
-  console.log("\n--- 5. Regression & Business Logic Test Suite ---");
+  // 7. Cloud Storage & Material Asset URL Integrity Audit
+  console.log("\n--- 5. Cloud Storage & Permanent Asset URL Integrity ---");
+  try {
+    const srcDir = path.join(BACKEND_DIR, "src");
+    let forbiddenSignedUrls = [];
+
+    function scanForSignedUrls(dir) {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scanForSignedUrls(fullPath);
+        } else if (entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".js"))) {
+          const content = fs.readFileSync(fullPath, "utf8");
+          if (content.includes("createSignedUrl")) {
+            forbiddenSignedUrls.push(path.relative(ROOT_DIR, fullPath));
+          }
+        }
+      }
+    }
+    scanForSignedUrls(srcDir);
+
+    if (forbiddenSignedUrls.length === 0) {
+      addCheck("Permanent Storage URL Invariant", "PASS", "Zero temporary createSignedUrl usages; all study materials use permanent public URLs.");
+    } else {
+      addCheck("Permanent Storage URL Invariant", "FAIL", `Found temporary createSignedUrl in: ${forbiddenSignedUrls.join(", ")}. Educational materials must use permanent public URLs!`);
+    }
+
+    // Live Supabase Storage Reachability Check
+    const sampleStorageUrl = "https://ofaraxqrpcdiregxjyyb.supabase.co/storage/v1/object/public/homework-submissions/materials/0c67b644-ae42-49e8-975f-85b9d0af0e1b/1790165601067_004f9dc4-a2af-43f7-a99f-47f0d43dfb23.pdf";
+    const storageHeadCheck = await fetch(sampleStorageUrl, { method: "HEAD", signal: AbortSignal.timeout(6000) }).catch(e => ({ status: 0, error: e.message }));
+    if (storageHeadCheck.status === 200) {
+      addCheck("Live Cloud Storage PDF Accessibility", "PASS", "HTTP 200 OK (Public bucket accessible without JWT expiration tokens).");
+    } else {
+      addCheck("Live Cloud Storage PDF Accessibility", "FAIL", `Storage object returned HTTP ${storageHeadCheck.status}: ${storageHeadCheck.error || "File download blocked or expired"}`);
+    }
+  } catch (err) {
+    addCheck("Cloud Storage Integrity Audit", "WARN", `Storage inspection error: ${err.message}`);
+  }
+
+  // 8. Full Regression Unit Test Suite
+  console.log("\n--- 6. Regression & Business Logic Test Suite ---");
   if (process.argv.includes("--fast")) {
-    addCheck("Unit & Regression Test Suite", "PASS", "Skipped (--fast mode). Run full audit without --fast to execute all 344 unit tests.");
+    addCheck("Unit & Regression Test Suite", "PASS", "Skipped (--fast mode). Run full audit without --fast to execute all 347 unit tests.");
   } else {
     const testStart = Date.now();
     try {
