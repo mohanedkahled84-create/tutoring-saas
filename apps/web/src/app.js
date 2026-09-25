@@ -8143,20 +8143,166 @@ class CentrlyApp {
     this.openBatchPortalLinksModal();
   }
 
-  openBatchPortalLinksModal() {
-    const studentList = this.students || [];
-    const unsentStudents = studentList.filter(s => 
-      (!s.parent_portal_sent_at || !s.student_portal_sent_at) && 
-      ((s.parentPhone || s.parent_phone) || (s.studentPhone || s.student_phone))
-    );
+  isStudentInBatchPortalGroup(s, targetGroupId) {
+    if (!targetGroupId || targetGroupId === 'ALL') return true;
+    if (targetGroupId === 'UNASSIGNED') {
+      return !s.group_id && !s.groupId && (!Array.isArray(s.group_ids) || s.group_ids.length === 0);
+    }
+    if (s.group_id === targetGroupId || s.groupId === targetGroupId) return true;
+    if (Array.isArray(s.group_ids) && s.group_ids.includes(targetGroupId)) return true;
+    const grp = (this.groups || []).find(g => g.id === targetGroupId || g.name === targetGroupId);
+    if (grp) {
+      if (s.group_id === grp.id || s.groupId === grp.id) return true;
+      if (Array.isArray(s.group_ids) && s.group_ids.includes(grp.id)) return true;
+      if (s.groupName === grp.name || s.group_name === grp.name) return true;
+    }
+    return false;
+  }
 
-    if (unsentStudents.length === 0) {
+  getUnsentPortalStudents(groupId = 'ALL') {
+    const studentList = this.students || [];
+    return studentList.filter(s => {
+      const isUnsent = (!s.parent_portal_sent_at || !s.student_portal_sent_at);
+      const hasPhone = !!((s.parentPhone || s.parent_phone) || (s.studentPhone || s.student_phone));
+      if (!isUnsent || !hasPhone) return false;
+      return this.isStudentInBatchPortalGroup(s, groupId);
+    });
+  }
+
+  renderBatchPortalStudentsListHtml(studentsToShow) {
+    if (!studentsToShow || studentsToShow.length === 0) {
+      return `
+        <div style="padding: 1.75rem 1rem; text-align: center; color: #64748b; background: #fff; border: 1.5px dashed #cbd5e1; border-radius: 0.5rem;">
+          <div style="font-size: 1.8rem; margin-bottom: 0.35rem;">🎉</div>
+          <div style="font-weight: 700; color: #1e293b; font-size: 0.92rem; margin-bottom: 0.2rem;">لا يوجد طلاب جدد غير مرسل لهم في هذه المجموعة</div>
+          <div style="font-size: 0.8rem; color: #64748b;">تم إرسال روابط المنصة والمتابعة لجميع طلاب هذه المجموعة مسبقاً، أو لا توجد أرقام هواتف مسجلة.</div>
+        </div>
+      `;
+    }
+
+    return studentsToShow.map((s, idx) => {
+      const pPhone = s.parentPhone || s.parent_phone || '—';
+      const sPhone = s.studentPhone || s.student_phone || '—';
+      const isChecked = idx < 24;
+      const matchedGroup = (this.groups || []).find(g => g.id === s.group_id || g.id === s.groupId);
+      const groupLabel = s.groupName || s.group_name || matchedGroup?.name || '';
+      return `
+        <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.65rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 0.45rem; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.borderColor='#94a3b8'; this.style.background='#f8fafc';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#fff';">
+          <span style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <input type="checkbox" class="batch-parent-checkbox" value="${escapeHtml(s.id)}" ${isChecked ? 'checked' : ''} onchange="window.centrlyApp.updateBatchPortalSelectedCount()">
+            <span style="font-weight: 700; color: #1e293b;">${escapeHtml(s.name || s.full_name || '—')}</span>
+            <span style="font-size: 0.75rem; color: #64748b; font-family: monospace;">كود: ${escapeHtml(s.code || s.student_code || '—')}</span>
+            ${groupLabel ? `<span style="font-size: 0.7rem; background: #eff6ff; color: #1d4ed8; padding: 0.1rem 0.45rem; border-radius: 4px; font-weight: 700; border: 1px solid #bfdbfe;">${escapeHtml(groupLabel)}</span>` : ''}
+          </span>
+          <span dir="ltr" style="font-size: 0.75rem; font-family: monospace; color: #475569; display: flex; flex-direction: column; align-items: flex-end;">
+            <span>ولي الأمر: ${escapeHtml(pPhone)}</span>
+            <span>الطالب: ${escapeHtml(sPhone)}</span>
+          </span>
+        </label>
+      `;
+    }).join('');
+  }
+
+  onBatchPortalGroupChange(groupId) {
+    this._currentBatchPortalGroupId = groupId;
+    const targetStudents = this.getUnsentPortalStudents(groupId);
+    const container = document.getElementById('batchPortalStudentsListContainer');
+    if (container) {
+      container.innerHTML = this.renderBatchPortalStudentsListHtml(targetStudents);
+    }
+
+    const countLabel = document.getElementById('batchPortalCountLabel');
+    const displayCount = Math.min(targetStudents.length, 24);
+    if (countLabel) {
+      countLabel.innerHTML = `الطلاب المستهدفون (${targetStudents.length} طالب - محدد ${displayCount} تلقائياً):`;
+    }
+
+    const masterCb = document.getElementById('selectAllBatchParentLinks');
+    if (masterCb) {
+      masterCb.checked = displayCount > 0;
+      masterCb.disabled = targetStudents.length === 0;
+    }
+
+    const limitWarning = document.getElementById('batchPortalLimitWarning');
+    if (limitWarning) {
+      limitWarning.style.display = targetStudents.length > 24 ? 'block' : 'none';
+    }
+
+    this.updateBatchPortalSelectedCount();
+  }
+
+  toggleAllBatchPortalCheckboxes(checked) {
+    const boxes = document.querySelectorAll('.batch-parent-checkbox');
+    boxes.forEach((cb, idx) => {
+      cb.checked = checked && (idx < 24);
+    });
+    this.updateBatchPortalSelectedCount();
+  }
+
+  updateBatchPortalSelectedCount() {
+    const selectedBoxes = Array.from(document.querySelectorAll('.batch-parent-checkbox:checked'));
+    const totalBoxes = document.querySelectorAll('.batch-parent-checkbox').length;
+    const count = selectedBoxes.length;
+
+    const masterCb = document.getElementById('selectAllBatchParentLinks');
+    if (masterCb && totalBoxes > 0) {
+      masterCb.checked = (count === Math.min(totalBoxes, 24));
+    }
+
+    const btn = document.getElementById('btnConfirmBatchParentLinks');
+    if (btn) {
+      if (count === 0) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+        btn.innerHTML = `${getIcon('whatsapp', 18)} <span>حدد طلاباً للإرسال (0)</span>`;
+      } else {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        btn.innerHTML = `${getIcon('whatsapp', 18)} <span>بدء الإرسال المزدوج الآمن (${count} طالب)</span>`;
+      }
+    }
+  }
+
+  openBatchPortalLinksModal(preselectedGroupId = null) {
+    const allUnsentStudents = this.getUnsentPortalStudents('ALL');
+
+    if (allUnsentStudents.length === 0) {
       this.showToast('جميع الطلاب المسجلين تم إرسال روابط المنصة والمتابعة لهم مسبقاً.', 'info');
       return;
     }
 
+    // Determine initial selected group
+    let initialGroupId = 'ALL';
+    if (preselectedGroupId) {
+      initialGroupId = preselectedGroupId;
+    } else {
+      const pageFilter = document.getElementById('studentGroupFilter')?.value;
+      if (pageFilter) {
+        const matched = (this.groups || []).find(g => g.id === pageFilter || g.name === pageFilter);
+        if (matched) {
+          initialGroupId = matched.id;
+        }
+      }
+    }
+
+    this._currentBatchPortalGroupId = initialGroupId;
+    const studentsToShow = this.getUnsentPortalStudents(initialGroupId);
     const teacherName = this.user?.name || 'مستر أحمد';
-    const displayCount = Math.min(unsentStudents.length, 24);
+    const displayCount = Math.min(studentsToShow.length, 24);
+
+    // Build Group Options
+    const groupOptions = (this.groups || []).map(g => {
+      const gCount = this.getUnsentPortalStudents(g.id).length;
+      const isSelected = g.id === initialGroupId;
+      return `<option value="${escapeHtml(g.id)}" ${isSelected ? 'selected' : ''}>${escapeHtml(g.name)} (${gCount} طالب غير مرسل)</option>`;
+    }).join('');
+
+    const unassignedCount = this.getUnsentPortalStudents('UNASSIGNED').length;
+    const unassignedOption = unassignedCount > 0
+      ? `<option value="UNASSIGNED" ${initialGroupId === 'UNASSIGNED' ? 'selected' : ''}>طلاب بدون مجموعة (${unassignedCount} طالب جديد)</option>`
+      : '';
 
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -8167,45 +8313,37 @@ class CentrlyApp {
           يُرسل رابط المنصة للطالب أولاً، ثم يُرسل رابط المتابعة لولي الأمر تلقائياً بعد 15 دقيقة. يظهر لولي الأمر إشعار "يكتب الآن..." لمدة 5 دقائق قبل استلام الرسالة، مع تنويع وصياغة متغيرة تلقائياً (Spintax) لكل رسالة لحماية رقمك تماماً من خوارزميات الحظر.
         </div>
 
+        <!-- Group Selector Filter -->
+        <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 0.75rem; padding: 0.75rem;">
+          <label for="batchPortalGroupSelect" style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 0.85rem; color: #1e293b; margin-bottom: 0.4rem;">
+            <span style="display: flex; align-items: center; gap: 0.35rem;">
+              <span style="color: #2563eb; font-size: 1rem;">👥</span>
+              <span>تحديد المجموعة المستهدفة للإرسال:</span>
+            </span>
+            <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">(اختر مجموعة معينة أو أرسل لجميع المجاميع)</span>
+          </label>
+          <select id="batchPortalGroupSelect" class="form-select" style="width: 100%; font-weight: 700; font-size: 0.9rem; padding: 0.5rem 0.75rem; border-radius: 0.5rem; border-color: #94a3b8; background-color: #ffffff; cursor: pointer;" onchange="window.centrlyApp.onBatchPortalGroupChange(this.value)">
+            <option value="ALL" ${initialGroupId === 'ALL' ? 'selected' : ''}>🌟 جميع المجاميع (${allUnsentStudents.length} طالب غير مرسل)</option>
+            ${groupOptions}
+            ${unassignedOption}
+          </select>
+        </div>
+
         <div>
-          <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-            <span>الطلاب المستهدفون (${unsentStudents.length} طالب - محدد ${displayCount} تلقائياً):</span>
-            <label style="font-size: 0.8rem; color: #64748b; font-weight: 600; cursor: pointer;">
-              <input type="checkbox" id="selectAllBatchParentLinks" checked onchange="
-                const checked = this.checked;
-                const boxes = document.querySelectorAll('.batch-parent-checkbox');
-                boxes.forEach((cb, idx) => {
-                  cb.checked = checked && (idx < 24);
-                });
-              "> تحديد أول 24 طالباً
+          <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <span id="batchPortalCountLabel">الطلاب المستهدفون (${studentsToShow.length} طالب - محدد ${displayCount} تلقائياً):</span>
+            <label style="font-size: 0.8rem; color: #64748b; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
+              <input type="checkbox" id="selectAllBatchParentLinks" ${displayCount > 0 ? 'checked' : ''} ${studentsToShow.length === 0 ? 'disabled' : ''} onchange="window.centrlyApp.toggleAllBatchPortalCheckboxes(this.checked)">
+              <span>تحديد أول 24 طالباً</span>
             </label>
           </div>
 
-          <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; background: #fafafa;">
-            ${unsentStudents.map((s, idx) => {
-              const pPhone = s.parentPhone || s.parent_phone || '—';
-              const sPhone = s.studentPhone || s.student_phone || '—';
-              const isChecked = idx < 24;
-              return `
-                <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.6rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 0.4rem; cursor: pointer;">
-                  <span style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" class="batch-parent-checkbox" value="${escapeHtml(s.id)}" ${isChecked ? 'checked' : ''}>
-                    <span style="font-weight: 700; color: #1e293b;">${escapeHtml(s.name)}</span>
-                    <span style="font-size: 0.75rem; color: #64748b; font-family: monospace;">كود: ${escapeHtml(s.code || s.student_code || '—')}</span>
-                  </span>
-                  <span dir="ltr" style="font-size: 0.75rem; font-family: monospace; color: #475569; display: flex; flex-direction: column; align-items: flex-end;">
-                    <span>ولي الأمر: ${escapeHtml(pPhone)}</span>
-                    <span>الطالب: ${escapeHtml(sPhone)}</span>
-                  </span>
-                </label>
-              `;
-            }).join('')}
+          <div id="batchPortalStudentsListContainer" style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; background: #fafafa;">
+            ${this.renderBatchPortalStudentsListHtml(studentsToShow)}
           </div>
-          ${unsentStudents.length > 24 ? `
-            <div style="font-size: 0.75rem; color: #b45309; margin-top: 0.3rem;">
-              ⚠️ تم تحديد أول 24 طالباً لحماية رقمك اليوم. يمكنك إرسال باقي الطلاب في اليوم التالي.
-            </div>
-          ` : ''}
+          <div id="batchPortalLimitWarning" style="font-size: 0.75rem; color: #b45309; margin-top: 0.4rem; background: #fffbeb; border: 1px solid #fde68a; padding: 0.4rem 0.6rem; border-radius: 0.4rem; display: ${studentsToShow.length > 24 ? 'block' : 'none'};">
+            ⚠️ تم تحديد أول 24 طالباً لحماية رقمك اليوم من خوارزميات واتساب. يمكنك إرسال باقي طلاب المجموعة في اليوم التالي.
+          </div>
         </div>
 
         <div style="border-top: 1px solid #e2e8f0; padding-top: 0.75rem;">
@@ -8268,12 +8406,13 @@ https://centerly-eg.com/p/p16766044
       </div>
     `;
 
+    const isBtnDisabled = displayCount === 0;
     const footerHtml = `
       <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 0.75rem;">
         <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-        <button type="button" id="btnConfirmBatchParentLinks" class="btn btn-primary" onclick="window.centrlyApp.dispatchBatchParentLinks()" style="background-color: #0284c7; border-color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+        <button type="button" id="btnConfirmBatchParentLinks" class="btn btn-primary" onclick="window.centrlyApp.dispatchBatchParentLinks()" ${isBtnDisabled ? 'disabled style="opacity: 0.6; cursor: not-allowed; background-color: #0284c7; border-color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;"' : 'style="background-color: #0284c7; border-color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;"'}>
           ${getIcon('whatsapp', 18)}
-          <span>بدء الإرسال المزدوج الآمن (${displayCount} طالب)</span>
+          <span>${isBtnDisabled ? 'حدد طلاباً للإرسال (0)' : `بدء الإرسال المزدوج الآمن (${displayCount} طالب)`}</span>
         </button>
       </div>
     `;
