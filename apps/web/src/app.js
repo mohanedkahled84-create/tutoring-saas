@@ -1,6 +1,6 @@
 import { authService } from './services/auth.js?v=4.9.25';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.26';
-import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
+import { renderSidebar } from './components/Sidebar.js?v=4.8.11';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.0';
 import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.21';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
@@ -32,6 +32,7 @@ import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.
 import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js?v=5.1.0';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js';
+import { renderAdminOutreachView } from './components/AdminOutreachView.js?v=1.0.1';
 import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.9.9';
 import { renderCouponsView } from './components/CouponsView.js?v=4.7.6';
 import { getIcon } from './utils/icons.js';
@@ -53,6 +54,9 @@ class CentrlyApp {
     this.adminTenantsData = { tenants: [] };
     this.adminTenantsFilter = 'all';
     this.adminTenantsSearchQuery = '';
+    this.adminOutreachData = { leads: [], metrics: {} };
+    this.adminOutreachFilter = 'all';
+    this.adminOutreachSearchQuery = '';
     this.centerDashboardState = {
       activeTab: 'teachers',
       period: new Date().toISOString().slice(0, 7),
@@ -398,7 +402,7 @@ class CentrlyApp {
           };
           if (proofsRes) this.adminProofsData = proofsRes;
           if (tenantsRes) this.adminTenantsData = tenantsRes;
-          if (['admin-dashboard', 'admin-proofs', 'admin-tenants'].includes(this.currentRoute)) {
+          if (['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach'].includes(this.currentRoute)) {
             this.renderMainContent();
           }
         }
@@ -556,13 +560,14 @@ class CentrlyApp {
     let hasToken = authService.isAuthenticated();
     const hasCachedSession = authService.hasSession();
 
-    const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'coupons', 'activity-logs'];
+    const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'coupons', 'activity-logs'];
     const rawRouteParam = urlParams.get('route');
     const requestedAdminRoute =
       (rawRouteParam && adminRoutes.includes(rawRouteParam)) ? rawRouteParam :
       (cleanPath === '/admin' || cleanPath === '/admin/overview' ? 'admin-dashboard' :
        cleanPath === '/admin/payment-proofs' || cleanPath === '/admin/proofs' ? 'admin-proofs' :
        cleanPath === '/admin/tenants' ? 'admin-tenants' :
+       cleanPath === '/admin/outreach' ? 'admin-outreach' :
        cleanPath === '/admin/coupons' ? 'coupons' : null);
 
     if (!hasToken && !hasCachedSession) {
@@ -1761,7 +1766,7 @@ class CentrlyApp {
 
       const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
       const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-      const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'coupons', 'activity-logs'];
+      const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'coupons', 'activity-logs'];
       const redirectRoute = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_redirect_route')) ||
                             (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_redirect_route'));
 
@@ -2426,7 +2431,7 @@ class CentrlyApp {
 
     const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-    const dedicatedAdminOnlyRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants'];
+    const dedicatedAdminOnlyRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach'];
     if (!isAdmin && dedicatedAdminOnlyRoutes.includes(route)) {
       route = isCenter ? 'center-dashboard' : 'dashboard';
     }
@@ -2602,6 +2607,21 @@ class CentrlyApp {
           } catch (err) {
             console.warn('admin-tenants load error', err);
             this.adminTenantsData = { tenants: [] };
+          }
+          this.renderMainContent();
+          break;
+        }
+        case 'admin-outreach': {
+          try {
+            const res = await request('/admin/outreach');
+            if (res && res.leads) {
+              this.adminOutreachData = res;
+            } else {
+              this.adminOutreachData = { leads: [], metrics: { total: 606, ready: 606, sent: 0, replied: 0, interested: 0, converted: 0, not_interested: 0 } };
+            }
+          } catch (err) {
+            console.warn('admin-outreach load error', err);
+            this.adminOutreachData = { leads: [], metrics: { total: 606, ready: 606, sent: 0, replied: 0, interested: 0, converted: 0, not_interested: 0 } };
           }
           this.renderMainContent();
           break;
@@ -3417,6 +3437,8 @@ class CentrlyApp {
         return renderAdminPaymentProofsView(this.adminProofsData || {}, this.adminProofsFilter || 'pending');
       case 'admin-tenants':
         return renderAdminTenantsView(this.adminTenantsData || {}, this.adminTenantsFilter || 'all', this.adminTenantsSearchQuery || '');
+      case 'admin-outreach':
+        return renderAdminOutreachView(this.adminOutreachData || {}, this.adminOutreachFilter || 'all', this.adminOutreachSearchQuery || '');
       case 'coupons':
         if (this.user?.role !== 'admin' && !this.user?.is_superadmin) {
           return renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
@@ -14460,6 +14482,22 @@ https://centerly-eg.com/p/p16766044
         inp.selectionStart = inp.selectionEnd = inp.value.length;
       }
     }, 50);
+  }
+
+  setOutreachFilter(filter) {
+    this.adminOutreachFilter = filter;
+    this.renderMainContent();
+  }
+
+  handleOutreachSearch(val) {
+    this.adminOutreachSearchQuery = val;
+    this.renderMainContent();
+  }
+
+  async refreshOutreachData() {
+    this.showToast('جاري تحديث بيانات التواصل...', 'info');
+    await this.loadRouteData('admin-outreach');
+    this.showToast('تم تحديث بيانات الحملة بنجاح', 'success');
   }
 
   openTenantOverrideModal(tenantId, tenantName, currentStatus, currentTier = 'growth') {

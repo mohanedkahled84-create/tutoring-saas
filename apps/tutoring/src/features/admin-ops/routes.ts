@@ -192,3 +192,65 @@ adminRouter.post("/purge-test-data", async (req: AuthenticatedRequest, res: Resp
   }
 });
 
+// GET /api/admin/outreach - Admin only: outreach campaign metrics and leads
+adminRouter.get("/outreach", async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY || "";
+    const BASE_ID = "appOpSvZI6AHA0DxY";
+    const TABLE_ID = "tblSX7a2jlDUHOm5H";
+
+    const allRecords: any[] = [];
+    let offset: string | null = null;
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID}?pageSize=100`;
+
+    do {
+      const fetchUrl: string = offset ? `${url}&offset=${offset}` : url;
+      const resp = await fetch(fetchUrl, {
+        headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }
+      });
+      if (!resp.ok) break;
+      const data: any = await resp.json();
+      if (data.records) allRecords.push(...data.records);
+      offset = data.offset || null;
+    } while (offset && allRecords.length < 1000);
+
+    const metrics = {
+      total: allRecords.length,
+      ready: 0,
+      sent: 0,
+      replied: 0,
+      interested: 0,
+      converted: 0,
+      not_interested: 0
+    };
+
+    const leads = allRecords.map(r => {
+      const f = r.fields || {};
+      const status = f["حالة التواصل"] || "جاهز للإرسال";
+
+      if (status === "جاهز للإرسال") metrics.ready++;
+      else if (status === "تم الإرسال") metrics.sent++;
+      else if (status === "تم الرد") metrics.replied++;
+      else if (status === "عميل محتمل (مهتم)") metrics.interested++;
+      else if (status === "أصبح عميل (مشترك)") metrics.converted++;
+      else if (status === "غير مهتم") metrics.not_interested++;
+
+      return {
+        id: r.id,
+        "الاسم": f["الاسم"] || "",
+        "رقم الهاتف": f["رقم الهاتف"] || "",
+        "الرقم الدولي (واتساب)": f["الرقم الدولي (واتساب)"] || "",
+        "حالة التواصل": status,
+        "القالب المرسل (A/B Test)": f["القالب المرسل (A/B Test)"] || "Template A",
+        "ملاحظات المحادثة": f["ملاحظات المحادثة"] || ""
+      };
+    });
+
+    res.json({ metrics, leads });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to fetch outreach data";
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+  }
+});
+
+
