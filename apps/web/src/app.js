@@ -8591,12 +8591,12 @@ https://centerly-eg.com/p/p16766044
     const rect = container.getBoundingClientRect();
     const windowHeight = window.innerHeight || document.documentElement.clientHeight;
 
-    const isTableInView = rect.top < (windowHeight - 50) && rect.bottom > 80;
+    const isTableInView = rect.top < (windowHeight - 20) && rect.bottom > 60;
 
     if (isTableInView) {
       const left = Math.max(0, rect.left);
       const width = Math.min(rect.width, (window.innerWidth || document.documentElement.clientWidth) - left);
-      floatingWrap.style.display = 'flex';
+      floatingWrap.style.display = 'block';
       floatingWrap.style.left = `${left}px`;
       floatingWrap.style.width = `${width}px`;
       if (!this._isSyncingTableScroll) {

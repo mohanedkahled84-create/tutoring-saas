@@ -169,30 +169,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
       </div>
 
       <!-- Students Table -->
-      <div class="card" id="studentsTableCard" style="margin: 0; padding: 0; border: 1px solid var(--centrly-line); position: relative; border-radius: var(--radius-lg);">
-        <!-- Sticky Top Horizontal Navigation Toolbar -->
-        <div style="position: sticky; top: 56px; z-index: 25; display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 1rem; background: #ffffff; border-bottom: 2px solid var(--centrly-line); border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); flex-wrap: wrap; gap: 0.5rem;">
-          <div style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; color: #1e293b; font-weight: 800;">
-            <span style="font-size: 1.1rem; color: #2563eb;">↔️</span>
-            <span>التحكم في عرض الجدول:</span>
-            <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(تحريك يميناً ويساراً للتنقل بين الأعمدة بسهولة)</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('full-right')" title="الانتقال إلى بداية الجدول (الاسم وكود الطالب)" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.6rem; border-color: #cbd5e1; background: #f8fafc;">
-              <span>➡️ أقصى اليمين</span>
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('right')" title="تحريك الجدول خطوة لليمين" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem; border-color: #cbd5e1; background: #f8fafc; display: inline-flex; align-items: center; gap: 0.25rem;">
-              <span>➡️</span> <span>يمين</span>
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('left')" title="تحريك الجدول خطوة لليسار" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem; border-color: #cbd5e1; background: #f8fafc; display: inline-flex; align-items: center; gap: 0.25rem;">
-              <span>يسار</span> <span>⬅️</span>
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('full-left')" title="الانتقال إلى نهاية الجدول (الروابط والإجراءات)" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.6rem; border-color: #cbd5e1; background: #f8fafc;">
-              <span>أقصى اليسار ⬅️</span>
-            </button>
-          </div>
-        </div>
-
+      <div class="card" id="studentsTableCard" style="margin: 0; padding: 0; border: 1px solid var(--centrly-line); position: relative; border-radius: var(--radius-lg); overflow: hidden;">
         <div id="studentsTableContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch;" onscroll="window.centrlyApp && window.centrlyApp.syncStudentsTableScroll('table')">
           <table class="data-table" id="studentsTable" style="margin: 0;">
             <thead>
@@ -368,23 +345,11 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
         </div>
       </div>
 
-      <!-- Floating Horizontal Scrollbar (Fixed to viewport bottom when scrolling tall student lists) -->
-      <div id="studentsStickyScrollWrap" style="display: none; position: fixed; bottom: 0; z-index: 50; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(8px); border-top: 2px solid #2563eb; box-shadow: 0 -4px 16px rgba(0,0,0,0.12); padding: 0.4rem 0.75rem; align-items: center; gap: 0.5rem; border-radius: 8px 8px 0 0;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('full-right')" title="الانتقال إلى أول الجدول (الاسم وكود الطالب)" style="font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.55rem; flex-shrink: 0; background: #ffffff; border-color: #cbd5e1;">
-          <span>➡️ البداية</span>
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('right')" title="تحريك يمين" style="font-size: 0.78rem; font-weight: 800; padding: 0.25rem 0.6rem; flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.2rem; background: #ffffff; border-color: #cbd5e1;">
-          <span>➡️</span> <span>يمين</span>
-        </button>
-        <div id="studentsStickyScrollTrack" style="flex: 1; overflow-x: auto; overflow-y: hidden; height: 18px;" onscroll="window.centrlyApp && window.centrlyApp.syncStudentsTableScroll('bar')">
+      <!-- Floating Horizontal Scrollbar (Fixed to viewport bottom whenever students table is in view) -->
+      <div id="studentsStickyScrollWrap" style="display: none; position: fixed; bottom: 0; z-index: 50; background: #ffffff; border: 1px solid #cbd5e1; border-bottom: none; box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.08); padding: 5px 8px; border-radius: 8px 8px 0 0; box-sizing: border-box;">
+        <div id="studentsStickyScrollTrack" style="width: 100%; overflow-x: auto; overflow-y: hidden; height: 14px;" onscroll="window.centrlyApp && window.centrlyApp.syncStudentsTableScroll('bar')">
           <div id="studentsStickyScrollDummy" style="height: 1px; width: 1200px;"></div>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('left')" title="تحريك يسار (الروابط والإجراءات)" style="font-size: 0.78rem; font-weight: 800; padding: 0.25rem 0.6rem; flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.2rem; background: #ffffff; border-color: #cbd5e1;">
-          <span>يسار</span> <span>⬅️</span>
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('full-left')" title="الانتقال إلى نهاية الجدول (الروابط والإجراءات)" style="font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.55rem; flex-shrink: 0; background: #ffffff; border-color: #cbd5e1;">
-          <span>النهاية ⬅️</span>
-        </button>
       </div>
 
     </div>
