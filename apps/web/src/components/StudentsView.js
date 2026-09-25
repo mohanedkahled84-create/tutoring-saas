@@ -169,25 +169,25 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
       </div>
 
       <!-- Students Table -->
-      <div class="card" id="studentsTableCard" style="margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--centrly-line); position: relative;">
-        <!-- Top Horizontal Navigation Toolbar -->
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 1rem; background: #f8fafc; border-bottom: 1px solid var(--centrly-line); flex-wrap: wrap; gap: 0.5rem;">
-          <div style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; color: #334155; font-weight: 700;">
+      <div class="card" id="studentsTableCard" style="margin: 0; padding: 0; border: 1px solid var(--centrly-line); position: relative; border-radius: var(--radius-lg);">
+        <!-- Sticky Top Horizontal Navigation Toolbar -->
+        <div style="position: sticky; top: 56px; z-index: 25; display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 1rem; background: #ffffff; border-bottom: 2px solid var(--centrly-line); border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; color: #1e293b; font-weight: 800;">
             <span style="font-size: 1.1rem; color: #2563eb;">↔️</span>
             <span>التحكم في عرض الجدول:</span>
             <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(تحريك يميناً ويساراً للتنقل بين الأعمدة بسهولة)</span>
           </div>
           <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('full-right')" title="الانتقال إلى بداية الجدول (الاسم وكود الطالب)" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.6rem; border-color: #cbd5e1; background: #ffffff;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('full-right')" title="الانتقال إلى بداية الجدول (الاسم وكود الطالب)" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.6rem; border-color: #cbd5e1; background: #f8fafc;">
               <span>➡️ أقصى اليمين</span>
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('right')" title="تحريك الجدول خطوة لليمين" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem; border-color: #cbd5e1; background: #ffffff; display: inline-flex; align-items: center; gap: 0.25rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('right')" title="تحريك الجدول خطوة لليمين" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem; border-color: #cbd5e1; background: #f8fafc; display: inline-flex; align-items: center; gap: 0.25rem;">
               <span>➡️</span> <span>يمين</span>
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('left')" title="تحريك الجدول خطوة لليسار" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem; border-color: #cbd5e1; background: #ffffff; display: inline-flex; align-items: center; gap: 0.25rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('left')" title="تحريك الجدول خطوة لليسار" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem; border-color: #cbd5e1; background: #f8fafc; display: inline-flex; align-items: center; gap: 0.25rem;">
               <span>يسار</span> <span>⬅️</span>
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('full-left')" title="الانتقال إلى نهاية الجدول (الروابط والإجراءات)" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.6rem; border-color: #cbd5e1; background: #ffffff;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('full-left')" title="الانتقال إلى نهاية الجدول (الروابط والإجراءات)" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.6rem; border-color: #cbd5e1; background: #f8fafc;">
               <span>أقصى اليسار ⬅️</span>
             </button>
           </div>

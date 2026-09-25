@@ -7,7 +7,7 @@ import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.3.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
-import { renderStudentsView } from './components/StudentsView.js?v=4.8.14';
+import { renderStudentsView } from './components/StudentsView.js?v=4.8.15';
 import { renderGroupsView } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.1.0';
@@ -8452,10 +8452,9 @@ https://centerly-eg.com/p/p16766044
     const rect = container.getBoundingClientRect();
     const windowHeight = window.innerHeight || document.documentElement.clientHeight;
 
-    const isTopVisible = rect.top < windowHeight;
-    const isBottomBelowScreen = rect.bottom > (windowHeight + 20);
+    const isTableInView = rect.top < (windowHeight - 50) && rect.bottom > 80;
 
-    if (isTopVisible && isBottomBelowScreen) {
+    if (isTableInView) {
       const left = Math.max(0, rect.left);
       const width = Math.min(rect.width, (window.innerWidth || document.documentElement.clientWidth) - left);
       floatingWrap.style.display = 'flex';
