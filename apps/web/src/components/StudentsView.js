@@ -169,9 +169,32 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
       </div>
 
       <!-- Students Table -->
-      <div class="card" style="margin: 0;">
-        <div style="overflow-x: auto;">
-          <table class="data-table" id="studentsTable">
+      <div class="card" id="studentsTableCard" style="margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--centrly-line); position: relative;">
+        <!-- Top Horizontal Navigation Toolbar -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 1rem; background: #f8fafc; border-bottom: 1px solid var(--centrly-line); flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; color: #334155; font-weight: 700;">
+            <span style="font-size: 1.1rem; color: #2563eb;">↔️</span>
+            <span>التحكم في عرض الجدول:</span>
+            <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(تحريك يميناً ويساراً للتنقل بين الأعمدة بسهولة)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('full-right')" title="الانتقال إلى بداية الجدول (الاسم وكود الطالب)" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.6rem; border-color: #cbd5e1; background: #ffffff;">
+              <span>➡️ أقصى اليمين</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('right')" title="تحريك الجدول خطوة لليمين" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem; border-color: #cbd5e1; background: #ffffff; display: inline-flex; align-items: center; gap: 0.25rem;">
+              <span>➡️</span> <span>يمين</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('left')" title="تحريك الجدول خطوة لليسار" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem; border-color: #cbd5e1; background: #ffffff; display: inline-flex; align-items: center; gap: 0.25rem;">
+              <span>يسار</span> <span>⬅️</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('full-left')" title="الانتقال إلى نهاية الجدول (الروابط والإجراءات)" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.6rem; border-color: #cbd5e1; background: #ffffff;">
+              <span>أقصى اليسار ⬅️</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="studentsTableContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch;" onscroll="window.centrlyApp && window.centrlyApp.syncStudentsTableScroll('table')">
+          <table class="data-table" id="studentsTable" style="margin: 0;">
             <thead>
               <tr>
                 <th>كود الطالب</th>
@@ -343,6 +366,23 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Floating Horizontal Scrollbar (Fixed to viewport bottom when scrolling tall student lists) -->
+      <div id="studentsStickyScrollWrap" style="display: none; position: fixed; bottom: 0; z-index: 50; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(8px); border-top: 2px solid #2563eb; box-shadow: 0 -4px 16px rgba(0,0,0,0.12); padding: 0.4rem 0.75rem; align-items: center; gap: 0.75rem; border-radius: 8px 8px 0 0;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('right')" title="تحريك يمين (كود واسم الطالب)" style="font-size: 0.78rem; font-weight: 800; padding: 0.25rem 0.65rem; flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.25rem; background: #ffffff; border-color: #cbd5e1;">
+          <span>➡️</span> <span>يمين</span>
+        </button>
+        <div style="font-size: 0.75rem; color: #475569; font-weight: 700; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 0.25rem;">
+          <span>↔️</span>
+          <span>شريط التمرير:</span>
+        </div>
+        <div id="studentsStickyScrollTrack" style="flex: 1; overflow-x: auto; overflow-y: hidden; height: 18px;" onscroll="window.centrlyApp && window.centrlyApp.syncStudentsTableScroll('bar')">
+          <div id="studentsStickyScrollDummy" style="height: 1px; width: 1200px;"></div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.scrollStudentsTable('left')" title="تحريك يسار (الروابط والإجراءات)" style="font-size: 0.78rem; font-weight: 800; padding: 0.25rem 0.65rem; flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.25rem; background: #ffffff; border-color: #cbd5e1;">
+          <span>يسار</span> <span>⬅️</span>
+        </button>
       </div>
 
     </div>

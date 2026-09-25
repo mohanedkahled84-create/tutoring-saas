@@ -7,7 +7,7 @@ import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.3.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
-import { renderStudentsView } from './components/StudentsView.js?v=4.8.12';
+import { renderStudentsView } from './components/StudentsView.js?v=4.8.13';
 import { renderGroupsView } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=4.1.0';
@@ -3347,11 +3347,17 @@ class CentrlyApp {
       </div>
     `;
     if (appEl) appEl.innerHTML = html;
+    if (this.currentRoute === 'students') {
+      this.initStudentsTableScrollSync();
+    }
   }
 
   renderMainContent() {
     const el = document.getElementById('mainContent');
     if (el) el.innerHTML = this.getContentHtml(this.currentRoute);
+    if (this.currentRoute === 'students') {
+      this.initStudentsTableScrollSync();
+    }
   }
 
   renderRouteLoading() {
@@ -8378,6 +8384,120 @@ https://centerly-eg.com/p/p16766044
       const matchQ = text.includes(q);
       const matchG = !groupFilter || text.includes(groupFilter.toLowerCase());
       r.style.display = matchQ && matchG ? '' : 'none';
+    });
+
+    if (typeof this.updateStudentsFloatingScrollbar === 'function') {
+      this.updateStudentsFloatingScrollbar();
+    }
+  }
+
+  scrollStudentsTable(direction) {
+    const container = document.getElementById('studentsTableContainer');
+    if (!container) return;
+
+    const step = 350;
+    try {
+      if (direction === 'full-right') {
+        container.scrollBy({ left: 10000, behavior: 'smooth' });
+      } else if (direction === 'full-left') {
+        container.scrollBy({ left: -10000, behavior: 'smooth' });
+      } else if (direction === 'right') {
+        container.scrollBy({ left: step, behavior: 'smooth' });
+      } else if (direction === 'left') {
+        container.scrollBy({ left: -step, behavior: 'smooth' });
+      }
+    } catch (e) {
+      if (direction === 'full-right') container.scrollLeft += 10000;
+      else if (direction === 'full-left') container.scrollLeft -= 10000;
+      else if (direction === 'right') container.scrollLeft += step;
+      else if (direction === 'left') container.scrollLeft -= step;
+    }
+  }
+
+  syncStudentsTableScroll(source) {
+    if (this._isSyncingTableScroll) return;
+    const tableContainer = document.getElementById('studentsTableContainer');
+    const scrollTrack = document.getElementById('studentsStickyScrollTrack');
+    if (!tableContainer || !scrollTrack) return;
+
+    this._isSyncingTableScroll = true;
+    try {
+      if (source === 'table') {
+        scrollTrack.scrollLeft = tableContainer.scrollLeft;
+      } else if (source === 'bar') {
+        tableContainer.scrollLeft = scrollTrack.scrollLeft;
+      }
+    } finally {
+      requestAnimationFrame(() => {
+        this._isSyncingTableScroll = false;
+      });
+    }
+  }
+
+  updateStudentsFloatingScrollbar() {
+    const container = document.getElementById('studentsTableContainer');
+    const floatingWrap = document.getElementById('studentsStickyScrollWrap');
+    const dummy = document.getElementById('studentsStickyScrollDummy');
+    const scrollTrack = document.getElementById('studentsStickyScrollTrack');
+    if (!container || !floatingWrap || !dummy || !scrollTrack) return;
+
+    const isOverflowing = container.scrollWidth > (container.clientWidth + 2);
+    if (!isOverflowing) {
+      floatingWrap.style.display = 'none';
+      return;
+    }
+
+    dummy.style.width = `${container.scrollWidth}px`;
+
+    const rect = container.getBoundingClientRect();
+    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+
+    const isTopVisible = rect.top < windowHeight;
+    const isBottomBelowScreen = rect.bottom > (windowHeight + 20);
+
+    if (isTopVisible && isBottomBelowScreen) {
+      const left = Math.max(0, rect.left);
+      const width = Math.min(rect.width, (window.innerWidth || document.documentElement.clientWidth) - left);
+      floatingWrap.style.display = 'flex';
+      floatingWrap.style.left = `${left}px`;
+      floatingWrap.style.width = `${width}px`;
+      if (!this._isSyncingTableScroll) {
+        scrollTrack.scrollLeft = container.scrollLeft;
+      }
+    } else {
+      floatingWrap.style.display = 'none';
+    }
+  }
+
+  initStudentsTableScrollSync() {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        this.updateStudentsFloatingScrollbar();
+
+        const container = document.getElementById('studentsTableContainer');
+        if (container && window.ResizeObserver && !this._studentsResizeObserver) {
+          this._studentsResizeObserver = new ResizeObserver(() => {
+            if (this.currentRoute === 'students') {
+              this.updateStudentsFloatingScrollbar();
+            }
+          });
+          this._studentsResizeObserver.observe(container);
+        }
+
+        if (!this._hasStudentsScrollListener) {
+          this._hasStudentsScrollListener = true;
+          window.addEventListener('scroll', () => {
+            if (this.currentRoute === 'students') {
+              this.updateStudentsFloatingScrollbar();
+            }
+          }, { passive: true });
+          window.addEventListener('resize', () => {
+            if (this.currentRoute === 'students') {
+              this.updateStudentsFloatingScrollbar();
+            }
+          }, { passive: true });
+        }
+      }, 60);
     });
   }
 

@@ -461,6 +461,39 @@ button.password-toggle-btn:active {
   margin: 0.15rem 0.25rem;
 }
 
+/* Students Table Responsive Horizontal Scrollbar Controls */
+#studentsTableContainer {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+#studentsTableContainer::-webkit-scrollbar,
+#studentsStickyScrollTrack::-webkit-scrollbar {
+  height: 10px;
+}
+
+#studentsTableContainer::-webkit-scrollbar-track,
+#studentsStickyScrollTrack::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+#studentsTableContainer::-webkit-scrollbar-thumb,
+#studentsStickyScrollTrack::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
+}
+
+#studentsTableContainer::-webkit-scrollbar-thumb:hover,
+#studentsStickyScrollTrack::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+#studentsStickyScrollTrack {
+  scrollbar-width: thin;
+  scrollbar-color: #2563eb #f1f5f9;
+}
+
 /* ==========================================================================
    Modal Dialogs & Responsive Scrolling System
    ========================================================================== */
