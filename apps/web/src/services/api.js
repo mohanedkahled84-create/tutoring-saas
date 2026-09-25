@@ -175,8 +175,17 @@ export async function request(endpoint, options = {}) {
                                 endpoint.includes('/auth/reset-password') ||
                                 endpoint.startsWith('/public/');
     if (!isAuthGuestEndpoint) {
-      const token = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_token')) ||
-                    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_token'));
+      let token = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_token')) ||
+                  (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_token'));
+      
+      // Proactively refresh expired token before dispatching authenticated request
+      if ((!token || isJwtExpired(token, 15)) && !options._retry) {
+        const refreshData = await performSilentRefresh();
+        if (refreshData && refreshData.token) {
+          token = refreshData.token;
+        }
+      }
+
       if (token && !headers['Authorization'] && !headers['authorization']) {
         headers['Authorization'] = `Bearer ${token}`;
       }
@@ -226,6 +235,10 @@ export async function request(endpoint, options = {}) {
         }
       } else if (data.message) {
         errMsg = data.message;
+      }
+
+      if (res.status === 401 && (errMsg.includes('token') || errMsg.includes('UNAUTHORIZED') || errMsg.includes('status 401'))) {
+        errMsg = 'انتهت صلاحية الجلسة لأسباب أمنية. يرجى تسجيل الدخول مجدداً.';
       }
       const err = new Error(errMsg);
       if (data.error && typeof data.error === 'object') {

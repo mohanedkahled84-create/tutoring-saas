@@ -1,5 +1,5 @@
 import { authService } from './services/auth.js?v=4.9.25';
-import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.25';
+import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.26';
 import { renderSidebar } from './components/Sidebar.js?v=4.8.10';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.0';
 import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.21';
@@ -12813,7 +12813,17 @@ https://centerly-eg.com/p/p16766044
       if (btn) btn.disabled = false;
       if (txt) txt.innerText = 'إرسال كود التحقق إلى البريد الإلكتروني';
       if (errEl) {
-        errEl.innerText = err.message || 'فشل إرسال كود التحقق إلى البريد الإلكتروني.';
+        const isAuthExpired = err.status === 401 || String(err.message || '').includes('token') || String(err.message || '').includes('UNAUTHORIZED') || String(err.message || '').includes('صلاحية');
+        if (isAuthExpired) {
+          errEl.innerHTML = `
+            <div style="margin-bottom: 0.5rem; line-height: 1.5;">انتهت صلاحية جلسة تسجيل الدخول. يرجى تسجيل الدخول مجدداً لإرسال كود التحقق.</div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="window.centrlyApp.renderAuth('login')" style="padding: 0.35rem 1.25rem; font-weight: 800; font-size: 0.85rem;">
+              تسجيل الدخول مجدداً
+            </button>
+          `;
+        } else {
+          errEl.innerText = err.message || 'فشل إرسال كود التحقق إلى البريد الإلكتروني.';
+        }
         errEl.style.display = 'block';
       }
     }
@@ -13034,8 +13044,16 @@ https://centerly-eg.com/p/p16766044
     } catch (err) {
       if (errEl) {
         const isLocked = err.status === 423 || String(err.message || '').includes('PIN_LOCKED');
+        const isAuthExpired = err.status === 401 || String(err.message || '').includes('token') || String(err.message || '').includes('UNAUTHORIZED') || String(err.message || '').includes('صلاحية');
         if (isLocked) {
           errEl.innerText = err.message || 'تم تجاوز الحد الأقصى للمحاولات الخاطئة (5 محاولات). تم قفل إدخال الرمز مؤقتاً لمدة 15 دقيقة.';
+        } else if (isAuthExpired) {
+          errEl.innerHTML = `
+            <div style="margin-bottom: 0.5rem; line-height: 1.5;">انتهت صلاحية جلسة تسجيل الدخول لأسباب أمنية.</div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="window.centrlyApp.renderAuth('login')" style="padding: 0.35rem 1.25rem; font-weight: 800; font-size: 0.85rem;">
+              تسجيل الدخول مجدداً
+            </button>
+          `;
         } else {
           errEl.innerText = err.message || 'تعذر التحقق من الرمز السري، يرجى التأكد من اتصال الإنترنت.';
         }
