@@ -1,5 +1,6 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import { renderParentPortalTourHtml } from "./PortalTourModal.js";
 
 /**
  * Centrly Parent Web Portal Component (DEV-34 & DEV-PORTAL)
@@ -52,6 +53,11 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
               محدّث لحظياً
             </span>
             <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <button onclick="window.openParentPortalTour ? window.openParentPortalTour(true) : null" 
+                style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="شرح أقسام المتابعة">
+                ${getIcon('lightbulb', 13, '#2563eb')}
+                <span>شرح المنصة</span>
+              </button>
               <button onclick="window.centrlyApp && window.centrlyApp.reloadParentPortal ? window.centrlyApp.reloadParentPortal() : window.location.reload()" 
                 style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #334155; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
                 ${getIcon('refresh', 13, '#334155')}
@@ -77,6 +83,29 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           <p style="font-size: 0.8rem; color: #64748b; margin: 0.4rem 0 0 0;">
             تقرير الحضور والغياب، درجات الكويزات، ومتابعة الواجبات المنزلية
           </p>
+        </div>
+
+        <!-- Interactive Walkthrough Launch Banner -->
+        <div onclick="window.openParentPortalTour ? window.openParentPortalTour(true) : null" 
+          style="background: #ffffff; border: 1px solid #a7f3d0; border-radius: 0.85rem; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16,185,129,0.06);"
+          onmouseover="this.style.borderColor='#059669'; this.style.background='#ecfdf5';" onmouseout="this.style.borderColor='#a7f3d0'; this.style.background='#ffffff';">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <div style="width: 34px; height: 34px; border-radius: 10px; background: #ecfdf5; border: 1px solid #bbf7d0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              ${getIcon('lightbulb', 18, '#059669')}
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.85rem; font-weight: 800; color: #065f46;">
+                💡 دليل ولي الأمر: تعرّف على أقسام المتابعة وطريقة الاستخدام
+              </div>
+              <div style="font-size: 0.72rem; color: #64748b;">
+                اضغط هنا لبدء جولة سريعة خطوة بخطوة لشرح كل قسم
+              </div>
+            </div>
+          </div>
+          <div style="background: #ecfdf5; color: #059669; font-size: 0.78rem; font-weight: 800; padding: 0.3rem 0.65rem; border-radius: 0.5rem; display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; flex-shrink: 0;">
+            <span>شرح الأقسام</span>
+            <span>←</span>
+          </div>
         </div>
 
         <!-- 3-Tab Navigation Bar: Attendance, Quizzes, Homework Tracking -->
@@ -409,6 +438,9 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           <div>مدعوم بواسطة <b>منظومة سنترلي (Centrly)</b></div>
         </div>
 
+        <!-- Walkthrough Onboarding Tour Modal -->
+        ${renderParentPortalTourHtml()}
+
       </div>
     </div>
   `;
@@ -432,5 +464,13 @@ if (typeof window !== 'undefined') {
       }
     });
   };
+
+  // Auto-launch walkthrough tour for first-time visitors
+  setTimeout(() => {
+    if (window.openParentPortalTour) {
+      window.openParentPortalTour(false);
+    }
+  }, 450);
 }
+
 

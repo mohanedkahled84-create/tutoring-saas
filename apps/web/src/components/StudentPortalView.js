@@ -1,6 +1,7 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js";
+import { renderStudentPortalTourHtml } from "./PortalTourModal.js";
 
 /**
  * Centrly Student Web Portal Component
@@ -120,6 +121,11 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
               بوابة الطالب الرسمية
             </span>
             <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <button onclick="window.openStudentPortalTour ? window.openStudentPortalTour(true) : null" 
+                style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35); border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="شرح أقسام المنصة">
+                ${getIcon('lightbulb', 13, '#fde047')}
+                <span>شرح المنصة</span>
+              </button>
               <button onclick="window.centrlyApp && window.centrlyApp.reloadStudentPortal ? window.centrlyApp.reloadStudentPortal() : window.location.reload()" 
                 style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
                 ${getIcon('refresh', 13, '#ffffff')}
@@ -148,6 +154,29 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           <p style="font-size: 0.8rem; opacity: 0.9; margin: 0.5rem 0 0 0;">
             المذكرات الدراسية، رفع الواجبات، ومتابعة الدرجات والغياب أولاً بأول
           </p>
+        </div>
+
+        <!-- Interactive Walkthrough Launch Banner -->
+        <div onclick="window.openStudentPortalTour ? window.openStudentPortalTour(true) : null" 
+          style="background: #ffffff; border: 1px solid #bfdbfe; border-radius: 0.85rem; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(37,99,235,0.06);"
+          onmouseover="this.style.borderColor='#2563eb'; this.style.background='#eff6ff';" onmouseout="this.style.borderColor='#bfdbfe'; this.style.background='#ffffff';">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <div style="width: 34px; height: 34px; border-radius: 10px; background: #eff6ff; border: 1px solid #dbeafe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              ${getIcon('lightbulb', 18, '#2563eb')}
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.85rem; font-weight: 800; color: #1e3a8a;">
+                💡 دليل المنصة: تعرّف على شرح الخانات وطريقة الاستخدام
+              </div>
+              <div style="font-size: 0.72rem; color: #64748b;">
+                اضغط هنا لبدء جولة سريعة خطوة بخطوة لشرح كل خانة
+              </div>
+            </div>
+          </div>
+          <div style="background: #eff6ff; color: #2563eb; font-size: 0.78rem; font-weight: 800; padding: 0.3rem 0.65rem; border-radius: 0.5rem; display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; flex-shrink: 0;">
+            <span>شرح الخانات</span>
+            <span>←</span>
+          </div>
         </div>
 
         <!-- 4-Tab Navigation Bar (Materials, Quizzes, Attendance, Barcode ID Card) -->
@@ -747,6 +776,9 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           مدعوم بواسطة <b>منظومة سنترلي (Centrly Student Portal)</b>
         </div>
 
+        <!-- Walkthrough Onboarding Tour Modal -->
+        ${renderStudentPortalTourHtml()}
+
       </div>
     </div>
   `;
@@ -783,4 +815,12 @@ if (typeof window !== 'undefined') {
       if (arrow) arrow.style.transform = 'rotate(0deg)';
     }
   };
+
+  // Auto-launch walkthrough tour for first-time visitors
+  setTimeout(() => {
+    if (window.openStudentPortalTour) {
+      window.openStudentPortalTour(false);
+    }
+  }, 450);
 }
+
