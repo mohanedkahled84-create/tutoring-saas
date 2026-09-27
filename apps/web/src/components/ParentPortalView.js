@@ -58,7 +58,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
                 ${getIcon('lightbulb', 13, '#2563eb')}
                 <span>شرح المنصة</span>
               </button>
-              <button onclick="window.centrlyApp && window.centrlyApp.reloadParentPortal ? window.centrlyApp.reloadParentPortal() : window.location.reload()" 
+              <button id="parent-refresh-data-btn" onclick="window.centrlyApp && window.centrlyApp.reloadParentPortal ? window.centrlyApp.reloadParentPortal() : window.location.reload()" 
                 style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #334155; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
                 ${getIcon('refresh', 13, '#334155')}
                 <span>تحديث البيانات</span>
@@ -85,29 +85,6 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
           </p>
         </div>
 
-        <!-- Interactive Walkthrough Launch Banner -->
-        <div onclick="window.openParentPortalTour ? window.openParentPortalTour(true) : null" 
-          style="background: #ffffff; border: 1px solid #a7f3d0; border-radius: 0.85rem; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16,185,129,0.06);"
-          onmouseover="this.style.borderColor='#059669'; this.style.background='#ecfdf5';" onmouseout="this.style.borderColor='#a7f3d0'; this.style.background='#ffffff';">
-          <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div style="width: 34px; height: 34px; border-radius: 10px; background: #ecfdf5; border: 1px solid #bbf7d0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              ${getIcon('lightbulb', 18, '#059669')}
-            </div>
-            <div style="text-align: right;">
-              <div style="font-size: 0.85rem; font-weight: 800; color: #065f46;">
-                💡 دليل ولي الأمر: تعرّف على أقسام المتابعة وطريقة الاستخدام
-              </div>
-              <div style="font-size: 0.72rem; color: #64748b;">
-                اضغط هنا لبدء جولة سريعة خطوة بخطوة لشرح كل قسم
-              </div>
-            </div>
-          </div>
-          <div style="background: #ecfdf5; color: #059669; font-size: 0.78rem; font-weight: 800; padding: 0.3rem 0.65rem; border-radius: 0.5rem; display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; flex-shrink: 0;">
-            <span>شرح الأقسام</span>
-            <span>←</span>
-          </div>
-        </div>
-
         <!-- 3-Tab Navigation Bar: Attendance, Quizzes, Homework Tracking -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
           <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('attendance') : null" id="tab-btn-attendance"
@@ -132,7 +109,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
         <!-- ================= TAB 1: ATTENDANCE & TIMELINE ================= -->
         <div id="tab-content-attendance" style="display: ${activeTab === 'attendance' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
           <!-- KPI Summary Cards -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
+          <div id="parent-kpi-summary-section" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
             <div style="background: #fff; padding: 1.1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
               <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">نسبة الحضور</div>
               <div style="font-size: 1.6rem; font-weight: 900; color: #10b981; margin-top: 0.2rem;">

@@ -156,29 +156,6 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           </p>
         </div>
 
-        <!-- Interactive Walkthrough Launch Banner -->
-        <div onclick="window.openStudentPortalTour ? window.openStudentPortalTour(true) : null" 
-          style="background: #ffffff; border: 1px solid #bfdbfe; border-radius: 0.85rem; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(37,99,235,0.06);"
-          onmouseover="this.style.borderColor='#2563eb'; this.style.background='#eff6ff';" onmouseout="this.style.borderColor='#bfdbfe'; this.style.background='#ffffff';">
-          <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div style="width: 34px; height: 34px; border-radius: 10px; background: #eff6ff; border: 1px solid #dbeafe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              ${getIcon('lightbulb', 18, '#2563eb')}
-            </div>
-            <div style="text-align: right;">
-              <div style="font-size: 0.85rem; font-weight: 800; color: #1e3a8a;">
-                💡 دليل المنصة: تعرّف على شرح الخانات وطريقة الاستخدام
-              </div>
-              <div style="font-size: 0.72rem; color: #64748b;">
-                اضغط هنا لبدء جولة سريعة خطوة بخطوة لشرح كل خانة
-              </div>
-            </div>
-          </div>
-          <div style="background: #eff6ff; color: #2563eb; font-size: 0.78rem; font-weight: 800; padding: 0.3rem 0.65rem; border-radius: 0.5rem; display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; flex-shrink: 0;">
-            <span>شرح الخانات</span>
-            <span>←</span>
-          </div>
-        </div>
-
         <!-- 4-Tab Navigation Bar (Materials, Quizzes, Attendance, Barcode ID Card) -->
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('materials') : null" id="student-tab-btn-materials"
@@ -246,7 +223,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           </div>
 
           <!-- Free PDF Helper & Conversion Guide Accordion (Collapsible) -->
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.85rem; overflow: hidden; box-shadow: 0 1px 4px rgba(16, 185, 129, 0.05);">
+          <div id="student-pdf-helper-card" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.85rem; overflow: hidden; box-shadow: 0 1px 4px rgba(16, 185, 129, 0.05);">
             <button type="button" onclick="window.togglePdfHelper ? window.togglePdfHelper() : null" 
               style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1.1rem; background: #f0fdf4; border: none; cursor: pointer; text-align: right; transition: background 0.2s;"
               onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
@@ -286,7 +263,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           </div>
 
           <!-- Active Homeworks Section (Required & In Progress) -->
-          <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+          <div id="student-active-homeworks-section" style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
               <div>
                 <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
@@ -487,7 +464,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
           ${studyMaterials.length > 0 ? `
             <!-- Study Materials & Lecture Notes Section -->
-            <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+            <div id="student-study-materials-section" style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
                 <div>
                   <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
