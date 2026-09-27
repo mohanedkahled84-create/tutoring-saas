@@ -1,7 +1,7 @@
 import { getIcon } from "../utils/icons.js";
 
 /**
- * Centrly Interactive Spotlight & Arrow Coachmark Tour
+ * Centrly Interactive Spotlight & Arrow Coachmark Tour (v5.3.0)
  * Creates an element spotlight with dark blurred background scrim (Backdrop Blur)
  * and a floating popover card with a pointing arrow pointing directly at
  * the target element (Upload button, materials, quizzes, attendance barcode).
@@ -13,21 +13,20 @@ export function renderStudentPortalTourHtml() {
       .portal-spotlight-target {
         position: relative !important;
         z-index: 99995 !important;
-        box-shadow: 0 0 0 4px #2563eb, 0 12px 30px rgba(37, 99, 235, 0.45) !important;
+        box-shadow: 0 0 0 4px #2563eb, 0 12px 35px rgba(37, 99, 235, 0.45) !important;
         border-radius: 0.85rem !important;
-        background: #ffffff !important;
         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
       }
     </style>
 
     <!-- Dark Blurred Backdrop Overlay -->
-    <div id="student-spotlight-backdrop" 
-      style="display: none; position: fixed; inset: 0; z-index: 99990; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); transition: opacity 0.3s ease;">
+    <div id="student-spotlight-backdrop" onclick="window.nextStudentPortalTourStep()" title="اضغط لمتابعة الشرح"
+      style="display: none; position: fixed; inset: 0; z-index: 99990; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); cursor: pointer; transition: opacity 0.3s ease;">
     </div>
 
     <!-- Floating Popover Tooltip with Pointer Arrow -->
     <div id="student-spotlight-popover" 
-      style="display: none; position: fixed; z-index: 99999; width: min(340px, calc(100vw - 32px)); background: #ffffff; border-radius: 1.15rem; padding: 1.1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 10px 10px -5px rgba(0, 0, 0, 0.15); border: 2px solid #3b82f6; direction: rtl; font-family: system-ui, -apple-system, sans-serif; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+      style="display: none; position: fixed; z-index: 99999; width: min(340px, calc(100vw - 32px)); max-height: calc(100vh - 24px); overflow-y: auto; background: #ffffff; border-radius: 1.15rem; padding: 1.1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 10px 10px -5px rgba(0, 0, 0, 0.15); border: 2px solid #3b82f6; direction: rtl; font-family: system-ui, -apple-system, sans-serif; box-sizing: border-box; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
       
       <!-- Pointing Arrow (Top or Bottom) -->
       <div id="student-spotlight-arrow" style="position: absolute; width: 0; height: 0;"></div>
@@ -56,16 +55,21 @@ export function renderStudentPortalTourHtml() {
       </div>
 
       <!-- Footer Buttons -->
-      <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;">
-        <button type="button" id="student-spotlight-prev-btn" onclick="window.prevStudentPortalTourStep()" 
-          style="display: none; background: #f8fafc; border: 1px solid #cbd5e1; color: #475569; padding: 0.45rem 0.85rem; border-radius: 0.55rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
-          السابق
-        </button>
-        <button type="button" id="student-spotlight-next-btn" onclick="window.nextStudentPortalTourStep()" 
-          style="width: 100%; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border: none; padding: 0.55rem 1rem; border-radius: 0.65rem; font-size: 0.825rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25); display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
-          <span>التالي</span>
-          <span>←</span>
-        </button>
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+          <button type="button" id="student-spotlight-prev-btn" onclick="window.prevStudentPortalTourStep()" 
+            style="display: none; background: #f8fafc; border: 1px solid #cbd5e1; color: #475569; padding: 0.45rem 0.85rem; border-radius: 0.55rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
+            السابق
+          </button>
+          <button type="button" id="student-spotlight-next-btn" onclick="window.nextStudentPortalTourStep()" 
+            style="width: 100%; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border: none; padding: 0.55rem 1rem; border-radius: 0.65rem; font-size: 0.825rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25); display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+            <span>التالي</span>
+            <span>←</span>
+          </button>
+        </div>
+        <div style="text-align: center; font-size: 0.68rem; color: #94a3b8;">
+          (يمكنك أيضاً النقر على الشاشة للمتابعة)
+        </div>
       </div>
 
     </div>
@@ -78,21 +82,20 @@ export function renderParentPortalTourHtml() {
       .portal-spotlight-target-emerald {
         position: relative !important;
         z-index: 99995 !important;
-        box-shadow: 0 0 0 4px #059669, 0 12px 30px rgba(5, 150, 105, 0.45) !important;
+        box-shadow: 0 0 0 4px #059669, 0 12px 35px rgba(5, 150, 105, 0.45) !important;
         border-radius: 0.85rem !important;
-        background: #ffffff !important;
         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
       }
     </style>
 
     <!-- Dark Blurred Backdrop Overlay -->
-    <div id="parent-spotlight-backdrop" 
-      style="display: none; position: fixed; inset: 0; z-index: 99990; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); transition: opacity 0.3s ease;">
+    <div id="parent-spotlight-backdrop" onclick="window.nextParentPortalTourStep()" title="اضغط لمتابعة الشرح"
+      style="display: none; position: fixed; inset: 0; z-index: 99990; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); cursor: pointer; transition: opacity 0.3s ease;">
     </div>
 
     <!-- Floating Popover Tooltip with Pointer Arrow -->
     <div id="parent-spotlight-popover" 
-      style="display: none; position: fixed; z-index: 99999; width: min(340px, calc(100vw - 32px)); background: #ffffff; border-radius: 1.15rem; padding: 1.1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 10px 10px -5px rgba(0, 0, 0, 0.15); border: 2px solid #059669; direction: rtl; font-family: system-ui, -apple-system, sans-serif; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+      style="display: none; position: fixed; z-index: 99999; width: min(340px, calc(100vw - 32px)); max-height: calc(100vh - 24px); overflow-y: auto; background: #ffffff; border-radius: 1.15rem; padding: 1.1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 10px 10px -5px rgba(0, 0, 0, 0.15); border: 2px solid #059669; direction: rtl; font-family: system-ui, -apple-system, sans-serif; box-sizing: border-box; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
       
       <!-- Pointing Arrow (Top or Bottom) -->
       <div id="parent-spotlight-arrow" style="position: absolute; width: 0; height: 0;"></div>
@@ -121,16 +124,21 @@ export function renderParentPortalTourHtml() {
       </div>
 
       <!-- Footer Buttons -->
-      <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;">
-        <button type="button" id="parent-spotlight-prev-btn" onclick="window.prevParentPortalTourStep()" 
-          style="display: none; background: #f8fafc; border: 1px solid #cbd5e1; color: #475569; padding: 0.45rem 0.85rem; border-radius: 0.55rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
-          السابق
-        </button>
-        <button type="button" id="parent-spotlight-next-btn" onclick="window.nextParentPortalTourStep()" 
-          style="width: 100%; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff; border: none; padding: 0.55rem 1rem; border-radius: 0.65rem; font-size: 0.825rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25); display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
-          <span>التالي</span>
-          <span>←</span>
-        </button>
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+          <button type="button" id="parent-spotlight-prev-btn" onclick="window.prevParentPortalTourStep()" 
+            style="display: none; background: #f8fafc; border: 1px solid #cbd5e1; color: #475569; padding: 0.45rem 0.85rem; border-radius: 0.55rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
+            السابق
+          </button>
+          <button type="button" id="parent-spotlight-next-btn" onclick="window.nextParentPortalTourStep()" 
+            style="width: 100%; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff; border: none; padding: 0.55rem 1rem; border-radius: 0.65rem; font-size: 0.825rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25); display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+            <span>التالي</span>
+            <span>←</span>
+          </button>
+        </div>
+        <div style="text-align: center; font-size: 0.68rem; color: #94a3b8;">
+          (يمكنك أيضاً النقر على الشاشة للمتابعة)
+        </div>
       </div>
 
     </div>
@@ -139,57 +147,81 @@ export function renderParentPortalTourHtml() {
 
 // Client-Side Spotlight Positioning Helper
 function calculateSpotlightPosition(targetEl, popover, arrow, color) {
-  // Instantly scroll element into view so measurements are 100% stable
-  targetEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+  if (!targetEl || !popover || !arrow) return;
 
+  const vh = window.innerHeight;
+  const vw = window.innerWidth;
+  const targetElHeight = targetEl.offsetHeight || 100;
+
+  // 1. Intelligent scroll: if target is tall (>40% of viewport), align to start so room remains below
+  if (targetElHeight > vh * 0.4) {
+    targetEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+  } else {
+    targetEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+  }
+
+  // 2. Measure target and popover dimensions
   const rect = targetEl.getBoundingClientRect();
-  const popoverWidth = Math.min(340, window.innerWidth - 32);
-  const popoverHeight = 185;
-  const gap = 16; // Safe clearance so popover NEVER covers the illuminated element
+  const popoverWidth = Math.min(340, vw - 32);
 
-  const spaceBelow = window.innerHeight - rect.bottom;
+  popover.style.display = 'block';
+  popover.style.width = popoverWidth + 'px';
+  popover.style.transform = 'none';
+
+  const popoverHeight = popover.offsetHeight || 190;
+  const gap = 12;
+
+  const spaceBelow = vh - rect.bottom;
   const spaceAbove = rect.top;
 
   let topPos = 0;
   let isBelow = true;
 
-  if (spaceBelow >= popoverHeight + gap + 10) {
-    // Ample space below -> position below target
+  if (spaceBelow >= popoverHeight + gap + 8) {
+    // Fits comfortably below
     topPos = rect.bottom + gap;
     isBelow = true;
-  } else if (spaceAbove >= popoverHeight + gap + 10) {
-    // Ample space above -> position above target
+  } else if (spaceAbove >= popoverHeight + gap + 8) {
+    // Fits comfortably above
     topPos = rect.top - popoverHeight - gap;
     isBelow = false;
   } else {
-    // Default to side with larger space
+    // Limited clearance on both sides:
+    // Anchor to whichever edge has more space
     if (spaceBelow >= spaceAbove) {
-      topPos = rect.bottom + gap;
+      topPos = vh - popoverHeight - 12;
       isBelow = true;
     } else {
-      topPos = Math.max(10, rect.top - popoverHeight - gap);
+      topPos = 12;
       isBelow = false;
     }
   }
 
-  // Horizontal position: center with target and clamp within screen
+  // 3. Strict screen boundary clamping: Popover is 100% GUARANTEED inside viewport!
+  const minTop = 10;
+  const maxTop = Math.max(minTop, vh - popoverHeight - 10);
+  topPos = Math.max(minTop, Math.min(topPos, maxTop));
+
+  // 4. Horizontal position: center with target and clamp within screen edges
   let leftPos = rect.left + (rect.width / 2) - (popoverWidth / 2);
-  if (leftPos < 12) leftPos = 12;
-  if (leftPos + popoverWidth > window.innerWidth - 12) {
-    leftPos = window.innerWidth - popoverWidth - 12;
-  }
+  const minLeft = 10;
+  const maxLeft = Math.max(minLeft, vw - popoverWidth - 10);
+  leftPos = Math.max(minLeft, Math.min(leftPos, maxLeft));
 
   popover.style.top = topPos + 'px';
   popover.style.left = leftPos + 'px';
-  popover.style.width = popoverWidth + 'px';
 
-  // Arrow alignment directly to target center
-  const targetCenterX = rect.left + (rect.width / 2);
+  // 5. Arrow calculation pointing directly towards target center
+  const targetCenterY = rect.top + (rect.height / 2);
+  const popoverCenterY = topPos + (popoverHeight / 2);
+  const isTargetAbove = targetCenterY < popoverCenterY;
+
+  const targetCenterX = Math.max(16, Math.min(rect.left + (rect.width / 2), vw - 16));
   let arrowOffset = targetCenterX - leftPos - 10;
-  if (arrowOffset < 20) arrowOffset = 20;
-  if (arrowOffset > popoverWidth - 30) arrowOffset = popoverWidth - 30;
+  arrowOffset = Math.max(16, Math.min(arrowOffset, popoverWidth - 36));
 
-  if (isBelow) {
+  if (isTargetAbove) {
+    // Target is above popover -> Arrow sits on top pointing up
     arrow.style.cssText = `
       position: absolute;
       top: -10px;
@@ -199,8 +231,10 @@ function calculateSpotlightPosition(targetEl, popover, arrow, color) {
       border-left: 10px solid transparent;
       border-right: 10px solid transparent;
       border-bottom: 10px solid ${color};
+      display: block;
     `;
   } else {
+    // Target is below popover -> Arrow sits on bottom pointing down
     arrow.style.cssText = `
       position: absolute;
       bottom: -10px;
@@ -210,6 +244,7 @@ function calculateSpotlightPosition(targetEl, popover, arrow, color) {
       border-left: 10px solid transparent;
       border-right: 10px solid transparent;
       border-top: 10px solid ${color};
+      display: block;
     `;
   }
 }
@@ -225,12 +260,12 @@ if (typeof window !== 'undefined') {
       getTarget: () => document.getElementById('student-study-materials-section') || document.getElementById('student-tab-btn-materials'),
       badge: 'الخطوة 1 من 6: المذكرات',
       title: '📚 ملازم الشرح وملفات الـ PDF',
-      desc: 'هنا بتنزل كل ملازم الحصص وملخصات الدروس والـ PDF اللي المعلم بيرفعها لمجموعتك. اضغط "عرض أو تحميل" لتنزيلها على تليفونك ومذاكرتها في أي وقت بدون إنترنت.',
+      desc: 'هنا بتنزل كل ملازم الحصص وملخصات الدروس والـ PDF اللي المعلم بيرفعها لمجموعتك. اضغط "تحميل / فتح المذكرة" لتنزيلها على تليفونك ومذاكرتها في أي وقت.',
       nextLabel: 'التالي: زر رفع الواجب ←'
     },
     {
       tab: 'materials',
-      getTarget: () => document.querySelector('[id^="hw-upload-btn-"]') || document.getElementById('student-active-homeworks-section'),
+      getTarget: () => document.querySelector('[id^="hw-upload-btn-"]') || document.getElementById('student-active-homeworks-section') || document.getElementById('student-tab-btn-materials'),
       badge: 'الخطوة 2 من 6: رفع الواجب',
       title: '📝 زر رفع حل الواجب المطلوب',
       desc: 'بعد ما تحل الواجب المطلوب في كشكولك وتصوّره بكاميرا الموبايل، اضغط على هذا الزر مباشرة لرفع صور أو PDF الحل للمعلم عشان يراجعه ويكتبلك التصحيح ويعتمده فوراً!',
@@ -238,7 +273,7 @@ if (typeof window !== 'undefined') {
     },
     {
       tab: 'materials',
-      getTarget: () => document.getElementById('student-pdf-helper-card'),
+      getTarget: () => document.getElementById('student-pdf-helper-card') || document.getElementById('student-tab-btn-materials'),
       badge: 'الخطوة 3 من 6: تحويل الصور',
       title: '💡 تحويل صور الكشكول إلى PDF مجاناً',
       desc: 'لو حليت الواجب في عدة صفحات بكشكولك، اضغط هنا لمعرفة طريقة دمج كل الصور في ملف PDF واحد مجاناً وسريع من موبايلك قبل رفعه.',
@@ -246,7 +281,7 @@ if (typeof window !== 'undefined') {
     },
     {
       tab: 'quizzes',
-      getTarget: () => document.getElementById('student-tab-btn-quizzes') || document.getElementById('student-tab-content-quizzes'),
+      getTarget: () => document.getElementById('student-tab-content-quizzes') || document.getElementById('student-tab-btn-quizzes'),
       badge: 'الخطوة 4 من 6: الكويزات',
       title: '🎯 درجات الكويزات والامتحانات',
       desc: 'كشف حساب شامل ومحدث لحظياً بكل كويز أو امتحان شهري في السنتر؛ هتشوف درجتك والدرجة العظمى والنسبة المئوية وملاحظات وتوجيهات المعلم لمستواك.',
@@ -254,7 +289,7 @@ if (typeof window !== 'undefined') {
     },
     {
       tab: 'attendance',
-      getTarget: () => document.getElementById('student-tab-btn-attendance') || document.getElementById('student-tab-content-attendance'),
+      getTarget: () => document.getElementById('student-tab-content-attendance') || document.getElementById('student-tab-btn-attendance'),
       badge: 'الخطوة 5 من 6: الحضور',
       title: '📅 سجل الحضور والغياب',
       desc: 'سجل كامل بكل الحصص التي حضرتها وتواريخها، ونسبة التزامك بالحضور وتنبيهات الغياب لمتابعة مستواك والتزامك أولاً بأول.',
@@ -292,52 +327,54 @@ if (typeof window !== 'undefined') {
 
     // 3. Highlight target element after tab DOM render
     setTimeout(() => {
-      const targetEl = step.getTarget();
-      const backdrop = document.getElementById('student-spotlight-backdrop');
-      const popover = document.getElementById('student-spotlight-popover');
-      const arrow = document.getElementById('student-spotlight-arrow');
-      if (!backdrop || !popover || !arrow) return;
+      requestAnimationFrame(() => {
+        const targetEl = step.getTarget();
+        const backdrop = document.getElementById('student-spotlight-backdrop');
+        const popover = document.getElementById('student-spotlight-popover');
+        const arrow = document.getElementById('student-spotlight-arrow');
+        if (!backdrop || !popover || !arrow) return;
 
-      backdrop.style.display = 'block';
-      popover.style.display = 'block';
+        backdrop.style.display = 'block';
+        popover.style.display = 'block';
 
-      if (targetEl) {
-        targetEl.classList.add('portal-spotlight-target');
-        window._studentActiveSpotlightEl = targetEl;
+        // Update contents FIRST so true offsetHeight can be measured accurately
+        document.getElementById('student-spotlight-badge').textContent = step.badge;
+        document.getElementById('student-spotlight-title').textContent = step.title;
+        document.getElementById('student-spotlight-desc').textContent = step.desc;
 
-        calculateSpotlightPosition(targetEl, popover, arrow, '#3b82f6');
-      } else {
-        popover.style.top = '50%';
-        popover.style.left = '50%';
-        popover.style.transform = 'translate(-50%, -50%)';
-        arrow.style.display = 'none';
-      }
+        const prevBtn = document.getElementById('student-spotlight-prev-btn');
+        if (prevBtn) prevBtn.style.display = (index > 0) ? 'block' : 'none';
 
-      // Update contents
-      document.getElementById('student-spotlight-badge').textContent = step.badge;
-      document.getElementById('student-spotlight-title').textContent = step.title;
-      document.getElementById('student-spotlight-desc').textContent = step.desc;
-
-      const prevBtn = document.getElementById('student-spotlight-prev-btn');
-      if (prevBtn) prevBtn.style.display = (index > 0) ? 'block' : 'none';
-
-      const nextBtn = document.getElementById('student-spotlight-next-btn');
-      if (nextBtn) {
-        nextBtn.innerHTML = `<span>${step.nextLabel}</span>`;
-        if (index === STUDENT_SPOTLIGHT_STEPS.length - 1) {
-          nextBtn.style.background = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
-          nextBtn.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
-        } else {
-          nextBtn.style.background = 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)';
-          nextBtn.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
+        const nextBtn = document.getElementById('student-spotlight-next-btn');
+        if (nextBtn) {
+          nextBtn.innerHTML = `<span>${step.nextLabel}</span>`;
+          if (index === STUDENT_SPOTLIGHT_STEPS.length - 1) {
+            nextBtn.style.background = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
+            nextBtn.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+          } else {
+            nextBtn.style.background = 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)';
+            nextBtn.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
+          }
         }
-      }
+
+        if (targetEl) {
+          targetEl.classList.add('portal-spotlight-target');
+          window._studentActiveSpotlightEl = targetEl;
+
+          calculateSpotlightPosition(targetEl, popover, arrow, '#3b82f6');
+        } else {
+          popover.style.top = '50%';
+          popover.style.left = '50%';
+          popover.style.transform = 'translate(-50%, -50%)';
+          arrow.style.display = 'none';
+        }
+      });
     }, 120);
   };
 
   window.openStudentPortalTour = function(force = true) {
     if (!force) {
-      const seen = localStorage.getItem('centrly_portal_spotlight_completed');
+      const seen = localStorage.getItem('centrly_portal_spotlight_v3_completed');
       if (seen === 'true') return;
     }
     window.renderStudentSpotlightStep(0);
@@ -369,7 +406,7 @@ if (typeof window !== 'undefined') {
 
     if (markSeen) {
       try {
-        localStorage.setItem('centrly_portal_spotlight_completed', 'true');
+        localStorage.setItem('centrly_portal_spotlight_v3_completed', 'true');
       } catch (_) {}
     }
   };
@@ -389,7 +426,7 @@ if (typeof window !== 'undefined') {
     },
     {
       tab: 'quizzes',
-      getTarget: () => document.getElementById('tab-btn-quizzes') || document.getElementById('tab-content-quizzes'),
+      getTarget: () => document.getElementById('tab-content-quizzes') || document.getElementById('tab-btn-quizzes'),
       badge: 'الخطوة 2 من 4: الكويزات',
       title: '📊 كشف درجات الكويزات والامتحانات',
       desc: 'تقرير دوري يوضح درجات الطالب في كل كويز مع النسبة المئوية وملاحظات وتوجيهات المعلم لمتابعة مستوى ابنكم أولاً بأول.',
@@ -397,7 +434,7 @@ if (typeof window !== 'undefined') {
     },
     {
       tab: 'homework',
-      getTarget: () => document.getElementById('tab-btn-homework') || document.getElementById('tab-content-homework'),
+      getTarget: () => document.getElementById('tab-content-homework') || document.getElementById('tab-btn-homework'),
       badge: 'الخطوة 3 من 4: الواجبات',
       title: '📝 متابعة الواجبات المنزلية',
       desc: 'معرفة مدى التزام الطالب بتسليم الواجبات في مواعيدها المحددة مع قراءة ملاحظات وتصحيح المعلم على الحل.',
@@ -432,47 +469,50 @@ if (typeof window !== 'undefined') {
     }
 
     setTimeout(() => {
-      const targetEl = step.getTarget();
-      const backdrop = document.getElementById('parent-spotlight-backdrop');
-      const popover = document.getElementById('parent-spotlight-popover');
-      const arrow = document.getElementById('parent-spotlight-arrow');
-      if (!backdrop || !popover || !arrow) return;
+      requestAnimationFrame(() => {
+        const targetEl = step.getTarget();
+        const backdrop = document.getElementById('parent-spotlight-backdrop');
+        const popover = document.getElementById('parent-spotlight-popover');
+        const arrow = document.getElementById('parent-spotlight-arrow');
+        if (!backdrop || !popover || !arrow) return;
 
-      backdrop.style.display = 'block';
-      popover.style.display = 'block';
+        backdrop.style.display = 'block';
+        popover.style.display = 'block';
 
-      if (targetEl) {
-        targetEl.classList.add('portal-spotlight-target-emerald');
-        window._parentActiveSpotlightEl = targetEl;
+        // Update contents FIRST
+        document.getElementById('parent-spotlight-badge').textContent = step.badge;
+        document.getElementById('parent-spotlight-title').textContent = step.title;
+        document.getElementById('parent-spotlight-desc').textContent = step.desc;
 
-        calculateSpotlightPosition(targetEl, popover, arrow, '#059669');
-      } else {
-        popover.style.top = '50%';
-        popover.style.left = '50%';
-        popover.style.transform = 'translate(-50%, -50%)';
-        arrow.style.display = 'none';
-      }
+        const prevBtn = document.getElementById('parent-spotlight-prev-btn');
+        if (prevBtn) prevBtn.style.display = (index > 0) ? 'block' : 'none';
 
-      document.getElementById('parent-spotlight-badge').textContent = step.badge;
-      document.getElementById('parent-spotlight-title').textContent = step.title;
-      document.getElementById('parent-spotlight-desc').textContent = step.desc;
-
-      const prevBtn = document.getElementById('parent-spotlight-prev-btn');
-      if (prevBtn) prevBtn.style.display = (index > 0) ? 'block' : 'none';
-
-      const nextBtn = document.getElementById('parent-spotlight-next-btn');
-      if (nextBtn) {
-        nextBtn.innerHTML = `<span>${step.nextLabel}</span>`;
-        if (index === PARENT_SPOTLIGHT_STEPS.length - 1) {
-          nextBtn.style.background = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
+        const nextBtn = document.getElementById('parent-spotlight-next-btn');
+        if (nextBtn) {
+          nextBtn.innerHTML = `<span>${step.nextLabel}</span>`;
+          if (index === PARENT_SPOTLIGHT_STEPS.length - 1) {
+            nextBtn.style.background = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
+          }
         }
-      }
+
+        if (targetEl) {
+          targetEl.classList.add('portal-spotlight-target-emerald');
+          window._parentActiveSpotlightEl = targetEl;
+
+          calculateSpotlightPosition(targetEl, popover, arrow, '#059669');
+        } else {
+          popover.style.top = '50%';
+          popover.style.left = '50%';
+          popover.style.transform = 'translate(-50%, -50%)';
+          arrow.style.display = 'none';
+        }
+      });
     }, 120);
   };
 
   window.openParentPortalTour = function(force = true) {
     if (!force) {
-      const seen = localStorage.getItem('centrly_portal_spotlight_completed');
+      const seen = localStorage.getItem('centrly_portal_spotlight_v3_completed');
       if (seen === 'true') return;
     }
     window.renderParentSpotlightStep(0);
@@ -504,8 +544,40 @@ if (typeof window !== 'undefined') {
 
     if (markSeen) {
       try {
-        localStorage.setItem('centrly_portal_spotlight_completed', 'true');
+        localStorage.setItem('centrly_portal_spotlight_v3_completed', 'true');
       } catch (_) {}
     }
   };
+
+  // 4. Global window resize & orientation change listener
+  window.addEventListener('resize', () => {
+    if (window._studentActiveSpotlightEl && document.getElementById('student-spotlight-popover')?.style.display === 'block') {
+      const popover = document.getElementById('student-spotlight-popover');
+      const arrow = document.getElementById('student-spotlight-arrow');
+      calculateSpotlightPosition(window._studentActiveSpotlightEl, popover, arrow, '#3b82f6');
+    }
+    if (window._parentActiveSpotlightEl && document.getElementById('parent-spotlight-popover')?.style.display === 'block') {
+      const popover = document.getElementById('parent-spotlight-popover');
+      const arrow = document.getElementById('parent-spotlight-arrow');
+      calculateSpotlightPosition(window._parentActiveSpotlightEl, popover, arrow, '#059669');
+    }
+  });
+
+  // 5. Global keyboard navigation (Esc, Arrow keys, Enter)
+  window.addEventListener('keydown', function(e) {
+    const studentTourOpen = document.getElementById('student-spotlight-popover')?.style.display === 'block';
+    const parentTourOpen = document.getElementById('parent-spotlight-popover')?.style.display === 'block';
+    if (!studentTourOpen && !parentTourOpen) return;
+
+    if (e.key === 'Escape') {
+      if (studentTourOpen) window.closeStudentPortalTour(true);
+      if (parentTourOpen) window.closeParentPortalTour(true);
+    } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
+      if (studentTourOpen) window.nextStudentPortalTourStep();
+      if (parentTourOpen) window.nextParentPortalTourStep();
+    } else if (e.key === 'ArrowLeft') {
+      if (studentTourOpen) window.prevStudentPortalTourStep();
+      if (parentTourOpen) window.prevParentPortalTourStep();
+    }
+  });
 }
