@@ -259,48 +259,69 @@ if (typeof window !== 'undefined') {
       tab: 'materials',
       getTarget: () => document.getElementById('student-study-materials-section') || document.getElementById('student-tab-btn-materials'),
       badge: 'الخطوة 1 من 6: المذكرات',
-      title: '📚 ملازم الشرح وملفات الـ PDF',
-      desc: 'هنا بتنزل كل ملازم الحصص وملخصات الدروس والـ PDF اللي المعلم بيرفعها لمجموعتك. اضغط "تحميل / فتح المذكرة" لتنزيلها على تليفونك ومذاكرتها في أي وقت.',
+      getTitle: () => '📚 ملازم الشرح وملفات الـ PDF',
+      getDesc: () => {
+        const hasMaterials = !!document.getElementById('student-study-materials-section');
+        return hasMaterials
+          ? 'هنا بتنزل كل ملازم الحصص وملخصات الدروس والـ PDF اللي المعلم بيرفعها لمجموعتك. اضغط "تحميل / فتح المذكرة" لتنزيلها على تليفونك ومذاكرتها في أي وقت.'
+          : 'هنا بتنزل كل ملازم الحصص وملخصات الدروس والـ PDF؛ وأول ما المعلم يرفع مذكرة جديدة لمجموعتك ستظهر لك هنا مباشرة لتحميلها على جهازك ومذاكرتها في أي وقت.';
+      },
       nextLabel: 'التالي: زر رفع الواجب ←'
     },
     {
       tab: 'materials',
       getTarget: () => document.querySelector('[id^="hw-upload-btn-"]') || document.getElementById('student-active-homeworks-section') || document.getElementById('student-tab-btn-materials'),
-      badge: 'الخطوة 2 من 6: رفع الواجب',
-      title: '📝 زر رفع حل الواجب المطلوب',
-      desc: 'بعد ما تحل الواجب المطلوب في كشكولك وتصوّره بكاميرا الموبايل، اضغط على هذا الزر مباشرة لرفع صور أو PDF الحل للمعلم عشان يراجعه ويكتبلك التصحيح ويعتمده فوراً!',
+      badge: 'الخطوة 2 من 6: الواجب ورفع الحل',
+      getTitle: () => document.querySelector('[id^="hw-upload-btn-"]') 
+        ? '📝 زر رفع حل الواجب المطلوب' 
+        : '📝 قسم الواجبات المنزلية ورفع الحل',
+      getDesc: () => {
+        const hasUploadBtn = !!document.querySelector('[id^="hw-upload-btn-"]');
+        if (hasUploadBtn) {
+          return 'بعد ما تحل الواجب المطلوب في كشكولك وتصوّره بكاميرا الموبايل، اضغط على هذا الزر مباشرة لرفع صور أو PDF الحل للمعلم عشان يراجعه ويكتبلك التصحيح ويعتمده فوراً!';
+        }
+        return `
+          هنا بيظهر أي واجب جديد يطلبه منك المعلم مع تفاصيل الصفحات والأسئلة المطلوبة.<br>
+          <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 0.55rem; padding: 0.5rem 0.75rem; margin-top: 0.5rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+            <span style="font-size: 0.73rem; color: #475569; font-weight: 700;">زر الرفع اللي هيظهرلك عند نزول الواجب:</span>
+            <span style="background: #059669; color: #ffffff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.6rem; border-radius: 0.4rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.25rem;">
+              <span>📷 رفع حل الواجب</span>
+            </span>
+          </div>
+        `;
+      },
       nextLabel: 'التالي: تحويل الصور لـ PDF ←'
     },
     {
       tab: 'materials',
       getTarget: () => document.getElementById('student-pdf-helper-card') || document.getElementById('student-tab-btn-materials'),
       badge: 'الخطوة 3 من 6: تحويل الصور',
-      title: '💡 تحويل صور الكشكول إلى PDF مجاناً',
-      desc: 'لو حليت الواجب في عدة صفحات بكشكولك، اضغط هنا لمعرفة طريقة دمج كل الصور في ملف PDF واحد مجاناً وسريع من موبايلك قبل رفعه.',
+      getTitle: () => '💡 تحويل صور الكشكول إلى PDF مجاناً',
+      getDesc: () => 'لو حليت الواجب في عدة صفحات بكشكولك، اضغط هنا لمعرفة طريقة دمج كل الصور في ملف PDF واحد مجاناً وسريع من موبايلك قبل رفعه.',
       nextLabel: 'التالي: درجات الكويزات ←'
     },
     {
       tab: 'quizzes',
       getTarget: () => document.getElementById('student-tab-content-quizzes') || document.getElementById('student-tab-btn-quizzes'),
       badge: 'الخطوة 4 من 6: الكويزات',
-      title: '🎯 درجات الكويزات والامتحانات',
-      desc: 'كشف حساب شامل ومحدث لحظياً بكل كويز أو امتحان شهري في السنتر؛ هتشوف درجتك والدرجة العظمى والنسبة المئوية وملاحظات وتوجيهات المعلم لمستواك.',
+      getTitle: () => '🎯 درجات الكويزات والامتحانات',
+      getDesc: () => 'كشف حساب شامل ومحدث لحظياً بكل كويز أو امتحان شهري في السنتر؛ هتشوف درجتك والدرجة العظمى والنسبة المئوية وملاحظات وتوجيهات المعلم لمستواك.',
       nextLabel: 'التالي: سجل الحضور ←'
     },
     {
       tab: 'attendance',
       getTarget: () => document.getElementById('student-tab-content-attendance') || document.getElementById('student-tab-btn-attendance'),
       badge: 'الخطوة 5 من 6: الحضور',
-      title: '📅 سجل الحضور والغياب',
-      desc: 'سجل كامل بكل الحصص التي حضرتها وتواريخها، ونسبة التزامك بالحضور وتنبيهات الغياب لمتابعة مستواك والتزامك أولاً بأول.',
+      getTitle: () => '📅 سجل الحضور والغياب',
+      getDesc: () => 'سجل كامل بكل الحصص التي حضرتها وتواريخها، ونسبة التزامك بالحضور وتنبيهات الغياب لمتابعة مستواك والتزامك أولاً بأول.',
       nextLabel: 'التالي: باركود الحضور عند الباب ←'
     },
     {
       tab: 'card',
       getTarget: () => document.getElementById('student-tab-content-card') || document.getElementById('student-tab-btn-card'),
       badge: 'الخطوة 6 من 6: باركود الحضور',
-      title: '🎫 باركود الحضور عند باب السنتر',
-      desc: 'كارتك الشخصي الحصري وفيه باركودك المعتمد؛ أول ما توصل للسنتر افتحه من موبايلك عشان المشرف يمسحه بالاسكانر في ثانية واحدة ويسجل حضورك تلقائياً!',
+      getTitle: () => '🎫 باركود الحضور عند باب السنتر',
+      getDesc: () => 'كارتك الشخصي الحصري وفيه باركودك المعتمد؛ أول ما توصل للسنتر افتحه من موبايلك عشان المشرف يمسحه بالاسكانر في ثانية واحدة ويسجل حضورك تلقائياً!',
       nextLabel: '✨ فهمت تماماً، ابدأ استخدام المنصة!'
     }
   ];
@@ -337,10 +358,13 @@ if (typeof window !== 'undefined') {
         backdrop.style.display = 'block';
         popover.style.display = 'block';
 
+        const title = typeof step.getTitle === 'function' ? step.getTitle() : step.title;
+        const desc = typeof step.getDesc === 'function' ? step.getDesc() : step.desc;
+
         // Update contents FIRST so true offsetHeight can be measured accurately
         document.getElementById('student-spotlight-badge').textContent = step.badge;
-        document.getElementById('student-spotlight-title').textContent = step.title;
-        document.getElementById('student-spotlight-desc').textContent = step.desc;
+        document.getElementById('student-spotlight-title').innerHTML = title;
+        document.getElementById('student-spotlight-desc').innerHTML = desc;
 
         const prevBtn = document.getElementById('student-spotlight-prev-btn');
         if (prevBtn) prevBtn.style.display = (index > 0) ? 'block' : 'none';
@@ -420,32 +444,32 @@ if (typeof window !== 'undefined') {
       tab: 'attendance',
       getTarget: () => document.getElementById('parent-kpi-summary-section') || document.getElementById('tab-btn-attendance'),
       badge: 'الخطوة 1 من 4: الحضور',
-      title: '📅 متابعة الحضور والغياب اللحظي',
-      desc: 'بمجرد وصول الطالب باب السنتر ومسح باركوده، يتحدث تقرير حضوره هنا بالساعة والتاريخ، أو تسجيل غيابه في حال عدم الحضور.',
+      getTitle: () => '📅 متابعة الحضور والغياب اللحظي',
+      getDesc: () => 'بمجرد وصول الطالب باب السنتر ومسح باركوده، يتحدث تقرير حضوره هنا بالساعة والتاريخ، أو تسجيل غيابه في حال عدم الحضور.',
       nextLabel: 'التالي: درجات الكويزات ←'
     },
     {
       tab: 'quizzes',
       getTarget: () => document.getElementById('tab-content-quizzes') || document.getElementById('tab-btn-quizzes'),
       badge: 'الخطوة 2 من 4: الكويزات',
-      title: '📊 كشف درجات الكويزات والامتحانات',
-      desc: 'تقرير دوري يوضح درجات الطالب في كل كويز مع النسبة المئوية وملاحظات وتوجيهات المعلم لمتابعة مستوى ابنكم أولاً بأول.',
+      getTitle: () => '📊 كشف درجات الكويزات والامتحانات',
+      getDesc: () => 'تقرير دوري يوضح درجات الطالب في كل كويز مع النسبة المئوية وملاحظات وتوجيهات المعلم لمتابعة مستوى ابنكم أولاً بأول.',
       nextLabel: 'التالي: متابعة الواجبات ←'
     },
     {
       tab: 'homework',
       getTarget: () => document.getElementById('tab-content-homework') || document.getElementById('tab-btn-homework'),
       badge: 'الخطوة 3 من 4: الواجبات',
-      title: '📝 متابعة الواجبات المنزلية',
-      desc: 'معرفة مدى التزام الطالب بتسليم الواجبات في مواعيدها المحددة مع قراءة ملاحظات وتصحيح المعلم على الحل.',
+      getTitle: () => '📝 متابعة الواجبات المنزلية',
+      getDesc: () => 'معرفة مدى التزام الطالب بتسليم الواجبات في مواعيدها المحددة مع قراءة ملاحظات وتصحيح المعلم على الحل.',
       nextLabel: 'التالي: تحديث البيانات ←'
     },
     {
       tab: 'attendance',
       getTarget: () => document.getElementById('parent-refresh-data-btn'),
       badge: 'الخطوة 4 من 4: التحديث',
-      title: '🔄 زر تحديث البيانات اللحظي',
-      desc: 'يمكنكم في أي لحظة الضغط على هذا الزر لتحديث وعرض أي بيانات وتقارير جديدة تلقائياً دون الحاجة لتسجيل الخروج.',
+      getTitle: () => '🔄 زر تحديث البيانات اللحظي',
+      getDesc: () => 'يمكنكم في أي لحظة الضغط على هذا الزر لتحديث وعرض أي بيانات وتقارير جديدة تلقائياً دون الحاجة لتسجيل الخروج.',
       nextLabel: '✨ فهمت تماماً، ابدأ استخدام المنصة!'
     }
   ];
@@ -479,10 +503,13 @@ if (typeof window !== 'undefined') {
         backdrop.style.display = 'block';
         popover.style.display = 'block';
 
+        const title = typeof step.getTitle === 'function' ? step.getTitle() : step.title;
+        const desc = typeof step.getDesc === 'function' ? step.getDesc() : step.desc;
+
         // Update contents FIRST
         document.getElementById('parent-spotlight-badge').textContent = step.badge;
-        document.getElementById('parent-spotlight-title').textContent = step.title;
-        document.getElementById('parent-spotlight-desc').textContent = step.desc;
+        document.getElementById('parent-spotlight-title').innerHTML = title;
+        document.getElementById('parent-spotlight-desc').innerHTML = desc;
 
         const prevBtn = document.getElementById('parent-spotlight-prev-btn');
         if (prevBtn) prevBtn.style.display = (index > 0) ? 'block' : 'none';
