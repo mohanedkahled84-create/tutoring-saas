@@ -348,7 +348,7 @@ publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<
           const s = matchedStudents[0];
           const pwd = s.portal_password || "غير مسجل";
           const username = s.student_code || s.name;
-          const replyText = `مرحباً بك في منصة سنترلي 🌟\nبيانات دخولك الخاصة بـ (${s.name}):\n🔑 اسم المستخدم / الكود: *${username}*\n🔒 كلمة المرور: *${pwd}*\n\n🌐 رابط تسجيل الدخول:\nhttps://centerly-eg.com/portal`;
+          const replyText = `مرحباً بك في منصة سنترلي\nبيانات دخولك الخاصة بـ (${s.name}):\nاسم المستخدم / الكود: *${username}*\nكلمة المرور: *${pwd}*\n\nرابط تسجيل الدخول:\nhttps://centerly-eg.com/portal`;
 
           // Dispatch free within 24h conversation window
           const phoneNumberId = process.env.META_PHONE_NUMBER_ID || "1236924299513397";
