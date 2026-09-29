@@ -326,12 +326,18 @@ publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<
       const from = msg.from; // e.g. "201012345678"
       const buttonText = msg.button?.text;
       const quickReplyPayload = msg.button?.payload;
+      const textBody = (msg.text?.body || "").trim();
 
-      // Handle Quick Reply: "الحصول على اسم المستخدم وكلمه السر"
+      // Handle Quick Reply: "الحصول على اسم المستخدم وكلمه السر" or text inquiry
       if (
         buttonText?.includes("اسم المستخدم") ||
         buttonText?.includes("كلمه السر") ||
-        quickReplyPayload === "GET_CREDENTIALS"
+        quickReplyPayload === "GET_CREDENTIALS" ||
+        textBody.includes("اسم المستخدم") ||
+        textBody.includes("كلمة السر") ||
+        textBody.includes("كلمه السر") ||
+        textBody.includes("الباسورد") ||
+        textBody.includes("كود")
       ) {
         const supabase = getServiceSupabaseClient();
         const cleanFrom = from.replace(/\D/g, "");
