@@ -8275,7 +8275,7 @@ class CentrlyApp {
         btn.disabled = false;
         btn.style.opacity = '1';
         btn.style.cursor = 'pointer';
-        btn.innerHTML = `${getIcon('whatsapp', 18)} <span>إرسال الروابط عبر واتساب سنترلي الرسمي (${count} طالب)</span>`;
+        btn.innerHTML = `${getIcon('whatsapp', 18)} <span>إرسال الروابط (${count} طالب)</span>`;
       }
     }
   }
@@ -8321,30 +8321,17 @@ class CentrlyApp {
 
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
-        <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 0.75rem; padding: 0.85rem; color: #166534; font-size: 0.85rem; line-height: 1.6;">
-          <div style="font-weight: 800; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
-            <span style="display: flex; align-items: center; gap: 0.4rem;">
-              <span style="color: #22c55e; font-size: 1.1rem;">✅</span>
-              <span>واتساب سنترلي الرسمي المعتمد (Meta Cloud API)</span>
-            </span>
-            <span style="background: #dcfce7; color: #15803d; font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 9999px; border: 1px solid #86efac;">
-              رقم موثق رسمي (+20 10 10979708) 🛡️
-            </span>
-          </div>
-          يُرسل رابط المنصة والمتابعة من خلال رقم منظومة سنترلي المعتمد رسميّاً من Meta. رسائل موثوقة ومضمونة بنسبة 100% وبدون استهلاك شريحتك الشخصية أو الخوف من حظر الأرقام.
-        </div>
-
         <!-- Group Selector Filter -->
         <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 0.75rem; padding: 0.75rem;">
           <label for="batchPortalGroupSelect" style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 0.85rem; color: #1e293b; margin-bottom: 0.4rem;">
             <span style="display: flex; align-items: center; gap: 0.35rem;">
               <span style="color: #2563eb; font-size: 1rem;">👥</span>
-              <span>تحديد المجموعة المستهدفة للإرسال:</span>
+              <span>تحديد المجموعة المستهدفة:</span>
             </span>
-            <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">(اختر مجموعة معينة أو أرسل لجميع المجاميع)</span>
+            <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">(اختر مجموعة معينة أو جميع المجاميع)</span>
           </label>
           <select id="batchPortalGroupSelect" class="form-select" style="width: 100%; font-weight: 700; font-size: 0.9rem; padding: 0.5rem 0.75rem; border-radius: 0.5rem; border-color: #94a3b8; background-color: #ffffff; cursor: pointer;" onchange="window.centrlyApp.onBatchPortalGroupChange(this.value)">
-            <option value="ALL" ${initialGroupId === 'ALL' ? 'selected' : ''}>🌟 جميع المجاميع (${allUnsentStudents.length} طالب غير مرسل)</option>
+            <option value="ALL" ${initialGroupId === 'ALL' ? 'selected' : ''}>🌟 جميع المجاميع (${allUnsentStudents.length} طالب)</option>
             ${groupOptions}
             ${unassignedOption}
           </select>
@@ -8359,11 +8346,8 @@ class CentrlyApp {
             </label>
           </div>
 
-          <div id="batchPortalStudentsListContainer" style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; background: #fafafa;">
+          <div id="batchPortalStudentsListContainer" style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; background: #fafafa;">
             ${this.renderBatchPortalStudentsListHtml(studentsToShow)}
-          </div>
-          <div id="batchPortalLimitNotice" style="font-size: 0.75rem; color: #0369a1; margin-top: 0.4rem; background: #f0f9ff; border: 1px solid #bae6fd; padding: 0.45rem 0.65rem; border-radius: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
-            <span>ℹ️ نظام الكوتا الذكي: إذا زاد إجمالي الرسائل المطلوبة عن كوتا الـ 250 رسالة اليومية للمنصة، تُرسل حصة اليوم فوراً وتُجدول البقية تلقائياً للغد.</span>
           </div>
         </div>
 
@@ -8374,14 +8358,14 @@ class CentrlyApp {
               document.getElementById('previewParentMsg').style.display='none';
               this.style.background='#0284c7'; this.style.color='#fff';
               document.getElementById('btnTabPreviewParent').style.background='#f1f5f9'; document.getElementById('btnTabPreviewParent').style.color='#334155';
-            " style="background: #0284c7; color: #fff; font-weight: 700;">نموذج الطالب المعتمد</button>
+            " style="background: #0284c7; color: #fff; font-weight: 700;">نموذج الطالب</button>
 
             <button type="button" class="btn btn-sm" id="btnTabPreviewParent" onclick="
               document.getElementById('previewStudentMsg').style.display='none';
               document.getElementById('previewParentMsg').style.display='block';
               this.style.background='#0284c7'; this.style.color='#fff';
               document.getElementById('btnTabPreviewStudent').style.background='#f1f5f9'; document.getElementById('btnTabPreviewStudent').style.color='#334155';
-            " style="background: #f1f5f9; color: #334155; font-weight: 700;">نموذج ولي الأمر المعتمد</button>
+            " style="background: #f1f5f9; color: #334155; font-weight: 700;">نموذج ولي الأمر</button>
           </div>
 
           <div id="previewStudentMsg" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.8rem; color: #334155; line-height: 1.6; white-space: pre-line;">
@@ -8398,7 +8382,7 @@ class CentrlyApp {
 
 💡 بمجرد دخولك للمنصة، ستجد جولة إرشادية ذكية وسهم يوضح لك طريقة استخدام كل خانة بسهولة.
 
-🔘 *أزرار تفاعلية في الرسالة:*
+🔘 *أزرار الرسالة:*
 [الدخول للمنصة]  |  [الحصول على اسم المستخدم وكلمه السر]
           </div>
 
@@ -8416,12 +8400,8 @@ class CentrlyApp {
 
 💡 بمجرد فتح الرابط، ستظهر جولة توضيحية تشرح لسيادتكم كافة أقسام التقرير وكيفية استخدامه بسهولة.
 
-🔘 *أزرار تفاعلية في الرسالة:*
+🔘 *أزرار الرسالة:*
 [الدخول للمنصة]  |  [الحصول على اسم المستخدم وكلمه السر]
-          </div>
-
-          <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
-            <span>✨ إرسال رسمي موثق بقوالب Meta Utility المعتمدة مع أزرار سريعة ورابط مباشر للمنصة.</span>
           </div>
         </div>
       </div>
@@ -8433,7 +8413,7 @@ class CentrlyApp {
         <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
         <button type="button" id="btnConfirmBatchParentLinks" class="btn btn-primary" onclick="window.centrlyApp.dispatchBatchParentLinks()" ${isBtnDisabled ? 'disabled style="opacity: 0.6; cursor: not-allowed; background-color: #0284c7; border-color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;"' : 'style="background-color: #0284c7; border-color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;"'}>
           ${getIcon('whatsapp', 18)}
-          <span>${isBtnDisabled ? 'حدد طلاباً للإرسال (0)' : `إرسال الروابط عبر واتساب سنترلي الرسمي (${displayCount} طالب)`}</span>
+          <span>${isBtnDisabled ? 'حدد طلاباً للإرسال (0)' : `إرسال الروابط (${displayCount} طالب)`}</span>
         </button>
       </div>
     `;
@@ -8453,7 +8433,7 @@ class CentrlyApp {
     const btn = document.getElementById('btnConfirmBatchParentLinks');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = `<span>جاري الإرسال عبر واتساب سنترلي الرسمي...</span>`;
+      btn.innerHTML = `<span>جاري الإرسال...</span>`;
     }
 
     try {
@@ -8478,7 +8458,7 @@ class CentrlyApp {
       });
 
       this.showToast(
-        res.message || `تم بنجاح إرسال الروابط لـ (${selectedIds.length}) طالباً عبر واتساب سنترلي المعتمد!`,
+        res.message || `تم بنجاح إرسال الروابط لـ (${selectedIds.length}) طالباً!`,
         res.is_template_pending ? 'info' : 'success'
       );
 
