@@ -295,5 +295,89 @@ publicRouter.post("/portal/change-password", async (req: Request, res: Response)
   }
 });
 
+// ============================================================================
+// Meta WhatsApp Cloud API Webhooks
+// ============================================================================
+publicRouter.get("/meta/webhook", (req: Request, res: Response): void => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  const expectedVerifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN || "centrly_meta_verify_2026";
+
+  if (mode === "subscribe" && token === expectedVerifyToken) {
+    res.status(200).send(challenge);
+  } else {
+    res.status(403).json({ error: "Verification token mismatch" });
+  }
+});
+
+publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<void> => {
+  // Always acknowledge immediately with 200 OK per Meta API standards
+  res.status(200).send("EVENT_RECEIVED");
+
+  try {
+    const entry = req.body?.entry?.[0];
+    const changes = entry?.changes?.[0]?.value;
+    const messages = changes?.messages;
+
+    if (messages && messages.length > 0) {
+      const msg = messages[0];
+      const from = msg.from; // e.g. "201012345678"
+      const buttonText = msg.button?.text;
+      const quickReplyPayload = msg.button?.payload;
+
+      // Handle Quick Reply: "الحصول على اسم المستخدم وكلمه السر"
+      if (
+        buttonText?.includes("اسم المستخدم") ||
+        buttonText?.includes("كلمه السر") ||
+        quickReplyPayload === "GET_CREDENTIALS"
+      ) {
+        const supabase = getServiceSupabaseClient();
+        const cleanFrom = from.replace(/\D/g, "");
+        const localFrom = cleanFrom.startsWith("20") ? "0" + cleanFrom.slice(2) : cleanFrom;
+
+        // Lookup student by phone or parent phone
+        const { data: matchedStudents } = await supabase
+          .from("students")
+          .select("id, name, student_code, portal_password, parent_phone, student_phone")
+          .or(`student_phone.ilike.%${localFrom}%,parent_phone.ilike.%${localFrom}%`)
+          .limit(3);
+
+        if (matchedStudents && matchedStudents.length > 0) {
+          const s = matchedStudents[0];
+          const pwd = s.portal_password || "غير مسجل";
+          const username = s.student_code || s.name;
+          const replyText = `مرحباً بك في منصة سنترلي 🌟\nبيانات دخولك الخاصة بـ (${s.name}):\n🔑 اسم المستخدم / الكود: *${username}*\n🔒 كلمة المرور: *${pwd}*\n\n🌐 رابط تسجيل الدخول:\nhttps://centerly-eg.com/portal`;
+
+          // Dispatch free within 24h conversation window
+          const phoneNumberId = process.env.META_PHONE_NUMBER_ID || "1236924299513397";
+          const accessToken = process.env.META_ACCESS_TOKEN;
+
+          if (accessToken) {
+            await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                messaging_product: "whatsapp",
+                recipient_type: "individual",
+                to: cleanFrom,
+                type: "text",
+                text: { body: replyText },
+              }),
+            }).catch(() => {});
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[MetaWebhook] Processing error:", err);
+  }
+});
+
+
 
 

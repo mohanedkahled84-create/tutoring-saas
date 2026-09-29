@@ -36,6 +36,11 @@ export const envSchema = z.object({
   EVOLUTION_INSTANCE_NAME: z.string().optional().default("centrly-main"),
   N8N_ADMIN_ALERT_WEBHOOK_URL: z.string().url().optional().or(z.literal("")).default("https://mohaned1.rooyai.com/webhook/centrly-admin-alerts"),
   SENTRY_DSN: z.string().optional().default(""),
+  // Meta WhatsApp Cloud API (Central System Number)
+  META_PHONE_NUMBER_ID: z.string().optional().default("1236924299513397"),
+  META_WABA_ID: z.string().optional().default("2155605835380579"),
+  META_ACCESS_TOKEN: z.string().optional().default(""),
+  META_PORTAL_DAILY_LIMIT: z.coerce.number().default(250),
   // DEV-71: Feature Flags (Default false for MVP-override / in-progress features)
   FEATURE_BUSINESS_DASHBOARD: booleanFlag,
   FEATURE_BEHAVIOR_TRACKING: booleanFlag,
@@ -106,6 +111,12 @@ export const config = {
   evolutionInstanceName: env.EVOLUTION_INSTANCE_NAME,
   n8nAdminAlertWebhookUrl: env.N8N_ADMIN_ALERT_WEBHOOK_URL,
   sentryDsn: env.SENTRY_DSN,
+  meta: {
+    phoneNumberId: env.META_PHONE_NUMBER_ID,
+    wabaId: env.META_WABA_ID,
+    accessToken: env.META_ACCESS_TOKEN,
+    dailyLimit: env.META_PORTAL_DAILY_LIMIT,
+  },
   features: {
     businessDashboard: env.FEATURE_BUSINESS_DASHBOARD,
     behaviorTracking: env.FEATURE_BEHAVIOR_TRACKING,

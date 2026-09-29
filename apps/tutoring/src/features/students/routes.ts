@@ -399,10 +399,22 @@ studentsRouter.post("/batch-send-parent-links", async (req: AuthenticatedRequest
   }
 });
 
-// DEV-PORTAL.5: POST /api/students/batch-send-dual-portal-links - Dual dispatch (Student + Parent) with 24-student daily cap & 30m pacing
+// GET /api/students/meta-portal-quota - Real-time daily quota stats for Meta WhatsApp
+studentsRouter.get("/meta-portal-quota", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  try {
+    const metaCloud = getServices(req).metaCloud;
+    const status = await metaCloud.getQuotaStatus(tenantId || undefined);
+    res.json(status);
+  } catch (err: any) {
+    res.status(500).json({ error: { code: "SERVER_ERROR", message: err.message } });
+  }
+});
+
+// DEV-PORTAL.5: POST /api/students/batch-send-dual-portal-links - Dual dispatch (Student + Parent)
 studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id;
-  const { student_ids, teacher_id, teacher_name, pacing_delay_ms, parent_delay_ms, typing_duration_ms } = req.body || {};
+  const { student_ids, teacher_id, teacher_name, pacing_delay_ms, parent_delay_ms, typing_duration_ms, provider = "meta" } = req.body || {};
 
   if (!tenantId && req.user?.role !== "admin") {
     res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
@@ -410,7 +422,8 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
   }
 
   try {
-    const studentsService = getServices(req).students;
+    const services = getServices(req);
+    const studentsService = services.students;
     const allStudents = await studentsService.listStudents(tenantId || undefined);
 
     // Target either explicitly passed IDs or unsent students
@@ -434,11 +447,59 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
       return;
     }
 
-    // Strict cap: 24 students max per batch/day
-    targetStudents = targetStudents.slice(0, 24);
-
     const canonicalOrigin = process.env.PUBLIC_APP_URL || "https://centerly-eg.com";
     const subjectName = req.body?.subject_name || (req.user as any)?.subject_name || undefined;
+
+    // Route to Central Meta Cloud API when provider is "meta" (default)
+    if (provider === "meta" && services.metaCloud) {
+      const metaStudents = targetStudents.map((s) => ({
+        student_id: s.id,
+        student_name: s.name,
+        student_phone: s.student_phone || undefined,
+        parent_phone: s.parent_phone || undefined,
+        subject_name: subjectName,
+        teacher_name: teacher_name || (req.user as any)?.name || (req.user as any)?.full_name || "المعلم",
+      }));
+
+      // Ensure portal password and tokens exist
+      for (const s of targetStudents) {
+        let token = s.parent_portal_token;
+        if (!token) {
+          token = generateParentPortalToken(s.id, tenantId || "default", 365);
+        }
+        let portalPassword = s.portal_password;
+        if (!portalPassword) {
+          portalPassword = Math.floor(100000 + Math.random() * 900000).toString();
+        }
+        await studentsService.updateStudent(s.id, { parent_portal_token: token, portal_password: portalPassword }).catch(() => {});
+      }
+
+      const metaResult = await services.metaCloud.dispatchBatchPortalLinks({
+        tenant_id: tenantId || "default",
+        teacher_id: teacher_id || req.user?.id || null,
+        teacher_name: teacher_name || (req.user as any)?.name || (req.user as any)?.full_name || "المعلم",
+        subject_name: subjectName,
+        students: metaStudents,
+        pacingDelayMs: pacing_delay_ms !== undefined ? pacing_delay_ms : 200,
+      });
+
+      res.json({
+        provider: "meta",
+        total: metaResult.total_students,
+        total_messages: metaResult.total_messages,
+        sent_today: metaResult.sent_today,
+        queued_tomorrow: metaResult.queued_tomorrow,
+        daily_limit: metaResult.daily_limit,
+        remaining_today: metaResult.remaining_today,
+        is_template_pending: metaResult.is_template_pending,
+        message: metaResult.message,
+      });
+      return;
+    }
+
+    // Fallback: Legacy Evolution API dispatch (Strict cap: 24 students max per batch/day)
+    targetStudents = targetStudents.slice(0, 24);
+
     const studentsPayload = targetStudents.map((s) => {
       let token = s.parent_portal_token;
       if (!token) {

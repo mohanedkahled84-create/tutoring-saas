@@ -8,6 +8,9 @@ export * from "./gateway.js";
 export * from "./service.js";
 export * from "./repository.js";
 export * from "./routes.js";
+export * from "./meta-cloud.gateway.js";
+export * from "./meta-portal-queue.repository.js";
+export * from "./meta-cloud.service.js";
 
 // Convenience export for cross-feature notifications complying with Rule 4
 const defaultService = new WhatsAppNotificationsService(

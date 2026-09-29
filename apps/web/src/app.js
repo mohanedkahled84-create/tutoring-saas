@@ -8202,16 +8202,15 @@ class CentrlyApp {
       `;
     }
 
-    return studentsToShow.map((s, idx) => {
+    return studentsToShow.map((s) => {
       const pPhone = s.parentPhone || s.parent_phone || '—';
       const sPhone = s.studentPhone || s.student_phone || '—';
-      const isChecked = idx < 24;
       const matchedGroup = (this.groups || []).find(g => g.id === s.group_id || g.id === s.groupId);
       const groupLabel = s.groupName || s.group_name || matchedGroup?.name || '';
       return `
         <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.65rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 0.45rem; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.borderColor='#94a3b8'; this.style.background='#f8fafc';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='#fff';">
           <span style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <input type="checkbox" class="batch-parent-checkbox" value="${escapeHtml(s.id)}" ${isChecked ? 'checked' : ''} onchange="window.centrlyApp.updateBatchPortalSelectedCount()">
+            <input type="checkbox" class="batch-parent-checkbox" value="${escapeHtml(s.id)}" checked onchange="window.centrlyApp.updateBatchPortalSelectedCount()">
             <span style="font-weight: 700; color: #1e293b;">${escapeHtml(s.name || s.full_name || '—')}</span>
             <span style="font-size: 0.75rem; color: #64748b; font-family: monospace;">كود: ${escapeHtml(s.code || s.student_code || '—')}</span>
             ${groupLabel ? `<span style="font-size: 0.7rem; background: #eff6ff; color: #1d4ed8; padding: 0.1rem 0.45rem; border-radius: 4px; font-weight: 700; border: 1px solid #bfdbfe;">${escapeHtml(groupLabel)}</span>` : ''}
@@ -8234,20 +8233,14 @@ class CentrlyApp {
     }
 
     const countLabel = document.getElementById('batchPortalCountLabel');
-    const displayCount = Math.min(targetStudents.length, 24);
     if (countLabel) {
-      countLabel.innerHTML = `الطلاب المستهدفون (${targetStudents.length} طالب - محدد ${displayCount} تلقائياً):`;
+      countLabel.innerHTML = `الطلاب المستهدفون (${targetStudents.length} طالب):`;
     }
 
     const masterCb = document.getElementById('selectAllBatchParentLinks');
     if (masterCb) {
-      masterCb.checked = displayCount > 0;
+      masterCb.checked = targetStudents.length > 0;
       masterCb.disabled = targetStudents.length === 0;
-    }
-
-    const limitWarning = document.getElementById('batchPortalLimitWarning');
-    if (limitWarning) {
-      limitWarning.style.display = targetStudents.length > 24 ? 'block' : 'none';
     }
 
     this.updateBatchPortalSelectedCount();
@@ -8255,8 +8248,8 @@ class CentrlyApp {
 
   toggleAllBatchPortalCheckboxes(checked) {
     const boxes = document.querySelectorAll('.batch-parent-checkbox');
-    boxes.forEach((cb, idx) => {
-      cb.checked = checked && (idx < 24);
+    boxes.forEach((cb) => {
+      cb.checked = checked;
     });
     this.updateBatchPortalSelectedCount();
   }
@@ -8268,7 +8261,7 @@ class CentrlyApp {
 
     const masterCb = document.getElementById('selectAllBatchParentLinks');
     if (masterCb && totalBoxes > 0) {
-      masterCb.checked = (count === Math.min(totalBoxes, 24));
+      masterCb.checked = (count === totalBoxes);
     }
 
     const btn = document.getElementById('btnConfirmBatchParentLinks');
@@ -8282,7 +8275,7 @@ class CentrlyApp {
         btn.disabled = false;
         btn.style.opacity = '1';
         btn.style.cursor = 'pointer';
-        btn.innerHTML = `${getIcon('whatsapp', 18)} <span>بدء الإرسال المزدوج الآمن (${count} طالب)</span>`;
+        btn.innerHTML = `${getIcon('whatsapp', 18)} <span>إرسال الروابط عبر واتساب سنترلي الرسمي (${count} طالب)</span>`;
       }
     }
   }
@@ -8312,7 +8305,7 @@ class CentrlyApp {
     this._currentBatchPortalGroupId = initialGroupId;
     const studentsToShow = this.getUnsentPortalStudents(initialGroupId);
     const teacherName = this.user?.name || 'مستر أحمد';
-    const displayCount = Math.min(studentsToShow.length, 24);
+    const displayCount = studentsToShow.length;
 
     // Build Group Options
     const groupOptions = (this.groups || []).map(g => {
@@ -8329,10 +8322,16 @@ class CentrlyApp {
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 0.75rem; padding: 0.85rem; color: #166534; font-size: 0.85rem; line-height: 1.6;">
-          <div style="font-weight: 800; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem;">
-            <span>⚡ نظام الإرسال المزدوج الذكي ومحاكاة الكتابة</span>
+          <div style="font-weight: 800; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+            <span style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="color: #22c55e; font-size: 1.1rem;">✅</span>
+              <span>واتساب سنترلي الرسمي المعتمد (Meta Cloud API)</span>
+            </span>
+            <span style="background: #dcfce7; color: #15803d; font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 9999px; border: 1px solid #86efac;">
+              رقم موثق رسمي (+20 10 10979708) 🛡️
+            </span>
           </div>
-          يُرسل رابط المنصة للطالب أولاً، ثم يُرسل رابط المتابعة لولي الأمر تلقائياً بعد 15 دقيقة. يظهر لولي الأمر إشعار "يكتب الآن..." لمدة 5 دقائق قبل استلام الرسالة، مع تنويع وصياغة متغيرة تلقائياً (Spintax) لكل رسالة لحماية رقمك تماماً من خوارزميات الحظر.
+          يُرسل رابط المنصة والمتابعة من خلال رقم منظومة سنترلي المعتمد رسميّاً من Meta. رسائل موثوقة ومضمونة بنسبة 100% وبدون استهلاك شريحتك الشخصية أو الخوف من حظر الأرقام.
         </div>
 
         <!-- Group Selector Filter -->
@@ -8353,18 +8352,18 @@ class CentrlyApp {
 
         <div>
           <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-            <span id="batchPortalCountLabel">الطلاب المستهدفون (${studentsToShow.length} طالب - محدد ${displayCount} تلقائياً):</span>
+            <span id="batchPortalCountLabel">الطلاب المستهدفون (${studentsToShow.length} طالب):</span>
             <label style="font-size: 0.8rem; color: #64748b; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
               <input type="checkbox" id="selectAllBatchParentLinks" ${displayCount > 0 ? 'checked' : ''} ${studentsToShow.length === 0 ? 'disabled' : ''} onchange="window.centrlyApp.toggleAllBatchPortalCheckboxes(this.checked)">
-              <span>تحديد أول 24 طالباً</span>
+              <span>تحديد الكل</span>
             </label>
           </div>
 
           <div id="batchPortalStudentsListContainer" style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; background: #fafafa;">
             ${this.renderBatchPortalStudentsListHtml(studentsToShow)}
           </div>
-          <div id="batchPortalLimitWarning" style="font-size: 0.75rem; color: #b45309; margin-top: 0.4rem; background: #fffbeb; border: 1px solid #fde68a; padding: 0.4rem 0.6rem; border-radius: 0.4rem; display: ${studentsToShow.length > 24 ? 'block' : 'none'};">
-            ⚠️ تم تحديد أول 24 طالباً لحماية رقمك اليوم من خوارزميات واتساب. يمكنك إرسال باقي طلاب المجموعة في اليوم التالي.
+          <div id="batchPortalLimitNotice" style="font-size: 0.75rem; color: #0369a1; margin-top: 0.4rem; background: #f0f9ff; border: 1px solid #bae6fd; padding: 0.45rem 0.65rem; border-radius: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
+            <span>ℹ️ نظام الكوتا الذكي: إذا زاد إجمالي الرسائل المطلوبة عن كوتا الـ 250 رسالة اليومية للمنصة، تُرسل حصة اليوم فوراً وتُجدول البقية تلقائياً للغد.</span>
           </div>
         </div>
 
@@ -8375,54 +8374,54 @@ class CentrlyApp {
               document.getElementById('previewParentMsg').style.display='none';
               this.style.background='#0284c7'; this.style.color='#fff';
               document.getElementById('btnTabPreviewParent').style.background='#f1f5f9'; document.getElementById('btnTabPreviewParent').style.color='#334155';
-            " style="background: #0284c7; color: #fff; font-weight: 700;">نموذج الطالب</button>
+            " style="background: #0284c7; color: #fff; font-weight: 700;">نموذج الطالب المعتمد</button>
 
             <button type="button" class="btn btn-sm" id="btnTabPreviewParent" onclick="
               document.getElementById('previewStudentMsg').style.display='none';
               document.getElementById('previewParentMsg').style.display='block';
               this.style.background='#0284c7'; this.style.color='#fff';
               document.getElementById('btnTabPreviewStudent').style.background='#f1f5f9'; document.getElementById('btnTabPreviewStudent').style.color='#334155';
-            " style="background: #f1f5f9; color: #334155; font-weight: 700;">نموذج ولي الأمر</button>
+            " style="background: #f1f5f9; color: #334155; font-weight: 700;">نموذج ولي الأمر المعتمد</button>
           </div>
 
           <div id="previewStudentMsg" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.8rem; color: #334155; line-height: 1.6; white-space: pre-line;">
-السلام عليكم ورحمة الله وبركاته، الطالب (اسم الطالب).
+*بوابة الطالب الرسمية | منظومة سنترلي*
 
-حرصاً على تنظيم مذاكرتك وتفوقك، هذا هو رابط بوابتك التعليمية الرسمية:
+أهلاً بك يا (اسم الطالب) 
+تم تفعيل بوابتك التعليمية الخاصة بمادتنا مع ${escapeHtml(teacherName)}.
 
-⚠️ *خطوة هامة وأساسية لتفعيل الرابط:*
-يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط والفتح مباشرة، ولتصلك تنبيهات الحصص والمذكرات الجديدة.
+من خلال بوابتك الشخصية يمكنك:
+📚 تحميل مذكرات الحصص وملخصات الـ PDF ومذاكرتها في أي وقت.
+📝 حل الواجب في كشكولك ورفع صور الحل مباشرة للمعلم وتلقي التصحيح.
+📊 متابعة درجاتك في جميع الكويزات والامتحانات الدورية.
+📅 كشف حضور الحصص مع كارت باركود الحضور المعتمد عند باب السنتر.
 
-*رابط بوابتك التعليمية المباشر:*
-https://centerly-eg.com/s/s16766044
+💡 بمجرد دخولك للمنصة، ستجد جولة إرشادية ذكية وسهم يوضح لك طريقة استخدام كل خانة بسهولة.
 
-- تحميل المذكرات وملازم الشرح وملفات الـ PDF.
-- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها ورفع الحلول.
-- الاطلاع على درجات الكويزات وسجل حضورك.
-
-مع تحيات: ${escapeHtml(teacherName)}
+🔘 *أزرار تفاعلية في الرسالة:*
+[الدخول للمنصة]  |  [الحصول على اسم المستخدم وكلمه السر]
           </div>
 
           <div id="previewParentMsg" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.8rem; color: #334155; line-height: 1.6; white-space: pre-line;">
-السلام عليكم ورحمة الله وبركاته، ولي أمر الطالب (اسم الطالب).
+*تقرير متابعة الطالب | منظومة سنترلي*
 
-حرصاً على متابعة المستوى الدراسي أولاً بأول، يسعدنا تزويدكم برابط بوابة المتابعة المباشرة الخاصة به:
+السيد ولي أمر الطالب (اسم الطالب) 
+تم تفعيل بوابة المتابعة المباشرة لنجلكم لمادتنا مع ${escapeHtml(teacherName)}.
 
-⚠️ *خطوة هامة وأساسية لتفعيل الرابط:*
-يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط والفتح مباشرة، ولضمان استلام إشعارات وتقارير الطالب باستمرار دون انقطاع.
+من خلال بوابتك يمكنك متابعة:
+📅 الحضور والغياب اللحظي فور مسح باركود الطالب عند باب السنتر.
+📊 كشف درجات الكويزات والامتحانات وملاحظات المعلم أولاً بأول.
+📝 متابعة تسليم الواجبات المنزلية ومستوى الحل.
+🔄 زر تحديث فوري لعرض أحدث التقارير دون تسجيل خروج.
 
-*رابط المتابعة المباشر لولي الأمر:*
-https://centerly-eg.com/p/p16766044
+💡 بمجرد فتح الرابط، ستظهر جولة توضيحية تشرح لسيادتكم كافة أقسام التقرير وكيفية استخدامه بسهولة.
 
-- متابعة تسجيل الحضور والغياب لحظياً مع كل حصة.
-- الاطلاع على درجات الكويزات والامتحانات الدورية فور رصدها.
-- متابعة الالتزام بتسليم وحل الواجبات وملاحظات المعلم.
-
-مع تحيات: ${escapeHtml(teacherName)}
+🔘 *أزرار تفاعلية في الرسالة:*
+[الدخول للمنصة]  |  [الحصول على اسم المستخدم وكلمه السر]
           </div>
 
           <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
-            <span>💡 صياغة متغيرة تلقائياً: يتم تدوير التحية والمقدمة والخاتمة لكل طالب وولي أمر لحماية حسابك من التكرار.</span>
+            <span>✨ إرسال رسمي موثق بقوالب Meta Utility المعتمدة مع أزرار سريعة ورابط مباشر للمنصة.</span>
           </div>
         </div>
       </div>
@@ -8434,7 +8433,7 @@ https://centerly-eg.com/p/p16766044
         <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
         <button type="button" id="btnConfirmBatchParentLinks" class="btn btn-primary" onclick="window.centrlyApp.dispatchBatchParentLinks()" ${isBtnDisabled ? 'disabled style="opacity: 0.6; cursor: not-allowed; background-color: #0284c7; border-color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;"' : 'style="background-color: #0284c7; border-color: #0284c7; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;"'}>
           ${getIcon('whatsapp', 18)}
-          <span>${isBtnDisabled ? 'حدد طلاباً للإرسال (0)' : `بدء الإرسال المزدوج الآمن (${displayCount} طالب)`}</span>
+          <span>${isBtnDisabled ? 'حدد طلاباً للإرسال (0)' : `إرسال الروابط عبر واتساب سنترلي الرسمي (${displayCount} طالب)`}</span>
         </button>
       </div>
     `;
@@ -8444,22 +8443,17 @@ https://centerly-eg.com/p/p16766044
 
   async dispatchBatchParentLinks() {
     const selectedBoxes = Array.from(document.querySelectorAll('.batch-parent-checkbox:checked'));
-    let selectedIds = selectedBoxes.map(cb => cb.value);
+    const selectedIds = selectedBoxes.map(cb => cb.value);
 
     if (selectedIds.length === 0) {
       this.showToast('يرجى اختيار طالب واحد على الأقل للإرسال.', 'warning');
       return;
     }
 
-    if (selectedIds.length > 24) {
-      selectedIds = selectedIds.slice(0, 24);
-      this.showToast('لأمان رقمك من خوارزميات واتساب، تم تحديد الحد الأقصى 24 طالباً لدفعة اليوم.', 'info');
-    }
-
     const btn = document.getElementById('btnConfirmBatchParentLinks');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = `<span>جاري بدء الجدولة الآمنة...</span>`;
+      btn.innerHTML = `<span>جاري الإرسال عبر واتساب سنترلي الرسمي...</span>`;
     }
 
     try {
@@ -8468,6 +8462,7 @@ https://centerly-eg.com/p/p16766044
         body: {
           student_ids: selectedIds,
           teacher_name: this.user?.name || 'المعلم',
+          provider: 'meta',
         },
       });
 
@@ -8483,8 +8478,8 @@ https://centerly-eg.com/p/p16766044
       });
 
       this.showToast(
-        res.message || `تم بنجاح بدء جدولة إرسال الروابط لـ (${selectedIds.length}) طالباً بأعلى معايير الأمان!`,
-        'success'
+        res.message || `تم بنجاح إرسال الروابط لـ (${selectedIds.length}) طالباً عبر واتساب سنترلي المعتمد!`,
+        res.is_template_pending ? 'info' : 'success'
       );
 
       if (this.currentRoute === 'students') {
@@ -8495,7 +8490,7 @@ https://centerly-eg.com/p/p16766044
         btn.disabled = false;
         btn.innerHTML = `${getIcon('whatsapp', 16)}<span>إعادة المحاولة</span>`;
       }
-      this.showToast(`حدث خطأ أثناء الإرسال الجماعي: ${err.message || 'تأكد من الاتصال بالخادم'}`, 'danger');
+      this.showToast(`حدث خطأ أثناء الإرسال: ${err.message || 'تأكد من الاتصال بالخادم'}`, 'danger');
     }
   }
 

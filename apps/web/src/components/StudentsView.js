@@ -130,7 +130,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-            <button class="btn btn-primary" onclick="window.centrlyApp.openBatchPortalLinksModal()" style="display: flex; align-items: center; gap: 0.4rem; background-color: #0284c7; border-color: #0284c7; font-weight: 700;" title="إرسال روابط المتابعة والمنصة للطلاب الجدد عبر واتساب (طالب وولي أمر)">
+            <button class="btn btn-primary" onclick="window.centrlyApp.openBatchPortalLinksModal()" style="display: flex; align-items: center; gap: 0.4rem; background-color: #0284c7; border-color: #0284c7; font-weight: 700;" title="إرسال روابط المتابعة والمنصة للطلاب الجدد عبر واتساب سنترلي الرسمي (Meta Cloud API)">
               ${getIcon('whatsapp', 18)}
               <span>إرسال الروابط للطلاب الجدد</span>
               ${unsentCount > 0 

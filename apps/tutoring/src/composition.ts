@@ -45,6 +45,9 @@ import {
   WhatsAppNotificationsService,
   SupabaseWhatsAppNotificationsRepository,
   HttpEvolutionGateway,
+  MetaCloudService,
+  SupabaseMetaPortalQueueRepository,
+  HttpMetaCloudGateway,
 } from "./features/whatsapp-notifications/index.js";
 import {
   BillingService,
@@ -97,6 +100,7 @@ export interface AppServices {
   sessions: SessionsService;
   attendance: AttendanceService;
   whatsapp: WhatsAppNotificationsService;
+  metaCloud: MetaCloudService;
   billing: BillingService;
   students: StudentsService;
   groups: GroupsService;
@@ -129,6 +133,11 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     whatsapp: new WhatsAppNotificationsService(
       new SupabaseWhatsAppNotificationsRepository(effectiveClient),
       new HttpEvolutionGateway(config.evolutionApiUrl, config.evolutionApiKey)
+    ),
+    metaCloud: new MetaCloudService(
+      new SupabaseMetaPortalQueueRepository(effectiveClient, privilegedClient),
+      new HttpMetaCloudGateway(config.meta.phoneNumberId, config.meta.accessToken, config.meta.wabaId),
+      config.meta.dailyLimit
     ),
     billing: new BillingService(new SupabaseBillingRepository(effectiveClient)),
     students: new StudentsService(new SupabaseStudentsRepository(effectiveClient, privilegedClient)),
