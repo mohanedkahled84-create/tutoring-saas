@@ -371,8 +371,9 @@ publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<
             if (matchedStudents && matchedStudents.length > 0) {
               const s = matchedStudents[0];
               const pwd = s.portal_password || "غير مسجل";
-              const username = s.student_code || s.name;
-              const replyText = `مرحباً بك في منصة سنترلي\nبيانات دخولك الخاصة بـ (${s.name}):\nاسم المستخدم / الكود: *${username}*\nكلمة المرور: *${pwd}*\n\nرابط تسجيل الدخول:\nhttps://centerly-eg.com/portal`;
+              const localPhone = cleanFrom.startsWith("20") ? "0" + cleanFrom.slice(2) : cleanFrom;
+              const loginPhone = localPhone || s.student_phone || s.parent_phone;
+              const replyText = `مرحباً بك في منصة سنترلي\nبيانات دخولك الخاصة بـ (${s.name}):\nاسم المستخدم: *${loginPhone}*\nكلمة المرور: *${pwd}*\n\nرابط تسجيل الدخول:\nhttps://centerly-eg.com/portal`;
 
               const phoneNumberId = process.env.META_PHONE_NUMBER_ID || "1236924299513397";
               const accessToken = process.env.META_ACCESS_TOKEN || "EAAadfhdz2egBSpVJ5rnNtBvTfZCMObM8PLytAFhfcT46JLsrtapKqTnw5ZB4ZAQz0U2eviXqBl1ERKuYpyF7zZATiRcFK00HTpPMxBZA2loDSk79HmJmqYfxmweZCEysyEBEOycoJ6VGGsSqFOtPIujKbuFqMTffxU95ZCnQZA1qHbjUBjZCnnvz3vJr2GArCdwZDZD";
