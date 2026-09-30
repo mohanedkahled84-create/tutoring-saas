@@ -63,19 +63,13 @@ export function renderStudentPortalTourHtml() {
       </div>
 
       <!-- Title & Explanation (Clean, elderly-friendly Arabic typography) -->
-      <div style="margin-bottom: 0.65rem;">
-        <h4 id="student-spotlight-title" style="font-size: 1.02rem; font-weight: 900; color: #0f172a; margin: 0 0 0.35rem 0; line-height: 1.35; display: flex; align-items: center; gap: 0.4rem;">
+      <div style="margin-bottom: 0.85rem;">
+        <h4 id="student-spotlight-title" style="font-size: 1.05rem; font-weight: 900; color: #0f172a; margin: 0 0 0.4rem 0; line-height: 1.35; display: flex; align-items: center; gap: 0.4rem;">
           عنوان الزر
         </h4>
-        <p id="student-spotlight-desc" style="font-size: 0.86rem; color: #334155; line-height: 1.55; margin: 0; font-weight: 500;">
+        <p id="student-spotlight-desc" style="font-size: 0.88rem; color: #334155; line-height: 1.6; margin: 0; font-weight: 500;">
           شرح الزر وكيفية استخدامه...
         </p>
-      </div>
-
-      <!-- Button Location Visual Clue (Elderly-Friendly Helper) -->
-      <div id="student-spotlight-hint" style="background: #eff6ff; border: 1px dashed #93c5fd; border-radius: 0.55rem; padding: 0.4rem 0.6rem; font-size: 0.78rem; font-weight: 800; color: #1e40af; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.75rem;">
-        <span id="student-spotlight-hint-icon" style="font-size: 1rem;">👆</span>
-        <span id="student-spotlight-hint-text">الزرار المطلوب متعلّم بالأزرق فوق هذا المربع</span>
       </div>
 
       <!-- Footer Navigation Buttons -->
@@ -148,19 +142,13 @@ export function renderParentPortalTourHtml() {
       </div>
 
       <!-- Title & Explanation (Clean, elderly-friendly Arabic typography) -->
-      <div style="margin-bottom: 0.65rem;">
-        <h4 id="parent-spotlight-title" style="font-size: 1.02rem; font-weight: 900; color: #0f172a; margin: 0 0 0.35rem 0; line-height: 1.35; display: flex; align-items: center; gap: 0.4rem;">
+      <div style="margin-bottom: 0.85rem;">
+        <h4 id="parent-spotlight-title" style="font-size: 1.05rem; font-weight: 900; color: #0f172a; margin: 0 0 0.4rem 0; line-height: 1.35; display: flex; align-items: center; gap: 0.4rem;">
           عنوان القسم
         </h4>
-        <p id="parent-spotlight-desc" style="font-size: 0.86rem; color: #334155; line-height: 1.55; margin: 0; font-weight: 500;">
+        <p id="parent-spotlight-desc" style="font-size: 0.88rem; color: #334155; line-height: 1.6; margin: 0; font-weight: 500;">
           شرح القسم لولي الأمر...
         </p>
-      </div>
-
-      <!-- Button Location Visual Clue (Elderly-Friendly Helper) -->
-      <div id="parent-spotlight-hint" style="background: #ecfdf5; border: 1px dashed #6ee7b7; border-radius: 0.55rem; padding: 0.4rem 0.6rem; font-size: 0.78rem; font-weight: 800; color: #065f46; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.75rem;">
-        <span id="parent-spotlight-hint-icon" style="font-size: 1rem;">👆</span>
-        <span id="parent-spotlight-hint-text">الزرار المطلوب متعلّم بالأخضر فوق هذا المربع</span>
       </div>
 
       <!-- Footer Navigation Buttons -->
@@ -249,10 +237,6 @@ function calculateSpotlightPosition(targetEl, popover, arrow, color, role = 'stu
     let arrowOffset = targetCenterX - leftPos - 9;
     arrowOffset = Math.max(16, Math.min(arrowOffset, popoverWidth - 34));
 
-    const hintIcon = document.getElementById(role + '-spotlight-hint-icon');
-    const hintText = document.getElementById(role + '-spotlight-hint-text');
-    const colorName = (role === 'student') ? 'بالأزرق' : 'بالأخضر';
-
     if (isTargetAbove) {
       // Target is above popover -> Arrow sits on top pointing up
       arrow.style.cssText = `
@@ -266,8 +250,6 @@ function calculateSpotlightPosition(targetEl, popover, arrow, color, role = 'stu
         border-bottom: 9px solid ${color};
         display: block;
       `;
-      if (hintIcon) hintIcon.textContent = '👆';
-      if (hintText) hintText.textContent = `الزرار المطلوب متعلّم ${colorName} فوق هذا المربع`;
     } else {
       // Target is below popover -> Arrow sits on bottom pointing down
       arrow.style.cssText = `
@@ -281,8 +263,6 @@ function calculateSpotlightPosition(targetEl, popover, arrow, color, role = 'stu
         border-top: 9px solid ${color};
         display: block;
       `;
-      if (hintIcon) hintIcon.textContent = '👇';
-      if (hintText) hintText.textContent = `الزرار المطلوب متعلّم ${colorName} تحت هذا المربع`;
     }
   }, 100);
 }
