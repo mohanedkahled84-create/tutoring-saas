@@ -1,7 +1,7 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js";
-import { renderStudentPortalTourHtml } from "./PortalTourModal.js";
+import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=6.0.0";
 
 /**
  * Centrly Student Web Portal Component
@@ -755,6 +755,9 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
         <!-- Walkthrough Onboarding Tour Modal -->
         ${renderStudentPortalTourHtml()}
+
+        <!-- Auto-launch tour immediately on first login/visit -->
+        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'/>" style="display:none;" onerror="(function(){ setTimeout(function(){ if (typeof window !== 'undefined' && window.openStudentPortalTour) window.openStudentPortalTour(false); }, 500); })()" />
 
       </div>
     </div>

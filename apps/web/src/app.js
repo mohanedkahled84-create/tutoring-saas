@@ -10,8 +10,8 @@ import { renderSessionsView } from './components/SessionsView.js';
 import { renderStudentsView } from './components/StudentsView.js?v=4.8.15';
 import { renderGroupsView } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
-import { renderParentPortalView } from './components/ParentPortalView.js?v=5.3.1';
-import { renderStudentPortalView } from './components/StudentPortalView.js?v=5.3.1';
+import { renderParentPortalView } from './components/ParentPortalView.js?v=6.0.0';
+import { renderStudentPortalView } from './components/StudentPortalView.js?v=6.0.0';
 import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.8';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=4.0.2';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js?v=4.8.1';
@@ -981,7 +981,14 @@ class CentrlyApp {
         throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة ولي الأمر');
       }
       const appEl = this.getAppEl();
-      if (appEl) appEl.innerHTML = renderParentPortalView(data);
+      if (appEl) {
+        appEl.innerHTML = renderParentPortalView(data);
+        setTimeout(() => {
+          if (typeof window !== 'undefined' && window.openParentPortalTour) {
+            window.openParentPortalTour(false);
+          }
+        }, 500);
+      }
     } catch (err) {
       const msg = err?.message || '';
       const isExpired = msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED') || msg.includes('401');
@@ -1035,7 +1042,14 @@ class CentrlyApp {
         throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة الطالب');
       }
       const appEl = this.getAppEl();
-      if (appEl) appEl.innerHTML = renderStudentPortalView(data);
+      if (appEl) {
+        appEl.innerHTML = renderStudentPortalView(data);
+        setTimeout(() => {
+          if (typeof window !== 'undefined' && window.openStudentPortalTour) {
+            window.openStudentPortalTour(false);
+          }
+        }, 500);
+      }
     } catch (err) {
       const msg = err?.message || '';
       const isExpired = msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED') || msg.includes('401');
