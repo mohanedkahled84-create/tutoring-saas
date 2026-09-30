@@ -26,7 +26,7 @@ export function formatVerificationEmailHtml(code: string, fullName?: string): st
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; direction: rtl; text-align: right;">
   <!-- Hidden Preheader for email clients (Gmail / Outlook) -->
-  <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #fff; opacity: 0; mso-hide: all;">
+  <div style="display:none!important;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">
     رمز تأكيد حسابك في منصة سنترلي هو ${code} - صالح لمدة 15 دقيقة.
   </div>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 16px;">
@@ -153,6 +153,9 @@ export class EmailVerificationService {
           text: plainText,
           headers: {
             "X-Entity-Ref-ID": `centrly-verify-${Date.now()}-${code}`,
+            "List-Unsubscribe": "<mailto:support@centerly-eg.com?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            "X-Auto-Response-Suppress": "OOF, AutoReply",
           },
         }),
       });
@@ -231,6 +234,9 @@ export class EmailVerificationService {
           text: plainText,
           headers: {
             "X-Entity-Ref-ID": `centrly-pin-${Date.now()}-${code}`,
+            "List-Unsubscribe": "<mailto:support@centerly-eg.com?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            "X-Auto-Response-Suppress": "OOF, AutoReply",
           },
         }),
       });
@@ -274,7 +280,7 @@ export function formatPinResetEmailHtml(code: string, fullName?: string): string
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; direction: rtl; text-align: right;">
   <!-- Hidden Preheader for email clients -->
-  <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #fff; opacity: 0; mso-hide: all;">
+  <div style="display:none!important;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">
     رمز إعادة تعيين رمز الأمان المالي في سنترلي هو ${code} - صالح لمدة 15 دقيقة.
   </div>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 16px;">
