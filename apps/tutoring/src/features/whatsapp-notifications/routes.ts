@@ -309,22 +309,72 @@ templatesRouter.post(
 
 // GET /api/whatsapp/inbox - Retrieve WhatsApp chat inbox with reply tracking
 whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const tenantId = req.user?.tenant_id;
-  const isAdmin = req.user?.role === "admin";
-  if (!tenantId && !isAdmin) {
+  const userEmail = (req.user?.email || "").toLowerCase();
+  const isPlatformAdmin = req.user?.role === "admin" ||
+                          userEmail === "mohanedabdulhalim@gmail.com" ||
+                          userEmail === "mohanedkhaled2367@gmail.com" ||
+                          userEmail === "teacher@centrly.app";
+
+  const requestedTenantId = typeof req.query.tenant_id === "string" ? req.query.tenant_id.trim() : "";
+  const userTenantId = req.user?.tenant_id;
+
+  if (!userTenantId && !isPlatformAdmin) {
     res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
     return;
   }
 
   try {
     const supabase = getServiceSupabaseClient();
+
+    // Prepare tenant switcher list for platform admin
+    let availableTenants: any[] | undefined = undefined;
+    if (isPlatformAdmin) {
+      const { data: allTenants } = await supabase
+        .from("tenants")
+        .select("id, name");
+
+      const { data: countData } = await supabase
+        .from("whatsapp_inbox")
+        .select("tenant_id");
+
+      const tMap = new Map<string, number>();
+      let totalAll = 0;
+      for (const row of (countData || [])) {
+        if (row.tenant_id) {
+          tMap.set(row.tenant_id, (tMap.get(row.tenant_id) || 0) + 1);
+          totalAll++;
+        }
+      }
+
+      availableTenants = [
+        { id: "all", name: `🏫 جميع المنظومات والمدرسين (${totalAll} رسالة)` },
+        ...(allTenants || []).map((t: any) => ({
+          id: t.id,
+          name: `${t.name} (${tMap.get(t.id) || 0} رسالة)`,
+        })),
+      ];
+    }
+
     let query = supabase
       .from("whatsapp_inbox")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (tenantId && !isAdmin) {
-      query = query.eq("tenant_id", tenantId);
+    // Determine effective tenant filter:
+    // If admin and requestedTenantId is set and !== 'all', filter by it.
+    // If admin and (!requestedTenantId || requestedTenantId === 'all'), query ALL!
+    // If regular teacher, filter by userTenantId.
+    let effectiveTenantId = "all";
+    if (isPlatformAdmin) {
+      if (requestedTenantId && requestedTenantId !== "all") {
+        query = query.eq("tenant_id", requestedTenantId);
+        effectiveTenantId = requestedTenantId;
+      } else {
+        effectiveTenantId = "all";
+      }
+    } else if (userTenantId) {
+      query = query.eq("tenant_id", userTenantId);
+      effectiveTenantId = userTenantId;
     }
 
     const { data: messages, error } = await query;
@@ -335,10 +385,16 @@ whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): P
     // Also fetch students for tenant to enrich metadata
     let studentsQuery = supabase
       .from("students")
-      .select("id, name, student_code, parent_phone, student_phone, group_id");
-    if (tenantId && !isAdmin) {
-      studentsQuery = studentsQuery.eq("tenant_id", tenantId);
+      .select("id, name, student_code, parent_phone, student_phone, group_id, tenant_id");
+
+    if (isPlatformAdmin) {
+      if (requestedTenantId && requestedTenantId !== "all") {
+        studentsQuery = studentsQuery.eq("tenant_id", requestedTenantId);
+      }
+    } else if (userTenantId) {
+      studentsQuery = studentsQuery.eq("tenant_id", userTenantId);
     }
+
     const { data: studentsData } = await studentsQuery;
     const studentsMap = new Map((studentsData || []).map((s: any) => [s.id, s]));
     const phoneMap = new Map<string, any>();
@@ -472,6 +528,9 @@ whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): P
       },
       conversations,
       raw_messages: enrichedMessages,
+      available_tenants: availableTenants,
+      active_tenant_id: effectiveTenantId,
+      is_platform_admin: isPlatformAdmin,
     });
   } catch (err: unknown) {
     res.status(500).json({

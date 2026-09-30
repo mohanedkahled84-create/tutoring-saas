@@ -56,6 +56,32 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
           </div>
         </div>
 
+        <!-- Admin Organization / Teacher Switcher -->
+        ${data.available_tenants && data.available_tenants.length > 0 ? `
+          <div style="margin-top: 1.25rem; background: rgba(0, 0, 0, 0.22); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 12px; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <span style="font-size: 1.2rem;">🏫</span>
+              <div>
+                <div style="font-size: 0.85rem; font-weight: 800; color: #ffffff;">عرض محادثات المعلم / المنظومة (لوحة تحكم المسؤول):</div>
+                <div style="font-size: 0.75rem; color: #a7f3d0;">يمكنك استعراض كل المدرسين معاً أو تحديد مدرس معين لرؤية طلابه ورسائله</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 280px; flex: 1; max-width: 420px;">
+              <select 
+                id="selectWhatsAppTenantFilter" 
+                onchange="window.centrlyApp.onWhatsAppTenantFilterChange(this.value)" 
+                style="width: 100%; background: #ffffff; color: #064e3b; font-weight: 800; font-size: 0.88rem; border: none; border-radius: 8px; padding: 0.5rem 0.85rem; cursor: pointer; outline: none; box-shadow: 0 2px 6px rgba(0,0,0,0.15);"
+              >
+                ${data.available_tenants.map(t => `
+                  <option value="${escapeHtml(t.id)}" ${t.id === (data.active_tenant_id || 'all') ? 'selected' : ''}>
+                    ${escapeHtml(t.name)}
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+        ` : ''}
+
         <!-- Navigation Tabs -->
         <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 1rem; flex-wrap: wrap;">
           <button type="button" id="tabBtnInbox" onclick="window.centrlyApp.switchWhatsAppTab('inbox')" style="padding: 0.55rem 1.25rem; border-radius: 8px; font-weight: 800; font-size: 0.9rem; border: none; cursor: pointer; transition: all 0.2s; ${activeTab === 'inbox' ? 'background: #ffffff; color: #065f46; box-shadow: 0 4px 10px rgba(0,0,0,0.1);' : 'background: rgba(255,255,255,0.1); color: #ffffff;'}">

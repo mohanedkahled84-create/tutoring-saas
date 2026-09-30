@@ -8647,11 +8647,16 @@ class CentrlyApp {
   // WhatsApp Live Inbox & Smart Profit Economics Center
   // ==========================================================================
 
-  async loadWhatsAppInboxData(render = true) {
+  async loadWhatsAppInboxData(render = true, tenantId = null) {
     try {
-      const res = await request('/whatsapp/inbox').catch(() => null);
+      const selectedTenant = tenantId !== null ? tenantId : (this.whatsappSelectedTenant || '');
+      const queryParam = selectedTenant ? `?tenant_id=${encodeURIComponent(selectedTenant)}` : '';
+      const res = await request(`/whatsapp/inbox${queryParam}`).catch(() => null);
       if (res && res.success) {
         this.whatsappInboxData = res;
+        if (res.active_tenant_id) {
+          this.whatsappSelectedTenant = res.active_tenant_id;
+        }
       } else {
         this.whatsappInboxData = res || {
           stats: { total_sent: 0, total_replied: 0, pending_reply: 0, reply_rate: 0 },
@@ -8672,6 +8677,12 @@ class CentrlyApp {
       }, 50);
     }
   }
+
+  async onWhatsAppTenantFilterChange(tenantId) {
+    this.whatsappSelectedTenant = tenantId;
+    await this.loadWhatsAppInboxData(true, tenantId);
+  }
+
 
   switchWhatsAppTab(tab) {
     this.whatsappActiveTab = tab;
