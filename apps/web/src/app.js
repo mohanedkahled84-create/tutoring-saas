@@ -8759,37 +8759,173 @@ class CentrlyApp {
     });
   }
 
+  whatsappSelectedPlan = 'plan_300';
+  whatsappBillingCycle = 'monthly';
+  whatsappUseMetaFreeTier = true;
+
+  selectWhatsAppPlan(planId) {
+    this.whatsappSelectedPlan = planId;
+    const plansData = {
+      plan_300: { monthly: 499, yearly: 4790, students: 300 },
+      plan_750: { monthly: 899, yearly: 8630, students: 750 },
+      plan_1500: { monthly: 1399, yearly: 13430, students: 1500 },
+    };
+
+    const targetPlan = plansData[planId] || plansData.plan_300;
+    const isYearly = this.whatsappBillingCycle === 'yearly';
+
+    const feeInput = document.getElementById('calcTeacherFee');
+    const studentsInput = document.getElementById('calcTeacherStudents');
+    if (feeInput) {
+      feeInput.value = isYearly ? targetPlan.yearly : targetPlan.monthly;
+    }
+    if (studentsInput) {
+      studentsInput.value = targetPlan.students;
+    }
+
+    // Highlight selected card
+    ['plan_300', 'plan_750', 'plan_1500'].forEach(id => {
+      const card = document.getElementById(id === 'plan_300' ? 'planCard300' : id === 'plan_750' ? 'planCard750' : 'planCard1500');
+      if (card) {
+        if (id === planId) {
+          card.style.border = '2px solid #3b82f6';
+          card.style.background = '#eff6ff';
+        } else {
+          card.style.border = '1.5px solid #cbd5e1';
+          card.style.background = '#ffffff';
+        }
+      }
+    });
+
+    this.recalculateWhatsAppEconomics();
+  }
+
+  setWhatsAppBillingCycle(cycle) {
+    this.whatsappBillingCycle = cycle;
+    const isYearly = cycle === 'yearly';
+
+    const btnMonthly = document.getElementById('btnCycleMonthly');
+    const btnYearly = document.getElementById('btnCycleYearly');
+
+    if (btnMonthly && btnYearly) {
+      if (isYearly) {
+        btnYearly.style.background = '#0f172a';
+        btnYearly.style.color = '#ffffff';
+        btnMonthly.style.background = 'transparent';
+        btnMonthly.style.color = '#475569';
+      } else {
+        btnMonthly.style.background = '#0f172a';
+        btnMonthly.style.color = '#ffffff';
+        btnYearly.style.background = 'transparent';
+        btnYearly.style.color = '#475569';
+      }
+    }
+
+    // Update prices displayed in the plan cards
+    const price300 = document.getElementById('planPrice300');
+    const price750 = document.getElementById('planPrice750');
+    const price1500 = document.getElementById('planPrice1500');
+    const sub300 = document.getElementById('planSubtext300');
+    const sub750 = document.getElementById('planSubtext750');
+    const sub1500 = document.getElementById('planSubtext1500');
+
+    if (isYearly) {
+      if (price300) price300.innerHTML = `4,790 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / سنوياً</span>`;
+      if (price750) price750.innerHTML = `8,630 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / سنوياً</span>`;
+      if (price1500) price1500.innerHTML = `13,430 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / سنوياً</span>`;
+
+      if (sub300) sub300.innerText = 'ما يعادل 399 ج.م/شهر (خصم 20%)';
+      if (sub750) sub750.innerText = 'ما يعادل 719 ج.م/شهر (خصم 20%)';
+      if (sub1500) sub1500.innerText = 'ما يعادل 1,119 ج.م/شهر (خصم 20%)';
+    } else {
+      if (price300) price300.innerHTML = `499 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / شهرياً</span>`;
+      if (price750) price750.innerHTML = `899 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / شهرياً</span>`;
+      if (price1500) price1500.innerHTML = `1,399 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / شهرياً</span>`;
+
+      if (sub300) sub300.innerText = 'أو 4,790 ج.م سنوياً (وفر 1,198 ج.م)';
+      if (sub750) sub750.innerText = 'أو 8,630 ج.م سنوياً (وفر 2,158 ج.م)';
+      if (sub1500) sub1500.innerText = 'أو 13,430 ج.م سنوياً (وفر 3,358 ج.م)';
+    }
+
+    // Update current plan input fee
+    const plansData = {
+      plan_300: { monthly: 499, yearly: 4790 },
+      plan_750: { monthly: 899, yearly: 8630 },
+      plan_1500: { monthly: 1399, yearly: 13430 },
+    };
+    const current = plansData[this.whatsappSelectedPlan] || plansData.plan_300;
+    const feeInput = document.getElementById('calcTeacherFee');
+    if (feeInput) {
+      feeInput.value = isYearly ? current.yearly : current.monthly;
+    }
+
+    const lblTeacherFee = document.getElementById('lblTeacherFee');
+    if (lblTeacherFee) {
+      lblTeacherFee.innerText = isYearly ? 'قيمة الاشتراك السنوي المحصل مقدماً (ج.م - بخصم 20%)' : 'قيمة اشتراك المدرس الشهري (ج.م)';
+    }
+
+    const lblMonth2Title = document.getElementById('lblMonth2Title');
+    if (lblMonth2Title) {
+      lblMonth2Title.innerText = isYearly ? 'حالة الشهور القادمة بعد الدفع السنوي:' : 'صافي ربحك الشهري المستمر:';
+    }
+
+    const lblYearBasis = document.getElementById('lblYearBasis');
+    if (lblYearBasis) {
+      lblYearBasis.innerText = isYearly ? 'اشتراك سنوي دفعة واحدة (خصم 20%)' : '12 شهر اشتراك متكرر';
+    }
+
+    this.recalculateWhatsAppEconomics();
+  }
+
+  toggleMetaFreeTier(checked) {
+    this.whatsappUseMetaFreeTier = Boolean(checked);
+    this.recalculateWhatsAppEconomics();
+  }
+
   recalculateWhatsAppEconomics() {
     const feeInput = document.getElementById('calcTeacherFee');
     const studentsInput = document.getElementById('calcTeacherStudents');
     const unitCostInput = document.getElementById('calcMsgUnitCost');
+    const freeTierCheckbox = document.getElementById('calcMetaFreeTier');
+    const isYearly = this.whatsappBillingCycle === 'yearly';
 
     if (!feeInput || !studentsInput) return;
 
     const teacherFee = Math.max(0, parseFloat(feeInput.value) || 0);
     const studentsCount = Math.max(1, parseInt(studentsInput.value, 10) || 1);
     const unitCost = Math.max(0, parseFloat(unitCostInput?.value ?? 0.80) || 0.80);
+    const useFreeTier = freeTierCheckbox ? freeTierCheckbox.checked : (this.whatsappUseMetaFreeTier ?? true);
+
+    // Meta Pricing Logic:
+    // Meta grants 1,000 free conversations per month.
+    // If studentsCount <= 1000: Meta cost is 0.00 EGP.
+    // Excess students above 1,000 are billed at unitCost (default 0.80 EGP).
+    const freeTierLimit = useFreeTier ? 1000 : 0;
+    const freeCount = Math.min(studentsCount, freeTierLimit);
+    const paidCount = Math.max(0, studentsCount - freeTierLimit);
+    const msgCost = Math.round(paidCount * unitCost);
 
     // Month 1: Setup & Onboarding
-    // Teacher pays subscription fee (e.g. 600 EGP)
-    // WhatsApp onboarding messages sent to his students (e.g. 105 students) for ONCE only!
-    const requiredMsgs = studentsCount;
-    const msgCost = Math.round(requiredMsgs * unitCost);
-    const month1Net = Math.max(0, teacherFee - msgCost);
+    // Teacher pays fee (monthly 499/899/1399 or yearly 4790/8630/13430)
+    // WhatsApp onboarding links are dispatched once
+    const month1Revenue = teacherFee;
+    const month1Net = Math.max(0, month1Revenue - msgCost);
+    const month1Margin = month1Revenue > 0 ? ((month1Net / month1Revenue) * 100).toFixed(1) : '100.0';
 
     // Month 2+: Recurring Months
-    // Teacher pays monthly fee (e.g. 600 EGP)
-    // Existing students already activated. WhatsApp message cost = 0.00 EGP!
-    // Net profit = 100% of teacher fee
-    const month2Net = teacherFee;
+    // Onboarding links are never re-sent. Meta WhatsApp cost = 0.00 EGP!
+    // If monthly: recurring monthly revenue is teacherFee (100% net margin)
+    // If yearly: already fully collected upfront; 0 EGP messaging cost
+    const month2Net = isYearly ? 0 : teacherFee;
 
-    // Annual Net: 12 months subscription - 1-time message cost
-    const annualRevenue = teacherFee * 12;
+    // Annual Net:
+    const annualRevenue = isYearly ? teacherFee : (teacherFee * 12);
     const annualNet = Math.max(0, annualRevenue - msgCost);
     const annualMargin = annualRevenue > 0 ? ((annualNet / annualRevenue) * 100).toFixed(1) : '100.0';
 
     const revEl = document.getElementById('calcMonth1Revenue');
     const msgsEl = document.getElementById('calcMonth1Msgs');
+    const freeCovEl = document.getElementById('calcMonth1FreeCoverage');
     const costEl = document.getElementById('calcMonth1Cost');
     const net1El = document.getElementById('calcMonth1Net');
     const net2El = document.getElementById('calcMonth2Net');
@@ -8799,16 +8935,42 @@ class CentrlyApp {
     const yearMarginEl = document.getElementById('calcYearMargin');
 
     if (revEl) revEl.innerText = `${teacherFee.toLocaleString('ar-EG')} ج.م`;
-    if (msgsEl) msgsEl.innerText = `${requiredMsgs.toLocaleString('ar-EG')} رسالة (طالب)`;
-    if (costEl) costEl.innerText = `${msgCost.toLocaleString('ar-EG')} ج.م (${requiredMsgs} × ${unitCost} ج.م)`;
-    if (net1El) net1El.innerText = `${month1Net.toLocaleString('ar-EG')} ج.م`;
-    if (net2El) net2El.innerText = `${month2Net.toLocaleString('ar-EG')} ج.م`;
+    if (msgsEl) msgsEl.innerText = `${studentsCount.toLocaleString('ar-EG')} رسالة (طالب)`;
+    if (freeCovEl) {
+      if (paidCount === 0) {
+        freeCovEl.innerText = `${studentsCount.toLocaleString('ar-EG')} رسالة مجانية (100% ضمن Meta)`;
+        freeCovEl.style.color = '#16a34a';
+      } else {
+        freeCovEl.innerText = `${freeCount.toLocaleString('ar-EG')} مجاناً من Meta + ${paidCount.toLocaleString('ar-EG')} رسالة مدفوعة`;
+        freeCovEl.style.color = '#0284c7';
+      }
+    }
+    if (costEl) {
+      if (msgCost === 0) {
+        costEl.innerText = '0.00 ج.م (مغطاة بالكامل مجاناً من Meta)';
+        costEl.style.color = '#16a34a';
+      } else {
+        costEl.innerText = `${msgCost.toLocaleString('ar-EG')} ج.م (${paidCount} رسالة × ${unitCost} ج.م)`;
+        costEl.style.color = '#ea580c';
+      }
+    }
+    if (net1El) net1El.innerText = `${month1Net.toLocaleString('ar-EG')} ج.م (${month1Margin}%)`;
+    if (net2El) {
+      if (isYearly) {
+        net2El.innerHTML = `<span style="font-size: 1.4rem; color: #166534;">مدفوع مقدماً بالكامل</span> <div style="font-size: 0.8rem; color: #15803d; font-weight: 700; margin-top: 0.2rem;">تكلفة الواتساب 0.00 ج.م طوال الشهور</div>`;
+      } else {
+        net2El.innerText = `${month2Net.toLocaleString('ar-EG')} ج.م`;
+      }
+    }
     if (yearNetEl) yearNetEl.innerText = `${annualNet.toLocaleString('ar-EG')} ج.م`;
     if (yearRevEl) yearRevEl.innerText = `${annualRevenue.toLocaleString('ar-EG')} ج.م`;
-    if (yearCostEl) yearCostEl.innerText = `${msgCost.toLocaleString('ar-EG')} ج.م (مرة واحدة فقط)`;
+    if (yearCostEl) {
+      yearCostEl.innerText = msgCost === 0 ? '0.00 ج.م (كل الرسائل مجانية)' : `${msgCost.toLocaleString('ar-EG')} ج.م (مرة واحدة بأول شهر)`;
+      yearCostEl.style.color = msgCost === 0 ? '#16a34a' : '#ea580c';
+    }
     if (yearMarginEl) yearMarginEl.innerText = `${annualMargin}%`;
 
-    // Update scale radar cards
+    // Update Scale Radar Cards
     const radarFeeLabel = document.getElementById('calcRadarFeeLabel');
     if (radarFeeLabel) radarFeeLabel.innerText = `${teacherFee.toLocaleString('ar-EG')}`;
 
@@ -8816,11 +8978,17 @@ class CentrlyApp {
     const r25 = document.getElementById('radar25');
     const r50 = document.getElementById('radar50');
     const r100 = document.getElementById('radar100');
+    const periodSubText = isYearly ? 'سنوياً كاش فوري مقدماً' : 'شهرياً بدون مصاريف رسائل';
 
     if (r10) r10.innerText = `${(teacherFee * 10).toLocaleString('ar-EG')} ج.م`;
     if (r25) r25.innerText = `${(teacherFee * 25).toLocaleString('ar-EG')} ج.م`;
     if (r50) r50.innerText = `${(teacherFee * 50).toLocaleString('ar-EG')} ج.م`;
     if (r100) r100.innerText = `${(teacherFee * 100).toLocaleString('ar-EG')} ج.م`;
+
+    ['radar10Sub', 'radar25Sub', 'radar50Sub', 'radar100Sub'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerText = periodSubText;
+    });
   }
 
   setCalcTeacherFee(num) {
@@ -8850,6 +9018,10 @@ class CentrlyApp {
     const greeting = encodeURIComponent(`مرحباً ${studentName ? studentName : ''}، معك مستر بخصوص المنصة والحصص.`);
     const waUrl = `https://wa.me/${formattedPhone}?text=${greeting}`;
     window.open(waUrl, '_blank');
+  }
+
+  viewWhatsAppConversationDetails(convIdentifier) {
+    return this.showWhatsAppMessageHistory(convIdentifier);
   }
 
   showWhatsAppMessageHistory(convIdentifier) {
