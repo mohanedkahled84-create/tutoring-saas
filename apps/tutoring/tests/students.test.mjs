@@ -165,3 +165,73 @@ test("DEV-67: generateBarcodeSheetPdf generates valid A4 PDF buffer", async () =
   assert.ok(buffer.length > 500);
   assert.equal(buffer.subarray(0, 4).toString(), "%PDF");
 });
+
+test("DEV-67: Code Uniqueness - rejects duplicate student codes on manual create and update", async () => {
+  const repo = new FakeStudentsRepository();
+  const service = new StudentsService(repo);
+
+  // Student 1 with code "1055"
+  await service.createStudent("tenant-1", {
+    name: "حسام حسن",
+    parent_phone: "01011112222",
+    code: "1055",
+  });
+
+  // Attempting Student 2 with duplicate code "1055" in same tenant must fail
+  await assert.rejects(
+    async () => {
+      await service.createStudent("tenant-1", {
+        name: "إبراهيم حسن",
+        parent_phone: "01033334444",
+        code: "1055",
+      });
+    },
+    (err) => err.message.includes("DUPLICATE_STUDENT_CODE") && err.message.includes("1055")
+  );
+
+  // Student 3 with different code "1056" succeeds
+  const s3 = await service.createStudent("tenant-1", {
+    name: "إبراهيم حسن",
+    parent_phone: "01033334444",
+    code: "1056",
+  });
+  assert.equal(s3.code, "1056");
+
+  // Updating s3 code to "1055" (held by حسام) must fail
+  await assert.rejects(
+    async () => {
+      await service.updateStudent(s3.id, {
+        code: "1055",
+      });
+    },
+    (err) => err.message.includes("DUPLICATE_STUDENT_CODE") && err.message.includes("1055")
+  );
+});
+
+test("DEV-67: Code Uniqueness - bulkImport rejects duplicate codes within batch and against DB", async () => {
+  const repo = new FakeStudentsRepository();
+  repo.groups.push({ id: "group-g1", name: "كيمياء 2ث", tenant_id: "tenant-1" });
+  const service = new StudentsService(repo);
+
+  // Existing student in DB with code 2001
+  await service.createStudent("tenant-1", {
+    name: "طالب قديم",
+    parent_phone: "01011112222",
+    code: "2001",
+  });
+
+  const rows = [
+    { name: "طالب جديد 1", parent_phone: "01022223333", code: "2001" }, // Duplicate with DB
+    { name: "طالب جديد 2", parent_phone: "01044445555", code: "2002" }, // Valid
+    { name: "طالب جديد 3", parent_phone: "01066667777", code: "2002" }, // Duplicate with row 2 in same batch
+    { name: "طالب جديد 4", parent_phone: "01088889999" }, // Auto-assigned serial, must not collide
+  ];
+
+  const result = await service.bulkImport("tenant-1", "group-g1", { rows });
+
+  assert.equal(result.total_rows, 4);
+  assert.equal(result.imported_count, 2); // row 2 and row 4
+  assert.equal(result.skipped_count, 2);  // row 1 and row 3
+  assert.ok(result.errors.some(e => e.row === 1 && e.error.includes("مسجل بالفعل في المنصة")));
+  assert.ok(result.errors.some(e => e.row === 3 && e.error.includes("مكرر في الملف نفسه")));
+});

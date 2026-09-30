@@ -45,36 +45,75 @@ export class StudentsService {
       throw new Error("NO_TENANT_CONTEXT");
     }
 
-    let codeToUse = data.student_code || data.code;
-    if (!codeToUse) {
-      const nextSerial = await this.repo.getHighestSerialCode(tenantId);
+    let codeToUse = (data.student_code || data.code || "").trim();
+    if (codeToUse) {
+      // Validate uniqueness for manually specified code
+      const existing = await this.repo.findByCode(tenantId, codeToUse);
+      if (existing) {
+        throw new Error(`DUPLICATE_STUDENT_CODE: كود الطالب (${codeToUse}) مسجل بالفعل للطالب "${existing.name}". لا يمكن تكرار الأكواد.`);
+      }
+    } else {
+      // Auto-generate unique serial code
+      let nextSerial = await this.repo.getHighestSerialCode(tenantId);
+      while (await this.repo.findByCode(tenantId, String(nextSerial))) {
+        nextSerial++;
+      }
       codeToUse = String(nextSerial);
     }
 
     const autoPassword = data.portal_password || String(Math.floor(100000 + Math.random() * 900000));
 
-    const student = await this.repo.create(tenantId, {
-      name: data.name,
-      parent_phone: data.parent_phone,
-      student_phone: data.student_phone || null,
-      code: codeToUse,
-      student_code: codeToUse,
-      notes: data.notes || null,
-      fee_override: data.fee_override ?? null,
-      exempt: data.exempt ?? false,
-      portal_password: autoPassword,
-    });
+    try {
+      const student = await this.repo.create(tenantId, {
+        name: data.name,
+        parent_phone: data.parent_phone,
+        student_phone: data.student_phone || null,
+        code: codeToUse,
+        student_code: codeToUse,
+        notes: data.notes || null,
+        fee_override: data.fee_override ?? null,
+        exempt: data.exempt ?? false,
+        portal_password: autoPassword,
+      });
 
-    if (student?.id && tenantId) {
-      const token = generateParentPortalToken(student.id, tenantId, 365);
-      await this.repo.update(student.id, { parent_portal_token: token }).catch(() => {});
-      student.parent_portal_token = token;
+      if (student?.id && tenantId) {
+        const token = generateParentPortalToken(student.id, tenantId, 365);
+        await this.repo.update(student.id, { parent_portal_token: token }).catch(() => {});
+        student.parent_portal_token = token;
+      }
+      return student;
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (err?.code === "23505" || msg.includes("idx_students_tenant_code_unique") || msg.includes("idx_students_tenant_student_code_unique") || msg.includes("duplicate key value")) {
+        throw new Error(`DUPLICATE_STUDENT_CODE: كود الطالب (${codeToUse}) مسجل بالفعل في المنصة. لا يمكن تكرار الأكواد.`);
+      }
+      throw err;
     }
-    return student;
   }
 
   async updateStudent(id: string, data: UpdateStudentDTO): Promise<Student | null> {
-    return this.repo.update(id, data);
+    const rawCode = data.code !== undefined ? data.code : undefined;
+    if (rawCode !== undefined && rawCode !== null) {
+      const newCode = String(rawCode).trim();
+      if (newCode) {
+        const current = await this.repo.findById(id);
+        if (current) {
+          const existingWithCode = await this.repo.findByCode(current.tenant_id, newCode);
+          if (existingWithCode && existingWithCode.id !== id) {
+            throw new Error(`DUPLICATE_STUDENT_CODE: كود الطالب (${newCode}) مسجل بالفعل للطالب "${existingWithCode.name}". لا يمكن تكرار الأكواد.`);
+          }
+        }
+      }
+    }
+    try {
+      return await this.repo.update(id, data);
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (err?.code === "23505" || msg.includes("idx_students_tenant_code_unique") || msg.includes("idx_students_tenant_student_code_unique") || msg.includes("duplicate key value")) {
+        throw new Error(`DUPLICATE_STUDENT_CODE: كود الطالب مسجل بالفعل في المنصة لطالب آخر.`);
+      }
+      throw err;
+    }
   }
 
   async deleteStudent(id: string): Promise<void> {
@@ -128,8 +167,17 @@ export class StudentsService {
       throw new Error("NO_DATA_ROWS");
     }
 
-    // 3. Resolve starting serial sequence
+    // 3. Resolve starting serial sequence and build existing codes map to prevent duplicates
     let nextSerial = await this.repo.getHighestSerialCode(tenantId);
+    const existingStudents = await this.repo.list(tenantId);
+    const existingCodeMap = new Map<string, string>(); // code -> student name
+    for (const s of existingStudents) {
+      const c1 = (s.code || "").trim();
+      const c2 = (s.student_code || "").trim();
+      if (c1) existingCodeMap.set(c1, s.name);
+      if (c2) existingCodeMap.set(c2, s.name);
+    }
+    const seenCodesInBatch = new Set<string>();
 
     const importedStudents: Array<{
       id: string;
@@ -178,9 +226,32 @@ export class StudentsService {
         continue;
       }
 
-      // Auto-assign serial if missing
-      if (!code) {
+      // Ensure unique code: validate if code provided, or auto-assign non-colliding serial
+      if (code) {
+        if (seenCodesInBatch.has(code)) {
+          errors.push({
+            row: rowNum,
+            name,
+            error: `كود الطالب (${code}) مكرر في الملف نفسه. لا يمكن تكرار الأكواد.`,
+          });
+          continue;
+        }
+        if (existingCodeMap.has(code)) {
+          const owner = existingCodeMap.get(code);
+          errors.push({
+            row: rowNum,
+            name,
+            error: `كود الطالب (${code}) مسجل بالفعل في المنصة للطالب "${owner}". لا يمكن تكرار الأكواد.`,
+          });
+          continue;
+        }
+        seenCodesInBatch.add(code);
+      } else {
+        while (existingCodeMap.has(String(nextSerial)) || seenCodesInBatch.has(String(nextSerial))) {
+          nextSerial += 1;
+        }
         code = String(nextSerial);
+        seenCodesInBatch.add(code);
         nextSerial += 1;
       }
 
@@ -223,6 +294,7 @@ export class StudentsService {
         });
 
         await this.repo.enrollStudentInGroup(tenantId, student.id, groupId);
+        existingCodeMap.set(code, name);
 
         importedStudents.push({
           id: student.id,
@@ -234,7 +306,11 @@ export class StudentsService {
         });
       } catch (rowErr: unknown) {
         const message = rowErr instanceof Error ? rowErr.message : "Row insertion failed";
-        errors.push({ row: rowNum, name, error: message });
+        if (message.includes("idx_students_tenant_code_unique") || message.includes("idx_students_tenant_student_code_unique") || message.includes("23505")) {
+          errors.push({ row: rowNum, name, error: `كود الطالب (${code}) مسجل بالفعل في المنصة لطالب آخر.` });
+        } else {
+          errors.push({ row: rowNum, name, error: message });
+        }
       }
     }
 

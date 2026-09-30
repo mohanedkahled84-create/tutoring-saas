@@ -8,6 +8,7 @@ import {
   publicSelfRegisterSchema,
 } from "../../shared/middleware/validation.js";
 import { generateParentPortalToken, buildShortPortalUrl } from "../../shared/utils/tokens.js";
+import { supabasePublic } from "../../supabase.js";
 
 export const studentsRouter = Router();
 export const importRouter = Router();
@@ -48,8 +49,12 @@ studentsRouter.post(
         res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
         return;
       }
-      const message = err instanceof Error ? err.message : "Failed to create student";
-      res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+      const rawMsg = err instanceof Error ? err.message : "Failed to create student";
+      if (rawMsg.startsWith("DUPLICATE_STUDENT_CODE:")) {
+        res.status(409).json({ error: { code: "DUPLICATE_STUDENT_CODE", message: rawMsg.replace("DUPLICATE_STUDENT_CODE: ", "") } });
+        return;
+      }
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: rawMsg } });
     }
   }
 );
@@ -92,8 +97,12 @@ studentsRouter.put(
 
       res.json({ student });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to update student";
-      res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+      const rawMsg = err instanceof Error ? err.message : "Failed to update student";
+      if (rawMsg.startsWith("DUPLICATE_STUDENT_CODE:")) {
+        res.status(409).json({ error: { code: "DUPLICATE_STUDENT_CODE", message: rawMsg.replace("DUPLICATE_STUDENT_CODE: ", "") } });
+        return;
+      }
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: rawMsg } });
     }
   }
 );
@@ -315,6 +324,27 @@ studentsRouter.post("/batch-send-parent-links", async (req: AuthenticatedRequest
     return;
   }
 
+  // Enforce subscription gating: batch links dispatch is strictly for paid active subscriptions
+  if (req.user?.role !== "admin" && tenantId) {
+    const db = req.supabase || supabasePublic;
+    const { data: tenant } = await db
+      .from("tenants")
+      .select("id, subscription_status, status")
+      .eq("id", tenantId)
+      .maybeSingle();
+
+    const isPaidActive = tenant?.subscription_status === "active" || tenant?.status === "active";
+    if (!isPaidActive) {
+      res.status(403).json({
+        error: {
+          code: "SUBSCRIPTION_REQUIRED",
+          message: "خاصية إرسال الروابط عبر واتساب متاحة حصرياً للباقات المدفوعة. يرجى تفعيل اشتراكك للاستفادة من الميزة.",
+        },
+      });
+      return;
+    }
+  }
+
   try {
     const studentsService = getServices(req).students;
     const allStudents = await studentsService.listStudents(tenantId || undefined);
@@ -419,6 +449,27 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
   if (!tenantId && req.user?.role !== "admin") {
     res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
     return;
+  }
+
+  // Enforce subscription gating: official Meta WhatsApp links dispatch is strictly for paid active subscriptions
+  if (req.user?.role !== "admin" && tenantId) {
+    const db = req.supabase || supabasePublic;
+    const { data: tenant } = await db
+      .from("tenants")
+      .select("id, subscription_status, status")
+      .eq("id", tenantId)
+      .maybeSingle();
+
+    const isPaidActive = tenant?.subscription_status === "active" || tenant?.status === "active";
+    if (!isPaidActive) {
+      res.status(403).json({
+        error: {
+          code: "SUBSCRIPTION_REQUIRED",
+          message: "خاصية إرسال الروابط عبر واتساب ميتا الرسمي متاحة حصرياً للباقات المدفوعة. يرجى تفعيل اشتراكك للاستفادة من الميزة.",
+        },
+      });
+      return;
+    }
   }
 
   try {

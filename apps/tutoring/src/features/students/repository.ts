@@ -102,6 +102,28 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     return student;
   }
 
+  async findByCode(tenantId: string | undefined, code: string): Promise<Student | null> {
+    const raw = code.trim();
+    if (!raw) return null;
+    const db = this.privilegedClient || this.client;
+    let q = db
+      .from("students")
+      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
+      .or(`code.eq.${raw},student_code.eq.${raw}`);
+
+    if (tenantId) {
+      q = q.eq("tenant_id", tenantId);
+    }
+
+    const { data, error } = await q.limit(1).maybeSingle();
+    if (error || !data) return null;
+    const student = data as Student;
+    if (!student.parent_portal_token && student.id && student.tenant_id) {
+      student.parent_portal_token = generateParentPortalToken(student.id, student.tenant_id, 365);
+    }
+    return student;
+  }
+
   async findByIdentifier(identifier: string, password?: string): Promise<Student | null> {
     const raw = identifier.trim();
     if (!raw) return null;
@@ -339,6 +361,19 @@ export class FakeStudentsRepository implements IStudentsRepository {
   async findById(id: string): Promise<Student | null> {
     const student = this.students.find((s) => s.id === id);
     return student ? { ...student } : null;
+  }
+
+  async findByCode(tenantId: string | undefined, code: string): Promise<Student | null> {
+    const raw = code.trim();
+    if (!raw) return null;
+    const found = this.students.find((s) => {
+      const tenantMatch = !tenantId || s.tenant_id === tenantId;
+      const codeMatch =
+        (s.code && s.code.trim() === raw) ||
+        (s.student_code && s.student_code.trim() === raw);
+      return tenantMatch && codeMatch;
+    });
+    return found ? { ...found } : null;
   }
 
   async findByIdentifier(identifier: string, password?: string): Promise<Student | null> {

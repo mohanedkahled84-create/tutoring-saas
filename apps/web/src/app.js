@@ -5617,6 +5617,11 @@ class CentrlyApp {
           <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم مصري مكون من 11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015</small>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">كود الطالب (اختياري)</label>
+          <input type="text" id="newStudentCode" class="form-input" placeholder="اتركه فارغاً للتوليد التلقائي (مثال: 1025)" dir="ltr">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">يمكنك كتابة كود مخصص للطالب أو تركه فارغاً ليقوم النظام بتوليد كود تسلسلي فريد تلقائياً.</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
             <label class="form-label" style="font-weight: 700; margin-bottom: 0;">المجموعة الأساسية *</label>
             <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleQuickAddGroupInSingleStudent()" style="font-size: 0.78rem; font-weight: 700; padding: 0.15rem 0.55rem; color: #2563eb; display: inline-flex; align-items: center; gap: 0.25rem; border-color: #cbd5e1;">
@@ -5686,6 +5691,7 @@ class CentrlyApp {
     const name = document.getElementById('newStudentName').value.trim();
     const parent_phone = document.getElementById('newStudentPhone').value.trim();
     const student_phone = document.getElementById('newStudentOwnPhone')?.value.trim() || '';
+    const rawCode = document.getElementById('newStudentCode')?.value.trim();
     const groupId = document.getElementById('newStudentGroup').value;
     const feedback = document.getElementById('addStudentFeedback');
     const saveBtn = document.getElementById('btnSaveStudent');
@@ -5723,6 +5729,24 @@ class CentrlyApp {
       return;
     }
 
+    // Client-side uniqueness check if a custom code is entered
+    if (rawCode) {
+      const duplicateStudent = (this.students || []).find(s => {
+        const c1 = (s.code || '').trim();
+        const c2 = (s.student_code || s.studentCode || '').trim();
+        return c1 === rawCode || c2 === rawCode;
+      });
+      if (duplicateStudent) {
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+          feedback.style.color = 'var(--centrly-danger)';
+          feedback.textContent = `كود الطالب (${rawCode}) مسجل بالفعل للطالب "${duplicateStudent.name}". لا يمكن تكرار الأكواد.`;
+        }
+        return;
+      }
+    }
+
     saveBtn.disabled = true;
     saveBtn.textContent = 'جاري الإضافة...';
 
@@ -5733,6 +5757,7 @@ class CentrlyApp {
           name,
           parent_phone: cleanParentPhone,
           student_phone: cleanStudentPhone,
+          code: rawCode || undefined,
         },
       });
 
@@ -5873,6 +5898,7 @@ class CentrlyApp {
     `).join('');
 
     const currentName = student.name || student.full_name || '';
+    const currentCode = student.code || student.student_code || student.studentCode || '';
     const currentStudentPhone = student.student_phone || student.studentPhone || '';
     const currentParentPhone = student.parent_phone || student.parentPhone || '';
 
@@ -5881,6 +5907,11 @@ class CentrlyApp {
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">اسم الطالب الرباعي *</label>
           <input type="text" id="editStudentName" class="form-input" value="${escapeHtml(currentName)}" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">كود الطالب *</label>
+          <input type="text" id="editStudentCode" class="form-input" value="${escapeHtml(currentCode)}" placeholder="مثال: 1025" dir="ltr" required>
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">كود الطالب التعريفي في المنصة والباركود (يجب أن يكون فريداً وغير مكرر)</small>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي *</label>
@@ -5916,12 +5947,39 @@ class CentrlyApp {
   async saveStudentEdit(e, studentId) {
     e.preventDefault();
     const name = document.getElementById('editStudentName')?.value.trim();
+    const code = document.getElementById('editStudentCode')?.value.trim();
     const parent_phone = document.getElementById('editStudentPhone')?.value.trim();
     const student_phone = document.getElementById('editStudentOwnPhone')?.value.trim() || '';
     const rawGroupId = document.getElementById('editStudentGroup')?.value;
     const targetGroupId = rawGroupId && rawGroupId.trim().length > 0 ? rawGroupId.trim() : null;
     const feedback = document.getElementById('editStudentFeedback');
     const saveBtn = document.getElementById('btnUpdateStudent');
+
+    if (!code) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = 'كود الطالب إلزامي ولا يمكن تركه فارغاً.';
+      }
+      return;
+    }
+
+    const duplicateStudent = (this.students || []).find(s => {
+      if (s.id === studentId) return false;
+      const c1 = (s.code || '').trim();
+      const c2 = (s.student_code || s.studentCode || '').trim();
+      return c1 === code || c2 === code;
+    });
+    if (duplicateStudent) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `كود الطالب (${code}) مسجل بالفعل للطالب "${duplicateStudent.name}". لا يمكن تكرار الأكواد.`;
+      }
+      return;
+    }
 
     const egyptianPhoneRegex = /^01[0125][0-9]{8}$/;
     const cleanParentPhone = parent_phone.replace(/[\s\-().]/g, '');
@@ -5959,6 +6017,7 @@ class CentrlyApp {
           parent_phone: cleanParentPhone,
           student_phone: cleanStudentPhone,
           group_id: targetGroupId,
+          code,
         },
       });
 
@@ -5974,6 +6033,9 @@ class CentrlyApp {
             ...this.students[studentIndex],
             ...(updatedStudent && typeof updatedStudent === 'object' ? updatedStudent : {}),
             name,
+            code,
+            student_code: code,
+            studentCode: code,
             parent_phone: cleanParentPhone,
             parentPhone: cleanParentPhone,
             student_phone: cleanStudentPhone,
@@ -8280,7 +8342,67 @@ class CentrlyApp {
     }
   }
 
-  openBatchPortalLinksModal(preselectedGroupId = null) {
+  openSubscriptionRequiredForBatchPortalModal() {
+    const bodyHtml = `
+      <div style="text-align: center; padding: 1.25rem 0.5rem;">
+        <div style="width: 76px; height: 76px; margin: 0 auto 1.25rem; background: linear-gradient(135deg, #fef3c7, #fef08a); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(234, 179, 8, 0.25); border: 2.5px solid #fde047;">
+          <span style="font-size: 2.25rem;">👑</span>
+        </div>
+        
+        <h3 style="font-size: 1.25rem; font-weight: 800; color: #1e293b; margin-bottom: 0.6rem;">
+          ميزة حصرية للباقات المدفوعة
+        </h3>
+        
+        <p style="font-size: 0.92rem; color: #475569; line-height: 1.6; max-width: 440px; margin: 0 auto 1.25rem;">
+          خاصية إرسال روابط المنصة وحسابات الدخول عبر <strong>واتساب ميتا الرسمي المعتمد (Meta Cloud API)</strong> متاحة حصرياً عند الاشتراك في إحدى باقات سنترلي.
+        </p>
+
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem; text-align: right; max-width: 440px; margin: 0 auto 1.5rem;">
+          <div style="font-weight: 800; font-size: 0.85rem; color: #0f172a; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span style="color: #ca8a04;">✨</span>
+            <span>ماذا تحصل عند الترقية للباقة المدفوعة؟</span>
+          </div>
+          <ul style="margin: 0; padding-right: 1.2rem; font-size: 0.825rem; color: #334155; display: flex; flex-direction: column; gap: 0.45rem; list-style-type: disc;">
+            <li>إرسال فوري لبيانات الدخول (اسم المستخدم وكلمة السر) لجميع الطلاب وأولياء الأمور بنقرة واحدة.</li>
+            <li>رسائل موثقة رسميّة باسم سنترلي عبر خوادم Meta دون أي حظر أو تعليق للأرقام.</li>
+            <li>ردود آلية ذكية عبر بوت واتساب بمجرد طلب الطالب بيانات حسابه.</li>
+            <li>بوابات متابعة حية لدرجات الكويزات، تقارير الحضور والغياب، وملاحظاتك المباشرة.</li>
+          </ul>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.6rem; max-width: 380px; margin: 0 auto;">
+          <button type="button" class="btn btn-primary" onclick="window.centrlyApp.closeModal(); window.centrlyApp.navigate('billing');" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; font-weight: 800; font-size: 0.95rem; padding: 0.75rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3); display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer;">
+            <span>🚀</span>
+            <span>الترقية والاشتراك في باقة الآن</span>
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()" style="font-weight: 600; font-size: 0.85rem; padding: 0.45rem;">
+            إغلاق
+          </button>
+        </div>
+      </div>
+    `;
+
+    this.showModal('تفعيل إرسال الروابط عبر واتساب', bodyHtml, '');
+  }
+
+  async openBatchPortalLinksModal(preselectedGroupId = null) {
+    if (!this.billingState && this.user?.role !== 'admin') {
+      try {
+        const billingRes = await request('/billing/status');
+        if (billingRes) {
+          this.billingState = billingRes;
+          this.saveCache('billingState', this.billingState);
+        }
+      } catch (_) {}
+    }
+
+    const billing = this.billingState || {};
+    const isPaidActive = (billing.subscription_status === 'active' || billing.status === 'active' || this.user?.role === 'admin');
+    if (!isPaidActive) {
+      this.openSubscriptionRequiredForBatchPortalModal();
+      return;
+    }
+
     const allUnsentStudents = this.getUnsentPortalStudents('ALL');
 
     if (allUnsentStudents.length === 0) {
@@ -8469,6 +8591,11 @@ class CentrlyApp {
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = `${getIcon('whatsapp', 16)}<span>إعادة المحاولة</span>`;
+      }
+      if (err?.code === 'SUBSCRIPTION_REQUIRED' || (err?.message && err.message.includes('SUBSCRIPTION_REQUIRED')) || (err?.message && err.message.includes('الباقات المدفوعة'))) {
+        this.closeModal();
+        this.openSubscriptionRequiredForBatchPortalModal();
+        return;
       }
       this.showToast(`حدث خطأ أثناء الإرسال: ${err.message || 'تأكد من الاتصال بالخادم'}`, 'danger');
     }
@@ -9514,6 +9641,15 @@ class CentrlyApp {
     let validCount = 0;
     let invalidCount = 0;
 
+    const seenCodesInPreview = new Set();
+    const existingCodeMap = new Map();
+    (this.students || []).forEach(s => {
+      const c1 = (s.code || '').trim();
+      const c2 = (s.student_code || s.studentCode || '').trim();
+      if (c1) existingCodeMap.set(c1, s.name);
+      if (c2) existingCodeMap.set(c2, s.name);
+    });
+
     const sampleRows = [];
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
@@ -9526,7 +9662,21 @@ class CentrlyApp {
 
       const isNameValid = name.length > 0;
       const isParentValid = this.isImportPhoneValid(parentPhone);
-      const isValid = isNameValid && isParentValid;
+      let isCodeDuplicate = false;
+      let duplicateReason = '';
+      if (code) {
+        if (seenCodesInPreview.has(code)) {
+          isCodeDuplicate = true;
+          duplicateReason = 'كود مكرر في الملف';
+        } else if (existingCodeMap.has(code)) {
+          isCodeDuplicate = true;
+          duplicateReason = `كود مكرر (${existingCodeMap.get(code)})`;
+        } else {
+          seenCodesInPreview.add(code);
+        }
+      }
+
+      const isValid = isNameValid && isParentValid && !isCodeDuplicate;
 
       if (isValid) {
         validCount++;
@@ -9538,6 +9688,8 @@ class CentrlyApp {
         let statusHtml = '';
         if (isValid) {
           statusHtml = `<span style="background: #dcfce7; color: #15803d; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">✅ صالح</span>`;
+        } else if (isCodeDuplicate) {
+          statusHtml = `<span style="background: #fee2e2; color: #b91c1c; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">⚠️ ${duplicateReason}</span>`;
         } else if (!isNameValid) {
           statusHtml = `<span style="background: #fee2e2; color: #b91c1c; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">⚠️ الاسم مفقود</span>`;
         } else if (!isParentValid) {
@@ -9569,7 +9721,7 @@ class CentrlyApp {
             </span>
             ${invalidCount > 0 ? `
               <span style="background: #fee2e2; color: #991b1b; padding: 0.2rem 0.55rem; border-radius: 6px; font-weight: 700;">
-                بيانات غير مكتملة: ${invalidCount}
+                بيانات غير مكتملة أو مكررة: ${invalidCount}
               </span>
             ` : ''}
           </div>
@@ -9642,6 +9794,14 @@ class CentrlyApp {
 
     const validStudents = [];
     const skippedRows = [];
+    const seenBatchCodes = new Set();
+    const existingCodeMap = new Map();
+    (this.students || []).forEach(s => {
+      const c1 = (s.code || '').trim();
+      const c2 = (s.student_code || s.studentCode || '').trim();
+      if (c1) existingCodeMap.set(c1, s.name);
+      if (c2) existingCodeMap.set(c2, s.name);
+    });
 
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
@@ -9666,6 +9826,27 @@ class CentrlyApp {
           reason: 'رقم ولي الأمر غير صالح (يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ومكون من 11 رقماً)',
         });
         continue;
+      }
+
+      // Check code uniqueness within batch and against existing DB students
+      if (code) {
+        if (seenBatchCodes.has(code)) {
+          skippedRows.push({
+            row: i + 1,
+            name,
+            reason: `كود الطالب (${code}) مكرر في الملف نفسه. لا يمكن تكرار الأكواد.`,
+          });
+          continue;
+        }
+        if (existingCodeMap.has(code)) {
+          skippedRows.push({
+            row: i + 1,
+            name,
+            reason: `كود الطالب (${code}) مسجل بالفعل في المنصة للطالب "${existingCodeMap.get(code)}". لا يمكن تكرار الأكواد.`,
+          });
+          continue;
+        }
+        seenBatchCodes.add(code);
       }
 
       validStudents.push({
