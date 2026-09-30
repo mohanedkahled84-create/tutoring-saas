@@ -8763,58 +8763,80 @@ class CentrlyApp {
   }
 
   recalculateWhatsAppEconomics() {
-    const studentInput = document.getElementById('calcStudentCount');
-    const feeInput = document.getElementById('calcStudentFee');
-    const exemptInput = document.getElementById('calcExemptCount');
+    const teacherInput = document.getElementById('calcTeacherCount');
+    const feeInput = document.getElementById('calcTeacherFee');
+    const freeInput = document.getElementById('calcFreeTeacherCount');
+    const avgStudentsInput = document.getElementById('calcAvgStudents');
 
-    if (!studentInput || !feeInput || !exemptInput) return;
+    if (!teacherInput || !feeInput) return;
 
-    const totalStudents = Math.max(0, parseInt(studentInput.value, 10) || 0);
-    const fee = Math.max(0, parseFloat(feeInput.value) || 0);
-    const exempt = Math.min(totalStudents, Math.max(0, parseInt(exemptInput.value, 10) || 0));
+    const totalTeachers = Math.max(1, parseInt(teacherInput.value, 10) || 1);
+    const teacherFee = Math.max(0, parseFloat(feeInput.value) || 0);
+    const freeTeachers = Math.min(totalTeachers, Math.max(0, parseInt(freeInput?.value, 10) || 0));
+    const avgStudents = Math.max(1, parseInt(avgStudentsInput?.value, 10) || 70);
 
-    const payingStudents = Math.max(0, totalStudents - exempt);
-    const monthlyRevenue = payingStudents * fee;
+    const payingTeachers = Math.max(0, totalTeachers - freeTeachers);
+    const monthlyTeacherRevenue = payingTeachers * teacherFee;
 
-    // Month 1 calculations:
-    // Required messages = totalStudents (each student receives portal login credentials once)
+    // Total students across all subscribed teachers
+    const totalStudents = totalTeachers * avgStudents;
+    // Each teacher sends onboarding messages to his students ONCE upon registration
     const requiredMsgs = totalStudents;
-    // Meta Cloud API provides 1,000 free service messages/month
+
+    // Meta WhatsApp Cloud API tier: 1,000 free service messages/month
     const metaFreeTier = 1000;
     const paidMsgs = Math.max(0, requiredMsgs - metaFreeTier);
-    const costPerPaidMsgEgp = 0.80; // approximate Meta Cloud API rate in Egypt
-    const month1WhatsAppCost = Math.round(paidMsgs * costPerPaidMsgEgp);
-    const month1Net = Math.max(0, monthlyRevenue - month1WhatsAppCost);
+    const costPerPaidMsg = 0.80; // approximate EGP per message
+    const month1WhatsAppCost = Math.round(paidMsgs * costPerPaidMsg);
+    const month1Net = Math.max(0, monthlyTeacherRevenue - month1WhatsAppCost);
 
-    // Month 2+ recurring calculations:
-    // Credentials already delivered. Zero new setup messages required. 100% recurring profit!
-    const month2Net = monthlyRevenue;
+    // Month 2+ (الشهرية القادمة):
+    // Existing students already activated. WhatsApp onboarding cost = 0.00 EGP!
+    const month2Net = monthlyTeacherRevenue;
 
+    const totalStudentsEl = document.getElementById('calcTotalStudents');
     const revEl = document.getElementById('calcMonth1Revenue');
     const msgsEl = document.getElementById('calcMonth1Msgs');
+    const costEl = document.getElementById('calcMonth1Cost');
     const net1El = document.getElementById('calcMonth1Net');
     const net2El = document.getElementById('calcMonth2Net');
 
-    if (revEl) revEl.innerText = `${monthlyRevenue.toLocaleString('ar-EG')} ج.م`;
-    if (msgsEl) msgsEl.innerText = `${requiredMsgs.toLocaleString('ar-EG')} رسالة (${payingStudents} دافع + ${exempt} معفي مجاناً)`;
-    if (net1El) {
+    if (totalStudentsEl) totalStudentsEl.innerText = `${totalStudents.toLocaleString('ar-EG')} طالب (${totalTeachers} مدرس × ${avgStudents} طالب)`;
+    if (revEl) revEl.innerText = `${monthlyTeacherRevenue.toLocaleString('ar-EG')} ج.م (${payingTeachers} مدرس دافع × ${teacherFee} ج.م)`;
+    if (msgsEl) msgsEl.innerText = `${requiredMsgs.toLocaleString('ar-EG')} رسالة تفعيل (تُرسل مرة واحدة فقط)`;
+    if (costEl) {
       if (month1WhatsAppCost > 0) {
-        net1El.innerText = `${month1Net.toLocaleString('ar-EG')} ج.م (بعد خصم ${month1WhatsAppCost.toLocaleString('ar-EG')} ج.م تكلفة رسائل فوق الـ 1,000)`;
+        costEl.innerText = `${month1WhatsAppCost.toLocaleString('ar-EG')} ج.م (${paidMsgs.toLocaleString('ar-EG')} رسالة فوق الـ 1,000 المجانية)`;
+        costEl.style.color = '#ea580c';
       } else {
-        net1El.innerText = `${month1Net.toLocaleString('ar-EG')} ج.م (0 ج.م تكلفة رسائل - ضمن الـ 1,000 المجانية)`;
+        costEl.innerText = '0.00 ج.م (مغطاة بالكامل ضمن الـ 1,000 المجانية من Meta)';
+        costEl.style.color = '#16a34a';
       }
     }
-    if (net2El) net2El.innerText = `${month2Net.toLocaleString('ar-EG')} ج.م`;
+    if (net1El) {
+      net1El.innerText = `${month1Net.toLocaleString('ar-EG')} ج.م`;
+    }
+    if (net2El) {
+      net2El.innerText = `${month2Net.toLocaleString('ar-EG')} ج.م`;
+    }
   }
 
-  setCalcStudents(num) {
-    const studentInput = document.getElementById('calcStudentCount');
-    const exemptInput = document.getElementById('calcExemptCount');
-    if (studentInput) {
-      studentInput.value = num;
-      if (exemptInput) {
-        exemptInput.value = Math.max(0, Math.round(num * 0.05));
+  setCalcTeachers(num) {
+    const teacherInput = document.getElementById('calcTeacherCount');
+    const freeInput = document.getElementById('calcFreeTeacherCount');
+    if (teacherInput) {
+      teacherInput.value = num;
+      if (freeInput) {
+        freeInput.value = Math.max(0, Math.round(num * 0.1));
       }
+      this.recalculateWhatsAppEconomics();
+    }
+  }
+
+  setCalcAvgStudents(num) {
+    const avgInput = document.getElementById('calcAvgStudents');
+    if (avgInput) {
+      avgInput.value = num;
       this.recalculateWhatsAppEconomics();
     }
   }

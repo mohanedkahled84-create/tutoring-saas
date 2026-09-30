@@ -100,6 +100,11 @@ export function renderBusinessOwnerDashboard(data = {}) {
               ${getIcon('refresh', 14)}
               <span>تحديث البيانات</span>
             </button>
+
+            <button class="btn btn-sm" onclick="window.centrlyApp.navigate('whatsapp-inbox')" style="background: rgba(16, 185, 129, 0.2); border: 1.5px solid #10b981; color: #34d399; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 800; border-radius: 8px;">
+              ${getIcon('whatsapp', 14, '#34d399')}
+              <span>مركز محادثات الواتساب وحاسبة الاشتراكات</span>
+            </button>
             
             <button class="btn btn-sm" onclick="window.centrlyApp.testAdminWebhook()" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; border-radius: 8px;">
               ${getIcon('whatsapp', 14, '#34d399')}
@@ -240,6 +245,30 @@ export function renderBusinessOwnerDashboard(data = {}) {
               <span style="color: #0369a1; font-weight: 800;">متصل</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Founder WhatsApp Inbox & Unit Economics Quick Banner -->
+      <div class="card" style="margin: 0; background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); color: #ffffff; border-radius: 14px; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; cursor: pointer; border: 1.5px solid #059669; box-shadow: 0 4px 15px rgba(6, 78, 59, 0.15);" onclick="window.centrlyApp.navigate('whatsapp-inbox')">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(255, 255, 255, 0.18); display: flex; align-items: center; justify-content: center; color: #34d399; flex-shrink: 0;">
+            ${getIcon('whatsapp', 26, '#34d399')}
+          </div>
+          <div>
+            <div style="font-weight: 800; font-size: 1.05rem; color: #ffffff; display: flex; align-items: center; gap: 0.5rem;">
+              <span>مركز محادثات الواتساب وحاسبة اشتراكات المدرسين وتكلفة الرسائل</span>
+              <span class="badge" style="background: #34d399; color: #064e3b; font-weight: 900; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 6px;">جديد</span>
+            </div>
+            <div style="font-size: 0.85rem; color: #d1fae5; margin-top: 0.25rem; line-height: 1.5;">
+              متابعة مباشرة لمن رد ومن لم يرد من الطلاب وأولياء الأمور على رسائل المدرسين، مع حاسبة تفاعلية لاشتراكات المدرسين (200 ج.م) وحساب أرباح الشهرية القادمة (100% صافي).
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button class="btn" style="background: #ffffff; color: #065f46; font-weight: 800; border: none; padding: 0.55rem 1.2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span>فتح الشاشة والحاسبة</span>
+            <span>&larr;</span>
+          </button>
         </div>
       </div>
 

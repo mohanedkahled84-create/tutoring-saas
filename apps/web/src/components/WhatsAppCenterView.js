@@ -140,7 +140,7 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
 
       </div>
 
-      <!-- TAB 2: SMART PROFIT & UNIT ECONOMICS CALCULATOR -->
+      <!-- TAB 2: SMART TEACHER SUBSCRIPTION & WHATSAPP UNIT ECONOMICS CALCULATOR -->
       <div id="sectionWhatsAppCalculator" style="${activeTab === 'calculator' ? 'display: flex; flex-direction: column; gap: 1.5rem;' : 'display: none;'}">
         
         <!-- Explanation Banner -->
@@ -148,63 +148,77 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
           <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
             <div style="color: #16a34a; margin-top: 0.15rem;">${getIcon('info', 22, '#16a34a')}</div>
             <div>
-              <div style="font-weight: 800; font-size: 0.95rem; color: #166534; margin-bottom: 0.35rem;">
-                كيف تعمل حسبة الواتساب الذكية وتقسيم الأرباح الشهرية؟
+              <div style="font-weight: 800; font-size: 0.98rem; color: #166534; margin-bottom: 0.4rem;">
+                النموذج المالي: اشتراكات المدرسين الشهرية وحسبة تكاليف رسائل الواتساب للطلاب
               </div>
-              <div style="font-size: 0.85rem; color: #15803d; line-height: 1.7;">
-                1. <strong>رسائل تفعيل البوابة تُرسل مرة واحدة فقط:</strong> يتم إرسال روابط المنصة وبيانات الدخول للطلاب وأولياء الأمور لمرة واحدة عند التسجيل، ولا تتكرر التكلفة كل شهر.<br>
-                2. <strong>شريحة مجانية 1,000 محادثة شهرياً من Meta:</strong> أول 1,000 محادثة شهرياً مجانية تماماً، وبالتالي تكلفة إرسال الروابط لطلابك مغطاة بالكامل بدون أي مصاريف.<br>
-                3. <strong>الشهرية القادمة (أرباح متكررة 100%):</strong> في الشهور القادمة، يدفع الطلاب اشتراكهم الشهري بانتظام (مثال 200 ج.م)، بينما تكلفة رسائل الواتساب تكون <strong>0 ج.م</strong> لأنهم مفعلون مسبقاً!
+              <div style="font-size: 0.86rem; color: #15803d; line-height: 1.8;">
+                • <strong>الاشتراك الشهري على المدرس:</strong> كل مدرس يشترك في المنصة باشتراك شهري (الافتراضي 200 ج.م شهرياً)، وهناك أحياناً مدرسين في فترات تجريبية أو مجانية (فري).<br>
+                • <strong>كل مدرس يرسل لطلابه روابط التفعيل:</strong> المعلم يرسل روابط البوابة وبيانات الدخول لطلابه <strong>مرة واحدة فقط</strong> عند تسجيلهم ولا تتكرر شهرياً.<br>
+                • <strong>شريحة Meta المجانية (1,000 محادثة شهرياً):</strong> أول 1,000 رسالة شهرياً مجانية تماماً من Meta، وتغطي تفعيل طلاب المدرسين الجدد بدون أي مصاريف.<br>
+                • <strong>الشهرية القادمة (أرباح متكررة 100% من المدرسين):</strong> في الشهور القادمة، يجدد المدرس اشتراكه الشهري (200 ج.م)، بينما تكلفة رسائل الواتساب لطلابه تكون <strong>0.00 ج.م</strong> لأن الحسابات مفعلة مسبقاً، فتصبح اشتراكات المدرسين صافي أرباح بالكامل!
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Interactive Calculator Card -->
+        <!-- Interactive Calculator Inputs -->
         <div class="card" style="margin: 0; padding: 1.5rem; border-radius: 14px;">
           <h3 style="margin: 0 0 1.25rem 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.5rem;">
             <span>${getIcon('chart', 20, 'var(--centrly-blue-700)')}</span>
-            <span>المدخلات المالية التفاعلية</span>
+            <span>المدخلات المالية التفاعلية (اشتراكات المدرسين وتكلفة الرسائل)</span>
           </h3>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
             
-            <!-- Student Count Input -->
+            <!-- 1. Teacher Count Input -->
             <div class="form-group" style="margin: 0;">
               <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #334155;">
-                عدد الطلاب الإجمالي
+                عدد المدرسين المشتركين في المنصة
               </label>
-              <input type="number" id="calcStudentCount" class="form-input" min="1" max="5000" value="${currentStudentsCount}" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.1rem; padding: 0.65rem 0.85rem;">
-              <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem;">
-                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(50)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">50</button>
-                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(100)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">100</button>
-                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(200)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">200</button>
-                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(300)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">300</button>
+              <input type="number" id="calcTeacherCount" class="form-input" min="1" max="1000" value="25" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.1rem; padding: 0.65rem 0.85rem;">
+              <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcTeachers(10)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">10 مدرسين</button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcTeachers(25)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">25 مدرس</button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcTeachers(50)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">50 مدرس</button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcTeachers(100)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">100 مدرس</button>
               </div>
             </div>
 
-            <!-- Price Per Student (Default 200 EGP as requested) -->
+            <!-- 2. Subscription Fee Per Teacher (200 EGP) -->
             <div class="form-group" style="margin: 0;">
               <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #334155;">
-                سعر اشتراك الطالب الشهري (ج.م)
+                سعر اشتراك المدرس الشهري (ج.م)
               </label>
               <div style="position: relative; display: flex; align-items: center;">
-                <input type="number" id="calcStudentFee" class="form-input" min="50" max="2000" value="200" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.1rem; padding: 0.65rem 0.85rem; padding-left: 3rem;">
+                <input type="number" id="calcTeacherFee" class="form-input" min="50" max="2000" value="200" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.1rem; padding: 0.65rem 0.85rem; padding-left: 3rem;">
                 <span style="position: absolute; left: 0.75rem; font-weight: 800; color: #64748b; font-size: 0.85rem;">ج.م</span>
               </div>
               <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
-                الافتراضي: 200 ج.م شهرياً للطالب
+                سعر اشتراك المدرس الأساسي: 200 ج.م شهرياً
               </div>
             </div>
 
-            <!-- Free / Exempted Students -->
+            <!-- 3. Free Trial / Exempted Teachers -->
             <div class="form-group" style="margin: 0;">
               <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #334155;">
-                الطلاب المعفيين (فري / أيتام / خصومات)
+                مدرسين تجريبي / فري بدون تحصيل
               </label>
-              <input type="number" id="calcExemptCount" class="form-input" min="0" max="500" value="${Math.max(0, Math.round(currentStudentsCount * 0.05))}" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.1rem; padding: 0.65rem 0.85rem;">
+              <input type="number" id="calcFreeTeacherCount" class="form-input" min="0" max="100" value="2" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.1rem; padding: 0.65rem 0.85rem;">
               <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
-                مراعاة الحالات المجانية بدون تحصيل
+                مراعاة المدرسين في فترات التجربة المجانية
+              </div>
+            </div>
+
+            <!-- 4. Avg Students per Teacher -->
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #334155;">
+                متوسط عدد الطلاب لكل مدرس
+              </label>
+              <input type="number" id="calcAvgStudents" class="form-input" min="10" max="1000" value="70" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.1rem; padding: 0.65rem 0.85rem;">
+              <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcAvgStudents(50)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">50 طالب</button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcAvgStudents(70)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">70 طالب</button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcAvgStudents(100)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">100 طالب</button>
               </div>
             </div>
 
@@ -214,58 +228,66 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
         <!-- Live Results Cards -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
           
-          <!-- Month 1: Setup & Launch -->
+          <!-- Month 1: Onboarding Month -->
           <div class="card" style="margin: 0; padding: 1.5rem; border-radius: 14px; background: #ffffff; border: 1.5px solid #cbd5e1; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
-              <span class="badge" style="background: #e2e8f0; color: #1e293b; font-weight: 800; font-size: 0.8rem; padding: 0.3rem 0.6rem;">الشهر الأول (تفعيل الحسابات)</span>
-              <span style="font-size: 0.75rem; color: #64748b;">مرة واحدة فقط</span>
+              <span class="badge" style="background: #e2e8f0; color: #1e293b; font-weight: 800; font-size: 0.8rem; padding: 0.3rem 0.6rem;">الشهر الأول (انضمام وتفعيل الطلاب)</span>
+              <span style="font-size: 0.75rem; color: #64748b;">تكلفة لمرة واحدة فقط</span>
             </div>
 
-            <div style="font-size: 0.85rem; color: #64748b;">إجمالي الإيراد الشهري المحصل:</div>
+            <div style="font-size: 0.85rem; color: #64748b;">إجمالي إيراد اشتراكات المدرسين:</div>
             <div id="calcMonth1Revenue" style="font-size: 1.85rem; font-weight: 900; color: #0f172a; font-family: monospace; margin-top: 0.15rem;">
               -- ج.م
             </div>
 
-            <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.825rem;">
+            <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.825rem;">
               <div style="display: flex; justify-content: space-between; color: #475569;">
-                <span>رسائل الواتساب المطلوبة:</span>
+                <span>إجمالي الطلاب عبر المدرسين:</span>
+                <strong id="calcTotalStudents" style="font-family: monospace; color: #0f172a;">-- طالب</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: #475569;">
+                <span>رسائل الواتساب للتفعيل:</span>
                 <strong id="calcMonth1Msgs" style="font-family: monospace;">-- رسالة</strong>
               </div>
               <div style="display: flex; justify-content: space-between; color: #16a34a; font-weight: 700;">
                 <span>شريحة Meta المجانية:</span>
                 <span>1,000 رسالة مجاناً</span>
               </div>
-              <div style="display: flex; justify-content: space-between; color: #0f172a; font-weight: 800; margin-top: 0.25rem;">
+              <div style="display: flex; justify-content: space-between; color: #475569;">
+                <span>تكلفة رسائل الواتساب:</span>
+                <strong id="calcMonth1Cost" style="font-family: monospace;">--</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: #0f172a; font-weight: 800; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed #e2e8f0;">
                 <span>صافي ربح الشهر الأول:</span>
-                <span id="calcMonth1Net" style="color: #047857; font-size: 1.05rem;">-- ج.م</span>
+                <span id="calcMonth1Net" style="color: #047857; font-size: 1.15rem; font-weight: 900; font-family: monospace;">-- ج.م</span>
               </div>
             </div>
           </div>
 
-          <!-- Month 2+: Next Recurring Month -->
+          <!-- Month 2+: Recurring Months -->
           <div class="card" style="margin: 0; padding: 1.5rem; border-radius: 14px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #86efac; box-shadow: 0 6px 20px rgba(22, 163, 74, 0.1);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
-              <span class="badge" style="background: #16a34a; color: #ffffff; font-weight: 800; font-size: 0.8rem; padding: 0.3rem 0.6rem;">الشهرية القادمة (أرباح مستمرة)</span>
+              <span class="badge" style="background: #16a34a; color: #ffffff; font-weight: 800; font-size: 0.8rem; padding: 0.3rem 0.6rem;">الشهرية القادمة (أرباح اشتراكات مستمرة)</span>
               <span style="font-size: 0.75rem; color: #15803d; font-weight: 700;">تتكرر شهرياً</span>
             </div>
 
-            <div style="font-size: 0.85rem; color: #166534;">صافي الأرباح الشهرية القادمة:</div>
-            <div id="calcMonth2Net" style="font-size: 2rem; font-weight: 900; color: #15803d; font-family: monospace; margin-top: 0.15rem;">
+            <div style="font-size: 0.85rem; color: #166534;">صافي الأرباح من اشتراكات المدرسين:</div>
+            <div id="calcMonth2Net" style="font-size: 2.1rem; font-weight: 900; color: #15803d; font-family: monospace; margin-top: 0.15rem;">
               -- ج.م
             </div>
 
-            <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid rgba(22, 163, 74, 0.2); display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.825rem;">
+            <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid rgba(22, 163, 74, 0.2); display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.825rem;">
               <div style="display: flex; justify-content: space-between; color: #166534;">
-                <span>تكلفة رسائل الواتساب:</span>
+                <span>تكلفة رسائل الطلاب بالشهور القادمة:</span>
                 <strong style="color: #15803d; font-size: 0.95rem;">0.00 ج.م (صفر تكلفة)</strong>
               </div>
               <div style="display: flex; justify-content: space-between; color: #15803d;">
                 <span>السبب:</span>
-                <span>الروابط أرسلت مسبقاً ولا تعاد</span>
+                <span>الروابط أرسلت مرة واحدة فقط للطلاب ولا تعاد</span>
               </div>
-              <div style="display: flex; justify-content: space-between; color: #14532d; font-weight: 800; margin-top: 0.25rem;">
-                <span>نسبة الربح من التحصيل:</span>
-                <span style="font-size: 1.05rem;">100% صافي أرباح</span>
+              <div style="display: flex; justify-content: space-between; color: #14532d; font-weight: 800; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(22, 163, 74, 0.3);">
+                <span>نسبة الربح من اشتراكات المدرسين:</span>
+                <span style="font-size: 1.15rem; color: #15803d; font-weight: 900;">100% صافي أرباح مستمرة</span>
               </div>
             </div>
           </div>
@@ -275,32 +297,38 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
         <!-- Growth Scenarios Card -->
         <div class="card" style="margin: 0; padding: 1.5rem; border-radius: 14px;">
           <h4 style="margin: 0 0 1rem 0; font-size: 1.05rem; font-weight: 800; color: var(--centrly-ink);">
-            رادار نمو الاشتراكات والأرباح عند زيادة عدد الطلاب (بسعر 200 ج.م)
+            رادار نمو عدد المدرسين المشتركين والأرباح الشهرية (بسعر اشتراك 200 ج.م للمدرس)
           </h4>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; text-align: center;">
-              <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">عند وصولك لـ 100 طالب</div>
-              <div style="font-size: 1.4rem; font-weight: 900; color: #0f172a; margin: 0.35rem 0; font-family: monospace;">20,000 ج.م</div>
-              <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">إيراد شهري مستمر</div>
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">عند وصولك لـ 25 مدرس</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: #0f172a; margin: 0.35rem 0; font-family: monospace;">5,000 ج.م</div>
+              <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">اشتراكات شهرية متكررة</div>
             </div>
 
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; text-align: center;">
-              <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">عند وصولك لـ 200 طالب</div>
-              <div style="font-size: 1.4rem; font-weight: 900; color: #0284c7; margin: 0.35rem 0; font-family: monospace;">40,000 ج.م</div>
-              <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">إيراد شهري مستمر</div>
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">عند وصولك لـ 50 مدرس</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: #0284c7; margin: 0.35rem 0; font-family: monospace;">10,000 ج.م</div>
+              <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">اشتراكات شهرية متكررة</div>
             </div>
 
             <div style="background: #f8fafc; border: 1.5px solid #bbf7d0; background: #f0fdf4; border-radius: 10px; padding: 1rem; text-align: center;">
-              <div style="font-size: 0.8rem; color: #166534; font-weight: 700;">عند وصولك لـ 300 طالب</div>
-              <div style="font-size: 1.4rem; font-weight: 900; color: #15803d; margin: 0.35rem 0; font-family: monospace;">60,000 ج.م</div>
-              <div style="font-size: 0.75rem; color: #15803d; font-weight: 800;">إيراد شهري مستمر</div>
+              <div style="font-size: 0.8rem; color: #166534; font-weight: 700;">عند وصولك لـ 100 مدرس</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: #15803d; margin: 0.35rem 0; font-family: monospace;">20,000 ج.م</div>
+              <div style="font-size: 0.75rem; color: #15803d; font-weight: 800;">اشتراكات شهرية متكررة</div>
             </div>
 
             <div style="background: #f8fafc; border: 1.5px solid #fed7aa; background: #fff7ed; border-radius: 10px; padding: 1rem; text-align: center;">
-              <div style="font-size: 0.8rem; color: #9a3412; font-weight: 700;">عند وصولك لـ 500 طالب</div>
-              <div style="font-size: 1.4rem; font-weight: 900; color: #ea580c; margin: 0.35rem 0; font-family: monospace;">100,000 ج.م</div>
-              <div style="font-size: 0.75rem; color: #c2410c; font-weight: 800;">إيراد شهري مستمر</div>
+              <div style="font-size: 0.8rem; color: #9a3412; font-weight: 700;">عند وصولك لـ 250 مدرس</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: #ea580c; margin: 0.35rem 0; font-family: monospace;">50,000 ج.م</div>
+              <div style="font-size: 0.75rem; color: #c2410c; font-weight: 800;">اشتراكات شهرية متكررة</div>
+            </div>
+
+            <div style="background: #f8fafc; border: 1.5px solid #c7d2fe; background: #eef2ff; border-radius: 10px; padding: 1rem; text-align: center;">
+              <div style="font-size: 0.8rem; color: #4338ca; font-weight: 700;">عند وصولك لـ 500 مدرس</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: #4f46e5; margin: 0.35rem 0; font-family: monospace;">100,000 ج.م</div>
+              <div style="font-size: 0.75rem; color: #4338ca; font-weight: 800;">اشتراكات شهرية متكررة</div>
             </div>
           </div>
         </div>
