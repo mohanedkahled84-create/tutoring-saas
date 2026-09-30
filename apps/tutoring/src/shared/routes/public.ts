@@ -93,9 +93,9 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
 
     if (portalData && portalData.student) {
       try {
-        let teacherPhone = "";
+        let teacherPhone = portalData.teacher_phone || portalData.student.teacher_phone || "";
         const targetTenantId = tenantId || portalData.student.tenant_id;
-        if (targetTenantId) {
+        if (!teacherPhone && targetTenantId) {
           const { data: tenantRow } = await supabase
             .from("tenants")
             .select("settings")
@@ -120,6 +120,7 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
         }
         if (teacherPhone) {
           portalData.student.teacher_phone = teacherPhone;
+          portalData.teacher_phone = teacherPhone;
         }
       } catch (_) {}
     }

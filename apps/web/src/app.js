@@ -695,6 +695,23 @@ class CentrlyApp {
     this.prefetchCoreData();
     this.startProactiveSessionRefresher();
 
+    // Critical: Auto-fetch route data on page refresh so no route ever gets stuck on a loading spinner
+    this.loadRouteData(this.currentRoute).then(() => {
+      this.routeLoadingState[this.currentRoute] = false;
+      this.dataLoadedState[this.currentRoute] = true;
+      this.renderMainContent();
+    }).catch(err => {
+      console.warn('Initial route load error on refresh:', err);
+      this.routeLoadingState[this.currentRoute] = false;
+      this.renderMainContent();
+    });
+
+    this.prefetchCoreData().then(() => {
+      if (['students', 'groups', 'dashboard', 'billing'].includes(this.currentRoute)) {
+        this.renderMainContent();
+      }
+    }).catch(() => {});
+
     // Async background security PIN check without blocking initial render
     request('/settings/security-pin').then(pinStatus => {
       if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
@@ -982,7 +999,9 @@ class CentrlyApp {
       }
       const appEl = this.getAppEl();
       if (appEl) {
-        appEl.innerHTML = renderParentPortalView(data);
+        const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_parent_tab')) ||
+                         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_parent_tab')) || 'attendance';
+        appEl.innerHTML = renderParentPortalView(data, savedTab);
         setTimeout(() => {
           if (typeof window !== 'undefined' && window.openParentPortalTour) {
             window.openParentPortalTour(false);
@@ -991,7 +1010,8 @@ class CentrlyApp {
       }
     } catch (err) {
       const msg = err?.message || '';
-      const isExpired = msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED') || msg.includes('401');
+      const isExpired = (msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED')) &&
+                        !msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('Failed to execute');
       if (isExpired) {
         try {
           localStorage.removeItem('centrly_portal_token');
@@ -1043,7 +1063,9 @@ class CentrlyApp {
       }
       const appEl = this.getAppEl();
       if (appEl) {
-        appEl.innerHTML = renderStudentPortalView(data);
+        const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_student_tab')) ||
+                         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_student_tab')) || 'materials';
+        appEl.innerHTML = renderStudentPortalView(data, savedTab);
         setTimeout(() => {
           if (typeof window !== 'undefined' && window.openStudentPortalTour) {
             window.openStudentPortalTour(false);
@@ -1052,7 +1074,8 @@ class CentrlyApp {
       }
     } catch (err) {
       const msg = err?.message || '';
-      const isExpired = msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED') || msg.includes('401');
+      const isExpired = (msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED')) &&
+                        !msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('Failed to execute');
       if (isExpired) {
         try {
           localStorage.removeItem('centrly_portal_token');

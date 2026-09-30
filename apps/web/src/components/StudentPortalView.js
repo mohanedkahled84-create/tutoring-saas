@@ -60,7 +60,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
   const studyMaterials = materials.filter(m => !m.is_homework);
   const approvedHomeworks = homeworkMaterials.filter(m => m.submission_status === 'approved');
 
-  const teacherPhone = student.teacher_phone || portalData.teacher_phone || student.contact_phone || '';
+  const teacherPhone = student.teacher_phone || portalData.teacher_phone || student.contact_phone || portalData.contact_phone || '01010979708';
   let cleanTeacherPhone = teacherPhone ? teacherPhone.replace(/[^\d+]/g, '') : '';
   if (cleanTeacherPhone.startsWith('+')) {
     cleanTeacherPhone = cleanTeacherPhone.substring(1);
@@ -805,6 +805,10 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 // Global helper for switching tabs in student portal
 if (typeof window !== 'undefined') {
   window.switchStudentPortalTab = function(tabName) {
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_portal_student_tab', tabName);
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_portal_student_tab', tabName);
+    } catch (_) {}
     const tabs = ['materials', 'quizzes', 'attendance', 'card'];
     tabs.forEach(t => {
       const content = document.getElementById('student-tab-content-' + t);

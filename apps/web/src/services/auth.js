@@ -3,9 +3,21 @@ import { request, API_BASE_URL, performSilentRefresh, isJwtExpired } from './api
 export const authService = {
   getUser() {
     try {
-      const raw = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_user')) ||
-                  (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_user'));
-      return raw ? JSON.parse(raw) : null;
+      const local = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_user') : null;
+      if (local) {
+        if (typeof sessionStorage !== 'undefined' && !sessionStorage.getItem('centrly_user')) {
+          try { sessionStorage.setItem('centrly_user', local); } catch (_) {}
+        }
+        return JSON.parse(local);
+      }
+      const session = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('centrly_user') : null;
+      if (session) {
+        if (typeof localStorage !== 'undefined' && !localStorage.getItem('centrly_user')) {
+          try { localStorage.setItem('centrly_user', session); } catch (_) {}
+        }
+        return JSON.parse(session);
+      }
+      return null;
     } catch (_) {
       return null;
     }
@@ -24,8 +36,20 @@ export const authService = {
   getToken() {
     try {
       const local = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_token') : null;
-      if (local) return local;
-      return (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_token')) || null;
+      if (local) {
+        if (typeof sessionStorage !== 'undefined' && !sessionStorage.getItem('centrly_token')) {
+          try { sessionStorage.setItem('centrly_token', local); } catch (_) {}
+        }
+        return local;
+      }
+      const session = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('centrly_token') : null;
+      if (session) {
+        if (typeof localStorage !== 'undefined' && !localStorage.getItem('centrly_token')) {
+          try { localStorage.setItem('centrly_token', session); } catch (_) {}
+        }
+        return session;
+      }
+      return null;
     } catch (_) {
       return null;
     }
@@ -34,8 +58,20 @@ export const authService = {
   getRefreshToken() {
     try {
       const local = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_refresh_token') : null;
-      if (local) return local;
-      return (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_refresh_token')) || null;
+      if (local) {
+        if (typeof sessionStorage !== 'undefined' && !sessionStorage.getItem('centrly_refresh_token')) {
+          try { sessionStorage.setItem('centrly_refresh_token', local); } catch (_) {}
+        }
+        return local;
+      }
+      const session = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('centrly_refresh_token') : null;
+      if (session) {
+        if (typeof localStorage !== 'undefined' && !localStorage.getItem('centrly_refresh_token')) {
+          try { localStorage.setItem('centrly_refresh_token', session); } catch (_) {}
+        }
+        return session;
+      }
+      return null;
     } catch (_) {
       return null;
     }

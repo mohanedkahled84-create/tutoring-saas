@@ -41,7 +41,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
   const materials = portalData.materials || [];
   const homeworkList = materials.filter(m => m.is_homework);
 
-  const teacherPhone = student.teacher_phone || portalData.teacher_phone || student.contact_phone || '';
+  const teacherPhone = student.teacher_phone || portalData.teacher_phone || student.contact_phone || portalData.contact_phone || '01010979708';
   let cleanTeacherPhone = teacherPhone ? teacherPhone.replace(/[^\d+]/g, '') : '';
   if (cleanTeacherPhone.startsWith('+')) {
     cleanTeacherPhone = cleanTeacherPhone.substring(1);
@@ -468,6 +468,10 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
 if (typeof window !== 'undefined') {
   window.switchParentPortalTab = function(tabName) {
     const target = (tabName === 'materials') ? 'homework' : tabName;
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_portal_parent_tab', target);
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_portal_parent_tab', target);
+    } catch (_) {}
     const tabs = ['attendance', 'quizzes', 'homework'];
     tabs.forEach(t => {
       const content = document.getElementById('tab-content-' + t);

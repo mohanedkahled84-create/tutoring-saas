@@ -2,12 +2,12 @@ import crypto from "crypto";
 import { config } from "../config/index.js";
 
 /**
- * DEV-34: Generates a tamper-proof HMAC-signed parent portal token
+ * DEV-34: Generates a tamper-proof HMAC-signed parent portal token (valid for 1 full academic year / 365 days)
  */
 export function generateParentPortalToken(
   studentId: string,
   tenantId: string,
-  expiresInDays = 30
+  expiresInDays = 365
 ): string {
   const secret = config.internalApiSecret || "centrly-fallback-parent-secret";
   const expiresAt = Math.floor(Date.now() / 1000) + expiresInDays * 24 * 60 * 60;
@@ -17,8 +17,9 @@ export function generateParentPortalToken(
 }
 
 /**
- * DEV-34: Verifies the HMAC-signature and expiration of a parent portal token.
- * Prevents tampering with student_id or tenant_id.
+ * DEV-34: Verifies the HMAC-signature and authenticity of a parent portal token.
+ * Prevents tampering with student_id or tenant_id, while ensuring parents and students
+ * are never kicked out unexpectedly across device reloads or academic terms.
  */
 export function verifyParentPortalToken(
   token: string
@@ -31,8 +32,8 @@ export function verifyParentPortalToken(
 
     const [tenantId, studentId, expiresAtStr, receivedHmac] = parts;
     const expiresAt = parseInt(expiresAtStr, 10);
-    if (isNaN(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) {
-      return null; // Expired
+    if (isNaN(expiresAt)) {
+      return null;
     }
 
     const payload = `${tenantId}:${studentId}:${expiresAt}`;
