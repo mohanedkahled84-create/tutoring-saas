@@ -17,7 +17,15 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
   const currentCount = studentList.length;
   const appObj = typeof window !== 'undefined' ? window.centrlyApp : null;
   const billingData = billing || appObj?.billingState || {};
-  const isPaidActive = (billingData.subscription_status === 'active' || billingData.status === 'active' || appObj?.user?.role === 'admin');
+  const isPaidActive = Boolean(
+    (appObj?.isUserSubscribed && appObj.isUserSubscribed()) ||
+    billingData.is_paid_active === true ||
+    billingData.subscription_status === 'active' ||
+    billingData.status === 'active' ||
+    (billingData.subscription_ends_at && new Date(billingData.subscription_ends_at).getTime() > Date.now()) ||
+    (Array.isArray(billingData.payment_proofs) && billingData.payment_proofs.some(p => p.status === 'approved')) ||
+    appObj?.user?.role === 'admin'
+  );
   const studentLimit = billingData.students_limit || 300;
   const ratio = studentLimit > 0 ? (currentCount / studentLimit) : 0;
   const isApproaching = ratio >= 0.85 && ratio < 1.0;
@@ -132,11 +140,11 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-            <button class="btn btn-primary" onclick="window.centrlyApp.openBatchPortalLinksModal()" style="display: flex; align-items: center; gap: 0.4rem; background-color: #0284c7; border-color: #0284c7; font-weight: 700;" title="${isPaidActive ? 'إرسال روابط المتابعة والمنصة للطلاب الجدد' : 'ميزة الباقات المدفوعة: إرسال روابط المتابعة والمنصة'}">
+            <button class="btn btn-primary" onclick="window.centrlyApp.openBatchPortalLinksModal()" style="display: flex; align-items: center; gap: 0.4rem; background-color: #0284c7; border-color: #0284c7; font-weight: 700;" title="${isPaidActive ? 'إرسال روابط المتابعة والمنصة للطلاب الجدد' : 'ميزة خاصة بالمشتركين: إرسال روابط المتابعة والمنصة'}">
               ${getIcon('whatsapp', 18)}
               <span>إرسال الروابط للطلاب الجدد</span>
               ${!isPaidActive 
-                ? `<span style="background: #fef08a; color: #854d0e; font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 9999px; font-weight: 900; border: 1px solid #fde047; display: inline-flex; align-items: center; gap: 0.2rem;">👑 باقات</span>`
+                ? `<span style="font-size: 0.95rem; margin-right: 0.2rem;" title="ميزة خاصة بالمشتركين">👑</span>`
                 : (unsentCount > 0 
                   ? `<span style="background: #ef4444; color: #fff; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 9999px; font-weight: 900;">${unsentCount}</span>` 
                   : `<span style="background: #10b981; color: #fff; font-size: 0.75rem; padding: 0.15rem 0.45rem; border-radius: 9999px; display: inline-flex; align-items: center;">${getIcon('check', 10, '#fff')}</span>`)

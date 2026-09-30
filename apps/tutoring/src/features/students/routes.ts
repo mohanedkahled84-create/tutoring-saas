@@ -456,11 +456,15 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
     const db = req.supabase || supabasePublic;
     const { data: tenant } = await db
       .from("tenants")
-      .select("id, subscription_status, status")
+      .select("id, subscription_status, status, subscription_ends_at, trial_ends_at")
       .eq("id", tenantId)
       .maybeSingle();
 
-    const isPaidActive = tenant?.subscription_status === "active" || tenant?.status === "active";
+    const isPaidActive =
+      tenant?.subscription_status === "active" ||
+      tenant?.status === "active" ||
+      (Boolean(tenant?.subscription_ends_at) && new Date(tenant!.subscription_ends_at).getTime() > Date.now());
+
     if (!isPaidActive) {
       res.status(403).json({
         error: {

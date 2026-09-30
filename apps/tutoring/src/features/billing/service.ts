@@ -143,8 +143,14 @@ export class BillingService {
       }
     }
 
+    const hasActiveSubscriptionEnd = Boolean(tenant.subscription_ends_at) && new Date(tenant.subscription_ends_at!).getTime() > Date.now();
+    const hasApprovedProof = Array.isArray(proofs) && proofs.some(p => p.status === "approved" && (!tenant.subscription_ends_at || new Date(tenant.subscription_ends_at).getTime() > Date.now()));
+    const isPaidActive = (tenant.subscription_status === "active") || hasActiveSubscriptionEnd || hasApprovedProof;
+
     return {
-      subscription_status: tenant.subscription_status,
+      subscription_status: isPaidActive ? "active" : tenant.subscription_status,
+      original_status: tenant.subscription_status,
+      is_paid_active: isPaidActive,
       trial_ends_at: tenant.trial_ends_at,
       subscription_ends_at: tenant.subscription_ends_at,
       days_remaining: daysRemaining,

@@ -41,6 +41,8 @@ export interface TenantBillingInfo {
 
 export interface TenantBillingStatus {
   subscription_status: string;
+  original_status?: string;
+  is_paid_active?: boolean;
   trial_ends_at?: string | null;
   subscription_ends_at?: string | null;
   days_remaining: number;

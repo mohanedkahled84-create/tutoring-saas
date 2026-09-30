@@ -2887,7 +2887,7 @@ class CentrlyApp {
             const [studRes, grpRes, billingRes] = await Promise.all([
               request('/students'),
               request('/groups'),
-              (!this.billingState || !this.billingState.students_limit) ? request('/billing/status').catch(() => null) : Promise.resolve(this.billingState),
+              request('/billing/status').catch(() => null),
             ]);
             this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
             this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -8141,51 +8141,46 @@ class CentrlyApp {
       return;
     }
 
-    const studentName = student?.name || 'الطالب';
-    this.showToast(`جاري إرسال رابط المتابعة لولي أمر (${studentName})...`, 'info');
+    const studentName = student?.name || student?.full_name || 'الطالب';
+    let cleanPhone = (parentPhone || '').replace(/[\s\-\+\(\)]/g, '');
+    if (cleanPhone.startsWith('00')) cleanPhone = cleanPhone.slice(2);
+    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
+      cleanPhone = '20' + cleanPhone.slice(1);
+    }
 
-    const openDirectFallback = async () => {
-      try {
-        const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-        const portalUrl = `${canonicalOrigin}/portal`;
-        const pass = student?.portal_password || '123456';
-        const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
-        const msg = `أهلاً بحضرتك ولي أمر الطالب (${studentName})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح!\n\nيسعدنا تزويدكم ببيانات بوابة المتابعة مع ${teacherName}:\n\n*رابط بوابة المتابعة:*\n${portalUrl}\n\n*اسم الدخول (رقم هاتفك):* ${parentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنكم في أي وقت:*\n- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.\n- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.\n- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.\n\n*تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.\n\nمع خالص تمنياتنا للطالب (${studentName}) بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
-        this.openDirectWhatsAppFallbackModal(studentName, parentPhone, msg, () => {
-          if (student) {
-            student.parent_portal_sent_at = new Date().toISOString();
-          }
-          if (this.currentRoute === 'students') {
-            this.renderMainContent();
-          }
-        }, 'parent');
-      } catch (fErr) {
-        this.showToast('تعذر تجهيز رابط المتابعة المباشر', 'danger');
-      }
-    };
+    if (!cleanPhone || cleanPhone.length < 9) {
+      this.showToast(`رقم هاتف ولي الأمر غير صالح للطالب "${studentName}". يرجى تعديل بيانات الطالب والتأكد من صحة الرقم أولاً.`, 'danger');
+      return;
+    }
 
-    try {
-      const res = await request(`/students/${studentId}/send-parent-link`, {
-        method: 'POST',
-        body: {
-          teacher_name: this.user?.name || 'المعلم',
-        },
-      });
+    const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
+    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
+    const portalUrl = `${canonicalOrigin}/portal`;
+    const rawTeacher = this.user?.name || 'المعلم';
+    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
+      ? rawTeacher
+      : `مستر ${rawTeacher}`;
 
-      if (res.success) {
-        if (student) {
-          student.parent_portal_sent_at = res.sent_at || new Date().toISOString();
-        }
-        this.showToast(`تم إرسال رابط المتابعة بنجاح لولي أمر (${studentName})!`, 'success');
-        if (this.currentRoute === 'students') {
-          this.renderMainContent();
-        }
-      } else {
-        // Automatically open instant 1-click Direct WhatsApp modal
-        await openDirectFallback();
-      }
-    } catch (err) {
-      await openDirectFallback();
+    const msg = `أهلاً بحضرتك ولي أمر الطالب (${studentName})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح!\n\nيسعدنا تزويدكم ببيانات بوابة المتابعة مع ${teacherName}:\n\n*رابط بوابة المتابعة:*\n${portalUrl}\n\n*اسم الدخول (رقم هاتفك):* ${parentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنكم في أي وقت:*\n- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.\n- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.\n- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.\n\n*تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.\n\nمع خالص تمنياتنا للطالب (${studentName}) بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
+
+    // Open WhatsApp Web/App directly
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+
+    const now = new Date().toISOString();
+    if (student) {
+      student.parent_portal_sent_at = now;
+    }
+
+    // Persist sent timestamp to database
+    request(`/students/${studentId}`, {
+      method: 'PATCH',
+      body: { parent_portal_sent_at: now },
+    }).catch(() => {});
+
+    this.showToast(`تم فتح محادثة واتساب لولي أمر (${studentName}) بنجاح! 💬`, 'success');
+    if (this.currentRoute === 'students') {
+      this.renderMainContent();
     }
   }
 
@@ -8197,52 +8192,46 @@ class CentrlyApp {
       return;
     }
 
-    const studentName = student?.name || 'الطالب';
-    this.showToast(`جاري إرسال رابط البوابة للطالب (${studentName})...`, 'info');
+    const studentName = student?.name || student?.full_name || 'الطالب';
+    let cleanPhone = (studentPhone || '').replace(/[\s\-\+\(\)]/g, '');
+    if (cleanPhone.startsWith('00')) cleanPhone = cleanPhone.slice(2);
+    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
+      cleanPhone = '20' + cleanPhone.slice(1);
+    }
 
-    const openDirectFallback = async () => {
-      try {
-        const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-        const studentUrl = `${canonicalOrigin}/portal`;
-        const pass = student?.portal_password || '123456';
-        const teacherName = this.user?.name ? (this.user.name.startsWith('مستر') || this.user.name.startsWith('أ.') ? this.user.name : `مستر ${this.user.name}`) : 'إدارة المتابعة';
-        const msg = `أهلاً بك يا (${studentName})، نتمنى لك كل التوفيق والتميز دائماً!\n\nتم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع ${teacherName}:\n\n*رابط بوابتك التعليمية:*\n${studentUrl}\n\n*اسم الدخول (رقم هاتفك):* ${studentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\n*تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والواجبات أولاً بأول.\n\nمع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
-        this.openDirectWhatsAppFallbackModal(studentName, studentPhone, msg, () => {
-          if (student) {
-            student.student_portal_sent_at = new Date().toISOString();
-          }
-          if (this.currentRoute === 'students') {
-            this.renderMainContent();
-          }
-        }, 'student');
-      } catch (fErr) {
-        this.showToast('تعذر تجهيز رابط بوابة الطالب المباشر', 'danger');
-      }
-    };
+    if (!cleanPhone || cleanPhone.length < 9) {
+      this.showToast(`رقم هاتف الطالب غير صالح للطالب "${studentName}". يرجى تعديل بيانات الطالب والتأكد من صحة الرقم أولاً.`, 'danger');
+      return;
+    }
 
-    try {
-      const res = await request(`/students/${studentId}/send-student-link`, {
-        method: 'POST',
-        body: {
-          teacher_name: this.user?.name || 'المعلم',
-        },
-      });
+    const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
+    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
+    const studentUrl = `${canonicalOrigin}/portal`;
+    const rawTeacher = this.user?.name || 'المعلم';
+    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
+      ? rawTeacher
+      : `مستر ${rawTeacher}`;
 
-      if (res.success) {
-        if (student) {
-          student.student_portal_sent_at = res.sent_at || new Date().toISOString();
-        }
-        this.showToast(`تم إرسال رابط البوابة بنجاح للطالب (${studentName})!`, 'success');
-        if (this.currentRoute === 'students') {
-          this.renderMainContent();
-        }
-      } else {
-        const errorMsg = res.error || 'خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR أولاً.';
-        this.showToast(errorMsg, 'danger');
-      }
-    } catch (err) {
-      const errorMsg = err.message || 'خدمة واتساب غير متصلة برقمك. يرجى التوجه إلى صفحة الإعدادات ومسح رمز QR أولاً.';
-      this.showToast(errorMsg, 'danger');
+    const msg = `أهلاً بك يا (${studentName})، نتمنى لك كل التوفيق والتميز دائماً!\n\nتم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع ${teacherName}:\n\n*رابط بوابتك التعليمية:*\n${studentUrl}\n\n*اسم الدخول (رقم هاتفك):* ${studentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\n*تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والواجبات أولاً بأول.\n\nمع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
+
+    // Open WhatsApp Web/App directly
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+
+    const now = new Date().toISOString();
+    if (student) {
+      student.student_portal_sent_at = now;
+    }
+
+    // Persist sent timestamp to database
+    request(`/students/${studentId}`, {
+      method: 'PATCH',
+      body: { student_portal_sent_at: now },
+    }).catch(() => {});
+
+    this.showToast(`تم فتح محادثة واتساب للطالب (${studentName}) بنجاح! 💬`, 'success');
+    if (this.currentRoute === 'students') {
+      this.renderMainContent();
     }
   }
 
@@ -8365,6 +8354,16 @@ class CentrlyApp {
     }
   }
 
+  isUserSubscribed() {
+    if (this.user?.role === 'admin') return true;
+    const b = this.billingState || {};
+    if (b.is_paid_active === true) return true;
+    if (b.subscription_status === 'active' || b.status === 'active') return true;
+    if (b.subscription_ends_at && new Date(b.subscription_ends_at).getTime() > Date.now()) return true;
+    if (Array.isArray(b.payment_proofs) && b.payment_proofs.some(p => p.status === 'approved')) return true;
+    return false;
+  }
+
   openSubscriptionRequiredForBatchPortalModal() {
     const bodyHtml = `
       <div style="text-align: center; padding: 1.25rem 0.5rem;">
@@ -8377,7 +8376,7 @@ class CentrlyApp {
         </h3>
         
         <p style="font-size: 0.92rem; color: #475569; line-height: 1.6; max-width: 440px; margin: 0 auto 1.25rem;">
-          خاصية إرسال روابط المنصة وحسابات الدخول عبر <strong>واتساب ميتا الرسمي المعتمد (Meta Cloud API)</strong> متاحة حصرياً عند الاشتراك في إحدى باقات سنترلي.
+          خاصية إرسال روابط المنصة وحسابات الدخول للطلاب وأولياء الأمور دفعة واحدة متاحة حصرياً عند الاشتراك في إحدى باقات سنترلي.
         </p>
 
         <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem; text-align: right; max-width: 440px; margin: 0 auto 1.5rem;">
@@ -8387,9 +8386,9 @@ class CentrlyApp {
           </div>
           <ul style="margin: 0; padding-right: 1.2rem; font-size: 0.825rem; color: #334155; display: flex; flex-direction: column; gap: 0.45rem; list-style-type: disc;">
             <li>إرسال فوري لبيانات الدخول (اسم المستخدم وكلمة السر) لجميع الطلاب وأولياء الأمور بنقرة واحدة.</li>
-            <li>رسائل موثقة رسميّة باسم سنترلي عبر خوادم Meta دون أي حظر أو تعليق للأرقام.</li>
-            <li>ردود آلية ذكية عبر بوت واتساب بمجرد طلب الطالب بيانات حسابه.</li>
-            <li>بوابات متابعة حية لدرجات الكويزات، تقارير الحضور والغياب، وملاحظاتك المباشرة.</li>
+            <li>وصول دائم غير محدود لجميع مميزات المنصة والمتابعة وبوابات الطلاب.</li>
+            <li>ردود آلية ذكية وبوابات متابعة حية لدرجات الكويزات، تقارير الحضور والغياب، وملاحظاتك المباشرة.</li>
+            <li>تحميل ملازم وملفات الشرح ورفع حلول الواجبات فورياً.</li>
           </ul>
         </div>
 
@@ -8405,11 +8404,11 @@ class CentrlyApp {
       </div>
     `;
 
-    this.showModal('تفعيل إرسال الروابط عبر واتساب', bodyHtml, '');
+    this.showModal('تفعيل إرسال الروابط', bodyHtml, '');
   }
 
   async openBatchPortalLinksModal(preselectedGroupId = null) {
-    if (!this.billingState && this.user?.role !== 'admin') {
+    if (!this.billingState || !this.billingState.subscription_status) {
       try {
         const billingRes = await request('/billing/status');
         if (billingRes) {
@@ -8419,8 +8418,7 @@ class CentrlyApp {
       } catch (_) {}
     }
 
-    const billing = this.billingState || {};
-    const isPaidActive = (billing.subscription_status === 'active' || billing.status === 'active' || this.user?.role === 'admin');
+    const isPaidActive = this.isUserSubscribed();
     if (!isPaidActive) {
       this.openSubscriptionRequiredForBatchPortalModal();
       return;
@@ -11165,8 +11163,7 @@ class CentrlyApp {
   }
 
   openPlanChoiceModal() {
-    const status = this.billingState?.subscription_status || this.billingState?.status || 'trial';
-    const isPaidActive = (status === 'active');
+    const isPaidActive = this.isUserSubscribed();
     if (!isPaidActive) {
       const el = document.getElementById('pricingPlansSection');
       if (el) {
