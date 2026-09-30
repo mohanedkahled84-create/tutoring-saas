@@ -35,3 +35,9 @@ Thumbs.db
 backups/
 .vercel
 scratch/
+
+# Local scratch, audits & lead data (contains keys & personal data)
+audit_airtable.js
+profile_logos/
+telegram_teachers_leads.*
+*.csv
