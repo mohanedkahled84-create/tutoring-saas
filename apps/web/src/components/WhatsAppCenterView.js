@@ -3,9 +3,12 @@ import { getIcon } from '../utils/icons.js';
 
 /**
  * WhatsApp Center, Delivery Logs & Platform Profit Economics View
- * Real Unit Economics: Outbound Meta messaging cost (0.80 EGP/msg) deducted from message #1.
- * Models real scenarios like teacher Omar Gamal (subscribed to 300-student plan @ 499 EGP, but has 68 actual students).
- * Shows Month 1 net profit, Month 2+ recurring 100% net margin (0 EGP WhatsApp cost), and annual net.
+ * Realistic Unit Economics:
+ * - 2 Messages sent per student (1 to student + 1 to parent)
+ * - Official Meta Utility Rate in Egypt: $0.0036 USD (~0.18 EGP)
+ * - Live modeling for teacher Omar Gamal (68 students = 136 messages @ ~0.18 EGP = 24.48 EGP)
+ * - Option to absorb cost in month 1 or charge the client/teacher
+ * - Month 2+ recurring 100% net margin (0 EGP WhatsApp cost)
  */
 export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
   const stats = data.stats || {
@@ -18,7 +21,9 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
   const conversations = data.conversations || [];
   const totalSent = stats.total_sent || conversations.length || 0;
   const currentActualStudents = data.total_students || window.centrlyApp?.students?.length || 68;
-  const estimatedDeductedEgp = (totalSent * 0.80).toFixed(1);
+  const utilityRateEgp = 0.18;
+  const estimatedDeductedEgp = (totalSent * utilityRateEgp).toFixed(2);
+  const estimatedDeductedUsd = (totalSent * 0.0036).toFixed(2);
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
@@ -38,7 +43,7 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
               </h1>
             </div>
             <p style="font-size: 0.88rem; color: #d1fae5; margin: 0; line-height: 1.6; max-width: 720px;">
-              متابعة مباشرة لمن رد ومن لم يرد من الطلاب وأولياء الأمور، مع سجل تفصيلي للرسائل، وحاسبة أرباح المنصة الواقعية (اشتراك الباقة ومصاريف Meta الصادرة لمرة واحدة بالشهر الأول).
+              متابعة مباشرة لمن رد ومن لم يرد من الطلاب وأولياء الأمور، مع سجل تفصيلي للرسائل، وحاسبة أرباح المنصة الواقعية (رسالتان لكل طالب: للطالب ولولي الأمر، بتكلفة Meta الرسمية $0.0036).
             </p>
           </div>
 
@@ -81,7 +86,7 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
                 </span>
               </div>
               <p style="margin: 0.25rem 0 0; font-size: 0.825rem; color: #64748b;">
-                تخصم Meta تكلفة كل رسالة تفعيل صادرة للطلاب مباشرة من بطاقتك البنكية (~0.80 ج.م) — وتُدفع <strong>لمرة واحدة فقط لكل طالب</strong> عند تفعيله.
+                تخصم Meta تكلفة كل رسالة تفعيل صادرة مباشرة من بطاقتك البنكية بسعر رسمي <strong>$0.0036 USD (~0.18 ج.م)</strong> لرسائل الـ Utility في مصر.
               </p>
             </div>
           </div>
@@ -92,12 +97,12 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
               <div style="font-size: 1.35rem; font-weight: 900; color: #0f172a; font-family: monospace;">${totalSent} <span style="font-size: 0.8rem; font-family: 'Cairo';">رسالة</span></div>
             </div>
             <div style="text-align: center;">
-              <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">سعر رسالة Meta في مصر</div>
-              <div style="font-size: 1.35rem; font-weight: 900; color: #0284c7; font-family: monospace;">0.80 <span style="font-size: 0.8rem; font-family: 'Cairo';">ج.م</span></div>
+              <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">سعر Meta الرسمي في مصر</div>
+              <div style="font-size: 1.35rem; font-weight: 900; color: #0284c7; font-family: monospace;">$0.0036 <span style="font-size: 0.8rem; font-family: 'Cairo';">(~0.18 ج.م)</span></div>
             </div>
             <div style="text-align: center;">
               <div style="font-size: 0.75rem; color: #dc2626; font-weight: 800;">إجمالي ما تم خصمه من Meta</div>
-              <div style="font-size: 1.35rem; font-weight: 900; color: #dc2626; font-family: monospace;">${estimatedDeductedEgp} <span style="font-size: 0.8rem; font-family: 'Cairo';">ج.م</span></div>
+              <div style="font-size: 1.35rem; font-weight: 900; color: #dc2626; font-family: monospace;">${estimatedDeductedEgp} ج.م <span style="font-size: 0.75rem; color: #64748b; font-family: monospace;">($${estimatedDeductedUsd})</span></div>
             </div>
           </div>
         </div>
@@ -230,13 +235,14 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
             <div style="color: #16a34a; margin-top: 0.15rem;">${getIcon('info', 22, '#16a34a')}</div>
             <div>
               <div style="font-weight: 900; font-size: 1.05rem; color: #166534; margin-bottom: 0.4rem;">
-                حاسبة أرباحي الصافية كصاحب منصة (من باقات المدرسين وتكلفة Meta الحقيقية)
+                حاسبة أرباحي الصافية كصاحب منصة (إرسال رسالتين لكل طالب + سعر Meta الرسمي لـ Utility)
               </div>
               <div style="font-size: 0.88rem; color: #15803d; line-height: 1.8;">
-                • <strong>محاسبة Meta للرسائل الصادرة:</strong> تخصم Meta مباشرة من بطاقتك تكلفة كل رسالة تفعيل صادرة للطلاب (<strong>~0.80 ج.م / رسالة</strong>).<br>
-                • <strong>المدرس لا يمتلك سعة الباقة كاملة من أول يوم:</strong> المدرس قد يشترك في <strong>باقة 300 طالب (499 ج.م)</strong>، ولكن لديه فعلياً <strong>68 أو 69 طالب فقط</strong> (مثل حساب مستر عمر جمال المسجل حالياً بالنظام).<br>
-                • <strong>مكسبك الفعلي في الشهر الأول (Month 1):</strong> يدفع المدرس 499 ج.م، وتخصم Meta منك لطلابه الـ 68 مبلغ <strong>54.40 ج.م فقط</strong>! فيبقى صافي ربحك <strong>444.60 ج.م</strong> (هامش ربح <strong>89.1%</strong>).<br>
-                • <strong>مكسبك في الشهور القادمة (الشهرية القادمة Month 2 وما بعدها):</strong> يجدد المدرس اشتراكه بـ <strong>499.00 ج.م</strong>، بينما تكلفة رسائل الواتساب لطلابه = <strong>0.00 ج.م دائماً</strong> لأن روابط المنصة أُرسلت في الشهر الأول ولن تُعاد، فيكون <strong>ربحك الصافي 100% كاملة في جيبك</strong>!
+                • <strong>إرسال رسالتين لكل طالب مسجل:</strong> عند تسجيل أي طالب، يتم إرسال <strong>رسالتين منفصلتين</strong> (1 للطالب برابط البوابة وكوده + 1 لولي الأمر لمتابعة الدرجات والغياب). إذن: <strong>عدد الرسائل = عدد الطلاب × 2</strong> (50 طالب = 100 رسالة، 68 طالب = 136 رسالة).<br>
+                • <strong>سعر رسالة Meta الرسمي لمصر (Utility Template):</strong> تبلغ تكلفة الرسالة في مصر رسمياً <strong>$0.0036 USD</strong> (حوالي <strong>0.18 ج.م فقط</strong> بسعر الصرف اليوم).<br>
+                • <strong>مثال حي (مستر عمر جمال - 68 طالب = 136 رسالة):</strong> يدفع اشتراك باقة 300 طالب (<strong>499 ج.م</strong>). تخصم Meta منك لرسائل الواتساب الـ 136: \(136 \times 0.18 =\) <strong>24.48 ج.م فقط ($0.49 USD)</strong>! فيبقى صافي ربحك في أول شهر <strong>474.52 ج.م (هامش ربح 95.1%)</strong>!<br>
+                • <strong>مكسبك في الشهور التالية (Recurring Months):</strong> يجدد المدرس اشتراكه بـ <strong>499.00 ج.م</strong>، بينما تكلفة الواتساب = <strong>0.00 ج.م دائماً</strong> لأن الروابط أُرسلت ولن تُعاد، فيكون <strong>ربحك الصافي 100% كامل في جيبك</strong>!<br>
+                • <strong>خيار تحميل التكلفة على المدرس (الزبون):</strong> إذا اخترت تحميل رسوم تفعيل الواتساب على المدرس مباشرة، فسيدفعها هو، ويكون <strong>صافي ربحك 499.00 ج.م كاملة (100%) من أول شهر</strong>!
               </div>
             </div>
           </div>
@@ -284,7 +290,7 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
                 <div id="planSubtext300" style="font-size: 0.75rem; color: #64748b;">أو 4,790 ج.م سنوياً (وفر 1,198 ج.م)</div>
               </div>
               <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700; border-top: 1px dashed #bfdbfe; padding-top: 0.6rem; margin-top: 0.6rem;">
-                ✓ لو عنده 68 طالب: مصاريف Meta فقط 54.40 ج.م (صافي ربح 444.60 ج.م أول شهر)
+                ✓ لو عنده 68 طالب (136 رسالة للطالب وولي أمره): تكلفة Meta فقط 24.48 ج.م ($0.49)
               </div>
             </div>
 
@@ -305,7 +311,7 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
                 <div id="planSubtext750" style="font-size: 0.75rem; color: #64748b;">أو 8,630 ج.م سنوياً (وفر 2,158 ج.م)</div>
               </div>
               <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700; border-top: 1px dashed #e2e8f0; padding-top: 0.6rem; margin-top: 0.6rem;">
-                ✓ مصاريف الواتساب لمرة واحدة بأول شهر فقط (0.80 ج.م لكل طالب فعلي)
+                ✓ رسائل التفعيل لمرة واحدة بأول شهر فقط (رسالتان لكل طالب: للطالب وولي الأمر)
               </div>
             </div>
 
@@ -323,7 +329,7 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
                 <div id="planSubtext1500" style="font-size: 0.75rem; color: #64748b;">أو 13,430 ج.م سنوياً (وفر 3,358 ج.م)</div>
               </div>
               <div style="font-size: 0.75rem; color: #0284c7; font-weight: 700; border-top: 1px dashed #e2e8f0; padding-top: 0.6rem; margin-top: 0.6rem;">
-                ✓ في الشهور القادمة تكلفة الواتساب 0 ج.م وصافي ربحك 1,399 ج.م كاملة
+                ✓ في الشهور القادمة تكلفة الواتساب 0.00 ج.م وصافي ربحك 1,399 ج.م كاملة
               </div>
             </div>
 
@@ -334,7 +340,7 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
         <div class="card" style="margin: 0; padding: 1.5rem; border-radius: 14px;">
           <h3 style="margin: 0 0 1.25rem 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.5rem;">
             <span>${getIcon('chart', 20, 'var(--centrly-blue-700)')}</span>
-            <span>مدخلات حسبة اشتراك المدرس والواتساب (مثال حي: عمر جمال بـ 68 طالب)</span>
+            <span>مدخلات حسبة اشتراك المدرس والواتساب (رسالتان لكل طالب: للطالب + لولي الأمر)</span>
           </h3>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
@@ -357,34 +363,61 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
 
             <!-- 2. Students Count Input -->
             <div class="form-group" style="margin: 0;">
-              <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #334155;">
-                عدد طلاب هذا المدرس الفعليين (المراد تفعيلهم بروابط المنصة)
-              </label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #334155; margin: 0;">
+                  عدد طلاب المدرس (إرسال رسالتين لكل طالب)
+                </label>
+                <span style="font-size: 0.75rem; color: #2563eb; font-weight: 800;">
+                  (طالب + ولي أمر)
+                </span>
+              </div>
               <input type="number" id="calcTeacherStudents" class="form-input" min="1" max="10000" value="68" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.15rem; padding: 0.65rem 0.85rem;">
               <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap;">
-                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(68)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #fef08a; color: #854d0e; font-weight: 900;" title="عدد طلاب مستر عمر جمال الفعليين المسجلين في النظام">
-                  68 طالب (عمر جمال الفعلي ⭐)
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(50)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #f1f5f9;">
+                  50 طالب (100 رسالة)
                 </button>
-                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(100)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #f1f5f9;">100 طالب</button>
-                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(150)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #f1f5f9;">150 طالب</button>
-                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(300)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #f1f5f9;" title="سعة الباقة كاملة (أسوأ الاحتمالات)">
-                  300 طالب (سعة الباقة كاملة)
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(68)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #fef08a; color: #854d0e; font-weight: 900;" title="طلاب مستر عمر جمال الفعليين">
+                  68 طالب (عمر جمال - 136 رسالة ⭐)
+                </button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(100)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #f1f5f9;">
+                  100 طالب (200 رسالة)
+                </button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(300)" style="padding: 0.2rem 0.55rem; font-size: 0.75rem; background: #f1f5f9;" title="سعة الباقة كاملة">
+                  300 طالب (600 رسالة)
                 </button>
               </div>
             </div>
 
-            <!-- 3. Meta Unit Cost Input -->
+            <!-- 3. Meta Unit Cost & Client Billing Option -->
             <div class="form-group" style="margin: 0;">
               <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #334155;">
-                سعر رسالة Meta الصادرة في مصر (ج.م)
+                سعر رسالة Meta في مصر وطريقة المحاسبة
               </label>
               
-              <div style="position: relative; display: flex; align-items: center;">
-                <input type="number" id="calcMsgUnitCost" class="form-input" min="0" max="10" step="0.05" value="0.80" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.15rem; padding: 0.65rem 0.85rem; padding-left: 3rem;">
+              <div style="position: relative; display: flex; align-items: center; margin-bottom: 0.4rem;">
+                <input type="number" id="calcMsgUnitCost" class="form-input" min="0.01" max="10" step="0.01" value="0.18" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.15rem; padding: 0.65rem 0.85rem; padding-left: 3rem;">
                 <span style="position: absolute; left: 0.75rem; font-weight: 800; color: #64748b; font-size: 0.85rem;">ج.م</span>
               </div>
-              <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem; line-height: 1.5;">
-                تخصم Meta هذا المبلغ مباشرة من بطاقتك الائتمانية <strong>لمرة واحدة فقط</strong> عند إرسال الرابط للطالب.
+
+              <!-- Quick Meta Price Buttons -->
+              <div style="display: flex; gap: 0.35rem; margin-bottom: 0.6rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcUnitCost(0.18)" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; background: #dcfce7; color: #166534; font-weight: 800;" title="سعر الـ Utility الرسمي لمصر $0.0036 USD">
+                  0.18 ج.م ($0.0036 رسمي Meta) ⭐
+                </button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcUnitCost(0.80)" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; background: #f1f5f9;" title="شامل عمولات البنك والضرائب">
+                  0.80 ج.م (مع عمولة البنك)
+                </button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcUnitCost(1.76)" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; background: #f1f5f9;" title="سعر $0.036 عبر وسيط">
+                  1.76 ج.م ($0.036 مع وسيط)
+                </button>
+              </div>
+
+              <!-- Pass WhatsApp cost to client toggle -->
+              <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 0.5rem 0.75rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.825rem; font-weight: 800; color: #0f172a; cursor: pointer; margin: 0;">
+                  <input type="checkbox" id="calcChargeClient" onchange="window.centrlyApp.recalculateWhatsAppEconomics()" style="width: 17px; height: 17px; accent-color: #2563eb;">
+                  <span>تحميل تكلفة الرسائل على المدرس (الزبون يدفعها كرسوم تفعيل)</span>
+                </label>
               </div>
             </div>
 
@@ -401,23 +434,23 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
               <span style="font-size: 0.75rem; color: #64748b;">تُدفع لمرة واحدة فقط</span>
             </div>
 
-            <div style="font-size: 0.85rem; color: #64748b;">إيراد اشتراك المدرس المحصل:</div>
+            <div style="font-size: 0.85rem; color: #64748b;">إجمالي ما يدفعه المدرس (كاش):</div>
             <div id="calcMonth1Revenue" style="font-size: 1.85rem; font-weight: 900; color: #0f172a; font-family: monospace; margin-top: 0.15rem;">
-              499 ج.م
+              499.00 ج.م
             </div>
 
             <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.825rem;">
               <div style="display: flex; justify-content: space-between; color: #475569;">
-                <span>رسائل تفعيل الطلاب:</span>
-                <strong id="calcMonth1Msgs" style="font-family: monospace; color: #0f172a;">68 رسالة</strong>
+                <span>رسائل الواتساب الصادرة:</span>
+                <strong id="calcMonth1Msgs" style="font-family: monospace; color: #0f172a;">136 رسالة (68 طالب + 68 ولي أمر)</strong>
               </div>
               <div style="display: flex; justify-content: space-between; color: #475569;">
-                <span>ما تخصمه منك Meta (الواتساب):</span>
-                <strong id="calcMonth1Cost" style="font-family: monospace; color: #ea580c;">54.40 ج.م (68 × 0.80)</strong>
+                <span>تكلفة رسائل Meta الإجمالية:</span>
+                <strong id="calcMonth1Cost" style="font-family: monospace; color: #16a34a;">24.48 ج.م ($0.49 USD)</strong>
               </div>
               <div style="display: flex; justify-content: space-between; color: #0f172a; font-weight: 900; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed #e2e8f0;">
                 <span>صافي ربحك في الشهر الأول:</span>
-                <span id="calcMonth1Net" style="color: #047857; font-size: 1.25rem; font-family: monospace;">444.60 ج.م (89.1%)</span>
+                <span id="calcMonth1Net" style="color: #047857; font-size: 1.25rem; font-family: monospace;">474.52 ج.م (95.1%)</span>
               </div>
             </div>
           </div>
@@ -441,7 +474,7 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
               </div>
               <div style="display: flex; justify-content: space-between; color: #15803d;">
                 <span>السبب:</span>
-                <span>الروابط أُرسلت مرة واحدة في أول شهر ولن تُعاد</span>
+                <span>الروابط أُرسلت مرة واحدة في أول شهر ولن تُعاد أبداً</span>
               </div>
               <div style="display: flex; justify-content: space-between; color: #14532d; font-weight: 900; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(22, 163, 74, 0.3);">
                 <span>نسبة الربح الصافي:</span>
@@ -459,21 +492,21 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
 
             <div style="font-size: 0.85rem; color: #64748b;">صافي ربحي السنوي من هذا المدرس:</div>
             <div id="calcYearNet" style="font-size: 1.85rem; font-weight: 900; color: #0284c7; font-family: monospace; margin-top: 0.15rem;">
-              5,933.60 ج.م
+              5,963.52 ج.م
             </div>
 
             <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.825rem;">
               <div style="display: flex; justify-content: space-between; color: #475569;">
                 <span>إجمالي الاشتراكات المحصلة:</span>
-                <strong id="calcYearRevenue" style="font-family: monospace; color: #0f172a;">5,988 ج.م</strong>
+                <strong id="calcYearRevenue" style="font-family: monospace; color: #0f172a;">5,988.00 ج.م</strong>
               </div>
               <div style="display: flex; justify-content: space-between; color: #475569;">
-                <span>إجمالي ما تخصمه Meta طوال العام:</span>
-                <strong id="calcYearCost" style="font-family: monospace; color: #ea580c;">54.40 ج.م (مرة واحدة فقط)</strong>
+                <span>إجمالي تكلفة Meta طوال العام:</span>
+                <strong id="calcYearCost" style="font-family: monospace; color: #16a34a;">24.48 ج.م (مرة واحدة فقط)</strong>
               </div>
               <div style="display: flex; justify-content: space-between; color: #0284c7; font-weight: 900; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed #e2e8f0;">
                 <span>هامش الربح السنوي الصافي:</span>
-                <span id="calcYearMargin" style="color: #0284c7; font-size: 1.15rem; font-family: monospace;">99.1%</span>
+                <span id="calcYearMargin" style="color: #0284c7; font-size: 1.15rem; font-family: monospace;">99.6%</span>
               </div>
             </div>
           </div>
@@ -484,10 +517,10 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
         <div class="card" style="margin: 0; padding: 1.5rem; border-radius: 14px; background: #fafafa; border: 1px solid #e2e8f0;">
           <h4 style="margin: 0 0 0.85rem 0; font-size: 1.05rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.45rem;">
             <span>${getIcon('chart', 18, '#0284c7')}</span>
-            <span>مقارنة ذكية: الواقع الفعلي (68 طالب زي عمر جمال) مقابل سعة الباقة كاملة (300 طالب)</span>
+            <span>مقارنة ذكية: الواقع الفعلي (68 طالب = 136 رسالة) مقابل سعة الباقة كاملة (300 طالب = 600 رسالة)</span>
           </h4>
           <p style="font-size: 0.825rem; color: #64748b; margin: 0 0 1rem 0;">
-            توضيح لماذا لا تخسر المنصة حتى لو بدأ المدرس بعدد طلاب قليل أو ملأ باقته بالكامل من أول شهر.
+            توضيح دقيق لتكلفة Meta الرسمية (رسالتان لكل طالب: للطالب + ولي أمره) مع ثبات ربح 100% من الشهر الثاني فصاعداً.
           </p>
 
           <div style="overflow-x: auto;">
@@ -502,18 +535,28 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
               <tbody>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <td style="padding: 0.75rem 1rem; font-weight: 700; color: #334155;">اشتراك الباقة الشهري (يدفعه المدرس)</td>
-                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #0f172a; background: #f0fdf4;">499 ج.م</td>
-                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #0f172a; background: #eff6ff;">499 ج.م</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #0f172a; background: #f0fdf4;">499.00 ج.م</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #0f172a; background: #eff6ff;">499.00 ج.م</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 0.75rem 1rem; font-weight: 700; color: #334155;">ما تخصمه منك Meta لرسائل الواتساب</td>
-                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #16a34a; background: #f0fdf4;">54.40 ج.م فقط (68 × 0.80)</td>
-                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #ea580c; background: #eff6ff;">240.00 ج.م (300 × 0.80)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 700; color: #334155;">عدد رسائل الواتساب (رسالتان لكل طالب)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #0f172a; background: #f0fdf4;">136 رسالة (68 طالب + 68 ولي أمر)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #0f172a; background: #eff6ff;">600 رسالة (300 طالب + 300 ولي أمر)</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 0.75rem 1rem; font-weight: 700; color: #334155;">صافي ربحك في الشهر الأول</td>
-                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #166534; font-size: 1.05rem; background: #f0fdf4;">444.60 ج.م (ربح 89.1%)</td>
-                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #1e40af; font-size: 1.05rem; background: #eff6ff;">259.00 ج.م (ربح 51.9%)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 700; color: #334155;">ما تخصمه منك Meta (بسعر $0.0036 = ~0.18 ج.م)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #16a34a; background: #f0fdf4;">24.48 ج.م فقط ($0.49 USD)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #ea580c; background: #eff6ff;">108.00 ج.م ($2.16 USD)</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 0.75rem 1rem; font-weight: 700; color: #334155;">صافي ربحك في الشهر الأول (إذا التكلفة مشمولة)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #166534; font-size: 1.05rem; background: #f0fdf4;">474.52 ج.م (ربح 95.1%)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #1e40af; font-size: 1.05rem; background: #eff6ff;">391.00 ج.م (ربح 78.4%)</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 0.75rem 1rem; font-weight: 700; color: #334155;">صافي ربحك لو حاسبت المدرس (الزبون) عليها</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #16a34a; font-size: 1.05rem; background: #f0fdf4;">499.00 ج.م (ربح 100%)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #16a34a; font-size: 1.05rem; background: #eff6ff;">499.00 ج.م (ربح 100%)</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <td style="padding: 0.75rem 1rem; font-weight: 700; color: #334155;">تكلفة رسائل الواتساب في الشهور التالية</td>
@@ -527,8 +570,8 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
                 </tr>
                 <tr>
                   <td style="padding: 0.75rem 1rem; font-weight: 700; color: #334155;">صافي ربح السنة الأولى بالكامل</td>
-                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #166534; font-size: 1.1rem; background: #f0fdf4;">5,933.60 ج.م (هامش 99.1%)</td>
-                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #1e3a8a; font-size: 1.1rem; background: #eff6ff;">5,748.00 ج.م (هامش 96.0%)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #166534; font-size: 1.1rem; background: #f0fdf4;">5,963.52 ج.م (هامش 99.6%)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 900; color: #1e3a8a; font-size: 1.1rem; background: #eff6ff;">5,880.00 ج.م (هامش 98.2%)</td>
                 </tr>
               </tbody>
             </table>

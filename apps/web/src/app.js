@@ -8882,22 +8882,27 @@ class CentrlyApp {
     const feeInput = document.getElementById('calcTeacherFee');
     const studentsInput = document.getElementById('calcTeacherStudents');
     const unitCostInput = document.getElementById('calcMsgUnitCost');
+    const chargeClientCheckbox = document.getElementById('calcChargeClient');
     const isYearly = this.whatsappBillingCycle === 'yearly';
 
     if (!feeInput || !studentsInput) return;
 
     const teacherFee = Math.max(0, parseFloat(feeInput.value) || 0);
     const studentsCount = Math.max(1, parseInt(studentsInput.value, 10) || 1);
-    const unitCost = Math.max(0, parseFloat(unitCostInput?.value ?? 0.80) || 0.80);
+    const unitCost = Math.max(0, parseFloat(unitCostInput?.value ?? 0.18) || 0.18);
+    const chargeClient = chargeClientCheckbox ? chargeClientCheckbox.checked : false;
 
     // Real Meta Economics:
-    // Meta charges per outbound utility template starting from message 1 (approx 0.80 EGP/msg in Egypt).
+    // 2 messages per student: 1 for student portal + 1 for parent monitoring portal
+    const totalMsgs = studentsCount * 2;
+    // Meta charges per outbound utility template starting from message 1 (approx 0.18 EGP / $0.0036 USD in Egypt).
     // Messages are sent to activate students for ONCE only during Month 1.
-    const msgCost = Math.round(studentsCount * unitCost * 100) / 100;
+    const rawMsgCost = Math.round(totalMsgs * unitCost * 100) / 100;
+    const effectiveMsgCost = chargeClient ? 0 : rawMsgCost;
 
     // Month 1: Setup & Onboarding
-    const month1Revenue = teacherFee;
-    const month1Net = Math.max(0, Math.round((month1Revenue - msgCost) * 100) / 100);
+    const month1Revenue = teacherFee + (chargeClient ? rawMsgCost : 0);
+    const month1Net = Math.max(0, Math.round((month1Revenue - rawMsgCost) * 100) / 100);
     const month1Margin = month1Revenue > 0 ? ((month1Net / month1Revenue) * 100).toFixed(1) : '100.0';
 
     // Month 2+: Recurring Months
@@ -8908,7 +8913,7 @@ class CentrlyApp {
 
     // Annual Net:
     const annualRevenue = isYearly ? teacherFee : (teacherFee * 12);
-    const annualNet = Math.max(0, Math.round((annualRevenue - msgCost) * 100) / 100);
+    const annualNet = Math.max(0, Math.round((annualRevenue - effectiveMsgCost) * 100) / 100);
     const annualMargin = annualRevenue > 0 ? ((annualNet / annualRevenue) * 100).toFixed(1) : '100.0';
 
     const revEl = document.getElementById('calcMonth1Revenue');
@@ -8921,9 +8926,22 @@ class CentrlyApp {
     const yearCostEl = document.getElementById('calcYearCost');
     const yearMarginEl = document.getElementById('calcYearMargin');
 
-    if (revEl) revEl.innerText = `${teacherFee.toLocaleString('ar-EG')} ج.م`;
-    if (msgsEl) msgsEl.innerText = `${studentsCount.toLocaleString('ar-EG')} رسالة (طالب)`;
-    if (costEl) costEl.innerText = `${msgCost.toFixed(2)} ج.م (${studentsCount} × ${unitCost.toFixed(2)} ج.م)`;
+    if (revEl) {
+      if (chargeClient) {
+        revEl.innerText = `${(teacherFee + rawMsgCost).toFixed(2)} ج.م (اشتراك + تفعيل)`;
+      } else {
+        revEl.innerText = `${teacherFee.toFixed(2)} ج.م`;
+      }
+    }
+    if (msgsEl) msgsEl.innerText = `${totalMsgs.toLocaleString('ar-EG')} رسالة (${studentsCount} طالب + ${studentsCount} ولي أمر)`;
+    if (costEl) {
+      if (chargeClient) {
+        costEl.innerText = `0.00 ج.م عليك (دفعها المدرس كرسوم تفعيل +${rawMsgCost.toFixed(2)} ج.م)`;
+      } else {
+        const usdVal = (rawMsgCost / 49.5).toFixed(2);
+        costEl.innerText = `${rawMsgCost.toFixed(2)} ج.م ($${usdVal} USD - ${totalMsgs} × ${unitCost.toFixed(2)} ج.م)`;
+      }
+    }
     if (net1El) net1El.innerText = `${month1Net.toFixed(2)} ج.م (${month1Margin}%)`;
     if (net2El) {
       if (isYearly) {
@@ -8934,7 +8952,13 @@ class CentrlyApp {
     }
     if (yearNetEl) yearNetEl.innerText = `${annualNet.toFixed(2)} ج.م`;
     if (yearRevEl) yearRevEl.innerText = `${annualRevenue.toLocaleString('ar-EG')} ج.م`;
-    if (yearCostEl) yearCostEl.innerText = `${msgCost.toFixed(2)} ج.م (مرة واحدة فقط بأول شهر)`;
+    if (yearCostEl) {
+      if (chargeClient) {
+        yearCostEl.innerText = `0.00 ج.م (محملة على المدرس)`;
+      } else {
+        yearCostEl.innerText = `${rawMsgCost.toFixed(2)} ج.م (مرة واحدة فقط بأول شهر)`;
+      }
+    }
     if (yearMarginEl) yearMarginEl.innerText = `${annualMargin}%`;
 
     // Update Scale Radar Cards
@@ -8944,6 +8968,7 @@ class CentrlyApp {
     const r10 = document.getElementById('radar10');
     const r25 = document.getElementById('radar25');
     const r50 = document.getElementById('radar50');
+    const r100 = document.getElementById('radar100');
     const periodSubText = isYearly ? 'سنوياً كاش فوري مقدماً' : 'شهرياً بدون مصاريف رسائل';
 
     if (r10) r10.innerText = `${(teacherFee * 10).toLocaleString('ar-EG')} ج.م`;
@@ -8969,6 +8994,14 @@ class CentrlyApp {
     const studentsInput = document.getElementById('calcTeacherStudents');
     if (studentsInput) {
       studentsInput.value = num;
+      this.recalculateWhatsAppEconomics();
+    }
+  }
+
+  setCalcUnitCost(num) {
+    const unitCostInput = document.getElementById('calcMsgUnitCost');
+    if (unitCostInput) {
+      unitCostInput.value = num;
       this.recalculateWhatsAppEconomics();
     }
   }
