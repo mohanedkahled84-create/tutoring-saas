@@ -103,6 +103,15 @@ export function createApp(): Express {
     req.url = "/short-links" + (req.url.startsWith("/") ? req.url : "/" + req.url);
     publicRouter(req, res, next);
   });
+  // Meta WhatsApp Cloud Webhook Aliases to guarantee reception across common endpoint configs
+  app.use("/meta/webhook", (req, res, next) => {
+    req.url = "/meta/webhook" + (req.url.startsWith("/") ? req.url : "/" + req.url);
+    publicRouter(req, res, next);
+  });
+  app.use("/api/meta/webhook", (req, res, next) => {
+    req.url = "/meta/webhook" + (req.url.startsWith("/") ? req.url : "/" + req.url);
+    publicRouter(req, res, next);
+  });
 
   // DEV-81 (GAP.3): Webhooks with signature verification and idempotency guard
   app.use("/api/webhooks", paymentWebhookRouter);
