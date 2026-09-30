@@ -401,20 +401,28 @@ whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): P
     }
 
     const conversations = Array.from(conversationsMap.values());
-    const total_sent = conversations.length;
+    const total_raw_messages = (messages || []).length;
+    const total_outbound = (messages || []).filter((m: any) => m.direction === "outbound").length;
+    const total_inbound = (messages || []).filter((m: any) => m.direction === "inbound").length;
+    const total_conversations = conversations.length;
     const total_replied = conversations.filter((c: any) => c.has_replied).length;
-    const pending_reply = total_sent - total_replied;
-    const reply_rate = total_sent > 0 ? Math.round((total_replied / total_sent) * 100) : 0;
+    const pending_reply = total_conversations - total_replied;
+    const reply_rate = total_conversations > 0 ? Math.round((total_replied / total_conversations) * 100) : 0;
 
     res.json({
       success: true,
       stats: {
-        total_sent,
+        total_sent: total_outbound || total_raw_messages || total_conversations,
+        total_messages: total_raw_messages,
+        total_outbound,
+        total_inbound,
+        total_conversations,
         total_replied,
         pending_reply,
         reply_rate,
       },
       conversations,
+      raw_messages: messages || [],
     });
   } catch (err: unknown) {
     res.status(500).json({

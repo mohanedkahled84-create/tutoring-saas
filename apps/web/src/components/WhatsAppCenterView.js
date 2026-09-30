@@ -19,7 +19,8 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
   };
 
   const conversations = data.conversations || [];
-  const totalSent = stats.total_sent || conversations.length || 0;
+  const rawMessages = data.raw_messages || [];
+  const totalSent = stats.total_sent || rawMessages.length || (conversations.length * 2) || 0;
   const currentActualStudents = data.total_students || window.centrlyApp?.students?.length || 68;
   const utilityRateEgp = 0.18;
   const estimatedDeductedEgp = (totalSent * utilityRateEgp).toFixed(2);
@@ -58,10 +59,10 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
         <!-- Navigation Tabs -->
         <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 1rem; flex-wrap: wrap;">
           <button type="button" id="tabBtnInbox" onclick="window.centrlyApp.switchWhatsAppTab('inbox')" style="padding: 0.55rem 1.25rem; border-radius: 8px; font-weight: 800; font-size: 0.9rem; border: none; cursor: pointer; transition: all 0.2s; ${activeTab === 'inbox' ? 'background: #ffffff; color: #065f46; box-shadow: 0 4px 10px rgba(0,0,0,0.1);' : 'background: rgba(255,255,255,0.1); color: #ffffff;'}">
-            محادثات الطلاب وتتبع الردود (${totalSent})
+            محادثات الطلاب وتتبع الردود (${conversations.length || totalSent})
           </button>
           <button type="button" id="tabBtnLogs" onclick="window.centrlyApp.switchWhatsAppTab('logs')" style="padding: 0.55rem 1.25rem; border-radius: 8px; font-weight: 800; font-size: 0.9rem; border: none; cursor: pointer; transition: all 0.2s; ${activeTab === 'logs' ? 'background: #ffffff; color: #065f46; box-shadow: 0 4px 10px rgba(0,0,0,0.1);' : 'background: rgba(255,255,255,0.1); color: #ffffff;'}">
-            سجل الرسائل وحالة التسليم (${totalSent})
+            سجل الرسائل وحالة التسليم (${rawMessages.length || totalSent})
           </button>
           <button type="button" id="tabBtnCalc" onclick="window.centrlyApp.switchWhatsAppTab('calculator')" style="padding: 0.55rem 1.25rem; border-radius: 8px; font-weight: 800; font-size: 0.9rem; border: none; cursor: pointer; transition: all 0.2s; ${activeTab === 'calculator' ? 'background: #ffffff; color: #065f46; box-shadow: 0 4px 10px rgba(0,0,0,0.1);' : 'background: rgba(255,255,255,0.1); color: #ffffff;'}">
             حاسبة أرباحي من اشتراكات المدرسين وتكلفة Meta
@@ -201,7 +202,7 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
             </div>
             <div>
               <span class="badge" style="background: #eff6ff; color: #1e40af; font-weight: 800; font-size: 0.8rem; padding: 0.35rem 0.75rem;">
-                إجمالي السجلات: ${conversations.length}
+                إجمالي السجلات: ${rawMessages.length || conversations.length || totalSent}
               </span>
             </div>
           </div>
@@ -219,7 +220,7 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
                 </tr>
               </thead>
               <tbody>
-                ${renderLogsTableRows(conversations)}
+                ${renderLogsTableRows(conversations, rawMessages)}
               </tbody>
             </table>
           </div>
@@ -691,8 +692,9 @@ function renderConversationCards(conversations = []) {
   }).join('');
 }
 
-function renderLogsTableRows(conversations = []) {
-  if (!conversations || conversations.length === 0) {
+function renderLogsTableRows(conversations = [], rawMessages = []) {
+  const items = rawMessages && rawMessages.length > 0 ? rawMessages : conversations;
+  if (!items || items.length === 0) {
     return `
       <tr>
         <td colspan="6" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
@@ -702,13 +704,18 @@ function renderLogsTableRows(conversations = []) {
     `;
   }
 
-  return conversations.map((c) => {
-    const isReplied = Boolean(c.has_replied);
-    const cleanPhone = String(c.phone || '').replace(/\D/g, '');
+  return items.map((item) => {
+    const isRaw = typeof item.direction === 'string';
+    const isReplied = Boolean(item.has_replied || item.status === 'replied');
+    const cleanPhone = String(item.phone || '').replace(/\D/g, '');
     const displayPhone = cleanPhone.startsWith('20') ? '0' + cleanPhone.slice(2) : cleanPhone;
-    const studentName = c.student_name || 'طالب';
-    const body = c.last_message?.body || 'تم إرسال رابط المنصة وبوابة المتابعة';
-    const time = c.last_message?.time ? new Date(c.last_message.time).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    const studentName = item.student_name || 'طالب';
+    const body = isRaw ? (item.message_body || 'تم إرسال رابط المنصة وبوابة المتابعة') : (item.last_message?.body || 'تم إرسال رابط المنصة وبوابة المتابعة');
+    const timeVal = isRaw ? item.created_at : item.last_message?.time;
+    const time = timeVal ? new Date(timeVal).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    const statusBadge = isRaw && item.direction === 'inbound'
+      ? `<span class="badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; background: #eff6ff; color: #1e40af;">واردة 📥</span>`
+      : `<span class="badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; ${isReplied ? 'background: #dcfce7; color: #166534;' : 'background: #f1f5f9; color: #475569;'}">${isReplied ? 'وصل رد 💬' : 'صادرة (تم التسليم) ✅'}</span>`;
 
     return `
       <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -716,9 +723,7 @@ function renderLogsTableRows(conversations = []) {
         <td style="padding: 0.75rem 0.85rem; font-family: monospace; color: #475569;" dir="ltr">${escapeHtml(displayPhone)}</td>
         <td style="padding: 0.75rem 0.85rem; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #334155;" title="${escapeHtml(body)}">${escapeHtml(body)}</td>
         <td style="padding: 0.75rem 0.85rem;">
-          <span class="badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; ${isReplied ? 'background: #dcfce7; color: #166534;' : 'background: #f1f5f9; color: #475569;'}">
-            ${isReplied ? 'وصل رد 💬' : 'في انتظار الرد ⏳'}
-          </span>
+          ${statusBadge}
         </td>
         <td style="padding: 0.75rem 0.85rem; font-size: 0.78rem; color: #64748b;">${escapeHtml(time)}</td>
         <td style="padding: 0.75rem 0.85rem; text-align: center;">
