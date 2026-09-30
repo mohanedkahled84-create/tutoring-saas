@@ -78,8 +78,15 @@ export function renderAuthScreens() {
             <input type="email" id="signupEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="email">
           </div>
           <div class="form-group">
-            <label class="form-label">رقم الواتساب (مصري) *</label>
-            <input type="tel" id="signupPhone" class="form-input" placeholder="رقم الهاتف" required dir="ltr" autocomplete="tel">
+            <label class="form-label">رقم الهاتف الأساسي (لتسجيل الدخول وتلقي OTP) *</label>
+            <input type="tel" id="signupPhone" class="form-input" placeholder="010..." required dir="ltr" autocomplete="tel">
+          </div>
+          <div class="form-group" style="margin-top: 0.85rem;">
+            <label class="form-label">رقم واتساب للتواصل مع الطلاب وأولياء الأمور 💬</label>
+            <input type="tel" id="signupContactPhone" class="form-input" placeholder="رقم واتساب المدرس أو المساعد (اختياري - إن ترك فارغاً سيتم استخدام نفس الرقم)" dir="ltr" autocomplete="tel">
+            <div style="font-size: 0.73rem; color: #64748b; margin-top: 0.25rem;">
+              يظهر هذا الرقم في بوابات الطلاب وأولياء الأمور كزر مباشر للتواصل معك عبر واتساب.
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">كلمة المرور *</label>

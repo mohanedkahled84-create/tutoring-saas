@@ -1,7 +1,6 @@
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { renderBillingView } from './BillingView.js?v=3.8.0';
-import { renderWhatsAppSettingsView } from './WhatsAppSettingsView.js?v=4.9.6';
 
 /**
  * Centrly Teacher Settings & Account Management View
@@ -33,6 +32,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
   const displayName = (user?.full_name || user?.name || '').replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim() || 'محمد خالد';
   const email = user?.email || '';
   const phone = user?.phone || '';
+  const contactPhone = user?.contact_phone || user?.whatsapp_phone || billing?.settings?.contact_phone || phone;
   const subject = user?.subject || '';
   const tenantName = user?.tenant_name || '';
 
@@ -98,13 +98,6 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           <span>الملف الشخصي والمادة</span>
         </button>
 
-        <button type="button" onclick="window.centrlyApp.switchSettingsTab('whatsapp')"
-          class="btn ${activeTab === 'whatsapp' ? 'btn-primary' : 'btn-secondary'}"
-          style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
-          ${getIcon('whatsapp', 16, activeTab === 'whatsapp' ? '#ffffff' : '#22c55e')}
-          <span>خدمة وربط الواتساب</span>
-        </button>
-
         <button type="button" onclick="window.centrlyApp.switchSettingsTab('subscription')"
           class="btn ${activeTab === 'subscription' ? 'btn-primary' : 'btn-secondary'}"
           style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
@@ -145,8 +138,16 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
               </div>
 
               <div class="form-group">
-                <label class="form-label" style="font-weight: 700;">رقم الواتساب للتواصل</label>
+                <label class="form-label" style="font-weight: 700;">رقم الهاتف الأساسي (تسجيل الدخول)</label>
                 <input type="tel" id="settingsPhone" class="form-input" value="${escapeHtml(phone)}" placeholder="010..." dir="ltr">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700;">رقم واتساب للتواصل مع الطلاب وأولياء الأمور 💬</label>
+                <input type="tel" id="settingsContactPhone" class="form-input" value="${escapeHtml(contactPhone || phone)}" placeholder="010..." dir="ltr">
+                <span style="font-size: 0.725rem; color: #64748b; margin-top: 0.25rem; display: block;">
+                  يظهر هذا الرقم كزر مباشر في بوابات الطلاب وأولياء الأمور للتواصل معك عبر واتساب.
+                </span>
               </div>
 
               <div class="form-group">
@@ -164,11 +165,6 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
             </div>
           </form>
         </div>
-      </div>
-
-      <!-- ================= TAB 2: WHATSAPP ================= -->
-      <div id="settingsTabWhatsApp" style="display: ${activeTab === 'whatsapp' ? 'block' : 'none'};">
-        ${renderWhatsAppSettingsView(whatsapp)}
       </div>
 
       <!-- ================= TAB 3: SUBSCRIPTION ================= -->

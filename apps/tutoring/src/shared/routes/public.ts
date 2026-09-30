@@ -91,6 +91,39 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
       }));
     }
 
+    if (portalData && portalData.student) {
+      try {
+        let teacherPhone = "";
+        const targetTenantId = tenantId || portalData.student.tenant_id;
+        if (targetTenantId) {
+          const { data: tenantRow } = await supabase
+            .from("tenants")
+            .select("settings")
+            .eq("id", targetTenantId)
+            .maybeSingle();
+          if (tenantRow?.settings) {
+            teacherPhone = (tenantRow.settings as any)?.contact_phone || (tenantRow.settings as any)?.whatsapp_phone || "";
+          }
+        }
+        if (!teacherPhone && targetTenantId) {
+          const { data: userRow } = await supabase
+            .from("users")
+            .select("phone")
+            .eq("tenant_id", targetTenantId)
+            .in("role", ["owner", "teacher", "center_owner"])
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (userRow?.phone) {
+            teacherPhone = userRow.phone;
+          }
+        }
+        if (teacherPhone) {
+          portalData.student.teacher_phone = teacherPhone;
+        }
+      } catch (_) {}
+    }
+
     res.json(portalData);
   } catch (err: unknown) {
     res.status(500).json({

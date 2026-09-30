@@ -211,7 +211,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
 
 // DEV-SA.1 & DEV-SL.1: POST /api/auth/signup - Teacher registration with 14-day trial & founder alert
 authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email, password, full_name, tenant_name, phone, subject, governorate, account_type } = req.body;
+  const { email, password, full_name, tenant_name, phone, contact_phone, subject, governorate, account_type } = req.body;
 
   if (!email || !password || !tenant_name) {
     res.status(400).json({
@@ -235,6 +235,13 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
           .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
       : undefined;
 
+    const normalizedContactPhone = typeof contact_phone === "string" && contact_phone.trim()
+      ? contact_phone
+          .trim()
+          .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632))
+          .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+      : normalizedPhone;
+
     const result = await authService.signup(
       {
         email,
@@ -242,6 +249,7 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
         full_name,
         tenant_name,
         phone: normalizedPhone,
+        contact_phone: normalizedContactPhone,
         subject,
         governorate,
         account_type: normalizedAccountType,
@@ -255,6 +263,7 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
           teacher_name: payload.teacher_name,
           teacher_email: payload.teacher_email,
           teacher_phone: payload.teacher_phone || normalizedPhone,
+          contact_phone: payload.contact_phone || normalizedContactPhone,
           tenant_name: payload.tenant_name,
           account_type: payload.account_type,
           subject: payload.subject,

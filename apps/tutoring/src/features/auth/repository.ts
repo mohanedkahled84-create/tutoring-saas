@@ -200,6 +200,18 @@ export class SupabaseAuthRepository implements IAuthRepository {
       );
 
       if (!directErr && directData?.user_id) {
+        if (data.contact_phone && directData.tenant_id) {
+          try {
+            const { data: curT } = await this.adminClient.from("tenants").select("settings").eq("id", directData.tenant_id).maybeSingle();
+            const curSettings = curT?.settings && typeof curT.settings === "object" ? curT.settings : {};
+            await this.adminClient.from("tenants").update({
+              settings: {
+                ...curSettings,
+                contact_phone: data.contact_phone,
+              },
+            }).eq("id", directData.tenant_id);
+          } catch (_) {}
+        }
         const code = await this.sendAndRecordOtp(data.email, data.full_name);
         return {
           user: {
@@ -209,6 +221,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
             name: data.full_name || null,
             full_name: data.full_name || null,
             phone: directData.phone || data.phone || null,
+            contact_phone: data.contact_phone || directData.phone || data.phone || null,
             subject: directData.subject || data.subject || null,
           },
           tenant: {
@@ -308,6 +321,19 @@ export class SupabaseAuthRepository implements IAuthRepository {
       throw new Error(rpcErr?.message || "Failed to initialize organization profile");
     }
 
+    if (data.contact_phone && rpcData?.tenant_id) {
+      try {
+        const { data: curT } = await this.adminClient.from("tenants").select("settings").eq("id", rpcData.tenant_id).maybeSingle();
+        const curSettings = curT?.settings && typeof curT.settings === "object" ? curT.settings : {};
+        await this.adminClient.from("tenants").update({
+          settings: {
+            ...curSettings,
+            contact_phone: data.contact_phone,
+          },
+        }).eq("id", rpcData.tenant_id);
+      } catch (_) {}
+    }
+
     const code = await this.sendAndRecordOtp(data.email, data.full_name);
 
     return {
@@ -318,6 +344,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
         name: data.full_name || null,
         full_name: data.full_name || null,
         phone: data.phone || null,
+        contact_phone: data.contact_phone || data.phone || null,
         subject: data.subject || null,
       },
       tenant: {
@@ -657,6 +684,7 @@ export class FakeAuthRepository implements IAuthRepository {
         name: data.full_name || null,
         full_name: data.full_name || null,
         phone: data.phone || null,
+        contact_phone: data.contact_phone || data.phone || null,
         subject: data.subject || null,
       },
       tenant,

@@ -32,6 +32,7 @@ const updateSettingsSchema = z.object({
   teacher_name: z.string().optional(),
   subject: z.string().optional(),
   phone: z.string().optional(),
+  contact_phone: z.string().optional(),
 });
 
 // GET /api/settings - Get tenant workflow settings
@@ -50,11 +51,13 @@ settingsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
   try {
     const tenantsRepo = getServices(req).tenants;
     const settings = await tenantsRepo.getTenantSettings(tenantId);
+    const resolvedContactPhone = (settings as any)?.contact_phone || (settings as any)?.whatsapp_phone || req.user?.phone || "";
 
     res.json({
       settings: {
         ...DEFAULT_TENANT_SETTINGS,
         ...(settings || {}),
+        contact_phone: resolvedContactPhone,
         subject: req.user?.subject || (settings as any)?.subject || "",
       },
       user: {
@@ -62,6 +65,7 @@ settingsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
         name: req.user?.name || req.user?.full_name,
         full_name: req.user?.full_name,
         phone: req.user?.phone || "",
+        contact_phone: resolvedContactPhone,
         subject: req.user?.subject || (settings as any)?.subject || "",
       },
     });
@@ -101,6 +105,10 @@ settingsRouter.put(
         ...req.body,
       };
 
+      if (req.body.contact_phone !== undefined) {
+        mergedSettings.contact_phone = normalizeDigits(req.body.contact_phone);
+      }
+
       const updated = await tenantsRepo.updateTenantSettings(tenantId, mergedSettings);
 
       // Also update user profile in public.users if teacher_name, phone, or subject are passed
@@ -131,6 +139,7 @@ settingsRouter.put(
           name: userUpdates.full_name ?? req.user?.name,
           full_name: userUpdates.full_name ?? req.user?.full_name,
           phone: userUpdates.phone ?? req.user?.phone,
+          contact_phone: mergedSettings.contact_phone || (existingSettings as any)?.contact_phone || req.user?.phone || "",
           subject: userUpdates.subject ?? req.user?.subject,
         },
       });

@@ -33,9 +33,9 @@ export function renderRiskWatchlistView(data = {}) {
               ${getIcon('refresh', 16)}
               <span>تحديث القائمة</span>
             </button>
-            <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('whatsapp')" style="display: inline-flex; align-items: center; gap: 0.35rem;">
-              ${getIcon('whatsapp', 16)}
-              <span>إعدادات قوالب الإنذار</span>
+            <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('settings')" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+              ${getIcon('settings', 16)}
+              <span>إعدادات النظام والتنبيهات</span>
             </button>
           </div>
         </div>

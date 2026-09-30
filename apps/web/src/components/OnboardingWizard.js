@@ -79,11 +79,7 @@ export function renderOnboardingWizard(step = 1, state = {}) {
             </div>
             <div style="display: flex; align-items: center; gap: 0.45rem; color: ${step >= 3 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
               <span style="width: 24px; height: 24px; border-radius: 50%; background: ${step >= 3 ? 'var(--centrly-blue-700)' : 'var(--centrly-line)'}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">3</span>
-              <span>سير العمل</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.45rem; color: ${step >= 4 ? 'var(--centrly-blue-700)' : 'var(--centrly-text)'}; font-weight: 700; font-size: 0.85rem;">
-              <span style="width: 24px; height: 24px; border-radius: 50%; background: ${step >= 4 ? 'var(--centrly-blue-700)' : 'var(--centrly-line)'}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">4</span>
-              <span>واتساب</span>
+              <span>سير العمل والتواصل</span>
             </div>
           </div>
         </div>
@@ -163,14 +159,22 @@ export function renderOnboardingWizard(step = 1, state = {}) {
           </div>
         ` : ''}
 
-        <!-- Step 3: Workflow Settings (DEV-38) -->
+        <!-- Step 3: Workflow Settings & Contact Phone (DEV-38) -->
         ${step === 3 ? `
           <div id="step3">
             <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
               ${getIcon('dashboard', 18, 'var(--centrly-blue-700)')}
-              <span>الخطوة 3: تفضيلات سير العمل للمدرس</span>
+              <span>الخطوة 3: تفضيلات سير العمل ورقم التواصل</span>
             </h3>
             
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+              <label class="form-label" style="font-weight: 700;">رقم واتساب للتواصل مع الطلاب وأولياء الأمور 💬</label>
+              <input type="tel" id="obContactPhone" class="form-input" placeholder="010..." value="${escapeHtml(defaultState.contactPhone || '')}" dir="ltr" style="font-size: 0.9rem;">
+              <span style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; display: block;">
+                سيظهر هذا الرقم كزر مباشر في بوابات المتابعة للطلاب وأولياء الأمور للتواصل معك عبر واتساب.
+              </span>
+            </div>
+
             <div class="form-group" style="margin-bottom: 1.25rem;">
               <label class="form-label">طريقة فحص وتصحيح الواجب الدراسي:</label>
               <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
@@ -180,17 +184,16 @@ export function renderOnboardingWizard(step = 1, state = {}) {
                 </label>
                 <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer;">
                   <input type="radio" name="obHomework" value="online_before_session" ${defaultState.homeworkSubmission === 'online_before_session' ? 'checked' : ''}>
-                  <span>تسليم الواجب أونلاين قبل موعد الحصة</span>
+                  <span>تسليم الواجب أونلاين عبر بوابة الطالب قبل موعد الحصة</span>
                 </label>
               </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 1.5rem;">
-              <label class="form-label">إشعارات الواتساب بعد إنهاء الحصة:</label>
-              <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; margin-top: 0.5rem; cursor: pointer;">
-                <input type="checkbox" id="obAutoNotification" ${defaultState.autoNotification ? 'checked' : ''}>
-                <span>إرسال تنبيهات الغياب الفردية للحالات الطارئة فقط (مع نقل المتابعة للبوابة)</span>
-              </label>
+              <label class="form-label">متابعة الطلاب وأولياء الأمور:</label>
+              <div style="background: #f8fafc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.85rem; font-size: 0.85rem; color: var(--centrly-text); line-height: 1.6;">
+                🔗 يتم تفعيل <strong>بوابات المتابعة الذكية</strong> تلقائياً لكل طالب وولي أمر لمتابعة الحضور والدرجات لحظياً، مع إمكانية المراسلة الفورية عبر واتساب بنقرة واحدة.
+              </div>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.75rem; flex-wrap: wrap; gap: 0.5rem;">
@@ -198,68 +201,9 @@ export function renderOnboardingWizard(step = 1, state = {}) {
                 السابق
               </button>
               <div style="display: flex; gap: 0.5rem;">
-                <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.skipOnboardingStep(3)" style="color: var(--centrly-text); border: 1px solid var(--centrly-line); background: #fff;">
-                  تخطي هذه الخطوة
-                </button>
-                <button type="button" class="btn btn-primary" onclick="window.centrlyApp.saveOnboardingDataAndGoToStep4()">
-                  حفظ والمتابعة إلى ربط واتساب
-                </button>
-              </div>
-            </div>
-          </div>
-        ` : ''}
-
-        <!-- Step 4: WhatsApp Connect (DEV-SSO.3) -->
-        ${step === 4 ? `
-          <div id="step4" style="text-align: center;">
-            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--centrly-ink); display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
-              ${getIcon('whatsapp', 18, 'var(--centrly-blue-700)')}
-              <span>الخطوة 4: ربط رقم الواتساب بالمنظومة</span>
-            </h3>
-            <p style="font-size: 0.85rem; color: var(--centrly-text); margin-bottom: 1.5rem;">
-              امسح رمز الاستجابة السريعة (QR Code) أو استخدم كود الاقتران لربط رقم واتساب لإرسال الإشعارات لأولياء الأمور
-            </p>
-
-            <div style="max-width: 320px; width: 100%; margin: 0 auto 1.5rem; padding: 1.5rem; background: #fff; border: 2px dashed var(--centrly-blue-700); border-radius: var(--radius-lg, 12px); box-sizing: border-box; text-align: center;">
-              <div id="obQrWrapper" style="width: 200px; height: 200px; max-width: 100%; background: #f8fafc; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md, 8px); margin: 0 auto; overflow: hidden; border: 1px solid var(--centrly-line, #e2e8f0);">
-                <img id="obQrImage" src="${defaultState.qrBase64 || ''}" alt="WhatsApp QR Code" style="width: 100%; height: 100%; object-fit: contain; ${defaultState.qrBase64 ? '' : 'display: none;'}">
-                <div id="obQrLoading" style="font-size: 0.85rem; color: var(--centrly-text); padding: 1rem; line-height: 1.5; ${defaultState.qrBase64 ? 'display: none;' : ''}">
-                  جارٍ إنشاء رمز QR...
-                </div>
-              </div>
-              <div id="obPairingContainer" style="margin-top: 1rem; font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink); word-break: break-all; ${(defaultState.pairingCode && defaultState.pairingCode.length <= 15 && !defaultState.pairingCode.includes('@') && !defaultState.pairingCode.includes(',')) ? '' : 'display: none;'}">
-                كود الاقتران: <span id="obPairingCode" style="font-family: monospace; color: var(--centrly-blue-800); background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px; letter-spacing: 1px;">${(defaultState.pairingCode && defaultState.pairingCode.length <= 15 && !defaultState.pairingCode.includes('@')) ? defaultState.pairingCode : ''}</span>
-              </div>
-            </div>
-
-            <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem;">
-              <span class="badge ${defaultState.waConnected ? 'badge-success' : 'badge-warning'}" id="obWaStatusBadge">
-                ${defaultState.waConnected ? `${getIcon('dotSuccess', 8)} بوابة الإرسال متصلة وجاهزة` : `${getIcon('dotWarning', 8)} بانتظار مسح رمز QR`}
-              </span>
-            </div>
-
-            <!-- Test WhatsApp message sender -->
-            <div style="max-width: 420px; margin: 0 auto 1.5rem; text-align: right; background: var(--centrly-surface); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--centrly-line);">
-              <label class="form-label" style="font-size: 0.8rem;">إرسال رسالة تجريبية لهاتفك للتحقق:</label>
-              <div style="display: flex; gap: 0.5rem;">
-                <input type="tel" id="obTestPhone" class="form-input" placeholder="رقم الهاتف للتجربة" dir="ltr" style="font-size: 0.85rem;">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendTestWhatsAppMessage()">
-                  إرسال تجربة
-                </button>
-              </div>
-              <div id="obTestMsgResult" style="font-size: 0.75rem; margin-top: 0.5rem; display: none;"></div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.75rem; flex-wrap: wrap; gap: 0.5rem;">
-              <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.nextOnboardingStep(3)">
-                السابق
-              </button>
-              <div style="display: flex; gap: 0.5rem;">
-                <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.finishOnboarding()" style="color: var(--centrly-text); border: 1px solid var(--centrly-line); background: #fff;">
-                  تخطي الربط الآن والبدء مباشرة
-                </button>
-                <button type="button" class="btn btn-primary" onclick="window.centrlyApp.finishOnboarding()">
-                  إنهاء والذهاب إلى لوحة التحكم
+                <button type="button" class="btn btn-primary" onclick="window.centrlyApp.saveOnboardingDataAndGoToStep4()" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); border: none; font-weight: 800; padding: 0.65rem 1.35rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                  <span>حفظ وإنهاء الإعداد والبدء فوراً</span>
+                  <span>←</span>
                 </button>
               </div>
             </div>

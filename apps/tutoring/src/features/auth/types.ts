@@ -10,6 +10,7 @@ export interface LoginResult {
     name?: string | null;
     full_name?: string | null;
     phone?: string | null;
+    contact_phone?: string | null;
     subject?: string | null;
     tenant_id?: string | null;
     role?: string | null;
@@ -25,6 +26,7 @@ export interface SignupDTO {
   full_name?: string;
   tenant_name: string;
   phone?: string;
+  contact_phone?: string;
   subject?: string;
   governorate?: string;
   account_type?: "teacher" | "center";
@@ -38,6 +40,7 @@ export interface SignupResult {
     name?: string | null;
     full_name?: string | null;
     phone?: string | null;
+    contact_phone?: string | null;
     subject?: string | null;
   };
   tenant: {

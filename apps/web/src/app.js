@@ -1880,6 +1880,7 @@ class CentrlyApp {
 
     const email = document.getElementById('signupEmail')?.value?.trim().toLowerCase() || '';
     const phone = normalizeDigits(document.getElementById('signupPhone')?.value?.trim() || '');
+    const contactPhone = normalizeDigits(document.getElementById('signupContactPhone')?.value?.trim() || '') || phone;
     const password = document.getElementById('signupPassword')?.value?.trim() || '';
     const passwordConfirm = document.getElementById('signupPasswordConfirm')?.value?.trim() || '';
 
@@ -1907,6 +1908,7 @@ class CentrlyApp {
       tenantName,
       email,
       phone,
+      contact_phone: contactPhone,
       subject,
       password,
       passwordConfirm,
@@ -1924,6 +1926,7 @@ class CentrlyApp {
         full_name: name,
         tenant_name: tenantName,
         phone,
+        contact_phone: contactPhone,
         subject,
         account_type: accountType,
       });
@@ -1938,6 +1941,7 @@ class CentrlyApp {
         full_name: name || res.user?.full_name,
         name: name || res.user?.name,
         phone: phone || res.user?.phone,
+        contact_phone: contactPhone || res.user?.contact_phone || phone,
         subject: subject || res.user?.subject,
       };
       authService.setUser(this.user);
@@ -2329,9 +2333,13 @@ class CentrlyApp {
   async saveOnboardingDataAndGoToStep4() {
     const selectedHw = document.querySelector('input[name="obHomework"]:checked')?.value || 'in_session';
     const autoNotif = document.getElementById('obAutoNotification')?.checked ?? true;
+    const obContactPhone = normalizeDigits(document.getElementById('obContactPhone')?.value?.trim() || '');
 
     this.onboardingState.homeworkSubmission = selectedHw;
     this.onboardingState.autoNotification = autoNotif;
+    if (obContactPhone && this.user) {
+      this.user.contact_phone = obContactPhone;
+    }
 
     try {
       await request('/settings', {
@@ -2340,13 +2348,14 @@ class CentrlyApp {
           homework_submission: selectedHw,
           auto_notification: autoNotif,
           enable_top_performers: true,
+          ...(obContactPhone ? { contact_phone: obContactPhone } : {}),
         }),
       }).catch(() => {});
 
-      this.persistOnboardingGroupAndStudents().catch(() => {});
-      this.nextOnboardingStep(4);
+      await this.persistOnboardingGroupAndStudents().catch(() => {});
+      await this.finishOnboarding();
     } catch (err) {
-      this.nextOnboardingStep(4);
+      await this.finishOnboarding();
     }
   }
 
@@ -10966,45 +10975,9 @@ class CentrlyApp {
     }
   }
 
-  startWhatsAppStatusPolling(context = 'onboarding') {
+  startWhatsAppStatusPolling(_context = 'onboarding') {
+    // Disabled in favor of 100% safe direct wa.me messaging and portal links
     this.stopWhatsAppStatusPolling();
-    this.waPollingInterval = setInterval(async () => {
-      try {
-        const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
-        const status = await request(`/whatsapp/status${teacherParam}`);
-
-        if (status && status.status === 'connected') {
-          this.stopWhatsAppStatusPolling();
-
-          if (context === 'onboarding') {
-            const badge = document.getElementById('obWaStatusBadge');
-            const loading = document.getElementById('obQrLoading');
-            const img = document.getElementById('obQrImage');
-            if (badge) {
-              badge.className = 'badge badge-success';
-              badge.textContent = 'تم الاتصال بنجاح وجاهز للإرسال!';
-            }
-            if (img) img.style.display = 'none';
-            if (loading) {
-              loading.style.display = 'block';
-              loading.textContent = 'تم ربط واتساب بنجاح! جاري التوجيه للوحة التحكم...';
-            }
-            setTimeout(() => {
-              this.finishOnboarding();
-            }, 1500);
-          } else if (context === 'settings') {
-            const badge = document.getElementById('settingsWaBadge');
-            if (badge) {
-              badge.className = 'badge badge-success';
-              badge.innerHTML = `<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#10b981"/></svg> متصل`;
-            }
-            await this.loadRouteData('whatsapp');
-          }
-        }
-      } catch (err) {
-        // silent polling catch
-      }
-    }, 3000);
   }
 
   stopWhatsAppStatusPolling() {
@@ -15198,15 +15171,6 @@ class CentrlyApp {
   switchSettingsTab(tab) {
     if (!this.settingsState) this.settingsState = {};
     this.settingsState.activeTab = tab;
-
-    if (tab === 'whatsapp') {
-      if (this.whatsappState?.status !== 'connected') {
-        this.startWhatsAppStatusPolling('settings');
-      }
-    } else {
-      this.stopWhatsAppStatusPolling();
-    }
-
     this.renderMainContent();
   }
 
@@ -15214,7 +15178,8 @@ class CentrlyApp {
     if (e) e.preventDefault();
     const name = document.getElementById('settingsTeacherName')?.value?.trim();
     const subject = document.getElementById('settingsSubject')?.value?.trim() || '';
-    const phone = document.getElementById('settingsPhone')?.value?.trim() || '';
+    const phone = normalizeDigits(document.getElementById('settingsPhone')?.value?.trim() || '');
+    const contactPhone = normalizeDigits(document.getElementById('settingsContactPhone')?.value?.trim() || '');
     const btn = document.getElementById('saveProfileBtn');
     if (btn) {
       btn.disabled = true;
@@ -15228,6 +15193,7 @@ class CentrlyApp {
           teacher_name: name,
           subject,
           phone,
+          contact_phone: contactPhone || phone,
         }),
       });
 
@@ -15238,6 +15204,7 @@ class CentrlyApp {
         }
         this.user.subject = subject;
         this.user.phone = phone;
+        this.user.contact_phone = contactPhone || phone;
         authService.setUser(this.user);
       }
       this.showToast('تم حفظ بيانات الملف الشخصي بنجاح', 'success');

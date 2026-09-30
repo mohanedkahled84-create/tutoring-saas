@@ -119,6 +119,7 @@ export class AuthService {
       teacher_name: string;
       teacher_email: string;
       teacher_phone?: string;
+      contact_phone?: string;
       tenant_name: string;
       subject?: string;
       governorate?: string;
@@ -132,6 +133,7 @@ export class AuthService {
       email: dto.email ? dto.email.trim().toLowerCase() : "",
       password: dto.password ? dto.password.trim() : "",
       tenant_name: dto.tenant_name ? dto.tenant_name.trim() : "",
+      contact_phone: dto.contact_phone ? dto.contact_phone.trim() : dto.phone,
     };
 
     if (!normalizedDto.email || !normalizedDto.password || !normalizedDto.tenant_name) {
@@ -153,6 +155,7 @@ export class AuthService {
         teacher_name: normalizedDto.full_name || normalizedDto.email,
         teacher_email: normalizedDto.email,
         teacher_phone: normalizedDto.phone,
+        contact_phone: normalizedDto.contact_phone,
         tenant_name: normalizedDto.tenant_name,
         subject: normalizedDto.subject,
         governorate: normalizedDto.governorate,

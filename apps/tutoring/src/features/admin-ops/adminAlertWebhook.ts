@@ -6,6 +6,7 @@ export interface NewSignupWebhookPayload {
   teacher_name: string;
   teacher_email: string;
   teacher_phone?: string;
+  contact_phone?: string;
   tenant_name: string;
   account_type?: "teacher" | "center";
   subject?: string;

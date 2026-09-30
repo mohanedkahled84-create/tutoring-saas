@@ -60,6 +60,19 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
   const studyMaterials = materials.filter(m => !m.is_homework);
   const approvedHomeworks = homeworkMaterials.filter(m => m.submission_status === 'approved');
 
+  const teacherPhone = student.teacher_phone || portalData.teacher_phone || student.contact_phone || '';
+  let cleanTeacherPhone = teacherPhone ? teacherPhone.replace(/[^\d+]/g, '') : '';
+  if (cleanTeacherPhone.startsWith('+')) {
+    cleanTeacherPhone = cleanTeacherPhone.substring(1);
+  } else if (cleanTeacherPhone.startsWith('01')) {
+    cleanTeacherPhone = '2' + cleanTeacherPhone;
+  }
+  const teacherNameStr = student.teacher_name || 'المعلم';
+  const teacherContactMsg = encodeURIComponent(
+    `السلام عليكم يا ${teacherNameStr}، أنا الطالب ${student.name}${student.student_code ? ` (كود: ${student.student_code})` : ''}${student.group_name ? ` - مجموعة ${student.group_name}` : ''}، وعندي استفسار بخصوص المادة.`
+  );
+  const teacherWaUrl = cleanTeacherPhone ? `https://wa.me/${cleanTeacherPhone}?text=${teacherContactMsg}` : null;
+
   const now = new Date();
   const isHomeworkFinished = (m) => {
     // 1. Approved homeworks are finished and approved
@@ -155,6 +168,31 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
             المذكرات الدراسية، رفع الواجبات، ومتابعة الدرجات والغياب أولاً بأول
           </p>
         </div>
+
+        <!-- Teacher Direct WhatsApp Contact Card -->
+        ${teacherWaUrl ? `
+          <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; border-radius: 1rem; padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: #10b981; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);">
+                ${getIcon('whatsapp', 22, '#ffffff')}
+              </div>
+              <div style="text-align: right;">
+                <div style="font-weight: 800; font-size: 0.9rem; color: #065f46;">
+                  تواصل مباشر مع ${escapeHtml(teacherNameStr)} 💬
+                </div>
+                <div style="font-size: 0.76rem; color: #047857; margin-top: 1px;">
+                  ${student.subject_name ? `${escapeHtml(student.subject_name)} • ` : ''}لأي سؤال في المنهج أو استفسار بخصوص الواجب
+                </div>
+              </div>
+            </div>
+            <a href="${teacherWaUrl}" target="_blank" rel="noopener noreferrer" 
+              style="background: #10b981; color: #ffffff; text-decoration: none; padding: 0.55rem 0.95rem; border-radius: 0.65rem; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; flex-shrink: 0; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); transition: transform 0.15s ease;"
+              onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+              ${getIcon('whatsapp', 15, '#ffffff')}
+              <span>مراسلة واتساب</span>
+            </a>
+          </div>
+        ` : ''}
 
         <!-- 4-Tab Navigation Bar (Materials, Quizzes, Attendance, Barcode ID Card) -->
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
