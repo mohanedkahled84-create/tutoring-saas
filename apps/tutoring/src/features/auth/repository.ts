@@ -558,7 +558,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
 
     return {
       success: true,
-      message: "تم إرسال رمز تحقق جديد إلى الواتساب والبريد الإلكتروني بنجاح.",
+      message: "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني بنجاح.",
       otp_code: code,
       phone,
       full_name: fullName,
@@ -753,7 +753,7 @@ export class FakeAuthRepository implements IAuthRepository {
     });
     return {
       success: true,
-      message: "تم إرسال رمز تحقق جديد إلى الواتساب والبريد الإلكتروني بنجاح.",
+      message: "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني بنجاح.",
       otp_code: "654321",
       phone: "01012345678",
       full_name: "مستخدم تجريبي",

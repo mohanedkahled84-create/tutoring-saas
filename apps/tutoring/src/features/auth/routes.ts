@@ -278,7 +278,7 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
     );
 
     res.status(201).json({
-      message: "تم إنشاء الحساب بنجاح. تم إرسال رمز التحقق إلى الواتساب وبريدك الإلكتروني.",
+      message: "تم إنشاء الحساب بنجاح. تم إرسال رمز التحقق إلى بريدك الإلكتروني.",
       requires_verification: true,
       email: email.trim().toLowerCase(),
       user: result.user,

@@ -144,7 +144,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
               ${getIcon('whatsapp', 18)}
               <span>إرسال الروابط للطلاب الجدد</span>
               ${!isPaidActive 
-                ? `<span style="font-size: 0.95rem; margin-right: 0.2rem;" title="ميزة خاصة بالمشتركين">👑</span>`
+                ? `<span style="display: inline-flex; align-items: center; margin-right: 0.2rem; color: #f59e0b;" title="ميزة خاصة بالمشتركين">${getIcon('crown', 15, '#f59e0b')}</span>`
                 : (unsentCount > 0 
                   ? `<span style="background: #ef4444; color: #fff; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 9999px; font-weight: 900;">${unsentCount}</span>` 
                   : `<span style="background: #10b981; color: #fff; font-size: 0.75rem; padding: 0.15rem 0.45rem; border-radius: 9999px; display: inline-flex; align-items: center;">${getIcon('check', 10, '#fff')}</span>`)

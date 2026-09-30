@@ -1955,7 +1955,7 @@ class CentrlyApp {
       });
 
       if (res.requires_verification) {
-        this.renderEmailVerificationView(email, password, 'تم إنشاء الحساب بنجاح! تم إرسال رمز التحقق إلى الواتساب وبريدك الإلكتروني 📲', this.signupFormData);
+        this.renderEmailVerificationView(email, password, 'تم إنشاء الحساب بنجاح! تم إرسال رمز التحقق إلى بريدك الإلكتروني.', this.signupFormData);
         return;
       }
 
@@ -2160,7 +2160,7 @@ class CentrlyApp {
 
     try {
       const res = await authService.resendVerification(email);
-      this.showVerificationAlert(res.message || 'تم إرسال رمز جديد إلى الواتساب وبريدك بنجاح 📲', 'success');
+      this.showVerificationAlert(res.message || 'تم إرسال رمز جديد إلى بريدك الإلكتروني بنجاح.', 'success');
 
       let timeLeft = 60;
       if (btn) {
@@ -8367,8 +8367,8 @@ class CentrlyApp {
   openSubscriptionRequiredForBatchPortalModal() {
     const bodyHtml = `
       <div style="text-align: center; padding: 1.25rem 0.5rem;">
-        <div style="width: 76px; height: 76px; margin: 0 auto 1.25rem; background: linear-gradient(135deg, #fef3c7, #fef08a); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(234, 179, 8, 0.25); border: 2.5px solid #fde047;">
-          <span style="font-size: 2.25rem;">👑</span>
+        <div style="width: 76px; height: 76px; margin: 0 auto 1.25rem; background: linear-gradient(135deg, #fef3c7, #fef08a); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(234, 179, 8, 0.25); border: 2.5px solid #fde047; color: #b45309;">
+          ${getIcon('crown', 38, '#b45309')}
         </div>
         
         <h3 style="font-size: 1.25rem; font-weight: 800; color: #1e293b; margin-bottom: 0.6rem;">
@@ -8381,7 +8381,6 @@ class CentrlyApp {
 
         <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.25rem; text-align: right; max-width: 440px; margin: 0 auto 1.5rem;">
           <div style="font-weight: 800; font-size: 0.85rem; color: #0f172a; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
-            <span style="color: #ca8a04;">✨</span>
             <span>ماذا تحصل عند الترقية للباقة المدفوعة؟</span>
           </div>
           <ul style="margin: 0; padding-right: 1.2rem; font-size: 0.825rem; color: #334155; display: flex; flex-direction: column; gap: 0.45rem; list-style-type: disc;">
@@ -8394,7 +8393,6 @@ class CentrlyApp {
 
         <div style="display: flex; flex-direction: column; gap: 0.6rem; max-width: 380px; margin: 0 auto;">
           <button type="button" class="btn btn-primary" onclick="window.centrlyApp.closeModal(); window.centrlyApp.navigate('billing');" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; font-weight: 800; font-size: 0.95rem; padding: 0.75rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3); display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer;">
-            <span>🚀</span>
             <span>الترقية والاشتراك في باقة الآن</span>
           </button>
           <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()" style="font-weight: 600; font-size: 0.85rem; padding: 0.45rem;">
@@ -11296,7 +11294,7 @@ class CentrlyApp {
                 <span class="badge badge-blue" style="font-size: 0.7rem; padding: 0.1rem 0.4rem;">تخفيض فوري</span>
               </label>
               <div style="display: flex; gap: 0.4rem;">
-                <input type="text" id="couponCodeInput" class="form-input" placeholder="اكتب كود الخصم (مثال: CEN100)" style="flex: 1; text-transform: uppercase; font-weight: 800; font-family: monospace; font-size: 0.875rem;" autocomplete="off" value="${escapeHtml(this.appliedCouponCode || '')}" ${this.appliedCouponData ? 'disabled' : ''} onkeydown="if(event.key==='Enter'){event.preventDefault(); window.centrlyApp.applyCouponCode();}">
+                <input type="text" id="couponCodeInput" class="form-input" placeholder="اكتب كود الخصم إن وجد" style="flex: 1; text-transform: uppercase; font-weight: 800; font-family: monospace; font-size: 0.875rem;" autocomplete="off" value="${escapeHtml(this.appliedCouponCode || '')}" ${this.appliedCouponData ? 'disabled' : ''} onkeydown="if(event.key==='Enter'){event.preventDefault(); window.centrlyApp.applyCouponCode();}">
                 <button type="button" id="btnApplyCoupon" class="btn btn-secondary" onclick="window.centrlyApp.applyCouponCode()" style="font-weight: 800; font-size: 0.825rem; padding: 0.4rem 1.1rem; border-color: var(--centrly-blue-700); color: ${this.appliedCouponData ? '#ffffff' : 'var(--centrly-blue-700)'}; background: ${this.appliedCouponData ? '#10b981' : 'transparent'}; cursor: pointer;" ${this.appliedCouponData ? 'disabled' : ''}>
                   ${this.appliedCouponData ? 'مفعّل ✓' : 'تطبيق'}
                 </button>
