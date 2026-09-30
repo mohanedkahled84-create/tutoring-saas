@@ -7452,37 +7452,40 @@ class CentrlyApp {
   async handleSendParentNote(e, studentId) {
     e.preventDefault();
     const text = document.getElementById('parentNoteText')?.value.trim();
-    const btn = document.getElementById('btnSendParentNote');
-    const feedback = document.getElementById('parentNoteFeedback');
     if (!text) return;
 
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'جاري الإرسال...';
+    const student = (this.students || []).find(s => String(s.id) === String(studentId));
+    const parentPhone = student?.parent_phone || student?.parentPhone || '';
+    const studentName = student?.name || student?.full_name || 'الطالب';
+
+    let cleanParent = (parentPhone || '').replace(/[\s\-\+\(\)]/g, '');
+    if (cleanParent.startsWith('00')) cleanParent = cleanParent.slice(2);
+    if (cleanParent.startsWith('01') && cleanParent.length === 11) {
+      cleanParent = '20' + cleanParent.slice(1);
     }
 
-    try {
-      await request(`/students/${studentId}/note`, {
-        method: 'POST',
-        body: { note: text },
-      }).catch(err => {
-        console.warn('Note dispatch fallback:', err);
-      });
-
-      this.closeModal();
-      this.showToast('تم إرسال الملاحظة لولي الأمر بنجاح عبر الواتساب', 'success');
-    } catch (err) {
-      if (feedback) {
-        feedback.style.display = 'block';
-        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
-        feedback.style.color = 'var(--centrly-danger)';
-        feedback.textContent = `${err.message || 'فشل إرسال الملاحظة'}`;
-      }
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'إرسال لولي الأمر';
-      }
+    if (!cleanParent || cleanParent.length < 9) {
+      this.showToast(`رقم هاتف ولي الأمر غير مسجل للطالب "${studentName}".`, 'warning');
+      return;
     }
+
+    const rawTeacher = this.user?.name || 'المعلم';
+    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
+      ? rawTeacher
+      : `مستر ${rawTeacher}`;
+
+    const msg = `السلام عليكم ورحمة الله وبركاته، تحية طيبة لولي أمر الطالب (${studentName}).\n\n📝 *ملاحظة خاصة من المعلم:*\n${text}\n\nمع خالص تمنياتنا للطالب بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
+    const waUrl = `https://wa.me/${cleanParent}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+
+    this.closeModal();
+    this.showToast(`تم فتح محادثة واتساب لولي أمر (${studentName}) بنجاح! 💬`, 'success');
+
+    // Persist note to student in backend
+    request(`/students/${studentId}`, {
+      method: 'PATCH',
+      body: { notes: text }
+    }).catch(() => {});
   }
 
   async retryFailedWhatsAppMessages() {
@@ -7858,47 +7861,21 @@ class CentrlyApp {
       if (comment) previewText += `ملاحظة: ${comment}\n`;
     }
 
-    this.showConfirmModal({
-      title: 'إرسال إشعار ولي الأمر عبر واتساب',
-      message: `هل ترغب في إرسال تقرير الحصة للطالب "${studentName}" إلى ولي الأمر (${parentPhone})؟`,
-      confirmText: 'إرسال الإشعار',
-      cancelText: 'إلغاء',
-      isDanger: false,
-      onConfirm: async () => {
-        let sentViaApi = false;
-        try {
-          const statusRes = await request('/whatsapp/status').catch(() => null);
-          if (statusRes && statusRes.status === 'connected') {
-            const sendRes = await request(`/sessions/${this.sessionState.id || 'active'}/resend/${studentId}`, { method: 'POST' }).catch(() => null);
-            if (sendRes && (sendRes.gateway_delivered || sendRes.dispatched || sendRes.success)) {
-              sentViaApi = true;
-            }
-          }
-        } catch (err) {
-          console.warn('API send failed, falling back to direct send:', err);
-        }
+    let cleanPhone = (parentPhone || '').replace(/[\s\-\+\(\)]/g, '');
+    if (cleanPhone.startsWith('00')) cleanPhone = cleanPhone.slice(2);
+    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
+      cleanPhone = '20' + cleanPhone.slice(1);
+    }
 
-        if (sentViaApi) {
-          if (row) {
-            row.sent = true;
-            row.deliveryStatus = 'delivered';
-            this.persistSessionState();
-          }
-          this.showToast(`تم إرسال الإشعار بنجاح إلى ولي أمر: ${studentName}`, 'success');
-          this.renderMainContent();
-        } else {
-          // Fallback to instant 1-click Direct WhatsApp
-          this.openDirectWhatsAppFallbackModal(studentName, parentPhone, previewText, () => {
-            if (row) {
-              row.sent = true;
-              row.deliveryStatus = 'delivered';
-              this.persistSessionState();
-              this.renderMainContent();
-            }
-          });
-        }
-      }
-    });
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(previewText)}`;
+    window.open(waUrl, '_blank');
+    if (row) {
+      row.sent = true;
+      row.deliveryStatus = 'delivered';
+      this.persistSessionState();
+    }
+    this.showToast(`تم فتح محادثة واتساب لولي أمر (${studentName}) بنجاح! 💬`, 'success');
+    this.renderMainContent();
   }
 
   openDirectWhatsAppFallbackModal(studentName, phone, messageText, onDelivered, recipientType = 'parent') {
@@ -12286,41 +12263,120 @@ class CentrlyApp {
       return;
     }
 
-    try {
-      const targetLabel = target === 'student' ? 'للطالب' : (target === 'parent' ? 'لولي الأمر' : 'لولي الأمر والطالب');
-      this.showToast(`جارٍ إرسال درجة (${studentName}) ${targetLabel} بنظام الأمان ومحاكاة الكتابة الحية...`, 'info');
-      const res = await request(`/students/${studentId}/notify-score`, {
-        method: 'POST',
-        body: {
-          quiz_title: quizTitle || `كويز ${currQuizNum}`,
-          score: Number(score),
-          max_score: currentQuiz.maxScore || 10,
-          note: note || undefined,
-          target,
-        },
-      });
+    const student = (this.students || []).find(s => String(s.id) === String(studentId));
+    const rawParentPhone = student?.parent_phone || student?.parentPhone || '';
+    const rawStudentPhone = student?.student_phone || student?.studentPhone || student?.phone || '';
 
-      if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
-      if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
-      const isDelivered = (res?.status === 'sent' || res?.delivered !== false);
-      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = isDelivered ? 'sent' : 'failed';
+    const cleanPhone = (phone) => {
+      let p = (phone || '').replace(/[\s\-\+\(\)]/g, '');
+      if (p.startsWith('00')) p = p.slice(2);
+      if (p.startsWith('01') && p.length === 11) p = '20' + p.slice(1);
+      return p;
+    };
 
-      if (isDelivered) {
-        const sentToStr = Array.isArray(res?.sent_to) && res.sent_to.length > 1 ? 'لولي الأمر والطالب معاً' : (res?.sent_to?.[0] === 'student' ? 'للطالب مباشرة' : 'لولي الأمر');
-        this.showToast(`تم إرسال إشعار درجة (${studentName}) ${sentToStr} بنجاح عبر واتساب`, 'success');
-      } else {
-        this.showToast(`تعذر تسليم إشعار (${studentName}): ${res?.error || 'فشل التوصيل'}`, 'danger');
+    const cleanParent = cleanPhone(rawParentPhone);
+    const cleanStudent = cleanPhone(rawStudentPhone);
+
+    const maxScore = currentQuiz.maxScore || 10;
+    const numScore = Number(score);
+    const percentage = (numScore / maxScore) * 100;
+    const rating = percentage >= 85 ? 'ممتاز 🌟' : percentage >= 65 ? 'جيد 👍' : 'يحتاج لمزيد من المذاكرة والاجتهاد 📝';
+    const displayTitle = (quizTitle && quizTitle.trim()) ? quizTitle.trim() : `كويز ${currQuizNum}`;
+
+    const rawTeacher = this.user?.name || 'المعلم';
+    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
+      ? rawTeacher
+      : `مستر ${rawTeacher}`;
+
+    const studentMsg = `أهلاً بك يا (${studentName})، نتمنى لك دوام التفوق والتميز دائماً!\n\n📊 *نتيجة تقييم:* ${displayTitle}\n🎯 *درجتك:* ${numScore} من ${maxScore} (${rating})\n${note && note.trim() ? `📝 *ملاحظة المعلم:* ${note.trim()}\n` : ''}\nمع أطيب التمنيات لك بدوام التميز والإنجاز.\nمع تحيات: ${teacherName}`;
+
+    const parentMsg = `السلام عليكم ورحمة الله وبركاته، تحية طيبة لولي أمر الطالب/ة (${studentName}).\n\nيسعدنا إحاطة سيادتكم علماً بنتيجة الاختبار الأخير:\n📊 *الاختبار:* ${displayTitle}\n🎯 *الدرجة المحققة:* ${numScore} من ${maxScore} (${rating})\n${note && note.trim() ? `📝 *ملاحظة المعلم:* ${note.trim()}\n` : ''}\nشاكرين لكم حسن تعاونكم وحرصكم المستمر على متابعة تفوق الطالب.\nمع تحيات: ${teacherName}`;
+
+    if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
+    if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
+
+    if (target === 'student') {
+      if (!cleanStudent || cleanStudent.length < 9) {
+        this.showToast(`رقم هاتف الطالب غير مسجل للطالب "${studentName}".`, 'warning');
+        return;
       }
+      const waUrl = `https://wa.me/${cleanStudent}?text=${encodeURIComponent(studentMsg)}`;
+      window.open(waUrl, '_blank');
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
       this.saveQuizzesToLocalStorage();
+      this.showToast(`تم فتح محادثة واتساب للطالب (${studentName}) بنجاح! 💬`, 'success');
       this.renderMainContent();
-    } catch (err) {
-      if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
-      if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
-      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'failed';
-      this.saveQuizzesToLocalStorage();
-      this.showToast(`فشل إرسال إشعار الكويز: ${err.message || 'خطأ في خادم الواتساب'}`, 'danger');
-      this.renderMainContent();
+      return;
     }
+
+    if (target === 'parent') {
+      if (!cleanParent || cleanParent.length < 9) {
+        this.showToast(`رقم هاتف ولي الأمر غير مسجل للطالب "${studentName}".`, 'warning');
+        return;
+      }
+      const waUrl = `https://wa.me/${cleanParent}?text=${encodeURIComponent(parentMsg)}`;
+      window.open(waUrl, '_blank');
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+      this.saveQuizzesToLocalStorage();
+      this.showToast(`تم فتح محادثة واتساب لولي أمر (${studentName}) بنجاح! 💬`, 'success');
+      this.renderMainContent();
+      return;
+    }
+
+    // target === 'both' or default
+    if (cleanParent && cleanStudent) {
+      const parentWaUrl = `https://wa.me/${cleanParent}?text=${encodeURIComponent(parentMsg)}`;
+      const studentWaUrl = `https://wa.me/${cleanStudent}?text=${encodeURIComponent(studentMsg)}`;
+
+      // Open parent chat immediately
+      window.open(parentWaUrl, '_blank');
+
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+      this.saveQuizzesToLocalStorage();
+      this.renderMainContent();
+
+      // Show instant modal to open student chat as well
+      this.showModal(
+        `إرسال النتيجة: ${studentName}`,
+        `<div style="text-align: center; padding: 1.25rem 0.5rem;" dir="rtl">
+          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🎉</div>
+          <h3 style="font-weight: 800; font-size: 1.1rem; color: #1e293b; margin-bottom: 0.4rem;">تم فتح محادثة ولي الأمر بنجاح!</h3>
+          <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.6;">تم فتح واتساب لولي الأمر (${escapeHtml(rawParentPhone)}) وتجهيز نص النتيجة.<br>اضغط بالأسفل لفتح محادثة الطالب أيضاً بنقرة واحدة:</p>
+          <div style="display: flex; flex-direction: column; gap: 0.6rem; max-width: 320px; margin: 0 auto;">
+            <a href="${studentWaUrl}" target="_blank" onclick="window.centrlyApp.closeModal(); window.centrlyApp.showToast('تم فتح محادثة الطالب (${escapeHtml(studentName)}) بنجاح! 💬', 'success');" class="btn btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #2563eb; border-color: #2563eb; font-weight: 700; text-decoration: none; padding: 0.65rem 1rem;">
+              <span>💬 فتح محادثة الطالب (${escapeHtml(rawStudentPhone)})</span>
+            </a>
+            <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()" style="font-size: 0.85rem;">
+              تم الاكتفاء بولي الأمر
+            </button>
+          </div>
+        </div>`,
+        ''
+      );
+      return;
+    }
+
+    if (cleanParent) {
+      const waUrl = `https://wa.me/${cleanParent}?text=${encodeURIComponent(parentMsg)}`;
+      window.open(waUrl, '_blank');
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+      this.saveQuizzesToLocalStorage();
+      this.showToast(`تم فتح محادثة واتساب لولي أمر (${studentName}) بنجاح! 💬`, 'success');
+      this.renderMainContent();
+      return;
+    }
+
+    if (cleanStudent) {
+      const waUrl = `https://wa.me/${cleanStudent}?text=${encodeURIComponent(studentMsg)}`;
+      window.open(waUrl, '_blank');
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+      this.saveQuizzesToLocalStorage();
+      this.showToast(`تم فتح محادثة واتساب للطالب (${studentName}) بنجاح! 💬`, 'success');
+      this.renderMainContent();
+      return;
+    }
+
+    this.showToast(`لا يوجد رقم هاتف مسجل للطالب أو لولي أمره لإرسال النتيجة.`, 'warning');
   }
 
   dispatchBatchQuizScores() {
