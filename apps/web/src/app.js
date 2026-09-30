@@ -8676,36 +8676,33 @@ class CentrlyApp {
   switchWhatsAppTab(tab) {
     this.whatsappActiveTab = tab;
     const inboxSec = document.getElementById('sectionWhatsAppInbox');
+    const logsSec = document.getElementById('sectionWhatsAppLogs');
     const calcSec = document.getElementById('sectionWhatsAppCalculator');
+
     const btnInbox = document.getElementById('tabBtnInbox');
+    const btnLogs = document.getElementById('tabBtnLogs');
     const btnCalc = document.getElementById('tabBtnCalc');
 
-    if (tab === 'inbox') {
-      if (inboxSec) inboxSec.style.display = 'flex';
-      if (calcSec) calcSec.style.display = 'none';
-      if (btnInbox) {
-        btnInbox.style.background = '#ffffff';
-        btnInbox.style.color = '#065f46';
-        btnInbox.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
+    [
+      { sec: inboxSec, btn: btnInbox, active: tab === 'inbox' },
+      { sec: logsSec, btn: btnLogs, active: tab === 'logs' },
+      { sec: calcSec, btn: btnCalc, active: tab === 'calculator' },
+    ].forEach(({ sec, btn, active }) => {
+      if (sec) sec.style.display = active ? 'flex' : 'none';
+      if (btn) {
+        if (active) {
+          btn.style.background = '#ffffff';
+          btn.style.color = '#065f46';
+          btn.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
+        } else {
+          btn.style.background = 'rgba(255,255,255,0.1)';
+          btn.style.color = '#ffffff';
+          btn.style.boxShadow = 'none';
+        }
       }
-      if (btnCalc) {
-        btnCalc.style.background = 'rgba(255,255,255,0.1)';
-        btnCalc.style.color = '#ffffff';
-        btnCalc.style.boxShadow = 'none';
-      }
-    } else {
-      if (inboxSec) inboxSec.style.display = 'none';
-      if (calcSec) calcSec.style.display = 'flex';
-      if (btnCalc) {
-        btnCalc.style.background = '#ffffff';
-        btnCalc.style.color = '#065f46';
-        btnCalc.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
-      }
-      if (btnInbox) {
-        btnInbox.style.background = 'rgba(255,255,255,0.1)';
-        btnInbox.style.color = '#ffffff';
-        btnInbox.style.boxShadow = 'none';
-      }
+    });
+
+    if (tab === 'calculator') {
       this.recalculateWhatsAppEconomics();
     }
   }
@@ -8763,80 +8760,81 @@ class CentrlyApp {
   }
 
   recalculateWhatsAppEconomics() {
-    const teacherInput = document.getElementById('calcTeacherCount');
     const feeInput = document.getElementById('calcTeacherFee');
-    const freeInput = document.getElementById('calcFreeTeacherCount');
-    const avgStudentsInput = document.getElementById('calcAvgStudents');
+    const studentsInput = document.getElementById('calcTeacherStudents');
+    const unitCostInput = document.getElementById('calcMsgUnitCost');
 
-    if (!teacherInput || !feeInput) return;
+    if (!feeInput || !studentsInput) return;
 
-    const totalTeachers = Math.max(1, parseInt(teacherInput.value, 10) || 1);
     const teacherFee = Math.max(0, parseFloat(feeInput.value) || 0);
-    const freeTeachers = Math.min(totalTeachers, Math.max(0, parseInt(freeInput?.value, 10) || 0));
-    const avgStudents = Math.max(1, parseInt(avgStudentsInput?.value, 10) || 70);
+    const studentsCount = Math.max(1, parseInt(studentsInput.value, 10) || 1);
+    const unitCost = Math.max(0, parseFloat(unitCostInput?.value ?? 0.80) || 0.80);
 
-    const payingTeachers = Math.max(0, totalTeachers - freeTeachers);
-    const monthlyTeacherRevenue = payingTeachers * teacherFee;
+    // Month 1: Setup & Onboarding
+    // Teacher pays subscription fee (e.g. 600 EGP)
+    // WhatsApp onboarding messages sent to his students (e.g. 105 students) for ONCE only!
+    const requiredMsgs = studentsCount;
+    const msgCost = Math.round(requiredMsgs * unitCost);
+    const month1Net = Math.max(0, teacherFee - msgCost);
 
-    // Total students across all subscribed teachers
-    const totalStudents = totalTeachers * avgStudents;
-    // Each teacher sends onboarding messages to his students ONCE upon registration
-    const requiredMsgs = totalStudents;
+    // Month 2+: Recurring Months
+    // Teacher pays monthly fee (e.g. 600 EGP)
+    // Existing students already activated. WhatsApp message cost = 0.00 EGP!
+    // Net profit = 100% of teacher fee
+    const month2Net = teacherFee;
 
-    // Meta WhatsApp Cloud API tier: 1,000 free service messages/month
-    const metaFreeTier = 1000;
-    const paidMsgs = Math.max(0, requiredMsgs - metaFreeTier);
-    const costPerPaidMsg = 0.80; // approximate EGP per message
-    const month1WhatsAppCost = Math.round(paidMsgs * costPerPaidMsg);
-    const month1Net = Math.max(0, monthlyTeacherRevenue - month1WhatsAppCost);
+    // Annual Net: 12 months subscription - 1-time message cost
+    const annualRevenue = teacherFee * 12;
+    const annualNet = Math.max(0, annualRevenue - msgCost);
+    const annualMargin = annualRevenue > 0 ? ((annualNet / annualRevenue) * 100).toFixed(1) : '100.0';
 
-    // Month 2+ (الشهرية القادمة):
-    // Existing students already activated. WhatsApp onboarding cost = 0.00 EGP!
-    const month2Net = monthlyTeacherRevenue;
-
-    const totalStudentsEl = document.getElementById('calcTotalStudents');
     const revEl = document.getElementById('calcMonth1Revenue');
     const msgsEl = document.getElementById('calcMonth1Msgs');
     const costEl = document.getElementById('calcMonth1Cost');
     const net1El = document.getElementById('calcMonth1Net');
     const net2El = document.getElementById('calcMonth2Net');
+    const yearNetEl = document.getElementById('calcYearNet');
+    const yearRevEl = document.getElementById('calcYearRevenue');
+    const yearCostEl = document.getElementById('calcYearCost');
+    const yearMarginEl = document.getElementById('calcYearMargin');
 
-    if (totalStudentsEl) totalStudentsEl.innerText = `${totalStudents.toLocaleString('ar-EG')} طالب (${totalTeachers} مدرس × ${avgStudents} طالب)`;
-    if (revEl) revEl.innerText = `${monthlyTeacherRevenue.toLocaleString('ar-EG')} ج.م (${payingTeachers} مدرس دافع × ${teacherFee} ج.م)`;
-    if (msgsEl) msgsEl.innerText = `${requiredMsgs.toLocaleString('ar-EG')} رسالة تفعيل (تُرسل مرة واحدة فقط)`;
-    if (costEl) {
-      if (month1WhatsAppCost > 0) {
-        costEl.innerText = `${month1WhatsAppCost.toLocaleString('ar-EG')} ج.م (${paidMsgs.toLocaleString('ar-EG')} رسالة فوق الـ 1,000 المجانية)`;
-        costEl.style.color = '#ea580c';
-      } else {
-        costEl.innerText = '0.00 ج.م (مغطاة بالكامل ضمن الـ 1,000 المجانية من Meta)';
-        costEl.style.color = '#16a34a';
-      }
-    }
-    if (net1El) {
-      net1El.innerText = `${month1Net.toLocaleString('ar-EG')} ج.م`;
-    }
-    if (net2El) {
-      net2El.innerText = `${month2Net.toLocaleString('ar-EG')} ج.م`;
-    }
+    if (revEl) revEl.innerText = `${teacherFee.toLocaleString('ar-EG')} ج.م`;
+    if (msgsEl) msgsEl.innerText = `${requiredMsgs.toLocaleString('ar-EG')} رسالة (طالب)`;
+    if (costEl) costEl.innerText = `${msgCost.toLocaleString('ar-EG')} ج.م (${requiredMsgs} × ${unitCost} ج.م)`;
+    if (net1El) net1El.innerText = `${month1Net.toLocaleString('ar-EG')} ج.م`;
+    if (net2El) net2El.innerText = `${month2Net.toLocaleString('ar-EG')} ج.م`;
+    if (yearNetEl) yearNetEl.innerText = `${annualNet.toLocaleString('ar-EG')} ج.م`;
+    if (yearRevEl) yearRevEl.innerText = `${annualRevenue.toLocaleString('ar-EG')} ج.م`;
+    if (yearCostEl) yearCostEl.innerText = `${msgCost.toLocaleString('ar-EG')} ج.م (مرة واحدة فقط)`;
+    if (yearMarginEl) yearMarginEl.innerText = `${annualMargin}%`;
+
+    // Update scale radar cards
+    const radarFeeLabel = document.getElementById('calcRadarFeeLabel');
+    if (radarFeeLabel) radarFeeLabel.innerText = `${teacherFee.toLocaleString('ar-EG')}`;
+
+    const r10 = document.getElementById('radar10');
+    const r25 = document.getElementById('radar25');
+    const r50 = document.getElementById('radar50');
+    const r100 = document.getElementById('radar100');
+
+    if (r10) r10.innerText = `${(teacherFee * 10).toLocaleString('ar-EG')} ج.م`;
+    if (r25) r25.innerText = `${(teacherFee * 25).toLocaleString('ar-EG')} ج.م`;
+    if (r50) r50.innerText = `${(teacherFee * 50).toLocaleString('ar-EG')} ج.م`;
+    if (r100) r100.innerText = `${(teacherFee * 100).toLocaleString('ar-EG')} ج.م`;
   }
 
-  setCalcTeachers(num) {
-    const teacherInput = document.getElementById('calcTeacherCount');
-    const freeInput = document.getElementById('calcFreeTeacherCount');
-    if (teacherInput) {
-      teacherInput.value = num;
-      if (freeInput) {
-        freeInput.value = Math.max(0, Math.round(num * 0.1));
-      }
+  setCalcTeacherFee(num) {
+    const feeInput = document.getElementById('calcTeacherFee');
+    if (feeInput) {
+      feeInput.value = num;
       this.recalculateWhatsAppEconomics();
     }
   }
 
-  setCalcAvgStudents(num) {
-    const avgInput = document.getElementById('calcAvgStudents');
-    if (avgInput) {
-      avgInput.value = num;
+  setCalcStudents(num) {
+    const studentsInput = document.getElementById('calcTeacherStudents');
+    if (studentsInput) {
+      studentsInput.value = num;
       this.recalculateWhatsAppEconomics();
     }
   }
