@@ -8761,14 +8761,14 @@ class CentrlyApp {
 
   whatsappSelectedPlan = 'plan_300';
   whatsappBillingCycle = 'monthly';
-  whatsappUseMetaFreeTier = true;
 
   selectWhatsAppPlan(planId) {
     this.whatsappSelectedPlan = planId;
+    const currentActual = this.students?.length || 68;
     const plansData = {
-      plan_300: { monthly: 499, yearly: 4790, students: 300 },
-      plan_750: { monthly: 899, yearly: 8630, students: 750 },
-      plan_1500: { monthly: 1399, yearly: 13430, students: 1500 },
+      plan_300: { monthly: 499, yearly: 4790, students: currentActual },
+      plan_750: { monthly: 899, yearly: 8630, students: 150 },
+      plan_1500: { monthly: 1399, yearly: 13430, students: 300 },
     };
 
     const targetPlan = plansData[planId] || plansData.plan_300;
@@ -8848,6 +8848,7 @@ class CentrlyApp {
     }
 
     // Update current plan input fee
+    const currentActual = this.students?.length || 68;
     const plansData = {
       plan_300: { monthly: 499, yearly: 4790 },
       plan_750: { monthly: 899, yearly: 8630 },
@@ -8877,16 +8878,10 @@ class CentrlyApp {
     this.recalculateWhatsAppEconomics();
   }
 
-  toggleMetaFreeTier(checked) {
-    this.whatsappUseMetaFreeTier = Boolean(checked);
-    this.recalculateWhatsAppEconomics();
-  }
-
   recalculateWhatsAppEconomics() {
     const feeInput = document.getElementById('calcTeacherFee');
     const studentsInput = document.getElementById('calcTeacherStudents');
     const unitCostInput = document.getElementById('calcMsgUnitCost');
-    const freeTierCheckbox = document.getElementById('calcMetaFreeTier');
     const isYearly = this.whatsappBillingCycle === 'yearly';
 
     if (!feeInput || !studentsInput) return;
@@ -8894,38 +8889,30 @@ class CentrlyApp {
     const teacherFee = Math.max(0, parseFloat(feeInput.value) || 0);
     const studentsCount = Math.max(1, parseInt(studentsInput.value, 10) || 1);
     const unitCost = Math.max(0, parseFloat(unitCostInput?.value ?? 0.80) || 0.80);
-    const useFreeTier = freeTierCheckbox ? freeTierCheckbox.checked : (this.whatsappUseMetaFreeTier ?? true);
 
-    // Meta Pricing Logic:
-    // Meta grants 1,000 free conversations per month.
-    // If studentsCount <= 1000: Meta cost is 0.00 EGP.
-    // Excess students above 1,000 are billed at unitCost (default 0.80 EGP).
-    const freeTierLimit = useFreeTier ? 1000 : 0;
-    const freeCount = Math.min(studentsCount, freeTierLimit);
-    const paidCount = Math.max(0, studentsCount - freeTierLimit);
-    const msgCost = Math.round(paidCount * unitCost);
+    // Real Meta Economics:
+    // Meta charges per outbound utility template starting from message 1 (approx 0.80 EGP/msg in Egypt).
+    // Messages are sent to activate students for ONCE only during Month 1.
+    const msgCost = Math.round(studentsCount * unitCost * 100) / 100;
 
     // Month 1: Setup & Onboarding
-    // Teacher pays fee (monthly 499/899/1399 or yearly 4790/8630/13430)
-    // WhatsApp onboarding links are dispatched once
     const month1Revenue = teacherFee;
-    const month1Net = Math.max(0, month1Revenue - msgCost);
+    const month1Net = Math.max(0, Math.round((month1Revenue - msgCost) * 100) / 100);
     const month1Margin = month1Revenue > 0 ? ((month1Net / month1Revenue) * 100).toFixed(1) : '100.0';
 
     // Month 2+: Recurring Months
     // Onboarding links are never re-sent. Meta WhatsApp cost = 0.00 EGP!
     // If monthly: recurring monthly revenue is teacherFee (100% net margin)
-    // If yearly: already fully collected upfront; 0 EGP messaging cost
+    // If yearly: already fully collected upfront; 0.00 EGP messaging cost
     const month2Net = isYearly ? 0 : teacherFee;
 
     // Annual Net:
     const annualRevenue = isYearly ? teacherFee : (teacherFee * 12);
-    const annualNet = Math.max(0, annualRevenue - msgCost);
+    const annualNet = Math.max(0, Math.round((annualRevenue - msgCost) * 100) / 100);
     const annualMargin = annualRevenue > 0 ? ((annualNet / annualRevenue) * 100).toFixed(1) : '100.0';
 
     const revEl = document.getElementById('calcMonth1Revenue');
     const msgsEl = document.getElementById('calcMonth1Msgs');
-    const freeCovEl = document.getElementById('calcMonth1FreeCoverage');
     const costEl = document.getElementById('calcMonth1Cost');
     const net1El = document.getElementById('calcMonth1Net');
     const net2El = document.getElementById('calcMonth2Net');
@@ -8936,38 +8923,18 @@ class CentrlyApp {
 
     if (revEl) revEl.innerText = `${teacherFee.toLocaleString('ar-EG')} ج.م`;
     if (msgsEl) msgsEl.innerText = `${studentsCount.toLocaleString('ar-EG')} رسالة (طالب)`;
-    if (freeCovEl) {
-      if (paidCount === 0) {
-        freeCovEl.innerText = `${studentsCount.toLocaleString('ar-EG')} رسالة مجانية (100% ضمن Meta)`;
-        freeCovEl.style.color = '#16a34a';
-      } else {
-        freeCovEl.innerText = `${freeCount.toLocaleString('ar-EG')} مجاناً من Meta + ${paidCount.toLocaleString('ar-EG')} رسالة مدفوعة`;
-        freeCovEl.style.color = '#0284c7';
-      }
-    }
-    if (costEl) {
-      if (msgCost === 0) {
-        costEl.innerText = '0.00 ج.م (مغطاة بالكامل مجاناً من Meta)';
-        costEl.style.color = '#16a34a';
-      } else {
-        costEl.innerText = `${msgCost.toLocaleString('ar-EG')} ج.م (${paidCount} رسالة × ${unitCost} ج.م)`;
-        costEl.style.color = '#ea580c';
-      }
-    }
-    if (net1El) net1El.innerText = `${month1Net.toLocaleString('ar-EG')} ج.م (${month1Margin}%)`;
+    if (costEl) costEl.innerText = `${msgCost.toFixed(2)} ج.م (${studentsCount} × ${unitCost.toFixed(2)} ج.م)`;
+    if (net1El) net1El.innerText = `${month1Net.toFixed(2)} ج.م (${month1Margin}%)`;
     if (net2El) {
       if (isYearly) {
         net2El.innerHTML = `<span style="font-size: 1.4rem; color: #166534;">مدفوع مقدماً بالكامل</span> <div style="font-size: 0.8rem; color: #15803d; font-weight: 700; margin-top: 0.2rem;">تكلفة الواتساب 0.00 ج.م طوال الشهور</div>`;
       } else {
-        net2El.innerText = `${month2Net.toLocaleString('ar-EG')} ج.م`;
+        net2El.innerText = `${month2Net.toFixed(2)} ج.م`;
       }
     }
-    if (yearNetEl) yearNetEl.innerText = `${annualNet.toLocaleString('ar-EG')} ج.م`;
+    if (yearNetEl) yearNetEl.innerText = `${annualNet.toFixed(2)} ج.م`;
     if (yearRevEl) yearRevEl.innerText = `${annualRevenue.toLocaleString('ar-EG')} ج.م`;
-    if (yearCostEl) {
-      yearCostEl.innerText = msgCost === 0 ? '0.00 ج.م (كل الرسائل مجانية)' : `${msgCost.toLocaleString('ar-EG')} ج.م (مرة واحدة بأول شهر)`;
-      yearCostEl.style.color = msgCost === 0 ? '#16a34a' : '#ea580c';
-    }
+    if (yearCostEl) yearCostEl.innerText = `${msgCost.toFixed(2)} ج.م (مرة واحدة فقط بأول شهر)`;
     if (yearMarginEl) yearMarginEl.innerText = `${annualMargin}%`;
 
     // Update Scale Radar Cards
@@ -8977,7 +8944,6 @@ class CentrlyApp {
     const r10 = document.getElementById('radar10');
     const r25 = document.getElementById('radar25');
     const r50 = document.getElementById('radar50');
-    const r100 = document.getElementById('radar100');
     const periodSubText = isYearly ? 'سنوياً كاش فوري مقدماً' : 'شهرياً بدون مصاريف رسائل';
 
     if (r10) r10.innerText = `${(teacherFee * 10).toLocaleString('ar-EG')} ج.م`;
