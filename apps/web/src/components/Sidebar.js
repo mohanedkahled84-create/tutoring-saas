@@ -13,6 +13,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
         { id: 'admin-dashboard', title: 'لوحة الإحصائيات والأرباح', icon: 'dashboard' },
         { id: 'admin-proofs', title: 'مراجعة إيصالات الدفع', icon: 'billing' },
         { id: 'admin-tenants', title: 'المشتركين والمعلمين والسناتر', icon: 'teachers' },
+        { id: 'whatsapp-inbox', title: 'مركز محادثات الواتساب', icon: 'whatsapp' },
         { id: 'admin-outreach', title: 'حملات التواصل (Outreach)', icon: 'whatsapp' },
         { id: 'coupons', title: 'أكواد الخصم والكوبونات', icon: 'billing' },
       ],
@@ -32,6 +33,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       routes: [
         { id: 'center-sessions', title: 'الحصص والقاعات الجارية', icon: 'sessions' },
         { id: 'center-dashboard', title: 'لوحة السنتر والإيرادات', icon: 'center' },
+        { id: 'whatsapp-inbox', title: 'محادثات الواتساب وحاسبة الأرباح', icon: 'whatsapp' },
         { id: 'center-rooms', title: 'القاعات والمختبرات', icon: 'rooms' },
       ],
     },
@@ -84,6 +86,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       category: 'الأرباح والتقارير الأكاديمية',
       routes: [
         { id: 'dashboard', title: 'لوحة المعلم والأرباح', icon: 'dashboard' },
+        { id: 'whatsapp-inbox', title: 'محادثات الواتساب وحاسبة الأرباح', icon: 'whatsapp' },
         { id: 'reports', title: 'الدرجات ولوحة الشرف', icon: 'reports' },
         { id: 'risk-watchlist', title: 'مؤشرات الخطر والإنذارات', icon: 'risk' },
       ],

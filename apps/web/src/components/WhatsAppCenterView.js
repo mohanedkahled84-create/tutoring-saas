@@ -1,0 +1,392 @@
+import { escapeHtml } from '../utils/escapeHtml.js';
+import { getIcon } from '../utils/icons.js';
+
+/**
+ * WhatsApp Center & Smart Profit Calculator View
+ * Combines WhatsApp Live Inbox & Messaging Tracker with Smart Unit Economics Calculator.
+ */
+export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
+  const stats = data.stats || {
+    total_sent: 0,
+    total_replied: 0,
+    pending_reply: 0,
+    reply_rate: 0,
+  };
+
+  const conversations = data.conversations || [];
+  const currentStudentsCount = data.total_students || conversations.length || 68;
+
+  return `
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
+      
+      <!-- Top Header & Navigation Banner -->
+      <div class="card" style="margin: 0; background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); color: #ffffff; border-radius: 16px; padding: 1.75rem 1.5rem; position: relative; overflow: hidden; box-shadow: 0 10px 25px rgba(6, 78, 59, 0.2);">
+        <div style="position: absolute; left: -20px; top: -20px; width: 140px; height: 140px; background: rgba(255, 255, 255, 0.05); border-radius: 50%; pointer-events: none;"></div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem; position: relative; z-index: 1;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: rgba(255, 255, 255, 0.15); border-radius: 10px; color: #34d399;">
+                ${getIcon('whatsapp', 22, '#34d399')}
+              </span>
+              <h1 style="font-family: 'Changa', sans-serif; font-size: 1.45rem; font-weight: 800; margin: 0; color: #ffffff;">
+                مركز محادثات الواتساب وحاسبة الأرباح
+              </h1>
+            </div>
+            <p style="font-size: 0.88rem; color: #d1fae5; margin: 0; line-height: 1.6; max-width: 600px;">
+              متابعة مباشرة لمن رد ومن لم يرد من الطلاب وأولياء الأمور، وإحصائيات تكلفة الرسائل وتقسيم الأرباح للشهرية القادمة.
+            </p>
+          </div>
+
+          <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            <button class="btn" onclick="window.centrlyApp.loadWhatsAppInboxData()" style="background: rgba(255, 255, 255, 0.15); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.25); font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; border-radius: 10px;">
+              ${getIcon('refresh', 16, '#ffffff')}
+              <span>تحديث المحادثات</span>
+            </button>
+            <button class="btn" onclick="window.centrlyApp.openBatchPortalLinksModal()" style="background: #ffffff; color: #065f46; border: none; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.15rem; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
+              ${getIcon('send', 16, '#065f46')}
+              <span>إرسال روابط جديدة</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 1rem;">
+          <button type="button" id="tabBtnInbox" onclick="window.centrlyApp.switchWhatsAppTab('inbox')" style="padding: 0.55rem 1.25rem; border-radius: 8px; font-weight: 800; font-size: 0.9rem; border: none; cursor: pointer; transition: all 0.2s; ${activeTab === 'inbox' ? 'background: #ffffff; color: #065f46; box-shadow: 0 4px 10px rgba(0,0,0,0.1);' : 'background: rgba(255,255,255,0.1); color: #ffffff;'}">
+            محادثات الواتساب وتتبع الردود (${stats.total_sent})
+          </button>
+          <button type="button" id="tabBtnCalc" onclick="window.centrlyApp.switchWhatsAppTab('calculator')" style="padding: 0.55rem 1.25rem; border-radius: 8px; font-weight: 800; font-size: 0.9rem; border: none; cursor: pointer; transition: all 0.2s; ${activeTab === 'calculator' ? 'background: #ffffff; color: #065f46; box-shadow: 0 4px 10px rgba(0,0,0,0.1);' : 'background: rgba(255,255,255,0.1); color: #ffffff;'}">
+            حاسبة الأرباح وتكاليف الرسائل الذكية
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 1: INBOX & CHAT TRACKER -->
+      <div id="sectionWhatsAppInbox" style="${activeTab === 'inbox' ? 'display: flex; flex-direction: column; gap: 1.5rem;' : 'display: none;'}">
+        
+        <!-- Quick Statistics Row -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+          <div class="card" style="margin: 0; padding: 1.25rem; border-radius: 12px; background: #ffffff; border: 1px solid var(--centrly-line); display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">إجمالي الرسائل المرسلة</div>
+              <div style="font-size: 1.75rem; font-weight: 900; color: #0f172a; margin-top: 0.2rem; font-family: monospace;">${stats.total_sent}</div>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: #2563eb;">
+              ${getIcon('send', 22, '#2563eb')}
+            </div>
+          </div>
+
+          <div class="card" style="margin: 0; padding: 1.25rem; border-radius: 12px; background: #f0fdf4; border: 1.5px solid #bbf7d0; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 0.8rem; color: #166534; font-weight: 800;">وصل رد من ولي الأمر / الطالب</div>
+              <div style="font-size: 1.75rem; font-weight: 900; color: #15803d; margin-top: 0.2rem; font-family: monospace;">${stats.total_replied}</div>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #dcfce7; display: flex; align-items: center; justify-content: center; color: #15803d;">
+              ${getIcon('check', 22, '#15803d')}
+            </div>
+          </div>
+
+          <div class="card" style="margin: 0; padding: 1.25rem; border-radius: 12px; background: #ffffff; border: 1px solid var(--centrly-line); display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">في انتظار الرد</div>
+              <div style="font-size: 1.75rem; font-weight: 900; color: #64748b; margin-top: 0.2rem; font-family: monospace;">${stats.pending_reply}</div>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f8fafc; display: flex; align-items: center; justify-content: center; color: #64748b;">
+              ${getIcon('clock', 22, '#64748b')}
+            </div>
+          </div>
+
+          <div class="card" style="margin: 0; padding: 1.25rem; border-radius: 12px; background: #ffffff; border: 1px solid var(--centrly-line); display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">معدل التفاعل والاستجابة</div>
+              <div style="font-size: 1.75rem; font-weight: 900; color: #0284c7; margin-top: 0.2rem; font-family: monospace;">${stats.reply_rate}%</div>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f0f9ff; display: flex; align-items: center; justify-content: center; color: #0284c7;">
+              ${getIcon('chart', 22, '#0284c7')}
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="card" style="margin: 0; padding: 1rem 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+              <button class="btn btn-sm" id="btnFilterAll" onclick="window.centrlyApp.filterWhatsAppInbox('ALL')" style="font-weight: 800; border-radius: 8px; background: #0f172a; color: #ffffff;">
+                الكل (${stats.total_sent})
+              </button>
+              <button class="btn btn-sm" id="btnFilterReplied" onclick="window.centrlyApp.filterWhatsAppInbox('REPLIED')" style="font-weight: 800; border-radius: 8px; background: #f1f5f9; color: #334155;">
+                وصل رد (${stats.total_replied})
+              </button>
+              <button class="btn btn-sm" id="btnFilterPending" onclick="window.centrlyApp.filterWhatsAppInbox('PENDING')" style="font-weight: 800; border-radius: 8px; background: #f1f5f9; color: #334155;">
+                بانتظار الرد (${stats.pending_reply})
+              </button>
+            </div>
+
+            <div style="flex: 1; max-width: 320px; position: relative;">
+              <input type="text" id="inboxSearchInput" class="form-input" placeholder="بحث باسم الطالب أو رقم الهاتف..." oninput="window.centrlyApp.searchWhatsAppInbox(this.value)" style="padding-right: 2.2rem; font-size: 0.85rem; border-radius: 8px;">
+              <span style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex;">
+                ${getIcon('search', 16, '#94a3b8')}
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Conversation Cards List -->
+        <div id="inboxConversationsList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          ${renderConversationCards(conversations)}
+        </div>
+
+      </div>
+
+      <!-- TAB 2: SMART PROFIT & UNIT ECONOMICS CALCULATOR -->
+      <div id="sectionWhatsAppCalculator" style="${activeTab === 'calculator' ? 'display: flex; flex-direction: column; gap: 1.5rem;' : 'display: none;'}">
+        
+        <!-- Explanation Banner -->
+        <div class="card" style="margin: 0; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 1.25rem 1.5rem;">
+          <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+            <div style="color: #16a34a; margin-top: 0.15rem;">${getIcon('info', 22, '#16a34a')}</div>
+            <div>
+              <div style="font-weight: 800; font-size: 0.95rem; color: #166534; margin-bottom: 0.35rem;">
+                كيف تعمل حسبة الواتساب الذكية وتقسيم الأرباح الشهرية؟
+              </div>
+              <div style="font-size: 0.85rem; color: #15803d; line-height: 1.7;">
+                1. <strong>رسائل تفعيل البوابة تُرسل مرة واحدة فقط:</strong> يتم إرسال روابط المنصة وبيانات الدخول للطلاب وأولياء الأمور لمرة واحدة عند التسجيل، ولا تتكرر التكلفة كل شهر.<br>
+                2. <strong>شريحة مجانية 1,000 محادثة شهرياً من Meta:</strong> أول 1,000 محادثة شهرياً مجانية تماماً، وبالتالي تكلفة إرسال الروابط لطلابك مغطاة بالكامل بدون أي مصاريف.<br>
+                3. <strong>الشهرية القادمة (أرباح متكررة 100%):</strong> في الشهور القادمة، يدفع الطلاب اشتراكهم الشهري بانتظام (مثال 200 ج.م)، بينما تكلفة رسائل الواتساب تكون <strong>0 ج.م</strong> لأنهم مفعلون مسبقاً!
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Calculator Card -->
+        <div class="card" style="margin: 0; padding: 1.5rem; border-radius: 14px;">
+          <h3 style="margin: 0 0 1.25rem 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.5rem;">
+            <span>${getIcon('chart', 20, 'var(--centrly-blue-700)')}</span>
+            <span>المدخلات المالية التفاعلية</span>
+          </h3>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+            
+            <!-- Student Count Input -->
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #334155;">
+                عدد الطلاب الإجمالي
+              </label>
+              <input type="number" id="calcStudentCount" class="form-input" min="1" max="5000" value="${currentStudentsCount}" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.1rem; padding: 0.65rem 0.85rem;">
+              <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem;">
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(50)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">50</button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(100)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">100</button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(200)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">200</button>
+                <button type="button" class="btn btn-sm" onclick="window.centrlyApp.setCalcStudents(300)" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9;">300</button>
+              </div>
+            </div>
+
+            <!-- Price Per Student (Default 200 EGP as requested) -->
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #334155;">
+                سعر اشتراك الطالب الشهري (ج.م)
+              </label>
+              <div style="position: relative; display: flex; align-items: center;">
+                <input type="number" id="calcStudentFee" class="form-input" min="50" max="2000" value="200" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.1rem; padding: 0.65rem 0.85rem; padding-left: 3rem;">
+                <span style="position: absolute; left: 0.75rem; font-weight: 800; color: #64748b; font-size: 0.85rem;">ج.م</span>
+              </div>
+              <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
+                الافتراضي: 200 ج.م شهرياً للطالب
+              </div>
+            </div>
+
+            <!-- Free / Exempted Students -->
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #334155;">
+                الطلاب المعفيين (فري / أيتام / خصومات)
+              </label>
+              <input type="number" id="calcExemptCount" class="form-input" min="0" max="500" value="${Math.max(0, Math.round(currentStudentsCount * 0.05))}" oninput="window.centrlyApp.recalculateWhatsAppEconomics()" style="font-weight: 800; font-size: 1.1rem; padding: 0.65rem 0.85rem;">
+              <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
+                مراعاة الحالات المجانية بدون تحصيل
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Live Results Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+          
+          <!-- Month 1: Setup & Launch -->
+          <div class="card" style="margin: 0; padding: 1.5rem; border-radius: 14px; background: #ffffff; border: 1.5px solid #cbd5e1; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+              <span class="badge" style="background: #e2e8f0; color: #1e293b; font-weight: 800; font-size: 0.8rem; padding: 0.3rem 0.6rem;">الشهر الأول (تفعيل الحسابات)</span>
+              <span style="font-size: 0.75rem; color: #64748b;">مرة واحدة فقط</span>
+            </div>
+
+            <div style="font-size: 0.85rem; color: #64748b;">إجمالي الإيراد الشهري المحصل:</div>
+            <div id="calcMonth1Revenue" style="font-size: 1.85rem; font-weight: 900; color: #0f172a; font-family: monospace; margin-top: 0.15rem;">
+              -- ج.م
+            </div>
+
+            <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.825rem;">
+              <div style="display: flex; justify-content: space-between; color: #475569;">
+                <span>رسائل الواتساب المطلوبة:</span>
+                <strong id="calcMonth1Msgs" style="font-family: monospace;">-- رسالة</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: #16a34a; font-weight: 700;">
+                <span>شريحة Meta المجانية:</span>
+                <span>1,000 رسالة مجاناً</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: #0f172a; font-weight: 800; margin-top: 0.25rem;">
+                <span>صافي ربح الشهر الأول:</span>
+                <span id="calcMonth1Net" style="color: #047857; font-size: 1.05rem;">-- ج.م</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Month 2+: Next Recurring Month -->
+          <div class="card" style="margin: 0; padding: 1.5rem; border-radius: 14px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #86efac; box-shadow: 0 6px 20px rgba(22, 163, 74, 0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+              <span class="badge" style="background: #16a34a; color: #ffffff; font-weight: 800; font-size: 0.8rem; padding: 0.3rem 0.6rem;">الشهرية القادمة (أرباح مستمرة)</span>
+              <span style="font-size: 0.75rem; color: #15803d; font-weight: 700;">تتكرر شهرياً</span>
+            </div>
+
+            <div style="font-size: 0.85rem; color: #166534;">صافي الأرباح الشهرية القادمة:</div>
+            <div id="calcMonth2Net" style="font-size: 2rem; font-weight: 900; color: #15803d; font-family: monospace; margin-top: 0.15rem;">
+              -- ج.م
+            </div>
+
+            <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid rgba(22, 163, 74, 0.2); display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.825rem;">
+              <div style="display: flex; justify-content: space-between; color: #166534;">
+                <span>تكلفة رسائل الواتساب:</span>
+                <strong style="color: #15803d; font-size: 0.95rem;">0.00 ج.م (صفر تكلفة)</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: #15803d;">
+                <span>السبب:</span>
+                <span>الروابط أرسلت مسبقاً ولا تعاد</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: #14532d; font-weight: 800; margin-top: 0.25rem;">
+                <span>نسبة الربح من التحصيل:</span>
+                <span style="font-size: 1.05rem;">100% صافي أرباح</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Growth Scenarios Card -->
+        <div class="card" style="margin: 0; padding: 1.5rem; border-radius: 14px;">
+          <h4 style="margin: 0 0 1rem 0; font-size: 1.05rem; font-weight: 800; color: var(--centrly-ink);">
+            رادار نمو الاشتراكات والأرباح عند زيادة عدد الطلاب (بسعر 200 ج.م)
+          </h4>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; text-align: center;">
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">عند وصولك لـ 100 طالب</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: #0f172a; margin: 0.35rem 0; font-family: monospace;">20,000 ج.م</div>
+              <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">إيراد شهري مستمر</div>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem; text-align: center;">
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">عند وصولك لـ 200 طالب</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: #0284c7; margin: 0.35rem 0; font-family: monospace;">40,000 ج.م</div>
+              <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">إيراد شهري مستمر</div>
+            </div>
+
+            <div style="background: #f8fafc; border: 1.5px solid #bbf7d0; background: #f0fdf4; border-radius: 10px; padding: 1rem; text-align: center;">
+              <div style="font-size: 0.8rem; color: #166534; font-weight: 700;">عند وصولك لـ 300 طالب</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: #15803d; margin: 0.35rem 0; font-family: monospace;">60,000 ج.م</div>
+              <div style="font-size: 0.75rem; color: #15803d; font-weight: 800;">إيراد شهري مستمر</div>
+            </div>
+
+            <div style="background: #f8fafc; border: 1.5px solid #fed7aa; background: #fff7ed; border-radius: 10px; padding: 1rem; text-align: center;">
+              <div style="font-size: 0.8rem; color: #9a3412; font-weight: 700;">عند وصولك لـ 500 طالب</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: #ea580c; margin: 0.35rem 0; font-family: monospace;">100,000 ج.م</div>
+              <div style="font-size: 0.75rem; color: #c2410c; font-weight: 800;">إيراد شهري مستمر</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
+
+function renderConversationCards(conversations = []) {
+  if (!conversations || conversations.length === 0) {
+    return `
+      <div class="card" style="margin: 0; padding: 3rem 1.5rem; text-align: center; border-radius: 12px;">
+        <div style="color: #94a3b8; margin-bottom: 0.75rem; display: flex; justify-content: center;">
+          ${getIcon('inbox', 42, '#94a3b8')}
+        </div>
+        <h4 style="margin: 0 0 0.4rem 0; font-size: 1.1rem; color: #334155; font-weight: 800;">
+          لا توجد رسائل واتساب مسجلة بعد
+        </h4>
+        <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 1.25rem 0;">
+          عند إرسال روابط المنصة للطلاب أو عند استلام ردودهم، ستظهر جميع المحادثات وتفاصيلها هنا فوراً.
+        </p>
+        <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.openBatchPortalLinksModal()" style="font-weight: 800; padding: 0.55rem 1.25rem;">
+          إرسال روابط المنصة للطلاب
+        </button>
+      </div>
+    `;
+  }
+
+  return conversations.map((conv) => {
+    const isReplied = Boolean(conv.has_replied);
+    const cleanPhone = String(conv.phone || '').replace(/\D/g, '');
+    const displayPhone = cleanPhone.startsWith('20') ? '0' + cleanPhone.slice(2) : cleanPhone;
+    const studentName = conv.student_name || 'طالب';
+    const lastMsgBody = conv.last_message?.body || 'تم إرسال رابط المنصة وبوابة المتابعة';
+    const msgTime = conv.last_message?.time ? new Date(conv.last_message.time).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'اليوم';
+
+    return `
+      <div class="card conversation-item" data-replied="${isReplied}" data-name="${escapeHtml(studentName.toLowerCase())}" data-phone="${escapeHtml(cleanPhone)}" style="margin: 0; padding: 1.15rem 1.25rem; border-radius: 12px; background: ${isReplied ? '#ffffff' : '#fafafa'}; border: ${isReplied ? '1.5px solid #86efac' : '1px solid var(--centrly-line)'}; transition: all 0.2s;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          
+          <!-- Student & Phone Info -->
+          <div style="display: flex; align-items: center; gap: 0.85rem; min-width: 240px;">
+            <div style="width: 44px; height: 44px; border-radius: 50%; background: ${isReplied ? '#dcfce7' : '#f1f5f9'}; color: ${isReplied ? '#15803d' : '#64748b'}; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.05rem; flex-shrink: 0;">
+              ${escapeHtml(studentName.charAt(0) || 'ط')}
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+                <span>${escapeHtml(studentName)}</span>
+                <span class="badge" style="font-size: 0.7rem; padding: 0.1rem 0.45rem; ${isReplied ? 'background: #dcfce7; color: #166534;' : 'background: #f1f5f9; color: #475569;'}">
+                  ${isReplied ? 'وصل رد 💬' : 'تم الإرسال ⏳'}
+                </span>
+              </div>
+              <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.15rem; font-family: monospace; display: flex; align-items: center; gap: 0.35rem;" dir="ltr">
+                <span>${escapeHtml(displayPhone)}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Message Status & Content -->
+          <div style="flex: 1; min-width: 250px; background: ${isReplied ? '#f0fdf4' : '#f8fafc'}; border: 1px solid ${isReplied ? '#bbf7d0' : '#e2e8f0'}; border-radius: 8px; padding: 0.65rem 0.85rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: ${isReplied ? '#15803d' : '#475569'};">
+                ${isReplied ? 'آخر رد من الطالب / ولي الأمر:' : 'حالة الإرسال:'}
+              </span>
+              <span style="font-size: 0.72rem; color: #94a3b8;">${escapeHtml(msgTime)}</span>
+            </div>
+            <div style="font-size: 0.825rem; color: ${isReplied ? '#14532d' : '#334155'}; font-weight: ${isReplied ? '700' : '500'}; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              ${escapeHtml(lastMsgBody)}
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button class="btn btn-sm" onclick="window.centrlyApp.openWhatsAppChatWindow('${escapeHtml(cleanPhone)}', '${escapeHtml(studentName)}')" style="background: #25D366; color: #ffffff; border: none; font-weight: 800; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25);">
+              ${getIcon('whatsapp', 15, '#ffffff')}
+              <span>فتح الشات</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.showWhatsAppMessageHistory('${escapeHtml(conv.id || cleanPhone)}')" style="font-weight: 700; font-size: 0.8rem; padding: 0.45rem 0.75rem; border-radius: 8px;">
+              تفاصيل المحادثة
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }).join('');
+}

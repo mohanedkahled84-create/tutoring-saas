@@ -35,6 +35,7 @@ import { renderAdminTenantsView } from './components/AdminTenantsView.js';
 import { renderAdminOutreachView } from './components/AdminOutreachView.js?v=1.0.1';
 import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.9.9';
 import { renderCouponsView } from './components/CouponsView.js?v=4.7.6';
+import { renderWhatsAppCenterView } from './components/WhatsAppCenterView.js?v=1.0.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.9.21';
@@ -48,6 +49,9 @@ class CentrlyApp {
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
     this.currentRoute = isAdmin ? 'admin-dashboard' : (isCenter ? 'center-dashboard' : 'dashboard');
     this.giftCodes = [];
+    this.whatsappInboxData = null;
+    this.whatsappActiveTab = 'inbox';
+    this.whatsappFilter = 'ALL';
     this.adminOverviewData = null;
     this.adminProofsData = { payment_proofs: [] };
     this.adminProofsFilter = 'pending';
@@ -3208,6 +3212,14 @@ class CentrlyApp {
           }
           break;
         }
+        case 'whatsapp-inbox': {
+          await this.loadWhatsAppInboxData(false);
+          this.renderMainContent();
+          setTimeout(() => {
+            this.recalculateWhatsAppEconomics();
+          }, 60);
+          break;
+        }
         case 'activity-logs': {
           const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
           if (isCenter) {
@@ -3566,6 +3578,15 @@ class CentrlyApp {
         });
       case 'whatsapp':
         return renderWhatsAppSettingsView(this.whatsappState || {});
+      case 'whatsapp-inbox':
+        return renderWhatsAppCenterView(
+          this.whatsappInboxData || {
+            stats: { total_sent: 0, total_replied: 0, pending_reply: 0, reply_rate: 0 },
+            conversations: [],
+            total_students: (this.students?.length || 68),
+          },
+          this.whatsappActiveTab || 'inbox'
+        );
       case 'activity-logs': {
         const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
         if (isAdmin) {
@@ -8605,6 +8626,8 @@ class CentrlyApp {
 
       if (this.currentRoute === 'students') {
         this.renderMainContent();
+      } else if (this.currentRoute === 'whatsapp-inbox') {
+        await this.loadWhatsAppInboxData(true);
       }
     } catch (err) {
       if (btn) {
@@ -8618,6 +8641,304 @@ class CentrlyApp {
       }
       this.showToast(`حدث خطأ أثناء الإرسال: ${err.message || 'تأكد من الاتصال بالخادم'}`, 'danger');
     }
+  }
+
+  // ==========================================================================
+  // WhatsApp Live Inbox & Smart Profit Economics Center
+  // ==========================================================================
+
+  async loadWhatsAppInboxData(render = true) {
+    try {
+      const res = await request('/whatsapp/inbox').catch(() => null);
+      if (res && res.success) {
+        this.whatsappInboxData = res;
+      } else {
+        this.whatsappInboxData = res || {
+          stats: { total_sent: 0, total_replied: 0, pending_reply: 0, reply_rate: 0 },
+          conversations: [],
+          total_students: this.students?.length || 68,
+        };
+      }
+      if (this.whatsappInboxData && !this.whatsappInboxData.total_students) {
+        this.whatsappInboxData.total_students = this.students?.length || 68;
+      }
+    } catch (err) {
+      console.warn('Failed to load WhatsApp inbox data:', err);
+    }
+    if (render) {
+      this.renderMainContent();
+      setTimeout(() => {
+        this.recalculateWhatsAppEconomics();
+      }, 50);
+    }
+  }
+
+  switchWhatsAppTab(tab) {
+    this.whatsappActiveTab = tab;
+    const inboxSec = document.getElementById('sectionWhatsAppInbox');
+    const calcSec = document.getElementById('sectionWhatsAppCalculator');
+    const btnInbox = document.getElementById('tabBtnInbox');
+    const btnCalc = document.getElementById('tabBtnCalc');
+
+    if (tab === 'inbox') {
+      if (inboxSec) inboxSec.style.display = 'flex';
+      if (calcSec) calcSec.style.display = 'none';
+      if (btnInbox) {
+        btnInbox.style.background = '#ffffff';
+        btnInbox.style.color = '#065f46';
+        btnInbox.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
+      }
+      if (btnCalc) {
+        btnCalc.style.background = 'rgba(255,255,255,0.1)';
+        btnCalc.style.color = '#ffffff';
+        btnCalc.style.boxShadow = 'none';
+      }
+    } else {
+      if (inboxSec) inboxSec.style.display = 'none';
+      if (calcSec) calcSec.style.display = 'flex';
+      if (btnCalc) {
+        btnCalc.style.background = '#ffffff';
+        btnCalc.style.color = '#065f46';
+        btnCalc.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
+      }
+      if (btnInbox) {
+        btnInbox.style.background = 'rgba(255,255,255,0.1)';
+        btnInbox.style.color = '#ffffff';
+        btnInbox.style.boxShadow = 'none';
+      }
+      this.recalculateWhatsAppEconomics();
+    }
+  }
+
+  filterWhatsAppInbox(filter) {
+    this.whatsappFilter = filter;
+    const items = document.querySelectorAll('.conversation-item');
+    items.forEach(el => {
+      const isReplied = el.getAttribute('data-replied') === 'true';
+      if (filter === 'ALL') {
+        el.style.display = '';
+      } else if (filter === 'REPLIED') {
+        el.style.display = isReplied ? '' : 'none';
+      } else if (filter === 'PENDING') {
+        el.style.display = !isReplied ? '' : 'none';
+      }
+    });
+
+    const btnAll = document.getElementById('btnFilterAll');
+    const btnReplied = document.getElementById('btnFilterReplied');
+    const btnPending = document.getElementById('btnFilterPending');
+
+    [
+      { btn: btnAll, active: filter === 'ALL' },
+      { btn: btnReplied, active: filter === 'REPLIED' },
+      { btn: btnPending, active: filter === 'PENDING' },
+    ].forEach(({ btn, active }) => {
+      if (!btn) return;
+      if (active) {
+        btn.style.background = '#0f172a';
+        btn.style.color = '#ffffff';
+      } else {
+        btn.style.background = '#f1f5f9';
+        btn.style.color = '#334155';
+      }
+    });
+  }
+
+  searchWhatsAppInbox(query) {
+    const q = (query || '').trim().toLowerCase();
+    const items = document.querySelectorAll('.conversation-item');
+    items.forEach(el => {
+      const name = (el.getAttribute('data-name') || '').toLowerCase();
+      const phone = (el.getAttribute('data-phone') || '').toLowerCase();
+      const matchesSearch = !q || name.includes(q) || phone.includes(q);
+      
+      const isReplied = el.getAttribute('data-replied') === 'true';
+      const matchesFilter = 
+        this.whatsappFilter === 'ALL' ||
+        (this.whatsappFilter === 'REPLIED' && isReplied) ||
+        (this.whatsappFilter === 'PENDING' && !isReplied);
+
+      el.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+    });
+  }
+
+  recalculateWhatsAppEconomics() {
+    const studentInput = document.getElementById('calcStudentCount');
+    const feeInput = document.getElementById('calcStudentFee');
+    const exemptInput = document.getElementById('calcExemptCount');
+
+    if (!studentInput || !feeInput || !exemptInput) return;
+
+    const totalStudents = Math.max(0, parseInt(studentInput.value, 10) || 0);
+    const fee = Math.max(0, parseFloat(feeInput.value) || 0);
+    const exempt = Math.min(totalStudents, Math.max(0, parseInt(exemptInput.value, 10) || 0));
+
+    const payingStudents = Math.max(0, totalStudents - exempt);
+    const monthlyRevenue = payingStudents * fee;
+
+    // Month 1 calculations:
+    // Required messages = totalStudents (each student receives portal login credentials once)
+    const requiredMsgs = totalStudents;
+    // Meta Cloud API provides 1,000 free service messages/month
+    const metaFreeTier = 1000;
+    const paidMsgs = Math.max(0, requiredMsgs - metaFreeTier);
+    const costPerPaidMsgEgp = 0.80; // approximate Meta Cloud API rate in Egypt
+    const month1WhatsAppCost = Math.round(paidMsgs * costPerPaidMsgEgp);
+    const month1Net = Math.max(0, monthlyRevenue - month1WhatsAppCost);
+
+    // Month 2+ recurring calculations:
+    // Credentials already delivered. Zero new setup messages required. 100% recurring profit!
+    const month2Net = monthlyRevenue;
+
+    const revEl = document.getElementById('calcMonth1Revenue');
+    const msgsEl = document.getElementById('calcMonth1Msgs');
+    const net1El = document.getElementById('calcMonth1Net');
+    const net2El = document.getElementById('calcMonth2Net');
+
+    if (revEl) revEl.innerText = `${monthlyRevenue.toLocaleString('ar-EG')} ج.م`;
+    if (msgsEl) msgsEl.innerText = `${requiredMsgs.toLocaleString('ar-EG')} رسالة (${payingStudents} دافع + ${exempt} معفي مجاناً)`;
+    if (net1El) {
+      if (month1WhatsAppCost > 0) {
+        net1El.innerText = `${month1Net.toLocaleString('ar-EG')} ج.م (بعد خصم ${month1WhatsAppCost.toLocaleString('ar-EG')} ج.م تكلفة رسائل فوق الـ 1,000)`;
+      } else {
+        net1El.innerText = `${month1Net.toLocaleString('ar-EG')} ج.م (0 ج.م تكلفة رسائل - ضمن الـ 1,000 المجانية)`;
+      }
+    }
+    if (net2El) net2El.innerText = `${month2Net.toLocaleString('ar-EG')} ج.م`;
+  }
+
+  setCalcStudents(num) {
+    const studentInput = document.getElementById('calcStudentCount');
+    const exemptInput = document.getElementById('calcExemptCount');
+    if (studentInput) {
+      studentInput.value = num;
+      if (exemptInput) {
+        exemptInput.value = Math.max(0, Math.round(num * 0.05));
+      }
+      this.recalculateWhatsAppEconomics();
+    }
+  }
+
+  openWhatsAppChatWindow(phone, studentName) {
+    const cleanPhone = String(phone || '').replace(/\D/g, '');
+    let formattedPhone = cleanPhone;
+    if (formattedPhone.startsWith('01')) {
+      formattedPhone = '2' + formattedPhone;
+    } else if (!formattedPhone.startsWith('20') && formattedPhone.length === 10) {
+      formattedPhone = '20' + formattedPhone;
+    }
+    const greeting = encodeURIComponent(`مرحباً ${studentName ? studentName : ''}، معك مستر بخصوص المنصة والحصص.`);
+    const waUrl = `https://wa.me/${formattedPhone}?text=${greeting}`;
+    window.open(waUrl, '_blank');
+  }
+
+  showWhatsAppMessageHistory(convIdentifier) {
+    const conversations = this.whatsappInboxData?.conversations || [];
+    const cleanId = String(convIdentifier || '').trim();
+    const conv = conversations.find(c => 
+      c.id === cleanId || 
+      String(c.phone || '').replace(/\D/g, '') === cleanId.replace(/\D/g, '') ||
+      c.student_id === cleanId
+    );
+
+    if (!conv) {
+      this.showToast('لم يتم العثور على سجل الرسائل لهذه المحادثة', 'info');
+      return;
+    }
+
+    const studentName = conv.student_name || 'طالب';
+    const cleanPhone = String(conv.phone || '').replace(/\D/g, '');
+    const displayPhone = cleanPhone.startsWith('20') ? '0' + cleanPhone.slice(2) : cleanPhone;
+
+    // Combine all inbound and outbound messages
+    const thread = [];
+    (conv.outbound_messages || []).forEach(m => {
+      thread.push({
+        id: m.id,
+        direction: 'outbound',
+        body: m.body,
+        time: m.time,
+        status: m.status || 'sent',
+      });
+    });
+    (conv.inbound_messages || []).forEach(m => {
+      thread.push({
+        id: m.id,
+        direction: 'inbound',
+        body: m.body,
+        time: m.time,
+        status: 'received',
+      });
+    });
+
+    // If empty thread, use last_message fallback
+    if (thread.length === 0 && conv.last_message) {
+      thread.push({
+        id: conv.id || 'last-msg',
+        direction: conv.last_message.direction || 'outbound',
+        body: conv.last_message.body,
+        time: conv.last_message.time,
+        status: 'sent',
+      });
+    }
+
+    // Sort chronologically ascending
+    thread.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1rem; max-height: 480px; overflow-y: auto; padding: 0.5rem;" dir="rtl">
+        
+        <!-- Header Info -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">${escapeHtml(studentName)}</div>
+            <div style="font-size: 0.8rem; color: #64748b; font-family: monospace;" dir="ltr">${escapeHtml(displayPhone)}</div>
+          </div>
+          <div>
+            <span class="badge" style="${conv.has_replied ? 'background: #dcfce7; color: #166534;' : 'background: #f1f5f9; color: #475569;'} font-weight: 800;">
+              ${conv.has_replied ? 'وصل رد من الطالب/ولي الأمر' : 'في انتظار الرد'}
+            </span>
+          </div>
+        </div>
+
+        <!-- Chat Stream (WhatsApp Bubble Style) -->
+        <div style="background: #efeae2; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; min-height: 240px;">
+          ${thread.map(msg => {
+            const isOutbound = msg.direction === 'outbound';
+            const msgDate = msg.time ? new Date(msg.time).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+            return `
+              <div style="display: flex; justify-content: ${isOutbound ? 'flex-start' : 'flex-end'};">
+                <div style="max-width: 82%; background: ${isOutbound ? '#ffffff' : '#d9fdd3'}; border-radius: 10px; padding: 0.65rem 0.85rem; box-shadow: 0 1px 2px rgba(0,0,0,0.12); position: relative;">
+                  <div style="font-size: 0.75rem; font-weight: 800; color: ${isOutbound ? '#2563eb' : '#047857'}; margin-bottom: 0.25rem;">
+                    ${isOutbound ? 'رسالة النظام / المنصة' : `رد: ${escapeHtml(studentName)}`}
+                  </div>
+                  <div style="font-size: 0.875rem; color: #1e293b; line-height: 1.6; white-space: pre-wrap; word-break: break-word;">
+                    ${escapeHtml(msg.body || '')}
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem; margin-top: 0.35rem; font-size: 0.7rem; color: #64748b;">
+                    <span>${escapeHtml(msgDate)}</span>
+                    ${isOutbound ? '<span style="color: #0284c7;">✓✓</span>' : ''}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+      </div>
+    `;
+
+    const footerHtml = `
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 0.5rem;">
+        <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
+        <button type="button" class="btn" onclick="window.centrlyApp.openWhatsAppChatWindow('${escapeHtml(cleanPhone)}', '${escapeHtml(studentName)}')" style="background: #25D366; color: #ffffff; font-weight: 800; border: none; padding: 0.55rem 1.25rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);">
+          ${getIcon('whatsapp', 18, '#ffffff')}
+          <span>فتح محادثة واتساب كاملة والرد</span>
+        </button>
+      </div>
+    `;
+
+    this.showModal(`محادثة واتساب: ${escapeHtml(studentName)}`, bodyHtml, footerHtml, '650px');
   }
 
   async downloadBarcodeSheet(groupId) {

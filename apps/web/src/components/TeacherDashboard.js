@@ -221,6 +221,10 @@ export function renderTeacherDashboard(
             </p>
           </div>
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn" style="background: rgba(16, 185, 129, 0.22); color: #fff; font-weight: 700; border: 1px solid rgba(52, 211, 153, 0.4); display: flex; align-items: center; gap: 0.4rem;" onclick="window.centrlyApp.navigate('whatsapp-inbox')">
+              ${getIcon('whatsapp', 16, '#34d399')}
+              <span>محادثات الواتساب والأرباح</span>
+            </button>
             <button class="btn" style="background: rgba(255,255,255,0.15); color: #fff; font-weight: 700; border: 1px solid rgba(255,255,255,0.3); display: flex; align-items: center; gap: 0.4rem;" onclick="window.centrlyApp.navigate('calendar')">
               ${getIcon('calendar', 16, '#ffffff')}
               <span>جدول الحصص</span>
@@ -296,6 +300,30 @@ export function renderTeacherDashboard(
           </div>
         </div>
 
+      </div>
+
+      <!-- WhatsApp Communications & Smart Profit Calculator Banner -->
+      <div class="card" style="margin: 0; background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); color: #ffffff; border-radius: 14px; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; cursor: pointer; border: 1.5px solid #059669; box-shadow: 0 4px 15px rgba(6, 78, 59, 0.15);" onclick="window.centrlyApp.navigate('whatsapp-inbox')">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(255, 255, 255, 0.18); display: flex; align-items: center; justify-content: center; color: #34d399; flex-shrink: 0;">
+            ${getIcon('whatsapp', 26, '#34d399')}
+          </div>
+          <div>
+            <div style="font-weight: 800; font-size: 1.05rem; color: #ffffff; display: flex; align-items: center; gap: 0.5rem;">
+              <span>مركز محادثات الواتساب وحاسبة الأرباح وتكاليف الرسائل</span>
+              <span class="badge" style="background: #34d399; color: #064e3b; font-weight: 900; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 6px;">شاشة جديدة</span>
+            </div>
+            <div style="font-size: 0.85rem; color: #d1fae5; margin-top: 0.25rem; line-height: 1.5;">
+              تتبع من استلم ومن رد من الطلاب وأولياء الأمور، مع حاسبة تفاعلية لحساب أرباح الاشتراكات الشهرية وتكلفة الرسائل للشهرية القادمة.
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button class="btn" style="background: #ffffff; color: #065f46; font-weight: 800; border: none; padding: 0.55rem 1.2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span>فتح الشاشة والمحادثات</span>
+            <span>&larr;</span>
+          </button>
+        </div>
       </div>
 
       <!-- Financial Breakdown & Operations Secondary KPIs -->

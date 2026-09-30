@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { validateBody, saveTemplateSchema } from "../../shared/middleware/validation.js";
 import { getServices } from "../../composition.js";
+import { getServiceSupabaseClient } from "../../supabase.js";
 import { WhatsAppNotificationsService, getDailyQuotaStatus } from "./service.js";
 
 function resolveWhatsAppService(req: AuthenticatedRequest): WhatsAppNotificationsService {
@@ -305,3 +306,120 @@ templatesRouter.post(
     }
   }
 );
+
+// GET /api/whatsapp/inbox - Retrieve WhatsApp chat inbox with reply tracking
+whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  const isAdmin = req.user?.role === "admin";
+  if (!tenantId && !isAdmin) {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
+
+  try {
+    const supabase = getServiceSupabaseClient();
+    let query = supabase
+      .from("whatsapp_inbox")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (tenantId && !isAdmin) {
+      query = query.eq("tenant_id", tenantId);
+    }
+
+    const { data: messages, error } = await query;
+    if (error) {
+      throw error;
+    }
+
+    // Also fetch students for tenant to enrich metadata
+    let studentsQuery = supabase
+      .from("students")
+      .select("id, name, student_code, parent_phone, student_phone, group_id");
+    if (tenantId && !isAdmin) {
+      studentsQuery = studentsQuery.eq("tenant_id", tenantId);
+    }
+    const { data: studentsData } = await studentsQuery;
+    const studentsMap = new Map((studentsData || []).map((s: any) => [s.id, s]));
+    const phoneMap = new Map<string, any>();
+    for (const s of (studentsData || [])) {
+      if (s.student_phone) phoneMap.set(String(s.student_phone).replace(/\D/g, "").slice(-9), s);
+      if (s.parent_phone) phoneMap.set(String(s.parent_phone).replace(/\D/g, "").slice(-9), s);
+    }
+
+    // Group messages by student_id or phone
+    const conversationsMap = new Map<string, any>();
+
+    for (const msg of (messages || [])) {
+      const cleanPhone = (msg.phone || "").replace(/\D/g, "");
+      const last9 = cleanPhone.slice(-9);
+      const student = msg.student_id ? studentsMap.get(msg.student_id) : (last9 ? phoneMap.get(last9) : null);
+      const key = msg.student_id || last9 || cleanPhone;
+
+      if (!conversationsMap.has(key)) {
+        conversationsMap.set(key, {
+          id: msg.id,
+          student_id: msg.student_id || student?.id || null,
+          student_name: msg.student_name || student?.name || "طالب / ولي أمر",
+          phone: msg.phone,
+          has_replied: Boolean(msg.has_replied || msg.direction === "inbound"),
+          last_message: {
+            body: msg.message_body,
+            direction: msg.direction,
+            time: msg.created_at,
+          },
+          inbound_messages: [],
+          outbound_messages: [],
+          created_at: msg.created_at,
+          status: msg.status || "sent",
+        });
+      }
+
+      const conv = conversationsMap.get(key);
+      if (msg.direction === "inbound") {
+        conv.has_replied = true;
+        conv.inbound_messages.push({
+          id: msg.id,
+          body: msg.message_body,
+          time: msg.created_at,
+        });
+        if (new Date(msg.created_at).getTime() > new Date(conv.last_message.time).getTime()) {
+          conv.last_message = {
+            body: msg.message_body,
+            direction: "inbound",
+            time: msg.created_at,
+          };
+        }
+      } else {
+        conv.outbound_messages.push({
+          id: msg.id,
+          body: msg.message_body,
+          time: msg.created_at,
+          status: msg.status,
+        });
+      }
+    }
+
+    const conversations = Array.from(conversationsMap.values());
+    const total_sent = conversations.length;
+    const total_replied = conversations.filter((c: any) => c.has_replied).length;
+    const pending_reply = total_sent - total_replied;
+    const reply_rate = total_sent > 0 ? Math.round((total_replied / total_sent) * 100) : 0;
+
+    res.json({
+      success: true,
+      stats: {
+        total_sent,
+        total_replied,
+        pending_reply,
+        reply_rate,
+      },
+      conversations,
+    });
+  } catch (err: unknown) {
+    res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: (err as Error).message },
+    });
+  }
+});
+

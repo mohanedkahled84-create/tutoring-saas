@@ -370,6 +370,49 @@ publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<
 
           console.log(`[MetaWebhook] Incoming message: from=${from}, type=${msgType}, buttonText="${buttonText}", buttonPayload="${buttonPayload}", textBody="${textBody}"`);
 
+          const incomingText = (textBody || buttonText || buttonPayload || "[رسالة من الطالب/ولي الأمر]").trim();
+          const cleanFrom = from.replace(/\D/g, "");
+          const last9 = cleanFrom.slice(-9);
+
+          const supabase = getServiceSupabaseClient();
+          const { data: matchedStudents } = await supabase
+            .from("students")
+            .select("id, name, tenant_id, student_code, portal_password, parent_phone, student_phone")
+            .or(`student_phone.ilike.%${last9}%,parent_phone.ilike.%${last9}%`)
+            .limit(5);
+
+          const matched = matchedStudents && matchedStudents.length > 0 ? matchedStudents[0] : null;
+
+          // 1. Record incoming message into whatsapp_inbox
+          try {
+            await supabase.from("whatsapp_inbox").insert({
+              tenant_id: matched?.tenant_id || null,
+              student_id: matched?.id || null,
+              phone: cleanFrom,
+              student_name: matched?.name || "طالب / ولي أمر",
+              direction: "inbound",
+              message_body: incomingText,
+              status: "unread",
+              has_replied: true,
+            });
+
+            // Mark previous outbound message as replied
+            if (matched?.id) {
+              await supabase
+                .from("whatsapp_inbox")
+                .update({
+                  has_replied: true,
+                  reply_body: incomingText,
+                  replied_at: new Date().toISOString(),
+                  status: "replied",
+                })
+                .eq("student_id", matched.id)
+                .eq("direction", "outbound");
+            }
+          } catch (inboxErr) {
+            console.warn("[MetaWebhook] Error recording inbound to whatsapp_inbox:", inboxErr);
+          }
+
           const isButtonAction = msgType === "button" || msgType === "interactive";
           const isCredentialKeyword =
             buttonText.includes("المستخدم") ||
@@ -386,24 +429,8 @@ publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<
 
           // Any button click or credential query
           if (isButtonAction || isCredentialKeyword) {
-            const cleanFrom = from.replace(/\D/g, "");
-            const last9 = cleanFrom.slice(-9);
-
-            console.log(`[MetaWebhook] Searching students for phone ending in: ${last9}`);
-            const supabase = getServiceSupabaseClient();
-            const { data: matchedStudents, error: dbErr } = await supabase
-              .from("students")
-              .select("id, name, student_code, portal_password, parent_phone, student_phone")
-              .or(`student_phone.ilike.%${last9}%,parent_phone.ilike.%${last9}%`)
-              .limit(5);
-
-            if (dbErr) {
-              console.error("[MetaWebhook] Database lookup error:", dbErr);
-              continue;
-            }
-
-            if (matchedStudents && matchedStudents.length > 0) {
-              const s = matchedStudents[0];
+            if (matched) {
+              const s = matched;
               const pwd = s.portal_password || "غير مسجل";
               const localPhone = cleanFrom.startsWith("20") ? "0" + cleanFrom.slice(2) : cleanFrom;
               const loginPhone = localPhone || s.student_phone || s.parent_phone;
@@ -430,6 +457,20 @@ publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<
 
               const sendJson = await sendRes.json().catch(() => ({}));
               console.log(`[MetaWebhook] Dispatch status: ${sendRes.status}, response:`, JSON.stringify(sendJson));
+
+              // Record outbound response
+              try {
+                await supabase.from("whatsapp_inbox").insert({
+                  tenant_id: s.tenant_id,
+                  student_id: s.id,
+                  phone: cleanFrom,
+                  student_name: s.name,
+                  direction: "outbound",
+                  message_body: `[إرسال تلقائي لبيانات الدخول] اسم المستخدم: ${loginPhone}`,
+                  status: "sent",
+                  has_replied: true,
+                });
+              } catch (_) {}
             } else {
               console.warn(`[MetaWebhook] No students found for phone ending in ${last9}`);
             }
