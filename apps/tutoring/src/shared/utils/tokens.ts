@@ -46,6 +46,10 @@ export function verifyParentPortalToken(
       return null; // Invalid signature / tampered
     }
 
+    if (expiresAt < Math.floor(Date.now() / 1000)) {
+      return null; // Expired token
+    }
+
     return { tenant_id: tenantId, student_id: studentId, expires_at: expiresAt };
   } catch {
     return null;

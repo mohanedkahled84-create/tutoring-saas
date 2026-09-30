@@ -238,12 +238,19 @@ settingsRouter.post(
 
       // Record in Supabase email_verifications table
       try {
-        await supabasePublic.from("email_verifications").insert({
-          email: userEmail,
-          code,
-          expires_at: new Date(expiresAt).toISOString(),
-          attempts: 0,
+        const { error: rpcErr } = await supabasePublic.rpc("record_email_otp", {
+          p_email: userEmail,
+          p_code: code,
+          p_expires_at: new Date(expiresAt).toISOString(),
         });
+        if (rpcErr) {
+          await supabasePublic.from("email_verifications").insert({
+            email: userEmail,
+            code,
+            expires_at: new Date(expiresAt).toISOString(),
+            attempts: 0,
+          });
+        }
       } catch (_) {}
 
       // Send email via defaultEmailVerificationService (Resend)

@@ -364,17 +364,33 @@ export class SupabaseAuthRepository implements IAuthRepository {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
     try {
-      await this.adminClient
-        .from("email_verifications")
-        .delete()
-        .eq("email", normalizedEmail);
-
-      await this.adminClient.from("email_verifications").insert({
-        email: normalizedEmail,
-        code,
-        expires_at: expiresAt,
-        attempts: 0,
+      // 1. Try record_email_otp RPC (SECURITY DEFINER)
+      const { error: rpcErr } = await this.adminClient.rpc("record_email_otp", {
+        p_email: normalizedEmail,
+        p_code: code,
+        p_expires_at: expiresAt,
       });
+
+      // 2. Fallback to direct table operations if RPC fails
+      if (rpcErr) {
+        console.warn(`[Auth] record_email_otp RPC fallback (${rpcErr.message}), writing to email_verifications directly...`);
+        await this.adminClient
+          .from("email_verifications")
+          .delete()
+          .eq("email", normalizedEmail);
+
+        const { error: insErr } = await this.adminClient.from("email_verifications").insert({
+          email: normalizedEmail,
+          code,
+          expires_at: expiresAt,
+          attempts: 0,
+        });
+
+        if (insErr) {
+          console.error(`[Auth] Error writing to email_verifications for ${normalizedEmail}:`, insErr);
+          throw new Error(`تعذر حفظ رمز التحقق: ${insErr.message}`);
+        }
+      }
 
       const res = await this.emailService.sendVerificationEmail({
         email: normalizedEmail,
@@ -385,7 +401,8 @@ export class SupabaseAuthRepository implements IAuthRepository {
         console.error(`[Auth] Failed to send verification OTP via Resend to ${normalizedEmail}:`, res.error);
       }
     } catch (err) {
-      console.error(`[Auth] Error writing to email_verifications for ${normalizedEmail}:`, err);
+      console.error(`[Auth] Error in sendAndRecordOtp for ${normalizedEmail}:`, err);
+      throw err;
     }
 
     return code;
