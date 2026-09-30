@@ -113,44 +113,48 @@ export function renderWhatsAppCenterView(data = {}, activeTab = 'inbox') {
       <div id="sectionWhatsAppInbox" style="${activeTab === 'inbox' ? 'display: flex; flex-direction: column; gap: 1.5rem;' : 'display: none;'}">
         
         <!-- Quick Statistics Row -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
           <div class="card" style="margin: 0; padding: 1.25rem; border-radius: 12px; background: #ffffff; border: 1px solid var(--centrly-line); display: flex; align-items: center; justify-content: space-between;">
             <div>
               <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">إجمالي الرسائل المرسلة</div>
-              <div style="font-size: 1.75rem; font-weight: 900; color: #0f172a; margin-top: 0.2rem; font-family: monospace;">${stats.total_sent}</div>
+              <div style="font-size: 1.75rem; font-weight: 900; color: #0f172a; margin-top: 0.2rem; font-family: monospace;">${totalSent}</div>
+              <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.15rem;">رسالتان لكل طالب</div>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: #2563eb;">
               ${getIcon('send', 22, '#2563eb')}
             </div>
           </div>
 
-          <div class="card" style="margin: 0; padding: 1.25rem; border-radius: 12px; background: #f0fdf4; border: 1.5px solid #bbf7d0; display: flex; align-items: center; justify-content: space-between;">
+          <div class="card" style="margin: 0; padding: 1.25rem; border-radius: 12px; background: #f0fdf4; border: 1.5px solid #86efac; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <div style="font-size: 0.8rem; color: #166534; font-weight: 800;">وصل رد من ولي الأمر / الطالب</div>
-              <div style="font-size: 1.75rem; font-weight: 900; color: #15803d; margin-top: 0.2rem; font-family: monospace;">${stats.total_replied}</div>
+              <div style="font-size: 0.8rem; color: #166534; font-weight: 800;">رسائل أولياء الأمور 👨‍👦</div>
+              <div style="font-size: 1.75rem; font-weight: 900; color: #15803d; margin-top: 0.2rem; font-family: monospace;">${stats.total_parent_messages || Math.round(totalSent / 2)}</div>
+              <div style="font-size: 0.72rem; color: #16a34a; margin-top: 0.15rem;">رابط متابعة الدرجات والغياب</div>
             </div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #dcfce7; display: flex; align-items: center; justify-content: center; color: #15803d;">
-              ${getIcon('check', 22, '#15803d')}
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #dcfce7; display: flex; align-items: center; justify-content: center; color: #16a34a;">
+              ${getIcon('users', 22, '#16a34a')}
+            </div>
+          </div>
+
+          <div class="card" style="margin: 0; padding: 1.25rem; border-radius: 12px; background: #eff6ff; border: 1.5px solid #bfdbfe; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 0.8rem; color: #1e40af; font-weight: 800;">رسائل الطلاب 🎓</div>
+              <div style="font-size: 1.75rem; font-weight: 900; color: #1d4ed8; margin-top: 0.2rem; font-family: monospace;">${stats.total_student_messages || Math.round(totalSent / 2)}</div>
+              <div style="font-size: 0.72rem; color: #2563eb; margin-top: 0.15rem;">رابط البوابة وكود الدخول</div>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #dbeafe; display: flex; align-items: center; justify-content: center; color: #1d4ed8;">
+              ${getIcon('graduation', 22, '#1d4ed8')}
             </div>
           </div>
 
           <div class="card" style="margin: 0; padding: 1.25rem; border-radius: 12px; background: #ffffff; border: 1px solid var(--centrly-line); display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">في انتظار الرد</div>
-              <div style="font-size: 1.75rem; font-weight: 900; color: #64748b; margin-top: 0.2rem; font-family: monospace;">${stats.pending_reply}</div>
+              <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">وصل رد وتفاعل 💬</div>
+              <div style="font-size: 1.75rem; font-weight: 900; color: #0f172a; margin-top: 0.2rem; font-family: monospace;">${stats.total_replied}</div>
+              <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.15rem;">معدل الاستجابة ${stats.reply_rate}%</div>
             </div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f8fafc; display: flex; align-items: center; justify-content: center; color: #64748b;">
-              ${getIcon('clock', 22, '#64748b')}
-            </div>
-          </div>
-
-          <div class="card" style="margin: 0; padding: 1.25rem; border-radius: 12px; background: #ffffff; border: 1px solid var(--centrly-line); display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">معدل التفاعل والاستجابة</div>
-              <div style="font-size: 1.75rem; font-weight: 900; color: #0284c7; margin-top: 0.2rem; font-family: monospace;">${stats.reply_rate}%</div>
-            </div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f0f9ff; display: flex; align-items: center; justify-content: center; color: #0284c7;">
-              ${getIcon('chart', 22, '#0284c7')}
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; color: #16a34a;">
+              ${getIcon('check', 22, '#16a34a')}
             </div>
           </div>
         </div>
@@ -637,17 +641,22 @@ function renderConversationCards(conversations = []) {
 
   return conversations.map((conv) => {
     const isReplied = Boolean(conv.has_replied);
-    const cleanPhone = String(conv.phone || '').replace(/\D/g, '');
-    const displayPhone = cleanPhone.startsWith('20') ? '0' + cleanPhone.slice(2) : cleanPhone;
     const studentName = conv.student_name || 'طالب';
     const lastMsgBody = conv.last_message?.body || 'تم إرسال رابط المنصة وبوابة المتابعة';
     const msgTime = conv.last_message?.time ? new Date(conv.last_message.time).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'اليوم';
 
+    const cleanParentPhone = String(conv.parent_phone || '').replace(/\D/g, '');
+    const cleanStudentPhone = String(conv.student_phone || '').replace(/\D/g, '');
+    const displayParentPhone = cleanParentPhone.startsWith('20') ? '0' + cleanParentPhone.slice(2) : cleanParentPhone;
+    const displayStudentPhone = cleanStudentPhone.startsWith('20') ? '0' + cleanStudentPhone.slice(2) : cleanStudentPhone;
+    const fallbackPhone = String(conv.phone || '').replace(/\D/g, '');
+    const displayFallback = fallbackPhone.startsWith('20') ? '0' + fallbackPhone.slice(2) : fallbackPhone;
+
     return `
-      <div class="card conversation-item" data-replied="${isReplied}" data-name="${escapeHtml(studentName.toLowerCase())}" data-phone="${escapeHtml(cleanPhone)}" style="margin: 0; padding: 1.15rem 1.25rem; border-radius: 12px; background: ${isReplied ? '#ffffff' : '#fafafa'}; border: ${isReplied ? '1.5px solid #86efac' : '1px solid var(--centrly-line)'}; transition: all 0.2s;">
+      <div class="card conversation-item" data-replied="${isReplied}" data-name="${escapeHtml(studentName.toLowerCase())}" data-phone="${escapeHtml(cleanParentPhone || cleanStudentPhone || fallbackPhone)}" style="margin: 0; padding: 1.15rem 1.25rem; border-radius: 12px; background: ${isReplied ? '#ffffff' : '#fafafa'}; border: ${isReplied ? '1.5px solid #86efac' : '1px solid var(--centrly-line)'}; transition: all 0.2s;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           
-          <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 240px;">
+          <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 250px;">
             <div style="width: 44px; height: 44px; border-radius: 10px; background: ${isReplied ? '#dcfce7' : '#f1f5f9'}; display: flex; align-items: center; justify-content: center; color: ${isReplied ? '#15803d' : '#64748b'}; flex-shrink: 0;">
               ${getIcon('whatsapp', 22, isReplied ? '#15803d' : '#64748b')}
             </div>
@@ -661,13 +670,24 @@ function renderConversationCards(conversations = []) {
                   ${isReplied ? 'وصل رد 💬' : 'في انتظار الرد ⏳'}
                 </span>
               </div>
-              <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; font-family: monospace;" dir="ltr">
-                ${escapeHtml(displayPhone)}
+              <div style="display: flex; gap: 0.4rem; margin-top: 0.35rem; font-size: 0.75rem; flex-wrap: wrap;">
+                ${displayParentPhone ? `
+                  <span style="color: #166534; background: #dcfce7; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 700; font-family: monospace;" dir="ltr">
+                    👨‍👦 ولي الأمر: ${escapeHtml(displayParentPhone)}
+                  </span>
+                ` : ''}
+                ${displayStudentPhone ? `
+                  <span style="color: #1e40af; background: #eff6ff; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 700; font-family: monospace;" dir="ltr">
+                    🎓 الطالب: ${escapeHtml(displayStudentPhone)}
+                  </span>
+                ` : (!displayParentPhone ? `
+                  <span style="color: #64748b; font-family: monospace;" dir="ltr">${escapeHtml(displayFallback)}</span>
+                ` : '')}
               </div>
             </div>
           </div>
 
-          <div style="flex: 2; min-width: 260px; max-width: 480px;">
+          <div style="flex: 2; min-width: 250px; max-width: 440px;">
             <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.2rem;">
               آخر رسالة / رد (${escapeHtml(msgTime)}):
             </div>
@@ -676,12 +696,25 @@ function renderConversationCards(conversations = []) {
             </div>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button class="btn btn-sm" onclick="window.centrlyApp.openWhatsAppChatWindow('${escapeHtml(cleanPhone)}', '${escapeHtml(studentName)}')" style="background: #25D366; color: #ffffff; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border-radius: 8px; border: none; font-size: 0.8rem; box-shadow: 0 2px 6px rgba(37, 211, 102, 0.2);">
-              ${getIcon('whatsapp', 14, '#ffffff')}
-              <span>شات واتساب</span>
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.showWhatsAppMessageHistory('${escapeHtml(cleanPhone)}')" style="padding: 0.45rem 0.75rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px;">
+          <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+            ${cleanParentPhone ? `
+              <button class="btn btn-sm" onclick="window.centrlyApp.openWhatsAppChatWindow('${escapeHtml(cleanParentPhone)}', 'ولي أمر ${escapeHtml(studentName)}')" style="background: #15803d; color: #ffffff; font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.45rem 0.75rem; border-radius: 8px; border: none; font-size: 0.78rem; box-shadow: 0 2px 6px rgba(21, 128, 61, 0.2);" title="محادثة واتساب مباشرة مع ولي الأمر">
+                ${getIcon('whatsapp', 14, '#ffffff')}
+                <span>شات ولي الأمر 👨‍👦</span>
+              </button>
+            ` : ''}
+            ${cleanStudentPhone ? `
+              <button class="btn btn-sm" onclick="window.centrlyApp.openWhatsAppChatWindow('${escapeHtml(cleanStudentPhone)}', '${escapeHtml(studentName)}')" style="background: #2563eb; color: #ffffff; font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.45rem 0.75rem; border-radius: 8px; border: none; font-size: 0.78rem; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);" title="محادثة واتساب مباشرة مع الطالب">
+                ${getIcon('whatsapp', 14, '#ffffff')}
+                <span>شات الطالب 🎓</span>
+              </button>
+            ` : (!cleanParentPhone ? `
+              <button class="btn btn-sm" onclick="window.centrlyApp.openWhatsAppChatWindow('${escapeHtml(fallbackPhone)}', '${escapeHtml(studentName)}')" style="background: #25D366; color: #ffffff; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border-radius: 8px; border: none; font-size: 0.8rem;">
+                ${getIcon('whatsapp', 14, '#ffffff')}
+                <span>شات واتساب</span>
+              </button>
+            ` : '')}
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.showWhatsAppMessageHistory('${escapeHtml(conv.id || cleanParentPhone || cleanStudentPhone || fallbackPhone)}')" style="padding: 0.45rem 0.65rem; font-size: 0.78rem; font-weight: 700; border-radius: 8px;">
               التفاصيل
             </button>
           </div>
@@ -707,19 +740,36 @@ function renderLogsTableRows(conversations = [], rawMessages = []) {
   return items.map((item) => {
     const isRaw = typeof item.direction === 'string';
     const isReplied = Boolean(item.has_replied || item.status === 'replied');
+    const isParent = item.recipient_type === 'parent' || (item.recipient_label && item.recipient_label.includes('ولي أمر'));
+    const isStudent = item.recipient_type === 'student' || (item.recipient_label && item.recipient_label.includes('الطالب'));
     const cleanPhone = String(item.phone || '').replace(/\D/g, '');
     const displayPhone = cleanPhone.startsWith('20') ? '0' + cleanPhone.slice(2) : cleanPhone;
     const studentName = item.student_name || 'طالب';
     const body = isRaw ? (item.message_body || 'تم إرسال رابط المنصة وبوابة المتابعة') : (item.last_message?.body || 'تم إرسال رابط المنصة وبوابة المتابعة');
     const timeVal = isRaw ? item.created_at : item.last_message?.time;
     const time = timeVal ? new Date(timeVal).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    
+    const roleBadge = isParent
+      ? `<span class="badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; background: #dcfce7; color: #166534; font-weight: 800;">👨‍👦 ولي أمر</span>`
+      : (isStudent
+        ? `<span class="badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; background: #eff6ff; color: #1e40af; font-weight: 800;">🎓 طالب</span>`
+        : `<span class="badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; background: #f1f5f9; color: #475569;">طالب / ولي أمر</span>`);
+
     const statusBadge = isRaw && item.direction === 'inbound'
       ? `<span class="badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; background: #eff6ff; color: #1e40af;">واردة 📥</span>`
       : `<span class="badge" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; ${isReplied ? 'background: #dcfce7; color: #166534;' : 'background: #f1f5f9; color: #475569;'}">${isReplied ? 'وصل رد 💬' : 'صادرة (تم التسليم) ✅'}</span>`;
 
+    const chatLabel = isParent ? `ولي أمر ${studentName}` : studentName;
+    const btnColor = isParent ? '#15803d' : '#2563eb';
+
     return `
       <tr style="border-bottom: 1px solid #f1f5f9;">
-        <td style="padding: 0.75rem 0.85rem; font-weight: 700; color: #0f172a;">${escapeHtml(studentName)}</td>
+        <td style="padding: 0.75rem 0.85rem;">
+          <div style="font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+            ${roleBadge}
+            <span>${escapeHtml(studentName)}</span>
+          </div>
+        </td>
         <td style="padding: 0.75rem 0.85rem; font-family: monospace; color: #475569;" dir="ltr">${escapeHtml(displayPhone)}</td>
         <td style="padding: 0.75rem 0.85rem; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #334155;" title="${escapeHtml(body)}">${escapeHtml(body)}</td>
         <td style="padding: 0.75rem 0.85rem;">
@@ -727,9 +777,9 @@ function renderLogsTableRows(conversations = [], rawMessages = []) {
         </td>
         <td style="padding: 0.75rem 0.85rem; font-size: 0.78rem; color: #64748b;">${escapeHtml(time)}</td>
         <td style="padding: 0.75rem 0.85rem; text-align: center;">
-          <button class="btn btn-sm" onclick="window.centrlyApp.openWhatsAppChatWindow('${escapeHtml(cleanPhone)}', '${escapeHtml(studentName)}')" style="background: #25D366; color: #fff; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 6px; border: none; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+          <button class="btn btn-sm" onclick="window.centrlyApp.openWhatsAppChatWindow('${escapeHtml(cleanPhone)}', '${escapeHtml(chatLabel)}')" style="background: ${btnColor}; color: #fff; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 6px; border: none; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
             ${getIcon('whatsapp', 13, '#ffffff')}
-            <span>فتح الشات</span>
+            <span>${isParent ? 'شات ولي الأمر' : 'شات الطالب'}</span>
           </button>
         </td>
       </tr>

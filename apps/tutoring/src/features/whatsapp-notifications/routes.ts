@@ -347,26 +347,62 @@ whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): P
       if (s.parent_phone) phoneMap.set(String(s.parent_phone).replace(/\D/g, "").slice(-9), s);
     }
 
-    // Group messages by student_id or phone
+    // Enrich messages and group into conversations
     const conversationsMap = new Map<string, any>();
+    const enrichedMessages: any[] = [];
+    let parentMsgsCount = 0;
+    let studentMsgsCount = 0;
 
     for (const msg of (messages || [])) {
       const cleanPhone = (msg.phone || "").replace(/\D/g, "");
       const last9 = cleanPhone.slice(-9);
       const student = msg.student_id ? studentsMap.get(msg.student_id) : (last9 ? phoneMap.get(last9) : null);
-      const key = msg.student_id || last9 || cleanPhone;
+      
+      const parentLast9 = student?.parent_phone ? String(student.parent_phone).replace(/\D/g, "").slice(-9) : "";
+      const studentLast9 = student?.student_phone ? String(student.student_phone).replace(/\D/g, "").slice(-9) : "";
+      
+      let recipientType = "parent";
+      if (last9 && last9 === studentLast9 && studentLast9 !== parentLast9) {
+        recipientType = "student";
+        studentMsgsCount++;
+      } else {
+        recipientType = "parent";
+        parentMsgsCount++;
+      }
+
+      const recipientLabel = recipientType === "parent"
+        ? `ولي أمر ${student?.name || msg.student_name || "الطالب"}`
+        : `الطالب ${student?.name || msg.student_name || ""}`;
+
+      const enrichedMsg = {
+        ...msg,
+        student_id: student?.id || msg.student_id,
+        student_name: student?.name || msg.student_name || "طالب",
+        recipient_type: recipientType,
+        recipient_label: recipientLabel,
+        student_phone: student?.student_phone || null,
+        parent_phone: student?.parent_phone || null,
+      };
+      enrichedMessages.push(enrichedMsg);
+
+      const key = msg.student_id || student?.id || last9 || cleanPhone;
 
       if (!conversationsMap.has(key)) {
         conversationsMap.set(key, {
           id: msg.id,
-          student_id: msg.student_id || student?.id || null,
-          student_name: msg.student_name || student?.name || "طالب / ولي أمر",
+          student_id: student?.id || msg.student_id || null,
+          student_name: student?.name || msg.student_name || "طالب / ولي أمر",
+          student_phone: student?.student_phone || (recipientType === "student" ? msg.phone : null),
+          parent_phone: student?.parent_phone || (recipientType === "parent" ? msg.phone : null),
           phone: msg.phone,
           has_replied: Boolean(msg.has_replied || msg.direction === "inbound"),
+          parent_replied: false,
+          student_replied: false,
           last_message: {
             body: msg.message_body,
             direction: msg.direction,
             time: msg.created_at,
+            recipient_type: recipientType,
           },
           inbound_messages: [],
           outbound_messages: [],
@@ -376,10 +412,17 @@ whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): P
       }
 
       const conv = conversationsMap.get(key);
+      if (student?.parent_phone && !conv.parent_phone) conv.parent_phone = student.parent_phone;
+      if (student?.student_phone && !conv.student_phone) conv.student_phone = student.student_phone;
+
       if (msg.direction === "inbound") {
         conv.has_replied = true;
+        if (recipientType === "parent") conv.parent_replied = true;
+        if (recipientType === "student") conv.student_replied = true;
         conv.inbound_messages.push({
           id: msg.id,
+          recipient_type: recipientType,
+          recipient_label: recipientLabel,
           body: msg.message_body,
           time: msg.created_at,
         });
@@ -388,11 +431,15 @@ whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): P
             body: msg.message_body,
             direction: "inbound",
             time: msg.created_at,
+            recipient_type: recipientType,
           };
         }
       } else {
         conv.outbound_messages.push({
           id: msg.id,
+          recipient_type: recipientType,
+          recipient_label: recipientLabel,
+          phone: msg.phone,
           body: msg.message_body,
           time: msg.created_at,
           status: msg.status,
@@ -416,13 +463,15 @@ whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): P
         total_messages: total_raw_messages,
         total_outbound,
         total_inbound,
+        total_parent_messages: parentMsgsCount,
+        total_student_messages: studentMsgsCount,
         total_conversations,
         total_replied,
         pending_reply,
         reply_rate,
       },
       conversations,
-      raw_messages: messages || [],
+      raw_messages: enrichedMessages,
     });
   } catch (err: unknown) {
     res.status(500).json({
