@@ -3630,23 +3630,98 @@ class CentrlyApp {
   // Active Session & Smart Attendance Actions (DEV-16, DEV-13, DEV-36, Feedback)
   // ==========================================================================
 
+  findStudentByQuery(rawQuery) {
+    if (!rawQuery) return null;
+    const clean = normalizeDigits(String(rawQuery)).trim().toLowerCase();
+    if (!clean) return null;
+
+    const list = this.students || [];
+
+    // Priority 1: Exact code match (code or student_code) - Absolute highest priority!
+    const exactCode = list.find(s => {
+      const c1 = normalizeDigits(String(s.code || '')).trim().toLowerCase();
+      const c2 = normalizeDigits(String(s.student_code || '')).trim().toLowerCase();
+      return c1 === clean || c2 === clean;
+    });
+    if (exactCode) return exactCode;
+
+    // Priority 2: Exact phone match (full digits)
+    const cleanPhoneDigits = clean.replace(/\D/g, '');
+    if (cleanPhoneDigits.length >= 9) {
+      const exactPhone = list.find(s => {
+        const sp = normalizeDigits(String(s.student_phone || '')).replace(/\D/g, '');
+        const pp = normalizeDigits(String(s.parent_phone || '')).replace(/\D/g, '');
+        return sp === cleanPhoneDigits || pp === cleanPhoneDigits;
+      });
+      if (exactPhone) return exactPhone;
+    }
+
+    // Priority 3: Exact name match
+    const exactName = list.find(s => {
+      const n = (s.name || '').trim().toLowerCase();
+      return n === clean;
+    });
+    if (exactName) return exactName;
+
+    // Priority 4: Name begins with query or contains query
+    const nameMatch = list.find(s => {
+      const n = (s.name || '').trim().toLowerCase();
+      return n.includes(clean);
+    });
+    if (nameMatch) return nameMatch;
+
+    // Priority 5: Partial phone match ONLY if query is a long phone fragment (7+ digits), NEVER short codes!
+    if (cleanPhoneDigits.length >= 7) {
+      const partialPhone = list.find(s => {
+        const sp = normalizeDigits(String(s.student_phone || '')).replace(/\D/g, '');
+        const pp = normalizeDigits(String(s.parent_phone || '')).replace(/\D/g, '');
+        return sp.includes(cleanPhoneDigits) || pp.includes(cleanPhoneDigits);
+      });
+      if (partialPhone) return partialPhone;
+    }
+
+    return null;
+  }
+
   onStudentScanInput(val) {
     const suggestionsBox = document.getElementById('studentScanSuggestions');
     if (!suggestionsBox) return;
 
-    const trimmed = (val || '').trim().toLowerCase();
+    const trimmed = normalizeDigits(String(val || '')).trim().toLowerCase();
     if (!trimmed || trimmed.length < 1) {
       suggestionsBox.style.display = 'none';
       suggestionsBox.innerHTML = '';
       return;
     }
 
-    const matches = (this.students || []).filter(s => {
-      const name = (s.name || '').toLowerCase();
-      const code = (s.code || s.student_code || '').toLowerCase();
-      const phone = (s.student_phone || s.parent_phone || '').toLowerCase();
-      return name.includes(trimmed) || code.includes(trimmed) || phone.includes(trimmed);
-    }).slice(0, 6);
+    const cleanDigits = trimmed.replace(/\D/g, '');
+
+    // Rank matching students:
+    // Rank 1: exact code match (100)
+    // Rank 2: code starts with query (80)
+    // Rank 3: code contains query (70)
+    // Rank 4: name starts with query (60)
+    // Rank 5: name contains query (50)
+    // Rank 6: phone match ONLY if query is 7+ digits (30)
+    const matches = (this.students || []).map(s => {
+      const code = normalizeDigits(String(s.code || s.student_code || '')).trim().toLowerCase();
+      const name = (s.name || '').trim().toLowerCase();
+      const sPhone = normalizeDigits(String(s.student_phone || '')).replace(/\D/g, '');
+      const pPhone = normalizeDigits(String(s.parent_phone || '')).replace(/\D/g, '');
+
+      let score = 0;
+      if (code === trimmed) score = 100;
+      else if (code.startsWith(trimmed)) score = 80;
+      else if (code.includes(trimmed)) score = 70;
+      else if (name.startsWith(trimmed)) score = 60;
+      else if (name.includes(trimmed)) score = 50;
+      else if (cleanDigits.length >= 7 && (sPhone.includes(cleanDigits) || pPhone.includes(cleanDigits))) score = 30;
+
+      return { student: s, score };
+    }).filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.student)
+      .slice(0, 6);
 
     if (matches.length === 0) {
       suggestionsBox.style.display = 'block';
@@ -3741,13 +3816,8 @@ class CentrlyApp {
       suggestionsBox.innerHTML = '';
     }
 
-    // Find student in directory
-    const student = (this.students || []).find(s => {
-      const code = (s.code || s.student_code || '').trim().toLowerCase();
-      const name = (s.name || '').trim().toLowerCase();
-      const q = query.toLowerCase();
-      return code === q || name === q || (s.student_phone && s.student_phone.includes(q)) || (s.parent_phone && s.parent_phone.includes(q));
-    });
+    // Find student in directory with strict prioritized matching
+    const student = this.findStudentByQuery(query);
 
     if (student) {
       this.closeInlineStudentAdd();
@@ -4150,29 +4220,60 @@ class CentrlyApp {
 
   async ensureHtml5QrcodeLoaded() {
     if (typeof Html5Qrcode !== 'undefined') return true;
-    return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = './src/vendor/html5-qrcode.min.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
+    const sources = [
+      '/apps/web/src/vendor/html5-qrcode.min.js',
+      '/src/vendor/html5-qrcode.min.js',
+      './src/vendor/html5-qrcode.min.js',
+      'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'
+    ];
+
+    for (const src of sources) {
+      if (typeof Html5Qrcode !== 'undefined') return true;
+      const loaded = await new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve(true);
+        script.onerror = () => {
+          script.remove();
+          resolve(false);
+        };
+        document.head.appendChild(script);
+      });
+      if (loaded && typeof Html5Qrcode !== 'undefined') return true;
+    }
+
+    return typeof Html5Qrcode !== 'undefined';
   }
 
   async startCameraScanner(mode = 'session') {
     unlockAudio();
+    const viewport = document.getElementById('centrlyCameraViewport');
     if (typeof Html5Qrcode === 'undefined') {
-      const viewport = document.getElementById('centrlyCameraViewport');
       if (viewport) {
         viewport.innerHTML = `
           <div style="color: #cbd5e1; padding: 3rem 1rem; text-align: center; font-size: 0.9rem;">
-            جارٍ تجهيز الكاميرا...
+            جارٍ تجهيز الكاميرا ومكتبة المسح...
           </div>
         `;
       }
       await this.ensureHtml5QrcodeLoaded();
     }
-    if (typeof Html5Qrcode === 'undefined') return;
+
+    if (typeof Html5Qrcode === 'undefined') {
+      if (viewport) {
+        viewport.innerHTML = `
+          <div style="color: #f87171; padding: 2.5rem 1rem; text-align: center; font-size: 0.88rem; line-height: 1.6;">
+            <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('alertTriangle', 32, '#ef4444')}</div>
+            <strong>تعذر تحميل قارئ الباركود:</strong><br>
+            يرجى التأكد من اتصال الإنترنت ثم إعادة المحاولة.<br><br>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.startCameraScanner('${mode}')" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 0.3rem;">
+              ${getIcon('refresh', 14)} إعادة المحاولة
+            </button>
+          </div>
+        `;
+      }
+      return;
+    }
 
     try {
       if (this._activeHtml5QrCode) {
@@ -4182,9 +4283,7 @@ class CentrlyApp {
       this._cameraTorchOn = false;
       this._cameraZoomLevel = 1.0;
 
-      // Restrict formats strictly to what Centrly uses:
-      // Code 128 (primary barcode for student IDs), QR Code, Code 39, EAN-13
-      // Eliminates 13 unused algorithms on every frame, cutting CPU decoding overhead by ~75%!
+      // Formats supported for lightning-fast detection
       const formatsToSupport = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
         Html5QrcodeSupportedFormats.CODE_128,
         Html5QrcodeSupportedFormats.QR_CODE,
@@ -4192,8 +4291,6 @@ class CentrlyApp {
         Html5QrcodeSupportedFormats.EAN_13,
       ] : [5, 0, 3, 9];
 
-      // Passing formatsToSupport and useBarCodeDetectorIfSupported to constructor activates
-      // native Android Vision / BarcodeDetector for lightning-fast hardware acceleration!
       const html5QrCode = new Html5Qrcode('centrlyCameraViewport', {
         formatsToSupport,
         verbose: false,
@@ -4206,37 +4303,61 @@ class CentrlyApp {
       const facingMode = this._cameraFacingMode || 'environment';
       const isMobile = window.innerWidth <= 768;
 
-      // High-performance scanning configuration
+      // Safe, cross-platform video constraints: NEVER use strict `min` width/height
+      // which throws OverconstrainedError on standard 640x480 laptop webcams!
       const config = {
-        fps: 25, // 25 frames per second for instant detection
+        fps: 22,
         qrbox: (viewfinderWidth, viewfinderHeight) => {
-          const boxWidth = Math.min(Math.floor(viewfinderWidth * 0.88), 320);
-          // Optimal 2.6:1 aspect ratio for linear barcodes (Code 128) and QR codes
-          const boxHeight = Math.min(Math.floor(boxWidth * 0.42), 125);
-          return { width: Math.max(boxWidth, 200), height: Math.max(boxHeight, 85) };
+          const boxWidth = Math.min(Math.floor(viewfinderWidth * 0.90), 320);
+          const boxHeight = Math.min(Math.floor(boxWidth * 0.55), 160);
+          return { width: Math.max(boxWidth, 200), height: Math.max(boxHeight, 95) };
         },
         videoConstraints: {
           facingMode: { ideal: facingMode },
-          width: { min: 720, ideal: 1280, max: 1920 },
-          height: { min: 480, ideal: 720, max: 1080 },
-          focusMode: { ideal: 'continuous' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
         disableFlip: false,
       };
 
-      // Only set fixed landscape aspect ratio on desktop viewports
       if (!isMobile) {
         config.aspectRatio = 1.333334;
       }
 
-      await html5QrCode.start(
-        { facingMode },
-        config,
-        (decodedText) => {
-          this.handleCameraScanDetected(decodedText, mode);
-        },
-        () => {} // frame noise ignored
-      );
+      const scanSuccess = (decodedText) => {
+        this.handleCameraScanDetected(decodedText, mode);
+      };
+
+      // Try initial camera start with automatic fallback if facingMode isn't available
+      try {
+        await html5QrCode.start({ facingMode }, config, scanSuccess, () => {});
+      } catch (firstErr) {
+        console.warn('Initial camera facingMode failed, retrying fallback:', firstErr);
+        const altFacing = facingMode === 'environment' ? 'user' : 'environment';
+        try {
+          await html5QrCode.start(
+            { facingMode: altFacing },
+            { ...config, videoConstraints: undefined },
+            scanSuccess,
+            () => {}
+          );
+          this._cameraFacingMode = altFacing;
+        } catch (secondErr) {
+          console.warn('Alternative facingMode failed, querying available cameras:', secondErr);
+          const cameras = await Html5Qrcode.getCameras().catch(() => []);
+          if (cameras && cameras.length > 0) {
+            const chosenId = cameras[0].id;
+            await html5QrCode.start(
+              chosenId,
+              { ...config, videoConstraints: undefined },
+              scanSuccess,
+              () => {}
+            );
+          } else {
+            throw firstErr;
+          }
+        }
+      }
 
       // Mobile Safari / Chrome video attributes & hardware continuous autofocus
       setTimeout(() => {
@@ -4249,7 +4370,6 @@ class CentrlyApp {
           video.style.objectFit = 'cover';
           video.style.borderRadius = '12px';
 
-          // Lock continuous hardware autofocus on media stream track
           try {
             const track = video.srcObject?.getVideoTracks()?.[0];
             if (track && track.getCapabilities) {
@@ -4272,7 +4392,10 @@ class CentrlyApp {
           <div style="color: #f87171; padding: 2.5rem 1rem; text-align: center; font-size: 0.88rem; line-height: 1.6;">
             <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('alertTriangle', 32, '#ef4444')}</div>
             <strong>تعذر فتح الكاميرا:</strong><br>
-            ${err.message || 'يرجى السماح للمتصفح بالوصول للكاميرا (Camera Permissions).'}
+            ${err.name === 'NotAllowedError' ? 'تم رفض إذن الكاميرا. يرجى السماح للمتصفح باستخدام الكاميرا من إعدادات الموقع.' : (err.message || 'يرجى التأكد من تشغيل الكاميرا وتوصيلها بالمتصفح.')}<br><br>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.startCameraScanner('${mode}')" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 0.3rem;">
+              ${getIcon('refresh', 14)} إعادة المحاولة
+            </button>
           </div>
         `;
       }
@@ -4411,13 +4534,8 @@ class CentrlyApp {
       return;
     }
 
-    // Default: Session attendance
-    const student = (this.students || []).find(s => {
-      const code = (s.code || s.student_code || '').trim().toLowerCase();
-      const name = (s.name || '').trim().toLowerCase();
-      const q = cleanCode.toLowerCase();
-      return code === q || name === q || (s.student_phone && s.student_phone.includes(q)) || (s.parent_phone && s.parent_phone.includes(q));
-    });
+    // Default: Session attendance with strict prioritized matching
+    const student = this.findStudentByQuery(cleanCode);
 
     if (student) {
       // Check if already attended
@@ -9190,14 +9308,34 @@ class CentrlyApp {
   }
 
   filterStudentsTable() {
-    const q = document.getElementById('studentSearchInput')?.value.toLowerCase() || '';
+    const rawVal = document.getElementById('studentSearchInput')?.value || '';
+    const q = normalizeDigits(rawVal).trim().toLowerCase();
     const groupFilter = document.getElementById('studentGroupFilter')?.value || '';
     const rows = document.querySelectorAll('#studentsTable tbody tr');
 
+    const cleanDigits = q.replace(/\D/g, '');
+
     rows.forEach(r => {
-      const text = r.textContent.toLowerCase();
-      const matchQ = text.includes(q);
-      const matchG = !groupFilter || text.includes(groupFilter.toLowerCase());
+      const rowCode = normalizeDigits(r.getAttribute('data-code') || '').trim().toLowerCase();
+      const rowName = (r.getAttribute('data-name') || '').trim().toLowerCase();
+      const rowPhone = normalizeDigits(r.getAttribute('data-phone') || '').replace(/\D/g, '');
+      const rowParentPhone = normalizeDigits(r.getAttribute('data-parent-phone') || '').replace(/\D/g, '');
+      const rowText = r.textContent.toLowerCase();
+
+      let matchQ = false;
+      if (!q) {
+        matchQ = true;
+      } else if (rowCode && (rowCode === q || rowCode.startsWith(q))) {
+        matchQ = true;
+      } else if (rowName && rowName.includes(q)) {
+        matchQ = true;
+      } else if (cleanDigits.length >= 7 && (rowPhone.includes(cleanDigits) || rowParentPhone.includes(cleanDigits))) {
+        matchQ = true;
+      } else if (cleanDigits.length < 7 && !rowCode && rowText.includes(q)) {
+        matchQ = true;
+      }
+
+      const matchG = !groupFilter || rowText.includes(groupFilter.toLowerCase());
       r.style.display = matchQ && matchG ? '' : 'none';
     });
 

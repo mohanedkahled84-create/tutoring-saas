@@ -249,7 +249,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 const studentPortalUrl = `${canonicalOrigin}/portal`;
                 const portalPassword = s.portal_password || s.portalPassword || (s.code ? String(s.code).padStart(6, '0') : '');
                 return `
-                <tr>
+                <tr data-code="${escapeHtml(s.code || s.student_code || '')}" data-name="${escapeHtml(s.name || s.full_name || '')}" data-phone="${escapeHtml(studentPhone || '')}" data-parent-phone="${escapeHtml(parentPhone || '')}">
                   <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>
                   <td style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(s.name || s.full_name || '—')}</td>
                   <td style="max-width: 150px;">

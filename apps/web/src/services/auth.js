@@ -122,6 +122,10 @@ export const authService = {
         'centrly_financial_pin',
         'centrly_active_session_state',
         'centrly_active_session_id',
+        'centrly_redirect_route',
+        'centrly_portal_token',
+        'centrly_portal_mode',
+        'centrly_portal_student',
       ];
       specificKeys.forEach(k => {
         if (typeof localStorage !== 'undefined') localStorage.removeItem(k);
@@ -305,7 +309,11 @@ export const authService = {
       console.warn('Backend logout request failed:', err);
     } finally {
       this.clearSession();
-      window.location.reload();
+      try {
+        if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
+      } catch (_) {}
+      // Navigate cleanly to home page without lingering route queries or paths
+      window.location.href = window.location.origin + '/';
     }
   }
 };
