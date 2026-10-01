@@ -42,6 +42,7 @@ export interface UpdateStudentDTO {
   student_phone?: string | null;
   notes?: string | null;
   code?: string | null;
+  student_code?: string | null;
   fee_override?: number | null;
   exempt?: boolean;
   parent_portal_token?: string | null;

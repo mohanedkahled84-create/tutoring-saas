@@ -45,7 +45,7 @@ export class StudentsService {
       throw new Error("NO_TENANT_CONTEXT");
     }
 
-    let codeToUse = (data.student_code || data.code || "").trim();
+    let codeToUse = normalizeDigits(data.student_code || data.code || "").trim();
     if (codeToUse) {
       // Validate uniqueness for manually specified code
       const existing = await this.repo.findByCode(tenantId, codeToUse);
@@ -92,9 +92,9 @@ export class StudentsService {
   }
 
   async updateStudent(id: string, data: UpdateStudentDTO): Promise<Student | null> {
-    const rawCode = data.code !== undefined ? data.code : undefined;
+    const rawCode = data.code !== undefined ? data.code : (data.student_code !== undefined ? data.student_code : undefined);
     if (rawCode !== undefined && rawCode !== null) {
-      const newCode = String(rawCode).trim();
+      const newCode = normalizeDigits(rawCode).trim();
       if (newCode) {
         const current = await this.repo.findById(id);
         if (current) {
@@ -104,6 +104,8 @@ export class StudentsService {
           }
         }
       }
+      data.code = newCode;
+      data.student_code = newCode;
     }
     try {
       return await this.repo.update(id, data);
