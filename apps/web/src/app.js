@@ -4176,7 +4176,16 @@ class CentrlyApp {
               تم تسجيل: <strong id="cameraScanCount" style="color: #16a34a; font-size: 1.05rem;">0</strong> طلاب
             </div>
 
-            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center;">
+              <button type="button" id="cameraSnapBtn" class="btn btn-primary btn-sm" onclick="window.centrlyApp.captureHighResFrameAndScan('${mode}')" style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; font-weight: 800; background: #059669; border-color: #059669; color: #fff; box-shadow: 0 2px 4px rgba(5,150,105,0.25);" title="التقاط فوري للصورة ومسح الباركود بأعلى دقة">
+                ${getIcon('camera', 13, '#fff')}
+                <span>مسح فوري</span>
+              </button>
+              <input type="file" id="cameraBarcodeFileInput" accept="image/*" capture="environment" style="display: none;" onchange="window.centrlyApp.handleBarcodeFileScan(this.files[0], '${mode}')">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('cameraBarcodeFileInput').click()" style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; font-weight: 700;" title="اختيار صورة كارت الطالب أو التقاط صورة بكاميرا الهاتف">
+                ${getIcon('upload', 13)}
+                <span>صورة الكارت</span>
+              </button>
               <button type="button" id="cameraZoomBtn" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleCameraZoom()" style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; font-weight: 700;" title="تكبير الكاميرا للقراءة عن بعد بدون تقريب الهاتف">
                 ${getIcon('search', 13)}
                 <span id="cameraZoomBtnText">1x</span>
@@ -4280,49 +4289,57 @@ class CentrlyApp {
         await this._activeHtml5QrCode.stop().catch(() => {});
         this._activeHtml5QrCode = null;
       }
+      if (this._nativeBarcodeInterval) {
+        clearInterval(this._nativeBarcodeInterval);
+        this._nativeBarcodeInterval = null;
+      }
       this._cameraTorchOn = false;
       this._cameraZoomLevel = 1.0;
 
-      // Formats supported for lightning-fast detection
+      // Supported 1D and 2D barcode formats:
+      // Code 128 (5), Code 39 (3), EAN-13 (9), EAN-8 (10), QR (0), UPC-A (14), UPC-E (15), Code 93 (4), ITF (8)
       const formatsToSupport = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
         Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.QR_CODE,
         Html5QrcodeSupportedFormats.CODE_39,
         Html5QrcodeSupportedFormats.EAN_13,
-      ] : [5, 0, 3, 9];
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_93,
+        Html5QrcodeSupportedFormats.ITF,
+      ] : [5, 3, 9, 10, 0, 14, 15, 4, 8];
 
+      // CRITICAL: useBarCodeDetectorIfSupported MUST be FALSE!
+      // In Chrome for Android / Windows, the experimental native BarcodeDetector API
+      // only supports "qr_code" by default and completely drops Code 128 linear barcodes.
+      // Setting this to false forces the battle-tested pure-JS ZXing engine to run!
       const html5QrCode = new Html5Qrcode('centrlyCameraViewport', {
         formatsToSupport,
         verbose: false,
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true,
+          useBarCodeDetectorIfSupported: false,
         },
       });
       this._activeHtml5QrCode = html5QrCode;
 
       const facingMode = this._cameraFacingMode || 'environment';
-      const isMobile = window.innerWidth <= 768;
 
-      // Safe, cross-platform video constraints: NEVER use strict `min` width/height
-      // which throws OverconstrainedError on standard 640x480 laptop webcams!
+      // CRITICAL: Do NOT pass `qrbox` here!
+      // When `qrbox` is set in html5-qrcode, it aggressively downsamples and crops
+      // the video stream to a tiny 200px-300px box, which blurs the thin vertical
+      // lines of Code 128 barcodes into an unreadable smear.
+      // By omitting qrbox, ZXing receives the crisp full-frame canvas!
+      // We keep a 12 FPS rate so ZXing has plenty of CPU time per frame to binarize and parse lines.
       const config = {
-        fps: 22,
-        qrbox: (viewfinderWidth, viewfinderHeight) => {
-          const boxWidth = Math.min(Math.floor(viewfinderWidth * 0.90), 320);
-          const boxHeight = Math.min(Math.floor(boxWidth * 0.55), 160);
-          return { width: Math.max(boxWidth, 200), height: Math.max(boxHeight, 95) };
-        },
+        fps: 12,
         videoConstraints: {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 1920, min: 640 },
+          height: { ideal: 1080, min: 480 },
         },
         disableFlip: false,
       };
-
-      if (!isMobile) {
-        config.aspectRatio = 1.333334;
-      }
 
       const scanSuccess = (decodedText) => {
         this.handleCameraScanDetected(decodedText, mode);
@@ -4385,6 +4402,30 @@ class CentrlyApp {
           } catch (_) {}
         }
       }, 150);
+
+      // AUXILIARY PARALLEL SCANNER:
+      // If the browser natively supports BarcodeDetector for code_128, run a hardware-accelerated
+      // poll every 250ms alongside ZXing for instant sub-50ms reads!
+      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+        try {
+          const supported = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
+          if (supported && supported.includes('code_128')) {
+            const nativeDetector = new window.BarcodeDetector({ formats: ['code_128', 'code_39', 'qr_code', 'ean_13'] });
+            this._nativeBarcodeInterval = setInterval(async () => {
+              const video = document.querySelector('#centrlyCameraViewport video');
+              if (video && video.readyState >= 2 && !video.paused) {
+                try {
+                  const barcodes = await nativeDetector.detect(video);
+                  if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                    scanSuccess(barcodes[0].rawValue);
+                  }
+                } catch (_) {}
+              }
+            }, 250);
+          }
+        } catch (_) {}
+      }
+
     } catch (err) {
       const viewport = document.getElementById('centrlyCameraViewport');
       if (viewport) {
@@ -4467,6 +4508,10 @@ class CentrlyApp {
   async closeCameraScannerModal() {
     this._cameraTorchOn = false;
     this._cameraZoomLevel = 1.0;
+    if (this._nativeBarcodeInterval) {
+      clearInterval(this._nativeBarcodeInterval);
+      this._nativeBarcodeInterval = null;
+    }
     if (this._activeHtml5QrCode) {
       try {
         await this._activeHtml5QrCode.stop();
@@ -4476,6 +4521,183 @@ class CentrlyApp {
     const modal = document.getElementById('cameraScannerModal');
     if (modal) modal.remove();
     this.focusScanInput();
+  }
+
+  async captureHighResFrameAndScan(mode = 'session') {
+    const snapBtn = document.getElementById('cameraSnapBtn');
+    const feedback = document.getElementById('cameraScanFeedback');
+    const originalContent = snapBtn ? snapBtn.innerHTML : '';
+    if (snapBtn) {
+      snapBtn.disabled = true;
+      snapBtn.innerHTML = `${getIcon('refresh', 13, '#fff')} <span>جارٍ الفحص...</span>`;
+    }
+    if (feedback) {
+      feedback.style.display = 'block';
+      feedback.style.background = '#3b82f6';
+      feedback.style.color = '#fff';
+      feedback.innerHTML = `<span>جارٍ تحليل صورة الكارت بأعلى دقة...</span>`;
+    }
+
+    try {
+      const video = document.querySelector('#centrlyCameraViewport video');
+      if (!video || !video.videoWidth || !video.videoHeight) {
+        throw new Error('الكاميرا غير جاهزة بعد، يرجى الانتظار ثانية');
+      }
+
+      // 1. Try native BarcodeDetector directly on live video
+      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+        try {
+          const supported = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
+          const formatsToCheck = ['code_128', 'code_39', 'qr_code', 'ean_13'].filter(f => supported.includes(f));
+          if (formatsToCheck.length > 0) {
+            const detector = new window.BarcodeDetector({ formats: formatsToCheck });
+            const detected = await detector.detect(video);
+            if (detected && detected.length > 0 && detected[0].rawValue) {
+              this.handleCameraScanDetected(detected[0].rawValue, mode);
+              return;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 2. Capture high-resolution full video frame to canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Check native detector on canvas
+      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+        try {
+          const supported = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
+          const formatsToCheck = ['code_128', 'code_39', 'qr_code', 'ean_13'].filter(f => supported.includes(f));
+          if (formatsToCheck.length > 0) {
+            const detector = new window.BarcodeDetector({ formats: formatsToCheck });
+            const detected = await detector.detect(canvas);
+            if (detected && detected.length > 0 && detected[0].rawValue) {
+              this.handleCameraScanDetected(detected[0].rawValue, mode);
+              return;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 3. Fallback to Html5Qrcode scanFileV2 (runs pure-JS ZXing with TRY_HARDER = true & multi-angle rotation)
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+      if (!blob) throw new Error('تعذر التقاط لقطة من الكاميرا');
+      const file = new File([blob], 'camera-snapshot.jpg', { type: 'image/jpeg' });
+
+      if (this._activeHtml5QrCode) {
+        try {
+          const result = await this._activeHtml5QrCode.scanFileV2(file, false);
+          if (result && result.decodedText) {
+            this.handleCameraScanDetected(result.decodedText, mode);
+            return;
+          }
+        } catch (scanErr) {
+          console.warn('scanFileV2 error on snapshot:', scanErr);
+        }
+      }
+
+      // If nothing detected
+      this.playScanBeep('warning');
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#f59e0b';
+        feedback.style.color = '#1e293b';
+        feedback.innerHTML = `<span>لم يتم رصد كود واضح. قرّب الكاميرا بمسافة 15-20 سم واضغط "مسح فوري" مرة أخرى.</span>`;
+        setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 2600);
+      }
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#ef4444';
+        feedback.style.color = '#fff';
+        feedback.innerHTML = `<span>خطأ في الالتقاط: ${escapeHtml(err.message || 'تعذر القراءة')}</span>`;
+        setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 2600);
+      }
+    } finally {
+      if (snapBtn) {
+        snapBtn.disabled = false;
+        snapBtn.innerHTML = originalContent || `${getIcon('camera', 13, '#fff')} <span>مسح فوري</span>`;
+      }
+    }
+  }
+
+  async handleBarcodeFileScan(file, mode = 'session') {
+    if (!file) return;
+    const feedback = document.getElementById('cameraScanFeedback');
+    if (feedback) {
+      feedback.style.display = 'block';
+      feedback.style.background = '#3b82f6';
+      feedback.style.color = '#fff';
+      feedback.innerHTML = `<span>جارٍ تحليل صورة الكارت...</span>`;
+    }
+
+    try {
+      // 1. Try native BarcodeDetector if available
+      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+        try {
+          const supported = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
+          const formatsToCheck = ['code_128', 'code_39', 'qr_code', 'ean_13'].filter(f => supported.includes(f));
+          if (formatsToCheck.length > 0) {
+            const imgBitmap = await createImageBitmap(file);
+            const detector = new window.BarcodeDetector({ formats: formatsToCheck });
+            const detected = await detector.detect(imgBitmap);
+            if (detected && detected.length > 0 && detected[0].rawValue) {
+              this.handleCameraScanDetected(detected[0].rawValue, mode);
+              return;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 2. Try scanFileV2 via active or temporary Html5Qrcode instance
+      if (this._activeHtml5QrCode) {
+        const result = await this._activeHtml5QrCode.scanFileV2(file, false);
+        if (result && result.decodedText) {
+          this.handleCameraScanDetected(result.decodedText, mode);
+          return;
+        }
+      } else {
+        const formatsToSupport = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.QR_CODE,
+        ] : [5, 3, 9, 0];
+        const tempScanner = new Html5Qrcode('centrlyCameraViewport', {
+          formatsToSupport,
+          verbose: false,
+          experimentalFeatures: { useBarCodeDetectorIfSupported: false },
+        });
+        const result = await tempScanner.scanFileV2(file, false);
+        tempScanner.clear();
+        if (result && result.decodedText) {
+          this.handleCameraScanDetected(result.decodedText, mode);
+          return;
+        }
+      }
+
+      this.playScanBeep('error');
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#ef4444';
+        feedback.style.color = '#fff';
+        feedback.innerHTML = `<span>تعذر استخراج الباركود من الصورة. يرجى التأكد من وضوح الخطوط وجودة الإضاءة.</span>`;
+        setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 3000);
+      }
+    } catch (err) {
+      this.playScanBeep('error');
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#ef4444';
+        feedback.style.color = '#fff';
+        feedback.innerHTML = `<span>تعذر قراءة الصورة: ${escapeHtml(err.message || 'تأكد من وضوح الباركود')}</span>`;
+        setTimeout(() => { if (feedback) feedback.style.display = 'none'; }, 3000);
+      }
+    }
   }
 
   async handleCameraScanDetected(decodedText, mode = 'session') {
