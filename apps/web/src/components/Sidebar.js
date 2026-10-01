@@ -3,7 +3,7 @@ import { escapeHtml } from '../utils/escapeHtml.js';
 
 export function renderSidebar(currentRoute = 'sessions', user = {}, securityState = { hasPin: false, isUnlocked: true }) {
   const isCenterOwner = user?.role === 'center_owner' || user?.account_type === 'center';
-  const isAdmin = user?.role === 'admin' || user?.is_superadmin;
+  const isAdmin = user?.role === 'admin' || user?.is_superadmin || user?.email === 'mohanedabdulhalim@gmail.com' || user?.email === 'mohanedkhaled2367@gmail.com';
 
   // Dedicated Executive Superadmin HQ Navigation (100% separate for the platform owner)
   const adminSections = [
@@ -13,7 +13,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
         { id: 'admin-dashboard', title: 'لوحة الإحصائيات والأرباح', icon: 'dashboard' },
         { id: 'admin-proofs', title: 'مراجعة إيصالات الدفع', icon: 'billing' },
         { id: 'admin-tenants', title: 'المشتركين والمعلمين والسناتر', icon: 'teachers' },
-        { id: 'whatsapp-inbox', title: 'مركز محادثات الواتساب', icon: 'whatsapp' },
+        { id: 'whatsapp-inbox', title: 'محادثات الواتساب وحاسبة الأرباح', icon: 'whatsapp' },
         { id: 'admin-outreach', title: 'حملات التواصل (Outreach)', icon: 'whatsapp' },
         { id: 'coupons', title: 'أكواد الخصم والكوبونات', icon: 'billing' },
       ],
@@ -33,7 +33,6 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       routes: [
         { id: 'center-sessions', title: 'الحصص والقاعات الجارية', icon: 'sessions' },
         { id: 'center-dashboard', title: 'لوحة السنتر والإيرادات', icon: 'center' },
-        { id: 'whatsapp-inbox', title: 'محادثات الواتساب وحاسبة الأرباح', icon: 'whatsapp' },
         { id: 'center-rooms', title: 'القاعات والمختبرات', icon: 'rooms' },
       ],
     },
@@ -86,7 +85,6 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       category: 'الأرباح والتقارير الأكاديمية',
       routes: [
         { id: 'dashboard', title: 'لوحة المعلم والأرباح', icon: 'dashboard' },
-        { id: 'whatsapp-inbox', title: 'محادثات الواتساب وحاسبة الأرباح', icon: 'whatsapp' },
         { id: 'reports', title: 'الدرجات ولوحة الشرف', icon: 'reports' },
         { id: 'risk-watchlist', title: 'مؤشرات الخطر والإنذارات', icon: 'risk' },
       ],

@@ -45,7 +45,7 @@ import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
 class CentrlyApp {
   constructor() {
     this.user = authService.getUser();
-    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedabdulhalim@gmail.com' || this.user?.email === 'mohanedkhaled2367@gmail.com';
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
     this.currentRoute = isAdmin ? 'admin-dashboard' : (isCenter ? 'center-dashboard' : 'dashboard');
     this.giftCodes = [];
@@ -3213,6 +3213,11 @@ class CentrlyApp {
           break;
         }
         case 'whatsapp-inbox': {
+          const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedabdulhalim@gmail.com' || this.user?.email === 'mohanedkhaled2367@gmail.com';
+          if (!isAdmin) {
+            this.navigate('dashboard');
+            return;
+          }
           await this.loadWhatsAppInboxData(false);
           this.renderMainContent();
           setTimeout(() => {
@@ -3578,7 +3583,11 @@ class CentrlyApp {
         });
       case 'whatsapp':
         return renderWhatsAppSettingsView(this.whatsappState || {});
-      case 'whatsapp-inbox':
+      case 'whatsapp-inbox': {
+        const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedabdulhalim@gmail.com' || this.user?.email === 'mohanedkhaled2367@gmail.com';
+        if (!isAdmin) {
+          return this.renderRouteView('dashboard');
+        }
         return renderWhatsAppCenterView(
           this.whatsappInboxData || {
             stats: { total_sent: 0, total_replied: 0, pending_reply: 0, reply_rate: 0 },
@@ -3587,6 +3596,7 @@ class CentrlyApp {
           },
           this.whatsappActiveTab || 'inbox'
         );
+      }
       case 'activity-logs': {
         const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
         if (isAdmin) {

@@ -318,8 +318,8 @@ whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): P
   const requestedTenantId = typeof req.query.tenant_id === "string" ? req.query.tenant_id.trim() : "";
   const userTenantId = req.user?.tenant_id;
 
-  if (!userTenantId && !isPlatformAdmin) {
-    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+  if (!isPlatformAdmin) {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "هذه الشاشة مخصصة فقط للوحة تحكم إدارة المنظومة (Centrly HQ)" } });
     return;
   }
 
