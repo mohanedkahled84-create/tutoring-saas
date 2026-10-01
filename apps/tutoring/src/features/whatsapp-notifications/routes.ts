@@ -311,7 +311,6 @@ templatesRouter.post(
 whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userEmail = (req.user?.email || "").toLowerCase();
   const isPlatformAdmin = req.user?.role === "admin" ||
-                          userEmail === "mohanedabdulhalim@gmail.com" ||
                           userEmail === "mohanedkhaled2367@gmail.com" ||
                           userEmail === "teacher@centrly.app";
 

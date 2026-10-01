@@ -3,7 +3,7 @@ import { escapeHtml } from '../utils/escapeHtml.js';
 
 export function renderSidebar(currentRoute = 'sessions', user = {}, securityState = { hasPin: false, isUnlocked: true }) {
   const isCenterOwner = user?.role === 'center_owner' || user?.account_type === 'center';
-  const isAdmin = user?.role === 'admin' || user?.is_superadmin || user?.email === 'mohanedabdulhalim@gmail.com' || user?.email === 'mohanedkhaled2367@gmail.com';
+  const isAdmin = user?.role === 'admin' || user?.is_superadmin || user?.email === 'mohanedkhaled2367@gmail.com';
 
   // Dedicated Executive Superadmin HQ Navigation (100% separate for the platform owner)
   const adminSections = [

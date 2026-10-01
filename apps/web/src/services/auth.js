@@ -21,12 +21,22 @@ export const authService = {
       }
       if (parsed) {
         const email = (parsed.email || '').toLowerCase();
-        if (email === 'mohanedabdulhalim@gmail.com' || email === 'mohanedkhaled2367@gmail.com') {
+        if (email === 'mohanedkhaled2367@gmail.com') {
           parsed.role = 'admin';
           parsed.is_superadmin = true;
           parsed.name = 'مهند خالد';
           parsed.full_name = 'مهند خالد';
+          parsed.tenant_id = 'df534fa1-c1a6-4b29-a6ab-80cb4aceb9e9';
           parsed.tenant_name = 'إدارة المنظومة (Centrly HQ)';
+        } else if (email === 'mohanedabdulhalim@gmail.com') {
+          // Strictly protect Mr. Omar El-Mohamady's teacher identity & tenant
+          parsed.role = 'owner';
+          parsed.is_superadmin = false;
+          parsed.name = 'مستر عمر المحمدي';
+          parsed.full_name = 'مستر عمر المحمدي';
+          parsed.teacher_name = 'مستر عمر المحمدي';
+          parsed.tenant_id = '0c67b644-ae42-49e8-975f-85b9d0af0e1b';
+          parsed.tenant_name = 'مستر عمر المحمدي - منظومة تعليمية';
         }
       }
       return parsed;
@@ -126,18 +136,20 @@ export const authService = {
         'centrly_portal_token',
         'centrly_portal_mode',
         'centrly_portal_student',
+        'centrly_portal_role',
+        'centrly_portal_data',
       ];
       specificKeys.forEach(k => {
         if (typeof localStorage !== 'undefined') localStorage.removeItem(k);
         if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(k);
       });
 
-      // Clear all tenant and data caches from browser storage
+      // Clear all centrly and supabase caches from browser storage
       if (typeof localStorage !== 'undefined') {
         const toRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && (k.startsWith('centrly_cache_') || k.startsWith('centrly_tenant_'))) {
+          if (k && (k.startsWith('centrly_') || k.startsWith('sb-'))) {
             toRemove.push(k);
           }
         }
@@ -148,7 +160,7 @@ export const authService = {
         const toRemove = [];
         for (let i = 0; i < sessionStorage.length; i++) {
           const k = sessionStorage.key(i);
-          if (k && (k.startsWith('centrly_cache_') || k.startsWith('centrly_tenant_'))) {
+          if (k && (k.startsWith('centrly_') || k.startsWith('sb-'))) {
             toRemove.push(k);
           }
         }

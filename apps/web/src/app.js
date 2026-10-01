@@ -45,7 +45,7 @@ import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
 class CentrlyApp {
   constructor() {
     this.user = authService.getUser();
-    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedabdulhalim@gmail.com' || this.user?.email === 'mohanedkhaled2367@gmail.com';
+    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedkhaled2367@gmail.com';
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
     this.currentRoute = isAdmin ? 'admin-dashboard' : (isCenter ? 'center-dashboard' : 'dashboard');
     this.giftCodes = [];
@@ -293,6 +293,10 @@ class CentrlyApp {
       if (cachedDashboard) {
         this.dashboardData = cachedDashboard;
       }
+      const cachedAdminOverview = this.loadCache('adminOverviewData', null);
+      if (cachedAdminOverview) {
+        this.adminOverviewData = cachedAdminOverview;
+      }
       const cachedBilling = this.loadCache('billingState', null);
       if (cachedBilling) {
         this.billingState = cachedBilling;
@@ -310,6 +314,16 @@ class CentrlyApp {
 
   hasRouteData(route) {
     switch (route) {
+      case 'admin-dashboard':
+        return Boolean(this.adminOverviewData);
+      case 'admin-proofs':
+        return Boolean(this.adminProofsData && Array.isArray(this.adminProofsData.payment_proofs));
+      case 'admin-tenants':
+        return Boolean(this.adminTenantsData && Array.isArray(this.adminTenantsData.tenants));
+      case 'admin-outreach':
+        return Boolean(this.adminOutreachData);
+      case 'whatsapp-inbox':
+        return Boolean(this.whatsappInboxData);
       case 'dashboard':
       case 'teacher-dashboard':
         return Boolean(this.dashboardData);
@@ -527,7 +541,7 @@ class CentrlyApp {
     const cachedPortalRole = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_role')) ||
                              (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_role'));
 
-    if (isPortalRoute || (!portalToken && !this.user && !authService.hasSession() && cachedPortalToken && cleanPath === '')) {
+    if (isPortalRoute) {
       if (cachedPortalToken) {
         try {
           if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
@@ -2631,11 +2645,14 @@ class CentrlyApp {
             };
             this.adminProofsData = proofsRes;
             this.adminTenantsData = tenantsRes;
-            await this.loadCoupons();
+            this.saveCache('adminOverviewData', this.adminOverviewData);
+            await this.loadCoupons().catch(() => {});
           } catch (err) {
             console.warn('admin-dashboard load error', err);
-            this.adminOverviewData = {};
+            this.adminOverviewData = this.adminOverviewData || {};
           }
+          this.routeLoadingState['admin-dashboard'] = false;
+          this.dataLoadedState['admin-dashboard'] = true;
           this.renderMainContent();
           break;
         }
@@ -2647,6 +2664,8 @@ class CentrlyApp {
             console.warn('admin-proofs load error', err);
             this.adminProofsData = { payment_proofs: [] };
           }
+          this.routeLoadingState['admin-proofs'] = false;
+          this.dataLoadedState['admin-proofs'] = true;
           this.renderMainContent();
           break;
         }
@@ -2658,6 +2677,8 @@ class CentrlyApp {
             console.warn('admin-tenants load error', err);
             this.adminTenantsData = { tenants: [] };
           }
+          this.routeLoadingState['admin-tenants'] = false;
+          this.dataLoadedState['admin-tenants'] = true;
           this.renderMainContent();
           break;
         }
@@ -2673,6 +2694,8 @@ class CentrlyApp {
             console.warn('admin-outreach load error', err);
             this.adminOutreachData = { leads: [], metrics: { total: 606, ready: 606, sent: 0, replied: 0, interested: 0, converted: 0, not_interested: 0 } };
           }
+          this.routeLoadingState['admin-outreach'] = false;
+          this.dataLoadedState['admin-outreach'] = true;
           this.renderMainContent();
           break;
         }
@@ -3213,7 +3236,7 @@ class CentrlyApp {
           break;
         }
         case 'whatsapp-inbox': {
-          const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedabdulhalim@gmail.com' || this.user?.email === 'mohanedkhaled2367@gmail.com';
+          const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedkhaled2367@gmail.com';
           if (!isAdmin) {
             this.navigate('dashboard');
             return;
@@ -3584,7 +3607,7 @@ class CentrlyApp {
       case 'whatsapp':
         return renderWhatsAppSettingsView(this.whatsappState || {});
       case 'whatsapp-inbox': {
-        const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedabdulhalim@gmail.com' || this.user?.email === 'mohanedkhaled2367@gmail.com';
+        const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedkhaled2367@gmail.com';
         if (!isAdmin) {
           return this.renderRouteView('dashboard');
         }
@@ -4332,11 +4355,15 @@ class CentrlyApp {
       // By omitting qrbox, ZXing receives the crisp full-frame canvas!
       // We keep a 12 FPS rate so ZXing has plenty of CPU time per frame to binarize and parse lines.
       const config = {
-        fps: 12,
+        fps: 15,
+        qrbox: (viewfinderWidth, viewfinderHeight) => ({
+          width: Math.min(340, Math.floor(viewfinderWidth * 0.9)),
+          height: Math.min(160, Math.floor(viewfinderHeight * 0.5)),
+        }),
         videoConstraints: {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1920, min: 640 },
-          height: { ideal: 1080, min: 480 },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
         disableFlip: false,
       };
@@ -4384,7 +4411,10 @@ class CentrlyApp {
           video.setAttribute('webkit-playsinline', 'true');
           video.setAttribute('muted', 'true');
           video.muted = true;
-          video.style.objectFit = 'cover';
+          video.style.maxWidth = '100%';
+          video.style.height = 'auto';
+          video.style.display = 'block';
+          video.style.margin = '0 auto';
           video.style.borderRadius = '12px';
 
           try {
@@ -4403,28 +4433,56 @@ class CentrlyApp {
         }
       }, 150);
 
-      // AUXILIARY PARALLEL SCANNER:
-      // If the browser natively supports BarcodeDetector for code_128, run a hardware-accelerated
-      // poll every 250ms alongside ZXing for instant sub-50ms reads!
-      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
-        try {
-          const supported = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
-          if (supported && supported.includes('code_128')) {
-            const nativeDetector = new window.BarcodeDetector({ formats: ['code_128', 'code_39', 'qr_code', 'ean_13'] });
-            this._nativeBarcodeInterval = setInterval(async () => {
-              const video = document.querySelector('#centrlyCameraViewport video');
-              if (video && video.readyState >= 2 && !video.paused) {
-                try {
-                  const barcodes = await nativeDetector.detect(video);
-                  if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-                    scanSuccess(barcodes[0].rawValue);
-                  }
-                } catch (_) {}
+      // HIGH-PRECISION AUXILIARY SCANNER:
+      // Polls every 160ms directly from the high-res video frame!
+      // Crops the center region (where the green box is) onto an 800x360 canvas and feeds it to ZXing & BarcodeDetector.
+      this._nativeBarcodeInterval = setInterval(async () => {
+        const video = document.querySelector('#centrlyCameraViewport video');
+        if (!video || video.readyState < 2 || video.paused) return;
+
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        if (!vw || !vh || vw < 100 || vh < 100) return;
+
+        // 1. Try native BarcodeDetector directly on video if supported
+        if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+          try {
+            const supported = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
+            const valid = ['code_128', 'code_39', 'qr_code', 'ean_13', 'upc_a'].filter(f => supported.includes(f));
+            if (valid.length > 0) {
+              const nativeDetector = new window.BarcodeDetector({ formats: valid });
+              const barcodes = await nativeDetector.detect(video);
+              if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                scanSuccess(barcodes[0].rawValue);
+                return;
               }
-            }, 250);
+            }
+          } catch (_) {}
+        }
+
+        // 2. Crisp center-crop for Code 128 (800x360 canvas)
+        try {
+          if (!this._auxScanCanvas) {
+            this._auxScanCanvas = document.createElement('canvas');
+          }
+          this._auxScanCanvas.width = 800;
+          this._auxScanCanvas.height = 360;
+          const ctx = this._auxScanCanvas.getContext('2d', { willReadFrequently: true });
+          const cropW = Math.round(vw * 0.85);
+          const cropH = Math.round(vh * 0.45);
+          const cropX = Math.round((vw - cropW) / 2);
+          const cropY = Math.round((vh - cropH) / 2);
+          ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, 800, 360);
+
+          if (this._activeHtml5QrCode?.qrcode) {
+            const res = await this._activeHtml5QrCode.qrcode.decodeRobustlyAsync(this._auxScanCanvas).catch(() => null);
+            if (res && res.text) {
+              scanSuccess(res.text);
+              return;
+            }
           }
         } catch (_) {}
-      }
+      }, 160);
 
     } catch (err) {
       const viewport = document.getElementById('centrlyCameraViewport');
@@ -4583,20 +4641,30 @@ class CentrlyApp {
         } catch (_) {}
       }
 
-      // 3. Fallback to Html5Qrcode scanFileV2 (runs pure-JS ZXing with TRY_HARDER = true & multi-angle rotation)
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
-      if (!blob) throw new Error('تعذر التقاط لقطة من الكاميرا');
-      const file = new File([blob], 'camera-snapshot.jpg', { type: 'image/jpeg' });
-
-      if (this._activeHtml5QrCode) {
+      // 3. Fallback to ZXing decodeRobustlyAsync on full high-res canvas (horizontal + rotated)
+      if (this._activeHtml5QrCode?.qrcode) {
         try {
-          const result = await this._activeHtml5QrCode.scanFileV2(file, false);
-          if (result && result.decodedText) {
-            this.handleCameraScanDetected(result.decodedText, mode);
+          const result = await this._activeHtml5QrCode.qrcode.decodeRobustlyAsync(canvas);
+          if (result && result.text) {
+            this.handleCameraScanDetected(result.text, mode);
             return;
           }
-        } catch (scanErr) {
-          console.warn('scanFileV2 error on snapshot:', scanErr);
+        } catch (_) {
+          // If horizontal pass fails, rotate 90 degrees and retry
+          try {
+            const rotCanvas = document.createElement('canvas');
+            rotCanvas.width = canvas.height;
+            rotCanvas.height = canvas.width;
+            const rCtx = rotCanvas.getContext('2d');
+            rCtx.translate(rotCanvas.width / 2, rotCanvas.height / 2);
+            rCtx.rotate(Math.PI / 2);
+            rCtx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+            const rotResult = await this._activeHtml5QrCode.qrcode.decodeRobustlyAsync(rotCanvas);
+            if (rotResult && rotResult.text) {
+              this.handleCameraScanDetected(rotResult.text, mode);
+              return;
+            }
+          } catch (_) {}
         }
       }
 
