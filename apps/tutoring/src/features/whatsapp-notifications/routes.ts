@@ -310,9 +310,9 @@ templatesRouter.post(
 // GET /api/whatsapp/inbox - Retrieve WhatsApp chat inbox with reply tracking
 whatsappRouter.get("/inbox", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userEmail = (req.user?.email || "").toLowerCase();
+  const adminEmails = ["mohanedkahled84@gmail.com", "mohanedkhaled84@gmail.com", "mohanedkhaled2367@gmail.com", "teacher@centrly.app"];
   const isPlatformAdmin = req.user?.role === "admin" ||
-                          userEmail === "mohanedkhaled2367@gmail.com" ||
-                          userEmail === "teacher@centrly.app";
+                          adminEmails.includes(userEmail);
 
   const requestedTenantId = typeof req.query.tenant_id === "string" ? req.query.tenant_id.trim() : "";
   const userTenantId = req.user?.tenant_id;

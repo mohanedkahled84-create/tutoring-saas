@@ -1,7 +1,7 @@
-import { authService } from './services/auth.js?v=4.9.25';
+import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.26';
-import { renderSidebar } from './components/Sidebar.js?v=4.8.11';
-import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.0';
+import { renderSidebar } from './components/Sidebar.js?v=4.8.12';
+import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.1';
 import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.21';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.3.0';
@@ -43,9 +43,17 @@ import { playBeep, unlockAudio } from './utils/beepAudio.js';
 import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
 
 class CentrlyApp {
+  isPlatformAdmin(user = this.user) {
+    if (!user) return false;
+    if (user.role === 'admin' || user.is_superadmin) return true;
+    const email = (user.email || '').toLowerCase();
+    const adminEmails = ['mohanedkahled84@gmail.com', 'mohanedkhaled84@gmail.com', 'mohanedkhaled2367@gmail.com', 'teacher@centrly.app'];
+    return adminEmails.includes(email);
+  }
+
   constructor() {
     this.user = authService.getUser();
-    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedkhaled2367@gmail.com';
+    const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
     this.currentRoute = isAdmin ? 'admin-dashboard' : (isCenter ? 'center-dashboard' : 'dashboard');
     this.giftCodes = [];
@@ -491,6 +499,16 @@ class CentrlyApp {
       }
     });
 
+    // Browser Back/Forward history navigation
+    window.addEventListener('popstate', () => {
+      const p = new URLSearchParams(window.location.search);
+      const r = p.get('route');
+      const target = r || (this.isPlatformAdmin(this.user) ? 'admin-dashboard' : (this.user?.role === 'center_owner' || this.user?.account_type === 'center' ? 'center-dashboard' : 'dashboard'));
+      if (target && target !== this.currentRoute) {
+        this.navigate(target);
+      }
+    });
+
     // Check if Short Portal URL is present (/p/:code or /s/:code or /p:code or /s:code or ?s=:code or ?p=:code)
     const urlParams = new URLSearchParams(window.location.search);
     const pathname = (window.location.pathname || '').trim();
@@ -536,28 +554,38 @@ class CentrlyApp {
     const cleanPath = (window.location.pathname || '').trim().replace(/\/+$/, '');
     const isPortalRoute = cleanPath === '/portal' || urlParams.get('view') === 'portal' || (urlParams.get('portal') === 'login' && !portalToken);
 
-    const cachedPortalToken = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||
-                              (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_token'));
-    const cachedPortalRole = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_role')) ||
-                             (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_role'));
+    // If an authenticated teacher/center/admin is on /portal without an explicit student query token or preview request:
+    const hasExistingTeacherSession = authService.isAuthenticated() || authService.hasSession();
+    if (isPortalRoute && hasExistingTeacherSession && !urlParams.has('portal') && !urlParams.has('view')) {
+      // Don't hijack authenticated teacher/admin into portal login or parent portal!
+      if (window.history && window.history.replaceState && window.location.pathname === '/portal') {
+        window.history.replaceState(null, '', '/');
+      }
+      // Continue to authenticated session!
+    } else {
+      const cachedPortalToken = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||
+                                (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_token'));
+      const cachedPortalRole = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_role')) ||
+                               (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_role'));
 
-    if (isPortalRoute) {
-      if (cachedPortalToken) {
-        try {
-          if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
-            window.history.replaceState(null, '', '/portal');
+      if (isPortalRoute) {
+        if (cachedPortalToken) {
+          try {
+            if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
+              window.history.replaceState(null, '', '/portal');
+            }
+          } catch (_) {}
+
+          if (cachedPortalRole === 'student') {
+            await this.loadStudentPortal(cachedPortalToken);
+          } else {
+            await this.loadParentPortal(cachedPortalToken);
           }
-        } catch (_) {}
-
-        if (cachedPortalRole === 'student') {
-          await this.loadStudentPortal(cachedPortalToken);
-        } else {
-          await this.loadParentPortal(cachedPortalToken);
+          return;
         }
+        this.renderPortalLogin();
         return;
       }
-      this.renderPortalLogin();
-      return;
     }
 
     // Check for password recovery hash / query (from Supabase password reset email)
@@ -660,10 +688,22 @@ class CentrlyApp {
       }
     }).catch(() => {});
 
-    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-    const savedRoute = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_current_route')) ||
-                       (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_current_route'));
+    const validTeacherRoutes = [
+      'sessions', 'quizzes', 'homework', 'materials',
+      'students', 'groups', 'assistants', 'calendar', 'student-cards',
+      'dashboard', 'reports', 'risk-watchlist', 'settings', 'billing', 'whatsapp'
+    ];
+    const validCenterRoutes = [
+      'center-sessions', 'center-dashboard', 'center-rooms',
+      'center-teachers', 'center-assistants', 'groups', 'students', 'calendar', 'student-cards',
+      'settings', 'activity-logs'
+    ];
+    const urlRoute = urlParams.get('route');
+    const effectiveSavedRoute = (urlRoute && urlRoute !== 'null' && urlRoute !== 'undefined') ? urlRoute :
+      ((typeof localStorage !== 'undefined' && localStorage.getItem('centrly_current_route')) ||
+       (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_current_route')));
     const redirectRoute = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_redirect_route')) ||
                           (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_redirect_route'));
 
@@ -685,13 +725,24 @@ class CentrlyApp {
           localStorage.removeItem('centrly_redirect_route');
         } catch (_) {}
       } else {
-        this.currentRoute = (savedRoute && adminRoutes.includes(savedRoute)) ? savedRoute : 'admin-dashboard';
+        this.currentRoute = (effectiveSavedRoute && adminRoutes.includes(effectiveSavedRoute)) ? effectiveSavedRoute : 'admin-dashboard';
       }
     } else if (isCenter) {
-      this.currentRoute = (savedRoute && savedRoute !== 'dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'center-dashboard';
+      this.currentRoute = (effectiveSavedRoute && validCenterRoutes.includes(effectiveSavedRoute)) ? effectiveSavedRoute : 'center-dashboard';
     } else {
-      this.currentRoute = (savedRoute && savedRoute !== 'center-dashboard' && !adminRoutes.includes(savedRoute)) ? savedRoute : 'dashboard';
+      this.currentRoute = (effectiveSavedRoute && validTeacherRoutes.includes(effectiveSavedRoute)) ? effectiveSavedRoute : 'dashboard';
     }
+
+    try {
+      localStorage.setItem('centrly_current_route', this.currentRoute);
+      sessionStorage.setItem('centrly_current_route', this.currentRoute);
+      if (window.history && window.history.replaceState) {
+        const cleanUrl = this.currentRoute && !['dashboard', 'admin-dashboard'].includes(this.currentRoute)
+          ? `/?route=${encodeURIComponent(this.currentRoute)}`
+          : '/';
+        window.history.replaceState(null, '', cleanUrl);
+      }
+    } catch (_) {}
 
     // Cross-Device Account-Level Security: Sync PIN status from user profile and storage
     if (typeof this.user?.has_security_pin === 'boolean') {
@@ -2493,9 +2544,9 @@ class CentrlyApp {
       route = 'settings';
     }
 
-    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-    const dedicatedAdminOnlyRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach'];
+    const dedicatedAdminOnlyRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'coupons'];
     if (!isAdmin && dedicatedAdminOnlyRoutes.includes(route)) {
       route = isCenter ? 'center-dashboard' : 'dashboard';
     }
@@ -2503,6 +2554,13 @@ class CentrlyApp {
     this.currentRoute = route;
     try {
       localStorage.setItem('centrly_current_route', route);
+      sessionStorage.setItem('centrly_current_route', route);
+      if (window.history && window.history.replaceState) {
+        const cleanUrl = route && !['dashboard', 'admin-dashboard'].includes(route)
+          ? `/?route=${encodeURIComponent(route)}`
+          : '/';
+        window.history.replaceState(null, '', cleanUrl);
+      }
     } catch (_) {}
     this.toggleSidebar(true);
 
@@ -3236,7 +3294,7 @@ class CentrlyApp {
           break;
         }
         case 'whatsapp-inbox': {
-          const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedkhaled2367@gmail.com';
+          const isAdmin = this.isPlatformAdmin(this.user);
           if (!isAdmin) {
             this.navigate('dashboard');
             return;
@@ -3526,7 +3584,7 @@ class CentrlyApp {
       case 'admin-outreach':
         return renderAdminOutreachView(this.adminOutreachData || {}, this.adminOutreachFilter || 'all', this.adminOutreachSearchQuery || '');
       case 'coupons':
-        if (this.user?.role !== 'admin' && !this.user?.is_superadmin) {
+        if (!this.isPlatformAdmin(this.user)) {
           return renderTeacherDashboard(this.dashboardData || {}, this.user || {}, {
             hasPin: this.hasSecurityPin,
             isUnlocked: this.isFinancialUnlocked,
@@ -3607,7 +3665,7 @@ class CentrlyApp {
       case 'whatsapp':
         return renderWhatsAppSettingsView(this.whatsappState || {});
       case 'whatsapp-inbox': {
-        const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin || this.user?.email === 'mohanedkhaled2367@gmail.com';
+        const isAdmin = this.isPlatformAdmin(this.user);
         if (!isAdmin) {
           return this.renderRouteView('dashboard');
         }

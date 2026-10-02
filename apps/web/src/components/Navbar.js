@@ -2,7 +2,9 @@ import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
 export function renderNavbar(user, activeSessionSummary = null) {
-  const isAdmin = user?.role === 'admin' || user?.is_superadmin;
+  const adminEmails = ['mohanedkahled84@gmail.com', 'mohanedkhaled84@gmail.com', 'mohanedkhaled2367@gmail.com', 'teacher@centrly.app'];
+  const userEmail = (user?.email || '').toLowerCase();
+  const isAdmin = user?.role === 'admin' || user?.is_superadmin || adminEmails.includes(userEmail);
 
   // Resolve raw name prioritizing full_name, name, teacher_name
   let rawName = (user?.full_name || user?.name || user?.teacher_name || '').trim();
@@ -10,8 +12,8 @@ export function renderNavbar(user, activeSessionSummary = null) {
 
   // If no name is set, or if it matches the email prefix (e.g. mohanedkahled84)
   if (!rawName || rawName === emailPrefix) {
-    if (user?.email === 'mohanedkahled84@gmail.com') {
-      rawName = 'أ. مهند خالد';
+    if (adminEmails.includes(userEmail)) {
+      rawName = 'مهند خالد';
     } else if (isAdmin) {
       rawName = 'مهند خالد';
     } else if (user?.tenant_name) {

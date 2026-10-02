@@ -21,7 +21,8 @@ export const authService = {
       }
       if (parsed) {
         const email = (parsed.email || '').toLowerCase();
-        if (email === 'mohanedkhaled2367@gmail.com') {
+        const adminEmails = ['mohanedkahled84@gmail.com', 'mohanedkhaled84@gmail.com', 'mohanedkhaled2367@gmail.com', 'teacher@centrly.app'];
+        if (adminEmails.includes(email)) {
           parsed.role = 'admin';
           parsed.is_superadmin = true;
           parsed.name = 'مهند خالد';

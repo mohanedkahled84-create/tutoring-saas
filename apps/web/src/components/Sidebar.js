@@ -2,8 +2,9 @@ import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
 export function renderSidebar(currentRoute = 'sessions', user = {}, securityState = { hasPin: false, isUnlocked: true }) {
-  const isCenterOwner = user?.role === 'center_owner' || user?.account_type === 'center';
-  const isAdmin = user?.role === 'admin' || user?.is_superadmin || user?.email === 'mohanedkhaled2367@gmail.com';
+  const adminEmails = ['mohanedkahled84@gmail.com', 'mohanedkhaled84@gmail.com', 'mohanedkhaled2367@gmail.com', 'teacher@centrly.app'];
+  const userEmail = (user?.email || '').toLowerCase();
+  const isAdmin = user?.role === 'admin' || user?.is_superadmin || adminEmails.includes(userEmail);
 
   // Dedicated Executive Superadmin HQ Navigation (100% separate for the platform owner)
   const adminSections = [
