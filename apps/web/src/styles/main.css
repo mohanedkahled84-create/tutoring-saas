@@ -994,3 +994,30 @@ button.password-toggle-btn:active {
     stroke-dashoffset: -124;
   }
 }
+
+/* ========================================================
+   Low-End Mobile & Legacy Browser Performance Optimizations
+   ======================================================== */
+@media (max-width: 768px) {
+  html, body {
+    text-rendering: optimizeSpeed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
+  }
+
+  /* GPU acceleration for mobile scroll containers */
+  #mainContent,
+  #studentsTableContainer,
+  .modal-overlay {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+  }
+
+  /* Contain layout reflows to boost scrolling speed on budget Android CPUs */
+  .card, .stat-card {
+    contain: content;
+    will-change: auto;
+  }
+}
+

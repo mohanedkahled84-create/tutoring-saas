@@ -133,12 +133,187 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Changa:wght@700&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="./src/styles/tokens.css?v=4.8.14">
-  <link rel="stylesheet" href="./src/styles/main.css?v=5.1.7">
+  <link rel="stylesheet" href="./src/styles/main.css?v=5.2.0">
+
+  <!-- Legacy & Low-End Mobile Browser Polyfills & Resilience Engine -->
+  <script>
+    if (typeof globalThis === 'undefined') { window.globalThis = window; }
+    if (!Promise.allSettled) {
+      Promise.allSettled = function(promises) {
+        return Promise.all(promises.map(function(p) {
+          return Promise.resolve(p).then(
+            function(val) { return { status: 'fulfilled', value: val }; },
+            function(err) { return { status: 'rejected', reason: err }; }
+          );
+        }));
+      };
+    }
+    if (!window.requestIdleCallback) {
+      window.requestIdleCallback = function(cb) {
+        return setTimeout(function() { cb({ didTimeout: false, timeRemaining: function() { return 0; } }); }, 1);
+      };
+      window.cancelIdleCallback = function(id) { clearTimeout(id); };
+    }
+
+    window.__centrlyLoaded = false;
+    (function() {
+      function showFallback(msg) {
+        if (window.__centrlyLoaded) return;
+        var actions = document.getElementById('centrlySplashActions');
+        var status = document.getElementById('centrlySplashStatus');
+        if (actions) actions.style.display = 'block';
+        if (status && msg) status.innerText = msg;
+        var chromeBtn = document.getElementById('centrlyOpenInChromeBtn');
+        if (chromeBtn) {
+          var cleanHref = window.location.href.replace(/^https?:\/\//, '');
+          chromeBtn.href = 'intent://' + cleanHref + '#Intent;scheme=https;package=com.android.chrome;end';
+        }
+      }
+
+      // Show recovery actions if loading takes more than 7 seconds on weak device/network
+      setTimeout(function() {
+        showFallback('يستغرق التحميل وقتاً إضافياً...');
+      }, 7000);
+
+      window.addEventListener('error', function(e) {
+        if (!window.__centrlyLoaded) {
+          showFallback('تنبيه: متصفحك يواجه صعوبة في تشغيل الصفحة');
+        }
+      });
+    })();
+  </script>
+
+  <!-- Instant CSS Splash Screen Styles (0ms First Contentful Paint on Mobile) -->
+  <style>
+    #centrlyInitialSplash {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #F8F7F1;
+      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+      direction: rtl;
+      padding: 1.5rem;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    .centrly-splash-card {
+      background: #ffffff;
+      border: 1px solid #E2E8F0;
+      border-radius: 20px;
+      padding: 2.25rem 1.75rem;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 10px 25px -5px rgba(23, 45, 112, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-sizing: border-box;
+    }
+    .centrly-splash-badge {
+      width: 58px;
+      height: 58px;
+      background: linear-gradient(135deg, #172D70 0%, #203B91 100%);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 26px;
+      font-weight: 800;
+      box-shadow: 0 6px 16px rgba(23, 45, 112, 0.25);
+      margin-bottom: 1rem;
+    }
+    .centrly-splash-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #172D70;
+      margin: 0 0 0.35rem 0;
+    }
+    .centrly-splash-subtitle {
+      font-size: 0.85rem;
+      color: #64748B;
+      margin: 0 0 1.25rem 0;
+    }
+    .centrly-splash-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3.5px solid rgba(32, 59, 145, 0.15);
+      border-top-color: #203B91;
+      border-radius: 50%;
+      animation: centrlySplashSpin 0.75s linear infinite;
+      margin-bottom: 1rem;
+    }
+    @keyframes centrlySplashSpin {
+      to { transform: rotate(360deg); }
+    }
+    .centrly-splash-status {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #334155;
+      margin: 0;
+    }
+    #centrlySplashActions {
+      display: none;
+      margin-top: 1.25rem;
+      width: 100%;
+      border-top: 1px dashed #E2E8F0;
+      padding-top: 1.25rem;
+    }
+    .centrly-btn-chrome {
+      display: block;
+      background: #172D70;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 0.65rem 1rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 3px 8px rgba(23, 45, 112, 0.2);
+    }
+    .centrly-btn-reload {
+      display: block;
+      width: 100%;
+      background: #F1F5F9;
+      color: #475569;
+      border: 1px solid #CBD5E1;
+      padding: 0.55rem 1rem;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+  </style>
 </head>
 <body>
   <div id="centrlyProgressBar" class="top-progress-bar"></div>
   <div id="app"></div>
-  <script src="/src/vendor/html5-qrcode.min.js"></script>
-  <script type="module" src="./src/app.js?v=6.1.2"></script>
+  <div id="centrlyInitialSplash">
+    <div class="centrly-splash-card">
+      <div class="centrly-splash-badge">⚡</div>
+      <h1 class="centrly-splash-title">سنترلي | Centrly</h1>
+      <p class="centrly-splash-subtitle">المنظومة الذكية لإدارة المعلمين والمراكز</p>
+      <div class="centrly-splash-spinner"></div>
+      <p id="centrlySplashStatus" class="centrly-splash-status">جاري تشغيل المنظومة...</p>
+      <div id="centrlySplashActions">
+        <p style="font-size: 0.78rem; color: #b91c1c; background: #fee2e2; padding: 0.5rem 0.65rem; border-radius: 8px; margin: 0 0 0.75rem 0; line-height: 1.45;">
+          إذا كان هاتفك بطيئاً أو لم تفتح الصفحة تلقائياً، يمكنك فتح الرابط في متصفح Chrome:
+        </p>
+        <a id="centrlyOpenInChromeBtn" class="centrly-btn-chrome" href="#">
+          فتح في متصفح Chrome 🌐
+        </a>
+        <button type="button" class="centrly-btn-reload" onclick="window.location.reload(true)">
+          إعادة المحاولة 🔄
+        </button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./src/app.js?v=6.2.0"></script>
 </body>
 </html>

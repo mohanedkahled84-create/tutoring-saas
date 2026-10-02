@@ -154,7 +154,10 @@ class CentrlyApp {
     this.materials = [];
     this.materialsGroupId = 'all';
     this.teacherAssistants = [];
-    const cachedHasPin = localStorage.getItem('centrly_has_security_pin');
+    let cachedHasPin = null;
+    try {
+      cachedHasPin = (typeof localStorage !== 'undefined') ? localStorage.getItem('centrly_has_security_pin') : null;
+    } catch (_) {}
     const cachedUser = authService.getUser();
     this.hasSecurityPin = (cachedUser && typeof cachedUser.has_security_pin === 'boolean')
       ? cachedUser.has_security_pin
@@ -761,25 +764,10 @@ class CentrlyApp {
     this.routeLoadingState[this.currentRoute] = !this.hasRouteData(this.currentRoute);
     this.studentsLoading = this.currentRoute === 'students' && (!Array.isArray(this.students) || this.students.length === 0);
     this.renderApp();
-    this.prefetchCoreData();
     this.startProactiveSessionRefresher();
 
-    // Critical: Auto-fetch route data on page refresh so no route ever gets stuck on a loading spinner
-    this.loadRouteData(this.currentRoute).then(() => {
-      this.routeLoadingState[this.currentRoute] = false;
-      this.dataLoadedState[this.currentRoute] = true;
-      this.renderMainContent();
-    }).catch(err => {
-      console.warn('Initial route load error on refresh:', err);
-      this.routeLoadingState[this.currentRoute] = false;
-      this.renderMainContent();
-    });
-
-    this.prefetchCoreData().then(() => {
-      if (['students', 'groups', 'dashboard', 'billing'].includes(this.currentRoute)) {
-        this.renderMainContent();
-      }
-    }).catch(() => {});
+    // Mark app as successfully loaded so watchdog/splash dismisses
+    window.__centrlyLoaded = true;
 
     // Async background security PIN check without blocking initial render
     request('/settings/security-pin').then(pinStatus => {
@@ -815,13 +803,30 @@ class CentrlyApp {
       this.startLiveSessionSync();
     }
 
+    // Load active route data once
     try {
       await this.loadRouteData(this.currentRoute);
+    } catch (err) {
+      console.warn('Initial route load error on refresh:', err);
     } finally {
       this.routeLoadingState[this.currentRoute] = false;
       this.dataLoadedState[this.currentRoute] = true;
       this.studentsLoading = false;
       this.renderMainContent();
+    }
+
+    // Defer prefetching core data until main thread is idle (saves bandwidth and CPU on weak phones)
+    const deferPrefetch = () => {
+      this.prefetchCoreData().then(() => {
+        if (['students', 'groups', 'dashboard', 'billing'].includes(this.currentRoute)) {
+          this.renderMainContent();
+        }
+      }).catch(() => {});
+    };
+    if (typeof window !== 'undefined' && window.requestIdleCallback) {
+      window.requestIdleCallback(deferPrefetch, { timeout: 3000 });
+    } else {
+      setTimeout(deferPrefetch, 1000);
     }
   }
 
@@ -878,6 +883,8 @@ class CentrlyApp {
   }
 
   getAppEl() {
+    const splash = document.getElementById('centrlyInitialSplash');
+    if (splash) splash.remove();
     let appEl = document.getElementById('app');
     if (!appEl && typeof document !== 'undefined') {
       appEl = document.createElement('div');
@@ -891,6 +898,7 @@ class CentrlyApp {
 
   // Official Landing / Welcome Page
   renderLanding() {
+    window.__centrlyLoaded = true;
     window.scrollTo(0, 0);
     document.title = 'سنترلي | Centrly - المنظومة الأذكى لإدارة المعلمين والمراكز التعليمية';
     const appEl = this.getAppEl();
@@ -1046,6 +1054,7 @@ class CentrlyApp {
 
   // DEV-34: No-App Parent Portal
   async loadParentPortal(token) {
+    window.__centrlyLoaded = true;
     this._parentPortalToken = token;
     try {
       if (typeof localStorage !== 'undefined' && token) {
@@ -1110,6 +1119,7 @@ class CentrlyApp {
   }
 
   async loadStudentPortal(token) {
+    window.__centrlyLoaded = true;
     this._studentPortalToken = token;
     try {
       if (typeof localStorage !== 'undefined' && token) {
@@ -1175,6 +1185,7 @@ class CentrlyApp {
 
   // DEV-PORTAL: Unified Student & Parent Portal Login & Session Handlers
   renderPortalLogin(errorMessage = '') {
+    window.__centrlyLoaded = true;
     this.currentRoute = 'portal';
     const appEl = this.getAppEl();
     if (appEl) {
@@ -1520,6 +1531,7 @@ class CentrlyApp {
   }
 
   renderAuth(tab = 'login') {
+    window.__centrlyLoaded = true;
     this.resetTenantState();
     window.scrollTo(0, 0);
     const appEl = this.getAppEl();
@@ -3480,6 +3492,7 @@ class CentrlyApp {
   }
 
   renderApp(force = false) {
+    window.__centrlyLoaded = true;
     const appEl = this.getAppEl();
     const mainContentEl = document.getElementById('mainContent');
     const appContainer = document.querySelector('.app-container');
@@ -3945,10 +3958,15 @@ class CentrlyApp {
     const currentCount = (this.students || []).length;
     if (currentCount >= studentLimit) {
       const storageKey = 'centrly_quota_exceeded_timestamp';
-      let reachedTimestamp = localStorage.getItem(storageKey);
-      if (!reachedTimestamp) {
+      let reachedTimestamp = null;
+      try {
+        reachedTimestamp = (typeof localStorage !== 'undefined') ? localStorage.getItem(storageKey) : null;
+        if (!reachedTimestamp) {
+          reachedTimestamp = Date.now().toString();
+          localStorage.setItem(storageKey, reachedTimestamp);
+        }
+      } catch (_) {
         reachedTimestamp = Date.now().toString();
-        localStorage.setItem(storageKey, reachedTimestamp);
       }
       const elapsedDays = (Date.now() - Number(reachedTimestamp)) / (1000 * 60 * 60 * 24);
       if (elapsedDays > 3) {
@@ -4412,16 +4430,20 @@ class CentrlyApp {
       // lines of Code 128 barcodes into an unreadable smear.
       // By omitting qrbox, ZXing receives the crisp full-frame canvas!
       // We keep a 12 FPS rate so ZXing has plenty of CPU time per frame to binarize and parse lines.
+      const isLowEndDevice = (typeof navigator !== 'undefined') && (
+        (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
+        (navigator.deviceMemory && navigator.deviceMemory <= 2)
+      );
       const config = {
-        fps: 15,
+        fps: isLowEndDevice ? 10 : 15,
         qrbox: (viewfinderWidth, viewfinderHeight) => ({
           width: Math.min(340, Math.floor(viewfinderWidth * 0.9)),
           height: Math.min(160, Math.floor(viewfinderHeight * 0.5)),
         }),
         videoConstraints: {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: isLowEndDevice ? 640 : 1280 },
+          height: { ideal: isLowEndDevice ? 480 : 720 },
         },
         disableFlip: false,
       };
@@ -6130,10 +6152,15 @@ class CentrlyApp {
     const currentCount = (this.students || []).length;
     if (currentCount >= studentLimit) {
       const storageKey = 'centrly_quota_exceeded_timestamp';
-      let reachedTimestamp = localStorage.getItem(storageKey);
-      if (!reachedTimestamp) {
+      let reachedTimestamp = null;
+      try {
+        reachedTimestamp = (typeof localStorage !== 'undefined') ? localStorage.getItem(storageKey) : null;
+        if (!reachedTimestamp) {
+          reachedTimestamp = Date.now().toString();
+          localStorage.setItem(storageKey, reachedTimestamp);
+        }
+      } catch (_) {
         reachedTimestamp = Date.now().toString();
-        localStorage.setItem(storageKey, reachedTimestamp);
       }
       const elapsedDays = (Date.now() - Number(reachedTimestamp)) / (1000 * 60 * 60 * 24);
       if (elapsedDays > 3) {
@@ -10027,10 +10054,15 @@ class CentrlyApp {
     const currentCount = (this.students || []).length;
     if (currentCount >= studentLimit) {
       const storageKey = 'centrly_quota_exceeded_timestamp';
-      let reachedTimestamp = localStorage.getItem(storageKey);
-      if (!reachedTimestamp) {
+      let reachedTimestamp = null;
+      try {
+        reachedTimestamp = (typeof localStorage !== 'undefined') ? localStorage.getItem(storageKey) : null;
+        if (!reachedTimestamp) {
+          reachedTimestamp = Date.now().toString();
+          localStorage.setItem(storageKey, reachedTimestamp);
+        }
+      } catch (_) {
         reachedTimestamp = Date.now().toString();
-        localStorage.setItem(storageKey, reachedTimestamp);
       }
       const elapsedDays = (Date.now() - Number(reachedTimestamp)) / (1000 * 60 * 60 * 24);
       if (elapsedDays > 3) {
