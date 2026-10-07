@@ -1183,32 +1183,6 @@ class CentrlyApp {
     }
   }
 
-  async switchToStudentPortal() {
-    const token = this._studentPortalToken || this._parentPortalToken ||
-      (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||
-      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_token'));
-    if (token) {
-      try {
-        if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_portal_role', 'student');
-        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_portal_role', 'student');
-      } catch (_) {}
-      await this.loadStudentPortal(token);
-    }
-  }
-
-  async switchToParentPortal() {
-    const token = this._parentPortalToken || this._studentPortalToken ||
-      (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||
-      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_token'));
-    if (token) {
-      try {
-        if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_portal_role', 'parent');
-        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_portal_role', 'parent');
-      } catch (_) {}
-      await this.loadParentPortal(token);
-    }
-  }
-
   // DEV-PORTAL: Unified Student & Parent Portal Login & Session Handlers
   renderPortalLogin(errorMessage = '') {
     window.__centrlyLoaded = true;

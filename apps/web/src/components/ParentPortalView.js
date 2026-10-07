@@ -65,12 +65,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
               <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%;"></span>
               محدّث لحظياً
             </span>
-            <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-              <button onclick="window.centrlyApp && window.centrlyApp.switchToStudentPortal ? window.centrlyApp.switchToStudentPortal() : null" 
-                style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #1d4ed8; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="الانتقال إلى بوابة الطالب">
-                ${getIcon('graduation', 13, '#1d4ed8')}
-                <span>بوابة الطالب</span>
-              </button>
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
               <button onclick="window.openParentPortalTour ? window.openParentPortalTour(true) : null" 
                 style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="شرح أقسام المتابعة">
                 ${getIcon('lightbulb', 13, '#2563eb')}
