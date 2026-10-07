@@ -133,7 +133,12 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
               <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%;"></span>
               بوابة الطالب الرسمية
             </span>
-            <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+              <button onclick="window.centrlyApp && window.centrlyApp.switchToParentPortal ? window.centrlyApp.switchToParentPortal() : null" 
+                style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35); border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="الانتقال إلى بوابة ولي الأمر">
+                ${getIcon('users', 13, '#ffffff')}
+                <span>بوابة ولي الأمر</span>
+              </button>
               <button onclick="window.openStudentPortalTour ? window.openStudentPortalTour(true) : null" 
                 style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35); border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="شرح أقسام المنصة">
                 ${getIcon('lightbulb', 13, '#fde047')}

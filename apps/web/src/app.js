@@ -1183,6 +1183,32 @@ class CentrlyApp {
     }
   }
 
+  async switchToStudentPortal() {
+    const token = this._studentPortalToken || this._parentPortalToken ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_token'));
+    if (token) {
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_portal_role', 'student');
+        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_portal_role', 'student');
+      } catch (_) {}
+      await this.loadStudentPortal(token);
+    }
+  }
+
+  async switchToParentPortal() {
+    const token = this._parentPortalToken || this._studentPortalToken ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_token'));
+    if (token) {
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_portal_role', 'parent');
+        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_portal_role', 'parent');
+      } catch (_) {}
+      await this.loadParentPortal(token);
+    }
+  }
+
   // DEV-PORTAL: Unified Student & Parent Portal Login & Session Handlers
   renderPortalLogin(errorMessage = '') {
     window.__centrlyLoaded = true;
@@ -1286,11 +1312,12 @@ class CentrlyApp {
       });
 
       if (res && res.success && res.token) {
+        const targetRole = (role === 'student' || role === 'parent') ? role : (res.role || 'parent');
         try {
           localStorage.setItem('centrly_portal_token', res.token);
-          localStorage.setItem('centrly_portal_role', res.role || 'parent');
+          localStorage.setItem('centrly_portal_role', targetRole);
           sessionStorage.setItem('centrly_portal_token', res.token);
-          sessionStorage.setItem('centrly_portal_role', res.role || 'parent');
+          sessionStorage.setItem('centrly_portal_role', targetRole);
         } catch (_) {}
 
         this.showToast('مرحباً بك! تم تسجيل الدخول بنجاح', 'success');
@@ -1301,7 +1328,7 @@ class CentrlyApp {
           }
         } catch (_) {}
 
-        if (res.role === 'student') {
+        if (targetRole === 'student') {
           await this.loadStudentPortal(res.token);
         } else {
           await this.loadParentPortal(res.token);
@@ -16544,6 +16571,11 @@ window.centrlyApp = new CentrlyApp();
 window.togglePasswordVisibility = (inputId, btnEl, event) => {
   if (window.centrlyApp) {
     return window.centrlyApp.togglePasswordVisibility(inputId, btnEl, event);
+  }
+};
+window.switchPortalLoginRole = (role) => {
+  if (window.centrlyApp) {
+    return window.centrlyApp.switchPortalLoginRole(role);
   }
 };
 if (document.readyState === 'loading') {

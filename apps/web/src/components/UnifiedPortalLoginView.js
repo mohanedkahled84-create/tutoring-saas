@@ -64,7 +64,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
           <button 
             type="button" 
             id="portalTabParent" 
-            onclick="window.centrlyApp && window.centrlyApp.switchPortalLoginRole ? window.centrlyApp.switchPortalLoginRole('parent') : null"
+            onclick="window.switchPortalLoginRole ? window.switchPortalLoginRole('parent') : (window.centrlyApp && window.centrlyApp.switchPortalLoginRole ? window.centrlyApp.switchPortalLoginRole('parent') : null)"
             style="flex: 1; padding: 0.65rem 0.5rem; border: none; border-radius: 0.55rem; font-family: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; background: ${!isStudent ? '#ffffff' : 'transparent'}; color: ${!isStudent ? '#1e3a8a' : '#64748b'}; box-shadow: ${!isStudent ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};"
           >
             <span>ولي أمر</span>
@@ -72,7 +72,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
           <button 
             type="button" 
             id="portalTabStudent" 
-            onclick="window.centrlyApp && window.centrlyApp.switchPortalLoginRole ? window.centrlyApp.switchPortalLoginRole('student') : null"
+            onclick="window.switchPortalLoginRole ? window.switchPortalLoginRole('student') : (window.centrlyApp && window.centrlyApp.switchPortalLoginRole ? window.centrlyApp.switchPortalLoginRole('student') : null)"
             style="flex: 1; padding: 0.65rem 0.5rem; border: none; border-radius: 0.55rem; font-family: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; background: ${isStudent ? '#ffffff' : 'transparent'}; color: ${isStudent ? '#1d4ed8' : '#64748b'}; box-shadow: ${isStudent ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};"
           >
             <span>طالب</span>

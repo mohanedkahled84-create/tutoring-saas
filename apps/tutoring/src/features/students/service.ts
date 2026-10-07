@@ -351,14 +351,14 @@ export class StudentsService {
     const cleanParentPhone = (student.parent_phone || "").replace(/[\s\-\(\)\.]/g, "");
 
     let role: "parent" | "student" = "parent";
-    // 1. If student phone and parent phone are distinct, auto-detect strictly by phone match:
-    if (cleanStudentPhone && cleanIdent === cleanStudentPhone && cleanIdent !== cleanParentPhone) {
+    // 1. If user explicitly requested a role (from /portal tabs), always respect user's choice:
+    if (dto.role === "student" || dto.role === "parent") {
+      role = dto.role;
+    } else if (cleanStudentPhone && cleanIdent === cleanStudentPhone && cleanIdent !== cleanParentPhone) {
+      // 2. Otherwise auto-detect strictly by phone match:
       role = "student";
     } else if (cleanParentPhone && cleanIdent === cleanParentPhone && cleanIdent !== cleanStudentPhone) {
       role = "parent";
-    } else if (dto.role === "student" || dto.role === "parent") {
-      // 2. If phone is shared between student & parent or identifier is student code, respect user's tab choice:
-      role = dto.role;
     } else if (cleanStudentPhone && cleanIdent === cleanStudentPhone) {
       role = "student";
     }

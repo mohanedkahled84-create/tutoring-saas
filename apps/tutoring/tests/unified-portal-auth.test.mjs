@@ -130,6 +130,24 @@ test("DEV-PORTAL: authenticatePortalUser correctly authenticates and determines 
   assert.equal(codeAuth.success, true);
   assert.equal(codeAuth.role, "parent");
 
+  // 3b. Authenticate with student phone but explicit role: 'parent' -> must strictly respect 'parent'
+  const explicitParentAuth = await service.authenticatePortalUser({
+    identifier: "01055551111",
+    password,
+    role: "parent",
+  });
+  assert.equal(explicitParentAuth.success, true);
+  assert.equal(explicitParentAuth.role, "parent");
+
+  // 3c. Authenticate with parent phone but explicit role: 'student' -> must strictly respect 'student'
+  const explicitStudentAuth = await service.authenticatePortalUser({
+    identifier: "01055552222",
+    password,
+    role: "student",
+  });
+  assert.equal(explicitStudentAuth.success, true);
+  assert.equal(explicitStudentAuth.role, "student");
+
   // 4. Invalid password rejects with INVALID_CREDENTIALS
   await assert.rejects(
     () => service.authenticatePortalUser({ identifier: "01055551111", password: "wrong-password" }),
