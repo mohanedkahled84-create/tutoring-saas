@@ -1,18 +1,18 @@
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.26';
-import { renderSidebar } from './components/Sidebar.js?v=4.8.12';
+import { renderSidebar } from './components/Sidebar.js?v=4.8.13';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.1';
 import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.21';
 import { renderOnboardingWizard } from './components/OnboardingWizard.js';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.3.0';
 import { renderTeacherCalendar } from './components/TeacherCalendar.js';
 import { renderSessionsView } from './components/SessionsView.js';
-import { renderStudentsView } from './components/StudentsView.js?v=4.8.15';
+import { renderStudentsView } from './components/StudentsView.js?v=4.8.16';
 import { renderGroupsView } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=6.0.0';
 import { renderStudentPortalView } from './components/StudentPortalView.js?v=6.0.0';
-import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.8';
+import { renderUnifiedPortalLoginView } from './components/UnifiedPortalLoginView.js?v=4.8.9';
 import { renderHomeworkReviewView } from './components/HomeworkReviewView.js?v=4.0.2';
 import { renderCenterOwnerDashboard } from './components/CenterOwnerDashboard.js?v=4.8.1';
 import { renderStudentReportsView } from './components/StudentReportsView.js?v=2.1.0';
@@ -544,8 +544,9 @@ class CentrlyApp {
     // Check if Portal token is present in URL (Student vs Parent Portal)
     const portalToken = urlParams.get('token');
     const portalType = urlParams.get('portal');
+    const explicitRoleParam = urlParams.get('role');
     if (portalToken) {
-      if (portalType === 'student') {
+      if (portalType === 'student' || explicitRoleParam === 'student') {
         await this.loadStudentPortal(portalToken);
       } else {
         await this.loadParentPortal(portalToken);
@@ -559,7 +560,7 @@ class CentrlyApp {
 
     // If an authenticated teacher/center/admin is on /portal without an explicit student query token or preview request:
     const hasExistingTeacherSession = authService.isAuthenticated() || authService.hasSession();
-    if (isPortalRoute && hasExistingTeacherSession && !urlParams.has('portal') && !urlParams.has('view')) {
+    if (isPortalRoute && hasExistingTeacherSession && !urlParams.has('portal') && !urlParams.has('view') && !urlParams.has('role') && !urlParams.has('preview')) {
       // Don't hijack authenticated teacher/admin into portal login or parent portal!
       if (window.history && window.history.replaceState && window.location.pathname === '/portal') {
         window.history.replaceState(null, '', '/');
@@ -573,13 +574,21 @@ class CentrlyApp {
 
       if (isPortalRoute) {
         if (cachedPortalToken) {
+          const effectiveRole = (explicitRoleParam === 'parent' || explicitRoleParam === 'student')
+            ? explicitRoleParam
+            : (cachedPortalRole || 'parent');
+
           try {
             if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
               window.history.replaceState(null, '', '/portal');
             }
+            if (effectiveRole) {
+              localStorage.setItem('centrly_portal_role', effectiveRole);
+              sessionStorage.setItem('centrly_portal_role', effectiveRole);
+            }
           } catch (_) {}
 
-          if (cachedPortalRole === 'student') {
+          if (effectiveRole === 'student') {
             await this.loadStudentPortal(cachedPortalToken);
           } else {
             await this.loadParentPortal(cachedPortalToken);
@@ -8614,7 +8623,7 @@ class CentrlyApp {
     const studentName = student?.name || student?.full_name || 'الطالب';
     const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
     const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-    const portalUrl = `${canonicalOrigin}/portal`;
+    const portalUrl = `${canonicalOrigin}/portal?role=parent`;
     const rawTeacher = this.user?.name || 'المعلم';
     const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
       ? rawTeacher
@@ -8629,7 +8638,7 @@ class CentrlyApp {
     const student = (this.students || []).find(s => s.id === studentId);
     const phone = student?.parent_phone || student?.parentPhone || '';
     const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-    const url = phone ? `${canonicalOrigin}/portal?role=parent&phone=${encodeURIComponent(phone)}` : `${canonicalOrigin}/portal`;
+    const url = `${canonicalOrigin}/portal?role=parent&preview=true${phone ? `&phone=${encodeURIComponent(phone)}` : ''}`;
     window.open(url, '_blank');
   }
 
@@ -8639,7 +8648,7 @@ class CentrlyApp {
     const studentName = student?.name || student?.full_name || 'الطالب';
     const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
     const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-    const portalUrl = `${canonicalOrigin}/portal`;
+    const portalUrl = `${canonicalOrigin}/portal?role=student`;
     const rawTeacher = this.user?.name || 'المعلم';
     const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
       ? rawTeacher
@@ -8654,7 +8663,7 @@ class CentrlyApp {
     const student = (this.students || []).find(s => s.id === studentId);
     const phone = student?.student_phone || student?.studentPhone || '';
     const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-    const url = phone ? `${canonicalOrigin}/portal?role=student&phone=${encodeURIComponent(phone)}` : `${canonicalOrigin}/portal`;
+    const url = `${canonicalOrigin}/portal?role=student&preview=true${phone ? `&phone=${encodeURIComponent(phone)}` : ''}`;
     window.open(url, '_blank');
   }
 

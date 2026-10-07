@@ -34,25 +34,25 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
   // Track when limit was first reached in localStorage for 3-day grace period calculation
   let graceDaysLeft = 3;
   let isGraceExpired = false;
-  if (isReachedOrExceeded) {
-    const storageKey = 'centrly_quota_exceeded_timestamp';
-    let reachedTimestamp = localStorage.getItem(storageKey);
-    if (!reachedTimestamp) {
-      reachedTimestamp = Date.now().toString();
-      localStorage.setItem(storageKey, reachedTimestamp);
-    }
-    const elapsedDays = (Date.now() - Number(reachedTimestamp)) / (1000 * 60 * 60 * 24);
-    if (elapsedDays > 3) {
-      isGraceExpired = true;
-      graceDaysLeft = 0;
+  try {
+    if (isReachedOrExceeded) {
+      const storageKey = 'centrly_quota_exceeded_timestamp';
+      let reachedTimestamp = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
+      if (!reachedTimestamp) {
+        reachedTimestamp = Date.now().toString();
+        if (typeof localStorage !== 'undefined') localStorage.setItem(storageKey, reachedTimestamp);
+      }
+      const elapsedDays = (Date.now() - Number(reachedTimestamp)) / (1000 * 60 * 60 * 24);
+      if (elapsedDays > 3) {
+        isGraceExpired = true;
+        graceDaysLeft = 0;
+      } else {
+        graceDaysLeft = Math.max(1, Math.ceil(3 - elapsedDays));
+      }
     } else {
-      graceDaysLeft = Math.max(1, Math.ceil(3 - elapsedDays));
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('centrly_quota_exceeded_timestamp');
     }
-  } else {
-    try {
-      localStorage.removeItem('centrly_quota_exceeded_timestamp');
-    } catch (_) {}
-  }
+  } catch (_) {}
 
   let quotaBannerHtml = '';
   if (isReachedOrExceeded) {
@@ -245,8 +245,8 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 const studentPhone = s.studentPhone || s.student_phone;
                 const parentPhone = s.parentPhone || s.parent_phone;
                 const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-                const parentPortalUrl = `${canonicalOrigin}/portal`;
-                const studentPortalUrl = `${canonicalOrigin}/portal`;
+                const parentPortalUrl = `${canonicalOrigin}/portal?role=parent&preview=true${parentPhone ? `&phone=${encodeURIComponent(parentPhone)}` : ''}`;
+                const studentPortalUrl = `${canonicalOrigin}/portal?role=student&preview=true${studentPhone ? `&phone=${encodeURIComponent(studentPhone)}` : ''}`;
                 const portalPassword = s.portal_password || s.portalPassword || (s.code ? String(s.code).padStart(6, '0') : '');
                 return `
                 <tr data-code="${escapeHtml(s.code || s.student_code || '')}" data-name="${escapeHtml(s.name || s.full_name || '')}" data-phone="${escapeHtml(studentPhone || '')}" data-parent-phone="${escapeHtml(parentPhone || '')}">
@@ -287,7 +287,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                           ${getIcon('whatsapp', 12)}
                           <span>إرسال</span>
                         </button>
-                        <a class="btn btn-secondary btn-sm" href="${parentPortalUrl}" target="_blank" rel="noopener noreferrer" title="معاينة بوابة ولي الأمر" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700); text-decoration: none;">
+                        <a class="btn btn-secondary btn-sm" href="${parentPortalUrl}" onclick="if (window.centrlyApp && window.centrlyApp.previewParentPortal) { window.centrlyApp.previewParentPortal('${escapeHtml(s.id)}'); return false; }" target="_blank" rel="noopener noreferrer" title="معاينة بوابة ولي الأمر" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700); text-decoration: none;">
                           ${getIcon('link', 12)}
                         </a>
                       </div>
@@ -303,7 +303,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                           ${getIcon('whatsapp', 12)}
                           <span>إرسال</span>
                         </button>
-                        <a class="btn btn-secondary btn-sm" href="${studentPortalUrl}" target="_blank" rel="noopener noreferrer" title="معاينة بوابة الطالب (رفع الواجبات والماتريال)" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: #1d4ed8; text-decoration: none;">
+                        <a class="btn btn-secondary btn-sm" href="${studentPortalUrl}" onclick="if (window.centrlyApp && window.centrlyApp.previewStudentPortal) { window.centrlyApp.previewStudentPortal('${escapeHtml(s.id)}'); return false; }" target="_blank" rel="noopener noreferrer" title="معاينة بوابة الطالب (رفع الواجبات والماتريال)" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: #1d4ed8; text-decoration: none;">
                           ${getIcon('link', 12)}
                         </a>
                       </div>
