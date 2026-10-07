@@ -464,7 +464,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                             </a>
                           </div>
                         ` : `
-                          <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF أو صورة واضحة (الحد الأقصى 25MB)</span>
+                          <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF أو صورة واضحة (الحد الأقصى 100MB)</span>
                         `}
 
                         <!-- File Upload Trigger (PDF or Images) -->

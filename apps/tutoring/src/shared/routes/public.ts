@@ -135,8 +135,13 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
 
 // GET /api/public/short-links/:code - Resolve short code to portal token
 publicRouter.get("/short-links/:code", async (req: Request, res: Response): Promise<void> => {
-  const code = (req.params.code || "").trim();
-  if (!code) {
+  const code = (
+    (typeof req.query.code === "string" && req.query.code.trim()) ||
+    (req.params.code !== "portal" ? req.params.code : "") ||
+    req.params.code ||
+    ""
+  ).trim();
+  if (!code || code === "portal") {
     res.status(400).json({ error: { code: "BAD_REQUEST", message: "Code is required" } });
     return;
   }

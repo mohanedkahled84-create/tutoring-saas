@@ -125,12 +125,12 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       const fileBuffer = Buffer.from(base64Clean, "base64");
 
       const defaultFilename = contentType.startsWith("image/") ? "homework.jpg" : "homework.pdf";
-      // Enforce 25MB maximum file size & magic bytes validation (C-05)
+      // Enforce 100MB maximum file size & magic bytes validation (C-05)
       const validation = validateFileUpload({
         buffer: fileBuffer,
         originalFilename: file_name || defaultFilename,
         declaredMimeType: contentType,
-        maxSizeBytes: 25 * 1024 * 1024,
+        maxSizeBytes: 100 * 1024 * 1024,
       });
 
       if (!validation.isValid || !validation.sanitizedFilename || !validation.detectedMimeType) {

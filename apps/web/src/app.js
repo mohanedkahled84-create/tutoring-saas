@@ -558,46 +558,36 @@ class CentrlyApp {
     const cleanPath = (window.location.pathname || '').trim().replace(/\/+$/, '');
     const isPortalRoute = cleanPath === '/portal' || urlParams.get('view') === 'portal' || (urlParams.get('portal') === 'login' && !portalToken);
 
-    // If an authenticated teacher/center/admin is on /portal without an explicit student query token or preview request:
-    const hasExistingTeacherSession = authService.isAuthenticated() || authService.hasSession();
-    if (isPortalRoute && hasExistingTeacherSession && !urlParams.has('portal') && !urlParams.has('view') && !urlParams.has('role') && !urlParams.has('preview')) {
-      // Don't hijack authenticated teacher/admin into portal login or parent portal!
-      if (window.history && window.history.replaceState && window.location.pathname === '/portal') {
-        window.history.replaceState(null, '', '/');
-      }
-      // Continue to authenticated session!
-    } else {
+    if (isPortalRoute) {
       const cachedPortalToken = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||
                                 (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_token'));
       const cachedPortalRole = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_role')) ||
                                (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_role'));
 
-      if (isPortalRoute) {
-        if (cachedPortalToken) {
-          const effectiveRole = (explicitRoleParam === 'parent' || explicitRoleParam === 'student')
-            ? explicitRoleParam
-            : (cachedPortalRole || 'parent');
+      if (cachedPortalToken) {
+        const effectiveRole = (explicitRoleParam === 'parent' || explicitRoleParam === 'student')
+          ? explicitRoleParam
+          : (cachedPortalRole || 'parent');
 
-          try {
-            if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
-              window.history.replaceState(null, '', '/portal');
-            }
-            if (effectiveRole) {
-              localStorage.setItem('centrly_portal_role', effectiveRole);
-              sessionStorage.setItem('centrly_portal_role', effectiveRole);
-            }
-          } catch (_) {}
-
-          if (effectiveRole === 'student') {
-            await this.loadStudentPortal(cachedPortalToken);
-          } else {
-            await this.loadParentPortal(cachedPortalToken);
+        try {
+          if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
+            window.history.replaceState(null, '', '/portal');
           }
-          return;
+          if (effectiveRole) {
+            localStorage.setItem('centrly_portal_role', effectiveRole);
+            sessionStorage.setItem('centrly_portal_role', effectiveRole);
+          }
+        } catch (_) {}
+
+        if (effectiveRole === 'student') {
+          await this.loadStudentPortal(cachedPortalToken);
+        } else {
+          await this.loadParentPortal(cachedPortalToken);
         }
-        this.renderPortalLogin();
         return;
       }
+      this.renderPortalLogin();
+      return;
     }
 
     // Check for password recovery hash / query (from Supabase password reset email)
@@ -1424,9 +1414,9 @@ class CentrlyApp {
       return;
     }
 
-    if (file.size > 25 * 1024 * 1024) {
+    if (file.size > 100 * 1024 * 1024) {
       resetFileInput();
-      this.showToast('حجم الملف يتجاوز الحد الأقصى المسموح به (25 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.', 'warning');
+      this.showToast('حجم الملف يتجاوز الحد الأقصى المسموح به (100 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.', 'warning');
       return;
     }
 
@@ -1508,7 +1498,7 @@ class CentrlyApp {
 
         xhr.onerror = () => reject(new Error('انقطع الاتصال بالإنترنت أثناء الرفع'));
         xhr.ontimeout = () => reject(new Error('استغرق الرفع وقتاً أطول من المتوقع، يرجى المحاولة مرة أخرى'));
-        xhr.timeout = 180000; // 3 minutes timeout
+        xhr.timeout = 300000; // 5 minutes timeout for up to 100MB uploads
 
         xhr.send(JSON.stringify({
           token,
@@ -2099,6 +2089,7 @@ class CentrlyApp {
 
   renderEmailVerificationView(email, password = '', note = '', signupData = null) {
     window.scrollTo(0, 0);
+    this.pendingVerification = { email, password, note, signupData: signupData || this.signupFormData };
     document.title = 'تأكيد البريد الإلكتروني | سنترلي';
     const appEl = this.getAppEl();
     if (appEl) appEl.innerHTML = renderEmailVerificationScreen({ email, note });
@@ -14597,7 +14588,7 @@ class CentrlyApp {
                 اضغط هنا لاختيار ملف PDF من اللابتوب أو الموبايل
               </div>
               <div style="font-size: 0.78rem; color: #64748b;">
-                ملفات PDF فقط (الحد الأقصى 25 ميجابايت) — أو اسحب الملف وأفلته هنا
+                ملفات PDF فقط (الحد الأقصى 100 ميجابايت) — أو اسحب الملف وأفلته هنا
               </div>
             </div>
 
@@ -14657,8 +14648,8 @@ class CentrlyApp {
       return;
     }
 
-    if (file.size > 25 * 1024 * 1024) {
-      this.showToast('حجم الملف كبير جداً (أقصى حد مسموح 25 ميجابايت)', 'error');
+    if (file.size > 100 * 1024 * 1024) {
+      this.showToast('حجم الملف كبير جداً (أقصى حد مسموح 100 ميجابايت)', 'error');
       return;
     }
 
@@ -15332,7 +15323,7 @@ class CentrlyApp {
                 اضغط هنا لاختيار ملف PDF من اللابتوب أو الموبايل
               </div>
               <div style="font-size: 0.78rem; color: #64748b;">
-                ملفات PDF فقط (الحد الأقصى 25 ميجابايت)
+                ملفات PDF فقط (الحد الأقصى 100 ميجابايت)
               </div>
             </div>
 
@@ -15424,8 +15415,8 @@ class CentrlyApp {
       return;
     }
 
-    if (file.size > 25 * 1024 * 1024) {
-      this.showToast('حجم الملف كبير جداً (أقصى حد مسموح 25 ميجابايت)', 'error');
+    if (file.size > 100 * 1024 * 1024) {
+      this.showToast('حجم الملف كبير جداً (أقصى حد مسموح 100 ميجابايت)', 'error');
       e.target.value = '';
       return;
     }

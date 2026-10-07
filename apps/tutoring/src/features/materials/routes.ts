@@ -96,7 +96,7 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
         buffer: fileBuffer,
         originalFilename: file_name || "material.pdf",
         declaredMimeType: contentType,
-        maxSizeBytes: 10 * 1024 * 1024,
+        maxSizeBytes: 100 * 1024 * 1024,
       });
 
       if (!validation.isValid || !validation.sanitizedFilename || !validation.detectedMimeType) {
