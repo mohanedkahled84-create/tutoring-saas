@@ -1079,9 +1079,14 @@ class CentrlyApp {
         const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_parent_tab')) ||
                          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_parent_tab')) || 'attendance';
         appEl.innerHTML = renderParentPortalView(data, savedTab);
+        const parentKey = (data && data.student && (data.student.id || data.student.parent_phone || data.student.student_code || data.student.code)) ? String(data.student.id || data.student.parent_phone || data.student.student_code || data.student.code).trim() : '';
+        if (typeof window !== 'undefined' && parentKey) {
+          window._centrlyCurrentParentId = parentKey;
+          window._centrlyCurrentStudentId = String(data.student.id || data.student.student_code || data.student.code || '').trim();
+        }
         setTimeout(() => {
           if (typeof window !== 'undefined' && window.openParentPortalTour) {
-            window.openParentPortalTour(false);
+            window.openParentPortalTour(false, parentKey);
           }
         }, 500);
       }
@@ -1144,9 +1149,13 @@ class CentrlyApp {
         const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_student_tab')) ||
                          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_student_tab')) || 'materials';
         appEl.innerHTML = renderStudentPortalView(data, savedTab);
+        const studentKey = (data && data.student && (data.student.id || data.student.student_code || data.student.code || data.student.student_phone)) ? String(data.student.id || data.student.student_code || data.student.code || data.student.student_phone).trim() : '';
+        if (typeof window !== 'undefined' && studentKey) {
+          window._centrlyCurrentStudentId = studentKey;
+        }
         setTimeout(() => {
           if (typeof window !== 'undefined' && window.openStudentPortalTour) {
-            window.openStudentPortalTour(false);
+            window.openStudentPortalTour(false, studentKey);
           }
         }, 500);
       }

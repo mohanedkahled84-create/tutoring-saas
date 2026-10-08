@@ -399,13 +399,28 @@ if (typeof window !== 'undefined') {
     }, 120);
   };
 
-  window.openStudentPortalTour = function(force = true) {
+  window.openStudentPortalTour = function(force = false, studentId = null) {
+    const rawId = studentId || (typeof window !== 'undefined' ? window._centrlyCurrentStudentId : null) || '';
+    const accountId = rawId ? String(rawId).trim().toLowerCase() : '';
+    const accountKey = accountId ? `centrly_tour_seen_student_${accountId}` : null;
+
     if (!force) {
       try {
-        const seen = localStorage.getItem('centrly_tour_v6_student_completed');
-        if (seen === 'true') return;
+        if (accountKey && localStorage.getItem(accountKey) === 'true') {
+          return;
+        }
+        if (!accountKey && localStorage.getItem('centrly_tour_v6_student_completed') === 'true') {
+          return;
+        }
       } catch (_) {}
     }
+
+    // Immediately mark seen for this student account so subsequent logins/logouts won't prompt it again
+    try {
+      if (accountKey) localStorage.setItem(accountKey, 'true');
+      localStorage.setItem('centrly_tour_v6_student_completed', 'true');
+    } catch (_) {}
+
     window.renderStudentSpotlightStep(0);
   };
 
@@ -435,6 +450,9 @@ if (typeof window !== 'undefined') {
 
     if (markSeen) {
       try {
+        const rawId = (typeof window !== 'undefined' ? window._centrlyCurrentStudentId : null) || '';
+        const accountId = rawId ? String(rawId).trim().toLowerCase() : '';
+        if (accountId) localStorage.setItem(`centrly_tour_seen_student_${accountId}`, 'true');
         localStorage.setItem('centrly_tour_v6_student_completed', 'true');
       } catch (_) {}
     }
@@ -550,13 +568,28 @@ if (typeof window !== 'undefined') {
     }, 120);
   };
 
-  window.openParentPortalTour = function(force = true) {
+  window.openParentPortalTour = function(force = false, parentId = null) {
+    const rawId = parentId || (typeof window !== 'undefined' ? (window._centrlyCurrentParentId || window._centrlyCurrentStudentId) : null) || '';
+    const accountId = rawId ? String(rawId).trim().toLowerCase() : '';
+    const accountKey = accountId ? `centrly_tour_seen_parent_${accountId}` : null;
+
     if (!force) {
       try {
-        const seen = localStorage.getItem('centrly_tour_v6_parent_completed');
-        if (seen === 'true') return;
+        if (accountKey && localStorage.getItem(accountKey) === 'true') {
+          return;
+        }
+        if (!accountKey && localStorage.getItem('centrly_tour_v6_parent_completed') === 'true') {
+          return;
+        }
       } catch (_) {}
     }
+
+    // Immediately mark seen for this parent account so subsequent logins/logouts won't prompt it again
+    try {
+      if (accountKey) localStorage.setItem(accountKey, 'true');
+      localStorage.setItem('centrly_tour_v6_parent_completed', 'true');
+    } catch (_) {}
+
     window.renderParentSpotlightStep(0);
   };
 
@@ -586,6 +619,9 @@ if (typeof window !== 'undefined') {
 
     if (markSeen) {
       try {
+        const rawId = (typeof window !== 'undefined' ? (window._centrlyCurrentParentId || window._centrlyCurrentStudentId) : null) || '';
+        const accountId = rawId ? String(rawId).trim().toLowerCase() : '';
+        if (accountId) localStorage.setItem(`centrly_tour_seen_parent_${accountId}`, 'true');
         localStorage.setItem('centrly_tour_v6_parent_completed', 'true');
       } catch (_) {}
     }

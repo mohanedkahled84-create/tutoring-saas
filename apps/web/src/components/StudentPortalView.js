@@ -1,7 +1,7 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js";
-import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=6.0.0";
+import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=6.5.0";
 
 /**
  * Centrly Student Web Portal Component
@@ -43,6 +43,10 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
   }
 
   const student = portalData.student;
+  const studentKey = (student.id || student.student_code || student.code || student.student_phone || '').toString().trim();
+  if (typeof window !== 'undefined' && studentKey) {
+    window._centrlyCurrentStudentId = studentKey;
+  }
   const summary = portalData.summary || {
     total_sessions: 0,
     attended_count: 0,
@@ -795,7 +799,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
         ${renderStudentPortalTourHtml()}
 
         <!-- Auto-launch tour immediately on first login/visit -->
-        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'/>" style="display:none;" onerror="(function(){ setTimeout(function(){ if (typeof window !== 'undefined' && window.openStudentPortalTour) window.openStudentPortalTour(false); }, 500); })()" />
+        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'/>" style="display:none;" onerror="(function(){ setTimeout(function(){ if (typeof window !== 'undefined' && window.openStudentPortalTour) window.openStudentPortalTour(false, '${studentKey}'); }, 500); })()" />
 
       </div>
     </div>
@@ -841,7 +845,7 @@ if (typeof window !== 'undefined') {
   // Auto-launch walkthrough tour for first-time visitors
   setTimeout(() => {
     if (window.openStudentPortalTour) {
-      window.openStudentPortalTour(false);
+      window.openStudentPortalTour(false, window._centrlyCurrentStudentId);
     }
   }, 450);
 }

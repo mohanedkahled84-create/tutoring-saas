@@ -145,13 +145,15 @@ export const authService = {
         if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(k);
       });
 
-      // Clear all centrly and supabase caches from browser storage
+      // Clear all centrly and supabase caches from browser storage (preserve tour completed states)
       if (typeof localStorage !== 'undefined') {
         const toRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
           if (k && (k.startsWith('centrly_') || k.startsWith('sb-'))) {
-            toRemove.push(k);
+            if (!k.includes('tour') && !k.includes('seen')) {
+              toRemove.push(k);
+            }
           }
         }
         toRemove.forEach(k => localStorage.removeItem(k));
@@ -162,7 +164,9 @@ export const authService = {
         for (let i = 0; i < sessionStorage.length; i++) {
           const k = sessionStorage.key(i);
           if (k && (k.startsWith('centrly_') || k.startsWith('sb-'))) {
-            toRemove.push(k);
+            if (!k.includes('tour') && !k.includes('seen')) {
+              toRemove.push(k);
+            }
           }
         }
         toRemove.forEach(k => sessionStorage.removeItem(k));

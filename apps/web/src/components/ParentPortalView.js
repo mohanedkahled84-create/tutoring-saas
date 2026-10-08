@@ -1,6 +1,6 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
-import { renderParentPortalTourHtml } from "./PortalTourModal.js?v=6.0.0";
+import { renderParentPortalTourHtml } from "./PortalTourModal.js?v=6.5.0";
 
 /**
  * Centrly Parent Web Portal Component (DEV-34 & DEV-PORTAL)
@@ -27,6 +27,11 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
   }
 
   const student = portalData.student;
+  const parentKey = (student.id || student.parent_phone || student.student_code || student.code || '').toString().trim();
+  if (typeof window !== 'undefined') {
+    if (parentKey) window._centrlyCurrentParentId = parentKey;
+    if (student.id || student.student_code) window._centrlyCurrentStudentId = (student.id || student.student_code || '').toString().trim();
+  }
   const summary = portalData.summary || {
     total_sessions: 0,
     attended_count: 0,
@@ -457,7 +462,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
         ${renderParentPortalTourHtml()}
 
         <!-- Auto-launch tour immediately on first login/visit -->
-        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'/>" style="display:none;" onerror="(function(){ setTimeout(function(){ if (typeof window !== 'undefined' && window.openParentPortalTour) window.openParentPortalTour(false); }, 500); })()" />
+        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'/>" style="display:none;" onerror="(function(){ setTimeout(function(){ if (typeof window !== 'undefined' && window.openParentPortalTour) window.openParentPortalTour(false, '${parentKey}'); }, 500); })()" />
 
       </div>
     </div>
@@ -490,7 +495,7 @@ if (typeof window !== 'undefined') {
   // Auto-launch walkthrough tour for first-time visitors
   setTimeout(() => {
     if (window.openParentPortalTour) {
-      window.openParentPortalTour(false);
+      window.openParentPortalTour(false, window._centrlyCurrentParentId);
     }
   }, 450);
 }
