@@ -289,14 +289,48 @@ authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response):
       res.status(400).json({ error: { code: "WEAK_PASSWORD", message: err.message } });
       return;
     }
-    if (err instanceof Error && ((err as Error & { code?: string }).code === "USER_ALREADY_EXISTS" || err.message.includes("مسجل بالفعل"))) {
-      res.status(400).json({ error: { code: "USER_ALREADY_EXISTS", message: "هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول بدلاً من ذلك." } });
+
+    const errCode = (err as Error & { code?: string })?.code;
+    const errMsg = err instanceof Error ? err.message : "";
+
+    // 1. Phone Conflict Check (Evaluated first to prevent substring collision on generic 'مسجل بالفعل')
+    const isPhoneConflict =
+      errCode === "PHONE_ALREADY_EXISTS" ||
+      errMsg.includes("PHONE_ALREADY_EXISTS") ||
+      errMsg.includes("رقم الهاتف") ||
+      errMsg.includes("بحساب آخر") ||
+      errMsg.includes("users_phone_key");
+
+    if (isPhoneConflict) {
+      res.status(400).json({
+        error: {
+          code: "PHONE_ALREADY_EXISTS",
+          message: "رقم الهاتف هذا مسجل بالفعل بحساب آخر. يرجى استخدام رقم هاتف آخر أو تسجيل الدخول بحسابك السابق.",
+        },
+      });
       return;
     }
-    if (err instanceof Error && ((err as Error & { code?: string }).code === "PHONE_ALREADY_EXISTS" || err.message.includes("بحساب آخر"))) {
-      res.status(400).json({ error: { code: "PHONE_ALREADY_EXISTS", message: "رقم الهاتف هذا مسجل بالفعل بحساب آخر." } });
+
+    // 2. Email Conflict Check
+    const isEmailConflict =
+      errCode === "USER_ALREADY_EXISTS" ||
+      errMsg.includes("USER_ALREADY_EXISTS") ||
+      errMsg.includes("البريد الإلكتروني مسجل بالفعل") ||
+      errMsg.includes("هذا البريد الإلكتروني مسجل بالفعل") ||
+      errMsg.includes("already registered") ||
+      errMsg.toLowerCase().includes("user already exists") ||
+      errMsg.includes("users_email_partial_key");
+
+    if (isEmailConflict) {
+      res.status(400).json({
+        error: {
+          code: "USER_ALREADY_EXISTS",
+          message: "هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول بدلاً من ذلك.",
+        },
+      });
       return;
     }
+
     const message = err instanceof Error ? err.message : "فشل إنشاء الحساب";
     res.status(400).json({ error: { code: "AUTH_ERROR", message } });
   }

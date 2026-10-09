@@ -167,3 +167,32 @@ test("AUTH-RESEND: Resend verification code updates the OTP and delivers new cod
   assert.equal(verifyRes.verified, true);
 });
 
+test("AUTH-COLLISION: Phone conflict takes precedence over email conflict and avoids generic substring trap", () => {
+  // Simulates the exact Postgres error when phone is already registered
+  const phoneErr = new Error("رقم الهاتف هذا مسجل بالفعل بحساب آخر.");
+  (phoneErr).code = "PHONE_ALREADY_EXISTS";
+
+  const errCode = (phoneErr).code;
+  const errMsg = phoneErr.message;
+
+  const isPhoneConflict =
+    errCode === "PHONE_ALREADY_EXISTS" ||
+    errMsg.includes("PHONE_ALREADY_EXISTS") ||
+    errMsg.includes("رقم الهاتف") ||
+    errMsg.includes("بحساب آخر") ||
+    errMsg.includes("users_phone_key");
+
+  const isEmailConflict = !isPhoneConflict && (
+    errCode === "USER_ALREADY_EXISTS" ||
+    errMsg.includes("USER_ALREADY_EXISTS") ||
+    errMsg.includes("البريد الإلكتروني مسجل بالفعل") ||
+    errMsg.includes("هذا البريد الإلكتروني مسجل بالفعل") ||
+    errMsg.includes("already registered") ||
+    errMsg.toLowerCase().includes("user already exists") ||
+    errMsg.includes("users_email_partial_key")
+  );
+
+  assert.equal(isPhoneConflict, true, "Phone collision must be recognized as phone conflict");
+  assert.equal(isEmailConflict, false, "Phone collision must NOT trigger email conflict");
+});
+

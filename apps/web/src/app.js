@@ -1636,6 +1636,10 @@ class CentrlyApp {
     }, 60);
   }
 
+  switchToLoginWithPhone(phone) {
+    this.switchToLoginWithEmail(phone);
+  }
+
   togglePasswordVisibility(inputId, btnEl, event) {
     if (event) {
       if (typeof event.preventDefault === 'function') event.preventDefault();
@@ -2076,16 +2080,34 @@ class CentrlyApp {
       this.startOnboarding();
     } catch (err) {
       const errMsg = err.message || '';
-      const isAlreadyExists = err.code === 'USER_ALREADY_EXISTS' ||
-                              errMsg.includes('مسجل بالفعل') ||
-                              errMsg.toLowerCase().includes('already exists') ||
-                              errMsg.toLowerCase().includes('already registered') ||
-                              errMsg.toLowerCase().includes('user_already_exists');
       const isPhoneExists = err.code === 'PHONE_ALREADY_EXISTS' ||
+                            errMsg.includes('PHONE_ALREADY_EXISTS') ||
+                            errMsg.includes('رقم الهاتف') ||
                             errMsg.includes('بحساب آخر') ||
                             errMsg.toLowerCase().includes('phone_already_exists');
+      const isAlreadyExists = !isPhoneExists && (
+                              err.code === 'USER_ALREADY_EXISTS' ||
+                              errMsg.includes('USER_ALREADY_EXISTS') ||
+                              errMsg.includes('البريد الإلكتروني مسجل بالفعل') ||
+                              errMsg.includes('هذا البريد الإلكتروني مسجل بالفعل') ||
+                              errMsg.includes('already registered') ||
+                              errMsg.toLowerCase().includes('already exists') ||
+                              errMsg.toLowerCase().includes('user already exists') ||
+                              errMsg.toLowerCase().includes('user_already_exists')
+                            );
 
-      if (isAlreadyExists) {
+      if (isPhoneExists) {
+        const safePhone = (phone || '').replace(/'/g, "\\'");
+        const friendlyHtml = `
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.6rem; text-align:right;">
+            <span style="line-height:1.5;">رقم الهاتف (${safePhone || 'هذا'}) مسجل بالفعل بحساب آخر. يمكنك تسجيل الدخول به مباشرة أو استخدام رقم هاتف آخر.</span>
+            <button type="button" onclick="window.centrlyApp.switchToLoginWithPhone('${safePhone}')" style="background:#2563eb; color:#ffffff; border:none; border-radius:6px; padding:0.35rem 0.85rem; font-size:0.8rem; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+              تسجيل الدخول بالرقم ←
+            </button>
+          </div>
+        `;
+        this.showAuthAlert(friendlyHtml, 'danger', true);
+      } else if (isAlreadyExists) {
         const safeEmail = (email || '').replace(/'/g, "\\'");
         const friendlyHtml = `
           <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.6rem; text-align:right;">
@@ -2096,8 +2118,6 @@ class CentrlyApp {
           </div>
         `;
         this.showAuthAlert(friendlyHtml, 'danger', true);
-      } else if (isPhoneExists) {
-        this.showAuthAlert('رقم الهاتف هذا مسجل بالفعل بحساب آخر. يرجى استخدام رقم هاتف آخر أو تسجيل الدخول.');
       } else if (errMsg.includes('Bearer token') || errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) {
         this.showAuthAlert('تعذر الاتصال بالخادم حالياً. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.');
       } else {

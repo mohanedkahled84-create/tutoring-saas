@@ -238,6 +238,15 @@ export class SupabaseAuthRepository implements IAuthRepository {
       if (directErr) {
         const errMsg = directErr.message || "";
         if (
+          errMsg.includes("PHONE_ALREADY_EXISTS") ||
+          errMsg.includes("رقم الهاتف هذا مسجل بالفعل") ||
+          errMsg.includes("users_phone_key")
+        ) {
+          const err = new Error("رقم الهاتف هذا مسجل بالفعل بحساب آخر. يرجى استخدام رقم هاتف آخر أو تسجيل الدخول.");
+          (err as Error & { code?: string }).code = "PHONE_ALREADY_EXISTS";
+          throw err;
+        }
+        if (
           errMsg.includes("USER_ALREADY_EXISTS") ||
           errMsg.includes("already registered") ||
           errMsg.includes("users_email_partial_key") ||
@@ -245,15 +254,6 @@ export class SupabaseAuthRepository implements IAuthRepository {
         ) {
           const err = new Error("هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول بدلاً من ذلك.");
           (err as Error & { code?: string }).code = "USER_ALREADY_EXISTS";
-          throw err;
-        }
-        if (
-          errMsg.includes("PHONE_ALREADY_EXISTS") ||
-          errMsg.includes("رقم الهاتف هذا مسجل بالفعل") ||
-          errMsg.includes("users_phone_key")
-        ) {
-          const err = new Error("رقم الهاتف هذا مسجل بالفعل بحساب آخر.");
-          (err as Error & { code?: string }).code = "PHONE_ALREADY_EXISTS";
           throw err;
         }
         if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {

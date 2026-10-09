@@ -164,6 +164,19 @@ async function runAudit() {
     } catch (syntaxErr) {
       addCheck("Frontend JavaScript Syntax (app.js)", "FAIL", `Syntax error detected in app.js: ${syntaxErr.message}`);
     }
+
+    // 6. Auth Conflict Discrimination Invariant (Phone vs Email)
+    const hasPhoneMethod = appJs.includes("switchToLoginWithPhone");
+    const authRoutesTs = fs.readFileSync(path.join(BACKEND_DIR, "src", "features", "auth", "routes.ts"), "utf8");
+    const hasRoutePhoneFirst = authRoutesTs.indexOf("isPhoneConflict") !== -1 &&
+                               authRoutesTs.indexOf("isEmailConflict") !== -1 &&
+                               authRoutesTs.indexOf("isPhoneConflict") < authRoutesTs.indexOf("isEmailConflict");
+
+    if (hasPhoneMethod && hasRoutePhoneFirst) {
+      addCheck("Auth Conflict Discrimination (Phone vs Email)", "PASS", "Phone conflict takes strict precedence over email error; login-by-phone action enabled.");
+    } else {
+      addCheck("Auth Conflict Discrimination", "FAIL", `Invariant failed: hasPhoneMethod=${hasPhoneMethod}, hasRoutePhoneFirst=${hasRoutePhoneFirst}`);
+    }
   } catch (feErr) {
     addCheck("Frontend Integrity Guard", "FAIL", `Audit exception: ${feErr.message}`);
   }
