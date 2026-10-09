@@ -1354,8 +1354,14 @@ class CentrlyApp {
     openFullscreenBarcodeModal(student);
   }
 
-  async compressImageFile(file, maxWidth = 1280, quality = 0.68) {
+  async compressImageFile(file, maxWidth = 1600, quality = 0.72) {
     return new Promise((resolve) => {
+      const isImg = (file && file.type && file.type.startsWith('image/')) ||
+        (file && file.name && /\.(jpg|jpeg|png|webp|bmp|heic)$/i.test(file.name));
+      if (!isImg) {
+        resolve(null);
+        return;
+      }
       const reader = new FileReader();
       reader.onerror = () => resolve(null);
       reader.onload = (e) => {
@@ -1483,11 +1489,18 @@ class CentrlyApp {
         xhr.open('POST', `${API_BASE_URL}/public/homework/submit`);
         xhr.setRequestHeader('Content-Type', 'application/json');
 
+        const totalMb = (uploadFileSize / (1024 * 1024)).toFixed(1);
+
         xhr.upload.onprogress = (evt) => {
           if (evt.lengthComputable && btn) {
             const percent = Math.min(99, Math.round((evt.loaded / evt.total) * 100));
-            btn.innerHTML = `<span>جارٍ الرفع (${percent}%)...</span>`;
+            const loadedMb = (evt.loaded / (1024 * 1024)).toFixed(1);
+            btn.innerHTML = `<span>جارٍ الرفع (${percent}% • ${loadedMb}/${totalMb} ميجا)...</span>`;
           }
+        };
+
+        xhr.upload.onload = () => {
+          if (btn) btn.innerHTML = '<span>تم الرفع 100%! جارٍ حفظ وتأكيد الواجب في السحابة...</span>';
         };
 
         xhr.onload = () => {
@@ -1505,9 +1518,11 @@ class CentrlyApp {
           }
         };
 
-        xhr.onerror = () => reject(new Error('انقطع الاتصال بالإنترنت أثناء الرفع'));
-        xhr.ontimeout = () => reject(new Error('استغرق الرفع وقتاً أطول من المتوقع، يرجى المحاولة مرة أخرى'));
-        xhr.timeout = 300000; // 5 minutes timeout for up to 100MB uploads
+        xhr.onerror = () => reject(new Error('انقطع الاتصال بالإنترنت أثناء الرفع. يرجى التأكد من استقرار الشبكة والمحاولة مجدداً'));
+        xhr.ontimeout = () => reject(new Error(`استغرق رفع الملف (${totalMb} ميجا) وقتاً طويلاً بسبب بطء سرعة الرفع لديك. يرجى الاتصال بشبكة أسرع أو تقليل حجم الملف والمحاولة مرة أخرى`));
+        // Dynamic timeout: 6 minutes minimum, up to 15 minutes (900,000ms) for large files up to 100MB on slow ADSL/3G
+        const uploadTimeoutMs = Math.min(900000, Math.max(360000, Math.round((uploadFileSize / (25 * 1024)) * 1000) + 120000));
+        xhr.timeout = uploadTimeoutMs;
 
         xhr.send(JSON.stringify({
           token,

@@ -78,17 +78,18 @@ export const financialPinRateLimiter = rateLimit({
   },
 });
 
-// C-05: Rate limiter for public homework upload / submission (5 requests/minute per IP)
+// C-05: Rate limiter for public homework upload / submission (25 requests/minute to accommodate shared center/school Wi-Fi & CGNAT)
 export const homeworkSubmissionRateLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: process.env.NODE_ENV === "test" ? 1000 : 5,
+  max: process.env.NODE_ENV === "test" ? 1000 : 25,
   standardHeaders: true,
   legacyHeaders: false,
+  skipFailedRequests: true,
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
       error: {
         code: "RATE_LIMITED",
-        message: "تم تجاوز الحد المسموح لتسليم الواجبات (5 محاولات في الدقيقة). يرجى الانتظار دقيقة وإعادة المحاولة.",
+        message: "تم تجاوز الحد المسموح لتسليم الواجبات. يرجى الانتظار دقيقة وإعادة المحاولة.",
       },
     });
   },

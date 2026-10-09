@@ -117,8 +117,9 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
         else if (lowerName.endsWith(".pdf")) contentType = "application/pdf";
       }
 
-      const base64Clean = file_data.replace(/^data:[^;]+;base64,/, "");
-      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64Clean) || base64Clean.length % 4 !== 0) {
+      const commaIdx = file_data.indexOf(",");
+      const base64Clean = (commaIdx !== -1 && commaIdx < 100) ? file_data.slice(commaIdx + 1) : file_data;
+      if (base64Clean.length % 4 !== 0) {
         res.status(400).json({ error: { code: "INVALID_FILE", message: "صيغة الملف غير صالحة" } });
         return;
       }
