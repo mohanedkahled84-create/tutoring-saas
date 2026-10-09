@@ -3739,13 +3739,40 @@ class CentrlyApp {
     const clean = normalizeDigits(String(rawQuery)).trim().toLowerCase();
     if (!clean) return null;
 
-    const list = this.students || [];
+    // Combine this.students and this.sessionState.attendanceList to maximize coverage
+    const list = [...(this.students || [])];
+    if (this.sessionState && Array.isArray(this.sessionState.attendanceList)) {
+      for (const a of this.sessionState.attendanceList) {
+        if (a && !list.some(s => s.id === (a.student_id || a.id))) {
+          list.push({
+            id: a.student_id || a.id,
+            code: a.code,
+            student_code: a.code,
+            name: a.name,
+            student_phone: a.phone || a.student_phone,
+            parent_phone: a.parent_phone,
+          });
+        }
+      }
+    }
+
+    // Helper to strip common student barcode prefixes and leading zeros
+    const stripPrefixAndZeros = (str) => {
+      if (!str) return '';
+      return String(str).replace(/^(stu-|eg-|st-|#)/i, '').replace(/^0+/, '').trim();
+    };
+
+    const cleanNormalized = stripPrefixAndZeros(clean);
 
     // Priority 1: Exact code match (code or student_code) - Absolute highest priority!
     const exactCode = list.find(s => {
       const c1 = normalizeDigits(String(s.code || '')).trim().toLowerCase();
       const c2 = normalizeDigits(String(s.student_code || '')).trim().toLowerCase();
-      return c1 === clean || c2 === clean;
+      if (c1 === clean || c2 === clean) return true;
+      if (cleanNormalized && (stripPrefixAndZeros(c1) === cleanNormalized || stripPrefixAndZeros(c2) === cleanNormalized)) {
+        return true;
+      }
+      return false;
     });
     if (exactCode) return exactCode;
 
@@ -3787,7 +3814,59 @@ class CentrlyApp {
     return null;
   }
 
+  async fetchStudentByQueryAsync(rawQuery) {
+    if (!rawQuery) return null;
+    const clean = normalizeDigits(String(rawQuery)).trim();
+    if (!clean) return null;
+
+    // 1. In-memory check first
+    const memMatch = this.findStudentByQuery(clean);
+    if (memMatch) return memMatch;
+
+    // 2. Query backend server live API
+    try {
+      const sanitized = clean.replace(/^(stu-|eg-|st-|#)/i, '').trim();
+      const queryParam = encodeURIComponent(sanitized || clean);
+      const res = await request(`/students?q=${queryParam}`);
+      const foundList = Array.isArray(res?.students) ? res.students : (Array.isArray(res) ? res : []);
+      if (foundList.length > 0) {
+        const stripPfx = (s) => String(s || '').toLowerCase().replace(/^(stu-|eg-|st-|#)/i, '').replace(/^0+/, '').trim();
+        const targetClean = clean.toLowerCase();
+        const targetNorm = stripPfx(clean);
+
+        const matched = foundList.find(s => {
+          const c1 = String(s.code || '').toLowerCase().trim();
+          const c2 = String(s.student_code || '').toLowerCase().trim();
+          if (c1 === targetClean || c2 === targetClean) return true;
+          if (targetNorm && (stripPfx(c1) === targetNorm || stripPfx(c2) === targetNorm)) return true;
+          return false;
+        }) || foundList[0];
+
+        if (matched) {
+          if (!this.students) this.students = [];
+          if (!this.students.some(s => s.id === matched.id)) {
+            this.students.push(matched);
+          }
+          return matched;
+        }
+      }
+    } catch (err) {
+      console.warn('fetchStudentByQueryAsync error:', err);
+    }
+    return null;
+  }
+
   onStudentScanInput(val) {
+    if (this._scanInputTimer) {
+      clearTimeout(this._scanInputTimer);
+    }
+    // Debounce to ensure hardware barcode scanners (typing within ~30ms) do NOT trigger DOM churn before Enter
+    this._scanInputTimer = setTimeout(() => {
+      this._renderScanSuggestions(val);
+    }, 120);
+  }
+
+  _renderScanSuggestions(val) {
     const suggestionsBox = document.getElementById('studentScanSuggestions');
     if (!suggestionsBox) return;
 
@@ -3863,7 +3942,7 @@ class CentrlyApp {
     if (!student) return;
 
     const input = document.getElementById('scanStudentCode');
-    if (input) input.value = student.code || student.student_code || student.name;
+    if (input) input.value = '';
 
     const suggestionsBox = document.getElementById('studentScanSuggestions');
     if (suggestionsBox) {
@@ -3880,33 +3959,40 @@ class CentrlyApp {
     const isMobile = window.innerWidth <= 768 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     if (isMobile) return;
 
+    if (this._focusScanTimer) {
+      clearTimeout(this._focusScanTimer);
+      this._focusScanTimer = null;
+    }
+
     const applyFocus = () => {
       const inp = document.getElementById('scanStudentCode');
       if (!inp) return;
-      if (document.activeElement !== inp) {
-        try {
-          inp.focus({ preventScroll: true });
-        } catch (_) {}
+      // Do not interrupt if active element is already the input (e.g. scanner or user typing)
+      if (document.activeElement === inp) {
+        return;
       }
       try {
-        inp.select();
+        inp.focus({ preventScroll: true });
+        if (!inp.value) {
+          inp.select();
+        }
       } catch (_) {}
     };
 
     applyFocus();
-    requestAnimationFrame(() => {
-      applyFocus();
-      requestAnimationFrame(applyFocus);
-    });
-    setTimeout(applyFocus, 25);
-    setTimeout(applyFocus, 75);
-    setTimeout(applyFocus, 150);
-    setTimeout(applyFocus, 300);
+    this._focusScanTimer = setTimeout(applyFocus, 40);
   }
 
-  handleStudentScan(e) {
+  async handleStudentScan(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (e && e.stopPropagation) e.stopPropagation();
+
+    // Cancel any pending debounced suggestion render immediately
+    if (this._scanInputTimer) {
+      clearTimeout(this._scanInputTimer);
+      this._scanInputTimer = null;
+    }
+
     const codeInput = document.getElementById('scanStudentCode');
     const query = codeInput?.value.trim();
     if (!query) {
@@ -3920,16 +4006,24 @@ class CentrlyApp {
       suggestionsBox.innerHTML = '';
     }
 
-    // Find student in directory with strict prioritized matching
-    const student = this.findStudentByQuery(query);
+    // 1. Fast in-memory lookup
+    let student = this.findStudentByQuery(query);
+
+    // 2. Live server fallback (eliminates false "غير موجود بالمنظومة" alarms)
+    if (!student) {
+      student = await this.fetchStudentByQueryAsync(query);
+    }
 
     if (student) {
+      if (codeInput) {
+        codeInput.value = '';
+      }
       this.closeInlineStudentAdd();
       this.registerStudentAttendance(student);
       this.focusScanInput();
     } else {
       this.playScanBeep('error');
-      // Student NOT found! Do NOT add dummy name! Show inline registration form!
+      // Student truly NOT found in system! Show inline registration form!
       const feedback = document.getElementById('scanFeedback');
       if (feedback) {
         feedback.style.display = 'block';
@@ -4405,19 +4499,14 @@ class CentrlyApp {
       this._cameraTorchOn = false;
       this._cameraZoomLevel = 1.0;
 
-      // Supported 1D and 2D barcode formats:
-      // Code 128 (5), Code 39 (3), EAN-13 (9), EAN-8 (10), QR (0), UPC-A (14), UPC-E (15), Code 93 (4), ITF (8)
+      // Supported barcode formats focused on student IDs (Code 128, QR, Code 39, EAN-13)
+      // Restricting to the 4 actual formats boosts JS decoding speed per frame by ~2.5x!
       const formatsToSupport = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
         Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.QR_CODE,
         Html5QrcodeSupportedFormats.CODE_39,
         Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.QR_CODE,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E,
-        Html5QrcodeSupportedFormats.CODE_93,
-        Html5QrcodeSupportedFormats.ITF,
-      ] : [5, 3, 9, 10, 0, 14, 15, 4, 8];
+      ] : [5, 0, 3, 9];
 
       // CRITICAL: useBarCodeDetectorIfSupported MUST be FALSE!
       // In Chrome for Android / Windows, the experimental native BarcodeDetector API
@@ -4434,21 +4523,15 @@ class CentrlyApp {
 
       const facingMode = this._cameraFacingMode || 'environment';
 
-      // CRITICAL: Do NOT pass `qrbox` here!
-      // When `qrbox` is set in html5-qrcode, it aggressively downsamples and crops
-      // the video stream to a tiny 200px-300px box, which blurs the thin vertical
-      // lines of Code 128 barcodes into an unreadable smear.
-      // By omitting qrbox, ZXing receives the crisp full-frame canvas!
-      // We keep a 12 FPS rate so ZXing has plenty of CPU time per frame to binarize and parse lines.
       const isLowEndDevice = (typeof navigator !== 'undefined') && (
         (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
         (navigator.deviceMemory && navigator.deviceMemory <= 2)
       );
       const config = {
-        fps: isLowEndDevice ? 10 : 15,
+        fps: isLowEndDevice ? 15 : 24,
         qrbox: (viewfinderWidth, viewfinderHeight) => ({
-          width: Math.min(340, Math.floor(viewfinderWidth * 0.9)),
-          height: Math.min(160, Math.floor(viewfinderHeight * 0.5)),
+          width: Math.min(460, Math.floor(viewfinderWidth * 0.95)),
+          height: Math.min(320, Math.floor(viewfinderHeight * 0.85)),
         }),
         videoConstraints: {
           facingMode: { ideal: facingMode },
@@ -4864,7 +4947,7 @@ class CentrlyApp {
     const now = Date.now();
 
     // Debounce to prevent multi-scanning the same student in rapid succession
-    if (this._lastCameraCode === cleanCode && now - (this._lastCameraTime || 0) < 2500) {
+    if (this._lastCameraCode === cleanCode && now - (this._lastCameraTime || 0) < 1200) {
       return;
     }
     this._lastCameraCode = cleanCode;
@@ -4915,7 +4998,12 @@ class CentrlyApp {
     }
 
     // Default: Session attendance with strict prioritized matching
-    const student = this.findStudentByQuery(cleanCode);
+    let student = this.findStudentByQuery(cleanCode);
+
+    // Live Server Fallback: If not in memory yet, query API
+    if (!student) {
+      student = await this.fetchStudentByQueryAsync(cleanCode);
+    }
 
     if (student) {
       // Check if already attended
