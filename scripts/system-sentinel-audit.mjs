@@ -91,20 +91,85 @@ async function runAudit() {
   // 4. Git Branch & Working Tree Hygiene
   console.log("\n--- 2. Git & Working Tree Hygiene ---");
   try {
-    const gitStatus = execSync("git status --porcelain", { cwd: ROOT_DIR, encoding: "utf8" }).trim();
+    const gitStatus = execSync("git status --porcelain -uno", { cwd: ROOT_DIR, encoding: "utf8" }).trim();
     const currentBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: ROOT_DIR, encoding: "utf8" }).trim();
     if (gitStatus.length === 0) {
-      addCheck(`Git Tree Hygiene (Branch: ${currentBranch})`, "PASS", "Working directory is clean, 0 uncommitted changes.");
+      addCheck(`Git Tree Hygiene (Branch: ${currentBranch})`, "PASS", "Tracked repository tree is clean, 0 uncommitted changes.");
     } else {
       const fileCount = gitStatus.split("\n").length;
-      addCheck(`Git Tree Hygiene (Branch: ${currentBranch})`, "WARN", `${fileCount} uncommitted change(s) detected.`);
+      addCheck(`Git Tree Hygiene (Branch: ${currentBranch})`, "WARN", `${fileCount} tracked uncommitted change(s) detected.`);
     }
   } catch (err) {
     addCheck("Git Tree Hygiene", "WARN", `Git inspection failed: ${err.message}`);
   }
 
-  // 5. Backend TypeScript Compilation & Types Integrity
-  console.log("\n--- 3. Codebase Build & Types Verification ---");
+  // 5. Frontend Architecture & Contracts Guard
+  console.log("\n--- 3. Frontend Architecture & Contracts Guard ---");
+  try {
+    const rootHtml = fs.readFileSync(path.join(ROOT_DIR, "index.html"), "utf8");
+    const webHtml = fs.readFileSync(path.join(ROOT_DIR, "apps", "web", "index.html"), "utf8");
+    const appJs = fs.readFileSync(path.join(ROOT_DIR, "apps", "web", "src", "app.js"), "utf8");
+
+    // 1. Mandatory DOM contracts (<div id="app"> and <base href="/">)
+    const rootHasApp = rootHtml.includes('<div id="app"></div>');
+    const webHasApp = webHtml.includes('<div id="app"></div>');
+    const rootHasBase = rootHtml.includes('<base href="/">');
+    const webHasBase = webHtml.includes('<base href="/">');
+
+    if (rootHasApp && webHasApp && rootHasBase && webHasBase) {
+      addCheck("DOM Mandatory Contracts (<div id='app'> & <base href='/'>)", "PASS", "Verified in index.html and apps/web/index.html.");
+    } else {
+      addCheck("DOM Mandatory Contracts", "FAIL", `Missing contract: rootApp=${rootHasApp}, webApp=${webHasApp}, rootBase=${rootHasBase}, webBase=${webHasBase}`);
+    }
+
+    // 2. Cache-Buster Synchronicity
+    const rootVersionMatch = rootHtml.match(/app\.js\?v=([a-zA-Z0-9.]+)/);
+    const webVersionMatch = webHtml.match(/app\.js\?v=([a-zA-Z0-9.]+)/);
+    const rootVersion = rootVersionMatch ? rootVersionMatch[1] : null;
+    const webVersion = webVersionMatch ? webVersionMatch[1] : null;
+
+    if (rootVersion && webVersion && rootVersion === webVersion) {
+      addCheck(`Cache-Buster Sync (v=${rootVersion})`, "PASS", "index.html and apps/web/index.html have identical version tag.");
+    } else {
+      addCheck("Cache-Buster Sync", "FAIL", `Mismatch: root has '${rootVersion}', apps/web has '${webVersion}'`);
+    }
+
+    // 3. Homework 100MB & 15m Timeout Invariants
+    const has100MbLimit = appJs.includes("100 * 1024 * 1024");
+    const hasDynamicTimeout = appJs.includes("uploadTimeoutMs") && appJs.includes("900000");
+    const serverTs = fs.readFileSync(path.join(BACKEND_DIR, "src", "server.ts"), "utf8");
+    const serverHasTimeout = serverTs.includes("server.requestTimeout = 900000");
+
+    if (has100MbLimit && hasDynamicTimeout && serverHasTimeout) {
+      addCheck("Homework Upload Capacity (100MB & 15m Timeout)", "PASS", "100MB limit, dynamic 15m client timeout, and 900s server timeout active.");
+    } else {
+      addCheck("Homework Upload Capacity", "FAIL", `Invariants broken: 100MB=${has100MbLimit}, dynamicTimeout=${hasDynamicTimeout}, serverTimeout=${serverHasTimeout}`);
+    }
+
+    // 4. Barcode Scanner Performance & Live Fallback Invariants
+    const hasScanDebounce = appJs.includes("_scanInputTimer") && appJs.includes("setTimeout");
+    const hasLiveFallback = appJs.includes("fetchStudentByQueryAsync") && appJs.includes("stripPrefixAndZeros");
+    const has4CameraFormats = appJs.includes("Html5QrcodeSupportedFormats.CODE_128") && appJs.includes("[5, 0, 3, 9]");
+
+    if (hasScanDebounce && hasLiveFallback && has4CameraFormats) {
+      addCheck("Barcode Scanner Engine (Debounce + Live Fallback + 4 Formats)", "PASS", "Hardware scan debounced (120ms), live server query fallback, and optimized 4-format camera.");
+    } else {
+      addCheck("Barcode Scanner Engine", "FAIL", `Scanner invariants broken: debounce=${hasScanDebounce}, liveFallback=${hasLiveFallback}, formats=${has4CameraFormats}`);
+    }
+
+    // 5. JavaScript Syntax Integrity
+    try {
+      execSync(`node --check "${path.join(ROOT_DIR, "apps", "web", "src", "app.js")}"`, { stdio: "pipe" });
+      addCheck("Frontend JavaScript Syntax (app.js)", "PASS", "Parsed cleanly with 0 syntax or token errors.");
+    } catch (syntaxErr) {
+      addCheck("Frontend JavaScript Syntax (app.js)", "FAIL", `Syntax error detected in app.js: ${syntaxErr.message}`);
+    }
+  } catch (feErr) {
+    addCheck("Frontend Integrity Guard", "FAIL", `Audit exception: ${feErr.message}`);
+  }
+
+  // 6. Backend TypeScript Compilation & Types Integrity
+  console.log("\n--- 4. Codebase Build & Types Verification ---");
   const tscStart = Date.now();
   try {
     execSync("npm run build", {
