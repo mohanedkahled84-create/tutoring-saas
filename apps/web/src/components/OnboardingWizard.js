@@ -1,4 +1,5 @@
 import { getIcon } from "../utils/icons.js";
+import { escapeHtml } from "../utils/escapeHtml.js";
 
 /**
  * Centrly Onboarding Wizard (DEV-15 & DEV-38)

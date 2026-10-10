@@ -213,6 +213,22 @@ test("DEV-15 & DEV-16: All required frontend UI components exist and export rend
   }
 });
 
+test("DEV-15: OnboardingWizard renders all steps (1, 2, 3) cleanly without ReferenceError", async () => {
+  const wizardPath = path.resolve(process.cwd(), "../../apps/web/src/components/OnboardingWizard.js");
+  const { renderOnboardingWizard } = await import(`file://${wizardPath}`);
+  assert.ok(typeof renderOnboardingWizard === "function", "renderOnboardingWizard must be exported");
+
+  for (let s = 1; s <= 3; s++) {
+    const html = renderOnboardingWizard(s, {
+      groupName: "أولى ثانوي",
+      sessionPrice: 120,
+      contactPhone: "01012345678",
+      students: [{ name: "طالب تجريبي", studentPhone: "01011112222", parentPhone: "01033334444" }],
+    });
+    assert.ok(typeof html === "string" && html.length > 50, `Step ${s} must render valid HTML string`);
+  }
+});
+
 test("DEV-16: SessionsView strictly masks financial totals when role is assistant", async () => {
   const webDir = path.resolve(process.cwd(), "../../apps/web/src/components");
   const sessionsViewPath = path.join(webDir, "SessionsView.js");

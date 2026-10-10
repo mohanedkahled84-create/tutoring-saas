@@ -177,6 +177,25 @@ async function runAudit() {
     } else {
       addCheck("Auth Conflict Discrimination", "FAIL", `Invariant failed: hasPhoneMethod=${hasPhoneMethod}, hasRoutePhoneFirst=${hasRoutePhoneFirst}`);
     }
+
+    // 7. Component Import Integrity & Onboarding Wizard Multi-Step Guard
+    const compDir = path.join(ROOT_DIR, "apps", "web", "src", "components");
+    const compFiles = fs.readdirSync(compDir).filter(f => f.endsWith(".js"));
+    let missingImports = [];
+    for (const cf of compFiles) {
+      const code = fs.readFileSync(path.join(compDir, cf), "utf8");
+      if (code.includes("escapeHtml(") && !/import.*escapeHtml/.test(code) && !/function escapeHtml/.test(code)) {
+        missingImports.push(`${cf}: missing escapeHtml`);
+      }
+      if (code.includes("getIcon(") && !/import.*getIcon/.test(code) && !/function getIcon/.test(code)) {
+        missingImports.push(`${cf}: missing getIcon`);
+      }
+    }
+    if (missingImports.length === 0) {
+      addCheck("Component Import Integrity (escapeHtml & getIcon)", "PASS", `All ${compFiles.length} frontend components have verified import bindings.`);
+    } else {
+      addCheck("Component Import Integrity", "FAIL", `Missing imports detected: ${missingImports.join(", ")}`);
+    }
   } catch (feErr) {
     addCheck("Frontend Integrity Guard", "FAIL", `Audit exception: ${feErr.message}`);
   }
