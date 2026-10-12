@@ -58,6 +58,14 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
     const isPlatformAdmin = isPlatformAdminEmail(userEmail);
     const resolvedRole = isPlatformAdmin ? "admin" : (dbUser?.role || (result.user as any)?.role);
 
+    if (isPlatformAdmin && dbUser && dbUser.role !== "admin") {
+      try {
+        const client = getScopedSupabaseClient(result.token);
+        await client.from("users").update({ role: "admin" }).eq("id", result.user.id);
+        dbUser.role = "admin";
+      } catch (_) {}
+    }
+
     res.json({
       message: "Login successful",
       user: {

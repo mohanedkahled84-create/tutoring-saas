@@ -144,6 +144,15 @@ export async function authenticateUser(
     const userEmail = (email || userRecord.email || "").toLowerCase().trim();
     const isPlatformAdmin = userRecord.role === "admin" || isPlatformAdminEmail(userEmail);
 
+    if (isPlatformAdmin && userRecord.role !== "admin") {
+      try {
+        await userClient.from("users").update({ role: "admin" }).eq("id", userId);
+        userRecord.role = "admin";
+      } catch (elevateErr) {
+        console.warn(`[auth.middleware] Auto-elevating founder ${userEmail} role in DB skipped/failed:`, elevateErr);
+      }
+    }
+
     if (!userRecord.tenant_id && !isPlatformAdmin) {
       res.status(403).json({
         error: {
