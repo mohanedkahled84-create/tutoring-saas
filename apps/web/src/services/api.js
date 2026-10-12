@@ -43,11 +43,11 @@ export function isJwtExpired(token, bufferSeconds = 30) {
   }
 }
 
-async function _executeSilentRefreshCore() {
+async function _executeSilentRefreshCore(force = false) {
   try {
     // 1. Cross-Tab Deduplication: Check if another tab already refreshed the token in localStorage
     const currentToken = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_token') : null;
-    if (currentToken && !isJwtExpired(currentToken, 60)) {
+    if (!force && currentToken && !isJwtExpired(currentToken, 60)) {
       const currentRefresh = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_refresh_token') : null;
       const userStr = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_user') : null;
       let parsedUser = null;
@@ -132,8 +132,8 @@ async function _executeSilentRefreshCore() {
  * Mutex and Web-Lock protected silent token refresh.
  * Coordinates across tabs and concurrent promises to prevent token family revocation.
  */
-export async function performSilentRefresh() {
-  if (activeRefreshPromise) {
+export async function performSilentRefresh(force = false) {
+  if (activeRefreshPromise && !force) {
     return activeRefreshPromise;
   }
 
@@ -141,13 +141,13 @@ export async function performSilentRefresh() {
     try {
       if (typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request) {
         return await navigator.locks.request('centrly_auth_refresh_lock', { timeout: 10000 }, async () => {
-          return await _executeSilentRefreshCore();
+          return await _executeSilentRefreshCore(force);
         }).catch(err => {
           console.warn('[performSilentRefresh] Web Lock fallback:', err);
-          return _executeSilentRefreshCore();
+          return _executeSilentRefreshCore(force);
         });
       }
-      return await _executeSilentRefreshCore();
+      return await _executeSilentRefreshCore(force);
     } finally {
       activeRefreshPromise = null;
     }
@@ -209,7 +209,7 @@ export async function request(endpoint, options = {}) {
         // Attempt silent session refresh if refresh token is available (skip for auth and public endpoints)
         const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/refresh') || endpoint.includes('/auth/signup') || endpoint.startsWith('/public/');
         if (!isAuthEndpoint && !options._retry) {
-          const refreshData = await performSilentRefresh();
+          const refreshData = await performSilentRefresh(true);
           if (refreshData && refreshData.token) {
             const retryHeaders = {
               ...headers,

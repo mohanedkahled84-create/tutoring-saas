@@ -1,5 +1,5 @@
 import { authService } from './services/auth.js?v=4.9.26';
-import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.26';
+import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
 import { renderSidebar } from './components/Sidebar.js?v=4.8.13';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.1';
 import { renderAuthScreens, renderEmailVerificationScreen } from './components/AuthScreens.js?v=4.9.21';
@@ -2730,9 +2730,9 @@ class CentrlyApp {
         case 'admin-dashboard': {
           try {
             const [ovRes, proofsRes, tenantsRes] = await Promise.all([
-              request('/admin/overview').catch(() => ({})),
-              request('/admin/payment-proofs').catch(() => ({ payment_proofs: [] })),
-              request('/admin/tenants').catch(() => ({ tenants: [] })),
+              request('/admin/overview').catch(err => { if (err?.status === 401) throw err; return {}; }),
+              request('/admin/payment-proofs').catch(err => { if (err?.status === 401) throw err; return { payment_proofs: [] }; }),
+              request('/admin/tenants').catch(err => { if (err?.status === 401) throw err; return { tenants: [] }; }),
             ]);
             this.adminOverviewData = this.buildAdminOverviewData(ovRes, proofsRes, tenantsRes);
             this.adminProofsData = proofsRes;
@@ -2741,6 +2741,12 @@ class CentrlyApp {
             await this.loadCoupons().catch(() => {});
           } catch (err) {
             console.warn('admin-dashboard load error', err);
+            if (err?.status === 401) {
+              this.showToast('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مجدداً.', 'warning');
+              authService.clearSession();
+              this.renderAuth('login');
+              return;
+            }
             this.adminOverviewData = this.adminOverviewData || {};
           }
           this.routeLoadingState['admin-dashboard'] = false;

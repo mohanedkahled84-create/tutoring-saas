@@ -45,6 +45,7 @@ export async function authenticateUser(
   const token = extractToken(req);
 
   if (!token) {
+    console.warn(`[auth.middleware] Missing token on ${req.method} ${req.originalUrl || req.path}`);
     res.status(401).json({
       error: {
         code: "UNAUTHORIZED",
@@ -60,6 +61,7 @@ export async function authenticateUser(
     const { data: authData, error: authError } = await authClientResolver.supabasePublic.auth.getUser(token);
 
     if (authError || !authData.user) {
+      console.warn(`[auth.middleware] getUser rejected on ${req.method} ${req.originalUrl || req.path}:`, authError?.message);
       res.status(401).json({
         error: {
           code: "UNAUTHORIZED",
@@ -146,8 +148,13 @@ export async function authenticateUser(
 
     if (isPlatformAdmin && userRecord.role !== "admin") {
       try {
-        await userClient.from("users").update({ role: "admin" }).eq("id", userId);
-        userRecord.role = "admin";
+        const { error: elevateErr } = await userClient.from("users").update({ role: "admin" }).eq("id", userId);
+        if (elevateErr) {
+          console.error(`[auth.middleware] Auto-elevating founder ${userEmail} role in DB failed:`, elevateErr);
+        } else {
+          console.info(`[auth.middleware] Auto-elevated founder ${userEmail} role to admin in DB.`);
+          userRecord.role = "admin";
+        }
       } catch (elevateErr) {
         console.warn(`[auth.middleware] Auto-elevating founder ${userEmail} role in DB skipped/failed:`, elevateErr);
       }
