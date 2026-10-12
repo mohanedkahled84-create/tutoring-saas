@@ -126,4 +126,7 @@ export interface IAdminOpsRepository {
     error_detail: string;
   }): Promise<void>;
   purgeTestData(adminId: string): Promise<{ deleted_tenants_count: number; deleted_proofs_count: number }>;
+  deleteTenant(tenantId: string): Promise<void>;
+  archiveTenant(tenantId: string): Promise<AdminTenantSummary>;
+  restoreTenant(tenantId: string): Promise<AdminTenantSummary>;
 }

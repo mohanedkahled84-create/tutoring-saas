@@ -121,6 +121,54 @@ adminRouter.post(
   }
 );
 
+// DELETE /api/admin/tenants/:id - Permanently delete a test teacher/tenant
+adminRouter.delete(
+  "/tenants/:id",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { id: tenantId } = req.params;
+    try {
+      const adminOpsService = getServices(req).adminOps;
+      await adminOpsService.deleteTenant(tenantId);
+      res.json({ message: "تم حذف حساب المعلم بنجاح" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "فشل حذف حساب المعلم";
+      res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+    }
+  }
+);
+
+// POST /api/admin/tenants/:id/archive - Archive / soft-delete a teacher
+adminRouter.post(
+  "/tenants/:id/archive",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { id: tenantId } = req.params;
+    try {
+      const adminOpsService = getServices(req).adminOps;
+      const tenant = await adminOpsService.archiveTenant(tenantId);
+      res.json({ message: "تم أرشفة المعلم واستبعاده من الحسابات بنجاح", tenant });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "فشل أرشفة حساب المعلم";
+      res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+    }
+  }
+);
+
+// POST /api/admin/tenants/:id/restore - Restore an archived teacher
+adminRouter.post(
+  "/tenants/:id/restore",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { id: tenantId } = req.params;
+    try {
+      const adminOpsService = getServices(req).adminOps;
+      const tenant = await adminOpsService.restoreTenant(tenantId);
+      res.json({ message: "تم استعادة حساب المعلم من الأرشيف بنجاح", tenant });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "فشل استعادة المعلم";
+      res.status(400).json({ error: { code: "BAD_REQUEST", message } });
+    }
+  }
+);
+
 // Admin-level Gift Codes Management
 adminRouter.get("/gift-codes", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

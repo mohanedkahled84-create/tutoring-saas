@@ -202,4 +202,22 @@ export class AdminOpsService {
       message: "تم إرسال إشعار تجريبي وتسجيله في سجل الأوتوميشن بنجاح!",
     };
   }
+
+  async deleteTenant(tenantId: string): Promise<void> {
+    if (tenantId === "df534fa1-c1a6-4b29-a6ab-80cb4aceb9e9") {
+      throw new Error("لا يمكن حذف حساب إدارة المنظومة الرئيسي");
+    }
+    await this.repo.deleteTenant(tenantId);
+  }
+
+  async archiveTenant(tenantId: string): Promise<AdminTenantSummary> {
+    if (tenantId === "df534fa1-c1a6-4b29-a6ab-80cb4aceb9e9") {
+      throw new Error("لا يمكن أرشفة حساب إدارة المنظومة الرئيسي");
+    }
+    return this.repo.archiveTenant(tenantId);
+  }
+
+  async restoreTenant(tenantId: string): Promise<AdminTenantSummary> {
+    return this.repo.restoreTenant(tenantId);
+  }
 }

@@ -71,7 +71,7 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
   async getOverviewCounts(): Promise<AdminOverviewMetrics> {
     const [{ count: tenantCount }, { count: studentCount }, { count: sessionCount }] =
       await Promise.all([
-        this.client.from("tenants").select("*", { count: "exact", head: true }),
+        this.client.from("tenants").select("*", { count: "exact", head: true }).is("deleted_at", null),
         this.client.from("students").select("*", { count: "exact", head: true }),
         this.client.from("sessions").select("*", { count: "exact", head: true }),
       ]);
@@ -271,6 +271,34 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
       deleted_proofs_count: deletedProofsCount,
     };
   }
+
+  async deleteTenant(tenantId: string): Promise<void> {
+    const { error } = await this.client
+      .from("tenants")
+      .delete()
+      .eq("id", tenantId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async archiveTenant(tenantId: string): Promise<AdminTenantSummary> {
+    const now = new Date().toISOString();
+    return this.updateTenantSubscription(tenantId, {
+      deleted_at: now,
+      subscription_status: "archived",
+      status: "paused",
+    });
+  }
+
+  async restoreTenant(tenantId: string): Promise<AdminTenantSummary> {
+    return this.updateTenantSubscription(tenantId, {
+      deleted_at: null,
+      subscription_status: "trial",
+      status: "active",
+    });
+  }
 }
 
 export class FakeAdminOpsRepository implements IAdminOpsRepository {
@@ -285,8 +313,9 @@ export class FakeAdminOpsRepository implements IAdminOpsRepository {
   }
 
   async getOverviewCounts(): Promise<AdminOverviewMetrics> {
+    const activeTenants = this.tenants.filter((t) => !t.deleted_at && t.subscription_status !== "archived");
     return {
-      total_tenants: this.tenants.length,
+      total_tenants: activeTenants.length,
       total_students: this.studentsCount,
       total_sessions: this.sessionsCount,
     };
@@ -418,6 +447,26 @@ export class FakeAdminOpsRepository implements IAdminOpsRepository {
       deleted_tenants_count: deletedTenants,
       deleted_proofs_count: deletedProofs,
     };
+  }
+
+  async deleteTenant(tenantId: string): Promise<void> {
+    this.tenants = this.tenants.filter((t) => t.id !== tenantId);
+  }
+
+  async archiveTenant(tenantId: string): Promise<AdminTenantSummary> {
+    return this.updateTenantSubscription(tenantId, {
+      deleted_at: new Date().toISOString(),
+      subscription_status: "archived",
+      status: "paused",
+    });
+  }
+
+  async restoreTenant(tenantId: string): Promise<AdminTenantSummary> {
+    return this.updateTenantSubscription(tenantId, {
+      deleted_at: null,
+      subscription_status: "trial",
+      status: "active",
+    });
   }
 }
 

@@ -444,6 +444,10 @@ export function renderBusinessOwnerDashboard(data = {}) {
                         <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openTenantOverrideModal('${t.id}')" style="font-weight: 700; font-size: 0.75rem; padding: 0.35rem 0.5rem; border-radius: 8px;" title="تعديل الباقة والاشتراك">
                           ${getIcon('edit', 12)}
                         </button>
+
+                        <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.handleArchiveTenant('${t.id}', '${escapeHtml(t.name)}')" style="font-weight: 700; font-size: 0.75rem; padding: 0.35rem 0.5rem; border-radius: 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" title="أرشفة الحساب واستبعاده من الرادار والحسابات">
+                          ${getIcon('archive', 12, '#d97706')}
+                        </button>
                       </div>
                     </td>
                   </tr>

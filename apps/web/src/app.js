@@ -29,9 +29,9 @@ import { renderCenterSettlementsView } from './components/CenterSettlementsView.
 import { renderLandingView } from './components/LandingView.js?v=4.8.7';
 import { renderMaterialsView } from './components/MaterialsView.js?v=2.9.0';
 import { renderTeacherAssistantsView } from './components/TeacherAssistantsView.js?v=2.1.0';
-import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js?v=5.1.0';
+import { renderBusinessOwnerDashboard } from './components/BusinessOwnerDashboard.js?v=5.2.0';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
-import { renderAdminTenantsView } from './components/AdminTenantsView.js';
+import { renderAdminTenantsView } from './components/AdminTenantsView.js?v=2.0.0';
 import { renderAdminOutreachView } from './components/AdminOutreachView.js?v=1.0.1';
 import { renderTeacherSettingsView } from './components/TeacherSettingsView.js?v=4.9.9';
 import { renderCouponsView } from './components/CouponsView.js?v=4.7.6';
@@ -392,7 +392,10 @@ class CentrlyApp {
   buildAdminOverviewData(overviewRaw, proofsRaw, tenantsRaw) {
     const overview = overviewRaw?.metrics || overviewRaw || {};
     const proofs = proofsRaw?.payment_proofs || [];
-    const tenants = tenantsRaw?.tenants || [];
+    const allTenants = tenantsRaw?.tenants || [];
+    
+    // Completely exclude archived / soft-deleted test teachers from calculations, radar, and KPIs
+    const tenants = allTenants.filter(t => !t.deleted_at && t.subscription_status !== 'archived');
     
     const pendingProofs = proofs.filter(p => p.status === 'pending');
     const approvedProofs = proofs.filter(p => p.status === 'approved');
@@ -15932,11 +15935,22 @@ class CentrlyApp {
           </div>
         </div>
 
-        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="submit" id="btnSubmitOverride" class="btn btn-primary" style="font-weight: 800;">
-            حفظ وتطبيق التعديل
-          </button>
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.handleArchiveTenant('${tenantId}', '${escapeHtml(tenantName || 'المعلم')}')" style="color: #b45309; border-color: #fde68a; background: #fffbeb; font-weight: 700; font-size: 0.775rem;">
+              📦 أرشفة الحساب (استبعاد من الحسبة)
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.handleDeleteTenantPrompt('${tenantId}', '${escapeHtml(tenantName || 'المعلم')}')" style="color: #dc2626; border-color: #fecaca; background: #fef2f2; font-weight: 700; font-size: 0.775rem;">
+              🗑️ حذف نهائي
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+            <button type="submit" id="btnSubmitOverride" class="btn btn-primary" style="font-weight: 800;">
+              حفظ وتطبيق التعديل
+            </button>
+          </div>
         </div>
       </form>
     `;
@@ -15977,6 +15991,62 @@ class CentrlyApp {
         btn.disabled = false;
         btn.innerText = 'حفظ وتطبيق التعديل';
       }
+    }
+  }
+
+  async handleArchiveTenant(tenantId, tenantName = 'المعلم') {
+    if (!confirm(`هل أنت متأكد من أرشفة حساب "${tenantName}"؟\nسيتم استبعاد هذا الحساب تماماً من إحصائيات المنظومة ورادار التفعيل وحسابات الأرباح، ويمكنك استعادته في أي وقت من تبويب الأرشيف والتجارب.`)) {
+      return;
+    }
+
+    try {
+      this.closeModal();
+      this.showToast('جاري أرشفة الحساب واستبعاده من الحسبة...', 'info');
+      await request(`/admin/tenants/${tenantId}/archive`, { method: 'POST' });
+      this.showToast(`تم أرشفة حساب "${tenantName}" واستبعاده من الحسبة بنجاح!`, 'success');
+      await Promise.all([
+        this.loadRouteData('admin-tenants'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل أرشفة الحساب: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  async handleRestoreTenant(tenantId, tenantName = 'المعلم') {
+    try {
+      this.closeModal();
+      this.showToast('جاري استعادة الحساب من الأرشيف...', 'info');
+      await request(`/admin/tenants/${tenantId}/restore`, { method: 'POST' });
+      this.showToast(`تم استعادة حساب "${tenantName}" وإعادته للحسابات النشطة بنجاح!`, 'success');
+      await Promise.all([
+        this.loadRouteData('admin-tenants'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل استعادة الحساب: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  async handleDeleteTenantPrompt(tenantId, tenantName = 'المعلم') {
+    if (!confirm(`⚠️ تحذير نهائي:\nهل أنت متأكد تماماً من حذف حساب المعلم "${tenantName}" نهائياً من قاعدة البيانات؟\nسيتم مسح كافة البيانات المرتبطة بهذا الحساب (الطلاب، الحصص، والإعدادات) فوراً ولا يمكن التراجع عن هذه الخطوة.`)) {
+      return;
+    }
+
+    try {
+      this.closeModal();
+      this.showToast('جاري حذف حساب المعلم نهائياً...', 'info');
+      await request(`/admin/tenants/${tenantId}`, { method: 'DELETE' });
+      this.showToast(`تم حذف حساب "${tenantName}" نهائياً بنجاح!`, 'success');
+      await Promise.all([
+        this.loadRouteData('admin-tenants'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل حذف المعلم: ${err.message || 'خطأ في الخادم'}`, 'danger');
     }
   }
 

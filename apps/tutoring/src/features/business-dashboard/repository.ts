@@ -11,10 +11,10 @@ export class SupabaseBusinessDashboardRepository implements IBusinessDashboardRe
     // 1. Fetch all tenants
     const { data: tenants } = await this.client
       .from("tenants")
-      .select("id, name, status, subscription_status, trial_ends_at, subscription_ends_at, created_at")
+      .select("id, name, status, subscription_status, trial_ends_at, subscription_ends_at, created_at, deleted_at")
       .order("created_at", { ascending: false });
 
-    const tenantList = tenants || [];
+    const tenantList = (tenants || []).filter((t) => !t.deleted_at && t.subscription_status !== "archived");
 
     // 2. Fetch counts
     const [{ count: studentCount }, { count: sessionCount }, { data: messageStats }] = await Promise.all([

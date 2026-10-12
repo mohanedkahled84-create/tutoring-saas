@@ -23,17 +23,24 @@ function formatArabicDate(dateStr) {
 }
 
 export function renderAdminTenantsView(data = {}, currentFilter = 'all', searchQuery = '') {
-  const tenants = data.tenants || [];
+  const allTenants = data.tenants || [];
   const filter = currentFilter || 'all';
   const query = (searchQuery || '').toLowerCase().trim();
 
-  const totalCount = tenants.length;
-  const activeCount = tenants.filter(t => t.subscription_status === 'active').length;
-  const trialCount = tenants.filter(t => t.subscription_status === 'trial').length;
-  const pendingCount = tenants.filter(t => t.subscription_status === 'pending_verification' || t.subscription_status === 'pending').length;
-  const expiredCount = tenants.filter(t => t.subscription_status === 'expired' || t.subscription_status === 'past_due' || t.subscription_status === 'deactivated').length;
+  // Separate non-archived from archived/test accounts
+  const activeTenants = allTenants.filter(t => !t.deleted_at && t.subscription_status !== 'archived');
+  const archivedTenants = allTenants.filter(t => Boolean(t.deleted_at || t.subscription_status === 'archived'));
 
-  const filteredTenants = tenants.filter(t => {
+  const totalCount = activeTenants.length;
+  const activeCount = activeTenants.filter(t => t.subscription_status === 'active').length;
+  const trialCount = activeTenants.filter(t => t.subscription_status === 'trial').length;
+  const pendingCount = activeTenants.filter(t => t.subscription_status === 'pending_verification' || t.subscription_status === 'pending').length;
+  const expiredCount = activeTenants.filter(t => t.subscription_status === 'expired' || t.subscription_status === 'past_due' || t.subscription_status === 'deactivated').length;
+  const archivedCount = archivedTenants.length;
+
+  const sourceTenants = filter === 'archived' ? archivedTenants : activeTenants;
+
+  const filteredTenants = sourceTenants.filter(t => {
     // Status filter
     if (filter === 'active' && t.subscription_status !== 'active') return false;
     if (filter === 'trial' && t.subscription_status !== 'trial') return false;
@@ -67,7 +74,7 @@ export function renderAdminTenantsView(data = {}, currentFilter = 'all', searchQ
               </span>
             </div>
             <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 0.35rem;">
-              دليل شامل لجميع المدرسين والسناتر المسجلين في سنترلي، مع التحكم الكامل في فترات التجربة وتجديد الاشتراكات يدوياً.
+              دليل شامل لجميع المدرسين والسناتر المسجلين في سنترلي، مع التحكم الكامل في فترات التجربة، الأرشفة، والتنظيف.
             </p>
           </div>
 
@@ -85,26 +92,30 @@ export function renderAdminTenantsView(data = {}, currentFilter = 'all', searchQ
       </div>
 
       <!-- Quick Stats KPI Bar -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem;">
-        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid var(--centrly-blue-700);">
-          <span style="font-size: 0.775rem; color: #64748b; font-weight: 700;">إجمالي المشتركين</span>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem;">
+        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid var(--centrly-blue-700); cursor: pointer;" onclick="window.centrlyApp.setAdminTenantsFilter('all')">
+          <span style="font-size: 0.775rem; color: #64748b; font-weight: 700;">المشتركون الفعليون</span>
           <div style="font-size: 1.4rem; font-weight: 900; color: var(--centrly-ink); margin-top: 0.2rem;">${totalCount}</div>
         </div>
-        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid #10b981;">
+        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid #10b981; cursor: pointer;" onclick="window.centrlyApp.setAdminTenantsFilter('active')">
           <span style="font-size: 0.775rem; color: #64748b; font-weight: 700;">اشتراكات نشطة</span>
           <div style="font-size: 1.4rem; font-weight: 900; color: #10b981; margin-top: 0.2rem;">${activeCount}</div>
         </div>
-        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid #0284c7;">
+        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid #0284c7; cursor: pointer;" onclick="window.centrlyApp.setAdminTenantsFilter('trial')">
           <span style="font-size: 0.775rem; color: #64748b; font-weight: 700;">فترة تجريبية</span>
           <div style="font-size: 1.4rem; font-weight: 900; color: #0284c7; margin-top: 0.2rem;">${trialCount}</div>
         </div>
-        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid #f59e0b;">
+        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid #f59e0b; cursor: pointer;" onclick="window.centrlyApp.setAdminTenantsFilter('pending')">
           <span style="font-size: 0.775rem; color: #64748b; font-weight: 700;">بانتظار التأكيد</span>
           <div style="font-size: 1.4rem; font-weight: 900; color: #d97706; margin-top: 0.2rem;">${pendingCount}</div>
         </div>
-        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid #ef4444;">
-          <span style="font-size: 0.775rem; color: #64748b; font-weight: 700;">اشتراكات منتهية</span>
+        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid #ef4444; cursor: pointer;" onclick="window.centrlyApp.setAdminTenantsFilter('expired')">
+          <span style="font-size: 0.775rem; color: #64748b; font-weight: 700;">منتهي / موقوف</span>
           <div style="font-size: 1.4rem; font-weight: 900; color: #ef4444; margin-top: 0.2rem;">${expiredCount}</div>
+        </div>
+        <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid #64748b; cursor: pointer; background: ${filter === 'archived' ? '#f1f5f9' : '#fff'};" onclick="window.centrlyApp.setAdminTenantsFilter('archived')">
+          <span style="font-size: 0.775rem; color: #64748b; font-weight: 700;">الأرشيف والتجارب</span>
+          <div style="font-size: 1.4rem; font-weight: 900; color: #64748b; margin-top: 0.2rem;">${archivedCount}</div>
         </div>
       </div>
 
@@ -121,11 +132,15 @@ export function renderAdminTenantsView(data = {}, currentFilter = 'all', searchQ
 
           <!-- Status Filter Pills -->
           <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
-            <button type="button" class="btn ${filter === 'all' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="window.centrlyApp.setAdminTenantsFilter('all')" style="font-weight: 700; font-size: 0.8rem; border-radius: 8px;">الكل</button>
+            <button type="button" class="btn ${filter === 'all' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="window.centrlyApp.setAdminTenantsFilter('all')" style="font-weight: 700; font-size: 0.8rem; border-radius: 8px;">الكل النشط (${totalCount})</button>
             <button type="button" class="btn ${filter === 'active' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="window.centrlyApp.setAdminTenantsFilter('active')" style="font-weight: 700; font-size: 0.8rem; border-radius: 8px;">نشط</button>
             <button type="button" class="btn ${filter === 'trial' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="window.centrlyApp.setAdminTenantsFilter('trial')" style="font-weight: 700; font-size: 0.8rem; border-radius: 8px;">تجربة</button>
             <button type="button" class="btn ${filter === 'pending' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="window.centrlyApp.setAdminTenantsFilter('pending')" style="font-weight: 700; font-size: 0.8rem; border-radius: 8px;">بانتظار التأكيد</button>
             <button type="button" class="btn ${filter === 'expired' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="window.centrlyApp.setAdminTenantsFilter('expired')" style="font-weight: 700; font-size: 0.8rem; border-radius: 8px;">منتهي</button>
+            <button type="button" class="btn ${filter === 'archived' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="window.centrlyApp.setAdminTenantsFilter('archived')" style="font-weight: 800; font-size: 0.8rem; border-radius: 8px; border-color: #94a3b8; color: ${filter === 'archived' ? '#fff' : '#475569'};">
+              ${getIcon('archive', 14)}
+              <span>الأرشيف والتجارب (${archivedCount})</span>
+            </button>
           </div>
 
         </div>
@@ -138,10 +153,10 @@ export function renderAdminTenantsView(data = {}, currentFilter = 'all', searchQ
             ${getIcon('info', 36, '#94a3b8')}
           </div>
           <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink); margin: 0 0 0.4rem;">
-            لا توجد نتائج مطابقة للبحث أو الفلتر
+            ${filter === 'archived' ? 'الأرشيف فارغ' : 'لا توجد نتائج مطابقة للبحث أو الفلتر'}
           </h3>
           <p style="font-size: 0.85rem; margin: 0;">
-            جرب كتابة اسم مختلف أو تغيير الفلتر المحدد أعلاه.
+            ${filter === 'archived' ? 'لا توجد أي حسابات معلمين مؤرشفة أو مستبعدة حالياً.' : 'جرب كتابة اسم مختلف أو تغيير الفلتر المحدد أعلاه.'}
           </p>
         </div>
       ` : `
@@ -163,9 +178,12 @@ export function renderAdminTenantsView(data = {}, currentFilter = 'all', searchQ
                   const status = t.subscription_status || 'trial';
                   const isCenter = t.account_type === 'center';
                   const expiryDate = t.subscription_ends_at || t.trial_ends_at;
+                  const isArchived = Boolean(t.deleted_at || t.subscription_status === 'archived');
 
                   let statusBadge = '';
-                  if (status === 'active') {
+                  if (isArchived) {
+                    statusBadge = `<span class="badge" style="background: #f1f5f9; color: #475569; font-weight: 800; border: 1px solid #cbd5e1;">📦 مؤرشف (خارج الحسبة)</span>`;
+                  } else if (status === 'active') {
                     statusBadge = `<span class="badge" style="background: #dcfce7; color: #166534; font-weight: 800; border: 1px solid #bbf7d0;">نشط (Active)</span>`;
                   } else if (status === 'trial') {
                     statusBadge = `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 800; border: 1px solid #bae6fd;">فترة تجريبية</span>`;
@@ -176,7 +194,7 @@ export function renderAdminTenantsView(data = {}, currentFilter = 'all', searchQ
                   }
 
                   return `
-                    <tr style="border-bottom: 1px solid #f1f5f9; ${idx % 2 === 1 ? 'background: #fdfdfd;' : ''}">
+                    <tr style="border-bottom: 1px solid #f1f5f9; ${isArchived ? 'background: #f8fafc; opacity: 0.85;' : (idx % 2 === 1 ? 'background: #fdfdfd;' : '')}">
                       
                       <!-- Name and Contact -->
                       <td style="padding: 0.85rem 1rem;">
@@ -218,10 +236,27 @@ export function renderAdminTenantsView(data = {}, currentFilter = 'all', searchQ
 
                       <!-- Actions -->
                       <td style="padding: 0.85rem 1rem; text-align: left;">
-                        <div style="display: flex; gap: 0.35rem; justify-content: flex-end;">
-                          <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openTenantOverrideModal('${t.id}', '${escapeHtml(t.name)}', '${status}', '${t.subscription_tier || 'growth'}')" style="font-weight: 800; font-size: 0.775rem; display: inline-flex; align-items: center; gap: 0.3rem;">
-                            ${getIcon('gear', 12)}
-                            <span>تعديل الصلاحية والخطة</span>
+                        <div style="display: flex; gap: 0.35rem; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+                          ${!isArchived ? `
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openTenantOverrideModal('${t.id}', '${escapeHtml(t.name)}', '${status}', '${t.subscription_tier || 'growth'}')" style="font-weight: 800; font-size: 0.775rem; display: inline-flex; align-items: center; gap: 0.3rem;" title="تعديل الباقة والاشتراك">
+                              ${getIcon('gear', 12)}
+                              <span>تعديل</span>
+                            </button>
+
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.handleArchiveTenant('${t.id}', '${escapeHtml(t.name)}')" style="font-weight: 800; font-size: 0.775rem; color: #d97706; border-color: #fde68a; background: #fffbeb; display: inline-flex; align-items: center; gap: 0.3rem;" title="أرشفة الحساب واستبعاده من الحسابات والإحصائيات">
+                              ${getIcon('archive', 12, '#d97706')}
+                              <span>أرشفة</span>
+                            </button>
+                          ` : `
+                            <button type="button" class="btn btn-sm" onclick="window.centrlyApp.handleRestoreTenant('${t.id}', '${escapeHtml(t.name)}')" style="font-weight: 800; font-size: 0.775rem; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 0.3rem;" title="استعادة المعلم وإعادته للحسابات النشطة">
+                              ${getIcon('check', 12, '#166534')}
+                              <span>استعادة</span>
+                            </button>
+                          `}
+
+                          <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.handleDeleteTenantPrompt('${t.id}', '${escapeHtml(t.name)}')" style="font-weight: 800; font-size: 0.775rem; color: #dc2626; border-color: #fecaca; background: #fef2f2; display: inline-flex; align-items: center; gap: 0.3rem;" title="حذف حساب المعلم التجريبي نهائياً">
+                            ${getIcon('delete', 12, '#dc2626')}
+                            <span>حذف</span>
                           </button>
                         </div>
                       </td>
