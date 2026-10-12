@@ -3,6 +3,19 @@ import { AuthenticatedRequest, UserRole } from "../types/index.js";
 import { supabasePublic, getScopedSupabaseClient } from "../../supabase.js";
 
 // Helper to extract token from Authorization header or httpOnly cookie
+export const PLATFORM_ADMIN_EMAILS = [
+  "mohanedkahled84@gmail.com",
+  "mohanedkhaled84@gmail.com",
+  "mohanedkhaled2367@gmail.com",
+  "teacher@centrly.app",
+];
+
+export function isPlatformAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const normalized = email.toLowerCase().trim();
+  return PLATFORM_ADMIN_EMAILS.some((adminEmail) => adminEmail.toLowerCase() === normalized);
+}
+
 export function extractToken(req: AuthenticatedRequest): string | null {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
@@ -128,7 +141,10 @@ export async function authenticateUser(
       return;
     }
 
-    if (!userRecord.tenant_id && userRecord.role !== "admin") {
+    const userEmail = (email || userRecord.email || "").toLowerCase().trim();
+    const isPlatformAdmin = userRecord.role === "admin" || isPlatformAdminEmail(userEmail);
+
+    if (!userRecord.tenant_id && !isPlatformAdmin) {
       res.status(403).json({
         error: {
           code: "FORBIDDEN",
@@ -152,7 +168,7 @@ export async function authenticateUser(
       phone,
       subject,
       tenant_id: userRecord.tenant_id,
-      role: userRecord.role as UserRole,
+      role: (isPlatformAdmin ? "admin" : userRecord.role) as UserRole,
       teacher_id: userRecord.teacher_id,
       assistant_id: userRecord.assistant_id,
       has_security_pin: hasSecurityPin,
@@ -183,6 +199,11 @@ export function requireRole(allowedRoles: UserRole[]) {
         },
       });
       return;
+    }
+
+    const isPlatformAdmin = req.user.role === "admin" || isPlatformAdminEmail(req.user.email);
+    if (isPlatformAdmin) {
+      return next();
     }
 
     if (!allowedRoles.includes(req.user.role)) {

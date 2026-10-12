@@ -305,7 +305,7 @@ class CentrlyApp {
         this.dashboardData = cachedDashboard;
       }
       const cachedAdminOverview = this.loadCache('adminOverviewData', null);
-      if (cachedAdminOverview) {
+      if (cachedAdminOverview && Array.isArray(cachedAdminOverview.activation_radar) && cachedAdminOverview.activation_radar.length > 0) {
         this.adminOverviewData = cachedAdminOverview;
       }
       const cachedBilling = this.loadCache('billingState', null);
@@ -326,7 +326,7 @@ class CentrlyApp {
   hasRouteData(route) {
     switch (route) {
       case 'admin-dashboard':
-        return Boolean(this.adminOverviewData);
+        return Boolean(this.adminOverviewData && Array.isArray(this.adminOverviewData.activation_radar));
       case 'admin-proofs':
         return Boolean(this.adminProofsData && Array.isArray(this.adminProofsData.payment_proofs));
       case 'admin-tenants':
@@ -389,6 +389,105 @@ class CentrlyApp {
     }, 250);
   }
 
+  buildAdminOverviewData(overviewRaw, proofsRaw, tenantsRaw) {
+    const overview = overviewRaw?.metrics || overviewRaw || {};
+    const proofs = proofsRaw?.payment_proofs || [];
+    const tenants = tenantsRaw?.tenants || [];
+    
+    const pendingProofs = proofs.filter(p => p.status === 'pending');
+    const approvedProofs = proofs.filter(p => p.status === 'approved');
+    const activeCount = tenants.filter(t => t.subscription_status === 'active').length;
+    const trialCount = tenants.filter(t => t.subscription_status === 'trial').length;
+    const expiredCount = tenants.filter(t => ['expired', 'past_due', 'deactivated'].includes(t.subscription_status)).length;
+
+    // 1. Real Cash Collected (All-time from approved payment proofs)
+    const totalCollectedEgp = approvedProofs.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    // 2. This Month Collected Cash & New Clients
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+
+    const thisMonthApprovedProofs = approvedProofs.filter(p => {
+      const d = new Date(p.reviewed_at || p.created_at);
+      return d.getFullYear() === curYear && d.getMonth() === curMonth;
+    });
+    const thisMonthCollectedEgp = thisMonthApprovedProofs.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    const thisMonthNewTenants = tenants.filter(t => {
+      if (!t.created_at) return false;
+      const d = new Date(t.created_at);
+      return d.getFullYear() === curYear && d.getMonth() === curMonth;
+    });
+    const newClientsThisMonth = thisMonthNewTenants.length;
+
+    // 3. Expected Next Month Normalized MRR (Restores regular plan prices after discounts)
+    let expectedNextMonthMrr = 0;
+    tenants.filter(t => t.subscription_status === 'active').forEach(t => {
+      const tier = (t.subscription_tier || '').toLowerCase();
+      const limit = Number(t.students_limit || t.settings?.students_limit || 0);
+      const planName = (t.plan_name || t.settings?.plan_name || '').toLowerCase();
+      if (limit >= 1500 || tier === 'pro' || planName.includes('1500')) {
+        expectedNextMonthMrr += 1399;
+      } else if (limit >= 750 || tier === 'growth' || planName.includes('750')) {
+        expectedNextMonthMrr += 899;
+      } else {
+        expectedNextMonthMrr += 499;
+      }
+    });
+
+    // 4. Onboarding & Activation Radar for New Clients
+    const activationRadar = tenants.map(t => {
+      const studentCount = Number(t.students_count || 0);
+      let stage = 'no_students';
+      let stageLabel = 'سجل ولم يضف طلاب بعد ⚠️';
+      let stageColor = '#f59e0b';
+      if (studentCount > 0) {
+        stage = 'has_students';
+        stageLabel = `أضاف ${studentCount} طالب ⏳`;
+        stageColor = '#2563eb';
+      }
+      return {
+        ...t,
+        studentCount,
+        stage,
+        stageLabel,
+        stageColor,
+      };
+    });
+
+    return {
+      overview: {
+        total_tenants: tenants.length || overview.total_tenants || 0,
+        active_tenants: activeCount || overview.active_tenants || 0,
+        trial_tenants: trialCount || overview.trial_tenants || 0,
+        expired_tenants: expiredCount,
+        total_collected_egp: totalCollectedEgp,
+        approved_proofs_count: approvedProofs.length,
+        this_month_collected_egp: thisMonthCollectedEgp,
+        new_clients_this_month: newClientsThisMonth,
+        expected_next_month_mrr: expectedNextMonthMrr,
+        total_students: overview.total_students || 0,
+        total_sessions: overview.total_sessions || 0,
+        whatsapp: overview.whatsapp || { total_sent: 0, total_failed: 0, estimated_cost_egp: 0, status: 'active' },
+      },
+      subscription_breakdown: {
+        active: activeCount,
+        trial: trialCount,
+        pending_verification: pendingProofs.length,
+        expired: expiredCount,
+      },
+      pending_proofs: pendingProofs,
+      activation_radar: activationRadar,
+      recent_signups: tenants.slice(0, 5),
+      at_risk_tenants: tenants.filter(t => t.subscription_status === 'trial').slice(0, 5).map(t => ({
+        tenant_id: t.id,
+        tenant_name: t.name,
+        details: `تنتهي التجربة في: ${t.trial_ends_at ? new Date(t.trial_ends_at).toLocaleDateString('ar-EG') : 'قريباً'}`,
+      })),
+    };
+  }
+
   async prefetchCoreData() {
     if (!authService.isAuthenticated()) return;
     const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
@@ -399,38 +498,11 @@ class CentrlyApp {
           request('/admin/payment-proofs').catch(() => null),
           request('/admin/tenants').catch(() => null),
         ]);
-        if (ovRes) {
-          const overview = ovRes.metrics || ovRes || {};
-          const proofs = proofsRes?.payment_proofs || [];
-          const tenants = tenantsRes?.tenants || [];
-          const pendingCount = proofs.filter(p => p.status === 'pending').length;
-          const activeCount = tenants.filter(t => t.subscription_status === 'active').length;
-          const trialCount = tenants.filter(t => t.subscription_status === 'trial').length;
-          const expiredCount = tenants.filter(t => ['expired', 'past_due', 'deactivated'].includes(t.subscription_status)).length;
-          this.adminOverviewData = {
-            overview: {
-              total_tenants: tenants.length || overview.total_tenants || 0,
-              active_tenants: activeCount || overview.active_tenants || 0,
-              trial_tenants: trialCount || overview.trial_tenants || 0,
-              mrr_egp: (activeCount * 799) || overview.mrr_egp || 0,
-              total_students: overview.total_students || 0,
-              total_sessions: overview.total_sessions || 0,
-              whatsapp: overview.whatsapp || { total_sent: 0, total_failed: 0, estimated_cost_egp: 0 },
-            },
-            subscription_breakdown: {
-              active: activeCount,
-              trial: trialCount,
-              pending_verification: pendingCount,
-              expired: expiredCount,
-            },
-            recent_signups: tenants.slice(0, 5),
-            at_risk_tenants: tenants.filter(t => t.subscription_status === 'trial').slice(0, 5).map(t => ({
-              tenant_name: t.name,
-              details: `تنتهي التجربة في: ${t.trial_ends_at ? new Date(t.trial_ends_at).toLocaleDateString('ar-EG') : 'قريباً'}`,
-            })),
-          };
+        if (ovRes || proofsRes || tenantsRes) {
+          this.adminOverviewData = this.buildAdminOverviewData(ovRes, proofsRes, tenantsRes);
           if (proofsRes) this.adminProofsData = proofsRes;
           if (tenantsRes) this.adminTenantsData = tenantsRes;
+          this.saveCache('adminOverviewData', this.adminOverviewData);
           if (['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach'].includes(this.currentRoute)) {
             this.renderMainContent();
           }
@@ -2662,102 +2734,7 @@ class CentrlyApp {
               request('/admin/payment-proofs').catch(() => ({ payment_proofs: [] })),
               request('/admin/tenants').catch(() => ({ tenants: [] })),
             ]);
-            const overview = ovRes.metrics || ovRes || {};
-            const proofs = proofsRes.payment_proofs || [];
-            const tenants = tenantsRes.tenants || [];
-            
-            const pendingProofs = proofs.filter(p => p.status === 'pending');
-            const approvedProofs = proofs.filter(p => p.status === 'approved');
-            const activeCount = tenants.filter(t => t.subscription_status === 'active').length;
-            const trialCount = tenants.filter(t => t.subscription_status === 'trial').length;
-            const expiredCount = tenants.filter(t => ['expired', 'past_due', 'deactivated'].includes(t.subscription_status)).length;
-
-            // 1. Real Cash Collected (All-time from approved payment proofs)
-            const totalCollectedEgp = approvedProofs.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-            // 2. This Month Collected Cash & New Clients
-            const now = new Date();
-            const curYear = now.getFullYear();
-            const curMonth = now.getMonth();
-
-            const thisMonthApprovedProofs = approvedProofs.filter(p => {
-              const d = new Date(p.reviewed_at || p.created_at);
-              return d.getFullYear() === curYear && d.getMonth() === curMonth;
-            });
-            const thisMonthCollectedEgp = thisMonthApprovedProofs.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-            const thisMonthNewTenants = tenants.filter(t => {
-              if (!t.created_at) return false;
-              const d = new Date(t.created_at);
-              return d.getFullYear() === curYear && d.getMonth() === curMonth;
-            });
-            const newClientsThisMonth = thisMonthNewTenants.length;
-
-            // 3. Expected Next Month Normalized MRR (Restores regular plan prices after discounts)
-            let expectedNextMonthMrr = 0;
-            tenants.filter(t => t.subscription_status === 'active').forEach(t => {
-              const tier = (t.subscription_tier || '').toLowerCase();
-              const limit = Number(t.students_limit || t.settings?.students_limit || 0);
-              const planName = (t.plan_name || t.settings?.plan_name || '').toLowerCase();
-              if (limit >= 1500 || tier === 'pro' || planName.includes('1500')) {
-                expectedNextMonthMrr += 1399;
-              } else if (limit >= 750 || tier === 'growth' || planName.includes('750')) {
-                expectedNextMonthMrr += 899;
-              } else {
-                expectedNextMonthMrr += 499;
-              }
-            });
-
-            // 4. Onboarding & Activation Radar for New Clients
-            const activationRadar = tenants.map(t => {
-              const studentCount = Number(t.students_count || 0);
-              let stage = 'no_students';
-              let stageLabel = 'سجل ولم يضف طلاب بعد ⚠️';
-              let stageColor = '#f59e0b';
-              if (studentCount > 0) {
-                stage = 'has_students';
-                stageLabel = `أضاف ${studentCount} طالب ⏳`;
-                stageColor = '#2563eb';
-              }
-              return {
-                ...t,
-                studentCount,
-                stage,
-                stageLabel,
-                stageColor,
-              };
-            });
-
-            this.adminOverviewData = {
-              overview: {
-                total_tenants: tenants.length || overview.total_tenants || 0,
-                active_tenants: activeCount || overview.active_tenants || 0,
-                trial_tenants: trialCount || overview.trial_tenants || 0,
-                expired_tenants: expiredCount,
-                total_collected_egp: totalCollectedEgp,
-                approved_proofs_count: approvedProofs.length,
-                this_month_collected_egp: thisMonthCollectedEgp,
-                new_clients_this_month: newClientsThisMonth,
-                expected_next_month_mrr: expectedNextMonthMrr,
-                total_students: overview.total_students || 0,
-                total_sessions: overview.total_sessions || 0,
-                whatsapp: overview.whatsapp || { total_sent: 0, total_failed: 0, estimated_cost_egp: 0, status: 'active' },
-              },
-              subscription_breakdown: {
-                active: activeCount,
-                trial: trialCount,
-                pending_verification: pendingProofs.length,
-                expired: expiredCount,
-              },
-              pending_proofs: pendingProofs,
-              activation_radar: activationRadar,
-              recent_signups: tenants.slice(0, 5),
-              at_risk_tenants: tenants.filter(t => t.subscription_status === 'trial').slice(0, 5).map(t => ({
-                tenant_id: t.id,
-                tenant_name: t.name,
-                details: `تنتهي التجربة في: ${t.trial_ends_at ? new Date(t.trial_ends_at).toLocaleDateString('ar-EG') : 'قريباً'}`,
-              })),
-            };
+            this.adminOverviewData = this.buildAdminOverviewData(ovRes, proofsRes, tenantsRes);
             this.adminProofsData = proofsRes;
             this.adminTenantsData = tenantsRes;
             this.saveCache('adminOverviewData', this.adminOverviewData);

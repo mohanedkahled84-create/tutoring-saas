@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { getServices } from "../../composition.js";
-import { extractToken, authenticateUser } from "../../shared/middleware/auth.js";
+import { extractToken, authenticateUser, isPlatformAdminEmail } from "../../shared/middleware/auth.js";
 import { getScopedSupabaseClient } from "../../supabase.js";
 import { authRateLimiter } from "../../shared/middleware/rateLimit.js";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
@@ -54,6 +54,10 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
       }
     } catch (_) {}
 
+    const userEmail = (result.user.email || dbUser?.email || rawIdentifier || "").toLowerCase().trim();
+    const isPlatformAdmin = isPlatformAdminEmail(userEmail);
+    const resolvedRole = isPlatformAdmin ? "admin" : (dbUser?.role || (result.user as any)?.role);
+
     res.json({
       message: "Login successful",
       user: {
@@ -63,9 +67,10 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
           full_name: dbUser.full_name || result.user.full_name,
           phone: dbUser.phone || (result.user as any)?.phone,
           subject: dbUser.subject || (result.user as any)?.subject,
-          role: dbUser.role || (result.user as any)?.role,
+          role: resolvedRole,
           tenant_id: dbUser.tenant_id || (result.user as any)?.tenant_id,
         } : {}),
+        role: resolvedRole,
         has_security_pin: hasSecurityPin,
       },
       token: result.token,

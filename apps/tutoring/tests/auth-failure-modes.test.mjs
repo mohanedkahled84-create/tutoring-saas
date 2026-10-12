@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { authenticateUser, authClientResolver } from "../dist/shared/middleware/auth.js";
+import { authenticateUser, authClientResolver, requireAdmin } from "../dist/shared/middleware/auth.js";
 
 function createMockReq(token) {
   return {
@@ -227,4 +227,77 @@ test("AUTH FAILURE MODES - 200 & next() called when profile exists", async () =>
     authClientResolver.supabasePublic = originalPub;
     authClientResolver.getScopedSupabaseClient = originalScoped;
   }
+});
+
+test("AUTH PLATFORM ADMIN - founder account receives admin role and passes requireAdmin", async () => {
+  const originalPub = authClientResolver.supabasePublic;
+  const originalScoped = authClientResolver.getScopedSupabaseClient;
+
+  authClientResolver.supabasePublic = {
+    auth: {
+      async getUser(token) {
+        return { data: { user: { id: "founder-1", email: "mohanedkahled84@gmail.com" } }, error: null };
+      },
+    },
+    async rpc(name, params) {
+      return {
+        data: {
+          id: "founder-1",
+          tenant_id: "tenant-hq",
+          role: "owner", // DB record is 'owner'
+          email: "mohanedkahled84@gmail.com",
+          full_name: "مهند خالد",
+        },
+        error: null,
+      };
+    },
+  };
+
+  try {
+    const req = createMockReq("valid-founder-token");
+    const res = createMockRes();
+    let authNextCalled = false;
+
+    await authenticateUser(req, res, () => {
+      authNextCalled = true;
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(authNextCalled, true);
+    assert.equal(req.user.email, "mohanedkahled84@gmail.com");
+    assert.equal(req.user.role, "admin");
+
+    // Test requireAdmin allows founder
+    let roleNextCalled = false;
+    const roleRes = createMockRes();
+    requireAdmin(req, roleRes, () => {
+      roleNextCalled = true;
+    });
+    assert.equal(roleNextCalled, true);
+    assert.equal(roleRes.statusCode, 200);
+  } finally {
+    authClientResolver.supabasePublic = originalPub;
+    authClientResolver.getScopedSupabaseClient = originalScoped;
+  }
+});
+
+test("AUTH REGULAR OWNER - regular owner cannot access admin-only endpoints", () => {
+  const req = {
+    user: {
+      id: "regular-teacher",
+      email: "teacher@regularschool.com",
+      role: "owner",
+      tenant_id: "tenant-normal",
+    },
+  };
+  const res = createMockRes();
+  let nextCalled = false;
+
+  requireAdmin(req, res, () => {
+    nextCalled = true;
+  });
+
+  assert.equal(nextCalled, false);
+  assert.equal(res.statusCode, 403);
+  assert.equal(res.body.error.code, "FORBIDDEN");
 });
