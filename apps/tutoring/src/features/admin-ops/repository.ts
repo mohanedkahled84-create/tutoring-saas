@@ -287,7 +287,7 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
     const now = new Date().toISOString();
     return this.updateTenantSubscription(tenantId, {
       deleted_at: now,
-      subscription_status: "archived",
+      subscription_status: "deactivated",
       status: "paused",
     });
   }
@@ -456,7 +456,7 @@ export class FakeAdminOpsRepository implements IAdminOpsRepository {
   async archiveTenant(tenantId: string): Promise<AdminTenantSummary> {
     return this.updateTenantSubscription(tenantId, {
       deleted_at: new Date().toISOString(),
-      subscription_status: "archived",
+      subscription_status: "deactivated",
       status: "paused",
     });
   }
