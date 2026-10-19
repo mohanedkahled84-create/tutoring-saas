@@ -1,3 +1,4 @@
+import { request } from "../services/api.js";
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { getIcon } from '../utils/icons.js';
 
@@ -239,4 +240,167 @@ export function renderWhatsAppSettingsView(data = {}) {
 
     </div>
   `;
+}
+
+export function registerWhatsAppSettingsActions(app) {
+  app.initOnboardingStep4 = async function() {
+    try {
+      const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
+      const [qrRes, statusRes] = await Promise.all([
+        request(`/whatsapp/qr${teacherParam}`).catch(() => null),
+        request(`/whatsapp/status${teacherParam}`).catch(() => null),
+      ]);
+
+      const img = document.getElementById('obQrImage');
+      const loading = document.getElementById('obQrLoading');
+      const code = document.getElementById('obPairingCode');
+      const badge = document.getElementById('obWaStatusBadge');
+
+      if (statusRes?.status === 'connected' || qrRes?.status === 'connected') {
+        if (badge) {
+          badge.className = 'badge badge-success';
+          badge.textContent = 'بوابة الإرسال متصلة وجاهزة';
+        }
+        if (loading) {
+          loading.style.display = 'block';
+          loading.textContent = 'الحساب متصل بالفعل وجاهز للاستخدام!';
+        }
+        return;
+      }
+
+      if (qrRes && qrRes.qr_base64 && img) {
+        img.src = qrRes.qr_base64;
+        img.style.display = 'block';
+        if (loading) loading.style.display = 'none';
+      }
+      const pContainer = document.getElementById('obPairingContainer');
+      const pCode = qrRes?.pairing_code ? String(qrRes.pairing_code).trim() : '';
+      if (code && pCode && pCode.length <= 15 && !pCode.includes('@') && !pCode.includes(',')) {
+        code.textContent = pCode;
+        if (pContainer) pContainer.style.display = 'block';
+      } else {
+        if (code) code.textContent = '';
+        if (pContainer) pContainer.style.display = 'none';
+      }
+
+      this.startWhatsAppStatusPolling('onboarding');
+    } catch (err) {
+      console.warn('initOnboardingStep4 error:', err);
+    }
+  }
+
+  app.startWhatsAppStatusPolling = function(_context = 'onboarding') {
+    // Disabled in favor of 100% safe direct wa.me messaging and portal links
+    this.stopWhatsAppStatusPolling();
+  }
+
+  app.stopWhatsAppStatusPolling = function() {
+    if (this.waPollingInterval) {
+      clearInterval(this.waPollingInterval);
+      this.waPollingInterval = null;
+    }
+  }
+
+  app.refreshWhatsAppQR = async function() {
+    try {
+      const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
+      const qrRes = await request(`/whatsapp/qr${teacherParam}`);
+      const img = document.getElementById('settingsQrImage');
+      const loading = document.getElementById('settingsQrLoading');
+      const code = document.getElementById('settingsPairingCode');
+
+      if (img && qrRes.qr_base64) {
+        img.src = qrRes.qr_base64;
+        img.style.display = 'block';
+        if (loading) loading.style.display = 'none';
+      }
+      if (code) {
+        const pCode = qrRes?.pairing_code ? String(qrRes.pairing_code).trim() : '';
+        const parentDiv = code.closest('div');
+        if (pCode && pCode.length <= 15 && !pCode.includes('@') && !pCode.includes(',')) {
+          code.textContent = pCode;
+          if (parentDiv) parentDiv.style.display = 'block';
+        } else {
+          code.textContent = '';
+          if (parentDiv) parentDiv.style.display = 'none';
+        }
+      }
+      this.startWhatsAppStatusPolling('settings');
+    } catch (err) {
+      this.showToast('فشل تحديث رمز QR: ' + (err.message || 'خطأ في الاتصال'), 'danger');
+    }
+  }
+
+  app.disconnectWhatsApp = function() {
+    this.showConfirmModal({
+      title: 'إلغاء ربط واتساب',
+      message: 'هل أنت متأكد من رغبتك في إلغاء ربط حساب واتساب؟ ستحتاج إلى مسح رمز QR مجدداً لإعادة تفعيل الإشعارات.',
+      confirmText: 'إلغاء الربط',
+      cancelText: 'تراجع',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
+          await request(`/whatsapp/disconnect${teacherParam}`, { method: 'POST' });
+          this.showToast('تم فصل الحساب بنجاح. يرجى مسح رمز QR لإعادة الربط.', 'info');
+          await this.loadRouteData('whatsapp');
+        } catch (err) {
+          this.showToast('فشل فصل الحساب: ' + (err.message || 'خطأ غير متوقع'), 'danger');
+        }
+      }
+    });
+  }
+
+  app.reconnectWhatsApp = function() {
+    this.refreshWhatsAppQR();
+  }
+
+  app.sendTestWhatsAppMessage = async function(e) {
+    e.preventDefault();
+    const phoneInput = document.getElementById('testPhoneInput');
+    const msgInput = document.getElementById('testMsgInput');
+    const btn = document.getElementById('btnSendTestMsg');
+    const feedback = document.getElementById('testMsgFeedback');
+
+    const phone = phoneInput?.value?.trim();
+    const message = msgInput?.value?.trim();
+
+    if (!phone) {
+      this.showToast('يرجى إدخال رقم هاتف صحيح', 'danger');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = 'جارٍ الإرسال...';
+    }
+    if (feedback) feedback.style.display = 'none';
+
+    try {
+      await request('/whatsapp/test', {
+        method: 'POST',
+        body: JSON.stringify({ phone, message }),
+      });
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#f0fdf4';
+        feedback.style.color = '#15803d';
+        feedback.style.border = '1px solid #bbf7d0';
+        feedback.innerHTML = `تم إرسال الرسالة الاختبارية بنجاح إلى الرقم <strong>${escapeHtml(phone)}</strong>!`;
+      }
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#b91c1c';
+        feedback.style.border = '1px solid #fecaca';
+        feedback.innerHTML = `فشل إرسال الرسالة: ${escapeHtml(err.message || 'خطأ في الاتصال')}`;
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = 'إرسال الآن';
+      }
+    }
+  };
 }

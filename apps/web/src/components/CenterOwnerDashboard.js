@@ -1,3 +1,4 @@
+import { request } from "../services/api.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 
@@ -559,4 +560,570 @@ export function renderCenterOwnerDashboard(state = {}) {
 
     </div>
   `;
+}
+
+export function registerCenterOwnerActions(app) {
+  // DEV-79: Center Owner Dashboard Actions
+  // ==========================================================================
+
+  app.switchCenterTab = function(tab) {
+    this.centerDashboardState.activeTab = tab;
+    this.renderMainContent();
+  }
+
+  app.changeCenterPeriod = async function(period) {
+    this.centerDashboardState.period = period;
+    this.renderMainContent();
+    await this.loadRouteData('center-dashboard');
+  }
+
+  app.toggleTeacherPayout = async function(teacherId, arg2, arg3, arg4) {
+    let period = this.centerDashboardState.period || new Date().toISOString().slice(0, 7);
+    let markPaid = true;
+    let teacherName = 'المعلم';
+    let amount = 0;
+
+    if (typeof arg4 === 'boolean') {
+      teacherName = arg2;
+      amount = arg3;
+      markPaid = arg4;
+    } else {
+      period = arg2;
+      markPaid = arg3 !== 'paid';
+    }
+
+    const nextStatus = markPaid ? 'paid' : 'unpaid';
+    const actionText = markPaid ? 'تسجيل صرف مستحقات' : 'إلغاء تأكيد صرف مستحقات';
+
+    this.showConfirmModal({
+      title: `${actionText} (${teacherName})`,
+      message: `هل أنت متأكد من ${actionText} لشهر (${period})؟`,
+      confirmText: markPaid ? 'تأكيد الصرف' : 'إلغاء الصرف',
+      cancelText: 'إلغاء',
+      isDanger: !markPaid,
+      onConfirm: async () => {
+        try {
+          await request('/centers/financials/payouts', {
+            method: 'POST',
+            body: {
+              teacher_id: teacherId,
+              period,
+              status: nextStatus,
+              is_paid: markPaid,
+              amount: Number(amount) || undefined,
+              notes: markPaid ? 'تم الصرف من لوحة الإدارة' : null,
+            },
+          });
+
+          if (this.centerDashboardState.rollup) {
+            const rep = this.centerDashboardState.rollup.reports.find(r => r.teacher.id === teacherId);
+            if (rep && rep.payout) {
+              rep.payout.status = nextStatus;
+              rep.payout.is_paid = markPaid;
+              if (markPaid) {
+                rep.payout.paid_at = new Date().toISOString();
+              } else {
+                rep.payout.paid_at = null;
+              }
+            }
+          }
+          this.showToast(`تم ${actionText} بنجاح!`, 'success');
+          this.renderMainContent();
+        } catch (err) {
+          this.showToast(`فشل تحديث حالة الصرف: ${err.message || 'حدث خطأ'}`, 'danger');
+        }
+      },
+    });
+  }
+
+  // ==========================================================================
+  // Center Multi-Sessions & Dedicated Pages (Teachers, Assistants, Rooms)
+  // ==========================================================================
+
+  app.handleCenterFrontDeskScan = async function(e) {
+    e.preventDefault();
+    const input = document.getElementById('centerBarcodeScanInput');
+    const barcode = input?.value.trim();
+    if (!barcode) return;
+
+    try {
+      const res = await request('/centers/front-desk/scan', {
+        method: 'POST',
+        body: { barcode },
+      });
+
+      this.centerSessionsState.scanResult = res;
+      if (res.success) {
+        this.playScanBeep('success');
+        this.showToast(res.message || 'تم رصد الحضور والتوجيه بنجاح!', 'success');
+        await this.loadRouteData('center-sessions');
+      } else {
+        this.playScanBeep('error');
+        this.showToast(res.message || 'تعذر التعرف على الطالب', 'warning');
+      }
+      if (input) input.value = '';
+      this.renderMainContent();
+    } catch (err) {
+      this.playScanBeep('error');
+      this.centerSessionsState.scanResult = {
+        success: false,
+        message: err.message || 'خطأ في عملية المسح',
+      };
+      this.showToast(`خطأ في المسح: ${err.message || 'تعذر الاتصال'}`, 'danger');
+      this.renderMainContent();
+    }
+  }
+
+  app.openCenterStartSessionModal = function() {
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)} (مستر ${escapeHtml(g.teacher_name || 'المعلم')})</option>`).join('');
+    const roomOptions = (this.centerRooms || []).map(r => `<option value="${r.id}">${escapeHtml(r.name)} (سعة ${r.capacity} طالب)</option>`).join('');
+
+    const bodyHtml = `
+      <form id="centerStartSessionForm" onsubmit="window.centrlyApp.handleCenterStartSessionSubmit(event)">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label">المجموعة الدراسية والمعلم *</label>
+          <select id="centerModalGroupSelect" class="form-select" required>
+            ${groupOptions || '<option value="">لا توجد مجاميع</option>'}
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label">القاعة المخصصة (اختياري)</label>
+          <select id="centerModalRoomSelect" class="form-select">
+            <option value="">بدون قاعة محددة (اختياري)</option>
+            ${roomOptions || ''}
+          </select>
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 700;">تشغيل الحصة الآن</button>
+        </div>
+      </form>
+    `;
+
+    this.showModal('تشغيل حصة جديدة في قاعة بالسنتر', bodyHtml);
+  }
+
+  app.handleCenterStartSessionSubmit = async function(e) {
+    e.preventDefault();
+    const groupId = document.getElementById('centerModalGroupSelect')?.value;
+    const roomId = document.getElementById('centerModalRoomSelect')?.value;
+    if (!groupId) return;
+
+    this.closeModal();
+    await this.startCenterSession(groupId, roomId);
+  }
+
+  app.startCenterSession = async function(groupId, roomId) {
+    const grp = (this.groups || []).find(g => g.id === groupId);
+    const room = (this.centerRooms || []).find(r => r.id === roomId);
+    const teacher = (this.centerTeachers || []).find(t => t.id === grp?.teacher_id);
+
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const res = await request('/sessions', {
+        method: 'POST',
+        body: {
+          group_id: groupId,
+          session_number: 1,
+          session_date: todayStr,
+          room_id: roomId || null,
+        },
+      }).catch(() => null);
+
+      const newSess = {
+        id: res?.session?.id || `sess-${Date.now()}`,
+        group_id: groupId,
+        group_name: grp?.name || 'حصة جديدة',
+        subject: grp?.subject || 'عامة',
+        teacher_name: teacher?.name || grp?.teacher_name || 'المعلم',
+        room_name: room?.name || 'القاعة الرئيسية',
+        present_count: 0,
+        session_number: res?.session?.session_number || 1,
+      };
+
+      if (!this.centerSessionsState.activeSessions) this.centerSessionsState.activeSessions = [];
+      this.centerSessionsState.activeSessions.unshift(newSess);
+      this.showToast(`تم بدء تشغيل الحصة بنجاح في (${newSess.room_name})!`, 'success');
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`تعذر تشغيل الحصة: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  app.promptCenterEndSession = function(sessionId) {
+    this.showConfirmModal({
+      title: 'تأكيد إنهاء الحصة',
+      message: 'هل أنت متأكد من إنهاء هذه الحصة وإخلاء القاعة بالسنتر؟',
+      confirmText: 'إنهاء الحصة',
+      cancelText: 'إلغاء',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await request(`/sessions/${sessionId}/end`, { method: 'POST' }).catch(() => {});
+          this.centerSessionsState.activeSessions = (this.centerSessionsState.activeSessions || []).filter(s => s.id !== sessionId);
+          this.showToast('تم إنهاء الحصة بنجاح وإخلاء القاعة.', 'success');
+          this.renderMainContent();
+        } catch (err) {
+          this.showToast(`فشل إنهاء الحصة: ${err.message || 'حدث خطأ'}`, 'danger');
+        }
+      },
+    });
+  }
+
+  app.viewCenterSessionDetails = function(sessionId) {
+    this.showToast(`كود الحصة: ${sessionId.slice(0, 8)}`, 'info');
+  }
+
+  app.viewTeacherGroups = function(teacherId) {
+    this.navigate('groups');
+  }
+
+  app.openAddTeacherModal = function() {
+    this.openAddTeacherModalDirect();
+  }
+
+  app.openAddAssistantModal = function() {
+    this.openAddAssistantModalDirect();
+  }
+
+  app.openAddRoomModal = function() {
+    this.openAddRoomModalDirect();
+  }
+
+  app.openAddTeacherModalDirect = function() {
+    const bodyHtml = `
+      <form id="modalAddTeacherForm" onsubmit="window.centrlyApp.handleModalAddTeacherSubmit(event)">
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">اسم المعلم بالكامل *</label>
+          <input type="text" id="modalTeacherName" class="form-input" placeholder="اسم المعلم بالكامل" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">رقم الهاتف *</label>
+          <input type="tel" id="modalTeacherPhone" class="form-input" placeholder="010..." dir="ltr" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">المادة الدراسية</label>
+          <input type="text" id="modalTeacherSubject" class="form-input" placeholder="المادة الدراسية">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">نظام المحاسبة الافتراضي</label>
+          <select id="modalTeacherRevenueModel" class="form-select">
+            <option value="percentage">نسبة سنتر (مئوية %)</option>
+            <option value="fixed_per_student">أجر ثابت لكل طالب (ج.م)</option>
+            <option value="fixed_rent">إيجار قاعة ثابت لكل حصة (ج.م)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">القيمة (النسبة % أو المبلغ ج.م)</label>
+          <input type="number" id="modalTeacherRevenueValue" class="form-input" value="20" min="0">
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 700;">إضافة المعلم الآن</button>
+        </div>
+      </form>
+    `;
+    this.showModal('إضافة معلم جديد في السنتر', bodyHtml);
+  }
+
+  app.handleModalAddTeacherSubmit = async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('modalTeacherName')?.value.trim();
+    const phone = document.getElementById('modalTeacherPhone')?.value.trim();
+    const subject = document.getElementById('modalTeacherSubject')?.value.trim();
+    const revenue_model = document.getElementById('modalTeacherRevenueModel')?.value;
+    const revenue_value = parseFloat(document.getElementById('modalTeacherRevenueValue')?.value) || 0;
+
+    if (!name || !phone) {
+      this.showToast('يرجى إدخال اسم المعلم ورقم هاتفه', 'error');
+      return;
+    }
+
+    try {
+      await request('/centers/teachers', {
+        method: 'POST',
+        body: {
+          name,
+          phone,
+          subjects: subject ? [subject] : ['عام'],
+          revenue_model,
+          revenue_value,
+          onboarding_method: 'invite_link',
+        },
+      });
+      this.closeModal();
+      this.showToast(`تمت إضافة المعلم (${name}) بنجاح!`, 'success');
+      await this.loadRouteData('center-teachers');
+    } catch (err) {
+      this.showToast(`فشل إضافة المعلم: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  app.openAddAssistantModalDirect = function() {
+    const teacherOptions = (this.centerTeachers || []).map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    const bodyHtml = `
+      <form id="modalAddAssistantForm" onsubmit="window.centrlyApp.handleModalAddAssistantSubmit(event)">
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">اسم المساعد بالكامل *</label>
+          <input type="text" id="modalAssistantName" class="form-input" placeholder="اسم المساعد" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">رقم الهاتف *</label>
+          <input type="tel" id="modalAssistantPhone" class="form-input" placeholder="011..." dir="ltr" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">التبعية (سنتر أم معلم معين) *</label>
+          <select id="modalAssistantType" class="form-select" onchange="document.getElementById('modalAssistantTeacherGroup').style.display = (this.value === 'assistant_to_teacher' ? 'block' : 'none')">
+            <option value="assistant_to_center">مساعد تابع لإدارة السنتر</option>
+            <option value="assistant_to_teacher">مساعد خاص بمعلم محدد</option>
+          </select>
+        </div>
+        <div id="modalAssistantTeacherGroup" class="form-group" style="margin-bottom: 0.75rem; display: none;">
+          <label class="form-label">المعلم التابع له</label>
+          <select id="modalAssistantTeacherId" class="form-select">
+            <option value="">اختر المعلم...</option>
+            ${teacherOptions}
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">المرتب الشهري / الأجر (ج.م)</label>
+          <input type="number" id="modalAssistantSalary" class="form-input" placeholder="المرتب الشهري (ج.م)" min="0" value="0">
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+            <input type="checkbox" id="modalAssistantFinancials">
+            <span>منح صلاحية الاطلاع على تقارير الخزينة والمالية</span>
+          </label>
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 700;">إضافة المساعد الآن</button>
+        </div>
+      </form>
+    `;
+    this.showModal('إضافة مساعد جديد في السنتر', bodyHtml);
+  }
+
+  app.handleModalAddAssistantSubmit = async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('modalAssistantName')?.value.trim();
+    const phone = document.getElementById('modalAssistantPhone')?.value.trim();
+    const assistant_type = document.getElementById('modalAssistantType')?.value;
+    const teacher_id = document.getElementById('modalAssistantTeacherId')?.value || undefined;
+    const salary = parseFloat(document.getElementById('modalAssistantSalary')?.value) || 0;
+    const can_view_financials = document.getElementById('modalAssistantFinancials')?.checked ?? false;
+
+    if (!name || !phone) {
+      this.showToast('يرجى إدخال اسم المساعد ورقم الهاتف', 'error');
+      return;
+    }
+
+    try {
+      await request('/centers/assistants', {
+        method: 'POST',
+        body: {
+          name,
+          phone,
+          assistant_type,
+          teacher_id: assistant_type === 'assistant_to_teacher' ? teacher_id : undefined,
+          salary,
+          can_view_financials,
+        },
+      });
+      this.closeModal();
+      this.showToast(`تمت إضافة المساعد (${name}) بنجاح!`, 'success');
+      await this.loadRouteData('center-assistants');
+    } catch (err) {
+      this.showToast(`فشل إضافة المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  app.openAddRoomModalDirect = function() {
+    const bodyHtml = `
+      <form id="modalAddRoomForm" onsubmit="window.centrlyApp.handleModalAddRoomSubmit(event)">
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">اسم القاعة *</label>
+          <input type="text" id="modalRoomName" class="form-input" placeholder="اسم القاعة" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label class="form-label">السعة الاستيعابية القصوى (عدد الطلاب) *</label>
+          <input type="number" id="modalRoomCapacity" class="form-input" placeholder="السعة الاستيعابية" min="1" required>
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 700;">إضافة القاعة الآن</button>
+        </div>
+      </form>
+    `;
+    this.showModal('إضافة قاعة جديدة في السنتر', bodyHtml);
+  }
+
+  app.handleModalAddRoomSubmit = async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('modalRoomName')?.value.trim();
+    const capacity = parseInt(document.getElementById('modalRoomCapacity')?.value, 10);
+
+    if (!name || !capacity) {
+      this.showToast('يرجى ملء اسم القاعة وسعتها', 'error');
+      return;
+    }
+
+    try {
+      await request('/centers/rooms', {
+        method: 'POST',
+        body: { name, capacity, hourly_rate: 0 },
+      });
+      this.closeModal();
+      this.showToast(`تمت إضافة القاعة (${name}) بنجاح!`, 'success');
+      await this.loadRouteData('center-rooms');
+    } catch (err) {
+      this.showToast(`فشل إضافة القاعة: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  // ==========================================================================
+  app.handleAddRoomSubmit = async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('newRoomName')?.value.trim();
+    const capacity = parseInt(document.getElementById('newRoomCapacity')?.value, 10);
+    if (!name || !capacity) return;
+
+    try {
+      const res = await request('/centers/rooms', {
+        method: 'POST',
+        body: JSON.stringify({ name, capacity }),
+      });
+      if (!this.centerDashboardState.rooms) this.centerDashboardState.rooms = [];
+      this.centerDashboardState.rooms.push(res.room || { id: res.id || `room-${Date.now()}`, name, capacity });
+      this.renderMainContent();
+      this.showToast('تمت إضافة القاعة بنجاح!', 'success');
+    } catch (err) {
+      this.showToast(`فشل إضافة القاعة: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  }
+
+  app.handleRoomConflictCheck = async function(e) {
+    e.preventDefault();
+    const roomId = document.getElementById('conflictRoomSelect')?.value;
+    const date = document.getElementById('conflictDate')?.value;
+    const startTime = document.getElementById('conflictStartTime')?.value;
+    const endTime = document.getElementById('conflictEndTime')?.value;
+    const studentCount = parseInt(document.getElementById('conflictStudentCount')?.value, 10) || undefined;
+
+    if (!roomId) {
+      this.showToast('يرجى اختيار القاعة أولاً', 'info');
+      return;
+    }
+
+    try {
+      const res = await request('/centers/rooms/check-conflict', {
+        method: 'POST',
+        body: JSON.stringify({
+          room_id: roomId,
+          date,
+          start_time: startTime,
+          end_time: endTime,
+          student_count: studentCount,
+        }),
+      });
+      this.centerDashboardState.conflictCheckResult = res;
+    } catch (err) {
+      this.centerDashboardState.conflictCheckResult = null;
+      this.showToast(`فشل فحص التعارض: ${err.message || 'حدث خطأ في الاتصال بالخدمة'}`, 'danger');
+    }
+    this.renderMainContent();
+  }
+
+  app.handleFrontDeskScanSubmit = async function(e) {
+    e.preventDefault();
+    const inputEl = document.getElementById('frontDeskBarcodeInput');
+    const barcode = inputEl?.value.trim();
+    if (!barcode) return;
+
+    try {
+      const res = await request('/centers/front-desk-scan', {
+        method: 'POST',
+        body: JSON.stringify({ barcode }),
+      });
+      this.centerDashboardState.frontDeskScanResult = res;
+    } catch (err) {
+      this.centerDashboardState.frontDeskScanResult = {
+        success: false,
+        code: 'SCAN_FAILED',
+        message: err.message || 'تعذر الاتصال بخدمة التحقق',
+        audio_alert: 'error',
+      };
+    }
+    this.renderMainContent();
+  }
+
+  app.handleAddTeacherSubmit = async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('obTeacherName')?.value.trim();
+    const phone = document.getElementById('obTeacherPhone')?.value.trim();
+    const subjectsStr = document.getElementById('obTeacherSubjects')?.value.trim();
+    const revenue_model = document.getElementById('obTeacherRevenueModel')?.value;
+    const revenue_value = parseFloat(document.getElementById('obTeacherRevenueValue')?.value) || 0;
+    const onboarding_method = document.getElementById('obTeacherMethod')?.value;
+    const email = document.getElementById('obTeacherEmail')?.value.trim() || undefined;
+    const password = document.getElementById('obTeacherPassword')?.value || undefined;
+
+    const subjects = subjectsStr ? subjectsStr.split('،').map(s => s.trim()) : [];
+
+    try {
+      const res = await request('/centers/teachers', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          phone,
+          subjects,
+          revenue_model,
+          revenue_value,
+          onboarding_method,
+          email,
+          password,
+        }),
+      });
+
+      if (res.onboarding_method === 'invite_link' && res.invite_url) {
+        this.centerDashboardState.generatedInvite = {
+          name,
+          invite_url: res.invite_url,
+        };
+      } else {
+        this.showToast('تمت إضافة المدرس وتفعيل حسابه بنجاح!', 'success');
+      }
+    } catch (err) {
+      this.showToast(`فشل إضافة المدرس: ${err.message || 'حدث خطأ أثناء حفظ بيانات المدرس'}`, 'danger');
+    }
+    this.renderMainContent();
+  }
+
+  app.handleAddAssistantSubmit = async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('obAssistantName')?.value.trim();
+    const phone = document.getElementById('obAssistantPhone')?.value.trim();
+    const assistant_type = document.getElementById('obAssistantType')?.value;
+    const can_view_financials = document.getElementById('obAssistantFinancials')?.checked ?? false;
+
+    try {
+      await request('/centers/assistants', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          phone,
+          assistant_type,
+          can_view_financials,
+        }),
+      });
+      this.showToast('تمت إضافة المساعد بنجاح!', 'success');
+    } catch (err) {
+      this.showToast(`فشل إضافة المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+    this.renderMainContent();
+  }
+
+  app.copyInviteUrl = function(url) {
+    this.copyToClipboard(url, 'تم نسخ رابط الدعوة بنجاح!', 'رابط الدعوة');
+  }
 }

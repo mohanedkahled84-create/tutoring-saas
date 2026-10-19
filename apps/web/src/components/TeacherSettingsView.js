@@ -1,6 +1,9 @@
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { renderBillingView } from './BillingView.js?v=3.8.0';
+import { request } from '../services/api.js';
+import { authService } from '../services/auth.js';
+import { normalizeDigits } from '../utils/normalizeDigits.js';
 
 /**
  * Centrly Teacher Settings & Account Management View
@@ -371,4 +374,252 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
 
     </div>
   `;
+}
+
+export function registerTeacherSettingsActions(app) {
+  app.switchSettingsTab = function(tab) {
+    if (!this.settingsState) this.settingsState = {};
+    this.settingsState.activeTab = tab;
+    this.renderMainContent();
+  };
+
+  app.handleSaveTeacherProfile = async function(e) {
+    if (e) e.preventDefault();
+    const name = document.getElementById('settingsTeacherName')?.value?.trim();
+    const subject = document.getElementById('settingsSubject')?.value?.trim() || '';
+    const phone = normalizeDigits(document.getElementById('settingsPhone')?.value?.trim() || '');
+    const contactPhone = normalizeDigits(document.getElementById('settingsContactPhone')?.value?.trim() || '');
+    const btn = document.getElementById('saveProfileBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>جارٍ الحفظ...</span>';
+    }
+
+    try {
+      await request('/settings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          teacher_name: name,
+          subject,
+          phone,
+          contact_phone: contactPhone || phone,
+        }),
+      });
+
+      if (this.user) {
+        if (name) {
+          this.user.name = name;
+          this.user.full_name = name;
+        }
+        this.user.subject = subject;
+        this.user.phone = phone;
+        this.user.contact_phone = contactPhone || phone;
+        authService.setUser(this.user);
+      }
+      this.showToast('تم حفظ بيانات الملف الشخصي بنجاح', 'success');
+      this.renderApp();
+    } catch (err) {
+      this.showToast(err.message || 'تعذر حفظ البيانات', 'danger');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>حفظ التعديلات</span>';
+      }
+    }
+  };
+
+  app.handleSettingsChangePassword = async function(e) {
+    if (e) e.preventDefault();
+    const currentPassword = document.getElementById('settingsCurrentPassword')?.value?.trim();
+    const newPassword = document.getElementById('settingsNewPassword')?.value?.trim();
+    const confirmPassword = document.getElementById('settingsConfirmPassword')?.value?.trim();
+    const alertBox = document.getElementById('settingsPasswordAlert');
+    const btn = document.getElementById('btnSettingsUpdatePassword');
+
+    const showAlert = (msg, isError = true) => {
+      if (!alertBox) return;
+      alertBox.style.display = 'block';
+      alertBox.style.background = isError ? '#fee2e2' : '#dcfce7';
+      alertBox.style.border = isError ? '1px solid #fca5a5' : '1px solid #86efac';
+      alertBox.style.color = isError ? '#991b1b' : '#166534';
+      alertBox.innerHTML = msg;
+    };
+
+    if (!currentPassword) {
+      showAlert('يرجى كتابة كلمة المرور الحالية للتأكد من هويتك.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      showAlert('يجب أن تكون كلمة المرور الجديدة 8 أحرف على الأقل.');
+      return;
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      showAlert('يجب أن تحتوي كلمة المرور على رقم واحد على الأقل (0-9).');
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      showAlert('يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل (A-Z).');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showAlert('كلمة المرور الجديدة غير متطابقة مع التأكيد.');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>جارٍ التحديث...</span>';
+    }
+
+    try {
+      await request('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+      showAlert('تم تحديث كلمة المرور بنجاح!', false);
+      const form = document.getElementById('formSettingsChangePassword');
+      if (form) form.reset();
+      this.showToast('تم تغيير كلمة المرور بنجاح', 'success');
+    } catch (err) {
+      const msg = err.message || 'تعذر تغيير كلمة المرور';
+      if (msg.includes('CURRENT_PASSWORD_INCORRECT') || msg.includes('الحالية غير صحيحة')) {
+        showAlert('كلمة المرور الحالية غير صحيحة. إذا كنت لا تذكرها، اضغط على "نسيت كلمة المرور الحالية؟" بالأسفل لإرسال رابط تعيين إلى بريدك.');
+      } else {
+        showAlert(msg);
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>تحديث كلمة المرور</span>';
+      }
+    }
+  };
+
+  app.toggleSettingsForgotPanel = function() {
+    const panel = document.getElementById('settingsForgotPanel');
+    if (panel) {
+      panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'block' : 'none';
+    }
+  };
+
+  app.handleSettingsForgotPassword = async function() {
+    const alertBox = document.getElementById('settingsForgotAlert');
+    const btn = document.getElementById('btnSettingsForgotSubmit');
+    const email = this.user?.email;
+
+    const showAlert = (msg, isError = true) => {
+      if (!alertBox) return;
+      alertBox.style.display = 'block';
+      alertBox.style.background = isError ? '#fee2e2' : '#dcfce7';
+      alertBox.style.border = isError ? '1px solid #fca5a5' : '1px solid #86efac';
+      alertBox.style.color = isError ? '#991b1b' : '#166534';
+      alertBox.innerHTML = msg;
+    };
+
+    if (!email) {
+      showAlert('لم يتم العثور على بريد إلكتروني مسجل لهذا الحساب.');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>جارٍ إرسال الرابط...</span>';
+    }
+
+    try {
+      await authService.forgotPassword(email);
+      showAlert(`تم إرسال رابط تأكيد وتعيين كلمة المرور الجديدة إلى بريدك الإلكتروني: <strong>${escapeHtml(email)}</strong>.<br>يرجى فحص صندوق الوارد (أو مجلد Spam)، والضغط على الرابط لتسجيل كلمة المرور الجديدة وتحديثها في النظام تلقائياً.`, false);
+      this.showToast('تم إرسال رابط استعادة كلمة المرور إلى بريدك', 'success');
+    } catch (err) {
+      showAlert(err.message || 'تعذر إرسال رابط استعادة كلمة المرور.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>إعادة إرسال الرابط</span>';
+      }
+    }
+  };
+
+  app.validateSettingsPasswordLive = function(val) {
+    const ruleLen = document.getElementById('ruleSettingsLen');
+    const ruleNum = document.getElementById('ruleSettingsNum');
+    const ruleUp = document.getElementById('ruleSettingsUp');
+    if (!ruleLen || !ruleNum || !ruleUp) return;
+
+    const hasLen = val && val.length >= 8;
+    const hasNum = /[0-9]/.test(val);
+    const hasUp = /[A-Z]/.test(val);
+
+    ruleLen.style.color = hasLen ? '#10b981' : '#94a3b8';
+    ruleLen.innerHTML = (hasLen ? '✓ ' : '• ') + '8 أحرف أو أكثر';
+
+    ruleNum.style.color = hasNum ? '#10b981' : '#94a3b8';
+    ruleNum.innerHTML = (hasNum ? '✓ ' : '• ') + 'رقم واحد على الأقل (0-9)';
+
+    ruleUp.style.color = hasUp ? '#10b981' : '#94a3b8';
+    ruleUp.innerHTML = (hasUp ? '✓ ' : '• ') + 'حرف كبير واحد على الأقل (A-Z)';
+  };
+
+  app.handleSaveFinancialPin = async function(e) {
+    if (e) e.preventDefault();
+    const pin = normalizeDigits(document.getElementById('settingsFinancialPin')?.value);
+
+    if (!pin) {
+      this.showToast('يرجى كتابة رمز الأمان المكون من 4 إلى 6 أرقام لحفظه وتأمينه.', 'warning');
+      return;
+    }
+
+    if (!/^\d{4,6}$/.test(pin)) {
+      this.showToast('يجب أن يتكون الرمز السري من 4 إلى 6 أرقام فقط.', 'danger');
+      return;
+    }
+
+    try {
+      await request('/settings/security-pin', {
+        method: 'POST',
+        body: { pin }
+      });
+      localStorage.setItem('centrly_has_security_pin', 'true');
+      this.hasSecurityPin = true;
+      this.isFinancialUnlocked = false;
+      if (this.user) {
+        this.user.has_security_pin = true;
+        authService.setUser(this.user);
+      }
+      this.showToast('تم حفظ وتأمين الرمز السري للأرباح بنجاح ومزامنته سحابياً مع حسابك.', 'success');
+      this.renderApp();
+    } catch (err) {
+      this.showToast(err.message || 'فشل حفظ الرمز السري', 'danger');
+    }
+  };
+
+  app.togglePinVisibility = function(inputId, btnEl, event) {
+    if (btnEl && btnEl.querySelector('span')) {
+      if (event) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+      }
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const isPassword = input.type === 'password';
+      const newType = isPassword ? 'text' : 'password';
+      input.type = newType;
+      try { input.setAttribute('type', newType); } catch (_) {}
+      const span = btnEl.querySelector('span') || btnEl;
+      span.innerText = isPassword ? 'إخفاء' : 'إظهار';
+      if (document.activeElement === input) {
+        try {
+          if (input.setSelectionRange && input.value) {
+            const len = input.value.length;
+            input.setSelectionRange(len, len);
+          }
+        } catch (_) {}
+      }
+    } else {
+      this.togglePasswordVisibility(inputId, btnEl, event);
+    }
+  };
 }

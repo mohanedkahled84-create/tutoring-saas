@@ -1,5 +1,6 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import { request } from "../services/api.js";
 
 /**
  * Centrly Teacher Assistants Management Component
@@ -257,4 +258,220 @@ export function renderTeacherAssistantsView(
       `}
     </div>
   `;
+}
+
+export function registerTeacherAssistantsActions(app) {
+  app.openAddTeacherAssistantModal = function() {
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    const bodyHtml = `
+      <form id="modalAddTeacherAssistantForm" onsubmit="window.centrlyApp.handleAddTeacherAssistantSubmit(event)">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اسم المساعد (الأسستنت) *</label>
+          <input type="text" id="modalTA_Name" class="form-input" placeholder="اسم المساعد" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم الهاتف (للتواصل والواتساب) *</label>
+          <input type="tel" id="modalTA_Phone" class="form-input" placeholder="010..." dir="ltr" required>
+        </div>
+
+        <div class="modal-form-grid">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">المجموعة المسندة</label>
+            <select id="modalTA_GroupId" class="form-select">
+              <option value="">جميع المجموعات (مسؤول عام)</option>
+              ${groupOptions}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">طبيعة الدور والعمل *</label>
+            <select id="modalTA_RoleType" class="form-select">
+              <option value="both">إداري وتعليمي شامل</option>
+              <option value="admin">إداري وتنظيمي فقط (حضور وكروت)</option>
+              <option value="educational">تعليمي وتدريسي فقط (شرح ومتابعة)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-form-grid" style="margin-bottom: 1.25rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">نظام المحاسبة *</label>
+            <select id="modalTA_SalaryModel" class="form-select" onchange="document.getElementById('modalTA_SalaryLabel').innerText = (this.value === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)')">
+              <option value="monthly">مرتب شهري ثابت</option>
+              <option value="per_session">أجر بالحصة الواحدة</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" id="modalTA_SalaryLabel" style="font-weight: 700;">المرتب الشهري الثابت (ج.م)</label>
+            <input type="number" id="modalTA_SalaryAmount" class="form-input" placeholder="0" min="0" value="0">
+          </div>
+        </div>
+      </form>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="modalAddTeacherAssistantForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">إضافة المساعد الآن</button>
+    `;
+    this.showModal('إضافة مساعد (أسستنت) جديد للمعلم', bodyHtml, footerHtml);
+  };
+
+  app.handleAddTeacherAssistantSubmit = async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('modalTA_Name')?.value.trim();
+    const phone = document.getElementById('modalTA_Phone')?.value.trim();
+    const group_id = document.getElementById('modalTA_GroupId')?.value || null;
+    const role_type = document.getElementById('modalTA_RoleType')?.value || 'both';
+    const salary_model = document.getElementById('modalTA_SalaryModel')?.value || 'monthly';
+    const salary_amount = parseFloat(document.getElementById('modalTA_SalaryAmount')?.value) || 0;
+
+    if (!name || !phone) {
+      this.showToast('يرجى كتابة اسم المساعد ورقم هاتفه', 'error');
+      return;
+    }
+
+    try {
+      await request('/assistants', {
+        method: 'POST',
+        body: {
+          name,
+          phone,
+          group_id: group_id || null,
+          role_type,
+          salary_model,
+          salary: salary_amount,
+          salary_amount,
+        },
+      });
+      this.closeModal();
+      this.showToast(`تمت إضافة المساعد (${name}) بنجاح!`, 'success');
+      await this.loadRouteData('assistants');
+    } catch (err) {
+      this.showToast(`فشل إضافة المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  };
+
+  app.openEditTeacherAssistantModal = function(assistantId) {
+    const assistant = (this.teacherAssistants || []).find(a => a.id === assistantId);
+    if (!assistant) return;
+
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}" ${assistant.group_id === g.id ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join('');
+    const bodyHtml = `
+      <form id="modalEditTeacherAssistantForm" onsubmit="window.centrlyApp.handleEditTeacherAssistantSubmit(event, '${assistantId}')">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اسم المساعد (الأسستنت) *</label>
+          <input type="text" id="modalEditTA_Name" class="form-input" value="${escapeHtml(assistant.name)}" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم الهاتف *</label>
+          <input type="tel" id="modalEditTA_Phone" class="form-input" value="${escapeHtml(assistant.phone || '')}" dir="ltr" required>
+        </div>
+
+        <div class="modal-form-grid">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">المجموعة المسندة</label>
+            <select id="modalEditTA_GroupId" class="form-select">
+              <option value="" ${!assistant.group_id ? 'selected' : ''}>جميع المجموعات (مسؤول عام)</option>
+              ${groupOptions}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">طبيعة الدور والعمل *</label>
+            <select id="modalEditTA_RoleType" class="form-select">
+              <option value="both" ${assistant.role_type === 'both' ? 'selected' : ''}>إداري وتعليمي شامل</option>
+              <option value="admin" ${assistant.role_type === 'admin' ? 'selected' : ''}>إداري وتنظيمي فقط</option>
+              <option value="educational" ${assistant.role_type === 'educational' ? 'selected' : ''}>تعليمي وتدريسي فقط</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-form-grid" style="margin-bottom: 1.25rem;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">نظام المحاسبة *</label>
+            <select id="modalEditTA_SalaryModel" class="form-select" onchange="document.getElementById('modalEditTA_SalaryLabel').innerText = (this.value === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)')">
+              <option value="monthly" ${assistant.salary_model === 'monthly' ? 'selected' : ''}>مرتب شهري ثابت</option>
+              <option value="per_session" ${assistant.salary_model === 'per_session' ? 'selected' : ''}>أجر بالحصة الواحدة</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" id="modalEditTA_SalaryLabel" style="font-weight: 700;">
+              ${assistant.salary_model === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)'}
+            </label>
+            <input type="number" id="modalEditTA_SalaryAmount" class="form-input" value="${Number(assistant.salary ?? assistant.salary_amount) || 0}" min="0">
+          </div>
+        </div>
+      </form>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="modalEditTeacherAssistantForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">حفظ التعديلات</button>
+    `;
+    this.showModal(`تعديل بيانات المساعد: ${escapeHtml(assistant.name)}`, bodyHtml, footerHtml);
+  };
+
+  app.handleEditTeacherAssistantSubmit = async function(e, assistantId) {
+    e.preventDefault();
+    const name = document.getElementById('modalEditTA_Name')?.value.trim();
+    const phone = document.getElementById('modalEditTA_Phone')?.value.trim();
+    const group_id = document.getElementById('modalEditTA_GroupId')?.value || null;
+    const role_type = document.getElementById('modalEditTA_RoleType')?.value || 'both';
+    const salary_model = document.getElementById('modalEditTA_SalaryModel')?.value || 'monthly';
+    const salary_amount = parseFloat(document.getElementById('modalEditTA_SalaryAmount')?.value) || 0;
+
+    try {
+      await request(`/assistants/${assistantId}`, {
+        method: 'PUT',
+        body: {
+          name,
+          phone,
+          group_id: group_id || null,
+          role_type,
+          salary_model,
+          salary: salary_amount,
+          salary_amount,
+        },
+      });
+      this.closeModal();
+      this.showToast('تم حفظ تعديلات المساعد بنجاح!', 'success');
+      await this.loadRouteData('assistants');
+    } catch (err) {
+      this.showToast(`فشل تعديل بيانات المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  };
+
+  app.deleteTeacherAssistant = function(id, name) {
+    const bodyHtml = `
+      <div style="text-align: center; padding: 0.5rem 0;">
+        <div style="margin-bottom: 0.75rem;">${getIcon('trash', 40, '#ef4444')}</div>
+        <h4 style="margin: 0 0 0.5rem; color: #0f172a; font-weight: 800;">تأكيد حذف المساعد</h4>
+        <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          هل أنت متأكد من حذف المساعد <strong>"${escapeHtml(name)}"</strong> من قائمة فريقك؟
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="button" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;" onclick="window.centrlyApp.confirmDeleteTeacherAssistant('${id}', '${escapeHtml(name)}')">
+            حذف نهائي
+          </button>
+        </div>
+      </div>
+    `;
+    this.showModal('حذف مساعد', bodyHtml);
+  };
+
+  app.confirmDeleteTeacherAssistant = async function(id, name) {
+    this.closeModal();
+    try {
+      await request(`/assistants/${id}`, { method: 'DELETE' });
+      this.showToast(`تم حذف المساعد (${name}) بنجاح`, 'success');
+      await this.loadRouteData('assistants');
+    } catch (err) {
+      this.showToast(`فشل حذف المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  };
 }

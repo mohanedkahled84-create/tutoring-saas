@@ -1,3 +1,4 @@
+import { request } from "../services/api.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 
@@ -124,4 +125,20 @@ export function renderRiskWatchlistView(data = {}) {
 
     </div>
   `;
+}
+
+export function registerRiskWatchlistActions(app) {
+  app.dispatchSingleRiskAlert = async function(studentId, studentName) {
+    try {
+      this.showToast(`جارٍ إرسال تنبيه المتابعة لولي أمر (${studentName})...`, 'info');
+      await request(`/at-risk/alerts/${studentId}`, {
+        method: 'POST',
+        body: { alert_type: 'absence_warning' },
+      });
+      this.showToast(`تم إرسال تنبيه المتابعة لولي أمر (${studentName}) بنجاح عبر واتساب`, 'success');
+      await this.loadRouteData('risk-watchlist');
+    } catch (err) {
+      this.showToast(`فشل إرسال تنبيه المتابعة: ${err.message || 'خطأ في الإرسال'}`, 'danger');
+    }
+  };
 }

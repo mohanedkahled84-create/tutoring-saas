@@ -1,3 +1,4 @@
+import { request } from "../services/api.js";
 import { renderStudentSearchBar } from "./StudentSearchBar.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
@@ -668,4 +669,82 @@ export function renderStudentReportsView(
 
     </div>
   `;
+}
+
+export function registerStudentReportsActions(app) {
+  app.switchReportsTab = function(tab) {
+    this.reportsState.activeTab = tab;
+    this.renderMainContent();
+  };
+
+  app.handleReportsPeriodChange = async function(month, year) {
+    this.reportsState.period = { month: parseInt(month, 10), year: parseInt(year, 10) };
+    await this.loadRouteData('reports');
+  };
+
+  app.handleReportsGroupChange = async function(groupId) {
+    this.reportsState.selectedGroupId = groupId;
+    await this.loadRouteData('reports');
+  };
+
+  app.handleReportsSearch = async function(query) {
+    this.reportsState.searchQuery = query;
+    await this.loadRouteData('reports');
+  };
+
+  app.handleBulkSendReports = function() {
+    if (this.reportsState.isSubmittingBulk) return;
+    this.showConfirmModal({
+      title: 'إرسال التقارير الشهرية',
+      message: 'هل تريد إرسال تقارير الأداء الشهرية لجميع أولياء الأمور عبر طابور رسائل الواتساب؟',
+      confirmText: 'إرسال التقارير',
+      cancelText: 'إلغاء',
+      isDanger: false,
+      onConfirm: async () => {
+        this.reportsState.isSubmittingBulk = true;
+        this.renderMainContent();
+
+        try {
+          const res = await request('/reports/bulk-send', {
+            method: 'POST',
+            body: JSON.stringify({
+              month: this.reportsState.period.month,
+              year: this.reportsState.period.year,
+              group_id: this.reportsState.selectedGroupId || undefined,
+            }),
+          });
+
+          const currentMonth = this.reportsState.period.month;
+          const currentYear = this.reportsState.period.year;
+          const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+          if (!this.reportsState.dispatchedMonths) this.reportsState.dispatchedMonths = {};
+          this.reportsState.dispatchedMonths[monthKey] = {
+            sentDate: new Date().toLocaleDateString('ar-EG'),
+          };
+
+          this.showToast(`${res.message || 'تم جدولة إرسال التقارير بنجاح'} (إجمالي الطلاب: ${res.total_students} | تمت الجدولة: ${res.queued_count})`, 'success');
+        } catch (err) {
+          this.showToast(`فشل جدولة إرسال التقارير الجماعية: ${err.message || 'خطأ في الخادم'}`, 'danger');
+        } finally {
+          this.reportsState.isSubmittingBulk = false;
+          this.renderMainContent();
+        }
+      }
+    });
+  };
+
+  app.handleSendIndividualReport = async function(studentId, studentName) {
+    try {
+      await request(`/reports/${studentId}/send`, {
+        method: 'POST',
+        body: JSON.stringify({
+          month: this.reportsState.period.month,
+          year: this.reportsState.period.year,
+        }),
+      });
+      this.showToast(`تم إرسال التقرير الأكاديمي بنجاح لولي أمر الطالب ${studentName}`, 'success');
+    } catch (err) {
+      this.showToast(`فشل إرسال تقرير الطالب ${studentName}: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  };
 }

@@ -1,5 +1,6 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import { request } from "../services/api.js";
 
 /**
  * Centrly Homework Review & Grading Component (DEV-HOMEWORK)
@@ -657,4 +658,468 @@ export function renderHomeworkReviewView(homeworkState = {}) {
 
     </div>
   `;
+}
+
+export function registerHomeworkActions(app) {
+  app.refreshHomeworkReview = async function() {
+    await this.loadRouteData('homework');
+    this.renderMainContent();
+    this.showToast('تم تحديث قائمة تسليمات الواجب بنجاح', 'info');
+  };
+
+  app.onSelectHomeworkAssignment = async function(materialId) {
+    if (!this.homeworkState) this.homeworkState = {};
+    this.homeworkState.selectedMaterialId = materialId;
+    await this.loadRouteData('homework');
+  };
+
+  app.filterHomeworkSubmissionsByGroup = async function(groupId) {
+    if (!this.homeworkState) this.homeworkState = {};
+    this.homeworkState.selectedGroupId = groupId;
+    await this.loadRouteData('homework');
+  };
+
+  app.switchHomeworkTab = function(tabName) {
+    if (!this.homeworkState) this.homeworkState = {};
+    this.homeworkState.activeTab = tabName;
+    this.renderMainContent();
+  };
+
+  app.switchHomeworkSubTab = function(subTabName) {
+    if (!this.homeworkState) this.homeworkState = {};
+    this.homeworkState.subTab = subTabName;
+    this.renderMainContent();
+  };
+
+  app.approveHomeworkSubmission = async function(submissionId) {
+    try {
+      await request(`/homework/submissions/${submissionId}/review`, {
+        method: 'PUT',
+        body: { status: 'approved' },
+      });
+      this.showToast('تم اعتماد الواجب بنجاح', 'success');
+      await this.loadRouteData('homework');
+    } catch (err) {
+      this.showToast(`فشل اعتماد الواجب: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  };
+
+  app.promptRejectHomework = function(submissionId, studentName) {
+    const bodyHtml = `
+      <div style="font-family: 'Cairo', sans-serif;">
+        <p style="font-size: 0.95rem; color: #1e293b; margin-bottom: 1rem; line-height: 1.6;">
+          أنت على وشك طلب إعادة حل الواجب من الطالب <strong style="color: var(--centrly-blue-800);">${escapeHtml(studentName)}</strong>.
+          يمكنك كتابة ملاحظات وتوجيهات للمعلم تظهر للطالب في بوابته:
+        </p>
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <label class="form-label" style="font-weight: 700; color: #334155;">ملاحظات المعلم وأسباب الإعادة (اختياري):</label>
+          <textarea id="rejectHomeworkNotes" class="form-input" rows="3" placeholder="اكتب ملاحظات وتوجيهات الإعادة للطالب..."></textarea>
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="button" id="btnConfirmRejectHw" class="btn" style="background: #ea580c; color: #fff; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; border: none; padding: 0.5rem 1.25rem; border-radius: 8px; cursor: pointer;" onclick="window.centrlyApp.confirmRejectHomework('${escapeHtml(submissionId)}', '${escapeHtml(studentName)}')">
+        <span>تأكيد طلب الإعادة</span>
+      </button>
+    `;
+
+    this.showModal(`طلب إعادة الواجب: ${escapeHtml(studentName)}`, bodyHtml, footerHtml);
+  };
+
+  app.confirmRejectHomework = async function(submissionId, studentName) {
+    const notesInput = document.getElementById('rejectHomeworkNotes');
+    const note = notesInput ? notesInput.value.trim() : '';
+    const confirmBtn = document.getElementById('btnConfirmRejectHw');
+
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'جاري الإرسال...';
+    }
+
+    try {
+      await request(`/homework/submissions/${submissionId}/review`, {
+        method: 'PUT',
+        body: {
+          status: 'rejected',
+          teacher_notes: note || 'يرجى مراجعة الحل وإعادة إرسال الواجب مرة أخرى.',
+        },
+      });
+      this.closeModal();
+      this.showToast(`تم طلب إعادة الواجب من الطالب (${studentName}) بنجاح`, 'warning');
+      await this.loadRouteData('homework');
+    } catch (err) {
+      this.showToast(`فشل تحديث حالة الواجب: ${err.message || 'حدث خطأ'}`, 'danger');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'تأكيد طلب الإعادة';
+      }
+    }
+  };
+
+  app.sendHomeworkReminderWhatsApp = async function(studentId, studentName, phone, targetType = 'student') {
+    if (!phone) {
+      this.showToast(`رقم هاتف ${targetType === 'parent' ? 'ولي الأمر' : 'الطالب'} غير متوفر للتذكير عبر واتساب`, 'warning');
+      return;
+    }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const targetPhone = cleanPhone.startsWith('2') ? cleanPhone : `2${cleanPhone}`;
+    const hwTitle = this.homeworkState?.currentHomework?.title || 'الواجب المنزلي';
+    
+    // Generate short student portal link
+    const canonicalOrigin = 'https://centerly-eg.com';
+    const cleanSid = String(studentId || '').replace(/-/g, '').slice(0, 8);
+    const studentPortalUrl = cleanSid ? `${canonicalOrigin}/s/s${cleanSid}` : `${canonicalOrigin}/parent-portal?portal=student`;
+
+    const message = targetType === 'parent'
+      ? `السلام عليكم ورحمة الله، ولي أمر الطالب (${studentName}) المحترم.\nنود إحاطتكم علماً بأن الطالب لم يقم بتسليم الواجب المطلوب (${hwTitle}) حتى الآن.\nيرجى حث الطالب على رفع حل الواجب عبر بوابته الخاصة:\n${studentPortalUrl}\n\nشاكرين تعاونكم المستمر حرصاً على تفوقه!`
+      : `أهلاً بك يا ${studentName}، نود تذكيرك بأن لديك واجب مطلوب تسليمه لمادة المعلم (${hwTitle}). يرجى رفع حل الواجب بصيغة PDF عبر بوابتك الخاصة:\n${studentPortalUrl}\n\nبالتوفيق والنجاح دائماً!`;
+
+    const waUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
+  };
+
+  app.copyAllMissingStudentsPhones = function() {
+    const missing = this.homeworkState?.missing || [];
+    const phones = missing.map(m => m.phone).filter(Boolean);
+    if (phones.length === 0) {
+      this.showToast('لا توجد أرقام هواتف مسجلة للطلاب المتأخرين', 'info');
+      return;
+    }
+    this.copyToClipboard(phones.join(', '), `تم نسخ ${phones.length} رقم هاتف للطلاب المتأخرين!`, 'أرقام هواتف الطلاب المتأخرين');
+  };
+
+  app.openAddHomeworkModal = function() {
+    this._currentHwMode = 'text';
+    this._selectedHwPdfFile = null;
+
+    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const bodyHtml = `
+      <form id="modalAddHomeworkForm" onsubmit="window.centrlyApp.handleAddHomeworkSubmit(event)">
+        
+        <!-- Title -->
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">عنوان الواجب *</label>
+          <input type="text" id="modalHwTitle" class="form-input" placeholder="عنوان الواجب المنزلي" required>
+        </div>
+
+        <!-- Target Group & Due Date -->
+        <div class="modal-form-grid">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">المجموعة المستهدفة</label>
+            <select id="modalHwGroupId" class="form-select">
+              <option value="">جميع المجموعات (متاح للكل)</option>
+              ${groupOptions}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">آخر موعد لتسليم الواجب</label>
+            <input type="date" id="modalHwDueDate" class="form-input" value="${nextWeek}">
+          </div>
+        </div>
+
+        <!-- Mode Selector Pills (3 Modes Requested by User) -->
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 800; color: #0f172a; margin-bottom: 0.45rem;">اختر طريقة تقديم الواجب للطلاب *</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.4rem; background: #f1f5f9; padding: 0.35rem; border-radius: 0.65rem; border: 1px solid #e2e8f0;">
+            <button type="button" id="hwTabBtn-text" onclick="window.centrlyApp.switchHwTab('text')" 
+              style="display: flex; align-items: center; justify-content: center; padding: 0.55rem 0.4rem; font-size: 0.85rem; font-weight: 800; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; background: #ffffff; color: var(--centrly-blue-800); box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
+              نص حر
+            </button>
+            <button type="button" id="hwTabBtn-pdf" onclick="window.centrlyApp.switchHwTab('pdf')" 
+              style="display: flex; align-items: center; justify-content: center; padding: 0.55rem 0.4rem; font-size: 0.85rem; font-weight: 700; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #64748b; text-align: center;">
+              رفع ملف PDF
+            </button>
+            <button type="button" id="hwTabBtn-link" onclick="window.centrlyApp.switchHwTab('link')" 
+              style="display: flex; align-items: center; justify-content: center; padding: 0.55rem 0.4rem; font-size: 0.85rem; font-weight: 700; border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: #64748b; text-align: center;">
+              رابط / لينك
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode 1: Free Text Section -->
+        <div id="hwSection-text">
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label class="form-label" style="font-weight: 800; color: #0f172a; display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: flex; align-items: center; gap: 0.35rem;">
+                ${getIcon('homework', 16, 'var(--centrly-blue-700)')}
+                <span>نص وتفاصيل الواجب المطلوب حله *</span>
+              </span>
+              <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">(Ctrl + Enter للحفظ السريع)</span>
+            </label>
+            <textarea id="modalHwDescriptionText" class="form-input" rows="5" 
+              placeholder="اكتب هنا تفاصيل الواجب والصفحات والأسئلة المطلوبة..." 
+              style="line-height: 1.6; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+        <!-- Mode 2: Direct PDF Upload Section -->
+        <div id="hwSection-pdf" style="display: none;">
+          <div class="form-group" style="margin-bottom: 0.85rem;">
+            <label class="form-label" style="font-weight: 800; color: #0f172a;">رفع ملف الواجب بصيغة PDF من جهازك *</label>
+            
+            <input type="file" id="modalHwPdfFileInput" accept="application/pdf" style="display: none;" onchange="window.centrlyApp.handleHwPdfSelected(event)">
+            
+            <div id="hwPdfDropzone" onclick="document.getElementById('modalHwPdfFileInput').click()" 
+              style="border: 2px dashed #3b82f6; border-radius: 0.75rem; padding: 1.35rem 1rem; text-align: center; cursor: pointer; background: #eff6ff; transition: all 0.2s;">
+              <div style="display: flex; justify-content: center; margin-bottom: 0.4rem;">
+                ${getIcon('upload', 32, '#2563eb')}
+              </div>
+              <div style="font-weight: 800; font-size: 0.95rem; color: #1e40af; margin-bottom: 0.2rem;">
+                اضغط هنا لاختيار ملف PDF من اللابتوب أو الموبايل
+              </div>
+              <div style="font-size: 0.78rem; color: #64748b;">
+                ملفات PDF فقط (الحد الأقصى 100 ميجابايت)
+              </div>
+            </div>
+
+            <div id="hwPdfSelectedPreview" style="display: none; margin-top: 0.6rem; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 0.65rem; padding: 0.75rem 0.9rem; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
+                <span style="display: flex; align-items: center; color: #15803d;">${getIcon('file', 22, '#15803d')}</span>
+                <div style="overflow: hidden;">
+                  <div id="hwPdfSelectedName" style="font-weight: 800; font-size: 0.875rem; color: #166534; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                  <div id="hwPdfSelectedSize" style="font-size: 0.75rem; color: #15803d; font-weight: 600;"></div>
+                </div>
+              </div>
+              <button type="button" onclick="window.centrlyApp.clearHwPdfFile()" class="btn btn-sm" style="background: #ffffff; border: 1px solid #fca5a5; color: #dc2626; font-weight: 700; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.4rem; cursor: pointer;">
+                تغيير الملف
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label class="form-label" style="font-weight: 700; color: #334155;">تعليمات أو ملاحظات إضافية على الملف (اختياري)</label>
+            <textarea id="modalHwDescriptionPdf" class="form-input" rows="2" placeholder="اكتب أي ملاحظات أو تعليمات إضافية للطلاب حول الملف..." style="line-height: 1.5; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+        <!-- Mode 3: External Link Section -->
+        <div id="hwSection-link" style="display: none;">
+          <div class="form-group" style="margin-bottom: 0.85rem;">
+            <label class="form-label" style="font-weight: 800; color: #0f172a;">رابط ملف الواجب (Google Drive / لينك مباشر) *</label>
+            <input type="url" id="modalHwUrl" class="form-input" placeholder="https://drive.google.com/... أو أي رابط خارجي" dir="ltr">
+            <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+              تأكد أن الرابط متاح للعرض والمشاركة مع الطلاب
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label class="form-label" style="font-weight: 700; color: #334155;">تعليمات أو ملاحظات على الرابط (اختياري)</label>
+            <textarea id="modalHwDescriptionLink" class="form-input" rows="2" placeholder="اكتب أي ملاحظات أو تعليمات إضافية للطلاب حول الرابط..." style="line-height: 1.5; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+      </form>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="modalAddHomeworkForm" id="btnPublishHomework" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">
+        نشر الواجب للطلاب الآن
+      </button>
+    `;
+
+    this.showModal('نشر وتكليف واجب منزلي جديد (Homework)', bodyHtml, footerHtml);
+  };
+
+  app.switchHwTab = function(mode) {
+    this._currentHwMode = mode;
+    const tabs = ['text', 'pdf', 'link'];
+    tabs.forEach(t => {
+      const btn = document.getElementById(`hwTabBtn-${t}`);
+      const sec = document.getElementById(`hwSection-${t}`);
+      if (btn && sec) {
+        if (t === mode) {
+          btn.style.background = '#ffffff';
+          btn.style.color = 'var(--centrly-blue-800)';
+          btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.08)';
+          btn.style.fontWeight = '800';
+          sec.style.display = 'block';
+        } else {
+          btn.style.background = 'transparent';
+          btn.style.color = '#64748b';
+          btn.style.boxShadow = 'none';
+          btn.style.fontWeight = '700';
+          sec.style.display = 'none';
+        }
+      }
+    });
+
+    setTimeout(() => {
+      if (mode === 'text') document.getElementById('modalHwDescriptionText')?.focus();
+      else if (mode === 'link') document.getElementById('modalHwUrl')?.focus();
+    }, 50);
+  };
+
+  app.handleHwPdfSelected = function(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      this.showToast('يرجى اختيار ملف PDF صالح فقط', 'error');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 100 * 1024 * 1024) {
+      this.showToast('حجم الملف كبير جداً (أقصى حد مسموح 100 ميجابايت)', 'error');
+      e.target.value = '';
+      return;
+    }
+
+    this._selectedHwPdfFile = file;
+
+    const preview = document.getElementById('hwPdfSelectedPreview');
+    const dropzone = document.getElementById('hwPdfDropzone');
+    const nameEl = document.getElementById('hwPdfSelectedName');
+    const sizeEl = document.getElementById('hwPdfSelectedSize');
+
+    if (preview && nameEl && sizeEl) {
+      nameEl.textContent = file.name;
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      sizeEl.textContent = `${sizeMB} ميجابايت`;
+      preview.style.display = 'flex';
+      if (dropzone) dropzone.style.display = 'none';
+    }
+  };
+
+  app.clearHwPdfFile = function() {
+    this._selectedHwPdfFile = null;
+    const input = document.getElementById('modalHwPdfFileInput');
+    if (input) input.value = '';
+    const preview = document.getElementById('hwPdfSelectedPreview');
+    const dropzone = document.getElementById('hwPdfDropzone');
+    if (preview) preview.style.display = 'none';
+    if (dropzone) dropzone.style.display = 'block';
+  };
+
+  app.onHomeworkTypeChange = function(mode) {
+    // Kept for backward compatibility
+  };
+
+  app.handleAddHomeworkSubmit = async function(e) {
+    e.preventDefault();
+    const mode = this._currentHwMode || 'text';
+    const title = document.getElementById('modalHwTitle')?.value.trim();
+    const group_id = document.getElementById('modalHwGroupId')?.value || null;
+    const due_date = document.getElementById('modalHwDueDate')?.value || null;
+    const submitBtn = document.getElementById('btnPublishHomework');
+
+    if (!title) {
+      this.showToast('يرجى كتابة عنوان الواجب', 'error');
+      return;
+    }
+
+    let description = '';
+    let url = '';
+    let file_data = null;
+    let file_name = null;
+
+    if (mode === 'text') {
+      description = document.getElementById('modalHwDescriptionText')?.value.trim() || '';
+      if (!description) {
+        this.showToast('يرجى كتابة نص الواجب وتفاصيل المطلوب حله', 'error');
+        return;
+      }
+    } else if (mode === 'pdf') {
+      description = document.getElementById('modalHwDescriptionPdf')?.value.trim() || '';
+      if (!this._selectedHwPdfFile) {
+        this.showToast('يرجى اختيار ملف PDF لرفعه للطلاب', 'error');
+        return;
+      }
+      file_name = this._selectedHwPdfFile.name;
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>جاري قراءة ورفع الملف...</span>`;
+      }
+
+      try {
+        file_data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('فشل قراءة الملف من الجهاز'));
+          reader.readAsDataURL(this._selectedHwPdfFile);
+        });
+      } catch (readErr) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<span>نشر الواجب للطلاب الآن</span>`;
+        }
+        this.showToast('فشل قراءة ملف الـ PDF، يرجى المحاولة مرة أخرى', 'error');
+        return;
+      }
+    } else if (mode === 'link') {
+      url = document.getElementById('modalHwUrl')?.value.trim() || '';
+      description = document.getElementById('modalHwDescriptionLink')?.value.trim() || '';
+      if (!url) {
+        this.showToast('يرجى إدخال رابط ملف الواجب (Google Drive أو لينك خارجي)', 'error');
+        return;
+      }
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>جاري نشر وتكليف الواجب...</span>`;
+    }
+
+    try {
+      await request('/materials', {
+        method: 'POST',
+        body: {
+          title,
+          group_id,
+          type: 'pdf',
+          url,
+          file_data,
+          file_name,
+          description: description || null,
+          is_homework: true,
+          due_date,
+          book_name: null,
+          pages: null,
+          questions: null,
+        },
+      });
+
+      this.closeModal();
+      this.showToast('تم نشر الواجب بنجاح! سيظهر الآن في بوابات الطلاب وأولياء الأمور', 'success');
+      
+      if (this.currentRoute === 'homework') {
+        await this.loadRouteData('homework');
+      } else if (this.currentRoute === 'materials') {
+        await this.loadRouteData('materials');
+      }
+    } catch (err) {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>نشر الواجب للطلاب الآن</span>`;
+      }
+      this.showToast(`فشل نشر الواجب: ${err.message || 'حدث خطأ'}`, 'danger');
+    }
+  };
+
+  app.copyHomeworkAssignmentText = function(homeworkId) {
+    const hw = (this.homeworkState?.assignments || this.materials || []).find(h => h.id === homeworkId);
+    if (!hw) {
+      this.showToast('تعذر العثور على بيانات الواجب للنسخ', 'error');
+      return;
+    }
+
+    let text = `*واجب منزلي جديد مطلوب تسليمه*\n`;
+    text += `• *العنوان:* ${hw.title}\n`;
+    if (hw.book_name) text += `• *الكتاب / الملزمة:* ${hw.book_name}\n`;
+    if (hw.pages) text += `• *الصفحات المطلوبة:* ${hw.pages}\n`;
+    if (hw.questions) text += `• *أرقام الأسئلة:* ${hw.questions}\n`;
+    if (hw.description) text += `• *وصف الواجب والمطلوب حله:*\n${hw.description}\n`;
+    if (hw.due_date) text += `• *آخر موعد للتسليم:* ${hw.due_date}\n`;
+    if (hw.url && hw.url !== '#' && hw.url.trim().length > 0) text += `• *رابط الملف المرفق:* ${hw.url}\n`;
+    text += `\n• *طريقة التسليم:* حل المطلوب في كشكولك بخط واضح، وصوّر الصفحات وحوّلها لـ PDF وارفعها مباشرة عبر رابط بوابتك الخاصة في Centrly.\nبالتوفيق والنجاح دائماً.`;
+
+    this.copyToClipboard(text, 'تم نسخ تفاصيل الواجب بنجاح! جاهز للصق في جروب الواتساب', 'تفاصيل الواجب');
+  };
 }

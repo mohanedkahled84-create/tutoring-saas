@@ -1,3 +1,5 @@
+import { request } from "../services/api.js";
+import { normalizeDigits } from "../utils/normalizeDigits.js";
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
@@ -346,4 +348,589 @@ export function renderBillingView(data = {}, user = {}) {
 
     </div>
   `;
+}
+
+export function registerBillingActions(app) {
+  // Billing & Subscription Actions (DEV-SL.3 & DEV-39)
+  // ==========================================================================
+
+  app.setBillingCycle = function(cycle = 'monthly') {
+    this.billingCycle = cycle;
+    this.renderMainContent();
+  }
+
+  app.showQuotaBlockedModal = function(currentCount, limit) {
+    const existing = document.getElementById('quotaBlockedModal');
+    if (existing) existing.remove();
+
+    const modalHtml = `
+      <div id="quotaBlockedModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999; padding: 1rem;" dir="rtl">
+        <div class="card" style="width: 100%; max-width: 480px; margin: 0; text-align: center; padding: 2rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25); font-family: 'Cairo', sans-serif;">
+          <div style="width: 56px; height: 56px; margin: 0 auto 1rem; border-radius: 50%; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 900;">
+            !
+          </div>
+          <h3 style="font-size: 1.3rem; font-weight: 900; color: #991b1b; margin: 0 0 0.5rem 0;">
+            تم الوصول للحد الأقصى لباقتك
+          </h3>
+          <p style="font-size: 0.9rem; color: #475569; line-height: 1.6; margin: 0 0 1.25rem 0;">
+            لقد استهلكت كامل سعة الطلاب المتاحة في باقتك (<strong>${currentCount} من أصل ${limit} طالب</strong>) وتجاوزت فترة السماح المحددة بـ 3 أيام.
+            <br>
+            لمواصلة إضافة الطلاب الجدد، يرجى ترقية باقتك إلى باقة أعلى (750 أو 1500 طالب).
+          </p>
+          <div style="display: flex; gap: 0.75rem; justify-content: center;">
+            <button class="btn btn-secondary" onclick="document.getElementById('quotaBlockedModal')?.remove()">إغلاق</button>
+            <button class="btn btn-primary" onclick="document.getElementById('quotaBlockedModal')?.remove(); window.centrlyApp.navigate('billing');" style="background: #2563eb; font-weight: 800;">
+              ترقية الباقة الآن
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  }
+
+  app.contactEnterpriseWhatsApp = function() {
+    const phone = '201010979708';
+    const message = encodeURIComponent('السلام عليكم، عايز أعمل باقة فوق 1500 طالب ومحتاج أعرف التفاصيل والأسعار.');
+    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+  }
+
+  app.openPlanChoiceModal = function() {
+    const isPaidActive = this.isUserSubscribed();
+    if (!isPaidActive) {
+      const el = document.getElementById('pricingPlansSection');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+
+    const isYearly = (this.billingCycle === 'yearly');
+    const userPlanName = this.billingState?.plan_name || 'باقة 300 طالب';
+    const plans = [
+      { name: 'باقة 300 طالب', monthly: 499, yearly: 4790 },
+      { name: 'باقة 750 طالب', monthly: 899, yearly: 8630 },
+      { name: 'باقة 1500 طالب', monthly: 1399, yearly: 13430 },
+    ];
+    const currentMatched = plans.find(p => userPlanName.includes(p.name)) || plans[0];
+    const currentPrice = isYearly ? currentMatched.yearly : currentMatched.monthly;
+
+    const bodyHtml = `
+      <div style="font-family: 'Cairo', sans-serif; text-align: center; padding: 0.5rem 0;">
+        <h4 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem;">
+          ما الذي ترغب في القيام به اليوم؟
+        </h4>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.6;">
+          يمكنك تجديد باقتك الحالية مباشرة بنفس المميزات أو الاطلاع على الباقات الأخرى للترقية لعدد طلاب أكبر.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <!-- Option 1: Renew Current Plan -->
+          <div style="border: 2px solid var(--centrly-blue-700); background: #eff6ff; border-radius: 12px; padding: 1.25rem; text-align: right; cursor: pointer; transition: all 0.2s;" onclick="window.centrlyApp.closeModal(); window.centrlyApp.openPaymentProofModal('${currentMatched.name}', ${currentPrice}, '${isYearly ? 'yearly' : 'monthly'}');">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <strong style="font-size: 1.05rem; color: var(--centrly-blue-800);">تجديد باقتي الحالية (${currentMatched.name})</strong>
+              <span class="badge badge-primary" style="font-weight: 800;">${Number(currentPrice).toLocaleString('ar-EG')} ج.م ${isYearly ? '/ سنوياً' : '/ شهرياً'}</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #475569; margin: 0;">
+              المتابعة بنفس عدد الطلاب الحالي وتمديد فترة الاشتراك فوراً.
+            </p>
+          </div>
+
+          <!-- Option 2: Change / Upgrade Plan -->
+          <div style="border: 1.5px solid #cbd5e1; background: #ffffff; border-radius: 12px; padding: 1.25rem; text-align: right; cursor: pointer; transition: all 0.2s;" onclick="window.centrlyApp.closeModal(); const el = document.getElementById('pricingPlansSection'); if (el) el.scrollIntoView({ behavior: 'smooth' });">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <strong style="font-size: 1.05rem; color: #0f172a;">ترقية أو تغيير الباقة</strong>
+              <span class="badge badge-secondary" style="font-weight: 700;">اختيار سعة جديدة</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #64748b; margin: 0;">
+              استعراض باقات الـ 750 والـ 1500 طالب والاشتراك السنوي بخصم 20%.
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.showModal('تجديد أو ترقية الاشتراك', bodyHtml);
+  }
+
+  app.openPaymentProofModal = function(planName = 'باقة 300 طالب', amount = 499, billingCycle = 'monthly') {
+    const existing = document.getElementById('paymentProofModal');
+    if (existing) existing.remove();
+
+    this.currentProofImageData = null;
+    this.originalAmount = Number(amount);
+    let effective = Number(amount);
+    if (this.appliedCouponData) {
+      if (this.appliedCouponData.discount_percent) {
+        effective = Math.max(0, Math.round(Number(amount) * (1 - (this.appliedCouponData.discount_percent / 100))));
+      } else if (this.appliedCouponData.discount_amount) {
+        effective = Math.max(0, Number(amount) - Number(this.appliedCouponData.discount_amount));
+      }
+    }
+    this.currentEffectiveAmount = effective;
+    const isFree = (effective <= 0);
+
+    const isYearly = (billingCycle === 'yearly');
+    const periodLabel = isYearly ? 'اشتراك سنوي (خصم 20%)' : 'اشتراك شهري';
+
+    const modalHtml = `
+      <div id="paymentProofModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 9999; padding: 1rem; overflow-y: auto;" dir="rtl">
+        <div class="card" style="width: 100%; max-width: 480px; margin: auto; animation: modalFadeIn 0.2s ease-out; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); font-family: 'Cairo', sans-serif; border-radius: 16px;">
+          <div class="card-header" style="border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+            <div>
+              <h3 class="card-title" style="margin: 0; font-size: 1.15rem; font-weight: 800;">الاشتراك في ${escapeHtml(planName)}</h3>
+              <p id="proofAmountSummary" style="font-size: 0.85rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
+                المبلغ المطلوب: <strong id="proofDisplayAmount" style="color: var(--centrly-blue-700);">${this.appliedCouponData ? `<span style="text-decoration: line-through; color: #94a3b8; font-size: 0.85rem; margin-left: 0.35rem;">${Number(amount).toLocaleString('ar-EG')}</span> ${Number(effective).toLocaleString('ar-EG')} ج.م` : `${Number(amount).toLocaleString('ar-EG')} ج.م`}</strong> (${periodLabel})
+              </p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closePaymentProofModal()" style="border: none; cursor: pointer; padding: 0.35rem 0.6rem; display: flex; align-items: center;">${getIcon('close', 16, '#64748b')}</button>
+          </div>
+
+          <form onsubmit="window.centrlyApp.handleSubmitPaymentProof(event, ${amount}, '${planName}', '${billingCycle}')">
+            
+            <!-- Transfer Number Card (hidden if 100% free) -->
+            <div id="proofTransferCard" style="${isFree ? 'display: none;' : 'display: block;'} background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 1rem;">
+              <div style="font-size: 0.825rem; color: #166534; font-weight: 700; margin-bottom: 0.35rem;">
+                رقم التحويل (إنستاباي أو محفظة إلكترونية):
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                <div style="font-family: monospace; font-size: 1.35rem; font-weight: 900; color: #15803d; direction: ltr; letter-spacing: 1px;">
+                  01010979708
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyToClipboard('01010979708', 'تم نسخ الرقم 01010979708 بنجاح!', 'رقم التحويل')" style="font-weight: 800; font-size: 0.8rem; background: #ffffff; border-color: #86efac; color: #166534;">
+                  نسخ الرقم
+                </button>
+              </div>
+              <div id="proofTransferInstruction" style="font-size: 0.775rem; color: #4b5563; margin-top: 0.4rem; line-height: 1.5;">
+                قم بتحويل المبلغ ${this.appliedCouponData ? 'المخفض ' : ''}<strong>(${Number(effective).toLocaleString('ar-EG')} ج.م)</strong> إلى هذا الرقم عبر إنستاباي أو من محفظتك، ثم أرفق الاسكرين شوت أدناه.
+              </div>
+            </div>
+
+            <!-- Free 100% Celebration Banner (shown if 100% free) -->
+            <div id="proofFreeBanner" style="${isFree ? 'display: block;' : 'display: none;'} background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.75rem;">🎉</span>
+                <div>
+                  <div style="font-weight: 800; color: #065f46; font-size: 0.95rem;">الاشتراك مجاني بالكامل (خصم 100%)</div>
+                  <div style="font-size: 0.8rem; color: #047857; margin-top: 0.2rem; line-height: 1.5;">
+                    تم تطبيق كود الخصم بنجاح! لا يتطلب الاشتراك أي تحويل مالي أو إرفاق اسكرين شوت.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Discount Coupon Section in Payment Modal -->
+            <div style="margin-bottom: 1rem; background: #f8fafc; border: 1.5px dashed var(--centrly-blue-700); border-radius: 12px; padding: 0.85rem 1rem;">
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem; color: #1e3a8a; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: flex; align-items: center; gap: 0.4rem;">
+                  ${getIcon('gift', 16, 'var(--centrly-blue-700)')}
+                  <span>لديك كود خصم أو بروموكود اشتراك؟</span>
+                </span>
+                <span class="badge badge-blue" style="font-size: 0.7rem; padding: 0.1rem 0.4rem;">تخفيض فوري</span>
+              </label>
+              <div style="display: flex; gap: 0.4rem;">
+                <input type="text" id="couponCodeInput" class="form-input" placeholder="اكتب كود الخصم إن وجد" style="flex: 1; text-transform: uppercase; font-weight: 800; font-family: monospace; font-size: 0.875rem;" autocomplete="off" value="${escapeHtml(this.appliedCouponCode || '')}" ${this.appliedCouponData ? 'disabled' : ''} onkeydown="if(event.key==='Enter'){event.preventDefault(); window.centrlyApp.applyCouponCode();}">
+                <button type="button" id="btnApplyCoupon" class="btn btn-secondary" onclick="window.centrlyApp.applyCouponCode()" style="font-weight: 800; font-size: 0.825rem; padding: 0.4rem 1.1rem; border-color: var(--centrly-blue-700); color: ${this.appliedCouponData ? '#ffffff' : 'var(--centrly-blue-700)'}; background: ${this.appliedCouponData ? '#10b981' : 'transparent'}; cursor: pointer;" ${this.appliedCouponData ? 'disabled' : ''}>
+                  ${this.appliedCouponData ? 'مفعّل ✓' : 'تطبيق'}
+                </button>
+              </div>
+              <div id="couponFeedback" style="${this.appliedCouponData ? 'display: block; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;' : 'display: none;'} font-size: 0.78rem; font-weight: 700; margin-top: 0.4rem; padding: 0.35rem 0.6rem; border-radius: 6px;">
+                ${this.appliedCouponData ? `تم تطبيق الكود (${escapeHtml(this.appliedCouponCode)}) بنجاح!` : ''}
+              </div>
+            </div>
+
+            <!-- Transfer Method Selection (hidden if free) -->
+            <div id="proofMethodGroup" class="form-group" style="${isFree ? 'display: none;' : 'display: block;'} margin-bottom: 0.85rem;">
+              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">طريقة التحويل المستخدمة</label>
+              <select id="proofPaymentMethod" class="form-input" style="width: 100%;">
+                <option value="instapay">إنستاباي (InstaPay)</option>
+                <option value="vodafone_cash">محفظة إلكترونية (فودافون كاش / محافظ المحمول)</option>
+              </select>
+            </div>
+
+            <!-- Screenshot Upload (Primary) (hidden if free) -->
+            <div id="proofScreenshotGroup" class="form-group" style="${isFree ? 'display: none;' : 'display: block;'} margin-bottom: 0.85rem;">
+              <label class="form-label" style="font-weight: 700; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>إرفاق الاسكرين شوت (صورة إيصال التحويل)</span>
+                <span style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">مطلوب</span>
+              </label>
+
+              <input type="file" id="proofImageFile" accept="image/*" style="display: none;" onchange="window.centrlyApp.handleProofImageSelected(this)">
+
+              <div id="proofDropzone" onclick="document.getElementById('proofImageFile').click()" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; cursor: pointer; background: #f8fafc; transition: all 0.2s ease;">
+                <div style="font-size: 0.95rem; font-weight: 800; color: var(--centrly-blue-700); margin-bottom: 0.25rem;">
+                  انقر هنا لاختيار الاسكرين شوت
+                </div>
+                <div style="font-size: 0.775rem; color: #64748b;">
+                  أو اسحب وأفلت صورة التحويل هنا
+                </div>
+              </div>
+
+              <div id="proofImagePreviewContainer" style="display: none; margin-top: 0.6rem; position: relative; border-radius: 12px; overflow: hidden; border: 1.5px solid #cbd5e1; background: #0f172a;">
+                <img id="proofImagePreview" src="" alt="معاينة إيصال التحويل" style="width: 100%; max-height: 180px; object-fit: contain; display: block;">
+                <button type="button" onclick="window.centrlyApp.removeProofImage()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.95); color: white; border: none; border-radius: 6px; padding: 0.35rem 0.65rem; font-size: 0.75rem; font-weight: 800; cursor: pointer; font-family: 'Cairo', sans-serif;">
+                  حذف الصورة
+                </button>
+              </div>
+            </div>
+
+            <!-- Optional reference or notes (hidden if free) -->
+            <div id="proofRefGroup" class="form-group" style="${isFree ? 'display: none;' : 'display: block;'} margin-bottom: 1rem;">
+              <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">رقم المحفظة المحول منها أو رقم العملية (اختياري)</label>
+              <input type="text" id="proofRefNumber" class="form-input" placeholder="رقم هاتفك المحول منه أو رقم العملية..." dir="ltr">
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+              <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closePaymentProofModal()">إلغاء</button>
+              <button type="submit" id="btnSubmitProof" class="btn btn-primary" style="font-weight: 800; ${isFree ? 'background: #10b981; border-color: #10b981;' : ''}">
+                ${isFree ? 'تأكيد الاشتراك مجاناً 🎉' : 'تأكيد وإرسال الإيصال'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Setup drag and drop for dropzone
+    setTimeout(() => {
+      const dropzone = document.getElementById('proofDropzone');
+      if (dropzone) {
+        dropzone.addEventListener('dragover', (ev) => {
+          ev.preventDefault();
+          dropzone.style.borderColor = 'var(--centrly-blue-700)';
+          dropzone.style.background = '#eff6ff';
+        });
+        dropzone.addEventListener('dragleave', () => {
+          dropzone.style.borderColor = '#cbd5e1';
+          dropzone.style.background = '#f8fafc';
+        });
+        dropzone.addEventListener('drop', (ev) => {
+          ev.preventDefault();
+          dropzone.style.borderColor = '#cbd5e1';
+          dropzone.style.background = '#f8fafc';
+          if (ev.dataTransfer?.files?.length) {
+            const fileInput = document.getElementById('proofImageFile');
+            if (fileInput) {
+              fileInput.files = ev.dataTransfer.files;
+              this.handleProofImageSelected(fileInput);
+            }
+          }
+        });
+      }
+    }, 50);
+  }
+
+  app.applyCouponCode = async function() {
+    const codeInput = document.getElementById('couponCodeInput');
+    const feedback = document.getElementById('couponFeedback');
+    const applyBtn = document.getElementById('btnApplyCoupon');
+    const displayAmount = document.getElementById('proofDisplayAmount');
+    const transferInstruction = document.getElementById('proofTransferInstruction');
+    const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
+
+    if (!code) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#dc2626';
+        feedback.innerText = 'يرجى إدخال كود الخصم أولاً';
+      }
+      return;
+    }
+
+    if (applyBtn) {
+      applyBtn.disabled = true;
+      applyBtn.innerText = 'تحقق...';
+    }
+
+    try {
+      const res = await request('/billing/validate-coupon', {
+        method: 'POST',
+        body: { code, amount: this.originalAmount },
+      });
+
+      if (res && res.valid) {
+        this.appliedCouponCode = res.gift_code?.code || code;
+        this.appliedCouponData = res.gift_code || { code, discount_percent: res.discount_percent, discount_amount: res.discount_amount };
+        this.currentEffectiveAmount = res.final_amount;
+        const isFree = (Number(res.final_amount) <= 0);
+
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.background = '#ecfdf5';
+          feedback.style.color = '#059669';
+          feedback.innerText = `تم تطبيق الكود (${this.appliedCouponCode}) بنجاح! وفرت ${Number(res.discount_amount).toLocaleString('ar-EG')} ج.م`;
+        }
+
+        if (displayAmount) {
+          displayAmount.innerHTML = `<span style="text-decoration: line-through; color: #94a3b8; font-size: 0.85rem; margin-left: 0.35rem;">${Number(this.originalAmount).toLocaleString('ar-EG')}</span> ${Number(res.final_amount).toLocaleString('ar-EG')} ج.م`;
+        }
+
+        const transferCard = document.getElementById('proofTransferCard');
+        const freeBanner = document.getElementById('proofFreeBanner');
+        const methodGroup = document.getElementById('proofMethodGroup');
+        const screenshotGroup = document.getElementById('proofScreenshotGroup');
+        const refGroup = document.getElementById('proofRefGroup');
+        const submitBtn = document.getElementById('btnSubmitProof');
+
+        if (isFree) {
+          if (transferCard) transferCard.style.display = 'none';
+          if (freeBanner) freeBanner.style.display = 'block';
+          if (methodGroup) methodGroup.style.display = 'none';
+          if (screenshotGroup) screenshotGroup.style.display = 'none';
+          if (refGroup) refGroup.style.display = 'none';
+          if (submitBtn) {
+            submitBtn.innerText = 'تأكيد الاشتراك مجاناً 🎉';
+            submitBtn.style.background = '#10b981';
+            submitBtn.style.borderColor = '#10b981';
+          }
+          this.removeProofImage();
+        } else {
+          if (transferCard) transferCard.style.display = 'block';
+          if (freeBanner) freeBanner.style.display = 'none';
+          if (methodGroup) methodGroup.style.display = 'block';
+          if (screenshotGroup) screenshotGroup.style.display = 'block';
+          if (refGroup) refGroup.style.display = 'block';
+          if (submitBtn) {
+            submitBtn.innerText = 'تأكيد وإرسال الإيصال';
+            submitBtn.style.background = '';
+            submitBtn.style.borderColor = '';
+          }
+          if (transferInstruction) {
+            transferInstruction.innerHTML = `قم بتحويل المبلغ المخفض <strong>(${Number(res.final_amount).toLocaleString('ar-EG')} ج.م)</strong> بعد تطبيق الخصم إلى هذا الرقم، ثم أرفق الاسكرين شوت أدناه.`;
+          }
+        }
+
+        if (codeInput) codeInput.disabled = true;
+        if (applyBtn) {
+          applyBtn.disabled = true;
+          applyBtn.innerText = 'مفعّل ✓';
+          applyBtn.style.background = '#10b981';
+          applyBtn.style.color = '#ffffff';
+          applyBtn.style.borderColor = '#10b981';
+        }
+      } else {
+        throw new Error(res?.error?.message || 'كود الخصم غير صالح أو منتهي الصلاحية');
+      }
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#dc2626';
+        feedback.innerText = err.message || 'كود الخصم غير صالح أو منتهي الصلاحية';
+      }
+      if (applyBtn) {
+        applyBtn.disabled = false;
+        applyBtn.innerText = 'تطبيق';
+      }
+    }
+  }
+
+  app.applyBillingCouponFromView = async function() {
+    const input = document.getElementById('billingDiscountCodeInput');
+    const feedback = document.getElementById('billingDiscountFeedback');
+    const applyBtn = document.getElementById('btnApplyBillingDiscount');
+    const rawCode = (input ? input.value : '').trim().toUpperCase();
+
+    if (!rawCode) {
+      this.showToast('يرجى كتابة كود الخصم أولاً', 'warning');
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#dc2626';
+        feedback.style.borderColor = '#fecaca';
+        feedback.innerText = 'يرجى إدخال كود الخصم أولاً';
+      }
+      return;
+    }
+
+    if (applyBtn) {
+      applyBtn.disabled = true;
+      applyBtn.innerText = 'جاري التحقق...';
+    }
+
+    try {
+      const res = await request('/billing/validate-coupon', {
+        method: 'POST',
+        body: { code: rawCode, amount: 499 },
+      });
+
+      if (res && res.valid) {
+        this.appliedCouponCode = res.gift_code?.code || rawCode;
+        this.appliedCouponData = res.gift_code || { code: rawCode, discount_percent: res.discount_percent || 20, discount_amount: res.discount_amount };
+        const discountLabel = this.appliedCouponData.discount_percent 
+          ? `${this.appliedCouponData.discount_percent}%` 
+          : `${this.appliedCouponData.discount_amount || res.discount_amount} ج.م`;
+
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.background = '#ecfdf5';
+          feedback.style.color = '#065f46';
+          feedback.style.borderColor = '#a7f3d0';
+          feedback.innerText = `تم تفعيل كود الخصم (${this.appliedCouponCode}) بنجاح! خصم بقيمة ${discountLabel} على كافة الباقات.`;
+        }
+        this.showToast(`تم تفعيل كود الخصم (${this.appliedCouponCode}) بنجاح!`, 'success');
+        this.renderMainContent();
+      } else {
+        throw new Error(res?.error?.message || 'كود الخصم غير صالح أو منتهي الصلاحية');
+      }
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = '#fef2f2';
+        feedback.style.color = '#dc2626';
+        feedback.style.borderColor = '#fecaca';
+        feedback.innerText = err.message || 'كود الخصم غير صالح أو منتهي الصلاحية';
+      }
+      this.showToast(err.message || 'كود الخصم غير صالح', 'error');
+    } finally {
+      if (applyBtn) {
+        applyBtn.disabled = false;
+        applyBtn.innerText = 'تطبيق الخصم';
+      }
+    }
+  }
+
+  app.handleProofImageSelected = function(input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.showToast('يرجى اختيار ملف صورة صالح (PNG أو JPG)', 'danger');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        this.currentProofImageData = compressedDataUrl;
+
+        const preview = document.getElementById('proofImagePreview');
+        const container = document.getElementById('proofImagePreviewContainer');
+        const dropzone = document.getElementById('proofDropzone');
+        if (preview) {
+          preview.src = compressedDataUrl;
+        }
+        if (container) {
+          container.style.display = 'block';
+        }
+        if (dropzone) {
+          dropzone.style.display = 'none';
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  app.removeProofImage = function() {
+    this.currentProofImageData = null;
+    const fileInput = document.getElementById('proofImageFile');
+    if (fileInput) fileInput.value = '';
+    const container = document.getElementById('proofImagePreviewContainer');
+    if (container) container.style.display = 'none';
+    const preview = document.getElementById('proofImagePreview');
+    if (preview) preview.src = '';
+    const dropzone = document.getElementById('proofDropzone');
+    if (dropzone) dropzone.style.display = 'block';
+  }
+
+  app.closePaymentProofModal = function() {
+    this.currentProofImageData = null;
+    this.appliedCouponCode = null;
+    const modal = document.getElementById('paymentProofModal');
+    if (modal) modal.remove();
+  }
+
+  app.handleSubmitPaymentProof = async function(e, amount, planName = 'باقة 100 طالب', billingCycle = 'monthly') {
+    e.preventDefault();
+
+    // Auto-apply coupon if user typed it in the modal input but didn't click "تطبيق"
+    const pendingCouponInput = document.getElementById('couponCodeInput')?.value?.trim().toUpperCase();
+    if (pendingCouponInput && !this.appliedCouponCode) {
+      try {
+        await this.applyCouponCode();
+      } catch (_) {}
+    }
+
+    const effectiveAmount = this.currentEffectiveAmount !== undefined ? this.currentEffectiveAmount : Number(amount);
+    const isFree = (Number(effectiveAmount) <= 0);
+
+    const method = isFree ? 'coupon' : (document.getElementById('proofPaymentMethod')?.value || 'instapay');
+    const refNum = isFree ? (this.appliedCouponCode || 'FREE_COUPON') : document.getElementById('proofRefNumber')?.value?.trim();
+    const notes = document.getElementById('proofNotes')?.value?.trim() || null;
+    const btn = document.getElementById('btnSubmitProof');
+
+    if (!isFree && !this.currentProofImageData && !refNum) {
+      this.showToast('يرجى إرفاق صورة إيصال التحويل (الاسكرين شوت)', 'danger');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = isFree ? 'جارٍ تفعيل الاشتراك...' : 'جارٍ التأكيد...';
+    }
+
+    const couponTag = this.appliedCouponCode 
+      ? `[كود خصم: ${this.appliedCouponCode}${isFree ? ' (خصم 100%)' : ''}] [المبلغ الأصلي: ${Number(amount)} ج.م]`
+      : '';
+    const planTag = `[${planName} - ${billingCycle === 'yearly' ? 'اشتراك سنوي' : 'اشتراك شهري'}]`;
+    const fullNotes = [planTag, couponTag, notes].filter(Boolean).join(' ');
+
+    try {
+      await request('/billing/payment-proof', {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: Number(effectiveAmount),
+          payment_method: method,
+          reference_number: refNum || null,
+          proof_image_url: this.currentProofImageData || null,
+          notes: fullNotes,
+          coupon_code: this.appliedCouponCode || null,
+        }),
+      });
+
+      if (!this.billingState) this.billingState = {};
+      this.billingState.subscription_status = 'pending_verification';
+      this.billingState.status = 'pending';
+
+      this.closePaymentProofModal();
+      if (isFree) {
+        this.showToast('تم تسجيل وتفعيل الاشتراك المجاني بنجاح! 🎉', 'success');
+      } else {
+        this.showToast('تم استلام إيصال التحويل بنجاح! الحالة الآن قيد المراجعة (Pending).', 'success');
+      }
+      this.renderMainContent();
+      try {
+        await this.loadRouteData('billing');
+      } catch (_) {}
+    } catch (err) {
+      this.showToast(`فشل تسجيل إيصال الدفع: ${err.message || 'خطأ في الخادم'}`, 'danger');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = isFree ? 'تأكيد الاشتراك مجاناً 🎉' : 'تأكيد وإرسال الإيصال';
+      }
+    }
+  };
 }

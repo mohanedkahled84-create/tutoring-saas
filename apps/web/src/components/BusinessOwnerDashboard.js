@@ -1,5 +1,7 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import { request } from "../services/api.js";
+import { normalizeDigits } from "../utils/normalizeDigits.js";
 
 /**
  * Centrly Business Owner & Founder Executive Command Center (HQ)
@@ -552,4 +554,790 @@ export function renderBusinessOwnerDashboard(data = {}) {
 
     </div>
   `;
+}
+
+
+export function registerBusinessOwnerActions(app) {
+  // Superadmin & Business Owner Actions (Centrly HQ)
+  // ==========================================================================
+
+  app.refreshBusinessDashboard = async function() {
+    await this.loadRouteData('admin-dashboard');
+    this.renderMainContent();
+    this.showToast('تم تحديث بيانات لوحة الإدارة', 'info');
+  }
+
+  app.refreshAdminPaymentProofs = async function() {
+    await this.loadRouteData('admin-proofs');
+    this.renderMainContent();
+    this.showToast('تم تحديث قائمة الإيصالات', 'info');
+  }
+
+  app.setAdminProofsFilter = function(filter) {
+    this.adminProofsFilter = filter;
+    this.renderMainContent();
+  }
+
+  app.openProofFullscreenModal = function(proofId) {
+    const proofs = this.adminProofsData?.payment_proofs || [];
+    const proof = proofs.find(p => p.id === proofId);
+    if (!proof || !proof.proof_image_url) {
+      this.showToast('تعذر العثور على صورة الإيصال', 'warning');
+      return;
+    }
+
+    const modalHtml = `
+      <div id="proofFullscreenModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9); align-items: center; justify-content: center; z-index: 10000; padding: 1rem;" dir="rtl">
+        <div style="max-width: 900px; width: 100%; max-height: 95vh; display: flex; flex-direction: column; background: #0f172a; border-radius: 16px; overflow: hidden; border: 1.5px solid #334155; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1.25rem; border-bottom: 1px solid #1e293b; background: #0b1120;">
+            <div style="color: #fff; font-weight: 800; font-size: 0.95rem;">
+              إيصال تحويل: ${escapeHtml(proof.tenants?.name || proof.tenant_name || 'مؤسسة')} (${Number(proof.amount || 0).toLocaleString('ar-EG')} ج.م)
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <a href="${proof.proof_image_url}" download="إيصال_تحويل_${proof.id}.png" class="btn btn-secondary btn-sm" style="font-size: 0.775rem; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                ${getIcon('download', 14)}
+                <span>تحميل الصورة</span>
+              </a>
+              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeProofFullscreenModal()" style="border: none; background: rgba(255,255,255,0.15); color: #fff; padding: 0.35rem 0.6rem; cursor: pointer; display: flex; align-items: center;">
+                ${getIcon('close', 16, '#fff')}
+              </button>
+            </div>
+          </div>
+
+          <div style="padding: 1rem; overflow: auto; display: flex; justify-content: center; align-items: center; background: #020617; flex: 1;">
+            <img src="${proof.proof_image_url}" alt="إيصال تحويل مكبر" style="max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px;">
+          </div>
+
+          <div style="padding: 0.75rem 1.25rem; background: #0b1120; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
+            <span>المرجع: ${escapeHtml(proof.reference_number || 'غير مسجل')}</span>
+            <span>طريقة الدفع: ${proof.payment_method === 'vodafone_cash' ? 'فودافون كاش' : 'إنستاباي'}</span>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    const existing = document.getElementById('proofFullscreenModal');
+    if (existing) existing.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  }
+
+  app.closeProofFullscreenModal = function() {
+    const modal = document.getElementById('proofFullscreenModal');
+    if (modal) modal.remove();
+  }
+
+  app.handleApproveProof = function(proofId, extendDays = 30) {
+    const bodyHtml = `
+      <div style="text-align: center; padding: 0.5rem 0;">
+        <div style="margin-bottom: 0.75rem;">${getIcon('checkCircle', 40, '#10b981')}</div>
+        <h4 style="margin: 0 0 0.5rem; color: #0f172a; font-weight: 800;">تأكيد اعتماد الإيصال</h4>
+        <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          هل أنت متأكد من اعتماد هذا الإيصال وتفعيل الاشتراك لهذا المشترك لمدة <strong>${extendDays} يوماً</strong>؟
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="button" class="btn btn-primary" style="background: #10b981; border-color: #10b981; font-weight: 800;" onclick="window.centrlyApp.confirmApproveProof('${proofId}', ${extendDays})">
+            اعتماد وتفعيل الاشتراك
+          </button>
+        </div>
+      </div>
+    `;
+    this.showModal('اعتماد إيصال سداد', bodyHtml);
+  }
+
+  app.confirmApproveProof = async function(proofId, extendDays = 30) {
+    this.closeModal();
+    try {
+      await request(`/admin/payment-proofs/${proofId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ extend_days: extendDays }),
+      });
+
+      this.closeProofFullscreenModal();
+      this.showToast(`تم اعتماد الإيصال بنجاح وتفعيل الاشتراك لمدة ${extendDays} يوماً!`, 'success');
+      
+      await Promise.all([
+        this.loadRouteData('admin-proofs'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل اعتماد الإيصال: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  app.handleRejectProofPrompt = function(proofId) {
+    const defaultReason = 'التحويل لم يصل إلى الحساب البنكي أو المحفظة';
+    const bodyHtml = `
+      <form id="formRejectProof" onsubmit="event.preventDefault(); window.centrlyApp.confirmRejectProof('${proofId}');">
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="font-weight: 700;">سبب الرفض (سيتم إشعار الحساب به) *</label>
+          <textarea id="adminRejectReasonInput" class="form-input" rows="3" required style="resize: vertical;">${defaultReason}</textarea>
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;">تأكيد الرفض</button>
+        </div>
+      </form>
+    `;
+    this.showModal('رفض إيصال السداد', bodyHtml);
+    setTimeout(() => {
+      document.getElementById('adminRejectReasonInput')?.focus();
+    }, 150);
+  }
+
+  app.confirmRejectProof = async function(proofId) {
+    const reason = document.getElementById('adminRejectReasonInput')?.value?.trim();
+    if (!reason) {
+      this.showToast('يرجى توضيح سبب الرفض', 'warning');
+      return;
+    }
+    this.closeModal();
+
+    try {
+      await request(`/admin/payment-proofs/${proofId}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+
+      this.closeProofFullscreenModal();
+      this.showToast('تم رفض الإيصال بنجاح', 'info');
+      await Promise.all([
+        this.loadRouteData('admin-proofs'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل رفض الإيصال: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  app.refreshAdminTenants = async function() {
+    await this.loadRouteData('admin-tenants');
+    this.renderMainContent();
+    this.showToast('تم تحديث دليل المشتركين', 'info');
+  }
+
+  app.setAdminTenantsFilter = function(filter) {
+    this.adminTenantsFilter = filter;
+    this.renderMainContent();
+  }
+
+  app.handleAdminTenantsSearch = function(val) {
+    this.adminTenantsSearchQuery = val;
+    this.renderMainContent();
+    setTimeout(() => {
+      const inp = document.getElementById('adminTenantsSearchInput');
+      if (inp) {
+        inp.focus();
+        inp.selectionStart = inp.selectionEnd = inp.value.length;
+      }
+    }, 50);
+  }
+
+  app.setOutreachFilter = function(filter) {
+    this.adminOutreachFilter = filter;
+    this.renderMainContent();
+  }
+
+  app.handleOutreachSearch = function(val) {
+    this.adminOutreachSearchQuery = val;
+    this.renderMainContent();
+  }
+
+  app.refreshOutreachData = async function() {
+    this.showToast('جاري تحديث بيانات التواصل...', 'info');
+    await this.loadRouteData('admin-outreach');
+    this.showToast('تم تحديث بيانات الحملة بنجاح', 'success');
+  }
+
+  app.openTenantOverrideModal = function(tenantId, tenantName, currentStatus, currentTier = 'growth') {
+    if (!tenantName && this.adminTenantsData?.tenants) {
+      const match = this.adminTenantsData.tenants.find(t => t.id === tenantId);
+      if (match) {
+        tenantName = match.name;
+        currentStatus = match.subscription_status || match.status || 'active';
+        currentTier = match.subscription_tier || 'growth';
+      }
+    }
+    const tier = (currentTier || 'growth').toLowerCase();
+    const bodyHtml = `
+      <form id="tenantOverrideForm" onsubmit="window.centrlyApp.handleSaveTenantOverride(event, '${tenantId}')">
+        <div style="margin-bottom: 1.25rem;">
+          <h4 style="margin: 0 0 0.35rem; font-weight: 800; color: var(--centrly-ink);">
+            تعديل اشتراك: ${escapeHtml(tenantName || 'المشترك')}
+          </h4>
+          <p style="font-size: 0.825rem; color: #64748b; margin: 0;">
+            الحالة الحالية: <strong style="color: var(--centrly-blue-700);">${currentStatus || 'active'}</strong>
+          </p>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">خطة / باقة المشترك</label>
+          <select id="overrideTier" class="form-select" style="width: 100%;">
+            <option value="starter" ${tier === 'starter' || tier.includes('300') || tier.includes('100') ? 'selected' : ''}>باقة 300 طالب (Starter - سعة 300)</option>
+            <option value="growth" ${tier === 'growth' || tier.includes('750') || tier.includes('250') ? 'selected' : ''}>باقة 750 طالب (Growth - سعة 750)</option>
+            <option value="pro" ${tier === 'pro' || tier.includes('1500') || tier.includes('500') ? 'selected' : ''}>باقة 1500 طالب (Pro - سعة 1500)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">الحالة الجديدة للاشتراك</label>
+          <select id="overrideStatus" class="form-select" style="width: 100%;">
+            <option value="active" ${currentStatus === 'active' ? 'selected' : ''}>نشط ومفعل (Active)</option>
+            <option value="trial" ${currentStatus === 'trial' ? 'selected' : ''}>فترة تجريبية (Trial)</option>
+            <option value="past_due" ${currentStatus === 'past_due' ? 'selected' : ''}>متأخر / بانتظار السداد (Past Due)</option>
+            <option value="deactivated" ${currentStatus === 'deactivated' ? 'selected' : ''}>معطل وموقوف (Deactivated)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">تمديد الصلاحية لعدد أيام إضافي</label>
+          <input type="number" id="overrideExtendDays" class="form-input" placeholder="عدد الأيام الإضافية" min="0" max="730" value="30">
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.35rem;">
+            سيتم إضافة هذه الأيام فوق الصلاحية الحالية أو من تاريخ اليوم (0 لعدم زيادة الأيام).
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.handleArchiveTenant('${tenantId}', '${escapeHtml(tenantName || 'المعلم')}')" style="color: #b45309; border-color: #fde68a; background: #fffbeb; font-weight: 700; font-size: 0.775rem;">
+              📦 أرشفة الحساب (استبعاد من الحسبة)
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.handleDeleteTenantPrompt('${tenantId}', '${escapeHtml(tenantName || 'المعلم')}')" style="color: #dc2626; border-color: #fecaca; background: #fef2f2; font-weight: 700; font-size: 0.775rem;">
+              🗑️ حذف نهائي
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+            <button type="submit" id="btnSubmitOverride" class="btn btn-primary" style="font-weight: 800;">
+              حفظ وتطبيق التعديل
+            </button>
+          </div>
+        </div>
+      </form>
+    `;
+    this.showModal('تعديل صلاحية وخطة المشترك', bodyHtml);
+  }
+
+  app.handleSaveTenantOverride = async function(e, tenantId) {
+    e.preventDefault();
+    const status = document.getElementById('overrideStatus')?.value || 'active';
+    const tier = document.getElementById('overrideTier')?.value || 'growth';
+    const extendDays = Number(document.getElementById('overrideExtendDays')?.value || 0);
+    const btn = document.getElementById('btnSubmitOverride');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = 'جارٍ الحفظ...';
+    }
+
+    try {
+      await request(`/admin/tenants/${tenantId}/subscription`, {
+        method: 'POST',
+        body: JSON.stringify({
+          status,
+          tier,
+          extend_days: extendDays > 0 ? extendDays : undefined,
+        }),
+      });
+
+      this.closeModal();
+      this.showToast('تم تعديل صلاحية المشترك وتحديث الاشتراك بنجاح!', 'success');
+      await Promise.all([
+        this.loadRouteData('admin-tenants'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل تعديل الاشتراك: ${err.message || 'خطأ في الخادم'}`, 'danger');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = 'حفظ وتطبيق التعديل';
+      }
+    }
+  }
+
+  app.handleArchiveTenant = async function(tenantId, tenantName = 'المعلم') {
+    if (!confirm(`هل أنت متأكد من أرشفة حساب "${tenantName}"؟\nسيتم استبعاد هذا الحساب تماماً من إحصائيات المنظومة ورادار التفعيل وحسابات الأرباح، ويمكنك استعادته في أي وقت من تبويب الأرشيف والتجارب.`)) {
+      return;
+    }
+
+    try {
+      this.closeModal();
+      this.showToast('جاري أرشفة الحساب واستبعاده من الحسبة...', 'info');
+      await request(`/admin/tenants/${tenantId}/archive`, { method: 'POST' });
+      this.showToast(`تم أرشفة حساب "${tenantName}" واستبعاده من الحسبة بنجاح!`, 'success');
+      await Promise.all([
+        this.loadRouteData('admin-tenants'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل أرشفة الحساب: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  app.handleRestoreTenant = async function(tenantId, tenantName = 'المعلم') {
+    try {
+      this.closeModal();
+      this.showToast('جاري استعادة الحساب من الأرشيف...', 'info');
+      await request(`/admin/tenants/${tenantId}/restore`, { method: 'POST' });
+      this.showToast(`تم استعادة حساب "${tenantName}" وإعادته للحسابات النشطة بنجاح!`, 'success');
+      await Promise.all([
+        this.loadRouteData('admin-tenants'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل استعادة الحساب: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  app.handleDeleteTenantPrompt = async function(tenantId, tenantName = 'المعلم') {
+    if (!confirm(`⚠️ تحذير نهائي:\nهل أنت متأكد تماماً من حذف حساب المعلم "${tenantName}" نهائياً من قاعدة البيانات؟\nسيتم مسح كافة البيانات المرتبطة بهذا الحساب (الطلاب، الحصص، والإعدادات) فوراً ولا يمكن التراجع عن هذه الخطوة.`)) {
+      return;
+    }
+
+    try {
+      this.closeModal();
+      this.showToast('جاري حذف حساب المعلم نهائياً...', 'info');
+      await request(`/admin/tenants/${tenantId}`, { method: 'DELETE' });
+      this.showToast(`تم حذف حساب "${tenantName}" نهائياً بنجاح!`, 'success');
+      await Promise.all([
+        this.loadRouteData('admin-tenants'),
+        this.loadRouteData('admin-dashboard'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل حذف المعلم: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  app.extendTenantTrialDirect = async function(tenantId, days = 7) {
+    try {
+      this.showToast('جاري تمديد فترة التجربة للمشترك...', 'info');
+      await request(`/admin/tenants/${tenantId}/subscription`, {
+        method: 'POST',
+        body: JSON.stringify({
+          extend_days: days,
+          status: 'trial',
+        }),
+      });
+      this.showToast(`تم تمديد فترة التجربة بنجاح (+${days} أيام إضافية)!`, 'success');
+      await Promise.all([
+        this.loadRouteData('admin-dashboard'),
+        this.loadRouteData('admin-tenants'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل تمديد التجربة: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  app.testAdminWebhook = async function() {
+    try {
+      this.showToast('جاري إرسال إشعار تجريبي لاختبار الـ Webhook...', 'info');
+      const res = await request('/admin/test-webhook', { method: 'POST' });
+      this.showToast(res.message || 'تم إرسال إشعار التجربة بنجاح!', 'success');
+    } catch (err) {
+      this.showToast(`فشل اختبار الـ Webhook: ${err.message || 'تأكد من ضبط المتغيرات'}`, 'danger');
+    }
+  }
+
+  app.openPurgeTestDataModal = function() {
+    const bodyHtml = `
+      <div style="text-align: center; padding: 0.5rem 0;">
+        <div style="margin-bottom: 0.75rem;">${getIcon('risk', 44, '#ef4444')}</div>
+        <h4 style="margin: 0 0 0.5rem; color: #991b1b; font-weight: 900;">تصفير وتنظيف بيانات وحسابات التجربة</h4>
+        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.6;">
+          سيقوم هذا الإجراء بحذف الحسابات والإيصالات التجريبية المسجلة سابقاً للبدء بصفحة بيضاء وسجلات نظيفة مع أول عميل حقيقي.
+          <br>
+          <strong style="color: #059669;">حسابك الأساسي كمدير ومؤسس للمنصة آمن تماماً ولن يتأثر.</strong>
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="button" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;" onclick="window.centrlyApp.confirmPurgeTestData()">
+            تأكيد تنظيف بيانات التجربة
+          </button>
+        </div>
+      </div>
+    `;
+    this.showModal('تصفير بيانات التجربة', bodyHtml);
+  }
+
+  app.confirmPurgeTestData = async function() {
+    this.closeModal();
+    try {
+      this.showToast('جاري تنظيف بيانات التجربة...', 'info');
+      const res = await request('/admin/purge-test-data', { method: 'POST' });
+      const delTenants = res.deleted_tenants_count ?? 0;
+      const delProofs = res.deleted_proofs_count ?? 0;
+      this.showToast(`تم تنظيف (${delTenants}) حساب تجريبي و (${delProofs}) إيصال تجريبي بنجاح!`, 'success');
+      await Promise.all([
+        this.loadRouteData('admin-dashboard'),
+        this.loadRouteData('admin-tenants'),
+        this.loadRouteData('admin-proofs'),
+      ]);
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل تنظيف البيانات: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    }
+  }
+
+  // ==========================================================================
+  // Founder / Superadmin Revenue Breakdown Modals
+  // ==========================================================================
+
+  app.openRevenueDetailsModal = async function(mode = 'all_time') {
+    if (!this.adminProofsData?.payment_proofs) {
+      try {
+        this.adminProofsData = await request('/admin/payment-proofs').catch(() => ({ payment_proofs: [] }));
+      } catch (_) {}
+    }
+
+    const proofs = (this.adminProofsData?.payment_proofs || []).filter(p => p.status === 'approved');
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+
+    const isThisMonth = mode === 'this_month';
+    const activeProofs = isThisMonth
+      ? proofs.filter(p => {
+          const d = new Date(p.reviewed_at || p.created_at);
+          return d.getFullYear() === curYear && d.getMonth() === curMonth;
+        })
+      : proofs;
+
+    const totalSum = activeProofs.reduce((acc, p) => acc + Number(p.amount || 0), 0);
+    const avgAmount = activeProofs.length ? Math.round(totalSum / activeProofs.length) : 0;
+    const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const currentMonthName = arabicMonths[curMonth];
+
+    const formatProofDate = (dateStr) => {
+      if (!dateStr) return '—';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString('ar-EG', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      } catch (_) {
+        return dateStr;
+      }
+    };
+
+    const title = isThisMonth 
+      ? `تفاصيل أرباح شهر ${currentMonthName} (المحصل الفعلي) 💰`
+      : 'تفاصيل إجمالي النقدية المحصلة (All-Time Cash In) 💼';
+
+    const renderTableRows = (list) => {
+      if (!list.length) {
+        return `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
+              <div style="margin-bottom: 0.5rem; display: flex; justify-content: center;">${getIcon('check', 32, '#94a3b8')}</div>
+              لا توجد عمليات تحويل معتمدة في هذا النطاق
+            </td>
+          </tr>
+        `;
+      }
+      return list.map((p, idx) => {
+        const clientName = escapeHtml(p.tenants?.name || p.tenant_name || 'مؤسسة تعليمية');
+        const amount = Number(p.amount || 0);
+        let methodLabel = 'إنستاباي (InstaPay)';
+        let methodColor = '#6366f1';
+        if (p.payment_method === 'vodafone_cash') {
+          methodLabel = 'فودافون كاش';
+          methodColor = '#ef4444';
+        } else if (p.payment_method === 'coupon') {
+          methodLabel = 'كوبون مجاني';
+          methodColor = '#10b981';
+        } else if (p.payment_method === 'bank_transfer') {
+          methodLabel = 'تحويل بنكي';
+          methodColor = '#0284c7';
+        }
+
+        const dateStr = formatProofDate(p.created_at);
+        const notes = escapeHtml(p.admin_notes || p.notes || 'لا توجد ملاحظات إضافية');
+        const ref = escapeHtml(p.reference_number || '—');
+        const hasImg = Boolean(p.proof_image_url);
+
+        return `
+          <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 0.85rem 0.65rem; font-weight: 800; color: #0f172a; font-size: 0.875rem;">
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #e0f2fe; color: #0369a1; font-size: 0.72rem; font-weight: 900;">${idx + 1}</span>
+                <span>${clientName}</span>
+              </div>
+            </td>
+            <td style="padding: 0.85rem 0.65rem; font-weight: 900; font-size: 1rem; color: #047857; font-family: monospace;">
+              ${amount.toLocaleString('ar-EG')} <span style="font-size: 0.75rem; font-family: 'Cairo'; font-weight: 700;">ج.م</span>
+            </td>
+            <td style="padding: 0.85rem 0.65rem;">
+              <span class="badge" style="background: ${methodColor}15; color: ${methodColor}; border: 1px solid ${methodColor}30; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px;">
+                ${methodLabel}
+              </span>
+            </td>
+            <td style="padding: 0.85rem 0.65rem; font-family: monospace; font-size: 0.8rem; color: #334155; direction: ltr; text-align: right;">
+              ${ref}
+            </td>
+            <td style="padding: 0.85rem 0.65rem; font-size: 0.78rem; color: #64748b;">
+              <div style="font-weight: 700; color: #1e293b;">${notes}</div>
+              <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">${dateStr}</div>
+            </td>
+            <td style="padding: 0.85rem 0.65rem; text-align: center;">
+              ${hasImg ? `
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openProofFullscreenModal('${p.id}')" style="padding: 0.3rem 0.6rem; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.3rem; border-radius: 6px;" title="عرض إيصال التحويل بملء الشاشة">
+                  ${getIcon('search', 12)}
+                  <span>معاينة</span>
+                </button>
+              ` : '<span style="color: #cbd5e1; font-size: 0.75rem;">بدون إيصال</span>'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1.15rem;">
+        
+        <!-- Filter Tabs & Mode Selector -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; background: #f8fafc; padding: 0.75rem; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-sm ${!isThisMonth ? 'btn-primary' : 'btn-secondary'}" onclick="window.centrlyApp.openRevenueDetailsModal('all_time')" style="font-weight: 800; border-radius: 8px;">
+              إجمالي الكاش الكل (${proofs.length})
+            </button>
+            <button type="button" class="btn btn-sm ${isThisMonth ? 'btn-primary' : 'btn-secondary'}" onclick="window.centrlyApp.openRevenueDetailsModal('this_month')" style="font-weight: 800; border-radius: 8px;">
+              شهر ${currentMonthName} فقط
+            </button>
+          </div>
+          <div style="font-size: 0.78rem; color: #64748b; font-weight: 700;">
+            سجلات نقدية فعلية معتمدة بالإيصالات الرسمية
+          </div>
+        </div>
+
+        <!-- Summary KPIs inside Modal -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+          <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 0.75rem 1rem;">
+            <div style="font-size: 0.75rem; color: #047857; font-weight: 800;">إجمالي المبلغ المحصل</div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #065f46; font-family: monospace; margin-top: 0.15rem;">
+              ${totalSum.toLocaleString('ar-EG')} <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م</span>
+            </div>
+          </div>
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 0.75rem 1rem;">
+            <div style="font-size: 0.75rem; color: #1e40af; font-weight: 800;">عدد العمليات المعتمدة</div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #1e3a8a; font-family: monospace; margin-top: 0.15rem;">
+              ${activeProofs.length} <span style="font-size: 0.85rem; font-family: 'Cairo';">عملية</span>
+            </div>
+          </div>
+          <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 0.75rem 1rem;">
+            <div style="font-size: 0.75rem; color: #6b21a8; font-weight: 800;">متوسط المعاملة</div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #581c87; font-family: monospace; margin-top: 0.15rem;">
+              ${avgAmount.toLocaleString('ar-EG')} <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div style="border: 1px solid #e2e8f0; border-radius: 10px; overflow-x: auto; background: #fff;">
+          <table style="width: 100%; border-collapse: collapse; text-align: right; min-width: 650px;">
+            <thead>
+              <tr style="background: #f1f5f9; border-bottom: 2px solid #e2e8f0; font-size: 0.78rem; color: #475569;">
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">المنظومة / المعلم</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">المبلغ</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">طريقة الدفع</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">رقم العملية / المرجع</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">الباقة والتاريخ</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800; text-align: center;">الإيصال</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderTableRows(activeProofs)}
+            </tbody>
+            <tfoot>
+              <tr style="background: #f8fafc; font-weight: 900; border-top: 2px solid #cbd5e1;">
+                <td style="padding: 0.85rem 0.65rem; color: #0f172a;">الإجمالي النهائي</td>
+                <td style="padding: 0.85rem 0.65rem; color: #047857; font-size: 1.1rem; font-family: monospace;">
+                  ${totalSum.toLocaleString('ar-EG')} ج.م
+                </td>
+                <td colspan="4" style="padding: 0.85rem 0.65rem; color: #64748b; font-size: 0.8rem;">
+                  صافي النقدية المحصلة فعلياً بحساباتك
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+      </div>
+    `;
+
+    const footerHtml = `
+      <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+        <span style="font-size: 0.8rem; color: #64748b;">
+          Centrly HQ Financial Audit
+        </span>
+        <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق النافذة</button>
+      </div>
+    `;
+
+    this.showModal(title, bodyHtml, footerHtml, '840px');
+  }
+
+  app.openExpectedMrrModal = async function() {
+    if (!this.adminTenantsData?.tenants) {
+      try {
+        this.adminTenantsData = await request('/admin/tenants').catch(() => ({ tenants: [] }));
+      } catch (_) {}
+    }
+
+    const tenants = this.adminTenantsData?.tenants || [];
+    const activeTenants = tenants.filter(t => t.subscription_status === 'active');
+    
+    let totalExpectedMrr = 0;
+    const clientRows = activeTenants.map((t, idx) => {
+      const tier = (t.subscription_tier || '').toLowerCase();
+      const limit = Number(t.students_limit || t.settings?.students_limit || 0);
+      const planName = t.plan_name || t.settings?.plan_name || (limit >= 1500 ? 'باقة 1500 طالب' : (limit >= 750 ? 'باقة 750 طالب' : 'باقة 300 طالب'));
+      
+      let normalMonthlyPrice = 499;
+      let tierBadge = 'Starter';
+      let tierColor = '#0284c7';
+      if (limit >= 1500 || tier === 'pro' || planName.includes('1500')) {
+        normalMonthlyPrice = 1399;
+        tierBadge = 'Scale';
+        tierColor = '#7c3aed';
+      } else if (limit >= 750 || tier === 'growth' || planName.includes('750')) {
+        normalMonthlyPrice = 899;
+        tierBadge = 'Growth';
+        tierColor = '#2563eb';
+      }
+      totalExpectedMrr += normalMonthlyPrice;
+
+      let renewalDate = 'غير محدد';
+      if (t.subscription_ends_at) {
+        try {
+          const d = new Date(t.subscription_ends_at);
+          renewalDate = d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (_) {}
+      }
+      const clientName = escapeHtml(t.name || 'مؤسسة تعليمية');
+
+      return `
+        <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='transparent'">
+          <td style="padding: 0.85rem 0.65rem; font-weight: 800; color: #0f172a; font-size: 0.875rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #fef3c7; color: #b45309; font-size: 0.72rem; font-weight: 900;">${idx + 1}</span>
+              <span>${clientName}</span>
+            </div>
+          </td>
+          <td style="padding: 0.85rem 0.65rem;">
+            <span class="badge" style="background: ${tierColor}15; color: ${tierColor}; border: 1px solid ${tierColor}30; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px;">
+              ${planName} (${tierBadge})
+            </span>
+          </td>
+          <td style="padding: 0.85rem 0.65rem; font-weight: 900; font-size: 1rem; color: #b45309; font-family: monospace;">
+            ${normalMonthlyPrice.toLocaleString('ar-EG')} <span style="font-size: 0.75rem; font-family: 'Cairo'; font-weight: 700;">ج.م / شهر</span>
+          </td>
+          <td style="padding: 0.85rem 0.65rem; font-size: 0.8rem; color: #475569;">
+            ${renewalDate}
+          </td>
+          <td style="padding: 0.85rem 0.65rem;">
+            <span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px;">
+              نشط (مفعل)
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1.15rem;">
+        
+        <!-- Explanation Banner -->
+        <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 1rem 1.25rem;">
+          <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+            <span style="color: #d97706; display: flex; margin-top: 2px;">${getIcon('reports', 22, '#d97706')}</span>
+            <div>
+              <h4 style="margin: 0 0 0.35rem; color: #92400e; font-weight: 900; font-size: 0.95rem;">
+                كيف يتم احتساب الأرباح الشهرية القادمة (MRR Normalization)؟
+              </h4>
+              <p style="margin: 0; color: #b45309; font-size: 0.825rem; line-height: 1.6;">
+                إذا كان العميل قد اشترك في الشهر الأول بخصم ترويجي أو كود تخفيض، فإن هذا المؤشر يقوم بإعادة احتساب كل عميل بسعر الباقة <strong>الطبيعي الرسمي</strong> الذي سيدفعه في الأشهر التالية بدون خصومات، ليعطيك الرؤية الواقعية للدخل الشهري الثابت المتكرر (MRR).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Official Plan Pricing Reference Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem;">
+          <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 0.75rem; text-align: center;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: #0369a1;">باقة Starter (300 طالب)</div>
+            <div style="font-size: 1.35rem; font-weight: 900; color: #0284c7; font-family: monospace; margin: 0.25rem 0;">499 ج.م</div>
+            <div style="font-size: 0.7rem; color: #64748b;">السعر الطبيعي شهرياً</div>
+          </div>
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 0.75rem; text-align: center;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: #1d4ed8;">باقة Growth (750 طالب)</div>
+            <div style="font-size: 1.35rem; font-weight: 900; color: #2563eb; font-family: monospace; margin: 0.25rem 0;">899 ج.م</div>
+            <div style="font-size: 0.7rem; color: #64748b;">السعر الطبيعي شهرياً</div>
+          </div>
+          <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 0.75rem; text-align: center;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: #6b21a8;">باقة Scale (1500 طالب)</div>
+            <div style="font-size: 1.35rem; font-weight: 900; color: #7c3aed; font-family: monospace; margin: 0.25rem 0;">1,399 ج.م</div>
+            <div style="font-size: 0.7rem; color: #64748b;">السعر الطبيعي شهرياً</div>
+          </div>
+        </div>
+
+        <!-- Subscribed Clients Table -->
+        <div style="border: 1px solid #e2e8f0; border-radius: 10px; overflow-x: auto; background: #fff;">
+          <table style="width: 100%; border-collapse: collapse; text-align: right; min-width: 580px;">
+            <thead>
+              <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; font-size: 0.78rem; color: #475569;">
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">العميل / المنظومة</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">الباقة</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">سعر التجديد الطبيعي</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">تاريخ التجديد القادم</th>
+                <th style="padding: 0.75rem 0.65rem; font-weight: 800;">الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${clientRows || `
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                    لا يوجد مشتركون نشطون حالياً
+                  </td>
+                </tr>
+              `}
+            </tbody>
+            <tfoot>
+              <tr style="background: #fffbeb; font-weight: 900; border-top: 2px solid #fde68a;">
+                <td style="padding: 0.85rem 0.65rem; color: #92400e;">إجمالي الإيراد الشهري القادم (MRR)</td>
+                <td colspan="4" style="padding: 0.85rem 0.65rem; color: #b45309; font-size: 1.2rem; font-family: monospace;">
+                  ${totalExpectedMrr.toLocaleString('ar-EG')} ج.م / شهرياً
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+      </div>
+    `;
+
+    const footerHtml = `
+      <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+        <span style="font-size: 0.8rem; color: #64748b;">
+          Centrly HQ SaaS Forecast
+        </span>
+        <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق النافذة</button>
+      </div>
+    `;
+
+    this.showModal('تفاصيل الإيراد الشهري المتوقع القادم (MRR) 📈', bodyHtml, footerHtml, '780px');
+  }
 }

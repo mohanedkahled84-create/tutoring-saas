@@ -372,6 +372,8 @@ test("UI-01: Static DOM Verification — All centrlyApp methods called in onclic
   const onclickRegex = /onclick=["'](?:window\.)?centrlyApp\.([a-zA-Z0-9_]+)\(/g;
   const missingMethods = new Set();
 
+  const allModulesContent = componentFiles.map((f) => fs.readFileSync(path.join(componentsDir, f), "utf8")).join("\n");
+
   for (const file of componentFiles) {
     const filePath = path.join(componentsDir, file);
     const content = fs.readFileSync(filePath, "utf8");
@@ -379,9 +381,10 @@ test("UI-01: Static DOM Verification — All centrlyApp methods called in onclic
     let match;
     while ((match = onclickRegex.exec(content)) !== null) {
       const methodName = match[1];
-      // Check if method exists in app.js
-      const methodRegex = new RegExp(`(?:async\\s+)?${methodName}\\s*\\(`);
-      if (!methodRegex.test(appJsContent)) {
+      // Check if method exists in app.js class or registered via component action modules
+      const inAppClass = new RegExp(`(?:async\\s+)?${methodName}\\s*\\(`).test(appJsContent);
+      const inModules = new RegExp(`app\\.${methodName}\\s*=`).test(allModulesContent);
+      if (!inAppClass && !inModules) {
         missingMethods.add(`${file}: ${methodName}`);
       }
     }

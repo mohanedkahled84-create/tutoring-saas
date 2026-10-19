@@ -1,3 +1,4 @@
+import { request } from "../services/api.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 
@@ -476,4 +477,614 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
 
     </div>
   `;
+}
+
+export function registerTeacherQuizzesActions(app) {
+  // Teacher Quizzes Management & WhatsApp Integration (DEV-QUIZ)
+  // ==========================================================================
+
+  app.saveQuizzesToLocalStorage = function(groupId) {
+    const gid = groupId || this.quizzesState.selectedGroupId;
+    if (!gid) return;
+    try {
+      localStorage.setItem(`centrly_quizzes_${gid}`, JSON.stringify({
+        quizzes: this.quizzesState.quizzes,
+        scoresMap: this.quizzesState.scoresMap,
+        notesMap: this.quizzesState.notesMap,
+        deliveryStatusMap: this.quizzesState.deliveryStatusMap,
+        currentQuizNumber: this.quizzesState.currentQuizNumber,
+      }));
+    } catch (_) {}
+  }
+
+  app.loadQuizzesForGroup = async function(groupId) {
+    if (!groupId) return;
+    // 1. Fast local cache recovery to prevent data loss on refresh
+    const cacheKey = `centrly_quizzes_${groupId}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.quizzes) && parsed.quizzes.length > 0) {
+          parsed.quizzes.forEach(q => {
+            if (q.title && (q.title.includes('أساسيات المادة') || q.title.includes('الفصل الأول') || q.title.includes('مراجعة شاملة'))) {
+              q.title = `كويز ${q.number}`;
+            }
+          });
+          this.quizzesState.quizzes = parsed.quizzes;
+        }
+        if (parsed.scoresMap) {
+          this.quizzesState.scoresMap = { ...this.quizzesState.scoresMap, ...parsed.scoresMap };
+        }
+        if (parsed.notesMap) {
+          this.quizzesState.notesMap = { ...this.quizzesState.notesMap, ...parsed.notesMap };
+        }
+        if (parsed.deliveryStatusMap) {
+          this.quizzesState.deliveryStatusMap = { ...this.quizzesState.deliveryStatusMap, ...parsed.deliveryStatusMap };
+        }
+        if (parsed.currentQuizNumber) {
+          this.quizzesState.currentQuizNumber = parsed.currentQuizNumber;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fetch authoritative data from backend Supabase API
+    try {
+      const res = await request(`/quizzes?group_id=${groupId}`);
+      if (res?.success && Array.isArray(res.quizzes) && res.quizzes.length > 0) {
+        this.quizzesState.quizzes = res.quizzes.map(q => {
+          let cleanTitle = q.title || `كويز ${q.quiz_number}`;
+          if (cleanTitle.includes('أساسيات المادة') || cleanTitle.includes('الفصل الأول') || cleanTitle.includes('مراجعة شاملة')) {
+            cleanTitle = `كويز ${q.quiz_number}`;
+          }
+          return {
+            id: q.id,
+            number: q.quiz_number,
+            title: cleanTitle,
+            maxScore: Number(q.max_score || 10),
+            date: q.quiz_date || new Date().toISOString().slice(0, 10),
+            skipped: Boolean(q.is_skipped),
+          };
+        });
+
+        if (res.scores_map) {
+          this.quizzesState.scoresMap = {
+            ...this.quizzesState.scoresMap,
+            ...res.scores_map,
+          };
+        }
+        if (res.notes_map) {
+          this.quizzesState.notesMap = {
+            ...this.quizzesState.notesMap,
+            ...res.notes_map,
+          };
+        }
+        if (res.delivery_status_map) {
+          this.quizzesState.deliveryStatusMap = {
+            ...this.quizzesState.deliveryStatusMap,
+            ...res.delivery_status_map,
+          };
+        }
+
+        this.saveQuizzesToLocalStorage(groupId);
+      }
+    } catch (err) {
+      console.warn('[Centrly] Could not fetch quizzes from backend, using cached state:', err);
+    }
+  }
+
+  app.switchQuizGroup = async function(groupId) {
+    this.quizzesState.selectedGroupId = groupId;
+    this.renderMainContent();
+    await this.loadQuizzesForGroup(groupId);
+    this.renderMainContent();
+  }
+
+  app.selectQuizNumber = function(quizNum) {
+    this.quizzesState.currentQuizNumber = quizNum;
+    this.saveQuizzesToLocalStorage();
+    this.renderMainContent();
+  }
+
+  app.addNewQuiz = function() {
+    const nextNum = (this.quizzesState.quizzes.length > 0)
+      ? Math.max(...this.quizzesState.quizzes.map(q => q.number)) + 1
+      : 1;
+    const today = new Date().toISOString().slice(0, 10);
+    const newQuizObj = {
+      id: `quiz-tmp-${Date.now()}`,
+      number: nextNum,
+      title: `كويز ${nextNum}`,
+      maxScore: 10,
+      date: today,
+      skipped: false,
+    };
+    this.quizzesState.quizzes.push(newQuizObj);
+    this.quizzesState.currentQuizNumber = nextNum;
+    this.saveQuizzesToLocalStorage();
+
+    // Persist new quiz definition in background
+    if (this.quizzesState.selectedGroupId) {
+      request('/quizzes', {
+        method: 'POST',
+        body: {
+          group_id: this.quizzesState.selectedGroupId,
+          quiz_number: nextNum,
+          title: `كويز ${nextNum}`,
+          max_score: 10,
+          quiz_date: today,
+          is_skipped: false,
+        },
+      }).then(res => {
+        if (res?.quiz?.id) {
+          newQuizObj.id = res.quiz.id;
+          this.saveQuizzesToLocalStorage();
+        }
+      }).catch(() => {});
+    }
+
+    this.showToast(`تمت إضافة كويز ${nextNum} بنجاح`, 'success');
+    this.renderMainContent();
+  }
+
+  app.skipCurrentQuiz = function(quizNum) {
+    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    if (quiz) {
+      quiz.skipped = true;
+      const nextQuiz = this.quizzesState.quizzes.find(q => q.number > quizNum && !q.skipped);
+      if (nextQuiz) {
+        this.quizzesState.currentQuizNumber = nextQuiz.number;
+      }
+      this.saveQuizzesToLocalStorage();
+
+      // Persist skipped status in background
+      if (this.quizzesState.selectedGroupId) {
+        request('/quizzes', {
+          method: 'POST',
+          body: {
+            group_id: this.quizzesState.selectedGroupId,
+            quiz_number: quizNum,
+            title: quiz.title || `كويز ${quizNum}`,
+            max_score: quiz.maxScore || 10,
+            is_skipped: true,
+          },
+        }).catch(() => {});
+      }
+
+      this.showToast(`تم تخطي كويز ${quizNum}`, 'info');
+      this.renderMainContent();
+    }
+  }
+
+  app.promptEditQuizTitle = function(quizNum) {
+    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    const currentTitle = quiz?.title || `كويز ${quizNum}`;
+    const bodyHtml = `
+      <form id="formEditQuizTitle" onsubmit="event.preventDefault(); window.centrlyApp.confirmEditQuizTitle(${quizNum});">
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="font-weight: 700;">اسم الكويز / الاختبار</label>
+          <input type="text" id="inputEditQuizTitle" class="form-input" value="${escapeHtml(currentTitle)}" placeholder="اسم الكويز / الاختبار" autofocus required>
+          <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.35rem;">
+            أدخل عنواناً مميزاً للكويز لتسهيل تمييزه في تقارير الطلاب.
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+          <button type="submit" class="btn btn-primary" style="font-weight: 800;">حفظ الاسم</button>
+        </div>
+      </form>
+    `;
+    this.showModal(`تعديل اسم الكويز رقم (${quizNum})`, bodyHtml);
+    setTimeout(() => {
+      document.getElementById('inputEditQuizTitle')?.focus();
+    }, 150);
+  }
+
+  app.confirmEditQuizTitle = function(quizNum) {
+    const newTitle = document.getElementById('inputEditQuizTitle')?.value?.trim();
+    this.closeModal();
+    this.updateQuizTitle(quizNum, newTitle);
+  }
+
+  app.updateQuizTitle = function(quizNum, newTitle) {
+    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    if (quiz) {
+      quiz.title = newTitle ? newTitle.trim() : `كويز ${quizNum}`;
+      this.saveQuizzesToLocalStorage();
+
+      if (this.quizzesState.selectedGroupId) {
+        request('/quizzes', {
+          method: 'POST',
+          body: {
+            id: quiz.id && quiz.id.length > 20 ? quiz.id : undefined,
+            group_id: this.quizzesState.selectedGroupId,
+            quiz_number: quizNum,
+            title: quiz.title,
+            max_score: quiz.maxScore || 10,
+            is_skipped: Boolean(quiz.skipped),
+          },
+        }).then(res => {
+          if (res?.quiz?.id) {
+            quiz.id = res.quiz.id;
+            this.saveQuizzesToLocalStorage();
+          }
+        }).catch(() => {});
+      }
+      this.showToast('تم تحديث عنوان الكويز بنجاح', 'info');
+      this.renderMainContent();
+    }
+  }
+
+  app.updateQuizMaxScore = function(quizNum, newMaxScore) {
+    const num = Number(newMaxScore);
+    if (isNaN(num) || num <= 0) return;
+    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    if (quiz) {
+      quiz.maxScore = num;
+      this.saveQuizzesToLocalStorage();
+
+      if (this.quizzesState.selectedGroupId) {
+        request('/quizzes', {
+          method: 'POST',
+          body: {
+            id: quiz.id && quiz.id.length > 20 ? quiz.id : undefined,
+            group_id: this.quizzesState.selectedGroupId,
+            quiz_number: quizNum,
+            title: quiz.title || `كويز ${quizNum}`,
+            max_score: num,
+            is_skipped: Boolean(quiz.skipped),
+          },
+        }).then(res => {
+          if (res?.quiz?.id) {
+            quiz.id = res.quiz.id;
+            this.saveQuizzesToLocalStorage();
+          }
+        }).catch(() => {});
+      }
+      this.showToast(`تم تحديث الدرجة العظمى إلى (${num} درجات)`, 'info');
+      this.renderMainContent();
+    }
+  }
+
+  app.updateStudentQuizScore = function(studentId, score) {
+    const currQuiz = this.quizzesState.currentQuizNumber || 1;
+    if (!this.quizzesState.scoresMap[currQuiz]) {
+      this.quizzesState.scoresMap[currQuiz] = {};
+    }
+    this.quizzesState.scoresMap[currQuiz][studentId] = score;
+    this.saveQuizzesToLocalStorage();
+  }
+
+  app.updateStudentQuizNote = function(studentId, note) {
+    const currQuiz = this.quizzesState.currentQuizNumber || 1;
+    if (!this.quizzesState.notesMap[currQuiz]) {
+      this.quizzesState.notesMap[currQuiz] = {};
+    }
+    this.quizzesState.notesMap[currQuiz][studentId] = note;
+    this.saveQuizzesToLocalStorage();
+  }
+
+  app.saveCurrentQuizScores = async function() {
+    if (this.quizzesState.isSaving) return;
+    const currQuizNum = this.quizzesState.currentQuizNumber || 1;
+    const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
+    const scores = this.quizzesState.scoresMap[currQuizNum] || {};
+    const notes = this.quizzesState.notesMap[currQuizNum] || {};
+
+    const count = Object.keys(scores).filter(k => scores[k] !== '' && scores[k] !== null).length;
+    if (count === 0) {
+      this.showToast('يرجى إدخال درجة طالب واحد على الأقل قبل الحفظ', 'warning');
+      return;
+    }
+
+    this.quizzesState.isSaving = true;
+    try {
+      this.saveQuizzesToLocalStorage();
+      await request('/quizzes/scores', {
+        method: 'POST',
+        body: {
+          group_id: this.quizzesState.selectedGroupId,
+          quiz_number: currQuizNum,
+          quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
+          max_score: currentQuiz.maxScore || 10,
+          scores,
+          notes,
+        },
+      });
+
+      // Synchronize in-memory with reportsState
+      if (this.reportsState) {
+        const month = this.reportsState.period?.month || (new Date().getMonth() + 1);
+        const year = this.reportsState.period?.year || new Date().getFullYear();
+        request(`/reports/monthly?month=${month}&year=${year}`).then(rep => {
+          if (rep?.leaderboard) {
+            this.reportsState.leaderboard = rep.leaderboard;
+            this.reportsState.average_score = rep.average_score || 0;
+          }
+        }).catch(() => {});
+      }
+
+      this.showToast(`تم حفظ وتثبيت درجات كويز ${currQuizNum} لـ (${count}) طالب بنجاح! وستظهر فوراً في بوابات المتابعة`, 'success');
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل حفظ درجات الكويز: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    } finally {
+      this.quizzesState.isSaving = false;
+    }
+  }
+
+  app.sendQuizScoreWhatsApp = async function(studentId, studentName, quizTitle, target = 'both') {
+    const currQuizNum = this.quizzesState.currentQuizNumber || 1;
+    const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
+    const score = this.quizzesState.scoresMap[currQuizNum]?.[studentId];
+    const note = this.quizzesState.notesMap[currQuizNum]?.[studentId] || '';
+
+    if (score === undefined || score === null || score === '') {
+      this.showToast(`يرجى رصد درجة الطالب (${studentName}) أولاً قبل إرسال الإشعار`, 'warning');
+      return;
+    }
+
+    const student = (this.students || []).find(s => String(s.id) === String(studentId));
+    const rawParentPhone = student?.parent_phone || student?.parentPhone || '';
+    const rawStudentPhone = student?.student_phone || student?.studentPhone || student?.phone || '';
+
+    const cleanPhone = (phone) => {
+      let p = (phone || '').replace(/[\s\-\+\(\)]/g, '');
+      if (p.startsWith('00')) p = p.slice(2);
+      if (p.startsWith('01') && p.length === 11) p = '20' + p.slice(1);
+      return p;
+    };
+
+    const cleanParent = cleanPhone(rawParentPhone);
+    const cleanStudent = cleanPhone(rawStudentPhone);
+
+    const maxScore = currentQuiz.maxScore || 10;
+    const numScore = Number(score);
+    const percentage = (numScore / maxScore) * 100;
+    const rating = percentage >= 85 ? 'ممتاز 🌟' : percentage >= 65 ? 'جيد 👍' : 'يحتاج لمزيد من المذاكرة والاجتهاد 📝';
+    const displayTitle = (quizTitle && quizTitle.trim()) ? quizTitle.trim() : `كويز ${currQuizNum}`;
+
+    const rawTeacher = this.user?.name || 'المعلم';
+    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
+      ? rawTeacher
+      : `مستر ${rawTeacher}`;
+
+    const studentMsg = `أهلاً بك يا (${studentName})، نتمنى لك دوام التفوق والتميز دائماً!\n\n📊 *نتيجة تقييم:* ${displayTitle}\n🎯 *درجتك:* ${numScore} من ${maxScore} (${rating})\n${note && note.trim() ? `📝 *ملاحظة المعلم:* ${note.trim()}\n` : ''}\nمع أطيب التمنيات لك بدوام التميز والإنجاز.\nمع تحيات: ${teacherName}`;
+
+    const parentMsg = `السلام عليكم ورحمة الله وبركاته، تحية طيبة لولي أمر الطالب/ة (${studentName}).\n\nيسعدنا إحاطة سيادتكم علماً بنتيجة الاختبار الأخير:\n📊 *الاختبار:* ${displayTitle}\n🎯 *الدرجة المحققة:* ${numScore} من ${maxScore} (${rating})\n${note && note.trim() ? `📝 *ملاحظة المعلم:* ${note.trim()}\n` : ''}\nشاكرين لكم حسن تعاونكم وحرصكم المستمر على متابعة تفوق الطالب.\nمع تحيات: ${teacherName}`;
+
+    if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
+    if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
+
+    if (target === 'student') {
+      if (!cleanStudent || cleanStudent.length < 9) {
+        this.showToast(`رقم هاتف الطالب غير مسجل للطالب "${studentName}".`, 'warning');
+        return;
+      }
+      const waUrl = `https://wa.me/${cleanStudent}?text=${encodeURIComponent(studentMsg)}`;
+      window.open(waUrl, '_blank');
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+      this.saveQuizzesToLocalStorage();
+      this.showToast(`تم فتح محادثة واتساب للطالب (${studentName}) بنجاح! 💬`, 'success');
+      this.renderMainContent();
+      return;
+    }
+
+    if (target === 'parent') {
+      if (!cleanParent || cleanParent.length < 9) {
+        this.showToast(`رقم هاتف ولي الأمر غير مسجل للطالب "${studentName}".`, 'warning');
+        return;
+      }
+      const waUrl = `https://wa.me/${cleanParent}?text=${encodeURIComponent(parentMsg)}`;
+      window.open(waUrl, '_blank');
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+      this.saveQuizzesToLocalStorage();
+      this.showToast(`تم فتح محادثة واتساب لولي أمر (${studentName}) بنجاح! 💬`, 'success');
+      this.renderMainContent();
+      return;
+    }
+
+    // target === 'both' or default
+    if (cleanParent && cleanStudent) {
+      const parentWaUrl = `https://wa.me/${cleanParent}?text=${encodeURIComponent(parentMsg)}`;
+      const studentWaUrl = `https://wa.me/${cleanStudent}?text=${encodeURIComponent(studentMsg)}`;
+
+      // Open parent chat immediately
+      window.open(parentWaUrl, '_blank');
+
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+      this.saveQuizzesToLocalStorage();
+      this.renderMainContent();
+
+      // Show instant modal to open student chat as well
+      this.showModal(
+        `إرسال النتيجة: ${studentName}`,
+        `<div style="text-align: center; padding: 1.25rem 0.5rem;" dir="rtl">
+          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🎉</div>
+          <h3 style="font-weight: 800; font-size: 1.1rem; color: #1e293b; margin-bottom: 0.4rem;">تم فتح محادثة ولي الأمر بنجاح!</h3>
+          <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.6;">تم فتح واتساب لولي الأمر (${escapeHtml(rawParentPhone)}) وتجهيز نص النتيجة.<br>اضغط بالأسفل لفتح محادثة الطالب أيضاً بنقرة واحدة:</p>
+          <div style="display: flex; flex-direction: column; gap: 0.6rem; max-width: 320px; margin: 0 auto;">
+            <a href="${studentWaUrl}" target="_blank" onclick="window.centrlyApp.closeModal(); window.centrlyApp.showToast('تم فتح محادثة الطالب (${escapeHtml(studentName)}) بنجاح! 💬', 'success');" class="btn btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #2563eb; border-color: #2563eb; font-weight: 700; text-decoration: none; padding: 0.65rem 1rem;">
+              <span>💬 فتح محادثة الطالب (${escapeHtml(rawStudentPhone)})</span>
+            </a>
+            <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()" style="font-size: 0.85rem;">
+              تم الاكتفاء بولي الأمر
+            </button>
+          </div>
+        </div>`,
+        ''
+      );
+      return;
+    }
+
+    if (cleanParent) {
+      const waUrl = `https://wa.me/${cleanParent}?text=${encodeURIComponent(parentMsg)}`;
+      window.open(waUrl, '_blank');
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+      this.saveQuizzesToLocalStorage();
+      this.showToast(`تم فتح محادثة واتساب لولي أمر (${studentName}) بنجاح! 💬`, 'success');
+      this.renderMainContent();
+      return;
+    }
+
+    if (cleanStudent) {
+      const waUrl = `https://wa.me/${cleanStudent}?text=${encodeURIComponent(studentMsg)}`;
+      window.open(waUrl, '_blank');
+      this.quizzesState.deliveryStatusMap[currQuizNum][studentId] = 'sent';
+      this.saveQuizzesToLocalStorage();
+      this.showToast(`تم فتح محادثة واتساب للطالب (${studentName}) بنجاح! 💬`, 'success');
+      this.renderMainContent();
+      return;
+    }
+
+    this.showToast(`لا يوجد رقم هاتف مسجل للطالب أو لولي أمره لإرسال النتيجة.`, 'warning');
+  }
+
+  app.dispatchBatchQuizScores = function() {
+    if (this.sessionState.isDispatchingQuizWhatsApp) {
+      this.showToast('عملية الإرسال قيد التنفيذ بالفعل مع فواصل الأمان الفائق...', 'warning');
+      return;
+    }
+
+    const currQuizNum = this.quizzesState.currentQuizNumber || 1;
+    const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
+    const scores = this.quizzesState.scoresMap[currQuizNum] || {};
+    const notes = this.quizzesState.notesMap[currQuizNum] || {};
+
+    const selectedGroupId = this.quizzesState.selectedGroupId;
+    const groupStudents = (this.students || []).filter(s => {
+      if (!selectedGroupId) return true;
+      if (String(s.group_id) === String(selectedGroupId) || String(s.groupId) === String(selectedGroupId)) return true;
+      if (Array.isArray(s.group_ids) && s.group_ids.some(gid => String(gid) === String(selectedGroupId))) return true;
+      return false;
+    });
+
+    const studentsToDispatch = groupStudents
+      .filter(s => scores[s.id] !== undefined && scores[s.id] !== null && scores[s.id] !== '')
+      .map(s => ({
+        student_id: s.id,
+        student_name: s.name,
+        parent_phone: s.parent_phone || '',
+        student_phone: s.student_phone || s.phone || '',
+        score: Number(scores[s.id]),
+        note: notes[s.id] || undefined,
+      }));
+
+    if (studentsToDispatch.length === 0) {
+      this.showToast('لا يوجد طلاب مرصودة درجاتهم في هذا الكويز للإرسال الجماعي. يرجى رصد الدرجات أولاً.', 'warning');
+      return;
+    }
+
+    const existing = document.getElementById('centrlyConfirmModal');
+    if (existing) existing.remove();
+
+    const modalEl = document.createElement('div');
+    modalEl.id = 'centrlyConfirmModal';
+    modalEl.className = 'modal-overlay';
+    modalEl.style.cssText = `
+      position: fixed; inset: 0; z-index: 100000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; padding: 1rem;
+      overflow-y: auto;
+    `;
+    modalEl.innerHTML = `
+      <div class="modal-dialog" dir="rtl" style="background: #ffffff; border-radius: 14px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--centrly-line); margin: auto; max-height: calc(100vh - 2rem); display: flex; flex-direction: column;">
+        <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--centrly-line); display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--centrly-ink);">
+            إرسال درجات الكويز عبر واتساب
+          </h3>
+          <button onclick="document.getElementById('centrlyConfirmModal')?.remove()" style="background: transparent; border: none; cursor: pointer; color: var(--centrly-text); display: flex; align-items: center;">${getIcon('close', 16, 'currentColor')}</button>
+        </div>
+        <div style="padding: 1.5rem; font-size: 0.925rem; color: var(--centrly-ink); line-height: 1.6;">
+          <p style="margin: 0 0 1rem 0;">
+            هل أنت متأكد من رغبتك في إرسال درجات (<strong>${studentsToDispatch.length}</strong>) طالب عبر الواتساب؟
+            <br>
+            <span style="font-size: 0.825rem; color: var(--centrly-text);">سيتم إرسال الرسائل بفواصل زمنية تلقائية لضمان وصولها بسلاسة.</span>
+          </p>
+
+          <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 1rem;">
+            <div style="font-weight: 800; font-size: 0.875rem; color: var(--centrly-ink); margin-bottom: 0.65rem;">
+              اختر جهة استلام النتيجة:
+            </div>
+            <label style="display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.6rem; cursor: pointer; font-size: 0.88rem;">
+              <input type="radio" name="quizBatchTarget" value="both" checked style="margin-top: 3px;" />
+              <div>
+                <strong>ولي الأمر والطالب معاً</strong> <span style="font-size: 0.75rem; color: #15803d; background: #dcfce7; padding: 1px 6px; border-radius: 4px; font-weight: 700;">موصى به</span>
+                <div style="font-size: 0.78rem; color: var(--centrly-text);">إرسال رسالة تقرير لولي الأمر، ورسالة تشجيعية منفصلة للطالب</div>
+              </div>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; cursor: pointer; font-size: 0.88rem;">
+              <input type="radio" name="quizBatchTarget" value="parents" />
+              <span>أولياء الأمور فقط</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.88rem;">
+              <input type="radio" name="quizBatchTarget" value="students" />
+              <span>الطلاب فقط</span>
+            </label>
+          </div>
+        </div>
+        <div style="padding: 1rem 1.5rem; background: var(--centrly-surface); border-top: 1px solid var(--centrly-line); display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button id="confirmModalCancelBtn" class="btn" style="background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1; font-weight: 700; padding: 0.5rem 1.25rem; border-radius: 8px; cursor: pointer;">
+            إلغاء
+          </button>
+          <button id="confirmModalActionBtn" class="btn" style="background: #25D366; color: #ffffff; border: none; font-weight: 800; padding: 0.5rem 1.4rem; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(37,211,102,0.35);">
+            بدء الإرسال الآمن (${studentsToDispatch.length} طالب)
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modalEl);
+
+    document.getElementById('confirmModalCancelBtn').onclick = () => {
+      modalEl.remove();
+    };
+
+    document.getElementById('confirmModalActionBtn').onclick = async () => {
+      const selectedTarget = document.querySelector('input[name="quizBatchTarget"]:checked')?.value || 'both';
+      modalEl.remove();
+
+      if (this.sessionState.isDispatchingQuizWhatsApp) return;
+      this.sessionState.isDispatchingQuizWhatsApp = true;
+      try {
+        const targetLabel = selectedTarget === 'both' ? 'لأولياء الأمور والطلاب' : (selectedTarget === 'students' ? 'للطلاب' : 'لأولياء الأمور');
+        this.showToast(`بدأت عملية الإرسال الآمن لدرجات الكويز ${targetLabel} بأعلى معايير الأمان...`, 'info');
+        const res = await request('/quizzes/dispatch-scores', {
+          method: 'POST',
+          body: {
+            group_id: selectedGroupId,
+            quiz_number: currQuizNum,
+            quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
+            max_score: currentQuiz.maxScore || 10,
+            students: studentsToDispatch,
+            target: selectedTarget,
+          },
+        });
+
+        if (!this.quizzesState.deliveryStatusMap) this.quizzesState.deliveryStatusMap = {};
+        if (!this.quizzesState.deliveryStatusMap[currQuizNum]) this.quizzesState.deliveryStatusMap[currQuizNum] = {};
+
+        if (Array.isArray(res?.results)) {
+          res.results.forEach(r => {
+            const sid = r.student_id || r.id;
+            if (sid) {
+              this.quizzesState.deliveryStatusMap[currQuizNum][sid] = (r.status === 'sent' || r.delivered) ? 'sent' : 'failed';
+            }
+          });
+        } else {
+          studentsToDispatch.forEach(s => {
+            this.quizzesState.deliveryStatusMap[currQuizNum][s.student_id] = 'sent';
+          });
+        }
+
+        this.saveQuizzesToLocalStorage();
+        this.showToast(`تم إتمام إرسال درجات الكويز! (المرسل: ${res.sent_count || res.sent || studentsToDispatch.length} ، الفاشل: ${res.failed_count || res.failed || 0})`, 'success');
+        this.renderMainContent();
+      } catch (err) {
+        this.showToast(`حدث خطأ أثناء الإرسال الجماعي: ${err.message || 'خطأ في الخادم'}`, 'danger');
+      } finally {
+        this.sessionState.isDispatchingQuizWhatsApp = false;
+      }
+    };
+  }
 }

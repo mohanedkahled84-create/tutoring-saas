@@ -1,5 +1,6 @@
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { request } from '../services/api.js';
 
 /**
  * Centrly Promo & Discount Codes Management View
@@ -192,4 +193,234 @@ export function renderCouponsView(codes = [], user = {}) {
 
     </div>
   `;
+}
+
+export function registerCouponsActions(app) {
+  app.loadCoupons = async function() {
+    try {
+      const res = await request('/billing/gift-codes').catch(async () => {
+        return await request('/admin/gift-codes').catch(() => ({ gift_codes: [] }));
+      });
+      this.giftCodes = Array.isArray(res?.gift_codes) ? res.gift_codes : [];
+    } catch (err) {
+      console.warn('Failed to load gift codes:', err);
+      this.giftCodes = [];
+    }
+  };
+
+  app.openCreateCouponModal = function() {
+    const existing = document.getElementById('createCouponModal');
+    if (existing) existing.remove();
+
+    const modalHtml = `
+      <div id="createCouponModal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 9999; padding: 1rem; overflow-y: auto;" dir="rtl">
+        <div class="card" style="width: 100%; max-width: 480px; margin: auto; animation: modalFadeIn 0.2s ease-out; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); font-family: 'Cairo', sans-serif; border-radius: 16px;">
+          <div class="card-header" style="border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="color: var(--centrly-blue-700);">${getIcon('billing', 20, 'var(--centrly-blue-700)')}</span>
+              <div>
+                <h3 class="card-title" style="margin: 0; font-size: 1.15rem; font-weight: 800;">إنشاء كود خصم جديد (Promo Code)</h3>
+                <p style="font-size: 0.8rem; color: var(--centrly-text); margin: 0.15rem 0 0 0;">
+                  يتفعل الكود فوراً في قاعدة البيانات السحابية المركزية.
+                </p>
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeCreateCouponModal()" style="border: none; cursor: pointer; padding: 0.35rem 0.6rem; display: flex; align-items: center;">${getIcon('close', 16, '#64748b')}</button>
+          </div>
+
+          <form onsubmit="window.centrlyApp.handleCreateCoupon(event)">
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">كود الخصم (رمز الكوبون بالإنجليزية)</label>
+                <input type="text" id="couponInputCode" class="form-input" placeholder="مثال: SUMMER25 أو EID2026" required
+                  style="text-transform: uppercase; font-family: monospace; font-weight: 800; letter-spacing: 0.05em; font-size: 1rem;"
+                  autocomplete="off" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '')">
+                <span style="font-size: 0.72rem; color: #64748b; margin-top: 0.25rem; display: block;">أحرف إنجليزية وأرقام فقط (يتحول تلقائياً لأحرف كبيرة).</span>
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">نوع الخصم</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                  <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.8rem; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer; background: #f8fafc;" id="couponTypeLabelPercent">
+                    <input type="radio" name="couponDiscountType" value="percent" checked onchange="window.centrlyApp.handleCouponTypeChange('percent')">
+                    <span style="font-weight: 700; font-size: 0.85rem;">نسبة مئوية (%)</span>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.8rem; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer; background: #f8fafc;" id="couponTypeLabelFixed">
+                    <input type="radio" name="couponDiscountType" value="fixed" onchange="window.centrlyApp.handleCouponTypeChange('fixed')">
+                    <span style="font-weight: 700; font-size: 0.85rem;">مبلغ نقدي ثابت (ج.م)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem;" id="couponValueLabel">قيمة الخصم (النسبة المئوية %)</label>
+                <div style="position: relative;">
+                  <input type="number" id="couponInputValue" class="form-input" min="1" max="100" placeholder="مثال: 30" required style="font-weight: 800; font-size: 1rem; padding-left: 3rem;">
+                  <span id="couponValueSuffix" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-weight: 800; color: #64748b;">%</span>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.825rem;">أقصى عدد استخدامات</label>
+                  <input type="number" id="couponInputMaxUses" class="form-input" min="1" placeholder="1000 (افتراضي)" value="1000">
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.825rem;">تاريخ الانتهاء (اختياري)</label>
+                  <input type="date" id="couponInputExpiresAt" class="form-input">
+                </div>
+              </div>
+
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.65rem;">
+              <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeCreateCouponModal()" style="font-weight: 700;">
+                إلغاء
+              </button>
+              <button type="submit" id="btnSubmitCreateCoupon" class="btn btn-primary" style="font-weight: 800; padding: 0.65rem 1.5rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                ${getIcon('plus', 16)}
+                <span>حفظ وتفعيل الكود فوراً</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  };
+
+  app.handleCouponTypeChange = function(type) {
+    const valInput = document.getElementById('couponInputValue');
+    const label = document.getElementById('couponValueLabel');
+    const suffix = document.getElementById('couponValueSuffix');
+    if (!valInput || !label || !suffix) return;
+
+    if (type === 'percent') {
+      label.innerText = 'قيمة الخصم (النسبة المئوية %)';
+      suffix.innerText = '%';
+      valInput.max = '100';
+      valInput.placeholder = 'مثال: 30';
+    } else {
+      label.innerText = 'قيمة الخصم (بالمبلغ النقدي بالجنيه)';
+      suffix.innerText = 'ج.م';
+      valInput.removeAttribute('max');
+      valInput.placeholder = 'مثال: 150';
+    }
+  };
+
+  app.closeCreateCouponModal = function() {
+    const modal = document.getElementById('createCouponModal');
+    if (modal) modal.remove();
+  };
+
+  app.handleCreateCoupon = async function(event) {
+    event.preventDefault();
+    const codeInput = document.getElementById('couponInputCode');
+    const typeInput = document.querySelector('input[name="couponDiscountType"]:checked');
+    const valueInput = document.getElementById('couponInputValue');
+    const maxUsesInput = document.getElementById('couponInputMaxUses');
+    const expiresInput = document.getElementById('couponInputExpiresAt');
+    const submitBtn = document.getElementById('btnSubmitCreateCoupon');
+
+    const code = (codeInput?.value || '').trim().toUpperCase();
+    const type = typeInput?.value || 'percent';
+    const numVal = Number(valueInput?.value || 0);
+    const maxUses = maxUsesInput?.value ? Number(maxUsesInput.value) : 1000;
+    const expiresAt = expiresInput?.value ? new Date(expiresInput.value).toISOString() : null;
+
+    if (!code) {
+      this.showToast('يرجى إدخال رمز كود الخصم', 'warning');
+      return;
+    }
+    if (numVal <= 0) {
+      this.showToast('يرجى إدخال قيمة صحيحة للخصم أكبر من صفر', 'warning');
+      return;
+    }
+
+    const payload = {
+      code,
+      discount_percent: type === 'percent' ? numVal : null,
+      discount_amount: type === 'fixed' ? numVal : null,
+      max_uses: maxUses,
+      expires_at: expiresAt,
+      is_active: true,
+    };
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'جاري الحفظ والتفعيل...';
+    }
+
+    try {
+      await request('/billing/gift-codes', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }).catch(async () => {
+        return await request('/admin/gift-codes', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      });
+
+      this.closeCreateCouponModal();
+      this.showToast(`تم إنشاء وتفعيل كود الخصم (${code}) بنجاح!`, 'success');
+      await this.loadCoupons();
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`تعذر إنشاء كود الخصم: ${err.message || 'حدث خطأ'}`, 'danger');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'حفظ وتفعيل الكود فوراً';
+      }
+    }
+  };
+
+  app.toggleCouponStatus = async function(id, newStatus) {
+    try {
+      await request(`/billing/gift-codes/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: newStatus }),
+      }).catch(async () => {
+        return await request(`/admin/gift-codes/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_active: newStatus }),
+        });
+      });
+
+      this.showToast(`تم ${newStatus ? 'تفعيل' : 'إيقاف'} كود الخصم بنجاح!`, 'success');
+      await this.loadCoupons();
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل تغيير حالة الكود: ${err.message}`, 'danger');
+    }
+  };
+
+  app.deleteCoupon = async function(id, code) {
+    if (!confirm(`هل أنت متأكد من حذف كود الخصم (${code}) نهائياً؟`)) {
+      return;
+    }
+
+    try {
+      await request(`/billing/gift-codes/${id}`, {
+        method: 'DELETE',
+      }).catch(async () => {
+        return await request(`/admin/gift-codes/${id}`, {
+          method: 'DELETE',
+        });
+      });
+
+      this.showToast(`تم حذف كود الخصم (${code}) بنجاح!`, 'success');
+      await this.loadCoupons();
+      this.renderMainContent();
+    } catch (err) {
+      this.showToast(`فشل حذف الكود: ${err.message}`, 'danger');
+    }
+  };
+
+  app.copyCouponCode = function(code) {
+    this.copyToClipboard(code, `تم نسخ كود الخصم (${code}) إلى الحافظة!`, 'كود الخصم');
+  };
 }
