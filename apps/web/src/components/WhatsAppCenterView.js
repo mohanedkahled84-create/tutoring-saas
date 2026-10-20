@@ -1,3 +1,5 @@
+import { request } from "../services/api.js";
+import { normalizeDigits } from "../utils/normalizeDigits.js";
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { getIcon } from '../utils/icons.js';
 
@@ -811,4 +813,505 @@ function renderLogsTableRows(conversations = [], rawMessages = []) {
       </tr>
     `;
   }).join('');
+}
+
+export function registerWhatsAppCenterActions(app) {
+  // WhatsApp Live Inbox & Smart Profit Economics Center
+  // ==========================================================================
+
+  app.loadWhatsAppInboxData = async function(render = true, tenantId = null) {
+    try {
+      const selectedTenant = tenantId !== null ? tenantId : (this.whatsappSelectedTenant || '');
+      const queryParam = selectedTenant ? `?tenant_id=${encodeURIComponent(selectedTenant)}` : '';
+      const res = await request(`/whatsapp/inbox${queryParam}`).catch(() => null);
+      if (res && res.success) {
+        this.whatsappInboxData = res;
+        if (res.active_tenant_id) {
+          this.whatsappSelectedTenant = res.active_tenant_id;
+        }
+      } else {
+        this.whatsappInboxData = res || {
+          stats: { total_sent: 0, total_replied: 0, pending_reply: 0, reply_rate: 0 },
+          conversations: [],
+          total_students: this.students?.length || 68,
+        };
+      }
+      if (this.whatsappInboxData && !this.whatsappInboxData.total_students) {
+        this.whatsappInboxData.total_students = this.students?.length || 68;
+      }
+    } catch (err) {
+      console.warn('Failed to load WhatsApp inbox data:', err);
+    }
+    if (render) {
+      this.renderMainContent();
+      setTimeout(() => {
+        this.recalculateWhatsAppEconomics();
+      }, 50);
+    }
+  }
+
+  app.onWhatsAppTenantFilterChange = async function(tenantId) {
+    this.whatsappSelectedTenant = tenantId;
+    await this.loadWhatsAppInboxData(true, tenantId);
+  }
+
+
+  app.switchWhatsAppTab = function(tab) {
+    this.whatsappActiveTab = tab;
+    const inboxSec = document.getElementById('sectionWhatsAppInbox');
+    const logsSec = document.getElementById('sectionWhatsAppLogs');
+    const calcSec = document.getElementById('sectionWhatsAppCalculator');
+
+    const btnInbox = document.getElementById('tabBtnInbox');
+    const btnLogs = document.getElementById('tabBtnLogs');
+    const btnCalc = document.getElementById('tabBtnCalc');
+
+    [
+      { sec: inboxSec, btn: btnInbox, active: tab === 'inbox' },
+      { sec: logsSec, btn: btnLogs, active: tab === 'logs' },
+      { sec: calcSec, btn: btnCalc, active: tab === 'calculator' },
+    ].forEach(({ sec, btn, active }) => {
+      if (sec) sec.style.display = active ? 'flex' : 'none';
+      if (btn) {
+        if (active) {
+          btn.style.background = '#ffffff';
+          btn.style.color = '#065f46';
+          btn.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
+        } else {
+          btn.style.background = 'rgba(255,255,255,0.1)';
+          btn.style.color = '#ffffff';
+          btn.style.boxShadow = 'none';
+        }
+      }
+    });
+
+    if (tab === 'calculator') {
+      this.recalculateWhatsAppEconomics();
+    }
+  }
+
+  app.filterWhatsAppInbox = function(filter) {
+    this.whatsappFilter = filter;
+    const items = document.querySelectorAll('.conversation-item');
+    items.forEach(el => {
+      const isReplied = el.getAttribute('data-replied') === 'true';
+      if (filter === 'ALL') {
+        el.style.display = '';
+      } else if (filter === 'REPLIED') {
+        el.style.display = isReplied ? '' : 'none';
+      } else if (filter === 'PENDING') {
+        el.style.display = !isReplied ? '' : 'none';
+      }
+    });
+
+    const btnAll = document.getElementById('btnFilterAll');
+    const btnReplied = document.getElementById('btnFilterReplied');
+    const btnPending = document.getElementById('btnFilterPending');
+
+    [
+      { btn: btnAll, active: filter === 'ALL' },
+      { btn: btnReplied, active: filter === 'REPLIED' },
+      { btn: btnPending, active: filter === 'PENDING' },
+    ].forEach(({ btn, active }) => {
+      if (!btn) return;
+      if (active) {
+        btn.style.background = '#0f172a';
+        btn.style.color = '#ffffff';
+      } else {
+        btn.style.background = '#f1f5f9';
+        btn.style.color = '#334155';
+      }
+    });
+  }
+
+  app.searchWhatsAppInbox = function(query) {
+    const q = (query || '').trim().toLowerCase();
+    const items = document.querySelectorAll('.conversation-item');
+    items.forEach(el => {
+      const name = (el.getAttribute('data-name') || '').toLowerCase();
+      const phone = (el.getAttribute('data-phone') || '').toLowerCase();
+      const matchesSearch = !q || name.includes(q) || phone.includes(q);
+      
+      const isReplied = el.getAttribute('data-replied') === 'true';
+      const matchesFilter = 
+        this.whatsappFilter === 'ALL' ||
+        (this.whatsappFilter === 'REPLIED' && isReplied) ||
+        (this.whatsappFilter === 'PENDING' && !isReplied);
+
+      el.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+    });
+  }
+
+  whatsappSelectedPlan = 'plan_300';
+  whatsappBillingCycle = 'monthly';
+
+  app.selectWhatsAppPlan = function(planId) {
+    this.whatsappSelectedPlan = planId;
+    const currentActual = this.students?.length || 68;
+    const plansData = {
+      plan_300: { monthly: 499, yearly: 4790, students: currentActual },
+      plan_750: { monthly: 899, yearly: 8630, students: 150 },
+      plan_1500: { monthly: 1399, yearly: 13430, students: 300 },
+    };
+
+    const targetPlan = plansData[planId] || plansData.plan_300;
+    const isYearly = this.whatsappBillingCycle === 'yearly';
+
+    const feeInput = document.getElementById('calcTeacherFee');
+    const studentsInput = document.getElementById('calcTeacherStudents');
+    if (feeInput) {
+      feeInput.value = isYearly ? targetPlan.yearly : targetPlan.monthly;
+    }
+    if (studentsInput) {
+      studentsInput.value = targetPlan.students;
+    }
+
+    // Highlight selected card
+    ['plan_300', 'plan_750', 'plan_1500'].forEach(id => {
+      const card = document.getElementById(id === 'plan_300' ? 'planCard300' : id === 'plan_750' ? 'planCard750' : 'planCard1500');
+      if (card) {
+        if (id === planId) {
+          card.style.border = '2px solid #3b82f6';
+          card.style.background = '#eff6ff';
+        } else {
+          card.style.border = '1.5px solid #cbd5e1';
+          card.style.background = '#ffffff';
+        }
+      }
+    });
+
+    this.recalculateWhatsAppEconomics();
+  }
+
+  app.setWhatsAppBillingCycle = function(cycle) {
+    this.whatsappBillingCycle = cycle;
+    const isYearly = cycle === 'yearly';
+
+    const btnMonthly = document.getElementById('btnCycleMonthly');
+    const btnYearly = document.getElementById('btnCycleYearly');
+
+    if (btnMonthly && btnYearly) {
+      if (isYearly) {
+        btnYearly.style.background = '#0f172a';
+        btnYearly.style.color = '#ffffff';
+        btnMonthly.style.background = 'transparent';
+        btnMonthly.style.color = '#475569';
+      } else {
+        btnMonthly.style.background = '#0f172a';
+        btnMonthly.style.color = '#ffffff';
+        btnYearly.style.background = 'transparent';
+        btnYearly.style.color = '#475569';
+      }
+    }
+
+    // Update prices displayed in the plan cards
+    const price300 = document.getElementById('planPrice300');
+    const price750 = document.getElementById('planPrice750');
+    const price1500 = document.getElementById('planPrice1500');
+    const sub300 = document.getElementById('planSubtext300');
+    const sub750 = document.getElementById('planSubtext750');
+    const sub1500 = document.getElementById('planSubtext1500');
+
+    if (isYearly) {
+      if (price300) price300.innerHTML = `4,790 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / سنوياً</span>`;
+      if (price750) price750.innerHTML = `8,630 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / سنوياً</span>`;
+      if (price1500) price1500.innerHTML = `13,430 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / سنوياً</span>`;
+
+      if (sub300) sub300.innerText = 'ما يعادل 399 ج.م/شهر (خصم 20%)';
+      if (sub750) sub750.innerText = 'ما يعادل 719 ج.م/شهر (خصم 20%)';
+      if (sub1500) sub1500.innerText = 'ما يعادل 1,119 ج.م/شهر (خصم 20%)';
+    } else {
+      if (price300) price300.innerHTML = `499 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / شهرياً</span>`;
+      if (price750) price750.innerHTML = `899 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / شهرياً</span>`;
+      if (price1500) price1500.innerHTML = `1,399 <span style="font-size: 0.85rem; font-family: 'Cairo';">ج.م / شهرياً</span>`;
+
+      if (sub300) sub300.innerText = 'أو 4,790 ج.م سنوياً (وفر 1,198 ج.م)';
+      if (sub750) sub750.innerText = 'أو 8,630 ج.م سنوياً (وفر 2,158 ج.م)';
+      if (sub1500) sub1500.innerText = 'أو 13,430 ج.م سنوياً (وفر 3,358 ج.م)';
+    }
+
+    // Update current plan input fee
+    const currentActual = this.students?.length || 68;
+    const plansData = {
+      plan_300: { monthly: 499, yearly: 4790 },
+      plan_750: { monthly: 899, yearly: 8630 },
+      plan_1500: { monthly: 1399, yearly: 13430 },
+    };
+    const current = plansData[this.whatsappSelectedPlan] || plansData.plan_300;
+    const feeInput = document.getElementById('calcTeacherFee');
+    if (feeInput) {
+      feeInput.value = isYearly ? current.yearly : current.monthly;
+    }
+
+    const lblTeacherFee = document.getElementById('lblTeacherFee');
+    if (lblTeacherFee) {
+      lblTeacherFee.innerText = isYearly ? 'قيمة الاشتراك السنوي المحصل مقدماً (ج.م - بخصم 20%)' : 'قيمة اشتراك المدرس الشهري (ج.م)';
+    }
+
+    const lblMonth2Title = document.getElementById('lblMonth2Title');
+    if (lblMonth2Title) {
+      lblMonth2Title.innerText = isYearly ? 'حالة الشهور القادمة بعد الدفع السنوي:' : 'صافي ربحك الشهري المستمر:';
+    }
+
+    const lblYearBasis = document.getElementById('lblYearBasis');
+    if (lblYearBasis) {
+      lblYearBasis.innerText = isYearly ? 'اشتراك سنوي دفعة واحدة (خصم 20%)' : '12 شهر اشتراك متكرر';
+    }
+
+    this.recalculateWhatsAppEconomics();
+  }
+
+  app.recalculateWhatsAppEconomics = function() {
+    const feeInput = document.getElementById('calcTeacherFee');
+    const studentsInput = document.getElementById('calcTeacherStudents');
+    const unitCostInput = document.getElementById('calcMsgUnitCost');
+    const chargeClientCheckbox = document.getElementById('calcChargeClient');
+    const isYearly = this.whatsappBillingCycle === 'yearly';
+
+    if (!feeInput || !studentsInput) return;
+
+    const teacherFee = Math.max(0, parseFloat(feeInput.value) || 0);
+    const studentsCount = Math.max(1, parseInt(studentsInput.value, 10) || 1);
+    const unitCost = Math.max(0, parseFloat(unitCostInput?.value ?? 0.18) || 0.18);
+    const chargeClient = chargeClientCheckbox ? chargeClientCheckbox.checked : false;
+
+    // Real Meta Economics:
+    // 2 messages per student: 1 for student portal + 1 for parent monitoring portal
+    const totalMsgs = studentsCount * 2;
+    // Meta charges per outbound utility template starting from message 1 (approx 0.18 EGP / $0.0036 USD in Egypt).
+    // Messages are sent to activate students for ONCE only during Month 1.
+    const rawMsgCost = Math.round(totalMsgs * unitCost * 100) / 100;
+    const effectiveMsgCost = chargeClient ? 0 : rawMsgCost;
+
+    // Month 1: Setup & Onboarding
+    const month1Revenue = teacherFee + (chargeClient ? rawMsgCost : 0);
+    const month1Net = Math.max(0, Math.round((month1Revenue - rawMsgCost) * 100) / 100);
+    const month1Margin = month1Revenue > 0 ? ((month1Net / month1Revenue) * 100).toFixed(1) : '100.0';
+
+    // Month 2+: Recurring Months
+    // Onboarding links are never re-sent. Meta WhatsApp cost = 0.00 EGP!
+    // If monthly: recurring monthly revenue is teacherFee (100% net margin)
+    // If yearly: already fully collected upfront; 0.00 EGP messaging cost
+    const month2Net = isYearly ? 0 : teacherFee;
+
+    // Annual Net:
+    const annualRevenue = isYearly ? teacherFee : (teacherFee * 12);
+    const annualNet = Math.max(0, Math.round((annualRevenue - effectiveMsgCost) * 100) / 100);
+    const annualMargin = annualRevenue > 0 ? ((annualNet / annualRevenue) * 100).toFixed(1) : '100.0';
+
+    const revEl = document.getElementById('calcMonth1Revenue');
+    const msgsEl = document.getElementById('calcMonth1Msgs');
+    const costEl = document.getElementById('calcMonth1Cost');
+    const net1El = document.getElementById('calcMonth1Net');
+    const net2El = document.getElementById('calcMonth2Net');
+    const yearNetEl = document.getElementById('calcYearNet');
+    const yearRevEl = document.getElementById('calcYearRevenue');
+    const yearCostEl = document.getElementById('calcYearCost');
+    const yearMarginEl = document.getElementById('calcYearMargin');
+
+    if (revEl) {
+      if (chargeClient) {
+        revEl.innerText = `${(teacherFee + rawMsgCost).toFixed(2)} ج.م (اشتراك + تفعيل)`;
+      } else {
+        revEl.innerText = `${teacherFee.toFixed(2)} ج.م`;
+      }
+    }
+    if (msgsEl) msgsEl.innerText = `${totalMsgs.toLocaleString('ar-EG')} رسالة (${studentsCount} طالب + ${studentsCount} ولي أمر)`;
+    if (costEl) {
+      if (chargeClient) {
+        costEl.innerText = `0.00 ج.م عليك (دفعها المدرس كرسوم تفعيل +${rawMsgCost.toFixed(2)} ج.م)`;
+      } else {
+        const usdVal = (rawMsgCost / 49.5).toFixed(2);
+        costEl.innerText = `${rawMsgCost.toFixed(2)} ج.م ($${usdVal} USD - ${totalMsgs} × ${unitCost.toFixed(2)} ج.م)`;
+      }
+    }
+    if (net1El) net1El.innerText = `${month1Net.toFixed(2)} ج.م (${month1Margin}%)`;
+    if (net2El) {
+      if (isYearly) {
+        net2El.innerHTML = `<span style="font-size: 1.4rem; color: #166534;">مدفوع مقدماً بالكامل</span> <div style="font-size: 0.8rem; color: #15803d; font-weight: 700; margin-top: 0.2rem;">تكلفة الواتساب 0.00 ج.م طوال الشهور</div>`;
+      } else {
+        net2El.innerText = `${month2Net.toFixed(2)} ج.م`;
+      }
+    }
+    if (yearNetEl) yearNetEl.innerText = `${annualNet.toFixed(2)} ج.م`;
+    if (yearRevEl) yearRevEl.innerText = `${annualRevenue.toLocaleString('ar-EG')} ج.م`;
+    if (yearCostEl) {
+      if (chargeClient) {
+        yearCostEl.innerText = `0.00 ج.م (محملة على المدرس)`;
+      } else {
+        yearCostEl.innerText = `${rawMsgCost.toFixed(2)} ج.م (مرة واحدة فقط بأول شهر)`;
+      }
+    }
+    if (yearMarginEl) yearMarginEl.innerText = `${annualMargin}%`;
+
+    // Update Scale Radar Cards
+    const radarFeeLabel = document.getElementById('calcRadarFeeLabel');
+    if (radarFeeLabel) radarFeeLabel.innerText = `${teacherFee.toLocaleString('ar-EG')}`;
+
+    const r10 = document.getElementById('radar10');
+    const r25 = document.getElementById('radar25');
+    const r50 = document.getElementById('radar50');
+    const r100 = document.getElementById('radar100');
+    const periodSubText = isYearly ? 'سنوياً كاش فوري مقدماً' : 'شهرياً بدون مصاريف رسائل';
+
+    if (r10) r10.innerText = `${(teacherFee * 10).toLocaleString('ar-EG')} ج.م`;
+    if (r25) r25.innerText = `${(teacherFee * 25).toLocaleString('ar-EG')} ج.م`;
+    if (r50) r50.innerText = `${(teacherFee * 50).toLocaleString('ar-EG')} ج.م`;
+    if (r100) r100.innerText = `${(teacherFee * 100).toLocaleString('ar-EG')} ج.م`;
+
+    ['radar10Sub', 'radar25Sub', 'radar50Sub', 'radar100Sub'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerText = periodSubText;
+    });
+  }
+
+  app.setCalcTeacherFee = function(num) {
+    const feeInput = document.getElementById('calcTeacherFee');
+    if (feeInput) {
+      feeInput.value = num;
+      this.recalculateWhatsAppEconomics();
+    }
+  }
+
+  app.setCalcStudents = function(num) {
+    const studentsInput = document.getElementById('calcTeacherStudents');
+    if (studentsInput) {
+      studentsInput.value = num;
+      this.recalculateWhatsAppEconomics();
+    }
+  }
+
+  app.setCalcUnitCost = function(num) {
+    const unitCostInput = document.getElementById('calcMsgUnitCost');
+    if (unitCostInput) {
+      unitCostInput.value = num;
+      this.recalculateWhatsAppEconomics();
+    }
+  }
+
+  app.openWhatsAppChatWindow = function(phone, studentName) {
+    const cleanPhone = String(phone || '').replace(/\D/g, '');
+    let formattedPhone = cleanPhone;
+    if (formattedPhone.startsWith('01')) {
+      formattedPhone = '2' + formattedPhone;
+    } else if (!formattedPhone.startsWith('20') && formattedPhone.length === 10) {
+      formattedPhone = '20' + formattedPhone;
+    }
+    const greeting = encodeURIComponent(`مرحباً ${studentName ? studentName : ''}، معك مستر بخصوص المنصة والحصص.`);
+    const waUrl = `https://wa.me/${formattedPhone}?text=${greeting}`;
+    window.open(waUrl, '_blank');
+  }
+
+  app.viewWhatsAppConversationDetails = function(convIdentifier) {
+    return this.showWhatsAppMessageHistory(convIdentifier);
+  }
+
+  app.showWhatsAppMessageHistory = function(convIdentifier) {
+    const conversations = this.whatsappInboxData?.conversations || [];
+    const cleanId = String(convIdentifier || '').trim();
+    const conv = conversations.find(c => 
+      c.id === cleanId || 
+      String(c.phone || '').replace(/\D/g, '') === cleanId.replace(/\D/g, '') ||
+      c.student_id === cleanId
+    );
+
+    if (!conv) {
+      this.showToast('لم يتم العثور على سجل الرسائل لهذه المحادثة', 'info');
+      return;
+    }
+
+    const studentName = conv.student_name || 'طالب';
+    const cleanPhone = String(conv.phone || '').replace(/\D/g, '');
+    const displayPhone = cleanPhone.startsWith('20') ? '0' + cleanPhone.slice(2) : cleanPhone;
+
+    // Combine all inbound and outbound messages
+    const thread = [];
+    (conv.outbound_messages || []).forEach(m => {
+      thread.push({
+        id: m.id,
+        direction: 'outbound',
+        body: m.body,
+        time: m.time,
+        status: m.status || 'sent',
+      });
+    });
+    (conv.inbound_messages || []).forEach(m => {
+      thread.push({
+        id: m.id,
+        direction: 'inbound',
+        body: m.body,
+        time: m.time,
+        status: 'received',
+      });
+    });
+
+    // If empty thread, use last_message fallback
+    if (thread.length === 0 && conv.last_message) {
+      thread.push({
+        id: conv.id || 'last-msg',
+        direction: conv.last_message.direction || 'outbound',
+        body: conv.last_message.body,
+        time: conv.last_message.time,
+        status: 'sent',
+      });
+    }
+
+    // Sort chronologically ascending
+    thread.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1rem; max-height: 480px; overflow-y: auto; padding: 0.5rem;" dir="rtl">
+        
+        <!-- Header Info -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">${escapeHtml(studentName)}</div>
+            <div style="font-size: 0.8rem; color: #64748b; font-family: monospace;" dir="ltr">${escapeHtml(displayPhone)}</div>
+          </div>
+          <div>
+            <span class="badge" style="${conv.has_replied ? 'background: #dcfce7; color: #166534;' : 'background: #f1f5f9; color: #475569;'} font-weight: 800;">
+              ${conv.has_replied ? 'وصل رد من الطالب/ولي الأمر' : 'في انتظار الرد'}
+            </span>
+          </div>
+        </div>
+
+        <!-- Chat Stream (WhatsApp Bubble Style) -->
+        <div style="background: #efeae2; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; min-height: 240px;">
+          ${thread.map(msg => {
+            const isOutbound = msg.direction === 'outbound';
+            const msgDate = msg.time ? new Date(msg.time).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+            return `
+              <div style="display: flex; justify-content: ${isOutbound ? 'flex-start' : 'flex-end'};">
+                <div style="max-width: 82%; background: ${isOutbound ? '#ffffff' : '#d9fdd3'}; border-radius: 10px; padding: 0.65rem 0.85rem; box-shadow: 0 1px 2px rgba(0,0,0,0.12); position: relative;">
+                  <div style="font-size: 0.75rem; font-weight: 800; color: ${isOutbound ? '#2563eb' : '#047857'}; margin-bottom: 0.25rem;">
+                    ${isOutbound ? 'رسالة النظام / المنصة' : `رد: ${escapeHtml(studentName)}`}
+                  </div>
+                  <div style="font-size: 0.875rem; color: #1e293b; line-height: 1.6; white-space: pre-wrap; word-break: break-word;">
+                    ${escapeHtml(msg.body || '')}
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem; margin-top: 0.35rem; font-size: 0.7rem; color: #64748b;">
+                    <span>${escapeHtml(msgDate)}</span>
+                    ${isOutbound ? '<span style="color: #0284c7;">✓✓</span>' : ''}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+      </div>
+    `;
+
+    const footerHtml = `
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 0.5rem;">
+        <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
+        <button type="button" class="btn" onclick="window.centrlyApp.openWhatsAppChatWindow('${escapeHtml(cleanPhone)}', '${escapeHtml(studentName)}')" style="background: #25D366; color: #ffffff; font-weight: 800; border: none; padding: 0.55rem 1.25rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);">
+          ${getIcon('whatsapp', 18, '#ffffff')}
+          <span>فتح محادثة واتساب كاملة والرد</span>
+        </button>
+      </div>
+    `;
+
+    this.showModal(`محادثة واتساب: ${escapeHtml(studentName)}`, bodyHtml, footerHtml, '650px');
+  }
 }

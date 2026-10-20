@@ -486,3 +486,79 @@ export function renderTeacherCalendar(data = {}) {
     </div>
   `;
 }
+
+export function registerTeacherCalendarActions(app) {
+  app.switchCalendarView = function(view) {
+    this.calendarState.view = view;
+    this.renderMainContent();
+  }
+
+  app.selectCalendarDay = function(dayKey) {
+    this.calendarState.selectedDayName = dayKey;
+    this.renderMainContent();
+  }
+
+  app.updateCalendarDateLabel = function() {
+    const offset = Number(this.calendarState.weekOffset) || 0;
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const daysSinceSat = (dayOfWeek + 1) % 7;
+    const sat = new Date(now);
+    sat.setDate(now.getDate() - daysSinceSat + (offset * 7));
+    const fri = new Date(sat);
+    fri.setDate(sat.getDate() + 6);
+
+    const arabicMonthNames = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+
+    const startStr = `${sat.getDate()} ${arabicMonthNames[sat.getMonth()]}`;
+    const endStr = `${fri.getDate()} ${arabicMonthNames[fri.getMonth()]} ${fri.getFullYear()}`;
+    this.calendarState.dateLabel = `أسبوع ${startStr} - ${endStr}`;
+  }
+
+  app.calendarPrev = function() {
+    this.calendarState.weekOffset = (this.calendarState.weekOffset || 0) - 1;
+    this.updateCalendarDateLabel();
+    this.renderMainContent();
+  }
+
+  app.calendarNext = function() {
+    this.calendarState.weekOffset = (this.calendarState.weekOffset || 0) + 1;
+    this.updateCalendarDateLabel();
+    this.renderMainContent();
+  }
+
+  app.calendarToday = function() {
+    this.calendarState.weekOffset = 0;
+    const jsDayToDayName = {
+      0: 'الأحد',
+      1: 'الإثنين',
+      2: 'الثلاثاء',
+      3: 'الأربعاء',
+      4: 'الخميس',
+      5: 'الجمعة',
+      6: 'السبت',
+    };
+    this.calendarState.selectedDayName = jsDayToDayName[new Date().getDay()] || 'السبت';
+    this.updateCalendarDateLabel();
+    this.renderMainContent();
+    this.showToast('عرض جدول اليوم الحالي', 'info');
+  }
+
+  app.filterCalendarByGroup = function(groupId) {
+    this.calendarState.selectedGroup = groupId;
+    this.renderMainContent();
+  }
+
+  // ==========================================================================
+  // ==========================================================================
+  // Calendar View Helpers
+  // ==========================================================================
+
+  app.toggleCalendarHideEnded = function() {
+    this.calendarState.hideEnded = this.calendarState.hideEnded !== false ? false : true;
+    this.renderMainContent();
+  }
+}

@@ -1,3 +1,7 @@
+import { request } from '../services/api.js';
+import { renderParentPortalView } from './ParentPortalView.js';
+import { renderStudentPortalView } from './StudentPortalView.js';
+import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js';
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
@@ -185,4 +189,515 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
       </div>
     </div>
   `;
+}
+
+
+/**
+ * Register Unified Student & Parent Portal Actions (DEV-89)
+ */
+export function registerUnifiedPortalActions(app) {
+  // DEV-34: No-App Parent Portal
+  app.loadParentPortal = async function loadParentPortal(token) {
+    window.__centrlyLoaded = true;
+    this._parentPortalToken = token;
+    try {
+      if (typeof localStorage !== 'undefined' && token) {
+        localStorage.setItem('centrly_portal_token', token);
+        localStorage.setItem('centrly_portal_role', 'parent');
+      }
+      if (typeof sessionStorage !== 'undefined' && token) {
+        sessionStorage.setItem('centrly_portal_token', token);
+        sessionStorage.setItem('centrly_portal_role', 'parent');
+      }
+      if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
+        window.history.replaceState(null, '', '/portal');
+      }
+    } catch (_) {}
+
+    try {
+      const data = await request(`/public/parent-portal?token=${encodeURIComponent(token)}`);
+      if (data && (data.error || !data.student)) {
+        throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة ولي الأمر');
+      }
+      const appEl = this.getAppEl();
+      if (appEl) {
+        const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_parent_tab')) ||
+                         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_parent_tab')) || 'attendance';
+        appEl.innerHTML = renderParentPortalView(data, savedTab);
+        const parentKey = (data && data.student && (data.student.id || data.student.parent_phone || data.student.student_code || data.student.code)) ? String(data.student.id || data.student.parent_phone || data.student.student_code || data.student.code).trim() : '';
+        if (typeof window !== 'undefined' && parentKey) {
+          window._centrlyCurrentParentId = parentKey;
+          window._centrlyCurrentStudentId = String(data.student.id || data.student.student_code || data.student.code || '').trim();
+        }
+        setTimeout(() => {
+          if (typeof window !== 'undefined' && window.openParentPortalTour) {
+            window.openParentPortalTour(false, parentKey);
+          }
+        }, 500);
+      }
+    } catch (err) {
+      const msg = err?.message || '';
+      const isExpired = (msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED')) &&
+                        !msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('Failed to execute');
+      if (isExpired) {
+        try {
+          localStorage.removeItem('centrly_portal_token');
+          localStorage.removeItem('centrly_portal_role');
+          sessionStorage.removeItem('centrly_portal_token');
+          sessionStorage.removeItem('centrly_portal_role');
+        } catch (_) {}
+        this.renderPortalLogin('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً');
+        return;
+      }
+      const appEl = this.getAppEl();
+      if (appEl) {
+        appEl.innerHTML = renderParentPortalView({
+          error: msg || 'تعذر تحميل بيانات بوابة ولي الأمر. يرجى التحقق من صحة الرابط.',
+        });
+      }
+    }
+  }
+
+  app.reloadParentPortal = async function reloadParentPortal() {
+    if (this._parentPortalToken) {
+      await this.loadParentPortal(this._parentPortalToken);
+      this.showToast('تم تحديث بيانات المتابعة بنجاح!', 'success');
+    } else {
+      window.location.reload();
+    }
+  }
+
+  app.loadStudentPortal = async function loadStudentPortal(token) {
+    window.__centrlyLoaded = true;
+    this._studentPortalToken = token;
+    try {
+      if (typeof localStorage !== 'undefined' && token) {
+        localStorage.setItem('centrly_portal_token', token);
+        localStorage.setItem('centrly_portal_role', 'student');
+      }
+      if (typeof sessionStorage !== 'undefined' && token) {
+        sessionStorage.setItem('centrly_portal_token', token);
+        sessionStorage.setItem('centrly_portal_role', 'student');
+      }
+      if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
+        window.history.replaceState(null, '', '/portal');
+      }
+    } catch (_) {}
+
+    try {
+      const data = await request(`/public/parent-portal?token=${encodeURIComponent(token)}`);
+      if (data && (data.error || !data.student)) {
+        throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة الطالب');
+      }
+      const appEl = this.getAppEl();
+      if (appEl) {
+        const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_student_tab')) ||
+                         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_student_tab')) || 'materials';
+        appEl.innerHTML = renderStudentPortalView(data, savedTab);
+        const studentKey = (data && data.student && (data.student.id || data.student.student_code || data.student.code || data.student.student_phone)) ? String(data.student.id || data.student.student_code || data.student.code || data.student.student_phone).trim() : '';
+        if (typeof window !== 'undefined' && studentKey) {
+          window._centrlyCurrentStudentId = studentKey;
+        }
+        setTimeout(() => {
+          if (typeof window !== 'undefined' && window.openStudentPortalTour) {
+            window.openStudentPortalTour(false, studentKey);
+          }
+        }, 500);
+      }
+    } catch (err) {
+      const msg = err?.message || '';
+      const isExpired = (msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED')) &&
+                        !msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('Failed to execute');
+      if (isExpired) {
+        try {
+          localStorage.removeItem('centrly_portal_token');
+          localStorage.removeItem('centrly_portal_role');
+          sessionStorage.removeItem('centrly_portal_token');
+          sessionStorage.removeItem('centrly_portal_role');
+        } catch (_) {}
+        this.renderPortalLogin('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً');
+        return;
+      }
+      const appEl = this.getAppEl();
+      if (appEl) {
+        appEl.innerHTML = renderStudentPortalView({
+          error: msg || 'تعذر تحميل بيانات بوابة الطالب. يرجى التحقق من صحة الرابط.',
+        });
+      }
+    }
+  }
+
+  app.reloadStudentPortal = async function reloadStudentPortal() {
+    if (this._studentPortalToken) {
+      await this.loadStudentPortal(this._studentPortalToken);
+      this.showToast('تم تحديث بيانات الطالب بنجاح!', 'success');
+    } else {
+      window.location.reload();
+    }
+  }
+
+  // DEV-PORTAL: Unified Student & Parent Portal Login & Session Handlers
+  app.renderPortalLogin = function renderPortalLogin(errorMessage = '') {
+    window.__centrlyLoaded = true;
+    this.currentRoute = 'portal';
+    const appEl = this.getAppEl();
+    if (appEl) {
+      appEl.innerHTML = renderUnifiedPortalLoginView(errorMessage);
+    }
+    if (window.history?.replaceState && window.location.pathname !== '/portal') {
+      window.history.replaceState(null, '', window.location.search ? `/portal${window.location.search}` : '/portal');
+    }
+  }
+
+  app.switchPortalLoginRole = function switchPortalLoginRole(role) {
+    const isStudent = role === 'student';
+    const tabParent = document.getElementById('portalTabParent');
+    const tabStudent = document.getElementById('portalTabStudent');
+    const heading = document.getElementById('portalHeadingText');
+    const subheading = document.getElementById('portalSubheadingText');
+    const roleInput = document.getElementById('portalRole');
+    const identLabel = document.getElementById('portalIdentifierLabel');
+    const identHelp = document.getElementById('portalIdentifierHelp');
+    const submitText = document.getElementById('portalSubmitBtnText');
+
+    if (roleInput) roleInput.value = isStudent ? 'student' : 'parent';
+
+    if (tabParent && tabStudent) {
+      if (isStudent) {
+        tabStudent.style.background = '#ffffff';
+        tabStudent.style.color = '#1d4ed8';
+        tabStudent.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)';
+
+        tabParent.style.background = 'transparent';
+        tabParent.style.color = '#64748b';
+        tabParent.style.boxShadow = 'none';
+      } else {
+        tabParent.style.background = '#ffffff';
+        tabParent.style.color = '#1e3a8a';
+        tabParent.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)';
+
+        tabStudent.style.background = 'transparent';
+        tabStudent.style.color = '#64748b';
+        tabStudent.style.boxShadow = 'none';
+      }
+    }
+
+    if (heading) heading.textContent = isStudent ? 'بوابة الطالب' : 'بوابة ولي الأمر';
+    if (subheading) subheading.textContent = isStudent
+      ? 'سجّل دخولك لتحميل المذكرات، تسليم الواجبات، ومتابعة درجاتك'
+      : 'سجّل دخولك لمتابعة الحضور والغياب، الدرجات، والواجبات';
+    if (identLabel) identLabel.textContent = isStudent
+      ? 'رقم هاتف الطالب أو كود الطالب'
+      : 'رقم هاتف ولي الأمر أو كود الطالب';
+    if (identHelp) identHelp.textContent = isStudent
+      ? 'اكتب رقم هاتفك المسجل لدى المعلم أو كودك الشخصي'
+      : 'اكتب رقم هاتف ولي الأمر أو كود الطالب';
+    if (submitText) submitText.textContent = isStudent ? 'دخول بوابة الطالب' : 'دخول بوابة ولي الأمر';
+
+    if (window.history?.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('role', isStudent ? 'student' : 'parent');
+      window.history.replaceState(null, '', url.pathname + url.search);
+    }
+  }
+
+  app.togglePortalPasswordVisibility = function togglePortalPasswordVisibility(btn, event) {
+    this.togglePasswordVisibility('portalPassword', btn, event);
+  }
+
+  app.handlePortalLogin = async function handlePortalLogin(event) {
+    if (event && event.preventDefault) event.preventDefault();
+    const identInput = document.getElementById('portalIdentifier');
+    const passInput = document.getElementById('portalPassword');
+    const rememberCheckbox = document.getElementById('portalRememberMe');
+    const submitBtn = document.getElementById('portalSubmitBtn');
+    const spinner = document.getElementById('portalSubmitSpinner');
+    const alertEl = document.getElementById('portalLoginAlert');
+    const roleInput = document.getElementById('portalRole');
+
+    const identifier = identInput ? normalizeDigits(identInput.value).trim() : '';
+    const password = passInput ? normalizeDigits(passInput.value).trim() : '';
+    const role = roleInput ? roleInput.value : 'parent';
+    const rememberMe = rememberCheckbox ? rememberCheckbox.checked : true;
+
+    if (!identifier || !password) {
+      if (alertEl) {
+        alertEl.style.display = 'block';
+        alertEl.textContent = 'يرجى كتابة رقم الهاتف أو كود الطالب وكلمة المرور';
+      }
+      return;
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline';
+    if (alertEl) alertEl.style.display = 'none';
+
+    try {
+      const res = await request('/public/portal/login', {
+        method: 'POST',
+        body: { identifier, password, role },
+      });
+
+      if (res && res.success && res.token) {
+        const targetRole = (role === 'student' || role === 'parent') ? role : (res.role || 'parent');
+        try {
+          localStorage.setItem('centrly_portal_token', res.token);
+          localStorage.setItem('centrly_portal_role', targetRole);
+          sessionStorage.setItem('centrly_portal_token', res.token);
+          sessionStorage.setItem('centrly_portal_role', targetRole);
+        } catch (_) {}
+
+        this.showToast('مرحباً بك! تم تسجيل الدخول بنجاح', 'success');
+
+        try {
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', '/portal');
+          }
+        } catch (_) {}
+
+        if (targetRole === 'student') {
+          await this.loadStudentPortal(res.token);
+        } else {
+          await this.loadParentPortal(res.token);
+        }
+      } else {
+        throw new Error(res?.error?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البيانات.');
+      }
+    } catch (err) {
+      const errorMsg = err?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البيانات.';
+      if (alertEl) {
+        alertEl.style.display = 'block';
+        alertEl.textContent = errorMsg;
+      } else {
+        this.renderPortalLogin(errorMsg);
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+    }
+  }
+
+  app.handlePortalLogout = function handlePortalLogout() {
+    try {
+      localStorage.removeItem('centrly_portal_token');
+      localStorage.removeItem('centrly_portal_role');
+      sessionStorage.removeItem('centrly_portal_token');
+      sessionStorage.removeItem('centrly_portal_role');
+      sessionStorage.removeItem('centrly_student_portal_token');
+    } catch (_) {}
+    this._parentPortalToken = null;
+    this._studentPortalToken = null;
+    this.showToast('تم تسجيل الخروج بنجاح', 'info');
+    this.renderPortalLogin();
+  }
+
+  app.downloadStudentCardPng = function downloadStudentCardPng(student) {
+    downloadStudentCardAsPng(student);
+  }
+
+  app.openFullscreenBarcode = function openFullscreenBarcode(student) {
+    openFullscreenBarcodeModal(student);
+  }
+
+  app.compressImageFile = async function compressImageFile(file, maxWidth = 1600, quality = 0.72) {
+    return new Promise((resolve) => {
+      const isImg = (file && file.type && file.type.startsWith('image/')) ||
+        (file && file.name && /\.(jpg|jpeg|png|webp|bmp|heic)$/i.test(file.name));
+      if (!isImg) {
+        resolve(null);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => resolve(null);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => resolve(null);
+        img.onload = () => {
+          try {
+            let { width, height } = img;
+            if (width > maxWidth || height > maxWidth) {
+              if (width > height) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              } else {
+                width = Math.round((width * maxWidth) / height);
+                height = maxWidth;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              resolve(null);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            let compressed = canvas.toDataURL('image/jpeg', quality);
+            let estimatedBytes = Math.round((compressed.length * 3) / 4);
+
+            // If still over 800KB, perform secondary pass with lower quality for fast network transfer
+            if (estimatedBytes > 800 * 1024) {
+              compressed = canvas.toDataURL('image/jpeg', 0.55);
+              estimatedBytes = Math.round((compressed.length * 3) / 4);
+            }
+
+            resolve({
+              data: compressed,
+              size: estimatedBytes,
+              name: (file.name || 'homework').replace(/\.[^/.]+$/, '') + '.jpg',
+            });
+          } catch (_) {
+            resolve(null);
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  app.handleStudentHomeworkUpload = async function handleStudentHomeworkUpload(materialId, file) {
+    if (!file) return;
+
+    const fileInput = document.getElementById(`hw-file-input-${materialId}`);
+    const resetFileInput = () => {
+      if (fileInput) fileInput.value = '';
+    };
+
+    const isPdf = (file.type && file.type.includes('pdf')) || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+    const isImage = (file.type && file.type.startsWith('image/')) || (file.name && /\.(jpg|jpeg|png|webp|heic|bmp)$/i.test(file.name));
+
+    if (!isPdf && !isImage) {
+      resetFileInput();
+      this.showToast('يرجى رفع ملف الواجب بصيغة PDF أو صورة واضحة (JPG / PNG / WEBP).', 'warning');
+      return;
+    }
+
+    if (file.size > 100 * 1024 * 1024) {
+      resetFileInput();
+      this.showToast('حجم الملف يتجاوز الحد الأقصى المسموح به (100 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.', 'warning');
+      return;
+    }
+
+    const token = this._studentPortalToken
+      || this._parentPortalToken
+      || (typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_portal_token') : null)
+      || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('centrly_portal_token') : null)
+      || new URLSearchParams(window.location.search).get('token')
+      || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('centrly_student_portal_token') : null)
+      || '';
+
+    if (!token) {
+      resetFileInput();
+      this.showToast('تعذر التحقق من رمز الطالب أو ولي الأمر. يرجى إعادة فتح الرابط والمحاولة مرة أخرى.', 'danger');
+      return;
+    }
+
+    const btn = document.getElementById(`hw-upload-btn-${materialId}`);
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>جارٍ معالجة الملف...</span>';
+    }
+
+    try {
+      let uploadBase64 = null;
+      let uploadFileName = file.name;
+      let uploadFileSize = file.size;
+
+      if (isImage) {
+        if (btn) btn.innerHTML = '<span>جارٍ تجهيز وضغط الصورة للرفع السريع...</span>';
+        const compressed = await this.compressImageFile(file, 1280, 0.68);
+        if (compressed && compressed.data) {
+          uploadBase64 = compressed.data;
+          uploadFileName = compressed.name;
+          uploadFileSize = compressed.size;
+        }
+      }
+
+      if (!uploadBase64) {
+        if (btn) btn.innerHTML = '<span>جارٍ قراءة الملف...</span>';
+        uploadBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = () => reject(new Error('تعذر قراءة الملف من جهازك'));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (btn) btn.innerHTML = '<span>جارٍ بدء الرفع (0%)...</span>';
+
+      // Upload with real-time percentage progress tracking
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_BASE_URL}/public/homework/submit`);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+
+        const totalMb = (uploadFileSize / (1024 * 1024)).toFixed(1);
+
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable && btn) {
+            const percent = Math.min(99, Math.round((evt.loaded / evt.total) * 100));
+            const loadedMb = (evt.loaded / (1024 * 1024)).toFixed(1);
+            btn.innerHTML = `<span>جارٍ الرفع (${percent}% • ${loadedMb}/${totalMb} ميجا)...</span>`;
+          }
+        };
+
+        xhr.upload.onload = () => {
+          if (btn) btn.innerHTML = '<span>تم الرفع 100%! جارٍ حفظ وتأكيد الواجب في السحابة...</span>';
+        };
+
+        xhr.onload = () => {
+          if (btn) btn.innerHTML = '<span>جارٍ معالجة وحفظ الواجب في السحابة...</span>';
+          let respData = {};
+          try {
+            respData = JSON.parse(xhr.responseText);
+          } catch (_) {}
+
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(respData);
+          } else {
+            const errMsg = respData?.error?.message || `فشل حفظ الواجب (${xhr.status})`;
+            reject(new Error(errMsg));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('انقطع الاتصال بالإنترنت أثناء الرفع. يرجى التأكد من استقرار الشبكة والمحاولة مجدداً'));
+        xhr.ontimeout = () => reject(new Error(`استغرق رفع الملف (${totalMb} ميجا) وقتاً طويلاً بسبب بطء سرعة الرفع لديك. يرجى الاتصال بشبكة أسرع أو تقليل حجم الملف والمحاولة مرة أخرى`));
+        // Dynamic timeout: 6 minutes minimum, up to 15 minutes (900,000ms) for large files up to 100MB on slow ADSL/3G
+        const uploadTimeoutMs = Math.min(900000, Math.max(360000, Math.round((uploadFileSize / (25 * 1024)) * 1000) + 120000));
+        xhr.timeout = uploadTimeoutMs;
+
+        xhr.send(JSON.stringify({
+          token,
+          material_id: materialId,
+          file_data: uploadBase64,
+          file_name: uploadFileName,
+          file_size: uploadFileSize,
+        }));
+      });
+
+      this.showToast('تم رفع حل الواجب بنجاح وإرساله لمعلمك للمراجعة.', 'success');
+      resetFileInput();
+
+      const portalRole = (typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_portal_role') : null)
+        || (this._parentPortalToken ? 'parent' : 'student');
+      if (portalRole === 'parent' && this.loadParentPortal) {
+        await this.loadParentPortal(token);
+      } else {
+        await this.loadStudentPortal(token);
+      }
+    } catch (subErr) {
+      console.error('Homework upload error:', subErr);
+      this.showToast(`فشل رفع الواجب: ${subErr.message || 'حدث خطأ في الاتصال'}`, 'danger');
+      resetFileInput();
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+  }
+
+
 }

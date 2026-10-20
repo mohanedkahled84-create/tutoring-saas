@@ -250,7 +250,8 @@ test("DEV-16: GroupsView hides session prices when role is assistant", async () 
 
 test("DEV-16: SessionsView automatically resets homework selector after every scan", () => {
   const appJsPath = path.resolve(process.cwd(), "../../apps/web/src/app.js");
-  const content = fs.readFileSync(appJsPath, "utf8");
+  const sessionsViewPath = path.resolve(process.cwd(), "../../apps/web/src/components/SessionsView.js");
+  const content = fs.readFileSync(appJsPath, "utf8") + (fs.existsSync(sessionsViewPath) ? "\n" + fs.readFileSync(sessionsViewPath, "utf8") : "");
 
   // Verify that handleStudentScan explicitly resets homework radio to default none
   assert.ok(content.includes("hwNoneRadio.checked = true") || content.includes("hwDoneRadio.checked = true"));

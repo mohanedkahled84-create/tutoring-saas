@@ -1,3 +1,6 @@
+import { authService } from '../services/auth.js';
+import { request } from '../services/api.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 import { getIcon } from '../utils/icons.js';
 
 export function renderAuthScreens() {
@@ -280,3 +283,768 @@ export function renderEmailVerificationScreen({ email = '', note = '' } = {}) {
   `;
 }
 
+
+
+/**
+ * Register Authentication & Account Lifecycle Actions (DEV-89)
+ */
+export function registerAuthActions(app) {
+  app.renderAuth = function renderAuth(tab = 'login') {
+    window.__centrlyLoaded = true;
+    this.resetTenantState();
+    window.scrollTo(0, 0);
+    const appEl = this.getAppEl();
+    if (appEl) appEl.innerHTML = renderAuthScreens();
+    if (tab === 'signup') {
+      this.switchAuthTab('signup');
+    } else {
+      this.switchAuthTab('login');
+    }
+
+    // Auto-dismiss auth error banner when user begins typing
+    const alertBox = document.getElementById('authAlert');
+    const inputs = document.querySelectorAll('#formLogin input, #formSignup input');
+    inputs.forEach(inp => {
+      inp.addEventListener('input', () => {
+        if (alertBox && alertBox.style.display !== 'none') {
+          alertBox.style.display = 'none';
+        }
+      });
+    });
+  }
+
+  app.switchAuthTab = function switchAuthTab(tab) {
+    document.title = tab === 'signup' ? 'إنشاء حساب جديد | سنترلي' : 'تسجيل الدخول | سنترلي';
+    const formLogin = document.getElementById('formLogin');
+    const formSignup = document.getElementById('formSignup');
+    const tabLogin = document.getElementById('tabLogin');
+    const tabSignup = document.getElementById('tabSignup');
+    const alertBox = document.getElementById('authAlert');
+    if (alertBox) alertBox.style.display = 'none';
+
+    if (tab === 'login') {
+      formLogin.style.display = 'block';
+      formSignup.style.display = 'none';
+      tabLogin.style.borderBottom = '2px solid var(--centrly-blue-700)';
+      tabLogin.style.color = 'var(--centrly-blue-800)';
+      tabSignup.style.borderBottom = '2px solid transparent';
+      tabSignup.style.color = 'var(--centrly-text)';
+    } else {
+      formLogin.style.display = 'none';
+      formSignup.style.display = 'block';
+      tabSignup.style.borderBottom = '2px solid var(--centrly-blue-700)';
+      tabSignup.style.color = 'var(--centrly-blue-800)';
+      tabLogin.style.borderBottom = '2px solid transparent';
+      tabLogin.style.color = 'var(--centrly-text)';
+    }
+  }
+
+  app.showAuthAlert = function showAuthAlert(msg, type = 'danger', isHtml = false) {
+    const alertBox = document.getElementById('authAlert');
+    if (!alertBox) return;
+    if (isHtml) {
+      alertBox.innerHTML = msg;
+    } else {
+      alertBox.textContent = msg;
+    }
+    alertBox.style.display = 'block';
+    if (type === 'danger') {
+      alertBox.className = 'badge-danger';
+      alertBox.style.backgroundColor = 'var(--centrly-danger-light)';
+      alertBox.style.color = 'var(--centrly-danger)';
+    } else {
+      alertBox.className = 'badge-success';
+      alertBox.style.backgroundColor = 'var(--centrly-success-light)';
+      alertBox.style.color = 'var(--centrly-success)';
+    }
+  }
+
+  app.switchToLoginWithEmail = function switchToLoginWithEmail(email) {
+    this.switchAuthTab('login');
+    setTimeout(() => {
+      const emailInput = document.getElementById('loginIdentifier') || document.getElementById('loginEmail');
+      if (emailInput && email) {
+        emailInput.value = email;
+        const pwdInput = document.getElementById('loginPassword');
+        if (pwdInput) pwdInput.focus();
+      }
+    }, 60);
+  }
+
+  app.switchToLoginWithPhone = function switchToLoginWithPhone(phone) {
+    this.switchToLoginWithEmail(phone);
+  }
+
+  app.togglePasswordVisibility = function togglePasswordVisibility(inputId, btnEl, event) {
+    if (event) {
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+      if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    }
+    const input = typeof inputId === 'string' ? document.getElementById(inputId) : inputId;
+    if (!input) {
+      console.warn('[Centrly] togglePasswordVisibility: input not found for id:', inputId);
+      return;
+    }
+    const isPassword = input.type === 'password';
+    const newType = isPassword ? 'text' : 'password';
+    input.type = newType;
+    try {
+      input.setAttribute('type', newType);
+    } catch (_) {}
+
+    // Find and update button element
+    const btn = btnEl?.closest?.('button') || btnEl || input.parentElement?.querySelector('button');
+    if (btn) {
+      btn.innerHTML = getIcon(isPassword ? 'eyeOff' : 'eye', 18);
+      btn.title = isPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور';
+      btn.setAttribute('aria-label', isPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+      btn.style.opacity = '1';
+    }
+
+    // Preserve focus and cursor position if currently focused
+    if (document.activeElement === input) {
+      try {
+        if (input.setSelectionRange && input.value) {
+          const len = input.value.length;
+          input.setSelectionRange(len, len);
+        }
+      } catch (_) {}
+    }
+  }
+
+  app.validatePasswordLive = function validatePasswordLive(pwd) {
+    const ruleLen = document.getElementById('ruleLength');
+    const ruleNum = document.getElementById('ruleNumber');
+    const ruleUp = document.getElementById('ruleUpper');
+    const iconLen = document.getElementById('iconLength');
+    const iconNum = document.getElementById('iconNumber');
+    const iconUp = document.getElementById('iconUpper');
+
+    const hasLen = pwd.length >= 8;
+    const hasNum = /\d/.test(pwd);
+    const hasUp = /[A-Z]/.test(pwd);
+
+    if (ruleLen) {
+      ruleLen.style.color = hasLen ? 'var(--centrly-success)' : '#94a3b8';
+      ruleLen.style.fontWeight = hasLen ? '700' : '400';
+      if (iconLen) iconLen.innerHTML = getIcon(hasLen ? 'dotSuccess' : 'dotNeutral', 8);
+    }
+    if (ruleNum) {
+      ruleNum.style.color = hasNum ? 'var(--centrly-success)' : '#94a3b8';
+      ruleNum.style.fontWeight = hasNum ? '700' : '400';
+      if (iconNum) iconNum.innerHTML = getIcon(hasNum ? 'dotSuccess' : 'dotNeutral', 8);
+    }
+    if (ruleUp) {
+      ruleUp.style.color = hasUp ? 'var(--centrly-success)' : '#94a3b8';
+      ruleUp.style.fontWeight = hasUp ? '700' : '400';
+      if (iconUp) iconUp.innerHTML = getIcon(hasUp ? 'dotSuccess' : 'dotNeutral', 8);
+    }
+  }
+
+  app.onAccountTypeChange = function onAccountTypeChange(type) {
+    const teacherGroup = document.getElementById('roleFieldsTeacher');
+    const centerGroup = document.getElementById('roleFieldsCenter');
+    const signupName = document.getElementById('signupName');
+    const ownerName = document.getElementById('signupCenterOwnerName');
+    const centerName = document.getElementById('signupCenterName');
+    if (type === 'center') {
+      if (teacherGroup) teacherGroup.style.display = 'none';
+      if (centerGroup) centerGroup.style.display = 'block';
+      if (signupName) signupName.required = false;
+      if (ownerName) ownerName.required = true;
+      if (centerName) centerName.required = true;
+    } else {
+      if (teacherGroup) teacherGroup.style.display = 'block';
+      if (centerGroup) centerGroup.style.display = 'none';
+      if (signupName) signupName.required = true;
+      if (ownerName) ownerName.required = false;
+      if (centerName) centerName.required = false;
+    }
+  }
+
+  app.openForgotPasswordModal = function openForgotPasswordModal() {
+    const modal = document.getElementById('forgotPasswordModal');
+    if (modal) modal.style.display = 'flex';
+    const alertBox = document.getElementById('forgotPasswordAlert');
+    if (alertBox) alertBox.style.display = 'none';
+  }
+
+  app.closeForgotPasswordModal = function closeForgotPasswordModal() {
+    const modal = document.getElementById('forgotPasswordModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  app.handleForgotPassword = async function handleForgotPassword(e) {
+    e.preventDefault();
+    const emailInput = document.getElementById('forgotEmail');
+    const alertBox = document.getElementById('forgotPasswordAlert');
+    const btn = document.getElementById('btnSubmitForgotPassword');
+    const email = emailInput?.value?.trim().toLowerCase();
+    if (!email) return;
+
+    try {
+      if (btn) { btn.disabled = true; btn.innerText = 'جاري الإرسال...'; }
+      await authService.forgotPassword(email);
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#f0fdf4';
+        alertBox.style.color = '#15803d';
+        alertBox.style.border = '1px solid #bbf7d0';
+        alertBox.innerText = 'تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني بنجاح. يرجى فحص صندوق الوارد ورسائل البريد المزعج (Spam).';
+      }
+      if (emailInput) emailInput.value = '';
+    } catch (err) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.style.border = '1px solid #fecaca';
+        alertBox.innerText = err.message || 'تعذر إرسال رابط الاستعادة، يرجى التأكد من البريد والمحاولة ثانية.';
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerText = 'إرسال رابط الاستعادة'; }
+    }
+  }
+
+  app.openResetPasswordModal = function openResetPasswordModal(token) {
+    const modal = document.getElementById('resetPasswordModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      const tokenInput = document.getElementById('resetPasswordToken');
+      if (tokenInput) tokenInput.value = token;
+      const alertBox = document.getElementById('resetPasswordAlert');
+      if (alertBox) alertBox.style.display = 'none';
+    }
+  }
+
+  app.closeResetPasswordModal = function closeResetPasswordModal() {
+    const modal = document.getElementById('resetPasswordModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  app.handleResetPasswordSubmit = async function handleResetPasswordSubmit(e) {
+    e.preventDefault();
+    const token = document.getElementById('resetPasswordToken')?.value?.trim();
+    const newPassword = document.getElementById('resetNewPassword')?.value?.trim();
+    const confirmPassword = document.getElementById('resetConfirmPassword')?.value?.trim();
+    const alertBox = document.getElementById('resetPasswordAlert');
+    const btn = document.getElementById('btnSubmitResetPassword');
+
+    if (!newPassword || !confirmPassword) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = 'يرجى إدخال وتأكيد كلمة المرور الجديدة';
+      }
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = 'كلمتا المرور غير متطابقتين';
+      }
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = 'يجب ألا تقل كلمة المرور عن 8 أحرف';
+      }
+      return;
+    }
+
+    try {
+      if (btn) { btn.disabled = true; btn.innerText = 'جاري الحفظ...'; }
+      await authService.resetPassword(token, newPassword);
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#f0fdf4';
+        alertBox.style.color = '#15803d';
+        alertBox.innerText = 'تم تحديث كلمة المرور بنجاح! يمكنك الآن تسجيل الدخول.';
+      }
+      setTimeout(() => {
+        this.closeResetPasswordModal();
+        this.renderAuth('login');
+      }, 1500);
+    } catch (err) {
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fef2f2';
+        alertBox.style.color = '#b91c1c';
+        alertBox.innerText = err.message || 'فشل تحديث كلمة المرور، قد يكون الرابط منتهي الصلاحية.';
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerText = 'تعيين كلمة المرور والدخول'; }
+    }
+  }
+
+  app.handleLogin = async function handleLogin(e) {
+    e.preventDefault();
+    const btn = e.target?.querySelector?.('button[type="submit"]');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:1rem;height:1rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-left:0.5rem;vertical-align:middle;"></span> جارٍ تسجيل الدخول...';
+    }
+
+    let rawIdentifier = document.getElementById('loginEmail')?.value?.trim() || '';
+    if (!rawIdentifier.includes('@')) {
+      rawIdentifier = rawIdentifier
+        .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632))
+        .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+        .trim();
+    }
+    const password = document.getElementById('loginPassword')?.value?.trim() || '';
+
+    try {
+      const res = await authService.login(rawIdentifier, password);
+      this.resetTenantState();
+      this.user = res.user;
+      try {
+        const meRes = await request('/auth/me');
+        if (meRes?.user) {
+          this.user = { ...res.user, ...meRes.user };
+          authService.setUser(this.user);
+        }
+      } catch (_) {}
+      this.restoreCachedData();
+
+      // Cross-Device Security: Bind PIN status directly from account profile
+      if (typeof this.user?.has_security_pin === 'boolean') {
+        this.hasSecurityPin = this.user.has_security_pin;
+        if (this.hasSecurityPin) {
+          this.isFinancialUnlocked = false;
+          try {
+            localStorage.setItem('centrly_has_security_pin', 'true');
+          } catch (_) {}
+        }
+      }
+
+      // Check cloud security PIN status for cross-device synchronization
+      try {
+        const pinStatus = await request('/settings/security-pin').catch(() => null);
+        if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
+          this.hasSecurityPin = pinStatus.has_pin;
+          if (this.hasSecurityPin) {
+            this.isFinancialUnlocked = false;
+          }
+          if (this.user) {
+            this.user.has_security_pin = pinStatus.has_pin;
+            authService.setUser(this.user);
+          }
+          try {
+            localStorage.setItem('centrly_has_security_pin', pinStatus.has_pin ? 'true' : 'false');
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+      const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
+      const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'coupons', 'activity-logs'];
+      const redirectRoute = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_redirect_route')) ||
+                            (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_redirect_route'));
+
+      if (isAdmin) {
+        if (redirectRoute && adminRoutes.includes(redirectRoute)) {
+          this.currentRoute = redirectRoute;
+          try {
+            sessionStorage.removeItem('centrly_redirect_route');
+            localStorage.removeItem('centrly_redirect_route');
+          } catch (_) {}
+        } else {
+          this.currentRoute = 'admin-dashboard';
+        }
+      } else if (isCenter) {
+        this.currentRoute = (redirectRoute && !adminRoutes.includes(redirectRoute)) ? redirectRoute : 'center-dashboard';
+      } else {
+        this.currentRoute = (redirectRoute && !adminRoutes.includes(redirectRoute)) ? redirectRoute : 'dashboard';
+      }
+
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_current_route', this.currentRoute);
+        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_current_route', this.currentRoute);
+      } catch (_) {}
+
+      // Scrub view=login from browser address bar
+      try {
+        if (window.history && window.history.replaceState) {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('view');
+          const cleanUrl = url.pathname + (url.search ? url.search : '');
+          window.history.replaceState(null, '', cleanUrl);
+        }
+      } catch (_) {}
+
+      this.startProactiveSessionRefresher();
+      this.renderApp();
+      await this.loadRouteData(this.currentRoute);
+    } catch (err) {
+      if (err.code === 'EMAIL_NOT_VERIFIED' || err.message?.includes('EMAIL_NOT_VERIFIED') || err.message?.includes('تأكيد بريدك')) {
+        const unverifiedEmail = err.email || (rawIdentifier.includes('@') ? rawIdentifier : '');
+        const loginPhone = rawIdentifier.includes('@') ? '' : rawIdentifier;
+        const fallbackSignupData = {
+          email: unverifiedEmail,
+          phone: loginPhone,
+          password: password,
+        };
+        this.renderEmailVerificationView(unverifiedEmail, password, 'يرجى تأكيد بريدك الإلكتروني أولاً للمتابعة. تم إرسال رمز التحقق إلى بريدك.', fallbackSignupData);
+        return;
+      }
+      let loginMsg = err.message || '';
+      if (loginMsg === 'INVALID_CREDENTIALS' || loginMsg.includes('INVALID_CREDENTIALS') || err.status === 401) {
+        loginMsg = 'البريد الإلكتروني أو رقم الهاتف أو كلمة المرور غير صحيحة.';
+      } else if (loginMsg.includes('Failed to fetch') || loginMsg.includes('NetworkError') || loginMsg.includes('Bearer token')) {
+        loginMsg = 'تعذر الاتصال بالخادم حالياً. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
+      }
+      this.showAuthAlert(loginMsg || 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  }
+
+  app.handleSignup = async function handleSignup(e) {
+    e.preventDefault();
+    const btn = e.target?.querySelector?.('button[type="submit"]');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:1rem;height:1rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-left:0.5rem;vertical-align:middle;"></span> جارٍ إنشاء الحساب...';
+    }
+
+    const accountType = document.getElementById('signupAccountType')?.value || 'teacher';
+    let name = '';
+    let tenantName = '';
+
+    if (accountType === 'center') {
+      const ownerName = document.getElementById('signupCenterOwnerName')?.value?.trim();
+      const centerName = document.getElementById('signupCenterName')?.value?.trim();
+      if (!ownerName || !centerName) {
+        if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        this.showAuthAlert('يرجى إدخال اسم المسؤول واسم السنتر التعليمي');
+        return;
+      }
+      name = ownerName;
+      tenantName = centerName;
+    } else {
+      name = document.getElementById('signupName')?.value?.trim();
+      if (!name) {
+        if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        this.showAuthAlert('يرجى إدخال اسم المدرس');
+        return;
+      }
+      tenantName = `${name} - منظومة تعليمية`;
+    }
+
+    const email = document.getElementById('signupEmail')?.value?.trim().toLowerCase() || '';
+    const phone = normalizeDigits(document.getElementById('signupPhone')?.value?.trim() || '');
+    const contactPhone = normalizeDigits(document.getElementById('signupContactPhone')?.value?.trim() || '') || phone;
+    const password = document.getElementById('signupPassword')?.value?.trim() || '';
+    const passwordConfirm = document.getElementById('signupPasswordConfirm')?.value?.trim() || '';
+
+    if (password.length < 8 || !/\d/.test(password) || !/[A-Z]/.test(password)) {
+      if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+      this.showAuthAlert('كلمة المرور يجب أن تتكون من 8 أحرف على الأقل، وتحتوي على رقم واحد وحرف كبير واحد');
+      return;
+    }
+
+    if (passwordConfirm && password !== passwordConfirm) {
+      if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+      this.showAuthAlert('كلمتا المرور غير متطابقتين. يرجى التأكد وإعادة المحاولة.');
+      return;
+    }
+
+    const ownerName = document.getElementById('signupCenterOwnerName')?.value?.trim() || '';
+    const centerName = document.getElementById('signupCenterName')?.value?.trim() || '';
+    const subject = document.getElementById('signupSubject')?.value?.trim() || '';
+
+    this.signupFormData = {
+      accountType,
+      name,
+      ownerName,
+      centerName,
+      tenantName,
+      email,
+      phone,
+      contact_phone: contactPhone,
+      subject,
+      password,
+      passwordConfirm,
+    };
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('centrly_signup_form_data', JSON.stringify(this.signupFormData));
+      }
+    } catch (_) {}
+
+    try {
+      const res = await authService.signup({
+        email,
+        password,
+        full_name: name,
+        tenant_name: tenantName,
+        phone,
+        contact_phone: contactPhone,
+        subject,
+        account_type: accountType,
+      });
+
+      if (res.requires_verification) {
+        this.renderEmailVerificationView(email, password, 'تم إنشاء الحساب بنجاح! تم إرسال رمز التحقق إلى بريدك الإلكتروني.', this.signupFormData);
+        return;
+      }
+
+      this.user = {
+        ...(res.user || {}),
+        full_name: name || res.user?.full_name,
+        name: name || res.user?.name,
+        phone: phone || res.user?.phone,
+        contact_phone: contactPhone || res.user?.contact_phone || phone,
+        subject: subject || res.user?.subject,
+      };
+      authService.setUser(this.user);
+      this.startOnboarding();
+    } catch (err) {
+      const errMsg = err.message || '';
+      const isPhoneExists = err.code === 'PHONE_ALREADY_EXISTS' ||
+                            errMsg.includes('PHONE_ALREADY_EXISTS') ||
+                            errMsg.includes('رقم الهاتف') ||
+                            errMsg.includes('بحساب آخر') ||
+                            errMsg.toLowerCase().includes('phone_already_exists');
+      const isAlreadyExists = !isPhoneExists && (
+                              err.code === 'USER_ALREADY_EXISTS' ||
+                              errMsg.includes('USER_ALREADY_EXISTS') ||
+                              errMsg.includes('البريد الإلكتروني مسجل بالفعل') ||
+                              errMsg.includes('هذا البريد الإلكتروني مسجل بالفعل') ||
+                              errMsg.includes('already registered') ||
+                              errMsg.toLowerCase().includes('already exists') ||
+                              errMsg.toLowerCase().includes('user already exists') ||
+                              errMsg.toLowerCase().includes('user_already_exists')
+                            );
+
+      if (isPhoneExists) {
+        const safePhone = (phone || '').replace(/'/g, "\\'");
+        const friendlyHtml = `
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.6rem; text-align:right;">
+            <span style="line-height:1.5;">رقم الهاتف (${safePhone || 'هذا'}) مسجل بالفعل بحساب آخر. يمكنك تسجيل الدخول به مباشرة أو استخدام رقم هاتف آخر.</span>
+            <button type="button" onclick="window.centrlyApp.switchToLoginWithPhone('${safePhone}')" style="background:#2563eb; color:#ffffff; border:none; border-radius:6px; padding:0.35rem 0.85rem; font-size:0.8rem; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+              تسجيل الدخول بالرقم ←
+            </button>
+          </div>
+        `;
+        this.showAuthAlert(friendlyHtml, 'danger', true);
+      } else if (isAlreadyExists) {
+        const safeEmail = (email || '').replace(/'/g, "\\'");
+        const friendlyHtml = `
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.6rem; text-align:right;">
+            <span style="line-height:1.5;">يوجد حساب مسجل بالفعل بهذا البريد الإلكتروني. جرب تسجيل الدخول بدلاً من ذلك.</span>
+            <button type="button" onclick="window.centrlyApp.switchToLoginWithEmail('${safeEmail}')" style="background:#2563eb; color:#ffffff; border:none; border-radius:6px; padding:0.35rem 0.85rem; font-size:0.8rem; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+              تسجيل الدخول الآن ←
+            </button>
+          </div>
+        `;
+        this.showAuthAlert(friendlyHtml, 'danger', true);
+      } else if (errMsg.includes('Bearer token') || errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) {
+        this.showAuthAlert('تعذر الاتصال بالخادم حالياً. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.');
+      } else {
+        this.showAuthAlert(errMsg || 'فشل إنشاء الحساب. يرجى التأكد من البيانات والمحاولة مجدداً.');
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  }
+
+  app.renderEmailVerificationView = function renderEmailVerificationView(email, password = '', note = '', signupData = null) {
+    window.scrollTo(0, 0);
+    this.pendingVerification = { email, password, note, signupData: signupData || this.signupFormData };
+    document.title = 'تأكيد البريد الإلكتروني | سنترلي';
+    const appEl = this.getAppEl();
+    if (appEl) appEl.innerHTML = renderEmailVerificationScreen({ email, note });
+  }
+
+  app.handleReturnToEditEmail = function handleReturnToEditEmail() {
+    let data = this.pendingVerification?.signupData || this.signupFormData;
+    if (!data) {
+      try {
+        const raw = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_signup_form_data');
+        if (raw) data = JSON.parse(raw);
+      } catch (_) {}
+    }
+    data = data || {};
+
+    this.renderAuth('signup');
+
+    setTimeout(() => {
+      if (data.accountType) {
+        const typeSelect = document.getElementById('signupAccountType');
+        if (typeSelect) {
+          typeSelect.value = data.accountType;
+          this.onAccountTypeChange(data.accountType);
+        }
+      }
+      if (data.accountType === 'center') {
+        const ownerInput = document.getElementById('signupCenterOwnerName');
+        if (ownerInput && (data.ownerName || data.name)) ownerInput.value = data.ownerName || data.name;
+        const centerInput = document.getElementById('signupCenterName');
+        if (centerInput && (data.centerName || data.tenantName)) centerInput.value = data.centerName || data.tenantName;
+      } else {
+        const nameInput = document.getElementById('signupName');
+        if (nameInput && data.name) nameInput.value = data.name;
+        const subjectInput = document.getElementById('signupSubject');
+        if (subjectInput && data.subject) subjectInput.value = data.subject;
+      }
+
+      const emailInput = document.getElementById('signupEmail');
+      if (emailInput) {
+        emailInput.value = data.email || this.pendingVerification?.email || '';
+        emailInput.focus();
+        emailInput.select();
+      }
+
+      const phoneInput = document.getElementById('signupPhone');
+      if (phoneInput && data.phone) phoneInput.value = data.phone;
+
+      const pwd = data.password || this.pendingVerification?.password;
+      const pwdInput = document.getElementById('signupPassword');
+      if (pwdInput && pwd) {
+        pwdInput.value = pwd;
+        this.validatePasswordLive(pwd);
+      }
+
+      const pwdConfirm = data.passwordConfirm || pwd;
+      const pwdConfirmInput = document.getElementById('signupPasswordConfirm');
+      if (pwdConfirmInput && pwdConfirm) {
+        pwdConfirmInput.value = pwdConfirm;
+      }
+
+      const termsCheck = document.getElementById('signupTermsConsent');
+      if (termsCheck) termsCheck.checked = true;
+    }, 50);
+  }
+
+  app.showVerificationAlert = function showVerificationAlert(message, type = 'error') {
+    const alertBox = document.getElementById('verificationAlert');
+    if (!alertBox) return;
+    alertBox.innerText = message;
+    alertBox.style.display = 'block';
+    if (type === 'success') {
+      alertBox.style.backgroundColor = '#f0fdf4';
+      alertBox.style.color = '#166534';
+      alertBox.style.borderColor = '#bbf7d0';
+    } else {
+      alertBox.style.backgroundColor = '#fef2f2';
+      alertBox.style.color = '#991b1b';
+      alertBox.style.borderColor = '#fecaca';
+    }
+  }
+
+  app.handleVerifyEmailSubmit = async function handleVerifyEmailSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnVerifySubmit');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:1rem;height:1rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-left:0.5rem;vertical-align:middle;"></span> جارٍ التأكيد...';
+    }
+
+    const email = document.getElementById('verificationEmailInput')?.value?.trim() || this.pendingVerification?.email || '';
+    const code = document.getElementById('verifyOtpCode')?.value?.trim() || '';
+    const password = this.pendingVerification?.password || '';
+
+    if (!code || code.length !== 6) {
+      if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+      this.showVerificationAlert('يرجى إدخال رمز التحقق المكون من 6 أرقام');
+      return;
+    }
+
+    try {
+      const res = await authService.verifyEmail(email, code, password);
+      this.showVerificationAlert(res.message || 'تم تأكيد البريد الإلكتروني بنجاح!', 'success');
+
+      if (res.user && res.token) {
+        this.resetTenantState();
+        this.user = res.user;
+        try {
+          const meRes = await request('/auth/me');
+          if (meRes?.user) {
+            this.user = { ...res.user, ...meRes.user };
+            authService.setUser(this.user);
+          }
+        } catch (_) {}
+        this.restoreCachedData();
+        setTimeout(() => {
+          this.startOnboarding();
+        }, 800);
+      } else {
+        setTimeout(() => {
+          this.renderAuth('login');
+          const emailInput = document.getElementById('loginEmail');
+          if (emailInput) emailInput.value = email;
+          this.showAuthAlert('تم تأكيد حسابك بنجاح! يمكنك الآن تسجيل الدخول.');
+        }, 1200);
+      }
+    } catch (err) {
+      this.showVerificationAlert(err.message || 'رمز التحقق غير صحيح أو انتهت صلاحيته.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  }
+
+  app.handleResendOtp = async function handleResendOtp() {
+    const btn = document.getElementById('btnResendOtp');
+    const email = document.getElementById('verificationEmailInput')?.value?.trim() || this.pendingVerification?.email || '';
+
+    if (!email) {
+      this.showVerificationAlert('لم يتم العثور على البريد الإلكتروني.');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = 'جارٍ إرسال رمز جديد...';
+    }
+
+    try {
+      const res = await authService.resendVerification(email);
+      this.showVerificationAlert(res.message || 'تم إرسال رمز جديد إلى بريدك الإلكتروني بنجاح.', 'success');
+
+      let timeLeft = 60;
+      if (btn) {
+        btn.disabled = true;
+        const interval = setInterval(() => {
+          timeLeft -= 1;
+          if (timeLeft <= 0) {
+            clearInterval(interval);
+            btn.disabled = false;
+            btn.innerText = 'لم يصلك الرمز؟ إعادة الإرسال';
+          } else {
+            btn.innerText = `إعادة الإرسال بعد (${timeLeft} ثانية)`;
+          }
+        }, 1000);
+      }
+    } catch (err) {
+      this.showVerificationAlert(err.message || 'تعذر إعادة إرسال الرمز. يرجى الانتظار قليلاً.');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = 'لم يصلك الرمز؟ إعادة الإرسال';
+      }
+    }
+  }
+
+
+}

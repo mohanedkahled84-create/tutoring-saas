@@ -109,6 +109,12 @@ async function runAudit() {
     const rootHtml = fs.readFileSync(path.join(ROOT_DIR, "index.html"), "utf8");
     const webHtml = fs.readFileSync(path.join(ROOT_DIR, "apps", "web", "index.html"), "utf8");
     const appJs = fs.readFileSync(path.join(ROOT_DIR, "apps", "web", "src", "app.js"), "utf8");
+    const compDir = path.join(ROOT_DIR, "apps", "web", "src", "components");
+    const compFiles = fs.readdirSync(compDir).filter(f => f.endsWith(".js"));
+    const allFrontendCode = [
+      appJs,
+      ...compFiles.map(f => fs.readFileSync(path.join(compDir, f), "utf8"))
+    ].join("\n");
 
     // 1. Mandatory DOM contracts (<div id="app"> and <base href="/">)
     const rootHasApp = rootHtml.includes('<div id="app"></div>');
@@ -135,8 +141,8 @@ async function runAudit() {
     }
 
     // 3. Homework 100MB & 15m Timeout Invariants
-    const has100MbLimit = appJs.includes("100 * 1024 * 1024");
-    const hasDynamicTimeout = appJs.includes("uploadTimeoutMs") && appJs.includes("900000");
+    const has100MbLimit = allFrontendCode.includes("100 * 1024 * 1024");
+    const hasDynamicTimeout = allFrontendCode.includes("uploadTimeoutMs") && allFrontendCode.includes("900000");
     const serverTs = fs.readFileSync(path.join(BACKEND_DIR, "src", "server.ts"), "utf8");
     const serverHasTimeout = serverTs.includes("server.requestTimeout = 900000");
 
@@ -147,9 +153,9 @@ async function runAudit() {
     }
 
     // 4. Barcode Scanner Performance & Live Fallback Invariants
-    const hasScanDebounce = appJs.includes("_scanInputTimer") && appJs.includes("setTimeout");
-    const hasLiveFallback = appJs.includes("fetchStudentByQueryAsync") && appJs.includes("stripPrefixAndZeros");
-    const has4CameraFormats = appJs.includes("Html5QrcodeSupportedFormats.CODE_128") && appJs.includes("[5, 0, 3, 9]");
+    const hasScanDebounce = allFrontendCode.includes("_scanInputTimer") && allFrontendCode.includes("setTimeout");
+    const hasLiveFallback = allFrontendCode.includes("fetchStudentByQueryAsync") && allFrontendCode.includes("stripPrefixAndZeros");
+    const has4CameraFormats = allFrontendCode.includes("Html5QrcodeSupportedFormats.CODE_128") && allFrontendCode.includes("[5, 0, 3, 9]");
 
     if (hasScanDebounce && hasLiveFallback && has4CameraFormats) {
       addCheck("Barcode Scanner Engine (Debounce + Live Fallback + 4 Formats)", "PASS", "Hardware scan debounced (120ms), live server query fallback, and optimized 4-format camera.");
@@ -166,7 +172,7 @@ async function runAudit() {
     }
 
     // 6. Auth Conflict Discrimination Invariant (Phone vs Email)
-    const hasPhoneMethod = appJs.includes("switchToLoginWithPhone");
+    const hasPhoneMethod = allFrontendCode.includes("switchToLoginWithPhone");
     const authRoutesTs = fs.readFileSync(path.join(BACKEND_DIR, "src", "features", "auth", "routes.ts"), "utf8");
     const hasRoutePhoneFirst = authRoutesTs.indexOf("isPhoneConflict") !== -1 &&
                                authRoutesTs.indexOf("isEmailConflict") !== -1 &&
@@ -179,8 +185,6 @@ async function runAudit() {
     }
 
     // 7. Component Import Integrity & Onboarding Wizard Multi-Step Guard
-    const compDir = path.join(ROOT_DIR, "apps", "web", "src", "components");
-    const compFiles = fs.readdirSync(compDir).filter(f => f.endsWith(".js"));
     let missingImports = [];
     for (const cf of compFiles) {
       const code = fs.readFileSync(path.join(compDir, cf), "utf8");

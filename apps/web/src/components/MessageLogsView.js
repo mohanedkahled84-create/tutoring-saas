@@ -95,3 +95,20 @@ export function renderMessageLogsView(logs = []) {
     </div>
   `;
 }
+
+export function registerMessageLogsActions(app) {
+  app.filterLogs = function(filter = 'all') {
+    const rows = document.querySelectorAll('.data-table tbody tr');
+    rows.forEach(r => {
+      if (filter === 'all') {
+        r.style.display = '';
+      } else if (filter === 'failed') {
+        const isFailed = r.innerHTML.includes('فشل التسليم') || r.innerHTML.includes('يحتاج مراجعة');
+        r.style.display = isFailed ? '' : 'none';
+      } else if (filter === 'sent') {
+        const isSent = r.innerHTML.includes('تم التسليم');
+        r.style.display = isSent ? '' : 'none';
+      }
+    });
+  };
+}

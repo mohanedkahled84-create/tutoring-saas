@@ -1,3 +1,5 @@
+import { request } from "../services/api.js";
+import { normalizeDigits } from "../utils/normalizeDigits.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 
@@ -216,4 +218,711 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
 
     </div>
   `;
+}
+
+export function registerGroupsActions(app) {
+  app.openCreateGroupModal = function() {
+    const isCenterOwner = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
+    const teacherOptions = (this.centerTeachers || []).map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)} (${(t.subjects || []).join('، ') || 'عام'})</option>`).join('');
+    const roomOptions = (this.centerRooms || []).map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.name)} (سعة ${r.capacity || 0} طالب)</option>`).join('');
+
+    const bodyHtml = `
+      <form id="createGroupModalForm" onsubmit="window.centrlyApp.handleCreateGroup(event)">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اسم المجموعة *</label>
+          <input type="text" id="newGroupName" class="form-input" placeholder="اسم المجموعة الدراسية" required>
+        </div>
+
+        ${isCenterOwner ? `
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">المدرس المسؤول *</label>
+              <select id="newGroupTeacherId" class="form-input" required>
+                <option value="">-- اختر المدرس --</option>
+                ${teacherOptions}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">القاعة المخصصة (اختياري)</label>
+              <select id="newGroupRoomId" class="form-input">
+                <option value="">-- بدون قاعة محددة (اختياري) --</option>
+                ${roomOptions}
+              </select>
+            </div>
+          </div>
+        ` : `
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">مكان الحصة / المقر (اختياري)</label>
+              <input type="text" id="newGroupCenter" class="form-input" placeholder="اسم السنتر أو منزل الطالب أو المقر (اختياري)">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">القاعة المخصصة (اختياري)</label>
+              <input type="text" id="newGroupRoomName" class="form-input" placeholder="اسم أو رقم القاعة (اختياري)">
+            </div>
+          </div>
+        `}
+
+        <div class="modal-form-grid">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
+            <input type="number" id="newGroupPrice" class="form-input" min="0" step="5" placeholder="سعر الحصة" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">تكرار الحصص أسبوعياً *</label>
+            <select id="newGroupSessionsPerWeek" class="form-input" onchange="window.centrlyApp.onSessionsPerWeekChange(this.value, 'new')">
+              <option value="1" selected>حصة واحدة بالأسبوع (4 حصص شهرياً)</option>
+              <option value="2">حصتان بالأسبوع (8 حصص شهرياً)</option>
+            </select>
+          </div>
+        </div>
+
+        <datalist id="commonSessionTimes">
+          <option value="08:00 ص"></option>
+          <option value="09:00 ص"></option>
+          <option value="10:00 ص"></option>
+          <option value="11:00 ص"></option>
+          <option value="12:00 م"></option>
+          <option value="01:00 م"></option>
+          <option value="02:00 م"></option>
+          <option value="03:00 م"></option>
+          <option value="04:00 م"></option>
+          <option value="05:00 م"></option>
+          <option value="06:00 م"></option>
+          <option value="07:00 م"></option>
+          <option value="08:00 م"></option>
+          <option value="09:00 م"></option>
+          <option value="10:00 م"></option>
+        </datalist>
+
+        <!-- Schedule Container for 1 Session / Week -->
+        <div id="newGroupScheduleSingle" class="modal-form-grid">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">يوم الحصة الأسبوعي *</label>
+            <select id="newGroupDayOfWeek" class="form-input">
+              <option value="السبت">السبت</option>
+              <option value="الأحد">الأحد</option>
+              <option value="الإثنين">الإثنين</option>
+              <option value="الثلاثاء">الثلاثاء</option>
+              <option value="الأربعاء">الأربعاء</option>
+              <option value="الخميس">الخميس</option>
+              <option value="الجمعة">الجمعة</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">موعد بداية الحصة *</label>
+            <input type="text" id="newGroupSessionTime" list="commonSessionTimes" class="form-input" placeholder="مثال: 04:00 م" value="04:00 م">
+          </div>
+        </div>
+
+        <!-- Schedule Container for 2 Sessions / Week -->
+        <div id="newGroupScheduleDouble" style="display: none; flex-direction: column; gap: 0.75rem; margin-bottom: 0.85rem; background: #f8fafc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.85rem;">
+          <div style="font-size: 0.825rem; font-weight: 700; color: var(--centrly-blue-700); margin-bottom: 0.25rem;">
+            مواعيد الحصتين في الأسبوع:
+          </div>
+          <div class="modal-form-grid" style="margin-bottom: 0;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الأول *</label>
+              <select id="newGroupDay1" class="form-input">
+                <option value="السبت" selected>السبت</option>
+                <option value="الأحد">الأحد</option>
+                <option value="الإثنين">الإثنين</option>
+                <option value="الثلاثاء">الثلاثاء</option>
+                <option value="الأربعاء">الأربعاء</option>
+                <option value="الخميس">الخميس</option>
+                <option value="الجمعة">الجمعة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">موعد بداية الحصة الأولى *</label>
+              <input type="text" id="newGroupTime1" list="commonSessionTimes" class="form-input" placeholder="مثال: 04:00 م" value="04:00 م">
+            </div>
+          </div>
+          <div class="modal-form-grid" style="margin-bottom: 0;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الثاني *</label>
+              <select id="newGroupDay2" class="form-input">
+                <option value="السبت">السبت</option>
+                <option value="الأحد">الأحد</option>
+                <option value="الإثنين">الإثنين</option>
+                <option value="الثلاثاء" selected>الثلاثاء</option>
+                <option value="الأربعاء">الأربعاء</option>
+                <option value="الخميس">الخميس</option>
+                <option value="الجمعة">الجمعة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">موعد بداية الحصة الثانية *</label>
+              <input type="text" id="newGroupTime2" list="commonSessionTimes" class="form-input" placeholder="مثال: 04:00 م" value="04:00 م">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Billing Models -->
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">مقر الحصة ونظام المحاسبة *</label>
+          <select id="newGroupBillingModel" class="form-input" onchange="window.centrlyApp.onBillingModelChange(this.value)">
+            <option value="no_center" selected>🏠 لا يوجد نسبة للسنتر (درس خاص / في منزل / أونلاين - المعلم 100%)</option>
+            <option value="percentage">🏢 سنتر تعليمي: نسبة مئوية للسنتر على كل طالب (%)</option>
+            <option value="fixed_per_student">🏢 سنتر تعليمي: أجر ثابت للسنتر على كل طالب (ج.م)</option>
+            <option value="fixed_rent">🏢 سنتر تعليمي: إيجار قاعة ثابت للحصة بالكامل (ج.م)</option>
+          </select>
+        </div>
+
+        <!-- Conditional Info 0: No Center -->
+        <div id="billingNoCenterInfo" class="form-group" style="margin-bottom: 0.85rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem;">
+          <div style="font-size: 0.825rem; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 0.4rem;">
+            <span>🏠</span>
+            <span>مجموعة خاصة أو منزلية (بدون نسبة سنتر):</span>
+          </div>
+          <div style="font-size: 0.775rem; color: #15803d; margin-top: 0.25rem; line-height: 1.5;">
+            لا توجد أي استقطاعات أو عمولات للسنتر. إيراد الحصة بالكامل يُحسب لك كمعلم بنسبة 100%.
+          </div>
+        </div>
+
+        <!-- Conditional Input 1: Percentage -->
+        <div id="billingPercentageGroup" class="form-group" style="margin-bottom: 0.85rem; display: none;">
+          <label class="form-label" style="font-weight: 700;">نسبة السنتر على الطالب (%) *</label>
+          <input type="number" id="newGroupCenterCut" class="form-input" min="0" max="100" value="20" placeholder="20">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">يحصل السنتر على هذه النسبة من كل تذكرة حضور والباقي للمدرس</small>
+        </div>
+
+        <!-- Conditional Input 2: Fixed per student -->
+        <div id="billingFixedPerStudentGroup" class="form-group" style="margin-bottom: 0.85rem; display: none;">
+          <label class="form-label" style="font-weight: 700;">قيمة أجر السنتر لكل طالب (ج.م) *</label>
+          <input type="number" id="newGroupFixedPerStudent" class="form-input" min="0" step="5" value="25" placeholder="25">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">قيمة ثابتة يدفعها الطالب للسنتر عن كل حصة يحضرها</small>
+        </div>
+
+        <!-- Conditional Input 3: Fixed room rent -->
+        <div id="billingFixedRentGroup" class="form-group" style="margin-bottom: 0.85rem; display: none;">
+          <label class="form-label" style="font-weight: 700;">إيجار القاعة الثابت للحصة (ج.م) *</label>
+          <input type="number" id="newGroupFixedRent" class="form-input" min="0" step="50" value="300" placeholder="300">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">مبلغ إيجار القاعة للحصة الواحدة بغض النظر عن عدد الطلاب</small>
+        </div>
+
+        <div id="createGroupFeedback" style="display: none; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem;"></div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="createGroupModalForm" id="btnSaveGroup" class="btn btn-primary" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ${getIcon('add', 16)} <span>إنشاء المجموعة</span>
+      </button>
+    `;
+    this.showModal('إنشاء مجموعة جديدة', bodyHtml, footerHtml);
+  }
+
+  app.onBillingModelChange = function(model) {
+    const noCenterInfo = document.getElementById('billingNoCenterInfo');
+    const pGroup = document.getElementById('billingPercentageGroup');
+    const fStudentGroup = document.getElementById('billingFixedPerStudentGroup');
+    const fRentGroup = document.getElementById('billingFixedRentGroup');
+
+    if (noCenterInfo) noCenterInfo.style.display = model === 'no_center' ? 'block' : 'none';
+    if (pGroup) pGroup.style.display = model === 'percentage' ? 'block' : 'none';
+    if (fStudentGroup) fStudentGroup.style.display = model === 'fixed_per_student' ? 'block' : 'none';
+    if (fRentGroup) fRentGroup.style.display = model === 'fixed_rent' ? 'block' : 'none';
+  }
+
+  app.onSessionsPerWeekChange = function(value, mode = 'new') {
+    const singleContainer = document.getElementById(`${mode}GroupScheduleSingle`);
+    const doubleContainer = document.getElementById(`${mode}GroupScheduleDouble`);
+    if (!singleContainer || !doubleContainer) return;
+
+    if (String(value) === '2') {
+      singleContainer.style.display = 'none';
+      doubleContainer.style.display = 'flex';
+    } else {
+      singleContainer.style.display = 'grid';
+      doubleContainer.style.display = 'none';
+    }
+  }
+
+  app.openEditGroupModal = function(groupId) {
+    const group = (this.groups || []).find(g => g.id === groupId);
+    if (!group) {
+      this.showToast('لم يتم العثور على بيانات المجموعة المحددة', 'danger');
+      return;
+    }
+
+    const isCenterOwner = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
+    const teacherOptions = (this.centerTeachers || []).map(t => `
+      <option value="${escapeHtml(t.id)}" ${t.id === group.teacher_id ? 'selected' : ''}>
+        ${escapeHtml(t.name)} (${(t.subjects || []).join('، ') || 'عام'})
+      </option>
+    `).join('');
+    const roomOptions = (this.centerRooms || []).map(r => `
+      <option value="${escapeHtml(r.id)}" ${r.id === group.room_id ? 'selected' : ''}>
+        ${escapeHtml(r.name)} (سعة ${r.capacity || 0} طالب)
+      </option>
+    `).join('');
+
+    const days = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+    const sessionsPerWeek = Number(group.sessions_per_week) === 2 ? 2 : 1;
+
+    // Parse existing days and times
+    const matchedDays = days.filter(d => (group.day_of_week && group.day_of_week.includes(d)) || (group.schedule && group.schedule.includes(d)));
+    const day1 = matchedDays[0] || (group.day_of_week && group.day_of_week.split('،')[0].trim()) || 'السبت';
+    const day2 = matchedDays[1] || (day1 === 'السبت' ? 'الثلاثاء' : (day1 === 'الأحد' ? 'الأربعاء' : 'الخميس'));
+
+    let time1 = '04:00 م';
+    let time2 = '04:00 م';
+    if (group.session_time) {
+      if (group.session_time.includes('/')) {
+        const parts = group.session_time.split('/').map(s => s.trim());
+        time1 = parts[0] || time1;
+        time2 = parts[1] || time1;
+      } else {
+        time1 = group.session_time;
+        time2 = group.session_time;
+      }
+    }
+    // Cleanly extract start time if existing group was saved with a range
+    if (time1 && time1.includes('-')) {
+      time1 = time1.split('-')[0].trim();
+    }
+    if (time2 && time2.includes('-')) {
+      time2 = time2.split('-')[0].trim();
+    }
+
+    const singleDayOptions = days.map(d => `<option value="${d}" ${d === day1 ? 'selected' : ''}>${d}</option>`).join('');
+    const day1Options = days.map(d => `<option value="${d}" ${d === day1 ? 'selected' : ''}>${d}</option>`).join('');
+    const day2Options = days.map(d => `<option value="${d}" ${d === day2 ? 'selected' : ''}>${d}</option>`).join('');
+
+    const currentModel = group.billing_model || 'percentage';
+
+    const bodyHtml = `
+      <form id="editGroupModalForm" onsubmit="window.centrlyApp.saveGroupEdit(event, '${escapeHtml(groupId)}')">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اسم المجموعة *</label>
+          <input type="text" id="editGroupName" class="form-input" value="${escapeHtml(group.name || '')}" required>
+        </div>
+
+        ${isCenterOwner ? `
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">المدرس المسؤول *</label>
+              <select id="editGroupTeacherId" class="form-input" required>
+                <option value="">-- اختر المدرس --</option>
+                ${teacherOptions}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">القاعة المخصصة (اختياري)</label>
+              <select id="editGroupRoomId" class="form-input">
+                <option value="">-- بدون قاعة محددة (اختياري) --</option>
+                ${roomOptions}
+              </select>
+            </div>
+          </div>
+        ` : `
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">مكان الحصة / المقر (اختياري)</label>
+              <input type="text" id="editGroupCenter" class="form-input" value="${escapeHtml(group.center_name || group.centerName || '')}" placeholder="اسم السنتر أو منزل الطالب أو المقر (اختياري)">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">القاعة المخصصة (اختياري)</label>
+              <input type="text" id="editGroupRoomName" class="form-input" value="${escapeHtml(group.room || group.room_name || '')}" placeholder="اسم أو رقم القاعة (اختياري)">
+            </div>
+          </div>
+        `}
+
+        <div class="modal-form-grid">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">سعر الحصة للطالب (ج.م) *</label>
+            <input type="number" id="editGroupPrice" class="form-input" min="0" step="5" value="${group.price ?? group.session_price ?? 80}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">تكرار الحصص أسبوعياً *</label>
+            <select id="editGroupSessionsPerWeek" class="form-input" onchange="window.centrlyApp.onSessionsPerWeekChange(this.value, 'edit')">
+              <option value="1" ${sessionsPerWeek === 1 ? 'selected' : ''}>حصة واحدة بالأسبوع (4 حصص شهرياً)</option>
+              <option value="2" ${sessionsPerWeek === 2 ? 'selected' : ''}>حصتان بالأسبوع (8 حصص شهرياً)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Schedule Container for 1 Session / Week -->
+        <div id="editGroupScheduleSingle" class="modal-form-grid" style="display: ${sessionsPerWeek === 1 ? 'grid' : 'none'};">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">يوم الحصة الأسبوعي *</label>
+            <select id="editGroupDayOfWeek" class="form-input">
+              ${singleDayOptions}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700;">موعد بداية الحصة *</label>
+            <input type="text" id="editGroupSessionTime" list="commonSessionTimes" class="form-input" value="${escapeHtml(time1)}" placeholder="مثال: 04:00 م">
+          </div>
+        </div>
+
+        <!-- Schedule Container for 2 Sessions / Week -->
+        <div id="editGroupScheduleDouble" style="display: ${sessionsPerWeek === 2 ? 'flex' : 'none'}; flex-direction: column; gap: 0.75rem; margin-bottom: 0.85rem; background: #f8fafc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.85rem;">
+          <div style="font-size: 0.825rem; font-weight: 700; color: var(--centrly-blue-700); margin-bottom: 0.25rem;">
+            مواعيد الحصتين في الأسبوع:
+          </div>
+          <div class="modal-form-grid" style="margin-bottom: 0;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الأول *</label>
+              <select id="editGroupDay1" class="form-input">
+                ${day1Options}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">موعد بداية الحصة الأولى *</label>
+              <input type="text" id="editGroupTime1" list="commonSessionTimes" class="form-input" value="${escapeHtml(time1)}" placeholder="مثال: 04:00 م">
+            </div>
+          </div>
+          <div class="modal-form-grid" style="margin-bottom: 0;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">اليوم الثاني *</label>
+              <select id="editGroupDay2" class="form-input">
+                ${day2Options}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 0.85rem;">موعد بداية الحصة الثانية *</label>
+              <input type="text" id="editGroupTime2" list="commonSessionTimes" class="form-input" value="${escapeHtml(time2)}" placeholder="مثال: 04:00 م">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Billing Models -->
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">مقر الحصة ونظام المحاسبة *</label>
+          <select id="editGroupBillingModel" class="form-input" onchange="window.centrlyApp.onEditBillingModelChange(this.value)">
+            <option value="no_center" ${currentModel === 'no_center' ? 'selected' : ''}>🏠 لا يوجد نسبة للسنتر (درس خاص / في منزل / أونلاين - المعلم 100%)</option>
+            <option value="percentage" ${currentModel === 'percentage' ? 'selected' : ''}>🏢 سنتر تعليمي: نسبة مئوية للسنتر على كل طالب (%)</option>
+            <option value="fixed_per_student" ${currentModel === 'fixed_per_student' ? 'selected' : ''}>🏢 سنتر تعليمي: أجر ثابت للسنتر على كل طالب (ج.م)</option>
+            <option value="fixed_rent" ${currentModel === 'fixed_rent' ? 'selected' : ''}>🏢 سنتر تعليمي: إيجار قاعة ثابت للحصة بالكامل (ج.م)</option>
+          </select>
+        </div>
+
+        <!-- Conditional Info 0: No Center -->
+        <div id="editBillingNoCenterInfo" class="form-group" style="margin-bottom: 0.85rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem; display: ${currentModel === 'no_center' ? 'block' : 'none'};">
+          <div style="font-size: 0.825rem; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 0.4rem;">
+            <span>🏠</span>
+            <span>مجموعة خاصة أو منزلية (بدون نسبة سنتر):</span>
+          </div>
+          <div style="font-size: 0.775rem; color: #15803d; margin-top: 0.25rem; line-height: 1.5;">
+            لا توجد أي استقطاعات أو عمولات للسنتر. إيراد الحصة بالكامل يُحسب لك كمعلم بنسبة 100%.
+          </div>
+        </div>
+
+        <!-- Conditional Input 1: Percentage -->
+        <div id="editBillingPercentageGroup" class="form-group" style="margin-bottom: 0.85rem; display: ${currentModel === 'percentage' ? 'block' : 'none'};">
+          <label class="form-label" style="font-weight: 700;">نسبة السنتر على الطالب (%) *</label>
+          <input type="number" id="editGroupCenterCut" class="form-input" min="0" max="100" value="${group.center_cut_percentage ?? 20}">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">يحصل السنتر على هذه النسبة من كل تذكرة حضور والباقي للمدرس</small>
+        </div>
+
+        <!-- Conditional Input 2: Fixed per student -->
+        <div id="editBillingFixedPerStudentGroup" class="form-group" style="margin-bottom: 0.85rem; display: ${currentModel === 'fixed_per_student' ? 'block' : 'none'};">
+          <label class="form-label" style="font-weight: 700;">قيمة أجر السنتر لكل طالب (ج.م) *</label>
+          <input type="number" id="editGroupFixedPerStudent" class="form-input" min="0" step="5" value="${group.fixed_per_student_amount ?? 25}">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">قيمة ثابتة يدفعها الطالب للسنتر عن كل حصة يحضرها</small>
+        </div>
+
+        <!-- Conditional Input 3: Fixed room rent -->
+        <div id="editBillingFixedRentGroup" class="form-group" style="margin-bottom: 0.85rem; display: ${currentModel === 'fixed_rent' ? 'block' : 'none'};">
+          <label class="form-label" style="font-weight: 700;">إيجار القاعة الثابت للحصة (ج.م) *</label>
+          <input type="number" id="editGroupFixedRent" class="form-input" min="0" step="50" value="${group.fixed_rent_amount ?? 300}">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">مبلغ إيجار القاعة للحصة الواحدة بغض النظر عن عدد الطلاب</small>
+        </div>
+
+        <div id="editGroupFeedback" style="display: none; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem;"></div>
+      </form>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="editGroupModalForm" id="btnUpdateGroup" class="btn btn-primary" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ${getIcon('check', 16)} <span>حفظ التعديلات</span>
+      </button>
+    `;
+
+    this.showModal(`تعديل بيانات المجموعة: ${escapeHtml(group.name)}`, bodyHtml, footerHtml);
+  }
+
+  app.onEditBillingModelChange = function(model) {
+    const noCenterInfo = document.getElementById('editBillingNoCenterInfo');
+    const pGroup = document.getElementById('editBillingPercentageGroup');
+    const fStudentGroup = document.getElementById('editBillingFixedPerStudentGroup');
+    const fRentGroup = document.getElementById('editBillingFixedRentGroup');
+
+    if (noCenterInfo) noCenterInfo.style.display = model === 'no_center' ? 'block' : 'none';
+    if (pGroup) pGroup.style.display = model === 'percentage' ? 'block' : 'none';
+    if (fStudentGroup) fStudentGroup.style.display = model === 'fixed_per_student' ? 'block' : 'none';
+    if (fRentGroup) fRentGroup.style.display = model === 'fixed_rent' ? 'block' : 'none';
+  }
+
+  app.handleCreateGroup = async function(e) {
+    e.preventDefault();
+    const isCenterOwner = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
+    const name = document.getElementById('newGroupName').value.trim();
+    const teacher_id = isCenterOwner ? (document.getElementById('newGroupTeacherId')?.value || null) : null;
+    const room_id = isCenterOwner ? (document.getElementById('newGroupRoomId')?.value || null) : null;
+    let center_name = undefined;
+    let room_name = undefined;
+
+    if (isCenterOwner && room_id) {
+      const matchedRoom = (this.centerRooms || []).find(r => r.id === room_id);
+      center_name = matchedRoom ? matchedRoom.name : 'قاعة السنتر';
+      room_name = matchedRoom ? matchedRoom.name : undefined;
+    } else {
+      center_name = document.getElementById('newGroupCenter')?.value.trim() || undefined;
+      room_name = document.getElementById('newGroupRoomName')?.value.trim() || undefined;
+    }
+
+    const price = Number(document.getElementById('newGroupPrice').value) || 0;
+    const sessions_per_week = Number(document.getElementById('newGroupSessionsPerWeek')?.value) || 1;
+    const billing_model = document.getElementById('newGroupBillingModel').value;
+
+    let day_of_week = 'السبت';
+    let session_time = '04:00 م';
+    let schedule = '';
+
+    if (sessions_per_week === 2) {
+      const day1 = document.getElementById('newGroupDay1')?.value || 'السبت';
+      const time1 = document.getElementById('newGroupTime1')?.value?.trim() || '04:00 م';
+      const day2 = document.getElementById('newGroupDay2')?.value || 'الثلاثاء';
+      const time2 = document.getElementById('newGroupTime2')?.value?.trim() || '04:00 م';
+
+      day_of_week = `${day1}، ${day2}`;
+      if (time1 === time2) {
+        session_time = time1;
+        schedule = `${day1} و${day2} • ${time1}`;
+      } else {
+        session_time = `${time1} / ${time2}`;
+        schedule = `${day1} (${time1}) • ${day2} (${time2})`;
+      }
+    } else {
+      day_of_week = document.getElementById('newGroupDayOfWeek')?.value || 'السبت';
+      session_time = document.getElementById('newGroupSessionTime')?.value?.trim() || '04:00 م';
+      schedule = `${day_of_week} • ${session_time}`;
+    }
+
+    let center_cut_percentage = 0;
+    let fixed_per_student_amount = null;
+    let fixed_rent_amount = null;
+
+    if (billing_model === 'no_center') {
+      center_cut_percentage = 0;
+      fixed_per_student_amount = null;
+      fixed_rent_amount = null;
+    } else if (billing_model === 'percentage') {
+      center_cut_percentage = Number(document.getElementById('newGroupCenterCut')?.value) || 20;
+    } else if (billing_model === 'fixed_per_student') {
+      fixed_per_student_amount = Number(document.getElementById('newGroupFixedPerStudent')?.value) || 20;
+    } else if (billing_model === 'fixed_rent') {
+      fixed_rent_amount = Number(document.getElementById('newGroupFixedRent')?.value) || 250;
+    }
+
+    const feedback = document.getElementById('createGroupFeedback');
+    const saveBtn = document.getElementById('btnSaveGroup');
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'جاري الإنشاء...';
+    }
+
+    try {
+      await request('/groups', {
+        method: 'POST',
+        body: {
+          name,
+          center_name,
+          teacher_id,
+          room_id,
+          room: room_name,
+          room_name: room_name,
+          price,
+          session_price: price,
+          sessions_per_week,
+          billing_model,
+          center_cut_percentage,
+          fixed_per_student_amount,
+          fixed_rent_amount,
+          day_of_week,
+          session_time,
+          schedule,
+        },
+      });
+
+      this.closeModal();
+      this.showToast(`تم إنشاء المجموعة (${name}) بنجاح!`, 'success');
+      await this.loadRouteData(this.currentRoute);
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `${err.message || 'فشل إنشاء المجموعة.'}`;
+      } else {
+        this.showToast(`فشل إنشاء المجموعة: ${err.message || 'خطأ في البيانات'}`, 'danger');
+      }
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'إنشاء المجموعة';
+      }
+    }
+  }
+
+  app.saveGroupEdit = async function(e, groupId) {
+    e.preventDefault();
+    const isCenterOwner = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
+    const name = document.getElementById('editGroupName')?.value.trim();
+    const teacher_id = isCenterOwner ? (document.getElementById('editGroupTeacherId')?.value || null) : null;
+    const room_id = isCenterOwner ? (document.getElementById('editGroupRoomId')?.value || null) : null;
+    let center_name = undefined;
+    let room_name = undefined;
+
+    if (isCenterOwner && room_id) {
+      const matchedRoom = (this.centerRooms || []).find(r => r.id === room_id);
+      center_name = matchedRoom ? matchedRoom.name : 'قاعة السنتر';
+      room_name = matchedRoom ? matchedRoom.name : undefined;
+    } else {
+      center_name = document.getElementById('editGroupCenter')?.value.trim() || undefined;
+      room_name = document.getElementById('editGroupRoomName')?.value.trim() || undefined;
+    }
+
+    const price = Number(document.getElementById('editGroupPrice')?.value) || 0;
+    const sessions_per_week = Number(document.getElementById('editGroupSessionsPerWeek')?.value) || 1;
+    const billing_model = document.getElementById('editGroupBillingModel')?.value || 'percentage';
+
+    let day_of_week = 'السبت';
+    let session_time = '04:00 م';
+    let schedule = '';
+
+    if (sessions_per_week === 2) {
+      const day1 = document.getElementById('editGroupDay1')?.value || 'السبت';
+      const time1 = document.getElementById('editGroupTime1')?.value?.trim() || '04:00 م';
+      const day2 = document.getElementById('editGroupDay2')?.value || 'الثلاثاء';
+      const time2 = document.getElementById('editGroupTime2')?.value?.trim() || '04:00 م';
+
+      day_of_week = `${day1}، ${day2}`;
+      if (time1 === time2) {
+        session_time = time1;
+        schedule = `${day1} و${day2} • ${time1}`;
+      } else {
+        session_time = `${time1} / ${time2}`;
+        schedule = `${day1} (${time1}) • ${day2} (${time2})`;
+      }
+    } else {
+      day_of_week = document.getElementById('editGroupDayOfWeek')?.value || 'السبت';
+      session_time = document.getElementById('editGroupSessionTime')?.value?.trim() || '04:00 م';
+      schedule = `${day_of_week} • ${session_time}`;
+    }
+
+    let center_cut_percentage = 0;
+    let fixed_per_student_amount = null;
+    let fixed_rent_amount = null;
+
+    if (billing_model === 'no_center') {
+      center_cut_percentage = 0;
+      fixed_per_student_amount = null;
+      fixed_rent_amount = null;
+    } else if (billing_model === 'percentage') {
+      center_cut_percentage = Number(document.getElementById('editGroupCenterCut')?.value) || 20;
+    } else if (billing_model === 'fixed_per_student') {
+      fixed_per_student_amount = Number(document.getElementById('editGroupFixedPerStudent')?.value) || 20;
+    } else if (billing_model === 'fixed_rent') {
+      fixed_rent_amount = Number(document.getElementById('editGroupFixedRent')?.value) || 250;
+    }
+
+    const feedback = document.getElementById('editGroupFeedback');
+    const saveBtn = document.getElementById('btnUpdateGroup');
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'جاري الحفظ...';
+    }
+
+    try {
+      await request(`/groups/${groupId}`, {
+        method: 'PUT',
+        body: {
+          name,
+          center_name,
+          teacher_id,
+          room_id,
+          room: room_name,
+          room_name: room_name,
+          price,
+          session_price: price,
+          sessions_per_week,
+          billing_model,
+          center_cut_percentage,
+          fixed_per_student_amount,
+          fixed_rent_amount,
+          day_of_week,
+          session_time,
+          schedule,
+        },
+      });
+
+      // Update local cache
+      const cached = (this.groups || []).find(g => g.id === groupId);
+      if (cached) {
+        cached.name = name;
+        cached.center_name = center_name;
+        cached.room = room_name;
+        cached.room_name = room_name;
+        cached.price = price;
+        cached.sessions_per_week = sessions_per_week;
+        cached.day_of_week = day_of_week;
+        cached.session_time = session_time;
+        cached.schedule = schedule;
+      }
+
+      this.closeModal();
+      this.showToast(`تم تحديث بيانات المجموعة (${name}) بنجاح!`, 'success');
+      await this.loadRouteData(this.currentRoute);
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `${err.message || 'فشل تحديث بيانات المجموعة.'}`;
+      } else {
+        this.showToast(`فشل تحديث المجموعة: ${err.message || 'خطأ في البيانات'}`, 'danger');
+      }
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'حفظ التعديلات';
+      }
+    }
+  }
+
+  app.confirmDeleteGroup = function(groupId, groupName) {
+    this.showConfirmModal({
+      title: 'حذف المجموعة الدراسية',
+      message: `هل أنت متأكد من رغبتك في حذف المجموعة "${groupName}" نهائياً؟ سيتم إلغاء قيد الطلاب من المجموعة.`,
+      confirmText: 'حذف المجموعة',
+      cancelText: 'إلغاء',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await request(`/groups/${groupId}`, { method: 'DELETE' });
+          this.showToast(`تم حذف المجموعة (${groupName}) بنجاح`, 'success');
+          await this.loadRouteData(this.currentRoute);
+        } catch (err) {
+          this.showToast(`فشل حذف المجموعة: ${err.message || 'خطأ في الخادم'}`, 'danger');
+        }
+      },
+    });
+  }
+
+  app.viewGroupDetails = function(groupId) {
+    this.currentRoute = 'students';
+    this.renderMainContent();
+    this.loadRouteData('students').then(() => {
+      const filter = document.getElementById('studentGroupFilter');
+      if (filter) {
+        filter.value = groupId;
+        this.filterStudentsTable();
+      }
+    });
+  }
 }

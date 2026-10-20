@@ -47,7 +47,8 @@ test("STUDENT-CARDS: live card preview and table preview column are removed", ()
 
 test("STUDENT-DIRECTORY: previewSpecificCard uses attendance pass screen", () => {
   const filePath = path.resolve(__dirname, "../../web/src/app.js");
-  const content = fs.readFileSync(filePath, "utf-8");
+  const studentCardsPath = path.resolve(__dirname, "../../web/src/components/StudentCardsView.js");
+  const content = fs.readFileSync(filePath, "utf-8") + (fs.existsSync(studentCardsPath) ? "\n" + fs.readFileSync(studentCardsPath, "utf-8") : "");
 
   assert.ok(content.includes("renderStudentAttendancePassHtml(studentObj)"), "previewSpecificCard must use renderStudentAttendancePassHtml");
   assert.ok(content.includes("باركود حضور الطالب:"), "Modal title should be باركود حضور الطالب");
@@ -55,7 +56,8 @@ test("STUDENT-DIRECTORY: previewSpecificCard uses attendance pass screen", () =>
 
 test("IMPORT-STUDENTS: in-modal loading spinner and progress bar implemented", () => {
   const filePath = path.resolve(__dirname, "../../web/src/app.js");
-  const content = fs.readFileSync(filePath, "utf-8");
+  const importModalPath = path.resolve(__dirname, "../../web/src/components/StudentImportModal.js");
+  const content = fs.readFileSync(filePath, "utf-8") + (fs.existsSync(importModalPath) ? "\n" + fs.readFileSync(importModalPath, "utf-8") : "");
 
   assert.ok(content.includes("جاري استيراد وحفظ بيانات الطلاب..."), "Modal must display loading message");
   assert.ok(content.includes("spinner"), "Modal must show spinner animation");
@@ -64,7 +66,8 @@ test("IMPORT-STUDENTS: in-modal loading spinner and progress bar implemented", (
 
 test("IMPORT-STUDENTS: 10-digit Egyptian numbers missing leading 0 are auto-fixed", () => {
   const filePath = path.resolve(__dirname, "../../web/src/app.js");
-  const content = fs.readFileSync(filePath, "utf-8");
+  const importModalPath = path.resolve(__dirname, "../../web/src/components/StudentImportModal.js");
+  const content = fs.readFileSync(filePath, "utf-8") + (fs.existsSync(importModalPath) ? "\n" + fs.readFileSync(importModalPath, "utf-8") : "");
 
   assert.ok(
     content.includes("digits.length === 10") && content.includes("digits = '0' + digits"),
@@ -132,7 +135,8 @@ test("WEB DOM: apps/web/index.html and root index.html must contain <div id=\"ap
 
 test("OFFLINE-ATTENDANCE: app.js contains persistent queue methods and non-destructive sync", () => {
   const appPath = path.resolve(__dirname, "../../web/src/app.js");
-  const appContent = fs.readFileSync(appPath, "utf-8");
+  const sessionsViewPath = path.resolve(__dirname, "../../web/src/components/SessionsView.js");
+  const appContent = fs.readFileSync(appPath, "utf-8") + (fs.existsSync(sessionsViewPath) ? "\n" + fs.readFileSync(sessionsViewPath, "utf-8") : "");
 
   assert.ok(appContent.includes("getOfflineAttendanceQueue()"), "Must define getOfflineAttendanceQueue");
   assert.ok(appContent.includes("saveOfflineAttendanceQueue("), "Must define saveOfflineAttendanceQueue");
@@ -202,7 +206,11 @@ test("SESSION-RESILIENCE: Proactive session refresher, Web Lock deduplication, a
 
 test("IMPORT-GROUP-SELECTION: Sheet import and add student modals support group choice and + New Group creation", () => {
   const appPath = path.resolve(__dirname, "../../web/src/app.js");
-  const appContent = fs.readFileSync(appPath, "utf-8");
+  const importModalPath = path.resolve(__dirname, "../../web/src/components/StudentImportModal.js");
+  const studentsViewPath = path.resolve(__dirname, "../../web/src/components/StudentsView.js");
+  const appContent = fs.readFileSync(appPath, "utf-8")
+    + (fs.existsSync(importModalPath) ? "\n" + fs.readFileSync(importModalPath, "utf-8") : "")
+    + (fs.existsSync(studentsViewPath) ? "\n" + fs.readFileSync(studentsViewPath, "utf-8") : "");
 
   assert.ok(appContent.includes("renderGroupOptionsForImport(selectedGroupId"), "app.js must define renderGroupOptionsForImport");
   assert.ok(appContent.includes("value=\"__NEW_GROUP__\""), "Group options must include __NEW_GROUP__ choice");

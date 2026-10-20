@@ -559,4 +559,396 @@ export function registerStudentCardsActions(app) {
   app.openCardsWhatsAppDispatchModal = function() {
     this.downloadSelectedCardsPdf();
   }
+
+  app.previewSpecificCard = function(name, code, group, phone) {
+    const studentObj = {
+      name,
+      student_code: code,
+      code,
+      group_name: group,
+      teacher_name: this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'معلم المادة'),
+      center_name: this.user?.account_type === 'center' ? this.user?.name : '',
+    };
+    const bodyHtml = renderStudentAttendancePassHtml(studentObj);
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
+      <button type="button" class="btn btn-primary" onclick="window.centrlyBarcodeCard.downloadCardPng(${JSON.stringify(studentObj).replace(/"/g, '&quot;')})">
+        ${getIcon('download', 16)} <span>تحميل الباركود (صورة)</span>
+      </button>
+    `;
+    this.showModal(`باركود حضور الطالب: ${escapeHtml(name)}`, bodyHtml, footerHtml, '480px');
+  }
+
+  app.printSingleCard = function(name, code, group, phone) {
+    const rawTeacherName = this.user?.name || (this.user?.account_type === 'center' ? 'السنتر التعليمي' : 'معلم المادة');
+    const teacherName = cleanTeacherNameString(rawTeacherName);
+    const barcodeSvg = generateBarcode128Svg(code, { height: 38, unitWidth: 2.0 });
+    const printHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>طباعة كارت - ${escapeHtml(name)}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800;900&family=Changa:wght@700;800;900&display=swap" rel="stylesheet">
+        <style>
+          @page { size: auto; margin: 10mm; }
+          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { font-family: 'Cairo', Tahoma, sans-serif; margin: 0; padding: 20px; background: #fff; display: flex; justify-content: center; }
+          .id-card {
+            width: 85.6mm; height: 54mm; background-color: #172D70; border: 2px solid #2949BA;
+            border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
+            page-break-inside: avoid; color: #ffffff;
+          }
+          .hdr { background-color: #2949BA; padding: 5px 12px; display: flex; justify-content: space-between; align-items: center; }
+          .logo { font-family: 'Changa', 'Cairo', sans-serif; font-size: 16px; font-weight: 900; color: #fff; }
+          .hdr-title { font-size: 10px; font-weight: 800; text-align: left; }
+          .hdr-sub { font-size: 7px; color: #E8EDFF; font-weight: 900; }
+          .divider { height: 2.5px; background-color: #E7A330; }
+          .body { padding: 5px 12px; display: flex; flex-direction: column; justify-content: space-around; flex-grow: 1; }
+          .lbl { font-size: 8px; color: #E8EDFF; font-weight: 700; }
+          .s-name { font-family: 'Changa', 'Cairo', sans-serif; font-size: 15px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .pill { background-color: #1f3688; border: 1px solid #2e4ebd; border-radius: 6px; padding: 3px 8px; display: flex; flex-direction: column; gap: 2px; font-size: 8px; font-weight: 700; }
+          .b-box { background: #fff; border-radius: 8px; padding: 4px 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+          .code-box { background-color: #E7A330; border-radius: 6px; padding: 2px 6px; text-align: center; min-width: 60px; }
+          .code-box-lbl { font-size: 7px; font-weight: 900; color: #0f172a; line-height: 1; }
+          .code-box-val { font-family: monospace; font-size: 13px; font-weight: 900; color: #020617; }
+          .ftr { background-color: #122359; color: #cbd5e1; font-size: 7.5px; font-weight: 700; text-align: center; padding: 3px; }
+        </style>
+      </head>
+      <body>
+        <div class="id-card">
+          <div>
+            <div class="hdr">
+              <div class="logo"><span>سنتر</span><span style="color: #E7A330;">لـ</span><span>ي</span></div>
+              <div class="hdr-title">
+                <div>بطاقة حضور الطالب</div>
+                <div class="hdr-sub">STUDENT ID</div>
+              </div>
+            </div>
+            <div class="divider"></div>
+          </div>
+          <div class="body">
+            <div>
+              <div class="lbl">اسم الطالب</div>
+              <div class="s-name">${escapeHtml(name)}</div>
+            </div>
+            <div class="pill">
+              <div><span style="color: #E7A330;">المدرّس:</span> ${escapeHtml(teacherName)}</div>
+              <div><span style="color: #E7A330;">المجموعة:</span> ${escapeHtml(group || 'عامة')}</div>
+            </div>
+            <div class="b-box">
+              <div style="flex-grow: 1; text-align: center;">
+                <div style="font-size: 7px; color: #475569; font-weight: 700; margin-bottom: 2px;">امسح الباركود لتسجيل الحضور</div>
+                <div style="width: 100%; display: flex; justify-content: center;">${barcodeSvg}</div>
+              </div>
+              <div class="code-box">
+                <div class="code-box-lbl">رقم الطالب</div>
+                <div class="code-box-val">${escapeHtml(code)}</div>
+              </div>
+            </div>
+          </div>
+          <div class="ftr">مخصصة للحضور — استخدمها في بداية كل حصة</div>
+        </div>
+        <script>
+          window.onload = function() { window.print(); };
+        </script>
+      </body>
+      </html>
+    `;
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.write(printHtml);
+      printWin.document.close();
+    } else {
+      this.showToast('يرجى السماح بالنوافذ المنبثقة (Popups) لإتمام الطباعة', 'danger');
+    }
+  }
+
+  app.filterCardsTable = function() {
+    const q = document.getElementById('cardSearchInput')?.value?.toLowerCase().trim() || '';
+    const rows = document.querySelectorAll('#cardsTable tbody tr');
+    rows.forEach(r => {
+      const text = r.textContent?.toLowerCase() || '';
+      r.style.display = text.includes(q) ? '' : 'none';
+    });
+    this.updateSelectedCardsCount();
+  }
+
+  app.filterCardsByGroup = function(groupId) {
+    const rows = document.querySelectorAll('#cardsTable tbody tr');
+    rows.forEach(r => {
+      const rowGroupId = r.getAttribute('data-group-id');
+      r.style.display = (!groupId || rowGroupId === groupId) ? '' : 'none';
+    });
+    this.updateSelectedCardsCount();
+  }
+
+  app.toggleMasterCardCheckbox = function(checked) {
+    const visibleChecks = document.querySelectorAll('#cardsTable tbody tr:not([style*="display: none"]) .student-card-check');
+    visibleChecks.forEach(c => c.checked = checked);
+    this.updateSelectedCardsCount();
+  }
+
+  app.selectAllCards = function(select) {
+    const checks = document.querySelectorAll('.student-card-check');
+    checks.forEach(c => c.checked = select);
+    const master = document.getElementById('cardMasterCheckbox');
+    if (master) master.checked = select;
+    this.updateSelectedCardsCount();
+  }
+
+  app.updateSelectedCardsCount = function() {
+    const checked = document.querySelectorAll('.student-card-check:checked');
+    const badge = document.getElementById('selectedCardsCountBadge');
+    if (badge) badge.textContent = `تم تحديد: ${checked.length} طالب`;
+  }
+
+  app.printSelectedCards = function() {
+    const checked = Array.from(document.querySelectorAll('.student-card-check:checked'));
+    if (checked.length === 0) {
+      this.showToast('يرجى تحديد طالب واحد على الأقل لطباعة الكارت', 'info');
+      return;
+    }
+
+    const studentsToPrint = checked.map(c => ({
+      id: c.value,
+      name: c.getAttribute('data-name'),
+      code: c.getAttribute('data-code'),
+      group: c.getAttribute('data-group'),
+      phone: c.getAttribute('data-phone'),
+    }));
+
+    const teacherName = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'أ. محمد خالد');
+
+    const printHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>طباعة كروت الطلاب - Centrly</title>
+        <style>
+          @page { size: A4 portrait; margin: 10mm; }
+          body { font-family: 'Cairo', 'Changa', sans-serif; margin: 0; padding: 0; background: #fff; color: #000; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; page-break-inside: avoid; }
+          .card {
+            border: 2px solid #0f172a; border-radius: 12px; padding: 12px 14px;
+            height: 190px; box-sizing: border-box; display: flex; flex-direction: column;
+            justify-content: space-between; page-break-inside: avoid; position: relative;
+            background: #fff;
+          }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 6px; }
+          .logo { font-size: 14px; font-weight: 800; color: #1e3a8a; }
+          .sub { font-size: 10px; color: #475569; }
+          .body { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+          .avatar { width: 44px; height: 44px; border-radius: 8px; background: #f1f5f9; border: 1.5px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; }
+          .name { font-size: 14px; font-weight: 800; color: #0f172a; }
+          .meta { font-size: 10px; color: #475569; margin-top: 3px; }
+          .footer { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 6px; padding: 6px 10px; border: 1px solid #e2e8f0; }
+          .barcode-bars { display: flex; gap: 2px; height: 22px; align-items: center; }
+          .barcode-bars span { background: #000; height: 100%; }
+          .code { font-family: monospace; font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #0f172a; }
+        </style>
+      </head>
+      <body>
+        <div class="grid">
+          ${studentsToPrint.map(s => `
+            <div class="card">
+              <div class="header">
+                <div>
+                  <div class="logo">سنترلي | Centrly</div>
+                  <div class="sub">كارت حضور ذكي</div>
+                </div>
+                <div style="text-align: left;">
+                  <div style="font-size: 11px; font-weight: 700;">${escapeHtml(teacherName)}</div>
+                  <div class="sub">${escapeHtml(s.group)}</div>
+                </div>
+              </div>
+              <div class="body">
+                <div class="avatar">${s.name?.charAt(0) || 'ط'}</div>
+                <div>
+                  <div class="name">${escapeHtml(s.name)}</div>
+                  <div class="meta">هاتف: ${escapeHtml(s.phone || '—')}</div>
+                </div>
+              </div>
+              <div class="footer">
+                <div class="barcode-bars">
+                  <span style="width:2px;"></span><span style="width:1px;"></span><span style="width:3px;"></span>
+                  <span style="width:1px;"></span><span style="width:2px;"></span><span style="width:4px;"></span>
+                  <span style="width:1px;"></span><span style="width:3px;"></span><span style="width:2px;"></span>
+                  <span style="width:1px;"></span><span style="width:2px;"></span><span style="width:3px;"></span>
+                </div>
+                <div style="text-align: left;">
+                  <div class="code">${escapeHtml(s.code)}</div>
+                  <div style="font-size: 8px; color: #64748b;">Scan to Attend</div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <script>
+          window.onload = function() { window.print(); };
+        </script>
+      </body>
+      </html>
+    `;
+
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.write(printHtml);
+      printWin.document.close();
+    } else {
+      this.showToast('يرجى السماح بالنوافذ المنبثقة (Popups) لإتمام الطباعة', 'danger');
+    }
+  }
+
+  app.orderSelectedCardsViaWhatsApp = function() {
+    this.openCardsWhatsAppDispatchModal();
+  }
+
+  app.openCardsWhatsAppDispatchModal = function() {
+    const checked = Array.from(document.querySelectorAll('.student-card-check:checked'));
+    const targetStudents = checked.length > 0
+      ? checked.map(c => ({
+          name: c.getAttribute('data-name'),
+          code: c.getAttribute('data-code'),
+          group: c.getAttribute('data-group'),
+          phone: c.getAttribute('data-phone'),
+          parent_phone: c.getAttribute('data-parent-phone') || '',
+        }))
+      : (this.students || []).map(s => ({
+          name: s.name,
+          code: s.code || s.student_code || '—',
+          group: s.group_name || 'عامة',
+          phone: s.student_phone || '',
+          parent_phone: s.parent_phone || '',
+        }));
+
+    if (targetStudents.length === 0) {
+      this.showToast('يرجى تحديد طالب واحد على الأقل أو إضافة طلاب لطلب كروت بلاستيكية', 'info');
+      return;
+    }
+
+    const userTitle = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'مدرس المادة');
+    this._pendingCardsStudents = targetStudents;
+
+    const bodyHtml = `
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;" dir="rtl">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; color: #166534; font-weight: 800; font-size: 1rem;">
+            ${getIcon('whatsapp', 20, '#166534')}
+            <span>تجهيز وإرسال كشف كروت الطلاب</span>
+          </div>
+          <p style="font-size: 0.85rem; color: #15803d; margin: 0.4rem 0 0 0; line-height: 1.6;">
+            تم توليد كشف رقمي منظم يحتوي على بيانات وأكواد وباركود الطلاب المحددين (${targetStudents.length} طالب) كملف جدول إلكتروني بدلاً من إرسال نصوص متفرقة.
+          </p>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 1rem; font-size: 0.85rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+            <span style="color: var(--centrly-text);">جهة الإصدار:</span>
+            <strong>${escapeHtml(userTitle)}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+            <span style="color: var(--centrly-text);">عدد الطلاب في الكشف:</span>
+            <strong style="color: var(--centrly-blue-800);">${targetStudents.length} طالب</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--centrly-text);">صيغة الملف:</span>
+            <strong style="font-family: monospace;">Excel / CSV جدول منظم</strong>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <button 
+            type="button"
+            class="btn btn-primary" 
+            style="background: #25d366; border-color: #25d366; font-weight: 800; padding: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,211,102,0.25);"
+            onclick="window.centrlyApp.dispatchCardsFileDirect()"
+          >
+            ${getIcon('whatsapp', 18, '#ffffff')}
+            <span>إرسال الملف مباشرة عبر واتساب المنظومة</span>
+          </button>
+
+          <button 
+            type="button"
+            class="btn btn-secondary" 
+            style="padding: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+            onclick="window.centrlyApp.downloadCardsCsvFile()"
+          >
+            ${getIcon('download', 18, 'var(--centrly-blue-700)')}
+            <span>تحميل ملف كروت الطلاب (Excel / CSV)</span>
+          </button>
+
+          <button 
+            type="button"
+            class="btn btn-secondary" 
+            style="padding: 0.7rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: #15803d;"
+            onclick="window.centrlyApp.openCardsWhatsAppChat()"
+          >
+            ${getIcon('chat', 18, '#15803d')}
+            <span>فتح محادثة واتساب الإدارة (01123671177)</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>
+    `;
+
+    this.showModal('إرسال كشف كروت الطلاب عبر واتساب', bodyHtml, footerHtml);
+  }
+
+  app.downloadCardsCsvFile = function() {
+    const students = this._pendingCardsStudents || this.students || [];
+    if (students.length === 0) {
+      this.showToast('لا توجد بيانات طلاب لتحميلها', 'warning');
+      return;
+    }
+    const header = ['كود الطالب', 'اسم الطالب', 'المجموعة الدراسية', 'رقم الهاتف', 'رقم ولي الأمر'];
+    const rows = students.map(s => [
+      `"${(s.code || '').replace(/"/g, '""')}"`,
+      `"${(s.name || '').replace(/"/g, '""')}"`,
+      `"${(s.group || s.group_name || '').replace(/"/g, '""')}"`,
+      `"${(s.phone || s.student_phone || '').replace(/"/g, '""')}"`,
+      `"${(s.parent_phone || '').replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = '\uFEFF' + [header.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `centrly_student_cards_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.showToast('تم تحميل ملف كشف الكروت بنجاح (Excel / CSV)!', 'success');
+  }
+
+  app.dispatchCardsFileDirect = async function() {
+    const students = this._pendingCardsStudents || this.students || [];
+    const userTitle = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'مدرس المادة');
+    try {
+      const summaryMsg = `السلام عليكم، تم إصدار كشف طلب كروت الطلاب لمنظومة (${userTitle}) بإجمالي (${students.length}) طالب وجاهز للمراجعة والتنفيذ.`;
+      await request('/whatsapp/test', {
+        method: 'POST',
+        body: JSON.stringify({ phone: '01123671177', message: summaryMsg }),
+      }).catch(() => null);
+
+      this.downloadCardsCsvFile();
+      this.closeModal();
+      this.showToast(`تم إرسال إشعار الكشف وتنزيل ملف الكروت بنجاح!`, 'success');
+    } catch (err) {
+      this.showToast(`تم تجهيز وتنزيل الملف، وتعذر الاتصال الآلي المباشر: ${err.message}`, 'info');
+      this.downloadCardsCsvFile();
+    }
+  }
+
+  app.openCardsWhatsAppChat = function() {
+    const students = this._pendingCardsStudents || this.students || [];
+    const userTitle = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'مدرس المادة');
+    const msg = `السلام عليكم، نزلت كشف كروت الطلاب لمنظومة (${userTitle}) بإجمالي (${students.length}) طالب، وعايز اعرف تفاصيل وأسعار طباعة الكروت علشان اطلبها.`;
+    window.open(`https://wa.me/201123671177?text=${encodeURIComponent(msg)}`, '_blank');
+  }
 }

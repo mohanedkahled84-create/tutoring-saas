@@ -1,3 +1,5 @@
+import { request } from "../services/api.js";
+import { normalizeDigits } from "../utils/normalizeDigits.js";
 import { renderStudentSearchBar } from "./StudentSearchBar.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
@@ -367,4 +369,684 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
 
     </div>
   `;
+}
+
+export function registerStudentsActions(app) {
+  app.openAddStudentModal = function() {
+    const studentLimit = this.billingState?.students_limit || 300;
+    const currentCount = (this.students || []).length;
+    if (currentCount >= studentLimit) {
+      const storageKey = 'centrly_quota_exceeded_timestamp';
+      let reachedTimestamp = null;
+      try {
+        reachedTimestamp = (typeof localStorage !== 'undefined') ? localStorage.getItem(storageKey) : null;
+        if (!reachedTimestamp) {
+          reachedTimestamp = Date.now().toString();
+          localStorage.setItem(storageKey, reachedTimestamp);
+        }
+      } catch (_) {
+        reachedTimestamp = Date.now().toString();
+      }
+      const elapsedDays = (Date.now() - Number(reachedTimestamp)) / (1000 * 60 * 60 * 24);
+      if (elapsedDays > 3) {
+        this.showQuotaBlockedModal(currentCount, studentLimit);
+        return;
+      }
+    }
+
+    const groupOptions = this.renderGroupOptionsForImport ? this.renderGroupOptionsForImport() : (this.groups || []).map(g => `<option value="${g.id}">${g.name} (${g.center_name || 'السنتر'})</option>`).join('');
+    const bodyHtml = `
+      <form id="addStudentModalForm" onsubmit="window.centrlyApp.handleCreateStudent(event)">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اسم الطالب رباعي *</label>
+          <input type="text" id="newStudentName" class="form-input" placeholder="اسم الطالب بالكامل" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي *</label>
+          <input type="tel" id="newStudentOwnPhone" class="form-input" placeholder="" dir="ltr" required>
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم هاتف الطالب للتواصل المباشر والباركود (إلزامي)</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم هاتف ولي الأمر (واتساب) *</label>
+          <input type="tel" id="newStudentPhone" class="form-input" placeholder="" dir="ltr" required>
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم مصري مكون من 11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">كود الطالب (اختياري)</label>
+          <input type="text" id="newStudentCode" class="form-input" placeholder="اتركه فارغاً للتوليد التلقائي (مثال: 1025)" dir="ltr">
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">يمكنك كتابة كود مخصص للطالب أو تركه فارغاً ليقوم النظام بتوليد كود تسلسلي فريد تلقائياً.</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <label class="form-label" style="font-weight: 700; margin-bottom: 0;">المجموعة الأساسية *</label>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleQuickAddGroupInSingleStudent()" style="font-size: 0.78rem; font-weight: 700; padding: 0.15rem 0.55rem; color: #2563eb; display: inline-flex; align-items: center; gap: 0.25rem; border-color: #cbd5e1;">
+              ${getIcon('add', 12, '#2563eb')}
+              <span>إضافة مجموعة جديدة</span>
+            </button>
+          </div>
+          <select id="newStudentGroup" class="form-input" required onchange="window.centrlyApp.handleStudentModalGroupChange(this)">
+            ${groupOptions}
+          </select>
+          <div id="quickGroupCreatorSingleStudent" style="display: none; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <div style="font-weight: 800; color: #166534; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem;">
+                ${getIcon('add', 14, '#16a34a')}
+                <span>إنشاء مجموعة جديدة فوراً واختيارها</span>
+              </div>
+              <button type="button" onclick="window.centrlyApp.cancelQuickAddGroupInSingleStudent()" style="background: none; border: none; font-size: 1.15rem; line-height: 1; cursor: pointer; color: #64748b;" title="إغلاق">&times;</button>
+            </div>
+            <div class="modal-form-grid" style="gap: 0.5rem; margin-bottom: 0;">
+              <div>
+                <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">اسم المجموعة *</label>
+                <input type="text" id="quickGroupNameStudent" class="form-input" placeholder="مثال: 1ث أ" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">المقر / السنتر (اختياري)</label>
+                <input type="text" id="quickGroupCenterStudent" class="form-input" placeholder="اسم السنتر" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">سعر الحصة (ج.م) *</label>
+                <input type="number" id="quickGroupPriceStudent" class="form-input" value="50" min="0" step="5" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
+              </div>
+              <div>
+                <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">يوم الحصة الأسبوعي</label>
+                <select id="quickGroupDayStudent" class="form-input" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
+                  <option value="السبت">السبت</option>
+                  <option value="الأحد">الأحد</option>
+                  <option value="الإثنين">الإثنين</option>
+                  <option value="الثلاثاء">الثلاثاء</option>
+                  <option value="الأربعاء">الأربعاء</option>
+                  <option value="الخميس">الخميس</option>
+                  <option value="الجمعة">الجمعة</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.35rem; margin-top: 0.6rem;">
+              <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="window.centrlyApp.cancelQuickAddGroupInSingleStudent()">إلغاء</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btnSaveQuickGroupStudent" onclick="window.centrlyApp.executeQuickCreateGroupForSingleStudent()" style="background: #16a34a; border-color: #16a34a; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.6rem;">
+                حفظ واختيار المجموعة الآن ✓
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="addStudentFeedback" style="display: none; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem; line-height: 1.4;"></div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="addStudentModalForm" id="btnSaveStudent" class="btn btn-primary" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ${getIcon('add', 16)} <span>إضافة الطالب</span>
+      </button>
+    `;
+    this.showModal('إضافة طالب جديد', bodyHtml, footerHtml);
+  }
+
+  app.handleCreateStudent = async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('newStudentName').value.trim();
+    const parent_phone = document.getElementById('newStudentPhone').value.trim();
+    const student_phone = document.getElementById('newStudentOwnPhone')?.value.trim() || '';
+    const rawCode = document.getElementById('newStudentCode')?.value.trim();
+    const groupId = document.getElementById('newStudentGroup').value;
+    const feedback = document.getElementById('addStudentFeedback');
+    const saveBtn = document.getElementById('btnSaveStudent');
+
+    if (!groupId || groupId === '__NEW_GROUP__') {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = 'يرجى اختيار المجموعة الأساسية للطالب أو إنشاء مجموعة جديدة أولاً.';
+      }
+      return;
+    }
+
+    const egyptianPhoneRegex = /^01[0125][0-9]{8}$/;
+    const cleanParentPhone = parent_phone.replace(/[\s\-().]/g, '');
+    if (!egyptianPhoneRegex.test(cleanParentPhone)) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `رقم ولي الأمر غير صحيح (${cleanParentPhone.length} أرقام). يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015.`;
+      }
+      return;
+    }
+
+    const cleanStudentPhone = student_phone.replace(/[\s\-().]/g, '');
+    if (!cleanStudentPhone || !egyptianPhoneRegex.test(cleanStudentPhone)) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `رقم هاتف الطالب إلزامي وغير صحيح. يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015.`;
+      }
+      return;
+    }
+
+    // Client-side uniqueness check if a custom code is entered
+    if (rawCode) {
+      const duplicateStudent = (this.students || []).find(s => {
+        const c1 = (s.code || '').trim();
+        const c2 = (s.student_code || s.studentCode || '').trim();
+        return c1 === rawCode || c2 === rawCode;
+      });
+      if (duplicateStudent) {
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+          feedback.style.color = 'var(--centrly-danger)';
+          feedback.textContent = `كود الطالب (${rawCode}) مسجل بالفعل للطالب "${duplicateStudent.name}". لا يمكن تكرار الأكواد.`;
+        }
+        return;
+      }
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'جاري الإضافة...';
+
+    try {
+      const res = await request('/students', {
+        method: 'POST',
+        body: {
+          name,
+          parent_phone: cleanParentPhone,
+          student_phone: cleanStudentPhone,
+          code: rawCode || undefined,
+        },
+      });
+
+      const studentId = res.student?.id;
+      if (studentId && groupId) {
+        await request(`/groups/${groupId}/students`, {
+          method: 'POST',
+          body: { student_id: studentId },
+        }).catch(err => console.warn('Enrollment note:', err));
+      }
+
+      this.closeModal();
+      this.showToast(`تمت إضافة الطالب (${name}) بنجاح! والكود التلقائي: ${res.student?.code || res.student?.student_code || 'تم التعيين'}`, 'success');
+      await this.loadRouteData(this.currentRoute);
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `${err.message || 'فشل إضافة الطالب. تأكد من صحة رقم الهاتف والبيانات.'}`;
+      } else {
+        this.showToast(`فشل إضافة الطالب: ${err.message || 'تأكد من صحة البيانات'}`, 'danger');
+      }
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'إضافة الطالب';
+    }
+  }
+
+  app.handleStudentModalGroupChange = function(selectEl) {
+    if (selectEl.value === '__NEW_GROUP__') {
+      this.toggleQuickAddGroupInSingleStudent(true);
+    } else {
+      this.toggleQuickAddGroupInSingleStudent(false);
+    }
+  }
+
+  app.toggleQuickAddGroupInSingleStudent = function(forceState = null) {
+    const container = document.getElementById('quickGroupCreatorSingleStudent');
+    if (!container) return;
+    const isVisible = container.style.display !== 'none';
+    const shouldShow = forceState !== null ? forceState : !isVisible;
+    container.style.display = shouldShow ? 'block' : 'none';
+    if (shouldShow) {
+      const nameInput = document.getElementById('quickGroupNameStudent');
+      if (nameInput) setTimeout(() => nameInput.focus(), 80);
+    } else {
+      const sel = document.getElementById('newStudentGroup');
+      if (sel && sel.value === '__NEW_GROUP__') {
+        sel.value = (this.groups && this.groups[0]?.id) || '';
+      }
+    }
+  }
+
+  app.cancelQuickAddGroupInSingleStudent = function() {
+    this.toggleQuickAddGroupInSingleStudent(false);
+  }
+
+  app.executeQuickCreateGroupForSingleStudent = async function() {
+    const nameInput = document.getElementById('quickGroupNameStudent');
+    const centerInput = document.getElementById('quickGroupCenterStudent');
+    const priceInput = document.getElementById('quickGroupPriceStudent');
+    const dayInput = document.getElementById('quickGroupDayStudent');
+    const saveBtn = document.getElementById('btnSaveQuickGroupStudent');
+
+    const name = nameInput?.value?.trim();
+    if (!name) {
+      this.showToast('يرجى كتابة اسم المجموعة أولاً', 'warning');
+      nameInput?.focus();
+      return;
+    }
+
+    const center_name = centerInput?.value?.trim() || undefined;
+    const price = Number(priceInput?.value) || 0;
+    const day_of_week = dayInput?.value || 'السبت';
+    const session_time = '04:00 م';
+    const schedule = `${day_of_week} • ${session_time}`;
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'جاري الحفظ... ⏳';
+    }
+
+    try {
+      const res = await request('/groups', {
+        method: 'POST',
+        body: {
+          name,
+          center_name,
+          price,
+          session_price: price,
+          day_of_week,
+          session_time,
+          sessions_per_week: 1,
+          billing_model: 'percentage',
+          center_cut_percentage: 20,
+          schedule,
+        },
+      });
+
+      const newGroup = res?.group || res;
+      if (!newGroup || !newGroup.id) {
+        throw new Error('لم يتم استلام بيانات المجموعة من الخادم');
+      }
+
+      if (!this.groups) this.groups = [];
+      this.groups.unshift(newGroup);
+      this.saveCache('groups', this.groups);
+
+      const selStudent = document.getElementById('newStudentGroup');
+      if (selStudent) {
+        selStudent.innerHTML = this.renderGroupOptionsForImport(newGroup.id);
+        selStudent.value = newGroup.id;
+      }
+
+      this.toggleQuickAddGroupInSingleStudent(false);
+      this.showToast(`تم إنشاء مجموعة (${escapeHtml(name)}) واختيارها بنجاح! ✓`, 'success');
+    } catch (err) {
+      console.error('Quick group creation failed:', err);
+      this.showToast(`تعذر إنشاء المجموعة: ${err.message || 'خطأ غير متوقع'}`, 'danger');
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'حفظ واختيار المجموعة الآن ✓';
+      }
+    }
+  }
+
+  app.editStudent = function(studentId) {
+    const student = (this.students || []).find(s => s.id === studentId);
+    if (!student) {
+      this.showToast('لم يتم العثور على بيانات الطالب المحدد', 'danger');
+      return;
+    }
+
+    const currentGroupId = student.group_id || (Array.isArray(student.group_ids) && student.group_ids[0]) || student.groupId || '';
+    const groupOptions = (this.groups || []).map(g => `
+      <option value="${g.id}" ${g.id === currentGroupId ? 'selected' : ''}>${g.name} (${g.center_name || g.centerName || 'السنتر'})</option>
+    `).join('');
+
+    const currentName = student.name || student.full_name || '';
+    const currentCode = student.code || student.student_code || student.studentCode || '';
+    const currentStudentPhone = student.student_phone || student.studentPhone || '';
+    const currentParentPhone = student.parent_phone || student.parentPhone || '';
+
+    const bodyHtml = `
+      <form id="editStudentModalForm" onsubmit="window.centrlyApp.saveStudentEdit(event, '${escapeHtml(studentId)}')">
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">اسم الطالب الرباعي *</label>
+          <input type="text" id="editStudentName" class="form-input" value="${escapeHtml(currentName)}" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">كود الطالب *</label>
+          <input type="text" id="editStudentCode" class="form-input" value="${escapeHtml(currentCode)}" placeholder="مثال: 1025" dir="ltr" required>
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">كود الطالب التعريفي في المنصة والباركود (يجب أن يكون فريداً وغير مكرر)</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي *</label>
+          <input type="tel" id="editStudentOwnPhone" class="form-input" value="${escapeHtml(currentStudentPhone)}" placeholder="" dir="ltr" required>
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم هاتف الطالب للتواصل المباشر والباركود (إلزامي 11 رقماً)</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">رقم هاتف ولي الأمر (واتساب) *</label>
+          <input type="tel" id="editStudentPhone" class="form-input" value="${escapeHtml(currentParentPhone)}" placeholder="" dir="ltr" required>
+          <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم مصري مكون من 11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015</small>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.85rem;">
+          <label class="form-label" style="font-weight: 700;">المجموعة الأساسية</label>
+          <select id="editStudentGroup" class="form-input">
+            <option value="" ${!currentGroupId ? 'selected' : ''}>-- عام (بدون مجموعة محددة) --</option>
+            ${groupOptions}
+          </select>
+        </div>
+        <div id="editStudentFeedback" style="display: none; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem; line-height: 1.4;"></div>
+      </form>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
+      <button type="submit" form="editStudentModalForm" id="btnUpdateStudent" class="btn btn-primary" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem;">
+        ${getIcon('check', 16)} <span>حفظ التعديلات</span>
+      </button>
+    `;
+
+    this.showModal(`تعديل بيانات الطالب: ${escapeHtml(currentName || student.name)}`, bodyHtml, footerHtml);
+  }
+
+  app.saveStudentEdit = async function(e, studentId) {
+    e.preventDefault();
+    const name = document.getElementById('editStudentName')?.value.trim();
+    const code = document.getElementById('editStudentCode')?.value.trim();
+    const parent_phone = document.getElementById('editStudentPhone')?.value.trim();
+    const student_phone = document.getElementById('editStudentOwnPhone')?.value.trim() || '';
+    const rawGroupId = document.getElementById('editStudentGroup')?.value;
+    const targetGroupId = rawGroupId && rawGroupId.trim().length > 0 ? rawGroupId.trim() : null;
+    const feedback = document.getElementById('editStudentFeedback');
+    const saveBtn = document.getElementById('btnUpdateStudent');
+
+    if (!code) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = 'كود الطالب إلزامي ولا يمكن تركه فارغاً.';
+      }
+      return;
+    }
+
+    const duplicateStudent = (this.students || []).find(s => {
+      if (s.id === studentId) return false;
+      const c1 = (s.code || '').trim();
+      const c2 = (s.student_code || s.studentCode || '').trim();
+      return c1 === code || c2 === code;
+    });
+    if (duplicateStudent) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `كود الطالب (${code}) مسجل بالفعل للطالب "${duplicateStudent.name}". لا يمكن تكرار الأكواد.`;
+      }
+      return;
+    }
+
+    const egyptianPhoneRegex = /^01[0125][0-9]{8}$/;
+    const cleanParentPhone = parent_phone.replace(/[\s\-().]/g, '');
+    if (!egyptianPhoneRegex.test(cleanParentPhone)) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `رقم ولي الأمر غير صحيح (${cleanParentPhone.length} أرقام). يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015.`;
+      }
+      return;
+    }
+
+    const cleanStudentPhone = student_phone.replace(/[\s\-().]/g, '');
+    if (!cleanStudentPhone || !egyptianPhoneRegex.test(cleanStudentPhone)) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `رقم هاتف الطالب إلزامي وغير صحيح. يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015.`;
+      }
+      return;
+    }
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'جاري الحفظ...';
+    }
+
+    try {
+      const updateRes = await request(`/students/${studentId}`, {
+        method: 'PUT',
+        body: {
+          name,
+          parent_phone: cleanParentPhone,
+          student_phone: cleanStudentPhone,
+          group_id: targetGroupId,
+          code,
+        },
+      });
+
+      const updatedStudent = updateRes?.student || updateRes;
+      const matchedGroup = (this.groups || []).find(g => g.id === targetGroupId);
+      const groupTitle = matchedGroup ? matchedGroup.name : (targetGroupId ? 'مجموعة محددة' : 'مجموعة عامة');
+
+      // Update in-memory state and cache immediately
+      if (Array.isArray(this.students)) {
+        const studentIndex = this.students.findIndex(s => s.id === studentId);
+        if (studentIndex !== -1) {
+          this.students[studentIndex] = {
+            ...this.students[studentIndex],
+            ...(updatedStudent && typeof updatedStudent === 'object' ? updatedStudent : {}),
+            name,
+            code,
+            student_code: code,
+            studentCode: code,
+            parent_phone: cleanParentPhone,
+            parentPhone: cleanParentPhone,
+            student_phone: cleanStudentPhone,
+            studentPhone: cleanStudentPhone,
+            group_id: targetGroupId,
+            groupId: targetGroupId,
+            group_ids: targetGroupId ? [targetGroupId] : [],
+            group_name: groupTitle,
+            groupName: groupTitle,
+          };
+          this.saveCache('students', this.students);
+        }
+      }
+
+      this.closeModal();
+      this.showToast(`تم تحديث بيانات الطالب (${name}) بنجاح!`, 'success');
+
+      // Re-fetch route data with cache-busting to guarantee server synchronization
+      try {
+        if (this.currentRoute === 'students') {
+          const freshRes = await request(`/students?_t=${Date.now()}`);
+          if (freshRes) {
+            const fetched = Array.isArray(freshRes) ? freshRes : (freshRes.students || []);
+            if (fetched.length > 0) {
+              this.students = fetched;
+              this.saveCache('students', this.students);
+            }
+          }
+        } else {
+          await this.loadRouteData(this.currentRoute);
+        }
+      } catch (rErr) {
+        console.warn('Background sync note:', rErr);
+      }
+
+      this.renderMainContent();
+    } catch (err) {
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
+        feedback.style.color = 'var(--centrly-danger)';
+        feedback.textContent = `${err.message || 'فشل تحديث بيانات الطالب.'}`;
+      } else {
+        this.showToast(`فشل تحديث بيانات الطالب: ${err.message || 'خطأ في البيانات'}`, 'danger');
+      }
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'حفظ التعديلات';
+      }
+    }
+  }
+
+  app.confirmDeleteStudent = function(studentId, studentName) {
+    this.showConfirmModal({
+      title: 'حذف الطالب نهائياً',
+      message: `هل أنت متأكد من رغبتك في حذف الطالب "${studentName}"؟ سيتم حذف جميع بياناته وسجلات حضوره بالكامل.`,
+      confirmText: 'حذف الطالب',
+      cancelText: 'إلغاء',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await request(`/students/${studentId}`, { method: 'DELETE' });
+          this.showToast(`تم حذف الطالب (${studentName}) بنجاح`, 'success');
+          await this.loadRouteData(this.currentRoute);
+        } catch (err) {
+          this.showToast(`فشل حذف الطالب: ${err.message || 'خطأ في الخادم'}`, 'danger');
+        }
+      },
+    });
+  }
+
+  app.filterStudentsTable = function() {
+    const rawVal = document.getElementById('studentSearchInput')?.value || '';
+    const q = normalizeDigits(rawVal).trim().toLowerCase();
+    const groupFilter = document.getElementById('studentGroupFilter')?.value || '';
+    const rows = document.querySelectorAll('#studentsTable tbody tr');
+
+    const cleanDigits = q.replace(/\D/g, '');
+
+    rows.forEach(r => {
+      const rowCode = normalizeDigits(r.getAttribute('data-code') || '').trim().toLowerCase();
+      const rowName = (r.getAttribute('data-name') || '').trim().toLowerCase();
+      const rowPhone = normalizeDigits(r.getAttribute('data-phone') || '').replace(/\D/g, '');
+      const rowParentPhone = normalizeDigits(r.getAttribute('data-parent-phone') || '').replace(/\D/g, '');
+      const rowText = r.textContent.toLowerCase();
+
+      let matchQ = false;
+      if (!q) {
+        matchQ = true;
+      } else if (rowCode && (rowCode === q || rowCode.startsWith(q))) {
+        matchQ = true;
+      } else if (rowName && rowName.includes(q)) {
+        matchQ = true;
+      } else if (cleanDigits.length >= 7 && (rowPhone.includes(cleanDigits) || rowParentPhone.includes(cleanDigits))) {
+        matchQ = true;
+      } else if (cleanDigits.length < 7 && !rowCode && rowText.includes(q)) {
+        matchQ = true;
+      }
+
+      const matchG = !groupFilter || rowText.includes(groupFilter.toLowerCase());
+      r.style.display = matchQ && matchG ? '' : 'none';
+    });
+
+    if (typeof this.updateStudentsFloatingScrollbar === 'function') {
+      this.updateStudentsFloatingScrollbar();
+    }
+  }
+
+  app.scrollStudentsTable = function(direction) {
+    const container = document.getElementById('studentsTableContainer');
+    if (!container) return;
+
+    const step = 350;
+    try {
+      if (direction === 'full-right') {
+        container.scrollBy({ left: 10000, behavior: 'smooth' });
+      } else if (direction === 'full-left') {
+        container.scrollBy({ left: -10000, behavior: 'smooth' });
+      } else if (direction === 'right') {
+        container.scrollBy({ left: step, behavior: 'smooth' });
+      } else if (direction === 'left') {
+        container.scrollBy({ left: -step, behavior: 'smooth' });
+      }
+    } catch (e) {
+      if (direction === 'full-right') container.scrollLeft += 10000;
+      else if (direction === 'full-left') container.scrollLeft -= 10000;
+      else if (direction === 'right') container.scrollLeft += step;
+      else if (direction === 'left') container.scrollLeft -= step;
+    }
+  }
+
+  app.syncStudentsTableScroll = function(source) {
+    if (this._isSyncingTableScroll) return;
+    const tableContainer = document.getElementById('studentsTableContainer');
+    const scrollTrack = document.getElementById('studentsStickyScrollTrack');
+    if (!tableContainer || !scrollTrack) return;
+
+    this._isSyncingTableScroll = true;
+    try {
+      if (source === 'table') {
+        scrollTrack.scrollLeft = tableContainer.scrollLeft;
+      } else if (source === 'bar') {
+        tableContainer.scrollLeft = scrollTrack.scrollLeft;
+      }
+    } finally {
+      requestAnimationFrame(() => {
+        this._isSyncingTableScroll = false;
+      });
+    }
+  }
+
+  app.updateStudentsFloatingScrollbar = function() {
+    const container = document.getElementById('studentsTableContainer');
+    const floatingWrap = document.getElementById('studentsStickyScrollWrap');
+    const dummy = document.getElementById('studentsStickyScrollDummy');
+    const scrollTrack = document.getElementById('studentsStickyScrollTrack');
+    if (!container || !floatingWrap || !dummy || !scrollTrack) return;
+
+    const isOverflowing = container.scrollWidth > (container.clientWidth + 2);
+    if (!isOverflowing) {
+      floatingWrap.style.display = 'none';
+      return;
+    }
+
+    dummy.style.width = `${container.scrollWidth}px`;
+
+    const rect = container.getBoundingClientRect();
+    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+
+    const isTableInView = rect.top < (windowHeight - 20) && rect.bottom > 60;
+
+    if (isTableInView) {
+      const left = Math.max(0, rect.left);
+      const width = Math.min(rect.width, (window.innerWidth || document.documentElement.clientWidth) - left);
+      floatingWrap.style.display = 'block';
+      floatingWrap.style.left = `${left}px`;
+      floatingWrap.style.width = `${width}px`;
+      if (!this._isSyncingTableScroll) {
+        scrollTrack.scrollLeft = container.scrollLeft;
+      }
+    } else {
+      floatingWrap.style.display = 'none';
+    }
+  }
+
+  app.initStudentsTableScrollSync = function() {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        this.updateStudentsFloatingScrollbar();
+
+        const container = document.getElementById('studentsTableContainer');
+        if (container && window.ResizeObserver && !this._studentsResizeObserver) {
+          this._studentsResizeObserver = new ResizeObserver(() => {
+            if (this.currentRoute === 'students') {
+              this.updateStudentsFloatingScrollbar();
+            }
+          });
+          this._studentsResizeObserver.observe(container);
+        }
+
+        if (!this._hasStudentsScrollListener) {
+          this._hasStudentsScrollListener = true;
+          window.addEventListener('scroll', () => {
+            if (this.currentRoute === 'students') {
+              this.updateStudentsFloatingScrollbar();
+            }
+          }, { passive: true });
+          window.addEventListener('resize', () => {
+            if (this.currentRoute === 'students') {
+              this.updateStudentsFloatingScrollbar();
+            }
+          }, { passive: true });
+        }
+      }, 60);
+    });
+  }
+
+
 }
