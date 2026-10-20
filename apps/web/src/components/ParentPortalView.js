@@ -461,9 +461,6 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
         <!-- Walkthrough Onboarding Tour Modal -->
         ${renderParentPortalTourHtml()}
 
-        <!-- Auto-launch tour immediately on first login/visit -->
-        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'/>" style="display:none;" onerror="(function(){ setTimeout(function(){ if (typeof window !== 'undefined' && window.openParentPortalTour) window.openParentPortalTour(false, '${parentKey}'); }, 500); })()" />
-
       </div>
     </div>
   `;
@@ -491,13 +488,6 @@ if (typeof window !== 'undefined') {
       }
     });
   };
-
-  // Auto-launch walkthrough tour for first-time visitors
-  setTimeout(() => {
-    if (window.openParentPortalTour) {
-      window.openParentPortalTour(false, window._centrlyCurrentParentId);
-    }
-  }, 450);
 }
 
 

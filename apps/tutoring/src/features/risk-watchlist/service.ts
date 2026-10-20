@@ -27,14 +27,12 @@ export class RiskWatchlistService {
 
     // 2. Fetch recent sessions
     const sessions = await this.repository.getRecentSessions(tenantId, groupId, 15);
-    if (sessions.length === 0) {
-      return [];
-    }
-
     const sessionIds = sessions.map((s) => s.id);
 
     // 3. Fetch attendance records
-    const attendanceRecords = await this.repository.getAttendanceForSessions(sessionIds);
+    const attendanceRecords = sessionIds.length > 0
+      ? await this.repository.getAttendanceForSessions(sessionIds)
+      : [];
 
     // 4. Fetch quiz scores
     const studentIds = students.map((s) => s.id);

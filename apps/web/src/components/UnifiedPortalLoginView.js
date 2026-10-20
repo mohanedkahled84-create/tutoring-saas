@@ -228,6 +228,7 @@ export function registerUnifiedPortalActions(app) {
         if (typeof window !== 'undefined' && parentKey) {
           window._centrlyCurrentParentId = parentKey;
           window._centrlyCurrentStudentId = String(data.student.id || data.student.student_code || data.student.code || '').trim();
+          try { localStorage.setItem('centrly_portal_last_id', parentKey); } catch (_) {}
         }
         setTimeout(() => {
           if (typeof window !== 'undefined' && window.openParentPortalTour) {
@@ -297,6 +298,7 @@ export function registerUnifiedPortalActions(app) {
         const studentKey = (data && data.student && (data.student.id || data.student.student_code || data.student.code || data.student.student_phone)) ? String(data.student.id || data.student.student_code || data.student.code || data.student.student_phone).trim() : '';
         if (typeof window !== 'undefined' && studentKey) {
           window._centrlyCurrentStudentId = studentKey;
+          try { localStorage.setItem('centrly_portal_last_id', studentKey); } catch (_) {}
         }
         setTimeout(() => {
           if (typeof window !== 'undefined' && window.openStudentPortalTour) {

@@ -370,9 +370,19 @@ class CentrlyApp {
       case 'teacher-dashboard':
         return Boolean(this.dashboardData);
       case 'students':
-        return Boolean(this.students && this.students.length > 0);
+        return Boolean(Array.isArray(this.students) && this.students.length > 0);
       case 'groups':
-        return Boolean(this.groups && this.groups.length > 0);
+        return Boolean(Array.isArray(this.groups) && this.groups.length > 0);
+      case 'sessions':
+        return Boolean(this.sessionState?.id || (Array.isArray(this.groups) && this.groups.length > 0));
+      case 'quizzes':
+        return Boolean(Array.isArray(this.groups) && this.groups.length > 0);
+      case 'homework':
+        return Boolean(this.homeworkState?.assignments);
+      case 'risk-watchlist':
+        return Boolean(Array.isArray(this.watchlistData));
+      case 'reports':
+        return Boolean(this.reportsState?.leaderboard);
       case 'billing':
       case 'settings':
         return Boolean(this.billingState);
@@ -1372,8 +1382,8 @@ class CentrlyApp {
         }
         case 'quizzes': {
           const [grpRes, studRes] = await Promise.all([
-            request('/groups').catch(() => []),
-            request('/students').catch(() => []),
+            (!this.groups || this.groups.length === 0) ? request('/groups').catch(() => []) : Promise.resolve(this.groups),
+            (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students),
           ]);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes?.groups || []);
           this.students = Array.isArray(studRes) ? studRes : (studRes?.students || []);
@@ -1742,7 +1752,7 @@ class CentrlyApp {
         case 'sessions': {
           const [grpRes, studRes] = await Promise.all([
             (!this.groups || this.groups.length === 0) ? request('/groups').catch(() => []) : Promise.resolve(this.groups),
-            request('/students').catch(() => []),
+            (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students),
           ]);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || this.groups || []);
           this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
