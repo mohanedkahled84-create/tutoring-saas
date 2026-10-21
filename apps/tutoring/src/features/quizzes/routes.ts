@@ -260,7 +260,12 @@ quizzesRouter.get(
           group_id: row.group_id,
           quiz_number: payload.quiz_number !== undefined ? Number(payload.quiz_number) : 1,
           time_limit_minutes: Number(payload.time_limit_minutes) || 20,
+          available_date: payload.available_date || null,
+          start_time: payload.start_time || null,
+          end_time: payload.end_time || null,
+          exam_mode: payload.exam_mode || "online",
           questions: questionsList,
+          stealth_models: payload.stealth_models || null,
           max_score: maxScore,
           created_at: row.created_at,
         };
@@ -286,7 +291,12 @@ quizzesRouter.post(
       title,
       subject,
       time_limit_minutes,
+      available_date,
+      start_time,
+      end_time,
+      exam_mode,
       questions,
+      stealth_models,
     } = req.body;
 
     if (!group_id || quiz_number === undefined) {
@@ -314,7 +324,7 @@ quizzesRouter.post(
         quiz_number: qNum,
         title: cleanTitle,
         max_score: maxScore,
-        quiz_date: new Date().toISOString().slice(0, 10),
+        quiz_date: available_date || new Date().toISOString().slice(0, 10),
         is_skipped: false,
       });
 
@@ -323,7 +333,12 @@ quizzesRouter.post(
         quiz_number: qNum,
         subject: cleanSubject,
         time_limit_minutes: cleanTimeLimit,
+        available_date: available_date || null,
+        start_time: start_time || null,
+        end_time: end_time || null,
+        exam_mode: exam_mode || "online",
         questions: questionsArr,
+        stealth_models: stealth_models || null,
       });
 
       let materialRecord: any;
@@ -681,7 +696,7 @@ quizzesRouter.post(
   "/omr-scan",
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id || "default";
-    const { group_id, quiz_number, student_code, model, answers } = req.body;
+    const { group_id, quiz_number, student_code, model, barcode, serial, answers } = req.body;
 
     if (!student_code || quiz_number === undefined) {
       res.status(400).json({
@@ -694,6 +709,17 @@ quizzesRouter.post(
       const services = getServices(req);
       const quizzesService = services.quizzes;
       const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
+
+      // Stealth model resolution from barcode/serial
+      let resolvedModel = model || "أ";
+      const codeToTest = (barcode || serial || "").toString().trim().toUpperCase();
+      if (codeToTest.endsWith("-01") || codeToTest.endsWith("-1") || codeToTest.includes("MOD-A")) {
+        resolvedModel = "أ";
+      } else if (codeToTest.endsWith("-02") || codeToTest.endsWith("-2") || codeToTest.includes("MOD-B")) {
+        resolvedModel = "ب";
+      } else if (codeToTest.endsWith("-03") || codeToTest.endsWith("-3") || codeToTest.includes("MOD-C")) {
+        resolvedModel = "ج";
+      }
 
       const { data: student, error: sErr } = await supabase
         .from("students")
@@ -719,7 +745,12 @@ quizzesRouter.post(
         try {
           const p = JSON.parse(row.questions || "{}");
           if (Number(p.quiz_number) === Number(quiz_number)) {
-            quizQuestions = p.questions || [];
+            // Check if stealth_models exist for the resolved model
+            if (p.stealth_models && p.stealth_models[resolvedModel]) {
+              quizQuestions = p.stealth_models[resolvedModel].questions || p.questions || [];
+            } else {
+              quizQuestions = p.questions || [];
+            }
             totalMaxScore = quizQuestions.reduce((sum: number, q: any) => sum + Number(q.points || 1), 0) || 10;
             break;
           }
@@ -756,7 +787,7 @@ quizzesRouter.post(
           [student.id]: calculatedScore,
         },
         notes: {
-          [student.id]: `تصحيح بابل شيت (نموذج ${model || "أ"})`,
+          [student.id]: `تصحيح بابل شيت (نموذج ${resolvedModel} - باركود تلقائي)`,
         },
       });
 
@@ -769,7 +800,7 @@ quizzesRouter.post(
         },
         score: calculatedScore,
         max_score: totalMaxScore,
-        model: model || "أ",
+        model: resolvedModel || "أ",
         breakdown: questionBreakdown,
         message: `تم رصد درجة الطالب ${student.name}: (${calculatedScore} / ${totalMaxScore}) بنجاح!`,
       });

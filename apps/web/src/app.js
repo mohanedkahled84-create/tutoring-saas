@@ -24,7 +24,7 @@ import { renderRiskWatchlistView, registerRiskWatchlistActions } from './compone
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=5.0.0';
+import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=6.0.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -1860,7 +1860,7 @@ class CentrlyApp {
             request('/groups').catch(() => ({ groups: [] })),
           ]);
           const materialsList = Array.isArray(matRes) ? matRes : (matRes.materials || []);
-          const hwAssignments = materialsList.filter(m => m.is_homework);
+          const hwAssignments = materialsList.filter(m => m.is_homework && m.type !== 'online_quiz');
           const groupsList = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           
           let selectedMaterialId = this.homeworkState?.selectedMaterialId || (hwAssignments[0]?.id || '');

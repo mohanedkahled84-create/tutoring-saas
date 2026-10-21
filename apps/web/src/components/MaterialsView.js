@@ -24,7 +24,7 @@ function resolveSafeMaterialUrl(rawUrl) {
 }
 
 export function renderMaterialsView(materials = [], groups = [], selectedGroupId = 'all') {
-  const materialList = materials || [];
+  const materialList = (materials || []).filter(m => m.type !== 'online_quiz');
 
   // Filter if selectedGroupId is provided
   const filtered = selectedGroupId === 'all' 

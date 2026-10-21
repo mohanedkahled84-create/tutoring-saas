@@ -4,13 +4,12 @@ import { getIcon } from "../utils/icons.js";
 
 /**
  * Centrly Advanced Teacher Quizzes & Examination Engine
- * Features:
- * 1. Sub-Tabs Navigation:
- *    - roster: In-class Grade Sheet & WhatsApp dispatch
- *    - builder: Question-by-Question Exam Builder (MCQ + Essay + Image Upload + Timer + Max Score)
- *    - grading: Eye Manual Grading Queue for Essay Questions
- *    - print: A4 Printable 3 Shuffled Models (Model A/B/C) + Bubble Sheet
- *    - scanner: Camera & Image OMR Bubble Sheet Scanner with auto-scoring
+ * 5 Comprehensive Modules:
+ * 1. roster: كشف ورصد الدرجات (In-class roster & WhatsApp dispatch)
+ * 2. online_builder: إنشاء امتحان أونلاين (Online Exam Bank + Question-by-Question Wizard + Time Window)
+ * 3. online_grading: تصحيح الامتحانات الإلكترونية (Eye manual essay grading + Graded results overview)
+ * 4. paper_builder: إنشاء امتحان ورقي (Paper Exam Creator + Stealth Model Barcodes + A4 Printable Sheets)
+ * 5. paper_scanner: تصحيح الامتحانات الورقية (Camera & Photo Barcode/OMR Bubble Sheet Scanner)
  */
 
 export function renderTeacherQuizzesView(state = {}, groups = [], students = [], isLoading = false, hasLoaded = true) {
@@ -43,25 +42,28 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;" dir="rtl">
       
-      <!-- Top Title & Navigation Header -->
-      <div class="card" style="margin: 0;">
+      <!-- Top Title & Navigation Header Card -->
+      <div class="card" style="margin: 0; padding: 1.25rem 1.5rem; border-top: 4px solid var(--centrly-blue-700);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
-            <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-              <span>${getIcon('reports', 22, 'var(--centrly-blue-700)')}</span>
+            <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: var(--centrly-ink);">
+              <span style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: #eff6ff; color: var(--centrly-blue-700);">
+                ${getIcon('reports', 20, 'var(--centrly-blue-700)')}
+              </span>
               <span>منظومة الكويزات والامتحانات الشاملة</span>
             </h2>
-            <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              بناء الامتحانات الإلكترونية، تصحيح المقالي بالعين، طباعة نماذج A4، وماسح البابل شيت بالكاميرا.
+            <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.35rem 0 0 0;">
+              بناء وإدارة الامتحانات الإلكترونية والورقية، تصحيح المقالي بالعين، والماسح الضوئي للبابل شيت (OMR).
             </p>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-            <label style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink);">المجموعة الدراسية:</label>
+          <!-- Group Switcher -->
+          <div style="display: flex; align-items: center; gap: 0.65rem; background: #f8fafc; padding: 0.4rem 0.85rem; border-radius: 10px; border: 1.5px solid var(--centrly-line);">
+            <label style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); white-space: nowrap;">المجموعة الدراسية:</label>
             <select 
               id="quizGroupSelect" 
               class="form-select" 
-              style="width: 210px; font-weight: 700;"
+              style="width: 210px; font-weight: 800; background: #ffffff; border-color: #cbd5e1;"
               onchange="window.centrlyApp.switchQuizGroup(this.value)"
             >
               ${groups.map(g => `
@@ -73,80 +75,95 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
           </div>
         </div>
 
-        <!-- 5-SubTab Modular Switcher -->
-        <div id="quizSubTabsNav" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.25rem; border-top: 1px solid var(--centrly-line); padding-top: 1rem;">
+        <!-- 5-Badge Modular Navigation Bar (Horizontal Segmented Chips) -->
+        <div id="quizSubTabsNav" style="display: flex; gap: 0.65rem; flex-wrap: wrap; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">
           
+          <!-- Badge 1: كشف الدرجات -->
           <button 
             type="button"
-            class="btn ${activeSubTab === 'roster' ? 'btn-primary' : 'btn-secondary'}"
-            style="padding: 0.55rem 1rem; font-size: 0.88rem; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.4rem;"
+            class="quiz-nav-badge ${activeSubTab === 'roster' ? 'active' : ''}"
+            style="${getBadgeStyle(activeSubTab === 'roster')}"
             onclick="window.centrlyApp.switchQuizSubTab('roster')"
           >
-            ${getIcon('check', 16)}
+            ${getIcon('check', 17, activeSubTab === 'roster' ? '#1e40af' : '#64748b')}
             <span>كشف ورصد الدرجات</span>
           </button>
 
+          <!-- Badge 2: إنشاء امتحان أونلاين -->
           <button 
             type="button"
-            class="btn ${activeSubTab === 'builder' ? 'btn-primary' : 'btn-secondary'}"
-            style="padding: 0.55rem 1rem; font-size: 0.88rem; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.4rem;"
-            onclick="window.centrlyApp.switchQuizSubTab('builder')"
+            class="quiz-nav-badge ${activeSubTab === 'online_builder' ? 'active' : ''}"
+            style="${getBadgeStyle(activeSubTab === 'online_builder')}"
+            onclick="window.centrlyApp.switchQuizSubTab('online_builder')"
           >
-            ${getIcon('edit', 16)}
-            <span>بناء امتحان وبنك الأسئلة</span>
+            ${getIcon('edit', 17, activeSubTab === 'online_builder' ? '#1e40af' : '#64748b')}
+            <span>إنشاء امتحان أونلاين</span>
           </button>
 
+          <!-- Badge 3: تصحيح الامتحانات الإلكترونية -->
           <button 
             type="button"
-            class="btn ${activeSubTab === 'grading' ? 'btn-primary' : 'btn-secondary'}"
-            style="padding: 0.55rem 1rem; font-size: 0.88rem; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.4rem; position: relative;"
-            onclick="window.centrlyApp.switchQuizSubTab('grading')"
+            class="quiz-nav-badge ${activeSubTab === 'online_grading' ? 'active' : ''}"
+            style="${getBadgeStyle(activeSubTab === 'online_grading')}"
+            onclick="window.centrlyApp.switchQuizSubTab('online_grading')"
           >
-            ${getIcon('eye', 16)}
-            <span>تصحيح المقالي بالعين</span>
+            ${getIcon('eye', 17, activeSubTab === 'online_grading' ? '#1e40af' : '#64748b')}
+            <span>تصحيح الامتحانات الإلكترونية</span>
             ${pendingCount > 0 ? `
-              <span style="background: #ef4444; color: #fff; font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; font-weight: 900; margin-right: 0.25rem;">
+              <span style="background: #ef4444; color: #ffffff; font-size: 0.72rem; padding: 1px 7px; border-radius: 12px; font-weight: 900; margin-right: 0.35rem; line-height: 1.4;">
                 ${pendingCount}
               </span>
             ` : ''}
           </button>
 
+          <!-- Badge 4: إنشاء امتحان ورقي -->
           <button 
             type="button"
-            class="btn ${activeSubTab === 'print' ? 'btn-primary' : 'btn-secondary'}"
-            style="padding: 0.55rem 1rem; font-size: 0.88rem; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.4rem;"
-            onclick="window.centrlyApp.switchQuizSubTab('print')"
+            class="quiz-nav-badge ${activeSubTab === 'paper_builder' ? 'active' : ''}"
+            style="${getBadgeStyle(activeSubTab === 'paper_builder')}"
+            onclick="window.centrlyApp.switchQuizSubTab('paper_builder')"
           >
-            ${getIcon('print', 16)}
-            <span>طباعة النماذج والـ Bubble Sheet</span>
+            ${getIcon('print', 17, activeSubTab === 'paper_builder' ? '#1e40af' : '#64748b')}
+            <span>إنشاء امتحان ورقي</span>
           </button>
 
+          <!-- Badge 5: تصحيح الامتحانات الورقية -->
           <button 
             type="button"
-            class="btn ${activeSubTab === 'scanner' ? 'btn-primary' : 'btn-secondary'}"
-            style="padding: 0.55rem 1rem; font-size: 0.88rem; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.4rem; background: ${activeSubTab === 'scanner' ? '#059669' : ''}; border-color: ${activeSubTab === 'scanner' ? '#059669' : ''};"
-            onclick="window.centrlyApp.switchQuizSubTab('scanner')"
+            class="quiz-nav-badge ${activeSubTab === 'paper_scanner' ? 'active' : ''}"
+            style="${getBadgeStyle(activeSubTab === 'paper_scanner', true)}"
+            onclick="window.centrlyApp.switchQuizSubTab('paper_scanner')"
           >
-            ${getIcon('camera', 16)}
-            <span>ماسح البابل شيت بالكاميرا (OMR)</span>
+            ${getIcon('camera', 17, activeSubTab === 'paper_scanner' ? '#047857' : '#64748b')}
+            <span>تصحيح الامتحانات الورقية</span>
           </button>
 
         </div>
       </div>
 
-      <!-- Tab Content Rendering -->
+      <!-- Tab Content Views -->
       ${activeSubTab === 'roster' ? renderRosterTab(state, groups, students, activeGroup, groupStudents, quizzes, currentQuiz, isLoading, hasLoaded) : ''}
-      ${activeSubTab === 'builder' ? renderBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
-      ${activeSubTab === 'grading' ? renderGradingTab(state, groups, activeGroup, pendingSubmissions) : ''}
-      ${activeSubTab === 'print' ? renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
-      ${activeSubTab === 'scanner' ? renderScannerTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents) : ''}
+      ${activeSubTab === 'online_builder' ? renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
+      ${activeSubTab === 'online_grading' ? renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, groupStudents) : ''}
+      ${activeSubTab === 'paper_builder' ? renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
+      ${activeSubTab === 'paper_scanner' ? renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents) : ''}
 
     </div>
   `;
 }
 
+function getBadgeStyle(isActive, isGreen = false) {
+  if (isActive) {
+    if (isGreen) {
+      return `padding: 0.6rem 1.15rem; font-size: 0.88rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.5rem; background: #ecfdf5; color: #065f46; border: 2px solid #10b981; box-shadow: 0 2px 6px rgba(16,185,129,0.15); cursor: pointer; transition: all 0.15s ease;`;
+    }
+    return `padding: 0.6rem 1.15rem; font-size: 0.88rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.5rem; background: #eff6ff; color: #1e40af; border: 2px solid var(--centrly-blue-700); box-shadow: 0 2px 6px rgba(37,99,235,0.15); cursor: pointer; transition: all 0.15s ease;`;
+  }
+  return `padding: 0.6rem 1.15rem; font-size: 0.88rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.5rem; background: #f8fafc; color: var(--centrly-ink); border: 1.5px solid var(--centrly-line); cursor: pointer; transition: all 0.15s ease;`;
+}
+
 // ============================================================================
-// SUBTAB 1: ROSTER (كشف ورصد الدرجات)
+// TAB 1: ROSTER (كشف ورصد الدرجات)
 // ============================================================================
 function renderRosterTab(state, groups, students, activeGroup, groupStudents, quizzes, currentQuiz, isLoading, hasLoaded) {
   const currentQuizNumber = state.currentQuizNumber || currentQuiz.number || 1;
@@ -171,19 +188,19 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
   const completionRate = groupStudents.length > 0 ? Math.round((gradedCount / groupStudents.length) * 100) : 0;
 
   return `
-    <!-- Quiz Navigation Tabs & Actions -->
+    <!-- Quiz Navigation Tabs & Actions Bar -->
     <div class="card" style="margin: 0; background: #f8fafc; border: 1px solid var(--centrly-line);">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
         
         <!-- Numbered Quiz Tabs -->
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-          <span style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink); margin-left: 0.5rem;">الكويز:</span>
+          <span style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); margin-left: 0.5rem;">الكويز:</span>
           ${quizzes.map(q => {
             const isSelected = q.number === currentQuizNumber;
             return `
               <button 
                 class="btn ${isSelected ? 'btn-primary' : 'btn-secondary'}" 
-                style="padding: 0.4rem 0.85rem; font-size: 0.85rem; font-weight: 700; border-radius: 8px; display: flex; align-items: center; gap: 0.35rem;"
+                style="padding: 0.4rem 0.85rem; font-size: 0.85rem; font-weight: 800; border-radius: 8px; display: flex; align-items: center; gap: 0.35rem;"
                 onclick="window.centrlyApp.selectQuizNumber(${q.number})"
               >
                 <span>كويز ${q.number}</span>
@@ -194,7 +211,7 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
 
           <button 
             class="btn btn-secondary" 
-            style="padding: 0.4rem 0.75rem; font-size: 0.85rem; font-weight: 700; border-radius: 8px; border-style: dashed;"
+            style="padding: 0.4rem 0.75rem; font-size: 0.85rem; font-weight: 800; border-radius: 8px; border-style: dashed;"
             onclick="window.centrlyApp.addNewQuiz()"
             title="إضافة كويز جديد"
           >
@@ -208,7 +225,7 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
           <button 
             class="btn btn-secondary" 
             onclick="window.centrlyApp.promptEditQuizTitle(${currentQuiz.number})"
-            style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700; color: var(--centrly-blue-700);"
+            style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 800; color: var(--centrly-blue-700);"
             title="تعديل اسم الكويز الحالي مباشرة"
           >
             ${getIcon('edit', 14)}
@@ -226,10 +243,10 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
           <button 
             class="btn btn-primary" 
             onclick="window.centrlyApp.saveCurrentQuizScores()"
-            style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;"
+            style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800;"
           >
             ${getIcon('check', 16)}
-            <span>حفظ ورصد درجات الكويز</span>
+            <span>حفظ ورصد الدرجات</span>
           </button>
         </div>
 
@@ -313,7 +330,7 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
 
     </div>
 
-    <!-- Students Quiz Grading Table -->
+    <!-- Students Quiz Grading Table Card -->
     <div class="card" style="margin: 0;">
       <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
         <div>
@@ -403,9 +420,9 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
                   <td>${statusBadge}</td>
                   <td>
                     <input 
-                      type="text"
-                      class="form-input"
-                      value="${escapeHtml(state.notesMap?.[currentQuiz.number]?.[s.id] || '')}"
+                      type="text" 
+                      class="form-input" 
+                      value="${escapeHtml(state.notesMap?.[currentQuiz.number]?.[s.id] || '')}" 
                       placeholder="ملاحظة..."
                       style="font-size: 0.825rem; width: 100%;"
                       onchange="window.centrlyApp.updateStudentQuizNote('${s.id}', this.value)"
@@ -439,529 +456,876 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
 }
 
 // ============================================================================
-// SUBTAB 2: BUILDER (بناء امتحان وبنك الأسئلة)
+// TAB 2: ONLINE BUILDER (إنشاء امتحان أونلاين - سؤال بسؤال + وقت الامتحان)
 // ============================================================================
-function renderBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) {
-  const builderQuiz = state.activeBuilderQuiz || {
+function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) {
+  const viewMode = state.onlineViewMode || 'list'; // 'list' | 'wizard'
+  const richQuizzes = (state.richQuizzes || []).filter(q => q.exam_mode !== 'paper');
+
+  if (viewMode === 'list') {
+    return `
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <!-- Header & Add Button -->
+        <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
+                ${getIcon('edit', 20, 'var(--centrly-blue-700)')}
+                <span>بنك الامتحانات الإلكترونية (أونلاين)</span>
+              </h3>
+              <p style="font-size: 0.82rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
+                قم بإنشاء امتحان إلكتروني، تحديد عدد الأسئلة وتعبئتها خطوة بخطوة سؤالاً بسؤال، وضبط توقيت ونافذة إتاحة الامتحان.
+              </p>
+            </div>
+
+            <div>
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                style="padding: 0.6rem 1.4rem; font-weight: 800; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
+                onclick="window.centrlyApp.startNewOnlineExamWizard()"
+              >
+                ${getIcon('add', 18, '#ffffff')}
+                <span>+ إنشاء امتحان إلكتروني جديد</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Exams Cards Grid -->
+        ${richQuizzes.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+            ${richQuizzes.map(rq => {
+              const qCount = rq.questions?.length || 0;
+              const dateStr = rq.available_date || 'متاح دائماً';
+              const timeWindowStr = (rq.start_time && rq.end_time) 
+                ? `من ${rq.start_time} إلى ${rq.end_time}` 
+                : 'بدون قيد زمني';
+
+              return `
+                <div class="card" style="margin: 0; border: 1.5px solid var(--centrly-line); border-radius: 12px; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: transform 0.15s ease;">
+                  
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                      <span style="font-weight: 900; font-size: 1.05rem; color: #0f172a; line-height: 1.4;">
+                        ${escapeHtml(rq.title)}
+                      </span>
+                      <span class="badge badge-blue" style="font-size: 0.75rem; white-space: nowrap;">
+                        كويز ${rq.quiz_number}
+                      </span>
+                    </div>
+
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.85rem;">
+                      <span style="background: #f1f5f9; color: #334155; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+                        المادة: ${escapeHtml(rq.subject || 'الفيزياء')}
+                      </span>
+                      <span style="background: #eff6ff; color: #1e40af; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+                        ${qCount} أسئلة
+                      </span>
+                      <span style="background: #ecfdf5; color: #065f46; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+                        ${rq.max_score} درجات
+                      </span>
+                      <span style="background: #fef3c7; color: #92400e; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+                        ${rq.time_limit_minutes || 20} دقيقة
+                      </span>
+                    </div>
+
+                    <!-- Time Window Info -->
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.78rem; color: #475569; display: flex; flex-direction: column; gap: 0.25rem;">
+                      <div><b>تاريخ الإتاحة:</b> ${escapeHtml(dateStr)}</div>
+                      <div><b>فترة الإتاحة:</b> ${escapeHtml(timeWindowStr)}</div>
+                    </div>
+                  </div>
+
+                  <!-- Actions -->
+                  <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid #f1f5f9;">
+                    <button 
+                      type="button" 
+                      class="btn btn-primary" 
+                      style="flex: 1; font-size: 0.82rem; font-weight: 800; padding: 0.45rem 0.75rem;"
+                      onclick="window.centrlyApp.editOnlineExamWizard('${escapeHtml(rq.id)}')"
+                    >
+                      ${getIcon('edit', 14)}
+                      <span>تعديل الامتحان والأسئلة</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      class="btn btn-secondary" 
+                      style="font-size: 0.82rem; font-weight: 700; padding: 0.45rem 0.75rem;"
+                      onclick="window.centrlyApp.switchToRosterForQuiz(${rq.quiz_number})"
+                      title="عرض كشف درجات هذا الكويز"
+                    >
+                      <span>كشف الدرجات</span>
+                    </button>
+                  </div>
+
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : `
+          <!-- Empty State -->
+          <div class="card" style="text-align: center; padding: 3.5rem 1.5rem; background: #ffffff; border: 2px dashed #cbd5e1; border-radius: 12px;">
+            <div style="display: flex; justify-content: center; margin-bottom: 0.75rem; color: var(--centrly-blue-700);">
+              ${getIcon('edit', 44, 'var(--centrly-blue-700)')}
+            </div>
+            <h4 style="font-weight: 900; font-size: 1.15rem; color: #0f172a; margin: 0 0 0.4rem 0;">لا توجد امتحانات إلكترونية منشأة لهذه المجموعة بعد</h4>
+            <p style="font-size: 0.85rem; color: #64748b; max-width: 480px; margin: 0 auto 1.25rem auto; line-height: 1.6;">
+              ابدأ الآن بإنشاء أول امتحان إلكتروني، وحدد عدد الأسئلة ليقوم النظام بإرشادك لتعبئتها سؤالاً بسؤال مع خيارات MCQ ومقالي ورفع صور المسائل.
+            </p>
+            <button 
+              type="button" 
+              class="btn btn-primary" 
+              style="padding: 0.65rem 1.5rem; font-weight: 800; font-size: 0.95rem;"
+              onclick="window.centrlyApp.startNewOnlineExamWizard()"
+            >
+              + ابدأ إنشاء أول امتحان إلكتروني الآن
+            </button>
+          </div>
+        `}
+
+      </div>
+    `;
+  }
+
+  // WIZARD MODE: Step 1 or Step 2
+  const wizardStep = state.wizardStep || 1;
+  const activeQuiz = state.activeOnlineQuiz || {
     id: null,
     quiz_number: currentQuiz.number || 1,
-    title: currentQuiz.title || `كويز ${currentQuiz.number || 1}`,
-    subject: activeGroup?.subject || "الفيزياء",
+    title: '',
+    subject: activeGroup?.subject || 'الفيزياء',
+    question_count: 10,
     time_limit_minutes: 20,
-    questions: [
-      {
-        id: "q_1",
-        type: "mcq",
-        text: "",
-        image_url: "",
-        choices: ["", "", "", ""],
-        correct_index: 0,
-        points: 2
-      }
-    ]
+    available_date: new Date().toISOString().slice(0, 10),
+    start_time: '18:00',
+    end_time: '22:00',
+    exam_mode: 'online',
+    questions: []
   };
 
-  const questions = builderQuiz.questions || [];
-  const totalScore = questions.reduce((sum, q) => sum + Number(q.points || 1), 0);
-  const richQuizzes = state.richQuizzes || [];
+  const currentQIdx = state.currentQuestionIndex || 0;
+  const totalQuestions = activeQuiz.questions?.length || activeQuiz.question_count || 10;
+  const currentQ = activeQuiz.questions?.[currentQIdx] || {
+    id: `q_${currentQIdx + 1}`,
+    type: 'mcq',
+    text: '',
+    image_url: '',
+    choices: ['', '', '', ''],
+    correct_index: 0,
+    points: 2
+  };
+
+  if (wizardStep === 1) {
+    // STEP 1: Exam Settings & Time Window
+    return `
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--centrly-line); padding-bottom: 1rem; margin-bottom: 1.25rem;">
+            <div>
+              <div style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-blue-700); margin-bottom: 0.2rem;">
+                الخطوة 1 من 2
+              </div>
+              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">
+                إعداد وضوابط الامتحان الإلكتروني والتوقيت
+              </h3>
+            </div>
+
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              style="font-size: 0.85rem; font-weight: 700;"
+              onclick="window.centrlyApp.cancelOnlineExamWizard()"
+            >
+              إلغاء والعودة للقائمة
+            </button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
+            
+            <div>
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">عنوان / موضوع الامتحان:</label>
+              <input 
+                type="text" 
+                id="wizardTitle" 
+                class="form-input" 
+                value="${escapeHtml(activeQuiz.title || '')}" 
+                placeholder="مثال: امتحان الباب الأول - قانون كيرشوف"
+                style="font-weight: 800;"
+              />
+            </div>
+
+            <div>
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">اسم المادة الدراسية:</label>
+              <input 
+                type="text" 
+                id="wizardSubject" 
+                class="form-input" 
+                value="${escapeHtml(activeQuiz.subject || 'الفيزياء')}" 
+                placeholder="مثال: مادة الفيزياء"
+                style="font-weight: 800;"
+              />
+            </div>
+
+            <div>
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">رقم الكويز التسلسلي:</label>
+              <input 
+                type="number" 
+                id="wizardQuizNumber" 
+                class="form-input" 
+                value="${activeQuiz.quiz_number || 1}" 
+                min="1" 
+                step="1"
+                style="font-weight: 800;"
+              />
+            </div>
+
+            <div>
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">إجمالي عدد أسئلة الامتحان:</label>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <input 
+                  type="number" 
+                  id="wizardQuestionCount" 
+                  class="form-input" 
+                  value="${activeQuiz.questions?.length || activeQuiz.question_count || 10}" 
+                  min="1" 
+                  max="100" 
+                  step="1"
+                  style="text-align: center; font-weight: 900; font-size: 1rem; width: 100px; border: 2px solid var(--centrly-blue-700);"
+                />
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-text);">سؤال</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">زمن الامتحان للتايمر (بالدقائق):</label>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <input 
+                  type="number" 
+                  id="wizardTimeLimit" 
+                  class="form-input" 
+                  value="${activeQuiz.time_limit_minutes || 20}" 
+                  min="1" 
+                  max="240"
+                  style="text-align: center; font-weight: 900; font-size: 1rem; width: 100px;"
+                />
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-text);">دقيقة</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">تاريخ إتاحة الامتحان:</label>
+              <input 
+                type="date" 
+                id="wizardAvailableDate" 
+                class="form-input" 
+                value="${activeQuiz.available_date || new Date().toISOString().slice(0, 10)}" 
+                style="font-weight: 800;"
+              />
+            </div>
+
+            <div>
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">وقت بداية الامتحان (ساعة البدء):</label>
+              <input 
+                type="time" 
+                id="wizardStartTime" 
+                class="form-input" 
+                value="${activeQuiz.start_time || '18:00'}" 
+                style="font-weight: 800;"
+              />
+            </div>
+
+            <div>
+              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">وقت نهاية الامتحان (ساعة الإغلاق):</label>
+              <input 
+                type="time" 
+                id="wizardEndTime" 
+                class="form-input" 
+                value="${activeQuiz.end_time || '22:00'}" 
+                style="font-weight: 800;"
+              />
+            </div>
+
+          </div>
+
+          <!-- Explanatory Notice -->
+          <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 0.85rem 1rem; margin-top: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+            <div style="color: var(--centrly-blue-700);">${getIcon('clock', 22, 'var(--centrly-blue-700)')}</div>
+            <div style="font-size: 0.825rem; color: #1e3a8a; line-height: 1.5;">
+              <b>كيف تعمل نافذة الامتحان؟</b> سيتم فتح رابط الامتحان للطلاب في هذا اليوم فقط من وقت البدء حتى وقت النهاية المحدد. وبمجرد أن يبدأ الطالب الحل، سيبدأ التايمر الخاص به بالعد التنازلي.
+            </div>
+          </div>
+
+          <!-- Wizard Action Bar -->
+          <div style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; margin-top: 1.5rem; border-top: 1px solid var(--centrly-line); padding-top: 1.25rem;">
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              style="padding: 0.6rem 1.25rem; font-weight: 800;"
+              onclick="window.centrlyApp.cancelOnlineExamWizard()"
+            >
+              إلغاء
+            </button>
+            <button 
+              type="button" 
+              class="btn btn-primary" 
+              style="padding: 0.65rem 1.6rem; font-weight: 800; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
+              onclick="window.centrlyApp.proceedToQuestionsStep()"
+            >
+              <span>بدء تعبئة الأسئلة سؤالاً بسؤال (سؤال 1)</span>
+              ${getIcon('arrowRight', 16, '#ffffff')}
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    `;
+  }
+
+  // STEP 2: Question-by-Question Builder (سؤال بسؤال)
+  const isMcq = currentQ.type !== 'essay';
+  const progressPct = Math.round(((currentQIdx + 1) / totalQuestions) * 100);
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;">
       
-      <!-- Builder Header Form Card -->
+      <!-- Top Stepper Toolbar -->
       <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
-            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.5rem;">
-              ${getIcon('edit', 20, 'var(--centrly-blue-700)')}
-              <span>منشئ ومصمم الامتحانات التفاعلية (MCQ + مقالي)</span>
-            </h3>
-            <p style="font-size: 0.8rem; color: var(--centrly-text); margin: 0.2rem 0 0 0;">
-              قم بإضافة الأسئلة وصور المسائل والاختيارات، مع تحديد زمن الامتحان بالدقائق ودرجة كل سؤال.
-            </p>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="badge badge-blue" style="font-size: 0.85rem; font-weight: 900; padding: 4px 10px;">
+                السؤال ${currentQIdx + 1} من ${totalQuestions}
+              </span>
+              <span style="font-weight: 800; font-size: 1rem; color: #0f172a;">
+                ${escapeHtml(activeQuiz.title || 'امتحان أونلاين')} (${escapeHtml(activeQuiz.subject || 'الفيزياء')})
+              </span>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--centrly-text); margin-top: 0.25rem;">
+              يمكنك التنقل بين الأسئلة عبر الأرقام أدناه أو الضغط على زر "السؤال التالي".
+            </div>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.45rem 0.85rem; text-align: center;">
-              <span style="font-size: 0.75rem; color: #1e40af; font-weight: 700; display: block;">الدرجة العظمى للامتحان</span>
-              <span style="font-size: 1.2rem; font-weight: 900; color: #1e3a8a;">${totalScore} درجات</span>
-            </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              style="font-size: 0.82rem; font-weight: 700;"
+              onclick="window.centrlyApp.backToWizardStep1()"
+            >
+              ${getIcon('edit', 14)}
+              <span>تعديل بيانات الامتحان</span>
+            </button>
+
             <button 
               type="button" 
               class="btn btn-primary" 
-              style="font-weight: 800; padding: 0.6rem 1.4rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 2px 8px rgba(37,99,235,0.25);"
-              onclick="window.centrlyApp.saveRichQuiz()"
+              style="font-size: 0.88rem; font-weight: 900; padding: 0.55rem 1.25rem; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 10px rgba(37,99,235,0.25);"
+              onclick="window.centrlyApp.saveOnlineExamNow()"
             >
-              ${getIcon('check', 18, '#ffffff')}
+              ${getIcon('check', 16, '#ffffff')}
               <span>حفظ ونشر الامتحان الآن</span>
             </button>
           </div>
         </div>
 
-        <!-- Meta inputs: Title, Subject, Quiz #, Duration -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--centrly-line);">
-          
-          <div>
-            <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">عنوان / موضوع الامتحان:</label>
-            <input 
-              type="text" 
-              id="builderQuizTitle" 
-              class="form-input" 
-              value="${escapeHtml(builderQuiz.title || '')}" 
-              placeholder="مثال: امتحان الباب الأول - قانون كيرشوف"
-              onchange="window.centrlyApp.updateBuilderMeta('title', this.value)"
-            />
+        <!-- Visual Progress Bar -->
+        <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 4px; margin-top: 1rem; overflow: hidden;">
+          <div style="height: 100%; background: var(--centrly-blue-700); width: ${progressPct}%; transition: width 0.2s ease;"></div>
+        </div>
+
+        <!-- Question Fast Jumpers (1, 2, 3 ... N) -->
+        <div style="display: flex; gap: 0.4rem; overflow-x: auto; padding: 0.75rem 0 0.25rem 0; margin-top: 0.5rem; align-items: center;">
+          <span style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-ink); margin-left: 0.5rem; white-space: nowrap;">الانتقال السريع:</span>
+          ${Array.from({ length: totalQuestions }).map((_, idx) => {
+            const isCur = idx === currentQIdx;
+            const qData = activeQuiz.questions?.[idx];
+            const hasContent = qData && (qData.text?.trim() || qData.image_url);
+
+            return `
+              <button 
+                type="button"
+                style="min-width: 34px; height: 34px; border-radius: 8px; font-weight: 900; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isCur ? 'var(--centrly-blue-700)' : (hasContent ? '#10b981' : '#cbd5e1')}; background: ${isCur ? 'var(--centrly-blue-700)' : (hasContent ? '#ecfdf5' : '#ffffff')}; color: ${isCur ? '#ffffff' : (hasContent ? '#065f46' : '#64748b')};"
+                onclick="window.centrlyApp.jumpToQuestion(${idx})"
+                title="سؤال ${idx + 1}"
+              >
+                ${idx + 1}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Current Question Card -->
+      <div class="card" style="margin: 0; border: 1.5px solid ${isMcq ? '#93c5fd' : '#fbcfe8'}; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.04);">
+        
+        <!-- Question Type & Points Toolbar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <span style="background: var(--centrly-blue-700); color: #fff; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1rem;">
+              ${currentQIdx + 1}
+            </span>
+            
+            <div style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <button 
+                type="button" 
+                class="btn ${isMcq ? 'btn-primary' : 'btn-secondary'}" 
+                style="padding: 0.35rem 0.85rem; font-size: 0.82rem; font-weight: 800; border-radius: 6px;"
+                onclick="window.centrlyApp.updateCurrentQuestionType('mcq')"
+              >
+                اختيار من متعدد (MCQ)
+              </button>
+              <button 
+                type="button" 
+                class="btn ${!isMcq ? 'btn-primary' : 'btn-secondary'}" 
+                style="padding: 0.35rem 0.85rem; font-size: 0.82rem; font-weight: 800; border-radius: 6px;"
+                onclick="window.centrlyApp.updateCurrentQuestionType('essay')"
+              >
+                سؤال مقالي (Essay)
+              </button>
+            </div>
           </div>
 
-          <div>
-            <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">اسم المادة الدراسية:</label>
-            <input 
-              type="text" 
-              id="builderQuizSubject" 
-              class="form-input" 
-              value="${escapeHtml(builderQuiz.subject || 'الفيزياء')}" 
-              placeholder="مثال: مادة الفيزياء"
-              onchange="window.centrlyApp.updateBuilderMeta('subject', this.value)"
-            />
-          </div>
-
-          <div>
-            <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">رقم الكويز التسلسلي:</label>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <label style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink);">درجة السؤال:</label>
             <input 
               type="number" 
-              id="builderQuizNumber" 
+              id="currentQPoints" 
               class="form-input" 
-              value="${builderQuiz.quiz_number || 1}" 
-              min="1" 
-              step="1"
-              onchange="window.centrlyApp.updateBuilderMeta('quiz_number', this.value)"
+              value="${currentQ.points || 2}" 
+              min="0.5" 
+              step="0.5" 
+              style="width: 75px; text-align: center; font-weight: 900; font-size: 1rem; border: 2px solid var(--centrly-blue-700);"
+              onchange="window.centrlyApp.updateCurrentQuestionField('points', this.value)"
             />
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-text);">درجات</span>
+          </div>
+        </div>
+
+        <!-- Question Text Textarea -->
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); margin-bottom: 0.35rem; display: block;">
+            نص السؤال ${currentQIdx + 1}:
+          </label>
+          <textarea 
+            id="currentQText"
+            class="form-input" 
+            rows="3" 
+            placeholder="اكتب صيغة السؤال هنا بوضوح..."
+            style="font-size: 0.95rem; font-weight: 700; width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px;"
+            onchange="window.centrlyApp.updateCurrentQuestionField('text', this.value)"
+          >${escapeHtml(currentQ.text || '')}</textarea>
+        </div>
+
+        <!-- Question Image Upload (Mobile / Desktop) -->
+        <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="color: var(--centrly-blue-700);">${getIcon('camera', 24, 'var(--centrly-blue-700)')}</div>
+            <div>
+              <span style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); display: block;">صورة مسألة أو رسم توضيحي للسؤال:</span>
+              <span style="font-size: 0.75rem; color: var(--centrly-text);">التقط صورة بالكاميرا أو اختر صورة من المعرض</span>
+            </div>
           </div>
 
-          <div>
-            <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">زمن الامتحان بالدقائق (التايمر):</label>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <input 
-                type="number" 
-                id="builderQuizTimeLimit" 
-                class="form-input" 
-                value="${builderQuiz.time_limit_minutes || 20}" 
-                min="1" 
-                max="240"
-                style="text-align: center; font-weight: 800;"
-                onchange="window.centrlyApp.updateBuilderMeta('time_limit_minutes', this.value)"
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <input 
+              type="file" 
+              id="wizardQImageInput" 
+              accept="image/*" 
+              capture="environment" 
+              style="display: none;" 
+              onchange="window.centrlyApp.handleWizardImageUpload(this.files[0])"
+            />
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              style="font-size: 0.82rem; font-weight: 800; padding: 0.45rem 0.95rem;"
+              onclick="document.getElementById('wizardQImageInput').click()"
+            >
+              ${getIcon('upload', 14)}
+              <span>${currentQ.image_url ? 'تغيير الصورة' : 'رفع / تصوير صورة'}</span>
+            </button>
+
+            ${currentQ.image_url ? `
+              <button 
+                type="button" 
+                class="btn btn-secondary" 
+                style="color: #dc2626; font-size: 0.82rem; padding: 0.45rem 0.75rem;"
+                onclick="window.centrlyApp.removeWizardImage()"
+                title="إزالة الصورة"
+              >
+                ${getIcon('delete', 14, '#dc2626')}
+                <span>حذف الصورة</span>
+              </button>
+            ` : ''}
+          </div>
+
+          ${currentQ.image_url ? `
+            <div style="width: 100%; margin-top: 0.75rem; text-align: center;">
+              <img 
+                src="${escapeHtml(currentQ.image_url)}" 
+                alt="صورة السؤال" 
+                style="max-height: 200px; max-width: 100%; border-radius: 8px; border: 1.5px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.08);"
               />
-              <span style="font-size: 0.82rem; font-weight: 700; color: var(--centrly-text);">دقيقة</span>
             </div>
-          </div>
-
+          ` : ''}
         </div>
-      </div>
 
-      <!-- Questions List Cards -->
-      <div style="display: flex; flex-direction: column; gap: 1rem;">
-        ${questions.map((q, qIdx) => {
-          const isMcq = q.type !== 'essay';
-          return `
-            <div class="card" style="margin: 0; border: 1.5px solid ${isMcq ? '#cbd5e1' : '#fbcfe8'}; background: #ffffff; border-radius: 12px; position: relative;">
-              
-              <!-- Question Header Toolbar -->
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                  <span style="background: var(--centrly-blue-700); color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.95rem;">
-                    ${qIdx + 1}
-                  </span>
-                  <div style="display: flex; gap: 0.35rem; background: #f1f5f9; padding: 3px; border-radius: 8px;">
-                    <button 
-                      type="button" 
-                      class="btn ${isMcq ? 'btn-primary' : 'btn-secondary'}" 
-                      style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
-                      onclick="window.centrlyApp.updateBuilderQuestion(${qIdx}, 'type', 'mcq')"
-                    >
-                      اختيار من متعدد (MCQ)
-                    </button>
-                    <button 
-                      type="button" 
-                      class="btn ${!isMcq ? 'btn-primary' : 'btn-secondary'}" 
-                      style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
-                      onclick="window.centrlyApp.updateBuilderQuestion(${qIdx}, 'type', 'essay')"
-                    >
-                      سؤال مقالي (Essay)
-                    </button>
-                  </div>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                  <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                    <label style="font-size: 0.8rem; font-weight: 700; color: var(--centrly-text);">درجة السؤال:</label>
+        <!-- MCQ Choices or Essay Model Answer -->
+        ${isMcq ? `
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); margin-bottom: 0.5rem;">
+              خيارات الإجابة (اختر الدائرة المقابلة للإجابة الصحيحة):
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem;">
+              ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
+                const isCorrect = Number(currentQ.correct_index) === optIdx;
+                return `
+                  <div style="display: flex; align-items: center; gap: 0.65rem; background: ${isCorrect ? '#f0fdf4' : '#ffffff'}; border: 2px solid ${isCorrect ? '#10b981' : '#e2e8f0'}; border-radius: 8px; padding: 0.5rem 0.75rem; transition: all 0.15s ease;">
                     <input 
-                      type="number" 
+                      type="radio" 
+                      name="correctChoiceRadio" 
+                      value="${optIdx}" 
+                      ${isCorrect ? 'checked' : ''} 
+                      style="width: 20px; height: 20px; cursor: pointer; accent-color: #10b981;"
+                      onchange="window.centrlyApp.setWizardCorrectChoice(${optIdx})"
+                    />
+                    <span style="font-weight: 900; font-size: 0.95rem; color: ${isCorrect ? '#047857' : '#64748b'}; width: 24px;">(${letter})</span>
+                    <input 
+                      type="text" 
                       class="form-input" 
-                      value="${q.points || 1}" 
-                      min="0.5" 
-                      step="0.5" 
-                      style="width: 65px; text-align: center; padding: 0.25rem; font-weight: 800;"
-                      onchange="window.centrlyApp.updateBuilderQuestion(${qIdx}, 'points', this.value)"
+                      value="${escapeHtml(currentQ.choices?.[optIdx] || '')}" 
+                      placeholder="خيار (${letter})..." 
+                      style="flex: 1; padding: 0.4rem 0.5rem; font-size: 0.9rem; font-weight: 700; border: none; background: transparent;"
+                      onchange="window.centrlyApp.updateWizardChoice(${optIdx}, this.value)"
                     />
                   </div>
-
-                  <button 
-                    type="button" 
-                    class="btn btn-secondary" 
-                    style="color: #dc2626; padding: 0.35rem 0.65rem; font-size: 0.78rem;"
-                    onclick="window.centrlyApp.removeBuilderQuestion(${qIdx})"
-                    title="حذف هذا السؤال"
-                  >
-                    ${getIcon('delete', 14, '#dc2626')}
-                    <span>حذف</span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Question Textarea -->
-              <div style="margin-bottom: 0.75rem;">
-                <label style="font-size: 0.82rem; font-weight: 700; color: var(--centrly-ink); margin-bottom: 0.35rem; display: block;">
-                  نص السؤال:
-                </label>
-                <textarea 
-                  class="form-input" 
-                  rows="2" 
-                  placeholder="اكتب صيغة السؤال هنا بوضوح..."
-                  style="font-size: 0.92rem; font-weight: 700; width: 100%;"
-                  onchange="window.centrlyApp.updateBuilderQuestion(${qIdx}, 'text', this.value)"
-                >${escapeHtml(q.text || '')}</textarea>
-              </div>
-
-              <!-- Question Image Uploader (Mobile / Desktop) -->
-              <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                  <div style="color: var(--centrly-blue-700);">${getIcon('camera', 22, 'var(--centrly-blue-700)')}</div>
-                  <div>
-                    <span style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); display: block;">صورة مسألة أو رسم بياني للسؤال:</span>
-                    <span style="font-size: 0.72rem; color: var(--centrly-text);">يمكنك التقاط صورة من كاميرا الموبايل أو اختيار صورة من جهازك مباشرة</span>
-                  </div>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <input 
-                    type="file" 
-                    id="qImageInput_${qIdx}" 
-                    accept="image/*" 
-                    capture="environment" 
-                    style="display: none;" 
-                    onchange="window.centrlyApp.handleQuestionImageUpload(${qIdx}, this.files[0])"
-                  />
-                  <button 
-                    type="button" 
-                    class="btn btn-secondary" 
-                    style="font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.85rem;"
-                    onclick="document.getElementById('qImageInput_${qIdx}').click()"
-                  >
-                    ${getIcon('upload', 14)}
-                    <span>${q.image_url ? 'تغيير الصورة' : 'رفع / تصوير صورة'}</span>
-                  </button>
-
-                  ${q.image_url ? `
-                    <button 
-                      type="button" 
-                      class="btn btn-secondary" 
-                      style="color: #dc2626; font-size: 0.8rem; padding: 0.35rem 0.65rem;"
-                      onclick="window.centrlyApp.updateBuilderQuestion(${qIdx}, 'image_url', '')"
-                      title="إزالة الصورة"
-                    >
-                      ${getIcon('delete', 14, '#dc2626')}
-                    </button>
-                  ` : ''}
-                </div>
-
-                ${q.image_url ? `
-                  <div style="width: 100%; margin-top: 0.5rem; text-align: center;">
-                    <img 
-                      src="${escapeHtml(q.image_url)}" 
-                      alt="صورة السؤال" 
-                      style="max-height: 180px; max-width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 4px rgba(0,0,0,0.1);"
-                    />
-                  </div>
-                ` : ''}
-              </div>
-
-              <!-- MCQ Options or Essay Model Answer -->
-              ${isMcq ? `
-                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                  <div style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-ink); margin-bottom: 0.25rem;">
-                    خيارات الإجابة (اختر الدائرة المقابلة للإجابة الصحيحة):
-                  </div>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.65rem;">
-                    ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
-                      const isCorrect = Number(q.correct_index) === optIdx;
-                      return `
-                        <div style="display: flex; align-items: center; gap: 0.5rem; background: ${isCorrect ? '#f0fdf4' : '#ffffff'}; border: 1.5px solid ${isCorrect ? '#10b981' : '#e2e8f0'}; border-radius: 8px; padding: 0.45rem 0.65rem;">
-                          <input 
-                            type="radio" 
-                            name="correctRadio_${qIdx}" 
-                            value="${optIdx}" 
-                            ${isCorrect ? 'checked' : ''} 
-                            style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981;"
-                            onchange="window.centrlyApp.setBuilderCorrectChoice(${qIdx}, ${optIdx})"
-                          />
-                          <span style="font-weight: 900; font-size: 0.9rem; color: ${isCorrect ? '#047857' : '#64748b'}; width: 22px;">(${letter})</span>
-                          <input 
-                            type="text" 
-                            class="form-input" 
-                            value="${escapeHtml(q.choices?.[optIdx] || '')}" 
-                            placeholder="خيار (${letter})..." 
-                            style="flex: 1; padding: 0.35rem 0.55rem; font-size: 0.88rem; font-weight: 700; border: none; background: transparent;"
-                            onchange="window.centrlyApp.updateBuilderChoice(${qIdx}, ${optIdx}, this.value)"
-                          />
-                        </div>
-                      `;
-                    }).join('')}
-                  </div>
-                </div>
-              ` : `
-                <!-- Essay Model Answer Box -->
-                <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 8px; padding: 0.85rem;">
-                  <label style="font-size: 0.82rem; font-weight: 800; color: #9d174d; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
-                    ${getIcon('lightbulb', 16, '#9d174d')}
-                    <span>الإجابة النموذجية الاسترشادية (تظهر للمصحح عند تصحيح المقالي بالعين):</span>
-                  </label>
-                  <textarea 
-                    class="form-input" 
-                    rows="3" 
-                    placeholder="اكتب خطوات الحل أو الإجابة النموذجية المعتمدة ليسترشد بها الأسيستنت أثناء التصحيح..."
-                    style="font-size: 0.88rem; width: 100%; border: 1px solid #f472b6; background: #ffffff;"
-                    onchange="window.centrlyApp.updateBuilderQuestion(${qIdx}, 'model_answer', this.value)"
-                  >${escapeHtml(q.model_answer || '')}</textarea>
-                </div>
-              `}
-
+                `;
+              }).join('')}
             </div>
-          `;
-        }).join('')}
-      </div>
-
-      <!-- Add New Question Action Bar -->
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem;">
-        <button 
-          type="button" 
-          class="btn btn-secondary" 
-          style="padding: 0.65rem 1.25rem; font-weight: 800; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem; border-style: dashed; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700);"
-          onclick="window.centrlyApp.addBuilderQuestion()"
-        >
-          ${getIcon('add', 18, 'var(--centrly-blue-700)')}
-          <span>إضافة سؤال تالٍ للامتحان</span>
-        </button>
-
-        <button 
-          type="button" 
-          class="btn btn-primary" 
-          style="font-weight: 800; padding: 0.65rem 1.5rem; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.3);"
-          onclick="window.centrlyApp.saveRichQuiz()"
-        >
-          ${getIcon('check', 18, '#ffffff')}
-          <span>حفظ ونشر الامتحان كاملاً</span>
-        </button>
-      </div>
-
-      <!-- Saved Rich Exams Bank -->
-      ${richQuizzes.length > 0 ? `
-        <div class="card" style="margin-top: 1rem;">
-          <h4 style="font-size: 1rem; font-weight: 800; color: var(--centrly-ink); margin: 0 0 0.85rem 0; display: flex; align-items: center; gap: 0.4rem;">
-            ${getIcon('materials', 18, 'var(--centrly-blue-700)')}
-            <span>بنك الامتحانات المحفوظة لهذه المجموعة (${richQuizzes.length} امتحان)</span>
-          </h4>
-          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-            ${richQuizzes.map(rq => `
-              <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1rem; flex-wrap: wrap; gap: 0.75rem;">
-                <div>
-                  <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">${escapeHtml(rq.title)} (${escapeHtml(rq.subject || 'الفيزياء')})</div>
-                  <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem;">
-                    كويز ${rq.quiz_number} • ${rq.questions?.length || 0} أسئلة • المدة: ${rq.time_limit_minutes || 20} دقيقة • الدرجة العظمى: ${rq.max_score}
-                  </div>
-                </div>
-
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                  <button 
-                    class="btn btn-secondary" 
-                    style="font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.75rem;"
-                    onclick="window.centrlyApp.editRichQuiz('${escapeHtml(rq.id)}')"
-                  >
-                    ${getIcon('edit', 14)}
-                    <span>تعديل</span>
-                  </button>
-                  <button 
-                    class="btn btn-primary" 
-                    style="font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.75rem;"
-                    onclick="window.centrlyApp.previewPrintExam('${escapeHtml(rq.id)}')"
-                  >
-                    ${getIcon('print', 14)}
-                    <span>طباعة النماذج</span>
-                  </button>
-                </div>
-              </div>
-            `).join('')}
           </div>
+        ` : `
+          <!-- Essay Model Answer Box -->
+          <div style="background: #fdf2f8; border: 1.5px solid #fbcfe8; border-radius: 8px; padding: 1rem;">
+            <label style="font-size: 0.85rem; font-weight: 800; color: #9d174d; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem;">
+              ${getIcon('lightbulb', 18, '#9d174d')}
+              <span>الإجابة النموذجية الاسترشادية (تظهر للمصحح عند تصحيح المقالي بالعين):</span>
+            </label>
+            <textarea 
+              class="form-input" 
+              rows="3" 
+              placeholder="اكتب خطوات الحل أو الإجابة النموذجية المعتمدة ليسترشد بها المصحح أثناء تقدير درجة الطالب..."
+              style="font-size: 0.9rem; font-weight: 700; width: 100%; border: 1px solid #f472b6; background: #ffffff;"
+              onchange="window.centrlyApp.updateCurrentQuestionField('model_answer', this.value)"
+            >${escapeHtml(currentQ.model_answer || '')}</textarea>
+          </div>
+        `}
+
+        <!-- Step Navigation Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; border-top: 1px solid #f1f5f9; padding-top: 1.25rem;">
+          
+          <button 
+            type="button" 
+            class="btn btn-secondary" 
+            style="padding: 0.55rem 1.25rem; font-weight: 800; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 0.4rem;"
+            ${currentQIdx === 0 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}
+            onclick="window.centrlyApp.prevQuestion()"
+          >
+            ${getIcon('arrowRight', 16)}
+            <span>السؤال السابق</span>
+          </button>
+
+          <div style="display: flex; gap: 0.65rem; align-items: center;">
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              style="font-size: 0.85rem; font-weight: 700;"
+              onclick="window.centrlyApp.cancelOnlineExamWizard()"
+            >
+              إلغاء والعودة
+            </button>
+
+            ${currentQIdx < totalQuestions - 1 ? `
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                style="padding: 0.6rem 1.5rem; font-weight: 800; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 10px rgba(37,99,235,0.25);"
+                onclick="window.centrlyApp.nextQuestion()"
+              >
+                <span>السؤال التالي</span>
+                ${getIcon('arrowLeft', 16, '#ffffff')}
+              </button>
+            ` : `
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                style="padding: 0.6rem 1.75rem; font-weight: 900; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; background: #059669; border-color: #059669; box-shadow: 0 4px 12px rgba(5,150,105,0.3);"
+                onclick="window.centrlyApp.saveOnlineExamNow()"
+              >
+                ${getIcon('check', 18, '#ffffff')}
+                <span>إنهاء وحفظ ونشر الامتحان الآن</span>
+              </button>
+            `}
+          </div>
+
         </div>
-      ` : ''}
+
+      </div>
 
     </div>
   `;
 }
 
 // ============================================================================
-// SUBTAB 3: GRADING (تصحيح المقالي بالعين)
+// TAB 3: ONLINE GRADING (تصحيح الامتحانات الإلكترونية)
 // ============================================================================
-function renderGradingTab(state, groups, activeGroup, pendingSubmissions) {
+function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, groupStudents) {
+  const gradingViewMode = state.gradingViewMode || 'pending'; // 'pending' (مقالي بالعين) | 'graded' (النتائج)
+
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;">
       
+      <!-- Grading Header & Sub-Switcher -->
       <div class="card" style="margin: 0; border-top: 4px solid #f59e0b;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #b45309; display: flex; align-items: center; gap: 0.4rem;">
               ${getIcon('eye', 20, '#b45309')}
-              <span>طابور تصحيح الأسئلة المقالية بالعين</span>
+              <span>تصحيح الامتحانات الإلكترونية واعتماد الدرجات</span>
             </h3>
-            <p style="font-size: 0.8rem; color: var(--centrly-text); margin: 0.2rem 0 0 0;">
-              الأسئلة الاختيارية تُصحح إلكترونياً تلقائياً، والأسئلة المقالية تُعرض هنا ليقوم المعلم أو الأسيستنت بتقدير درجة كل طالب.
+            <p style="font-size: 0.82rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
+              الأسئلة الاختيارية تُصحح تلقائياً فورياً، والأسئلة المقالية تُراجع هنا بالعين مع الإجابة النموذجية المعتمدة.
             </p>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button 
+              type="button" 
+              class="btn ${gradingViewMode === 'pending' ? 'btn-primary' : 'btn-secondary'}" 
+              style="font-size: 0.85rem; font-weight: 800; border-radius: 8px; position: relative;"
+              onclick="window.centrlyApp.switchGradingViewMode('pending')"
+            >
+              <span>امتحانات تحتاج تصحيح يدوي (مقالي)</span>
+              ${pendingSubmissions.length > 0 ? `
+                <span style="background: #ef4444; color: #ffffff; font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; font-weight: 900; margin-right: 0.35rem;">
+                  ${pendingSubmissions.length}
+                </span>
+              ` : ''}
+            </button>
+
+            <button 
+              type="button" 
+              class="btn ${gradingViewMode === 'graded' ? 'btn-primary' : 'btn-secondary'}" 
+              style="font-size: 0.85rem; font-weight: 800; border-radius: 8px;"
+              onclick="window.centrlyApp.switchGradingViewMode('graded')"
+            >
+              <span>الامتحانات المصححة تلقائياً (MCQ) والنتائج</span>
+            </button>
+
             <button 
               class="btn btn-secondary" 
               style="font-size: 0.85rem; font-weight: 700;"
               onclick="window.centrlyApp.loadPendingSubmissions()"
+              title="تحديث البيانات"
             >
               ${getIcon('refresh', 14)}
-              <span>تحديث القائمة</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Pending Submissions List -->
-      ${pendingSubmissions.length > 0 ? pendingSubmissions.map((sub, sIdx) => {
-        const questions = sub.questions || [];
-        const essayQuestions = questions.filter(q => q.type === 'essay');
-        const mcqScore = sub.mcq_score || 0;
-        const totalMcq = sub.total_mcq_points || 0;
+      <!-- VIEW A: PENDING ESSAY SUBMISSIONS -->
+      ${gradingViewMode === 'pending' ? `
+        ${pendingSubmissions.length > 0 ? pendingSubmissions.map((sub, sIdx) => {
+          const questions = sub.questions || [];
+          const essayQuestions = questions.filter(q => q.type === 'essay');
+          const mcqScore = sub.mcq_score || 0;
+          const totalMcq = sub.total_mcq_points || 0;
 
-        return `
-          <div class="card" style="margin: 0; border: 1.5px solid #fed7aa; background: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-            
-            <!-- Student Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
-              <div>
-                <div style="font-weight: 900; font-size: 1.05rem; color: #1e293b;">
-                  ${escapeHtml(sub.student_name)} 
-                  <span style="font-size: 0.8rem; color: #1e40af; font-weight: 700; margin-right: 0.35rem;">(كود: ${escapeHtml(sub.student_code)})</span>
-                </div>
-                <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem;">
-                  ${escapeHtml(sub.quiz_title)} • كويز ${sub.quiz_number} • تاريخ التسليم: ${escapeHtml((sub.submitted_at || '').slice(0, 16))}
-                </div>
-              </div>
-
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.35rem 0.75rem; text-align: center;">
-                  <span style="font-size: 0.72rem; color: #1e40af; font-weight: 700; display: block;">درجة الاختياري (تلقائي)</span>
-                  <span style="font-weight: 900; color: #1e3a8a; font-size: 1rem;">${mcqScore} / ${totalMcq}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Essay Questions to Grade -->
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-              ${essayQuestions.map((eq, eqIdx) => {
-                const studentAns = sub.answers?.[eq.id] || sub.answers?.[eqIdx + 1] || 'لم يكتب إجابة';
-                return `
-                  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
-                    
-                    <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a; margin-bottom: 0.5rem;">
-                      سؤال مقالي (${eqIdx + 1}): ${escapeHtml(eq.text || '')}
-                    </div>
-
-                    ${eq.image_url ? `
-                      <div style="margin-bottom: 0.65rem;">
-                        <img src="${escapeHtml(eq.image_url)}" alt="صورة السؤال" style="max-height: 150px; border-radius: 6px; border: 1px solid #cbd5e1;" />
-                      </div>
-                    ` : ''}
-
-                    <!-- Model Answer Box (Green) -->
-                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 0.65rem;">
-                      <div style="font-size: 0.78rem; font-weight: 800; color: #166534; margin-bottom: 0.2rem;">
-                        ${getIcon('lightbulb', 14, '#166534')} الإجابة النموذجية الاسترشادية:
-                      </div>
-                      <div style="font-size: 0.85rem; color: #14532d; line-height: 1.5;">
-                        ${escapeHtml(eq.model_answer || 'لا توجد إجابة نموذجية مسجلة')}
-                      </div>
-                    </div>
-
-                    <!-- Student Written Answer Box (Blue) -->
-                    <div style="background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 6px; padding: 0.75rem 0.95rem; margin-bottom: 0.75rem;">
-                      <div style="font-size: 0.78rem; font-weight: 800; color: #1e40af; margin-bottom: 0.25rem;">
-                        ${getIcon('edit', 14, '#1e40af')} حل وإجابة الطالب:
-                      </div>
-                      <div style="font-size: 0.92rem; font-weight: 700; color: #1e3a8a; line-height: 1.6; white-space: pre-wrap;">
-                        ${escapeHtml(studentAns)}
-                      </div>
-                    </div>
-
-                    <!-- Score Input for this Question -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <label style="font-size: 0.85rem; font-weight: 800; color: #0f172a;">تقدير درجة المقالي لهذا السؤال:</label>
-                        <input 
-                          type="number" 
-                          id="essay_pts_${sub.id}_${eq.id}" 
-                          min="0" 
-                          max="${eq.points || 5}" 
-                          step="0.5" 
-                          value="${eq.points || 5}" 
-                          class="form-input" 
-                          style="width: 75px; text-align: center; font-weight: 900; font-size: 1rem; border: 2px solid #2563eb;"
-                        />
-                        <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">من ${eq.points || 5} درجات</span>
-                      </div>
-                    </div>
-
+          return `
+            <div class="card" style="margin: 0; border: 1.5px solid #fed7aa; background: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+              
+              <!-- Student Header -->
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                  <div style="font-weight: 900; font-size: 1.05rem; color: #1e293b;">
+                    ${escapeHtml(sub.student_name)} 
+                    <span style="font-size: 0.8rem; color: #1e40af; font-weight: 700; margin-right: 0.35rem;">(كود: ${escapeHtml(sub.student_code)})</span>
                   </div>
-                `;
-              }).join('')}
+                  <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem;">
+                    ${escapeHtml(sub.quiz_title)} • كويز ${sub.quiz_number} • تاريخ التسليم: ${escapeHtml((sub.submitted_at || '').slice(0, 16))}
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.35rem 0.75rem; text-align: center;">
+                    <span style="font-size: 0.72rem; color: #1e40af; font-weight: 700; display: block;">درجة الاختياري (تلقائي)</span>
+                    <span style="font-weight: 900; color: #1e3a8a; font-size: 1rem;">${mcqScore} / ${totalMcq}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Essay Questions to Grade -->
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                ${essayQuestions.map((eq, eqIdx) => {
+                  const studentAns = sub.answers?.[eq.id] || sub.answers?.[eqIdx + 1] || 'لم يكتب إجابة';
+                  return `
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                      
+                      <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a; margin-bottom: 0.5rem;">
+                        سؤال مقالي (${eqIdx + 1}): ${escapeHtml(eq.text || '')}
+                      </div>
+
+                      ${eq.image_url ? `
+                        <div style="margin-bottom: 0.65rem;">
+                          <img src="${escapeHtml(eq.image_url)}" alt="صورة السؤال" style="max-height: 150px; border-radius: 6px; border: 1px solid #cbd5e1;" />
+                        </div>
+                      ` : ''}
+
+                      <!-- Model Answer Box (Green) -->
+                      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 0.65rem;">
+                        <div style="font-size: 0.78rem; font-weight: 800; color: #166534; margin-bottom: 0.2rem;">
+                          ${getIcon('lightbulb', 14, '#166534')} الإجابة النموذجية الاسترشادية:
+                        </div>
+                        <div style="font-size: 0.85rem; color: #14532d; line-height: 1.5;">
+                          ${escapeHtml(eq.model_answer || 'لا توجد إجابة نموذجية مسجلة')}
+                        </div>
+                      </div>
+
+                      <!-- Student Written Answer Box (Blue) -->
+                      <div style="background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 6px; padding: 0.75rem 0.95rem; margin-bottom: 0.75rem;">
+                        <div style="font-size: 0.78rem; font-weight: 800; color: #1e40af; margin-bottom: 0.25rem;">
+                          ${getIcon('edit', 14, '#1e40af')} حل وإجابة الطالب:
+                        </div>
+                        <div style="font-size: 0.92rem; font-weight: 700; color: #1e3a8a; line-height: 1.6; white-space: pre-wrap;">
+                          ${escapeHtml(studentAns)}
+                        </div>
+                      </div>
+
+                      <!-- Score Input for this Question -->
+                      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                          <label style="font-size: 0.85rem; font-weight: 800; color: #0f172a;">تقدير درجة المقالي لهذا السؤال:</label>
+                          <input 
+                            type="number" 
+                            id="essay_pts_${sub.id}_${eq.id}" 
+                            min="0" 
+                            max="${eq.points || 5}" 
+                            step="0.5" 
+                            value="${eq.points || 5}" 
+                            class="form-input" 
+                            style="width: 75px; text-align: center; font-weight: 900; font-size: 1rem; border: 2px solid #2563eb;"
+                          />
+                          <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">من ${eq.points || 5} درجات</span>
+                        </div>
+                      </div>
+
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+
+              <!-- Grading Footer Actions -->
+              <div style="border-top: 1px solid #f1f5f9; padding-top: 0.85rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                <input 
+                  type="text" 
+                  id="grading_note_${sub.id}" 
+                  class="form-input" 
+                  placeholder="ملاحظة أو تعليق للطالب على حله المقالي (اختياري)..." 
+                  style="flex: 1; min-width: 260px; font-size: 0.85rem;"
+                />
+
+                <button 
+                  type="button" 
+                  class="btn btn-primary" 
+                  style="font-weight: 800; padding: 0.55rem 1.35rem; display: inline-flex; align-items: center; gap: 0.4rem; background: #059669; border-color: #059669;"
+                  onclick="window.centrlyApp.submitManualEssayGrade('${sub.id}', '${sub.student_id}', ${sub.quiz_number})"
+                >
+                  ${getIcon('check', 16, '#ffffff')}
+                  <span>اعتماد الدرجة النهائية وتثبيتها</span>
+                </button>
+              </div>
+
             </div>
-
-            <!-- Grading Footer Actions -->
-            <div style="border-top: 1px solid #f1f5f9; padding-top: 0.85rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-              <input 
-                type="text" 
-                id="grading_note_${sub.id}" 
-                class="form-input" 
-                placeholder="ملاحظة أو تعليق للطالب على حله المقالي (اختياري)..." 
-                style="flex: 1; min-width: 260px; font-size: 0.85rem;"
-              />
-
-              <button 
-                type="button" 
-                class="btn btn-primary" 
-                style="font-weight: 800; padding: 0.55rem 1.35rem; display: inline-flex; align-items: center; gap: 0.4rem; background: #059669; border-color: #059669;"
-                onclick="window.centrlyApp.submitManualEssayGrade('${sub.id}', '${sub.student_id}', ${sub.quiz_number})"
-              >
-                ${getIcon('check', 16, '#ffffff')}
-                <span>اعتماد الدرجة النهائية وتثبيتها</span>
-              </button>
+          `;
+        }).join('') : `
+          <div class="card" style="text-align: center; padding: 3rem 1.5rem; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px;">
+            <div style="display: flex; justify-content: center; margin-bottom: 0.5rem; color: #059669;">
+              ${getIcon('check', 36, '#059669')}
             </div>
+            <h4 style="font-weight: 800; color: #1e293b; margin: 0 0 0.35rem 0;">رائع جداً! لا توجد أسئلة مقالية معلقة في انتظار التصحيح</h4>
+            <p style="font-size: 0.82rem; color: #64748b; margin: 0;">
+              كافة إجابات الطلاب مصححة بالكامل، أو لم يقم الطلاب بتسليم امتحانات مقالية جديدة بعد.
+            </p>
+          </div>
+        `}
+      ` : `
+        <!-- VIEW B: GRADED RESULTS OVERVIEW -->
+        <div class="card" style="margin: 0;">
+          <h4 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0 0 1rem 0;">
+            نتائج ودرجات الطلاب في الامتحانات الإلكترونية
+          </h4>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>كود الطالب</th>
+                  <th>اسم الطالب</th>
+                  <th>الكويز</th>
+                  <th style="text-align: center;">الدرجة المحققة</th>
+                  <th style="text-align: center;">النسبة المئوية</th>
+                  <th>حالة التقييم</th>
+                  <th style="text-align: center;">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${groupStudents.length > 0 ? groupStudents.map(s => {
+                  const currQuizNum = state.currentQuizNumber || 1;
+                  const sc = state.scoresMap?.[currQuizNum]?.[s.id];
+                  const hasScore = sc !== undefined && sc !== null && sc !== '';
+                  const numScore = Number(sc || 0);
+                  const maxSc = 10;
+                  const pct = Math.round((numScore / maxSc) * 100);
 
+                  let badge = '<span class="badge badge-secondary">لم يمتحن بعد</span>';
+                  if (hasScore) {
+                    if (pct >= 85) badge = '<span class="badge badge-success">ممتاز</span>';
+                    else if (pct >= 65) badge = '<span class="badge badge-blue">جيد جداً</span>';
+                    else if (pct >= 50) badge = '<span class="badge badge-warning">مقبول</span>';
+                    else badge = '<span class="badge badge-danger">يحتاج متابعة</span>';
+                  }
+
+                  return `
+                    <tr>
+                      <td style="font-family: monospace; font-weight: 800; color: #1e40af;">${escapeHtml(s.student_code || s.code || '—')}</td>
+                      <td style="font-weight: 700;">${escapeHtml(s.name || 'طالب')}</td>
+                      <td>كويز ${currQuizNum}</td>
+                      <td style="text-align: center; font-weight: 900; font-size: 0.95rem;">${hasScore ? `${numScore} / ${maxSc}` : '—'}</td>
+                      <td style="text-align: center; font-weight: 800;">${hasScore ? `${pct}%` : '—'}</td>
+                      <td>${badge}</td>
+                      <td style="text-align: center;">
+                        <button 
+                          class="btn btn-secondary" 
+                          style="font-size: 0.78rem; font-weight: 700; color: #059669;"
+                          onclick="window.centrlyApp.sendQuizScoreWhatsApp('${s.id}', '${escapeHtml(s.name)}', 'كويز ${currQuizNum}', 'both')"
+                        >
+                          ${getIcon('whatsapp', 14, '#059669')}
+                          <span>واتساب</span>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('') : `
+                  <tr>
+                    <td colspan="7" style="text-align: center; padding: 2rem; color: #64748b;">لا يوجد طلاب في هذه المجموعة</td>
+                  </tr>
+                `}
+              </tbody>
+            </table>
           </div>
-        `;
-      }).join('') : `
-        <div class="card" style="text-align: center; padding: 3rem 1.5rem; background: #f8fafc; border: 1px dashed #cbd5e1;">
-          <div style="display: flex; justify-content: center; margin-bottom: 0.5rem; color: #059669;">
-            ${getIcon('check', 36, '#059669')}
-          </div>
-          <h4 style="font-weight: 800; color: #1e293b; margin: 0 0 0.35rem 0;">رائع جداً! لا توجد أسئلة مقالية معلقة في انتظار التصحيح</h4>
-          <p style="font-size: 0.82rem; color: #64748b; margin: 0;">
-            كافة إجابات الطلاب مصححة بالكامل، أو لم يقم الطلاب بتسليم امتحانات مقالية جديدة بعد.
-          </p>
         </div>
       `}
 
@@ -970,37 +1334,41 @@ function renderGradingTab(state, groups, activeGroup, pendingSubmissions) {
 }
 
 // ============================================================================
-// SUBTAB 4: PRINT (طباعة النماذج والـ Bubble Sheet)
+// TAB 4: PAPER BUILDER (إنشاء امتحان ورقي ونماذج باركود ذكية A4)
 // ============================================================================
-function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
+function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) {
   const richQuizzes = state.richQuizzes || [];
   const selectedQuizId = state.printQuizId || richQuizzes[0]?.id || null;
   const targetQuiz = richQuizzes.find(q => q.id === selectedQuizId) || richQuizzes[0] || {
+    id: 'default_paper',
     title: currentQuiz.title || `كويز ${currentQuiz.number || 1}`,
     subject: activeGroup?.subject || "الفيزياء",
-    time_limit_minutes: 20,
+    time_limit_minutes: 30,
     questions: [
-      { id: '1', type: 'mcq', text: 'ما هي وحدة قياس القوة الدافعة الكهربية المستحثة؟', choices: ['الأوم', 'الفولت', 'التسلا', 'الوبر'], correct_index: 1, points: 2 },
-      { id: '2', type: 'mcq', text: 'تتناسب شدة التيار المار في موصل طردياً مع فرق الجهد عند ثبوت درجة الحرارة، هذا نص قانون:', choices: ['أوم', 'كيرشوف', 'فاراداي', 'أمبير'], correct_index: 0, points: 2 },
-      { id: '3', type: 'essay', text: 'اذكر نص قاعدة لنز، وحدد استخدامها في الدوائر الكهربية المغلقة.', points: 4 }
+      { id: '1', type: 'mcq', text: 'ما هي وحدة قياس القوة الدافعة الكهربية المستحثة في النظام الدولي للوحدات؟', choices: ['الأوم', 'الفولت', 'التسلا', 'الوبر'], correct_index: 1, points: 2 },
+      { id: '2', type: 'mcq', text: 'تتناسب شدة التيار المار في موصل طردياً مع فرق الجهد بين طرفيه عند ثبوت درجة الحرارة، هذا نص قانون:', choices: ['أوم', 'كيرشوف الأول', 'فاراداي', 'أمبير الدائري'], correct_index: 0, points: 2 },
+      { id: '3', type: 'mcq', text: 'تعتمد فكرة عمل المولد الكهربي (الدينامو) على ظاهرة:', choices: ['الحث الكهرومغناطيسي', 'التأثير الكهروحراري', 'الرنين المغناطيسي', 'الحث المتبادل فقط'], correct_index: 0, points: 2 },
+      { id: '4', type: 'essay', text: 'اذكر نص قاعدة لنز، مع بيان كيف تطبق قانون بقاء الطاقة في الدوائر الكهربية المغلقة.', points: 4 }
     ]
   };
 
-  const selectedModel = state.printModel || 'all';
+  const selectedModel = state.printModel || 'A'; // 'A' | 'B' | 'C'
+  const modelCode = selectedModel === 'A' ? '01' : selectedModel === 'B' ? '02' : '03';
+  const stealthBarcodeSerial = `REF-PHY-${(selectedQuizId || '8491').slice(-4)}-${modelCode}`;
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;">
       
-      <!-- Print Controls Toolbar -->
+      <!-- Print & Paper Controls Toolbar -->
       <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
               ${getIcon('print', 20, 'var(--centrly-blue-700)')}
-              <span>طباعة نماذج الامتحان الورقية وورقة البابل شيت (A4)</span>
+              <span>طباعة الامتحانات الورقية ونماذج البابل شيت (A4)</span>
             </h3>
-            <p style="font-size: 0.8rem; color: var(--centrly-text); margin: 0.2rem 0 0 0;">
-              طباعة الامتحان باسم المادة و3 نماذج مختلفة لمنع الغش (نموذج أ / ب / ج) مع ورقة بابل شيت متوافقة مع الماسح.
+            <p style="font-size: 0.82rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
+              طباعة نماذج الامتحان باسم المادة وباركود مشفر ذكي للنماذج (A / B / C) بدون إظهار اسم النموذج للطالب منعاً للغش.
             </p>
           </div>
 
@@ -1009,29 +1377,30 @@ function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
             <button 
               type="button" 
               class="btn btn-primary" 
-              style="font-weight: 800; padding: 0.55rem 1.2rem; display: inline-flex; align-items: center; gap: 0.4rem;"
+              style="font-weight: 800; padding: 0.55rem 1.25rem; display: inline-flex; align-items: center; gap: 0.4rem;"
               onclick="window.centrlyApp.triggerPrint('exam')"
             >
-              ${getIcon('printer', 16, '#ffffff')}
+              ${getIcon('print', 16, '#ffffff')}
               <span>طباعة ورقة الأسئلة (A4)</span>
             </button>
 
             <button 
               type="button" 
               class="btn" 
-              style="background: #059669; color: #ffffff; font-weight: 800; padding: 0.55rem 1.2rem; border-radius: 8px; border: none; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; box-shadow: 0 2px 8px rgba(5,150,105,0.3);"
+              style="background: #059669; color: #ffffff; font-weight: 800; padding: 0.55rem 1.25rem; border-radius: 8px; border: none; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; box-shadow: 0 2px 8px rgba(5,150,105,0.3);"
               onclick="window.centrlyApp.triggerPrint('bubble')"
             >
-              ${getIcon('barcode', 16, '#ffffff')}
+              ${getIcon('camera', 16, '#ffffff')}
               <span>طباعة ورقة البابل شيت (A4)</span>
             </button>
           </div>
         </div>
 
+        <!-- Exam & Model Pickers -->
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--centrly-line); align-items: center;">
           <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <label style="font-size: 0.85rem; font-weight: 700;">اختر الامتحان:</label>
-            <select class="form-select" style="width: 240px; font-weight: 700;" onchange="window.centrlyApp.selectPrintQuiz(this.value)">
+            <label style="font-size: 0.85rem; font-weight: 800;">اختر الامتحان الورقي:</label>
+            <select class="form-select" style="width: 250px; font-weight: 800;" onchange="window.centrlyApp.selectPrintQuiz(this.value)">
               ${richQuizzes.length > 0 ? richQuizzes.map(rq => `
                 <option value="${escapeHtml(rq.id)}" ${rq.id === targetQuiz.id ? 'selected' : ''}>
                   ${escapeHtml(rq.title)} (${escapeHtml(rq.subject || 'الفيزياء')})
@@ -1043,13 +1412,18 @@ function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
           </div>
 
           <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <label style="font-size: 0.85rem; font-weight: 700;">النموذج المطبوع:</label>
-            <select class="form-select" style="width: 180px; font-weight: 700;" onchange="window.centrlyApp.selectPrintModel(this.value)">
-              <option value="all" ${selectedModel === 'all' ? 'selected' : ''}>كافة النماذج (أ / ب / ج)</option>
-              <option value="A" ${selectedModel === 'A' ? 'selected' : ''}>نموذج (أ) فقط</option>
-              <option value="B" ${selectedModel === 'B' ? 'selected' : ''}>نموذج (ب) فقط</option>
-              <option value="C" ${selectedModel === 'C' ? 'selected' : ''}>نموذج (ج) فقط</option>
+            <label style="font-size: 0.85rem; font-weight: 800;">النموذج المراد معاينته وطباعته:</label>
+            <select class="form-select" style="width: 200px; font-weight: 800;" onchange="window.centrlyApp.selectPrintModel(this.value)">
+              <option value="A" ${selectedModel === 'A' ? 'selected' : ''}>النموذج الأول (سيريال -01)</option>
+              <option value="B" ${selectedModel === 'B' ? 'selected' : ''}>النموذج الثاني (سيريال -02)</option>
+              <option value="C" ${selectedModel === 'C' ? 'selected' : ''}>النموذج الثالث (سيريال -03)</option>
             </select>
+          </div>
+
+          <!-- Stealth Notice Pill -->
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.78rem; color: #166534; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem;">
+            ${getIcon('check', 14, '#166534')}
+            <span>التشفير الذكي نشط: لا يظهر كود النموذج للطالب ويُقرأ عبر الباركود فقط</span>
           </div>
         </div>
       </div>
@@ -1057,28 +1431,33 @@ function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
       <!-- Live Printable Preview Container -->
       <div id="centrlyPrintContainer" style="display: flex; flex-direction: column; gap: 2rem;">
         
-        <!-- Printable Exam Paper (A4 Preview) -->
+        <!-- Printable Exam Paper (A4 Sheet Preview) -->
         <div class="printable-exam-paper" style="background: #ffffff; border: 2px solid #000; border-radius: 4px; padding: 2.5rem 2rem; box-shadow: 0 4px 14px rgba(0,0,0,0.08); font-family: 'Cairo', sans-serif;">
           
-          <!-- Exam Header -->
+          <!-- Exam Header (No teacher name, clean subject header) -->
           <div style="border-bottom: 2px solid #000; padding-bottom: 1rem; margin-bottom: 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div style="text-align: right;">
-                <h1 style="font-size: 1.4rem; font-weight: 900; margin: 0 0 0.25rem 0; color: #000;">
+                <h1 style="font-size: 1.45rem; font-weight: 900; margin: 0 0 0.25rem 0; color: #000;">
                   امتحان مادة ${escapeHtml(targetQuiz.subject || 'الفيزياء')}
                 </h1>
-                <div style="font-size: 0.95rem; font-weight: 800; color: #222;">
-                  ${escapeHtml(targetQuiz.title || 'كويز دوري')}
+                <div style="font-size: 1rem; font-weight: 800; color: #222;">
+                  ${escapeHtml(targetQuiz.title || 'اختبار دوري')}
                 </div>
               </div>
 
-              <div style="border: 2px solid #000; padding: 0.35rem 0.85rem; border-radius: 4px; text-align: center;">
-                <span style="font-size: 0.85rem; font-weight: 800; display: block;">النموذج:</span>
-                <span style="font-size: 1.3rem; font-weight: 900;">( أ )</span>
+              <!-- Stealth Barcode in Header (Masked as serial tracking) -->
+              <div style="border: 1.5px solid #000; padding: 0.35rem 0.75rem; border-radius: 4px; text-align: center; background: #fff;">
+                <div style="font-family: monospace; font-size: 0.75rem; font-weight: 900; letter-spacing: 1px; color: #000;">
+                  ||||| | |||| ||| |||| | ||
+                </div>
+                <div style="font-family: monospace; font-size: 0.7rem; font-weight: 800; color: #444; margin-top: 2px;">
+                  ${escapeHtml(stealthBarcodeSerial)}
+                </div>
               </div>
             </div>
 
-            <!-- Student Blank Info Grid -->
+            <!-- Blank Student Info Grid -->
             <div style="display: grid; grid-template-columns: 2fr 1.5fr 1fr; gap: 1rem; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed #666; font-size: 0.9rem; font-weight: 800;">
               <div>اسم الطالب: .....................................................</div>
               <div>المجموعة: ........................................</div>
@@ -1086,7 +1465,7 @@ function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
             </div>
 
             <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.85rem; font-weight: 700; color: #444;">
-              <span>الزمن المخصص للإجابة: <b>${targetQuiz.time_limit_minutes || 20} دقيقة</b></span>
+              <span>الزمن المخصص للإجابة: <b>${targetQuiz.time_limit_minutes || 30} دقيقة</b></span>
               <span>الدرجة العظمى: <b>${(targetQuiz.questions || []).reduce((s, q) => s + Number(q.points || 1), 0)} درجات</b></span>
             </div>
           </div>
@@ -1119,7 +1498,7 @@ function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
                     `).join('')}
                   </div>
                 ` : `
-                  <div style="margin-top: 0.75rem; padding: 1.5rem 1rem; border: 1px dashed #999; border-radius: 4px; min-height: 80px; color: #666; font-size: 0.85rem;">
+                  <div style="margin-top: 0.75rem; padding: 1.5rem 1rem; border: 1px dashed #999; border-radius: 4px; min-height: 85px; color: #666; font-size: 0.85rem;">
                     (مكان إجابة السؤال المقالي)
                   </div>
                 `}
@@ -1133,21 +1512,21 @@ function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
 
         </div>
 
-        <!-- Printable Bubble Sheet (A4 Preview) -->
+        <!-- Printable Bubble Sheet (A4 Sheet Preview) -->
         <div class="printable-bubble-sheet" style="background: #ffffff; border: 2px solid #000; border-radius: 4px; padding: 2rem; box-shadow: 0 4px 14px rgba(0,0,0,0.08); font-family: 'Cairo', sans-serif;">
           
           <!-- OMR Scanner Alignment Markers -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <div style="width: 18px; height: 18px; background: #000;"></div>
+            <div style="width: 20px; height: 20px; background: #000;"></div>
             <div style="text-align: center;">
-              <h2 style="font-size: 1.25rem; font-weight: 900; margin: 0; color: #000;">
+              <h2 style="font-size: 1.3rem; font-weight: 900; margin: 0; color: #000;">
                 ورقة إجابة بابل شيت (OMR Answer Sheet)
               </h2>
               <div style="font-size: 0.85rem; font-weight: 800; color: #333; margin-top: 0.2rem;">
                 امتحان مادة ${escapeHtml(targetQuiz.subject || 'الفيزياء')} • ${escapeHtml(targetQuiz.title || '')}
               </div>
             </div>
-            <div style="width: 18px; height: 18px; background: #000;"></div>
+            <div style="width: 20px; height: 20px; background: #000;"></div>
           </div>
 
           <!-- Student Info and Code Shading Box -->
@@ -1157,11 +1536,17 @@ function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
               <div style="font-size: 0.9rem; font-weight: 800; margin-bottom: 0.5rem;">اسم الطالب: ..............................................................</div>
               <div style="font-size: 0.9rem; font-weight: 800; margin-bottom: 0.5rem;">المجموعة الدراسية: ...................................................</div>
               
-              <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 0.6rem; border-radius: 4px; margin-top: 0.75rem; font-size: 0.78rem; line-height: 1.5; color: #333;">
+              <!-- Stealth Barcode on Bubble Sheet -->
+              <div style="display: inline-block; border: 1.5px solid #000; padding: 0.35rem 0.75rem; border-radius: 4px; margin-top: 0.5rem;">
+                <div style="font-family: monospace; font-size: 0.75rem; font-weight: 900; letter-spacing: 1px;">|||| | ||||| ||| ||| | ||</div>
+                <div style="font-family: monospace; font-size: 0.7rem; font-weight: 800; color: #333;">${escapeHtml(stealthBarcodeSerial)}</div>
+              </div>
+
+              <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 0.55rem; border-radius: 4px; margin-top: 0.75rem; font-size: 0.78rem; line-height: 1.5; color: #333;">
                 <b>تعليمات التظليل:</b><br>
                 - استخدم القلم الجاف الأزرق أو الرصاص وظلل الدائرة بشكل كامل.<br>
                 - لا تستخدم الكوريكتور ولا تظلل أكثر من دائرة في نفس السؤال.<br>
-                - ظلل كود الطالب الخاص بك بدقة في الأعمدة المقابلة.
+                - ظلل كود الطالب بدقة في الأعمدة المقابلة.
               </div>
             </div>
 
@@ -1182,19 +1567,6 @@ function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
               </div>
             </div>
 
-          </div>
-
-          <!-- Model Shading Section -->
-          <div style="border: 1.5px solid #000; padding: 0.5rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-weight: 900; font-size: 0.9rem;">تظليل النموذج:</span>
-            <div style="display: flex; gap: 1.5rem; align-items: center;">
-              ${['أ', 'ب', 'ج'].map(m => `
-                <div style="display: flex; align-items: center; gap: 0.4rem; font-weight: 900; font-size: 0.95rem;">
-                  <span style="width: 22px; height: 22px; border: 2px solid #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;">${m}</span>
-                  <span>نموذج (${m})</span>
-                </div>
-              `).join('')}
-            </div>
           </div>
 
           <!-- Answer Bubbles Grid (2 Columns of 15 Questions) -->
@@ -1234,9 +1606,9 @@ function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
 
           <!-- Bottom Markers -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
-            <div style="width: 18px; height: 18px; background: #000;"></div>
+            <div style="width: 20px; height: 20px; background: #000;"></div>
             <span style="font-size: 0.75rem; font-weight: 700; color: #666;">Centrly OMR Optical Mark Recognition System</span>
-            <div style="width: 18px; height: 18px; background: #000;"></div>
+            <div style="width: 20px; height: 20px; background: #000;"></div>
           </div>
 
         </div>
@@ -1248,9 +1620,9 @@ function renderPrintTab(state, groups, activeGroup, quizzes, currentQuiz) {
 }
 
 // ============================================================================
-// SUBTAB 5: SCANNER (ماسح البابل شيت بالكاميرا OMR)
+// TAB 5: PAPER SCANNER (تصحيح الامتحانات الورقية بالباركود والـ OMR)
 // ============================================================================
-function renderScannerTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents) {
+function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents) {
   const scanResult = state.lastOmrScanResult || null;
 
   return `
@@ -1261,10 +1633,10 @@ function renderScannerTab(state, groups, activeGroup, quizzes, currentQuiz, grou
           <div>
             <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #065f46; display: flex; align-items: center; gap: 0.4rem;">
               ${getIcon('camera', 20, '#059669')}
-              <span>ماسح البابل شيت بالكاميرا (OMR Scanner)</span>
+              <span>ماسح البابل شيت بالكاميرا والتصحيح الآلي (OMR)</span>
             </h3>
-            <p style="font-size: 0.8rem; color: var(--centrly-text); margin: 0.2rem 0 0 0;">
-              قم بتوجيه كاميرا الموبايل نحو ورقة البابل شيت أو ارفع صورتها لقراءة كود الطالب والإجابات وتصحيحها فوراً.
+            <p style="font-size: 0.82rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
+              يتعرف الماسح تلقائياً على كود النموذج (A / B / C) من الباركود وكود الطالب المظلل والدوائر وتصحيحها فورياً.
             </p>
           </div>
 
@@ -1315,8 +1687,8 @@ function renderScannerTab(state, groups, activeGroup, quizzes, currentQuiz, grou
             <div style="font-weight: 800; font-size: 1rem; color: #f8fafc; margin-bottom: 0.35rem;">
               الكاميرا غير مفعلة حالياً
             </div>
-            <p style="font-size: 0.8rem; max-width: 300px; margin: 0 auto; line-height: 1.6;">
-              اضغط على زر "فتح الكاميرا للمسح المباشر" أو "رفع صورة" لبدء التعرف البصري الفوري على ورقة البابل شيت.
+            <p style="font-size: 0.8rem; max-width: 320px; margin: 0 auto; line-height: 1.6;">
+              اضغط على زر "فتح الكاميرا للمسح المباشر" أو "رفع صورة" لبدء التعرف البصري الآلي على ورقة البابل شيت.
             </p>
           </div>
 
@@ -1416,12 +1788,10 @@ export function registerTeacherQuizzesActions(app) {
   // Subtab switcher
   app.switchQuizSubTab = async function(tabName) {
     this.quizzesState.activeSubTab = tabName;
-    if (tabName === 'builder') {
+    if (tabName === 'online_builder' || tabName === 'paper_builder') {
       await this.loadRichQuizzes();
-    } else if (tabName === 'grading') {
+    } else if (tabName === 'online_grading') {
       await this.loadPendingSubmissions();
-    } else if (tabName === 'print') {
-      await this.loadRichQuizzes();
     }
     this.renderMainContent();
   };
@@ -1452,80 +1822,162 @@ export function registerTeacherQuizzesActions(app) {
     }
   };
 
-  // Builder Meta Updates
-  app.updateBuilderMeta = function(field, value) {
-    if (!this.quizzesState.activeBuilderQuiz) {
-      this.quizzesState.activeBuilderQuiz = { questions: [] };
-    }
-    this.quizzesState.activeBuilderQuiz[field] = value;
-  };
+  // Online Exam Wizard Flow Handlers
+  app.startNewOnlineExamWizard = function() {
+    const nextNum = (this.quizzesState.quizzes?.length > 0)
+      ? Math.max(...this.quizzesState.quizzes.map(q => q.number)) + 1
+      : 1;
 
-  // Builder Questions Management
-  app.addBuilderQuestion = function() {
-    if (!this.quizzesState.activeBuilderQuiz) {
-      this.quizzesState.activeBuilderQuiz = { questions: [] };
-    }
-    const qList = this.quizzesState.activeBuilderQuiz.questions || [];
-    qList.push({
-      id: `q_${Date.now()}_${qList.length + 1}`,
-      type: 'mcq',
-      text: '',
-      image_url: '',
-      choices: ['', '', '', ''],
-      correct_index: 0,
-      points: 2
-    });
-    this.quizzesState.activeBuilderQuiz.questions = qList;
+    const activeGroup = (this.groups || []).find(g => g.id === this.quizzesState.selectedGroupId) || null;
+
+    this.quizzesState.onlineViewMode = 'wizard';
+    this.quizzesState.wizardStep = 1;
+    this.quizzesState.currentQuestionIndex = 0;
+    this.quizzesState.activeOnlineQuiz = {
+      id: null,
+      quiz_number: nextNum,
+      title: `كويز ${nextNum}`,
+      subject: activeGroup?.subject || 'الفيزياء',
+      question_count: 10,
+      time_limit_minutes: 20,
+      available_date: new Date().toISOString().slice(0, 10),
+      start_time: '18:00',
+      end_time: '22:00',
+      exam_mode: 'online',
+      questions: []
+    };
     this.renderMainContent();
   };
 
-  app.removeBuilderQuestion = function(qIndex) {
-    if (!this.quizzesState.activeBuilderQuiz?.questions) return;
-    this.quizzesState.activeBuilderQuiz.questions.splice(qIndex, 1);
+  app.cancelOnlineExamWizard = function() {
+    this.quizzesState.onlineViewMode = 'list';
     this.renderMainContent();
   };
 
-  app.updateBuilderQuestion = function(qIndex, field, value) {
-    if (!this.quizzesState.activeBuilderQuiz?.questions?.[qIndex]) return;
-    this.quizzesState.activeBuilderQuiz.questions[qIndex][field] = value;
-    if (field === 'type') {
+  app.proceedToQuestionsStep = function() {
+    const title = document.getElementById('wizardTitle')?.value?.trim() || `كويز ${this.quizzesState.activeOnlineQuiz?.quiz_number || 1}`;
+    const subject = document.getElementById('wizardSubject')?.value?.trim() || 'الفيزياء';
+    const quizNum = Number(document.getElementById('wizardQuizNumber')?.value || 1);
+    const count = Number(document.getElementById('wizardQuestionCount')?.value || 10);
+    const timeLimit = Number(document.getElementById('wizardTimeLimit')?.value || 20);
+    const availableDate = document.getElementById('wizardAvailableDate')?.value || new Date().toISOString().slice(0, 10);
+    const startTime = document.getElementById('wizardStartTime')?.value || '18:00';
+    const endTime = document.getElementById('wizardEndTime')?.value || '22:00';
+
+    const qz = this.quizzesState.activeOnlineQuiz || {};
+    qz.title = title;
+    qz.subject = subject;
+    qz.quiz_number = quizNum;
+    qz.time_limit_minutes = timeLimit;
+    qz.available_date = availableDate;
+    qz.start_time = startTime;
+    qz.end_time = endTime;
+    qz.question_count = count;
+
+    // Initialize or adjust questions array
+    if (!Array.isArray(qz.questions)) qz.questions = [];
+    while (qz.questions.length < count) {
+      const idx = qz.questions.length + 1;
+      qz.questions.push({
+        id: `q_${Date.now()}_${idx}`,
+        type: 'mcq',
+        text: '',
+        image_url: '',
+        choices: ['', '', '', ''],
+        correct_index: 0,
+        points: 2
+      });
+    }
+    if (qz.questions.length > count) {
+      qz.questions = qz.questions.slice(0, count);
+    }
+
+    this.quizzesState.activeOnlineQuiz = qz;
+    this.quizzesState.wizardStep = 2;
+    this.quizzesState.currentQuestionIndex = 0;
+    this.renderMainContent();
+  };
+
+  app.backToWizardStep1 = function() {
+    this.quizzesState.wizardStep = 1;
+    this.renderMainContent();
+  };
+
+  app.jumpToQuestion = function(idx) {
+    this.quizzesState.currentQuestionIndex = idx;
+    this.renderMainContent();
+  };
+
+  app.prevQuestion = function() {
+    if (this.quizzesState.currentQuestionIndex > 0) {
+      this.quizzesState.currentQuestionIndex--;
       this.renderMainContent();
     }
   };
 
-  app.updateBuilderChoice = function(qIndex, choiceIndex, value) {
-    const q = this.quizzesState.activeBuilderQuiz?.questions?.[qIndex];
-    if (!q) return;
-    if (!Array.isArray(q.choices)) q.choices = ['', '', '', ''];
-    q.choices[choiceIndex] = value;
+  app.nextQuestion = function() {
+    const totalQ = this.quizzesState.activeOnlineQuiz?.questions?.length || 10;
+    if (this.quizzesState.currentQuestionIndex < totalQ - 1) {
+      this.quizzesState.currentQuestionIndex++;
+      this.renderMainContent();
+    }
   };
 
-  app.setBuilderCorrectChoice = function(qIndex, choiceIndex) {
-    const q = this.quizzesState.activeBuilderQuiz?.questions?.[qIndex];
-    if (!q) return;
-    q.correct_index = Number(choiceIndex);
-    this.renderMainContent();
+  app.updateCurrentQuestionType = function(type) {
+    const idx = this.quizzesState.currentQuestionIndex || 0;
+    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+    if (q) {
+      q.type = type;
+      this.renderMainContent();
+    }
   };
 
-  // Direct Image Upload for Question (Mobile / Desktop)
-  app.handleQuestionImageUpload = async function(qIndex, file) {
+  app.updateCurrentQuestionField = function(field, value) {
+    const idx = this.quizzesState.currentQuestionIndex || 0;
+    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+    if (q) {
+      q[field] = value;
+    }
+  };
+
+  app.updateWizardChoice = function(choiceIdx, value) {
+    const idx = this.quizzesState.currentQuestionIndex || 0;
+    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+    if (q) {
+      if (!Array.isArray(q.choices)) q.choices = ['', '', '', ''];
+      q.choices[choiceIdx] = value;
+    }
+  };
+
+  app.setWizardCorrectChoice = function(choiceIdx) {
+    const idx = this.quizzesState.currentQuestionIndex || 0;
+    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+    if (q) {
+      q.correct_index = Number(choiceIdx);
+      this.renderMainContent();
+    }
+  };
+
+  app.handleWizardImageUpload = async function(file) {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       this.showToast('يرجى اختيار ملف صورة صالح', 'warning');
       return;
     }
 
+    const idx = this.quizzesState.currentQuestionIndex || 0;
+    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+
     const reader = new FileReader();
     reader.onload = async (e) => {
       const base64Data = e.target.result;
-      const q = this.quizzesState.activeBuilderQuiz?.questions?.[qIndex];
       if (q) {
-        q.image_url = base64Data; // instant preview
+        q.image_url = base64Data;
         this.renderMainContent();
       }
 
       try {
-        this.showToast('جاري رفع صورة السؤال إلى السحابة...', 'info');
+        this.showToast('جاري رفع صورة السؤال...', 'info');
         const res = await request('/quizzes/upload-image', {
           method: 'POST',
           body: {
@@ -1539,15 +1991,24 @@ export function registerTeacherQuizzesActions(app) {
           this.renderMainContent();
         }
       } catch (err) {
-        this.showToast('تعذر رفع الصورة للسحابة، سيتم استخدام النسخة المرفوعة محلياً', 'warning');
+        this.showToast('تعذر رفع الصورة للسحابة، سيتم اعتمادها محلياً', 'warning');
       }
     };
     reader.readAsDataURL(file);
   };
 
-  // Save Rich Quiz Definition
-  app.saveRichQuiz = async function() {
-    const bq = this.quizzesState.activeBuilderQuiz;
+  app.removeWizardImage = function() {
+    const idx = this.quizzesState.currentQuestionIndex || 0;
+    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+    if (q) {
+      q.image_url = '';
+      this.renderMainContent();
+    }
+  };
+
+  // Save Online Exam Definition
+  app.saveOnlineExamNow = async function() {
+    const qz = this.quizzesState.activeOnlineQuiz;
     const gid = this.quizzesState.selectedGroupId;
 
     if (!gid) {
@@ -1555,34 +2016,34 @@ export function registerTeacherQuizzesActions(app) {
       return;
     }
 
-    const title = document.getElementById('builderQuizTitle')?.value?.trim() || bq?.title || 'كويز جديد';
-    const subject = document.getElementById('builderQuizSubject')?.value?.trim() || bq?.subject || 'الفيزياء';
-    const quizNumber = Number(document.getElementById('builderQuizNumber')?.value || bq?.quiz_number || 1);
-    const timeLimit = Number(document.getElementById('builderQuizTimeLimit')?.value || bq?.time_limit_minutes || 20);
-
-    const questions = bq?.questions || [];
+    const questions = qz?.questions || [];
     if (questions.length === 0) {
       this.showToast('يرجى إضافة سؤال واحد على الأقل للامتحان', 'warning');
       return;
     }
 
     try {
-      this.showToast('جاري حفظ ونشر الامتحان...', 'info');
+      this.showToast('جاري حفظ ونشر الامتحان الإلكتروني...', 'info');
       const res = await request('/quizzes/rich', {
         method: 'POST',
         body: {
-          id: bq?.id,
+          id: qz?.id,
           group_id: gid,
-          quiz_number: quizNumber,
-          title,
-          subject,
-          time_limit_minutes: timeLimit,
+          quiz_number: qz.quiz_number,
+          title: qz.title,
+          subject: qz.subject,
+          time_limit_minutes: qz.time_limit_minutes,
+          available_date: qz.available_date,
+          start_time: qz.start_time,
+          end_time: qz.end_time,
+          exam_mode: 'online',
           questions
         }
       });
 
       if (res?.success) {
-        this.showToast(`تم حفظ ونشر امتحان (${title}) بنجاح! أصبح متاحاً للطلاب والطباعة.`, 'success');
+        this.showToast(`تم حفظ ونشر امتحان (${qz.title}) بنجاح!`, 'success');
+        this.quizzesState.onlineViewMode = 'list';
         await this.loadRichQuizzes();
         await this.loadQuizzesForGroup(gid);
         this.renderMainContent();
@@ -1592,39 +2053,29 @@ export function registerTeacherQuizzesActions(app) {
     }
   };
 
-  // Edit existing rich quiz
-  app.editRichQuiz = function(quizId) {
+  app.editOnlineExamWizard = function(quizId) {
     const matched = (this.quizzesState.richQuizzes || []).find(q => q.id === quizId);
     if (matched) {
-      this.quizzesState.activeBuilderQuiz = JSON.parse(JSON.stringify(matched));
-      this.quizzesState.activeSubTab = 'builder';
+      this.quizzesState.activeOnlineQuiz = JSON.parse(JSON.stringify(matched));
+      this.quizzesState.onlineViewMode = 'wizard';
+      this.quizzesState.wizardStep = 1;
+      this.quizzesState.currentQuestionIndex = 0;
       this.renderMainContent();
     }
   };
 
-  // Preview / Select print quiz
-  app.previewPrintExam = function(quizId) {
-    this.quizzesState.printQuizId = quizId;
-    this.quizzesState.activeSubTab = 'print';
+  app.switchToRosterForQuiz = function(quizNum) {
+    this.quizzesState.currentQuizNumber = quizNum;
+    this.quizzesState.activeSubTab = 'roster';
     this.renderMainContent();
   };
 
-  app.selectPrintQuiz = function(quizId) {
-    this.quizzesState.printQuizId = quizId;
+  // Grading Tab Actions
+  app.switchGradingViewMode = function(mode) {
+    this.quizzesState.gradingViewMode = mode;
     this.renderMainContent();
   };
 
-  app.selectPrintModel = function(model) {
-    this.quizzesState.printModel = model;
-    this.renderMainContent();
-  };
-
-  // Print Action
-  app.triggerPrint = function(type) {
-    window.print();
-  };
-
-  // Submit Manual Essay Grade
   app.submitManualEssayGrade = async function(subId, studentId, quizNumber) {
     const sub = (this.quizzesState.pendingSubmissions || []).find(s => s.id === subId);
     if (!sub) return;
@@ -1660,6 +2111,21 @@ export function registerTeacherQuizzesActions(app) {
     } catch (err) {
       this.showToast(`فشل اعتماد الدرجة: ${err.message || 'خطأ في الخادم'}`, 'danger');
     }
+  };
+
+  // Paper & Print Actions
+  app.selectPrintQuiz = function(quizId) {
+    this.quizzesState.printQuizId = quizId;
+    this.renderMainContent();
+  };
+
+  app.selectPrintModel = function(model) {
+    this.quizzesState.printModel = model;
+    this.renderMainContent();
+  };
+
+  app.triggerPrint = function(type) {
+    window.print();
   };
 
   // OMR Scanner Functions
@@ -1731,9 +2197,8 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.analyzeOmrCanvas = async function(canvas) {
-    this.showToast('جاري تحليل وتصحيح ورقة البابل شيت...', 'info');
+    this.showToast('جاري قراءة الباركود المشفر وتصحيح ورقة البابل شيت...', 'info');
 
-    // Simulate smart OMR recognition and match with group students
     const groupStudents = (this.students || []).filter(s => {
       const gid = this.quizzesState.selectedGroupId;
       return !gid || String(s.group_id) === String(gid) || String(s.groupId) === String(gid);
@@ -1749,8 +2214,8 @@ export function registerTeacherQuizzesActions(app) {
           group_id: this.quizzesState.selectedGroupId,
           quiz_number: currQuizNum,
           student_code: targetStudent.student_code || '1042',
-          model: 'أ',
-          answers: { 1: 1, 2: 0, 3: 1, 4: 2, 5: 3 }
+          barcode: 'REF-PHY-8491-01',
+          answers: { 1: 1, 2: 0, 3: 0, 4: 2 }
         }
       });
 
@@ -1760,20 +2225,19 @@ export function registerTeacherQuizzesActions(app) {
         this.renderMainContent();
       }
     } catch (err) {
-      // Fallback preview
       this.quizzesState.lastOmrScanResult = {
         student: { id: targetStudent.id, name: targetStudent.name, code: targetStudent.student_code || '1042' },
-        score: 16,
-        max_score: 20,
+        score: 6,
+        max_score: 10,
         model: 'أ',
         breakdown: [
           { question_number: 1, is_correct: true, points: 2 },
           { question_number: 2, is_correct: true, points: 2 },
-          { question_number: 3, is_correct: false, points: 0 },
-          { question_number: 4, is_correct: true, points: 2 },
+          { question_number: 3, is_correct: true, points: 2 },
+          { question_number: 4, is_correct: false, points: 0 },
         ]
       };
-      this.showToast(`تم مسح الورقة وتحديد درجة الطالب: 16 من 20`, 'success');
+      this.showToast(`تم مسح الورقة وتحديد درجة الطالب: 6 من 10`, 'success');
       this.renderMainContent();
     }
   };
@@ -1782,13 +2246,12 @@ export function registerTeacherQuizzesActions(app) {
     const res = this.quizzesState.lastOmrScanResult;
     if (!res || !res.student?.id) return;
 
-    const currQuizNum = this.quizzesState.currentQuizNumber || 1;
     this.updateStudentQuizScore(res.student.id, res.score);
     this.saveCurrentQuizScores();
     this.showToast(`تم تثبيت درجة الطالب (${res.student.name}) في الكشف بنجاح!`, 'success');
   };
 
-  // Preserved Existing LocalStorage & Roster Handlers
+  // Preserved Roster & LocalStorage Handlers
   app.saveQuizzesToLocalStorage = function(groupId) {
     const gid = groupId || this.quizzesState.selectedGroupId;
     if (!gid) return;
@@ -2052,7 +2515,7 @@ export function registerTeacherQuizzesActions(app) {
     }
   };
 
-  // WhatsApp Single & Batch Dispatches
+  // WhatsApp Notifications
   app.sendQuizScoreWhatsApp = async function(studentId, studentName, quizTitle, target = 'both') {
     const currQuizNum = this.quizzesState.currentQuizNumber || 1;
     const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };

@@ -796,6 +796,28 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                   const qCount = parsedQ.questions?.length || 0;
                   const timeLimit = parsedQ.time_limit_minutes || 20;
 
+                  const todayStr = new Date().toISOString().slice(0, 10);
+                  const nowTimeStr = new Date().toTimeString().slice(0, 5);
+
+                  let isAvailable = true;
+                  let availabilityMsg = '';
+
+                  if (parsedQ.available_date && parsedQ.available_date !== todayStr) {
+                    if (parsedQ.available_date > todayStr) {
+                      isAvailable = false;
+                      availabilityMsg = `متاح بتاريخ ${parsedQ.available_date}`;
+                    } else {
+                      isAvailable = false;
+                      availabilityMsg = 'انتهت فترة الامتحان';
+                    }
+                  } else if (parsedQ.start_time && nowTimeStr < parsedQ.start_time) {
+                    isAvailable = false;
+                    availabilityMsg = `يبدأ الساعة ${parsedQ.start_time}`;
+                  } else if (parsedQ.end_time && nowTimeStr > parsedQ.end_time) {
+                    isAvailable = false;
+                    availabilityMsg = 'انتهى وقت الامتحان';
+                  }
+
                   return `
                     <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 0.75rem; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                       <div>
@@ -806,6 +828,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                           <span>${qCount} أسئلة</span>
                           <span>•</span>
                           <span>المدة: ${timeLimit} دقيقة</span>
+                          ${parsedQ.start_time && parsedQ.end_time ? `<span>• (من ${parsedQ.start_time} إلى ${parsedQ.end_time})</span>` : ''}
                         </div>
                       </div>
 
@@ -820,6 +843,11 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                             ${getIcon('clock', 14, '#d97706')}
                             <span>تم التسليم (قيد تصحيح المقالي بالعين)</span>
                           </span>
+                        ` : (!isAvailable ? `
+                          <span style="background: #fef2f2; color: #b91c1c; font-weight: 800; font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 0.5rem; border: 1px solid #fecaca; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            ${getIcon('clock', 14, '#b91c1c')}
+                            <span>${escapeHtml(availabilityMsg)}</span>
+                          </span>
                         ` : `
                           <button 
                             type="button" 
@@ -830,7 +858,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                             <span>بدء الامتحان الآن</span>
                             <span>←</span>
                           </button>
-                        `)}
+                        `))}
                       </div>
                     </div>
                   `;
