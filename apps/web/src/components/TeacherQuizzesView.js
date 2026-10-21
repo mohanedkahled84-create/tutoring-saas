@@ -1470,40 +1470,59 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
   };
 
   if (paperMode === 'create') {
+    const paperWizardStep = state.paperWizardStep || 1;
     const activePaperQuiz = state.activePaperQuiz || {
       id: null,
       quiz_number: currentQuiz.number || 1,
       title: '',
       subject: activeGroup?.subject || "الفيزياء",
+      question_count: 10,
+      max_score: 20,
       time_limit_minutes: 45,
-      questions: [
-        { id: 'pq_1', type: 'mcq', text: '', image_url: '', choices: ['', '', '', ''], correct_index: 0, points: 2 }
-      ]
+      exam_mode: 'paper',
+      questions: []
     };
-    const questions = activePaperQuiz.questions || [];
-    const totalPoints = questions.reduce((s, q) => s + Number(q.points || 1), 0);
 
-    return `
-      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-        
-        <!-- Builder Header Card -->
-        <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--centrly-line); padding-bottom: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.5rem;">
-                ${getIcon('edit', 22, 'var(--centrly-blue-700)')}
-                <span>تصميم وبناء امتحان ورقي جديد وتوليد النماذج والـ Bubble Sheet</span>
-              </h3>
-              <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
-                أضف الأسئلة، اختر نوعها (MCQ أو مقالي)، أضف صور المسائل، وسيقوم النظام تلقائياً بتوليد 3 نماذج مشفرة الباركود وورقة بابل شيت متوافقة مع الماسح.
-              </p>
-            </div>
+    const currentQCount = Number(activePaperQuiz.question_count || (activePaperQuiz.questions?.length > 0 ? activePaperQuiz.questions.length : 10));
+    const currentMaxScore = Number(activePaperQuiz.max_score || (currentQCount * 2));
+    const currentTimeLimit = Number(activePaperQuiz.time_limit_minutes || 45);
+    const defaultPointsPerQ = Math.max(0.5, Math.round((currentMaxScore / currentQCount) * 10) / 10);
 
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.4rem 0.85rem; text-align: center;">
-                <span style="font-size: 0.72rem; color: #1e40af; font-weight: 700; display: block;">الدرجة العظمى</span>
-                <span style="font-size: 1.15rem; font-weight: 900; color: #1e3a8a;">${totalPoints} درجات</span>
+    // =========================================================================
+    // STEP 1: Paper Exam Settings & Scoring Rules (إعداد وضوابط الامتحان الورقي)
+    // =========================================================================
+    if (paperWizardStep === 1) {
+      const qCountChips = [5, 10, 15, 20, 25, 30, 40];
+      const maxScoreChips = [10, 20, 30, 40, 50, 60, 100];
+      const timeChips = [
+        { val: 15, label: '15 دقيقة' },
+        { val: 30, label: '30 دقيقة' },
+        { val: 45, label: '45 دقيقة' },
+        { val: 60, label: '60 دقيقة (ساعة)' },
+        { val: 90, label: '90 دقيقة (ساعة ونصف)' },
+        { val: 120, label: '120 دقيقة (ساعتان)' }
+      ];
+
+      return `
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+          
+          <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
+            
+            <!-- Step Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--centrly-line); padding-bottom: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-blue-700); margin-bottom: 0.2rem;">
+                  الخطوة 1 من 2
+                </div>
+                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.5rem;">
+                  ${getIcon('edit', 22, 'var(--centrly-blue-700)')}
+                  <span>إعداد وضوابط الامتحان الورقي وتوزيع الدرجات</span>
+                </h3>
+                <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
+                  حدد عدد الأسئلة والدرجة الكلية وزمن الإجابة، وسيقوم النظام بتوزيع الدرجات تلقائياً وتجهيز نماذج البابل شيت المتوافقة.
+                </p>
               </div>
+
               <button 
                 type="button" 
                 class="btn btn-secondary" 
@@ -1513,398 +1532,729 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 إلغاء والعودة للمعاينة
               </button>
             </div>
-          </div>
 
-          <!-- Meta inputs -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--centrly-line); margin-bottom: 1.5rem;">
-            <div>
-              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">عنوان / موضوع الامتحان الورقي:</label>
-              <input 
-                type="text" 
-                id="paperQuizTitle" 
-                class="form-input" 
-                value="${escapeHtml(activePaperQuiz.title || '')}" 
-                placeholder="مثال: امتحان نصف العام الدراسي - الباب الأول"
-                style="font-weight: 800;"
-                onchange="window.centrlyApp.updatePaperMeta('title', this.value)"
-              />
-            </div>
+            <!-- Settings Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
+              
+              <!-- Exam Title -->
+              <div>
+                <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">عنوان / موضوع الامتحان الورقي:</label>
+                <input 
+                  type="text" 
+                  id="paperQuizTitle" 
+                  class="form-input" 
+                  value="${escapeHtml(activePaperQuiz.title || '')}" 
+                  placeholder="مثال: امتحان نصف العام - الباب الأول"
+                  style="font-weight: 800;"
+                  onchange="window.centrlyApp.updatePaperMeta('title', this.value)"
+                />
+              </div>
 
-            <div>
-              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">اسم المادة الدراسية:</label>
-              <input 
-                type="text" 
-                id="paperQuizSubject" 
-                class="form-input" 
-                value="${escapeHtml(activePaperQuiz.subject || 'الفيزياء')}" 
-                placeholder="مثال: مادة الفيزياء"
-                style="font-weight: 800;"
-                onchange="window.centrlyApp.updatePaperMeta('subject', this.value)"
-              />
-            </div>
+              <!-- Subject -->
+              <div>
+                <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">اسم المادة الدراسية:</label>
+                <input 
+                  type="text" 
+                  id="paperQuizSubject" 
+                  class="form-input" 
+                  value="${escapeHtml(activePaperQuiz.subject || 'الفيزياء')}" 
+                  placeholder="مثال: مادة الفيزياء"
+                  style="font-weight: 800;"
+                  onchange="window.centrlyApp.updatePaperMeta('subject', this.value)"
+                />
+              </div>
 
-            <div>
-              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">رقم الكويز التسلسلي:</label>
-              <input 
-                type="number" 
-                id="paperQuizNumber" 
-                class="form-input" 
-                value="${activePaperQuiz.quiz_number || 1}" 
-                min="1" 
-                step="1"
-                style="font-weight: 800;"
-                onchange="window.centrlyApp.updatePaperMeta('quiz_number', this.value)"
-              />
-            </div>
-
-            <div>
-              <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">زمن الامتحان المخصص (بالدقائق):</label>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <!-- Quiz Number -->
+              <div>
+                <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">رقم الكويز التسلسلي:</label>
                 <input 
                   type="number" 
-                  id="paperQuizTimeLimit" 
+                  id="paperQuizNumber" 
                   class="form-input" 
-                  value="${activePaperQuiz.time_limit_minutes || 45}" 
-                  min="5" 
-                  max="240"
-                  style="text-align: center; font-weight: 900; font-size: 1rem; width: 90px;"
-                  onchange="window.centrlyApp.updatePaperMeta('time_limit_minutes', this.value)"
+                  value="${activePaperQuiz.quiz_number || 1}" 
+                  min="1" 
+                  step="1" 
+                  style="font-weight: 800;"
+                  onchange="window.centrlyApp.updatePaperMeta('quiz_number', this.value)"
                 />
-                <span style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-text);">دقيقة</span>
               </div>
-            </div>
-          </div>
 
-          <!-- Questions List -->
-          <div style="display: flex; flex-direction: column; gap: 1rem;">
-            ${questions.map((q, qIdx) => {
-              const isMcq = q.type !== 'essay';
-              const isQImageOnly = q.format === 'image_only' || (q.format !== 'standard' && !q.text?.trim() && !!q.image_url);
-              return `
-                <div class="card" style="margin: 0; border: 1.5px solid ${isMcq ? '#cbd5e1' : '#fbcfe8'}; background: #ffffff; border-radius: 12px; position: relative;" onclick="if(window.centrlyApp) window.centrlyApp.quizzesState.activePaperPasteQIdx = ${qIdx}">
-                  
-                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
-                      <span style="background: var(--centrly-blue-700); color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.95rem;">
-                        ${qIdx + 1}
-                      </span>
-                      <div style="display: flex; gap: 0.35rem; background: #f1f5f9; padding: 3px; border-radius: 8px;">
-                        <button 
-                          type="button" 
-                          class="btn ${isMcq ? 'btn-primary' : 'btn-secondary'}" 
-                          style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
-                          onclick="window.centrlyApp.updatePaperQuestion(${qIdx}, 'type', 'mcq')"
-                        >
-                          اختيار من متعدد (MCQ)
-                        </button>
-                        <button 
-                          type="button" 
-                          class="btn ${!isMcq ? 'btn-primary' : 'btn-secondary'}" 
-                          style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
-                          onclick="window.centrlyApp.updatePaperQuestion(${qIdx}, 'type', 'essay')"
-                        >
-                          سؤال مقالي (Essay)
-                        </button>
-                      </div>
-
-                      <!-- Format Selector: Standard vs Image-Only -->
-                      <div style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <button 
-                          type="button" 
-                          class="btn ${!isQImageOnly ? 'btn-primary' : 'btn-secondary'}" 
-                          style="padding: 0.3rem 0.65rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
-                          onclick="window.centrlyApp.setPaperQuestionFormat(${qIdx}, 'standard')"
-                        >
-                          سؤال نصي
-                        </button>
-                        <button 
-                          type="button" 
-                          class="btn ${isQImageOnly ? 'btn-primary' : 'btn-secondary'}" 
-                          style="padding: 0.3rem 0.65rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem; ${isQImageOnly ? 'background: #0284c7; border-color: #0284c7; color: #fff;' : ''}"
-                          onclick="window.centrlyApp.setPaperQuestionFormat(${qIdx}, 'image_only')"
-                          title="تفعيل وضع صورة السؤال بالكامل من الكتاب أو المذكرة دون كتابة نص"
-                        >
-                          ${getIcon('camera', 13, isQImageOnly ? '#fff' : 'var(--centrly-blue-700)')}
-                          <span>السؤال صورة بالكامل</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                      <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                        <label style="font-size: 0.8rem; font-weight: 700; color: var(--centrly-text);">درجة السؤال:</label>
-                        <input 
-                          type="number" 
-                          class="form-input" 
-                          value="${q.points || 2}" 
-                          min="0.5" 
-                          step="0.5" 
-                          style="width: 65px; text-align: center; padding: 0.25rem; font-weight: 800;"
-                          onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'points', this.value)"
-                        />
-                      </div>
-
+              <!-- Total Questions with Quick Chips -->
+              <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <label class="form-label" style="font-weight: 800; font-size: 0.85rem; margin: 0;">عدد أسئلة الامتحان:</label>
+                  <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <input 
+                      type="number" 
+                      id="paperQuizQuestionCount" 
+                      class="form-input" 
+                      value="${currentQCount}" 
+                      min="1" 
+                      max="100" 
+                      style="width: 75px; text-align: center; font-weight: 900; font-size: 1rem; padding: 0.25rem; border: 2px solid var(--centrly-blue-700);"
+                      onchange="window.centrlyApp.setPaperMetaQuick('question_count', this.value)"
+                    />
+                    <span style="font-size: 0.82rem; font-weight: 700; color: #475569;">سؤال</span>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem;">
+                  ${qCountChips.map(n => {
+                    const isSel = n === currentQCount;
+                    return `
                       <button 
                         type="button" 
-                        class="btn btn-secondary" 
-                        style="color: #dc2626; padding: 0.35rem 0.65rem; font-size: 0.78rem;"
-                        onclick="window.centrlyApp.removePaperQuestion(${qIdx})"
-                        title="حذف هذا السؤال"
+                        class="btn" 
+                        style="padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isSel ? 'var(--centrly-blue-700)' : '#cbd5e1'}; background: ${isSel ? 'var(--centrly-blue-700)' : '#ffffff'}; color: ${isSel ? '#ffffff' : '#334155'};"
+                        onclick="window.centrlyApp.setPaperMetaQuick('question_count', ${n})"
                       >
-                        ${getIcon('delete', 14, '#dc2626')}
-                        <span>حذف</span>
+                        ${n} أسئلة
                       </button>
-                    </div>
-                  </div>
-
-                  ${isQImageOnly ? `
-                    <!-- Image-Only Hero Box for Paper Exam -->
-                    <div style="background: #f0fdf4; border: 2px dashed ${q.image_url ? '#10b981' : '#86efac'}; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem; text-align: right;">
-                        <div>
-                          <span style="font-size: 0.9rem; font-weight: 800; color: #166534; display: flex; align-items: center; gap: 0.35rem;">
-                            ${getIcon('camera', 16, '#166534')}
-                            <span>صورة السؤال بالكامل (قص من كتاب أو مذكرة للطباعة في ورقة الامتحان):</span>
-                          </span>
-                          <span style="font-size: 0.72rem; color: #15803d;">
-                            صيغة المسألة معروضة بالصورة كاملة دون الحاجة لكتابة أي نص.
-                          </span>
-                        </div>
-
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                          <input 
-                            type="file" 
-                            id="paperQImageInput_${qIdx}" 
-                            accept="image/*" 
-                            capture="environment" 
-                            style="display: none;" 
-                            onchange="window.centrlyApp.handlePaperImageUpload(${qIdx}, this.files[0])"
-                          />
-                          <button 
-                            type="button" 
-                            class="btn btn-primary" 
-                            style="font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;"
-                            onclick="document.getElementById('paperQImageInput_${qIdx}').click()"
-                          >
-                            ${getIcon('upload', 14, '#ffffff')}
-                            <span>${q.image_url ? 'تغيير صورة السؤال' : 'رفع / تصوير صورة السؤال'}</span>
-                          </button>
-
-                          ${q.image_url ? `
-                            <button 
-                              type="button" 
-                              class="btn btn-secondary" 
-                              style="color: #dc2626; border-color: #fecaca; font-size: 0.8rem; padding: 0.35rem 0.65rem;"
-                              onclick="window.centrlyApp.removePaperImage(${qIdx})"
-                              title="إزالة الصورة"
-                            >
-                              ${getIcon('delete', 14, '#dc2626')}
-                              <span>حذف الصورة</span>
-                            </button>
-                          ` : ''}
-                        </div>
-                      </div>
-
-                      ${q.image_url ? `
-                        <div style="background: #ffffff; padding: 0.5rem; border-radius: 6px; border: 1px solid #bbf7d0; display: inline-block; max-width: 100%;">
-                          <img 
-                            src="${escapeHtml(q.image_url)}" 
-                            alt="صورة السؤال" 
-                            style="max-height: 240px; max-width: 100%; border-radius: 6px; object-fit: contain;"
-                          />
-                        </div>
-                      ` : `
-                        <div 
-                          style="padding: 1.25rem 1rem; border: 1.5px dashed #86efac; background: #ffffff; border-radius: 6px; cursor: pointer;"
-                          onclick="document.getElementById('paperQImageInput_${qIdx}').click()"
-                        >
-                          <div style="background: #dcfce7; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem auto; color: #15803d;">
-                            ${getIcon('camera', 24, '#15803d')}
-                          </div>
-                          <div style="font-weight: 800; font-size: 0.9rem; color: #166534;">اضغط لرفع أو تصوير صورة السؤال بالكامل</div>
-                          <div style="font-size: 0.72rem; color: #15803d;">(أو انقر هنا والصق الصورة بـ <b>Ctrl + V</b>)</div>
-                        </div>
-                      `}
-
-                      <div style="margin-top: 0.5rem; text-align: right;">
-                        <details style="font-size: 0.78rem; color: #475569;">
-                          <summary style="cursor: pointer; font-weight: 700; color: #166534;">+ إضافة عنوان أو رأس سؤال اختياري</summary>
-                          <input 
-                            type="text" 
-                            class="form-input" 
-                            value="${escapeHtml(q.text || '')}" 
-                            placeholder="عنوان أو ملاحظة اختيارية..." 
-                            style="margin-top: 0.35rem; font-size: 0.82rem;"
-                            onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'text', this.value)"
-                          />
-                        </details>
-                      </div>
-                    </div>
-                  ` : `
-                    <!-- Standard Question Textarea -->
-                    <div style="margin-bottom: 0.75rem;">
-                      <label style="font-size: 0.82rem; font-weight: 700; color: var(--centrly-ink); margin-bottom: 0.35rem; display: block;">
-                        نص السؤال:
-                      </label>
-                      <textarea 
-                        class="form-input" 
-                        rows="2" 
-                        placeholder="اكتب صيغة السؤال هنا بوضوح..."
-                        style="font-size: 0.92rem; font-weight: 700; width: 100%;"
-                        onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'text', this.value)"
-                      >${escapeHtml(q.text || '')}</textarea>
-                    </div>
-
-                    <!-- Question Image Uploader -->
-                    <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
-                      <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <div style="color: var(--centrly-blue-700);">${getIcon('camera', 22, 'var(--centrly-blue-700)')}</div>
-                        <div>
-                          <span style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); display: block;">صورة مسألة أو رسم بياني للسؤال:</span>
-                          <span style="font-size: 0.72rem; color: var(--centrly-text);">التقط صورة بكاميرا الهاتف أو اختر صورة من جهازك</span>
-                        </div>
-                      </div>
-
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <input 
-                          type="file" 
-                          id="paperQImageInput_${qIdx}" 
-                          accept="image/*" 
-                          capture="environment" 
-                          style="display: none;" 
-                          onchange="window.centrlyApp.handlePaperImageUpload(${qIdx}, this.files[0])"
-                        />
-                        <button 
-                          type="button" 
-                          class="btn btn-secondary" 
-                          style="font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.85rem;"
-                          onclick="document.getElementById('paperQImageInput_${qIdx}').click()"
-                        >
-                          ${getIcon('upload', 14)}
-                          <span>${q.image_url ? 'تغيير الصورة' : 'رفع / تصوير صورة'}</span>
-                        </button>
-
-                        ${q.image_url ? `
-                          <button 
-                            type="button" 
-                            class="btn btn-secondary" 
-                            style="color: #dc2626; font-size: 0.8rem; padding: 0.35rem 0.65rem;"
-                            onclick="window.centrlyApp.removePaperImage(${qIdx})"
-                            title="إزالة الصورة"
-                          >
-                            ${getIcon('delete', 14, '#dc2626')}
-                          </button>
-                        ` : ''}
-                      </div>
-
-                      ${q.image_url ? `
-                        <div style="width: 100%; margin-top: 0.5rem; text-align: center;">
-                          <img 
-                            src="${escapeHtml(q.image_url)}" 
-                            alt="صورة السؤال" 
-                            style="max-height: 180px; max-width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 4px rgba(0,0,0,0.1);"
-                          />
-                        </div>
-                      ` : ''}
-                    </div>
-                  `}
-
-                  <!-- MCQ Choices or Essay Model Answer -->
-                  ${isMcq ? `
-                    <div>
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
-                        <span style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-ink);">
-                          خيارات الإجابة (اختر الدائرة المقابلة للإجابة الصحيحة):
-                        </span>
-                        ${isQImageOnly ? `
-                          <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">
-                            💡 إذا كانت الاختيارات موجودة داخل الصورة، اختر الدائرة الصحيحة فقط دون كتابة نص
-                          </span>
-                        ` : ''}
-                      </div>
-                      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.65rem;">
-                        ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
-                          const isCorrect = Number(q.correct_index) === optIdx;
-                          return `
-                            <div style="display: flex; align-items: center; gap: 0.5rem; background: ${isCorrect ? '#f0fdf4' : '#ffffff'}; border: 1.5px solid ${isCorrect ? '#10b981' : '#e2e8f0'}; border-radius: 8px; padding: 0.45rem 0.65rem;">
-                              <input 
-                                type="radio" 
-                                name="paperCorrectRadio_${qIdx}" 
-                                value="${optIdx}" 
-                                ${isCorrect ? 'checked' : ''} 
-                                style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981;"
-                                onchange="window.centrlyApp.setPaperCorrectChoice(${qIdx}, ${optIdx})"
-                              />
-                              <span style="font-weight: 900; font-size: 0.9rem; color: ${isCorrect ? '#047857' : '#64748b'}; width: 22px;">(${letter})</span>
-                              <input 
-                                type="text" 
-                                class="form-input" 
-                                value="${escapeHtml(q.choices?.[optIdx] || '')}" 
-                                placeholder="${isQImageOnly ? `خيار (${letter}) - اختياري...` : `خيار (${letter})...`}" 
-                                style="flex: 1; padding: 0.35rem 0.55rem; font-size: 0.88rem; font-weight: 700; border: none; background: transparent;"
-                                onchange="window.centrlyApp.updatePaperChoice(${qIdx}, ${optIdx}, this.value)"
-                              />
-                            </div>
-                          `;
-                        }).join('')}
-                      </div>
-                    </div>
-                  ` : `
-                    <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 8px; padding: 0.85rem;">
-                      <label style="font-size: 0.82rem; font-weight: 800; color: #9d174d; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
-                        ${getIcon('lightbulb', 16, '#9d174d')}
-                        <span>الإجابة النموذجية الاسترشادية:</span>
-                      </label>
-                      <textarea 
-                        class="form-input" 
-                        rows="2" 
-                        placeholder="اكتب خطوات الحل أو الإجابة النموذجية..."
-                        style="font-size: 0.88rem; width: 100%; border: 1px solid #f472b6; background: #ffffff;"
-                        onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'model_answer', this.value)"
-                      >${escapeHtml(q.model_answer || '')}</textarea>
-                    </div>
-                  `}
-
+                    `;
+                  }).join('')}
                 </div>
-              `;
-            }).join('')}
-          </div>
+              </div>
 
-          <!-- Add question & Save buttons -->
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; border-top: 1px solid var(--centrly-line); padding-top: 1.25rem;">
-            <button 
-              type="button" 
-              class="btn btn-secondary" 
-              style="padding: 0.65rem 1.25rem; font-weight: 800; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem; border-style: dashed; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700);"
-              onclick="window.centrlyApp.addPaperQuestion()"
-            >
-              ${getIcon('add', 18, 'var(--centrly-blue-700)')}
-              <span>+ إضافة سؤال تالٍ للامتحان</span>
-            </button>
+              <!-- Max Score with Quick Chips -->
+              <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <label class="form-label" style="font-weight: 800; font-size: 0.85rem; margin: 0;">الدرجة الكلية (الدرجة من كام؟):</label>
+                  <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <input 
+                      type="number" 
+                      id="paperQuizMaxScore" 
+                      class="form-input" 
+                      value="${currentMaxScore}" 
+                      min="1" 
+                      max="300" 
+                      style="width: 75px; text-align: center; font-weight: 900; font-size: 1rem; padding: 0.25rem; border: 2px solid #059669; color: #065f46;"
+                      onchange="window.centrlyApp.setPaperMetaQuick('max_score', this.value)"
+                    />
+                    <span style="font-size: 0.82rem; font-weight: 700; color: #475569;">درجة</span>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem;">
+                  ${maxScoreChips.map(s => {
+                    const isSel = s === currentMaxScore;
+                    return `
+                      <button 
+                        type="button" 
+                        class="btn" 
+                        style="padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isSel ? '#059669' : '#cbd5e1'}; background: ${isSel ? '#059669' : '#ffffff'}; color: ${isSel ? '#ffffff' : '#334155'};"
+                        onclick="window.centrlyApp.setPaperMetaQuick('max_score', ${s})"
+                      >
+                        ${s} درجة
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
 
-            <div style="display: flex; gap: 0.75rem; align-items: center;">
+              <!-- Time Limit with Quick Chips -->
+              <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <label class="form-label" style="font-weight: 800; font-size: 0.85rem; margin: 0;">زمن الامتحان المخصص للطلاب:</label>
+                  <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <input 
+                      type="number" 
+                      id="paperQuizTimeLimit" 
+                      class="form-input" 
+                      value="${currentTimeLimit}" 
+                      min="5" 
+                      max="240" 
+                      style="width: 75px; text-align: center; font-weight: 900; font-size: 1rem; padding: 0.25rem; border: 2px solid #d97706; color: #b45309;"
+                      onchange="window.centrlyApp.setPaperMetaQuick('time_limit_minutes', this.value)"
+                    />
+                    <span style="font-size: 0.82rem; font-weight: 700; color: #475569;">دقيقة</span>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem;">
+                  ${timeChips.map(t => {
+                    const isSel = t.val === currentTimeLimit;
+                    return `
+                      <button 
+                        type="button" 
+                        class="btn" 
+                        style="padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isSel ? '#d97706' : '#cbd5e1'}; background: ${isSel ? '#d97706' : '#ffffff'}; color: ${isSel ? '#ffffff' : '#334155'};"
+                        onclick="window.centrlyApp.setPaperMetaQuick('time_limit_minutes', ${t.val})"
+                      >
+                        ${t.label}
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Real-time Scoring & Distribution Banner -->
+            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 0.85rem 1rem; margin-top: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="color: var(--centrly-blue-700);">${getIcon('lightbulb', 24, 'var(--centrly-blue-700)')}</div>
+                <div>
+                  <span style="font-size: 0.9rem; font-weight: 800; color: #1e3a8a; display: block;">
+                    احتساب وتوزيع الدرجات التلقائي:
+                  </span>
+                  <span style="font-size: 0.82rem; color: #1e40af;">
+                    الدرجة الكلية (${currentMaxScore} درجة) ÷ إجمالي الأسئلة (${currentQCount} سؤال) = <b>${defaultPointsPerQ} درجات لكل سؤال</b> (يمكنك تخصيص درجة كل سؤال بشكل مستقل في الخطوة التالية).
+                  </span>
+                </div>
+              </div>
+              <div style="background: #ffffff; border: 1.5px solid #bfdbfe; padding: 0.45rem 1rem; border-radius: 8px; text-align: center;">
+                <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">الدرجة الافتراضية لكل سؤال</span>
+                <span style="font-size: 1.2rem; font-weight: 900; color: #1e3a8a;">${defaultPointsPerQ} درجات</span>
+              </div>
+            </div>
+
+            <!-- Smart Automation Notice -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; margin-top: 1rem;">
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem 1rem; display: flex; align-items: flex-start; gap: 0.65rem;">
+                <div style="color: #166534; margin-top: 2px;">${getIcon('check', 18, '#166534')}</div>
+                <div style="font-size: 0.82rem; color: #14532d; line-height: 1.5;">
+                  <b>توليد بابل شيت متوافق تلقائياً:</b> سيتم تجهيز ورقة بابل شيت مطابقة تماماً لعدد الأسئلة (${currentQCount} سؤال) مع خانات تظليل كود الطالب المكون من 4 خانات.
+                </div>
+              </div>
+
+              <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 0.75rem 1rem; display: flex; align-items: flex-start; gap: 0.65rem;">
+                <div style="color: #7e22ce; margin-top: 2px;">${getIcon('camera', 18, '#7e22ce')}</div>
+                <div style="font-size: 0.82rem; color: #581c87; line-height: 1.5;">
+                  <b>تشفير النماذج الثلاثة (A / B / C):</b> تشفير ذكي وسري برمز باركود بدون طباعة اسم النموذج أمام الطالب لمنع الغش والتواطؤ داخل القاعة.
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; margin-top: 1.5rem; border-top: 1px solid var(--centrly-line); padding-top: 1.25rem;">
               <button 
                 type="button" 
                 class="btn btn-secondary" 
-                style="padding: 0.65rem 1.25rem; font-weight: 800;"
+                style="padding: 0.6rem 1.25rem; font-weight: 800;"
                 onclick="window.centrlyApp.cancelPaperExamCreate()"
               >
                 إلغاء
+              </button>
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                style="padding: 0.65rem 1.75rem; font-weight: 900; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
+                onclick="window.centrlyApp.proceedToPaperQuestionsStep()"
+              >
+                <span>متابعة: كتابة وتصميم الأسئلة (سؤال 1)</span>
+                ${getIcon('arrowRight', 16, '#ffffff')}
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // STEP 2: Paper Exam Questions Builder (كتابة وتصميم الأسئلة)
+    // =========================================================================
+    const questions = activePaperQuiz.questions || [];
+    const totalQuestions = questions.length || currentQCount;
+    const currentPaperQIdx = Math.max(0, Math.min(totalQuestions - 1, state.currentPaperQIdx || 0));
+    const layoutMode = state.paperLayoutMode || 'single'; // 'single' | 'all'
+    const totalCurrentPoints = questions.reduce((s, q) => s + Number(q.points || 1), 0);
+    const targetScore = activePaperQuiz.max_score || (totalQuestions * 2);
+    const isScoreMatched = totalCurrentPoints === targetScore;
+    const progressPct = Math.round(((currentPaperQIdx + 1) / totalQuestions) * 100);
+
+    const renderQuestionCardInner = (q, qIdx) => {
+      const isMcq = q.type !== 'essay';
+      const isQImageOnly = q.format === 'image_only' || (q.format !== 'standard' && !q.text?.trim() && !!q.image_url);
+
+      return `
+        <div class="card" style="margin: 0; border: 1.5px solid ${isMcq ? '#cbd5e1' : '#fbcfe8'}; background: #ffffff; border-radius: 12px; position: relative;" onclick="if(window.centrlyApp) window.centrlyApp.quizzesState.activePaperPasteQIdx = ${qIdx}">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+              <span style="background: var(--centrly-blue-700); color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.95rem;">
+                ${qIdx + 1}
+              </span>
+              <div style="display: flex; gap: 0.35rem; background: #f1f5f9; padding: 3px; border-radius: 8px;">
+                <button 
+                  type="button" 
+                  class="btn ${isMcq ? 'btn-primary' : 'btn-secondary'}" 
+                  style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
+                  onclick="window.centrlyApp.updatePaperQuestion(${qIdx}, 'type', 'mcq')"
+                >
+                  اختيار من متعدد (MCQ)
+                </button>
+                <button 
+                  type="button" 
+                  class="btn ${!isMcq ? 'btn-primary' : 'btn-secondary'}" 
+                  style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
+                  onclick="window.centrlyApp.updatePaperQuestion(${qIdx}, 'type', 'essay')"
+                >
+                  سؤال مقالي (Essay)
+                </button>
+              </div>
+
+              <!-- Format Selector: Standard vs Image-Only -->
+              <div style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <button 
+                  type="button" 
+                  class="btn ${!isQImageOnly ? 'btn-primary' : 'btn-secondary'}" 
+                  style="padding: 0.3rem 0.65rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
+                  onclick="window.centrlyApp.setPaperQuestionFormat(${qIdx}, 'standard')"
+                >
+                  سؤال نصي
+                </button>
+                <button 
+                  type="button" 
+                  class="btn ${isQImageOnly ? 'btn-primary' : 'btn-secondary'}" 
+                  style="padding: 0.3rem 0.65rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem; ${isQImageOnly ? 'background: #0284c7; border-color: #0284c7; color: #fff;' : ''}"
+                  onclick="window.centrlyApp.setPaperQuestionFormat(${qIdx}, 'image_only')"
+                  title="تفعيل وضع صورة السؤال بالكامل من الكتاب أو المذكرة دون كتابة نص"
+                >
+                  ${getIcon('camera', 13, isQImageOnly ? '#fff' : 'var(--centrly-blue-700)')}
+                  <span>السؤال صورة بالكامل</span>
+                </button>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: var(--centrly-text);">درجة السؤال:</label>
+                <input 
+                  type="number" 
+                  class="form-input" 
+                  value="${q.points || defaultPointsPerQ}" 
+                  min="0.5" 
+                  step="0.5" 
+                  style="width: 65px; text-align: center; padding: 0.25rem; font-weight: 800;"
+                  onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'points', this.value)"
+                />
+              </div>
+
+              <button 
+                type="button" 
+                class="btn btn-secondary" 
+                style="color: #dc2626; padding: 0.35rem 0.65rem; font-size: 0.78rem;"
+                onclick="window.centrlyApp.removePaperQuestion(${qIdx})"
+                title="حذف هذا السؤال"
+              >
+                ${getIcon('delete', 14, '#dc2626')}
+                <span>حذف</span>
+              </button>
+            </div>
+          </div>
+
+          ${isQImageOnly ? `
+            <!-- Image-Only Hero Box for Paper Exam -->
+            <div style="background: #f0fdf4; border: 2px dashed ${q.image_url ? '#10b981' : '#86efac'}; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem; text-align: right;">
+                <div>
+                  <span style="font-size: 0.9rem; font-weight: 800; color: #166534; display: flex; align-items: center; gap: 0.35rem;">
+                    ${getIcon('camera', 16, '#166534')}
+                    <span>صورة السؤال بالكامل (قص من كتاب أو مذكرة للطباعة في ورقة الامتحان):</span>
+                  </span>
+                  <span style="font-size: 0.72rem; color: #15803d;">
+                    صيغة المسألة معروضة بالصورة كاملة دون الحاجة لكتابة أي نص.
+                  </span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <input 
+                    type="file" 
+                    id="paperQImageInput_${qIdx}" 
+                    accept="image/*" 
+                    capture="environment" 
+                    style="display: none;" 
+                    onchange="window.centrlyApp.handlePaperImageUpload(${qIdx}, this.files[0])"
+                  />
+                  <button 
+                    type="button" 
+                    class="btn btn-primary" 
+                    style="font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;"
+                    onclick="document.getElementById('paperQImageInput_${qIdx}').click()"
+                  >
+                    ${getIcon('upload', 14, '#ffffff')}
+                    <span>${q.image_url ? 'تغيير صورة السؤال' : 'رفع / تصوير صورة السؤال'}</span>
+                  </button>
+
+                  ${q.image_url ? `
+                    <button 
+                      type="button" 
+                      class="btn btn-secondary" 
+                      style="color: #dc2626; border-color: #fecaca; font-size: 0.8rem; padding: 0.35rem 0.65rem;"
+                      onclick="window.centrlyApp.removePaperImage(${qIdx})"
+                      title="إزالة الصورة"
+                    >
+                      ${getIcon('delete', 14, '#dc2626')}
+                      <span>حذف الصورة</span>
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+
+              ${q.image_url ? `
+                <div style="background: #ffffff; padding: 0.5rem; border-radius: 6px; border: 1px solid #bbf7d0; display: inline-block; max-width: 100%;">
+                  <img 
+                    src="${escapeHtml(q.image_url)}" 
+                    alt="صورة السؤال" 
+                    style="max-height: 240px; max-width: 100%; border-radius: 6px; object-fit: contain;"
+                  />
+                </div>
+              ` : `
+                <div 
+                  style="padding: 1.25rem 1rem; border: 1.5px dashed #86efac; background: #ffffff; border-radius: 6px; cursor: pointer;"
+                  onclick="document.getElementById('paperQImageInput_${qIdx}').click()"
+                >
+                  <div style="background: #dcfce7; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem auto; color: #15803d;">
+                    ${getIcon('camera', 24, '#15803d')}
+                  </div>
+                  <div style="font-weight: 800; font-size: 0.9rem; color: #166534;">اضغط لرفع أو تصوير صورة السؤال بالكامل</div>
+                  <div style="font-size: 0.72rem; color: #15803d;">(أو انقر هنا والصق الصورة بـ <b>Ctrl + V</b>)</div>
+                </div>
+              `}
+
+              <div style="margin-top: 0.5rem; text-align: right;">
+                <details style="font-size: 0.78rem; color: #475569;">
+                  <summary style="cursor: pointer; font-weight: 700; color: #166534;">+ إضافة عنوان أو رأس سؤال اختياري</summary>
+                  <input 
+                    type="text" 
+                    class="form-input" 
+                    value="${escapeHtml(q.text || '')}" 
+                    placeholder="عنوان أو ملاحظة اختيارية..." 
+                    style="margin-top: 0.35rem; font-size: 0.82rem;"
+                    onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'text', this.value)"
+                  />
+                </details>
+              </div>
+            </div>
+          ` : `
+            <!-- Standard Question Textarea -->
+            <div style="margin-bottom: 0.75rem;">
+              <label style="font-size: 0.82rem; font-weight: 700; color: var(--centrly-ink); margin-bottom: 0.35rem; display: block;">
+                نص السؤال:
+              </label>
+              <textarea 
+                class="form-input" 
+                rows="2" 
+                placeholder="اكتب صيغة السؤال هنا بوضوح..."
+                style="font-size: 0.92rem; font-weight: 700; width: 100%;"
+                onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'text', this.value)"
+              >${escapeHtml(q.text || '')}</textarea>
+            </div>
+
+            <!-- Question Image Uploader -->
+            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="color: var(--centrly-blue-700);">${getIcon('camera', 22, 'var(--centrly-blue-700)')}</div>
+                <div>
+                  <span style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); display: block;">صورة مسألة أو رسم بياني للسؤال:</span>
+                  <span style="font-size: 0.72rem; color: var(--centrly-text);">التقط صورة بكاميرا الهاتف أو اختر صورة من جهازك</span>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <input 
+                  type="file" 
+                  id="paperQImageInput_${qIdx}" 
+                  accept="image/*" 
+                  capture="environment" 
+                  style="display: none;" 
+                  onchange="window.centrlyApp.handlePaperImageUpload(${qIdx}, this.files[0])"
+                />
+                <button 
+                  type="button" 
+                  class="btn btn-secondary" 
+                  style="font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.85rem;"
+                  onclick="document.getElementById('paperQImageInput_${qIdx}').click()"
+                >
+                  ${getIcon('upload', 14)}
+                  <span>${q.image_url ? 'تغيير الصورة' : 'رفع / تصوير صورة'}</span>
+                </button>
+
+                ${q.image_url ? `
+                  <button 
+                    type="button" 
+                    class="btn btn-secondary" 
+                    style="color: #dc2626; font-size: 0.8rem; padding: 0.35rem 0.65rem;"
+                    onclick="window.centrlyApp.removePaperImage(${qIdx})"
+                    title="إزالة الصورة"
+                  >
+                    ${getIcon('delete', 14, '#dc2626')}
+                  </button>
+                ` : ''}
+              </div>
+
+              ${q.image_url ? `
+                <div style="width: 100%; margin-top: 0.5rem; text-align: center;">
+                  <img 
+                    src="${escapeHtml(q.image_url)}" 
+                    alt="صورة السؤال" 
+                    style="max-height: 180px; max-width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 4px rgba(0,0,0,0.1);"
+                  />
+                </div>
+              ` : ''}
+            </div>
+          `}
+
+          <!-- MCQ Choices or Essay Model Answer -->
+          ${isMcq ? `
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-ink);">
+                  خيارات الإجابة (اختر الدائرة المقابلة للإجابة الصحيحة):
+                </span>
+                ${isQImageOnly ? `
+                  <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">
+                    💡 إذا كانت الاختيارات موجودة داخل الصورة، اختر الدائرة الصحيحة فقط دون كتابة نص
+                  </span>
+                ` : ''}
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.65rem;">
+                ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
+                  const isCorrect = Number(q.correct_index) === optIdx;
+                  return `
+                    <div style="display: flex; align-items: center; gap: 0.5rem; background: ${isCorrect ? '#f0fdf4' : '#ffffff'}; border: 1.5px solid ${isCorrect ? '#10b981' : '#e2e8f0'}; border-radius: 8px; padding: 0.45rem 0.65rem;">
+                      <input 
+                        type="radio" 
+                        name="paperCorrectRadio_${qIdx}" 
+                        value="${optIdx}" 
+                        ${isCorrect ? 'checked' : ''} 
+                        style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981;"
+                        onchange="window.centrlyApp.setPaperCorrectChoice(${qIdx}, ${optIdx})"
+                      />
+                      <span style="font-weight: 900; font-size: 0.9rem; color: ${isCorrect ? '#047857' : '#64748b'}; width: 22px;">(${letter})</span>
+                      <input 
+                        type="text" 
+                        class="form-input" 
+                        value="${escapeHtml(q.choices?.[optIdx] || '')}" 
+                        placeholder="${isQImageOnly ? `خيار (${letter}) - اختياري...` : `خيار (${letter})...`}" 
+                        style="flex: 1; padding: 0.35rem 0.55rem; font-size: 0.88rem; font-weight: 700; border: none; background: transparent;"
+                        onchange="window.centrlyApp.updatePaperChoice(${qIdx}, ${optIdx}, this.value)"
+                      />
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : `
+            <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 8px; padding: 0.85rem;">
+              <label style="font-size: 0.82rem; font-weight: 800; color: #9d174d; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
+                ${getIcon('lightbulb', 16, '#9d174d')}
+                <span>الإجابة النموذجية الاسترشادية:</span>
+              </label>
+              <textarea 
+                class="form-input" 
+                rows="2" 
+                placeholder="اكتب خطوات الحل أو الإجابة النموذجية..."
+                style="font-size: 0.88rem; width: 100%; border: 1px solid #f472b6; background: #ffffff;"
+                onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'model_answer', this.value)"
+              >${escapeHtml(q.model_answer || '')}</textarea>
+            </div>
+          `}
+
+        </div>
+      `;
+    };
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <!-- Step 2 Stepper Toolbar Card -->
+        <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="badge badge-blue" style="font-size: 0.85rem; font-weight: 900; padding: 4px 10px;">
+                  الخطوة 2 من 2: كتابة وتصميم الأسئلة
+                </span>
+                <span style="font-weight: 800; font-size: 1rem; color: #0f172a;">
+                  ${escapeHtml(activePaperQuiz.title || 'امتحان ورقي جديد')} (${escapeHtml(activePaperQuiz.subject || 'الفيزياء')})
+                </span>
+              </div>
+              
+              <div style="font-size: 0.78rem; color: var(--centrly-text); margin-top: 0.35rem;">
+                الزمن المخصص: <b>${activePaperQuiz.time_limit_minutes || 45} دقيقة</b> • عدد الأسئلة: <b>${totalQuestions} سؤال</b>
+              </div>
+            </div>
+
+            <!-- Score Summary & Action Buttons -->
+            <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+              
+              <!-- Live Score Pill -->
+              <div style="background: ${isScoreMatched ? '#ecfdf5' : '#fffbeb'}; border: 1.5px solid ${isScoreMatched ? '#a7f3d0' : '#fde68a'}; border-radius: 8px; padding: 0.4rem 0.85rem; text-align: center;">
+                <span style="font-size: 0.72rem; color: ${isScoreMatched ? '#047857' : '#b45309'}; font-weight: 700; display: block;">
+                  ${isScoreMatched ? '✓ مجموع الدرجات مطابق' : 'مجموع الدرجات الحالي'}
+                </span>
+                <span style="font-size: 1.05rem; font-weight: 900; color: ${isScoreMatched ? '#065f46' : '#92400e'};">
+                  ${totalCurrentPoints} / ${targetScore} درجة
+                </span>
+              </div>
+
+              <button 
+                type="button" 
+                class="btn btn-secondary" 
+                style="font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;"
+                onclick="window.centrlyApp.backToPaperStep1Settings()"
+              >
+                ${getIcon('edit', 14)}
+                <span>تعديل إعدادات الامتحان (الخطوة 1)</span>
+              </button>
+
+              <button 
+                type="button" 
+                class="btn btn-secondary" 
+                style="font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;"
+                onclick="window.centrlyApp.togglePaperQuestionsViewMode()"
+              >
+                <span>${layoutMode === 'all' ? 'عرض سؤال بسؤال' : 'عرض كافة الأسئلة في شاشة واحدة'}</span>
               </button>
 
               <button 
                 type="button" 
                 class="btn btn-primary" 
-                style="font-weight: 900; padding: 0.65rem 1.75rem; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.3);"
+                style="font-size: 0.9rem; font-weight: 900; padding: 0.6rem 1.4rem; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
                 onclick="window.centrlyApp.savePaperExam()"
               >
-                ${getIcon('check', 18, '#ffffff')}
+                ${getIcon('check', 16, '#ffffff')}
                 <span>حفظ وتوليد نماذج الامتحان والـ Bubble Sheet</span>
               </button>
             </div>
           </div>
 
+          <!-- Visual Progress Bar (if in single mode) -->
+          ${layoutMode === 'single' ? `
+            <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 4px; margin-top: 1rem; overflow: hidden;">
+              <div style="height: 100%; background: var(--centrly-blue-700); width: ${progressPct}%; transition: width 0.2s ease;"></div>
+            </div>
+          ` : ''}
+
+          <!-- Fast Question Jumpers (1..N) -->
+          <div style="display: flex; gap: 0.4rem; overflow-x: auto; padding: 0.75rem 0 0.25rem 0; margin-top: 0.5rem; align-items: center;">
+            <span style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-ink); margin-left: 0.5rem; white-space: nowrap;">الانتقال السريع:</span>
+            ${Array.from({ length: totalQuestions }).map((_, idx) => {
+              const isCur = idx === currentPaperQIdx;
+              const qData = questions[idx];
+              const hasContent = qData && (qData.text?.trim() || qData.image_url);
+
+              return `
+                <button 
+                  type="button"
+                  style="min-width: 34px; height: 34px; border-radius: 8px; font-weight: 900; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isCur ? 'var(--centrly-blue-700)' : (hasContent ? '#10b981' : '#cbd5e1')}; background: ${isCur ? 'var(--centrly-blue-700)' : (hasContent ? '#ecfdf5' : '#ffffff')}; color: ${isCur ? '#ffffff' : (hasContent ? '#065f46' : '#64748b')};"
+                  onclick="window.centrlyApp.jumpToPaperQuestion(${idx})"
+                  title="سؤال ${idx + 1}"
+                >
+                  ${idx + 1}
+                </button>
+              `;
+            }).join('')}
+          </div>
+
         </div>
+
+        <!-- Questions Rendering Area -->
+        ${layoutMode === 'single' ? `
+          <!-- SINGLE QUESTION VIEW (سؤال بسؤال) -->
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            ${renderQuestionCardInner(questions[currentPaperQIdx] || { id: 'pq_1', type: 'mcq', choices: ['', '', '', ''], points: defaultPointsPerQ }, currentPaperQIdx)}
+
+            <!-- Stepper Footer Navigation -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; background: #ffffff; padding: 1rem 1.25rem; border-radius: 12px; border: 1px solid var(--centrly-line);">
+              <div style="display: flex; gap: 0.65rem; align-items: center;">
+                <button 
+                  type="button" 
+                  class="btn btn-secondary" 
+                  style="font-weight: 800; font-size: 0.85rem; padding: 0.55rem 1.15rem;"
+                  ${currentPaperQIdx === 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
+                  onclick="window.centrlyApp.prevPaperQuestion()"
+                >
+                  ◀ السؤال السابق
+                </button>
+
+                ${currentPaperQIdx < totalQuestions - 1 ? `
+                  <button 
+                    type="button" 
+                    class="btn btn-primary" 
+                    style="font-weight: 800; font-size: 0.85rem; padding: 0.55rem 1.25rem;"
+                    onclick="window.centrlyApp.nextPaperQuestion()"
+                  >
+                    السؤال التالي ▶
+                  </button>
+                ` : `
+                  <button 
+                    type="button" 
+                    class="btn btn-primary" 
+                    style="font-weight: 900; font-size: 0.85rem; padding: 0.55rem 1.25rem; background: #059669; border-color: #059669;"
+                    onclick="window.centrlyApp.savePaperExam()"
+                  >
+                    ✓ إنهاء وحفظ الامتحان
+                  </button>
+                `}
+              </div>
+
+              <div style="display: flex; gap: 0.65rem; align-items: center;">
+                <button 
+                  type="button" 
+                  class="btn btn-secondary" 
+                  style="font-weight: 800; font-size: 0.85rem; color: var(--centrly-blue-700); border-style: dashed; border-color: var(--centrly-blue-700);"
+                  onclick="window.centrlyApp.addPaperQuestion()"
+                >
+                  ${getIcon('add', 16, 'var(--centrly-blue-700)')}
+                  <span>+ إضافة سؤال تالٍ للامتحان</span>
+                </button>
+
+                <button 
+                  type="button" 
+                  class="btn btn-primary" 
+                  style="font-weight: 900; font-size: 0.92rem; padding: 0.6rem 1.5rem; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
+                  onclick="window.centrlyApp.savePaperExam()"
+                >
+                  ${getIcon('check', 16, '#ffffff')}
+                  <span>حفظ وتوليد نماذج الامتحان والـ Bubble Sheet</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        ` : `
+          <!-- ALL QUESTIONS VIEW (عرض كافة الأسئلة في شاشة واحدة) -->
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            ${questions.map((q, qIdx) => renderQuestionCardInner(q, qIdx)).join('')}
+
+            <!-- Bottom Action Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem; border-top: 1px solid var(--centrly-line); padding-top: 1.25rem;">
+              <button 
+                type="button" 
+                class="btn btn-secondary" 
+                style="padding: 0.65rem 1.25rem; font-weight: 800; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem; border-style: dashed; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700);"
+                onclick="window.centrlyApp.addPaperQuestion()"
+              >
+                ${getIcon('add', 18, 'var(--centrly-blue-700)')}
+                <span>+ إضافة سؤال جديد للامتحان</span>
+              </button>
+
+              <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <button 
+                  type="button" 
+                  class="btn btn-secondary" 
+                  style="padding: 0.65rem 1.25rem; font-weight: 800;"
+                  onclick="window.centrlyApp.cancelPaperExamCreate()"
+                >
+                  إلغاء
+                </button>
+
+                <button 
+                  type="button" 
+                  class="btn btn-primary" 
+                  style="font-weight: 900; padding: 0.65rem 1.75rem; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.3);"
+                  onclick="window.centrlyApp.savePaperExam()"
+                >
+                  ${getIcon('check', 18, '#ffffff')}
+                  <span>حفظ وتوليد نماذج الامتحان والـ Bubble Sheet</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        `}
 
       </div>
     `;
@@ -2150,39 +2500,46 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
 
           </div>
 
-          <!-- Answer Bubbles Grid (2 Columns of 15 Questions) -->
+          <!-- Answer Bubbles Grid (Dynamic based on total questions) -->
           <div style="border: 2px solid #000; padding: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-            
-            ${[0, 1].map(colIdx => `
-              <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-                <div style="display: flex; justify-content: space-between; border-bottom: 1.5px solid #000; padding-bottom: 0.25rem; font-weight: 900; font-size: 0.82rem;">
-                  <span>رقم</span>
-                  <div style="display: flex; gap: 1.25rem; padding-left: 0.5rem;">
-                    <span>أ</span>
-                    <span>ب</span>
-                    <span>ج</span>
-                    <span>د</span>
-                  </div>
-                </div>
-
-                ${Array.from({ length: 15 }).map((_, rIdx) => {
-                  const qNum = colIdx * 15 + rIdx + 1;
-                  return `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0;">
-                      <span style="font-weight: 900; font-size: 0.85rem; width: 28px;">${qNum}</span>
-                      <div style="display: flex; gap: 0.95rem;">
-                        ${['أ', 'ب', 'ج', 'د'].map(l => `
-                          <span style="width: 20px; height: 20px; border: 1.5px solid #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">
-                            ${l}
-                          </span>
-                        `).join('')}
+            ${(() => {
+              const totalQ = Math.max(5, (targetQuiz.questions || []).length || 20);
+              const col1Count = Math.ceil(totalQ / 2);
+              const col2Count = totalQ - col1Count;
+              return [0, 1].map(colIdx => {
+                const countThisCol = colIdx === 0 ? col1Count : col2Count;
+                const startNum = colIdx === 0 ? 1 : col1Count + 1;
+                return `
+                  <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1.5px solid #000; padding-bottom: 0.25rem; font-weight: 900; font-size: 0.82rem;">
+                      <span>رقم</span>
+                      <div style="display: flex; gap: 1.25rem; padding-left: 0.5rem;">
+                        <span>أ</span>
+                        <span>ب</span>
+                        <span>ج</span>
+                        <span>د</span>
                       </div>
                     </div>
-                  `;
-                }).join('')}
-              </div>
-            `).join('')}
 
+                    ${Array.from({ length: countThisCol }).map((_, rIdx) => {
+                      const qNum = startNum + rIdx;
+                      return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0;">
+                          <span style="font-weight: 900; font-size: 0.85rem; width: 28px;">${qNum}</span>
+                          <div style="display: flex; gap: 0.95rem;">
+                            ${['أ', 'ب', 'ج', 'د'].map(l => `
+                              <span style="width: 20px; height: 20px; border: 1.5px solid #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">
+                                ${l}
+                              </span>
+                            `).join('')}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                `;
+              }).join('');
+            })()}
           </div>
 
           <!-- Bottom Markers -->
@@ -2713,24 +3070,19 @@ export function registerTeacherQuizzesActions(app) {
     const activeGroup = (this.groups || []).find(g => g.id === this.quizzesState.selectedGroupId) || null;
 
     this.quizzesState.paperViewMode = 'create';
+    this.quizzesState.paperWizardStep = 1;
+    this.quizzesState.currentPaperQIdx = 0;
+    this.quizzesState.paperLayoutMode = 'single';
     this.quizzesState.activePaperQuiz = {
       id: null,
       quiz_number: nextNum,
       title: `امتحان ورقي جديد ${nextNum}`,
       subject: activeGroup?.subject || 'الفيزياء',
+      question_count: 10,
+      max_score: 20,
       time_limit_minutes: 45,
       exam_mode: 'paper',
-      questions: [
-        {
-          id: `pq_${Date.now()}_1`,
-          type: 'mcq',
-          text: '',
-          image_url: '',
-          choices: ['', '', '', ''],
-          correct_index: 0,
-          points: 2
-        }
-      ]
+      questions: []
     };
     this.renderMainContent();
   };
@@ -2744,7 +3096,12 @@ export function registerTeacherQuizzesActions(app) {
     const selectedQuizId = this.quizzesState.printQuizId;
     const matched = (this.quizzesState.richQuizzes || []).find(q => q.id === selectedQuizId) || this.quizzesState.richQuizzes?.[0];
     if (matched) {
-      this.quizzesState.activePaperQuiz = JSON.parse(JSON.stringify(matched));
+      const cloned = JSON.parse(JSON.stringify(matched));
+      const qCount = cloned.questions?.length || 10;
+      const totalPoints = cloned.questions?.reduce((s, q) => s + Number(q.points || 1), 0) || 20;
+      cloned.question_count = qCount;
+      cloned.max_score = totalPoints;
+      this.quizzesState.activePaperQuiz = cloned;
     } else {
       const nextNum = (this.quizzesState.quizzes?.length > 0)
         ? Math.max(...this.quizzesState.quizzes.map(q => q.number)) + 1
@@ -2755,14 +3112,111 @@ export function registerTeacherQuizzesActions(app) {
         quiz_number: nextNum,
         title: `امتحان ورقي ${nextNum}`,
         subject: activeGroup?.subject || 'الفيزياء',
+        question_count: 10,
+        max_score: 20,
         time_limit_minutes: 45,
         exam_mode: 'paper',
-        questions: [
-          { id: `pq_${Date.now()}_1`, type: 'mcq', text: '', image_url: '', choices: ['', '', '', ''], correct_index: 0, points: 2 }
-        ]
+        questions: []
       };
     }
     this.quizzesState.paperViewMode = 'create';
+    this.quizzesState.paperWizardStep = 1;
+    this.quizzesState.currentPaperQIdx = 0;
+    this.quizzesState.paperLayoutMode = 'single';
+    this.renderMainContent();
+  };
+
+  app.setPaperMetaQuick = function(field, val) {
+    if (!this.quizzesState.activePaperQuiz) {
+      this.quizzesState.activePaperQuiz = {};
+    }
+    const numVal = Number(val);
+    this.quizzesState.activePaperQuiz[field] = numVal;
+
+    const countInput = document.getElementById('paperQuizQuestionCount');
+    const scoreInput = document.getElementById('paperQuizMaxScore');
+    const timeInput = document.getElementById('paperQuizTimeLimit');
+    if (field === 'question_count' && countInput) countInput.value = numVal;
+    if (field === 'max_score' && scoreInput) scoreInput.value = numVal;
+    if (field === 'time_limit_minutes' && timeInput) timeInput.value = numVal;
+
+    this.renderMainContent();
+  };
+
+  app.proceedToPaperQuestionsStep = function() {
+    const qz = this.quizzesState.activePaperQuiz || {};
+    const title = document.getElementById('paperQuizTitle')?.value?.trim() || qz.title || `امتحان ورقي ${qz.quiz_number || 1}`;
+    const subject = document.getElementById('paperQuizSubject')?.value?.trim() || qz.subject || 'الفيزياء';
+    const quizNum = Number(document.getElementById('paperQuizNumber')?.value || qz.quiz_number || 1);
+    const count = Math.max(1, Math.min(100, Number(document.getElementById('paperQuizQuestionCount')?.value || qz.question_count || 10)));
+    const maxScore = Math.max(1, Number(document.getElementById('paperQuizMaxScore')?.value || qz.max_score || 20));
+    const timeLimit = Math.max(5, Number(document.getElementById('paperQuizTimeLimit')?.value || qz.time_limit_minutes || 45));
+
+    const defaultPoints = Math.max(0.5, Math.round((maxScore / count) * 10) / 10);
+
+    qz.title = title;
+    qz.subject = subject;
+    qz.quiz_number = quizNum;
+    qz.question_count = count;
+    qz.max_score = maxScore;
+    qz.time_limit_minutes = timeLimit;
+
+    if (!Array.isArray(qz.questions)) qz.questions = [];
+
+    while (qz.questions.length < count) {
+      const idx = qz.questions.length + 1;
+      qz.questions.push({
+        id: `pq_${Date.now()}_${idx}`,
+        type: 'mcq',
+        text: '',
+        image_url: '',
+        choices: ['', '', '', ''],
+        correct_index: 0,
+        points: defaultPoints
+      });
+    }
+
+    if (qz.questions.length > count) {
+      qz.questions = qz.questions.slice(0, count);
+    }
+
+    this.quizzesState.activePaperQuiz = qz;
+    this.quizzesState.paperWizardStep = 2;
+    this.quizzesState.currentPaperQIdx = 0;
+    this.quizzesState.activePaperPasteQIdx = 0;
+    this.renderMainContent();
+  };
+
+  app.backToPaperStep1Settings = function() {
+    this.quizzesState.paperWizardStep = 1;
+    this.renderMainContent();
+  };
+
+  app.jumpToPaperQuestion = function(idx) {
+    this.quizzesState.currentPaperQIdx = idx;
+    this.quizzesState.activePaperPasteQIdx = idx;
+    this.renderMainContent();
+  };
+
+  app.prevPaperQuestion = function() {
+    if ((this.quizzesState.currentPaperQIdx || 0) > 0) {
+      this.quizzesState.currentPaperQIdx--;
+      this.quizzesState.activePaperPasteQIdx = this.quizzesState.currentPaperQIdx;
+      this.renderMainContent();
+    }
+  };
+
+  app.nextPaperQuestion = function() {
+    const totalQ = this.quizzesState.activePaperQuiz?.questions?.length || 10;
+    if ((this.quizzesState.currentPaperQIdx || 0) < totalQ - 1) {
+      this.quizzesState.currentPaperQIdx++;
+      this.quizzesState.activePaperPasteQIdx = this.quizzesState.currentPaperQIdx;
+      this.renderMainContent();
+    }
+  };
+
+  app.togglePaperQuestionsViewMode = function() {
+    this.quizzesState.paperLayoutMode = (this.quizzesState.paperLayoutMode === 'all') ? 'single' : 'all';
     this.renderMainContent();
   };
 
@@ -2781,6 +3235,7 @@ export function registerTeacherQuizzesActions(app) {
       this.quizzesState.activePaperQuiz.questions = [];
     }
     const qList = this.quizzesState.activePaperQuiz.questions;
+    const defaultPts = Math.max(0.5, Math.round(((this.quizzesState.activePaperQuiz.max_score || 20) / (qList.length + 1)) * 10) / 10);
     qList.push({
       id: `pq_${Date.now()}_${qList.length + 1}`,
       type: 'mcq',
@@ -2788,14 +3243,27 @@ export function registerTeacherQuizzesActions(app) {
       image_url: '',
       choices: ['', '', '', ''],
       correct_index: 0,
-      points: 2
+      points: defaultPts
     });
+    this.quizzesState.activePaperQuiz.question_count = qList.length;
+    this.quizzesState.currentPaperQIdx = qList.length - 1;
+    this.quizzesState.activePaperPasteQIdx = this.quizzesState.currentPaperQIdx;
     this.renderMainContent();
   };
 
   app.removePaperQuestion = function(qIdx) {
     if (!this.quizzesState.activePaperQuiz?.questions) return;
-    this.quizzesState.activePaperQuiz.questions.splice(qIdx, 1);
+    const qList = this.quizzesState.activePaperQuiz.questions;
+    if (qList.length <= 1) {
+      this.showToast('يجب أن يحتوي الامتحان على سؤال واحد على الأقل', 'warning');
+      return;
+    }
+    qList.splice(qIdx, 1);
+    this.quizzesState.activePaperQuiz.question_count = qList.length;
+    if ((this.quizzesState.currentPaperQIdx || 0) >= qList.length) {
+      this.quizzesState.currentPaperQIdx = Math.max(0, qList.length - 1);
+    }
+    this.quizzesState.activePaperPasteQIdx = this.quizzesState.currentPaperQIdx;
     this.renderMainContent();
   };
 
@@ -2889,7 +3357,7 @@ export function registerTeacherQuizzesActions(app) {
       return;
     }
 
-    const title = document.getElementById('paperQuizTitle')?.value?.trim() || qz?.title || 'امتحان ورقي جديد';
+    const title = document.getElementById('paperQuizTitle')?.value?.trim() || qz?.title || `امتحان ورقي ${qz?.quiz_number || 1}`;
     const subject = document.getElementById('paperQuizSubject')?.value?.trim() || qz?.subject || 'الفيزياء';
     const quizNumber = Number(document.getElementById('paperQuizNumber')?.value || qz?.quiz_number || 1);
     const timeLimit = Number(document.getElementById('paperQuizTimeLimit')?.value || qz?.time_limit_minutes || 45);
@@ -3462,7 +3930,9 @@ export function registerTeacherQuizzesActions(app) {
               window.centrlyApp.handleWizardImageUpload(file);
               break;
             } else if (state?.activeSubTab === 'paper_builder' && state?.paperViewMode === 'create') {
-              const targetIdx = state.activePaperPasteQIdx ?? (state.activePaperQuiz?.questions?.length ? (state.activePaperQuiz.questions.length - 1) : 0);
+              const targetIdx = (state.paperWizardStep === 2 && state.paperLayoutMode !== 'all')
+                ? (state.currentPaperQIdx || 0)
+                : (state.activePaperPasteQIdx ?? (state.activePaperQuiz?.questions?.length ? (state.activePaperQuiz.questions.length - 1) : 0));
               if (targetIdx >= 0) {
                 e.preventDefault();
                 window.centrlyApp.handlePaperImageUpload(targetIdx, file);
