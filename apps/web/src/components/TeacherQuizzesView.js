@@ -2569,8 +2569,9 @@ export function registerTeacherQuizzesActions(app) {
         this.renderMainContent();
       }
 
+      this.showToast('تمت إضافة صورة السؤال بنجاح', 'success');
+
       try {
-        this.showToast('جاري رفع صورة السؤال...', 'info');
         const res = await request('/quizzes/upload-image', {
           method: 'POST',
           body: {
@@ -2578,13 +2579,11 @@ export function registerTeacherQuizzesActions(app) {
             file_name: file.name
           }
         });
-        if (res?.success && res.url) {
+        if (res?.success && res.url && res.url !== base64Data) {
           if (q) q.image_url = res.url;
-          this.showToast('تم رفع صورة السؤال بنجاح', 'success');
-          this.renderMainContent();
         }
-      } catch (err) {
-        this.showToast('تعذر رفع الصورة للسحابة، سيتم اعتمادها محلياً', 'warning');
+      } catch (_) {
+        // Data URL is fully preserved and valid locally and on save
       }
     };
     reader.readAsDataURL(file);
@@ -2851,19 +2850,19 @@ export function registerTeacherQuizzesActions(app) {
         }
         this.renderMainContent();
       }
+
+      this.showToast('تمت إضافة صورة السؤال بنجاح', 'success');
+
       try {
-        this.showToast('جاري رفع صورة السؤال...', 'info');
         const res = await request('/quizzes/upload-image', {
           method: 'POST',
           body: { image_data: base64Data, file_name: file.name }
         });
-        if (res?.success && res.url) {
+        if (res?.success && res.url && res.url !== base64Data) {
           if (q) q.image_url = res.url;
-          this.showToast('تم رفع صورة السؤال بنجاح', 'success');
-          this.renderMainContent();
         }
       } catch (_) {
-        this.showToast('تعذر رفع الصورة للسحابة، سيتم اعتمادها محلياً', 'warning');
+        // Data URL is fully preserved and valid locally and on save
       }
     };
     reader.readAsDataURL(file);

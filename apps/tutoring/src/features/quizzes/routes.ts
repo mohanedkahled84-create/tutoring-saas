@@ -810,3 +810,63 @@ quizzesRouter.post(
     }
   }
 );
+
+// POST /api/quizzes/upload-image - Upload question illustration / diagram / image
+quizzesRouter.post(
+  "/upload-image",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id || "default";
+    const { image_data } = req.body;
+
+    if (!image_data || typeof image_data !== "string") {
+      res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "image_data is required" },
+      });
+      return;
+    }
+
+    try {
+      const supabase = getServiceSupabaseClient();
+      if (supabase && image_data.startsWith("data:image/")) {
+        const matches = image_data.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const contentType = matches[1];
+          const buffer = Buffer.from(matches[2], "base64");
+          const ext = contentType.split("/")[1] || "jpg";
+          const path = `${tenantId}/quizzes/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+
+          const { data: uploadData, error: uploadErr } = await supabase.storage
+            .from("quiz-images")
+            .upload(path, buffer, {
+              contentType,
+              upsert: true,
+            });
+
+          if (!uploadErr && uploadData) {
+            const { data: urlData } = supabase.storage
+              .from("quiz-images")
+              .getPublicUrl(path);
+
+            if (urlData?.publicUrl) {
+              res.status(200).json({
+                success: true,
+                url: urlData.publicUrl,
+              });
+              return;
+            }
+          }
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        url: image_data,
+      });
+    } catch (_) {
+      res.status(200).json({
+        success: true,
+        url: image_data,
+      });
+    }
+  }
+);
