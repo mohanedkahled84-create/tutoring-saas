@@ -1004,14 +1004,12 @@ class CentrlyApp {
     const splash = document.getElementById('centrlyInitialSplash');
     if (splash) splash.remove();
     let appEl = document.getElementById('app');
-    if (!appEl && typeof document !== 'undefined') {
+    if (!appEl && typeof document !== 'undefined' && document.body) {
       appEl = document.createElement('div');
       appEl.id = 'app';
-      if (document.body) {
-        dled = false;
-        btn.innerHTML = originalText;
-      }
+      document.body.appendChild(appEl);
     }
+    return appEl;
   }
 
   // ==========================================================================
