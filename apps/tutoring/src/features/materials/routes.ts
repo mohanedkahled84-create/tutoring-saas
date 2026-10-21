@@ -153,6 +153,46 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
   }
 });
 
+// PATCH /api/materials/:id - Update study material metadata / exceptions
+materialsRouter.patch("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const tenantId = req.user?.tenant_id;
+  const { id } = req.params;
+
+  if (!tenantId && req.user?.role !== "admin") {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
+    return;
+  }
+
+  const { title, description, url, group_id, book_name, pages, questions } = req.body;
+
+  try {
+    const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
+    const updatePayload: Record<string, any> = {};
+
+    if (title !== undefined) updatePayload.title = title.trim();
+    if (description !== undefined) updatePayload.description = description ? description.trim() : null;
+    if (url !== undefined) updatePayload.url = normalizeMaterialUrl(url.trim());
+    if (group_id !== undefined) updatePayload.group_id = group_id || null;
+    if (book_name !== undefined) updatePayload.book_name = book_name ? book_name.trim() : null;
+    if (pages !== undefined) updatePayload.pages = pages ? pages.trim() : null;
+    if (questions !== undefined) updatePayload.questions = questions ? questions.trim() : null;
+
+    const { data, error } = await supabase
+      .from("study_materials")
+      .update(updatePayload)
+      .eq("id", id)
+      .eq("tenant_id", tenantId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, material: data });
+  } catch (err: unknown) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
+  }
+});
+
 // DELETE /api/materials/:id - Delete a study material
 materialsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id;

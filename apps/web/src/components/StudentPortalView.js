@@ -2,6 +2,7 @@ import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js";
 import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=6.5.0";
+import { openVideoPlayerModal } from "./VideoLessonsView.js";
 
 /**
  * Centrly Student Web Portal Component
@@ -22,6 +23,146 @@ export function resolveSafeMaterialUrl(rawUrl) {
       .split('?')[0];
   }
   return trimmed;
+}
+
+export function renderStudentStudyMaterialCard(m, student = {}, homeworkMaterials = [], approvedHomeworks = []) {
+  const isPdf = m.type === 'pdf';
+  const isVideo = m.type === 'video';
+  const resolvedMatUrl = resolveSafeMaterialUrl(m.url);
+  const isGatedByHw = isVideo && m.book_name === 'approved_homework';
+
+  let isUnlocked = true;
+  let reqHwTitle = 'واجب مطلوب';
+  let isSubmittedPending = false;
+
+  if (isGatedByHw) {
+    let allowedStudents = [];
+    try {
+      if (m.questions) {
+        const meta = JSON.parse(m.questions);
+        if (Array.isArray(meta.allowed_student_ids)) allowedStudents = meta.allowed_student_ids;
+        if (meta.homework_title) reqHwTitle = meta.homework_title;
+      }
+    } catch (_) {}
+
+    const studentId = student.id || '';
+    const studentCode = student.student_code || '';
+    const isBypassed = Boolean(
+      (studentId && allowedStudents.includes(studentId)) ||
+      (studentCode && allowedStudents.includes(studentCode))
+    );
+
+    const reqHwId = m.pages;
+    if (reqHwId && reqHwTitle === 'واجب مطلوب') {
+      const matchedHw = homeworkMaterials.find(h => h.id === reqHwId);
+      if (matchedHw) reqHwTitle = matchedHw.title;
+    }
+
+    const isApproved = approvedHomeworks.some(h => h.id === reqHwId);
+    const pendingHw = homeworkMaterials.find(h => h.id === reqHwId && h.submission_status === 'pending');
+    isSubmittedPending = Boolean(pendingHw);
+
+    isUnlocked = isBypassed || isApproved;
+  }
+
+  // 1. Gated and Locked State
+  if (isGatedByHw && !isUnlocked) {
+    return `
+      <div style="padding: 1rem; border-radius: 0.75rem; background: #fffbeb; border: 1.5px dashed #f59e0b; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 180px;">
+          <div style="margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 0.3rem; background: #fef3c7; color: #b45309; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 0.25rem;">
+              ${getIcon('lock', 12, '#b45309')}
+              <span>فيديو مقفل (مشروط باعتماد واجب)</span>
+            </span>
+          </div>
+          <h4 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0 0 0.3rem 0;">
+            ${escapeHtml(m.title)}
+          </h4>
+          <div style="font-size: 0.8rem; color: #92400e; display: flex; align-items: center; gap: 0.35rem; line-height: 1.4;">
+            ${getIcon('info', 14, '#b45309')}
+            <span>
+              ${isSubmittedPending 
+                ? `تم تسليم الواجب (<strong>${escapeHtml(reqHwTitle)}</strong>) وهو قيد مراجعة واعتماد المعلم لفتح الفيديو تلقائياً فور الاعتماد.` 
+                : `يتطلب فتح ومشاهدة الفيديو <strong>اعتماد تسليم واجب: "${escapeHtml(reqHwTitle)}"</strong> أولاً من المعلم.`}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          ${isSubmittedPending ? `
+            <span style="display: inline-flex; align-items: center; gap: 0.35rem; background: #fef3c7; color: #b45309; padding: 0.5rem 0.9rem; border-radius: 0.5rem; font-size: 0.82rem; font-weight: 800; border: 1px solid #fde68a;">
+              ${getIcon('clock', 14, '#b45309')}
+              <span>قيد اعتماد المعلم</span>
+            </span>
+          ` : `
+            <button type="button" onclick="window.scrollToHomework && window.scrollToHomework('${escapeHtml(m.pages || '')}')"
+              style="display: inline-flex; align-items: center; gap: 0.35rem; background: #f59e0b; color: #ffffff; padding: 0.5rem 0.9rem; border-radius: 0.5rem; border: none; font-size: 0.82rem; font-weight: 800; cursor: pointer; box-shadow: 0 2px 4px rgba(245,158,11,0.25);">
+              ${getIcon('homework', 14, '#ffffff')}
+              <span>تسليم الواجب المطلوب لفتح الفيديو</span>
+            </button>
+          `}
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. Unlocked State (either open or requirements met)
+  const typeBadge = isPdf 
+    ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('file', 12, '#1d4ed8')} PDF</span>` 
+    : (isVideo ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('video', 12, '#1d4ed8')} فيديو شرح</span>` : `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('link', 12, '#1d4ed8')} رابط</span>`);
+  
+  const studentWatermark = `${student.name || 'طالب'} • كود: ${student.student_code || '-'} • ${student.student_phone || student.parent_phone || ''}`;
+
+  return `
+    <div style="padding: 0.9rem 1rem; border-radius: 0.75rem; background: ${isGatedByHw ? '#f0fdf4' : '#f8fafc'}; border: 1px solid ${isGatedByHw ? '#bbf7d0' : '#e2e8f0'}; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 180px;">
+        <div style="margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+          <span style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 0.3rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+            ${typeBadge}
+          </span>
+          ${isGatedByHw ? `
+            <span style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 0.3rem; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 0.2rem;">
+              ${getIcon('check', 11, '#047857')}
+              <span>تم فتح الفيديو (الواجب معتمد)</span>
+            </span>
+          ` : ''}
+        </div>
+        <h4 style="font-size: 0.92rem; font-weight: 800; color: #0f172a; margin: 0;">
+          ${escapeHtml(m.title)}
+        </h4>
+        ${m.description ? `
+          <p style="font-size: 0.78rem; color: #64748b; margin: 0.25rem 0 0 0; line-height: 1.4;">
+            ${escapeHtml(m.description)}
+          </p>
+        ` : ''}
+      </div>
+
+      ${(() => {
+        if (!resolvedMatUrl || resolvedMatUrl === '#') return '';
+        if (isVideo) {
+          return `
+            <div>
+              <button type="button" onclick="window.centrlyPlayVideoWithWatermark ? window.centrlyPlayVideoWithWatermark('${escapeHtml(resolvedMatUrl)}', '${escapeHtml(m.title)}', '${escapeHtml(studentWatermark)}') : window.open('${escapeHtml(resolvedMatUrl)}', '_blank')"
+                style="display: inline-flex; align-items: center; gap: 0.35rem; background: #2563eb; color: #ffffff; padding: 0.45rem 0.85rem; border-radius: 0.5rem; border: none; font-size: 0.8rem; font-weight: 800; cursor: pointer; box-shadow: 0 1px 3px rgba(37,99,235,0.25);">
+                ${getIcon('video', 13, '#ffffff')}
+                <span>مشاهدة الفيديو</span>
+              </button>
+            </div>
+          `;
+        }
+        return `
+          <div>
+            <a href="${escapeHtml(resolvedMatUrl)}" target="_blank" rel="noopener noreferrer" 
+              style="display: inline-flex; align-items: center; gap: 0.35rem; background: #1d4ed8; color: #ffffff; padding: 0.45rem 0.85rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.8rem; font-weight: 800; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
+              ${getIcon(isPdf ? 'download' : 'link', 13, '#ffffff')}
+              <span>${isPdf ? 'تحميل / فتح المذكرة' : 'فتح الرابط'}</span>
+            </a>
+          </div>
+        `;
+      })()}
+    </div>
+  `;
 }
 
 export function renderStudentPortalView(portalData = {}, activeTab = 'materials') {
@@ -343,7 +484,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                     : `<span style="font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 0.35rem; background: #fef3c7; color: #b45309; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('homework', 12, '#b45309')} <span>واجب منزلي مطلوب</span></span>`);
 
                 return `
-                  <div style="padding: 1.1rem; border-radius: 0.85rem; background: ${cardBg}; border: 1px solid ${cardBorder}; display: flex; flex-direction: column; gap: 0.65rem;">
+                  <div id="hw-card-${escapeHtml(m.id)}" style="padding: 1.1rem; border-radius: 0.85rem; background: ${cardBg}; border: 1px solid ${cardBorder}; display: flex; flex-direction: column; gap: 0.65rem;">
                     
                     <!-- Top row: Title and Tags -->
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
@@ -521,47 +662,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
               </div>
 
               <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                ${studyMaterials.map(m => {
-                  const isPdf = m.type === 'pdf';
-                  const isVideo = m.type === 'video';
-                  const typeBadge = isPdf 
-                    ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('file', 12, '#1d4ed8')} PDF</span>` 
-                    : (isVideo ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('video', 12, '#1d4ed8')} فيديو</span>` : `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('link', 12, '#1d4ed8')} رابط</span>`);
-                  const actionText = isPdf ? 'تحميل / فتح المذكرة' : (isVideo ? 'مشاهدة الفيديو' : 'فتح الرابط');
-
-                  return `
-                    <div style="padding: 0.9rem 1rem; border-radius: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                      <div style="flex: 1; min-width: 180px;">
-                        <div style="margin-bottom: 0.25rem;">
-                          <span style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 0.3rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
-                            ${typeBadge}
-                          </span>
-                        </div>
-                        <h4 style="font-size: 0.92rem; font-weight: 800; color: #0f172a; margin: 0;">
-                          ${escapeHtml(m.title)}
-                        </h4>
-                        ${m.description ? `
-                          <p style="font-size: 0.78rem; color: #64748b; margin: 0.25rem 0 0 0; line-height: 1.4;">
-                            ${escapeHtml(m.description)}
-                          </p>
-                        ` : ''}
-                      </div>
-
-                      ${(() => {
-                        const resolvedMatUrl = resolveSafeMaterialUrl(m.url);
-                        return (resolvedMatUrl && resolvedMatUrl !== '#') ? `
-                          <div>
-                            <a href="${escapeHtml(resolvedMatUrl)}" target="_blank" rel="noopener noreferrer" 
-                              style="display: inline-flex; align-items: center; gap: 0.35rem; background: #1d4ed8; color: #ffffff; padding: 0.45rem 0.85rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.8rem; font-weight: 800; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
-                              ${getIcon(isPdf ? 'download' : (isVideo ? 'video' : 'link'), 13, '#ffffff')}
-                              <span>${actionText}</span>
-                            </a>
-                          </div>
-                        ` : '';
-                      })()}
-                    </div>
-                  `;
-                }).join('')}
+                ${studyMaterials.map(m => renderStudentStudyMaterialCard(m, student, homeworkMaterials, approvedHomeworks)).join('')}
               </div>
             </div>
           ` : ''}
@@ -823,6 +924,19 @@ if (typeof window !== 'undefined') {
         btn.style.boxShadow = (t === tabName) ? '0 2px 6px rgba(0,0,0,0.08)' : 'none';
       }
     });
+  };
+
+  window.scrollToHomework = function(hwId) {
+    if (window.switchStudentPortalTab) window.switchStudentPortalTab('materials');
+    const targetCard = hwId ? document.getElementById('hw-card-' + hwId) : null;
+    if (targetCard) {
+      targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetCard.style.outline = '2px solid #f59e0b';
+      setTimeout(() => { targetCard.style.outline = 'none'; }, 2500);
+    } else {
+      const activeHw = document.getElementById('student-tab-content-materials');
+      if (activeHw) activeHw.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   window.togglePdfHelper = function() {

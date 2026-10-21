@@ -53,6 +53,10 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('video-lessons')" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+              ${getIcon('video', 16, '#1d4ed8')}
+              <span>فيديوهات الشرح والحل (يوتيوب المشروط)</span>
+            </button>
             <button class="btn btn-primary" onclick="window.centrlyApp.openAddMaterialModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800;">
               ${getIcon('add', 16, '#ffffff')}
               <span>إضافة مذكرة / رابط شرح جديد</span>

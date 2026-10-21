@@ -6,6 +6,15 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
   const userEmail = (user?.email || '').toLowerCase();
   const isAdmin = user?.role === 'admin' || user?.is_superadmin || adminEmails.includes(userEmail);
   const isCenterOwner = user?.role === 'center_owner' || user?.account_type === 'center';
+  const isOmarMohamadi = 
+    user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' || 
+    userEmail === 'mohanedabdulhalim@gmail.com' ||
+    userEmail.includes('omar') ||
+    userEmail.includes('mohamadi') ||
+    (user?.name || '').includes('عمر') ||
+    (user?.teacher_name || '').includes('عمر') ||
+    (user?.tenant_name || '').includes('عمر') ||
+    isAdmin;
 
   // Dedicated Executive Superadmin HQ Navigation (100% separate for the platform owner)
   const adminSections = [
@@ -18,6 +27,14 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
         { id: 'whatsapp-inbox', title: 'محادثات الواتساب وحاسبة الأرباح', icon: 'whatsapp' },
         { id: 'admin-outreach', title: 'حملات التواصل (Outreach)', icon: 'whatsapp' },
         { id: 'coupons', title: 'أكواد الخصم والكوبونات', icon: 'billing' },
+      ],
+    },
+    {
+      category: 'التجارب الميدانية والأكاديمية (Canary)',
+      routes: [
+        { id: 'video-lessons', title: 'فيديوهات الشرح والحل (عمر المحمدي)', icon: 'video' },
+        { id: 'materials', title: 'المذكرات والماتريال', icon: 'materials' },
+        { id: 'homework', title: 'مراجعة وتصحيح الواجبات', icon: 'homework' },
       ],
     },
     {
@@ -63,15 +80,18 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
   // 2. Students & Classes management (Students, Groups, Calendar, Cards)
   // 3. Analytics & Financials (Earnings Dashboard, Reports, Risk Watchlist)
   // 4. Administration & Settings (Assistants, WhatsApp, Billing, Activity)
+  const teacherDailyRoutes = [
+    { id: 'sessions', title: 'بدء حصة ورصد الحضور', icon: 'sessions' },
+    ...(isOmarMohamadi ? [{ id: 'video-lessons', title: 'فيديوهات الشرح والحل', icon: 'video' }] : []),
+    { id: 'quizzes', title: 'الكويزات والامتحانات', icon: 'reports' },
+    { id: 'homework', title: 'مراجعة وتصحيح الواجبات', icon: 'homework' },
+    { id: 'materials', title: 'المذكرات والماتريال', icon: 'materials' },
+  ];
+
   const teacherSections = [
     {
       category: 'العمليات اليومية للحصة',
-      routes: [
-        { id: 'sessions', title: 'بدء حصة ورصد الحضور', icon: 'sessions' },
-        { id: 'quizzes', title: 'الكويزات والامتحانات', icon: 'reports' },
-        { id: 'homework', title: 'مراجعة وتصحيح الواجبات', icon: 'homework' },
-        { id: 'materials', title: 'المذكرات والماتريال', icon: 'materials' },
-      ],
+      routes: teacherDailyRoutes,
     },
     {
       category: 'إدارة الطلاب والمجاميع وفريق العمل',

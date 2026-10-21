@@ -4,7 +4,7 @@ import { registerStudentImportActions } from './components/StudentImportModal.js
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=1.0.0';
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
-import { renderSidebar } from './components/Sidebar.js?v=4.8.13';
+import { renderSidebar } from './components/Sidebar.js?v=5.0.0';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.1';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.9.21';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
@@ -15,7 +15,7 @@ import { renderStudentsView, registerStudentsActions } from './components/Studen
 import { renderGroupsView, registerGroupsActions } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView, registerMessageLogsActions } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=6.0.0';
-import { renderStudentPortalView } from './components/StudentPortalView.js?v=6.0.0';
+import { renderStudentPortalView } from './components/StudentPortalView.js?v=6.5.0';
 import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=4.8.9';
 import { renderHomeworkReviewView, registerHomeworkActions } from './components/HomeworkReviewView.js?v=4.0.2';
 import { renderCenterOwnerDashboard, registerCenterOwnerActions } from './components/CenterOwnerDashboard.js?v=4.8.1';
@@ -31,7 +31,7 @@ import { renderCenterAssistantsView } from './components/CenterAssistantsView.js
 import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
 import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.8.7';
-import { renderMaterialsView, registerMaterialsActions } from './components/MaterialsView.js?v=2.9.0';
+import { renderMaterialsView, registerMaterialsActions } from './components/MaterialsView.js?v=3.0.0';
 import { renderTeacherAssistantsView, registerTeacherAssistantsActions } from './components/TeacherAssistantsView.js?v=2.1.0';
 import { renderBusinessOwnerDashboard, registerBusinessOwnerActions } from './components/BusinessOwnerDashboard.js?v=5.2.0';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
@@ -40,6 +40,7 @@ import { renderAdminOutreachView } from './components/AdminOutreachView.js?v=1.0
 import { renderTeacherSettingsView, registerTeacherSettingsActions } from './components/TeacherSettingsView.js?v=4.9.9';
 import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=4.7.6';
 import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=1.0.0';
+import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.1.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.9.21';
@@ -177,6 +178,7 @@ class CentrlyApp {
     this.restoreCachedData();
     this.initTheme();
     registerMaterialsActions(this);
+    registerVideoLessonsActions(this);
     registerCouponsActions(this);
     registerTeacherAssistantsActions(this);
     registerHomeworkActions(this);
@@ -387,6 +389,7 @@ class CentrlyApp {
       case 'settings':
         return Boolean(this.billingState);
       case 'materials':
+      case 'video-lessons':
         return Boolean(this.materials && this.materials.length > 0);
       case 'assistants':
         return Boolean(this.teacherAssistants && this.teacherAssistants.length > 0);
@@ -727,7 +730,7 @@ class CentrlyApp {
     let hasToken = authService.isAuthenticated();
     const hasCachedSession = authService.hasSession();
 
-    const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'coupons', 'activity-logs'];
+    const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'coupons', 'activity-logs', 'video-lessons', 'materials', 'homework'];
     const rawRouteParam = urlParams.get('route');
     const requestedAdminRoute =
       (rawRouteParam && adminRoutes.includes(rawRouteParam)) ? rawRouteParam :
@@ -811,8 +814,18 @@ class CentrlyApp {
 
     const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
+    const userEmail = (this.user?.email || '').toLowerCase();
+    const isOmarMohamadi = 
+      this.user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' || 
+      userEmail === 'mohanedabdulhalim@gmail.com' ||
+      userEmail.includes('omar') ||
+      userEmail.includes('mohamadi') ||
+      (this.user?.name || '').includes('عمر') ||
+      (this.user?.teacher_name || '').includes('عمر') ||
+      (this.user?.tenant_name || '').includes('عمر') ||
+      isAdmin;
     const validTeacherRoutes = [
-      'sessions', 'quizzes', 'homework', 'materials',
+      'sessions', ...(isOmarMohamadi ? ['video-lessons'] : []), 'quizzes', 'homework', 'materials',
       'students', 'groups', 'assistants', 'calendar', 'student-cards',
       'dashboard', 'reports', 'risk-watchlist', 'settings', 'billing', 'whatsapp'
     ];
@@ -1825,6 +1838,22 @@ class CentrlyApp {
           this.renderMainContent();
           break;
         }
+        case 'video-lessons': {
+          const [matRes, grpRes, stdRes] = await Promise.all([
+            request('/materials').catch(() => ({ materials: [] })),
+            request('/groups').catch(() => ({ groups: [] })),
+            request('/students').catch(() => ({ students: [] })),
+          ]);
+          this.materials = Array.isArray(matRes) ? matRes : (matRes.materials || []);
+          this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
+          this.students = Array.isArray(stdRes) ? stdRes : (stdRes.students || []);
+          this.videoLessonsGroupId = this.videoLessonsGroupId || 'all';
+          this.saveCache('materials', this.materials);
+          this.saveCache('groups', this.groups);
+          this.saveCache('students', this.students);
+          this.renderMainContent();
+          break;
+        }
         case 'homework': {
           const [matRes, grpRes] = await Promise.all([
             request('/materials').catch(() => ({ materials: [] })),
@@ -2032,6 +2061,8 @@ class CentrlyApp {
         });
       case 'materials':
         return renderMaterialsView(this.materials, this.groups, this.materialsGroupId);
+      case 'video-lessons':
+        return renderVideoLessonsView(this.materials, this.groups, this.students, this.videoLessonsGroupId, this.user);
       case 'homework':
         return renderHomeworkReviewView(this.homeworkState || {});
       case 'assistants':
