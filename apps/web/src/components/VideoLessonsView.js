@@ -169,7 +169,7 @@ export function renderVideoLessonsView(
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <span style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-ink);">المجموعة:</span>
-            <select class="form-control" style="width: auto; padding: 0.4rem 1rem; font-size: 0.85rem; border-radius: 6px; font-weight: 600;" onchange="window.centrlyApp.handleVideoLessonGroupFilter(this.value)">
+            <select class="form-select" style="width: auto; height: 38px; padding: 0.4rem 2.25rem 0.4rem 0.85rem; font-size: 0.85rem; border-radius: 8px; font-weight: 700; border: 1.5px solid var(--centrly-line, #cbd5e1); background-color: #ffffff; cursor: pointer;" onchange="window.centrlyApp.handleVideoLessonGroupFilter(this.value)">
               <option value="all" ${selectedGroupId === 'all' ? 'selected' : ''}>كافة المجاميع الدراسية (${totalVideos} فيديو)</option>
               ${allGroups.map(g => `
                 <option value="${escapeHtml(g.id)}" ${selectedGroupId === g.id ? 'selected' : ''}>
@@ -354,7 +354,7 @@ export function registerVideoLessonsActions(app) {
 
         <div class="form-group">
           <label class="form-label" style="font-weight: 700; color: var(--centrly-ink);">المجموعة الدراسية المستهدفة</label>
-          <select id="modalVideoGroupId" class="form-control" style="width: 100%;">
+          <select id="modalVideoGroupId" class="form-select" style="width: 100%; height: 42px; border: 1.5px solid var(--centrly-line, #cbd5e1); border-radius: 8px; padding: 0.6rem 2.25rem 0.6rem 0.85rem; font-family: inherit; font-size: 0.875rem; font-weight: 600; color: var(--centrly-ink, #0f172a); background-color: #ffffff; cursor: pointer;">
             <option value="">جميع المجاميع</option>
             ${groupsList.map(g => `
               <option value="${escapeHtml(g.id)}">${escapeHtml(g.name)}</option>
@@ -401,7 +401,7 @@ export function registerVideoLessonsActions(app) {
           <div id="videoHomeworkSelectContainer" style="display: none; margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px dashed #cbd5e1;">
             <label class="form-label" style="font-weight: 700; color: #1e293b;">اختر الواجب المشروط اعتماده:</label>
             ${homeworkList.length > 0 ? `
-              <select id="modalVideoRequiredHwId" class="form-control" style="width: 100%;">
+              <select id="modalVideoRequiredHwId" class="form-select" style="width: 100%; height: 42px; border: 1.5px solid var(--centrly-line, #cbd5e1); border-radius: 8px; padding: 0.6rem 2.25rem 0.6rem 0.85rem; font-family: inherit; font-size: 0.875rem; font-weight: 600; color: var(--centrly-ink, #0f172a); background-color: #ffffff; cursor: pointer;">
                 ${homeworkList.map(hw => `
                   <option value="${escapeHtml(hw.id)}">${escapeHtml(hw.title)}</option>
                 `).join('')}
