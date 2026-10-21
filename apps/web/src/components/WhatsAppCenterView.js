@@ -942,8 +942,8 @@ export function registerWhatsAppCenterActions(app) {
     });
   }
 
-  whatsappSelectedPlan = 'plan_300';
-  whatsappBillingCycle = 'monthly';
+  app.whatsappSelectedPlan = 'plan_300';
+  app.whatsappBillingCycle = 'monthly';
 
   app.selectWhatsAppPlan = function(planId) {
     this.whatsappSelectedPlan = planId;

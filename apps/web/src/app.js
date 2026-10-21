@@ -30,7 +30,7 @@ import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
 import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
-import { renderLandingView } from './components/LandingView.js?v=4.8.7';
+import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.8.7';
 import { renderMaterialsView, registerMaterialsActions } from './components/MaterialsView.js?v=2.9.0';
 import { renderTeacherAssistantsView, registerTeacherAssistantsActions } from './components/TeacherAssistantsView.js?v=2.1.0';
 import { renderBusinessOwnerDashboard, registerBusinessOwnerActions } from './components/BusinessOwnerDashboard.js?v=5.2.0';
@@ -580,6 +580,9 @@ class CentrlyApp {
   }
 
   async init() {
+    const lingeringSplash = document.getElementById('centrlyInitialSplash');
+    if (lingeringSplash) lingeringSplash.remove();
+
     this.setupModalKeyboardShortcuts();
 
     // Prevent accidental mouse wheel number changes across all number inputs
