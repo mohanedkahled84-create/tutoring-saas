@@ -1040,3 +1040,49 @@ button.password-toggle-btn:active {
   }
 }
 
+/* ========================================================
+   Print Media Styles for Exams and Bubble Sheets
+   ======================================================== */
+@media print {
+  .sidebar,
+  .top-bar,
+  .mobile-nav,
+  .btn,
+  #quizSubTabsNav,
+  header,
+  footer,
+  #toastContainer {
+    display: none !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #mainContent {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #centrlyPrintContainer {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .printable-exam-paper,
+  .printable-bubble-sheet {
+    box-shadow: none !important;
+    border: 2px solid #000000 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    margin: 0 !important;
+    padding: 1cm !important;
+  }
+}
+
+

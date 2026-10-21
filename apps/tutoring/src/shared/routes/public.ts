@@ -488,6 +488,149 @@ publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<
   }
 });
 
+// DEV-QUIZ.PORTAL: POST /api/public/quizzes/submit - Submit online quiz from student portal
+publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promise<void> => {
+  const { token, material_id, answers, elapsed_seconds } = req.body;
+  if (!token || !material_id) {
+    res.status(400).json({ error: { code: "BAD_REQUEST", message: "Token and material_id are required" } });
+    return;
+  }
 
+  const supabase = getServiceSupabaseClient();
+  const verified = verifyParentPortalToken(token);
+  let studentId = verified?.student_id || null;
+  let tenantId = verified?.tenant_id || null;
 
+  if (!studentId || !tenantId) {
+    const { data: sRow } = await supabase
+      .from("students")
+      .select("id, tenant_id, name, group_id")
+      .eq("parent_portal_token", token)
+      .maybeSingle();
 
+    if (sRow) {
+      studentId = sRow.id;
+      tenantId = sRow.tenant_id;
+    }
+  }
+
+  if (!studentId || !tenantId) {
+    res.status(401).json({ error: { code: "UNAUTHORIZED", message: "جلسة المتابعة غير صالحة أو منتهية الصلاحية" } });
+    return;
+  }
+
+  try {
+    const { data: material, error: mErr } = await supabase
+      .from("study_materials")
+      .select("*")
+      .eq("id", material_id)
+      .eq("tenant_id", tenantId)
+      .single();
+
+    if (mErr || !material) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "الامتحان غير موجود" } });
+      return;
+    }
+
+    let payload: any = {};
+    try {
+      payload = typeof material.questions === "string" ? JSON.parse(material.questions) : (material.questions || {});
+    } catch (_) {
+      payload = {};
+    }
+
+    const questionsList: any[] = Array.isArray(payload.questions) ? payload.questions : [];
+    const qNum = Number(payload.quiz_number || 1);
+    const studentAnswers = answers || {};
+
+    let mcqScore = 0;
+    let totalMcqPoints = 0;
+    let totalMaxScore = 0;
+    let hasEssay = false;
+
+    questionsList.forEach((q: any, idx: number) => {
+      const qPts = Number(q.points || 1);
+      totalMaxScore += qPts;
+      const qAns = studentAnswers[q.id] ?? studentAnswers[idx + 1];
+
+      if (q.type === "essay") {
+        hasEssay = true;
+      } else {
+        totalMcqPoints += qPts;
+        const isCorrect = Number(qAns) === Number(q.correct_index);
+        if (isCorrect) {
+          mcqScore += qPts;
+        }
+      }
+    });
+
+    const isGraded = !hasEssay;
+    const finalScore = isGraded ? mcqScore : null;
+
+    const submissionNotes = {
+      material_id,
+      quiz_number: qNum,
+      group_id: material.group_id,
+      answers: studentAnswers,
+      mcq_score: mcqScore,
+      total_mcq_points: totalMcqPoints,
+      max_score: totalMaxScore,
+      elapsed_seconds: elapsed_seconds || 0,
+      has_essay: hasEssay,
+      is_graded: isGraded,
+      final_score: finalScore,
+    };
+
+    const statusVal = isGraded ? "approved" : "needs_grading";
+
+    await supabase
+      .from("homework_submissions")
+      .upsert(
+        {
+          tenant_id: tenantId,
+          material_id: material_id,
+          student_id: studentId,
+          file_name: `online_quiz_${qNum}.json`,
+          file_url: null,
+          status: statusVal,
+          teacher_notes: JSON.stringify(submissionNotes),
+          submitted_at: new Date().toISOString(),
+        },
+        { onConflict: "material_id,student_id" }
+      );
+
+    if (isGraded) {
+      const idempotencyKey = `${tenantId}:${material.group_id || "default"}:${studentId}:quiz-${qNum}`;
+      await supabase.from("quiz_scores").upsert(
+        {
+          tenant_id: tenantId,
+          group_id: material.group_id,
+          quiz_number: qNum,
+          student_id: studentId,
+          score: mcqScore,
+          max_score: totalMaxScore,
+          note: "تصحيح إلكتروني تلقائي 100%",
+          idempotency_key: idempotencyKey,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "idempotency_key" }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      is_graded: isGraded,
+      has_essay: hasEssay,
+      score: isGraded ? mcqScore : undefined,
+      max_score: totalMaxScore,
+      mcq_score: mcqScore,
+      total_mcq_points: totalMcqPoints,
+      message: isGraded
+        ? `أحسنت! تم تصحيح الامتحان تلقائياً ودرجتك هي: (${mcqScore} من ${totalMaxScore})`
+        : "تم تسليم الامتحان بنجاح! سيتم إعلان درجتك النهائية فور مراجعة وتصحيح الأسئلة المقالية بالعين من المعلم.",
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to submit quiz";
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+  }
+});

@@ -15,7 +15,7 @@ import { renderStudentsView, registerStudentsActions } from './components/Studen
 import { renderGroupsView, registerGroupsActions } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView, registerMessageLogsActions } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=6.0.0';
-import { renderStudentPortalView } from './components/StudentPortalView.js?v=6.5.0';
+import { renderStudentPortalView } from './components/StudentPortalView.js?v=7.0.0';
 import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=4.8.9';
 import { renderHomeworkReviewView, registerHomeworkActions } from './components/HomeworkReviewView.js?v=4.0.2';
 import { renderCenterOwnerDashboard, registerCenterOwnerActions } from './components/CenterOwnerDashboard.js?v=4.8.1';
@@ -24,7 +24,7 @@ import { renderRiskWatchlistView, registerRiskWatchlistActions } from './compone
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=4.8.12';
+import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=5.0.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';

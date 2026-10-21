@@ -201,9 +201,15 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
   const sessions = portalData.sessions || [];
   const quizzes = portalData.quizzes || [];
   const materials = portalData.materials || [];
+  const onlineQuizzes = materials.filter(m => m.type === 'online_quiz' || (m.questions && !m.is_homework));
   const homeworkMaterials = materials.filter(m => m.is_homework);
-  const studyMaterials = materials.filter(m => !m.is_homework);
+  const studyMaterials = materials.filter(m => !m.is_homework && m.type !== 'online_quiz');
   const approvedHomeworks = homeworkMaterials.filter(m => m.submission_status === 'approved');
+
+  if (typeof window !== 'undefined') {
+    window.__portalMaterials = materials;
+    window.__portalToken = portalData.token || (typeof location !== 'undefined' ? new URLSearchParams(location.search).get('token') : '');
+  }
 
   const teacherPhone = student.teacher_phone || portalData.teacher_phone || student.contact_phone || portalData.contact_phone || '01010979708';
   let cleanTeacherPhone = teacherPhone ? teacherPhone.replace(/[^\d+]/g, '') : '';
@@ -765,6 +771,74 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
             </div>
           </div>
 
+          <!-- Active Online Quizzes Section -->
+          ${onlineQuizzes.length > 0 ? `
+            <div style="background: #ffffff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 2px solid #3b82f6;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem;">
+                <div>
+                  <h2 style="font-size: 1.05rem; font-weight: 800; color: #1e3a8a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                    ${getIcon('edit', 18, '#2563eb')}
+                    <span>امتحانات تفاعلية أونلاين متاحة لك الآن</span>
+                  </h2>
+                  <p style="font-size: 0.75rem; color: #64748b; margin: 0.2rem 0 0 0;">
+                    اختبر مستواك، الأسئلة تظهر سؤالاً بسؤال مع تايمر للوقت
+                  </p>
+                </div>
+                <span class="badge badge-blue" style="font-weight: 800;">${onlineQuizzes.length} امتحان متاح</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                ${onlineQuizzes.map(oq => {
+                  let parsedQ = {};
+                  try {
+                    parsedQ = typeof oq.questions === 'string' ? JSON.parse(oq.questions) : (oq.questions || {});
+                  } catch (_) {}
+                  const qCount = parsedQ.questions?.length || 0;
+                  const timeLimit = parsedQ.time_limit_minutes || 20;
+
+                  return `
+                    <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 0.75rem; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                      <div>
+                        <div style="font-weight: 900; font-size: 0.95rem; color: #0f172a;">${escapeHtml(oq.title)}</div>
+                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                          <span>${escapeHtml(parsedQ.subject || 'الفيزياء')}</span>
+                          <span>•</span>
+                          <span>${qCount} أسئلة</span>
+                          <span>•</span>
+                          <span>المدة: ${timeLimit} دقيقة</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        ${oq.submission_status === 'approved' ? `
+                          <span style="background: #ecfdf5; color: #059669; font-weight: 800; font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 0.5rem; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            ${getIcon('check', 14, '#059669')}
+                            <span>تم الحل والتصحيح بنجاح</span>
+                          </span>
+                        ` : (oq.submission_status === 'needs_grading' ? `
+                          <span style="background: #fffbeb; color: #d97706; font-weight: 800; font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 0.5rem; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            ${getIcon('clock', 14, '#d97706')}
+                            <span>تم التسليم (قيد تصحيح المقالي بالعين)</span>
+                          </span>
+                        ` : `
+                          <button 
+                            type="button" 
+                            class="btn btn-primary" 
+                            style="font-weight: 800; font-size: 0.85rem; padding: 0.5rem 1.1rem; border-radius: 0.6rem; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 8px rgba(37,99,235,0.25);"
+                            onclick="window.startStudentOnlineExam('${escapeHtml(oq.id)}')"
+                          >
+                            <span>بدء الامتحان الآن</span>
+                            <span>←</span>
+                          </button>
+                        `)}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+
           <!-- Quizzes List -->
           <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
@@ -950,6 +1024,330 @@ if (typeof window !== 'undefined') {
     } else {
       content.style.display = 'none';
       if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+  };
+
+  // ========================================================================
+  // INTERACTIVE STUDENT ONLINE EXAM RUNNER
+  // ========================================================================
+  window.startStudentOnlineExam = function(materialId) {
+    const materials = window.__portalMaterials || [];
+    const mat = materials.find(m => m.id === materialId);
+    if (!mat) return;
+
+    let parsed = {};
+    try {
+      parsed = typeof mat.questions === 'string' ? JSON.parse(mat.questions) : (mat.questions || {});
+    } catch (_) {}
+
+    const questions = parsed.questions || [];
+    if (questions.length === 0) {
+      alert('هذا الامتحان لا يحتوي على أسئلة بعد');
+      return;
+    }
+
+    window.__currentExam = {
+      materialId: mat.id,
+      title: mat.title,
+      subject: parsed.subject || 'الفيزياء',
+      timeLimitMinutes: parsed.time_limit_minutes || 20,
+      questions: questions,
+      currentIndex: 0,
+      answers: {},
+      timeRemaining: (parsed.time_limit_minutes || 20) * 60,
+      timerInterval: null
+    };
+
+    let modalEl = document.getElementById('studentExamModalOverlay');
+    if (!modalEl) {
+      modalEl = document.createElement('div');
+      modalEl.id = 'studentExamModalOverlay';
+      modalEl.style.cssText = `
+        position: fixed; inset: 0; z-index: 999999;
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(6px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem; overflow-y: auto; font-family: 'Cairo', sans-serif;
+      `;
+      document.body.appendChild(modalEl);
+    }
+
+    if (window.__currentExam.timerInterval) clearInterval(window.__currentExam.timerInterval);
+    window.__currentExam.timerInterval = setInterval(() => {
+      window.__currentExam.timeRemaining--;
+      const timerDisplay = document.getElementById('examTimerCountdown');
+      if (timerDisplay) {
+        const mins = Math.max(0, Math.floor(window.__currentExam.timeRemaining / 60));
+        const secs = Math.max(0, window.__currentExam.timeRemaining % 60);
+        timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        if (window.__currentExam.timeRemaining < 120) {
+          timerDisplay.style.color = '#ef4444';
+          timerDisplay.style.fontWeight = '900';
+        }
+      }
+      if (window.__currentExam.timeRemaining <= 0) {
+        clearInterval(window.__currentExam.timerInterval);
+        alert('انتهى وقت الامتحان المخصص! سيتم تسليم إجاباتك تلقائياً الآن.');
+        window.submitStudentOnlineExam(true);
+      }
+    }, 1000);
+
+    window.renderStudentExamRunner();
+  };
+
+  window.renderStudentExamRunner = function() {
+    const exam = window.__currentExam;
+    const modalEl = document.getElementById('studentExamModalOverlay');
+    if (!exam || !modalEl) return;
+
+    const q = exam.questions[exam.currentIndex];
+    const totalQ = exam.questions.length;
+    const isMcq = q.type !== 'essay';
+    const selectedAns = exam.answers[q.id];
+
+    const mins = Math.floor(exam.timeRemaining / 60);
+    const secs = exam.timeRemaining % 60;
+    const formattedTimer = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+    modalEl.innerHTML = `
+      <div dir="rtl" style="background: #ffffff; border-radius: 16px; max-width: 680px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.3); overflow: hidden; border: 1px solid #e2e8f0; margin: auto; display: flex; flex-direction: column;">
+        
+        <!-- Header Strip -->
+        <div style="background: #1e3a8a; color: #ffffff; padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <div style="font-weight: 900; font-size: 1.1rem;">${escapeHtml(exam.title)}</div>
+            <div style="font-size: 0.78rem; color: #93c5fd; margin-top: 0.15rem;">مادة ${escapeHtml(exam.subject)} • سؤال ${exam.currentIndex + 1} من ${totalQ}</div>
+          </div>
+
+          <!-- Timer Clock Badge -->
+          <div style="background: #0f172a; padding: 0.4rem 0.85rem; border-radius: 30px; display: flex; align-items: center; gap: 0.45rem; border: 1.5px solid #3b82f6;">
+            <span style="font-size: 0.8rem; color: #94a3b8;">الوقت المتبقي:</span>
+            <span id="examTimerCountdown" style="font-family: monospace; font-size: 1.15rem; font-weight: 900; color: #38bdf8;">
+              ${formattedTimer}
+            </span>
+          </div>
+        </div>
+
+        <!-- Question Body Card -->
+        <div style="padding: 1.5rem; flex: 1;">
+          
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem; gap: 0.5rem;">
+            <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; line-height: 1.6;">
+              <span style="color: #2563eb; font-weight: 900;">(${exam.currentIndex + 1})</span> 
+              ${escapeHtml(q.text || '')}
+            </div>
+            <span style="background: #eff6ff; color: #1e40af; font-size: 0.78rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; white-space: nowrap;">
+              [${q.points || 1} درجات]
+            </span>
+          </div>
+
+          ${q.image_url ? `
+            <div style="text-align: center; margin: 1rem 0;">
+              <img src="${escapeHtml(q.image_url)}" alt="صورة المسألة" style="max-height: 220px; max-width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.08);" />
+            </div>
+          ` : ''}
+
+          <!-- MCQ Options or Essay Area -->
+          ${isMcq ? `
+            <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1.25rem;">
+              ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
+                const isSelected = Number(selectedAns) === optIdx;
+                const optText = q.choices?.[optIdx] || '';
+                return `
+                  <div 
+                    onclick="window.selectExamChoice(${optIdx})"
+                    style="display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; border-radius: 10px; border: 2px solid ${isSelected ? '#2563eb' : '#e2e8f0'}; background: ${isSelected ? '#eff6ff' : '#ffffff'}; cursor: pointer; transition: all 0.15s ease;"
+                  >
+                    <span style="width: 28px; height: 28px; border-radius: 50%; border: 2px solid ${isSelected ? '#2563eb' : '#94a3b8'}; background: ${isSelected ? '#2563eb' : '#fff'}; color: ${isSelected ? '#fff' : '#64748b'}; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem;">
+                      ${letter}
+                    </span>
+                    <span style="font-weight: 700; font-size: 0.95rem; color: ${isSelected ? '#1e40af' : '#1e293b'}; flex: 1;">
+                      ${escapeHtml(optText)}
+                    </span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : `
+            <div style="margin-top: 1rem;">
+              <label style="font-weight: 800; font-size: 0.85rem; color: #1e293b; margin-bottom: 0.35rem; display: block;">
+                اكتب إجابتك المقالية بالتفصيل هنا:
+              </label>
+              <textarea 
+                rows="4" 
+                class="form-input" 
+                placeholder="اكتب خطوات الحل أو الإجابة النموذجية الخاصة بك..."
+                style="width: 100%; font-size: 0.95rem; line-height: 1.6; border: 2px solid #cbd5e1; border-radius: 8px; padding: 0.75rem;"
+                oninput="window.setExamEssayAnswer(this.value)"
+              >${escapeHtml(selectedAns || '')}</textarea>
+            </div>
+          `}
+
+        </div>
+
+        <!-- Question Navigation Dots Strip -->
+        <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          
+          <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+            ${exam.questions.map((item, idx) => {
+              const isCurrent = idx === exam.currentIndex;
+              const hasAnswered = exam.answers[item.id] !== undefined && exam.answers[item.id] !== '';
+              return `
+                <button 
+                  type="button" 
+                  onclick="window.goToExamQuestion(${idx})"
+                  style="width: 28px; height: 28px; border-radius: 6px; font-weight: 800; font-size: 0.78rem; border: 1.5px solid ${isCurrent ? '#1e3a8a' : (hasAnswered ? '#10b981' : '#cbd5e1')}; background: ${isCurrent ? '#1e3a8a' : (hasAnswered ? '#dcfce7' : '#ffffff')}; color: ${isCurrent ? '#ffffff' : (hasAnswered ? '#15803d' : '#64748b')}; cursor: pointer;"
+                >
+                  ${idx + 1}
+                </button>
+              `;
+            }).join('')}
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              style="padding: 0.45rem 0.85rem; font-size: 0.85rem; font-weight: 700;"
+              onclick="window.prevExamQuestion()"
+              ${exam.currentIndex === 0 ? 'disabled style="opacity: 0.5;"' : ''}
+            >
+              السابق
+            </button>
+
+            ${exam.currentIndex < totalQ - 1 ? `
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                style="padding: 0.45rem 1rem; font-size: 0.85rem; font-weight: 800;"
+                onclick="window.nextExamQuestion()"
+              >
+                التالي
+              </button>
+            ` : `
+              <button 
+                type="button" 
+                class="btn" 
+                style="background: #059669; color: #fff; border: none; padding: 0.45rem 1.25rem; font-size: 0.88rem; font-weight: 900; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 8px rgba(5,150,105,0.3);"
+                onclick="window.submitStudentOnlineExam(false)"
+              >
+                تسليم الامتحان
+              </button>
+            `}
+          </div>
+
+        </div>
+
+      </div>
+    `;
+  };
+
+  window.selectExamChoice = function(choiceIdx) {
+    const exam = window.__currentExam;
+    if (!exam) return;
+    const q = exam.questions[exam.currentIndex];
+    exam.answers[q.id] = choiceIdx;
+    window.renderStudentExamRunner();
+  };
+
+  window.setExamEssayAnswer = function(text) {
+    const exam = window.__currentExam;
+    if (!exam) return;
+    const q = exam.questions[exam.currentIndex];
+    exam.answers[q.id] = text;
+  };
+
+  window.nextExamQuestion = function() {
+    const exam = window.__currentExam;
+    if (!exam || exam.currentIndex >= exam.questions.length - 1) return;
+    exam.currentIndex++;
+    window.renderStudentExamRunner();
+  };
+
+  window.prevExamQuestion = function() {
+    const exam = window.__currentExam;
+    if (!exam || exam.currentIndex <= 0) return;
+    exam.currentIndex--;
+    window.renderStudentExamRunner();
+  };
+
+  window.goToExamQuestion = function(idx) {
+    const exam = window.__currentExam;
+    if (!exam || idx < 0 || idx >= exam.questions.length) return;
+    exam.currentIndex = idx;
+    window.renderStudentExamRunner();
+  };
+
+  window.submitStudentOnlineExam = async function(isAuto) {
+    const exam = window.__currentExam;
+    if (!exam) return;
+
+    if (!isAuto) {
+      const answeredCount = Object.keys(exam.answers).filter(k => exam.answers[k] !== undefined && exam.answers[k] !== '').length;
+      const totalCount = exam.questions.length;
+      if (answeredCount < totalCount) {
+        if (!confirm(`لقد قمت بالإجابة على (${answeredCount}) من أصل (${totalCount}) أسئلة. هل أنت متأكد من رغبتك في تسليم الامتحان الآن؟`)) {
+          return;
+        }
+      } else {
+        if (!confirm('هل أنت متأكد من تسليم إجاباتك وإنهاء الامتحان؟')) {
+          return;
+        }
+      }
+    }
+
+    if (exam.timerInterval) clearInterval(exam.timerInterval);
+
+    const token = window.__portalToken || (typeof location !== 'undefined' ? new URLSearchParams(location.search).get('token') : '');
+
+    try {
+      const res = await fetch('/api/public/quizzes/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: token,
+          material_id: exam.materialId,
+          answers: exam.answers,
+          elapsed_seconds: (exam.timeLimitMinutes * 60) - exam.timeRemaining
+        })
+      });
+
+      const data = await res.json();
+      const modalEl = document.getElementById('studentExamModalOverlay');
+
+      if (data?.success) {
+        if (modalEl) {
+          modalEl.innerHTML = `
+            <div dir="rtl" style="background: #ffffff; border-radius: 16px; max-width: 480px; width: 100%; padding: 2rem; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.3); border: 1px solid #e2e8f0; margin: auto;">
+              <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
+              <h2 style="font-size: 1.3rem; font-weight: 900; color: #1e3a8a; margin: 0 0 0.5rem 0;">
+                ${data.is_graded ? 'تم تصحيح امتحانك بنجاح!' : 'تم تسليم الامتحان بنجاح!'}
+              </h2>
+              <p style="font-size: 0.9rem; color: #475569; line-height: 1.6; margin-bottom: 1.25rem;">
+                ${escapeHtml(data.message || 'أحسنت صنعاً')}
+              </p>
+              ${data.is_graded ? `
+                <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 10px; padding: 1rem; margin-bottom: 1.25rem;">
+                  <span style="font-size: 0.85rem; font-weight: 800; color: #166534; display: block;">درجتك المحققة</span>
+                  <span style="font-size: 2rem; font-weight: 900; color: #166534;">${data.score} / ${data.max_score}</span>
+                </div>
+              ` : ''}
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                style="font-weight: 800; padding: 0.6rem 1.8rem; border-radius: 8px;"
+                onclick="window.location.reload()"
+              >
+                العودة لبوابة المتابعة
+              </button>
+            </div>
+          `;
+        }
+      } else {
+        alert(data?.error?.message || 'حدث خطأ أثناء تسليم الامتحان');
+      }
+    } catch (err) {
+      alert('تعذر إرسال الإجابات، يرجى التحقق من اتصال الإنترنت');
     }
   };
 }
