@@ -354,16 +354,6 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
             ${getIcon('check', 18, '#ffffff')}
             <span>حفظ ورصد درجات الكويز</span>
           </button>
-          
-          <button 
-            class="btn"
-            style="background: #25D366; color: #fff; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(37,211,102,0.3);"
-            onclick="window.centrlyApp.dispatchBatchQuizScores()"
-            title="إرسال درجات الكويز دفعة واحدة عبر واتساب"
-          >
-            ${getIcon('whatsapp', 16, '#ffffff')}
-            <span>إرسال جماعي بالواتساب</span>
-          </button>
         </div>
       </div>
 
