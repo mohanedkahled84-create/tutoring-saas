@@ -165,7 +165,7 @@ export function renderStudentStudyMaterialCard(m, student = {}, homeworkMaterial
   `;
 }
 
-export function renderStudentPortalView(portalData = {}, activeTab = 'materials') {
+export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard') {
   if (portalData.error || !portalData.student) {
     return `
       <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; padding: 1.5rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
@@ -203,7 +203,8 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
   const materials = portalData.materials || [];
   const onlineQuizzes = materials.filter(m => m.type === 'online_quiz' || (m.questions && !m.is_homework));
   const homeworkMaterials = materials.filter(m => m.is_homework);
-  const studyMaterials = materials.filter(m => !m.is_homework && m.type !== 'online_quiz');
+  const videoMaterials = materials.filter(m => m.type === 'video');
+  const studyMaterials = materials.filter(m => !m.is_homework && m.type !== 'online_quiz' && m.type !== 'video');
   const approvedHomeworks = homeworkMaterials.filter(m => m.submission_status === 'approved');
 
   if (typeof window !== 'undefined') {
@@ -239,7 +240,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
         if (!isNaN(d.getTime())) {
           d.setHours(23, 59, 59, 999);
           if (d.getTime() < now.getTime()) {
-            return true; // Deadline passed -> Finished (لم يتم تسليمه)
+            return true; // Deadline passed -> Finished
           }
         }
       } catch (_) {}
@@ -272,9 +273,9 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
   return `
     <div style="min-height: 100vh; background-color: #f8fafc; padding: 1rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
-      <div style="max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;">
+      <div style="max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;">
         
-        <!-- Student Portal Header -->
+        <!-- Student Portal Header (Teacher White-Labeled) -->
         <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); border-radius: 1.25rem; padding: 1.5rem; box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15); color: #fff; text-align: center; position: relative; overflow: hidden;">
           <!-- Subtle decorative circle -->
           <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.08); border-radius: 50%;"></div>
@@ -282,7 +283,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; position: relative; z-index: 2;">
             <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #10b981; font-weight: 700; background: rgba(255,255,255,0.95); padding: 0.25rem 0.6rem; border-radius: 9999px;">
               <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%;"></span>
-              بوابة الطالب الرسمية
+              بوابة الطالب — ${escapeHtml(teacherNameStr)}
             </span>
             <div style="display: flex; gap: 0.4rem; align-items: center;">
               <button onclick="window.openStudentPortalTour ? window.openStudentPortalTour(true) : null" 
@@ -316,7 +317,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           </div>
           
           <p style="font-size: 0.8rem; opacity: 0.9; margin: 0.5rem 0 0 0;">
-            المذكرات الدراسية، رفع الواجبات، ومتابعة الدرجات والغياب أولاً بأول
+            الواجبات، الامتحانات الدورية، وفيديوهات الشرح والمتابعة
           </p>
         </div>
 
@@ -329,10 +330,10 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
               </div>
               <div style="text-align: right;">
                 <div style="font-weight: 800; font-size: 0.9rem; color: #065f46;">
-                  تواصل مباشر مع ${escapeHtml(teacherNameStr)} 💬
+                  تواصل مباشر مع ${escapeHtml(teacherNameStr)}
                 </div>
                 <div style="font-size: 0.76rem; color: #047857; margin-top: 1px;">
-                  ${student.subject_name ? `${escapeHtml(student.subject_name)} • ` : ''}لأي سؤال في المنهج أو استفسار بخصوص الواجب
+                  ${student.subject_name ? `${escapeHtml(student.subject_name)} • ` : ''}لأي استفسار في المنهج أو بخصوص الواجب والامتحانات
                 </div>
               </div>
             </div>
@@ -345,31 +346,151 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
           </div>
         ` : ''}
 
-        <!-- 4-Tab Navigation Bar (Materials, Quizzes, Attendance, Barcode ID Card) -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
-          <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('materials') : null" id="student-tab-btn-materials"
-            style="padding: 0.65rem 0.35rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: ${activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('materials', 15, activeTab === 'materials' ? '#1e3a8a' : '#64748b')}
-            <span>المذكرات والواجب ${homeworkMaterials.length > 0 ? `(${approvedHomeworks.length}/${homeworkMaterials.length})` : `(${materials.length})`}</span>
+        <!-- 6-Tab Navigation Bar (Dashboard, Materials, Exams, Videos, Attendance, Barcode) -->
+        <div style="display: flex; gap: 4px; background: #e2e8f0; padding: 4px; border-radius: 0.85rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+          <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('dashboard') : null" id="student-tab-btn-dashboard"
+            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'dashboard' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'dashboard' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'dashboard' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('dashboard', 14, activeTab === 'dashboard' ? '#1e3a8a' : '#64748b')}
+            <span>الرئيسية والمهام</span>
           </button>
 
-          <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('quizzes') : null" id="student-tab-btn-quizzes"
-            style="padding: 0.65rem 0.35rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: ${activeTab === 'quizzes' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'quizzes' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'quizzes' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('chart', 15, activeTab === 'quizzes' ? '#1e3a8a' : '#64748b')}
-            <span>الكويزات (${quizzes.length})</span>
+          <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('materials') : null" id="student-tab-btn-materials"
+            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('homework', 14, activeTab === 'materials' ? '#1e3a8a' : '#64748b')}
+            <span>الواجبات والمذكرات ${activeHomeworks.length > 0 ? `(${activeHomeworks.length})` : ''}</span>
+          </button>
+
+          <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('exams') : null" id="student-tab-btn-exams"
+            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'exams' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'exams' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'exams' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('chart', 14, activeTab === 'exams' ? '#1e3a8a' : '#64748b')}
+            <span>الامتحانات ${onlineQuizzes.length > 0 ? `(${onlineQuizzes.length})` : ''}</span>
+          </button>
+
+          <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('videos') : null" id="student-tab-btn-videos"
+            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'videos' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'videos' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'videos' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('video', 14, activeTab === 'videos' ? '#1e3a8a' : '#64748b')}
+            <span>فيديوهات الشرح ${videoMaterials.length > 0 ? `(${videoMaterials.length})` : ''}</span>
           </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('attendance') : null" id="student-tab-btn-attendance"
-            style="padding: 0.65rem 0.35rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('calendar', 15, activeTab === 'attendance' ? '#1e3a8a' : '#64748b')}
+            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('calendar', 14, activeTab === 'attendance' ? '#1e3a8a' : '#64748b')}
             <span>الحضور والغياب</span>
           </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('card') : null" id="student-tab-btn-card"
-            style="padding: 0.65rem 0.35rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: ${activeTab === 'card' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'card' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'card' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('barcode', 15, activeTab === 'card' ? '#1e3a8a' : '#64748b')}
-            <span>باركود الحضور</span>
+            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'card' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'card' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'card' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('barcode', 14, activeTab === 'card' ? '#1e3a8a' : '#64748b')}
+            <span>كارت الباركود</span>
           </button>
+        </div>
+
+        <!-- ================= TAB 1: DASHBOARD (الرئيسية والمهام) ================= -->
+        <div id="student-tab-content-dashboard" style="display: ${activeTab === 'dashboard' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
+          
+          <!-- 3 Golden KPIs -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
+            <div style="background: #ffffff; padding: 1rem 0.75rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">نسبة الحضور</div>
+              <div style="font-size: 1.55rem; font-weight: 900; color: #10b981; margin-top: 0.2rem;">
+                ${escapeHtml(summary.attendance_rate || '100%')}
+              </div>
+              <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.2rem;">
+                ${escapeHtml(summary.attended_count || 0)} حاضر / ${escapeHtml(summary.total_sessions || 0)} حصة
+              </div>
+            </div>
+
+            <div style="background: #ffffff; padding: 1rem 0.75rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">متوسط الكويزات</div>
+              <div style="font-size: 1.55rem; font-weight: 900; color: #2563eb; margin-top: 0.2rem;">
+                ${escapeHtml(summary.quiz_average_percentage || '—')}
+              </div>
+              <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.2rem;">
+                ${quizzes.length > 0 ? `${quizzes.length} كويز مرصود` : 'لا توجد كويزات'}
+              </div>
+            </div>
+
+            <div style="background: #ffffff; padding: 1rem 0.75rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">الواجبات المسلّمة</div>
+              <div style="font-size: 1.55rem; font-weight: 900; color: ${activeHomeworks.length > 0 ? '#b45309' : '#059669'}; margin-top: 0.2rem;">
+                ${approvedHomeworks.length} <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">/ ${homeworkMaterials.length}</span>
+              </div>
+              <div style="font-size: 0.72rem; color: ${activeHomeworks.length > 0 ? '#b45309' : '#059669'}; margin-top: 0.2rem; font-weight: 700;">
+                ${activeHomeworks.length > 0 ? `${activeHomeworks.length} مطلوب للتسليم` : 'كافة الواجبات معتمدة'}
+              </div>
+            </div>
+          </div>
+
+          <!-- To-Do Action Items Section -->
+          <div style="background: #ffffff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem;">
+              <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                ${getIcon('homework', 18, '#1e3a8a')}
+                <span>المهام المطلوب متابعتها وإنجازها</span>
+              </h2>
+              <span style="font-size: 0.75rem; color: #64748b; font-weight: 700;">
+                ${activeHomeworks.length + onlineQuizzes.length} مهام معلقة
+              </span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              ${activeHomeworks.length > 0 ? `
+                <div style="padding: 0.85rem 1rem; border-radius: 0.75rem; background: #fffbeb; border: 1px solid #fef3c7; border-right: 4px solid #f59e0b; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                  <div>
+                    <span style="font-size: 0.7rem; font-weight: 800; color: #b45309; background: #fef3c7; padding: 0.15rem 0.45rem; border-radius: 0.3rem;">واجب مطلوب للتسليم</span>
+                    <h4 style="font-size: 0.92rem; font-weight: 800; color: #0f172a; margin: 0.25rem 0 0 0;">${escapeHtml(activeHomeworks[0].title)}</h4>
+                    ${activeHomeworks[0].due_date ? `<div style="font-size: 0.75rem; color: #92400e; margin-top: 0.15rem;">ينتهي: ${escapeHtml(activeHomeworks[0].due_date)}</div>` : ''}
+                  </div>
+                  <button type="button" onclick="window.switchStudentPortalTab('materials')" class="btn btn-sm btn-primary" style="font-weight: 800; font-size: 0.8rem; padding: 0.45rem 0.9rem; border-radius: 0.5rem;">
+                    تسليم الواجب الآن
+                  </button>
+                </div>
+              ` : ''}
+
+              ${onlineQuizzes.length > 0 ? `
+                <div style="padding: 0.85rem 1rem; border-radius: 0.75rem; background: #eff6ff; border: 1px solid #dbeafe; border-right: 4px solid #2563eb; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                  <div>
+                    <span style="font-size: 0.7rem; font-weight: 800; color: #1d4ed8; background: #dbeafe; padding: 0.15rem 0.45rem; border-radius: 0.3rem;">امتحان أونلاين متاح</span>
+                    <h4 style="font-size: 0.92rem; font-weight: 800; color: #0f172a; margin: 0.25rem 0 0 0;">${escapeHtml(onlineQuizzes[0].title)}</h4>
+                    <div style="font-size: 0.75rem; color: #1e40af; margin-top: 0.15rem;">بيئة مؤمنة • تصحيح واعتماد مباشر</div>
+                  </div>
+                  <button type="button" onclick="window.switchStudentPortalTab('exams')" class="btn btn-sm" style="background: #1e3a8a; color: #fff; font-weight: 800; font-size: 0.8rem; padding: 0.45rem 0.9rem; border-radius: 0.5rem; border: none; cursor: pointer;">
+                    دخول الامتحان
+                  </button>
+                </div>
+              ` : ''}
+
+              ${videoMaterials.length > 0 ? `
+                <div style="padding: 0.85rem 1rem; border-radius: 0.75rem; background: #f5f3ff; border: 1px solid #ede9fe; border-right: 4px solid #7c3aed; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                  <div>
+                    <span style="font-size: 0.7rem; font-weight: 800; color: #6d28d9; background: #ede9fe; padding: 0.15rem 0.45rem; border-radius: 0.3rem;">فيديو شرح متاح</span>
+                    <h4 style="font-size: 0.92rem; font-weight: 800; color: #0f172a; margin: 0.25rem 0 0 0;">${escapeHtml(videoMaterials[0].title)}</h4>
+                    <div style="font-size: 0.75rem; color: #5b21b6; margin-top: 0.15rem;">شرح أفكار المنهج وحلول التمارين</div>
+                  </div>
+                  <button type="button" onclick="window.switchStudentPortalTab('videos')" class="btn btn-sm" style="background: #7c3aed; color: #fff; font-weight: 800; font-size: 0.8rem; padding: 0.45rem 0.9rem; border-radius: 0.5rem; border: none; cursor: pointer;">
+                    مشاهدة الفيديو
+                  </button>
+                </div>
+              ` : ''}
+
+              <!-- Class schedule card -->
+              <div style="padding: 0.85rem 1rem; border-radius: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <div>
+                  <div style="font-weight: 800; font-size: 0.9rem; color: #0f172a;">
+                    ${escapeHtml(student.group_name || 'مجموعة السنتر')}
+                  </div>
+                  <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
+                    احرص على إحضار كشكول الواجب والملزمة وإظهار باركود الحضور عند بوابة السنتر.
+                  </div>
+                </div>
+                <button type="button" onclick="window.switchStudentPortalTab('card')" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 0.45rem 0.85rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 800; cursor: pointer;">
+                  عرض الباركود
+                </button>
+              </div>
+
+            </div>
+          </div>
+
         </div>
 
         <!-- ================= TAB 1: MATERIALS & HOMEWORK (TOP OF PAGE) ================= -->
@@ -396,7 +517,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                 ${approvedHomeworks.length} <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">/ ${homeworkMaterials.length}</span>
               </div>
               <div style="font-size: 0.725rem; color: #059669; font-weight: 700; margin-top: 0.2rem;">
-                ${homeworkMaterials.length > 0 && approvedHomeworks.length === homeworkMaterials.length ? 'تم تسليم كافة الواجبات ★' : `تم تسليم ${approvedHomeworks.length} واجب بنجاح`}
+                ${homeworkMaterials.length > 0 && approvedHomeworks.length === homeworkMaterials.length ? 'تم تسليم كافة الواجبات بنجاح' : `تم تسليم ${approvedHomeworks.length} واجب بنجاح`}
               </div>
             </div>
 
@@ -464,7 +585,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
                 </p>
               </div>
               <span class="badge ${sortedActiveHomeworks.length > 0 ? 'badge-amber' : 'badge-green'}" style="font-weight: 700; font-size: 0.8rem; padding: 0.3rem 0.65rem;">
-                ${sortedActiveHomeworks.length > 0 ? `${sortedActiveHomeworks.length} واجب مطلوب` : 'لا توجد واجبات متأخرة ✓'}
+                ${sortedActiveHomeworks.length > 0 ? `${sortedActiveHomeworks.length} واجب مطلوب` : 'لا توجد واجبات متأخرة'}
               </span>
             </div>
 
@@ -745,8 +866,8 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
         </div>
 
-        <!-- ================= TAB 2: QUIZZES & GRADES ================= -->
-        <div id="student-tab-content-quizzes" style="display: ${activeTab === 'quizzes' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
+        <!-- ================= TAB 3: EXAMS (الامتحانات) ================= -->
+        <div id="student-tab-content-exams" style="display: ${activeTab === 'exams' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
           
           <!-- Quiz KPI Summary -->
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
@@ -921,7 +1042,37 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
         </div>
 
-        <!-- ================= TAB 3: ATTENDANCE HISTORY ================= -->
+        <!-- ================= TAB 4: VIDEOS (فيديوهات الشرح) ================= -->
+        <div id="student-tab-content-videos" style="display: ${activeTab === 'videos' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
+          
+          <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+                  ${getIcon('video', 18, '#7c3aed')}
+                  <span>فيديوهات الشرح والمراجعة</span>
+                </h2>
+                <p style="font-size: 0.75rem; color: #64748b; margin: 0.2rem 0 0 0;">
+                  شروحات مسجلة وحلول التمارين مؤمنة بعلامة مائية لبياناتك الشخصية
+                </p>
+              </div>
+              <span class="badge" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ede9fe; font-weight: 800;">
+                ${videoMaterials.length} فيديو متاح
+              </span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              ${videoMaterials.length > 0 ? videoMaterials.map(m => renderStudentStudyMaterialCard(m, student, homeworkMaterials, approvedHomeworks)).join('') : `
+                <div style="text-align: center; padding: 2rem 1rem; color: #64748b; font-size: 0.85rem; background: #f8fafc; border-radius: 0.75rem; border: 1px dashed #cbd5e1;">
+                  لا توجد فيديوهات شرح منشورة لمجموعتك حالياً.
+                </div>
+              `}
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ================= TAB 5: ATTENDANCE HISTORY (الحضور والغياب) ================= -->
         <div id="student-tab-content-attendance" style="display: ${activeTab === 'attendance' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
           
           <!-- Attendance KPI Summary -->
@@ -985,7 +1136,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
 
         </div>
 
-        <!-- ================= TAB 4: STUDENT ATTENDANCE BARCODE PASS ================= -->
+        <!-- ================= TAB 6: STUDENT ATTENDANCE BARCODE PASS ================= -->
         <div id="student-tab-content-card" style="display: ${activeTab === 'card' ? 'flex' : 'none'}; flex-direction: column; gap: 0.85rem; align-items: center; width: 100%;">
           <div style="width: 100%; max-width: 420px;">
             ${renderStudentAttendancePassHtml(student)}
@@ -995,7 +1146,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'materials'
         <!-- Student Portal Security & Integrity Note -->
         <div style="text-align: center; padding: 1rem 0; font-size: 0.75rem; color: #94a3b8; line-height: 1.6;">
           رابطك الشخصي لمتابعة دراستك • تتحدث البيانات والدرجات تلقائياً<br>
-          مدعوم بواسطة <b>منظومة سنترلي (Centrly Student Portal)</b>
+          بوابة الطالب الرسمية — ${escapeHtml(teacherNameStr)}
         </div>
 
         <!-- Walkthrough Onboarding Tour Modal -->
@@ -1013,7 +1164,7 @@ if (typeof window !== 'undefined') {
       if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_portal_student_tab', tabName);
       if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_portal_student_tab', tabName);
     } catch (_) {}
-    const tabs = ['materials', 'quizzes', 'attendance', 'card'];
+    const tabs = ['dashboard', 'materials', 'exams', 'videos', 'attendance', 'card'];
     tabs.forEach(t => {
       const content = document.getElementById('student-tab-content-' + t);
       const btn = document.getElementById('student-tab-btn-' + t);
@@ -1347,7 +1498,11 @@ if (typeof window !== 'undefined') {
         if (modalEl) {
           modalEl.innerHTML = `
             <div dir="rtl" style="background: #ffffff; border-radius: 16px; max-width: 480px; width: 100%; padding: 2rem; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.3); border: 1px solid #e2e8f0; margin: auto;">
-              <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
+              <div style="display: flex; justify-content: center; margin-bottom: 0.75rem; color: #059669;">
+                <div style="background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;">
+                  ${getIcon('check', 36, '#059669')}
+                </div>
+              </div>
               <h2 style="font-size: 1.3rem; font-weight: 900; color: #1e3a8a; margin: 0 0 0.5rem 0;">
                 ${data.is_graded ? 'تم تصحيح امتحانك بنجاح!' : 'تم تسليم الامتحان بنجاح!'}
               </h2>

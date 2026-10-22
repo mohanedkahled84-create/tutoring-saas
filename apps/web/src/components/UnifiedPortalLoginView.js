@@ -293,7 +293,7 @@ export function registerUnifiedPortalActions(app) {
       const appEl = this.getAppEl();
       if (appEl) {
         const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_student_tab')) ||
-                         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_student_tab')) || 'materials';
+                         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_student_tab')) || 'dashboard';
         appEl.innerHTML = renderStudentPortalView(data, savedTab);
         const studentKey = (data && data.student && (data.student.id || data.student.student_code || data.student.code || data.student.student_phone)) ? String(data.student.id || data.student.student_code || data.student.code || data.student.student_phone).trim() : '';
         if (typeof window !== 'undefined' && studentKey) {
