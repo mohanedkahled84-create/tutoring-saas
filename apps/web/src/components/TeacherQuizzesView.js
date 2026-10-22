@@ -38,6 +38,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
 
   const pendingSubmissions = state.pendingSubmissions || [];
   const pendingCount = pendingSubmissions.length;
+  const onlineSubmissions = state.onlineSubmissions || [];
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;" dir="rtl">
@@ -143,7 +144,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
 
       <!-- Tab Content Views -->
       ${activeSubTab === 'online_builder' ? renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
-      ${activeSubTab === 'online_grading' ? renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, groupStudents) : ''}
+      ${activeSubTab === 'online_grading' ? renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, onlineSubmissions) : ''}
       ${activeSubTab === 'paper_builder' ? renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
       ${activeSubTab === 'paper_scanner' ? renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents) : ''}
       ${activeSubTab === 'roster' ? renderRosterTab(state, groups, students, activeGroup, groupStudents, quizzes, currentQuiz, isLoading, hasLoaded) : ''}
@@ -1186,10 +1187,13 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
 }
 
 // ============================================================================
-// TAB 3: ONLINE GRADING (تصحيح الامتحانات الإلكترونية)
+// TAB 2: ONLINE GRADING (تصحيح الامتحانات الإلكترونية)
 // ============================================================================
-function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, groupStudents) {
+function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, onlineSubmissions) {
   const gradingViewMode = state.gradingViewMode || 'pending'; // 'pending' (مقالي بالعين) | 'graded' (النتائج)
+  const submissionsList = Array.isArray(onlineSubmissions) ? onlineSubmissions : [];
+  const gradedSubmissions = submissionsList.filter(sub => sub.status === 'approved' || sub.is_graded);
+  const pending = Array.isArray(pendingSubmissions) ? pendingSubmissions : [];
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -1215,9 +1219,9 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
               onclick="window.centrlyApp.switchGradingViewMode('pending')"
             >
               <span>امتحانات تحتاج تصحيح يدوي (مقالي)</span>
-              ${pendingSubmissions.length > 0 ? `
+              ${pending.length > 0 ? `
                 <span style="background: #ef4444; color: #ffffff; font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; font-weight: 900; margin-right: 0.35rem;">
-                  ${pendingSubmissions.length}
+                  ${pending.length}
                 </span>
               ` : ''}
             </button>
@@ -1229,12 +1233,17 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
               onclick="window.centrlyApp.switchGradingViewMode('graded')"
             >
               <span>الامتحانات المصححة تلقائياً (MCQ) والنتائج</span>
+              ${gradedSubmissions.length > 0 ? `
+                <span style="background: #059669; color: #ffffff; font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; font-weight: 900; margin-right: 0.35rem;">
+                  ${gradedSubmissions.length}
+                </span>
+              ` : ''}
             </button>
 
             <button 
               class="btn btn-secondary" 
               style="font-size: 0.85rem; font-weight: 700;"
-              onclick="window.centrlyApp.loadPendingSubmissions()"
+              onclick="window.centrlyApp.loadOnlineSubmissions()"
               title="تحديث البيانات"
             >
               ${getIcon('refresh', 14)}
@@ -1245,7 +1254,7 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
 
       <!-- VIEW A: PENDING ESSAY SUBMISSIONS -->
       ${gradingViewMode === 'pending' ? `
-        ${pendingSubmissions.length > 0 ? pendingSubmissions.map((sub, sIdx) => {
+        ${pending.length > 0 ? pending.map((sub, sIdx) => {
           const questions = sub.questions || [];
           const essayQuestions = questions.filter(q => q.type === 'essay');
           const mcqScore = sub.mcq_score || 0;
@@ -1262,7 +1271,7 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                     <span style="font-size: 0.8rem; color: #1e40af; font-weight: 700; margin-right: 0.35rem;">(كود: ${escapeHtml(sub.student_code)})</span>
                   </div>
                   <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.2rem;">
-                    ${escapeHtml(sub.quiz_title)} • كويز ${sub.quiz_number} • تاريخ التسليم: ${escapeHtml((sub.submitted_at || '').slice(0, 16))}
+                    ${escapeHtml(sub.quiz_title)} • كويز ${sub.quiz_number} • تاريخ التسليم: ${escapeHtml((sub.submitted_at || '').slice(0, 16).replace('T', ' '))}
                   </div>
                 </div>
 
@@ -1371,67 +1380,104 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
       ` : `
         <!-- VIEW B: GRADED RESULTS OVERVIEW -->
         <div class="card" style="margin: 0;">
-          <h4 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0 0 1rem 0;">
-            نتائج ودرجات الطلاب في الامتحانات الإلكترونية
-          </h4>
-          <div style="overflow-x: auto;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>كود الطالب</th>
-                  <th>اسم الطالب</th>
-                  <th>الكويز</th>
-                  <th style="text-align: center;">الدرجة المحققة</th>
-                  <th style="text-align: center;">النسبة المئوية</th>
-                  <th>حالة التقييم</th>
-                  <th style="text-align: center;">إجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${groupStudents.length > 0 ? groupStudents.map(s => {
-                  const currQuizNum = state.currentQuizNumber || 1;
-                  const sc = state.scoresMap?.[currQuizNum]?.[s.id];
-                  const hasScore = sc !== undefined && sc !== null && sc !== '';
-                  const numScore = Number(sc || 0);
-                  const maxSc = 10;
-                  const pct = Math.round((numScore / maxSc) * 100);
-
-                  let badge = '<span class="badge badge-secondary">لم يمتحن بعد</span>';
-                  if (hasScore) {
-                    if (pct >= 85) badge = '<span class="badge badge-success">ممتاز</span>';
-                    else if (pct >= 65) badge = '<span class="badge badge-blue">جيد جداً</span>';
-                    else if (pct >= 50) badge = '<span class="badge badge-warning">مقبول</span>';
-                    else badge = '<span class="badge badge-danger">يحتاج متابعة</span>';
-                  }
-
-                  return `
-                    <tr>
-                      <td style="font-family: monospace; font-weight: 800; color: #1e40af;">${escapeHtml(s.student_code || s.code || '—')}</td>
-                      <td style="font-weight: 700;">${escapeHtml(s.name || 'طالب')}</td>
-                      <td>كويز ${currQuizNum}</td>
-                      <td style="text-align: center; font-weight: 900; font-size: 0.95rem;">${hasScore ? `${numScore} / ${maxSc}` : '—'}</td>
-                      <td style="text-align: center; font-weight: 800;">${hasScore ? `${pct}%` : '—'}</td>
-                      <td>${badge}</td>
-                      <td style="text-align: center;">
-                        <button 
-                          class="btn btn-secondary" 
-                          style="font-size: 0.78rem; font-weight: 700; color: #059669;"
-                          onclick="window.centrlyApp.sendQuizScoreWhatsApp('${s.id}', '${escapeHtml(s.name)}', 'كويز ${currQuizNum}', 'both')"
-                        >
-                          ${getIcon('whatsapp', 14, '#059669')}
-                          <span>واتساب</span>
-                        </button>
-                      </td>
-                    </tr>
-                  `;
-                }).join('') : `
-                  <tr>
-                    <td colspan="7" style="text-align: center; padding: 2rem; color: #64748b;">لا يوجد طلاب في هذه المجموعة</td>
-                  </tr>
-                `}
-              </tbody>
-            </table>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <h4 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">
+                نتائج ودرجات الامتحانات الإلكترونية المعتمدة
+              </h4>
+              <p style="font-size: 0.8rem; color: #64748b; margin: 0.2rem 0 0 0;">
+                هنا تظهر فقط تسليمات الامتحانات التي أجاب عليها الطلاب إلكترونياً عبر هواتفهم وحساباتهم
+              </p>
+            </div>
+            ${gradedSubmissions.length > 0 ? `
+              <span class="badge badge-success" style="font-size: 0.82rem; font-weight: 800;">
+                إجمالي التسليمات: ${gradedSubmissions.length}
+              </span>
+            ` : ''}
           </div>
+
+          ${gradedSubmissions.length > 0 ? `
+            <div style="overflow-x: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>كود الطالب</th>
+                    <th>اسم الطالب</th>
+                    <th>الامتحان الإلكتروني</th>
+                    <th style="text-align: center;">الدرجة المحققة</th>
+                    <th style="text-align: center;">النسبة المئوية</th>
+                    <th style="text-align: center;">تاريخ الحل</th>
+                    <th>نوع التقييم</th>
+                    <th style="text-align: center;">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${gradedSubmissions.map(sub => {
+                    const numScore = Number(sub.score ?? sub.mcq_score ?? 0);
+                    const maxSc = Number(sub.max_score || 10);
+                    const pct = Math.round((numScore / (maxSc || 1)) * 100);
+
+                    let badge = '<span class="badge badge-success">تصحيح تلقائي 100%</span>';
+                    if (sub.has_essay) {
+                      badge = '<span class="badge badge-blue">تم اعتماد المقالي</span>';
+                    }
+
+                    return `
+                      <tr>
+                        <td style="font-family: monospace; font-weight: 800; color: #1e40af;">${escapeHtml(sub.student_code || '—')}</td>
+                        <td style="font-weight: 700;">${escapeHtml(sub.student_name || 'طالب')}</td>
+                        <td style="font-weight: 600;">${escapeHtml(sub.quiz_title || `كويز ${sub.quiz_number || 1}`)}</td>
+                        <td style="text-align: center; font-weight: 900; font-size: 1rem; color: #059669;">${numScore} / ${maxSc}</td>
+                        <td style="text-align: center; font-weight: 800; color: ${pct >= 50 ? '#059669' : '#dc2626'};">${pct}%</td>
+                        <td style="text-align: center; font-size: 0.78rem; color: #64748b;">${escapeHtml((sub.submitted_at || '').slice(0, 16).replace('T', ' '))}</td>
+                        <td>${badge}</td>
+                        <td style="text-align: center;">
+                          <button 
+                            class="btn btn-secondary" 
+                            style="font-size: 0.78rem; font-weight: 700; color: #059669;"
+                            onclick="window.centrlyApp.sendQuizScoreWhatsApp('${sub.student_id}', '${escapeHtml(sub.student_name)}', '${escapeHtml(sub.quiz_title || `كويز ${sub.quiz_number || 1}`)}', 'both', ${numScore}, ${maxSc})"
+                          >
+                            ${getIcon('whatsapp', 14, '#059669')}
+                            <span>واتساب</span>
+                          </button>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : `
+            <div style="text-align: center; padding: 3.5rem 1.5rem; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px;">
+              <div style="display: flex; justify-content: center; margin-bottom: 0.75rem; color: #94a3b8;">
+                ${getIcon('award', 44, '#94a3b8')}
+              </div>
+              <h4 style="font-weight: 800; color: #1e293b; margin: 0 0 0.4rem 0; font-size: 1.1rem;">
+                لا توجد تسليمات للامتحانات الإلكترونية بعد
+              </h4>
+              <p style="font-size: 0.85rem; color: #64748b; margin: 0 auto; max-width: 520px; line-height: 1.6;">
+                هذا التبويب مخصص حصرياً للامتحانات التي يؤديها الطلاب أونلاين عبر هواتفهم وحساباتهم. لم يقم أي طالب بتسليم امتحان إلكتروني في هذه المجموعة حتى الآن.
+              </p>
+              <div style="margin-top: 1.25rem; display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+                <button 
+                  class="btn btn-primary" 
+                  style="font-size: 0.85rem; font-weight: 800; border-radius: 8px;"
+                  onclick="window.centrlyApp.switchQuizSubTab('online_builder')"
+                >
+                  ${getIcon('plus', 15)}
+                  <span>إنشاء امتحان أونلاين جديد للطلاب</span>
+                </button>
+                <button 
+                  class="btn btn-secondary" 
+                  style="font-size: 0.85rem; font-weight: 700; border-radius: 8px;"
+                  onclick="window.centrlyApp.switchQuizSubTab('roster')"
+                >
+                  ${getIcon('check', 15)}
+                  <span>الانتقال لرصد درجات الكويزات العادية يدوياً</span>
+                </button>
+              </div>
+            </div>
+          `}
         </div>
       `}
 
@@ -2791,7 +2837,7 @@ export function registerTeacherQuizzesActions(app) {
     if (tabName === 'online_builder' || tabName === 'paper_builder') {
       await this.loadRichQuizzes();
     } else if (tabName === 'online_grading') {
-      await this.loadPendingSubmissions();
+      await this.loadOnlineSubmissions();
     }
     this.renderMainContent();
   };
@@ -2809,17 +2855,35 @@ export function registerTeacherQuizzesActions(app) {
     }
   };
 
-  // Pending essay submissions loader
-  app.loadPendingSubmissions = async function() {
+  // Online exam submissions loader (Both Pending Essay & Graded MCQ)
+  app.loadOnlineSubmissions = async function() {
     try {
       const gid = this.quizzesState.selectedGroupId;
-      const res = await request(`/quizzes/submissions/pending${gid ? `?group_id=${gid}` : ''}`);
-      if (res?.success && Array.isArray(res.submissions)) {
-        this.quizzesState.pendingSubmissions = res.submissions;
+      const [allRes, pendingRes] = await Promise.allSettled([
+        request(`/quizzes/submissions${gid ? `?group_id=${gid}` : ''}`),
+        request(`/quizzes/submissions/pending${gid ? `?group_id=${gid}` : ''}`)
+      ]);
+
+      if (allRes.status === 'fulfilled' && allRes.value?.success && Array.isArray(allRes.value.submissions)) {
+        this.quizzesState.onlineSubmissions = allRes.value.submissions;
+      } else {
+        this.quizzesState.onlineSubmissions = [];
+      }
+
+      if (pendingRes.status === 'fulfilled' && pendingRes.value?.success && Array.isArray(pendingRes.value.submissions)) {
+        this.quizzesState.pendingSubmissions = pendingRes.value.submissions;
+      } else if (this.quizzesState.onlineSubmissions) {
+        this.quizzesState.pendingSubmissions = this.quizzesState.onlineSubmissions.filter(s => s.status === 'needs_grading');
       }
     } catch (err) {
-      console.warn('[Centrly] Could not load pending submissions:', err);
+      console.warn('[Centrly] Could not load online submissions:', err);
     }
+  };
+
+  // Pending essay submissions loader (backward compat)
+  app.loadPendingSubmissions = async function() {
+    await this.loadOnlineSubmissions();
+    this.renderMainContent();
   };
 
   // Online Exam Wizard Flow Handlers
@@ -3115,8 +3179,7 @@ export function registerTeacherQuizzesActions(app) {
 
       if (res?.success) {
         this.showToast(`تم اعتماد وتثبيت الدرجة النهائية (${res.final_score}) للطالب بنجاح!`, 'success');
-        await this.loadPendingSubmissions();
-        await this.loadQuizzesForGroup(this.quizzesState.selectedGroupId);
+        await this.loadOnlineSubmissions();
         this.renderMainContent();
       }
     } catch (err) {
@@ -3705,7 +3768,7 @@ export function registerTeacherQuizzesActions(app) {
     this.renderMainContent();
     await this.loadQuizzesForGroup(groupId);
     await this.loadRichQuizzes();
-    await this.loadPendingSubmissions();
+    await this.loadOnlineSubmissions();
     this.renderMainContent();
   };
 
@@ -3966,11 +4029,11 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   // WhatsApp Notifications
-  app.sendQuizScoreWhatsApp = async function(studentId, studentName, quizTitle, target = 'both') {
+  app.sendQuizScoreWhatsApp = async function(studentId, studentName, quizTitle, target = 'both', explicitScore = null, explicitMaxScore = null) {
     const currQuizNum = this.quizzesState.currentQuizNumber || 1;
-    const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
-    const score = this.quizzesState.scoresMap[currQuizNum]?.[studentId];
-    const note = this.quizzesState.notesMap[currQuizNum]?.[studentId] || '';
+    const currentQuiz = this.quizzesState.quizzes?.find(q => q.number === currQuizNum) || { maxScore: 10 };
+    const score = explicitScore !== null ? explicitScore : this.quizzesState.scoresMap?.[currQuizNum]?.[studentId];
+    const note = this.quizzesState.notesMap?.[currQuizNum]?.[studentId] || '';
 
     if (score === undefined || score === null || score === '') {
       this.showToast(`يرجى رصد درجة الطالب (${studentName}) أولاً قبل إرسال الإشعار`, 'warning');
@@ -3991,9 +4054,9 @@ export function registerTeacherQuizzesActions(app) {
     const cleanParent = cleanPhone(rawParentPhone);
     const cleanStudent = cleanPhone(rawStudentPhone);
 
-    const maxScore = currentQuiz.maxScore || 10;
+    const maxScore = explicitMaxScore !== null ? explicitMaxScore : (currentQuiz.maxScore || 10);
     const numScore = Number(score);
-    const percentage = (numScore / maxScore) * 100;
+    const percentage = Math.round((numScore / (maxScore || 1)) * 100);
     const rating = percentage >= 85 ? 'ممتاز' : percentage >= 65 ? 'جيد جداً' : 'يحتاج لمزيد من المذاكرة والاجتهاد';
     const displayTitle = (quizTitle && quizTitle.trim()) ? quizTitle.trim() : `كويز ${currQuizNum}`;
 

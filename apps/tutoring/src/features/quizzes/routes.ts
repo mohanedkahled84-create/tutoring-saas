@@ -494,6 +494,137 @@ quizzesRouter.post(
   }
 );
 
+// DEV-QUIZ.RICH-4B: GET /api/quizzes/submissions - List online quiz submissions (graded & pending)
+quizzesRouter.get(
+  "/submissions",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id || "default";
+    const groupId = (req.query.group_id as string) || "";
+    const statusFilter = (req.query.status as string) || "all";
+
+    try {
+      const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
+
+      let query = supabase
+        .from("homework_submissions")
+        .select(`
+          id,
+          tenant_id,
+          student_id,
+          material_id,
+          file_name,
+          status,
+          file_url,
+          teacher_notes,
+          submitted_at
+        `)
+        .eq("tenant_id", tenantId)
+        .order("submitted_at", { ascending: false });
+
+      if (statusFilter === "pending") {
+        query = query.eq("status", "needs_grading");
+      } else if (statusFilter === "graded") {
+        query = query.eq("status", "approved");
+      } else {
+        query = query.in("status", ["needs_grading", "approved"]);
+      }
+
+      const { data: subs, error: subsError } = await query;
+      if (subsError) throw subsError;
+
+      // Filter only online quiz submissions (file_name starts with online_quiz_ or teacher_notes contains quiz metadata)
+      const onlineSubs = (subs || []).filter((s: any) => {
+        if (s.file_name && s.file_name.startsWith("online_quiz_")) return true;
+        try {
+          const notes = typeof s.teacher_notes === "string" ? JSON.parse(s.teacher_notes) : s.teacher_notes;
+          if (notes && (notes.quiz_number !== undefined || notes.mcq_score !== undefined)) return true;
+        } catch (_) {}
+        return false;
+      });
+
+      if (onlineSubs.length === 0) {
+        res.status(200).json({ success: true, submissions: [] });
+        return;
+      }
+
+      const studentIds = [...new Set(onlineSubs.map((s: any) => s.student_id))];
+      const materialIds = [...new Set(onlineSubs.map((s: any) => s.material_id))];
+
+      const { data: studentsData } = await supabase
+        .from("students")
+        .select("id, name, student_code, group_id, student_phone")
+        .in("id", studentIds);
+
+      const { data: materialsData } = await supabase
+        .from("study_materials")
+        .select("id, title, description, questions, group_id")
+        .in("id", materialIds);
+
+      const studentMap = new Map((studentsData || []).map((s: any) => [s.id, s]));
+      const materialMap = new Map((materialsData || []).map((m: any) => [m.id, m]));
+
+      const results = onlineSubs
+        .filter((sub: any) => {
+          if (!groupId) return true;
+          const s = studentMap.get(sub.student_id);
+          const m = materialMap.get(sub.material_id);
+          return (s && String(s.group_id) === String(groupId)) || (m && String(m.group_id) === String(groupId));
+        })
+        .map((sub: any) => {
+          const student = studentMap.get(sub.student_id) || {};
+          const material = materialMap.get(sub.material_id) || {};
+          let parsedNotes: any = {};
+          try {
+            parsedNotes = typeof sub.teacher_notes === "string" ? JSON.parse(sub.teacher_notes) : (sub.teacher_notes || {});
+          } catch (_) {
+            parsedNotes = {};
+          }
+
+          let materialQuestions: any = {};
+          try {
+            materialQuestions = typeof material.questions === "string" ? JSON.parse(material.questions) : (material.questions || {});
+          } catch (_) {
+            materialQuestions = {};
+          }
+
+          const hasEssay = Boolean(parsedNotes.has_essay);
+          const isGraded = sub.status === "approved" || parsedNotes.is_graded === true;
+          const finalScore = parsedNotes.final_score !== undefined && parsedNotes.final_score !== null
+            ? Number(parsedNotes.final_score)
+            : (isGraded ? Number(parsedNotes.mcq_score || 0) : null);
+
+          return {
+            id: sub.id,
+            submission_id: sub.id,
+            student_id: sub.student_id,
+            student_name: (student as any).name || "طالب",
+            student_code: (student as any).student_code || "—",
+            student_phone: (student as any).student_phone || "",
+            material_id: sub.material_id,
+            quiz_title: material.title || "امتحان أونلاين",
+            subject: material.description || materialQuestions.subject || "الفيزياء",
+            quiz_number: materialQuestions.quiz_number || 1,
+            status: sub.status,
+            is_graded: isGraded,
+            has_essay: hasEssay,
+            score: finalScore,
+            max_score: Number(parsedNotes.max_score || 10),
+            mcq_score: Number(parsedNotes.mcq_score || 0),
+            total_mcq_points: Number(parsedNotes.total_mcq_points || 0),
+            questions: materialQuestions.questions || [],
+            answers: parsedNotes.answers || {},
+            submitted_at: sub.submitted_at,
+          };
+        });
+
+      res.status(200).json({ success: true, submissions: results });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to fetch online submissions";
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+    }
+  }
+);
+
 // DEV-QUIZ.RICH-4: GET /api/quizzes/submissions/pending - List pending essay submissions
 quizzesRouter.get(
   "/submissions/pending",
