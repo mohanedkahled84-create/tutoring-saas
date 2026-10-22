@@ -83,7 +83,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
   const teacherDailyRoutes = [
     { id: 'sessions', title: 'بدء حصة ورصد الحضور', icon: 'sessions' },
     ...(isOmarMohamadi ? [{ id: 'video-lessons', title: 'فيديوهات الشرح والحل', icon: 'video' }] : []),
-    { id: 'quizzes', title: 'الكويزات والامتحانات', icon: 'reports' },
+    { id: 'quizzes', title: isOmarMohamadi ? 'الكويزات والامتحانات الشاملة' : 'رصد درجات الكويزات', icon: 'reports' },
     { id: 'homework', title: 'مراجعة وتصحيح الواجبات', icon: 'homework' },
     { id: 'materials', title: 'المذكرات والماتريال', icon: 'materials' },
   ];

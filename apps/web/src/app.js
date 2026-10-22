@@ -4,7 +4,7 @@ import { registerStudentImportActions } from './components/StudentImportModal.js
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=1.0.0';
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
-import { renderSidebar } from './components/Sidebar.js?v=5.0.0';
+import { renderSidebar } from './components/Sidebar.js?v=5.1.0';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.1';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.9.21';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
@@ -24,7 +24,7 @@ import { renderRiskWatchlistView, registerRiskWatchlistActions } from './compone
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=7.0.0';
+import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=7.1.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -2087,7 +2087,8 @@ class CentrlyApp {
           this.groups, 
           this.students, 
           isRouteFetching, 
-          Boolean(this.dataLoadedState['quizzes'])
+          Boolean(this.dataLoadedState['quizzes']),
+          this.user
         );
       case 'calendar':
         return renderTeacherCalendar(this.calendarState);

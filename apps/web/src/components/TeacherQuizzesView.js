@@ -12,8 +12,21 @@ import { getIcon } from "../utils/icons.js";
  * 5. paper_scanner: تصحيح الامتحانات الورقية (Camera & Photo Barcode/OMR Bubble Sheet Scanner)
  */
 
-export function renderTeacherQuizzesView(state = {}, groups = [], students = [], isLoading = false, hasLoaded = true) {
-  const activeSubTab = state.activeSubTab || 'online_builder';
+export function renderTeacherQuizzesView(state = {}, groups = [], students = [], isLoading = false, hasLoaded = true, currentUser = null) {
+  const user = currentUser || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
+  const userEmail = (user?.email || '').toLowerCase();
+  const isAdmin = user?.role === 'admin' || user?.is_superadmin;
+  const isOmarMohamadi = 
+    user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' || 
+    userEmail === 'mohanedabdulhalim@gmail.com' ||
+    userEmail.includes('omar') ||
+    userEmail.includes('mohamadi') ||
+    (user?.name || '').includes('عمر') ||
+    (user?.teacher_name || '').includes('عمر') ||
+    (user?.tenant_name || '').includes('عمر') ||
+    isAdmin;
+
+  const activeSubTab = isOmarMohamadi ? (state.activeSubTab || 'online_builder') : 'roster';
   const selectedGroupId = state.selectedGroupId || (groups[0]?.id || '');
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
 
@@ -39,6 +52,52 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   const pendingSubmissions = state.pendingSubmissions || [];
   const pendingCount = pendingSubmissions.length;
   const onlineSubmissions = state.onlineSubmissions || [];
+
+  // =========================================================================
+  // STANDARD TEACHERS RESTRICTION:
+  // If not Mr. Omar El-Mohammadi (and not Admin): restrict strictly to classic in-class quiz roster
+  // =========================================================================
+  if (!isOmarMohamadi) {
+    return `
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;" dir="rtl">
+        <div class="card" style="margin: 0; padding: 1.25rem 1.5rem; border-top: 4px solid var(--centrly-blue-700);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: var(--centrly-ink);">
+                <span style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: #eff6ff; color: var(--centrly-blue-700);">
+                  ${getIcon('reports', 20, 'var(--centrly-blue-700)')}
+                </span>
+                <span>رصد درجات كويزات الحصة</span>
+              </h2>
+              <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.35rem 0 0 0;">
+                تسجيل ورصد درجات الاختبارات الدورية للطلاب في الحصة وإرسال النتيجة لأولياء الأمور عبر الواتساب.
+              </p>
+            </div>
+
+            <!-- Group Switcher -->
+            <div style="display: flex; align-items: center; gap: 0.65rem; background: #f8fafc; padding: 0.4rem 0.85rem; border-radius: 10px; border: 1.5px solid var(--centrly-line);">
+              <label style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); white-space: nowrap;">المجموعة الدراسية:</label>
+              <select 
+                id="quizGroupSelect" 
+                class="form-select" 
+                style="width: 210px; font-weight: 800; background: #ffffff; border-color: #cbd5e1;"
+                onchange="window.centrlyApp.switchQuizGroup(this.value)"
+              >
+                ${groups.map(g => `
+                  <option value="${escapeHtml(g.id)}" ${g.id === selectedGroupId ? 'selected' : ''}>
+                    ${escapeHtml(g.name)}
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Standard Roster Table -->
+        ${renderRosterTab(state, groups, students, activeGroup, groupStudents, quizzes, currentQuiz, isLoading, hasLoaded)}
+      </div>
+    `;
+  }
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;" dir="rtl">
@@ -2833,6 +2892,23 @@ export function registerTeacherQuizzesActions(app) {
 
   // Subtab switcher
   app.switchQuizSubTab = async function(tabName) {
+    const user = this.user || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
+    const userEmail = (user?.email || '').toLowerCase();
+    const isAdmin = user?.role === 'admin' || user?.is_superadmin;
+    const isOmarMohamadi = 
+      user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' || 
+      userEmail === 'mohanedabdulhalim@gmail.com' ||
+      userEmail.includes('omar') ||
+      userEmail.includes('mohamadi') ||
+      (user?.name || '').includes('عمر') ||
+      (user?.teacher_name || '').includes('عمر') ||
+      (user?.tenant_name || '').includes('عمر') ||
+      isAdmin;
+
+    if (!isOmarMohamadi && tabName !== 'roster') {
+      return;
+    }
+
     this.quizzesState.activeSubTab = tabName;
     if (tabName === 'online_builder' || tabName === 'paper_builder') {
       await this.loadRichQuizzes();
