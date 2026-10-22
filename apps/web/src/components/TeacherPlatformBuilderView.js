@@ -614,10 +614,13 @@ export function registerTeacherPlatformActions(appInstance) {
           appInstance.finishProgressBar();
           notify('تم حفظ وتحديث إعدادات منصتك بنجاح! الرابط أصبح فعالاً لطلابك الآن.', 'success');
 
-          if (appInstance.loadRouteData) {
-            await appInstance.loadRouteData('platform-builder', true);
-          }
-          appInstance.render();
+          try {
+            if (typeof appInstance.loadRouteData === 'function') {
+              await appInstance.loadRouteData('platform-builder', true);
+            } else if (typeof appInstance.renderMainContent === 'function') {
+              appInstance.renderMainContent();
+            }
+          } catch (_) {}
         }
       } catch (err) {
         appInstance.finishProgressBar();
