@@ -1495,50 +1495,30 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
       title: '',
       subject: activeGroup?.subject || "الفيزياء",
       question_count: 10,
-      max_score: 20,
       time_limit_minutes: 45,
       exam_mode: 'paper',
       questions: []
     };
 
     const currentQCount = Number(activePaperQuiz.question_count || (activePaperQuiz.questions?.length > 0 ? activePaperQuiz.questions.length : 10));
-    const currentMaxScore = Number(activePaperQuiz.max_score || (currentQCount * 2));
-    const currentTimeLimit = Number(activePaperQuiz.time_limit_minutes || 45);
-    const defaultPointsPerQ = Math.max(0.5, Math.round((currentMaxScore / currentQCount) * 10) / 10);
 
     // =========================================================================
-    // STEP 1: Paper Exam Settings & Scoring Rules (إعداد وضوابط الامتحان الورقي)
+    // STEP 1: Paper Exam Settings (إعداد وضوابط الامتحان الورقي)
     // =========================================================================
     if (paperWizardStep === 1) {
-      const qCountChips = [5, 10, 15, 20, 25, 30, 40];
-      const maxScoreChips = [10, 20, 30, 40, 50, 60, 100];
-      const timeChips = [
-        { val: 15, label: '15 دقيقة' },
-        { val: 30, label: '30 دقيقة' },
-        { val: 45, label: '45 دقيقة' },
-        { val: 60, label: '60 دقيقة (ساعة)' },
-        { val: 90, label: '90 دقيقة (ساعة ونصف)' },
-        { val: 120, label: '120 دقيقة (ساعتان)' }
-      ];
-
       return `
         <div style="display: flex; flex-direction: column; gap: 1.25rem;">
           
           <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
             
-            <!-- Step Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--centrly-line); padding-bottom: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--centrly-line); padding-bottom: 1rem; margin-bottom: 1.25rem;">
               <div>
                 <div style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-blue-700); margin-bottom: 0.2rem;">
                   الخطوة 1 من 2
                 </div>
-                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.5rem;">
-                  ${getIcon('edit', 22, 'var(--centrly-blue-700)')}
-                  <span>إعداد وضوابط الامتحان الورقي وتوزيع الدرجات</span>
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">
+                  إعداد وضوابط الامتحان الورقي
                 </h3>
-                <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
-                  حدد عدد الأسئلة والدرجة الكلية وزمن الإجابة، وسيقوم النظام بتوزيع الدرجات تلقائياً وتجهيز نماذج البابل شيت المتوافقة.
-                </p>
               </div>
 
               <button 
@@ -1551,10 +1531,8 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
               </button>
             </div>
 
-            <!-- Settings Grid -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
               
-              <!-- Exam Title -->
               <div>
                 <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">عنوان / موضوع الامتحان الورقي:</label>
                 <input 
@@ -1562,13 +1540,11 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                   id="paperQuizTitle" 
                   class="form-input" 
                   value="${escapeHtml(activePaperQuiz.title || '')}" 
-                  placeholder="مثال: امتحان نصف العام - الباب الأول"
+                  placeholder="مثال: امتحان الباب الأول - قانون كيرشوف"
                   style="font-weight: 800;"
-                  onchange="window.centrlyApp.updatePaperMeta('title', this.value)"
                 />
               </div>
 
-              <!-- Subject -->
               <div>
                 <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">اسم المادة الدراسية:</label>
                 <input 
@@ -1578,11 +1554,9 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                   value="${escapeHtml(activePaperQuiz.subject || 'الفيزياء')}" 
                   placeholder="مثال: مادة الفيزياء"
                   style="font-weight: 800;"
-                  onchange="window.centrlyApp.updatePaperMeta('subject', this.value)"
                 />
               </div>
 
-              <!-- Quiz Number -->
               <div>
                 <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">رقم الكويز التسلسلي:</label>
                 <input 
@@ -1591,156 +1565,55 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                   class="form-input" 
                   value="${activePaperQuiz.quiz_number || 1}" 
                   min="1" 
-                  step="1" 
+                  step="1"
                   style="font-weight: 800;"
-                  onchange="window.centrlyApp.updatePaperMeta('quiz_number', this.value)"
                 />
               </div>
 
-              <!-- Total Questions with Quick Chips -->
-              <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                  <label class="form-label" style="font-weight: 800; font-size: 0.85rem; margin: 0;">عدد أسئلة الامتحان:</label>
-                  <div style="display: flex; align-items: center; gap: 0.35rem;">
-                    <input 
-                      type="number" 
-                      id="paperQuizQuestionCount" 
-                      class="form-input" 
-                      value="${currentQCount}" 
-                      min="1" 
-                      max="100" 
-                      style="width: 75px; text-align: center; font-weight: 900; font-size: 1rem; padding: 0.25rem; border: 2px solid var(--centrly-blue-700);"
-                      onchange="window.centrlyApp.setPaperMetaQuick('question_count', this.value)"
-                    />
-                    <span style="font-size: 0.82rem; font-weight: 700; color: #475569;">سؤال</span>
-                  </div>
-                </div>
-                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem;">
-                  ${qCountChips.map(n => {
-                    const isSel = n === currentQCount;
-                    return `
-                      <button 
-                        type="button" 
-                        class="btn" 
-                        style="padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isSel ? 'var(--centrly-blue-700)' : '#cbd5e1'}; background: ${isSel ? 'var(--centrly-blue-700)' : '#ffffff'}; color: ${isSel ? '#ffffff' : '#334155'};"
-                        onclick="window.centrlyApp.setPaperMetaQuick('question_count', ${n})"
-                      >
-                        ${n} أسئلة
-                      </button>
-                    `;
-                  }).join('')}
+              <div>
+                <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">إجمالي عدد أسئلة الامتحان:</label>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <input 
+                    type="number" 
+                    id="paperQuizQuestionCount" 
+                    class="form-input" 
+                    value="${currentQCount}" 
+                    min="1" 
+                    max="100" 
+                    step="1"
+                    style="text-align: center; font-weight: 900; font-size: 1rem; width: 100px; border: 2px solid var(--centrly-blue-700);"
+                  />
+                  <span style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-text);">سؤال</span>
                 </div>
               </div>
 
-              <!-- Max Score with Quick Chips -->
-              <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                  <label class="form-label" style="font-weight: 800; font-size: 0.85rem; margin: 0;">الدرجة الكلية (الدرجة من كام؟):</label>
-                  <div style="display: flex; align-items: center; gap: 0.35rem;">
-                    <input 
-                      type="number" 
-                      id="paperQuizMaxScore" 
-                      class="form-input" 
-                      value="${currentMaxScore}" 
-                      min="1" 
-                      max="300" 
-                      style="width: 75px; text-align: center; font-weight: 900; font-size: 1rem; padding: 0.25rem; border: 2px solid #059669; color: #065f46;"
-                      onchange="window.centrlyApp.setPaperMetaQuick('max_score', this.value)"
-                    />
-                    <span style="font-size: 0.82rem; font-weight: 700; color: #475569;">درجة</span>
-                  </div>
-                </div>
-                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem;">
-                  ${maxScoreChips.map(s => {
-                    const isSel = s === currentMaxScore;
-                    return `
-                      <button 
-                        type="button" 
-                        class="btn" 
-                        style="padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isSel ? '#059669' : '#cbd5e1'}; background: ${isSel ? '#059669' : '#ffffff'}; color: ${isSel ? '#ffffff' : '#334155'};"
-                        onclick="window.centrlyApp.setPaperMetaQuick('max_score', ${s})"
-                      >
-                        ${s} درجة
-                      </button>
-                    `;
-                  }).join('')}
-                </div>
-              </div>
-
-              <!-- Time Limit with Quick Chips -->
-              <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0.85rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                  <label class="form-label" style="font-weight: 800; font-size: 0.85rem; margin: 0;">زمن الامتحان المخصص للطلاب:</label>
-                  <div style="display: flex; align-items: center; gap: 0.35rem;">
-                    <input 
-                      type="number" 
-                      id="paperQuizTimeLimit" 
-                      class="form-input" 
-                      value="${currentTimeLimit}" 
-                      min="5" 
-                      max="240" 
-                      style="width: 75px; text-align: center; font-weight: 900; font-size: 1rem; padding: 0.25rem; border: 2px solid #d97706; color: #b45309;"
-                      onchange="window.centrlyApp.setPaperMetaQuick('time_limit_minutes', this.value)"
-                    />
-                    <span style="font-size: 0.82rem; font-weight: 700; color: #475569;">دقيقة</span>
-                  </div>
-                </div>
-                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem;">
-                  ${timeChips.map(t => {
-                    const isSel = t.val === currentTimeLimit;
-                    return `
-                      <button 
-                        type="button" 
-                        class="btn" 
-                        style="padding: 0.2rem 0.55rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isSel ? '#d97706' : '#cbd5e1'}; background: ${isSel ? '#d97706' : '#ffffff'}; color: ${isSel ? '#ffffff' : '#334155'};"
-                        onclick="window.centrlyApp.setPaperMetaQuick('time_limit_minutes', ${t.val})"
-                      >
-                        ${t.label}
-                      </button>
-                    `;
-                  }).join('')}
+              <div>
+                <label class="form-label" style="font-weight: 800; font-size: 0.85rem;">زمن الامتحان المخصص للطلاب (بالدقائق):</label>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <input 
+                    type="number" 
+                    id="paperQuizTimeLimit" 
+                    class="form-input" 
+                    value="${activePaperQuiz.time_limit_minutes || 45}" 
+                    min="5" 
+                    max="240"
+                    style="text-align: center; font-weight: 900; font-size: 1rem; width: 100px;"
+                  />
+                  <span style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-text);">دقيقة</span>
                 </div>
               </div>
 
             </div>
 
-            <!-- Real-time Scoring & Distribution Banner -->
-            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 0.85rem 1rem; margin-top: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div style="color: var(--centrly-blue-700);">${getIcon('lightbulb', 24, 'var(--centrly-blue-700)')}</div>
-                <div>
-                  <span style="font-size: 0.9rem; font-weight: 800; color: #1e3a8a; display: block;">
-                    احتساب وتوزيع الدرجات التلقائي:
-                  </span>
-                  <span style="font-size: 0.82rem; color: #1e40af;">
-                    الدرجة الكلية (${currentMaxScore} درجة) ÷ إجمالي الأسئلة (${currentQCount} سؤال) = <b>${defaultPointsPerQ} درجات لكل سؤال</b> (يمكنك تخصيص درجة كل سؤال بشكل مستقل في الخطوة التالية).
-                  </span>
-                </div>
-              </div>
-              <div style="background: #ffffff; border: 1.5px solid #bfdbfe; padding: 0.45rem 1rem; border-radius: 8px; text-align: center;">
-                <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">الدرجة الافتراضية لكل سؤال</span>
-                <span style="font-size: 1.2rem; font-weight: 900; color: #1e3a8a;">${defaultPointsPerQ} درجات</span>
+            <!-- Explanatory Notice -->
+            <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 0.85rem 1rem; margin-top: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+              <div style="color: var(--centrly-blue-700);">${getIcon('print', 22, 'var(--centrly-blue-700)')}</div>
+              <div style="font-size: 0.825rem; color: #1e3a8a; line-height: 1.5;">
+                <b>تجهيز الامتحان الورقي والـ Bubble Sheet:</b> سيتم تجهيز الأسئلة سؤالاً بسؤال لتعبئتها وتحديد درجة كل سؤال أثناء كتابته، مع توليد ورقة بابل شيت متوافقة وتشفير 3 نماذج سرية (A / B / C) لمنع الغش.
               </div>
             </div>
 
-            <!-- Smart Automation Notice -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; margin-top: 1rem;">
-              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem 1rem; display: flex; align-items: flex-start; gap: 0.65rem;">
-                <div style="color: #166534; margin-top: 2px;">${getIcon('check', 18, '#166534')}</div>
-                <div style="font-size: 0.82rem; color: #14532d; line-height: 1.5;">
-                  <b>توليد بابل شيت متوافق تلقائياً:</b> سيتم تجهيز ورقة بابل شيت مطابقة تماماً لعدد الأسئلة (${currentQCount} سؤال) مع خانات تظليل كود الطالب المكون من 4 خانات.
-                </div>
-              </div>
-
-              <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 0.75rem 1rem; display: flex; align-items: flex-start; gap: 0.65rem;">
-                <div style="color: #7e22ce; margin-top: 2px;">${getIcon('camera', 18, '#7e22ce')}</div>
-                <div style="font-size: 0.82rem; color: #581c87; line-height: 1.5;">
-                  <b>تشفير النماذج الثلاثة (A / B / C):</b> تشفير ذكي وسري برمز باركود بدون طباعة اسم النموذج أمام الطالب لمنع الغش والتواطؤ داخل القاعة.
-                </div>
-              </div>
-            </div>
-
-            <!-- Action Bar -->
+            <!-- Wizard Action Bar -->
             <div style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; margin-top: 1.5rem; border-top: 1px solid var(--centrly-line); padding-top: 1.25rem;">
               <button 
                 type="button" 
@@ -1753,10 +1626,10 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
               <button 
                 type="button" 
                 class="btn btn-primary" 
-                style="padding: 0.65rem 1.75rem; font-weight: 900; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
+                style="padding: 0.65rem 1.6rem; font-weight: 800; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
                 onclick="window.centrlyApp.proceedToPaperQuestionsStep()"
               >
-                <span>متابعة: كتابة وتصميم الأسئلة (سؤال 1)</span>
+                <span>بدء تعبئة الأسئلة سؤالاً بسؤال (سؤال 1)</span>
                 ${getIcon('arrowRight', 16, '#ffffff')}
               </button>
             </div>
@@ -1775,8 +1648,6 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
     const currentPaperQIdx = Math.max(0, Math.min(totalQuestions - 1, state.currentPaperQIdx || 0));
     const layoutMode = state.paperLayoutMode || 'single'; // 'single' | 'all'
     const totalCurrentPoints = questions.reduce((s, q) => s + Number(q.points || 1), 0);
-    const targetScore = activePaperQuiz.max_score || (totalQuestions * 2);
-    const isScoreMatched = totalCurrentPoints === targetScore;
     const progressPct = Math.round(((currentPaperQIdx + 1) / totalQuestions) * 100);
 
     const renderQuestionCardInner = (q, qIdx) => {
@@ -1839,7 +1710,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 <input 
                   type="number" 
                   class="form-input" 
-                  value="${q.points || defaultPointsPerQ}" 
+                  value="${q.points !== undefined && q.points !== null ? q.points : 2}" 
                   min="0.5" 
                   step="0.5" 
                   style="width: 65px; text-align: center; padding: 0.25rem; font-weight: 800;"
@@ -2098,12 +1969,12 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
             <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
               
               <!-- Live Score Pill -->
-              <div style="background: ${isScoreMatched ? '#ecfdf5' : '#fffbeb'}; border: 1.5px solid ${isScoreMatched ? '#a7f3d0' : '#fde68a'}; border-radius: 8px; padding: 0.4rem 0.85rem; text-align: center;">
-                <span style="font-size: 0.72rem; color: ${isScoreMatched ? '#047857' : '#b45309'}; font-weight: 700; display: block;">
-                  ${isScoreMatched ? '✓ مجموع الدرجات مطابق' : 'مجموع الدرجات الحالي'}
+              <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 0.4rem 0.95rem; text-align: center;">
+                <span style="font-size: 0.72rem; color: #1e40af; font-weight: 700; display: block;">
+                  إجمالي درجات الامتحان
                 </span>
-                <span style="font-size: 1.05rem; font-weight: 900; color: ${isScoreMatched ? '#065f46' : '#92400e'};">
-                  ${totalCurrentPoints} / ${targetScore} درجة
+                <span style="font-size: 1.05rem; font-weight: 900; color: #1e3a8a;">
+                  ${totalCurrentPoints} درجات
                 </span>
               </div>
 
@@ -2172,7 +2043,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
         ${layoutMode === 'single' ? `
           <!-- SINGLE QUESTION VIEW (سؤال بسؤال) -->
           <div style="display: flex; flex-direction: column; gap: 1rem;">
-            ${renderQuestionCardInner(questions[currentPaperQIdx] || { id: 'pq_1', type: 'mcq', choices: ['', '', '', ''], points: defaultPointsPerQ }, currentPaperQIdx)}
+            ${renderQuestionCardInner(questions[currentPaperQIdx] || { id: 'pq_1', type: 'mcq', choices: ['', '', '', ''], points: 2 }, currentPaperQIdx)}
 
             <!-- Stepper Footer Navigation -->
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; background: #ffffff; padding: 1rem 1.25rem; border-radius: 12px; border: 1px solid var(--centrly-line);">
@@ -3193,10 +3064,8 @@ export function registerTeacherQuizzesActions(app) {
     this.quizzesState.activePaperQuiz[field] = numVal;
 
     const countInput = document.getElementById('paperQuizQuestionCount');
-    const scoreInput = document.getElementById('paperQuizMaxScore');
     const timeInput = document.getElementById('paperQuizTimeLimit');
     if (field === 'question_count' && countInput) countInput.value = numVal;
-    if (field === 'max_score' && scoreInput) scoreInput.value = numVal;
     if (field === 'time_limit_minutes' && timeInput) timeInput.value = numVal;
 
     this.renderMainContent();
@@ -3208,16 +3077,12 @@ export function registerTeacherQuizzesActions(app) {
     const subject = document.getElementById('paperQuizSubject')?.value?.trim() || qz.subject || 'الفيزياء';
     const quizNum = Number(document.getElementById('paperQuizNumber')?.value || qz.quiz_number || 1);
     const count = Math.max(1, Math.min(100, Number(document.getElementById('paperQuizQuestionCount')?.value || qz.question_count || 10)));
-    const maxScore = Math.max(1, Number(document.getElementById('paperQuizMaxScore')?.value || qz.max_score || 20));
     const timeLimit = Math.max(5, Number(document.getElementById('paperQuizTimeLimit')?.value || qz.time_limit_minutes || 45));
-
-    const defaultPoints = Math.max(0.5, Math.round((maxScore / count) * 10) / 10);
 
     qz.title = title;
     qz.subject = subject;
     qz.quiz_number = quizNum;
     qz.question_count = count;
-    qz.max_score = maxScore;
     qz.time_limit_minutes = timeLimit;
 
     if (!Array.isArray(qz.questions)) qz.questions = [];
@@ -3231,7 +3096,7 @@ export function registerTeacherQuizzesActions(app) {
         image_url: '',
         choices: ['', '', '', ''],
         correct_index: 0,
-        points: defaultPoints
+        points: 2
       });
     }
 
@@ -3294,7 +3159,6 @@ export function registerTeacherQuizzesActions(app) {
       this.quizzesState.activePaperQuiz.questions = [];
     }
     const qList = this.quizzesState.activePaperQuiz.questions;
-    const defaultPts = Math.max(0.5, Math.round(((this.quizzesState.activePaperQuiz.max_score || 20) / (qList.length + 1)) * 10) / 10);
     qList.push({
       id: `pq_${Date.now()}_${qList.length + 1}`,
       type: 'mcq',
@@ -3302,7 +3166,7 @@ export function registerTeacherQuizzesActions(app) {
       image_url: '',
       choices: ['', '', '', ''],
       correct_index: 0,
-      points: defaultPts
+      points: 2
     });
     this.quizzesState.activePaperQuiz.question_count = qList.length;
     this.quizzesState.currentPaperQIdx = qList.length - 1;
