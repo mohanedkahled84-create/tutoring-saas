@@ -4,6 +4,7 @@ import { renderStudentPortalView } from './StudentPortalView.js';
 import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js';
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
+import { normalizeDigits } from '../utils/normalizeDigits.js';
 
 /**
  * Centrly Unified Student & Parent Portal Login View
@@ -163,6 +164,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
           <button 
             type="submit" 
             id="portalSubmitBtn" 
+            onclick="window.centrlyApp && window.centrlyApp.handlePortalLogin ? window.centrlyApp.handlePortalLogin(event) : null"
             style="width: 100%; padding: 0.85rem; border: none; border-radius: 0.75rem; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; font-size: 0.95rem; font-weight: 800; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); transition: opacity 0.2s;"
             onmouseover="this.style.opacity='0.95'"
             onmouseout="this.style.opacity='1'"
@@ -417,24 +419,24 @@ export function registerUnifiedPortalActions(app) {
     const alertEl = document.getElementById('portalLoginAlert');
     const roleInput = document.getElementById('portalRole');
 
-    const identifier = identInput ? normalizeDigits(identInput.value).trim() : '';
-    const password = passInput ? normalizeDigits(passInput.value).trim() : '';
-    const role = roleInput ? roleInput.value : 'parent';
-    const rememberMe = rememberCheckbox ? rememberCheckbox.checked : true;
-
-    if (!identifier || !password) {
-      if (alertEl) {
-        alertEl.style.display = 'block';
-        alertEl.textContent = 'يرجى كتابة رقم الهاتف أو كود الطالب وكلمة المرور';
-      }
-      return;
-    }
-
-    if (submitBtn) submitBtn.disabled = true;
-    if (spinner) spinner.style.display = 'inline';
-    if (alertEl) alertEl.style.display = 'none';
-
     try {
+      const identifier = identInput ? normalizeDigits(identInput.value).trim() : '';
+      const password = passInput ? normalizeDigits(passInput.value).trim() : '';
+      const role = roleInput ? roleInput.value : 'parent';
+      const rememberMe = rememberCheckbox ? rememberCheckbox.checked : true;
+
+      if (!identifier || !password) {
+        if (alertEl) {
+          alertEl.style.display = 'block';
+          alertEl.textContent = 'يرجى كتابة رقم الهاتف أو كود الطالب وكلمة المرور';
+        }
+        return;
+      }
+
+      if (submitBtn) submitBtn.disabled = true;
+      if (spinner) spinner.style.display = 'inline';
+      if (alertEl) alertEl.style.display = 'none';
+
       const res = await request('/public/portal/login', {
         method: 'POST',
         body: { identifier, password, role },
@@ -466,6 +468,7 @@ export function registerUnifiedPortalActions(app) {
         throw new Error(res?.error?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البيانات.');
       }
     } catch (err) {
+      console.error('Portal login error:', err);
       const errorMsg = err?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البيانات.';
       if (alertEl) {
         alertEl.style.display = 'block';
