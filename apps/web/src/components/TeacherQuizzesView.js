@@ -197,19 +197,24 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
           <span style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); margin-left: 0.5rem;">الكويز:</span>
           ${quizzes.map(q => {
             const isSelected = q.number === currentQuizNumber;
+            const displayTitle = q.title || `كويز ${q.number}`;
             return `
               <button 
+                id="quizTabBtn_${q.number}"
+                type="button"
                 class="btn ${isSelected ? 'btn-primary' : 'btn-secondary'}" 
                 style="padding: 0.4rem 0.85rem; font-size: 0.85rem; font-weight: 800; border-radius: 8px; display: flex; align-items: center; gap: 0.35rem;"
                 onclick="window.centrlyApp.selectQuizNumber(${q.number})"
+                title="${escapeHtml(displayTitle)}"
               >
-                <span>كويز ${q.number}</span>
+                <span class="quiz-tab-label">${escapeHtml(displayTitle)}</span>
                 ${q.skipped ? '<span style="font-size: 0.7rem; color: #f59e0b;">(مُتخطى)</span>' : ''}
               </button>
             `;
           }).join('')}
 
           <button 
+            type="button"
             class="btn btn-secondary" 
             style="padding: 0.4rem 0.75rem; font-size: 0.85rem; font-weight: 800; border-radius: 8px; border-style: dashed;"
             onclick="window.centrlyApp.addNewQuiz()"
@@ -223,15 +228,7 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
         <!-- Quick Action Buttons -->
         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
           <button 
-            class="btn btn-secondary" 
-            onclick="window.centrlyApp.promptEditQuizTitle(${currentQuiz.number})"
-            style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 800; color: var(--centrly-blue-700);"
-            title="تعديل اسم الكويز الحالي مباشرة"
-          >
-            ${getIcon('edit', 14)}
-            <span>تعديل الاسم</span>
-          </button>
-          <button 
+            type="button"
             class="btn btn-secondary" 
             onclick="window.centrlyApp.skipCurrentQuiz(${currentQuiz.number})"
             style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #b45309;"
@@ -241,12 +238,14 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
             <span>تخطي هذا الكويز</span>
           </button>
           <button 
+            type="button"
             class="btn btn-primary" 
             onclick="window.centrlyApp.saveCurrentQuizScores()"
-            style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800;"
+            style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; padding: 0.55rem 1.25rem; box-shadow: 0 2px 8px rgba(37,99,235,0.25);"
+            title="حفظ الكويز وتثبيت كافة بياناته ودرجاته"
           >
-            ${getIcon('check', 16)}
-            <span>حفظ ورصد الدرجات</span>
+            ${getIcon('check', 16, '#ffffff')}
+            <span>حفظ الكويز والدرجات</span>
           </button>
         </div>
 
@@ -263,29 +262,21 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
           </label>
           <span style="font-size: 0.75rem; color: var(--centrly-blue-700); font-weight: 800; background: #eff6ff; padding: 2px 8px; border-radius: 4px; border: 1px solid #bfdbfe; display: inline-flex; align-items: center; gap: 0.25rem;">
             ${getIcon('edit', 12)}
-            <span>قابل للتعديل</span>
+            <span>قابل للتعديل المباشر</span>
           </span>
         </div>
-        <div style="display: flex; gap: 0.4rem; margin-top: 0.4rem;">
+        <div style="margin-top: 0.45rem;">
           <input 
             id="quizTitleInput"
             type="text" 
             class="form-input" 
             value="${escapeHtml(currentQuiz.title || `كويز ${currentQuiz.number}`)}" 
             placeholder="اكتب اسم الكويز هنا..."
-            style="font-size: 0.95rem; font-weight: 800; color: var(--centrly-ink); padding: 0.45rem 0.65rem; border: 2px solid var(--centrly-blue-700); background: #f8fafc; border-radius: 6px; flex: 1;"
-            onchange="window.centrlyApp.updateQuizTitle(${currentQuiz.number}, this.value)"
-            onblur="window.centrlyApp.updateQuizTitle(${currentQuiz.number}, this.value)"
-            onkeydown="if(event.key === 'Enter'){ window.centrlyApp.updateQuizTitle(${currentQuiz.number}, this.value); this.blur(); }"
+            style="font-size: 0.95rem; font-weight: 800; color: var(--centrly-ink); padding: 0.45rem 0.65rem; border: 2px solid var(--centrly-blue-700); background: #f8fafc; border-radius: 6px; width: 100%; box-sizing: border-box;"
+            oninput="window.centrlyApp.onQuizTitleLiveInput(${currentQuiz.number}, this.value)"
+            onchange="window.centrlyApp.onQuizTitleLiveInput(${currentQuiz.number}, this.value)"
+            onkeydown="if(event.key === 'Enter'){ window.centrlyApp.saveCurrentQuizScores(); this.blur(); }"
           />
-          <button 
-            class="btn btn-primary" 
-            style="padding: 0.4rem 0.75rem; font-size: 0.8rem; font-weight: 800; white-space: nowrap;"
-            onclick="window.centrlyApp.updateQuizTitle(${currentQuiz.number}, document.getElementById('quizTitleInput').value)"
-            title="حفظ اسم الكويز"
-          >
-            حفظ
-          </button>
         </div>
         <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; font-size: 0.82rem; color: var(--centrly-text);">
           <span style="font-weight: 700;">الدرجة العظمى للكويز:</span>
@@ -299,9 +290,8 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
               class="form-input" 
               value="${currentQuiz.maxScore || 10}" 
               style="width: 70px; text-align: center; padding: 0.25rem 0.35rem; font-weight: 800; font-size: 0.9rem; border: 1.5px solid var(--centrly-line); border-radius: 6px;"
-              onchange="window.centrlyApp.updateQuizMaxScore(${currentQuiz.number}, this.value)"
-              onblur="window.centrlyApp.updateQuizMaxScore(${currentQuiz.number}, this.value)"
-              onkeydown="if(event.key === 'Enter'){ window.centrlyApp.updateQuizMaxScore(${currentQuiz.number}, this.value); this.blur(); }"
+              oninput="window.centrlyApp.onQuizMaxScoreLiveInput(${currentQuiz.number}, this.value)"
+              onkeydown="if(event.key === 'Enter'){ window.centrlyApp.saveCurrentQuizScores(); this.blur(); }"
             />
             <span style="font-weight: 700;">درجات</span>
           </div>
@@ -3815,7 +3805,32 @@ export function registerTeacherQuizzesActions(app) {
     this.updateQuizTitle(quizNum, newTitle);
   };
 
-  app.updateQuizTitle = function(quizNum, newTitle) {
+  app.onQuizTitleLiveInput = function(quizNum, val) {
+    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    if (quiz) {
+      quiz.title = val ? val.trim() : `كويز ${quizNum}`;
+      const tabBtn = document.getElementById(`quizTabBtn_${quizNum}`);
+      if (tabBtn) {
+        const span = tabBtn.querySelector('.quiz-tab-label');
+        if (span) span.textContent = val || `كويز ${quizNum}`;
+        tabBtn.setAttribute('title', val || `كويز ${quizNum}`);
+      }
+      this.saveQuizzesToLocalStorage();
+    }
+  };
+
+  app.onQuizMaxScoreLiveInput = function(quizNum, val) {
+    const num = Number(val);
+    if (num > 0) {
+      const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+      if (quiz) {
+        quiz.maxScore = num;
+        this.saveQuizzesToLocalStorage();
+      }
+    }
+  };
+
+  app.updateQuizTitle = function(quizNum, newTitle, silent = false) {
     const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
     if (quiz) {
       quiz.title = newTitle ? newTitle.trim() : `كويز ${quizNum}`;
@@ -3834,12 +3849,14 @@ export function registerTeacherQuizzesActions(app) {
           },
         }).catch(() => {});
       }
-      this.showToast('تم تحديث عنوان الكويز بنجاح', 'info');
-      this.renderMainContent();
+      if (!silent) {
+        this.showToast('تم تحديث عنوان الكويز بنجاح', 'info');
+        this.renderMainContent();
+      }
     }
   };
 
-  app.updateQuizMaxScore = function(quizNum, newMaxScore) {
+  app.updateQuizMaxScore = function(quizNum, newMaxScore, silent = false) {
     const num = Number(newMaxScore);
     if (isNaN(num) || num <= 0) return;
     const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
@@ -3860,8 +3877,10 @@ export function registerTeacherQuizzesActions(app) {
           },
         }).catch(() => {});
       }
-      this.showToast(`تم تحديث الدرجة العظمى إلى (${num} درجات)`, 'info');
-      this.renderMainContent();
+      if (!silent) {
+        this.showToast(`تم تحديث الدرجة العظمى إلى (${num} درجات)`, 'info');
+        this.renderMainContent();
+      }
     }
   };
 
@@ -3887,34 +3906,60 @@ export function registerTeacherQuizzesActions(app) {
     if (this.quizzesState.isSaving) return;
     const currQuizNum = this.quizzesState.currentQuizNumber || 1;
     const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
+
+    // Read latest title and max score inputs directly
+    const titleInput = document.getElementById('quizTitleInput');
+    if (titleInput && titleInput.value.trim()) {
+      currentQuiz.title = titleInput.value.trim();
+    }
+    const maxScoreInput = document.getElementById('quizMaxScoreInput');
+    if (maxScoreInput && Number(maxScoreInput.value) > 0) {
+      currentQuiz.maxScore = Number(maxScoreInput.value);
+    }
+
     const scores = this.quizzesState.scoresMap[currQuizNum] || {};
     const notes = this.quizzesState.notesMap[currQuizNum] || {};
 
     const count = Object.keys(scores).filter(k => scores[k] !== '' && scores[k] !== null).length;
-    if (count === 0) {
-      this.showToast('يرجى إدخال درجة طالب واحد على الأقل قبل الحفظ', 'warning');
-      return;
-    }
 
     this.quizzesState.isSaving = true;
     try {
       this.saveQuizzesToLocalStorage();
-      await request('/quizzes/scores', {
-        method: 'POST',
-        body: {
-          group_id: this.quizzesState.selectedGroupId,
-          quiz_number: currQuizNum,
-          quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
-          max_score: currentQuiz.maxScore || 10,
-          scores,
-          notes,
-        },
-      });
 
-      this.showToast(`تم حفظ وتثبيت درجات كويز ${currQuizNum} لـ (${count}) طالب بنجاح!`, 'success');
+      if (count === 0) {
+        // Save quiz settings even if no grades entered yet
+        if (this.quizzesState.selectedGroupId) {
+          await request('/quizzes', {
+            method: 'POST',
+            body: {
+              id: currentQuiz.id && currentQuiz.id.length > 20 ? currentQuiz.id : undefined,
+              group_id: this.quizzesState.selectedGroupId,
+              quiz_number: currQuizNum,
+              title: currentQuiz.title || `كويز ${currQuizNum}`,
+              max_score: currentQuiz.maxScore || 10,
+              is_skipped: Boolean(currentQuiz.skipped),
+            },
+          });
+        }
+        this.showToast(`تم حفظ الكويز (${currentQuiz.title || `كويز ${currQuizNum}`}) بنجاح!`, 'success');
+      } else {
+        await request('/quizzes/scores', {
+          method: 'POST',
+          body: {
+            group_id: this.quizzesState.selectedGroupId,
+            quiz_number: currQuizNum,
+            quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
+            max_score: currentQuiz.maxScore || 10,
+            scores,
+            notes,
+          },
+        });
+        this.showToast(`تم حفظ الكويز (${currentQuiz.title || `كويز ${currQuizNum}`}) وتثبيت درجات (${count}) طالب بنجاح!`, 'success');
+      }
+
       this.renderMainContent();
     } catch (err) {
-      this.showToast(`فشل حفظ درجات الكويز: ${err.message || 'خطأ في الخادم'}`, 'danger');
+      this.showToast(`فشل حفظ الكويز: ${err.message || 'خطأ في الخادم'}`, 'danger');
     } finally {
       this.quizzesState.isSaving = false;
     }
