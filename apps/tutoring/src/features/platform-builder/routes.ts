@@ -78,6 +78,28 @@ publicPlatformRouter.get(
 // ============================================================================
 
 /**
+ * Helper to check if the current user is an admin or Mr. Omar test account
+ */
+function isUserAdminOrOmar(req: AuthenticatedRequest): boolean {
+  const adminEmails = [
+    'mohanedkahled84@gmail.com',
+    'mohanedkhaled84@gmail.com',
+    'mohanedkhaled2367@gmail.com',
+    'teacher@centrly.app',
+    'mohanedabdulhalim@gmail.com',
+  ];
+  const userEmail = (req.user?.email || '').toLowerCase();
+  return Boolean(
+    req.user?.role === 'admin' ||
+    (req.user as any)?.is_superadmin ||
+    adminEmails.includes(userEmail) ||
+    req.user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' ||
+    userEmail.includes('omar') ||
+    userEmail.includes('mohamadi')
+  );
+}
+
+/**
  * GET /api/platform/settings
  * Retrieves teacher's platform settings and current plan tier
  */
@@ -93,7 +115,8 @@ platformRouter.get(
     try {
       const services = getServices(req);
       const service = (services as any).platformBuilder;
-      const data = await service.getTeacherSettings(tenantId);
+      const isAdminOrOmar = isUserAdminOrOmar(req);
+      const data = await service.getTeacherSettings(tenantId, isAdminOrOmar);
 
       res.status(200).json({
         success: true,
@@ -123,7 +146,8 @@ platformRouter.post(
     try {
       const services = getServices(req);
       const service = (services as any).platformBuilder;
-      const saved = await service.savePlatformSettings(tenantId, req.body);
+      const isAdminOrOmar = isUserAdminOrOmar(req);
+      const saved = await service.savePlatformSettings(tenantId, req.body, isAdminOrOmar);
 
       res.status(200).json({
         success: true,

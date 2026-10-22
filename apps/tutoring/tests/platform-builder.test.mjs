@@ -113,3 +113,34 @@ test("PlatformBuilderService - PRO Tier Gating: Allows PRO tenants to publish pl
   assert.ok(publicView);
   assert.equal(publicView.display_title, "منصة مستر عمر جمال");
 });
+
+test("PlatformBuilderService - Admin / Omar bypass allows publishing without PRO tier", async () => {
+  const repo = new FakePlatformBuilderRepository();
+  const service = new PlatformBuilderService(repo);
+
+  const tenantId = "tenant-admin-test";
+  repo.setTenantPlan(tenantId, {
+    subscription_tier: "free",
+    subscription_status: "trial",
+    is_pro: false,
+    is_active: true,
+  });
+
+  // Verify getTeacherSettings elevates is_pro for adminOrOmar
+  const settingsData = await service.getTeacherSettings(tenantId, true);
+  assert.equal(settingsData.plan.is_pro, true);
+
+  // Verify savePlatformSettings succeeds when isAdminOrOmar is true
+  const saved = await service.savePlatformSettings(
+    tenantId,
+    {
+      subdomain: "admin-platform",
+      display_title: "منصة الأدمن التجريبية",
+      subject_title: "شامل",
+    },
+    true
+  );
+
+  assert.equal(saved.subdomain, "admin-platform");
+  assert.equal(saved.is_active, true);
+});

@@ -30,11 +30,14 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       ],
     },
     {
-      category: 'التجارب الميدانية والأكاديمية (Canary)',
+      category: 'منصتي والتعليم الذكي (تجربة المعلم PRO)',
       routes: [
-        { id: 'video-lessons', title: 'فيديوهات الشرح والحل (عمر المحمدي)', icon: 'video' },
-        { id: 'materials', title: 'المذكرات والماتريال', icon: 'materials' },
+        { id: 'platform-builder', title: 'إنشاء وتخصيص منصتك', icon: 'globe', isPro: true },
+        { id: 'video-lessons', title: 'فيديوهات الشرح والحل', icon: 'video', isPro: true },
+        { id: 'quizzes', title: 'الكويزات والامتحانات الشاملة', icon: 'reports', isPro: true },
+        { id: 'sessions', title: 'بدء حصة ورصد الحضور', icon: 'sessions' },
         { id: 'homework', title: 'مراجعة وتصحيح الواجبات', icon: 'homework' },
+        { id: 'materials', title: 'المذكرات والماتريال', icon: 'materials' },
       ],
     },
     {
