@@ -1455,19 +1455,37 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
 function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) {
   const paperMode = state.paperViewMode || 'preview'; // 'preview' | 'create'
   const richQuizzes = state.richQuizzes || [];
-  const selectedQuizId = state.printQuizId || richQuizzes[0]?.id || null;
-  const targetQuiz = richQuizzes.find(q => q.id === selectedQuizId) || richQuizzes[0] || {
-    id: 'default_paper',
-    title: currentQuiz.title || `كويز ${currentQuiz.number || 1}`,
-    subject: activeGroup?.subject || "الفيزياء",
-    time_limit_minutes: 30,
-    questions: [
-      { id: '1', type: 'mcq', text: 'ما هي وحدة قياس القوة الدافعة الكهربية المستحثة في النظام الدولي للوحدات؟', choices: ['الأوم', 'الفولت', 'التسلا', 'الوبر'], correct_index: 1, points: 2 },
-      { id: '2', type: 'mcq', text: 'تتناسب شدة التيار المار في موصل طردياً مع فرق الجهد بين طرفيه عند ثبوت درجة الحرارة، هذا نص قانون:', choices: ['أوم', 'كيرشوف الأول', 'فاراداي', 'أمبير الدائري'], correct_index: 0, points: 2 },
-      { id: '3', type: 'mcq', text: 'تعتمد فكرة عمل المولد الكهربي (الدينامو) على ظاهرة:', choices: ['الحث الكهرومغناطيسي', 'التأثير الكهروحراري', 'الرنين المغناطيسي', 'الحث المتبادل فقط'], correct_index: 0, points: 2 },
-      { id: '4', type: 'essay', text: 'اذكر نص قاعدة لنز، مع بيان كيف تطبق قانون بقاء الطاقة في الدوائر الكهربية المغلقة.', points: 4 }
-    ]
-  };
+  const paperQuizzes = richQuizzes.filter(q => q.exam_mode === 'paper' || !q.exam_mode);
+  const selectedQuizId = state.printQuizId || paperQuizzes[0]?.id || richQuizzes[0]?.id || null;
+  const targetQuiz = paperQuizzes.find(q => q.id === selectedQuizId) || richQuizzes.find(q => q.id === selectedQuizId) || paperQuizzes[0] || richQuizzes[0] || null;
+
+  // If no exam has been created yet and not in create mode: show clean empty state instead of dummy example
+  if (!targetQuiz && paperMode !== 'create') {
+    return `
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div class="card" style="margin: 0; text-align: center; padding: 4rem 1.5rem; background: #ffffff; border: 2px dashed #cbd5e1; border-radius: 12px;">
+          <div style="display: flex; justify-content: center; margin-bottom: 1rem; color: var(--centrly-blue-700);">
+            ${getIcon('print', 48, 'var(--centrly-blue-700)')}
+          </div>
+          <h3 style="font-weight: 900; font-size: 1.3rem; color: var(--centrly-ink); margin: 0 0 0.5rem 0;">
+            لا توجد امتحانات ورقية منشأة لهذه المجموعة بعد
+          </h3>
+          <p style="font-size: 0.9rem; color: var(--centrly-text); max-width: 520px; margin: 0 auto 1.5rem auto; line-height: 1.6;">
+            اضغط على الزر أدناه لبدء ضبط وتصميم أول امتحان ورقي، وتحديد عدد الأسئلة والدرجات، وفور الانتهاء وحفظ الامتحان ستظهر لك هنا مباشرة المعاينة الشاملة للطباعة (A4) ونماذج البابل شيت.
+          </p>
+          <button 
+            type="button" 
+            class="btn btn-primary" 
+            style="padding: 0.75rem 2rem; font-weight: 900; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 14px rgba(37,99,235,0.3);"
+            onclick="window.centrlyApp.startNewPaperExam()"
+          >
+            ${getIcon('add', 20, '#ffffff')}
+            <span>+ إنشاء امتحان ورقي جديد الآن</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }
 
   if (paperMode === 'create') {
     const paperWizardStep = state.paperWizardStep || 1;
@@ -2398,43 +2416,84 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
             </div>
           </div>
 
-          <!-- Questions List -->
-          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-            ${(targetQuiz.questions || []).map((q, idx) => `
-              <div style="break-inside: avoid; page-break-inside: avoid; margin-bottom: 1rem;">
-                <div style="font-weight: 800; font-size: 1.05rem; line-height: 1.6; margin-bottom: 0.5rem; display: flex; align-items: flex-start; gap: 0.5rem;">
-                  <span style="display: inline-block; width: 24px;">(${idx + 1})</span>
-                  <div style="flex: 1;">
-                    ${q.text ? escapeHtml(q.text) : (q.image_url ? 'سؤال مصور من الشكل / المسألة الموضحة أدناه:' : '')} 
-                    <span style="font-size: 0.82rem; font-weight: 600; color: #555;">[${q.points || 1} درجات]</span>
-                  </div>
-                </div>
+          <!-- Questions List (Image beside question, choices under question) -->
+          <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            ${(targetQuiz.questions || []).map((q, idx) => {
+              const hasImage = !!q.image_url;
+              const hasText = !!(q.text && q.text.trim());
+              const isImageOnly = (q.format === 'image_only') || (!hasText && hasImage);
+              const isMcq = q.type !== 'essay';
+              const pointsText = `[${q.points || 1} درجات]`;
 
-                ${q.image_url ? `
-                  <div style="text-align: center; margin: 0.75rem 0;">
-                    <img src="${escapeHtml(q.image_url)}" alt="صورة السؤال" style="max-height: 280px; max-width: 95%; border: 1px solid #cbd5e1; border-radius: 4px;" />
-                  </div>
-                ` : ''}
+              return `
+                <div style="break-inside: avoid; page-break-inside: avoid; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px dashed #cbd5e1;">
+                  
+                  ${hasImage && !isImageOnly ? `
+                    <!-- Question Text on Right + Question Image on Left (Side-by-Side) -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1.25rem; margin-bottom: 0.85rem;">
+                      <div style="flex: 1; font-weight: 800; font-size: 1.05rem; line-height: 1.6; text-align: right;">
+                        <span style="font-weight: 900; margin-left: 0.35rem;">(${idx + 1})</span>
+                        <span>${escapeHtml(q.text)}</span>
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #555; margin-right: 0.4rem;">${pointsText}</span>
+                      </div>
 
-                ${q.type !== 'essay' ? `
-                  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.65rem; padding-right: 1.75rem;">
-                    ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
-                      const optText = q.choices?.[optIdx]?.trim();
-                      return `
-                        <div style="font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
-                          <span style="display: inline-block; width: 22px; height: 22px; border: 1.5px solid #000; border-radius: 50%; text-align: center; line-height: 20px; font-weight: 900; font-size: 0.82rem;">${letter}</span>
-                          <span>${optText ? escapeHtml(optText) : ''}</span>
+                      <div style="flex-shrink: 0; text-align: center; max-width: 260px; border: 1.5px solid #000; border-radius: 4px; padding: 4px; background: #fff;">
+                        <img 
+                          src="${escapeHtml(q.image_url)}" 
+                          alt="الشكل المقابل" 
+                          style="max-height: 160px; max-width: 250px; object-fit: contain; display: block;" 
+                        />
+                        <div style="font-size: 0.68rem; font-weight: 800; color: #444; border-top: 1px dashed #666; margin-top: 3px; padding-top: 2px;">
+                          (الشكل المقابل)
                         </div>
-                      `;
-                    }).join('')}
-                  </div>
-                ` : `
-                  <div style="margin-top: 0.75rem; padding: 1.5rem 1rem; border: 1px dashed #999; border-radius: 4px; min-height: 85px; color: #666; font-size: 0.85rem;">
-                    (مكان إجابة السؤال المقالي)
-                  </div>
-                `}
-              </div>
-            `).join('')}
+                      </div>
+                    </div>
+                  ` : isImageOnly ? `
+                    <!-- Image-Only Question (Hero Image) -->
+                    <div style="margin-bottom: 0.85rem;">
+                      <div style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+                        <span><span style="font-weight: 900; margin-left: 0.35rem;">(${idx + 1})</span> ${q.text ? escapeHtml(q.text) : 'سؤال مصور من المسألة الموضحة أدناه:'}</span>
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #555;">${pointsText}</span>
+                      </div>
+                      <div style="text-align: center; margin: 0.5rem 0;">
+                        <img 
+                          src="${escapeHtml(q.image_url)}" 
+                          alt="صورة السؤال" 
+                          style="max-height: 260px; max-width: 95%; border: 1.5px solid #000; border-radius: 4px; object-fit: contain;" 
+                        />
+                      </div>
+                    </div>
+                  ` : `
+                    <!-- Standard Text Question (No Image) -->
+                    <div style="font-weight: 800; font-size: 1.05rem; line-height: 1.6; margin-bottom: 0.85rem; text-align: right;">
+                      <span style="font-weight: 900; margin-left: 0.35rem;">(${idx + 1})</span>
+                      <span>${escapeHtml(q.text || '')}</span>
+                      <span style="font-size: 0.82rem; font-weight: 700; color: #555; margin-right: 0.4rem;">${pointsText}</span>
+                    </div>
+                  `}
+
+                  <!-- Choices UNDER the Question -->
+                  ${isMcq ? `
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.65rem; padding-right: 1.75rem; width: 100%;">
+                      ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
+                        const optText = q.choices?.[optIdx]?.trim();
+                        return `
+                          <div style="font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem;">
+                            <span style="display: inline-block; width: 22px; height: 22px; border: 1.5px solid #000; border-radius: 50%; text-align: center; line-height: 20px; font-weight: 900; font-size: 0.82rem; flex-shrink: 0;">${letter}</span>
+                            <span>${optText ? escapeHtml(optText) : ''}</span>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  ` : `
+                    <div style="margin-top: 0.75rem; padding: 1.5rem 1rem; border: 1px dashed #777; border-radius: 4px; min-height: 85px; color: #666; font-size: 0.85rem; width: 100%;">
+                      (مكان إجابة السؤال المقالي)
+                    </div>
+                  `}
+
+                </div>
+              `;
+            }).join('')}
           </div>
 
           <div style="text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #000; font-weight: 800; font-size: 0.9rem;">
