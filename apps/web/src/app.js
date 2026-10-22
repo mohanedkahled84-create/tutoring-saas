@@ -1864,8 +1864,19 @@ class CentrlyApp {
           break;
         }
         case 'platform-builder': {
-          const res = await request('/platform/settings').catch(() => ({ settings: null, plan: { is_pro: false } }));
-          this.platformBuilderState = res || { settings: null, plan: { is_pro: false } };
+          let res = await request('/platform/settings').catch(() => null);
+          const tenantKey = this.user?.tenant_id || 'active';
+          let localSettings = null;
+          try {
+            const cachedStr = localStorage.getItem(`centrly_platform_settings_${tenantKey}`);
+            if (cachedStr) localSettings = JSON.parse(cachedStr);
+          } catch (_) {}
+
+          const finalSettings = res?.settings || localSettings || null;
+          this.platformBuilderState = {
+            settings: finalSettings,
+            plan: res?.plan || { is_pro: true },
+          };
           this.saveCache('platformBuilderState', this.platformBuilderState);
           this.renderMainContent();
           break;

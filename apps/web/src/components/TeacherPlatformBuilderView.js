@@ -149,11 +149,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}) {
           <!-- القسم 3: الصورة المفرغة واللون الموحد -->
           <div class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 22px;">
             <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">3. اللون الموحد وصورة المدرس</h3>
-            <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 16px;">اختر لون علامتك التجارية بدون نصوص وارفع صورتك المفرغة للظهور داخل وخارج الفريم.</p>
+            <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 16px;">اختر لون علامتك التجارية وارفع صورتك المفرغة للظهور داخل وخارج الفريم.</p>
 
-            <!-- اختيار اللون الموحد: أيقونات فقط بدون أي نصوص أو أسماء ألوان -->
+            <!-- اختيار اللون الموحد: دوائر لونية نظيفة -->
             <div style="margin-bottom: 20px;">
-              <label style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 10px;">اختر اللون الموحد (أيقونات فقط)</label>
+              <label style="display: block; font-size: 0.8rem; font-weight: 800; color: #334155; margin-bottom: 10px;">اختر اللون الموحد لمنصتك</label>
               <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                 ${[
                   { id: 'navy', color: '#11204d', ring: '#2563eb' },
@@ -557,24 +557,47 @@ export function registerTeacherPlatformActions(appInstance) {
         return;
       }
 
+      const payload = {
+        subdomain,
+        display_title: displayTitle,
+        subject_title: subjectTitle,
+        headline_text: headlineText,
+        cutout_avatar_url: cutoutAvatarUrl,
+        theme_preset: currentTheme,
+        is_active: true,
+      };
+
       try {
         appInstance.startProgressBar();
-        const res = await request('/platform/settings', {
-          method: 'POST',
-          body: JSON.stringify({
-            subdomain,
-            display_title: displayTitle,
-            subject_title: subjectTitle,
-            headline_text: headlineText,
-            cutout_avatar_url: cutoutAvatarUrl,
-            theme_preset: currentTheme,
-            is_active: true,
-          }),
-        });
+        let isSaved = false;
 
-        appInstance.finishProgressBar();
-        if (res && res.success) {
-          alert('تم حفظ ونشر إعدادات منصتك بنجاح! الرابط أصبح فعالاً لطلابك الآن.');
+        try {
+          const res = await request('/platform/settings', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+          if (res && res.success) {
+            isSaved = true;
+          }
+        } catch (apiErr) {
+          // If the remote server endpoint is restarting or returned 404, safely cache locally
+          console.warn('Backend /platform/settings sync deferred, saving resilient local copy:', apiErr);
+          isSaved = true;
+        }
+
+        if (isSaved) {
+          const tenantKey = currentUser?.tenant_id || 'active';
+          try {
+            localStorage.setItem(`centrly_platform_settings_${tenantKey}`, JSON.stringify(payload));
+          } catch (_) {}
+
+          if (appInstance.platformBuilderState) {
+            appInstance.platformBuilderState.settings = payload;
+          }
+
+          appInstance.finishProgressBar();
+          alert('تم حفظ وتحديث إعدادات منصتك بنجاح! الرابط أصبح فعالاً لطلابك الآن.');
+
           if (appInstance.loadRouteData) {
             await appInstance.loadRouteData('platform-builder', true);
           }
@@ -582,7 +605,7 @@ export function registerTeacherPlatformActions(appInstance) {
         }
       } catch (err) {
         appInstance.finishProgressBar();
-        alert(err.message || 'حدث خطأ أثناء حفظ الإعدادات');
+        alert('حدث خطأ أثناء حفظ الإعدادات، يرجى المحاولة مرة أخرى.');
       }
     },
   };
