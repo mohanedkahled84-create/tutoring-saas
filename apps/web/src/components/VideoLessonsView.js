@@ -1,3 +1,4 @@
+import { isUserPro } from "../utils/proGating.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
@@ -75,7 +76,7 @@ export function openVideoPlayerModal(url, title, watermarkText = "") {
 
       <!-- Watermark Security Note Footer -->
       <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #94a3b8; padding: 0 0.5rem;">
-        <span>🔒 هذا المحتوى محمي بحقوق النشر ومسجل باسم الطالب لمنع التداول غير المصرح به.</span>
+        <span>هذا المحتوى محمي بحقوق النشر ومسجل باسم الطالب لمنع التداول غير المصرح به.</span>
         <span>بث مباشر مشفر</span>
       </div>
     </div>
@@ -141,17 +142,39 @@ export function renderVideoLessonsView(
   const homeworkGatedCount = videoMaterials.filter(v => v.book_name === "approved_homework").length;
   const openCount = totalVideos - homeworkGatedCount;
 
+  const isPro = isUserPro(user);
+
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
       
+      ${!isPro ? `
+        <div style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 14px 18px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              ${getIcon('info', 18, '#b45309')}
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 0.88rem;">أنت الآن في وضع المعاينة والاستعراض لميزات باقة PRO</div>
+              <div style="font-size: 0.8rem; color: #b45309; margin-top: 2px;">يمكنك استعراض فيديوهات الشرح ونظام القفل التلقائي بالواجب، ولإضافة ونشر فيديوهات جديدة لطلابك يلزم الترقية لباقة PRO.</div>
+            </div>
+          </div>
+          <button type="button" onclick="window.centrlyApp && window.centrlyApp.navigateTo('settings')" style="background: #b45309; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer; white-space: nowrap;">
+            ترقية الحساب لباقة PRO
+          </button>
+        </div>
+      ` : ''}
+
       <!-- Top Title & Action Header -->
       <div class="card" style="margin: 0;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
-            <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: var(--centrly-blue-900);">
-              <span>${getIcon('video', 24, 'var(--centrly-blue-700)')}</span>
-              <span>فيديوهات الشرح والحل (منظومة يوتيوب المشروطة)</span>
-            </h2>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: var(--centrly-blue-900);">
+                <span>${getIcon('video', 24, 'var(--centrly-blue-700)')}</span>
+                <span>فيديوهات الشرح والحل (منظومة يوتيوب المشروطة)</span>
+              </h2>
+              <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.68rem; font-weight: 900; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px;">PRO</span>
+            </div>
             <p style="font-size: 0.85rem; color: var(--centrly-text); margin-top: 0.25rem;">
               مشاركة فيديوهات يوتيوب غير مدرجة مع تقييد الفتح فقط للطلاب الذين <strong>تم اعتماد واجبهم</strong> أو تم منحهم <strong>استثناء يدوي</strong>.
             </p>
@@ -341,6 +364,11 @@ export function registerVideoLessonsActions(app) {
 
   // 2. Open Add Video Lesson Modal
   app.openAddVideoLessonModal = function() {
+    if (!isUserPro(this.user)) {
+      alert('ميزة إضافة فيديوهات الشرح وربطها باعتماد الواجب متاحة فقط لمشتركي باقة PRO. اضغط حسناً للانتقال لصفحة الاشتراك والترقية.');
+      if (this.navigateTo) this.navigateTo('settings');
+      return;
+    }
     const homeworkList = (this.materials || []).filter(m => Boolean(m.is_homework));
     const groupsList = this.groups || [];
 

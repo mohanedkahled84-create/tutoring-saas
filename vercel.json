@@ -150,6 +150,14 @@
       "destination": "/apps/web/src/:path*"
     },
     {
+      "source": "/mr-omar",
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
+      "source": "/mr-omar/dashboard",
+      "destination": "/teacher-platform-sample/index.html"
+    },
+    {
       "source": "/portal",
       "destination": "/index.html"
     },
@@ -166,7 +174,7 @@
       "destination": "/index.html"
     },
     {
-      "source": "/((?!api/|apps/).*)",
+      "source": "/((?!api/|apps/|teacher-platform-sample/|mr-omar).*)",
       "destination": "/index.html"
     }
   ]

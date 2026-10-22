@@ -76,14 +76,14 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
   ];
 
   // Dedicated Teacher Navigation grouped strictly by operational priority:
-  // 1. Daily in-class actions (Sessions, Quizzes, Homework, Materials) - Most frequent
-  // 2. Students & Classes management (Students, Groups, Calendar, Cards)
-  // 3. Analytics & Financials (Earnings Dashboard, Reports, Risk Watchlist)
-  // 4. Administration & Settings (Assistants, WhatsApp, Billing, Activity)
+  // 1. Daily in-class actions (Sessions, Manual Quiz Grades, Homework, Materials) - Basic tier
+  // 2. Pro Platform & Smart LMS (Platform Builder, Video Lessons, Electronic Exams) - PRO tier
+  // 3. Students & Classes management (Students, Groups, Calendar, Cards)
+  // 4. Analytics & Financials (Earnings Dashboard, Reports, Risk Watchlist)
+  // 5. Administration & Settings (Assistants, WhatsApp, Billing, Activity)
   const teacherDailyRoutes = [
     { id: 'sessions', title: 'بدء حصة ورصد الحضور', icon: 'sessions' },
-    ...(isOmarMohamadi ? [{ id: 'video-lessons', title: 'فيديوهات الشرح والحل', icon: 'video' }] : []),
-    { id: 'quizzes', title: isOmarMohamadi ? 'الكويزات والامتحانات الشاملة' : 'رصد درجات الكويزات', icon: 'reports' },
+    ...(isOmarMohamadi ? [] : [{ id: 'quizzes', title: 'رصد درجات الكويزات', icon: 'reports' }]),
     { id: 'homework', title: 'مراجعة وتصحيح الواجبات', icon: 'homework' },
     { id: 'materials', title: 'المذكرات والماتريال', icon: 'materials' },
   ];
@@ -93,6 +93,16 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       category: 'العمليات اليومية للحصة',
       routes: teacherDailyRoutes,
     },
+    ...(isOmarMohamadi ? [
+      {
+        category: 'منصتي والتعليم الذكي (PRO)',
+        routes: [
+          { id: 'platform-builder', title: 'إنشاء منصتك المستقلة', icon: 'globe', isPro: true },
+          { id: 'video-lessons', title: 'فيديوهات الشرح والحل', icon: 'video', isPro: true },
+          { id: 'quizzes', title: 'الكويزات والامتحانات الشاملة', icon: 'reports', isPro: true },
+        ],
+      }
+    ] : []),
     {
       category: 'إدارة الطلاب والمجاميع وفريق العمل',
       routes: [
@@ -168,8 +178,9 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
                     <span class="nav-icon" style="display: inline-flex; align-items: center; justify-content: center; color: ${isActive ? 'var(--centrly-blue-700)' : '#64748b'};">
                       ${getIcon(r.icon, 18)}
                     </span>
-                    <span style="font-weight: ${isActive ? '800' : '600'}; color: ${isActive ? 'var(--centrly-blue-800)' : '#334155'}; font-size: 0.875rem; flex: 1;">
-                      ${escapeHtml(r.title)}
+                    <span style="font-weight: ${isActive ? '800' : '600'}; color: ${isActive ? 'var(--centrly-blue-800)' : '#334155'}; font-size: 0.875rem; flex: 1; display: flex; align-items: center; justify-content: space-between;">
+                      <span>${escapeHtml(r.title)}</span>
+                      ${r.isPro ? `<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.65rem; font-weight: 900; padding: 1px 6px; border-radius: 4px; letter-spacing: 0.5px;">PRO</span>` : ''}
                     </span>
                     ${isLocked ? `<span title="محمي برمز الأمان (PIN)" style="display: inline-flex; align-items: center; margin-right: 0.35rem; opacity: 0.85;">${getIcon('lock', 13, '#f59e0b')}</span>` : ''}
                     ${isActive ? `<span class="active-indicator" style="width: 3.5px; height: 18px; border-radius: 4px; background: var(--centrly-blue-700); position: absolute; right: 0;"></span>` : ''}

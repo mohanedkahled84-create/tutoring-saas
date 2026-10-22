@@ -41,6 +41,7 @@ import { renderTeacherSettingsView, registerTeacherSettingsActions } from './com
 import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=4.7.6';
 import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=1.0.0';
 import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.1.0';
+import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.0.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.9.21';
@@ -128,6 +129,7 @@ class CentrlyApp {
     this.students = [];
     this.groups = [];
     this.dashboardData = null;
+    this.platformBuilderState = null;
     this.calendarSessions = [];
     this.calendarState = {
       view: 'week',
@@ -179,6 +181,7 @@ class CentrlyApp {
     this.initTheme();
     registerMaterialsActions(this);
     registerVideoLessonsActions(this);
+    registerTeacherPlatformActions(this);
     registerCouponsActions(this);
     registerTeacherAssistantsActions(this);
     registerHomeworkActions(this);
@@ -325,6 +328,10 @@ class CentrlyApp {
         this.resetTenantState();
         return;
       }
+      const cachedPlatform = this.loadCache('platformBuilderState', null);
+      if (cachedPlatform) {
+        this.platformBuilderState = cachedPlatform;
+      }
       const cachedGroups = this.loadCache('groups', null);
       if (cachedGroups && Array.isArray(cachedGroups) && cachedGroups.length > 0) {
         this.groups = cachedGroups;
@@ -391,6 +398,8 @@ class CentrlyApp {
       case 'materials':
       case 'video-lessons':
         return Boolean(this.materials && this.materials.length > 0);
+      case 'platform-builder':
+        return Boolean(this.platformBuilderState);
       case 'assistants':
         return Boolean(this.teacherAssistants && this.teacherAssistants.length > 0);
       case 'student-cards':
@@ -1854,6 +1863,13 @@ class CentrlyApp {
           this.renderMainContent();
           break;
         }
+        case 'platform-builder': {
+          const res = await request('/platform/settings').catch(() => ({ settings: null, plan: { is_pro: false } }));
+          this.platformBuilderState = res || { settings: null, plan: { is_pro: false } };
+          this.saveCache('platformBuilderState', this.platformBuilderState);
+          this.renderMainContent();
+          break;
+        }
         case 'homework': {
           const [matRes, grpRes] = await Promise.all([
             request('/materials').catch(() => ({ materials: [] })),
@@ -2063,6 +2079,8 @@ class CentrlyApp {
         return renderMaterialsView(this.materials, this.groups, this.materialsGroupId);
       case 'video-lessons':
         return renderVideoLessonsView(this.materials, this.groups, this.students, this.videoLessonsGroupId, this.user);
+      case 'platform-builder':
+        return renderTeacherPlatformBuilderView(this.platformBuilderState || {}, this.user);
       case 'homework':
         return renderHomeworkReviewView(this.homeworkState || {});
       case 'assistants':

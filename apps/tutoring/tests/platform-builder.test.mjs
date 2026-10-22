@@ -1,0 +1,115 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { PlatformBuilderService } from "../dist/features/platform-builder/service.js";
+import { FakePlatformBuilderRepository } from "../dist/features/platform-builder/repository.js";
+
+test("PlatformBuilderService - Subdomain format validation", () => {
+  const repo = new FakePlatformBuilderRepository();
+  const service = new PlatformBuilderService(repo);
+
+  // Too short (< 3 chars)
+  assert.equal(service.validateSubdomainFormat("om").valid, false);
+
+  // Reserved keywords
+  assert.equal(service.validateSubdomainFormat("admin").valid, false);
+  assert.equal(service.validateSubdomainFormat("api").valid, false);
+  assert.equal(service.validateSubdomainFormat("portal").valid, false);
+  assert.equal(service.validateSubdomainFormat("centrly").valid, false);
+
+  // Invalid characters (spaces, arabic, special symbols)
+  assert.equal(service.validateSubdomainFormat("omar jamal").valid, false);
+  assert.equal(service.validateSubdomainFormat("عمر-جمال").valid, false);
+  assert.equal(service.validateSubdomainFormat("omar_jamal").valid, false);
+  assert.equal(service.validateSubdomainFormat("-omar").valid, false);
+
+  // Valid subdomains
+  assert.equal(service.validateSubdomainFormat("omarjamal").valid, true);
+  assert.equal(service.validateSubdomainFormat("mr-omar").valid, true);
+  assert.equal(service.validateSubdomainFormat("physics2026").valid, true);
+});
+
+test("PlatformBuilderService - Subdomain availability checking", async () => {
+  const repo = new FakePlatformBuilderRepository();
+  const service = new PlatformBuilderService(repo);
+
+  // Seed an existing subdomain for tenant-1
+  await repo.upsert("tenant-1", {
+    subdomain: "mr-ahmed",
+    display_title: "منصة مستر أحمد",
+    subject_title: "فيزياء",
+  });
+
+  // Check mr-ahmed from tenant-2 -> taken
+  const checkTaken = await service.checkSubdomainAvailability("mr-ahmed", "tenant-2");
+  assert.equal(checkTaken.available, false);
+  assert.match(checkTaken.reason, /مستخدم بالفعل/);
+
+  // Check mr-ahmed from tenant-1 (its owner) -> available (own subdomain)
+  const checkOwn = await service.checkSubdomainAvailability("mr-ahmed", "tenant-1");
+  assert.equal(checkOwn.available, true);
+
+  // Check new unused subdomain -> available
+  const checkNew = await service.checkSubdomainAvailability("mr-tarek", "tenant-2");
+  assert.equal(checkNew.available, true);
+});
+
+test("PlatformBuilderService - PRO Tier Gating: Blocks non-PRO tenants", async () => {
+  const repo = new FakePlatformBuilderRepository();
+  const service = new PlatformBuilderService(repo);
+
+  const tenantId = "tenant-starter-123";
+  repo.setTenantPlan(tenantId, {
+    subscription_tier: "starter",
+    subscription_status: "active",
+    is_pro: false,
+    is_active: true,
+  });
+
+  // Attempting to save as non-PRO must throw PRO_REQUIRED error
+  await assert.rejects(
+    async () => {
+      await service.savePlatformSettings(tenantId, {
+        subdomain: "mr-starter",
+        display_title: "منصة المعلم",
+        subject_title: "لغة عربية",
+      });
+    },
+    (err) => {
+      assert.equal(err.code, "PRO_REQUIRED");
+      assert.equal(err.statusCode, 403);
+      assert.match(err.message, /باقة برو/);
+      return true;
+    }
+  );
+});
+
+test("PlatformBuilderService - PRO Tier Gating: Allows PRO tenants to publish platform", async () => {
+  const repo = new FakePlatformBuilderRepository();
+  const service = new PlatformBuilderService(repo);
+
+  const tenantId = "tenant-pro-999";
+  repo.setTenantPlan(tenantId, {
+    subscription_tier: "pro",
+    subscription_status: "active",
+    is_pro: true,
+    is_active: true,
+  });
+
+  const saved = await service.savePlatformSettings(tenantId, {
+    subdomain: "omarjamal",
+    display_title: "منصة مستر عمر جمال",
+    subject_title: "خبير اللغة الإنجليزية",
+    theme_preset: "navy",
+    headline_text: "طريقك للدرجة النهائية",
+  });
+
+  assert.equal(saved.subdomain, "omarjamal");
+  assert.equal(saved.display_title, "منصة مستر عمر جمال");
+  assert.equal(saved.theme_preset, "navy");
+  assert.equal(saved.is_active, true);
+
+  // Retrieve public settings by subdomain
+  const publicView = await service.getPublicSettings("omarjamal");
+  assert.ok(publicView);
+  assert.equal(publicView.display_title, "منصة مستر عمر جمال");
+});

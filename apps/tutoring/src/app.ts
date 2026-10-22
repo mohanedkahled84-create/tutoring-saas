@@ -34,6 +34,7 @@ import { quizzesRouter } from "./features/quizzes/routes.js";
 import { materialsRouter } from "./features/materials/routes.js";
 import { assistantsRouter } from "./features/assistants/routes.js";
 import { homeworkRouter, publicHomeworkRouter } from "./features/homework/routes.js";
+import { platformRouter, publicPlatformRouter } from "./features/platform-builder/index.js";
 
 export function createApp(): Express {
   const app = express();
@@ -99,6 +100,7 @@ export function createApp(): Express {
   // Public endpoints (Self-registration from shareable links - no token needed)
   app.use("/api/public", publicRouter);
   app.use("/api/public/homework", publicHomeworkRouter);
+  app.use("/api/platform", publicPlatformRouter);
   app.use("/api/short-links", (req, res, next) => {
     req.url = "/short-links" + (req.url.startsWith("/") ? req.url : "/" + req.url);
     publicRouter(req, res, next);
@@ -144,6 +146,7 @@ export function createApp(): Express {
   app.use("/api/materials", authenticateUser, materialsRouter);
   app.use("/api/assistants", authenticateUser, assistantsRouter);
   app.use("/api/homework", authenticateUser, homeworkRouter);
+  app.use("/api/platform", authenticateUser, platformRouter);
 
   // DEV-WPA.1: Protected Internal Automation routes (shared-secret auth)
   app.use("/internal", authenticateInternalSecret, internalRouter);

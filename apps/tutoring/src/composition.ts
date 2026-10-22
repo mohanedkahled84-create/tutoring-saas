@@ -93,6 +93,10 @@ import {
   QuizzesService,
   SupabaseQuizzesRepository,
 } from "./features/quizzes/index.js";
+import {
+  PlatformBuilderService,
+  SupabasePlatformBuilderRepository,
+} from "./features/platform-builder/index.js";
 
 export interface AppServices {
   riskWatchlist: RiskWatchlistService;
@@ -111,6 +115,7 @@ export interface AppServices {
   centers: CentersService;
   reports: ReportsService;
   quizzes: QuizzesService;
+  platformBuilder: PlatformBuilderService;
   tenants: ITenantsRepository;
   messageLogs: IMessageLogsRepository;
   [serviceName: string]: unknown;
@@ -149,6 +154,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     centers: new CentersService(new SupabaseCentersRepository(effectiveClient, privilegedClient)),
     reports: new ReportsService(new SupabaseReportsRepository(effectiveClient), undefined, messageLogsRepo),
     quizzes: new QuizzesService(new SupabaseQuizzesRepository(effectiveClient)),
+    platformBuilder: new PlatformBuilderService(new SupabasePlatformBuilderRepository(effectiveClient, privilegedClient)),
     tenants: new SupabaseTenantsRepository(effectiveClient, privilegedClient),
     messageLogs: messageLogsRepo,
     _client: effectiveClient,

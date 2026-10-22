@@ -1,3 +1,4 @@
+import { isUserPro } from "../utils/proGating.js";
 import { request } from "../services/api.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
@@ -16,17 +17,8 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   const user = currentUser || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
   const userEmail = (user?.email || '').toLowerCase();
   const isAdmin = user?.role === 'admin' || user?.is_superadmin;
-  const isOmarMohamadi = 
-    user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' || 
-    userEmail === 'mohanedabdulhalim@gmail.com' ||
-    userEmail.includes('omar') ||
-    userEmail.includes('mohamadi') ||
-    (user?.name || '').includes('عمر') ||
-    (user?.teacher_name || '').includes('عمر') ||
-    (user?.tenant_name || '').includes('عمر') ||
-    isAdmin;
-
-  const activeSubTab = isOmarMohamadi ? (state.activeSubTab || 'online_builder') : 'roster';
+  const isPro = isUserPro(user);
+  const activeSubTab = state.activeSubTab || (isPro ? 'online_builder' : 'roster');
   const selectedGroupId = state.selectedGroupId || (groups[0]?.id || '');
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
 
@@ -53,51 +45,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   const pendingCount = pendingSubmissions.length;
   const onlineSubmissions = state.onlineSubmissions || [];
 
-  // =========================================================================
-  // STANDARD TEACHERS RESTRICTION:
-  // If not Mr. Omar El-Mohammadi (and not Admin): restrict strictly to classic in-class quiz roster
-  // =========================================================================
-  if (!isOmarMohamadi) {
-    return `
-      <div style="display: flex; flex-direction: column; gap: 1.25rem;" dir="rtl">
-        <div class="card" style="margin: 0; padding: 1.25rem 1.5rem; border-top: 4px solid var(--centrly-blue-700);">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: var(--centrly-ink);">
-                <span style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: #eff6ff; color: var(--centrly-blue-700);">
-                  ${getIcon('reports', 20, 'var(--centrly-blue-700)')}
-                </span>
-                <span>رصد درجات كويزات الحصة</span>
-              </h2>
-              <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.35rem 0 0 0;">
-                تسجيل ورصد درجات الاختبارات الدورية للطلاب في الحصة وإرسال النتيجة لأولياء الأمور عبر الواتساب.
-              </p>
-            </div>
 
-            <!-- Group Switcher -->
-            <div style="display: flex; align-items: center; gap: 0.65rem; background: #f8fafc; padding: 0.4rem 0.85rem; border-radius: 10px; border: 1.5px solid var(--centrly-line);">
-              <label style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); white-space: nowrap;">المجموعة الدراسية:</label>
-              <select 
-                id="quizGroupSelect" 
-                class="form-select" 
-                style="width: 210px; font-weight: 800; background: #ffffff; border-color: #cbd5e1;"
-                onchange="window.centrlyApp.switchQuizGroup(this.value)"
-              >
-                ${groups.map(g => `
-                  <option value="${escapeHtml(g.id)}" ${g.id === selectedGroupId ? 'selected' : ''}>
-                    ${escapeHtml(g.name)}
-                  </option>
-                `).join('')}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Standard Roster Table -->
-        ${renderRosterTab(state, groups, students, activeGroup, groupStudents, quizzes, currentQuiz, isLoading, hasLoaded)}
-      </div>
-    `;
-  }
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;" dir="rtl">
@@ -147,6 +95,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
           >
             ${getIcon('edit', 17, activeSubTab === 'online_builder' ? '#1e40af' : '#64748b')}
             <span>إنشاء امتحان أونلاين</span>
+            <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.62rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">PRO</span>
           </button>
 
           <!-- Badge 2: تصحيح الامتحانات الإلكترونية -->
@@ -158,6 +107,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
           >
             ${getIcon('eye', 17, activeSubTab === 'online_grading' ? '#1e40af' : '#64748b')}
             <span>تصحيح الامتحانات الإلكترونية</span>
+            <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.62rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">PRO</span>
             ${pendingCount > 0 ? `
               <span style="background: #ef4444; color: #ffffff; font-size: 0.72rem; padding: 1px 7px; border-radius: 12px; font-weight: 900; margin-right: 0.35rem; line-height: 1.4;">
                 ${pendingCount}
@@ -174,6 +124,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
           >
             ${getIcon('print', 17, activeSubTab === 'paper_builder' ? '#1e40af' : '#64748b')}
             <span>إنشاء امتحان ورقي</span>
+            <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.62rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">PRO</span>
           </button>
 
           <!-- Badge 4: تصحيح الامتحانات الورقية -->
@@ -185,6 +136,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
           >
             ${getIcon('camera', 17, activeSubTab === 'paper_scanner' ? '#047857' : '#64748b')}
             <span>تصحيح الامتحانات الورقية</span>
+            <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.62rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">PRO</span>
           </button>
 
           <!-- Badge 5: رصد درجات امتحان يدوياً (الترتيب الأخير) -->
@@ -196,10 +148,28 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
           >
             ${getIcon('check', 17, activeSubTab === 'roster' ? '#1e40af' : '#64748b')}
             <span>رصد درجات امتحان يدوياً</span>
+            <span style="background: #e2e8f0; color: #475569; font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">مجاني</span>
           </button>
 
         </div>
       </div>
+
+      ${!isPro && activeSubTab !== 'roster' ? `
+        <div style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 14px 18px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              ${getIcon('info', 18, '#b45309')}
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 0.88rem;">أنت الآن في وضع المعاينة والاستعراض لميزات باقة PRO</div>
+              <div style="font-size: 0.8rem; color: #b45309; margin-top: 2px;">يمكنك تجربة تجهيز الأسئلة وتوليد النماذج، وعند الرغبة في نشر الامتحان وتفعيله للطلاب يلزم الترقية لباقة PRO.</div>
+            </div>
+          </div>
+          <button type="button" onclick="window.centrlyApp && window.centrlyApp.navigateTo('settings')" style="background: #b45309; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer; white-space: nowrap;">
+            ترقية الحساب لباقة PRO
+          </button>
+        </div>
+      ` : ''}
 
       <!-- Tab Content Views -->
       ${activeSubTab === 'online_builder' ? renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
@@ -1142,7 +1112,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
               </span>
               ${isImageOnly ? `
                 <span style="font-size: 0.75rem; background: #e0f2fe; color: #0369a1; padding: 0.2rem 0.6rem; border-radius: 6px; font-weight: 700;">
-                  💡 إذا كانت الاختيارات (أ/ب/ج/د) موجودة داخل الصورة، يكفيك اختيار الدائرة الصحيحة فقط دون كتابة نص
+                  إذا كانت الاختيارات (أ/ب/ج/د) موجودة داخل الصورة، يكفيك اختيار الدائرة الصحيحة فقط دون كتابة نص
                 </span>
               ` : ''}
             </div>
@@ -1987,7 +1957,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 </span>
                 ${isQImageOnly ? `
                   <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">
-                    💡 إذا كانت الاختيارات موجودة داخل الصورة، اختر الدائرة الصحيحة فقط دون كتابة نص
+                    إذا كانت الاختيارات موجودة داخل الصورة، اختر الدائرة الصحيحة فقط دون كتابة نص
                   </span>
                 ` : ''}
               </div>
@@ -2169,7 +2139,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                     style="font-weight: 900; font-size: 0.85rem; padding: 0.55rem 1.25rem; background: #059669; border-color: #059669;"
                     onclick="window.centrlyApp.savePaperExam()"
                   >
-                    ✓ إنهاء وحفظ الامتحان
+                    إنهاء وحفظ الامتحان
                   </button>
                 `}
               </div>
@@ -3159,6 +3129,11 @@ export function registerTeacherQuizzesActions(app) {
 
   // Save Online Exam Definition
   app.saveOnlineExamNow = async function() {
+    if (!isUserPro(this.user)) {
+      alert('ميزة إنشاء ونشر الامتحانات الإلكترونية متاحة فقط لمشتركي باقة PRO. اضغط حسناً للانتقال لصفحة الاشتراك والترقية.');
+      if (this.navigateTo) this.navigateTo('settings');
+      return;
+    }
     const qz = this.quizzesState.activeOnlineQuiz;
     const gid = this.quizzesState.selectedGroupId;
 
@@ -3539,6 +3514,11 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.savePaperExam = async function() {
+    if (!isUserPro(this.user)) {
+      alert('ميزة إنشاء وطباعة الامتحانات الورقية وتوليد البابل شيت متاحة فقط لمشتركي باقة PRO. اضغط حسناً للانتقال لصفحة الاشتراك والترقية.');
+      if (this.navigateTo) this.navigateTo('settings');
+      return;
+    }
     const qz = this.quizzesState.activePaperQuiz;
     const gid = this.quizzesState.selectedGroupId;
     if (!gid) {
@@ -3613,6 +3593,11 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.startOmrCamera = async function() {
+    if (!isUserPro(this.user)) {
+      alert('ميزة تصحيح البابل شيت بالكاميرا (OMR) متاحة فقط لمشتركي باقة PRO. اضغط حسناً للانتقال لصفحة الاشتراك والترقية.');
+      if (this.navigateTo) this.navigateTo('settings');
+      return;
+    }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       this.showToast('متصفحك لا يدعم فتح الكاميرا مباشرة، يرجى استخدام زر رفع صورة', 'warning');
       return;
@@ -3667,6 +3652,11 @@ export function registerTeacherQuizzesActions(app) {
 
   app.handleOmrImageUpload = function(file) {
     if (!file) return;
+    if (!isUserPro(this.user)) {
+      alert('ميزة تصحيح البابل شيت بالصور (OMR) متاحة فقط لمشتركي باقة PRO. اضغط حسناً للانتقال لصفحة الاشتراك والترقية.');
+      if (this.navigateTo) this.navigateTo('settings');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
@@ -3699,7 +3689,7 @@ export function registerTeacherQuizzesActions(app) {
     }
 
     this.saveQuizzesToLocalStorage();
-    this.showToast(`✓ تم رصد ورقة (${scanData.student_name}): ${scanData.score} من ${scanData.max_score}`, 'success');
+    this.showToast(`تم رصد ورقة (${scanData.student_name}): ${scanData.score} من ${scanData.max_score}`, 'success');
     this.renderMainContent();
   };
 
@@ -3771,7 +3761,7 @@ export function registerTeacherQuizzesActions(app) {
     }
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const fullPhone = cleanPhone.startsWith('20') ? cleanPhone : (cleanPhone.startsWith('0') ? '2' + cleanPhone : '20' + cleanPhone);
-    const msg = `السلام عليكم ولي أمر الطالب (${scan.student_name}) 🌸\nنحيطكم علماً بنتيجة ${scan.exam_title}:\n📊 الدرجة: ${scan.score} من ${scan.max_score} (${scan.percentage}%)\n📝 النموذج: ${scan.model}\nمع تحيات إدارة مادة ${scan.exam_title}`;
+    const msg = `السلام عليكم ولي أمر الطالب (${scan.student_name}) \nنحيطكم علماً بنتيجة ${scan.exam_title}:\nالدرجة: ${scan.score} من ${scan.max_score} (${scan.percentage}%)\nالنموذج: ${scan.model}\nمع تحيات إدارة مادة ${scan.exam_title}`;
     const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`;
     window.open(waUrl, '_blank');
   };
