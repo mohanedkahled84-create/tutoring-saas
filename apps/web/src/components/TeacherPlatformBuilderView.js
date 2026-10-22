@@ -101,9 +101,9 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}) {
         <!-- العمود الأيمن: نموذج الإعدادات -->
         <div style="display: flex; flex-direction: column; gap: 20px;">
           
-          <!-- القسم 1: حجز السب دومين -->
+          <!-- القسم 1: حجز الرابط المخصص -->
           <div class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 22px;">
-            <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">1. رابط المنصة المخصص (السب دومين)</h3>
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">1. رابط منصتك الخاص</h3>
             <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 16px;">الرابط الذي ستشاركه مع طلابك للدخول لمنصتك الخاصة مباشرة.</p>
             
             <div style="margin-bottom: 10px;">
@@ -357,7 +357,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}) {
                 <div style="display: flex; gap: 6px;">
                   <input type="text" readonly value="https://${escapeHtml(subdomain)}.centrly.com" 
                     style="flex: 1; height: 34px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; font-weight: 700; padding: 0 8px; direction: ltr;">
-                  <button type="button" onclick="navigator.clipboard.writeText('https://${escapeHtml(subdomain)}.centrly.com'); alert('تم نسخ رابط منصتك بنجاح!');" 
+                  <button type="button" onclick="navigator.clipboard.writeText('https://${escapeHtml(subdomain)}.centrly.com'); window.teacherPlatformActions.showToast('تم نسخ رابط منصتك بنجاح!', 'success');" 
                     style="background: #11204d; color: #ffffff; border: none; padding: 0 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
                     نسخ
                   </button>
@@ -381,6 +381,14 @@ export function registerTeacherPlatformActions(appInstance) {
   let debounceTimer = null;
   let currentTheme = 'navy';
 
+  function notify(msg, type = 'success') {
+    if (appInstance && typeof appInstance.showToast === 'function') {
+      appInstance.showToast(msg, type);
+    } else if (typeof window.centrlyApp?.showToast === 'function') {
+      window.centrlyApp.showToast(msg, type);
+    }
+  }
+
   const themeColors = {
     navy: { bg: '#11204d', circle: 'radial-gradient(circle, #2563eb 0%, #0a1330 100%)', ring: '#2563eb', btn: '#11204d' },
     red: { bg: '#b91c1c', circle: 'radial-gradient(circle, #ef4444 0%, #7f1d1d 100%)', ring: '#ef4444', btn: '#b91c1c' },
@@ -390,8 +398,14 @@ export function registerTeacherPlatformActions(appInstance) {
   };
 
   window.teacherPlatformActions = {
+    showToast: notify,
+
     selectTheme(themeId) {
       currentTheme = themeId;
+      try {
+        localStorage.setItem('portal_theme', themeId);
+      } catch (_) {}
+
       const conf = themeColors[themeId] || themeColors.navy;
 
       // Update color button borders and check icons
@@ -531,7 +545,7 @@ export function registerTeacherPlatformActions(appInstance) {
       const isPro = Boolean(plan.is_pro) || isAdmin || isOmar;
 
       if (!isPro) {
-        alert('ميزة تفعيل ونشر منصتك المستقلة متاحة فقط لمشتركي باقة PRO. اضغط حسناً للانتقال لصفحة الاشتراك والترقية.');
+        notify('ميزة تفعيل ونشر منصتك المستقلة متاحة فقط لمشتركي باقة PRO.', 'warning');
         appInstance.navigateTo('settings');
         return;
       }
@@ -543,17 +557,17 @@ export function registerTeacherPlatformActions(appInstance) {
       const cutoutAvatarUrl = document.getElementById('builderCutoutInput')?.value?.trim();
 
       if (!subdomain) {
-        alert('يرجى تحديد اسم الرابط (السب دومين) أولاً');
+        notify('يرجى تحديد اسم رابط منصتك أولاً', 'warning');
         return;
       }
 
       if (!displayTitle) {
-        alert('يرجى إدخال اسم المنصة الرسمي');
+        notify('يرجى إدخال اسم المنصة الرسمي', 'warning');
         return;
       }
 
       if (!subjectTitle) {
-        alert('يرجى إدخال تخصص المعلم والمرحلة الدراسية');
+        notify('يرجى إدخال تخصص المعلم والمرحلة الدراسية', 'warning');
         return;
       }
 
@@ -589,6 +603,8 @@ export function registerTeacherPlatformActions(appInstance) {
           const tenantKey = currentUser?.tenant_id || 'active';
           try {
             localStorage.setItem(`centrly_platform_settings_${tenantKey}`, JSON.stringify(payload));
+            localStorage.setItem('centrly_platform_settings', JSON.stringify(payload));
+            localStorage.setItem('portal_theme', currentTheme);
           } catch (_) {}
 
           if (appInstance.platformBuilderState) {
@@ -596,7 +612,7 @@ export function registerTeacherPlatformActions(appInstance) {
           }
 
           appInstance.finishProgressBar();
-          alert('تم حفظ وتحديث إعدادات منصتك بنجاح! الرابط أصبح فعالاً لطلابك الآن.');
+          notify('تم حفظ وتحديث إعدادات منصتك بنجاح! الرابط أصبح فعالاً لطلابك الآن.', 'success');
 
           if (appInstance.loadRouteData) {
             await appInstance.loadRouteData('platform-builder', true);
@@ -605,7 +621,7 @@ export function registerTeacherPlatformActions(appInstance) {
         }
       } catch (err) {
         appInstance.finishProgressBar();
-        alert('حدث خطأ أثناء حفظ الإعدادات، يرجى المحاولة مرة أخرى.');
+        notify('حدث خطأ أثناء حفظ الإعدادات، يرجى المحاولة مرة أخرى.', 'danger');
       }
     },
   };

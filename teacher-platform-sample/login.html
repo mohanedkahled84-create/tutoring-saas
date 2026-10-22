@@ -141,42 +141,6 @@
       font-weight: 700;
     }
 
-    /* شريط تجربة الألوان الموحدة للمنصة */
-    .theme-switcher-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.25);
-      padding: 6px 12px;
-      border-radius: var(--radius-full);
-      border: 1px solid var(--border-glass);
-    }
-
-    .theme-label {
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: rgba(255, 255, 255, 0.8);
-      margin-left: 4px;
-    }
-
-    .theme-color-btn {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 2px solid #ffffff;
-      cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .theme-color-btn:hover {
-      transform: scale(1.15);
-    }
-
-    .theme-color-btn.active {
-      transform: scale(1.2);
-      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8);
-    }
-
     /* 2. منطقة الهيرو الرئيسية */
     .hero-container {
       width: 100%;
@@ -471,16 +435,6 @@
         <span class="brand-subdomain">mr-omar.com</span>
       </div>
     </div>
-
-    <!-- أزرار تجربة الألوان الموحدة للمنصة -->
-    <div class="theme-switcher-bar">
-      <span class="theme-label">اختر اللون الموحد:</span>
-      <button class="theme-color-btn" style="background: #b91c1c;" title="أحمر ناري" onclick="applyTheme('red', this)"></button>
-      <button class="theme-color-btn active" style="background: #11204d;" title="كحلي ملكي راقي" onclick="applyTheme('navy', this)"></button>
-      <button class="theme-color-btn" style="background: #064e3b;" title="زمردي راقي" onclick="applyTheme('emerald', this)"></button>
-      <button class="theme-color-btn" style="background: #581c87;" title="بنفسجي فاخر" onclick="applyTheme('purple', this)"></button>
-      <button class="theme-color-btn" style="background: #0f172a;" title="أسود كربوني" onclick="applyTheme('slate', this)"></button>
-    </div>
   </header>
 
   <!-- 2. منطقة الهيرو الرئيسية -->
@@ -609,10 +563,6 @@
       if (s.theme_preset) {
         document.body.className = 'theme-' + s.theme_preset;
         localStorage.setItem('portal_theme', s.theme_preset);
-        document.querySelectorAll('.theme-color-btn').forEach(btn => {
-          if (btn.getAttribute('onclick')?.includes(s.theme_preset)) btn.classList.add('active');
-          else btn.classList.remove('active');
-        });
       }
       if (s.display_title) {
         document.title = `${s.display_title} — البوابة الرسمية للطلاب`;
@@ -641,21 +591,9 @@
 
     hydratePlatformFromSubdomain();
 
-    // استرجاع الثيم المفضل إن وجد
+    // استرجاع اللون الموحد المعتمد لمنصة المعلم
     const savedTheme = localStorage.getItem('portal_theme') || 'navy';
     document.body.className = 'theme-' + savedTheme;
-    document.querySelectorAll('.theme-color-btn').forEach(btn => {
-      if (btn.getAttribute('onclick')?.includes(savedTheme)) btn.classList.add('active');
-      else btn.classList.remove('active');
-    });
-
-    // تطبيق اللون الموحد فورياً وحفظه
-    function applyTheme(themeName, btn) {
-      document.body.className = 'theme-' + themeName;
-      localStorage.setItem('portal_theme', themeName);
-      document.querySelectorAll('.theme-color-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    }
 
     function setMode(mode) {
       const btnL = document.getElementById('tabBtnLogin');
