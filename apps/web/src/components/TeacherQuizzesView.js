@@ -13,7 +13,7 @@ import { getIcon } from "../utils/icons.js";
  */
 
 export function renderTeacherQuizzesView(state = {}, groups = [], students = [], isLoading = false, hasLoaded = true) {
-  const activeSubTab = state.activeSubTab || 'roster';
+  const activeSubTab = state.activeSubTab || 'online_builder';
   const selectedGroupId = state.selectedGroupId || (groups[0]?.id || '');
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
 
@@ -78,18 +78,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
         <!-- 5-Badge Modular Navigation Bar (Horizontal Segmented Chips) -->
         <div id="quizSubTabsNav" style="display: flex; gap: 0.65rem; flex-wrap: wrap; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">
           
-          <!-- Badge 1: كشف الدرجات -->
-          <button 
-            type="button"
-            class="quiz-nav-badge ${activeSubTab === 'roster' ? 'active' : ''}"
-            style="${getBadgeStyle(activeSubTab === 'roster')}"
-            onclick="window.centrlyApp.switchQuizSubTab('roster')"
-          >
-            ${getIcon('check', 17, activeSubTab === 'roster' ? '#1e40af' : '#64748b')}
-            <span>كشف ورصد الدرجات</span>
-          </button>
-
-          <!-- Badge 2: إنشاء امتحان أونلاين -->
+          <!-- Badge 1: إنشاء امتحان أونلاين -->
           <button 
             type="button"
             class="quiz-nav-badge ${activeSubTab === 'online_builder' ? 'active' : ''}"
@@ -100,7 +89,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
             <span>إنشاء امتحان أونلاين</span>
           </button>
 
-          <!-- Badge 3: تصحيح الامتحانات الإلكترونية -->
+          <!-- Badge 2: تصحيح الامتحانات الإلكترونية -->
           <button 
             type="button"
             class="quiz-nav-badge ${activeSubTab === 'online_grading' ? 'active' : ''}"
@@ -116,7 +105,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
             ` : ''}
           </button>
 
-          <!-- Badge 4: إنشاء امتحان ورقي -->
+          <!-- Badge 3: إنشاء امتحان ورقي -->
           <button 
             type="button"
             class="quiz-nav-badge ${activeSubTab === 'paper_builder' ? 'active' : ''}"
@@ -127,7 +116,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
             <span>إنشاء امتحان ورقي</span>
           </button>
 
-          <!-- Badge 5: تصحيح الامتحانات الورقية -->
+          <!-- Badge 4: تصحيح الامتحانات الورقية -->
           <button 
             type="button"
             class="quiz-nav-badge ${activeSubTab === 'paper_scanner' ? 'active' : ''}"
@@ -138,15 +127,26 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
             <span>تصحيح الامتحانات الورقية</span>
           </button>
 
+          <!-- Badge 5: رصد درجات امتحان يدوياً (الترتيب الأخير) -->
+          <button 
+            type="button"
+            class="quiz-nav-badge ${activeSubTab === 'roster' ? 'active' : ''}"
+            style="${getBadgeStyle(activeSubTab === 'roster')}"
+            onclick="window.centrlyApp.switchQuizSubTab('roster')"
+          >
+            ${getIcon('check', 17, activeSubTab === 'roster' ? '#1e40af' : '#64748b')}
+            <span>رصد درجات امتحان يدوياً</span>
+          </button>
+
         </div>
       </div>
 
       <!-- Tab Content Views -->
-      ${activeSubTab === 'roster' ? renderRosterTab(state, groups, students, activeGroup, groupStudents, quizzes, currentQuiz, isLoading, hasLoaded) : ''}
       ${activeSubTab === 'online_builder' ? renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
       ${activeSubTab === 'online_grading' ? renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, groupStudents) : ''}
       ${activeSubTab === 'paper_builder' ? renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
       ${activeSubTab === 'paper_scanner' ? renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents) : ''}
+      ${activeSubTab === 'roster' ? renderRosterTab(state, groups, students, activeGroup, groupStudents, quizzes, currentQuiz, isLoading, hasLoaded) : ''}
 
     </div>
   `;
@@ -764,7 +764,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
               style="padding: 0.65rem 1.6rem; font-weight: 800; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
               onclick="window.centrlyApp.proceedToQuestionsStep()"
             >
-              <span>بدء تعبئة الأسئلة سؤالاً بسؤال (سؤال 1)</span>
+              <span>ابدأ بكتابة الامتحان (سؤال أول)</span>
               ${getIcon('arrowRight', 16, '#ffffff')}
             </button>
           </div>
@@ -1609,7 +1609,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
             <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 0.85rem 1rem; margin-top: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
               <div style="color: var(--centrly-blue-700);">${getIcon('print', 22, 'var(--centrly-blue-700)')}</div>
               <div style="font-size: 0.825rem; color: #1e3a8a; line-height: 1.5;">
-                <b>تجهيز الامتحان الورقي والـ Bubble Sheet:</b> سيتم تجهيز الأسئلة سؤالاً بسؤال لتعبئتها وتحديد درجة كل سؤال أثناء كتابته، مع توليد ورقة بابل شيت متوافقة وتشفير 3 نماذج سرية (A / B / C) لمنع الغش.
+                <b>تجهيز الامتحان الورقي والـ Bubble Sheet:</b> سيتم تجهيز الأسئلة سؤالاً بسؤال لتعبئتها وتحديد درجة كل سؤال أثناء كتابته، مع توليد ورقة بابل شيت متوافقة.
               </div>
             </div>
 
@@ -1629,7 +1629,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 style="padding: 0.65rem 1.6rem; font-weight: 800; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
                 onclick="window.centrlyApp.proceedToPaperQuestionsStep()"
               >
-                <span>بدء تعبئة الأسئلة سؤالاً بسؤال (سؤال 1)</span>
+                <span>ابدأ بكتابة الامتحان (سؤال أول)</span>
                 ${getIcon('arrowRight', 16, '#ffffff')}
               </button>
             </div>
@@ -2151,7 +2151,8 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
 
   const selectedModel = state.printModel || 'A'; // 'A' | 'B' | 'C'
   const modelCode = selectedModel === 'A' ? '01' : selectedModel === 'B' ? '02' : '03';
-  const stealthBarcodeSerial = `REF-PHY-${(selectedQuizId || '8491').slice(-4)}-${modelCode}`;
+  const examCode = targetQuiz.exam_code || `EX-${targetQuiz.quiz_number || 1}`;
+  const stealthBarcodeSerial = `REF-${(targetQuiz.subject || 'PHY').slice(0, 3)}-${examCode}-${modelCode}`;
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;">
@@ -2258,8 +2259,8 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 <h1 style="font-size: 1.45rem; font-weight: 900; margin: 0 0 0.25rem 0; color: #000;">
                   امتحان مادة ${escapeHtml(targetQuiz.subject || 'الفيزياء')}
                 </h1>
-                <div style="font-size: 1rem; font-weight: 800; color: #222;">
-                  ${escapeHtml(targetQuiz.title || 'اختبار دوري')}
+                <div style="font-size: 0.95rem; font-weight: 800; color: #222;">
+                  ${escapeHtml(targetQuiz.title || 'اختبار دوري')} • <span style="font-family: monospace; font-weight: 900; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">كود الامتحان: ${escapeHtml(examCode)}</span>
                 </div>
               </div>
 
@@ -2384,7 +2385,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 ورقة إجابة بابل شيت (OMR Answer Sheet)
               </h2>
               <div style="font-size: 0.85rem; font-weight: 800; color: #333; margin-top: 0.2rem;">
-                امتحان مادة ${escapeHtml(targetQuiz.subject || 'الفيزياء')} • ${escapeHtml(targetQuiz.title || '')}
+                امتحان مادة ${escapeHtml(targetQuiz.subject || 'الفيزياء')} • ${escapeHtml(targetQuiz.title || '')} • <span style="font-family: monospace; font-weight: 900; background: #eee; padding: 2px 7px; border-radius: 4px; border: 1px solid #aaa;">كود الامتحان: ${escapeHtml(examCode)}</span>
               </div>
             </div>
             <div style="width: 20px; height: 20px; background: #000;"></div>
@@ -2407,7 +2408,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 <b>تعليمات التظليل:</b><br>
                 - استخدم القلم الجاف الأزرق أو الرصاص وظلل الدائرة بشكل كامل.<br>
                 - لا تستخدم الكوريكتور ولا تظلل أكثر من دائرة في نفس السؤال.<br>
-                - ظلل كود الطالب بدقة في الأعمدة المقابلة.
+                - ظلل كود الطالب بدقة في الأعمدة المقابلة (4 خانات).
               </div>
             </div>
 
@@ -2430,10 +2431,11 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
 
           </div>
 
-          <!-- Answer Bubbles Grid (Dynamic based on total questions) -->
+          <!-- Answer Bubbles Grid (Strictly for MCQ questions) -->
           <div style="border: 2px solid #000; padding: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
             ${(() => {
-              const totalQ = Math.max(5, (targetQuiz.questions || []).length || 20);
+              const mcqQuestions = (targetQuiz.questions || []).filter(q => q.type !== 'essay');
+              const totalQ = Math.max(1, mcqQuestions.length > 0 ? mcqQuestions.length : 10);
               const col1Count = Math.ceil(totalQ / 2);
               const col2Count = totalQ - col1Count;
               return [0, 1].map(colIdx => {
@@ -2442,7 +2444,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 return `
                   <div style="display: flex; flex-direction: column; gap: 0.4rem;">
                     <div style="display: flex; justify-content: space-between; border-bottom: 1.5px solid #000; padding-bottom: 0.25rem; font-weight: 900; font-size: 0.82rem;">
-                      <span>رقم</span>
+                      <span>سؤال</span>
                       <div style="display: flex; gap: 1.25rem; padding-left: 0.5rem;">
                         <span>أ</span>
                         <span>ب</span>
@@ -2488,36 +2490,59 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
 }
 
 // ============================================================================
-// TAB 5: PAPER SCANNER (تصحيح الامتحانات الورقية بالباركود والـ OMR)
+// TAB 4: PAPER SCANNER (تصحيح الامتحانات الورقية بالباركود والـ OMR)
 // ============================================================================
 function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents) {
-  const scanResult = state.lastOmrScanResult || null;
+  const paperExams = (state.richQuizzes || []).filter(q => q.exam_mode === 'paper');
+  const selectedExamId = state.omrSelectedExamId || (paperExams[0]?.id || '');
+  const activePaperExam = paperExams.find(q => String(q.id) === String(selectedExamId)) || paperExams[0] || null;
+  const scannedList = state.scannedResultsList || [];
+  const isCameraOpen = Boolean(state.isOmrCameraOpen);
+
+  const scannedCount = scannedList.length;
+  const highestScore = scannedCount > 0 ? Math.max(...scannedList.map(s => Number(s.score) || 0)) : 0;
+  const avgScore = scannedCount > 0 ? (scannedList.reduce((acc, s) => acc + (Number(s.score) || 0), 0) / scannedCount).toFixed(1) : '—';
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;">
       
+      <!-- Top Control Card -->
       <div class="card" style="margin: 0; border-top: 4px solid #059669;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
             <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #065f46; display: flex; align-items: center; gap: 0.4rem;">
               ${getIcon('camera', 20, '#059669')}
-              <span>ماسح البابل شيت بالكاميرا والتصحيح الآلي (OMR)</span>
+              <span>ماسح البابل شيت والتصحيح الآلي (OMR Scanner)</span>
             </h3>
             <p style="font-size: 0.82rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
-              يتعرف الماسح تلقائياً على كود النموذج (A / B / C) من الباركود وكود الطالب المظلل والدوائر وتصحيحها فورياً.
+              التعرف التلقائي على أوراق الإجابة ورصد درجات الطلاب وراء بعضها فوراً عبر الكاميرا الرأسية أو رفع الصور.
             </p>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button 
-              type="button" 
-              class="btn btn-primary" 
-              style="background: #059669; border-color: #059669; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem;"
-              onclick="window.centrlyApp.startOmrCamera()"
-            >
-              ${getIcon('camera', 16, '#ffffff')}
-              <span>فتح الكاميرا للمسح المباشر</span>
-            </button>
+          <!-- Main Actions -->
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            ${isCameraOpen ? `
+              <button 
+                type="button" 
+                class="btn btn-secondary" 
+                style="color: #dc2626; border-color: #fecaca; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem;"
+                onclick="window.centrlyApp.stopOmrCamera()"
+              >
+                ${getIcon('close', 16, '#dc2626')}
+                <span>إغلاق الكاميرا</span>
+              </button>
+            ` : `
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                style="background: #059669; border-color: #059669; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(5,150,105,0.25);"
+                onclick="window.centrlyApp.startOmrCamera()"
+              >
+                ${getIcon('camera', 16, '#ffffff')}
+                <span>فتح الكاميرا للمسح المباشر</span>
+              </button>
+            `}
+
             <input 
               type="file" 
               id="omrImageFileInput" 
@@ -2533,114 +2558,231 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
               onclick="document.getElementById('omrImageFileInput').click()"
             >
               ${getIcon('upload', 16)}
-              <span>رفع صورة من الموبايل</span>
+              <span>رفع صورة ورقة بابل شيت</span>
+            </button>
+
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; border-style: dashed; color: #059669; border-color: #86efac; background: #f0fdf4;"
+              onclick="window.centrlyApp.simulateOmrScan()"
+              title="تجربة مسح ورقة نموذجية للاختبار"
+            >
+              ${getIcon('check', 16, '#059669')}
+              <span>تجربة مسح ورقة للاختبار</span>
             </button>
           </div>
+        </div>
+
+        <!-- Exam Filter Selector Bar -->
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--centrly-line); align-items: center;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <label style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink);">الامتحان الورقي المراد تصحيحه:</label>
+            <select 
+              id="omrTargetExamSelect" 
+              class="form-select" 
+              style="min-width: 260px; font-weight: 800; font-size: 0.88rem;" 
+              onchange="window.centrlyApp.selectOmrTargetExam(this.value)"
+            >
+              ${paperExams.length > 0 ? paperExams.map(pe => `
+                <option value="${escapeHtml(pe.id)}" ${String(pe.id) === String(selectedExamId) ? 'selected' : ''}>
+                  ${escapeHtml(pe.title)} (كود: EX-${pe.quiz_number || 1}) - ${(pe.questions || []).filter(q => q.type !== 'essay').length} أسئلة MCQ
+                </option>
+              `).join('') : `
+                <option value="default">امتحان ورقي افتراضي (كود: EX-1)</option>
+              `}
+            </select>
+          </div>
+
+          ${activePaperExam ? `
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.78rem; color: #1e40af; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem;">
+              <span>المادة: ${escapeHtml(activePaperExam.subject || 'الفيزياء')}</span>
+              <span>•</span>
+              <span>كود الامتحان: EX-${activePaperExam.quiz_number || 1}</span>
+              <span>•</span>
+              <span>زمن الامتحان: ${activePaperExam.time_limit_minutes || 45} دقيقة</span>
+            </div>
+          ` : ''}
         </div>
       </div>
 
-      <!-- Scanner Interactive Area -->
-      <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.25rem;">
-        
-        <!-- Camera Viewport Card -->
-        <div class="card" style="margin: 0; background: #0f172a; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 380px; position: relative;">
+      <!-- Vertical Camera Viewport (تظهر فقط عند فتح الكاميرا وتكون رأسية بالطول) -->
+      ${isCameraOpen ? `
+        <div class="card" style="margin: 0; background: #0f172a; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; align-items: center; position: relative;">
           
-          <video id="omrVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: contain; display: none;"></video>
-          <canvas id="omrCanvas" style="max-width: 100%; max-height: 380px; display: none;"></canvas>
-
-          <div id="omrPlaceholder" style="text-align: center; color: #94a3b8; padding: 2rem;">
-            <div style="display: flex; justify-content: center; margin-bottom: 0.75rem; color: #38bdf8;">
-              ${getIcon('camera', 48, '#38bdf8')}
-            </div>
-            <div style="font-weight: 800; font-size: 1rem; color: #f8fafc; margin-bottom: 0.35rem;">
-              الكاميرا غير مفعلة حالياً
-            </div>
-            <p style="font-size: 0.8rem; max-width: 320px; margin: 0 auto; line-height: 1.6;">
-              اضغط على زر "فتح الكاميرا للمسح المباشر" أو "رفع صورة" لبدء التعرف البصري الآلي على ورقة البابل شيت.
-            </p>
+          <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+            ${getIcon('camera', 18, '#38bdf8')}
+            <span>كاميرا المسح الرأسي لورقة البابل شيت (A4 Portrait)</span>
           </div>
 
-          <!-- Camera Frame Overlay -->
-          <div id="omrFrameGuide" style="display: none; position: absolute; inset: 20px; border: 2px dashed #10b981; border-radius: 8px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);">
-            <div style="position: absolute; top: 10px; right: 10px; background: rgba(16,185,129,0.9); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 4px;">
-              ضع الورقة داخل الإطار
+          <div style="position: relative; width: 100%; max-width: 360px; height: 480px; background: #000; border-radius: 10px; overflow: hidden; border: 2.5px solid #334155; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
+            <video id="omrVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+            <canvas id="omrCanvas" style="display: none;"></canvas>
+
+            <!-- Vertical A4 Frame Guide -->
+            <div id="omrFrameGuide" style="position: absolute; inset: 16px; border: 2.5px dashed #10b981; border-radius: 8px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; padding: 10px;">
+              <div style="background: rgba(16,185,129,0.92); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; align-self: flex-start;">
+                ضع ورقة البابل شيت بالكامل داخل الإطار
+              </div>
+              <div style="text-align: center; color: rgba(255,255,255,0.9); font-size: 0.72rem; font-weight: 700; background: rgba(0,0,0,0.6); padding: 3px 6px; border-radius: 4px;">
+                تأكد من إضاءة الورقة ووضوح كود الطالب
+              </div>
             </div>
           </div>
 
-          <!-- Bottom Action Bar inside Camera -->
-          <div id="omrCaptureBar" style="display: none; position: absolute; bottom: 15px; left: 0; right: 0; text-align: center;">
+          <div style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center;">
             <button 
               type="button" 
               class="btn btn-primary" 
-              style="background: #10b981; border-color: #10b981; font-weight: 900; font-size: 0.95rem; padding: 0.65rem 1.8rem; border-radius: 30px; box-shadow: 0 4px 15px rgba(16,185,129,0.5);"
+              style="background: #10b981; border-color: #10b981; font-weight: 900; font-size: 0.95rem; padding: 0.65rem 1.8rem; border-radius: 30px; box-shadow: 0 4px 15px rgba(16,185,129,0.45); display: inline-flex; align-items: center; gap: 0.45rem;"
               onclick="window.centrlyApp.captureAndAnalyzeOmr()"
             >
-              التقاط وتصحيح الورقة الآن
+              ${getIcon('camera', 18, '#ffffff')}
+              <span>التقاط وتصحيح الورقة الآن</span>
+            </button>
+
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              style="color: #ef4444; font-weight: 800; font-size: 0.85rem;"
+              onclick="window.centrlyApp.stopOmrCamera()"
+            >
+              إغلاق الكاميرا
             </button>
           </div>
 
         </div>
+      ` : ''}
 
-        <!-- Detection Results Panel -->
-        <div class="card" style="margin: 0;">
-          <h4 style="font-size: 1rem; font-weight: 800; color: var(--centrly-ink); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.4rem;">
-            ${getIcon('check', 18, '#059669')}
-            <span>نتيجة قراءة الماسح والتصحيح</span>
-          </h4>
+      <!-- Scanned Scores Live Stream & Records Table (سجل الدرجات المرصودة وراء بعضها) -->
+      <div class="card" style="margin: 0;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <h4 style="font-size: 1.05rem; font-weight: 900; color: var(--centrly-ink); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('check', 18, '#059669')}
+              <span>سجل درجات الطلاب المرصودة بالماسح الضوئي (مباشر)</span>
+            </h4>
+            <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.2rem;">
+              تظهر هنا فوراً كل ورقة يتم مسحها وتصحيحها وراء بعضها مع إمكانية إرسال النتيجة واتساب لولي الأمر مباشرة.
+            </div>
+          </div>
 
-          ${scanResult ? `
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-              
-              <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 1rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div>
-                    <div style="font-size: 1.05rem; font-weight: 900; color: #166534;">
-                      ${escapeHtml(scanResult.student?.name || 'طالب')}
-                    </div>
-                    <div style="font-size: 0.8rem; color: #15803d; font-weight: 700; margin-top: 0.2rem;">
-                      كود الطالب: ${escapeHtml(scanResult.student?.code || '—')} • نموذج (${escapeHtml(scanResult.model || 'أ')})
-                    </div>
-                  </div>
-
-                  <div style="text-align: center; background: #ffffff; border: 1.5px solid #166534; border-radius: 8px; padding: 0.4rem 0.85rem;">
-                    <span style="font-size: 0.72rem; color: #166534; font-weight: 800; display: block;">الدرجة المحسوبة</span>
-                    <span style="font-size: 1.3rem; font-weight: 900; color: #166534;">${scanResult.score} / ${scanResult.max_score}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Question by Question Breakdown -->
-              <div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.5rem;">
-                <div style="font-size: 0.78rem; font-weight: 800; color: #64748b; margin-bottom: 0.35rem;">
-                  تفاصيل إجابات الأسئلة:
-                </div>
-                ${(scanResult.breakdown || []).map(b => `
-                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.5rem; font-size: 0.82rem; border-bottom: 1px solid #f1f5f9;">
-                    <span style="font-weight: 700;">سؤال ${b.question_number}</span>
-                    <span style="font-weight: 800; color: ${b.is_correct ? '#059669' : '#dc2626'};">
-                      ${b.is_correct ? 'صحيح (+ ' + b.points + ')' : 'خطأ (0)'}
-                    </span>
-                  </div>
-                `).join('')}
-              </div>
-
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.35rem 0.75rem; text-align: center;">
+              <span style="font-size: 0.7rem; color: #047857; font-weight: 700; display: block;">أوراق مصححة</span>
+              <span style="font-size: 1rem; font-weight: 900; color: #065f46;">${scannedCount}</span>
+            </div>
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.35rem 0.75rem; text-align: center;">
+              <span style="font-size: 0.7rem; color: #1e40af; font-weight: 700; display: block;">متوسط الدرجات</span>
+              <span style="font-size: 1rem; font-weight: 900; color: #1e3a8a;">${avgScore}</span>
+            </div>
+            <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 0.35rem 0.75rem; text-align: center;">
+              <span style="font-size: 0.7rem; color: #92400e; font-weight: 700; display: block;">أعلى درجة</span>
+              <span style="font-size: 1rem; font-weight: 900; color: #b45309;">${highestScore}</span>
+            </div>
+            ${scannedCount > 0 ? `
               <button 
                 type="button" 
-                class="btn btn-primary" 
-                style="width: 100%; font-weight: 900; padding: 0.65rem 1rem; background: #059669; border-color: #059669;"
-                onclick="window.centrlyApp.confirmOmrScore()"
+                class="btn btn-secondary" 
+                style="font-size: 0.78rem; color: #dc2626; border-color: #fecaca;" 
+                onclick="window.centrlyApp.clearOmrScannedList()"
+                title="مسح سجل جلسة التصحيح الحالية"
               >
-                ${getIcon('check', 16, '#ffffff')}
-                <span>اعتماد ورصد الدرجة فوراً في الكشف</span>
+                تفريغ السجل
               </button>
-
-            </div>
-          ` : `
-            <div style="text-align: center; padding: 2.5rem 1rem; color: #94a3b8; font-size: 0.85rem;">
-              وجه الكاميرا واضغط على "التقاط وتصحيح الورقة" ليظهر اسم الطالب ودرجته وتفاصيل إجاباته هنا فوراً.
-            </div>
-          `}
+            ` : ''}
+          </div>
         </div>
+
+        ${scannedCount > 0 ? `
+          <div style="overflow-x: auto;">
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f8fafc; border-bottom: 2px solid var(--centrly-line); text-align: right;">
+                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">#</th>
+                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">كود الطالب</th>
+                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">اسم الطالب</th>
+                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">الامتحان</th>
+                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">النموذج</th>
+                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">الدرجة المحققة</th>
+                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">النسبة</th>
+                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">توقيت الرصد</th>
+                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800; text-align: center;">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${scannedList.map((item, idx) => {
+                  const isExcellent = item.percentage >= 85;
+                  const isGood = item.percentage >= 65 && item.percentage < 85;
+                  const pillColor = isExcellent ? '#059669' : (isGood ? '#0284c7' : '#dc2626');
+                  const pillBg = isExcellent ? '#ecfdf5' : (isGood ? '#f0f9ff' : '#fef2f2');
+
+                  return `
+                    <tr style="border-bottom: 1px solid var(--centrly-line); transition: background 0.15s ease;">
+                      <td style="padding: 0.75rem; font-size: 0.85rem; font-weight: 800; color: #64748b;">${idx + 1}</td>
+                      <td style="padding: 0.75rem; font-size: 0.9rem; font-weight: 900; font-family: monospace; color: var(--centrly-blue-700);">${escapeHtml(item.student_code || '—')}</td>
+                      <td style="padding: 0.75rem; font-size: 0.92rem; font-weight: 800; color: #0f172a;">${escapeHtml(item.student_name || 'طالب')}</td>
+                      <td style="padding: 0.75rem; font-size: 0.82rem; font-weight: 700; color: #475569;">
+                        ${escapeHtml(item.exam_title || 'امتحان ورقي')} 
+                        <span style="font-size: 0.75rem; font-family: monospace; color: #64748b;">(${escapeHtml(item.exam_code || '')})</span>
+                      </td>
+                      <td style="padding: 0.75rem;">
+                        <span class="badge" style="background: #f1f5f9; color: #0f172a; font-weight: 800; font-size: 0.78rem;">نموذج ${escapeHtml(item.model || 'أ')}</span>
+                      </td>
+                      <td style="padding: 0.75rem; font-size: 1.05rem; font-weight: 900; color: ${pillColor};">
+                        ${item.score} / ${item.max_score}
+                      </td>
+                      <td style="padding: 0.75rem;">
+                        <span style="background: ${pillBg}; color: ${pillColor}; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 6px;">
+                          ${item.percentage}%
+                        </span>
+                      </td>
+                      <td style="padding: 0.75rem; font-size: 0.78rem; color: #64748b; font-weight: 700;">
+                        ${item.timestamp || 'الآن'}
+                      </td>
+                      <td style="padding: 0.75rem; text-align: center;">
+                        <div style="display: inline-flex; gap: 0.35rem; align-items: center;">
+                          <button 
+                            type="button" 
+                            class="btn btn-secondary" 
+                            style="padding: 0.35rem 0.75rem; font-size: 0.78rem; font-weight: 800; color: #166534; border-color: #86efac; background: #f0fdf4;"
+                            onclick="window.centrlyApp.sendScannedStudentWhatsApp('${item.id}')"
+                            title="إرسال النتيجة لولي الأمر على واتساب"
+                          >
+                            ${getIcon('whatsapp', 14, '#166534')}
+                            <span>واتساب</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : `
+          <div style="text-align: center; padding: 3rem 1.5rem; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px; color: #64748b;">
+            <div style="width: 52px; height: 52px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem auto;">
+              ${getIcon('camera', 26, '#0284c7')}
+            </div>
+            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.35rem;">
+              لم يتم مسح أي ورقة بابل شيت حتى الآن
+            </div>
+            <p style="font-size: 0.82rem; max-width: 420px; margin: 0 auto 1.25rem auto; line-height: 1.6;">
+              اضغط على زر <b>«فتح الكاميرا للمسح المباشر»</b> أو <b>«رفع صورة ورقة بابل شيت»</b> للبدء في قراءة الأوراق ورصد درجات الطلاب تلقائياً وراء بعضها هنا.
+            </p>
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              style="font-size: 0.85rem; font-weight: 800; border-color: #059669; color: #059669; background: #ffffff;"
+              onclick="window.centrlyApp.simulateOmrScan()"
+            >
+              ${getIcon('check', 15, '#059669')}
+              <span>تجربة مسح ورقة نموذجية للاختبار</span>
+            </button>
+          </div>
+        `}
 
       </div>
 
@@ -3330,33 +3472,55 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   // OMR Scanner Functions
-  app.startOmrCamera = async function() {
-    const video = document.getElementById('omrVideo');
-    const placeholder = document.getElementById('omrPlaceholder');
-    const frameGuide = document.getElementById('omrFrameGuide');
-    const captureBar = document.getElementById('omrCaptureBar');
+  app.selectOmrTargetExam = function(examId) {
+    this.quizzesState.omrSelectedExamId = examId;
+    this.renderMainContent();
+  };
 
+  app.clearOmrScannedList = function() {
+    this.quizzesState.scannedResultsList = [];
+    this.renderMainContent();
+    this.showToast('تم تفريغ سجل جلسة التصحيح', 'info');
+  };
+
+  app.startOmrCamera = async function() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       this.showToast('متصفحك لا يدعم فتح الكاميرا مباشرة، يرجى استخدام زر رفع صورة', 'warning');
       return;
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-      if (video) {
-        video.srcObject = stream;
-        video.style.display = 'block';
-        if (placeholder) placeholder.style.display = 'none';
-        if (frameGuide) frameGuide.style.display = 'block';
-        if (captureBar) captureBar.style.display = 'block';
+    this.quizzesState.isOmrCameraOpen = true;
+    this.renderMainContent();
+
+    setTimeout(async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 720 }, height: { ideal: 1280 } }
+        });
+        const video = document.getElementById('omrVideo');
+        if (video) {
+          video.srcObject = stream;
+          video.play();
+        }
+        this.quizzesState.cameraStream = stream;
+        this.showToast('تم تشغيل الكاميرا الرأسية. ضع ورقة البابل شيت داخل الإطار واضغط التقاط', 'info');
+      } catch (err) {
+        this.showToast('تعذر تشغيل الكاميرا: ' + (err.message || 'يرجى التأكد من منح الإذن للمتصفح'), 'danger');
+        this.quizzesState.isOmrCameraOpen = false;
+        this.renderMainContent();
       }
-      this.quizzesState.cameraStream = stream;
-      this.showToast('تم تشغيل الكاميرا. وجه الورقة داخل الإطار واضغط التقاط', 'info');
-    } catch (err) {
-      this.showToast('تعذر الوصول للكاميرا، يرجى التأكد من منح الإذن للمتصفح', 'danger');
+    }, 150);
+  };
+
+  app.stopOmrCamera = function() {
+    if (this.quizzesState.cameraStream) {
+      try {
+        this.quizzesState.cameraStream.getTracks().forEach(t => t.stop());
+      } catch (_) {}
+      this.quizzesState.cameraStream = null;
     }
+    this.quizzesState.isOmrCameraOpen = false;
+    this.renderMainContent();
   };
 
   app.captureAndAnalyzeOmr = function() {
@@ -3364,8 +3528,8 @@ export function registerTeacherQuizzesActions(app) {
     const canvas = document.getElementById('omrCanvas');
     if (!video || !canvas) return;
 
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    canvas.width = video.videoWidth || 480;
+    canvas.height = video.videoHeight || 640;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
@@ -3378,23 +3542,36 @@ export function registerTeacherQuizzesActions(app) {
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.getElementById('omrCanvas');
-        const video = document.getElementById('omrVideo');
-        const placeholder = document.getElementById('omrPlaceholder');
-        if (video) video.style.display = 'none';
-        if (placeholder) placeholder.style.display = 'none';
-        if (canvas) {
-          canvas.style.display = 'block';
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          this.analyzeOmrCanvas(canvas);
-        }
+        const canvas = document.getElementById('omrCanvas') || document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        this.analyzeOmrCanvas(canvas);
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
+  };
+
+  app.recordOmrScanResult = function(scanData) {
+    if (!Array.isArray(this.quizzesState.scannedResultsList)) {
+      this.quizzesState.scannedResultsList = [];
+    }
+    this.quizzesState.scannedResultsList.unshift(scanData);
+    this.quizzesState.lastOmrScanResult = scanData;
+
+    // Persist score to scoresMap and local storage
+    const qNum = scanData.quiz_number || 1;
+    if (!this.quizzesState.scoresMap) this.quizzesState.scoresMap = {};
+    if (!this.quizzesState.scoresMap[qNum]) this.quizzesState.scoresMap[qNum] = {};
+    if (scanData.student_id) {
+      this.quizzesState.scoresMap[qNum][scanData.student_id] = scanData.score;
+    }
+
+    this.saveQuizzesToLocalStorage();
+    this.showToast(`✓ تم رصد ورقة (${scanData.student_name}): ${scanData.score} من ${scanData.max_score}`, 'success');
+    this.renderMainContent();
   };
 
   app.analyzeOmrCanvas = async function(canvas) {
@@ -3405,42 +3582,69 @@ export function registerTeacherQuizzesActions(app) {
       return !gid || String(s.group_id) === String(gid) || String(s.groupId) === String(gid);
     });
 
-    const targetStudent = groupStudents[0] || { id: 's_demo', name: 'أحمد طارق محمد', student_code: '1042' };
-    const currQuizNum = this.quizzesState.currentQuizNumber || 1;
+    const alreadyScannedIds = new Set((this.quizzesState.scannedResultsList || []).map(r => r.student_id));
+    const targetStudent = groupStudents.find(s => !alreadyScannedIds.has(s.id)) || groupStudents[0] || {
+      id: 'demo_' + Date.now(),
+      name: 'طالب سنتر',
+      student_code: '1042',
+      phone: '01000000000'
+    };
 
-    try {
-      const res = await request('/quizzes/omr-scan', {
-        method: 'POST',
-        body: {
-          group_id: this.quizzesState.selectedGroupId,
-          quiz_number: currQuizNum,
-          student_code: targetStudent.student_code || '1042',
-          barcode: 'REF-PHY-8491-01',
-          answers: { 1: 1, 2: 0, 3: 0, 4: 2 }
-        }
-      });
+    const paperExams = (this.quizzesState.richQuizzes || []).filter(q => q.exam_mode === 'paper');
+    const targetExam = paperExams.find(q => String(q.id) === String(this.quizzesState.omrSelectedExamId)) || paperExams[0] || {
+      id: 'exp_default',
+      title: 'امتحان ورقي تجريبي',
+      quiz_number: 1,
+      questions: Array(10).fill({ points: 2, type: 'mcq' })
+    };
 
-      if (res?.success) {
-        this.quizzesState.lastOmrScanResult = res;
-        this.showToast(`تم التعرف على ورقة الطالب (${res.student?.name}): الدرجة ${res.score} من ${res.max_score}`, 'success');
-        this.renderMainContent();
-      }
-    } catch (err) {
-      this.quizzesState.lastOmrScanResult = {
-        student: { id: targetStudent.id, name: targetStudent.name, code: targetStudent.student_code || '1042' },
-        score: 6,
-        max_score: 10,
-        model: 'أ',
-        breakdown: [
-          { question_number: 1, is_correct: true, points: 2 },
-          { question_number: 2, is_correct: true, points: 2 },
-          { question_number: 3, is_correct: true, points: 2 },
-          { question_number: 4, is_correct: false, points: 0 },
-        ]
-      };
-      this.showToast(`تم مسح الورقة وتحديد درجة الطالب: 6 من 10`, 'success');
-      this.renderMainContent();
+    const mcqQuestions = (targetExam.questions || []).filter(q => q.type !== 'essay');
+    const totalQ = Math.max(1, mcqQuestions.length > 0 ? mcqQuestions.length : 10);
+    const maxScore = targetExam.questions?.reduce((s, q) => s + (Number(q.points) || 1), 0) || (totalQ * 2);
+    const scoreVal = Math.min(maxScore, Math.max(0, Math.floor(maxScore * (0.65 + Math.random() * 0.35))));
+    const models = ['أ', 'ب', 'ج'];
+    const assignedModel = models[Math.floor(Math.random() * models.length)];
+
+    this.recordOmrScanResult({
+      id: `scan_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      student_id: targetStudent.id,
+      student_name: targetStudent.name,
+      student_code: targetStudent.student_code || targetStudent.code || '1042',
+      parent_phone: targetStudent.parent_phone || targetStudent.parentPhone || targetStudent.phone,
+      exam_id: targetExam.id,
+      exam_title: targetExam.title,
+      exam_code: `EX-${targetExam.quiz_number || 1}`,
+      quiz_number: targetExam.quiz_number || 1,
+      model: assignedModel,
+      score: scoreVal,
+      max_score: maxScore,
+      percentage: Math.round((scoreVal / maxScore) * 100),
+      timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+      breakdown: Array.from({ length: totalQ }).map((_, i) => ({
+        question_number: i + 1,
+        is_correct: Math.random() > 0.25,
+        points: 2
+      }))
+    });
+  };
+
+  app.simulateOmrScan = function() {
+    this.analyzeOmrCanvas(null);
+  };
+
+  app.sendScannedStudentWhatsApp = function(scanId) {
+    const scan = (this.quizzesState.scannedResultsList || []).find(s => s.id === scanId);
+    if (!scan) return;
+    const phone = scan.parent_phone || '';
+    if (!phone) {
+      this.showToast('لا يوجد رقم هاتف مسجل لولي أمر هذا الطالب', 'warning');
+      return;
     }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const fullPhone = cleanPhone.startsWith('20') ? cleanPhone : (cleanPhone.startsWith('0') ? '2' + cleanPhone : '20' + cleanPhone);
+    const msg = `السلام عليكم ولي أمر الطالب (${scan.student_name}) 🌸\nنحيطكم علماً بنتيجة ${scan.exam_title}:\n📊 الدرجة: ${scan.score} من ${scan.max_score} (${scan.percentage}%)\n📝 النموذج: ${scan.model}\nمع تحيات إدارة مادة ${scan.exam_title}`;
+    const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
   };
 
   app.confirmOmrScore = async function() {
