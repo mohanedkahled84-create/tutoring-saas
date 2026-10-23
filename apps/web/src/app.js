@@ -496,7 +496,7 @@ class CentrlyApp {
     const activationRadar = tenants.map(t => {
       const studentCount = Number(t.students_count || 0);
       let stage = 'no_students';
-      let stageLabel = 'سجل ولم يضف طلاب بعد ⚠️';
+      let stageLabel = 'سجل ولم يضف طلاب بعد';
       let stageColor = '#f59e0b';
       if (studentCount > 0) {
         stage = 'has_students';
@@ -685,9 +685,37 @@ class CentrlyApp {
       return;
     }
 
-    // DEV-PORTAL: Unified Portal Route (/portal or ?view=portal or cached portal session)
+    // DEV-PORTAL: Unified Portal Route (/portal, ?view=portal, teacher subdomain, or teacher path)
     const cleanPath = (window.location.pathname || '').trim().replace(/\/+$/, '');
-    const isPortalRoute = cleanPath === '/portal' || urlParams.get('view') === 'portal' || (urlParams.get('portal') === 'login' && !portalToken);
+    const currentHost = (window.location.hostname || '').toLowerCase();
+
+    // Check if accessed via teacher subdomain (e.g. mr-omar.centerly-eg.com)
+    let detectedTeacherSubdomain = null;
+    const hostSegments = currentHost.split('.');
+    if (hostSegments.length >= 3) {
+      const firstSub = hostSegments[0];
+      if (!['www', 'app', 'admin', 'api', 'dev', 'mail', 'centrly-platform'].includes(firstSub)) {
+        detectedTeacherSubdomain = firstSub;
+      }
+    }
+
+    // Or check if accessed via path (e.g. /mr-omar, /mr-omar/dashboard)
+    const pathSegments = cleanPath.split('/').filter(Boolean);
+    if (!detectedTeacherSubdomain && pathSegments.length > 0) {
+      const seg0 = pathSegments[0].toLowerCase();
+      if (seg0 === 'mr-omar' || seg0.startsWith('mr-')) {
+        detectedTeacherSubdomain = seg0;
+      }
+    }
+
+    if (detectedTeacherSubdomain) {
+      window.__teacherSubdomain = detectedTeacherSubdomain;
+    }
+
+    const isPortalRoute = cleanPath === '/portal' || 
+                          urlParams.get('view') === 'portal' || 
+                          (urlParams.get('portal') === 'login' && !portalToken) ||
+                          Boolean(detectedTeacherSubdomain);
 
     if (isPortalRoute) {
       const cachedPortalToken = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_token')) ||

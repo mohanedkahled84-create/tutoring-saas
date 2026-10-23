@@ -61,7 +61,7 @@ export function openVideoPlayerModal(url, title, watermarkText = "") {
       <!-- Video Container with Watermark -->
       <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);">
         <iframe 
-          src="https://www.youtube.com/embed/${encodeURIComponent(ytId)}?autoplay=1&rel=0&modestbranding=1" 
+          id="centrlyVideoIframe" src="https://www.youtube.com/embed/${encodeURIComponent(ytId)}?enablejsapi=1&autoplay=1&rel=0&modestbranding=1" 
           title="${escapeHtml(title || "Video")}"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
           allowfullscreen 

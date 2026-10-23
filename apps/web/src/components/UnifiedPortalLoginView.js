@@ -23,7 +23,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
       presetIdentifier = params.get('phone') || params.get('user') || params.get('identifier') || '';
     }
     const roleParam = params.get('role');
-    if (roleParam === 'student') {
+    if (roleParam === 'student' || window.__teacherSubdomain) {
       currentRole = 'student';
     }
   }
@@ -57,7 +57,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
             سـ
           </div>
           <h1 id="portalHeadingText" style="font-size: 1.35rem; font-weight: 800; margin: 0 0 0.35rem 0; color: #0f172a;">
-            ${isStudent ? 'بوابة الطالب' : 'بوابة ولي الأمر'}
+            ${(typeof window !== 'undefined' && window.__teacherSubdomain === 'mr-omar') ? 'منصة مستر عمر المحمدي — بوابة الطالب' : (isStudent ? 'بوابة الطالب' : 'بوابة ولي الأمر')}
           </h1>
           <p id="portalSubheadingText" style="font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.5;">
             ${isStudent ? 'سجّل دخولك لتحميل المذكرات، تسليم الواجبات، ومتابعة درجاتك' : 'سجّل دخولك لمتابعة الحضور والغياب، الدرجات، والواجبات'}

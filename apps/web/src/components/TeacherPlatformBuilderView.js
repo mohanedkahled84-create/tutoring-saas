@@ -58,7 +58,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
   // Official live URL
   const officialSubdomain = subdomain || (isOmar ? 'mr-omar' : 'yourname');
-  const livePlatformUrl = `https://${officialSubdomain}.centrly.com`;
+  const livePlatformUrl = `https://${officialSubdomain}.centerly-eg.com`;
   const internalPlatformPath = `/${officialSubdomain}`;
 
   // Theme metadata
@@ -139,7 +139,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 <strong style="font-weight: 900;">${onlineCount}</strong> نشط الآن
               </span>
               <span style="background: var(--centrly-blue-100, #e8edff); color: var(--centrly-blue-700, #2949ba); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
-                <strong style="font-weight: 900;">${watchedCount}</strong> شاهد المحاضرة
+                <strong style="font-weight: 900;">${watchedCount}</strong> أتمّ المشاهدة بالكامل
               </span>
               <span style="background: var(--centrly-warning-light, #fef3c7); color: var(--centrly-warning, #d98916); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
                 <strong style="font-weight: 900;">${hwSubmittedCount}</strong> سلّم الواجب
@@ -155,11 +155,10 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
             </a>
 
-            <a href="https://api.whatsapp.com/send?text=${encodeURIComponent(`أهلاً بكم يا شباب! دي المنصة التعليمية الرسمية الخاصة بينا للمتابعة والواجبات والشروحات:\n${livePlatformUrl}`)}" 
-              target="_blank" rel="noopener noreferrer" class="btn" style="background: #16a34a; color: #ffffff; text-decoration: none; height: 32px; padding: 0 10px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; border-radius: 6px;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-              <span>مشاركة</span>
-            </a>
+            <button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.copyPlatformLink(this, '${escapeHtml(livePlatformUrl)}')" style="height: 32px; padding: 0 12px; font-size: 0.78rem; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; color: var(--centrly-blue-700, #2949ba); background: #ffffff; border: 1px solid var(--centrly-line, #e2e8f0); cursor: pointer;">
+      ${getIcon('copy', 13)}
+      <span>نسخ الرابط</span>
+    </button>
 
             <button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.toggleEditSettings()" style="height: 32px; padding: 0 10px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
               ${getIcon('edit', 12)}
@@ -198,9 +197,9 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--centrly-success, #25845a); display: inline-block;"></span>
               <span>نشط الآن (${onlineCount})</span>
             </button>
-            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('watching', this)"
+            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('completed', this)"
               style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
-              <span>شاهد المحاضرة (${watchedCount})</span>
+              <span>أتمّ المشاهدة (${watchedCount})</span>
             </button>
             <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('submitted_hw', this)"
               style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
@@ -258,11 +257,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
                 const isOnline = isMohaned;
                 const vTitle = 'فيديو حل واجب الباب الرابع';
-                const vCur = isMohaned ? '24:15' : '0:00';
+                const vCur = isMohaned ? '35:23' : '0:00';
                 const vDur = '35:23';
-                const vPct = isMohaned ? 68 : 0;
+                const vPct = isMohaned ? 100 : 0;
                 const vRem = isMohaned ? '11:08 د' : '35:23 د';
-                const vStat = isMohaned ? 'watching' : 'not_started';
+                const vStat = isMohaned ? 'completed' : 'not_started';
 
                 const hTitle = 'واجب شابتر 1';
                 const hStat = isMohaned ? 'approved' : 'missing';
@@ -306,18 +305,21 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                     <!-- 3. تراكينج المحاضرة (الفيديو) -->
                     <td style="padding: 12px 14px; vertical-align: middle;">
                       ${isMohaned ? `
-                        <div style="font-weight: 800; font-size: 0.82rem; color: var(--centrly-ink, #182349); margin-bottom: 3px;">
-                          ${escapeHtml(vTitle)}
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+                          <span style="font-weight: 800; font-size: 0.82rem; color: var(--centrly-ink, #182349);">${escapeHtml(vTitle)}</span>
+                          <span style="background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 4px;">
+                            مكتمل (100%)
+                          </span>
                         </div>
                         <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
-                          <div style="width: ${vPct}%; height: 100%; background: var(--centrly-blue-700, #2949ba); border-radius: 3px;"></div>
+                          <div style="width: 100%; height: 100%; background: var(--centrly-success, #25845a); border-radius: 3px;"></div>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem;">
                           <span style="font-weight: 800; color: var(--centrly-ink, #182349); font-family: monospace;">
-                            شاهد ${escapeHtml(vCur)} من ${escapeHtml(vDur)} (${vPct}%)
+                            شاهد 35:23 من 35:23 (100%)
                           </span>
-                          <span style="color: var(--centrly-warning, #d98916); font-weight: 700;">
-                            متبقي ${escapeHtml(vRem)}
+                          <span style="color: var(--centrly-success, #25845a); font-weight: 800;">
+                            أتمّ المشاهدة بالكامل
                           </span>
                         </div>
                       ` : `
@@ -557,7 +559,7 @@ export function registerTeacherPlatformActions(appInstance) {
         let match = false;
         if (filterType === 'all') match = true;
         else if (filterType === 'online') match = status.includes('online');
-        else if (filterType === 'watching') match = status.includes('watching');
+        else if (filterType === 'completed' || filterType === 'watching') match = status.includes('completed') || status.includes('watching');
         else if (filterType === 'submitted_hw') match = status.includes('submitted_hw');
         else if (filterType === 'not_started') match = status.includes('not_started');
         r.style.display = match ? '' : 'none';
@@ -616,9 +618,10 @@ export function registerTeacherPlatformActions(appInstance) {
       if (btnEl) {
         const originalContent = btnEl.innerHTML;
         btnEl.innerHTML = `
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
+          <span style="color: #16a34a; font-weight: 800;">تم النسخ!</span>
         `;
         setTimeout(() => {
           btnEl.innerHTML = originalContent;
