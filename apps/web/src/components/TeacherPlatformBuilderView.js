@@ -506,7 +506,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                     <div>
                       <div style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 3px;">رقم هاتف الطالب (أو كود الطالب)</div>
                       <div style="height: 32px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 0 10px; display: flex; align-items: center; font-size: 0.75rem; color: rgba(255,255,255,0.5); font-family: monospace;">
-                        01123671177 أو كود 1001
+                        01123671177 أو كود 1006
                       </div>
                     </div>
 

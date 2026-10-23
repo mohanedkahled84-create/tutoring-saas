@@ -967,6 +967,128 @@
       background: #f1f5f9;
       border-color: var(--brand-primary);
     }
+
+    /* تبويبات الأقسام والأرشيف الداخلي (Subtabs & Archive) */
+    .panel-subtabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 8px;
+    }
+    .subtab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .subtab-btn:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
+    }
+    .subtab-btn.active {
+      background: var(--brand-navy);
+      color: #ffffff;
+    }
+    .subtab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.25);
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+    .subtab-btn:not(.active) .subtab-count {
+      background: #e2e8f0;
+      color: var(--text-muted);
+    }
+    .subtab-btn:not(.active) .subtab-count.has-items {
+      background: var(--brand-accent);
+      color: #ffffff;
+    }
+
+    /* شرائط الأرشيف الصغيرة المدمجة (Compact Archive Strips) */
+    .archive-compact-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .archive-compact-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .archive-compact-row:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+    .archive-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .archive-check-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .archive-check-circle.approved {
+      background: var(--status-success-bg);
+      color: var(--status-success);
+    }
+    .archive-check-circle.pending {
+      background: var(--status-warning-bg);
+      color: var(--status-warning);
+    }
+    .archive-title {
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .archive-date {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: block;
+      margin-top: 2px;
+    }
+    .archive-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .btn-compact {
+      height: 30px !important;
+      padding: 0 12px !important;
+      font-size: 0.75rem !important;
+    }
   </style>
 </head>
 <body>
@@ -1003,7 +1125,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           </span>
           <span>الواجبات والتسليم</span>
-          <span class="menu-badge badge-warning">مطلوب</span>
+          <span class="menu-badge badge-warning" id="sidebarHwBadge" style="display: none;">مطلوب</span>
         </button>
 
         <!-- 3. الامتحانات -->
@@ -1012,7 +1134,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </span>
           <span>الامتحانات</span>
-          <span class="menu-badge badge-success">1 متاح</span>
+          <span class="menu-badge badge-success" id="sidebarExamsBadge" style="display: none;"></span>
         </button>
 
         <!-- 4. المحاضرات وفيديوهات الشرح (مشروطة بالواجب) -->
@@ -1046,7 +1168,7 @@
           <div class="student-avatar">م</div>
           <div class="student-info">
             <h4 id="sidebarStudentName">مهند خالد</h4>
-            <p id="sidebarStudentCode">كود: 1001 • سنتر النيل</p>
+            <p id="sidebarStudentCode">كود: 1006 • سنتر الهضبه</p>
           </div>
         </div>
         <a href="javascript:void(0)" onclick="logoutStudent()" class="logout-btn" title="تسجيل الخروج">خروج</a>
@@ -1158,12 +1280,31 @@
 
       <!-- ================= 3. الواجبات والتسليم ================= -->
       <section id="panel-homework" class="panel">
-        <div class="section-title-clean">
-          <span>الواجبات والتكليفات المطلوبة</span>
+        
+        <!-- التبويبات العلوية: الواجبات المطلوبة vs أرشيف المسلّم -->
+        <div class="panel-subtabs">
+          <button class="subtab-btn active" id="tabHwActive" onclick="switchHwSubTab('active')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>الواجبات المطلوبة حالياً</span>
+            <span class="subtab-count has-items" id="countHwActive">0</span>
+          </button>
+          <button class="subtab-btn" id="tabHwArchive" onclick="switchHwSubTab('archive')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+            <span>أرشيف الواجبات المسلّمة</span>
+            <span class="subtab-count" id="countHwArchive">0</span>
+          </button>
         </div>
-        <div id="homeworkListContainer">
-          <!-- ديناميكي: تظهر هنا الواجبات المرفوعة فعلياً -->
+
+        <!-- 1. حاوية الواجبات النشطة المطلوبة -->
+        <div id="homeworkActiveContainer">
+          <!-- ديناميكي: تظهر هنا الواجبات التي لم تسلم بعد -->
         </div>
+
+        <!-- 2. حاوية أرشيف الواجبات المسلّمة (شرائط مدمجة صغيرة) -->
+        <div id="homeworkArchiveContainer" style="display: none;">
+          <!-- ديناميكي: شرائط مدمجة وصغيرة للواجبات المسلمة والمعتمدة -->
+        </div>
+
       </section>
 
       <!-- ================= 4. الامتحانات الشاملة والكويزات ================= -->
@@ -1190,11 +1331,11 @@
       <section id="panel-pass" class="panel">
         <div class="id-card-wrap">
           <h3 style="font-size: 1.05rem; font-weight: 800;">بطاقة حضور الحصص الرقمية</h3>
-          <p id="passTeacherLabel" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">مستر عمر المحمدي • سنتر النيل • مجموعه يوم السبت والتلات</p>
+          <p id="passTeacherLabel" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">مستر عمر المحمدي • سنتر الهضبه • الاحد والأربع تالته ثانوي</p>
 
           <div style="margin: 20px 0; padding: 14px; background: #f8fafc; border-radius: 8px; border: 1px dashed var(--border-subtle);">
             <div style="height: 48px; background: repeating-linear-gradient(90deg, #000, #000 3px, #fff 3px, #fff 6px, #000 6px, #000 9px, #fff 9px, #fff 12px); width: 80%; margin: 0 auto;"></div>
-            <p id="passStudentCode" style="font-size: 0.95rem; font-weight: 900; letter-spacing: 3px; margin-top: 8px; color: var(--text-main);">1001-2026</p>
+            <p id="passStudentCode" style="font-size: 0.95rem; font-weight: 900; letter-spacing: 3px; margin-top: 8px; color: var(--text-main);">1006-2026</p>
           </div>
 
           <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
@@ -1214,7 +1355,7 @@
     <div class="exam-topbar">
       <div>
         <h3 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 2px;">كويز 1: الحركة وقوانين نيوتن — بيئة اختبار مؤمنة</h3>
-        <span style="font-size: 0.75rem; color: #94a3b8;" id="examStudentLabel">الطالب: مهند خالد (كود: 1001 • سنتر النيل)</span>
+        <span style="font-size: 0.75rem; color: #94a3b8;" id="examStudentLabel">الطالب: مهند خالد (كود: 1006 • سنتر الهضبه)</span>
       </div>
 
       <div style="display: flex; align-items: center; gap: 16px;">
@@ -1278,7 +1419,7 @@
     </div>
 
     <!-- علامة مائية متحركة خاصة بالطالب أثناء الامتحان -->
-    <div class="exam-watermark" id="examWatermark">مهند خالد • 01123671177 • 1001</div>
+    <div class="exam-watermark" id="examWatermark">مهند خالد • 01123671177 • 1006</div>
 
   </div>
 
@@ -1340,16 +1481,16 @@
     </div>
   </div>
 
-  <script>
+    <script>
     // 1. استرجاع وتحديث بيانات الطالب الحقيقية من قاعدة البيانات
-    const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFiOjU3MDczMmJjLTBkYmUtNGFiZi1iNDYyLTE5N2JkYTBkMzUxMDoxODI0Mjk0MzI5OmFlZGE5NWVlYjRlY2Q5YTA5MzAyMzBjNTc1MzM3NGM1YmEzM2NmZTA2Njg4NWY0Y2ZmYjdiZmQ1Y2ZkM2VkYzE';
+    const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFiOjlkYTNhYWUwLTk3ZGYtNDdhNi04MmU5LTA2YzYxMzlmNjNlNToxODI0Mjk2NTI4OjRmYWZmZTVkNWU3NzZiNzI0ZWQyYzgzMWYxNWI2NWM3ZDU4NTZkNDc2ZDc0YTVjNmVjZWM0YzdjZWRhNTJjMjU';
 
     let currentStudent = {
       name: 'مهند خالد',
-      code: '1001',
+      code: '1006',
       phone: '01123671177',
-      center: 'النيل',
-      group: 'مجموعه يوم السبت والتلات',
+      center: 'الهضبه',
+      group: 'الاحد والأربع تالته ثانوي',
       subject: 'فيزياء',
       teacher: 'مستر عمر المحمدي',
       teacher_phone: '01010979708'
@@ -1371,8 +1512,8 @@
 
       const codeEl = document.getElementById('sidebarStudentCode');
       if (codeEl) {
-        const cName = currentStudent.center || currentStudent.center_name || 'النيل';
-        codeEl.innerText = 'كود: ' + (currentStudent.code || currentStudent.student_code || '1001') + ' • سنتر ' + cName;
+        const cName = currentStudent.center || currentStudent.center_name || 'الهضبه';
+        codeEl.innerText = 'كود: ' + (currentStudent.code || currentStudent.student_code || '1006') + ' • سنتر ' + cName;
       }
 
       const greetingEl = document.getElementById('homeGreetingName');
@@ -1388,12 +1529,12 @@
 
       const passTeacherEl = document.getElementById('passTeacherLabel');
       if (passTeacherEl) {
-        passTeacherEl.innerText = `${currentStudent.teacher || currentStudent.teacher_name || 'مستر عمر المحمدي'} • سنتر ${currentStudent.center || currentStudent.center_name || 'النيل'} • ${currentStudent.group || currentStudent.group_name || 'مجموعه يوم السبت والتلات'}`;
+        passTeacherEl.innerText = `${currentStudent.teacher || currentStudent.teacher_name || 'مستر عمر المحمدي'} • سنتر ${currentStudent.center || currentStudent.center_name || 'الهضبه'} • ${currentStudent.group || currentStudent.group_name || 'الاحد والأربع تالته ثانوي'}`;
       }
 
       const passCodeEl = document.getElementById('passStudentCode');
       if (passCodeEl) {
-        passCodeEl.innerText = `${currentStudent.code || currentStudent.student_code || '1001'}-2026`;
+        passCodeEl.innerText = `${currentStudent.code || currentStudent.student_code || '1006'}-2026`;
       }
 
       const watermarkEl = document.getElementById('videoFloatingWatermark');
@@ -1403,12 +1544,12 @@
 
       const examWatermarkEl = document.getElementById('examWatermark');
       if (examWatermarkEl) {
-        examWatermarkEl.innerText = `${currentStudent.name} • ${currentStudent.phone || currentStudent.student_phone || '01123671177'} • ${currentStudent.code || currentStudent.student_code || '1001'}`;
+        examWatermarkEl.innerText = `${currentStudent.name} • ${currentStudent.phone || currentStudent.student_phone || '01123671177'} • ${currentStudent.code || currentStudent.student_code || '1006'}`;
       }
 
       const examStudentLabel = document.getElementById('examStudentLabel');
       if (examStudentLabel) {
-        examStudentLabel.innerText = `الطالب: ${currentStudent.name} (كود: ${currentStudent.code || currentStudent.student_code || '1001'} • سنتر ${currentStudent.center || currentStudent.center_name || 'النيل'})`;
+        examStudentLabel.innerText = `الطالب: ${currentStudent.name} (كود: ${currentStudent.code || currentStudent.student_code || '1006'} • سنتر ${currentStudent.center || currentStudent.center_name || 'الهضبه'})`;
       }
     }
     hydrateStudentUI(currentStudent);
@@ -1467,31 +1608,12 @@
       return sub || 'mr-omar';
     }
 
-    // 4. حالة الواجبات والامتحانات الخاصة بالطالب
-    let studentApprovedHomeworks = {};
-    let studentSubmittedHomeworks = {};
-    function loadStudentHomeworkState() {
-      try {
-        studentApprovedHomeworks = JSON.parse(localStorage.getItem('centrly_approved_homeworks') || '{}');
-      } catch (_) { studentApprovedHomeworks = {}; }
-      try {
-        studentSubmittedHomeworks = JSON.parse(localStorage.getItem('centrly_submitted_homeworks') || '{}');
-      } catch (_) { studentSubmittedHomeworks = {}; }
-    }
-    loadStudentHomeworkState();
-
-    function isHwApproved(hwId) {
-      if (!hwId) return true;
-      if (studentApprovedHomeworks['all']) return true;
-      return Boolean(studentApprovedHomeworks[hwId]);
-    }
-
-    function isHwPending(hw, hwId) {
-      if (!hwId) return false;
-      if (isHwApproved(hwId)) return false;
-      if (studentSubmittedHomeworks[hwId]) return true;
-      if (hw && (hw.submission_status === 'pending' || Boolean(hw.submission_url))) return true;
-      return false;
+    // 4. حالة الواجبات الحقيقية (من قاعدة البيانات)
+    function getHwStatus(hw) {
+      if (!hw) return 'unsubmitted';
+      if (hw.submission_status === 'approved') return 'approved';
+      if (hw.submission_status === 'pending' || Boolean(hw.submission_url)) return 'pending';
+      return 'unsubmitted';
     }
 
     // 5. محرك الإشعارات النظيف (Zero Alert popups)
@@ -1516,7 +1638,7 @@
       clearTimeout(toast._timer);
       toast._timer = setTimeout(() => {
         toast.classList.remove('active');
-      }, 3200);
+      }, 3400);
     }
 
     function escapeHtml(str) {
@@ -1531,7 +1653,7 @@
 
     function escapeJsStr(str) {
       if (!str) return '';
-      return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+      return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\'").replace(/"/g, '\"');
     }
 
     // 6. استخراج معرف يوتيوب وتشغيل الفيديو مع العلامة المائية
@@ -1591,7 +1713,6 @@
     let platformContent = [];
 
     async function fetchPlatformContent() {
-      loadStudentHomeworkState();
       hydrateSettings();
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -1613,10 +1734,10 @@
               const s = portalData.student;
               currentStudent = {
                 name: s.name || 'مهند خالد',
-                code: s.student_code || s.code || '1001',
+                code: s.student_code || s.code || '1006',
                 phone: s.student_phone || s.parent_phone || '01123671177',
-                center: s.center_name || 'النيل',
-                group: s.group_name || 'مجموعه يوم السبت والتلات',
+                center: s.center_name || 'الهضبه',
+                group: s.group_name || 'الاحد والأربع تالته ثانوي',
                 subject: s.subject_name || 'فيزياء',
                 teacher: s.teacher_name || 'مستر عمر المحمدي',
                 teacher_phone: s.teacher_phone || '01010979708'
@@ -1664,12 +1785,55 @@
       renderAllPanels();
     }
 
-    // 8. تصيير جميع الأقسام (Panels) بدون أي بيانات وهمية
+    // 8. تبديل تبويبات الواجبات (النشطة vs الأرشيف)
+    function switchHwSubTab(tab) {
+      window._userSwitchedHwTab = true;
+      const tabActive = document.getElementById('tabHwActive');
+      const tabArchive = document.getElementById('tabHwArchive');
+      const activeContainer = document.getElementById('homeworkActiveContainer');
+      const archiveContainer = document.getElementById('homeworkArchiveContainer');
+
+      if (tab === 'archive') {
+        if (tabActive) tabActive.classList.remove('active');
+        if (tabArchive) tabArchive.classList.add('active');
+        if (activeContainer) activeContainer.style.display = 'none';
+        if (archiveContainer) archiveContainer.style.display = 'block';
+      } else {
+        if (tabArchive) tabArchive.classList.remove('active');
+        if (tabActive) tabActive.classList.add('active');
+        if (archiveContainer) archiveContainer.style.display = 'none';
+        if (activeContainer) activeContainer.style.display = 'block';
+      }
+    }
+
+    // 9. تصيير جميع الأقسام (Panels) بالربط المباشر مع قاعدة البيانات
     function renderAllPanels() {
       const videos = platformContent.filter(m => m.type === 'video' || (m.url && (m.url.includes('youtu.be') || m.url.includes('youtube.com'))));
       const homework = platformContent.filter(m => m.is_homework || m.type === 'homework');
       const quizzes = platformContent.filter(m => m.is_quiz || m.type === 'quiz' || m.type === 'online_quiz');
       const materials = platformContent.filter(m => !m.is_homework && !m.is_quiz && m.type !== 'video' && m.type !== 'online_quiz' && m.type !== 'quiz' && !Boolean(m.url && (m.url.includes('youtu.be') || m.url.includes('youtube.com'))));
+
+      // شارات السايد بار الديناميكية (إخفاء شارة الامتحانات تماماً إذا كان العدد 0)
+      const examsBadge = document.getElementById('sidebarExamsBadge');
+      if (examsBadge) {
+        if (quizzes.length > 0) {
+          examsBadge.innerText = `${quizzes.length} متاح`;
+          examsBadge.style.display = 'inline-flex';
+        } else {
+          examsBadge.style.display = 'none';
+        }
+      }
+
+      const unsubmittedCount = homework.filter(h => getHwStatus(h) === 'unsubmitted').length;
+      const hwBadge = document.getElementById('sidebarHwBadge');
+      if (hwBadge) {
+        if (unsubmittedCount > 0) {
+          hwBadge.innerText = `${unsubmittedCount} مطلوب`;
+          hwBadge.style.display = 'inline-flex';
+        } else {
+          hwBadge.style.display = 'none';
+        }
+      }
 
       // تحديث مؤشرات الـ KPIs في الصفحة الرئيسية
       const kpiLecturesVal = document.getElementById('kpiLecturesVal');
@@ -1680,7 +1844,16 @@
       const kpiHomeworkVal = document.getElementById('kpiHomeworkVal');
       if (kpiHomeworkVal) kpiHomeworkVal.innerText = homework.length;
       const kpiHomeworkNote = document.getElementById('kpiHomeworkNote');
-      if (kpiHomeworkNote) kpiHomeworkNote.innerText = homework.length > 0 ? `${homework.length} تكليف دراسي مسجل` : 'لا توجد تكليفات مطلوبة حالياً';
+      if (kpiHomeworkNote) kpiHomeworkNote.innerText = homework.length > 0 ? `${homework.length} تكليف مسجل بالداتابيز` : 'لا توجد تكليفات مطلوبة حالياً';
+
+      // شريط تقدم المنهج
+      const totalWork = homework.length + videos.length;
+      const completedWork = homework.filter(h => getHwStatus(h) === 'approved').length;
+      const progressPct = totalWork > 0 ? Math.round((completedWork / totalWork) * 100) : 0;
+      const pctEl = document.getElementById('homeProgressPct');
+      if (pctEl) pctEl.innerText = `${progressPct}% مكتمل`;
+      const fillEl = document.getElementById('homeProgressFill');
+      if (fillEl) fillEl.style.width = `${progressPct}%`;
 
       // تحديث قائمة المهام العاجلة بالرئيسية
       renderHomeTasks(videos, homework, quizzes);
@@ -1698,23 +1871,23 @@
       const countEl = document.getElementById('homePendingCount');
       if (!container) return;
 
-      const pendingHomework = homework.filter(h => !isHwApproved(h.id));
-      const totalPending = pendingHomework.length + quizzes.length;
+      const unsubmittedHw = homework.filter(h => getHwStatus(h) === 'unsubmitted');
+      const totalPending = unsubmittedHw.length + quizzes.length;
       if (countEl) countEl.innerText = `${totalPending} مهمة معلقة`;
 
-      if (videos.length === 0 && homework.length === 0 && quizzes.length === 0) {
+      if (videos.length === 0 && unsubmittedHw.length === 0 && quizzes.length === 0) {
         container.innerHTML = `
           <div class="empty-state-card">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             <h3>لا توجد مهام دراسية معلقة حالياً</h3>
-            <p>ستظهر هنا المحاضرات والواجبات والكويزات فور قيامك بإضافتها من لوحة تحكم المعلم.</p>
+            <p>ممتاز! لقد أنجزت جميع واجباتك واختباراتك المتاحة حتى الآن.</p>
           </div>
         `;
         return;
       }
 
       let html = '';
-      pendingHomework.forEach(hw => {
+      unsubmittedHw.forEach(hw => {
         html += `
           <div class="todo-card urgent">
             <div class="todo-info">
@@ -1743,16 +1916,26 @@
       });
 
       videos.slice(0, 2).forEach(vid => {
-        const reqHwId = vid.pages || (vid.questions ? (() => { try { return JSON.parse(vid.questions).homework_id; } catch(_) { return null; } })() : null);
-        const locked = (vid.book_name === 'approved_homework' || Boolean(reqHwId)) && !isHwApproved(reqHwId);
+        let reqHwId = vid.pages;
+        if (vid.questions) {
+          try {
+            const qObj = JSON.parse(vid.questions);
+            if (qObj.homework_id) reqHwId = qObj.homework_id;
+          } catch (_) {}
+        }
+        const isGated = (vid.book_name === 'approved_homework') || Boolean(reqHwId);
+        const targetHw = reqHwId ? homework.find(h => h.id === reqHwId) : null;
+        const isApproved = targetHw ? (targetHw.submission_status === 'approved') : false;
+        const isLocked = isGated && !isApproved;
+
         html += `
-          <div class="todo-card ${locked ? '' : 'completed'}">
+          <div class="todo-card ${isLocked ? '' : 'completed'}">
             <div class="todo-info">
-              <h4 style="${locked ? '' : 'color: var(--brand-navy);'}">محاضرة شرح: ${escapeHtml(vid.title)}</h4>
-              <p>${locked ? 'محاضرة مشروطة بتسليم واعتماد الواجب أولاً' : 'محاضرة مفتوحة ومتاحة للمشاهدة الآن'}</p>
+              <h4 style="${isLocked ? '' : 'color: var(--brand-navy);'}">محاضرة شرح: ${escapeHtml(vid.title)}</h4>
+              <p>${isLocked ? 'محاضرة مشروطة بتسليم واعتماد الواجب أولاً' : 'محاضرة مفتوحة ومتاحة للمشاهدة الآن'}</p>
             </div>
-            <button class="btn ${locked ? 'btn-secondary' : 'btn-primary'}" onclick="${locked ? "switchPanel('homework', document.querySelectorAll('.menu-item')[1])" : `launchVideo('${escapeJsStr(vid.title)}', '${escapeJsStr(vid.url)}')`}">
-              <span>${locked ? 'تسليم الواجب لفتحها' : 'مشاهدة الآن'}</span>
+            <button class="btn ${isLocked ? 'btn-secondary' : 'btn-primary'}" onclick="${isLocked ? "switchPanel('homework', document.querySelectorAll('.menu-item')[1])" : `launchVideo('${escapeJsStr(vid.title)}', '${escapeJsStr(vid.url)}')`}">
+              <span>${isLocked ? 'تسليم الواجب لفتحها' : 'مشاهدة الآن'}</span>
             </button>
           </div>
         `;
@@ -1761,7 +1944,7 @@
       container.innerHTML = html;
     }
 
-    // تصيير قسم المحاضرات وفيديوهات الشرح
+    // تصيير قسم المحاضرات وفيديوهات الشرح مع القفل الحقيقي
     function renderLecturesPanel(videos) {
       const container = document.getElementById('lecturesListContainer');
       if (!container) return;
@@ -1789,22 +1972,27 @@
           } catch (_) {}
         }
         const isGated = (v.book_name === 'approved_homework') || Boolean(reqHwId);
-        const isLocked = isGated && !isHwApproved(reqHwId);
+        const targetHw = reqHwId ? platformContent.find(m => m.id === reqHwId) : null;
+        const hwStatus = targetHw ? getHwStatus(targetHw) : 'unsubmitted';
+        const isApproved = !isGated || hwStatus === 'approved';
+        const isPending = isGated && hwStatus === 'pending';
 
-        if (isLocked) {
+        if (!isApproved) {
           html += `
             <div class="clean-item-card locked">
               <div class="item-meta">
                 <h3>${escapeHtml(v.title)}</h3>
                 <p>${escapeHtml(v.description || 'فيديو شرح وتطبيقات المسائل')}</p>
-                <div class="lock-hint">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  <span>يتطلب فتح المحاضرة تسليم واعتماد: ${escapeHtml(reqHwTitle)}</span>
+                <div class="lock-hint" style="${isPending ? 'background: #fef3c7; border-color: #fde68a; color: #92400e;' : ''}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    ${isPending ? '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' : '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'}
+                  </svg>
+                  <span>${isPending ? `تم تسليم كشكول حل (${escapeHtml(reqHwTitle)}) • قيد مراجعة واعتماد المستر لفتح المحاضرة` : `يتطلب فتح المحاضرة تسليم واعتماد: ${escapeHtml(reqHwTitle)}`}</span>
                 </div>
               </div>
               <div>
                 <button class="btn btn-secondary" onclick="switchPanel('homework', document.querySelectorAll('.menu-item')[1])">
-                  <span>الانتقال للواجب لفتحه</span>
+                  <span>${isPending ? 'متابعة حالة الواجب' : 'تسليم الواجب لفتحها'}</span>
                 </button>
               </div>
             </div>
@@ -1834,127 +2022,188 @@
       container.innerHTML = html;
     }
 
-    // تصيير قسم الواجبات
+    // تصيير قسم الواجبات (تقسيم الواجبات المطلوبة vs الأرشيف كشرائط مدمجة وصغيرة)
     function renderHomeworkPanel(homework) {
-      const container = document.getElementById('homeworkListContainer');
-      if (!container) return;
+      const activeContainer = document.getElementById('homeworkActiveContainer');
+      const archiveContainer = document.getElementById('homeworkArchiveContainer');
+      const countActiveEl = document.getElementById('countHwActive');
+      const countArchiveEl = document.getElementById('countHwArchive');
 
-      if (homework.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state-card">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <h3>لا توجد واجبات أو تكليفات مطلوبة حالياً</h3>
-            <p>ستظهر الواجبات والتكليفات الدراسية هنا فور تكليف الطلاب بها من لوحة التحكم.</p>
-          </div>
-        `;
-        return;
+      if (!activeContainer || !archiveContainer) return;
+
+      const activeHomework = homework.filter(h => getHwStatus(h) === 'unsubmitted');
+      const archivedHomework = homework.filter(h => getHwStatus(h) !== 'unsubmitted');
+
+      if (countActiveEl) {
+        countActiveEl.innerText = activeHomework.length;
+        countActiveEl.className = 'subtab-count' + (activeHomework.length > 0 ? ' has-items' : '');
+      }
+      if (countArchiveEl) {
+        countArchiveEl.innerText = archivedHomework.length;
+        countArchiveEl.className = 'subtab-count' + (archivedHomework.length > 0 ? ' has-items' : '');
       }
 
-      let html = '';
-      homework.forEach(hw => {
-        const approved = isHwApproved(hw.id);
-        const pending = isHwPending(hw, hw.id);
+      // توجيه تلقائي للأرشيف إذا لم تكن هناك واجبات نشطة
+      if (activeHomework.length === 0 && archivedHomework.length > 0 && !window._userSwitchedHwTab) {
+        switchHwSubTab('archive');
+      }
 
-        html += `
-          <div class="clean-item-card" style="flex-direction: column; align-items: stretch;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-              <div>
-                <h3 style="font-size: 1rem; font-weight: 800;">${escapeHtml(hw.title)}</h3>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-                  ${escapeHtml(hw.description || (hw.book_name ? `المطلوب: حل ${hw.book_name} ص ${hw.pages || ''}` : 'حل الأسئلة المطلوبة ورفع كشكول الحل'))}
-                </p>
-              </div>
-              <span class="kpi-badge ${approved ? 'badge-success' : (pending ? 'badge-warning' : 'badge-danger')}">
-                ${approved ? 'معتمد (10 / 10)' : (pending ? 'قيد المراجعة' : 'مطلوب التسليم')}
-              </span>
-            </div>
-
-            <div style="display: flex; gap: 8px; margin: 10px 0 4px 0; flex-wrap: wrap;">
-              ${hw.submission_url ? `
-                <a href="${escapeHtml(hw.submission_url)}" target="_blank" class="btn btn-secondary" style="height: 32px; font-size: 0.78rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  <span>معاينة حل الطالب المرفوع (كشكول الحل)</span>
-                </a>
-              ` : ''}
-
-              ${hw.url ? `
-                <a href="${escapeHtml(hw.url)}" target="_blank" class="btn btn-secondary" style="height: 32px; font-size: 0.78rem;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  <span>فتح شيت الأسئلة (PDF)</span>
-                </a>
-              ` : ''}
-            </div>
-
-            <!-- منطقة رفع الواجب -->
-            <div class="file-dropzone-box" style="margin-top: 10px;" onclick="triggerHwUpload('${escapeJsStr(hw.id)}', '${escapeJsStr(hw.title)}')">
-              <input type="file" id="file_input_${hw.id}" style="display: none;" onchange="handleHwFileSelected(event, '${escapeJsStr(hw.id)}', '${escapeJsStr(hw.title)}')">
-              <h4 style="font-size: 0.92rem; font-weight: 800; margin-bottom: 2px;">
-                ${approved ? 'تم تسليم واعتماد الواجب بنجاح' : (pending ? 'تم رفع ملف الواجب (قيد مراجعة واعتماد المستر)' : 'اضغط هنا لرفع صور أو ملف الواجب المحلول')}
-              </h4>
-              <p style="font-size: 0.78rem; color: var(--text-muted);">
-                ${approved ? 'درجة الواجب: 10 من 10' : (pending ? 'ملف الحل مرفوع بقاعدة البيانات • يمكنك استبداله برفع ملف جديد' : 'الصيغ المدعومة: JPG, PNG, PDF (من الموبايل أو الكمبيوتر)')}
-              </p>
-            </div>
-
-            <!-- زر محاكاة تجربة اعتماد المعلم والأسيستنت لفك قفل المحاضرة فورياً -->
-            <div style="margin-top: 12px; padding: 10px 14px; background: #f8fafc; border: 1px solid var(--border-subtle); border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-              <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700;">
-                ${approved ? 'حالة الاعتماد: تم اعتماد هذا الواجب وفك المحاضرة المرتبطة به.' : 'محاكاة اعتماد الأسيستنت: اضغط هنا لاعتماد الواجب وفك المحاضرة المشروطة فورياً:'}
-              </span>
-              <div style="display: flex; gap: 8px;">
-                ${approved ? `
-                  <button class="btn btn-secondary" style="height: 32px; font-size: 0.75rem;" onclick="toggleHomeworkApproval('${escapeJsStr(hw.id)}', '${escapeJsStr(hw.title)}')">
-                    <span>إلغاء الاعتماد (لتجربة القفل مجدداً)</span>
-                  </button>
-                  <button class="btn btn-primary" style="height: 32px; font-size: 0.78rem; background: var(--status-success); border-color: var(--status-success); pointer-events: none;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span>معتمد (10 / 10)</span>
-                  </button>
-                ` : `
-                  <button class="btn btn-primary" style="height: 32px; font-size: 0.78rem;" onclick="toggleHomeworkApproval('${escapeJsStr(hw.id)}', '${escapeJsStr(hw.title)}')">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span>اعتماد الواجب وفتح المحاضرة</span>
-                  </button>
-                `}
-              </div>
-            </div>
+      // 1. تصيير الواجبات النشطة المطلوبة
+      if (activeHomework.length === 0) {
+        activeContainer.innerHTML = `
+          <div class="empty-state-card">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+            <h3>لا توجد واجبات معلقة مطلوب تسليمها حالياً</h3>
+            <p>رائع! لقد سلمت جميع التكليفات المطلوبة. يمكنك مراجعة واجباتك وحلولك السابقة في تبويب «أرشيف الواجبات المسلّمة».</p>
           </div>
         `;
-      });
+      } else {
+        let activeHtml = '';
+        activeHomework.forEach(hw => {
+          activeHtml += `
+            <div class="clean-item-card" style="flex-direction: column; align-items: stretch;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <h3 style="font-size: 1rem; font-weight: 800;">${escapeHtml(hw.title)}</h3>
+                  <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                    ${escapeHtml(hw.description || (hw.book_name ? `المطلوب: حل ${hw.book_name} ص ${hw.pages || ''}` : 'حل الأسئلة المطلوبة ورفع كشكول الحل'))}
+                  </p>
+                </div>
+                <span class="kpi-badge badge-danger">
+                  مطلوب التسليم
+                </span>
+              </div>
 
-      container.innerHTML = html;
+              ${hw.url ? `
+                <div style="margin: 10px 0 4px 0;">
+                  <a href="${escapeHtml(hw.url)}" target="_blank" class="btn btn-secondary" style="height: 32px; font-size: 0.78rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>فتح شيت الأسئلة (PDF)</span>
+                  </a>
+                </div>
+              ` : ''}
+
+              <!-- منطقة رفع الواجب الفعلية -->
+              <div class="file-dropzone-box" style="margin-top: 10px;" onclick="triggerHwUpload('${escapeJsStr(hw.id)}')">
+                <input type="file" id="file_input_${hw.id}" accept="image/*,.pdf" style="display: none;" onchange="handleHwFileSelected(event, '${escapeJsStr(hw.id)}')">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: var(--brand-navy); margin-bottom: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <h4 style="font-size: 0.92rem; font-weight: 800; margin-bottom: 2px;">
+                  اضغط هنا لرفع صور أو ملف الواجب المحلول
+                </h4>
+                <p style="font-size: 0.78rem; color: var(--text-muted);">
+                  الصيغ المدعومة: صور الكشكول (JPG, PNG) أو ملف PDF • يتم رفعه فورياً لقاعدة البيانات
+                </p>
+              </div>
+            </div>
+          `;
+        });
+        activeContainer.innerHTML = activeHtml;
+      }
+
+      // 2. تصيير أرشيف الواجبات المسلّمة (شرائط مدمجة وصغيرة)
+      if (archivedHomework.length === 0) {
+        archiveContainer.innerHTML = `
+          <div class="empty-state-card">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+            <h3>أرشيف الواجبات فارغ حالياً</h3>
+            <p>ستظهر هنا كشرائط مدمجة وصغيرة جميع الواجبات التي قمت بتسليمها للمستر أو تم اعتمادها.</p>
+          </div>
+        `;
+      } else {
+        let archiveHtml = '<div class="archive-compact-list">';
+        archivedHomework.forEach(hw => {
+          const isApproved = hw.submission_status === 'approved';
+          const statusTitle = isApproved ? 'تم الاعتماد بنجاح • الدرجة: 10 من 10' : 'تم تسليم كشكول الحل • قيد مراجعة واعتماد المستر';
+
+          archiveHtml += `
+            <div class="archive-compact-row">
+              <div class="archive-meta">
+                <div class="archive-check-circle ${isApproved ? 'approved' : 'pending'}">
+                  ${isApproved
+                    ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+                    : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+                  }
+                </div>
+                <div>
+                  <h4 class="archive-title">${escapeHtml(hw.title)}</h4>
+                  <span class="archive-date">${statusTitle}</span>
+                </div>
+              </div>
+
+              <div class="archive-actions">
+                ${hw.submission_url ? `
+                  <a href="${escapeHtml(hw.submission_url)}" target="_blank" class="btn btn-secondary btn-compact">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span>معاينة حلي المرفوع</span>
+                  </a>
+                ` : ''}
+
+                ${hw.url ? `
+                  <a href="${escapeHtml(hw.url)}" target="_blank" class="btn btn-secondary btn-compact">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>شيت الأسئلة</span>
+                  </a>
+                ` : ''}
+
+                <span class="kpi-badge ${isApproved ? 'badge-success' : 'badge-warning'}" style="font-size: 0.72rem; padding: 4px 9px;">
+                  ${isApproved ? 'معتمد (10 / 10)' : 'قيد المراجعة'}
+                </span>
+              </div>
+            </div>
+          `;
+        });
+        archiveHtml += '</div>';
+        archiveContainer.innerHTML = archiveHtml;
+      }
     }
 
-    function triggerHwUpload(hwId, hwTitle) {
+    // رفع الواجب الفعلي لقاعدة البيانات عبر Backend Railway
+    function triggerHwUpload(hwId) {
       const fileInput = document.getElementById('file_input_' + hwId);
       if (fileInput) fileInput.click();
     }
 
-    function handleHwFileSelected(event, hwId, hwTitle) {
-      studentSubmittedHomeworks[hwId] = {
-        submittedAt: new Date().toISOString(),
-        fileName: 'Homework_Mohaned_Uploaded.pdf'
+    async function handleHwFileSelected(event, hwId) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const token = localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN;
+      showPortalToast('جاري رفع وتأمين ملف الواجب في قاعدة البيانات...', 'info');
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const base64Data = e.target.result;
+        try {
+          const res = await fetch('https://tutoring-backend-production-c8dd.up.railway.app/api/public/homework/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: token,
+              material_id: hwId,
+              file_data: base64Data,
+              file_name: file.name
+            })
+          });
+
+          const data = await res.json();
+          if (res.ok && data.success) {
+            showPortalToast('تم رفع الواجب بنجاح وإرساله للمستر للمراجعة والاعتماد!', 'success');
+            window._userSwitchedHwTab = false;
+            await fetchPlatformContent();
+            switchHwSubTab('archive');
+          } else {
+            const msg = data?.error?.message || data?.error || 'تعذر رفع الواجب، يرجى المحاولة لاحقاً';
+            showPortalToast(msg, 'error');
+          }
+        } catch (err) {
+          console.error('Upload network error:', err);
+          showPortalToast('تعذر الاتصال بالسيرفر، تأكد من اتصال الإنترنت وحاول مجدداً', 'error');
+        }
       };
-      localStorage.setItem('centrly_submitted_homeworks', JSON.stringify(studentSubmittedHomeworks));
-      showPortalToast('تم رفع ملف الواجب بنجاح! في انتظار اعتماد المستر أو الأسيستنت.', 'success');
-      renderAllPanels();
-    }
-
-    function toggleHomeworkApproval(hwId, hwTitle) {
-      if (studentApprovedHomeworks[hwId]) {
-        delete studentApprovedHomeworks[hwId];
-        localStorage.setItem('centrly_approved_homeworks', JSON.stringify(studentApprovedHomeworks));
-        showPortalToast('تم إعادة تعيين الواجب كغير معتمد (تم قفل المحاضرة المشروطة مجدداً).', 'warning');
-      } else {
-        studentApprovedHomeworks[hwId] = true;
-        localStorage.setItem('centrly_approved_homeworks', JSON.stringify(studentApprovedHomeworks));
-        showPortalToast('تم اعتماد الواجب بنجاح! تم فك قفل المحاضرات المرتبطة فورياً.', 'success');
-      }
-      renderAllPanels();
-    }
-
-    function approveHomework(hwId, hwTitle) {
-      toggleHomeworkApproval(hwId, hwTitle);
+      reader.onerror = function() {
+        showPortalToast('حدث خطأ أثناء قراءة الملف من جهازك', 'error');
+      };
+      reader.readAsDataURL(file);
     }
 
     // تصيير قسم الكويزات والامتحانات
@@ -2030,7 +2279,7 @@
       container.innerHTML = html;
     }
 
-    // 9. تشغيل البيئة المعزولة للامتحان بدون بوب أب كروم (Zero Alert)
+    // 10. تشغيل البيئة المعزولة للامتحان بدون بوب أب كروم (Zero Alert)
     let examWatermarkTimer = null;
     let tabSwitchWarnCount = 0;
     let examTimerInterval = null;
@@ -2107,7 +2356,7 @@
       if (modal) modal.classList.remove('active');
     }
 
-    // 10. التنقل بين الأقسام
+    // 11. التنقل بين الأقسام
     const pageMeta = {
       home: { title: 'الرئيسية ومتابعة المستوى', sub: 'لوحة متابعة الأداء والمهام الدراسية المعلقة' },
       homework: { title: 'الواجبات والتسليم', sub: 'تسليم ومتابعة الواجبات والتصحيح الفوري' },
@@ -2153,9 +2402,9 @@
       }
     }
 
-    // 11. مستمعات المزامنة في الوقت الحقيقي (Real-Time Cross-Tab Reactivity)
+    // 12. مستمعات المزامنة في الوقت الحقيقي (Real-Time Reactivity)
     window.addEventListener('storage', (e) => {
-      if (['centrly_materials', 'centrly_platform_content', 'centrly_platform_settings', 'centrly_approved_homeworks', 'centrly_submitted_homeworks'].includes(e.key)) {
+      if (['centrly_materials', 'centrly_platform_content', 'centrly_platform_settings'].includes(e.key)) {
         fetchPlatformContent();
       }
     });
