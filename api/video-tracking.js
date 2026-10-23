@@ -7,7 +7,7 @@ const memoryFallback = new Map();
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
@@ -152,6 +152,30 @@ export default async function handler(req, res) {
     } catch (err) {
       console.error('Error handling real video tracking post:', err);
       return res.status(500).json({ success: false, message: 'خطأ في معالجة الطلب' });
+    }
+  }
+
+  // DELETE: Remove watch record (reset to unwatched)
+  if (req.method === 'DELETE') {
+    try {
+      const code = String(req.query?.student_code || req.body?.student_code || '').trim();
+      if (!code) {
+        return res.status(400).json({ success: false, message: 'كود الطالب مطلوب' });
+      }
+      const trackPhone = `VIDEO_TRACK_${code}`;
+      const delUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(trackPhone)}`;
+      await fetch(delUrl, {
+        method: 'DELETE',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      });
+      memoryFallback.delete(code);
+      return res.status(200).json({ success: true, message: 'تم إلغاء توثيق المشاهدة بنجاح' });
+    } catch (err) {
+      console.error('Error deleting video tracking:', err);
+      return res.status(500).json({ success: false, message: 'خطأ في الحذف' });
     }
   }
 

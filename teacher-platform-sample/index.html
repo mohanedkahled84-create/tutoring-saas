@@ -1806,6 +1806,23 @@
       hydrateSettings();
 
       const urlParams = new URLSearchParams(window.location.search);
+
+      // Student identity resolution
+      const allKnownStudents = {
+        '1006': { name: 'مهند خالد', code: '1006', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
+        '1005': { name: 'احمد محمود', code: '1005', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
+        '1002': { name: 'باسل امير', code: '1002', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
+        '1003': { name: 'عمر جمال', code: '1003', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
+        '1004': { name: 'احمد عبد الله', code: '1004', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
+      };
+
+      const qCode = urlParams.get('code') || localStorage.getItem('portal_student_code');
+      if (qCode && allKnownStudents[qCode]) {
+        currentStudent = { ...currentStudent, ...allKnownStudents[qCode] };
+        localStorage.setItem('portal_student', JSON.stringify(currentStudent));
+        hydrateStudentUI(currentStudent);
+      }
+
       const token = urlParams.get('token') || localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN;
       if (token && !localStorage.getItem('centrly_portal_token')) {
         localStorage.setItem('centrly_portal_token', token);
@@ -1820,7 +1837,7 @@
         if (res.ok) {
           const portalData = await res.json();
           if (portalData) {
-            if (portalData.student) {
+            if (portalData.student && !qCode) {
               const s = portalData.student;
               currentStudent = {
                 name: s.name || 'مهند خالد',
@@ -2024,9 +2041,16 @@
               <h4 style="${isLocked ? '' : 'color: var(--brand-navy);'}">محاضرة شرح: ${escapeHtml(vid.title)}</h4>
               <p>${isLocked ? 'محاضرة مشروطة بتسليم واعتماد الواجب أولاً' : 'محاضرة مفتوحة ومتاحة للمشاهدة الآن'}</p>
             </div>
-            <button class="btn ${isLocked ? 'btn-secondary' : 'btn-primary'}" onclick="${isLocked ? "switchPanel('homework', document.querySelectorAll('.menu-item')[1])" : `launchVideo('${escapeJsStr(vid.title)}', '${escapeJsStr(vid.url)}')`}">
-              <span>${isLocked ? 'تسليم الواجب لفتحها' : 'مشاهدة الآن'}</span>
-            </button>
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="launchVideo('${escapeJsStr(vid.title)}', '${escapeJsStr(vid.url)}')">
+                <span>مشاهدة الآن</span>
+              </button>
+              ${isLocked ? `
+                <button class="btn btn-secondary" onclick="switchPanel('homework', document.querySelectorAll('.menu-item')[1])">
+                  <span>تسليم الواجب</span>
+                </button>
+              ` : ''}
+            </div>
           </div>
         `;
       });
@@ -2080,9 +2104,13 @@
                   <span>${isPending ? `تم تسليم كشكول حل (${escapeHtml(reqHwTitle)}) • قيد مراجعة واعتماد المستر لفتح المحاضرة` : `يتطلب فتح المحاضرة تسليم واعتماد: ${escapeHtml(reqHwTitle)}`}</span>
                 </div>
               </div>
-              <div>
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="launchVideo('${escapeJsStr(v.title)}', '${escapeJsStr(v.url)}')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  <span>مشاهدة المحاضرة</span>
+                </button>
                 <button class="btn btn-secondary" onclick="switchPanel('homework', document.querySelectorAll('.menu-item')[1])">
-                  <span>${isPending ? 'متابعة حالة الواجب' : 'تسليم الواجب لفتحها'}</span>
+                  <span>${isPending ? 'متابعة حالة الواجب' : 'تسليم الواجب'}</span>
                 </button>
               </div>
             </div>
