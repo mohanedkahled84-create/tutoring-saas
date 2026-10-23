@@ -1217,15 +1217,6 @@
             <p id="pageSubheading">لوحة متابعة الأداء والمهام الدراسية المعلقة</p>
           </div>
         </div>
-
-        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-          <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted);">تبديل الطالب للتجربة:</span>
-          <button type="button" onclick="switchTestStudent('1006')" style="background: #1e3a8a; color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; cursor: pointer;">مهند (1006)</button>
-          <button type="button" onclick="switchTestStudent('1005')" style="background: #10b981; color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; cursor: pointer;">احمد محمود (1005)</button>
-          <button type="button" onclick="switchTestStudent('1002')" style="background: #3b82f6; color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; cursor: pointer;">باسل (1002)</button>
-          <button type="button" onclick="switchTestStudent('1003')" style="background: #8b5cf6; color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; cursor: pointer;">عمر جمال (1003)</button>
-          <button type="button" onclick="switchTestStudent('1004')" style="background: #f59e0b; color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; cursor: pointer;">احمد عبد الله (1004)</button>
-        </div>
       </div>
 
       <!-- ================= 1. الصفحة الرئيسية (HOME DASHBOARD) ================= -->
@@ -1948,6 +1939,41 @@
         console.warn('Backend parent-portal fetch warning:', err);
       }
 
+      // 1.5 جلب الامتحانات والكويزات المباشرة من السيرفر (/api/quizzes/rich)
+      try {
+        let richRes = await fetch('/api/quizzes/rich').then(r => r.json()).catch(() => null);
+        if (!richRes || !richRes.success) {
+          richRes = await fetch('https://centerly-eg.com/api/quizzes/rich').then(r => r.json()).catch(() => null);
+        }
+        if (richRes && richRes.success && Array.isArray(richRes.quizzes)) {
+          richRes.quizzes.forEach(q => {
+            const maxScore = Array.isArray(q.questions) 
+              ? q.questions.reduce((sum, item) => sum + Number(item.points || 1), 0) 
+              : 10;
+            dbMaterials.push({
+              id: q.id,
+              title: q.title || `كويز ${q.quiz_number}`,
+              description: q.subject || 'الفيزياء',
+              type: 'online_quiz',
+              is_quiz: true,
+              group_id: q.group_id,
+              quiz_number: q.quiz_number,
+              time_limit_minutes: Number(q.time_limit_minutes) || 20,
+              available_date: q.available_date,
+              start_time: q.start_time,
+              end_time: q.end_time,
+              exam_mode: q.exam_mode || 'online',
+              questions: Array.isArray(q.questions) ? q.questions : [],
+              stealth_models: q.stealth_models,
+              max_score: maxScore,
+              created_at: q.created_at
+            });
+          });
+        }
+      } catch (richErr) {
+        console.warn('Rich quizzes fetch warning in student platform:', richErr);
+      }
+
       // 2. دمج أي محتوى إضافي تم رفعه محلياً من لوحة المعلم
       let localMaterials = [];
       try {
@@ -2488,7 +2514,59 @@
       const overlay = document.getElementById('secureExamOverlay');
       if (overlay) overlay.classList.add('active');
 
-      remainingSeconds = 20 * 60;
+      const targetQz = platformContent.find(m => m.id === quizId) || null;
+      if (targetQz) {
+        remainingSeconds = (Number(targetQz.time_limit_minutes) || 20) * 60;
+        const titleEl = document.querySelector('.exam-topbar h3');
+        if (titleEl) titleEl.innerText = `${targetQz.title || 'امتحان إلكتروني'} — بيئة اختبار مؤمنة`;
+
+        const examBody = document.querySelector('.exam-body');
+        if (examBody && Array.isArray(targetQz.questions) && targetQz.questions.length > 0) {
+          let qHtml = `
+            <div class="exam-warning-banner">
+              تنبيه أمني: هذه بيئة معزولة مخصصة لمنع الغش. تغيير التاب أو تصوير الشاشة مسجل برقم الطالب ويؤدي لسحب ورقة الإجابة.
+            </div>
+          `;
+
+          targetQz.questions.forEach((q, idx) => {
+            const qPoints = q.points || 1;
+            const isEssay = q.type === 'essay';
+            qHtml += `
+              <div class="exam-q-box">
+                <div class="exam-q-title">السؤال ${idx + 1}: ${escapeHtml(q.text || '')} (${qPoints} درجات)</div>
+                ${q.image_url ? `<div style="margin: 10px 0;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 250px; border-radius: 8px;" /></div>` : ''}
+                ${!isEssay ? `
+                  ${(q.choices || q.options || []).filter(c => c && String(c).trim()).map((choice, cIdx) => `
+                    <div class="exam-choice" onclick="selectChoice(this)">
+                      ${String.fromCharCode(0x0623 + cIdx)}) ${escapeHtml(choice)}
+                    </div>
+                  `).join('')}
+                ` : `
+                  <textarea style="width: 100%; height: 90px; padding: 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 0.85rem; outline: none; margin-top: 8px;" placeholder="اكتب إجابتك المقالية بالتفصيل هنا..."></textarea>
+                  <div style="margin-top: 8px;">
+                    <button type="button" class="btn btn-secondary" style="height: 32px; font-size: 0.78rem;" onclick="showPortalToast('تم تفعيل كاميرا الهاتف لرفع صورة الإجابة', 'info')">
+                      <span>تصوير ورقة الإجابة من الموبايل</span>
+                    </button>
+                  </div>
+                `}
+              </div>
+            `;
+          });
+
+          qHtml += `
+            <div style="text-align: center; margin-top: 30px;">
+              <button class="btn btn-action-exam" style="padding: 0 36px; height: 46px; font-size: 0.98rem;" onclick="submitAndFinishExam()">
+                <span>تسليم ورقة الإجابة النهائية</span>
+              </button>
+            </div>
+          `;
+
+          examBody.innerHTML = qHtml;
+        }
+      } else {
+        remainingSeconds = 20 * 60;
+      }
+
       updateExamClock();
       if (examTimerInterval) clearInterval(examTimerInterval);
       examTimerInterval = setInterval(() => {

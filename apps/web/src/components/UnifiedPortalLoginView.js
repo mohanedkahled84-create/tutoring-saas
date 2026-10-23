@@ -292,6 +292,56 @@ export function registerUnifiedPortalActions(app) {
       if (data && (data.error || !data.student)) {
         throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة الطالب');
       }
+
+      // Enrich with rich quizzes from /api/quizzes/rich
+      try {
+        let richRes = await fetch('/api/quizzes/rich').then(r => r.json()).catch(() => null);
+        if (!richRes || !richRes.success) {
+          richRes = await fetch('https://centerly-eg.com/api/quizzes/rich').then(r => r.json()).catch(() => null);
+        }
+        if (richRes && richRes.success && Array.isArray(richRes.quizzes)) {
+          if (!Array.isArray(data.materials)) data.materials = [];
+          if (!Array.isArray(data.quizzes)) data.quizzes = [];
+          richRes.quizzes.forEach(q => {
+            const maxScore = Array.isArray(q.questions) 
+              ? q.questions.reduce((sum, item) => sum + Number(item.points || 1), 0) 
+              : 10;
+            const exists = data.materials.some(m => m.id === q.id);
+            if (!exists) {
+              data.materials.push({
+                id: q.id,
+                title: q.title || `كويز ${q.quiz_number}`,
+                description: q.subject || 'الفيزياء',
+                type: 'online_quiz',
+                is_quiz: true,
+                group_id: q.group_id,
+                quiz_number: q.quiz_number,
+                time_limit_minutes: Number(q.time_limit_minutes) || 20,
+                available_date: q.available_date,
+                start_time: q.start_time,
+                end_time: q.end_time,
+                exam_mode: q.exam_mode || 'online',
+                questions: Array.isArray(q.questions) ? q.questions : [],
+                stealth_models: q.stealth_models,
+                max_score: maxScore,
+                created_at: q.created_at
+              });
+            }
+            const qExists = data.quizzes.some(qz => qz.id === q.id || qz.quiz_number === q.quiz_number);
+            if (!qExists) {
+              data.quizzes.push({
+                id: q.id,
+                title: q.title || `كويز ${q.quiz_number}`,
+                quiz_number: q.quiz_number,
+                max_score: maxScore,
+                quiz_date: q.available_date || (q.created_at ? q.created_at.slice(0, 10) : ''),
+                questions: q.questions
+              });
+            }
+          });
+        }
+      } catch (_) {}
+
       const appEl = this.getAppEl();
       if (appEl) {
         const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_student_tab')) ||
