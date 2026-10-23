@@ -123,6 +123,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
     const p = liveTrackingMap[code];
     return p && (p.percent >= 100 || p.status === 'completed');
   }).length;
+  const watchedCount = completedCount;
 
   const watchingCount = trackingStudents.filter(s => {
     const code = s.student_code || s.code || '';
@@ -238,7 +239,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
             </button>
             <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('completed', this)"
               style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
-              <span>أتمّ المشاهدة (${watchedCount})</span>
+              <span>أتمّ المشاهدة (${completedCount})</span>
+            </button>
+            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('watching', this)"
+              style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
+              <span>قيد المشاهدة (${watchingCount})</span>
             </button>
             <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('submitted_hw', this)"
               style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
@@ -246,7 +251,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
             </button>
             <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('not_started', this)"
               style="background: var(--centrly-surface, #f8f7f1); color: #64748b; border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
-              <span>لم يبدأ بعد (${totalStudents - watchedCount})</span>
+              <span>لم يبدأ بعد (${totalStudents - completedCount - watchingCount})</span>
             </button>
           </div>
 
