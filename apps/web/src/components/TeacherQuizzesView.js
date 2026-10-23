@@ -2892,12 +2892,12 @@ export function registerTeacherQuizzesActions(app) {
   app.loadRichQuizzes = async function() {
     try {
       const gid = this.quizzesState.selectedGroupId;
-      let res = await request(`/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).catch(() => null);
-      if (!res || !res.success) {
-        res = await fetch(`/api/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null);
-      }
+      let res = await fetch(`/api/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null);
       if (!res || !res.success) {
         res = await fetch(`https://centerly-eg.com/api/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null);
+      }
+      if (!res || !res.success) {
+        res = await request(`/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).catch(() => null);
       }
       if (res?.success && Array.isArray(res.quizzes)) {
         this.quizzesState.richQuizzes = res.quizzes;
@@ -3171,20 +3171,23 @@ export function registerTeacherQuizzesActions(app) {
       };
       let res = null;
       try {
-        res = await request('/quizzes/rich', { method: 'POST', body: payload });
-      } catch (err) {
-        console.warn('Primary /quizzes/rich request failed, attempting fallback endpoints...', err);
+        const fb1 = await fetch('/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (fb1.ok) res = await fb1.json();
+      } catch (_) {}
+
+      if (!res || !res.success) {
         try {
-          const fb1 = await fetch('/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          if (fb1.ok) res = await fb1.json();
+          const fb2 = await fetch('https://centerly-eg.com/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (fb2.ok) res = await fb2.json();
         } catch (_) {}
-        if (!res) {
-          try {
-            const fb2 = await fetch('https://centerly-eg.com/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (fb2.ok) res = await fb2.json();
-          } catch (_) {}
+      }
+
+      if (!res || !res.success) {
+        try {
+          res = await request('/quizzes/rich', { method: 'POST', body: payload });
+        } catch (err) {
+          if (!res) throw err;
         }
-        if (!res) throw err;
       }
 
       if (res?.success) {
@@ -3570,20 +3573,23 @@ export function registerTeacherQuizzesActions(app) {
       };
       let res = null;
       try {
-        res = await request('/quizzes/rich', { method: 'POST', body: payload });
-      } catch (err) {
-        console.warn('Primary /quizzes/rich request failed, attempting fallback endpoints...', err);
+        const fb1 = await fetch('/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (fb1.ok) res = await fb1.json();
+      } catch (_) {}
+
+      if (!res || !res.success) {
         try {
-          const fb1 = await fetch('/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          if (fb1.ok) res = await fb1.json();
+          const fb2 = await fetch('https://centerly-eg.com/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (fb2.ok) res = await fb2.json();
         } catch (_) {}
-        if (!res) {
-          try {
-            const fb2 = await fetch('https://centerly-eg.com/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (fb2.ok) res = await fb2.json();
-          } catch (_) {}
+      }
+
+      if (!res || !res.success) {
+        try {
+          res = await request('/quizzes/rich', { method: 'POST', body: payload });
+        } catch (err) {
+          if (!res) throw err;
         }
-        if (!res) throw err;
       }
 
       if (res?.success) {
