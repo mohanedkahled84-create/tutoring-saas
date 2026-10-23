@@ -49,4 +49,5 @@ export interface IPlatformBuilderRepository {
   isSubdomainTaken(subdomain: string, excludeTenantId?: string): Promise<boolean>;
   upsert(tenantId: string, settings: SavePlatformSettingsDto): Promise<TenantPlatformSettings>;
   getTenantPlan(tenantId: string): Promise<TenantPlanDetails>;
+  getPublicMaterials(tenantId: string): Promise<any[]>;
 }

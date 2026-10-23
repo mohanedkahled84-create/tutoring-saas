@@ -1843,6 +1843,10 @@ class CentrlyApp {
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           this.materialsGroupId = this.materialsGroupId || 'all';
           this.saveCache('materials', this.materials);
+          try {
+            localStorage.setItem('centrly_materials', JSON.stringify(this.materials));
+            localStorage.setItem('centrly_platform_content', JSON.stringify(this.materials));
+          } catch (_) {}
           this.saveCache('groups', this.groups);
           this.renderMainContent();
           break;
@@ -1858,6 +1862,10 @@ class CentrlyApp {
           this.students = Array.isArray(stdRes) ? stdRes : (stdRes.students || []);
           this.videoLessonsGroupId = this.videoLessonsGroupId || 'all';
           this.saveCache('materials', this.materials);
+          try {
+            localStorage.setItem('centrly_materials', JSON.stringify(this.materials));
+            localStorage.setItem('centrly_platform_content', JSON.stringify(this.materials));
+          } catch (_) {}
           this.saveCache('groups', this.groups);
           this.saveCache('students', this.students);
           this.renderMainContent();
@@ -1921,6 +1929,10 @@ class CentrlyApp {
             submitted: submissionsData.submitted || [],
             missing: submissionsData.missing || [],
           };
+          try {
+            localStorage.setItem('centrly_materials', JSON.stringify(materialsList));
+            localStorage.setItem('centrly_platform_content', JSON.stringify(materialsList));
+          } catch (_) {}
           this.renderMainContent();
           break;
         }

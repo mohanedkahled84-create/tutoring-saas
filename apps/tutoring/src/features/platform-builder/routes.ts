@@ -49,6 +49,35 @@ publicPlatformRouter.get(
 );
 
 /**
+ * GET /api/platform/public/:subdomain/content
+ * Returns public study materials, video lessons, and homework for the tenant platform
+ */
+publicPlatformRouter.get(
+  "/public/:subdomain/content",
+  async (req: Request, res: Response): Promise<void> => {
+    const subdomain = req.params.subdomain;
+    if (!subdomain) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: "Subdomain is required" } });
+      return;
+    }
+
+    try {
+      const services = getServices(req as any);
+      const service = (services as any).platformBuilder;
+      const materials = await service.getPublicMaterials(subdomain);
+
+      res.status(200).json({
+        success: true,
+        materials: materials || [],
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to fetch platform content";
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+    }
+  }
+);
+
+/**
  * GET /api/platform/check/:subdomain
  * Checks if a subdomain is available
  */

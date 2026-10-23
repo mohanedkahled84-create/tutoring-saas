@@ -130,6 +130,39 @@ export class SupabasePlatformBuilderRepository implements IPlatformBuilderReposi
       is_active: isActive,
     };
   }
+
+  async getPublicMaterials(tenantId: string): Promise<any[]> {
+    const { data, error } = await this.queryClient
+      .from("study_materials")
+      .select("id, title, description, type, url, group_id, is_homework, due_date, book_name, pages, questions, created_at")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    let items = (data || []) as any[];
+
+    try {
+      const { data: quizzesData } = await this.queryClient
+        .from("quizzes")
+        .select("id, title, quiz_number, max_score, quiz_date, is_skipped, group_id, created_at")
+        .eq("tenant_id", tenantId)
+        .order("quiz_number", { ascending: false });
+      if (quizzesData && quizzesData.length > 0) {
+        const mappedQuizzes = quizzesData.map((q: any) => ({
+          ...q,
+          type: "quiz",
+          is_quiz: true,
+          title: q.title || `كويز ${q.quiz_number}`,
+        }));
+        items = [...items, ...mappedQuizzes];
+      }
+    } catch (_) {}
+
+    return items;
+  }
 }
 
 /**
@@ -200,5 +233,15 @@ export class FakePlatformBuilderRepository implements IPlatformBuilderRepository
         is_active: true,
       }
     );
+  }
+
+  private fakeMaterials: Map<string, any[]> = new Map();
+
+  setFakeMaterials(tenantId: string, items: any[]): void {
+    this.fakeMaterials.set(tenantId, items);
+  }
+
+  async getPublicMaterials(tenantId: string): Promise<any[]> {
+    return this.fakeMaterials.get(tenantId) || [];
   }
 }

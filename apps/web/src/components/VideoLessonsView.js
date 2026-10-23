@@ -536,6 +536,10 @@ export function registerVideoLessonsActions(app) {
         if (!Array.isArray(this.materials)) this.materials = [];
         this.materials.unshift(res.material);
         this.saveCache("materials", this.materials);
+        try {
+          localStorage.setItem('centrly_materials', JSON.stringify(this.materials));
+          localStorage.setItem('centrly_platform_content', JSON.stringify(this.materials));
+        } catch (_) {}
         this.closeModal();
         this.showToast("تم نشر فيديو الشرح بنجاح", "success");
         this.renderMainContent();
@@ -717,6 +721,10 @@ export function registerVideoLessonsActions(app) {
         if (Array.isArray(this.materials)) {
           this.materials = this.materials.filter(m => m.id !== videoId);
           this.saveCache("materials", this.materials);
+          try {
+            localStorage.setItem('centrly_materials', JSON.stringify(this.materials));
+            localStorage.setItem('centrly_platform_content', JSON.stringify(this.materials));
+          } catch (_) {}
         }
         this.showToast("تم حذف الفيديو بنجاح", "success");
         this.renderMainContent();

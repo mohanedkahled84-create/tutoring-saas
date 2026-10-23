@@ -113,6 +113,18 @@ export class PlatformBuilderService {
   }
 
   /**
+   * Retrieves public study materials, videos, and homework for student portal
+   */
+  async getPublicMaterials(subdomain: string): Promise<any[]> {
+    if (!subdomain) return [];
+    const settings = await this.getPublicSettings(subdomain);
+    if (!settings || !settings.tenant_id) {
+      return [];
+    }
+    return await this.repository.getPublicMaterials(settings.tenant_id);
+  }
+
+  /**
    * Retrieves settings and plan eligibility for the logged-in teacher
    */
   async getTeacherSettings(

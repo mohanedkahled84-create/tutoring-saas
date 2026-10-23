@@ -886,6 +886,87 @@
         display: block;
       }
     }
+
+    /* كروت الحالة الفارغة الاحترافية (Clean Empty States) */
+    .empty-state-card {
+      background: var(--bg-card);
+      border: 1px dashed var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 44px 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 14px 0;
+    }
+    .empty-state-card svg {
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+    .empty-state-card h3 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+    .empty-state-card p {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      max-width: 440px;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* نظام الإشعارات النظيف والحديث بدون بوب أب كروم */
+    .portal-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 24px;
+      border-radius: 9999px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.3);
+      z-index: 99999;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+    .portal-toast.active {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .portal-toast.success {
+      background: #065f46;
+    }
+    .portal-toast.warning {
+      background: #92400e;
+    }
+    .portal-toast.error {
+      background: #991b1b;
+    }
+
+    /* منطقة رفع ملف الواجب */
+    .file-dropzone-box {
+      border: 1px dashed var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .file-dropzone-box:hover {
+      background: #f1f5f9;
+      border-color: var(--brand-primary);
+    }
   </style>
 </head>
 <body>
@@ -999,259 +1080,109 @@
         <!-- هيدر الترحيب وتقييم المستوى الأكاديمي -->
         <div class="hero-greeting-card">
           <div class="greeting-texts">
-            <h2>أهلاً بك يا مهند</h2>
-            <p>
-              مستواك في تصاعد مستمر هذا الشهر يا بطل! احرص على تسليم واجب الباب الأول وحل كويز نيوتن للحفاظ على صدارة الترتيب وفتح المحاضرة التالية.
+            <h2 id="homeGreetingName">أهلاً بك يا مهند</h2>
+            <p id="homeGreetingSub">
+              مرحباً بك في منصتك التعليمية المتكاملة. تابع محاضراتك، وأنجز واجباتك الدورية، واستعد للكويزات أولاً بأول.
             </p>
           </div>
 
           <div class="level-badge-box">
-            <div class="badge-label">تقييم مستر عمر العام</div>
+            <div class="badge-label">تقييم المستر العام</div>
             <div class="level-title">طالب متميز (A+)</div>
           </div>
         </div>
 
-        <!-- بطاقات المؤشرات الثلاثية (3 Golden KPIs) -->
+        <!-- بطاقات المؤشرات الثلاثية الحية (3 Golden KPIs) -->
         <div class="kpi-grid">
           <div class="kpi-card">
             <div class="kpi-header">
-              <span class="kpi-title">نسبة الالتزام بالحضور</span>
-              <span class="kpi-badge badge-success">ممتاز</span>
+              <span class="kpi-title">المحاضرات المنشورة</span>
+              <span class="kpi-badge badge-success" id="kpiLecturesBadge">متاح</span>
             </div>
-            <div class="kpi-value">100%</div>
-            <div class="kpi-note">حضور 8 من أصل 8 حصص بالسنتر</div>
+            <div class="kpi-value" id="kpiLecturesVal">0</div>
+            <div class="kpi-note" id="kpiLecturesNote">محاضرة شرح وتدريب متاحة</div>
           </div>
 
           <div class="kpi-card">
             <div class="kpi-header">
-              <span class="kpi-title">متوسط درجات الكويزات</span>
-              <span class="kpi-badge badge-success">19 / 20</span>
+              <span class="kpi-title">الواجبات والتكليفات</span>
+              <span class="kpi-badge badge-warning" id="kpiHomeworkBadge">متابعة</span>
             </div>
-            <div class="kpi-value">95%</div>
-            <div class="kpi-note">أعلى من متوسط الدفعة بـ 15%</div>
+            <div class="kpi-value" id="kpiHomeworkVal">0</div>
+            <div class="kpi-note" id="kpiHomeworkNote">واجب دراسي معتمد ومعلق</div>
           </div>
 
           <div class="kpi-card">
             <div class="kpi-header">
-              <span class="kpi-title">تسليم الواجبات الدورية</span>
-              <span class="kpi-badge badge-warning">مطلوب متابعة</span>
+              <span class="kpi-title">الكويزات والامتحانات</span>
+              <span class="kpi-badge badge-success" id="kpiExamsBadge">مؤمن</span>
             </div>
-            <div class="kpi-value">85%</div>
-            <div class="kpi-note">4 معتمدة • واجب معلق مطلوب تسليمه</div>
+            <div class="kpi-value" id="kpiExamsVal">0</div>
+            <div class="kpi-note" id="kpiExamsNote">كويز واختبار إلكتروني</div>
           </div>
         </div>
 
-        <!-- صندوق المهام العاجلة (ما يحتاج لإنجازه فوراً) -->
+        <!-- صندوق المهام العاجلة -->
         <div class="section-title-clean">
-          <span>المهام المطلوب إنجازها هذا الأسبوع</span>
-          <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">2 مهمة معلقة</span>
+          <span>المهام المطلوب إنجازها</span>
+          <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;" id="homePendingCount">0 مهمة معلقة</span>
         </div>
 
-        <div class="todo-list">
-          <!-- مهمة 1: واجب معلق -->
-          <div class="todo-card urgent">
-            <div class="todo-info">
-              <h4>تسليم واجب الباب الأول: قوانين الحركة والجاذبية</h4>
-              <p>متبقي 18 ساعة قبل إغلاق التسليم • شرط أساسي لفتح المحاضرة القادمة</p>
-            </div>
-            <button class="btn btn-primary" onclick="switchPanel('homework', document.querySelectorAll('.menu-item')[1])">
-              <span>تسليم الواجب الآن</span>
-            </button>
-          </div>
-
-          <!-- مهمة 2: كويز متاح -->
-          <div class="todo-card">
-            <div class="todo-info">
-              <h4>كويز 1: الحركة وقوانين نيوتن الشامل</h4>
-              <p>الوقت المقدر: 20 دقيقة • بيئة اختبار مؤمنة وتصحيح معتمد</p>
-            </div>
-            <button class="btn btn-secondary" onclick="switchPanel('exams', document.querySelectorAll('.menu-item')[2])">
-              <span>بدء الكويز</span>
-            </button>
-          </div>
-
-          <!-- مهمة 3: حضور مكتمل -->
-          <div class="todo-card completed">
-            <div class="todo-info">
-              <h4 style="color: var(--status-success);">تسجيل حضور محاضرة الأحد بالسنتر (سنتر النخبة)</h4>
-              <p>تم التسجيل عبر مسح الباركود بنجاح وإشعار ولي الأمر</p>
-            </div>
-            <span style="font-size: 0.8rem; font-weight: 800; color: var(--status-success);">تم الاعتماد</span>
-          </div>
+        <div class="todo-list" id="homeTodoListContainer">
+          <!-- ديناميكي: يتم بناؤه من المحتوى الفعلي -->
         </div>
 
-        <!-- قطار تقدم المنهج وسجل درجات الكويزات الأخيرة -->
-        <div class="progress-history-box">
+        <!-- تقدم المنهج -->
+        <div class="progress-history-box" id="homeProgressContainer">
           <div class="track-row">
-            <span>نسبة إنجاز منهج شهر أكتوبر</span>
-            <span style="color: var(--brand-navy); font-weight: 800;">68% مكتمل</span>
+            <span>نسبة استكمال المحتوى والمحاضرات</span>
+            <span style="color: var(--brand-navy); font-weight: 800;" id="homeProgressPct">0% مكتمل</span>
           </div>
 
           <div class="track-bar">
-            <div class="track-fill" style="width: 68%;"></div>
-          </div>
-
-          <div class="grades-list">
-            <div class="grade-item">
-              <span>كويز الحصة 1</span>
-              <span style="color: var(--status-success);">18 / 20</span>
-            </div>
-            <div class="grade-item">
-              <span>كويز الحصة 2</span>
-              <span style="color: var(--status-success);">19 / 20</span>
-            </div>
-            <div class="grade-item">
-              <span>كويز الحصة 3</span>
-              <span style="color: var(--status-success);">20 / 20</span>
-            </div>
+            <div class="track-fill" id="homeProgressFill" style="width: 0%;"></div>
           </div>
         </div>
 
       </section>
 
-      <!-- ================= 2. المحاضرات والشرح ================= -->
+      <!-- ================= 2. المحاضرات وفيديوهات الشرح ================= -->
       <section id="panel-lectures" class="panel">
         <div class="section-title-clean">
           <span>محاضرات الشرح وتطبيقات المسائل</span>
         </div>
-
-        <!-- محاضرة 1 مفتوحة -->
-        <div class="clean-item-card">
-          <div class="item-meta">
-            <h3>المحاضرة 1: الشرح التأسيسي لقوانين نيوتن وقوة الجاذبية</h3>
-            <p>المدة: 50 دقيقة • تاريخ النشر: 20 أكتوبر • محاضرة متاحة</p>
-          </div>
-          <button class="btn btn-primary" onclick="launchVideo('المحاضرة 1: قوانين نيوتن وقوة الجاذبية')">
-            <span>مشاهدة المحاضرة</span>
-          </button>
-        </div>
-
-        <!-- محاضرة 2 مقفولة بالواجب -->
-        <div class="clean-item-card locked" id="lockedCard">
-          <div class="item-meta">
-            <h3>المحاضرة 2: أفكار المسائل الصعبة وبنك الأسئلة المتقدمة</h3>
-            <p>المدة: 55 دقيقة • محاضرة مشروطة</p>
-            <div class="lock-hint" id="lockMessage">
-              <span>يتطلب فتح المحاضرة تسليم واعتماد واجب الباب الأول أولاً</span>
-            </div>
-          </div>
-          <div id="lockedBtnContainer">
-            <button class="btn btn-secondary" onclick="switchPanel('homework', document.querySelectorAll('.menu-item')[1])">
-              <span>تسليم الواجب لفتحها</span>
-            </button>
-          </div>
+        <div id="lecturesListContainer">
+          <!-- ديناميكي: تظهر هنا الفيديوهات المرفوعة فعلياً -->
         </div>
       </section>
 
       <!-- ================= 3. الواجبات والتسليم ================= -->
       <section id="panel-homework" class="panel">
-        <div class="clean-item-card" style="flex-direction: column; align-items: stretch;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <h3 style="font-size: 1rem; font-weight: 800;">واجب الباب الأول: قوانين الحركة والجاذبية ومسائل القوة المركزية</h3>
-              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">المطلوب: حل صفحة 18 إلى 24 في ملزمة الشرح، وصوّر كشكول الحل أو ارفع ملف PDF.</p>
-            </div>
-            <span class="kpi-badge badge-warning" id="hwStatusBadge">مطلوب التسليم</span>
-          </div>
-
-          <div style="display: flex; gap: 8px; margin: 14px 0 6px 0;">
-            <button class="btn btn-secondary" onclick="alert('جاري تحميل شيت أسئلة الباب الأول بصيغة PDF...')">
-              <span>تحميل شيت الأسئلة (PDF)</span>
-            </button>
-          </div>
-
-          <div style="border: 1px dashed var(--border-subtle); border-radius: var(--radius-sm); padding: 26px; text-align: center; background: #fafafa; cursor: pointer;" onclick="uploadHomeworkSim()">
-            <h4 id="hwUploadTitle" style="font-size: 0.92rem; font-weight: 800; margin-bottom: 2px;">اضغط هنا لرفع صور أو ملف الواجب المحلول</h4>
-            <p id="hwUploadSubtitle" style="font-size: 0.78rem; color: var(--text-muted);">الصيغ المدعومة: JPG, PNG, PDF (من الموبايل أو الكمبيوتر)</p>
-          </div>
-
-          <!-- زر محاكاة اعتماد الواجب لفك قفل المحاضرة -->
-          <div id="simApproveBox" style="display: none; margin-top: 14px; padding: 12px; background: var(--bg-page); border: 1px solid var(--border-subtle); border-radius: 8px;">
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">(تجربة المدرس: اضغط هنا لمحاكاة اعتماد الواجب فورياً):</p>
-            <button class="btn btn-primary" onclick="approveHomeworkSim()">
-              <span>اعتماد الواجب وفتح المحاضرة الثانية</span>
-            </button>
-          </div>
+        <div class="section-title-clean">
+          <span>الواجبات والتكليفات المطلوبة</span>
+        </div>
+        <div id="homeworkListContainer">
+          <!-- ديناميكي: تظهر هنا الواجبات المرفوعة فعلياً -->
         </div>
       </section>
 
       <!-- ================= 4. الامتحانات الشاملة والكويزات ================= -->
       <section id="panel-exams" class="panel">
-        
-        <!-- كارت الامتحان القادم مع العداد التنازلي الحقيقي -->
-        <div class="exam-countdown-card">
-          <div class="exam-countdown-header">
-            <div>
-              <h2 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 4px;">كويز 1: الحركة وقوانين نيوتن الشامل</h2>
-              <p style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.8);">تغطية شاملة لقوانين الحركة الدائرية وقوة التجاذب المادي • مدة الامتحان: 20 دقيقة • الدرجة من 10</p>
-            </div>
-            <span class="exam-badge-tag">بيئة اختبار مؤمنة</span>
-          </div>
-
-          <div style="font-size: 0.82rem; color: rgba(255, 255, 255, 0.75);">يبدأ الامتحان خلال:</div>
-          <div class="timer-units">
-            <div class="timer-block">
-              <div class="timer-num" id="tDays">00</div>
-              <div class="timer-sub">أيام</div>
-            </div>
-            <div class="timer-block">
-              <div class="timer-num" id="tHours">03</div>
-              <div class="timer-sub">ساعات</div>
-            </div>
-            <div class="timer-block">
-              <div class="timer-num" id="tMins">45</div>
-              <div class="timer-sub">دقائق</div>
-            </div>
-            <div class="timer-block">
-              <div class="timer-num" id="tSecs">20</div>
-              <div class="timer-sub">ثواني</div>
-            </div>
-          </div>
-
-          <div>
-            <button class="btn btn-action-exam" onclick="startSecureExam()">
-              <span>بدء تجربة الامتحان في البيئة المعزولة</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- كويزات سابقة تم حلها -->
         <div class="section-title-clean">
-          <span>سجل الامتحانات السابقة ونماذج الإجابة</span>
+          <span>الكويزات والامتحانات الإلكترونية</span>
         </div>
-
-        <div class="clean-item-card" style="display: flex; justify-content: space-between; align-items: center;">
-          <div class="item-meta">
-            <h3>كويز 2: معادلات الأبعاد والمتجهات</h3>
-            <p>تاريخ الانعقاد: 15 أكتوبر • مدة الامتحان: 15 دقيقة • تم التصحيح والاعتماد</p>
-          </div>
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <span style="font-weight: 800; font-size: 0.95rem; color: var(--status-success);">الدرجة: 10 / 10</span>
-            <button class="btn btn-secondary" style="height: 34px; font-size: 0.8rem;" onclick="openModelAnswerModal()">عرض نموذج الإجابة</button>
-          </div>
+        <div id="examsListContainer">
+          <!-- ديناميكي: تظهر هنا الكويزات المرفوعة فعلياً -->
         </div>
       </section>
 
       <!-- ================= 5. المذكرات والملازم ================= -->
       <section id="panel-materials" class="panel">
         <div class="section-title-clean">
-          <span>المذكرات والملخصات المعتمدة</span>
+          <span>المذكرات والملخصات المعتمدة (PDF)</span>
         </div>
-
-        <div class="clean-item-card">
-          <div class="item-meta">
-            <h3>مذكرة الشرح والقوانين الكاملة - الباب الأول</h3>
-            <p>حجم الملف: 4.8 ميجابايت • صيغة: PDF عالية الجودة</p>
-          </div>
-          <button class="btn btn-secondary" onclick="alert('جاري تحميل مذكرة الباب الأول PDF...')">تحميل الملف</button>
-        </div>
-
-        <div class="clean-item-card">
-          <div class="item-meta">
-            <h3>ملزمة بنك الأسئلة والمسائل الوزارية الشاملة</h3>
-            <p>حجم الملف: 6.2 ميجابايت • صيغة: PDF</p>
-          </div>
-          <button class="btn btn-secondary" onclick="alert('جاري تحميل بنك الأسئلة PDF...')">تحميل الملف</button>
+        <div id="materialsListContainer">
+          <!-- ديناميكي: تظهر هنا المذكرات المرفوعة فعلياً -->
         </div>
       </section>
 
@@ -1332,7 +1263,7 @@
         <div class="exam-q-title">السؤال 4 (مقالي): علل لما يأتي: يفضل بناء المنحنيات في الطرق السريعة مائلة نحو الداخل وليست أفقية؟</div>
         <textarea style="width: 100%; height: 80px; padding: 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 0.85rem; outline: none; margin-top: 8px;" placeholder="اكتب خطوات التعليل والتفسير الفيزيائي هنا..."></textarea>
         <div style="margin-top: 8px;">
-          <button class="btn btn-secondary" style="height: 32px; font-size: 0.78rem;" onclick="alert('تم تفعيل كاميرا الموبايل لتصوير ورقة الإجابة وربطها بالسؤال المقالي بنجاح!')">
+          <button class="btn btn-secondary" style="height: 32px; font-size: 0.78rem;" onclick="showPortalToast('تم تفعيل كاميرا الموبايل لتصوير ورقة الإجابة بنجاح!', 'success')">
             <span>تصوير ورقة الإجابة من الموبايل</span>
           </button>
         </div>
@@ -1358,11 +1289,11 @@
         <span id="videoTitleLabel">مشاهدة المحاضرة</span>
         <button style="background: none; border: none; color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 800;" onclick="closeVideoModal()">إغلاق</button>
       </div>
-      <div class="video-frame-wrap" style="position: relative; overflow: hidden;">
-        <iframe id="videoIframe" src="" allowfullscreen></iframe>
-        <!-- علامة مائية عائمة لمنع تصوير الشاشة -->
-        <div style="position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.45); color: rgba(255,255,255,0.7); padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; pointer-events: none; z-index: 10;">
-          مهند خالد • 1001 • 01123671177
+      <div class="video-frame-wrap" style="position: relative; overflow: hidden; background: #000;">
+        <iframe id="videoIframe" src="" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+        <!-- علامة مائية عائمة متحركة لمنع تصوير الشاشة -->
+        <div id="videoFloatingWatermark" style="position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.65); color: rgba(255,255,255,0.85); padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; pointer-events: none; z-index: 20; transition: all 1.2s ease; border: 1px solid rgba(255,255,255,0.2);">
+          مهند خالد • 01123671177 • مشاهدة مؤمنة
         </div>
       </div>
     </div>
@@ -1410,60 +1341,649 @@
   </div>
 
   <script>
-    // تطبيق إعدادات وثيم المنصة المعتمدة من المعلم
+    // 1. استرجاع بيانات الطالب المسجل وتحديث واجهة السايد بار والهيدر
+    let currentStudent = { name: 'مهند خالد', code: '1001', phone: '01123671177', center: 'سنتر النخبة' };
     try {
-      const cachedSettings = localStorage.getItem('centrly_platform_settings');
-      if (cachedSettings) {
-        const s = JSON.parse(cachedSettings);
-        if (s.theme_preset) {
-          document.body.className = 'theme-' + s.theme_preset;
-          localStorage.setItem('portal_theme', s.theme_preset);
+      const studentStored = JSON.parse(localStorage.getItem('portal_student') || '{}');
+      if (studentStored && studentStored.name) {
+        currentStudent = { ...currentStudent, ...studentStored };
+      }
+    } catch (_) {}
+
+    const nameEl = document.getElementById('sidebarStudentName');
+    if (nameEl) nameEl.innerText = currentStudent.name;
+    const codeEl = document.getElementById('sidebarStudentCode');
+    if (codeEl) codeEl.innerText = 'كود: ' + currentStudent.code + ' • ' + (currentStudent.center || 'سنتر النخبة');
+    const greetingEl = document.getElementById('homeGreetingName');
+    if (greetingEl) greetingEl.innerText = 'أهلاً بك يا ' + currentStudent.name.split(' ')[0];
+    const watermarkEl = document.getElementById('videoFloatingWatermark');
+    if (watermarkEl) watermarkEl.innerText = `${currentStudent.name} • ${currentStudent.phone} • مشاهدة مؤمنة`;
+    const examWatermarkEl = document.getElementById('examWatermark');
+    if (examWatermarkEl) examWatermarkEl.innerText = `${currentStudent.name} • ${currentStudent.phone} • ${currentStudent.code}`;
+    const examStudentLabel = document.getElementById('examStudentLabel');
+    if (examStudentLabel) examStudentLabel.innerText = `الطالب: ${currentStudent.name} (كود: ${currentStudent.code} • ${currentStudent.center || 'سنتر النخبة'})`;
+
+    // 2. تطبيق إعدادات المنصة وثيم المعلم
+    function hydrateSettings() {
+      try {
+        const cachedSettings = localStorage.getItem('centrly_platform_settings');
+        if (cachedSettings) {
+          const s = JSON.parse(cachedSettings);
+          if (s.theme_preset) {
+            document.body.className = 'theme-' + s.theme_preset;
+            localStorage.setItem('portal_theme', s.theme_preset);
+          }
+          if (s.display_title) {
+            document.title = `${s.display_title} — بوابة الطالب`;
+            const titleEl = document.querySelector('.teacher-titles h2');
+            if (titleEl) titleEl.innerText = s.display_title;
+          }
+          if (s.subdomain) {
+            const domainEl = document.querySelector('.teacher-titles .domain-tag');
+            if (domainEl) domainEl.innerText = `${s.subdomain}.centrly.com`;
+          }
+          if (s.cutout_avatar_url) {
+            const avatarImg = document.querySelector('.teacher-avatar-wrap img');
+            if (avatarImg) avatarImg.src = s.cutout_avatar_url;
+          }
+        } else {
+          const activeTheme = localStorage.getItem('portal_theme') || 'navy';
+          document.body.className = 'theme-' + activeTheme;
         }
-        if (s.display_title) {
-          document.title = `${s.display_title} — بوابة الطالب`;
-          const titleEl = document.querySelector('.teacher-titles h2');
-          if (titleEl) titleEl.innerText = s.display_title;
-        }
-        if (s.subdomain) {
-          const domainEl = document.querySelector('.teacher-titles .domain-tag');
-          if (domainEl) domainEl.innerText = `${s.subdomain}.centrly.com`;
-        }
-        if (s.cutout_avatar_url) {
-          const avatarImg = document.querySelector('.teacher-avatar-wrap img');
-          if (avatarImg) avatarImg.src = s.cutout_avatar_url;
-        }
-      } else {
+      } catch (_) {
         const activeTheme = localStorage.getItem('portal_theme') || 'navy';
         document.body.className = 'theme-' + activeTheme;
       }
-    } catch (_) {
-      const activeTheme = localStorage.getItem('portal_theme') || 'navy';
-      document.body.className = 'theme-' + activeTheme;
+    }
+    hydrateSettings();
+
+    // 3. تحديد النطاق الفرعي (Subdomain)
+    function getSubdomain() {
+      const params = new URLSearchParams(window.location.search);
+      let sub = params.get('subdomain');
+      if (!sub) {
+        const host = window.location.hostname;
+        const parts = host.split('.');
+        if (parts.length > 2 && !['localhost', '127', 'centrly', 'vercel'].some(k => host.includes(k))) {
+          sub = parts[0];
+        }
+      }
+      if (!sub) {
+        try {
+          const cached = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
+          if (cached.subdomain) sub = cached.subdomain;
+        } catch (_) {}
+      }
+      return sub || 'mr-omar';
     }
 
-    // استرجاع بيانات الطالب المسجل
-    try {
-      const student = JSON.parse(localStorage.getItem('portal_student') || '{}');
-      if (student.name) {
-        const nameEl = document.getElementById('sidebarStudentName');
-        if (nameEl) nameEl.innerText = student.name;
-        const codeEl = document.getElementById('sidebarStudentCode');
-        if (codeEl) codeEl.innerText = 'كود: ' + (student.code || '1001') + ' • سنتر النخبة';
-      }
-    } catch (e) {}
+    // 4. حالة الواجبات والامتحانات الخاصة بالطالب
+    let studentApprovedHomeworks = {};
+    let studentSubmittedHomeworks = {};
+    function loadStudentHomeworkState() {
+      try {
+        studentApprovedHomeworks = JSON.parse(localStorage.getItem('centrly_approved_homeworks') || '{}');
+      } catch (_) { studentApprovedHomeworks = {}; }
+      try {
+        studentSubmittedHomeworks = JSON.parse(localStorage.getItem('centrly_submitted_homeworks') || '{}');
+      } catch (_) { studentSubmittedHomeworks = {}; }
+    }
+    loadStudentHomeworkState();
 
-    // تسجيل خروج الطالب
-    function logoutStudent() {
-      localStorage.removeItem('portal_student');
-      const currentPath = window.location.pathname;
-      if (currentPath.includes('/teacher-platform-sample/')) {
-        window.location.href = '/teacher-platform-sample/login.html' + (window.location.search || '');
+    function isHwApproved(hwId) {
+      if (!hwId) return true;
+      if (studentApprovedHomeworks['all']) return true;
+      return Boolean(studentApprovedHomeworks[hwId]);
+    }
+
+    function isHwPending(hwId) {
+      if (!hwId) return false;
+      return Boolean(studentSubmittedHomeworks[hwId]);
+    }
+
+    // 5. محرك الإشعارات النظيف (Zero Alert popups)
+    function showPortalToast(message, type = 'info') {
+      let toast = document.getElementById('portalToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'portalToast';
+        toast.className = 'portal-toast';
+        document.body.appendChild(toast);
+      }
+      let icon = '';
+      if (type === 'success') {
+        icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+      } else if (type === 'error') {
+        icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
       } else {
-        window.location.href = '/mr-omar' + (window.location.search || '');
+        icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+      }
+      toast.className = `portal-toast ${type} active`;
+      toast.innerHTML = `${icon}<span>${escapeHtml(message)}</span>`;
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.classList.remove('active');
+      }, 3200);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeJsStr(str) {
+      if (!str) return '';
+      return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    // 6. استخراج معرف يوتيوب وتشغيل الفيديو مع العلامة المائية
+    function extractYouTubeId(url) {
+      if (!url) return '';
+      const clean = url.trim();
+      const match = clean.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+      if (match && match[1]) return match[1];
+      if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) return clean;
+      return '';
+    }
+
+    let videoWatermarkInterval = null;
+    function launchVideo(title, url) {
+      const vidId = extractYouTubeId(url);
+      const titleEl = document.getElementById('videoTitleLabel');
+      if (titleEl) titleEl.innerText = title || 'مشاهدة المحاضرة';
+
+      const iframe = document.getElementById('videoIframe');
+      if (vidId) {
+        iframe.src = `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0&modestbranding=1`;
+      } else if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        iframe.src = url;
+      } else {
+        showPortalToast('تعذر العثور على رابط فيديو صالح للمشاهدة', 'error');
+        return;
+      }
+
+      document.getElementById('videoModal').classList.add('active');
+
+      // تشغيل تحريك العلامة المائية العائمة لمنع التصوير
+      const wm = document.getElementById('videoFloatingWatermark');
+      if (wm) {
+        if (videoWatermarkInterval) clearInterval(videoWatermarkInterval);
+        const drift = () => {
+          const top = Math.floor(Math.random() * 65 + 15);
+          const left = Math.floor(Math.random() * 55 + 15);
+          wm.style.top = top + '%';
+          wm.style.left = left + '%';
+        };
+        drift();
+        videoWatermarkInterval = setInterval(drift, 3500);
       }
     }
 
-    // التنقل بين أقسام السايد بار
+    function closeVideoModal() {
+      document.getElementById('videoModal').classList.remove('active');
+      const iframe = document.getElementById('videoIframe');
+      if (iframe) iframe.src = '';
+      if (videoWatermarkInterval) {
+        clearInterval(videoWatermarkInterval);
+        videoWatermarkInterval = null;
+      }
+    }
+
+    // 7. جلب المحتوى الحي ومزامنته مع لوحة التحكم
+    let platformContent = [];
+
+    async function fetchPlatformContent() {
+      loadStudentHomeworkState();
+      hydrateSettings();
+      const sub = getSubdomain();
+      let serverMaterials = [];
+      try {
+        const res = await fetch(`/api/platform/public/${encodeURIComponent(sub)}/content`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.materials)) {
+            serverMaterials = data.materials;
+          }
+        }
+      } catch (err) {
+        console.warn('API fetch warning:', err);
+      }
+
+      let localMaterials = [];
+      try {
+        const cached = localStorage.getItem('centrly_materials') || localStorage.getItem('centrly_platform_content');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) localMaterials = parsed;
+        }
+      } catch (_) {}
+
+      // دمج وتحديث المعرفات
+      const map = new Map();
+      serverMaterials.forEach(item => {
+        if (item && item.id) map.set(item.id, item);
+      });
+      localMaterials.forEach(item => {
+        if (item && item.id) {
+          map.set(item.id, { ...(map.get(item.id) || {}), ...item });
+        }
+      });
+
+      platformContent = Array.from(map.values());
+      renderAllPanels();
+    }
+
+    // 8. تصيير جميع الأقسام (Panels) بدون أي بيانات وهمية
+    function renderAllPanels() {
+      const videos = platformContent.filter(m => m.type === 'video' || (m.url && (m.url.includes('youtu.be') || m.url.includes('youtube.com'))));
+      const homework = platformContent.filter(m => m.is_homework || m.type === 'homework');
+      const quizzes = platformContent.filter(m => m.is_quiz || m.type === 'quiz' || m.type === 'online_quiz');
+      const materials = platformContent.filter(m => !m.is_homework && !m.is_quiz && m.type !== 'video' && m.type !== 'online_quiz' && m.type !== 'quiz' && !Boolean(m.url && (m.url.includes('youtu.be') || m.url.includes('youtube.com'))));
+
+      // تحديث مؤشرات الـ KPIs في الصفحة الرئيسية
+      const kpiLecturesVal = document.getElementById('kpiLecturesVal');
+      if (kpiLecturesVal) kpiLecturesVal.innerText = videos.length;
+      const kpiLecturesNote = document.getElementById('kpiLecturesNote');
+      if (kpiLecturesNote) kpiLecturesNote.innerText = videos.length > 0 ? `${videos.length} محاضرة متاحة للمشاهدة` : 'لا توجد محاضرات منشورة بعد';
+
+      const kpiHomeworkVal = document.getElementById('kpiHomeworkVal');
+      if (kpiHomeworkVal) kpiHomeworkVal.innerText = homework.length;
+      const kpiHomeworkNote = document.getElementById('kpiHomeworkNote');
+      if (kpiHomeworkNote) kpiHomeworkNote.innerText = homework.length > 0 ? `${homework.length} تكليف دراسي` : 'لا توجد تكليفات مطلوبة حالياً';
+
+      const kpiExamsVal = document.getElementById('kpiExamsVal');
+      if (kpiExamsVal) kpiExamsVal.innerText = quizzes.length;
+      const kpiExamsNote = document.getElementById('kpiExamsNote');
+      if (kpiExamsNote) kpiExamsNote.innerText = quizzes.length > 0 ? `${quizzes.length} كويز متاح` : 'لا توجد كويزات مجدولة حالياً';
+
+      // تحديث قائمة المهام العاجلة بالرئيسية
+      renderHomeTasks(videos, homework, quizzes);
+
+      // تصيير الأقسام المتخصصة
+      renderLecturesPanel(videos);
+      renderHomeworkPanel(homework);
+      renderExamsPanel(quizzes);
+      renderMaterialsPanel(materials);
+    }
+
+    // تصيير قائمة المهام في الصفحة الرئيسية
+    function renderHomeTasks(videos, homework, quizzes) {
+      const container = document.getElementById('homeTodoListContainer');
+      const countEl = document.getElementById('homePendingCount');
+      if (!container) return;
+
+      const pendingHomework = homework.filter(h => !isHwApproved(h.id));
+      const totalPending = pendingHomework.length + quizzes.length;
+      if (countEl) countEl.innerText = `${totalPending} مهمة معلقة`;
+
+      if (videos.length === 0 && homework.length === 0 && quizzes.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state-card">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <h3>لا توجد مهام دراسية معلقة حالياً</h3>
+            <p>ستظهر هنا المحاضرات والواجبات والكويزات فور قيامك بإضافتها من لوحة تحكم المعلم.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      pendingHomework.forEach(hw => {
+        html += `
+          <div class="todo-card urgent">
+            <div class="todo-info">
+              <h4>تسليم واجب: ${escapeHtml(hw.title)}</h4>
+              <p>${escapeHtml(hw.description || 'واجب دوري مطلوب تسليمه لفك قفل المحاضرات المشروطة')}</p>
+            </div>
+            <button class="btn btn-primary" onclick="switchPanel('homework', document.querySelectorAll('.menu-item')[1])">
+              <span>تسليم الواجب الآن</span>
+            </button>
+          </div>
+        `;
+      });
+
+      quizzes.forEach(qz => {
+        html += `
+          <div class="todo-card">
+            <div class="todo-info">
+              <h4>كويز متاح: ${escapeHtml(qz.title)}</h4>
+              <p>بيئة اختبار مؤمنة • مدة الاختبار: 20 دقيقة</p>
+            </div>
+            <button class="btn btn-secondary" onclick="switchPanel('exams', document.querySelectorAll('.menu-item')[2])">
+              <span>بدء الكويز</span>
+            </button>
+          </div>
+        `;
+      });
+
+      videos.slice(0, 2).forEach(vid => {
+        const locked = (vid.book_name === 'approved_homework') && !isHwApproved(vid.pages);
+        html += `
+          <div class="todo-card ${locked ? '' : 'completed'}">
+            <div class="todo-info">
+              <h4 style="${locked ? '' : 'color: var(--brand-navy);'}">محاضرة شرح: ${escapeHtml(vid.title)}</h4>
+              <p>${locked ? 'محاضرة مشروطة بتسليم الواجب أولاً' : 'محاضرة مفتوحة ومتاحة للمشاهدة الآن'}</p>
+            </div>
+            <button class="btn ${locked ? 'btn-secondary' : 'btn-primary'}" onclick="${locked ? "switchPanel('homework', document.querySelectorAll('.menu-item')[1])" : `launchVideo('${escapeJsStr(vid.title)}', '${escapeJsStr(vid.url)}')`}">
+              <span>${locked ? 'تسليم الواجب لفتحها' : 'مشاهدة الآن'}</span>
+            </button>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // تصيير قسم المحاضرات
+    function renderLecturesPanel(videos) {
+      const container = document.getElementById('lecturesListContainer');
+      if (!container) return;
+
+      if (videos.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state-card">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <h3>لا توجد محاضرات شرح منشورة بعد</h3>
+            <p>ستظهر هنا فيديوهات الشرح وتطبيقات المسائل فور قيامك بنشرها من قسم «فيديوهات الشرح» في لوحة التحكم.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      videos.forEach(v => {
+        const isLocked = (v.book_name === 'approved_homework') && !isHwApproved(v.pages);
+        if (isLocked) {
+          html += `
+            <div class="clean-item-card locked">
+              <div class="item-meta">
+                <h3>${escapeHtml(v.title)}</h3>
+                <p>${escapeHtml(v.description || 'فيديو شرح وتطبيقات المسائل')}</p>
+                <div class="lock-hint">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span>يتطلب فتح المحاضرة تسليم واعتماد الواجب أولاً</span>
+                </div>
+              </div>
+              <div>
+                <button class="btn btn-secondary" onclick="switchPanel('homework', document.querySelectorAll('.menu-item')[1])">
+                  <span>تسليم الواجب لفتحها</span>
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="clean-item-card">
+              <div class="item-meta">
+                <h3>${escapeHtml(v.title)}</h3>
+                <p>${escapeHtml(v.description || 'فيديو شرح ومسائل تدريبية')} • محاضرة متاحة</p>
+                ${v.book_name === 'approved_homework' ? `
+                  <div style="font-size: 0.78rem; color: var(--status-success); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>تم استيفاء شرط الواجب • المحاضرة مفتوحة للمشاهدة</span>
+                  </div>
+                ` : ''}
+              </div>
+              <button class="btn btn-primary" onclick="launchVideo('${escapeJsStr(v.title)}', '${escapeJsStr(v.url)}')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>مشاهدة المحاضرة</span>
+              </button>
+            </div>
+          `;
+        }
+      });
+
+      container.innerHTML = html;
+    }
+
+    // تصيير قسم الواجبات
+    function renderHomeworkPanel(homework) {
+      const container = document.getElementById('homeworkListContainer');
+      if (!container) return;
+
+      if (homework.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state-card">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <h3>لا توجد واجبات أو تكليفات مطلوبة حالياً</h3>
+            <p>ستظهر الواجبات والتكليفات الدراسية هنا فور تكليف الطلاب بها من لوحة التحكم.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      homework.forEach(hw => {
+        const approved = isHwApproved(hw.id);
+        const pending = isHwPending(hw.id) && !approved;
+
+        html += `
+          <div class="clean-item-card" style="flex-direction: column; align-items: stretch;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <h3 style="font-size: 1rem; font-weight: 800;">${escapeHtml(hw.title)}</h3>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                  ${escapeHtml(hw.description || (hw.book_name ? `المطلوب: حل ${hw.book_name} ص ${hw.pages || ''}` : 'حل الأسئلة المطلوبة ورفع كشكول الحل'))}
+                </p>
+              </div>
+              <span class="kpi-badge ${approved ? 'badge-success' : (pending ? 'badge-warning' : 'badge-danger')}">
+                ${approved ? 'معتمد (10 / 10)' : (pending ? 'قيد المراجعة' : 'مطلوب التسليم')}
+              </span>
+            </div>
+
+            ${hw.url ? `
+              <div style="display: flex; gap: 8px; margin: 12px 0 6px 0;">
+                <a href="${escapeHtml(hw.url)}" target="_blank" class="btn btn-secondary" style="height: 32px; font-size: 0.78rem;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>فتح شيت الأسئلة (PDF)</span>
+                </a>
+              </div>
+            ` : ''}
+
+            <!-- منطقة رفع الواجب -->
+            <div class="file-dropzone-box" style="margin-top: 10px;" onclick="triggerHwUpload('${escapeJsStr(hw.id)}', '${escapeJsStr(hw.title)}')">
+              <input type="file" id="file_input_${hw.id}" style="display: none;" onchange="handleHwFileSelected(event, '${escapeJsStr(hw.id)}', '${escapeJsStr(hw.title)}')">
+              <h4 style="font-size: 0.92rem; font-weight: 800; margin-bottom: 2px;">
+                ${approved ? 'تم تسليم واعتماد الواجب بنجاح' : (pending ? 'تم رفع ملف الواجب (قيد اعتماد المستر)' : 'اضغط هنا لرفع صور أو ملف الواجب المحلول')}
+              </h4>
+              <p style="font-size: 0.78rem; color: var(--text-muted);">
+                ${approved ? 'درجة الواجب: 10 من 10' : (pending ? 'Homework_Mohaned_Solved.pdf • يمكنك إعادة الرفع' : 'الصيغ المدعومة: JPG, PNG, PDF (من الموبايل أو الكمبيوتر)')}
+              </p>
+            </div>
+
+            <!-- زر محاكاة تجربة اعتماد المعلم والأسيستنت لفك قفل المحاضرة -->
+            <div style="margin-top: 12px; padding: 10px 14px; background: #f8fafc; border: 1px solid var(--border-subtle); border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+              <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">(تجربة المعلم والأسيستنت: اضغط هنا لمحاكاة اعتماد الواجب وفك المحاضرة المشروطة فورياً):</span>
+              <button class="btn btn-primary" style="height: 32px; font-size: 0.78rem;" onclick="approveHomework('${escapeJsStr(hw.id)}', '${escapeJsStr(hw.title)}')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>اعتماد الواجب وفتح المحاضرة</span>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function triggerHwUpload(hwId, hwTitle) {
+      const fileInput = document.getElementById('file_input_' + hwId);
+      if (fileInput) fileInput.click();
+    }
+
+    function handleHwFileSelected(event, hwId, hwTitle) {
+      studentSubmittedHomeworks[hwId] = {
+        submittedAt: new Date().toISOString(),
+        fileName: 'Homework_Mohaned_Uploaded.pdf'
+      };
+      localStorage.setItem('centrly_submitted_homeworks', JSON.stringify(studentSubmittedHomeworks));
+      showPortalToast('تم رفع ملف الواجب بنجاح! في انتظار اعتماد المستر أو الأسيستنت.', 'success');
+      renderAllPanels();
+    }
+
+    function approveHomework(hwId, hwTitle) {
+      studentApprovedHomeworks[hwId] = true;
+      localStorage.setItem('centrly_approved_homeworks', JSON.stringify(studentApprovedHomeworks));
+      showPortalToast('تم اعتماد الواجب بنجاح! تم فك قفل المحاضرات المرتبطة.', 'success');
+      renderAllPanels();
+    }
+
+    // تصيير قسم الكويزات والامتحانات
+    function renderExamsPanel(quizzes) {
+      const container = document.getElementById('examsListContainer');
+      if (!container) return;
+
+      if (quizzes.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state-card">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <h3>لا توجد كويزات أو امتحانات مجدولة حالياً</h3>
+            <p>ستظهر هنا الكويزات الدورية ونماذج الإجابة فور إنشائها في لوحة التحكم.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      quizzes.forEach(qz => {
+        html += `
+          <div class="clean-item-card" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="item-meta">
+              <h3>${escapeHtml(qz.title)}</h3>
+              <p>الدرجة الكلية: ${qz.max_score || 10} • بيئة اختبار مؤمنة لمنع تصوير الشاشة</p>
+            </div>
+            <button class="btn btn-action-exam" style="height: 38px;" onclick="startSecureExam('${escapeJsStr(qz.id || '')}', '${escapeJsStr(qz.title)}')">
+              <span>بدء تجربة الامتحان</span>
+            </button>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // تصيير قسم المذكرات والملخصات
+    function renderMaterialsPanel(materials) {
+      const container = document.getElementById('materialsListContainer');
+      if (!container) return;
+
+      if (materials.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state-card">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            <h3>لا توجد مذكرات أو ملازم مرفوعة بعد</h3>
+            <p>ستظهر هنا مذكرات الشرح وبنوك الأسئلة فور رفعها بصيغة PDF من قسم «المذكرات» بلوحة التحكم.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      materials.forEach(mat => {
+        html += `
+          <div class="clean-item-card">
+            <div class="item-meta">
+              <h3>${escapeHtml(mat.title)}</h3>
+              <p>${escapeHtml(mat.description || 'ملف مذكرة وملخص دراسي')} • صيغة PDF</p>
+            </div>
+            ${mat.url ? `
+              <a href="${escapeHtml(mat.url)}" target="_blank" class="btn btn-secondary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>تحميل أو فتح الملف</span>
+              </a>
+            ` : `
+              <button class="btn btn-secondary" disabled>ملف معتمد</button>
+            `}
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // 9. تشغيل البيئة المعزولة للامتحان بدون بوب أب كروم (Zero Alert)
+    let examWatermarkTimer = null;
+    let tabSwitchWarnCount = 0;
+    let examTimerInterval = null;
+    let remainingSeconds = 20 * 60;
+
+    function startSecureExam(quizId, quizTitle) {
+      const overlay = document.getElementById('secureExamOverlay');
+      if (overlay) overlay.classList.add('active');
+
+      remainingSeconds = 20 * 60;
+      updateExamClock();
+      if (examTimerInterval) clearInterval(examTimerInterval);
+      examTimerInterval = setInterval(() => {
+        if (remainingSeconds > 0) {
+          remainingSeconds--;
+          updateExamClock();
+        } else {
+          clearInterval(examTimerInterval);
+          submitAndFinishExam();
+        }
+      }, 1000);
+
+      const wm = document.getElementById('examWatermark');
+      if (wm) {
+        if (examWatermarkTimer) clearInterval(examWatermarkTimer);
+        examWatermarkTimer = setInterval(() => {
+          const top = Math.floor(Math.random() * 60 + 20);
+          const left = Math.floor(Math.random() * 55 + 20);
+          wm.style.top = top + '%';
+          wm.style.left = left + '%';
+        }, 3500);
+      }
+
+      window.onblur = () => {
+        if (!overlay.classList.contains('active')) return;
+        tabSwitchWarnCount++;
+        showPortalToast(`تحذير أمني: تم رصد مغادرة نافذة الامتحان (محاولة ${tabSwitchWarnCount} من 2). تكرار المحاولة يؤدي لسحب الورقة.`, 'warning');
+      };
+    }
+
+    function updateExamClock() {
+      const m = Math.floor(remainingSeconds / 60);
+      const s = remainingSeconds % 60;
+      const el = document.getElementById('examLiveClock');
+      if (el) el.innerText = (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+    }
+
+    function exitSecureExam() {
+      const overlay = document.getElementById('secureExamOverlay');
+      if (overlay) overlay.classList.remove('active');
+      if (examWatermarkTimer) clearInterval(examWatermarkTimer);
+      if (examTimerInterval) clearInterval(examTimerInterval);
+      window.onblur = null;
+    }
+
+    function submitAndFinishExam() {
+      exitSecureExam();
+      showPortalToast('تم استلام وتسجيل إجاباتك بنجاح! الدرجة المحققة: 10 / 10', 'success');
+      openModelAnswerModal();
+    }
+
+    function selectChoice(el) {
+      const parent = el.parentElement;
+      parent.querySelectorAll('.exam-choice').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function openModelAnswerModal() {
+      const modal = document.getElementById('modelAnswerModal');
+      if (modal) modal.classList.add('active');
+    }
+    function closeModelAnswerModal() {
+      const modal = document.getElementById('modelAnswerModal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    // 10. التنقل بين الأقسام
     const pageMeta = {
       home: { title: 'الرئيسية ومتابعة المستوى', sub: 'لوحة متابعة الأداء والمهام الدراسية المعلقة' },
       homework: { title: 'الواجبات والتسليم', sub: 'تسليم ومتابعة الواجبات والتصحيح الفوري' },
@@ -1475,7 +1995,12 @@
 
     function switchPanel(panelId, btnEl) {
       document.querySelectorAll('.menu-item').forEach(b => b.classList.remove('active'));
-      if (btnEl) btnEl.classList.add('active');
+      if (btnEl) {
+        btnEl.classList.add('active');
+      } else {
+        const item = document.querySelector(`.menu-item[onclick*="${panelId}"]`);
+        if (item) item.classList.add('active');
+      }
 
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       const target = document.getElementById('panel-' + panelId);
@@ -1493,141 +2018,29 @@
       document.getElementById('sidebar').classList.toggle('open');
     }
 
-    // محاكاة تسليم واعتماد الواجب
-    function uploadHomeworkSim() {
-      const title = document.getElementById('hwUploadTitle');
-      const sub = document.getElementById('hwUploadSubtitle');
-      const badge = document.getElementById('hwStatusBadge');
-
-      title.innerText = 'جاري رفع ملف الواجب...';
-      setTimeout(() => {
-        title.innerText = 'تم رفع ملف الواجب بنجاح (Homework_Mohaned_1001.pdf)';
-        sub.innerText = 'في انتظار اعتماد مستر عمر أو الأسيستنت';
-        badge.innerText = 'قيد المراجعة';
-        badge.className = 'kpi-badge badge-warning';
-        document.getElementById('simApproveBox').style.display = 'block';
-      }, 700);
-    }
-
-    function approveHomeworkSim() {
-      const badge = document.getElementById('hwStatusBadge');
-      badge.innerText = 'معتمد (الدرجة: 10/10)';
-      badge.className = 'kpi-badge badge-success';
-      document.getElementById('simApproveBox').style.display = 'none';
-
-      // فك قفل المحاضرة
-      const card = document.getElementById('lockedCard');
-      if (card) {
-        card.classList.remove('locked');
-        document.getElementById('lockMessage').style.display = 'none';
-        document.getElementById('lockedBtnContainer').innerHTML = `
-          <button class="btn btn-primary" onclick="launchVideo('المحاضرة 2: أفكار المسائل المتقدمة')">
-            <span>مشاهدة المحاضرة الآن</span>
-          </button>
-        `;
+    function logoutStudent() {
+      localStorage.removeItem('portal_student');
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/teacher-platform-sample/')) {
+        window.location.href = '/teacher-platform-sample/login.html' + (window.location.search || '');
+      } else {
+        window.location.href = '/mr-omar' + (window.location.search || '');
       }
-
-      alert('تم اعتماد الواجب بنجاح! تم فك قفل المحاضرة الثانية.');
     }
 
-    // مشغل الفيديو
-    function launchVideo(title) {
-      document.getElementById('videoTitleLabel').innerText = title;
-      document.getElementById('videoIframe').src = 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1';
-      document.getElementById('videoModal').classList.add('active');
-    }
+    // 11. مستمعات المزامنة في الوقت الحقيقي (Real-Time Cross-Tab Reactivity)
+    window.addEventListener('storage', (e) => {
+      if (['centrly_materials', 'centrly_platform_content', 'centrly_platform_settings', 'centrly_approved_homeworks', 'centrly_submitted_homeworks'].includes(e.key)) {
+        fetchPlatformContent();
+      }
+    });
 
-    function closeVideoModal() {
-      document.getElementById('videoModal').classList.remove('active');
-      document.getElementById('videoIframe').src = '';
-    }
+    window.addEventListener('focus', () => {
+      fetchPlatformContent();
+    });
 
-    // نافذة نموذج الإجابة
-    function openModelAnswerModal() {
-      document.getElementById('modelAnswerModal').classList.add('active');
-    }
-    function closeModelAnswerModal() {
-      document.getElementById('modelAnswerModal').classList.remove('active');
-    }
-
-    // محاكاة البيئة المعزولة للامتحان
-    let examWatermarkTimer = null;
-    let tabSwitchWarnCount = 0;
-    let examTimerInterval = null;
-    let remainingSeconds = 20 * 60; // 20 دقيقة
-
-    function startSecureExam() {
-      const overlay = document.getElementById('secureExamOverlay');
-      overlay.classList.add('active');
-
-      // تشغيل العداد التنازلي التفاعلي
-      remainingSeconds = 20 * 60;
-      updateExamClock();
-      if (examTimerInterval) clearInterval(examTimerInterval);
-      examTimerInterval = setInterval(() => {
-        if (remainingSeconds > 0) {
-          remainingSeconds--;
-          updateExamClock();
-        } else {
-          clearInterval(examTimerInterval);
-          submitAndFinishExam();
-        }
-      }, 1000);
-
-      // تشغيل العلامة المائية المتحركة
-      const wm = document.getElementById('examWatermark');
-      if (examWatermarkTimer) clearInterval(examWatermarkTimer);
-      examWatermarkTimer = setInterval(() => {
-        const top = Math.floor(Math.random() * 60 + 20);
-        const left = Math.floor(Math.random() * 55 + 20);
-        wm.style.top = top + '%';
-        wm.style.left = left + '%';
-      }, 3500);
-
-      // رصد تغيير التاب (Tab-switch detection)
-      window.onblur = () => {
-        if (!overlay.classList.contains('active')) return;
-        tabSwitchWarnCount++;
-        alert(`تحذير أمني: تم رصد مغادرة نافذة الامتحان (محاولة ${tabSwitchWarnCount} من 2). تكرار المحاولة يؤدي لسحب الورقة.`);
-      };
-    }
-
-    function updateExamClock() {
-      const m = Math.floor(remainingSeconds / 60);
-      const s = remainingSeconds % 60;
-      const el = document.getElementById('examLiveClock');
-      if (el) el.innerText = (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
-    }
-
-    function exitSecureExam(confirmExit) {
-      if (confirmExit && !confirm('هل أنت متأكد من تسليم ورقة الإجابة الآن؟')) return;
-      const overlay = document.getElementById('secureExamOverlay');
-      overlay.classList.remove('active');
-      if (examWatermarkTimer) clearInterval(examWatermarkTimer);
-      if (examTimerInterval) clearInterval(examTimerInterval);
-      window.onblur = null;
-    }
-
-    function submitAndFinishExam() {
-      exitSecureExam(false);
-      alert('تم استلام وتسجيل إجاباتك بنجاح!\nالدرجة المحققة: 10 / 10\nتم فتح خيار «عرض نموذج الإجابة» لمراجعة الإجابات وتفسيرات مستر عمر.');
-      openModelAnswerModal();
-    }
-
-    function selectChoice(el) {
-      const parent = el.parentElement;
-      parent.querySelectorAll('.exam-choice').forEach(c => c.classList.remove('selected'));
-      el.classList.add('selected');
-    }
-
-    // عداد كارت الهيرو
-    setInterval(() => {
-      const s = document.getElementById('tSecs');
-      if (!s) return;
-      let val = parseInt(s.innerText, 10);
-      val = val > 0 ? val - 1 : 59;
-      s.innerText = val < 10 ? '0' + val : val;
-    }, 1000);
+    // البدء الفوري عند تحميل الصفحة
+    fetchPlatformContent();
   </script>
 </body>
 </html>

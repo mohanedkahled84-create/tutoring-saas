@@ -144,3 +144,37 @@ test("PlatformBuilderService - Admin / Omar bypass allows publishing without PRO
   assert.equal(saved.subdomain, "admin-platform");
   assert.equal(saved.is_active, true);
 });
+
+test("PlatformBuilderService - getPublicMaterials returns teacher study materials", async () => {
+  const repo = new FakePlatformBuilderRepository();
+  const service = new PlatformBuilderService(repo);
+
+  const tenantId = "tenant-content-test";
+  await repo.upsert(tenantId, {
+    subdomain: "mr-content",
+    display_title: "منصة المحتوى",
+    subject_title: "فيزياء",
+  });
+
+  repo.setFakeMaterials(tenantId, [
+    {
+      id: "mat-1",
+      title: "محاضرة 1",
+      type: "video",
+      url: "https://www.youtube.com/watch?v=123",
+      is_homework: false,
+    },
+    {
+      id: "mat-2",
+      title: "واجب 1",
+      type: "pdf",
+      url: "https://example.com/hw.pdf",
+      is_homework: true,
+    },
+  ]);
+
+  const materials = await service.getPublicMaterials("mr-content");
+  assert.equal(materials.length, 2);
+  assert.equal(materials[0].title, "محاضرة 1");
+  assert.equal(materials[1].is_homework, true);
+});
