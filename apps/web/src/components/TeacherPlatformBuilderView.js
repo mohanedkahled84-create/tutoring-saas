@@ -591,6 +591,32 @@ export function registerTeacherPlatformActions(appInstance) {
       }
       try {
         let res = await fetch('/api/video-tracking').then(r => r.json()).catch(() => null);
+        if (!res || !Array.isArray(res.views) || res.views.length === 0) {
+          res = await fetch('https://centerly-eg.com/api/video-tracking').then(r => r.json()).catch(() => null);
+        }
+        if (!res || !Array.isArray(res.views) || res.views.length === 0) {
+          try {
+            const supaUrl = 'https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/whatsapp_inbox?phone=like.VIDEO_TRACK_%25&select=*&order=created_at.desc';
+            const supaRes = await fetch(supaUrl, {
+              headers: {
+                apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
+                Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz'
+              }
+            });
+            if (supaRes.ok) {
+              const rows = await supaRes.json();
+              res = {
+                views: (Array.isArray(rows) ? rows : []).map(r => ({
+                  student_code: String(r.phone || '').replace('VIDEO_TRACK_', '').trim(),
+                  student_name: r.student_name,
+                  material_title: r.message_body,
+                  status: 'watched',
+                  watched_at: r.created_at
+                }))
+              };
+            }
+          } catch (_) {}
+        }
         if (!res || !Array.isArray(res.views)) {
           res = await (appInstance?.request ? appInstance.request('/platform/video-views') : fetch(`${API_BASE_URL}/platform/video-views`).then(r => r.json()).catch(() => null));
         }

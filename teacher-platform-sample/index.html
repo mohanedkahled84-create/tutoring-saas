@@ -1218,8 +1218,13 @@
           </div>
         </div>
 
-        <div>
-          <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">الفصل الدراسي الأول • دفعة 2026</span>
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted);">تبديل الطالب للتجربة:</span>
+          <button type="button" onclick="switchTestStudent('1006')" style="background: #1e3a8a; color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; cursor: pointer;">مهند (1006)</button>
+          <button type="button" onclick="switchTestStudent('1005')" style="background: #10b981; color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; cursor: pointer;">احمد محمود (1005)</button>
+          <button type="button" onclick="switchTestStudent('1002')" style="background: #3b82f6; color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; cursor: pointer;">باسل (1002)</button>
+          <button type="button" onclick="switchTestStudent('1003')" style="background: #8b5cf6; color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; cursor: pointer;">عمر جمال (1003)</button>
+          <button type="button" onclick="switchTestStudent('1004')" style="background: #f59e0b; color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem; font-weight: 800; padding: 3px 8px; border-radius: 5px; cursor: pointer;">احمد عبد الله (1004)</button>
         </div>
       </div>
 
@@ -1582,6 +1587,23 @@
     }
     hydrateStudentUI(currentStudent);
 
+    window.switchTestStudent = function(code) {
+      const allKnown = {
+        '1006': { name: 'مهند خالد', code: '1006', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
+        '1005': { name: 'احمد محمود', code: '1005', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
+        '1002': { name: 'باسل امير', code: '1002', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
+        '1003': { name: 'عمر جمال', code: '1003', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
+        '1004': { name: 'احمد عبد الله', code: '1004', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
+      };
+      if (allKnown[code]) {
+        currentStudent = { ...currentStudent, ...allKnown[code] };
+        localStorage.setItem('portal_student', JSON.stringify(currentStudent));
+        localStorage.setItem('portal_student_code', code);
+        hydrateStudentUI(currentStudent);
+        showPortalToast(`تم التبديل لتجربة الطالب: ${currentStudent.name} (كود: ${code})`, 'info');
+      }
+    };
+
     // 2. تطبيق إعدادات المنصة وثيم المعلم
     function hydrateSettings() {
       try {
@@ -1770,6 +1792,8 @@
           })
         }).catch(() => {});
       } catch (_) {}
+
+      showPortalToast(`تم تسجيل مشاهدة المحاضرة للطالب (${studentName}) بنجاح`, 'success');
 
       // تشغيل تحريك العلامة المائية العائمة لمنع التصوير (كود الطالب شبه شفاف)
       const wm = document.getElementById('videoFloatingWatermark');
