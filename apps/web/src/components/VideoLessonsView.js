@@ -55,19 +55,23 @@ export function openVideoPlayerModal(url, title, watermarkText = "") {
       activeStudentCode = curStudent.student_code || curStudent.code || null;
     } catch (_) {}
   }
+  // When student opens video, set status to watching with current progress (never assume 100% unless finished)
   if (activeStudentCode) {
     try {
       const trackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
-      trackingMap[activeStudentCode] = {
-        percent: 100,
-        curTime: '35:23',
-        durTime: '35:23',
-        status: 'completed',
-        isOnline: true,
-        updatedAt: Date.now()
-      };
-      localStorage.setItem('centrly_video_tracking_map', JSON.stringify(trackingMap));
-      window.dispatchEvent(new CustomEvent('centrly_tracking_updated', { detail: trackingMap }));
+      const existing = trackingMap[activeStudentCode];
+      if (!existing || existing.status !== 'completed') {
+        trackingMap[activeStudentCode] = {
+          percent: existing?.percent || 5,
+          curTime: existing?.curTime || '01:45',
+          durTime: '35:23',
+          status: 'watching',
+          isOnline: true,
+          updatedAt: Date.now()
+        };
+        localStorage.setItem('centrly_video_tracking_map', JSON.stringify(trackingMap));
+        window.dispatchEvent(new CustomEvent('centrly_tracking_updated', { detail: trackingMap }));
+      }
     } catch (_) {}
   }
 

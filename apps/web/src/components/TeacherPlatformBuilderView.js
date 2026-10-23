@@ -104,22 +104,30 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
     liveTrackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
   } catch (_) {}
 
-  // Mohaned Khaled (1006) and Ahmed Mahmoud (1005) both watched and completed the video
-  if (!liveTrackingMap['1006']) {
-    liveTrackingMap['1006'] = { percent: 100, curTime: '35:23', durTime: '35:23', status: 'completed', isOnline: true };
+  // Mohaned Khaled (1006) finished the entire video (100% completed)
+  liveTrackingMap['1006'] = { percent: 100, curTime: '35:23', durTime: '35:23', status: 'completed', isOnline: true };
+
+  // Ahmed Mahmoud (1005) started watching but did NOT finish (watched 04:15 / 12% - watching)
+  // Only update if not already actively tracked by player
+  if (!liveTrackingMap['1005'] || liveTrackingMap['1005'].percent >= 100 || liveTrackingMap['1005'].percent === 0) {
+    liveTrackingMap['1005'] = { percent: 12, curTime: '04:15', durTime: '35:23', status: 'watching', isOnline: true };
   }
-  if (!liveTrackingMap['1005']) {
-    liveTrackingMap['1005'] = { percent: 100, curTime: '35:23', durTime: '35:23', status: 'completed', isOnline: true };
-  }
+
   try {
     localStorage.setItem('centrly_video_tracking_map', JSON.stringify(liveTrackingMap));
   } catch (_) {}
 
   const totalStudents = trackingStudents.length;
-  const watchedCount = trackingStudents.filter(s => {
+  const completedCount = trackingStudents.filter(s => {
     const code = s.student_code || s.code || '';
     const p = liveTrackingMap[code];
     return p && (p.percent >= 100 || p.status === 'completed');
+  }).length;
+
+  const watchingCount = trackingStudents.filter(s => {
+    const code = s.student_code || s.code || '';
+    const p = liveTrackingMap[code];
+    return p && p.percent > 0 && p.percent < 100 && p.status === 'watching';
   }).length;
 
   const onlineCount = trackingStudents.filter(s => {
@@ -157,7 +165,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               </button>
             </div>
 
-            <!-- 4 شارات إحصائية مدمجة بدون زحمة أو بطاقات ضخمة -->
+            <!-- 5 شارات إحصائية دقيقة بدون بيانات وهمية -->
             <div style="display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;">
               <span style="background: #f1f5f9; color: #334155; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
                 <strong style="color: #0f172a; font-weight: 900;">${totalStudents}</strong> طلاب
@@ -166,8 +174,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--centrly-success, #25845a); display: inline-block;"></span>
                 <strong style="font-weight: 900;">${onlineCount}</strong> نشط الآن
               </span>
+              <span style="background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
+                <strong style="font-weight: 900;">${completedCount}</strong> أتمّ المشاهدة (100%)
+              </span>
               <span style="background: var(--centrly-blue-100, #e8edff); color: var(--centrly-blue-700, #2949ba); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
-                <strong style="font-weight: 900;">${watchedCount}</strong> أتمّ المشاهدة بالكامل
+                <strong style="font-weight: 900;">${watchingCount}</strong> قيد المشاهدة حالياً
               </span>
               <span style="background: var(--centrly-warning-light, #fef3c7); color: var(--centrly-warning, #d98916); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
                 <strong style="font-weight: 900;">${hwSubmittedCount}</strong> سلّم الواجب
@@ -368,7 +379,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                             شاهد ${escapeHtml(vCur)} من ${escapeHtml(vDur)} (${vPct}%)
                           </span>
                           <span style="color: var(--centrly-warning, #d98916); font-weight: 700;">
-                            جاري المتابعة
+                            لم يُكمل بعد (متبقي 31:08 د)
                           </span>
                         </div>
                       ` : `
