@@ -2892,7 +2892,13 @@ export function registerTeacherQuizzesActions(app) {
   app.loadRichQuizzes = async function() {
     try {
       const gid = this.quizzesState.selectedGroupId;
-      const res = await request(`/quizzes/rich${gid ? `?group_id=${gid}` : ''}`);
+      let res = await request(`/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).catch(() => null);
+      if (!res || !res.success) {
+        res = await fetch(`/api/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null);
+      }
+      if (!res || !res.success) {
+        res = await fetch(`https://centerly-eg.com/api/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null);
+      }
       if (res?.success && Array.isArray(res.quizzes)) {
         this.quizzesState.richQuizzes = res.quizzes;
       }
@@ -3150,22 +3156,36 @@ export function registerTeacherQuizzesActions(app) {
 
     try {
       this.showToast('جاري حفظ ونشر الامتحان الإلكتروني...', 'info');
-      const res = await request('/quizzes/rich', {
-        method: 'POST',
-        body: {
-          id: qz?.id,
-          group_id: gid,
-          quiz_number: qz.quiz_number,
-          title: qz.title,
-          subject: qz.subject,
-          time_limit_minutes: qz.time_limit_minutes,
-          available_date: qz.available_date,
-          start_time: qz.start_time,
-          end_time: qz.end_time,
-          exam_mode: 'online',
-          questions
+      const payload = {
+        id: qz?.id,
+        group_id: gid,
+        quiz_number: qz.quiz_number,
+        title: qz.title,
+        subject: qz.subject,
+        time_limit_minutes: qz.time_limit_minutes,
+        available_date: qz.available_date,
+        start_time: qz.start_time,
+        end_time: qz.end_time,
+        exam_mode: 'online',
+        questions
+      };
+      let res = null;
+      try {
+        res = await request('/quizzes/rich', { method: 'POST', body: payload });
+      } catch (err) {
+        console.warn('Primary /quizzes/rich request failed, attempting fallback endpoints...', err);
+        try {
+          const fb1 = await fetch('/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (fb1.ok) res = await fb1.json();
+        } catch (_) {}
+        if (!res) {
+          try {
+            const fb2 = await fetch('https://centerly-eg.com/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (fb2.ok) res = await fb2.json();
+          } catch (_) {}
         }
-      });
+        if (!res) throw err;
+      }
 
       if (res?.success) {
         this.showToast(`تم حفظ ونشر امتحان (${qz.title}) بنجاح!`, 'success');
@@ -3538,19 +3558,33 @@ export function registerTeacherQuizzesActions(app) {
 
     try {
       this.showToast('جاري حفظ وتوليد نماذج الامتحان الورقي والـ Bubble Sheet...', 'info');
-      const res = await request('/quizzes/rich', {
-        method: 'POST',
-        body: {
-          id: qz?.id,
-          group_id: gid,
-          quiz_number: quizNumber,
-          title,
-          subject,
-          time_limit_minutes: timeLimit,
-          exam_mode: 'paper',
-          questions
+      const payload = {
+        id: qz?.id,
+        group_id: gid,
+        quiz_number: quizNumber,
+        title,
+        subject,
+        time_limit_minutes: timeLimit,
+        exam_mode: 'paper',
+        questions
+      };
+      let res = null;
+      try {
+        res = await request('/quizzes/rich', { method: 'POST', body: payload });
+      } catch (err) {
+        console.warn('Primary /quizzes/rich request failed, attempting fallback endpoints...', err);
+        try {
+          const fb1 = await fetch('/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (fb1.ok) res = await fb1.json();
+        } catch (_) {}
+        if (!res) {
+          try {
+            const fb2 = await fetch('https://centerly-eg.com/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (fb2.ok) res = await fb2.json();
+          } catch (_) {}
         }
-      });
+        if (!res) throw err;
+      }
 
       if (res?.success) {
         this.showToast(`تم حفظ وتوليد نماذج الامتحان الورقي بنجاح!`, 'success');

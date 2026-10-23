@@ -1,0 +1,310 @@
+// Serverless Handler for Rich Quizzes (Online Exams, Paper Exams, and Bubble Sheets)
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ofaraxqrpcdiregxjyyb.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz';
+
+function generateStealthModels(questions) {
+  if (!Array.isArray(questions) || questions.length === 0) return null;
+
+  // Model A: Original order
+  const modelA = questions.map((q, idx) => ({
+    ...q,
+    original_index: idx,
+    model_number: 1,
+  }));
+
+  // Model B: Rotate/shift order
+  const modelB = [...questions].reverse().map((q, idx) => ({
+    ...q,
+    original_index: questions.indexOf(q),
+    model_number: 2,
+  }));
+
+  // Model C: Alternate interleaved order
+  const evens = questions.filter((_, i) => i % 2 === 0);
+  const odds = questions.filter((_, i) => i % 2 !== 0);
+  const modelC = [...odds, ...evens].map((q, idx) => ({
+    ...q,
+    original_index: questions.indexOf(q),
+    model_number: 3,
+  }));
+
+  return {
+    A: modelA,
+    B: modelB,
+    C: modelC,
+  };
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // GET: Fetch rich quizzes
+  if (req.method === 'GET') {
+    try {
+      const { group_id } = req.query || {};
+      let url = `${SUPABASE_URL}/rest/v1/study_materials?type=eq.online_quiz&select=*&order=created_at.desc`;
+      if (group_id) {
+        url += `&group_id=eq.${encodeURIComponent(group_id)}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Supabase query failed: ${response.status}`);
+      }
+
+      const rows = await response.json();
+      const richQuizzes = (Array.isArray(rows) ? rows : []).map((row) => {
+        let meta = {};
+        try {
+          meta = JSON.parse(row.questions || '{}');
+        } catch (_) {}
+
+        return {
+          id: row.id,
+          title: row.title || 'كويز بدون عنوان',
+          subject: row.description || meta.subject || 'الفيزياء',
+          group_id: row.group_id,
+          quiz_number: Number(meta.quiz_number) || 1,
+          time_limit_minutes: Number(meta.time_limit_minutes) || 20,
+          available_date: meta.available_date || (row.created_at ? row.created_at.slice(0, 10) : ''),
+          start_time: meta.start_time || null,
+          end_time: meta.end_time || null,
+          exam_mode: meta.exam_mode || 'online',
+          questions: Array.isArray(meta.questions) ? meta.questions : [],
+          stealth_models: meta.stealth_models || null,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        quizzes: richQuizzes,
+      });
+    } catch (err) {
+      console.error('[api/quizzes/rich] GET error:', err);
+      return res.status(500).json({
+        success: false,
+        error: { message: err.message || 'Failed to fetch rich quizzes' },
+      });
+    }
+  }
+
+  // POST: Create or update a rich quiz definition
+  if (req.method === 'POST') {
+    try {
+      let body = req.body;
+      if (typeof body === 'string') {
+        try {
+          body = JSON.parse(body);
+        } catch (_) {}
+      }
+
+      const {
+        id,
+        group_id,
+        quiz_number,
+        title,
+        subject,
+        time_limit_minutes,
+        available_date,
+        start_time,
+        end_time,
+        exam_mode,
+        questions,
+        stealth_models,
+      } = body || {};
+
+      if (!group_id || quiz_number === undefined) {
+        return res.status(400).json({
+          success: false,
+          error: { message: 'group_id and quiz_number are required' },
+        });
+      }
+
+      const qNum = Number(quiz_number) || 1;
+      const questionsArr = Array.isArray(questions) ? questions : [];
+      const maxScore = questionsArr.reduce((sum, q) => sum + Number(q.points || 1), 0) || 10;
+      const cleanTitle = (title && String(title).trim()) || `كويز ${qNum}`;
+      const cleanSubject = (subject && String(subject).trim()) || 'الفيزياء';
+      const cleanTimeLimit = Number(time_limit_minutes) || 20;
+      const resolvedStealth = stealth_models || generateStealthModels(questionsArr);
+
+      const questionsPayload = JSON.stringify({
+        quiz_number: qNum,
+        subject: cleanSubject,
+        time_limit_minutes: cleanTimeLimit,
+        available_date: available_date || null,
+        start_time: start_time || null,
+        end_time: end_time || null,
+        exam_mode: exam_mode || 'online',
+        questions: questionsArr,
+        stealth_models: resolvedStealth,
+      });
+
+      // 1. Upsert into quizzes table for score tracking
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/quizzes`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify({
+            group_id,
+            quiz_number: qNum,
+            title: cleanTitle,
+            max_score: maxScore,
+            quiz_date: available_date || new Date().toISOString().slice(0, 10),
+            is_skipped: false,
+          }),
+        });
+      } catch (upsertErr) {
+        console.warn('Quizzes table upsert warning:', upsertErr);
+      }
+
+      // 2. Insert or update in study_materials
+      let materialRecord = null;
+
+      if (id && String(id).length > 20) {
+        const updateUrl = `${SUPABASE_URL}/rest/v1/study_materials?id=eq.${encodeURIComponent(id)}`;
+        const updateRes = await fetch(updateUrl, {
+          method: 'PATCH',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation',
+          },
+          body: JSON.stringify({
+            title: cleanTitle,
+            description: cleanSubject,
+            group_id,
+            questions: questionsPayload,
+            updated_at: new Date().toISOString(),
+          }),
+        });
+
+        if (updateRes.ok) {
+          const updated = await updateRes.json();
+          materialRecord = Array.isArray(updated) && updated[0] ? updated[0] : { id };
+        }
+      }
+
+      if (!materialRecord) {
+        // Check if one already exists for this group and quiz_number
+        const checkUrl = `${SUPABASE_URL}/rest/v1/study_materials?type=eq.online_quiz&group_id=eq.${encodeURIComponent(group_id)}&select=id,questions`;
+        const checkRes = await fetch(checkUrl, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        });
+
+        let existingRows = [];
+        if (checkRes.ok) {
+          existingRows = await checkRes.json();
+        }
+
+        const matched = (Array.isArray(existingRows) ? existingRows : []).find((r) => {
+          try {
+            const p = JSON.parse(r.questions || '{}');
+            return Number(p.quiz_number) === qNum;
+          } catch (_) {
+            return false;
+          }
+        });
+
+        if (matched && matched.id) {
+          const patchUrl = `${SUPABASE_URL}/rest/v1/study_materials?id=eq.${encodeURIComponent(matched.id)}`;
+          const patchRes = await fetch(patchUrl, {
+            method: 'PATCH',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=representation',
+            },
+            body: JSON.stringify({
+              title: cleanTitle,
+              description: cleanSubject,
+              questions: questionsPayload,
+              updated_at: new Date().toISOString(),
+            }),
+          });
+          if (patchRes.ok) {
+            const patched = await patchRes.json();
+            materialRecord = Array.isArray(patched) && patched[0] ? patched[0] : { id: matched.id };
+          }
+        } else {
+          // Insert new
+          const insertUrl = `${SUPABASE_URL}/rest/v1/study_materials`;
+          const insertRes = await fetch(insertUrl, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=representation',
+            },
+            body: JSON.stringify({
+              title: cleanTitle,
+              description: cleanSubject,
+              type: 'online_quiz',
+              group_id,
+              is_homework: false,
+              questions: questionsPayload,
+            }),
+          });
+
+          if (insertRes.ok) {
+            const inserted = await insertRes.json();
+            materialRecord = Array.isArray(inserted) && inserted[0] ? inserted[0] : {};
+          }
+        }
+      }
+
+      const savedId = materialRecord?.id || id || `quiz-${qNum}-${Date.now()}`;
+
+      return res.status(200).json({
+        success: true,
+        quiz: {
+          id: savedId,
+          title: cleanTitle,
+          subject: cleanSubject,
+          group_id,
+          quiz_number: qNum,
+          time_limit_minutes: cleanTimeLimit,
+          available_date,
+          start_time,
+          end_time,
+          exam_mode: exam_mode || 'online',
+          questions: questionsArr,
+          stealth_models: resolvedStealth,
+        },
+      });
+    } catch (err) {
+      console.error('[api/quizzes/rich] POST error:', err);
+      return res.status(500).json({
+        success: false,
+        error: { message: err.message || 'Failed to save rich quiz' },
+      });
+    }
+  }
+
+  return res.status(405).json({ error: { message: 'Method Not Allowed' } });
+}
