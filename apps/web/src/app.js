@@ -41,7 +41,7 @@ import { renderTeacherSettingsView, registerTeacherSettingsActions } from './com
 import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=4.7.6';
 import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=1.0.0';
 import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.1.0';
-import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.0.0';
+import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.1.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.9.21';
@@ -2091,7 +2091,7 @@ class CentrlyApp {
       case 'video-lessons':
         return renderVideoLessonsView(this.materials, this.groups, this.students, this.videoLessonsGroupId, this.user);
       case 'platform-builder':
-        return renderTeacherPlatformBuilderView(this.platformBuilderState || {}, this.user);
+        return renderTeacherPlatformBuilderView(this.platformBuilderState || {}, this.user, this.students || []);
       case 'homework':
         return renderHomeworkReviewView(this.homeworkState || {});
       case 'assistants':

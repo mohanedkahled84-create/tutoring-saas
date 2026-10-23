@@ -524,6 +524,23 @@
 
   </main>
 
+  <!-- شاشة حماية المنصة قبل اعتماد ونشر المعلم لها -->
+  <div id="unreleasedOverlay" style="display: none; position: fixed; inset: 0; background: #0b132b; z-index: 99999; align-items: center; justify-content: center; padding: 24px; text-align: center;">
+    <div style="max-width: 480px; width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px; padding: 36px 28px; backdrop-filter: blur(12px); box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+      <div style="width: 68px; height: 68px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 1.5px solid rgba(245, 158, 11, 0.35); color: #f59e0b; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px auto;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+      </div>
+      <h2 style="font-size: 1.35rem; font-weight: 900; color: #ffffff; margin-bottom: 8px;">المنصة قيد التجهيز من قبل المعلم</h2>
+      <p style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 22px;">
+        يقوم المعلم حالياً بضبط الهوية التعليمية وإعداد المحتوى والشروحات. سيتم فتح تسجيل الدخول لجميع الطلاب فور اعتماد ونشر المنصة.
+      </p>
+      <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.08); padding: 8px 16px; border-radius: 20px; font-size: 0.78rem; color: #94a3b8; font-weight: 700;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></span>
+        <span>يرجى التواصل مع معلمك لمعرفة موعد إطلاق المنصة</span>
+      </div>
+    </div>
+  </div>
+
   <script>
     // مزامنة إعدادات المنصة الحية حسب الرابط الفرعي (Subdomain)
     async function hydratePlatformFromSubdomain() {
@@ -539,7 +556,13 @@
       if (!sub) {
         const cached = localStorage.getItem('centrly_platform_settings');
         if (cached) {
-          try { applySettingsToDOM(JSON.parse(cached)); } catch (_) {}
+          try { 
+            const parsed = JSON.parse(cached);
+            applySettingsToDOM(parsed);
+            checkPublishStatus(parsed);
+          } catch (_) {}
+        } else {
+          checkPublishStatus(null);
         }
         return;
       }
@@ -551,10 +574,48 @@
           if (data && data.settings) {
             localStorage.setItem('centrly_platform_settings', JSON.stringify(data.settings));
             applySettingsToDOM(data.settings);
+            checkPublishStatus(data.settings);
+          } else {
+            checkPublishStatus(null);
+          }
+        } else {
+          // If public API returns 404 or fails, check cached settings
+          const cached = localStorage.getItem('centrly_platform_settings');
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              applySettingsToDOM(parsed);
+              checkPublishStatus(parsed);
+            } catch (_) {
+              checkPublishStatus(null);
+            }
+          } else {
+            checkPublishStatus(null);
           }
         }
       } catch (e) {
         console.warn('Could not fetch public settings, using fallback', e);
+        const cached = localStorage.getItem('centrly_platform_settings');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            applySettingsToDOM(parsed);
+            checkPublishStatus(parsed);
+          } catch (_) {
+            checkPublishStatus(null);
+          }
+        }
+      }
+    }
+
+    function checkPublishStatus(s) {
+      const isPublished = Boolean(
+        (s && (s.is_published === true || s.is_active === true)) ||
+        localStorage.getItem('centrly_platform_published') === 'true'
+      );
+      const overlay = document.getElementById('unreleasedOverlay');
+      if (overlay) {
+        overlay.style.display = isPublished ? 'none' : 'flex';
       }
     }
 
