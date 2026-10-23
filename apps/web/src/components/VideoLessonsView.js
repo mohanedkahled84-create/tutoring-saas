@@ -107,15 +107,22 @@ export function openVideoPlayerModal(url, title, watermarkText = "") {
       window.dispatchEvent(new CustomEvent('centrly_tracking_updated', { detail: trackingMap }));
     } catch (_) {}
 
-    // B. Direct Database API call to backend
+    // B. Direct Server API calls (Vercel Serverless Function + Backend Fallback)
     try {
+      fetch('/api/video-tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true
+      }).catch(() => {});
+
       const endpoint = `${API_BASE_URL}/platform/public/${encodeURIComponent(activeSubdomain)}/video-view`;
       fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         keepalive: true
-      }).catch(err => console.warn('Could not record video view to DB:', err));
+      }).catch(() => {});
     } catch (_) {}
   };
 

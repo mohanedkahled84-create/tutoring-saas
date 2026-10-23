@@ -643,7 +643,10 @@ export function registerTeacherPlatformActions(appInstance) {
         btn.style.pointerEvents = 'none';
       }
       try {
-        const res = await (appInstance?.request ? appInstance.request('/platform/video-views') : fetch(`${API_BASE_URL}/platform/video-views`).then(r => r.json()));
+        let res = await fetch('/api/video-tracking').then(r => r.json()).catch(() => null);
+        if (!res || !Array.isArray(res.views) || res.views.length === 0) {
+          res = await (appInstance?.request ? appInstance.request('/platform/video-views') : fetch(`${API_BASE_URL}/platform/video-views`).then(r => r.json()).catch(() => null));
+        }
         if (res && Array.isArray(res.views)) {
           window.__centrlyServerVideoViews = res.views;
           if (appInstance && typeof appInstance.renderMainContent === 'function') {
