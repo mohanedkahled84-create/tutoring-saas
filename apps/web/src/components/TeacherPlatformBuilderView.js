@@ -1,6 +1,6 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
-import { request } from "../services/api.js";
+import { request, API_BASE_URL } from "../services/api.js";
 
 /**
  * Centrly White-Label Platform Builder & Student Engagement Hub
@@ -98,24 +98,40 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
     return 0;
   });
 
-  // Dynamic Student Tracking Map (Reads real live progress for all students)
+  // Dynamic Student Tracking Map: Combines Database server logs with any active local tracking
   let liveTrackingMap = {};
-  try {
-    liveTrackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
-  } catch (_) {}
 
-  // Mohaned Khaled (1006) finished the entire video (100% completed)
-  liveTrackingMap['1006'] = { percent: 100, curTime: '35:23', durTime: '35:23', status: 'completed', isOnline: true };
-
-  // Ahmed Mahmoud (1005) started watching but did NOT finish (watched 04:15 / 12% - watching)
-  // Only update if not already actively tracked by player
-  if (!liveTrackingMap['1005'] || liveTrackingMap['1005'].percent >= 100 || liveTrackingMap['1005'].percent === 0) {
-    liveTrackingMap['1005'] = { percent: 12, curTime: '04:15', durTime: '35:23', status: 'watching', isOnline: true };
+  // 1. Ingest real database server logs if available
+  if (typeof window !== 'undefined' && Array.isArray(window.__centrlyServerVideoViews)) {
+    window.__centrlyServerVideoViews.forEach(v => {
+      if (v && v.student_code) {
+        liveTrackingMap[v.student_code] = {
+          percent: Number(v.progress_percent || 0),
+          curTime: v.current_time || '01:45',
+          durTime: v.duration_time || '35:23',
+          status: v.status || (v.progress_percent >= 90 ? 'completed' : 'watching'),
+          studentName: v.student_name,
+          isOnline: true,
+          updatedAt: v.updated_at
+        };
+      }
+    });
   }
 
+  // 2. Overlay any client-side real-time watch events from local storage
   try {
-    localStorage.setItem('centrly_video_tracking_map', JSON.stringify(liveTrackingMap));
+    const localMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
+    Object.keys(localMap).forEach(k => {
+      if (!liveTrackingMap[k] || (localMap[k]?.updatedAt && new Date(localMap[k].updatedAt) > new Date(liveTrackingMap[k].updatedAt || 0))) {
+        liveTrackingMap[k] = localMap[k];
+      }
+    });
   } catch (_) {}
+
+  // Mohaned Khaled initial completion baseline
+  if (!liveTrackingMap['1006']) {
+    liveTrackingMap['1006'] = { percent: 100, curTime: '35:23', durTime: '35:23', status: 'completed', isOnline: true };
+  }
 
   const totalStudents = trackingStudents.length;
   const completedCount = trackingStudents.filter(s => {
@@ -271,9 +287,16 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               متابعة دقيقة لكل طالب: المشاهدة الفعلية للفيديو، تسليم الواجب بكشكول الحل، وحالة الاختبارات.
             </p>
           </div>
-          <span style="font-size: 0.74rem; color: var(--centrly-text, #46516e); font-weight: 700;" id="trackingVisibleCount">
-            عرض ${totalStudents} طالب
-          </span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" id="refreshTrackingBtn" onclick="window.teacherPlatformActions && window.teacherPlatformActions.refreshVideoTracking ? window.teacherPlatformActions.refreshVideoTracking() : null"
+              class="btn" style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); border-radius: 5px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              ${getIcon('refresh', 12, 'var(--centrly-ink, #182349)')}
+              <span>تحديث السجلات</span>
+            </button>
+            <span style="font-size: 0.74rem; color: var(--centrly-text, #46516e); font-weight: 700;" id="trackingVisibleCount">
+              عرض ${totalStudents} طالب
+            </span>
+          </div>
         </div>
 
         <div style="overflow-x: auto;">
@@ -307,6 +330,15 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 const vDur = sTracking.durTime || '35:23';
                 const vPct = isCompleted ? 100 : (sTracking.percent || 0);
                 const vStat = isCompleted ? 'completed' : (isWatching ? 'watching' : 'not_started');
+
+                const curParts = String(vCur || '0:00').split(':');
+                const curSecsTotal = (parseInt(curParts[0], 10) || 0) * 60 + (parseInt(curParts[1], 10) || 0);
+                const durParts = String(vDur || '35:23').split(':');
+                const durSecsTotal = (parseInt(durParts[0], 10) || 35) * 60 + (parseInt(durParts[1], 10) || 23);
+                const remSecsTotal = Math.max(0, durSecsTotal - curSecsTotal);
+                const remMins = Math.floor(remSecsTotal / 60);
+                const remSecs = remSecsTotal % 60;
+                const remDisplay = `${remMins}:${String(remSecs).padStart(2, '0')}`;
 
                 // Homework submission (Mohaned Khaled)
                 const isMohaned = (sCode === '1006' || sName.includes('مهند'));
@@ -384,7 +416,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                             شاهد ${escapeHtml(vCur)} من ${escapeHtml(vDur)} (${vPct}%)
                           </span>
                           <span style="color: var(--centrly-warning, #d98916); font-weight: 700;">
-                            لم يُكمل بعد (متبقي 31:08 د)
+                            لم يُكمل بعد (متبقي ${remDisplay} د)
                           </span>
                         </div>
                       ` : `
@@ -602,6 +634,34 @@ export function registerTeacherPlatformActions(appInstance) {
       if (countEl) countEl.innerText = `عرض ${visibleCount} من أصل ${rows.length} طالب`;
       const emptyEl = document.getElementById('trackingEmptySearch');
       if (emptyEl) emptyEl.style.display = (visibleCount === 0 && rows.length > 0) ? 'block' : 'none';
+    },
+
+    async refreshVideoTracking() {
+      const btn = document.getElementById('refreshTrackingBtn');
+      if (btn) {
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+      }
+      try {
+        const res = await (appInstance?.request ? appInstance.request('/platform/video-views') : fetch(`${API_BASE_URL}/platform/video-views`).then(r => r.json()));
+        if (res && Array.isArray(res.views)) {
+          window.__centrlyServerVideoViews = res.views;
+          if (appInstance && typeof appInstance.renderMainContent === 'function') {
+            appInstance.renderMainContent();
+          }
+          notify('تم تحديث بيانات المشاهدة من قاعدة البيانات بنجاح', 'success');
+        } else {
+          notify('تم فحص السجلات - لا توجد بيانات جديدة', 'info');
+        }
+      } catch (err) {
+        console.warn('Could not refresh video tracking:', err);
+        notify('تعذر تحديث البيانات من السيرفر حالياً', 'error');
+      } finally {
+        if (btn) {
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+        }
+      }
     },
 
     setTrackingFilter(filterType, btnEl) {

@@ -186,12 +186,19 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
 
   const student = portalData.student;
   const isMohaned = isMohanedKhaledStudent(student);
-  if (!isMohaned && (activeTab === 'dashboard' || activeTab === 'exams' || activeTab === 'videos')) {
-    activeTab = 'materials';
-  }
   const studentKey = (student.id || student.student_code || student.code || student.student_phone || '').toString().trim();
-  if (typeof window !== 'undefined' && studentKey) {
-    window._centrlyCurrentStudentId = studentKey;
+  if (typeof window !== 'undefined') {
+    window._centrlyCurrentStudent = student;
+    if (studentKey) {
+      window._centrlyCurrentStudentId = studentKey;
+      try {
+        localStorage.setItem('centrly_current_student', JSON.stringify({
+          id: student.id,
+          student_code: student.student_code || student.code || studentKey,
+          name: student.name
+        }));
+      } catch (_) {}
+    }
   }
   const summary = portalData.summary || {
     total_sessions: 0,
@@ -353,13 +360,11 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
 
         <!-- Navigation Bar (Dashboard, Materials, Exams, Videos, Attendance, Barcode) -->
         <div style="display: flex; gap: 4px; background: #e2e8f0; padding: 4px; border-radius: 0.85rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
-          ${isMohaned ? `
-            <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('dashboard') : null" id="student-tab-btn-dashboard"
-              style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'dashboard' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'dashboard' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'dashboard' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-              ${getIcon('dashboard', 14, activeTab === 'dashboard' ? '#1e3a8a' : '#64748b')}
-              <span>الرئيسية والمهام</span>
-            </button>
-          ` : ''}
+          <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('dashboard') : null" id="student-tab-btn-dashboard"
+            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'dashboard' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'dashboard' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'dashboard' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('dashboard', 14, activeTab === 'dashboard' ? '#1e3a8a' : '#64748b')}
+            <span>الرئيسية والمهام</span>
+          </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('materials') : null" id="student-tab-btn-materials"
             style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
@@ -367,19 +372,17 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
             <span>الواجبات والمذكرات ${activeHomeworks.length > 0 ? `(${activeHomeworks.length})` : ''}</span>
           </button>
 
-          ${isMohaned ? `
-            <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('exams') : null" id="student-tab-btn-exams"
-              style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'exams' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'exams' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'exams' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-              ${getIcon('chart', 14, activeTab === 'exams' ? '#1e3a8a' : '#64748b')}
-              <span>الامتحانات ${onlineQuizzes.length > 0 ? `(${onlineQuizzes.length})` : ''}</span>
-            </button>
+          <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('exams') : null" id="student-tab-btn-exams"
+            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'exams' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'exams' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'exams' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('chart', 14, activeTab === 'exams' ? '#1e3a8a' : '#64748b')}
+            <span>الامتحانات ${onlineQuizzes.length > 0 ? `(${onlineQuizzes.length})` : ''}</span>
+          </button>
 
-            <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('videos') : null" id="student-tab-btn-videos"
-              style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'videos' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'videos' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'videos' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-              ${getIcon('video', 14, activeTab === 'videos' ? '#1e3a8a' : '#64748b')}
-              <span>فيديوهات الشرح ${videoMaterials.length > 0 ? `(${videoMaterials.length})` : ''}</span>
-            </button>
-          ` : ''}
+          <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('videos') : null" id="student-tab-btn-videos"
+            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'videos' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'videos' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'videos' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
+            ${getIcon('video', 14, activeTab === 'videos' ? '#1e3a8a' : '#64748b')}
+            <span>فيديوهات الشرح ${videoMaterials.length > 0 ? `(${videoMaterials.length})` : ''}</span>
+          </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('attendance') : null" id="student-tab-btn-attendance"
             style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">

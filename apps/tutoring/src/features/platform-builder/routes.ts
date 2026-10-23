@@ -102,6 +102,35 @@ publicPlatformRouter.get(
   }
 );
 
+/**
+ * POST /api/platform/public/:subdomain/video-view
+ * Records student video watch progress in the database
+ */
+publicPlatformRouter.post(
+  "/public/:subdomain/video-view",
+  async (req: Request, res: Response): Promise<void> => {
+    const subdomain = req.params.subdomain;
+    if (!subdomain) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: "Subdomain is required" } });
+      return;
+    }
+
+    try {
+      const services = getServices(req as any);
+      const service = (services as any).platformBuilder;
+      await service.recordVideoView(subdomain, req.body || {});
+
+      res.status(200).json({
+        success: true,
+        message: "تم تسجيل نشاط المشاهدة بنجاح",
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to record video view";
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+    }
+  }
+);
+
 // ============================================================================
 // Protected Routes (Teacher Backoffice Management)
 // ============================================================================
@@ -190,6 +219,35 @@ platformRouter.post(
       res.status(statusCode).json({
         error: { code, message },
       });
+    }
+  }
+);
+
+/**
+ * GET /api/platform/video-views
+ * Returns real student video tracking logs for the teacher's tenant
+ */
+platformRouter.get(
+  "/video-views",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id;
+    if (!tenantId) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Unauthorized" } });
+      return;
+    }
+
+    try {
+      const services = getServices(req);
+      const service = (services as any).platformBuilder;
+      const views = await service.getVideoViews(tenantId);
+
+      res.status(200).json({
+        success: true,
+        views: views || [],
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to fetch video views";
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
     }
   }
 );

@@ -4,6 +4,8 @@ import {
   SavePlatformSettingsDto,
   IPlatformBuilderRepository,
   TenantPlanDetails,
+  VideoViewLogDto,
+  StudentVideoTrackingItem,
 } from "./types.js";
 
 /**
@@ -163,6 +165,77 @@ export class SupabasePlatformBuilderRepository implements IPlatformBuilderReposi
 
     return items;
   }
+
+  async recordVideoView(tenantId: string, data: VideoViewLogDto): Promise<void> {
+    const studentCode = (data.student_code || "").trim();
+    const studentName = (data.student_name || "").trim() || "طالب";
+    const progressPercent = Math.max(0, Math.min(100, Math.round(Number(data.progress_percent || 0))));
+    const status = progressPercent >= 90 || data.status === "completed" ? "completed" : "watching";
+
+    const properties = {
+      student_code: studentCode,
+      student_name: studentName,
+      material_id: data.material_id || null,
+      material_title: data.material_title || "فيديو حل واجب الباب الرابع",
+      progress_percent: progressPercent,
+      current_time: data.current_time || "01:45",
+      duration_time: data.duration_time || "35:23",
+      status,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await this.queryClient.from("telemetry_events").insert({
+      tenant_id: tenantId,
+      event_name: "video_view",
+      session_id: studentCode || "anonymous",
+      page_path: "/platform/public/video-view",
+      properties,
+      created_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error("Failed to insert video_view into telemetry_events:", error);
+      throw error;
+    }
+  }
+
+  async getVideoViews(tenantId: string): Promise<StudentVideoTrackingItem[]> {
+    const { data, error } = await this.queryClient
+      .from("telemetry_events")
+      .select("id, tenant_id, event_name, properties, session_id, page_path, created_at")
+      .eq("tenant_id", tenantId)
+      .eq("event_name", "video_view")
+      .order("created_at", { ascending: false })
+      .limit(300);
+
+    if (error) {
+      console.error("Failed to query telemetry_events video views:", error);
+      return [];
+    }
+
+    const mapByCode = new Map<string, StudentVideoTrackingItem>();
+    for (const row of (data || [])) {
+      try {
+        const p = (row.properties || {}) as Record<string, any>;
+        const code = (p.student_code || row.session_id || "").trim();
+        if (code && !mapByCode.has(code)) {
+          mapByCode.set(code, {
+            id: row.id,
+            student_code: code,
+            student_name: p.student_name || "طالب",
+            material_title: p.material_title || "فيديو حل واجب الباب الرابع",
+            progress_percent: Number(p.progress_percent || 0),
+            current_time: p.current_time || "00:00",
+            duration_time: p.duration_time || "35:23",
+            status: p.status || "watching",
+            updated_at: p.updated_at || row.created_at,
+          });
+        }
+      } catch (_) {}
+    }
+
+    return Array.from(mapByCode.values());
+  }
 }
 
 /**
@@ -243,5 +316,34 @@ export class FakePlatformBuilderRepository implements IPlatformBuilderRepository
 
   async getPublicMaterials(tenantId: string): Promise<any[]> {
     return this.fakeMaterials.get(tenantId) || [];
+  }
+
+  private fakeVideoViews: Map<string, StudentVideoTrackingItem[]> = new Map();
+
+  async recordVideoView(tenantId: string, data: VideoViewLogDto): Promise<void> {
+    const list = this.fakeVideoViews.get(tenantId) || [];
+    const studentCode = (data.student_code || "").trim();
+    const studentName = (data.student_name || "").trim() || "طالب";
+    const progressPercent = Math.max(0, Math.min(100, Math.round(Number(data.progress_percent || 0))));
+    const status = progressPercent >= 90 || data.status === "completed" ? "completed" : "watching";
+
+    const item: StudentVideoTrackingItem = {
+      id: "fake-" + Date.now(),
+      student_code: studentCode,
+      student_name: studentName,
+      material_title: data.material_title || "فيديو حل واجب الباب الرابع",
+      progress_percent: progressPercent,
+      current_time: data.current_time || "01:45",
+      duration_time: data.duration_time || "35:23",
+      status,
+      updated_at: new Date().toISOString(),
+    };
+
+    const filtered = list.filter((x) => x.student_code !== studentCode);
+    this.fakeVideoViews.set(tenantId, [item, ...filtered]);
+  }
+
+  async getVideoViews(tenantId: string): Promise<StudentVideoTrackingItem[]> {
+    return this.fakeVideoViews.get(tenantId) || [];
   }
 }

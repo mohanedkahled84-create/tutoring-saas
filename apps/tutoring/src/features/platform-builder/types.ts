@@ -43,6 +43,32 @@ export interface TenantPlanDetails {
   is_active: boolean;
 }
 
+export interface VideoViewLogDto {
+  student_code?: string | null;
+  student_name?: string | null;
+  student_id?: string | null;
+  material_id?: string | null;
+  material_title?: string | null;
+  progress_percent?: number | null;
+  watched_seconds?: number | null;
+  duration_seconds?: number | null;
+  current_time?: string | null;
+  duration_time?: string | null;
+  status?: "opened" | "watching" | "completed" | string;
+}
+
+export interface StudentVideoTrackingItem {
+  id: string;
+  student_code: string;
+  student_name: string;
+  material_title: string;
+  progress_percent: number;
+  current_time: string;
+  duration_time: string;
+  status: string;
+  updated_at: string;
+}
+
 export interface IPlatformBuilderRepository {
   getByTenantId(tenantId: string): Promise<TenantPlatformSettings | null>;
   getBySubdomain(subdomain: string): Promise<TenantPlatformSettings | null>;
@@ -50,4 +76,6 @@ export interface IPlatformBuilderRepository {
   upsert(tenantId: string, settings: SavePlatformSettingsDto): Promise<TenantPlatformSettings>;
   getTenantPlan(tenantId: string): Promise<TenantPlanDetails>;
   getPublicMaterials(tenantId: string): Promise<any[]>;
+  recordVideoView(tenantId: string, data: VideoViewLogDto): Promise<void>;
+  getVideoViews(tenantId: string): Promise<StudentVideoTrackingItem[]>;
 }

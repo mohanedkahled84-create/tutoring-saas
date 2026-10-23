@@ -4,6 +4,8 @@ import {
   SubdomainAvailabilityResult,
   IPlatformBuilderRepository,
   TenantPlanDetails,
+  VideoViewLogDto,
+  StudentVideoTrackingItem,
 } from "./types.js";
 
 const RESERVED_SUBDOMAINS = new Set([
@@ -207,5 +209,24 @@ export class PlatformBuilderService {
     };
 
     return await this.repository.upsert(tenantId, payload);
+  }
+
+  /**
+   * Records a student video watching event into the database
+   */
+  async recordVideoView(subdomain: string, data: VideoViewLogDto): Promise<void> {
+    const clean = (subdomain || "").trim().toLowerCase();
+    const settings = await this.repository.getBySubdomain(clean);
+    if (!settings || !settings.tenant_id) {
+      throw new Error("المنصة غير موجودة أو غير مفعلة");
+    }
+    await this.repository.recordVideoView(settings.tenant_id, data);
+  }
+
+  /**
+   * Retrieves real student video watching tracking records for teacher backoffice
+   */
+  async getVideoViews(tenantId: string): Promise<StudentVideoTrackingItem[]> {
+    return await this.repository.getVideoViews(tenantId);
   }
 }

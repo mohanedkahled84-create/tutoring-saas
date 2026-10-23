@@ -40,8 +40,8 @@ import { renderAdminOutreachView } from './components/AdminOutreachView.js?v=1.0
 import { renderTeacherSettingsView, registerTeacherSettingsActions } from './components/TeacherSettingsView.js?v=4.9.9';
 import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=4.7.6';
 import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=1.0.0';
-import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.1.0';
-import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.3.0';
+import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.2.0';
+import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.4.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.9.21';
@@ -1900,7 +1900,13 @@ class CentrlyApp {
           break;
         }
         case 'platform-builder': {
-          let res = await request('/platform/settings').catch(() => null);
+          let [res, viewsRes] = await Promise.all([
+            request('/platform/settings').catch(() => null),
+            request('/platform/video-views').catch(() => null),
+          ]);
+          if (viewsRes && Array.isArray(viewsRes.views)) {
+            window.__centrlyServerVideoViews = viewsRes.views;
+          }
           const tenantKey = this.user?.tenant_id || 'active';
           let localSettings = null;
           try {
@@ -1912,6 +1918,7 @@ class CentrlyApp {
           this.platformBuilderState = {
             settings: finalSettings,
             plan: res?.plan || { is_pro: true },
+            views: viewsRes?.views || [],
           };
           this.saveCache('platformBuilderState', this.platformBuilderState);
           this.renderMainContent();

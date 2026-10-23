@@ -178,3 +178,69 @@ test("PlatformBuilderService - getPublicMaterials returns teacher study material
   assert.equal(materials[0].title, "محاضرة 1");
   assert.equal(materials[1].is_homework, true);
 });
+
+test("PlatformBuilderService - Real video view logging and retrieval", async () => {
+  const repo = new FakePlatformBuilderRepository();
+  const service = new PlatformBuilderService(repo);
+
+  const tenantId = "tenant-video-tracker";
+  await repo.upsert(tenantId, {
+    subdomain: "mr-tracker",
+    display_title: "منصة المتابعة",
+    subject_title: "فيزياء",
+  });
+
+  // Student 1005 (Ahmed Mahmoud) watches 12%
+  await service.recordVideoView("mr-tracker", {
+    student_code: "1005",
+    student_name: "أحمد محمود",
+    material_title: "فيديو حل واجب الباب الرابع",
+    progress_percent: 12,
+    current_time: "04:15",
+    duration_time: "35:23",
+    status: "watching",
+  });
+
+  // Student 1006 (Mohaned Khaled) watches 100%
+  await service.recordVideoView("mr-tracker", {
+    student_code: "1006",
+    student_name: "مهند خالد",
+    material_title: "فيديو حل واجب الباب الرابع",
+    progress_percent: 100,
+    current_time: "35:23",
+    duration_time: "35:23",
+    status: "completed",
+  });
+
+  // Retrieve views for tenant
+  const views = await service.getVideoViews(tenantId);
+  assert.equal(views.length, 2);
+
+  const mohaned = views.find((v) => v.student_code === "1006");
+  assert.ok(mohaned);
+  assert.equal(mohaned.student_name, "مهند خالد");
+  assert.equal(mohaned.progress_percent, 100);
+  assert.equal(mohaned.status, "completed");
+
+  const ahmed = views.find((v) => v.student_code === "1005");
+  assert.ok(ahmed);
+  assert.equal(ahmed.student_name, "أحمد محمود");
+  assert.equal(ahmed.progress_percent, 12);
+  assert.equal(ahmed.status, "watching");
+
+  // Re-watching updates progress accurately
+  await service.recordVideoView("mr-tracker", {
+    student_code: "1005",
+    student_name: "أحمد محمود",
+    material_title: "فيديو حل واجب الباب الرابع",
+    progress_percent: 65,
+    current_time: "22:50",
+    duration_time: "35:23",
+    status: "watching",
+  });
+
+  const updatedViews = await service.getVideoViews(tenantId);
+  assert.equal(updatedViews.length, 2);
+  const ahmedUpdated = updatedViews.find((v) => v.student_code === "1005");
+  assert.equal(ahmedUpdated.progress_percent, 65);
+});
