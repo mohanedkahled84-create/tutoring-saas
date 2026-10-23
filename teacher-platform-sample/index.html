@@ -968,7 +968,7 @@
             <p id="sidebarStudentCode">كود: 1001 • سنتر النخبة</p>
           </div>
         </div>
-        <a href="login.html" class="logout-btn" title="تسجيل الخروج">خروج</a>
+        <a href="javascript:void(0)" onclick="logoutStudent()" class="logout-btn" title="تسجيل الخروج">خروج</a>
       </div>
 
     </aside>
@@ -1410,9 +1410,36 @@
   </div>
 
   <script>
-    // تطبيق الثيم المحفوظ من صفحة الدخول
-    const activeTheme = localStorage.getItem('portal_theme') || 'navy';
-    document.body.className = 'theme-' + activeTheme;
+    // تطبيق إعدادات وثيم المنصة المعتمدة من المعلم
+    try {
+      const cachedSettings = localStorage.getItem('centrly_platform_settings');
+      if (cachedSettings) {
+        const s = JSON.parse(cachedSettings);
+        if (s.theme_preset) {
+          document.body.className = 'theme-' + s.theme_preset;
+          localStorage.setItem('portal_theme', s.theme_preset);
+        }
+        if (s.display_title) {
+          document.title = `${s.display_title} — بوابة الطالب`;
+          const titleEl = document.querySelector('.teacher-titles h2');
+          if (titleEl) titleEl.innerText = s.display_title;
+        }
+        if (s.subdomain) {
+          const domainEl = document.querySelector('.teacher-titles .domain-tag');
+          if (domainEl) domainEl.innerText = `${s.subdomain}.centrly.com`;
+        }
+        if (s.cutout_avatar_url) {
+          const avatarImg = document.querySelector('.teacher-avatar-wrap img');
+          if (avatarImg) avatarImg.src = s.cutout_avatar_url;
+        }
+      } else {
+        const activeTheme = localStorage.getItem('portal_theme') || 'navy';
+        document.body.className = 'theme-' + activeTheme;
+      }
+    } catch (_) {
+      const activeTheme = localStorage.getItem('portal_theme') || 'navy';
+      document.body.className = 'theme-' + activeTheme;
+    }
 
     // استرجاع بيانات الطالب المسجل
     try {
@@ -1424,6 +1451,17 @@
         if (codeEl) codeEl.innerText = 'كود: ' + (student.code || '1001') + ' • سنتر النخبة';
       }
     } catch (e) {}
+
+    // تسجيل خروج الطالب
+    function logoutStudent() {
+      localStorage.removeItem('portal_student');
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/teacher-platform-sample/')) {
+        window.location.href = '/teacher-platform-sample/login.html' + (window.location.search || '');
+      } else {
+        window.location.href = '/mr-omar' + (window.location.search || '');
+      }
+    }
 
     // التنقل بين أقسام السايد بار
     const pageMeta = {

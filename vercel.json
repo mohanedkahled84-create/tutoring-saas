@@ -154,7 +154,23 @@
       "destination": "/teacher-platform-sample/login.html"
     },
     {
+      "source": "/mr-omar/",
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
+      "source": "/mr-omar/login",
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
       "source": "/mr-omar/dashboard",
+      "destination": "/teacher-platform-sample/index.html"
+    },
+    {
+      "source": "/mr-omar/dashboard/",
+      "destination": "/teacher-platform-sample/index.html"
+    },
+    {
+      "source": "/mr-omar/dashboard/:path*",
       "destination": "/teacher-platform-sample/index.html"
     },
     {

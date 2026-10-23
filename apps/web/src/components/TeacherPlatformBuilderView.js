@@ -114,8 +114,14 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               </button>
 
               <a href="${escapeHtml(internalPlatformPath)}" target="_blank" rel="noopener noreferrer" 
+                style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #ffffff; text-decoration: none; padding: 9px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                <span>صفحة دخول الطلاب</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+              </a>
+
+              <a href="/mr-omar/dashboard" target="_blank" rel="noopener noreferrer" 
                 style="background: #ffffff; color: #0b132b; text-decoration: none; padding: 9px 18px; border-radius: 8px; font-size: 0.82rem; font-weight: 900; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(255,255,255,0.2); transition: all 0.2s ease;">
-                <span>فتح المنصة الآن</span>
+                <span>معاينة منصة الطالب (السايد بار)</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
               </a>
             </div>
@@ -380,10 +386,17 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               </div>
               
               ${isPublished ? `
-                <a href="${escapeHtml(internalPlatformPath)}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #2563eb; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                  <span>فتح المنصة الحقيقية</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
-                </a>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <a href="${escapeHtml(internalPlatformPath)}" target="_blank" rel="noopener noreferrer" style="font-size: 0.74rem; color: #64748b; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 3px;">
+                    <span>صفحة الدخول</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                  </a>
+                  <span style="color: #cbd5e1;">•</span>
+                  <a href="/mr-omar/dashboard" target="_blank" rel="noopener noreferrer" style="font-size: 0.74rem; color: #2563eb; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                    <span>بوابة الطالب (السايد بار)</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                  </a>
+                </div>
               ` : `
                 <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -506,7 +519,9 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                   </div>
 
                   <!-- الزر الأبيض البارز الكبير الخاص بالمنصة -->
-                  <button type="button" id="previewSubmitBtn" style="width: 100%; height: 40px; background: #ffffff; color: ${activeThemeMeta.color}; border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: default; box-shadow: 0 4px 14px rgba(0,0,0,0.2); transition: color 0.4s ease;">
+                  <button type="button" id="previewSubmitBtn" 
+                    ${isPublished ? `onclick="window.open('/mr-omar/dashboard', '_blank')"` : `onclick="window.teacherPlatformActions.showToast('عاين شكل المنصة مباشرة أو اضغط حفظ ونشر بالأسفل لتفعيلها', 'info')"`}
+                    style="width: 100%; height: 40px; background: #ffffff; color: ${activeThemeMeta.color}; border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.2); transition: color 0.4s ease;">
                     <span>دخول إلى منصتي</span>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                   </button>

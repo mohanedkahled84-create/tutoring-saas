@@ -677,17 +677,24 @@
 
     function submitForm(e) {
       e.preventDefault();
-      // حفظ بيانات الطالب مهند خالد
+      
+      const phoneInput = document.getElementById('loginStudentPhone')?.value?.trim() || '01123671177';
       const studentData = {
         name: 'مهند خالد',
         code: '1001',
-        phone: '01123671177',
+        phone: phoneInput,
         center: 'سنتر النخبة',
         group: 'مجموعة الأحد والثلاثاء'
       };
       localStorage.setItem('portal_student', JSON.stringify(studentData));
-      // الدخول مباشرة لمنصة الطالب ذات السايد بار
-      window.location.href = 'index.html' + (window.location.search || '');
+
+      // الدخول مباشرة لمنصة الطالب ذات السايد بار والمحاضرات والامتحانات
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/teacher-platform-sample/')) {
+        window.location.href = '/teacher-platform-sample/index.html' + (window.location.search || '');
+      } else {
+        window.location.href = '/mr-omar/dashboard' + (window.location.search || '');
+      }
     }
   </script>
 </body>
