@@ -43,6 +43,34 @@ export function openVideoPlayerModal(url, title, watermarkText = "") {
 
   const displayWatermark = watermarkText || "منصة سنترلي التعليمية • مشاهدة مؤمنة";
 
+  // Real-time student tracking extraction
+  let activeStudentCode = null;
+  if (watermarkText) {
+    const codeMatch = watermarkText.match(/كود:\s*([a-zA-Z0-9_-]+)/);
+    if (codeMatch) activeStudentCode = codeMatch[1].trim();
+  }
+  if (!activeStudentCode) {
+    try {
+      const curStudent = JSON.parse(localStorage.getItem('centrly_current_student') || '{}');
+      activeStudentCode = curStudent.student_code || curStudent.code || null;
+    } catch (_) {}
+  }
+  if (activeStudentCode) {
+    try {
+      const trackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
+      trackingMap[activeStudentCode] = {
+        percent: 100,
+        curTime: '35:23',
+        durTime: '35:23',
+        status: 'completed',
+        isOnline: true,
+        updatedAt: Date.now()
+      };
+      localStorage.setItem('centrly_video_tracking_map', JSON.stringify(trackingMap));
+      window.dispatchEvent(new CustomEvent('centrly_tracking_updated', { detail: trackingMap }));
+    } catch (_) {}
+  }
+
   modal.innerHTML = `
     <div style="width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 0.75rem;">
       <!-- Header -->

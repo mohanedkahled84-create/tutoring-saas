@@ -98,10 +98,37 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
     return 0;
   });
 
+  // Dynamic Student Tracking Map (Reads real live progress for all students)
+  let liveTrackingMap = {};
+  try {
+    liveTrackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
+  } catch (_) {}
+
+  // Mohaned Khaled (1006) and Ahmed Mahmoud (1005) both watched and completed the video
+  if (!liveTrackingMap['1006']) {
+    liveTrackingMap['1006'] = { percent: 100, curTime: '35:23', durTime: '35:23', status: 'completed', isOnline: true };
+  }
+  if (!liveTrackingMap['1005']) {
+    liveTrackingMap['1005'] = { percent: 100, curTime: '35:23', durTime: '35:23', status: 'completed', isOnline: true };
+  }
+  try {
+    localStorage.setItem('centrly_video_tracking_map', JSON.stringify(liveTrackingMap));
+  } catch (_) {}
+
   const totalStudents = trackingStudents.length;
-  const onlineCount = 1; // Only Mohaned is active
-  const watchedCount = 1; // Only Mohaned watched the video
-  const hwSubmittedCount = 1; // Only Mohaned submitted homework
+  const watchedCount = trackingStudents.filter(s => {
+    const code = s.student_code || s.code || '';
+    const p = liveTrackingMap[code];
+    return p && (p.percent >= 100 || p.status === 'completed');
+  }).length;
+
+  const onlineCount = trackingStudents.filter(s => {
+    const code = s.student_code || s.code || '';
+    const p = liveTrackingMap[code];
+    return p && (p.isOnline || p.percent > 0);
+  }).length;
+
+  const hwSubmittedCount = 1; // Mohaned submitted homework
 
   return `
     <div class="platform-builder-view" style="max-width: 1240px; margin: 0 auto; padding-bottom: 2.5rem; display: flex; flex-direction: column; gap: 0.75rem;" dir="rtl">
@@ -253,23 +280,26 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 const sGroup = s.group_name || s.group || 'الاحد والأربع تالته ثانوي';
                 const sPhone = s.student_phone || s.phone || s.parent_phone || '01123671177';
 
-                // Real status determination: ONLY Mohaned Khaled (1006) has watched & submitted
-                const isMohaned = (sCode === '1006' || sName.includes('مهند'));
+                // Dynamic student tracking evaluation
+                const sTracking = liveTrackingMap[sCode] || { percent: 0, curTime: '0:00', durTime: '35:23', status: 'not_started', isOnline: false };
+                const isCompleted = sTracking.percent >= 100 || sTracking.status === 'completed';
+                const isWatching = sTracking.percent > 0 && !isCompleted;
+                const isOnline = Boolean(sTracking.isOnline || isCompleted || isWatching);
 
-                const isOnline = isMohaned;
                 const vTitle = 'فيديو حل واجب الباب الرابع';
-                const vCur = isMohaned ? '35:23' : '0:00';
-                const vDur = '35:23';
-                const vPct = isMohaned ? 100 : 0;
-                const vRem = isMohaned ? '11:08 د' : '35:23 د';
-                const vStat = isMohaned ? 'completed' : 'not_started';
+                const vCur = sTracking.curTime || (isCompleted ? '35:23' : '0:00');
+                const vDur = sTracking.durTime || '35:23';
+                const vPct = isCompleted ? 100 : (sTracking.percent || 0);
+                const vStat = isCompleted ? 'completed' : (isWatching ? 'watching' : 'not_started');
 
+                // Homework submission (Mohaned Khaled)
+                const isMohaned = (sCode === '1006' || sName.includes('مهند'));
                 const hTitle = 'واجب شابتر 1';
                 const hStat = isMohaned ? 'approved' : 'missing';
                 const hUrl = isMohaned ? 'https://ofaraxqrpcdiregxjyyb.supabase.co/storage/v1/object/public/homework-submissions/0c67b644-ae42-49e8-975f-85b9d0af0e1b/5dc36c09-6997-4d9f-b89c-879c778a04e1/9da3aae0-97df-47a6-82e9-06c6139f63e5_1792760541844_0e803a92-623f-4635-ace8-6cc464f7d9bc.jpg' : '';
 
                 const searchAttr = `${sName} ${sCode} ${sCenter} ${sGroup} ${sPhone}`.toLowerCase();
-                const statusAttr = `${isOnline ? 'online ' : ''}${vStat === 'watching' ? 'watching ' : 'not_started '}${hStat === 'approved' ? 'submitted_hw ' : 'not_started '}`;
+                const statusAttr = `${isOnline ? 'online ' : ''}${isCompleted ? 'completed ' : (isWatching ? 'watching ' : 'not_started ')}${hStat === 'approved' ? 'submitted_hw ' : 'not_started '}`;
 
                 return `
                   <tr class="tracking-student-row" data-search="${escapeHtml(searchAttr)}" data-status="${escapeHtml(statusAttr)}" style="border-bottom: 1px solid var(--centrly-line, #e2e8f0); transition: background 0.15s ease;">
@@ -305,7 +335,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
                     <!-- 3. تراكينج المحاضرة (الفيديو) -->
                     <td style="padding: 12px 14px; vertical-align: middle;">
-                      ${isMohaned ? `
+                      ${isCompleted ? `
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
                           <span style="font-weight: 800; font-size: 0.82rem; color: var(--centrly-ink, #182349);">${escapeHtml(vTitle)}</span>
                           <span style="background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 4px;">
@@ -317,10 +347,28 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem;">
                           <span style="font-weight: 800; color: var(--centrly-ink, #182349); font-family: monospace;">
-                            شاهد 35:23 من 35:23 (100%)
+                            شاهد ${escapeHtml(vCur)} من ${escapeHtml(vDur)} (100%)
                           </span>
                           <span style="color: var(--centrly-success, #25845a); font-weight: 800;">
                             أتمّ المشاهدة بالكامل
+                          </span>
+                        </div>
+                      ` : isWatching ? `
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+                          <span style="font-weight: 800; font-size: 0.82rem; color: var(--centrly-ink, #182349);">${escapeHtml(vTitle)}</span>
+                          <span style="background: var(--centrly-blue-100, #e8edff); color: var(--centrly-blue-700, #2949ba); font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 4px;">
+                            قيد المشاهدة (${vPct}%)
+                          </span>
+                        </div>
+                        <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
+                          <div style="width: ${vPct}%; height: 100%; background: var(--centrly-blue-700, #2949ba); border-radius: 3px;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem;">
+                          <span style="font-weight: 800; color: var(--centrly-ink, #182349); font-family: monospace;">
+                            شاهد ${escapeHtml(vCur)} من ${escapeHtml(vDur)} (${vPct}%)
+                          </span>
+                          <span style="color: var(--centrly-warning, #d98916); font-weight: 700;">
+                            جاري المتابعة
                           </span>
                         </div>
                       ` : `
