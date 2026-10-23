@@ -249,13 +249,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
       </div>
 
       <!-- ======================================================== -->
-      <!-- 3. جدول التراكينج الحقيقي للطلاب (Authentic Live Tracking) -->
+      <!-- 3. جدول متابعة الطلاب الفعلي (Authentic Live Tracking) -->
       <!-- ======================================================== -->
       <div class="card" style="margin: 0; padding: 0; background: var(--centrly-white, #ffffff); border: 1px solid var(--centrly-line, #e2e8f0); border-radius: 0.75rem; overflow: hidden; box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.03));">
         <div style="padding: 0.75rem 1.15rem; border-bottom: 1px solid var(--centrly-line, #e2e8f0); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <div>
             <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--centrly-ink, #182349);">
-              سجل تفاعل وتراكينج الطلاب الفعلي بقاعدة البيانات
+              سجل تفاعل ومتابعة الطلاب الفعلي بقاعدة البيانات
             </h3>
             <p style="font-size: 0.75rem; color: var(--centrly-text, #46516e); margin: 2px 0 0 0;">
               متابعة دقيقة لكل طالب: المشاهدة الفعلية للفيديو، تسليم الواجب بكشكول الحل، وحالة الاختبارات.
@@ -279,8 +279,8 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               <tr style="background: var(--centrly-surface, #f8f7f1); border-bottom: 1px solid var(--centrly-line, #e2e8f0); color: #475569; font-weight: 800; font-size: 0.76rem;">
                 <th style="padding: 10px 16px;">الطالب والكود</th>
                 <th style="padding: 10px 14px;">حالة التواجد</th>
-                <th style="padding: 10px 14px; min-width: 240px;">تراكينج المحاضرة (فيديو الشرح)</th>
-                <th style="padding: 10px 14px;">تراكينج الواجب</th>
+                <th style="padding: 10px 14px; min-width: 240px;">المحاضرة (فيديو الشرح)</th>
+                <th style="padding: 10px 14px;">تسليم الواجب</th>
                 <th style="padding: 10px 14px;">الامتحانات الإلكترونية</th>
                 <th style="padding: 10px 16px; text-align: center;">إجراء مباشر</th>
               </tr>
@@ -339,7 +339,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                       `}
                     </td>
 
-                    <!-- 3. تراكينج المحاضرة (فيديو الشرح) -->
+                    <!-- 3. المحاضرة (فيديو الشرح) -->
                     <td style="padding: 12px 14px; vertical-align: middle;">
                       ${hasWatched ? `
                         <div style="display: inline-flex; align-items: center; gap: 5px; background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">
@@ -360,7 +360,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                       `}
                     </td>
 
-                    <!-- 4. تراكينج الواجب -->
+                    <!-- 4. تسليم الواجب -->
                     <td style="padding: 12px 14px; vertical-align: middle;">
                       <div style="font-weight: 800; font-size: 0.8rem; color: var(--centrly-ink, #182349); margin-bottom: 2px;">
                         ${escapeHtml(hTitle)}

@@ -90,17 +90,22 @@ export function renderStudentStudyMaterialCard(m, student = {}, homeworkMaterial
           </div>
         </div>
 
-        <div>
+        <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+          <button type="button" onclick="window.centrlyPlayVideoWithWatermark ? window.centrlyPlayVideoWithWatermark('${escapeHtml(resolvedMatUrl)}', '${escapeHtml(m.title)}', '${escapeHtml(studentWatermark)}') : window.open('${escapeHtml(resolvedMatUrl)}', '_blank')"
+            style="display: inline-flex; align-items: center; gap: 0.35rem; background: #2563eb; color: #ffffff; padding: 0.45rem 0.85rem; border-radius: 0.5rem; border: none; font-size: 0.8rem; font-weight: 800; cursor: pointer; box-shadow: 0 1px 3px rgba(37,99,235,0.25);">
+            ${getIcon('video', 13, '#ffffff')}
+            <span>مشاهدة الفيديو</span>
+          </button>
           ${isSubmittedPending ? `
-            <span style="display: inline-flex; align-items: center; gap: 0.35rem; background: #fef3c7; color: #b45309; padding: 0.5rem 0.9rem; border-radius: 0.5rem; font-size: 0.82rem; font-weight: 800; border: 1px solid #fde68a;">
-              ${getIcon('clock', 14, '#b45309')}
-              <span>قيد اعتماد المعلم</span>
+            <span style="display: inline-flex; align-items: center; gap: 0.35rem; background: #fef3c7; color: #b45309; padding: 0.45rem 0.75rem; border-radius: 0.5rem; font-size: 0.76rem; font-weight: 800; border: 1px solid #fde68a;">
+              ${getIcon('clock', 13, '#b45309')}
+              <span>الواجب قيد الاعتماد</span>
             </span>
           ` : `
             <button type="button" onclick="window.scrollToHomework && window.scrollToHomework('${escapeHtml(m.pages || '')}')"
-              style="display: inline-flex; align-items: center; gap: 0.35rem; background: #f59e0b; color: #ffffff; padding: 0.5rem 0.9rem; border-radius: 0.5rem; border: none; font-size: 0.82rem; font-weight: 800; cursor: pointer; box-shadow: 0 2px 4px rgba(245,158,11,0.25);">
-              ${getIcon('homework', 14, '#ffffff')}
-              <span>تسليم الواجب المطلوب لفتح الفيديو</span>
+              style="display: inline-flex; align-items: center; gap: 0.35rem; background: #f59e0b; color: #ffffff; padding: 0.45rem 0.75rem; border-radius: 0.5rem; border: none; font-size: 0.76rem; font-weight: 800; cursor: pointer;">
+              ${getIcon('homework', 13, '#ffffff')}
+              <span>تسليم الواجب</span>
             </button>
           `}
         </div>

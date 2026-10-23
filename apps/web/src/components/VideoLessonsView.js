@@ -95,12 +95,22 @@ export function openVideoPlayerModal(url, title, watermarkText = "") {
 
     // B. Direct Server API call to /api/video-tracking (Vercel Serverless Function -> Supabase)
     try {
-      fetch('/api/video-tracking', {
+      const liveEndpoint = 'https://centerly-eg.com/api/video-tracking';
+      fetch(liveEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         keepalive: true
       }).catch(() => {});
+
+      if (typeof window !== 'undefined' && window.location.origin.startsWith('http') && !window.location.origin.includes('centerly-eg.com')) {
+        fetch('/api/video-tracking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true
+        }).catch(() => {});
+      }
     } catch (_) {}
 
     // C. Backup direct insert to Supabase whatsapp_inbox

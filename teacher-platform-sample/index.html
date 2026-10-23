@@ -1712,10 +1712,68 @@
 
       document.getElementById('videoModal').classList.add('active');
 
+      // توثيق المشاهدة الفورية في قاعدة البيانات والسيرفر
+      const studentCode = String(currentStudent.code || currentStudent.student_code || '1006').trim();
+      const studentName = currentStudent.name || 'طالب';
+      const payload = {
+        student_code: studentCode,
+        student_name: studentName,
+        material_title: title || 'فيديو حل واجب الباب الرابع',
+        status: 'watched',
+        watched_at: new Date().toISOString()
+      };
+
+      // A. التحديث المحلي الفوري لجميع التابات
+      try {
+        const trackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
+        trackingMap[studentCode] = {
+          status: 'watched',
+          studentName: studentName,
+          updatedAt: payload.watched_at
+        };
+        localStorage.setItem('centrly_video_tracking_map', JSON.stringify(trackingMap));
+        window.dispatchEvent(new CustomEvent('centrly_tracking_updated', { detail: trackingMap }));
+      } catch (_) {}
+
+      // B. إرسال إلى سيرفر المنصة وسيرفر Vercel
+      try {
+        fetch('https://centerly-eg.com/api/video-tracking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => {});
+        if (typeof window !== 'undefined' && window.location.origin.startsWith('http')) {
+          fetch('/api/video-tracking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).catch(() => {});
+        }
+      } catch (_) {}
+
+      // C. إرسال مباشر لقاعدة بيانات Supabase
+      try {
+        fetch('https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/whatsapp_inbox', {
+          method: 'POST',
+          headers: {
+            'apikey': 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
+            'Authorization': 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            phone: `VIDEO_TRACK_${studentCode}`,
+            student_name: studentName,
+            message_body: title || 'فيديو حل واجب الباب الرابع',
+            direction: 'inbound',
+            status: 'watched'
+          })
+        }).catch(() => {});
+      } catch (_) {}
+
       // تشغيل تحريك العلامة المائية العائمة لمنع التصوير (كود الطالب شبه شفاف)
       const wm = document.getElementById('videoFloatingWatermark');
       if (wm) {
-        const studentCode = currentStudent.code || currentStudent.student_code || '1006';
         wm.innerText = `كود: ${studentCode}`;
         wm.style.bottom = 'auto';
         wm.style.right = 'auto';
