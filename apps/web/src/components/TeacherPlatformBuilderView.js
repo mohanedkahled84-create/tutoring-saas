@@ -56,9 +56,10 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   const themePreset = settings.theme_preset || "navy";
   const cutoutAvatarUrl = settings.cutout_avatar_url || "";
 
-  // Official live URL
+  // Official live URL (Direct universal URL that works for 100% of students without DNS delay)
   const officialSubdomain = subdomain || (isOmar ? 'mr-omar' : 'yourname');
-  const livePlatformUrl = `https://${officialSubdomain}.centerly-eg.com`;
+  const livePlatformUrl = `https://centerly-eg.com/${officialSubdomain}`;
+  const customSubdomainUrl = `https://${officialSubdomain}.centerly-eg.com`;
   const internalPlatformPath = `/${officialSubdomain}`;
 
   // Theme metadata
