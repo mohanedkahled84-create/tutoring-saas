@@ -1265,6 +1265,15 @@
             <div class="kpi-value" id="kpiHomeworkVal">0</div>
             <div class="kpi-note" id="kpiHomeworkNote">واجب دراسي مسجل بالداتابيز</div>
           </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">متوسط نتائج الكويزات</span>
+              <span class="kpi-badge badge-success" id="kpiQuizAvgBadge">معتمد</span>
+            </div>
+            <div class="kpi-value" id="kpiQuizAvgVal">—</div>
+            <div class="kpi-note" id="kpiQuizAvgNote">نتائج الامتحانات الدورية المرصودة</div>
+          </div>
         </div>
 
         <!-- صندوق المهام العاجلة -->
@@ -1333,10 +1342,19 @@
       <!-- ================= 4. الامتحانات الشاملة والكويزات ================= -->
       <section id="panel-exams" class="panel">
         <div class="section-title-clean">
-          <span>الكويزات والامتحانات الإلكترونية</span>
+          <span>الكويزات والامتحانات الإلكترونية المتاحة للحل</span>
         </div>
         <div id="examsListContainer">
           <!-- ديناميكي: تظهر هنا الكويزات المرفوعة فعلياً -->
+        </div>
+
+        <!-- سجل درجات ونتائج الكويزات المرصودة رسمياً من المعلم -->
+        <div class="section-title-clean" style="margin-top: 32px;">
+          <span>سجل درجات الكويزات والامتحانات المرصودة</span>
+          <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;" id="recordedScoresCount"></span>
+        </div>
+        <div id="recordedScoresContainer">
+          <!-- ديناميكي: تظهر هنا نتائج الكويزات والامتحانات المرصودة -->
         </div>
       </section>
 
@@ -1874,37 +1892,89 @@
 
       let dbMaterials = [];
 
-      // 1. جلب بيانات الطالب والمحتوى الفعلي من قاعدة البيانات عبر Railway Backend
-      try {
-        const portalUrl = `https://tutoring-backend-production-c8dd.up.railway.app/api/public/parent-portal?token=${encodeURIComponent(token)}`;
-        const res = await fetch(portalUrl);
-        if (res.ok) {
-          const portalData = await res.json();
-          if (portalData) {
-            if (portalData.student && !qCode) {
-              const s = portalData.student;
-              currentStudent = {
-                name: s.name || 'مهند خالد',
-                code: s.student_code || s.code || '1006',
-                phone: s.student_phone || s.parent_phone || '01123671177',
-                center: s.center_name || 'الهضبه',
-                group: s.group_name || 'الاحد والأربع تالته ثانوي',
-                subject: s.subject_name || 'فيزياء',
-                teacher: s.teacher_name || 'مستر عمر المحمدي',
-                teacher_phone: s.teacher_phone || '01010979708'
-              };
-              localStorage.setItem('portal_student', JSON.stringify(currentStudent));
-              hydrateStudentUI(currentStudent);
+      // Dynamic student resolution by code if token is not known
+      if (qCode && (!token || token === MOHANED_FALLBACK_TOKEN)) {
+        try {
+          const sRes = await fetch(`https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/students?or=(student_code.eq.${encodeURIComponent(qCode)},code.eq.${encodeURIComponent(qCode)})&select=*`, {
+            headers: { apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz', Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz' }
+          });
+          if (sRes.ok) {
+            const sList = await sRes.json();
+            if (Array.isArray(sList) && sList.length > 0) {
+              const matchedS = sList[0];
+              if (matchedS.parent_portal_token) {
+                token = matchedS.parent_portal_token;
+                localStorage.setItem('centrly_portal_token', token);
+              }
             }
+          }
+        } catch (_) {}
+      }
 
-            if (portalData.summary && portalData.summary.attendance_rate) {
+      // 1. جلب بيانات الطالب والمحتوى الفعلي من قاعدة البيانات عبر Railway Backend مع fallback مباشر لـ Supabase RPC
+      try {
+        let portalData = null;
+        try {
+          const portalUrl = `https://tutoring-backend-production-c8dd.up.railway.app/api/public/parent-portal?token=${encodeURIComponent(token)}`;
+          const res = await fetch(portalUrl);
+          if (res.ok) {
+            portalData = await res.json();
+          }
+        } catch (_) {}
+
+        // Fallback to Supabase RPC if Railway backend is unreachable or timed out
+        if (!portalData || !portalData.student) {
+          try {
+            const rpcRes = await fetch('https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/rpc/get_parent_portal_payload', {
+              method: 'POST',
+              headers: {
+                apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
+                Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ p_token: token })
+            });
+            if (rpcRes.ok) {
+              portalData = await rpcRes.json();
+            }
+          } catch (_) {}
+        }
+
+        if (portalData) {
+          if (portalData.student) {
+            const s = portalData.student;
+            currentStudent = {
+              name: s.name || 'مهند خالد',
+              code: s.student_code || s.code || '1006',
+              phone: s.student_phone || s.parent_phone || '01123671177',
+              center: s.center_name || 'الهضبه',
+              group: s.group_name || 'الاحد والأربع تالته ثانوي',
+              subject: s.subject_name || 'فيزياء',
+              teacher: s.teacher_name || 'مستر عمر المحمدي',
+              teacher_phone: s.teacher_phone || '01010979708'
+            };
+            localStorage.setItem('portal_student', JSON.stringify(currentStudent));
+            hydrateStudentUI(currentStudent);
+          }
+
+          if (portalData.summary) {
+            if (portalData.summary.attendance_rate) {
               const attEl = document.getElementById('kpiAttendanceVal');
               if (attEl) attEl.innerText = portalData.summary.attendance_rate;
             }
-
-            if (Array.isArray(portalData.materials)) {
-              dbMaterials = portalData.materials;
+            const qAvgEl = document.getElementById('kpiQuizAvgVal');
+            if (qAvgEl) {
+              qAvgEl.innerText = portalData.summary.quiz_average_percentage || '—';
             }
+          }
+
+          if (Array.isArray(portalData.quizzes)) {
+            window._studentRecordedQuizzes = portalData.quizzes;
+            renderRecordedScores(portalData.quizzes);
+          }
+
+          if (Array.isArray(portalData.materials)) {
+            dbMaterials = portalData.materials;
           }
         }
       } catch (err) {
@@ -2146,6 +2216,55 @@
         `;
       });
 
+      container.innerHTML = html;
+      renderRecordedScores(window._studentRecordedQuizzes || []);
+    }
+
+    // تصيير كشف درجات الامتحانات المرصودة من قاعدة البيانات
+    function renderRecordedScores(recorded) {
+      const container = document.getElementById('recordedScoresContainer');
+      const countEl = document.getElementById('recordedScoresCount');
+      if (!container) return;
+
+      if (!Array.isArray(recorded) || recorded.length === 0) {
+        if (countEl) countEl.innerText = '0 امتحان';
+        container.innerHTML = `
+          <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+            لم يتم رصد درجات امتحانات رسمية حتى الآن. ستظهر نتائجك ودرجاتك المعتمدة هنا فور رصدها من المعلم.
+          </div>
+        `;
+        return;
+      }
+
+      if (countEl) countEl.innerText = recorded.length + ' امتحان مرصود';
+      let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+      recorded.forEach(q => {
+        const pct = Math.round(Number(q.percentage) || (Number(q.score) / (Number(q.max_score) || 10) * 100) || 0);
+        const tier = q.tier || (pct >= 85 ? 'ممتاز' : (pct >= 75 ? 'جيد جداً' : (pct >= 60 ? 'جيد' : 'يحتاج متابعة')));
+        const tierColor = pct >= 85 ? '#059669' : (pct >= 75 ? '#2563eb' : (pct >= 60 ? '#d97706' : '#dc2626'));
+        const tierBg = pct >= 85 ? '#ecfdf5' : (pct >= 75 ? '#eff6ff' : (pct >= 60 ? '#fffbeb' : '#fef2f2'));
+
+        html += `
+          <div class="clean-item-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; border-right: 4px solid ${tierColor};">
+            <div class="item-meta" style="flex: 1; min-width: 220px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <h3 style="margin: 0; font-size: 0.98rem; font-weight: 800; color: var(--text-main);">${escapeHtml(q.title || 'كويز دوري')}</h3>
+                <span style="font-size: 0.72rem; font-weight: 800; color: ${tierColor}; background: ${tierBg}; padding: 2px 8px; border-radius: 6px; border: 1px solid ${tierColor}40;">${escapeHtml(tier)}</span>
+              </div>
+              <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: var(--text-muted);">
+                ${q.date ? `تاريخ الامتحان: ${escapeHtml(q.date)} • ` : ''}الدرجة الكلية: ${q.max_score || 10} • النسبة المئوية: ${pct}%
+              </p>
+              ${q.note || q.notes ? `<div style="margin-top: 6px; font-size: 0.78rem; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 6px;"><b>ملاحظة المعلم:</b> ${escapeHtml(q.note || q.notes)}</div>` : ''}
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; background: ${tierBg}; padding: 8px 16px; border-radius: 10px; border: 1px solid ${tierColor}30;">
+              <span style="font-size: 1.35rem; font-weight: 900; color: ${tierColor}; font-family: monospace;">${q.score}</span>
+              <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 800;"> / ${q.max_score || 10}</span>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
       container.innerHTML = html;
     }
 

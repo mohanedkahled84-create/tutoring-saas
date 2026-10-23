@@ -384,6 +384,7 @@ publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<
             .from("students")
             .select("id, name, tenant_id, student_code, portal_password, parent_phone, student_phone")
             .or(`student_phone.ilike.%${last9}%,parent_phone.ilike.%${last9}%`)
+            .order("created_at", { ascending: false })
             .limit(5);
 
           const matched = matchedStudents && matchedStudents.length > 0 ? matchedStudents[0] : null;
