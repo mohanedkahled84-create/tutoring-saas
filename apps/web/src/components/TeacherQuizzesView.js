@@ -2911,22 +2911,36 @@ export function registerTeacherQuizzesActions(app) {
   app.loadOnlineSubmissions = async function() {
     try {
       const gid = this.quizzesState.selectedGroupId;
-      const [allRes, pendingRes] = await Promise.allSettled([
-        request(`/quizzes/submissions${gid ? `?group_id=${gid}` : ''}`),
-        request(`/quizzes/submissions/pending${gid ? `?group_id=${gid}` : ''}`)
-      ]);
+      let allData = null;
+      let pendingData = null;
 
-      if (allRes.status === 'fulfilled' && allRes.value?.success && Array.isArray(allRes.value.submissions)) {
-        this.quizzesState.onlineSubmissions = allRes.value.submissions;
-      } else {
-        this.quizzesState.onlineSubmissions = [];
+      try {
+        const [r1, r2] = await Promise.all([
+          fetch(`/api/quizzes/submissions${gid ? `?group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null),
+          fetch(`/api/quizzes/submissions?type=pending${gid ? `&group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null)
+        ]);
+        if (r1?.success && Array.isArray(r1.submissions)) allData = r1.submissions;
+        if (r2?.success && Array.isArray(r2.submissions)) pendingData = r2.submissions;
+      } catch (_) {}
+
+      if (!allData || allData.length === 0) {
+        const [allRes, pendingRes] = await Promise.allSettled([
+          request(`/quizzes/submissions${gid ? `?group_id=${gid}` : ''}`),
+          request(`/quizzes/submissions/pending${gid ? `?group_id=${gid}` : ''}`)
+        ]);
+
+        if (allRes.status === 'fulfilled' && allRes.value?.success && Array.isArray(allRes.value.submissions)) {
+          allData = allRes.value.submissions;
+        }
+        if (pendingRes.status === 'fulfilled' && pendingRes.value?.success && Array.isArray(pendingRes.value.submissions)) {
+          pendingData = pendingRes.value.submissions;
+        }
       }
 
-      if (pendingRes.status === 'fulfilled' && pendingRes.value?.success && Array.isArray(pendingRes.value.submissions)) {
-        this.quizzesState.pendingSubmissions = pendingRes.value.submissions;
-      } else if (this.quizzesState.onlineSubmissions) {
-        this.quizzesState.pendingSubmissions = this.quizzesState.onlineSubmissions.filter(s => s.status === 'needs_grading');
-      }
+      this.quizzesState.onlineSubmissions = Array.isArray(allData) ? allData : [];
+      this.quizzesState.pendingSubmissions = Array.isArray(pendingData) 
+        ? pendingData 
+        : this.quizzesState.onlineSubmissions.filter(s => s.status === 'pending' || s.status === 'needs_grading');
     } catch (err) {
       console.warn('[Centrly] Could not load online submissions:', err);
     }
@@ -3239,17 +3253,35 @@ export function registerTeacherQuizzesActions(app) {
 
     try {
       this.showToast('جاري اعتماد وتثبيت الدرجة...', 'info');
-      const res = await request('/quizzes/submissions/grade-essay', {
-        method: 'POST',
-        body: {
-          submission_id: subId,
-          student_id: studentId,
-          quiz_number: quizNumber,
-          group_id: this.quizzesState.selectedGroupId,
-          essay_scores: essayScores,
-          notes: note
-        }
-      });
+      let res = null;
+      try {
+        res = await request('/quizzes/submissions/grade-essay', {
+          method: 'POST',
+          body: {
+            submission_id: subId,
+            student_id: studentId,
+            quiz_number: quizNumber,
+            group_id: this.quizzesState.selectedGroupId,
+            essay_scores: essayScores,
+            notes: note
+          }
+        });
+      } catch (err) {
+        console.warn('Primary /quizzes/submissions/grade-essay failed, attempting fallback...', err);
+        const totalEssay = Object.values(essayScores).reduce((a, b) => a + Number(b), 0);
+        const fbRes = await fetch('/api/quizzes/submissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            submission_id: subId,
+            student_code: sub.student_code,
+            material_id: sub.material_id || sub.quiz_id,
+            essay_score: totalEssay
+          })
+        }).then(r => r.json()).catch(() => null);
+        if (fbRes?.success) res = fbRes;
+        if (!res) throw err;
+      }
 
       if (res?.success) {
         this.showToast(`تم اعتماد وتثبيت الدرجة النهائية (${res.final_score}) للطالب بنجاح!`, 'success');

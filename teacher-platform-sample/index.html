@@ -1473,43 +1473,15 @@
     </div>
   </div>
 
-  <!-- نافذة نموذج الإجابة الاسترشادي للمراجعة -->
+  <!-- نافذة مراجعة وتصحيح الامتحان والنتيجة (ديناميكية بالكامل) -->
   <div class="video-modal-bg" id="modelAnswerModal">
-    <div class="video-box" style="max-width: 700px; background: #ffffff; color: var(--text-main); border-radius: var(--radius-lg); overflow: hidden; padding: 0;">
-      <div class="video-bar" style="background: var(--brand-navy); color: #fff;">
-        <span style="font-weight: 800; font-size: 0.95rem;">نموذج الإجابة الاسترشادي — كويز 1: الحركة وقوانين نيوتن</span>
-        <button style="background: none; border: none; color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 800;" onclick="closeModelAnswerModal()">إغلاق</button>
+    <div class="video-box" style="max-width: 720px; background: #ffffff; color: var(--text-main); border-radius: var(--radius-lg); overflow: hidden; padding: 0;">
+      <div class="video-bar" style="background: var(--brand-navy); color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 12px 18px;">
+        <span style="font-weight: 800; font-size: 0.95rem;" id="reviewModalTitle">مراجعة وتصحيح الامتحان</span>
+        <button style="background: none; border: none; color: #fff; cursor: pointer; font-size: 0.9rem; font-weight: 800;" onclick="closeModelAnswerModal()">إغلاق ✕</button>
       </div>
-      <div style="padding: 22px; max-height: 80vh; overflow-y: auto;">
-        
-        <div style="padding: 12px; background: var(--status-success-bg); border: 1px solid var(--status-success); border-radius: var(--radius-md); margin-bottom: 16px;">
-          <h4 style="font-size: 0.95rem; font-weight: 900; color: var(--status-success); margin-bottom: 4px;">نتيجة الطالب: 10 / 10 (ممتاز مرتفع)</h4>
-          <p style="font-size: 0.8rem; color: #065f46; margin: 0;">تم اعتماد التصحيح الإلكتروني والمقالي من مستر عمر بنجاح.</p>
-        </div>
-
-        <div style="margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
-          <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 4px;">السؤال 1: اتجاه العجلة المركزية؟</div>
-          <div style="color: var(--status-success); font-weight: 800; font-size: 0.85rem;">الإجابة النموذجية: (ب) عمودياً على اتجاه السرعة ونحو مركز المسار الدائري.</div>
-          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">تفسير مستر عمر: لأن العجلة المركزية تنشأ عن التغير في اتجاه السرعة المماسية فقط دون تغير مقدارها.</p>
-        </div>
-
-        <div style="margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
-          <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 4px;">السؤال 2: حساب القوة الجاذبة المركزية؟</div>
-          <div style="color: var(--status-success); font-weight: 800; font-size: 0.85rem;">الإجابة النموذجية: (ب) 16 نيوتن.</div>
-          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">طريقة الحل: F = (m × v²) / r = (2 × 16) / 2 = 16 N.</p>
-        </div>
-
-        <div style="margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
-          <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 4px;">السؤال 3: مضاعفة المسافة بين جسمين؟</div>
-          <div style="color: var(--status-success); font-weight: 800; font-size: 0.85rem;">الإجابة النموذجية: (أ) تقل إلى الربع.</div>
-          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">تفسير مستر عمر: قانون التجاذب العام ينص على أن القوة تتناسب عكسياً مع مربع البعد (F ∝ 1/r²).</p>
-        </div>
-
-        <div>
-          <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 4px;">السؤال 4 (مقالي): علل ميل المنحنيات في الطرق؟</div>
-          <div style="color: var(--status-success); font-weight: 800; font-size: 0.85rem;">الإجابة المعتمدة: حتى تعمل المركبة الأفقية لقوة رد الفعل مع قوة الاحتكاك كقوة جاذبة مركزية تحافظ على مسار السيارة دون انزلاق.</div>
-        </div>
-
+      <div id="reviewModalBody" style="padding: 22px; max-height: 80vh; overflow-y: auto;">
+        <!-- يتم تصيير النتيجة وأسئلة الامتحان هنا ديناميكياً -->
       </div>
     </div>
   </div>
@@ -2086,10 +2058,22 @@
       if (!container) return;
 
       const unsubmittedHw = homework.filter(h => getHwStatus(h) === 'unsubmitted');
-      const totalPending = unsubmittedHw.length + quizzes.length;
+      const pendingQuizzes = quizzes.filter(qz => {
+        const subKey = `centrly_submission_${currentStudent.code || '1006'}_${qz.id}`;
+        try {
+          const s = localStorage.getItem(subKey);
+          if (s) {
+            const parsed = JSON.parse(s);
+            if (parsed && (parsed.status === 'pending' || parsed.status === 'graded')) return false;
+          }
+        } catch (_) {}
+        return true;
+      });
+
+      const totalPending = unsubmittedHw.length + pendingQuizzes.length;
       if (countEl) countEl.innerText = `${totalPending} مهمة معلقة`;
 
-      if (videos.length === 0 && unsubmittedHw.length === 0 && quizzes.length === 0) {
+      if (videos.length === 0 && unsubmittedHw.length === 0 && pendingQuizzes.length === 0) {
         container.innerHTML = `
           <div class="empty-state-card">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -2115,12 +2099,12 @@
         `;
       });
 
-      quizzes.forEach(qz => {
+      pendingQuizzes.forEach(qz => {
         html += `
           <div class="todo-card">
             <div class="todo-info">
               <h4>كويز متاح: ${escapeHtml(qz.title)}</h4>
-              <p>بيئة اختبار مؤمنة • مدة الاختبار: 20 دقيقة</p>
+              <p>بيئة اختبار مؤمنة • مدة الاختبار: ${qz.time_limit_minutes || 20} دقيقة</p>
             </div>
             <button class="btn btn-secondary" onclick="switchPanel('exams', document.querySelectorAll('.menu-item')[2])">
               <span>بدء الكويز</span>
@@ -2449,15 +2433,41 @@
 
       let html = '';
       quizzes.forEach(qz => {
+        const subKey = `centrly_submission_${currentStudent.code || '1006'}_${qz.id}`;
+        let sub = null;
+        try {
+          const s = localStorage.getItem(subKey);
+          if (s) sub = JSON.parse(s);
+        } catch (_) {}
+
+        let actionBtn = '';
+        if (sub && sub.status === 'pending') {
+          actionBtn = `
+            <button class="btn btn-secondary" style="height: 38px; background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-weight: 800; font-size: 0.82rem; border-radius: 8px; cursor: pointer;" onclick="openPendingReviewModal(platformContent.find(m => m.id === '${escapeJsStr(qz.id || '')}'))">
+              <span>تم التسليم (قيد التصحيح ⏳)</span>
+            </button>
+          `;
+        } else if (sub && sub.status === 'graded') {
+          actionBtn = `
+            <button class="btn btn-secondary" style="height: 38px; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; font-weight: 800; font-size: 0.82rem; border-radius: 8px; cursor: pointer;" onclick="startSecureExam('${escapeJsStr(qz.id || '')}', '${escapeJsStr(qz.title)}')">
+              <span>عرض النتيجة (${sub.score} / ${sub.max_score}) ✔️</span>
+            </button>
+          `;
+        } else {
+          actionBtn = `
+            <button class="btn btn-action-exam" style="height: 38px;" onclick="startSecureExam('${escapeJsStr(qz.id || '')}', '${escapeJsStr(qz.title)}')">
+              <span>بدء الامتحان</span>
+            </button>
+          `;
+        }
+
         html += `
           <div class="clean-item-card" style="display: flex; justify-content: space-between; align-items: center;">
             <div class="item-meta">
               <h3>${escapeHtml(qz.title)}</h3>
-              <p>الدرجة الكلية: ${qz.max_score || 10} • بيئة اختبار مؤمنة لمنع تصوير الشاشة</p>
+              <p>الدرجة الكلية: ${qz.max_score || 10} • مدة الامتحان: ${qz.time_limit_minutes || 20} دقيقة • بيئة اختبار مؤمنة لمنع تصوير الشاشة</p>
             </div>
-            <button class="btn btn-action-exam" style="height: 38px;" onclick="startSecureExam('${escapeJsStr(qz.id || '')}', '${escapeJsStr(qz.title)}')">
-              <span>بدء تجربة الامتحان</span>
-            </button>
+            ${actionBtn}
           </div>
         `;
       });
@@ -2504,67 +2514,95 @@
       container.innerHTML = html;
     }
 
-    // 10. تشغيل البيئة المعزولة للامتحان بدون بوب أب كروم (Zero Alert)
+    // 10. تشغيل البيئة المعزولة للامتحان والتصحيح الذكي
     let examWatermarkTimer = null;
     let tabSwitchWarnCount = 0;
     let examTimerInterval = null;
     let remainingSeconds = 20 * 60;
+    let currentActiveQuiz = null;
+    let currentExamAnswers = {};
+    let currentExamEssayAnswers = {};
 
     function startSecureExam(quizId, quizTitle) {
+      const targetQz = platformContent.find(m => m.id === quizId) || null;
+      if (!targetQz) {
+        showPortalToast('تعذر العثور على بيانات الامتحان', 'error');
+        return;
+      }
+
+      // التحقق مما إذا كان الطالب قد سلّم هذا الامتحان مسبقاً
+      const subKey = `centrly_submission_${currentStudent.code || '1006'}_${targetQz.id}`;
+      const existingSubStr = localStorage.getItem(subKey);
+      if (existingSubStr) {
+        try {
+          const existingSub = JSON.parse(existingSubStr);
+          if (existingSub.status === 'pending') {
+            openPendingReviewModal(targetQz);
+            return;
+          } else if (existingSub.status === 'graded') {
+            openExamReviewModal(targetQz, existingSub.gradedDetails, existingSub.score, existingSub.max_score);
+            return;
+          }
+        } catch (_) {}
+      }
+
+      currentActiveQuiz = targetQz;
+      currentExamAnswers = {};
+      currentExamEssayAnswers = {};
+
       const overlay = document.getElementById('secureExamOverlay');
       if (overlay) overlay.classList.add('active');
 
-      const targetQz = platformContent.find(m => m.id === quizId) || null;
-      if (targetQz) {
-        remainingSeconds = (Number(targetQz.time_limit_minutes) || 20) * 60;
-        const titleEl = document.querySelector('.exam-topbar h3');
-        if (titleEl) titleEl.innerText = `${targetQz.title || 'امتحان إلكتروني'} — بيئة اختبار مؤمنة`;
+      remainingSeconds = (Number(targetQz.time_limit_minutes) || 20) * 60;
+      const titleEl = document.querySelector('.exam-topbar h3');
+      if (titleEl) titleEl.innerText = `${targetQz.title || 'امتحان إلكتروني'} — بيئة اختبار مؤمنة`;
 
-        const examBody = document.querySelector('.exam-body');
-        if (examBody && Array.isArray(targetQz.questions) && targetQz.questions.length > 0) {
-          let qHtml = `
-            <div class="exam-warning-banner">
-              تنبيه أمني: هذه بيئة معزولة مخصصة لمنع الغش. تغيير التاب أو تصوير الشاشة مسجل برقم الطالب ويؤدي لسحب ورقة الإجابة.
-            </div>
-          `;
+      const examBody = document.querySelector('.exam-body');
+      if (examBody && Array.isArray(targetQz.questions) && targetQz.questions.length > 0) {
+        let qHtml = `
+          <div class="exam-warning-banner">
+            تنبيه أمني: هذه بيئة معزولة مخصصة لمنع الغش. تغيير التاب أو تصوير الشاشة مسجل برقم الطالب ويؤدي لسحب ورقة الإجابة.
+          </div>
+        `;
 
-          targetQz.questions.forEach((q, idx) => {
-            const qPoints = q.points || 1;
-            const isEssay = q.type === 'essay';
-            qHtml += `
-              <div class="exam-q-box">
-                <div class="exam-q-title">السؤال ${idx + 1}: ${escapeHtml(q.text || '')} (${qPoints} درجات)</div>
-                ${q.image_url ? `<div style="margin: 10px 0;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 250px; border-radius: 8px;" /></div>` : ''}
-                ${!isEssay ? `
+        targetQz.questions.forEach((q, idx) => {
+          const qPoints = q.points || 1;
+          const isEssay = q.type === 'essay';
+          qHtml += `
+            <div class="exam-q-box" style="margin-bottom: 20px; padding: 18px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: #ffffff;">
+              <div class="exam-q-title" style="font-weight: 800; font-size: 0.95rem; margin-bottom: 12px; color: var(--text-main);">
+                السؤال ${idx + 1}: ${escapeHtml(q.text || '')} <span style="font-size: 0.8rem; color: var(--brand-navy); font-weight: 700;">(${qPoints} درجات)</span>
+              </div>
+              ${q.image_url ? `<div style="margin: 10px 0;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 250px; border-radius: 8px;" /></div>` : ''}
+              ${!isEssay ? `
+                <div class="exam-choices-list" style="display: flex; flex-direction: column; gap: 8px;">
                   ${(q.choices || q.options || []).filter(c => c && String(c).trim()).map((choice, cIdx) => `
-                    <div class="exam-choice" onclick="selectChoice(this)">
+                    <div class="exam-choice" onclick="selectChoice(this, ${idx}, ${cIdx})" style="padding: 10px 14px; border: 1.5px solid var(--border-subtle); border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 0.88rem; font-weight: 600;">
                       ${String.fromCharCode(0x0623 + cIdx)}) ${escapeHtml(choice)}
                     </div>
                   `).join('')}
-                ` : `
-                  <textarea style="width: 100%; height: 90px; padding: 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 0.85rem; outline: none; margin-top: 8px;" placeholder="اكتب إجابتك المقالية بالتفصيل هنا..."></textarea>
-                  <div style="margin-top: 8px;">
-                    <button type="button" class="btn btn-secondary" style="height: 32px; font-size: 0.78rem;" onclick="showPortalToast('تم تفعيل كاميرا الهاتف لرفع صورة الإجابة', 'info')">
-                      <span>تصوير ورقة الإجابة من الموبايل</span>
-                    </button>
-                  </div>
-                `}
-              </div>
-            `;
-          });
-
-          qHtml += `
-            <div style="text-align: center; margin-top: 30px;">
-              <button class="btn btn-action-exam" style="padding: 0 36px; height: 46px; font-size: 0.98rem;" onclick="submitAndFinishExam()">
-                <span>تسليم ورقة الإجابة النهائية</span>
-              </button>
+                </div>
+              ` : `
+                <textarea style="width: 100%; height: 95px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 0.88rem; outline: none; margin-top: 8px; font-family: inherit;" placeholder="اكتب خطوات الحل أو الإجابة المقالية بالتفصيل هنا..." oninput="recordEssayAnswer(${idx}, this.value)"></textarea>
+                <div style="margin-top: 10px;">
+                  <button type="button" class="btn btn-secondary" style="height: 32px; font-size: 0.78rem;" onclick="showPortalToast('تم تفعيل كاميرا الهاتف لرفع صورة الحل', 'info')">
+                    <span>📷 تصوير ورقة الإجابة من الموبايل</span>
+                  </button>
+                </div>
+              `}
             </div>
           `;
+        });
 
-          examBody.innerHTML = qHtml;
-        }
-      } else {
-        remainingSeconds = 20 * 60;
+        qHtml += `
+          <div style="text-align: center; margin-top: 30px;">
+            <button type="button" class="btn btn-action-exam" style="padding: 0 36px; height: 46px; font-size: 0.98rem; font-weight: 800; background: #059669; border-color: #059669; color: #fff; border-radius: 8px; cursor: pointer;" onclick="submitAndFinishExam()">
+              <span>تسليم ورقة الإجابة النهائية</span>
+            </button>
+          </div>
+        `;
+
+        examBody.innerHTML = qHtml;
       }
 
       updateExamClock();
@@ -2597,6 +2635,23 @@
       };
     }
 
+    function selectChoice(el, qIdx, cIdx) {
+      const parent = el.parentElement;
+      parent.querySelectorAll('.exam-choice').forEach(c => {
+        c.classList.remove('selected');
+        c.style.borderColor = 'var(--border-subtle)';
+        c.style.background = '#ffffff';
+      });
+      el.classList.add('selected');
+      el.style.borderColor = '#2563eb';
+      el.style.background = '#eff6ff';
+      currentExamAnswers[qIdx] = cIdx;
+    }
+
+    function recordEssayAnswer(qIdx, text) {
+      currentExamEssayAnswers[qIdx] = text;
+    }
+
     function updateExamClock() {
       const m = Math.floor(remainingSeconds / 60);
       const s = remainingSeconds % 60;
@@ -2614,20 +2669,254 @@
 
     function submitAndFinishExam() {
       exitSecureExam();
-      showPortalToast('تم استلام وتسجيل إجاباتك بنجاح! الدرجة المحققة: 10 / 10', 'success');
-      openModelAnswerModal();
+      if (!currentActiveQuiz) return;
+
+      const questions = Array.isArray(currentActiveQuiz.questions) ? currentActiveQuiz.questions : [];
+      const hasEssay = questions.some(q => q.type === 'essay');
+      const subKey = `centrly_submission_${currentStudent.code || '1006'}_${currentActiveQuiz.id}`;
+
+      if (hasEssay) {
+        // ----------------------------------------------------
+        // حالة: الامتحان يحتوي على مقالي
+        // ممنوع التصحيح التلقائي، لا تظهر أي درجة ولا نموذج إجابة!
+        // ----------------------------------------------------
+        const submissionRecord = {
+          quiz_id: currentActiveQuiz.id,
+          quiz_title: currentActiveQuiz.title,
+          student_code: currentStudent.code || '1006',
+          student_name: currentStudent.name || 'مهند خالد',
+          status: 'pending',
+          score: null,
+          max_score: questions.reduce((sum, q) => sum + Number(q.points || 1), 0),
+          submitted_at: new Date().toISOString(),
+          answers: currentExamAnswers,
+          essay_answers: currentExamEssayAnswers
+        };
+        try {
+          localStorage.setItem(subKey, JSON.stringify(submissionRecord));
+        } catch (_) {}
+
+        // إرسال التسليم للسيرفر
+        try {
+          const submitPayload = {
+            token: localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN,
+            material_id: currentActiveQuiz.id,
+            answers: { ...currentExamAnswers, ...currentExamEssayAnswers },
+            elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds
+          };
+          fetch('/api/public/quizzes/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submitPayload)
+          }).catch(() => null);
+        } catch (_) {}
+
+        showPortalToast('تم استلام إجاباتك بنجاح! يتضمن الامتحان أسئلة مقالية (قيد التصحيح والاعتماد بالعين من المعلم).', 'info');
+        openPendingReviewModal(currentActiveQuiz);
+        renderAllPanels();
+      } else {
+        // ----------------------------------------------------
+        // حالة: الامتحان اختياري فقط (MCQ Only)
+        // تصحيح فوري حقيقي بناءً على إجابات الطالب
+        // ----------------------------------------------------
+        let earnedPoints = 0;
+        let totalPoints = 0;
+
+        const gradedDetails = questions.map((q, idx) => {
+          const qPts = Number(q.points || 1);
+          totalPoints += qPts;
+          const selectedIdx = currentExamAnswers[idx];
+          const correctIdx = Number(q.correct_index !== undefined ? q.correct_index : (q.correct !== undefined ? q.correct : 0));
+          const isCorrect = selectedIdx !== undefined && Number(selectedIdx) === correctIdx;
+          if (isCorrect) {
+            earnedPoints += qPts;
+          }
+          return {
+            q,
+            selectedIdx,
+            correctIdx,
+            isCorrect,
+            pts: qPts
+          };
+        });
+
+        const submissionRecord = {
+          quiz_id: currentActiveQuiz.id,
+          quiz_title: currentActiveQuiz.title,
+          student_code: currentStudent.code || '1006',
+          student_name: currentStudent.name || 'مهند خالد',
+          status: 'graded',
+          score: earnedPoints,
+          max_score: totalPoints,
+          submitted_at: new Date().toISOString(),
+          gradedDetails,
+          answers: currentExamAnswers
+        };
+        try {
+          localStorage.setItem(subKey, JSON.stringify(submissionRecord));
+        } catch (_) {}
+
+        try {
+          const submitPayload = {
+            token: localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN,
+            material_id: currentActiveQuiz.id,
+            answers: currentExamAnswers,
+            elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds
+          };
+          fetch('/api/public/quizzes/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submitPayload)
+          }).catch(() => null);
+        } catch (_) {}
+
+        showPortalToast(`تم تصحيح الامتحان الإلكتروني بنجاح! النتيجة: ${earnedPoints} من ${totalPoints}`, 'success');
+        openExamReviewModal(currentActiveQuiz, gradedDetails, earnedPoints, totalPoints);
+        renderAllPanels();
+      }
     }
 
-    function selectChoice(el) {
-      const parent = el.parentElement;
-      parent.querySelectorAll('.exam-choice').forEach(c => c.classList.remove('selected'));
-      el.classList.add('selected');
-    }
-
-    function openModelAnswerModal() {
+    function openPendingReviewModal(quiz) {
       const modal = document.getElementById('modelAnswerModal');
-      if (modal) modal.classList.add('active');
+      const titleEl = document.getElementById('reviewModalTitle');
+      const bodyEl = document.getElementById('reviewModalBody');
+      if (!modal || !bodyEl) return;
+
+      if (titleEl) titleEl.innerText = `حالة الامتحان — ${quiz?.title || 'امتحان إلكتروني'}`;
+
+      bodyEl.innerHTML = `
+        <div style="text-align: center; padding: 25px 15px;">
+          <div style="width: 70px; height: 70px; border-radius: 50%; background: #fef3c7; color: #d97706; display: inline-flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px;">
+            ⏳
+          </div>
+          <h3 style="font-size: 1.15rem; font-weight: 800; color: #92400e; margin-bottom: 8px;">
+            تم استلام إجاباتك بنجاح — قيد التصحيح والاعتماد
+          </h3>
+          <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; max-width: 480px; margin: 0 auto 20px auto;">
+            يتضمن هذا الامتحان أسئلة مقالية تخضع للمراجعة والتقدير بالعين من المعلم.<br>
+            <strong>لن تظهر أي درجات أو نموذج إجابة</strong> إلا بعد اعتماد المعلم للتصحيح رسمياً.
+          </p>
+          <div style="display: inline-flex; gap: 8px; align-items: center; background: #f8fafc; border: 1px solid var(--border-subtle); padding: 10px 18px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; color: var(--text-main);">
+            <span>الحالة الحالية:</span>
+            <span style="color: #d97706; font-weight: 800;">بانتظار تصحيح المقالي بالعين من المعلم</span>
+          </div>
+          <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" style="padding: 0 24px; height: 38px; font-size: 0.88rem; font-weight: 800;" onclick="closeModelAnswerModal()">
+              إغلاق
+            </button>
+            <button type="button" class="btn btn-secondary" style="padding: 0 20px; height: 38px; font-size: 0.85rem; font-weight: 800; border-color: #f59e0b; color: #b45309;" onclick="localStorage.removeItem('centrly_submission_' + (currentStudent.code || '1006') + '_${quiz?.id}'); closeModelAnswerModal(); startSecureExam('${escapeJsStr(quiz?.id || '')}', '${escapeJsStr(quiz?.title || '')}');">
+              🔄 إعادة حل الامتحان (للتجربة)
+            </button>
+          </div>
+        </div>
+      `;
+
+      modal.classList.add('active');
     }
+
+    function openExamReviewModal(quiz, gradedDetails, score, maxScore) {
+      const modal = document.getElementById('modelAnswerModal');
+      const titleEl = document.getElementById('reviewModalTitle');
+      const bodyEl = document.getElementById('reviewModalBody');
+      if (!modal || !bodyEl) return;
+
+      if (titleEl) titleEl.innerText = `مراجعة وتصحيح — ${quiz?.title || 'الامتحان'}`;
+
+      const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+      const isHigh = pct >= 85;
+      const isPass = pct >= 50;
+      const badgeColor = isHigh ? '#10b981' : (isPass ? '#f59e0b' : '#ef4444');
+      const badgeBg = isHigh ? '#ecfdf5' : (isPass ? '#fffbeb' : '#fef2f2');
+      const appraisal = isHigh ? 'ممتاز مرتفع ✔️' : (isPass ? 'جيد • استمر في التحسن' : 'يحتاج لمراجعة الدرس وإعادة التدريب');
+
+      let html = `
+        <div style="padding: 16px; background: ${badgeBg}; border: 1.5px solid ${badgeColor}; border-radius: var(--radius-md); margin-bottom: 22px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <h4 style="font-size: 1.15rem; font-weight: 900; color: ${badgeColor}; margin: 0 0 4px 0;">
+                نتيجتك: ${score} من ${maxScore} (${pct}%)
+              </h4>
+              <span style="font-size: 0.85rem; font-weight: 800; color: var(--text-main);">${appraisal}</span>
+            </div>
+            <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted);">
+              تم التصحيح الفوري تلقائياً
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 18px;">
+      `;
+
+      (gradedDetails || []).forEach((item, idx) => {
+        const q = item.q;
+        const selectedIdx = item.selectedIdx;
+        const correctIdx = item.correctIdx;
+        const isCorrect = item.isCorrect;
+        const choices = (q.choices || q.options || []).filter(c => c && String(c).trim());
+
+        html += `
+          <div style="border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px;">
+              <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">
+                السؤال ${idx + 1}: ${escapeHtml(q.text || '')}
+              </div>
+              <span style="font-size: 0.78rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; white-space: nowrap; ${isCorrect ? 'background: #ecfdf5; color: #065f46;' : 'background: #fef2f2; color: #991b1b;'}">
+                ${isCorrect ? `+${item.pts} (إجابة صحيحة ✔)` : `0 / ${item.pts} (إجابة خاطئة ✖)`}
+              </span>
+            </div>
+
+            ${q.image_url ? `<div style="margin: 8px 0;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 200px; border-radius: 6px;" /></div>` : ''}
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${choices.map((choice, cIdx) => {
+                const isThisCorrect = (cIdx === correctIdx);
+                const isThisSelected = (selectedIdx !== undefined && cIdx === Number(selectedIdx));
+
+                let choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; border: 1.5px solid var(--border-subtle); background: #f8fafc; color: var(--text-muted);';
+                let iconMark = '';
+
+                if (isThisCorrect) {
+                  choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; border: 2px solid #10b981; background: #ecfdf5; color: #065f46; box-shadow: 0 2px 6px rgba(16,185,129,0.15);';
+                  iconMark = '<span style="color: #10b981; font-weight: 900; margin-right: auto;">✔ الإجابة الصحيحة</span>';
+                } else if (isThisSelected && !isCorrect) {
+                  choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; border: 2px solid #ef4444; background: #fef2f2; color: #991b1b;';
+                  iconMark = '<span style="color: #ef4444; font-weight: 900; margin-right: auto;">✖ إجابتك (غير صحيحة)</span>';
+                }
+
+                return `
+                  <div style="${choiceStyle} display: flex; align-items: center; justify-content: space-between;">
+                    <span>${String.fromCharCode(0x0623 + cIdx)}) ${escapeHtml(choice)}</span>
+                    ${iconMark}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            ${selectedIdx === undefined ? `
+              <div style="margin-top: 8px; font-size: 0.78rem; color: #ef4444; font-weight: 700;">
+                لم تقم باختيار أي إجابة لهذا السؤال.
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+
+      html += `
+        </div>
+        <div style="text-align: center; margin-top: 24px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary" style="padding: 0 28px; height: 38px; font-size: 0.88rem; font-weight: 800;" onclick="closeModelAnswerModal()">
+            إغلاق المراجعة
+          </button>
+          <button type="button" class="btn btn-secondary" style="padding: 0 20px; height: 38px; font-size: 0.85rem; font-weight: 800; border-color: #3b82f6; color: #2563eb;" onclick="localStorage.removeItem('centrly_submission_' + (currentStudent.code || '1006') + '_${quiz?.id}'); closeModelAnswerModal(); startSecureExam('${escapeJsStr(quiz?.id || '')}', '${escapeJsStr(quiz?.title || '')}');">
+            🔄 إعادة حل الامتحان (للتجربة)
+          </button>
+        </div>
+      `;
+
+      bodyEl.innerHTML = html;
+      modal.classList.add('active');
+    }
+
     function closeModelAnswerModal() {
       const modal = document.getElementById('modelAnswerModal');
       if (modal) modal.classList.remove('active');
