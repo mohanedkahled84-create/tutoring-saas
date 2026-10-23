@@ -35,7 +35,7 @@ export default async function handler(req, res) {
         student_code: String(row.phone || '').replace('VIDEO_TRACK_', '').trim(),
         student_name: row.student_name || 'طالب',
         material_title: row.message_body || 'فيديو حل واجب الباب الرابع',
-        status: 'watched',
+        status: (row.status === 'watching' || row.status === 'in_progress') ? 'watching' : 'watched',
         watched_at: row.created_at || row.updated_at,
       }));
 
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
         } catch (_) {}
       }
 
-      const { student_code, student_name, material_title } = body || {};
+      const { student_code, student_name, material_title, status } = body || {};
       const code = String(student_code || '').trim();
 
       if (!code) {
@@ -74,9 +74,10 @@ export default async function handler(req, res) {
       const studentName = String(student_name || 'طالب').trim();
       const title = String(material_title || 'فيديو حل واجب الباب الرابع').trim();
       const trackPhone = `VIDEO_TRACK_${code}`;
+      const targetStatus = (status === 'watching' || status === 'in_progress') ? 'watching' : 'watched';
 
       // Check if already registered in database
-      const checkUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(trackPhone)}&select=id,created_at`;
+      const checkUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(trackPhone)}&select=id,status,created_at`;
       const checkRes = await fetch(checkUrl, {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -91,13 +92,39 @@ export default async function handler(req, res) {
 
       let record;
       if (Array.isArray(existing) && existing.length > 0) {
+        const existingRow = existing[0];
+        let finalStatus = targetStatus;
+
+        // If previously watched, keep watched so re-opening doesn't downgrade
+        if (existingRow.status === 'watched' && targetStatus === 'watching') {
+          finalStatus = 'watched';
+        } else if (targetStatus === 'watched' && existingRow.status !== 'watched') {
+          // Promote from 'watching' to 'watched' in Supabase
+          try {
+            await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?id=eq.${existingRow.id}`, {
+              method: 'PATCH',
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                Prefer: 'return=minimal',
+              },
+              body: JSON.stringify({
+                status: 'watched',
+                updated_at: new Date().toISOString(),
+              }),
+            });
+          } catch (_) {}
+          finalStatus = 'watched';
+        }
+
         record = {
-          id: existing[0].id,
+          id: existingRow.id,
           student_code: code,
           student_name: studentName,
           material_title: title,
-          status: 'watched',
-          watched_at: existing[0].created_at || new Date().toISOString(),
+          status: finalStatus,
+          watched_at: existingRow.created_at || new Date().toISOString(),
         };
       } else {
         // Insert new real record
@@ -115,7 +142,7 @@ export default async function handler(req, res) {
             student_name: studentName,
             message_body: title,
             direction: 'inbound',
-            status: 'watched',
+            status: targetStatus,
           }),
         });
 
@@ -127,7 +154,7 @@ export default async function handler(req, res) {
             student_code: code,
             student_name: studentName,
             material_title: title,
-            status: 'watched',
+            status: targetStatus,
             watched_at: row.created_at || new Date().toISOString(),
           };
         } else {
@@ -136,7 +163,7 @@ export default async function handler(req, res) {
             student_code: code,
             student_name: studentName,
             material_title: title,
-            status: 'watched',
+            status: targetStatus,
             watched_at: new Date().toISOString(),
           };
         }

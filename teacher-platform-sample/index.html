@@ -1458,9 +1458,19 @@
   <!-- مشغل الفيديو المنبثق مع العلامة المائية -->
   <div class="video-modal-bg" id="videoModal">
     <div class="video-box" style="position: relative;">
-      <div class="video-bar">
-        <span id="videoTitleLabel">مشاهدة المحاضرة</span>
-        <button style="background: none; border: none; color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 800;" onclick="closeVideoModal()">إغلاق</button>
+      <div class="video-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="videoTitleLabel" style="font-weight: 800; font-size: 0.95rem;">مشاهدة المحاضرة</span>
+          <span id="videoLiveStatusBadge" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: rgba(234, 88, 12, 0.2); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.4); font-weight: 800;">
+            قيد المشاهدة الآن
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button type="button" onclick="reportVideoTelemetry('watched'); showPortalToast('تم إنهاء المشاهدة وتوثيق حضورك بنجاح (شاهد ✔)', 'success');" style="background: #16a34a; color: #fff; border: none; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; cursor: pointer;">
+            إنهاء المشاهدة وتأكيد الحضور ✔
+          </button>
+          <button style="background: none; border: none; color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 800;" onclick="closeVideoModal()">إغلاق</button>
+        </div>
       </div>
       <div class="video-frame-wrap" style="position: relative; overflow: hidden; background: #000;">
         <iframe id="videoIframe" src="" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
@@ -1717,44 +1727,36 @@
     }
 
     let videoWatermarkInterval = null;
-    function launchVideo(title, url) {
-      const vidId = extractYouTubeId(url);
-      const titleEl = document.getElementById('videoTitleLabel');
-      if (titleEl) titleEl.innerText = title || 'مشاهدة المحاضرة';
+    let activeVideoTitle = 'فيديو حل واجب الباب الرابع';
 
-      const iframe = document.getElementById('videoIframe');
-      if (vidId) {
-        iframe.src = `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0&modestbranding=1`;
-      } else if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-        iframe.src = url;
-      } else {
-        showPortalToast('تعذر العثور على رابط فيديو صالح للمشاهدة', 'error');
-        return;
-      }
-
-      document.getElementById('videoModal').classList.add('active');
-
-      // توثيق المشاهدة الفورية في قاعدة البيانات والسيرفر
+    function reportVideoTelemetry(newStatus, vTitle) {
       const studentCode = String(currentStudent.code || currentStudent.student_code || '1006').trim();
       const studentName = currentStudent.name || 'طالب';
+      const actualTitle = vTitle || activeVideoTitle || 'فيديو حل واجب الباب الرابع';
       const payload = {
         student_code: studentCode,
         student_name: studentName,
-        material_title: title || 'فيديو حل واجب الباب الرابع',
-        status: 'watched',
+        material_title: actualTitle,
+        status: newStatus,
         watched_at: new Date().toISOString()
       };
 
       // A. التحديث المحلي الفوري لجميع التابات
       try {
         const trackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
-        trackingMap[studentCode] = {
-          status: 'watched',
-          studentName: studentName,
-          updatedAt: payload.watched_at
-        };
-        localStorage.setItem('centrly_video_tracking_map', JSON.stringify(trackingMap));
-        window.dispatchEvent(new CustomEvent('centrly_tracking_updated', { detail: trackingMap }));
+        const prevStatus = trackingMap[studentCode]?.status;
+        if (prevStatus === 'watched' && newStatus === 'watching') {
+          payload.status = 'watched';
+        } else {
+          trackingMap[studentCode] = {
+            status: newStatus,
+            studentName: studentName,
+            materialTitle: actualTitle,
+            updatedAt: payload.watched_at
+          };
+          localStorage.setItem('centrly_video_tracking_map', JSON.stringify(trackingMap));
+          window.dispatchEvent(new CustomEvent('centrly_tracking_updated', { detail: trackingMap }));
+        }
       } catch (_) {}
 
       // B. إرسال إلى سيرفر المنصة وسيرفر Vercel
@@ -1786,18 +1788,73 @@
           body: JSON.stringify({
             phone: `VIDEO_TRACK_${studentCode}`,
             student_name: studentName,
-            message_body: title || 'فيديو حل واجب الباب الرابع',
+            message_body: actualTitle,
             direction: 'inbound',
-            status: 'watched'
+            status: newStatus
           })
         }).catch(() => {});
       } catch (_) {}
 
-      showPortalToast(`تم تسجيل مشاهدة المحاضرة للطالب (${studentName}) بنجاح`, 'success');
+      const badge = document.getElementById('videoLiveStatusBadge');
+      if (badge) {
+        if (newStatus === 'watching') {
+          badge.style.background = 'rgba(234, 88, 12, 0.2)';
+          badge.style.color = '#fb923c';
+          badge.style.borderColor = 'rgba(251, 146, 60, 0.4)';
+          badge.innerText = 'قيد المشاهدة الآن';
+        } else if (newStatus === 'watched') {
+          badge.style.background = 'rgba(34, 197, 94, 0.2)';
+          badge.style.color = '#4ade80';
+          badge.style.borderColor = 'rgba(74, 222, 128, 0.4)';
+          badge.innerText = '✔ تمت المشاهدة واكتملت';
+        }
+      }
+    }
 
-      // تشغيل تحريك العلامة المائية العائمة لمنع التصوير (كود الطالب شبه شفاف)
+    // الاستماع الحقيقي لأحداث مشغل اليوتيوب عند التشغيل وعند انتهاء الفيديو
+    window.addEventListener('message', function(event) {
+      if (!event.data) return;
+      let data = event.data;
+      if (typeof data === 'string') {
+        try { data = JSON.parse(data); } catch (_) { return; }
+      }
+      if (data && data.event === 'onStateChange') {
+        if (data.info === 1) { // 1 = PLAYING (الطالب يشاهد الآن)
+          reportVideoTelemetry('watching');
+        } else if (data.info === 0) { // 0 = ENDED (الطالب أنهى الفيديو بالكامل!)
+          reportVideoTelemetry('watched');
+          showPortalToast(`عاش يا بطل! تم إنهاء مشاهدة المحاضرة وتوثيقك كـ (شاهد ✔) في سجلات المستر`, 'success');
+        }
+      }
+    });
+
+    function launchVideo(title, url) {
+      activeVideoTitle = title || 'فيديو حل واجب الباب الرابع';
+      const vidId = extractYouTubeId(url);
+      const titleEl = document.getElementById('videoTitleLabel');
+      if (titleEl) titleEl.innerText = activeVideoTitle;
+
+      const iframe = document.getElementById('videoIframe');
+      if (vidId) {
+        const originParam = (typeof window !== 'undefined' && window.location.origin) ? `&origin=${encodeURIComponent(window.location.origin)}` : '';
+        iframe.src = `https://www.youtube.com/embed/${vidId}?enablejsapi=1&autoplay=1&rel=0&modestbranding=1${originParam}`;
+      } else if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        iframe.src = url;
+      } else {
+        showPortalToast('تعذر العثور على رابط فيديو صالح للمشاهدة', 'error');
+        return;
+      }
+
+      document.getElementById('videoModal').classList.add('active');
+
+      // توثيق فوري: بمجرد فتح الفيديو وبدء المشاهدة يسجل (قيد المشاهدة)
+      reportVideoTelemetry('watching', activeVideoTitle);
+      showPortalToast(`بدأت مشاهدة المحاضرة • قيد المشاهدة حالياً في لوحة المستر`, 'info');
+
+      // تشغيل تحريك العلامة المائية العائمة لمنع التصوير
       const wm = document.getElementById('videoFloatingWatermark');
       if (wm) {
+        const studentCode = currentStudent.code || currentStudent.student_code || '1006';
         wm.innerText = `كود: ${studentCode}`;
         wm.style.bottom = 'auto';
         wm.style.right = 'auto';

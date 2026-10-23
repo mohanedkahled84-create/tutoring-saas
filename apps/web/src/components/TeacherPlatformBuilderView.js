@@ -106,7 +106,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
     window.__centrlyServerVideoViews.forEach(v => {
       if (v && v.student_code) {
         liveTrackingMap[String(v.student_code).trim()] = {
-          status: 'watched',
+          status: (v.status === 'watching' || v.status === 'in_progress') ? 'watching' : 'watched',
           studentName: v.student_name,
           materialTitle: v.material_title,
           updatedAt: v.watched_at || v.updated_at
@@ -119,9 +119,9 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   try {
     const localMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
     Object.keys(localMap).forEach(k => {
-      if (localMap[k]?.status === 'watched' || localMap[k]?.status === 'completed') {
+      if (localMap[k]?.status) {
         liveTrackingMap[String(k).trim()] = {
-          status: 'watched',
+          status: (localMap[k].status === 'watching' || localMap[k].status === 'in_progress') ? 'watching' : 'watched',
           studentName: localMap[k].studentName || '',
           materialTitle: localMap[k].materialTitle || '',
           updatedAt: localMap[k].updatedAt
@@ -133,9 +133,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   const totalStudents = trackingStudents.length;
   const watchedCount = trackingStudents.filter(s => {
     const code = String(s.student_code || s.code || '').trim();
-    return Boolean(liveTrackingMap[code]);
+    return liveTrackingMap[code]?.status === 'watched';
   }).length;
-  const notWatchedCount = totalStudents - watchedCount;
+  const watchingCount = trackingStudents.filter(s => {
+    const code = String(s.student_code || s.code || '').trim();
+    return liveTrackingMap[code]?.status === 'watching';
+  }).length;
+  const notWatchedCount = totalStudents - watchedCount - watchingCount;
   const hwSubmittedCount = 1; // Mohaned submitted homework
 
   return `
@@ -175,6 +179,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 <span>شاهد:</span>
                 <strong style="font-weight: 900;">${watchedCount}</strong>
               </span>
+              ${watchingCount > 0 ? `
+                <span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                  <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ea580c;"></span>
+                  <span>قيد المشاهدة:</span>
+                  <strong style="font-weight: 900;">${watchingCount}</strong>
+                </span>
+              ` : ''}
               <span style="background: #f8fafc; color: #64748b; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
                 <span>لم يشاهد:</span>
                 <strong style="font-weight: 900;">${notWatchedCount}</strong>
@@ -234,6 +245,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
               ${getIcon('check', 11, 'var(--centrly-success, #25845a)')}
               <span>شاهد (${watchedCount})</span>
+            </button>
+            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('watching', this)"
+              style="background: var(--centrly-surface, #f8f7f1); color: #c2410c; border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+              <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ea580c;"></span>
+              <span>قيد المشاهدة (${watchingCount})</span>
             </button>
             <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('not_watched', this)"
               style="background: var(--centrly-surface, #f8f7f1); color: #64748b; border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
@@ -295,7 +311,9 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
                 // Dynamic student tracking evaluation
                 const sTracking = liveTrackingMap[sCode];
-                const hasWatched = Boolean(sTracking);
+                const watchStatus = sTracking?.status || (sTracking ? 'watched' : 'not_watched');
+                const isWatched = watchStatus === 'watched';
+                const isWatching = watchStatus === 'watching';
                 const vTitle = 'فيديو حل واجب الباب الرابع';
 
                 // Homework submission (Mohaned Khaled)
@@ -305,7 +323,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 const hUrl = isMohaned ? 'https://ofaraxqrpcdiregxjyyb.supabase.co/storage/v1/object/public/homework-submissions/0c67b644-ae42-49e8-975f-85b9d0af0e1b/5dc36c09-6997-4d9f-b89c-879c778a04e1/9da3aae0-97df-47a6-82e9-06c6139f63e5_1792760541844_0e803a92-623f-4635-ace8-6cc464f7d9bc.jpg' : '';
 
                 const searchAttr = `${sName} ${sCode} ${sCenter} ${sGroup} ${sPhone}`.toLowerCase();
-                const statusAttr = `${hasWatched ? 'watched ' : 'not_watched '}${hStat === 'approved' ? 'submitted_hw ' : ''}`;
+                const statusAttr = `${isWatched ? 'watched ' : (isWatching ? 'watching ' : 'not_watched ')}${hStat === 'approved' ? 'submitted_hw ' : ''}`;
 
                 return `
                   <tr class="tracking-student-row" data-search="${escapeHtml(searchAttr)}" data-status="${escapeHtml(statusAttr)}" style="border-bottom: 1px solid var(--centrly-line, #e2e8f0); transition: background 0.15s ease;">
@@ -325,7 +343,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
                     <!-- 2. حالة التواجد -->
                     <td style="padding: 12px 14px; vertical-align: middle;">
-                      ${hasWatched ? `
+                      ${isWatching ? `
+                        <div style="display: inline-flex; align-items: center; gap: 5px; background: #fff7ed; color: #c2410c; padding: 3px 8px; border-radius: 5px; font-weight: 800; font-size: 0.74rem;">
+                          <span style="width: 6px; height: 6px; border-radius: 50%; background: #ea580c; display: inline-block;"></span>
+                          <span>يشاهد الآن</span>
+                        </div>
+                        <div style="font-size: 0.7rem; color: #c2410c; margin-top: 2px;">بوابة المحاضرات</div>
+                      ` : (isWatched ? `
                         <div style="display: inline-flex; align-items: center; gap: 5px; background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); padding: 3px 8px; border-radius: 5px; font-weight: 800; font-size: 0.74rem;">
                           <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--centrly-success, #25845a); display: inline-block;"></span>
                           <span>متصل الآن</span>
@@ -336,24 +360,34 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                           <span style="width: 5px; height: 5px; border-radius: 50%; background: #cbd5e1; display: inline-block;"></span>
                           <span>غير متصل</span>
                         </div>
-                      `}
+                      `)}
                     </td>
 
                     <!-- 3. المحاضرة (فيديو الشرح) -->
                     <td style="padding: 12px 14px; vertical-align: middle;">
-                      ${hasWatched ? `
+                      ${isWatched ? `
                         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                           <div style="display: inline-flex; align-items: center; gap: 5px; background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">
                             ${getIcon('check', 13, 'var(--centrly-success, #25845a)')}
                             <span>شاهد</span>
                           </div>
                           <button type="button" onclick="window.teacherPlatformActions.resetStudentWatch('${escapeHtml(sCode)}', '${escapeHtml(sName)}', this)" 
-                            style="background: none; border: 1px solid #cbd5e1; color: #64748b; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;" title="إلغاء توثيق المشاهدة وإعادتها لـ لم يشاهد">
+                            style="background: none; border: 1px solid #cbd5e1; color: #64748b; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;" title="إعادة الضبط لـ لم يشاهد">
                             إلغاء
                           </button>
                         </div>
                         <div style="font-size: 0.72rem; color: #64748b; margin-top: 3px;">
                           ${escapeHtml(vTitle)}
+                        </div>
+                      ` : (isWatching ? `
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                          <div style="display: inline-flex; align-items: center; gap: 6px; background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">
+                            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ea580c;"></span>
+                            <span>قيد المشاهدة</span>
+                          </div>
+                        </div>
+                        <div style="font-size: 0.72rem; color: #ea580c; margin-top: 3px; font-weight: 600;">
+                          فاتح المحاضرة حالياً
                         </div>
                       ` : `
                         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
@@ -361,17 +395,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                             <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #cbd5e1;"></span>
                             <span>لم يشاهد</span>
                           </div>
-                          <button type="button" onclick="window.teacherPlatformActions.simulateStudentWatch('${escapeHtml(sCode)}', '${escapeHtml(sName)}', '${escapeHtml(vTitle)}', this)" 
-                            style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 5px; font-size: 0.72rem; font-weight: 800; padding: 3px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;"
-                            title="توثيق مشاهدة هذا الطالب فوراً للتجربة">
-                            ${getIcon('check', 11, '#2563eb')}
-                            <span>توثيق المشاهدة</span>
-                          </button>
                         </div>
                         <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 3px;">
                           ${escapeHtml(vTitle)}
                         </div>
-                      `}
+                      `)}
                     </td>
 
                     <!-- 4. تسليم الواجب -->
@@ -771,7 +799,8 @@ export function registerTeacherPlatformActions(appInstance) {
         const status = r.getAttribute('data-status') || '';
         let match = false;
         if (filterType === 'all') match = true;
-        else if (filterType === 'watched') match = status.includes('watched') && !status.includes('not_watched');
+        else if (filterType === 'watched') match = status.includes('watched ') && !status.includes('not_watched');
+        else if (filterType === 'watching') match = status.includes('watching');
         else if (filterType === 'not_watched') match = status.includes('not_watched');
         else if (filterType === 'submitted_hw') match = status.includes('submitted_hw');
         r.style.display = match ? '' : 'none';

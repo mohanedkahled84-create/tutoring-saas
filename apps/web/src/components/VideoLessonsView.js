@@ -70,27 +70,32 @@ export function openVideoPlayerModal(url, title, watermarkText = "") {
   const activeSubdomain = (typeof window !== 'undefined' && window.__teacherSubdomain) || 'mr-omar';
 
   // Real-time Database Reporting Function
-  const reportVideoViewToDatabase = () => {
+  const reportVideoViewToDatabase = (newStatus = 'watching') => {
     if (!activeStudentCode) return;
 
     const payload = {
       student_code: String(activeStudentCode).trim(),
       student_name: activeStudentName || 'طالب',
       material_title: title || 'فيديو حل واجب الباب الرابع',
-      status: 'watched',
+      status: newStatus,
       watched_at: new Date().toISOString()
     };
 
     // A. Local reactive update for open tabs
     try {
       const trackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
-      trackingMap[activeStudentCode] = {
-        status: 'watched',
-        studentName: activeStudentName,
-        updatedAt: payload.watched_at
-      };
-      localStorage.setItem('centrly_video_tracking_map', JSON.stringify(trackingMap));
-      window.dispatchEvent(new CustomEvent('centrly_tracking_updated', { detail: trackingMap }));
+      const prev = trackingMap[activeStudentCode]?.status;
+      if (prev === 'watched' && newStatus === 'watching') {
+        payload.status = 'watched';
+      } else {
+        trackingMap[activeStudentCode] = {
+          status: newStatus,
+          studentName: activeStudentName,
+          updatedAt: payload.watched_at
+        };
+        localStorage.setItem('centrly_video_tracking_map', JSON.stringify(trackingMap));
+        window.dispatchEvent(new CustomEvent('centrly_tracking_updated', { detail: trackingMap }));
+      }
     } catch (_) {}
 
     // B. Direct Server API call to /api/video-tracking (Vercel Serverless Function -> Supabase)
@@ -128,16 +133,16 @@ export function openVideoPlayerModal(url, title, watermarkText = "") {
           student_name: activeStudentName || 'طالب',
           message_body: title || 'فيديو حل واجب الباب الرابع',
           direction: 'inbound',
-          status: 'watched'
+          status: newStatus
         }),
         keepalive: true
       }).catch(() => {});
     } catch (_) {}
   };
 
-  // Immediate report upon opening the video modal
+  // Immediate report upon opening the video modal -> starts in 'watching' state
   if (activeStudentCode) {
-    reportVideoViewToDatabase();
+    reportVideoViewToDatabase('watching');
   }
 
   modal.innerHTML = `
@@ -194,20 +199,44 @@ export function openVideoPlayerModal(url, title, watermarkText = "") {
   const completeBtn = modal.querySelector("#markCentrlyVideoCompletedBtn");
   if (completeBtn) {
     completeBtn.onclick = () => {
-      reportVideoViewToDatabase();
+      reportVideoViewToDatabase('watched');
       completeBtn.style.background = '#10b981';
       const txt = modal.querySelector('#markCentrlyVideoCompletedText');
-      if (txt) txt.textContent = 'تم توثيق المشاهدة';
+      if (txt) txt.textContent = 'تمت المشاهدة بنجاح';
       const statusEl = modal.querySelector('#centrlyWatchLiveStatus');
       if (statusEl) {
-        statusEl.textContent = 'تم تسجيلك بنجاح في سجل المشاهدة لدى المعلم!';
+        statusEl.textContent = 'تم توثيق إتمام المشاهدة بنجاح (شاهد ✔)';
         statusEl.style.color = '#34d399';
       }
     };
   }
 
+  // Real-time YouTube player state change listener (detecting play vs video ended)
+  const ytMsgHandler = (e) => {
+    try {
+      const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      if (data && data.event === 'onStateChange') {
+        if (data.info === 1) {
+          reportVideoViewToDatabase('watching');
+        } else if (data.info === 0) {
+          reportVideoViewToDatabase('watched');
+          if (completeBtn) completeBtn.style.background = '#10b981';
+          const txt = modal.querySelector('#markCentrlyVideoCompletedText');
+          if (txt) txt.textContent = 'تمت المشاهدة واكتملت';
+          const statusEl = modal.querySelector('#centrlyWatchLiveStatus');
+          if (statusEl) {
+            statusEl.textContent = 'عاش يا بطل! تم إنهاء مشاهدة الفيديو بنجاح (شاهد ✔)';
+            statusEl.style.color = '#34d399';
+          }
+        }
+      }
+    } catch (_) {}
+  };
+  window.addEventListener('message', ytMsgHandler);
+
   // Close handlers
   const cleanupAndClose = () => {
+    window.removeEventListener('message', ytMsgHandler);
     modal.remove();
   };
 
