@@ -1904,7 +1904,7 @@ class CentrlyApp {
             request('/platform/settings').catch(() => null),
             fetch('/api/video-tracking').then(r => r.json()).catch(() => null),
           ]);
-          if (!viewsRes || !Array.isArray(viewsRes.views) || viewsRes.views.length === 0) {
+          if (!viewsRes || !Array.isArray(viewsRes.views)) {
             const fallbackViews = await request('/platform/video-views').catch(() => null);
             if (fallbackViews && Array.isArray(fallbackViews.views)) {
               viewsRes = fallbackViews;

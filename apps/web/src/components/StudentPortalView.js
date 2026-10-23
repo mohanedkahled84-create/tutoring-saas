@@ -113,7 +113,7 @@ export function renderStudentStudyMaterialCard(m, student = {}, homeworkMaterial
     ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('file', 12, '#1d4ed8')} PDF</span>` 
     : (isVideo ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('video', 12, '#1d4ed8')} فيديو شرح</span>` : `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('link', 12, '#1d4ed8')} رابط</span>`);
   
-  const studentWatermark = `${student.name || 'طالب'} • كود: ${student.student_code || '-'} • ${student.student_phone || student.parent_phone || ''}`;
+  const studentWatermark = `${student.name || 'طالب'} • كود: ${student.student_code || student.code || '-'} • ${student.student_phone || student.phone || student.parent_phone || ''}`;
 
   return `
     <div style="padding: 0.9rem 1rem; border-radius: 0.75rem; background: ${isGatedByHw ? '#f0fdf4' : '#f8fafc'}; border: 1px solid ${isGatedByHw ? '#bbf7d0' : '#e2e8f0'}; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">

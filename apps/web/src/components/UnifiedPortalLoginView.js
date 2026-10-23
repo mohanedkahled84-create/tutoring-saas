@@ -300,6 +300,17 @@ export function registerUnifiedPortalActions(app) {
         const studentKey = (data && data.student && (data.student.id || data.student.student_code || data.student.code || data.student.student_phone)) ? String(data.student.id || data.student.student_code || data.student.code || data.student.student_phone).trim() : '';
         if (typeof window !== 'undefined' && studentKey) {
           window._centrlyCurrentStudentId = studentKey;
+          if (data && data.student) {
+            window._centrlyCurrentStudent = data.student;
+            try {
+              localStorage.setItem('centrly_current_student', JSON.stringify({
+                id: data.student.id,
+                student_code: data.student.student_code || data.student.code || studentKey,
+                name: data.student.name,
+                student_phone: data.student.student_phone || data.student.phone
+              }));
+            } catch (_) {}
+          }
           try { localStorage.setItem('centrly_portal_last_id', studentKey); } catch (_) {}
         }
         setTimeout(() => {

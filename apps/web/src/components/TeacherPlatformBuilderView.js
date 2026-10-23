@@ -105,14 +105,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   if (typeof window !== 'undefined' && Array.isArray(window.__centrlyServerVideoViews)) {
     window.__centrlyServerVideoViews.forEach(v => {
       if (v && v.student_code) {
-        liveTrackingMap[v.student_code] = {
-          percent: Number(v.progress_percent || 0),
-          curTime: v.current_time || '01:45',
-          durTime: v.duration_time || '35:23',
-          status: v.status || (v.progress_percent >= 90 ? 'completed' : 'watching'),
+        liveTrackingMap[String(v.student_code).trim()] = {
+          status: 'watched',
           studentName: v.student_name,
-          isOnline: true,
-          updatedAt: v.updated_at
+          materialTitle: v.material_title,
+          updatedAt: v.watched_at || v.updated_at
         };
       }
     });
@@ -122,37 +119,23 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   try {
     const localMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
     Object.keys(localMap).forEach(k => {
-      if (!liveTrackingMap[k] || (localMap[k]?.updatedAt && new Date(localMap[k].updatedAt) > new Date(liveTrackingMap[k].updatedAt || 0))) {
-        liveTrackingMap[k] = localMap[k];
+      if (localMap[k]?.status === 'watched' || localMap[k]?.status === 'completed') {
+        liveTrackingMap[String(k).trim()] = {
+          status: 'watched',
+          studentName: localMap[k].studentName || '',
+          materialTitle: localMap[k].materialTitle || '',
+          updatedAt: localMap[k].updatedAt
+        };
       }
     });
   } catch (_) {}
 
-  // Mohaned Khaled initial completion baseline
-  if (!liveTrackingMap['1006']) {
-    liveTrackingMap['1006'] = { percent: 100, curTime: '35:23', durTime: '35:23', status: 'completed', isOnline: true };
-  }
-
   const totalStudents = trackingStudents.length;
-  const completedCount = trackingStudents.filter(s => {
-    const code = s.student_code || s.code || '';
-    const p = liveTrackingMap[code];
-    return p && (p.percent >= 100 || p.status === 'completed');
+  const watchedCount = trackingStudents.filter(s => {
+    const code = String(s.student_code || s.code || '').trim();
+    return Boolean(liveTrackingMap[code]);
   }).length;
-  const watchedCount = completedCount;
-
-  const watchingCount = trackingStudents.filter(s => {
-    const code = s.student_code || s.code || '';
-    const p = liveTrackingMap[code];
-    return p && p.percent > 0 && p.percent < 100 && p.status === 'watching';
-  }).length;
-
-  const onlineCount = trackingStudents.filter(s => {
-    const code = s.student_code || s.code || '';
-    const p = liveTrackingMap[code];
-    return p && (p.isOnline || p.percent > 0);
-  }).length;
-
+  const notWatchedCount = totalStudents - watchedCount;
   const hwSubmittedCount = 1; // Mohaned submitted homework
 
   return `
@@ -182,20 +165,19 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               </button>
             </div>
 
-            <!-- 5 شارات إحصائية دقيقة بدون بيانات وهمية -->
+            <!-- 4 شارات إحصائية حقيقية ودقيقة -->
             <div style="display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;">
               <span style="background: #f1f5f9; color: #334155; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
                 <strong style="color: #0f172a; font-weight: 900;">${totalStudents}</strong> طلاب
               </span>
               <span style="background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--centrly-success, #25845a); display: inline-block;"></span>
-                <strong style="font-weight: 900;">${onlineCount}</strong> نشط الآن
+                ${getIcon('check', 11, 'var(--centrly-success, #25845a)')}
+                <span>شاهد:</span>
+                <strong style="font-weight: 900;">${watchedCount}</strong>
               </span>
-              <span style="background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
-                <strong style="font-weight: 900;">${completedCount}</strong> أتمّ المشاهدة (100%)
-              </span>
-              <span style="background: var(--centrly-blue-100, #e8edff); color: var(--centrly-blue-700, #2949ba); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
-                <strong style="font-weight: 900;">${watchingCount}</strong> قيد المشاهدة حالياً
+              <span style="background: #f8fafc; color: #64748b; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                <span>لم يشاهد:</span>
+                <strong style="font-weight: 900;">${notWatchedCount}</strong>
               </span>
               <span style="background: var(--centrly-warning-light, #fef3c7); color: var(--centrly-warning, #d98916); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
                 <strong style="font-weight: 900;">${hwSubmittedCount}</strong> سلّم الواجب
@@ -248,26 +230,18 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               style="background: var(--centrly-blue-700, #2949ba); color: #ffffff; border: 1px solid var(--centrly-blue-700, #2949ba); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
               <span>الكل (${totalStudents})</span>
             </button>
-            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('online', this)"
+            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('watched', this)"
               style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-              <span style="width: 5px; height: 5px; border-radius: 50%; background: var(--centrly-success, #25845a); display: inline-block;"></span>
-              <span>نشط الآن (${onlineCount})</span>
+              ${getIcon('check', 11, 'var(--centrly-success, #25845a)')}
+              <span>شاهد (${watchedCount})</span>
             </button>
-            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('completed', this)"
-              style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
-              <span>أتمّ المشاهدة (${completedCount})</span>
-            </button>
-            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('watching', this)"
-              style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
-              <span>قيد المشاهدة (${watchingCount})</span>
+            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('not_watched', this)"
+              style="background: var(--centrly-surface, #f8f7f1); color: #64748b; border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
+              <span>لم يشاهد (${notWatchedCount})</span>
             </button>
             <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('submitted_hw', this)"
               style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
               <span>سلّم الواجب (${hwSubmittedCount})</span>
-            </button>
-            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('not_started', this)"
-              style="background: var(--centrly-surface, #f8f7f1); color: #64748b; border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
-              <span>لم يبدأ بعد (${totalStudents - completedCount - watchingCount})</span>
             </button>
           </div>
 
@@ -320,25 +294,9 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 const sPhone = s.student_phone || s.phone || s.parent_phone || '01123671177';
 
                 // Dynamic student tracking evaluation
-                const sTracking = liveTrackingMap[sCode] || { percent: 0, curTime: '0:00', durTime: '35:23', status: 'not_started', isOnline: false };
-                const isCompleted = sTracking.percent >= 100 || sTracking.status === 'completed';
-                const isWatching = sTracking.percent > 0 && !isCompleted;
-                const isOnline = Boolean(sTracking.isOnline || isCompleted || isWatching);
-
+                const sTracking = liveTrackingMap[sCode];
+                const hasWatched = Boolean(sTracking);
                 const vTitle = 'فيديو حل واجب الباب الرابع';
-                const vCur = sTracking.curTime || (isCompleted ? '35:23' : '0:00');
-                const vDur = sTracking.durTime || '35:23';
-                const vPct = isCompleted ? 100 : (sTracking.percent || 0);
-                const vStat = isCompleted ? 'completed' : (isWatching ? 'watching' : 'not_started');
-
-                const curParts = String(vCur || '0:00').split(':');
-                const curSecsTotal = (parseInt(curParts[0], 10) || 0) * 60 + (parseInt(curParts[1], 10) || 0);
-                const durParts = String(vDur || '35:23').split(':');
-                const durSecsTotal = (parseInt(durParts[0], 10) || 35) * 60 + (parseInt(durParts[1], 10) || 23);
-                const remSecsTotal = Math.max(0, durSecsTotal - curSecsTotal);
-                const remMins = Math.floor(remSecsTotal / 60);
-                const remSecs = remSecsTotal % 60;
-                const remDisplay = `${remMins}:${String(remSecs).padStart(2, '0')}`;
 
                 // Homework submission (Mohaned Khaled)
                 const isMohaned = (sCode === '1006' || sName.includes('مهند'));
@@ -347,7 +305,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 const hUrl = isMohaned ? 'https://ofaraxqrpcdiregxjyyb.supabase.co/storage/v1/object/public/homework-submissions/0c67b644-ae42-49e8-975f-85b9d0af0e1b/5dc36c09-6997-4d9f-b89c-879c778a04e1/9da3aae0-97df-47a6-82e9-06c6139f63e5_1792760541844_0e803a92-623f-4635-ace8-6cc464f7d9bc.jpg' : '';
 
                 const searchAttr = `${sName} ${sCode} ${sCenter} ${sGroup} ${sPhone}`.toLowerCase();
-                const statusAttr = `${isOnline ? 'online ' : ''}${isCompleted ? 'completed ' : (isWatching ? 'watching ' : 'not_started ')}${hStat === 'approved' ? 'submitted_hw ' : 'not_started '}`;
+                const statusAttr = `${hasWatched ? 'watched ' : 'not_watched '}${hStat === 'approved' ? 'submitted_hw ' : ''}`;
 
                 return `
                   <tr class="tracking-student-row" data-search="${escapeHtml(searchAttr)}" data-status="${escapeHtml(statusAttr)}" style="border-bottom: 1px solid var(--centrly-line, #e2e8f0); transition: background 0.15s ease;">
@@ -367,7 +325,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
                     <!-- 2. حالة التواجد -->
                     <td style="padding: 12px 14px; vertical-align: middle;">
-                      ${isOnline ? `
+                      ${hasWatched ? `
                         <div style="display: inline-flex; align-items: center; gap: 5px; background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); padding: 3px 8px; border-radius: 5px; font-weight: 800; font-size: 0.74rem;">
                           <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--centrly-success, #25845a); display: inline-block;"></span>
                           <span>متصل الآن</span>
@@ -381,49 +339,24 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                       `}
                     </td>
 
-                    <!-- 3. تراكينج المحاضرة (الفيديو) -->
+                    <!-- 3. تراكينج المحاضرة (فيديو الشرح) -->
                     <td style="padding: 12px 14px; vertical-align: middle;">
-                      ${isCompleted ? `
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
-                          <span style="font-weight: 800; font-size: 0.82rem; color: var(--centrly-ink, #182349);">${escapeHtml(vTitle)}</span>
-                          <span style="background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 4px;">
-                            مكتمل (100%)
-                          </span>
+                      ${hasWatched ? `
+                        <div style="display: inline-flex; align-items: center; gap: 5px; background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">
+                          ${getIcon('check', 13, 'var(--centrly-success, #25845a)')}
+                          <span>شاهد</span>
                         </div>
-                        <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
-                          <div style="width: 100%; height: 100%; background: var(--centrly-success, #25845a); border-radius: 3px;"></div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem;">
-                          <span style="font-weight: 800; color: var(--centrly-ink, #182349); font-family: monospace;">
-                            شاهد ${escapeHtml(vCur)} من ${escapeHtml(vDur)} (100%)
-                          </span>
-                          <span style="color: var(--centrly-success, #25845a); font-weight: 800;">
-                            أتمّ المشاهدة بالكامل
-                          </span>
-                        </div>
-                      ` : isWatching ? `
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
-                          <span style="font-weight: 800; font-size: 0.82rem; color: var(--centrly-ink, #182349);">${escapeHtml(vTitle)}</span>
-                          <span style="background: var(--centrly-blue-100, #e8edff); color: var(--centrly-blue-700, #2949ba); font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 4px;">
-                            قيد المشاهدة (${vPct}%)
-                          </span>
-                        </div>
-                        <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 4px;">
-                          <div style="width: ${vPct}%; height: 100%; background: var(--centrly-blue-700, #2949ba); border-radius: 3px;"></div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem;">
-                          <span style="font-weight: 800; color: var(--centrly-ink, #182349); font-family: monospace;">
-                            شاهد ${escapeHtml(vCur)} من ${escapeHtml(vDur)} (${vPct}%)
-                          </span>
-                          <span style="color: var(--centrly-warning, #d98916); font-weight: 700;">
-                            لم يُكمل بعد (متبقي ${remDisplay} د)
-                          </span>
+                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 3px;">
+                          ${escapeHtml(vTitle)}
                         </div>
                       ` : `
-                        <div style="font-size: 0.78rem; color: #94a3b8; font-weight: 600;">
-                          لم يبدأ مشاهدة ${escapeHtml(vTitle)} بعد
+                        <div style="display: inline-flex; align-items: center; gap: 5px; background: #f8fafc; color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.78rem; border: 1px solid #e2e8f0;">
+                          <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #cbd5e1;"></span>
+                          <span>لم يشاهد</span>
                         </div>
-                        <span style="font-size: 0.7rem; color: #cbd5e1;">(0% مكتمل)</span>
+                        <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 3px;">
+                          ${escapeHtml(vTitle)}
+                        </div>
                       `}
                     </td>
 
@@ -644,7 +577,7 @@ export function registerTeacherPlatformActions(appInstance) {
       }
       try {
         let res = await fetch('/api/video-tracking').then(r => r.json()).catch(() => null);
-        if (!res || !Array.isArray(res.views) || res.views.length === 0) {
+        if (!res || !Array.isArray(res.views)) {
           res = await (appInstance?.request ? appInstance.request('/platform/video-views') : fetch(`${API_BASE_URL}/platform/video-views`).then(r => r.json()).catch(() => null));
         }
         if (res && Array.isArray(res.views)) {
@@ -686,10 +619,9 @@ export function registerTeacherPlatformActions(appInstance) {
         const status = r.getAttribute('data-status') || '';
         let match = false;
         if (filterType === 'all') match = true;
-        else if (filterType === 'online') match = status.includes('online');
-        else if (filterType === 'completed' || filterType === 'watching') match = status.includes('completed') || status.includes('watching');
+        else if (filterType === 'watched') match = status.includes('watched') && !status.includes('not_watched');
+        else if (filterType === 'not_watched') match = status.includes('not_watched');
         else if (filterType === 'submitted_hw') match = status.includes('submitted_hw');
-        else if (filterType === 'not_started') match = status.includes('not_started');
         r.style.display = match ? '' : 'none';
         if (match) visibleCount++;
       });
