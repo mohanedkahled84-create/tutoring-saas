@@ -39,13 +39,6 @@ export default async function handler(req, res) {
         watched_at: row.created_at || row.updated_at,
       }));
 
-      // Merge any memory fallbacks not yet present
-      memoryFallback.forEach((val, code) => {
-        if (!views.some((v) => v.student_code === code)) {
-          views.push(val);
-        }
-      });
-
       return res.status(200).json({
         success: true,
         views,
