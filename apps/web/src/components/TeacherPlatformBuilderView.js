@@ -417,7 +417,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 <input type="text" id="builderSubdomainInput" value="${escapeHtml(subdomain)}" placeholder="mr-omar" 
                   style="border: none; background: transparent; padding: 0 8px; font-size: 0.85rem; font-weight: 800; color: #0f172a; outline: none; flex: 1; text-align: left;"
                   oninput="window.teacherPlatformActions.handleSubdomainInput(this.value)">
-                <span style="background: #e2e8f0; color: #475467; font-size: 0.8rem; font-weight: 800; padding: 0 8px; height: 100%; display: flex; align-items: center;">.centrly.com</span>
+                <span style="background: #e2e8f0; color: #475467; font-size: 0.8rem; font-weight: 800; padding: 0 8px; height: 100%; display: flex; align-items: center;">.centerly-eg.com</span>
               </div>
               <div id="subdomainCheckFeedback" style="font-size: 0.72rem; font-weight: 700; margin-top: 3px; min-height: 16px;"></div>
             </div>
