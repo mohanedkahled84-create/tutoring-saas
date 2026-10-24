@@ -18,6 +18,15 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
 
   const currentCount = studentList.length;
   const appObj = typeof window !== 'undefined' ? window.centrlyApp : null;
+  let activeGroupFilter = appObj?.studentsGroupFilter;
+  if (activeGroupFilter === undefined || activeGroupFilter === null) {
+    try {
+      activeGroupFilter = sessionStorage.getItem('centrly_students_group_filter') || '';
+    } catch (_) {
+      activeGroupFilter = '';
+    }
+  }
+  let activeSearchQuery = appObj?.studentsSearchQuery || '';
   const billingData = billing || appObj?.billingState || {};
   const isPaidActive = Boolean(
     (appObj?.isUserSubscribed && appObj.isUserSubscribed()) ||
@@ -173,12 +182,21 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
             ${renderStudentSearchBar({
               id: "studentSearchInput",
               placeholder: "ابحث بالاسم، كود الطالب، أو رقم الهاتف...",
+              value: activeSearchQuery,
               onInputHandler: "window.centrlyApp.filterStudentsTable()",
             })}
           </div>
           <select id="studentGroupFilter" class="form-select" style="flex: 1; min-width: 180px;" onchange="window.centrlyApp.filterStudentsTable()">
-            <option value="">جميع المجاميع</option>
-            ${(groups || []).map(g => `<option value="${escapeHtml(g.name || g.id)}">${escapeHtml(g.name)}</option>`).join('')}
+            <option value="" ${!activeGroupFilter ? 'selected' : ''}>جميع المجاميع</option>
+            ${(groups || []).map(g => {
+              const val = g.name || g.id;
+              const isSelected = activeGroupFilter && (
+                String(val).trim() === String(activeGroupFilter).trim() ||
+                String(g.id).trim() === String(activeGroupFilter).trim() ||
+                String(g.name).trim() === String(activeGroupFilter).trim()
+              );
+              return `<option value="${escapeHtml(val)}" ${isSelected ? 'selected' : ''}>${escapeHtml(g.name)}</option>`;
+            }).join('')}
           </select>
         </div>
       </div>
@@ -244,14 +262,40 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
               ` : studentList.length > 0 ? studentList.map(s => {
                 const matchedGroup = (groups || []).find(g => g.id === s.group_id || g.id === s.groupId);
                 const displayGroupName = s.groupName || s.group_name || matchedGroup?.name || 'مجموعة عامة';
+                const sGroupId = s.group_id || s.groupId || matchedGroup?.id || '';
                 const studentPhone = s.studentPhone || s.student_phone;
                 const parentPhone = s.parentPhone || s.parent_phone;
                 const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
                 const parentPortalUrl = `${canonicalOrigin}/portal?role=parent&preview=true${parentPhone ? `&phone=${encodeURIComponent(parentPhone)}` : ''}`;
                 const studentPortalUrl = `${canonicalOrigin}/portal?role=student&preview=true${studentPhone ? `&phone=${encodeURIComponent(studentPhone)}` : ''}`;
                 const portalPassword = s.portal_password || s.portalPassword || (s.code ? String(s.code).padStart(6, '0') : '');
+
+                let isRowVisible = true;
+                if (activeGroupFilter) {
+                  const gFilterLower = activeGroupFilter.toLowerCase().trim();
+                  const matchG = displayGroupName.toLowerCase().includes(gFilterLower) ||
+                                 String(sGroupId).toLowerCase() === gFilterLower ||
+                                 (matchedGroup && matchedGroup.name && matchedGroup.name.toLowerCase().includes(gFilterLower));
+                  if (!matchG) isRowVisible = false;
+                }
+                if (activeSearchQuery && isRowVisible) {
+                  const qClean = normalizeDigits(activeSearchQuery).trim().toLowerCase();
+                  const rowCode = normalizeDigits(s.code || s.student_code || '').trim().toLowerCase();
+                  const rowName = (s.name || s.full_name || '').trim().toLowerCase();
+                  const cleanDigits = qClean.replace(/\D/g, '');
+                  const sPh = normalizeDigits(studentPhone || '').replace(/\D/g, '');
+                  const pPh = normalizeDigits(parentPhone || '').replace(/\D/g, '');
+                  let matchQ = false;
+                  if (!qClean) matchQ = true;
+                  else if (rowCode && (rowCode === qClean || rowCode.startsWith(qClean))) matchQ = true;
+                  else if (rowName && rowName.includes(qClean)) matchQ = true;
+                  else if (cleanDigits.length >= 7 && (sPh.includes(cleanDigits) || pPh.includes(cleanDigits))) matchQ = true;
+                  else if (cleanDigits.length < 7 && !rowCode && (displayGroupName.toLowerCase().includes(qClean) || rowName.includes(qClean))) matchQ = true;
+                  if (!matchQ) isRowVisible = false;
+                }
+
                 return `
-                <tr data-code="${escapeHtml(s.code || s.student_code || '')}" data-name="${escapeHtml(s.name || s.full_name || '')}" data-phone="${escapeHtml(studentPhone || '')}" data-parent-phone="${escapeHtml(parentPhone || '')}">
+                <tr data-code="${escapeHtml(s.code || s.student_code || '')}" data-name="${escapeHtml(s.name || s.full_name || '')}" data-phone="${escapeHtml(studentPhone || '')}" data-parent-phone="${escapeHtml(parentPhone || '')}" data-group="${escapeHtml(displayGroupName)}" data-group-id="${escapeHtml(sGroupId)}" style="${isRowVisible ? '' : 'display: none;'}">
                   <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>
                   <td style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(s.name || s.full_name || '—')}</td>
                   <td style="max-width: 150px;">
@@ -741,6 +785,10 @@ export function registerStudentsActions(app) {
 
   app.saveStudentEdit = async function(e, studentId) {
     e.preventDefault();
+    const currentGroupFilter = document.getElementById('studentGroupFilter')?.value;
+    if (currentGroupFilter !== undefined && currentGroupFilter !== null) {
+      this.studentsGroupFilter = currentGroupFilter;
+    }
     const name = document.getElementById('editStudentName')?.value.trim();
     const code = document.getElementById('editStudentCode')?.value.trim();
     const parent_phone = document.getElementById('editStudentPhone')?.value.trim();
@@ -867,6 +915,9 @@ export function registerStudentsActions(app) {
       }
 
       this.renderMainContent();
+      if (typeof this.filterStudentsTable === 'function') {
+        this.filterStudentsTable();
+      }
     } catch (err) {
       if (feedback) {
         feedback.style.display = 'block';
@@ -884,6 +935,11 @@ export function registerStudentsActions(app) {
   }
 
   app.confirmDeleteStudent = function(studentId, studentName) {
+    const currentGroupFilter = document.getElementById('studentGroupFilter')?.value;
+    if (currentGroupFilter !== undefined && currentGroupFilter !== null) {
+      this.studentsGroupFilter = currentGroupFilter;
+    }
+
     this.showConfirmModal({
       title: 'حذف الطالب نهائياً',
       message: `هل أنت متأكد من رغبتك في حذف الطالب "${studentName}"؟ سيتم حذف جميع بياناته وسجلات حضوره بالكامل.`,
@@ -895,6 +951,9 @@ export function registerStudentsActions(app) {
           await request(`/students/${studentId}`, { method: 'DELETE' });
           this.showToast(`تم حذف الطالب (${studentName}) بنجاح`, 'success');
           await this.loadRouteData(this.currentRoute);
+          if (typeof this.filterStudentsTable === 'function') {
+            this.filterStudentsTable();
+          }
         } catch (err) {
           this.showToast(`فشل حذف الطالب: ${err.message || 'خطأ في الخادم'}`, 'danger');
         }
@@ -903,18 +962,43 @@ export function registerStudentsActions(app) {
   }
 
   app.filterStudentsTable = function() {
-    const rawVal = document.getElementById('studentSearchInput')?.value || '';
-    const q = normalizeDigits(rawVal).trim().toLowerCase();
-    const groupFilter = document.getElementById('studentGroupFilter')?.value || '';
-    const rows = document.querySelectorAll('#studentsTable tbody tr');
+    const searchEl = document.getElementById('studentSearchInput');
+    const groupEl = document.getElementById('studentGroupFilter');
 
+    const rawVal = searchEl ? searchEl.value : (this.studentsSearchQuery || '');
+    const q = normalizeDigits(rawVal).trim().toLowerCase();
+
+    let groupFilter = groupEl ? groupEl.value : (this.studentsGroupFilter || '');
+    if (!groupFilter && !groupEl) {
+      try {
+        groupFilter = sessionStorage.getItem('centrly_students_group_filter') || '';
+      } catch (_) {}
+    }
+
+    this.studentsGroupFilter = groupFilter;
+    if (searchEl) {
+      this.studentsSearchQuery = rawVal;
+    }
+
+    try {
+      if (groupFilter) {
+        sessionStorage.setItem('centrly_students_group_filter', groupFilter);
+      } else {
+        sessionStorage.removeItem('centrly_students_group_filter');
+      }
+    } catch (_) {}
+
+    const rows = document.querySelectorAll('#studentsTable tbody tr');
     const cleanDigits = q.replace(/\D/g, '');
 
     rows.forEach(r => {
+      if (r.classList.contains('skeleton-row')) return;
       const rowCode = normalizeDigits(r.getAttribute('data-code') || '').trim().toLowerCase();
       const rowName = (r.getAttribute('data-name') || '').trim().toLowerCase();
       const rowPhone = normalizeDigits(r.getAttribute('data-phone') || '').replace(/\D/g, '');
       const rowParentPhone = normalizeDigits(r.getAttribute('data-parent-phone') || '').replace(/\D/g, '');
+      const rowGroup = (r.getAttribute('data-group') || '').toLowerCase();
+      const rowGroupId = (r.getAttribute('data-group-id') || '').toLowerCase();
       const rowText = r.textContent.toLowerCase();
 
       let matchQ = false;
@@ -930,7 +1014,8 @@ export function registerStudentsActions(app) {
         matchQ = true;
       }
 
-      const matchG = !groupFilter || rowText.includes(groupFilter.toLowerCase());
+      const gVal = (groupFilter || '').toLowerCase().trim();
+      const matchG = !gVal || rowGroup.includes(gVal) || rowGroupId === gVal || rowText.includes(gVal);
       r.style.display = matchQ && matchG ? '' : 'none';
     });
 

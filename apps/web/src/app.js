@@ -11,7 +11,7 @@ import { renderOnboardingWizard, registerOnboardingActions } from './components/
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.3.0';
 import { renderTeacherCalendar, registerTeacherCalendarActions } from './components/TeacherCalendar.js';
 import { renderSessionsView, registerSessionsActions } from './components/SessionsView.js';
-import { renderStudentsView, registerStudentsActions } from './components/StudentsView.js?v=4.8.16';
+import { renderStudentsView, registerStudentsActions } from './components/StudentsView.js?v=4.8.17';
 import { renderGroupsView, registerGroupsActions } from './components/GroupsView.js?v=4.8.12';
 import { renderMessageLogsView, registerMessageLogsActions } from './components/MessageLogsView.js';
 import { renderParentPortalView } from './components/ParentPortalView.js?v=6.0.0';
@@ -2122,6 +2122,9 @@ class CentrlyApp {
     if (el) el.innerHTML = this.getContentHtml(this.currentRoute);
     if (this.currentRoute === 'students') {
       this.initStudentsTableScrollSync();
+      if (typeof this.filterStudentsTable === 'function') {
+        this.filterStudentsTable();
+      }
     }
   }
 
