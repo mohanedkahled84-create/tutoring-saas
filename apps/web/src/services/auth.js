@@ -36,6 +36,7 @@ export const authService = {
           parsed.name = 'مستر عمر المحمدي';
           parsed.full_name = 'مستر عمر المحمدي';
           parsed.teacher_name = 'مستر عمر المحمدي';
+          parsed.subject = 'فيزياء الثانوية العامة';
           parsed.tenant_id = '0c67b644-ae42-49e8-975f-85b9d0af0e1b';
           parsed.tenant_name = 'مستر عمر المحمدي - منظومة تعليمية';
         }

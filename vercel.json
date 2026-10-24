@@ -150,6 +150,46 @@
       "destination": "/apps/web/src/:path*"
     },
     {
+      "source": "/(dashboard|dashboard/.*|index\\.html)",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/index.html"
+    },
+    {
+      "source": "/(dashboard|dashboard/.*|index\\.html)",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/index.html"
+    },
+    {
+      "source": "/((?!api/|apps/|teacher-platform-sample/|src/|.*\\.(?:png|ico|jpg|jpeg|svg|webp|woff2|woff|ttf|css|js|webmanifest)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
+      "source": "/((?!api/|apps/|teacher-platform-sample/|src/|.*\\.(?:png|ico|jpg|jpeg|svg|webp|woff2|woff|ttf|css|js|webmanifest)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
       "source": "/mr-omar",
       "destination": "/teacher-platform-sample/login.html"
     },

@@ -49,17 +49,23 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   );
 
   const subdomain = settings.subdomain || (isOmar ? "mr-omar" : "");
-  const displayTitle = settings.display_title || (user.name ? `منصة ${user.name}` : (isOmar ? "منصة مستر عمر المحمدي" : "منصة الأستاذ"));
-  const subjectTitle = settings.subject_title || user.subject || (isOmar ? "فيزياء الثانوية العامة" : "المرحلة الثانوية");
+  const displayTitle = (settings.display_title || '').trim() || (user.name ? `منصة ${user.name}` : (isOmar ? "منصة مستر عمر المحمدي" : "منصة الأستاذ"));
+  
+  let subjectTitle = (settings.subject_title || user.subject || '').trim();
+  // إزالة أي نص توضيحي قديم تم حفظه سابقاً مثل خبير اللغة الإنجليزية
+  if (!subjectTitle || subjectTitle.includes('الإنجليزية') || subjectTitle.includes('خبير')) {
+    subjectTitle = (user?.subject || (isOmar ? "فيزياء الثانوية العامة" : "المرحلة الثانوية")).trim();
+  }
+
   const headlineText = settings.headline_text || "بوابتك التعليمية الشاملة للتفوق والدرجة النهائية";
   const subtitleText = settings.subtitle_text || "هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.";
   const themePreset = settings.theme_preset || "navy";
   const cutoutAvatarUrl = settings.cutout_avatar_url || "";
 
-  // Official live URL (Direct universal URL that works for 100% of students without DNS delay)
+  // Official live URL (الرابط الرسمي على السابدومين الخاص بالمدرس)
   const officialSubdomain = subdomain || (isOmar ? 'mr-omar' : 'yourname');
-  const livePlatformUrl = `https://centerly-eg.com/${officialSubdomain}`;
-  const customSubdomainUrl = `https://${officialSubdomain}.centerly-eg.com`;
+  const livePlatformUrl = `https://${officialSubdomain}.centerly-eg.com`;
+  const customSubdomainUrl = livePlatformUrl;
   const internalPlatformPath = `/${officialSubdomain}`;
 
   // Theme metadata
@@ -142,44 +148,81 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   const notWatchedCount = totalStudents - watchedCount - watchingCount;
   const hwSubmittedCount = 1; // Mohaned submitted homework
 
-    // خريطة كويزات الطلاب المرصودة لعرض نتائج حقيقية وهادئة
-  const knownStudentQuizzes = {
-    '1117': { title: 'Exam 1', score: 13.5, maxScore: 15, pct: 90, tier: 'ممتاز' },
-    '1101': { title: 'Exam 1', score: 13, maxScore: 15, pct: 87, tier: 'ممتاز' },
-    '1102': { title: 'Exam 1', score: 13, maxScore: 15, pct: 87, tier: 'ممتاز' },
-    '1118': { title: 'Exam 1', score: 10, maxScore: 15, pct: 67, tier: 'جيد' },
-    '1103': { title: 'Exam 1', score: 11.5, maxScore: 15, pct: 77, tier: 'جيد جداً' },
-    '1116': { title: 'Exam 1', score: 12, maxScore: 15, pct: 80, tier: 'جيد جداً' },
-    '1111': { title: 'Exam 1', score: 12.5, maxScore: 15, pct: 83, tier: 'جيد جداً' },
-    '1099': { title: 'Exam 1', score: 12, maxScore: 15, pct: 80, tier: 'جيد جداً' },
-    '1006': { title: 'كويز 1', score: 10, maxScore: 10, pct: 100, tier: 'ممتاز' },
-  };
+      // فحص نتائج الكويزات الأونلاين الحقيقية فقط بدون أي نتائج ورقية أو وهمية
+  function resolveStudentOnlineQuiz(studentCode, studentId) {
+    const sCode = String(studentCode || '').trim();
+    const sId = String(studentId || '').trim();
 
-  function resolveStudentQuiz(code, studentId) {
-    const sCodeStr = String(code || '').trim();
-    if (sCodeStr && knownStudentQuizzes[sCodeStr]) return knownStudentQuizzes[sCodeStr];
+    // 1. فحص تسليمات الكويزات الأونلاين الفعلية القادمة من قاعدة البيانات
+    const onlineSubs = state.onlineSubmissions || window.__centrlyOnlineSubmissions || [];
+    const sub = onlineSubs.find(s => 
+      (sId && String(s.student_id).trim() === sId) || 
+      (sCode && String(s.student_code || '').trim() === sCode)
+    );
+
+    if (sub) {
+      let notes = {};
+      try {
+        notes = typeof sub.teacher_notes === 'string' ? JSON.parse(sub.teacher_notes) : (sub.teacher_notes || {});
+      } catch (_) {}
+
+      const hasEssay = Boolean(notes.has_essay);
+      const isGraded = notes.is_graded === true || sub.status === 'approved';
+      const score = notes.final_score !== undefined && notes.final_score !== null ? Number(notes.final_score) : null;
+      const maxScore = Number(notes.max_score || 10);
+      const quizTitle = notes.title || (notes.quiz_number ? `كويز ${notes.quiz_number}` : 'كويز أونلاين');
+
+      if (!isGraded && hasEssay) {
+        return {
+          title: quizTitle,
+          status: 'pending_grading',
+          displayText: 'قيد التصحيح'
+        };
+      }
+
+      if (score !== null && !isNaN(score)) {
+        const pct = Math.round((score / maxScore) * 100);
+        return {
+          title: quizTitle,
+          score,
+          maxScore,
+          pct,
+          tier: pct >= 85 ? 'ممتاز' : (pct >= 75 ? 'جيد جداً' : (pct >= 60 ? 'جيد' : 'يحتاج متابعة')),
+          status: 'graded'
+        };
+      }
+    }
+
+    // 2. فحص كاش تسليمات كويزات الأونلاين المحفوظة محلياً أثناء الاختبار
     try {
-      const qState = window.centrlyApp?.quizzesState;
-      if (qState && qState.scoresMap) {
-        for (const [qNum, scoreObj] of Object.entries(qState.scoresMap)) {
-          if (scoreObj && (scoreObj[studentId] !== undefined || scoreObj[sCodeStr] !== undefined)) {
-            const sc = scoreObj[studentId] !== undefined ? scoreObj[studentId] : scoreObj[sCodeStr];
-            if (sc !== '' && sc !== null && sc !== undefined) {
-              const qObj = qState.quizzes?.find(q => q.number === Number(qNum));
-              const maxSc = Number(qObj?.maxScore || 10);
-              const pct = Math.round((Number(sc) / maxSc) * 100);
-              return {
-                title: qObj?.title || `كويز ${qNum}`,
-                score: sc,
-                maxScore: maxSc,
-                pct: pct,
-                tier: pct >= 85 ? 'ممتاز' : (pct >= 75 ? 'جيد جداً' : (pct >= 60 ? 'جيد' : 'يحتاج متابعة'))
-              };
+      if (typeof localStorage !== 'undefined') {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(`centrly_submission_${sCode}_`)) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const data = JSON.parse(raw);
+              if (data.has_essay && !data.is_graded) {
+                return { title: data.title || 'كويز أونلاين', status: 'pending_grading', displayText: 'قيد التصحيح' };
+              }
+              if (data.score !== undefined && data.score !== null) {
+                const max = Number(data.max_score || 10);
+                const pct = Math.round((Number(data.score) / max) * 100);
+                return {
+                  title: data.title || 'كويز أونلاين',
+                  score: data.score,
+                  maxScore: max,
+                  pct,
+                  tier: pct >= 85 ? 'ممتاز' : (pct >= 75 ? 'جيد جداً' : (pct >= 60 ? 'جيد' : 'يحتاج متابعة')),
+                  status: 'graded'
+                };
+              }
             }
           }
         }
       }
     } catch (_) {}
+
     return null;
   }
 
@@ -218,7 +261,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
           <!-- أزرار الإجراءات السريعة -->
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-            <a href="/mr-omar/dashboard" target="_blank" rel="noopener noreferrer" 
+            <a href="https://${officialSubdomain}.centerly-eg.com/dashboard" target="_blank" rel="noopener noreferrer" 
               style="height: 30px; padding: 0 11px; font-size: 0.76rem; font-weight: 600; background: #0f172a; color: #ffffff; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
               <span>معاينة المنصة</span>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
@@ -267,7 +310,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 600; font-size: 0.73rem;">
                 <th style="padding: 9px 14px;">الطالب والسنتر</th>
                 <th style="padding: 9px 14px;">حساب دخول المنصة</th>
-                <th style="padding: 9px 14px;">آخر نتيجة كويز</th>
+                <th style="padding: 9px 14px;">آخر نتيجة كويز أونلاين</th>
                 <th style="padding: 9px 14px; text-align: center;">إجراء مباشر</th>
               </tr>
             </thead>
@@ -280,13 +323,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 const sPhone = s.student_phone || s.phone || s.parent_phone || '01123671177';
                 const sPass = s.portal_password || (sCode === '1117' ? '506438' : (sCode === '1006' ? '1006' : '123456'));
 
-                const quiz = resolveStudentQuiz(sCode, s.id);
+                const quiz = resolveStudentOnlineQuiz(sCode, s.id);
                 const searchAttr = `${sName} ${sCode} ${sCenter} ${sGroup} ${sPhone}`.toLowerCase();
 
                 const cleanPhone = String(sPhone).replace(/\D/g, '').replace(/^2/, '').replace(/^0/, '');
                 const waText = `السلام عليكم يا ${sName}، بيانات دخولك لمنصة ${displayTitle}:\nكود الطالب: *${sCode}*\nكلمة المرور: *${sPass}*\nرابط المنصة:\n${livePlatformUrl}\nنتمنى لك دوام التوفيق والتميز!`;
                 const waUrl = `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}`;
-                const studentDashboardUrl = `/mr-omar/dashboard?code=${encodeURIComponent(sCode)}${s.parent_portal_token ? `&token=${encodeURIComponent(s.parent_portal_token)}` : ''}`;
+                const studentDashboardUrl = `https://${officialSubdomain}.centerly-eg.com/dashboard?code=${encodeURIComponent(sCode)}${s.parent_portal_token ? `&token=${encodeURIComponent(s.parent_portal_token)}` : ''}`;
 
                 return `
                   <tr class="tracking-student-row" data-search="${escapeHtml(searchAttr)}" style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s ease;">
@@ -314,15 +357,24 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                       </div>
                     </td>
 
-                    <!-- 3. آخر نتيجة كويز -->
+                    <!-- 3. آخر نتيجة كويز أونلاين -->
                     <td style="padding: 10px 14px; vertical-align: middle;">
-                      ${quiz ? `
-                        <div style="display: inline-flex; align-items: center; gap: 6px;">
-                          <span style="font-weight: 700; font-size: 0.84rem; color: #0f172a; font-family: monospace;">${quiz.score} / ${quiz.maxScore}</span>
-                          <span style="font-size: 0.7rem; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px;">${escapeHtml(quiz.title)}</span>
-                          <span style="font-size: 0.7rem; font-weight: 600; color: #166534; background: #f0fdf4; padding: 1px 6px; border-radius: 4px;">${escapeHtml(quiz.tier)}</span>
-                        </div>
-                      ` : `
+                      ${quiz ? (
+                        quiz.status === 'pending_grading' ? `
+                          <div style="display: inline-flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.71rem; font-weight: 600; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px;">
+                              قيد التصحيح
+                            </span>
+                            <span style="font-size: 0.72rem; color: #64748b;">${escapeHtml(quiz.title)}</span>
+                          </div>
+                        ` : `
+                          <div style="display: inline-flex; align-items: center; gap: 6px;">
+                            <span style="font-weight: 700; font-size: 0.84rem; color: #0f172a; font-family: monospace;">${quiz.score} / ${quiz.maxScore}</span>
+                            <span style="font-size: 0.7rem; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px;">${escapeHtml(quiz.title)}</span>
+                            <span style="font-size: 0.7rem; font-weight: 600; color: #166534; background: #f0fdf4; padding: 1px 6px; border-radius: 4px;">${escapeHtml(quiz.tier)}</span>
+                          </div>
+                        `
+                      ) : `
                         <span style="font-size: 0.74rem; color: #94a3b8;">لم يرصد بعد</span>
                       `}
                     </td>

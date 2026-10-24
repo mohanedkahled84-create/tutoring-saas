@@ -3080,7 +3080,10 @@
       localStorage.removeItem('portal_student');
       localStorage.removeItem('centrly_portal_token');
       const currentPath = window.location.pathname;
-      if (currentPath.includes('/teacher-platform-sample/')) {
+      const isSub = window.location.hostname.includes('mr-omar') || window.location.hostname.split('.').length > 2;
+      if (isSub) {
+        window.location.href = '/login' + (window.location.search || '');
+      } else if (currentPath.includes('/teacher-platform-sample/')) {
         window.location.href = '/teacher-platform-sample/login.html' + (window.location.search || '');
       } else {
         window.location.href = '/mr-omar' + (window.location.search || '');

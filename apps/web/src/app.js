@@ -41,7 +41,7 @@ import { renderTeacherSettingsView, registerTeacherSettingsActions } from './com
 import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=4.7.6';
 import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=1.0.0';
 import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.3.0';
-import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.6.0';
+import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.7.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.9.21';
@@ -1900,57 +1900,45 @@ class CentrlyApp {
           break;
         }
         case 'platform-builder': {
-          let [res, viewsRes] = await Promise.all([
+          let [res, viewsRes, onlineSubsRes] = await Promise.all([
             request('/platform/settings').catch(() => null),
             fetch('/api/video-tracking').then(r => r.json()).catch(() => null),
-          ]);
-          if (!viewsRes || !Array.isArray(viewsRes.views) || viewsRes.views.length === 0) {
-            viewsRes = await fetch('https://centerly-eg.com/api/video-tracking').then(r => r.json()).catch(() => null);
-          }
-          if (!viewsRes || !Array.isArray(viewsRes.views) || viewsRes.views.length === 0) {
-            try {
-              const supaUrl = 'https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/whatsapp_inbox?phone=like.VIDEO_TRACK_%25&select=*&order=created_at.desc';
-              const supaRes = await fetch(supaUrl, {
-                headers: {
-                  apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-                  Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz'
-                }
-              });
-              if (supaRes.ok) {
-                const rows = await supaRes.json();
-                viewsRes = {
-                  views: (Array.isArray(rows) ? rows : []).map(r => ({
-                    student_code: String(r.phone || '').replace('VIDEO_TRACK_', '').trim(),
-                    student_name: r.student_name,
-                    material_title: r.message_body,
-                    status: 'watched',
-                    watched_at: r.created_at
-                  }))
-                };
+            fetch('https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/homework_submissions?file_name=like.online_quiz%25&select=*&order=submitted_at.desc', {
+              headers: {
+                apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
+                Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz'
               }
-            } catch (_) {}
-          }
-          if (!viewsRes || !Array.isArray(viewsRes.views)) {
-            const fallbackViews = await request('/platform/video-views').catch(() => null);
-            if (fallbackViews && Array.isArray(fallbackViews.views)) {
-              viewsRes = fallbackViews;
-            }
-          }
-          if (viewsRes && Array.isArray(viewsRes.views)) {
-            window.__centrlyServerVideoViews = viewsRes.views;
-          }
+            }).then(r => r.json()).catch(() => [])
+          ]);
+
+          const onlineSubmissions = Array.isArray(onlineSubsRes) ? onlineSubsRes : [];
+          window.__centrlyOnlineSubmissions = onlineSubmissions;
+
           const tenantKey = this.user?.tenant_id || 'active';
           let localSettings = null;
           try {
             const cachedStr = localStorage.getItem(`centrly_platform_settings_${tenantKey}`);
-            if (cachedStr) localSettings = JSON.parse(cachedStr);
+            if (cachedStr) {
+              localSettings = JSON.parse(cachedStr);
+              // تنظيف أي قيمة سابقة تخص خبير اللغة الإنجليزية من الكاش المحلي للمتصفح
+              if (localSettings && localSettings.subject_title && (localSettings.subject_title.includes('الإنجليزية') || localSettings.subject_title.includes('خبير'))) {
+                localSettings.subject_title = this.user?.subject || 'فيزياء الثانوية العامة';
+                localStorage.setItem(`centrly_platform_settings_${tenantKey}`, JSON.stringify(localSettings));
+                localStorage.setItem('centrly_platform_settings', JSON.stringify(localSettings));
+              }
+            }
           } catch (_) {}
 
           const finalSettings = res?.settings || localSettings || null;
+          if (finalSettings && finalSettings.subject_title && (finalSettings.subject_title.includes('الإنجليزية') || finalSettings.subject_title.includes('خبير'))) {
+            finalSettings.subject_title = this.user?.subject || 'فيزياء الثانوية العامة';
+          }
+
           this.platformBuilderState = {
             settings: finalSettings,
             plan: res?.plan || { is_pro: true },
             views: viewsRes?.views || [],
+            onlineSubmissions: onlineSubmissions
           };
           this.saveCache('platformBuilderState', this.platformBuilderState);
           this.renderMainContent();
