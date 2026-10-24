@@ -2332,14 +2332,25 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 <span>${layoutMode === 'all' ? 'عرض سؤال بسؤال' : 'عرض كافة الأسئلة'}</span>
               </button>
 
-              <button 
-                type="button" 
-                style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
-                onclick="window.centrlyApp.savePaperExam()"
-              >
-                ${getIcon('check', 13, '#ffffff')}
-                <span>حفظ وتوليد نماذج الامتحان</span>
-              </button>
+              ${state.isSavingPaperExam ? `
+                <button 
+                  type="button" 
+                  disabled
+                  style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #64748b; color: #ffffff; border: none; border-radius: 5px; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px; opacity: 0.85;"
+                >
+                  <span style="width: 12px; height: 12px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: centrlySpin 0.75s linear infinite;"></span>
+                  <span>جاري الحفظ والتوليد...</span>
+                </button>
+              ` : `
+                <button 
+                  type="button" 
+                  style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
+                  onclick="window.centrlyApp.savePaperExam()"
+                >
+                  ${getIcon('check', 13, '#ffffff')}
+                  <span>حفظ وتوليد نماذج الامتحان</span>
+                </button>
+              `}
             </div>
           </div>
 
@@ -2399,15 +2410,25 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                   >
                     السؤال التالي ▶
                   </button>
+                ` : (state.isSavingPaperExam ? `
+                  <button 
+                    type="button" 
+                    disabled
+                    style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #64748b; color: #ffffff; border: none; border-radius: 5px; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px; opacity: 0.85;"
+                  >
+                    <span style="width: 12px; height: 12px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: centrlySpin 0.75s linear infinite;"></span>
+                    <span>جاري الحفظ والتوليد...</span>
+                  </button>
                 ` : `
                   <button 
                     type="button" 
+                    id="btnFinishSavePaperExam"
                     style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                     onclick="window.centrlyApp.savePaperExam()"
                   >
                     إنهاء وحفظ الامتحان
                   </button>
-                `}
+                `)}
               </div>
 
               <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -2420,14 +2441,25 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                   <span>+ إضافة سؤال تالٍ</span>
                 </button>
 
-                <button 
-                  type="button" 
-                  style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
-                  onclick="window.centrlyApp.savePaperExam()"
-                >
-                  ${getIcon('check', 13, '#ffffff')}
-                  <span>حفظ وتوليد نماذج الامتحان</span>
-                </button>
+                ${state.isSavingPaperExam ? `
+                  <button 
+                    type="button" 
+                    disabled
+                    style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #64748b; color: #ffffff; border: none; border-radius: 5px; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px; opacity: 0.85;"
+                  >
+                    <span style="width: 12px; height: 12px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: centrlySpin 0.75s linear infinite;"></span>
+                    <span>جاري الحفظ والتوليد...</span>
+                  </button>
+                ` : `
+                  <button 
+                    type="button" 
+                    style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
+                    onclick="window.centrlyApp.savePaperExam()"
+                  >
+                    ${getIcon('check', 13, '#ffffff')}
+                    <span>حفظ وتوليد نماذج الامتحان</span>
+                  </button>
+                `}
               </div>
             </div>
 
@@ -4009,18 +4041,27 @@ export function registerTeacherQuizzesActions(app) {
     const timeLimit = Number(document.getElementById('paperQuizTimeLimit')?.value || qz?.time_limit_minutes || 45);
 
     try {
+      this.quizzesState.isSavingPaperExam = true;
+      this.renderMainContent();
       this.showToast('جاري حفظ وتوليد نماذج الامتحان الورقي والـ Bubble Sheet...', 'info');
 
       let targetGroupIds = [];
       if (Array.isArray(qz?.target_group_ids) && qz.target_group_ids.length > 0) {
-        targetGroupIds = qz.target_group_ids;
-      } else if (targetGroupId === 'all' && Array.isArray(this.groups)) {
-        targetGroupIds = this.groups.map(g => g.id);
-      } else if (targetGroupId && targetGroupId !== 'multiple') {
-        targetGroupIds = [targetGroupId];
-      } else if (currentGid) {
-        targetGroupIds = [currentGid];
+        targetGroupIds = qz.target_group_ids.filter(id => id && id !== 'all' && id !== 'multiple');
       }
+      if (targetGroupIds.length === 0) {
+        if ((targetGroupId === 'all' || qz?.target_group_id === 'all') && Array.isArray(this.groups) && this.groups.length > 0) {
+          targetGroupIds = this.groups.map(g => g.id);
+        } else if (targetGroupId && targetGroupId !== 'multiple' && targetGroupId !== 'all') {
+          targetGroupIds = [targetGroupId];
+        } else if (currentGid) {
+          targetGroupIds = [currentGid];
+        } else if (Array.isArray(this.groups) && this.groups.length > 0) {
+          targetGroupIds = [this.groups[0].id];
+        }
+      }
+
+      const savedQuizzes = [];
 
       for (const gid of targetGroupIds) {
         const payload = {
@@ -4052,15 +4093,43 @@ export function registerTeacherQuizzesActions(app) {
             res = await request('/quizzes/rich', { method: 'POST', body: payload });
           } catch (_) {}
         }
+
+        const savedItem = res?.quiz || {
+          ...payload,
+          id: payload.id || `paper_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          created_at: new Date().toISOString()
+        };
+        savedQuizzes.push(savedItem);
       }
 
-      this.showToast(`تم حفظ وتوليد نماذج الامتحان الورقي بنجاح!`, 'success');
-      await this.loadRichQuizzes();
-      if (currentGid) await this.loadQuizzesForGroup(currentGid);
+      // Optimistically insert into richQuizzes so it appears immediately!
+      if (!Array.isArray(this.quizzesState.richQuizzes)) {
+        this.quizzesState.richQuizzes = [];
+      }
+      for (const sq of savedQuizzes) {
+        this.quizzesState.richQuizzes = this.quizzesState.richQuizzes.filter(
+          q => !(q.id === sq.id || (String(q.group_id) === String(sq.group_id) && Number(q.quiz_number) === Number(sq.quiz_number) && q.exam_mode === 'paper'))
+        );
+        this.quizzesState.richQuizzes.unshift(sq);
+      }
+
       this.quizzesState.paperViewMode = 'list';
+      this.quizzesState.isSavingPaperExam = false;
+      this.quizzesState.printQuizId = savedQuizzes[0]?.id;
       this.renderMainContent();
+
+      this.showToast('تم حفظ وتوليد نماذج الامتحان الورقي بنجاح!', 'success');
+
+      // Refresh in background
+      this.loadRichQuizzes().catch(() => {});
+      if (currentGid && typeof this.loadQuizzesForGroup === 'function') {
+        this.loadQuizzesForGroup(currentGid).catch(() => {});
+      }
     } catch (err) {
       this.showToast(`فشل حفظ الامتحان: ${err.message || 'خطأ في الخادم'}`, 'danger');
+    } finally {
+      this.quizzesState.isSavingPaperExam = false;
+      this.renderMainContent();
     }
   };
 

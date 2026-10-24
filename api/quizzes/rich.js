@@ -113,7 +113,7 @@ export default async function handler(req, res) {
                 if (!group_id || parsed.group_id === group_id) {
                   // Dedup against existing richQuizzes
                   const exists = richQuizzes.some(
-                    (q) => q.group_id === parsed.group_id && Number(q.quiz_number) === Number(parsed.quiz_number)
+                    (q) => q.group_id === parsed.group_id && Number(q.quiz_number) === Number(parsed.quiz_number) && (q.exam_mode || 'online') === (parsed.exam_mode || 'online')
                   );
                   if (!exists) {
                     richQuizzes.push(parsed);
@@ -264,7 +264,7 @@ export default async function handler(req, res) {
           const matched = (Array.isArray(existingRows) ? existingRows : []).find((r) => {
             try {
               const p = JSON.parse(r.questions || '{}');
-              return Number(p.quiz_number) === qNum;
+              return Number(p.quiz_number) === qNum && (p.exam_mode || 'online') === (exam_mode || 'online');
             } catch (_) {
               return false;
             }
@@ -340,7 +340,8 @@ export default async function handler(req, res) {
 
       // 3. Resilient fallback storage in whatsapp_inbox table (guaranteed write with anon key)
       try {
-        const fallbackPhone = `QUIZ_DEF_${group_id}_${qNum}`;
+        const modePrefix = exam_mode === 'paper' ? 'PAPER_' : '';
+        const fallbackPhone = `QUIZ_DEF_${modePrefix}${group_id}_${qNum}`;
         const checkInboxUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(fallbackPhone)}&select=id`;
         const checkInboxRes = await fetch(checkInboxUrl, {
           headers: {
