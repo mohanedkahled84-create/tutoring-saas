@@ -182,7 +182,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
                     <span class="nav-icon" style="display: inline-flex; align-items: center; justify-content: center; color: ${isActive ? '#ffffff' : '#64748b'};">
                       ${getIcon(r.icon, 16, isActive ? '#ffffff' : '#64748b')}
                     </span>
-                    <span style="font-weight: ${isActive ? '700' : '600'}; color: ${isActive ? '#ffffff' : '#334155'}; font-size: 0.82rem; flex: 1; display: flex; align-items: center; justify-content: space-between;">
+                    <span class="nav-title" style="font-weight: ${isActive ? '700' : '600'}; color: ${isActive ? '#ffffff' : '#334155'}; font-size: 0.82rem; flex: 1; display: flex; align-items: center; justify-content: space-between;">
                       <span>${escapeHtml(r.title)}</span>
                       ${r.isPro ? `<span style="background: ${isActive ? '#1e293b' : '#fef3c7'}; color: ${isActive ? '#fde68a' : '#b45309'}; border: 1px solid ${isActive ? '#334155' : '#fde68a'}; font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; letter-spacing: 0.5px;">PRO</span>` : ''}
                     </span>

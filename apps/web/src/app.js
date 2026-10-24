@@ -4,7 +4,7 @@ import { registerStudentImportActions } from './components/StudentImportModal.js
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=1.0.0';
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
-import { renderSidebar } from './components/Sidebar.js?v=5.1.0';
+import { renderSidebar } from './components/Sidebar.js?v=5.2.0';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.1';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.9.21';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
@@ -41,7 +41,7 @@ import { renderTeacherSettingsView, registerTeacherSettingsActions } from './com
 import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=4.7.6';
 import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=1.0.0';
 import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.3.0';
-import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.7.1';
+import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.8.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.9.21';
@@ -2092,7 +2092,7 @@ class CentrlyApp {
         const btnRoute = match ? match[1] : '';
         const isActive = btnRoute === this.currentRoute;
         btn.classList.toggle('active', isActive);
-        btn.style.background = isActive ? '#eff6ff' : 'transparent';
+        btn.style.background = '';
       });
 
       this.renderMainContent();

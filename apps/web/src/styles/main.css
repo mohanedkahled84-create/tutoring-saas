@@ -85,14 +85,14 @@
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--radius-md);
-  color: var(--centrly-text);
+  gap: 0.65rem;
+  padding: 0.48rem 0.7rem;
+  border-radius: 6px;
+  color: #334155;
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.875rem;
-  transition: all 0.15s ease-in-out;
+  font-size: 0.82rem;
+  transition: all 0.12s ease;
   cursor: pointer;
   border: none;
   background: transparent;
@@ -100,16 +100,59 @@
   text-align: right;
 }
 
-.nav-link:hover {
-  background-color: var(--centrly-blue-100);
-  color: var(--centrly-blue-800);
+.nav-link .nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.nav-link:hover:not(.active) {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.nav-link:hover:not(.active) .nav-icon {
+  color: #0f172a;
 }
 
 .nav-link.active {
-  background-color: var(--centrly-blue-100);
-  color: var(--centrly-blue-800);
-  border-right: 4px solid var(--centrly-blue-700);
+  background-color: #0f172a !important;
+  color: #ffffff !important;
   font-weight: 700;
+}
+
+.nav-link.active .nav-icon,
+.nav-link.active .nav-title,
+.nav-link.active span {
+  color: #ffffff !important;
+}
+
+.nav-link.active svg {
+  stroke: #ffffff !important;
+}
+
+/* Responsive Platform Builder Student Tracking */
+.desktop-tracking-table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+}
+.mobile-tracking-cards {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .desktop-tracking-table {
+    display: none !important;
+  }
+  .mobile-tracking-cards {
+    display: flex !important;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 0.75rem;
+  }
 }
 
 /* Main Content Area */

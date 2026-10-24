@@ -371,17 +371,19 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
       </div>
 
       <!-- ======================================================== -->
-      <!-- 3. كشف حسابات ومتابعة الطلاب الهادئ (Clean 4-Column Table) -->
+      <!-- 3. كشف حسابات ومتابعة الطلاب المتجاوب (Responsive Table & Mobile Cards) -->
       <!-- ======================================================== -->
       <div class="card" style="margin: 0; padding: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.82rem;">
+        
+        <!-- Desktop Table View (>= 769px) -->
+        <div class="desktop-tracking-table">
+          <table style="width: 100%; min-width: 680px; border-collapse: collapse; text-align: right; font-size: 0.82rem;">
             <thead>
               <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 600; font-size: 0.73rem;">
-                <th style="padding: 9px 14px;">الطالب والسنتر</th>
-                <th style="padding: 9px 14px;">حساب دخول المنصة</th>
-                <th style="padding: 9px 14px;">آخر نتيجة كويز أونلاين</th>
-                <th style="padding: 9px 14px; text-align: center;">إجراء مباشر</th>
+                <th style="padding: 9px 14px; width: 30%;">الطالب والسنتر</th>
+                <th style="padding: 9px 14px; width: 25%;">حساب دخول المنصة</th>
+                <th style="padding: 9px 14px; width: 25%;">آخر نتيجة كويز أونلاين</th>
+                <th style="padding: 9px 14px; width: 20%; text-align: center;">إجراء مباشر</th>
               </tr>
             </thead>
             <tbody id="trackingTableBody">
@@ -469,15 +471,108 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
               }).join('')}
             </tbody>
           </table>
-
-          <div id="trackingEmptySearch" style="display: none; padding: 24px; text-align: center; color: #64748b;">
-            <div style="font-size: 0.88rem; font-weight: 700; color: #0f172a; margin-bottom: 2px;">لا توجد نتائج مطابقة لبحثك</div>
-            <p style="font-size: 0.75rem; margin: 0;">تأكد من صحة اسم الطالب أو الكود وجرب البحث مرة أخرى.</p>
-          </div>
         </div>
+
+        <!-- Mobile Card View (<= 768px) -->
+        <div class="mobile-tracking-cards">
+          ${trackingStudents.map(s => {
+            const sCode = String(s.student_code || s.code || '1006').trim();
+            const sName = s.name || 'طالب';
+            const sCenter = s.center_name || s.center || 'الهضبه';
+            const sGroup = s.group_name || s.group || '';
+            const sPhone = s.student_phone || s.phone || s.parent_phone || '01123671177';
+            const sPass = s.portal_password || (sCode === '1117' ? '506438' : (sCode === '1006' ? '1006' : '123456'));
+
+            const quiz = resolveStudentOnlineQuiz(sCode, s.id);
+            const searchAttr = `${sName} ${sCode} ${sCenter} ${sGroup} ${sPhone}`.toLowerCase();
+
+            const cleanPhone = String(sPhone).replace(/\D/g, '').replace(/^2/, '').replace(/^0/, '');
+            const waText = `السلام عليكم يا ${sName}، بيانات دخولك لمنصة ${displayTitle}:\nكود الطالب: *${sCode}*\nكلمة المرور: *${sPass}*\nرابط المنصة:\n${livePlatformUrl}\nنتمنى لك دوام التوفيق والتميز!`;
+            const waUrl = `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}`;
+            const studentDashboardUrl = `https://${officialSubdomain}.centerly-eg.com/dashboard?code=${encodeURIComponent(sCode)}${s.parent_portal_token ? `&token=${encodeURIComponent(s.parent_portal_token)}` : ''}`;
+
+            return `
+              <div class="tracking-student-row card" data-search="${escapeHtml(searchAttr)}" style="margin: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                
+                <!-- Top Row: Student Name + Status Badge -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.55rem;">
+                  <div>
+                    <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; line-height: 1.3;">
+                      ${escapeHtml(sName)}
+                    </div>
+                    <div style="font-size: 0.74rem; color: #64748b; margin-top: 3px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                      <span style="font-family: monospace; font-weight: 800; color: #1e293b; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">كود: ${escapeHtml(sCode)}</span>
+                      <span>•</span>
+                      <span>سنتر ${escapeHtml(sCenter)}</span>
+                      ${sGroup ? `<span>• ${escapeHtml(sGroup)}</span>` : ''}
+                    </div>
+                  </div>
+
+                  <span style="font-size: 0.72rem; color: #15803d; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; flex-shrink: 0;">
+                    مفعل
+                  </span>
+                </div>
+
+                <!-- Middle Box: Password & Online Quiz Score -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem;">
+                  
+                  <div style="border-left: 1px solid #e2e8f0; padding-left: 0.4rem;">
+                    <div style="font-size: 0.68rem; color: #64748b; font-weight: 700;">دخول المنصة:</div>
+                    <div style="font-size: 0.76rem; color: #0f172a; margin-top: 2px;">
+                      كلمة السر: <strong style="font-family: monospace; font-size: 0.85rem; color: #1e293b;">${escapeHtml(sPass)}</strong>
+                    </div>
+                  </div>
+
+                  <div style="padding-right: 0.2rem;">
+                    <div style="font-size: 0.68rem; color: #64748b; font-weight: 700;">آخر نتيجة كويز:</div>
+                    <div style="margin-top: 2px;">
+                      ${quiz ? (
+                        quiz.status === 'pending_grading' ? `
+                          <div style="display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="font-size: 0.68rem; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 1px 5px; border-radius: 3px;">قيد التصحيح</span>
+                            <span style="font-size: 0.7rem; color: #64748b;">${escapeHtml(quiz.title)}</span>
+                          </div>
+                        ` : `
+                          <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                            <span style="font-weight: 900; font-size: 0.82rem; color: #0f172a; font-family: monospace;">${quiz.score} / ${quiz.maxScore}</span>
+                            <span style="font-size: 0.68rem; color: #475569; background: #ffffff; border: 1px solid #cbd5e1; padding: 1px 5px; border-radius: 3px;">${escapeHtml(quiz.title)}</span>
+                            <span style="font-size: 0.68rem; font-weight: 700; color: #166534; background: #f0fdf4; padding: 1px 5px; border-radius: 3px;">${escapeHtml(quiz.tier)}</span>
+                          </div>
+                        `
+                      ) : `
+                        <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">لم يرصد بعد</span>
+                      `}
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Bottom Row: Action Buttons -->
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <a href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer"
+                    style="flex: 1; height: 34px; padding: 0 10px; font-size: 0.76rem; font-weight: 700; background: #15803d; color: #ffffff; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 1px 2px rgba(21,128,61,0.15);">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                    <span>إرسال الحساب واتساب</span>
+                  </a>
+                  <a href="${escapeHtml(studentDashboardUrl)}" target="_blank" rel="noopener noreferrer"
+                    style="height: 34px; padding: 0 14px; font-size: 0.76rem; font-weight: 700; background: #ffffff; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                    <span>معاينة</span>
+                  </a>
+                </div>
+
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div id="trackingEmptySearch" style="display: none; padding: 24px; text-align: center; color: #64748b;">
+          <div style="font-size: 0.88rem; font-weight: 700; color: #0f172a; margin-bottom: 2px;">لا توجد نتائج مطابقة لبحثك</div>
+          <p style="font-size: 0.75rem; margin: 0;">تأكد من صحة اسم الطالب أو الكود وجرب البحث مرة أخرى.</p>
+        </div>
+
       </div>
 
-<!-- ======================================================== -->
+      <!-- ======================================================== -->
       <!-- 4. قسم تعديل الهوية والمظهر (Collapsible Settings Drawer) -->
       <!-- ======================================================== -->
       <div id="builderSettingsFormSection" style="display: ${isPublished ? 'none' : 'flex'}; flex-direction: column; gap: 16px; margin-top: 8px;">
@@ -616,17 +711,28 @@ export function registerTeacherPlatformActions(appInstance) {
     filterStudents(query) {
       const q = (query || '').toLowerCase().trim();
       const rows = document.querySelectorAll('.tracking-student-row');
-      let visibleCount = 0;
+      let visibleTrCount = 0;
+      let visibleCardCount = 0;
+      let totalTrCount = 0;
+      let totalCardCount = 0;
       rows.forEach(r => {
         const text = (r.getAttribute('data-search') || '').toLowerCase();
         const match = !q || text.includes(q);
         r.style.display = match ? '' : 'none';
-        if (match) visibleCount++;
+        if (r.tagName === 'TR') {
+          totalTrCount++;
+          if (match) visibleTrCount++;
+        } else {
+          totalCardCount++;
+          if (match) visibleCardCount++;
+        }
       });
+      const effectiveCount = (window.innerWidth <= 768) ? visibleCardCount : visibleTrCount;
+      const effectiveTotal = (window.innerWidth <= 768) ? totalCardCount : totalTrCount;
       const countEl = document.getElementById('trackingVisibleCount');
-      if (countEl) countEl.innerText = `عرض ${visibleCount} من أصل ${rows.length} طالب`;
+      if (countEl) countEl.innerText = `عرض ${effectiveCount} من أصل ${effectiveTotal} طالب`;
       const emptyEl = document.getElementById('trackingEmptySearch');
-      if (emptyEl) emptyEl.style.display = (visibleCount === 0 && rows.length > 0) ? 'block' : 'none';
+      if (emptyEl) emptyEl.style.display = (effectiveCount === 0 && effectiveTotal > 0) ? 'block' : 'none';
     },
 
     async refreshVideoTracking() {
