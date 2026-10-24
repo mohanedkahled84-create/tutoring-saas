@@ -48,15 +48,28 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
     return false;
   });
 
-  const quizzes = state.quizzes || [
-    { id: 1, number: 1, title: 'كويز 1', maxScore: 10, date: '2026-09-01', skipped: false },
-    { id: 2, number: 2, title: 'كويز 2', maxScore: 10, date: '2026-09-05', skipped: false },
-    { id: 3, number: 3, title: 'كويز 3', maxScore: 10, date: '2026-09-08', skipped: false },
-  ];
+  // Scope manual quizzes specifically to the selected group
+  let groupQuizzesList = (state.groupQuizzes && selectedGroupId && state.groupQuizzes[selectedGroupId])
+    ? state.groupQuizzes[selectedGroupId]
+    : (state.quizzes || []);
+
+  if (!groupQuizzesList || groupQuizzesList.length === 0) {
+    const today = new Date().toISOString().slice(0, 10);
+    groupQuizzesList = [
+      { id: `quiz-${selectedGroupId || 'default'}-1`, group_id: selectedGroupId, number: 1, title: 'كويز 1', maxScore: 10, date: today, skipped: false },
+      { id: `quiz-${selectedGroupId || 'default'}-2`, group_id: selectedGroupId, number: 2, title: 'كويز 2', maxScore: 10, date: today, skipped: false },
+      { id: `quiz-${selectedGroupId || 'default'}-3`, group_id: selectedGroupId, number: 3, title: 'كويز 3', maxScore: 10, date: today, skipped: false },
+    ];
+  }
+
+  const quizzes = groupQuizzesList.filter(q => {
+    if (!q.group_id || q.group_id === 'all') return true;
+    return !selectedGroupId || String(q.group_id) === String(selectedGroupId);
+  });
 
   const currentQuizNumber = state.currentQuizNumber || quizzes[quizzes.length - 1]?.number || 1;
   const currentQuiz = quizzes.find(q => q.number === currentQuizNumber) || quizzes[0] || {
-    id: 1, number: 1, title: 'كويز 1', maxScore: 10, date: '2026-09-10', skipped: false
+    id: `quiz-${selectedGroupId || 'default'}-1`, group_id: selectedGroupId, number: 1, title: 'كويز 1', maxScore: 10, date: new Date().toISOString().slice(0, 10), skipped: false
   };
 
   const pendingSubmissions = state.pendingSubmissions || [];
@@ -4107,43 +4120,110 @@ export function registerTeacherQuizzesActions(app) {
     this.showToast(`تم تثبيت درجة الطالب (${res.student.name}) في الكشف بنجاح!`, 'success');
   };
 
-  // Preserved Roster & LocalStorage Handlers
+  // Preserved Roster & LocalStorage Handlers (Strictly Scoped Per Group)
+  app.syncActiveGroupQuizzes = function(groupId) {
+    const gid = groupId || this.quizzesState.selectedGroupId || (this.groups?.[0]?.id) || 'default';
+    if (!this.quizzesState.groupQuizzes) this.quizzesState.groupQuizzes = {};
+    if (!this.quizzesState.groupScores) this.quizzesState.groupScores = {};
+    if (!this.quizzesState.groupNotes) this.quizzesState.groupNotes = {};
+    if (!this.quizzesState.groupDeliveryStatus) this.quizzesState.groupDeliveryStatus = {};
+    if (!this.quizzesState.groupCurrentQuiz) this.quizzesState.groupCurrentQuiz = {};
+
+    // 1. Try reading from memory or localStorage
+    if (!this.quizzesState.groupQuizzes[gid] || this.quizzesState.groupQuizzes[gid].length === 0) {
+      const cacheKey = `centrly_quizzes_${gid}`;
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed.quizzes) && parsed.quizzes.length > 0) {
+            // Strictly exclude any quizzes belonging to other groups
+            const valid = parsed.quizzes.filter(q => {
+              if (q.group_id && q.group_id !== 'all' && String(q.group_id) !== String(gid)) return false;
+              if (typeof q.id === 'string' && q.id.startsWith('quiz-') && !q.id.startsWith(`quiz-${gid}-`) && !q.id.startsWith('quiz-default-') && !q.id.startsWith('quiz-tmp-')) {
+                const parts = q.id.split('-');
+                if (parts.length >= 3 && parts[1] !== gid) return false;
+              }
+              return true;
+            });
+            if (valid.length > 0) {
+              this.quizzesState.groupQuizzes[gid] = valid.map(q => ({
+                ...q,
+                group_id: gid,
+              }));
+            }
+          }
+          if (parsed.scoresMap) this.quizzesState.groupScores[gid] = parsed.scoresMap;
+          if (parsed.notesMap) this.quizzesState.groupNotes[gid] = parsed.notesMap;
+          if (parsed.deliveryStatusMap) this.quizzesState.groupDeliveryStatus[gid] = parsed.deliveryStatusMap;
+          if (parsed.currentQuizNumber) this.quizzesState.groupCurrentQuiz[gid] = parsed.currentQuizNumber;
+        }
+      } catch (_) {}
+    }
+
+    // 2. Clean fresh default starter quizzes if empty for this group
+    if (!this.quizzesState.groupQuizzes[gid] || this.quizzesState.groupQuizzes[gid].length === 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      this.quizzesState.groupQuizzes[gid] = [
+        { id: `quiz-${gid}-1`, group_id: gid, number: 1, title: 'كويز 1', maxScore: 10, date: today, skipped: false },
+        { id: `quiz-${gid}-2`, group_id: gid, number: 2, title: 'كويز 2', maxScore: 10, date: today, skipped: false },
+        { id: `quiz-${gid}-3`, group_id: gid, number: 3, title: 'كويز 3', maxScore: 10, date: today, skipped: false },
+      ];
+      if (!this.quizzesState.groupScores[gid]) this.quizzesState.groupScores[gid] = {};
+      if (!this.quizzesState.groupNotes[gid]) this.quizzesState.groupNotes[gid] = {};
+      if (!this.quizzesState.groupDeliveryStatus[gid]) this.quizzesState.groupDeliveryStatus[gid] = {};
+      this.quizzesState.groupCurrentQuiz[gid] = 1;
+    }
+
+    // 3. Point active state references directly to this group's isolated structures
+    this.quizzesState.quizzes = this.quizzesState.groupQuizzes[gid];
+    this.quizzesState.scoresMap = this.quizzesState.groupScores[gid] || {};
+    this.quizzesState.notesMap = this.quizzesState.groupNotes[gid] || {};
+    this.quizzesState.deliveryStatusMap = this.quizzesState.groupDeliveryStatus[gid] || {};
+
+    let currNum = this.quizzesState.groupCurrentQuiz[gid];
+    if (!currNum || !this.quizzesState.quizzes.some(q => q.number === currNum)) {
+      currNum = this.quizzesState.quizzes[this.quizzesState.quizzes.length - 1]?.number || 1;
+      this.quizzesState.groupCurrentQuiz[gid] = currNum;
+    }
+    this.quizzesState.currentQuizNumber = currNum;
+
+    return this.quizzesState.quizzes;
+  };
+
   app.saveQuizzesToLocalStorage = function(groupId) {
     const gid = groupId || this.quizzesState.selectedGroupId;
     if (!gid) return;
     try {
+      const quizzesToSave = this.quizzesState.groupQuizzes?.[gid] || this.quizzesState.quizzes || [];
+      const scoresToSave = this.quizzesState.groupScores?.[gid] || this.quizzesState.scoresMap || {};
+      const notesToSave = this.quizzesState.groupNotes?.[gid] || this.quizzesState.notesMap || {};
+      const deliveryToSave = this.quizzesState.groupDeliveryStatus?.[gid] || this.quizzesState.deliveryStatusMap || {};
+      const currentNum = this.quizzesState.groupCurrentQuiz?.[gid] || this.quizzesState.currentQuizNumber || 1;
+
       localStorage.setItem(`centrly_quizzes_${gid}`, JSON.stringify({
-        quizzes: this.quizzesState.quizzes,
-        scoresMap: this.quizzesState.scoresMap,
-        notesMap: this.quizzesState.notesMap,
-        deliveryStatusMap: this.quizzesState.deliveryStatusMap,
-        currentQuizNumber: this.quizzesState.currentQuizNumber,
+        quizzes: quizzesToSave,
+        scoresMap: scoresToSave,
+        notesMap: notesToSave,
+        deliveryStatusMap: deliveryToSave,
+        currentQuizNumber: currentNum,
       }));
     } catch (_) {}
   };
 
   app.loadQuizzesForGroup = async function(groupId) {
     if (!groupId) return;
-    const cacheKey = `centrly_quizzes_${groupId}`;
-    try {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed.quizzes) && parsed.quizzes.length > 0) {
-          this.quizzesState.quizzes = parsed.quizzes;
-        }
-        if (parsed.scoresMap) this.quizzesState.scoresMap = { ...this.quizzesState.scoresMap, ...parsed.scoresMap };
-        if (parsed.notesMap) this.quizzesState.notesMap = { ...this.quizzesState.notesMap, ...parsed.notesMap };
-        if (parsed.deliveryStatusMap) this.quizzesState.deliveryStatusMap = { ...this.quizzesState.deliveryStatusMap, ...parsed.deliveryStatusMap };
-        if (parsed.currentQuizNumber) this.quizzesState.currentQuizNumber = parsed.currentQuizNumber;
-      }
-    } catch (_) {}
+    const gid = groupId;
+
+    // Immediately isolate and set active quizzes & scores for this group from memory or localStorage
+    this.syncActiveGroupQuizzes(gid);
 
     try {
-      const res = await request(`/quizzes?group_id=${groupId}`);
+      const res = await request(`/quizzes?group_id=${gid}`);
       if (res?.success && Array.isArray(res.quizzes) && res.quizzes.length > 0) {
-        this.quizzesState.quizzes = res.quizzes.map(q => ({
+        const fetchedQuizzes = res.quizzes.map(q => ({
           id: q.id,
+          group_id: gid,
           number: q.quiz_number,
           title: q.title || `كويز ${q.quiz_number}`,
           maxScore: Number(q.max_score || 10),
@@ -4151,10 +4231,22 @@ export function registerTeacherQuizzesActions(app) {
           skipped: Boolean(q.is_skipped),
         }));
 
-        if (res.scores_map) this.quizzesState.scoresMap = { ...this.quizzesState.scoresMap, ...res.scores_map };
-        if (res.notes_map) this.quizzesState.notesMap = { ...this.quizzesState.notesMap, ...res.notes_map };
-        if (res.delivery_status_map) this.quizzesState.deliveryStatusMap = { ...this.quizzesState.deliveryStatusMap, ...res.delivery_status_map };
-        this.saveQuizzesToLocalStorage(groupId);
+        this.quizzesState.groupQuizzes[gid] = fetchedQuizzes;
+        this.quizzesState.groupScores[gid] = res.scores_map || {};
+        this.quizzesState.groupNotes[gid] = res.notes_map || {};
+        this.quizzesState.groupDeliveryStatus[gid] = res.delivery_status_map || {};
+
+        if (String(this.quizzesState.selectedGroupId) === String(gid)) {
+          this.quizzesState.quizzes = fetchedQuizzes;
+          this.quizzesState.scoresMap = this.quizzesState.groupScores[gid];
+          this.quizzesState.notesMap = this.quizzesState.groupNotes[gid];
+          this.quizzesState.deliveryStatusMap = this.quizzesState.groupDeliveryStatus[gid];
+          if (!fetchedQuizzes.some(q => q.number === this.quizzesState.currentQuizNumber)) {
+            this.quizzesState.currentQuizNumber = fetchedQuizzes[fetchedQuizzes.length - 1]?.number || 1;
+            this.quizzesState.groupCurrentQuiz[gid] = this.quizzesState.currentQuizNumber;
+          }
+        }
+        this.saveQuizzesToLocalStorage(gid);
       }
     } catch (err) {
       console.warn('[Centrly] Could not fetch quizzes from backend, using cached state:', err);
@@ -4162,8 +4254,12 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.switchQuizGroup = async function(groupId) {
+    if (!groupId) return;
     this.quizzesState.selectedGroupId = groupId;
+    // Synchronously switch to the selected group's isolated data (zero bleed-over)
+    this.syncActiveGroupQuizzes(groupId);
     this.renderMainContent();
+
     await this.loadQuizzesForGroup(groupId);
     await this.loadRichQuizzes();
     await this.loadOnlineSubmissions();
@@ -4224,33 +4320,46 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.selectQuizNumber = function(quizNum) {
+    const gid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id) || 'default';
     this.quizzesState.currentQuizNumber = quizNum;
-    this.saveQuizzesToLocalStorage();
+    if (!this.quizzesState.groupCurrentQuiz) this.quizzesState.groupCurrentQuiz = {};
+    this.quizzesState.groupCurrentQuiz[gid] = quizNum;
+    this.saveQuizzesToLocalStorage(gid);
     this.renderMainContent();
   };
 
   app.addNewQuiz = function() {
-    const nextNum = (this.quizzesState.quizzes.length > 0)
-      ? Math.max(...this.quizzesState.quizzes.map(q => q.number)) + 1
+    const gid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id) || 'default';
+    this.syncActiveGroupQuizzes(gid);
+
+    const groupQuizzes = this.quizzesState.groupQuizzes?.[gid] || this.quizzesState.quizzes || [];
+    const nextNum = (groupQuizzes.length > 0)
+      ? Math.max(...groupQuizzes.map(q => q.number)) + 1
       : 1;
     const today = new Date().toISOString().slice(0, 10);
     const newQuizObj = {
-      id: `quiz-tmp-${Date.now()}`,
+      id: `quiz-${gid}-${Date.now()}`,
+      group_id: gid,
       number: nextNum,
       title: `كويز ${nextNum}`,
       maxScore: 10,
       date: today,
       skipped: false,
     };
-    this.quizzesState.quizzes.push(newQuizObj);
+    groupQuizzes.push(newQuizObj);
+    if (!this.quizzesState.groupQuizzes) this.quizzesState.groupQuizzes = {};
+    this.quizzesState.groupQuizzes[gid] = groupQuizzes;
+    this.quizzesState.quizzes = groupQuizzes;
     this.quizzesState.currentQuizNumber = nextNum;
-    this.saveQuizzesToLocalStorage();
+    if (!this.quizzesState.groupCurrentQuiz) this.quizzesState.groupCurrentQuiz = {};
+    this.quizzesState.groupCurrentQuiz[gid] = nextNum;
+    this.saveQuizzesToLocalStorage(gid);
 
-    if (this.quizzesState.selectedGroupId) {
+    if (gid && gid !== 'default') {
       request('/quizzes', {
         method: 'POST',
         body: {
-          group_id: this.quizzesState.selectedGroupId,
+          group_id: gid,
           quiz_number: nextNum,
           title: `كويز ${nextNum}`,
           max_score: 10,
@@ -4260,28 +4369,34 @@ export function registerTeacherQuizzesActions(app) {
       }).then(res => {
         if (res?.quiz?.id) {
           newQuizObj.id = res.quiz.id;
-          this.saveQuizzesToLocalStorage();
+          this.saveQuizzesToLocalStorage(gid);
         }
       }).catch(() => {});
     }
 
-    this.showToast(`تمت إضافة كويز ${nextNum} بنجاح`, 'success');
+    this.showToast(`تمت إضافة كويز ${nextNum} لهذه المجموعة بنجاح`, 'success');
     this.renderMainContent();
   };
 
   app.skipCurrentQuiz = function(quizNum) {
-    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    const gid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id) || 'default';
+    const quizzes = this.quizzesState.quizzes || [];
+    const quiz = quizzes.find(q => q.number === quizNum);
     if (quiz) {
       quiz.skipped = true;
-      const nextQuiz = this.quizzesState.quizzes.find(q => q.number > quizNum && !q.skipped);
-      if (nextQuiz) this.quizzesState.currentQuizNumber = nextQuiz.number;
-      this.saveQuizzesToLocalStorage();
+      const nextQuiz = quizzes.find(q => q.number > quizNum && !q.skipped);
+      if (nextQuiz) {
+        this.quizzesState.currentQuizNumber = nextQuiz.number;
+        if (!this.quizzesState.groupCurrentQuiz) this.quizzesState.groupCurrentQuiz = {};
+        this.quizzesState.groupCurrentQuiz[gid] = nextQuiz.number;
+      }
+      this.saveQuizzesToLocalStorage(gid);
 
-      if (this.quizzesState.selectedGroupId) {
+      if (gid && gid !== 'default') {
         request('/quizzes', {
           method: 'POST',
           body: {
-            group_id: this.quizzesState.selectedGroupId,
+            group_id: gid,
             quiz_number: quizNum,
             title: quiz.title || `كويز ${quizNum}`,
             max_score: quiz.maxScore || 10,
@@ -4399,27 +4514,36 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.updateStudentQuizScore = function(studentId, score) {
+    const gid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id) || 'default';
     const currQuiz = this.quizzesState.currentQuizNumber || 1;
+    if (!this.quizzesState.scoresMap) this.quizzesState.scoresMap = {};
     if (!this.quizzesState.scoresMap[currQuiz]) {
       this.quizzesState.scoresMap[currQuiz] = {};
     }
     this.quizzesState.scoresMap[currQuiz][studentId] = score;
-    this.saveQuizzesToLocalStorage();
+    if (!this.quizzesState.groupScores) this.quizzesState.groupScores = {};
+    this.quizzesState.groupScores[gid] = this.quizzesState.scoresMap;
+    this.saveQuizzesToLocalStorage(gid);
   };
 
   app.updateStudentQuizNote = function(studentId, note) {
+    const gid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id) || 'default';
     const currQuiz = this.quizzesState.currentQuizNumber || 1;
+    if (!this.quizzesState.notesMap) this.quizzesState.notesMap = {};
     if (!this.quizzesState.notesMap[currQuiz]) {
       this.quizzesState.notesMap[currQuiz] = {};
     }
     this.quizzesState.notesMap[currQuiz][studentId] = note;
-    this.saveQuizzesToLocalStorage();
+    if (!this.quizzesState.groupNotes) this.quizzesState.groupNotes = {};
+    this.quizzesState.groupNotes[gid] = this.quizzesState.notesMap;
+    this.saveQuizzesToLocalStorage(gid);
   };
 
   app.saveCurrentQuizScores = async function() {
     if (this.quizzesState.isSaving) return;
+    const gid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id) || 'default';
     const currQuizNum = this.quizzesState.currentQuizNumber || 1;
-    const currentQuiz = this.quizzesState.quizzes.find(q => q.number === currQuizNum) || { maxScore: 10 };
+    const currentQuiz = (this.quizzesState.quizzes || []).find(q => q.number === currQuizNum) || { maxScore: 10 };
 
     // Read latest title and max score inputs directly
     const titleInput = document.getElementById('quizTitleInput');
@@ -4430,15 +4554,20 @@ export function registerTeacherQuizzesActions(app) {
     if (maxScoreInput && Number(maxScoreInput.value) > 0) {
       currentQuiz.maxScore = Number(maxScoreInput.value);
     }
+    currentQuiz.group_id = gid;
 
-    const scores = this.quizzesState.scoresMap[currQuizNum] || {};
-    const notes = this.quizzesState.notesMap[currQuizNum] || {};
+    const scores = this.quizzesState.scoresMap?.[currQuizNum] || {};
+    const notes = this.quizzesState.notesMap?.[currQuizNum] || {};
 
     const count = Object.keys(scores).filter(k => scores[k] !== '' && scores[k] !== null).length;
 
     this.quizzesState.isSaving = true;
     try {
-      this.saveQuizzesToLocalStorage();
+      if (!this.quizzesState.groupScores) this.quizzesState.groupScores = {};
+      if (!this.quizzesState.groupNotes) this.quizzesState.groupNotes = {};
+      this.quizzesState.groupScores[gid] = this.quizzesState.scoresMap;
+      this.quizzesState.groupNotes[gid] = this.quizzesState.notesMap;
+      this.saveQuizzesToLocalStorage(gid);
 
       if (count === 0) {
         // Save quiz settings even if no grades entered yet

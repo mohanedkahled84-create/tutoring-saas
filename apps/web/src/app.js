@@ -24,7 +24,7 @@ import { renderRiskWatchlistView, registerRiskWatchlistActions } from './compone
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=7.9.0';
+import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=8.0.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -95,11 +95,12 @@ class CentrlyApp {
     this.quizzesState = {
       selectedGroupId: '',
       currentQuizNumber: 1,
-      quizzes: [
-        { id: 1, number: 1, title: 'كويز 1', maxScore: 10, date: '2026-09-01', skipped: false },
-        { id: 2, number: 2, title: 'كويز 2', maxScore: 10, date: '2026-09-05', skipped: false },
-        { id: 3, number: 3, title: 'كويز 3', maxScore: 10, date: '2026-09-08', skipped: false },
-      ],
+      groupQuizzes: {},
+      groupScores: {},
+      groupNotes: {},
+      groupDeliveryStatus: {},
+      groupCurrentQuiz: {},
+      quizzes: [],
       scoresMap: {},
       notesMap: {},
     };
@@ -1492,6 +1493,9 @@ class CentrlyApp {
             } catch (_) {}
           }
           if (this.quizzesState.selectedGroupId) {
+            if (this.syncActiveGroupQuizzes) {
+              this.syncActiveGroupQuizzes(this.quizzesState.selectedGroupId);
+            }
             await this.loadQuizzesForGroup(this.quizzesState.selectedGroupId);
           }
           this.renderMainContent();
