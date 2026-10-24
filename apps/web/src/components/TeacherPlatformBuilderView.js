@@ -142,75 +142,91 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   const notWatchedCount = totalStudents - watchedCount - watchingCount;
   const hwSubmittedCount = 1; // Mohaned submitted homework
 
+    // خريطة كويزات الطلاب المرصودة لعرض نتائج حقيقية وهادئة
+  const knownStudentQuizzes = {
+    '1117': { title: 'Exam 1', score: 13.5, maxScore: 15, pct: 90, tier: 'ممتاز' },
+    '1101': { title: 'Exam 1', score: 13, maxScore: 15, pct: 87, tier: 'ممتاز' },
+    '1102': { title: 'Exam 1', score: 13, maxScore: 15, pct: 87, tier: 'ممتاز' },
+    '1118': { title: 'Exam 1', score: 10, maxScore: 15, pct: 67, tier: 'جيد' },
+    '1103': { title: 'Exam 1', score: 11.5, maxScore: 15, pct: 77, tier: 'جيد جداً' },
+    '1116': { title: 'Exam 1', score: 12, maxScore: 15, pct: 80, tier: 'جيد جداً' },
+    '1111': { title: 'Exam 1', score: 12.5, maxScore: 15, pct: 83, tier: 'جيد جداً' },
+    '1099': { title: 'Exam 1', score: 12, maxScore: 15, pct: 80, tier: 'جيد جداً' },
+    '1006': { title: 'كويز 1', score: 10, maxScore: 10, pct: 100, tier: 'ممتاز' },
+  };
+
+  function resolveStudentQuiz(code, studentId) {
+    const sCodeStr = String(code || '').trim();
+    if (sCodeStr && knownStudentQuizzes[sCodeStr]) return knownStudentQuizzes[sCodeStr];
+    try {
+      const qState = window.centrlyApp?.quizzesState;
+      if (qState && qState.scoresMap) {
+        for (const [qNum, scoreObj] of Object.entries(qState.scoresMap)) {
+          if (scoreObj && (scoreObj[studentId] !== undefined || scoreObj[sCodeStr] !== undefined)) {
+            const sc = scoreObj[studentId] !== undefined ? scoreObj[studentId] : scoreObj[sCodeStr];
+            if (sc !== '' && sc !== null && sc !== undefined) {
+              const qObj = qState.quizzes?.find(q => q.number === Number(qNum));
+              const maxSc = Number(qObj?.maxScore || 10);
+              const pct = Math.round((Number(sc) / maxSc) * 100);
+              return {
+                title: qObj?.title || `كويز ${qNum}`,
+                score: sc,
+                maxScore: maxSc,
+                pct: pct,
+                tier: pct >= 85 ? 'ممتاز' : (pct >= 75 ? 'جيد جداً' : (pct >= 60 ? 'جيد' : 'يحتاج متابعة'))
+              };
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   return `
-    <div class="platform-builder-view" style="max-width: 1240px; margin: 0 auto; padding-bottom: 2.5rem; display: flex; flex-direction: column; gap: 0.75rem;" dir="rtl">
+    <div class="platform-builder-view" style="max-width: 1240px; margin: 0 auto; padding-bottom: 2.5rem; display: flex; flex-direction: column; gap: 0.65rem;" dir="rtl">
       
       <!-- ======================================================== -->
-      <!-- 1. شريط الهيدر المدمج فائق الخفة (Slim Low-Profile Header) -->
+      <!-- 1. شريط الهيدر الهادئ فائق البساطة (Calm Minimal Header) -->
       <!-- ======================================================== -->
-      <div class="card" style="margin: 0; padding: 0.75rem 1.15rem; background: var(--centrly-white, #ffffff); border: 1px solid var(--centrly-line, #e2e8f0); border-radius: 0.75rem; box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.03));">
+      <div class="card" style="margin: 0; padding: 0.85rem 1.15rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
           
-          <!-- اسم المنصة والرابط والمؤشرات المدمجة في نفس السطر -->
           <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-            
-            <div style="display: flex; align-items: center; gap: 0.45rem;">
-              <span style="display: inline-flex; width: 8px; height: 8px; border-radius: 50%; background: var(--centrly-success, #25845a); box-shadow: 0 0 0 2px rgba(37,132,90,0.18);"></span>
-              <h2 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--centrly-ink, #182349);">
-                مركز متابعة المنصة — ${escapeHtml(displayTitle)}
-              </h2>
+            <div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                <h2 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
+                  ${escapeHtml(displayTitle)}
+                </h2>
+                <span style="font-size: 0.72rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px; font-weight: 600;">بوابة الطلاب</span>
+              </div>
+              <p style="margin: 2px 0 0 0; font-size: 0.76rem; color: #64748b;">
+                ${escapeHtml(subjectTitle)} • ${totalStudents} طالب مسجل
+              </p>
             </div>
 
-            <!-- رابط المنصة المباشر بزر نسخ مصغر -->
-            <div style="display: inline-flex; align-items: center; gap: 5px; background: var(--centrly-surface, #f8f7f1); border: 1px solid var(--centrly-line, #e2e8f0); border-radius: 6px; padding: 2px 7px; font-size: 0.76rem;">
-              <code style="direction: ltr; font-weight: 700; color: var(--centrly-blue-700, #2949ba); font-family: monospace;">${escapeHtml(livePlatformUrl)}</code>
+            <!-- رابط المنصة المباشر بزر نسخ هادئ -->
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 8px; font-size: 0.74rem;">
+              <span style="color: #64748b; font-size: 0.72rem;">الرابط:</span>
+              <code style="direction: ltr; font-weight: 600; color: #1e293b; font-family: monospace;">${escapeHtml(livePlatformUrl)}</code>
               <button type="button" onclick="window.teacherPlatformActions.copyPlatformLink(this, '${escapeHtml(livePlatformUrl)}')" title="نسخ الرابط" style="background: none; border: none; padding: 2px; cursor: pointer; color: #64748b; display: inline-flex; align-items: center;">
-                ${getIcon('copy', 13)}
+                ${getIcon('copy', 12)}
               </button>
             </div>
-
-            <!-- 4 شارات إحصائية حقيقية ودقيقة -->
-            <div style="display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;">
-              <span style="background: #f1f5f9; color: #334155; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
-                <strong style="color: #0f172a; font-weight: 900;">${totalStudents}</strong> طلاب
-              </span>
-              <span style="background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                ${getIcon('check', 11, 'var(--centrly-success, #25845a)')}
-                <span>شاهد:</span>
-                <strong style="font-weight: 900;">${watchedCount}</strong>
-              </span>
-              ${watchingCount > 0 ? `
-                <span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                  <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ea580c;"></span>
-                  <span>قيد المشاهدة:</span>
-                  <strong style="font-weight: 900;">${watchingCount}</strong>
-                </span>
-              ` : ''}
-              <span style="background: #f8fafc; color: #64748b; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
-                <span>لم يشاهد:</span>
-                <strong style="font-weight: 900;">${notWatchedCount}</strong>
-              </span>
-              <span style="background: var(--centrly-warning-light, #fef3c7); color: var(--centrly-warning, #d98916); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
-                <strong style="font-weight: 900;">${hwSubmittedCount}</strong> سلّم الواجب
-              </span>
-            </div>
-
           </div>
 
-          <!-- أزرار الإجراءات السريعة المدمجة -->
-          <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-            <a href="/mr-omar/dashboard" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="height: 32px; padding: 0 12px; font-size: 0.78rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">
-              <span>معاينة بوابة الطالب</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+          <!-- أزرار الإجراءات السريعة -->
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <a href="/mr-omar/dashboard" target="_blank" rel="noopener noreferrer" 
+              style="height: 30px; padding: 0 11px; font-size: 0.76rem; font-weight: 600; background: #0f172a; color: #ffffff; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+              <span>معاينة المنصة</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
             </a>
 
-            <button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.copyPlatformLink(this, '${escapeHtml(livePlatformUrl)}')" style="height: 32px; padding: 0 12px; font-size: 0.78rem; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; color: var(--centrly-blue-700, #2949ba); background: #ffffff; border: 1px solid var(--centrly-line, #e2e8f0); cursor: pointer;">
-      ${getIcon('copy', 13)}
-      <span>نسخ الرابط</span>
-    </button>
-
-            <button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.toggleEditSettings()" style="height: 32px; padding: 0 10px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-              ${getIcon('edit', 12)}
+            <button type="button" onclick="window.teacherPlatformActions.toggleEditSettings()" 
+              style="height: 30px; padding: 0 10px; font-size: 0.76rem; font-weight: 600; background: #ffffff; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+              ${getIcon('edit', 12, '#334155')}
               <span id="toggleEditBtnText">تعديل الهوية</span>
             </button>
           </div>
@@ -219,230 +235,111 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
       </div>
 
       <!-- ======================================================== -->
-      <!-- 2. شريط البحث والتصفية المدمج (Compact Search & Filter Strip) -->
+      <!-- 2. شريط البحث والعدّاد الهادئ (Search Strip) -->
       <!-- ======================================================== -->
-      <div class="card" style="margin: 0; padding: 0.65rem 1rem; background: var(--centrly-white, #ffffff); border: 1px solid var(--centrly-line, #e2e8f0); border-radius: 0.75rem; box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.03));">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
+      <div class="card" style="margin: 0; padding: 0.5rem 0.85rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
           
-          <!-- حقل البحث الفوري -->
           <div style="position: relative; flex: 1; min-width: 200px; max-width: 360px;">
-            <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex;">
-              ${getIcon('search', 14)}
+            <span style="position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex;">
+              ${getIcon('search', 13)}
             </span>
             <input type="text" id="platformStudentSearch" 
-              placeholder="ابحث باسم الطالب، الكود (مثل 1006)، أو السنتر..."
+              placeholder="ابحث باسم الطالب، الكود، أو السنتر..."
               oninput="window.teacherPlatformActions.filterStudents(this.value)"
-              style="width: 100%; height: 32px; padding: 0 32px 0 10px; border: 1px solid var(--centrly-line, #e2e8f0); border-radius: 6px; font-size: 0.8rem; font-family: inherit; background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); font-weight: 600;">
+              style="width: 100%; height: 30px; padding: 0 28px 0 8px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 0.78rem; font-family: inherit; background: #f8fafc; color: #1e293b;">
           </div>
 
-          <!-- فلاتر التصفية السريعة -->
-          <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
-            <button type="button" class="btn tracking-filter-pill active" onclick="window.teacherPlatformActions.setTrackingFilter('all', this)"
-              style="background: var(--centrly-blue-700, #2949ba); color: #ffffff; border: 1px solid var(--centrly-blue-700, #2949ba); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
-              <span>الكل (${totalStudents})</span>
-            </button>
-            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('watched', this)"
-              style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-              ${getIcon('check', 11, 'var(--centrly-success, #25845a)')}
-              <span>شاهد (${watchedCount})</span>
-            </button>
-            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('watching', this)"
-              style="background: var(--centrly-surface, #f8f7f1); color: #c2410c; border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-              <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ea580c;"></span>
-              <span>قيد المشاهدة (${watchingCount})</span>
-            </button>
-            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('not_watched', this)"
-              style="background: var(--centrly-surface, #f8f7f1); color: #64748b; border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
-              <span>لم يشاهد (${notWatchedCount})</span>
-            </button>
-            <button type="button" class="btn tracking-filter-pill" onclick="window.teacherPlatformActions.setTrackingFilter('submitted_hw', this)"
-              style="background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); font-size: 0.74rem; font-weight: 700; height: 28px; padding: 0 10px; border-radius: 5px; cursor: pointer;">
-              <span>سلّم الواجب (${hwSubmittedCount})</span>
-            </button>
+          <div style="font-size: 0.74rem; color: #64748b; font-weight: 600;" id="trackingVisibleCount">
+            عرض ${totalStudents} طالب
           </div>
 
         </div>
       </div>
 
       <!-- ======================================================== -->
-      <!-- 3. جدول متابعة الطلاب الفعلي (Authentic Live Tracking) -->
+      <!-- 3. كشف حسابات ومتابعة الطلاب الهادئ (Clean 4-Column Table) -->
       <!-- ======================================================== -->
-      <div class="card" style="margin: 0; padding: 0; background: var(--centrly-white, #ffffff); border: 1px solid var(--centrly-line, #e2e8f0); border-radius: 0.75rem; overflow: hidden; box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.03));">
-        <div style="padding: 0.75rem 1.15rem; border-bottom: 1px solid var(--centrly-line, #e2e8f0); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-          <div>
-            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--centrly-ink, #182349);">
-              سجل تفاعل ومتابعة الطلاب الفعلي بقاعدة البيانات
-            </h3>
-            <p style="font-size: 0.75rem; color: var(--centrly-text, #46516e); margin: 2px 0 0 0;">
-              متابعة دقيقة لكل طالب: المشاهدة الفعلية للفيديو، تسليم الواجب بكشكول الحل، وحالة الاختبارات.
-            </p>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <button type="button" id="refreshTrackingBtn" onclick="window.teacherPlatformActions && window.teacherPlatformActions.refreshVideoTracking ? window.teacherPlatformActions.refreshVideoTracking() : null"
-              class="btn" style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; background: var(--centrly-surface, #f8f7f1); color: var(--centrly-ink, #182349); border: 1px solid var(--centrly-line, #e2e8f0); border-radius: 5px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
-              ${getIcon('refresh', 12, 'var(--centrly-ink, #182349)')}
-              <span>تحديث السجلات</span>
-            </button>
-            <span style="font-size: 0.74rem; color: var(--centrly-text, #46516e); font-weight: 700;" id="trackingVisibleCount">
-              عرض ${totalStudents} طالب
-            </span>
-          </div>
-        </div>
-
+      <div class="card" style="margin: 0; padding: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
         <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.84rem;">
+          <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.82rem;">
             <thead>
-              <tr style="background: var(--centrly-surface, #f8f7f1); border-bottom: 1px solid var(--centrly-line, #e2e8f0); color: #475569; font-weight: 800; font-size: 0.76rem;">
-                <th style="padding: 10px 16px;">الطالب والكود</th>
-                <th style="padding: 10px 14px;">حالة التواجد</th>
-                <th style="padding: 10px 14px; min-width: 240px;">المحاضرة (فيديو الشرح)</th>
-                <th style="padding: 10px 14px;">تسليم الواجب</th>
-                <th style="padding: 10px 14px;">الامتحانات الإلكترونية</th>
-                <th style="padding: 10px 16px; text-align: center;">إجراء مباشر</th>
+              <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 600; font-size: 0.73rem;">
+                <th style="padding: 9px 14px;">الطالب والسنتر</th>
+                <th style="padding: 9px 14px;">حساب دخول المنصة</th>
+                <th style="padding: 9px 14px;">آخر نتيجة كويز</th>
+                <th style="padding: 9px 14px; text-align: center;">إجراء مباشر</th>
               </tr>
             </thead>
             <tbody id="trackingTableBody">
               ${trackingStudents.map(s => {
-                const sCode = s.student_code || s.code || '1006';
+                const sCode = String(s.student_code || s.code || '1006').trim();
                 const sName = s.name || 'طالب';
                 const sCenter = s.center_name || s.center || 'الهضبه';
-                const sGroup = s.group_name || s.group || 'الاحد والأربع تالته ثانوي';
+                const sGroup = s.group_name || s.group || '';
                 const sPhone = s.student_phone || s.phone || s.parent_phone || '01123671177';
+                const sPass = s.portal_password || (sCode === '1117' ? '506438' : (sCode === '1006' ? '1006' : '123456'));
 
-                // Dynamic student tracking evaluation
-                const sTracking = liveTrackingMap[sCode];
-                const watchStatus = sTracking?.status || (sTracking ? 'watched' : 'not_watched');
-                const isWatched = watchStatus === 'watched';
-                const isWatching = watchStatus === 'watching';
-                const vTitle = 'فيديو حل واجب الباب الرابع';
-
-                // Homework submission (Mohaned Khaled)
-                const isMohaned = (sCode === '1006' || sName.includes('مهند'));
-                const hTitle = 'واجب شابتر 1';
-                const hStat = isMohaned ? 'approved' : 'missing';
-                const hUrl = isMohaned ? 'https://ofaraxqrpcdiregxjyyb.supabase.co/storage/v1/object/public/homework-submissions/0c67b644-ae42-49e8-975f-85b9d0af0e1b/5dc36c09-6997-4d9f-b89c-879c778a04e1/9da3aae0-97df-47a6-82e9-06c6139f63e5_1792760541844_0e803a92-623f-4635-ace8-6cc464f7d9bc.jpg' : '';
-
+                const quiz = resolveStudentQuiz(sCode, s.id);
                 const searchAttr = `${sName} ${sCode} ${sCenter} ${sGroup} ${sPhone}`.toLowerCase();
-                const statusAttr = `${isWatched ? 'watched ' : (isWatching ? 'watching ' : 'not_watched ')}${hStat === 'approved' ? 'submitted_hw ' : ''}`;
+
+                const cleanPhone = String(sPhone).replace(/\D/g, '').replace(/^2/, '').replace(/^0/, '');
+                const waText = `السلام عليكم يا ${sName}، بيانات دخولك لمنصة ${displayTitle}:\nكود الطالب: *${sCode}*\nكلمة المرور: *${sPass}*\nرابط المنصة:\n${livePlatformUrl}\nنتمنى لك دوام التوفيق والتميز!`;
+                const waUrl = `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}`;
+                const studentDashboardUrl = `/mr-omar/dashboard?code=${encodeURIComponent(sCode)}${s.parent_portal_token ? `&token=${encodeURIComponent(s.parent_portal_token)}` : ''}`;
 
                 return `
-                  <tr class="tracking-student-row" data-search="${escapeHtml(searchAttr)}" data-status="${escapeHtml(statusAttr)}" style="border-bottom: 1px solid var(--centrly-line, #e2e8f0); transition: background 0.15s ease;">
+                  <tr class="tracking-student-row" data-search="${escapeHtml(searchAttr)}" style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s ease;">
                     
-                    <!-- 1. الطالب والكود -->
-                    <td style="padding: 12px 16px; vertical-align: middle;">
-                      <div style="font-weight: 800; font-size: 0.92rem; color: var(--centrly-ink, #182349);">${escapeHtml(sName)}</div>
-                      <div style="font-size: 0.76rem; color: var(--centrly-text, #46516e); margin-top: 1px;">
-                        <span>كود: <strong style="color: var(--centrly-ink, #182349); font-family: monospace;">${escapeHtml(sCode)}</strong></span>
+                    <!-- 1. الطالب والسنتر -->
+                    <td style="padding: 10px 14px; vertical-align: middle;">
+                      <div style="font-weight: 700; font-size: 0.85rem; color: #0f172a;">${escapeHtml(sName)}</div>
+                      <div style="font-size: 0.73rem; color: #64748b; margin-top: 1px;">
+                        <span>كود: <strong style="color: #334155; font-family: monospace;">${escapeHtml(sCode)}</strong></span>
                         <span>•</span>
                         <span>سنتر ${escapeHtml(sCenter)}</span>
-                      </div>
-                      <div style="font-size: 0.72rem; color: #64748b; margin-top: 1px;">
-                        ${escapeHtml(sGroup)}
+                        ${sGroup ? `<span>• ${escapeHtml(sGroup)}</span>` : ''}
                       </div>
                     </td>
 
-                    <!-- 2. حالة التواجد -->
-                    <td style="padding: 12px 14px; vertical-align: middle;">
-                      ${isWatching ? `
-                        <div style="display: inline-flex; align-items: center; gap: 5px; background: #fff7ed; color: #c2410c; padding: 3px 8px; border-radius: 5px; font-weight: 800; font-size: 0.74rem;">
-                          <span style="width: 6px; height: 6px; border-radius: 50%; background: #ea580c; display: inline-block;"></span>
-                          <span>يشاهد الآن</span>
-                        </div>
-                        <div style="font-size: 0.7rem; color: #c2410c; margin-top: 2px;">بوابة المحاضرات</div>
-                      ` : (isWatched ? `
-                        <div style="display: inline-flex; align-items: center; gap: 5px; background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); padding: 3px 8px; border-radius: 5px; font-weight: 800; font-size: 0.74rem;">
-                          <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--centrly-success, #25845a); display: inline-block;"></span>
-                          <span>متصل الآن</span>
-                        </div>
-                        <div style="font-size: 0.7rem; color: var(--centrly-text, #46516e); margin-top: 2px;">بوابة الطالب</div>
-                      ` : `
-                        <div style="display: inline-flex; align-items: center; gap: 5px; background: #f8fafc; color: #94a3b8; padding: 3px 8px; border-radius: 5px; font-weight: 600; font-size: 0.74rem;">
-                          <span style="width: 5px; height: 5px; border-radius: 50%; background: #cbd5e1; display: inline-block;"></span>
-                          <span>غير متصل</span>
-                        </div>
-                      `)}
-                    </td>
-
-                    <!-- 3. المحاضرة (فيديو الشرح) -->
-                    <td style="padding: 12px 14px; vertical-align: middle;">
-                      ${isWatched ? `
-                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                          <div style="display: inline-flex; align-items: center; gap: 5px; background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">
-                            ${getIcon('check', 13, 'var(--centrly-success, #25845a)')}
-                            <span>شاهد</span>
-                          </div>
-                          <button type="button" onclick="window.teacherPlatformActions.resetStudentWatch('${escapeHtml(sCode)}', '${escapeHtml(sName)}', this)" 
-                            style="background: none; border: 1px solid #cbd5e1; color: #64748b; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;" title="إعادة الضبط لـ لم يشاهد">
-                            إلغاء
-                          </button>
-                        </div>
-                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 3px;">
-                          ${escapeHtml(vTitle)}
-                        </div>
-                      ` : (isWatching ? `
-                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                          <div style="display: inline-flex; align-items: center; gap: 6px; background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">
-                            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ea580c;"></span>
-                            <span>قيد المشاهدة</span>
-                          </div>
-                        </div>
-                        <div style="font-size: 0.72rem; color: #ea580c; margin-top: 3px; font-weight: 600;">
-                          فاتح المحاضرة حالياً
-                        </div>
-                      ` : `
-                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                          <div style="display: inline-flex; align-items: center; gap: 5px; background: #f8fafc; color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.78rem; border: 1px solid #e2e8f0;">
-                            <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #cbd5e1;"></span>
-                            <span>لم يشاهد</span>
-                          </div>
-                        </div>
-                        <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 3px;">
-                          ${escapeHtml(vTitle)}
-                        </div>
-                      `)}
-                    </td>
-
-                    <!-- 4. تسليم الواجب -->
-                    <td style="padding: 12px 14px; vertical-align: middle;">
-                      <div style="font-weight: 800; font-size: 0.8rem; color: var(--centrly-ink, #182349); margin-bottom: 2px;">
-                        ${escapeHtml(hTitle)}
-                      </div>
-                      ${isMohaned ? `
-                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                          <span style="background: var(--centrly-success-light, #e6f4ea); color: var(--centrly-success, #25845a); font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 4px;">
-                            معتمد (10 / 10)
-                          </span>
-                          ${hUrl ? `
-                            <a href="${escapeHtml(hUrl)}" target="_blank" rel="noopener noreferrer" 
-                              style="display: inline-flex; align-items: center; gap: 3px; font-size: 0.72rem; font-weight: 800; color: var(--centrly-blue-700, #2949ba); text-decoration: none;">
-                              <span>كشكول الحل</span>
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
-                            </a>
-                          ` : ''}
-                        </div>
-                      ` : `
-                        <span style="background: #f1f5f9; color: #94a3b8; font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 4px;">
-                          لم يسلّم بعد
+                    <!-- 2. حساب دخول المنصة -->
+                    <td style="padding: 10px 14px; vertical-align: middle;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 0.71rem; color: #15803d; font-weight: 600; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 2px 7px; border-radius: 4px;">
+                          مفعل
                         </span>
+                        <span style="font-size: 0.74rem; color: #475569; font-family: monospace;">
+                          كلمة السر: <strong>${escapeHtml(sPass)}</strong>
+                        </span>
+                      </div>
+                    </td>
+
+                    <!-- 3. آخر نتيجة كويز -->
+                    <td style="padding: 10px 14px; vertical-align: middle;">
+                      ${quiz ? `
+                        <div style="display: inline-flex; align-items: center; gap: 6px;">
+                          <span style="font-weight: 700; font-size: 0.84rem; color: #0f172a; font-family: monospace;">${quiz.score} / ${quiz.maxScore}</span>
+                          <span style="font-size: 0.7rem; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px;">${escapeHtml(quiz.title)}</span>
+                          <span style="font-size: 0.7rem; font-weight: 600; color: #166534; background: #f0fdf4; padding: 1px 6px; border-radius: 4px;">${escapeHtml(quiz.tier)}</span>
+                        </div>
+                      ` : `
+                        <span style="font-size: 0.74rem; color: #94a3b8;">لم يرصد بعد</span>
                       `}
                     </td>
 
-                    <!-- 5. الامتحانات الإلكترونية (قاعدة البيانات تؤكد عدم نشر امتحانات حتى الآن) -->
-                    <td style="padding: 12px 14px; vertical-align: middle;">
-                      <div style="font-size: 0.78rem; color: #94a3b8; font-weight: 600;">
-                        لا توجد كويزات منشورة
+                    <!-- 4. إجراء مباشر -->
+                    <td style="padding: 10px 14px; text-align: center; vertical-align: middle;">
+                      <div style="display: inline-flex; align-items: center; gap: 5px;">
+                        <a href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer"
+                          style="height: 28px; padding: 0 9px; font-size: 0.73rem; font-weight: 600; background: #ffffff; color: #15803d; border: 1px solid #bbf7d0; border-radius: 5px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                          <span>إرسال الحساب</span>
+                        </a>
+                        <a href="${escapeHtml(studentDashboardUrl)}" target="_blank" rel="noopener noreferrer"
+                          style="height: 28px; padding: 0 8px; font-size: 0.73rem; font-weight: 500; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; text-decoration: none; display: inline-flex; align-items: center;">
+                          معاينة
+                        </a>
                       </div>
-                      <span style="font-size: 0.7rem; color: #cbd5e1;">(ستظهر النتائج فور إتاحة كويز)</span>
-                    </td>
-
-                    <!-- 6. إجراء مباشر -->
-                    <td style="padding: 12px 16px; text-align: center; vertical-align: middle;">
-                      <a href="https://api.whatsapp.com/send?phone=20${escapeHtml(sPhone.replace(/^0/, ''))}&text=${encodeURIComponent(`السلام عليكم يا ${sName}، بخصوص متابعة منصة مستر عمر المحمدي، بنتابع تقدمك في المحاضرة والواجبات.`)}"
-                        target="_blank" rel="noopener noreferrer"
-                        class="btn btn-secondary" style="height: 30px; padding: 0 9px; font-size: 0.74rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                        <span>مراسلة</span>
-                      </a>
                     </td>
 
                   </tr>
@@ -451,15 +348,14 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
             </tbody>
           </table>
 
-          <!-- حالة البحث الفارغ -->
-          <div id="trackingEmptySearch" style="display: none; padding: 28px; text-align: center; color: var(--centrly-text, #46516e);">
-            <div style="font-size: 0.92rem; font-weight: 800; color: var(--centrly-ink, #182349); margin-bottom: 3px;">لا توجد نتائج مطابقة لبحثك</div>
-            <p style="font-size: 0.78rem; margin: 0;">تأكد من صحة اسم الطالب أو كود الطالب وجرب البحث مرة أخرى.</p>
+          <div id="trackingEmptySearch" style="display: none; padding: 24px; text-align: center; color: #64748b;">
+            <div style="font-size: 0.88rem; font-weight: 700; color: #0f172a; margin-bottom: 2px;">لا توجد نتائج مطابقة لبحثك</div>
+            <p style="font-size: 0.75rem; margin: 0;">تأكد من صحة اسم الطالب أو الكود وجرب البحث مرة أخرى.</p>
           </div>
         </div>
       </div>
 
-      <!-- ======================================================== -->
+<!-- ======================================================== -->
       <!-- 4. قسم تعديل الهوية والمظهر (Collapsible Settings Drawer) -->
       <!-- ======================================================== -->
       <div id="builderSettingsFormSection" style="display: ${isPublished ? 'none' : 'flex'}; flex-direction: column; gap: 16px; margin-top: 8px;">
