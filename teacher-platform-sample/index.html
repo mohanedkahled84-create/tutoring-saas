@@ -1988,14 +1988,20 @@
         console.warn('Backend parent-portal fetch warning:', err);
       }
 
-      // 1.5 جلب الامتحانات والكويزات المباشرة من السيرفر (/api/quizzes/rich)
+      // 1.5 جلب الامتحانات والكويزات المباشرة من السيرفر (/api/quizzes/rich) مع استبعاد أي كويز تجريبي
       try {
         let richRes = await fetch('/api/quizzes/rich').then(r => r.json()).catch(() => null);
         if (!richRes || !richRes.success) {
           richRes = await fetch('https://centerly-eg.com/api/quizzes/rich').then(r => r.json()).catch(() => null);
         }
         if (richRes && richRes.success && Array.isArray(richRes.quizzes)) {
-          richRes.quizzes.forEach(q => {
+          const validQuizzes = richRes.quizzes.filter(q => {
+            const t = (q.title || '').toLowerCase();
+            const id = (q.id || '').toLowerCase();
+            return !t.includes('تجريبي') && !t.includes('trial') && !t.includes('test') && !id.includes('trial') && !id.includes('test');
+          });
+
+          validQuizzes.forEach(q => {
             const maxScore = Array.isArray(q.questions) 
               ? q.questions.reduce((sum, item) => sum + Number(item.points || 1), 0) 
               : 10;
@@ -2023,14 +2029,61 @@
         console.warn('Rich quizzes fetch warning in student platform:', richErr);
       }
 
-      // 2. دمج أي محتوى إضافي تم رفعه محلياً من لوحة المعلم
+      // 1.6 جلب تسليمات الطالب ونتائج التصحيح المعتمدة من السيرفر بمزامنة فورية
+      window._studentOnlineSubmissionsMap = new Map();
+      const currentStudentCode = currentStudent.code || '1006';
+      try {
+        let subRes = await fetch(`/api/quizzes/submissions?student_code=${encodeURIComponent(currentStudentCode)}`).then(r => r.json()).catch(() => null);
+        if (!subRes || !subRes.success) {
+          subRes = await fetch(`https://centerly-eg.com/api/quizzes/submissions?student_code=${encodeURIComponent(currentStudentCode)}`).then(r => r.json()).catch(() => null);
+        }
+        if (subRes && subRes.success && Array.isArray(subRes.submissions)) {
+          subRes.submissions.forEach(sub => {
+            if (sub && (sub.quiz_id || sub.material_id)) {
+              const qId = sub.quiz_id || sub.material_id;
+              window._studentOnlineSubmissionsMap.set(qId, sub);
+              const subKey = `centrly_submission_${currentStudentCode}_${qId}`;
+              try {
+                localStorage.setItem(subKey, JSON.stringify(sub));
+              } catch (_) {}
+            }
+          });
+        }
+      } catch (subErr) {
+        console.warn('Quiz submissions fetch warning in student platform:', subErr);
+      }
+
+      // 2. تنظيف ودمج أي محتوى إضافي تم رفعه محلياً مع إزالة أي كويز تجريبي نهائياً
       let localMaterials = [];
       try {
         const cached = localStorage.getItem('centrly_materials') || localStorage.getItem('centrly_platform_content');
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed)) localMaterials = parsed;
+          if (Array.isArray(parsed)) {
+            localMaterials = parsed.filter(m => {
+              const t = (m.title || '').toLowerCase();
+              const id = (m.id || '').toLowerCase();
+              return !t.includes('تجريبي') && !t.includes('trial') && !t.includes('test') && !id.includes('trial') && !id.includes('test');
+            });
+          }
         }
+      } catch (_) {}
+
+      try {
+        ['centrly_materials', 'centrly_platform_content', 'centrly_quizzes'].forEach(k => {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            let items = JSON.parse(raw);
+            if (Array.isArray(items)) {
+              items = items.filter(m => {
+                const t = (m.title || '').toLowerCase();
+                const id = (m.id || '').toLowerCase();
+                return !t.includes('تجريبي') && !t.includes('trial') && !t.includes('test') && !id.includes('trial') && !id.includes('test');
+              });
+              localStorage.setItem(k, JSON.stringify(items));
+            }
+          }
+        });
       } catch (_) {}
 
       // دمج وتحديث المعرفات (قاعدة البيانات هي الأساس وتتكامل مع التعديلات الحديثة)
@@ -2043,6 +2096,40 @@
           map.set(item.id, { ...(map.get(item.id) || {}), ...item });
         }
       });
+
+      // 2.5 دمج الكويزات الأونلاين المعتمدة داخل كشف الدرجات المرصودة وتحديث النسبة
+      const allRecorded = Array.isArray(window._studentRecordedQuizzes) ? [...window._studentRecordedQuizzes] : [];
+      if (window._studentOnlineSubmissionsMap) {
+        window._studentOnlineSubmissionsMap.forEach(sub => {
+          const isGraded = sub.status === 'approved' || sub.status === 'graded' || sub.is_graded === true;
+          if (isGraded) {
+            const quizTitle = sub.quiz_title || (sub.quiz_number ? `كويز ${sub.quiz_number}` : 'كويز أونلاين');
+            const score = Number(sub.total_score !== undefined ? sub.total_score : (sub.score !== undefined ? sub.score : (sub.final_score !== undefined ? sub.final_score : 0)));
+            const maxScore = Number(sub.max_score || 10);
+            const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+            const exists = allRecorded.some(r => r.title === quizTitle || r.id === sub.quiz_id || r.id === sub.material_id);
+            if (!exists) {
+              allRecorded.unshift({
+                id: sub.quiz_id || sub.material_id,
+                title: quizTitle,
+                score: score,
+                max_score: maxScore,
+                percentage: pct,
+                date: sub.graded_at ? sub.graded_at.slice(0, 10) : (sub.submitted_at ? sub.submitted_at.slice(0, 10) : ''),
+                note: sub.essay_score !== undefined ? `درجة المقالي: ${sub.essay_score} + الموضوعي: ${sub.mcq_score || 0}` : 'كويز أونلاين معتمد'
+              });
+            }
+          }
+        });
+      }
+      renderRecordedScores(allRecorded);
+
+      const qAvgEl = document.getElementById('kpiQuizAvgVal');
+      if (qAvgEl && allRecorded.length > 0) {
+        const totalPct = allRecorded.reduce((sum, item) => sum + (Number(item.percentage) || (Number(item.score) / (Number(item.max_score) || 10) * 100) || 0), 0);
+        const avgPct = Math.round(totalPct / allRecorded.length);
+        qAvgEl.innerText = `${avgPct}%`;
+      }
 
       platformContent = Array.from(map.values());
       renderAllPanels();
@@ -2546,7 +2633,13 @@
       const container = document.getElementById('examsListContainer');
       if (!container) return;
 
-      if (quizzes.length === 0) {
+      const filteredQuizzes = (quizzes || []).filter(q => {
+        const title = (q.title || '').toLowerCase();
+        const id = (q.id || '').toLowerCase();
+        return !title.includes('تجريبي') && !title.includes('trial') && !title.includes('test') && !id.includes('trial') && !id.includes('test');
+      });
+
+      if (filteredQuizzes.length === 0) {
         container.innerHTML = `
           <div class="empty-state-card">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -2558,25 +2651,33 @@
       }
 
       let html = '';
-      quizzes.forEach(qz => {
-        const subKey = `centrly_submission_${currentStudent.code || '1006'}_${qz.id}`;
-        let sub = null;
-        try {
-          const s = localStorage.getItem(subKey);
-          if (s) sub = JSON.parse(s);
-        } catch (_) {}
+      filteredQuizzes.forEach(qz => {
+        const studentCode = currentStudent.code || '1006';
+        const subKey = `centrly_submission_${studentCode}_${qz.id}`;
+        let sub = window._studentOnlineSubmissionsMap?.get(qz.id) || null;
+        if (!sub) {
+          try {
+            const s = localStorage.getItem(subKey);
+            if (s) sub = JSON.parse(s);
+          } catch (_) {}
+        }
+
+        const isGraded = sub && (sub.status === 'approved' || sub.status === 'graded' || sub.is_graded === true);
+        const isPending = sub && !isGraded && (sub.status === 'pending' || sub.status === 'needs_grading' || sub.has_essay);
+        const finalScore = Number(sub?.total_score !== undefined ? sub.total_score : (sub?.score !== undefined ? sub.score : (sub?.final_score !== undefined ? sub.final_score : 0)));
+        const maxScore = Number(sub?.max_score || qz.max_score || 10);
 
         let actionBtn = '';
-        if (sub && sub.status === 'pending') {
+        if (isGraded) {
           actionBtn = `
-            <button class="btn btn-secondary" style="height: 38px; background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-weight: 800; font-size: 0.82rem; border-radius: 8px; cursor: pointer;" onclick="openPendingReviewModal(platformContent.find(m => m.id === '${escapeJsStr(qz.id || '')}'))">
-              <span>تم التسليم (قيد التصحيح ⏳)</span>
+            <button class="btn btn-secondary" style="height: 38px; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; font-weight: 800; font-size: 0.82rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" onclick="viewQuizResult('${escapeJsStr(qz.id)}')">
+              <span>عرض النتيجة (${finalScore} / ${maxScore}) ✔️</span>
             </button>
           `;
-        } else if (sub && sub.status === 'graded') {
+        } else if (isPending) {
           actionBtn = `
-            <button class="btn btn-secondary" style="height: 38px; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; font-weight: 800; font-size: 0.82rem; border-radius: 8px; cursor: pointer;" onclick="startSecureExam('${escapeJsStr(qz.id || '')}', '${escapeJsStr(qz.title)}')">
-              <span>عرض النتيجة (${sub.score} / ${sub.max_score}) ✔️</span>
+            <button class="btn btn-secondary" style="height: 38px; background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-weight: 800; font-size: 0.82rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" onclick="openPendingReviewModal(platformContent.find(m => m.id === '${escapeJsStr(qz.id || '')}'))">
+              <span>تم التسليم (قيد التصحيح ⏳)</span>
             </button>
           `;
         } else {
@@ -2599,6 +2700,21 @@
       });
 
       container.innerHTML = html;
+    }
+
+    function viewQuizResult(quizId) {
+      const qz = platformContent.find(m => m.id === quizId) || { id: quizId, title: 'كويز' };
+      const studentCode = currentStudent.code || '1006';
+      let sub = window._studentOnlineSubmissionsMap?.get(quizId) || null;
+      if (!sub) {
+        try {
+          const s = localStorage.getItem(`centrly_submission_${studentCode}_${quizId}`);
+          if (s) sub = JSON.parse(s);
+        } catch (_) {}
+      }
+      const score = Number(sub?.total_score !== undefined ? sub.total_score : (sub?.score !== undefined ? sub.score : (sub?.final_score !== undefined ? sub.final_score : 0)));
+      const maxScore = Number(sub?.max_score || qz.max_score || 10);
+      openExamReviewModal(qz, sub?.gradedDetails || null, score, maxScore, sub);
     }
 
     // تصيير قسم المذكرات والملخصات
@@ -2658,18 +2774,25 @@
 
       // التحقق مما إذا كان الطالب قد سلّم هذا الامتحان مسبقاً
       const subKey = `centrly_submission_${currentStudent.code || '1006'}_${targetQz.id}`;
-      const existingSubStr = localStorage.getItem(subKey);
-      if (existingSubStr) {
+      let existingSub = window._studentOnlineSubmissionsMap?.get(targetQz.id) || null;
+      if (!existingSub) {
         try {
-          const existingSub = JSON.parse(existingSubStr);
-          if (existingSub.status === 'pending') {
-            openPendingReviewModal(targetQz);
-            return;
-          } else if (existingSub.status === 'graded') {
-            openExamReviewModal(targetQz, existingSub.gradedDetails, existingSub.score, existingSub.max_score);
-            return;
-          }
+          const existingSubStr = localStorage.getItem(subKey);
+          if (existingSubStr) existingSub = JSON.parse(existingSubStr);
         } catch (_) {}
+      }
+
+      if (existingSub) {
+        const isGraded = existingSub.status === 'approved' || existingSub.status === 'graded' || existingSub.is_graded === true;
+        if (isGraded) {
+          const score = Number(existingSub.total_score !== undefined ? existingSub.total_score : (existingSub.score !== undefined ? existingSub.score : (existingSub.final_score !== undefined ? existingSub.final_score : 0)));
+          const maxScore = Number(existingSub.max_score || targetQz.max_score || 10);
+          openExamReviewModal(targetQz, existingSub.gradedDetails || null, score, maxScore, existingSub);
+          return;
+        } else if (existingSub.status === 'pending' || existingSub.status === 'needs_grading' || existingSub.has_essay) {
+          openPendingReviewModal(targetQz);
+          return;
+        }
       }
 
       currentActiveQuiz = targetQz;
@@ -2965,32 +3088,34 @@
       modal.classList.add('active');
     }
 
-    function openExamReviewModal(quiz, gradedDetails, score, maxScore) {
+    function openExamReviewModal(quiz, gradedDetails, score, maxScore, submission) {
       const modal = document.getElementById('modelAnswerModal');
       const titleEl = document.getElementById('reviewModalTitle');
       const bodyEl = document.getElementById('reviewModalBody');
       if (!modal || !bodyEl) return;
 
-      if (titleEl) titleEl.innerText = `مراجعة وتصحيح — ${quiz?.title || 'الامتحان'}`;
+      if (titleEl) titleEl.innerText = `تقرير النتيجة — ${quiz?.title || submission?.quiz_title || 'كويز'}`;
 
       const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
       const isHigh = pct >= 85;
       const isPass = pct >= 50;
-      const badgeColor = isHigh ? '#10b981' : (isPass ? '#f59e0b' : '#ef4444');
-      const badgeBg = isHigh ? '#ecfdf5' : (isPass ? '#fffbeb' : '#fef2f2');
-      const appraisal = isHigh ? 'ممتاز مرتفع ✔️' : (isPass ? 'جيد • استمر في التحسن' : 'يحتاج لمراجعة الدرس وإعادة التدريب');
+      const badgeColor = isHigh ? '#059669' : (isPass ? '#2563eb' : '#dc2626');
+      const badgeBg = isHigh ? '#ecfdf5' : (isPass ? '#eff6ff' : '#fef2f2');
+      const appraisal = isHigh ? 'ممتاز مرتفع ✔️' : (isPass ? 'جيد جداً • استمر في التفوق' : 'يحتاج لمزيد من التدريب والمتابعة');
 
       let html = `
-        <div style="padding: 16px; background: ${badgeBg}; border: 1.5px solid ${badgeColor}; border-radius: var(--radius-md); margin-bottom: 22px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div style="padding: 18px; background: ${badgeBg}; border: 1.5px solid ${badgeColor}; border-radius: var(--radius-md); margin-bottom: 22px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <div>
-              <h4 style="font-size: 1.15rem; font-weight: 900; color: ${badgeColor}; margin: 0 0 4px 0;">
-                نتيجتك: ${score} من ${maxScore} (${pct}%)
+              <h4 style="font-size: 1.25rem; font-weight: 900; color: ${badgeColor}; margin: 0 0 4px 0;">
+                الدرجة النهائية: ${score} من ${maxScore} (${pct}%)
               </h4>
-              <span style="font-size: 0.85rem; font-weight: 800; color: var(--text-main);">${appraisal}</span>
+              <span style="font-size: 0.88rem; font-weight: 800; color: var(--text-main);">${appraisal}</span>
             </div>
-            <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted);">
-              تم التصحيح الفوري تلقائياً
+            <div style="text-align: left;">
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 800; color: #065f46; background: #d1fae5; padding: 4px 10px; border-radius: 6px;">
+                ✔ تم اعتماد وتصحيح الامتحان من المعلم
+              </span>
             </div>
           </div>
         </div>
@@ -2998,59 +3123,144 @@
         <div style="display: flex; flex-direction: column; gap: 18px;">
       `;
 
-      (gradedDetails || []).forEach((item, idx) => {
-        const q = item.q;
-        const selectedIdx = item.selectedIdx;
-        const correctIdx = item.correctIdx;
-        const isCorrect = item.isCorrect;
-        const choices = (q.choices || q.options || []).filter(c => c && String(c).trim());
+      // بناء تفاصيل الأسئلة (سواء تم تمرير gradedDetails أو بناؤها من submission و quiz)
+      const questionsList = (submission && Array.isArray(submission.questions) && submission.questions.length > 0)
+        ? submission.questions
+        : (quiz && Array.isArray(quiz.questions) ? quiz.questions : []);
 
-        html += `
-          <div style="border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px; background: #ffffff;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px;">
-              <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">
-                السؤال ${idx + 1}: ${escapeHtml(q.text || '')}
+      const studentAnswers = (submission && submission.answers) ? submission.answers : {};
+      const studentEssayAnswers = (submission && submission.essay_answers) ? submission.essay_answers : {};
+
+      if (Array.isArray(gradedDetails) && gradedDetails.length > 0) {
+        gradedDetails.forEach((item, idx) => {
+          const q = item.q;
+          const selectedIdx = item.selectedIdx;
+          const correctIdx = item.correctIdx;
+          const isCorrect = item.isCorrect;
+          const choices = (q.choices || q.options || []).filter(c => c && String(c).trim());
+
+          html += `
+            <div style="border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px; background: #ffffff;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px;">
+                <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">
+                  السؤال ${idx + 1}: ${escapeHtml(q.text || '')}
+                </div>
+                <span style="font-size: 0.78rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; white-space: nowrap; ${isCorrect ? 'background: #ecfdf5; color: #065f46;' : 'background: #fef2f2; color: #991b1b;'}">
+                  ${isCorrect ? `+${item.pts} (إجابة صحيحة ✔)` : `0 / ${item.pts} (إجابة خاطئة ✖)`}
+                </span>
               </div>
-              <span style="font-size: 0.78rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; white-space: nowrap; ${isCorrect ? 'background: #ecfdf5; color: #065f46;' : 'background: #fef2f2; color: #991b1b;'}">
-                ${isCorrect ? `+${item.pts} (إجابة صحيحة ✔)` : `0 / ${item.pts} (إجابة خاطئة ✖)`}
-              </span>
+
+              ${q.image_url ? `<div style="margin: 8px 0;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 200px; border-radius: 6px;" /></div>` : ''}
+
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                ${choices.map((choice, cIdx) => {
+                  const isThisCorrect = (cIdx === correctIdx);
+                  const isThisSelected = (selectedIdx !== undefined && cIdx === Number(selectedIdx));
+
+                  let choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; border: 1.5px solid var(--border-subtle); background: #f8fafc; color: var(--text-muted);';
+                  let iconMark = '';
+
+                  if (isThisCorrect) {
+                    choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; border: 2px solid #10b981; background: #ecfdf5; color: #065f46; box-shadow: 0 2px 6px rgba(16,185,129,0.15);';
+                    iconMark = '<span style="color: #10b981; font-weight: 900; margin-right: auto;">✔ الإجابة الصحيحة</span>';
+                  } else if (isThisSelected && !isCorrect) {
+                    choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; border: 2px solid #ef4444; background: #fef2f2; color: #991b1b;';
+                    iconMark = '<span style="color: #ef4444; font-weight: 900; margin-right: auto;">✖ إجابتك (غير صحيحة)</span>';
+                  }
+
+                  return `
+                    <div style="${choiceStyle} display: flex; align-items: center; justify-content: space-between;">
+                      <span>${String.fromCharCode(0x0623 + cIdx)}) ${escapeHtml(choice)}</span>
+                      ${iconMark}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
             </div>
+          `;
+        });
+      } else if (questionsList.length > 0) {
+        questionsList.forEach((q, idx) => {
+          const isEssay = q.type === 'essay';
+          const qPoints = Number(q.points || (isEssay ? 8 : 1));
 
-            ${q.image_url ? `<div style="margin: 8px 0;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 200px; border-radius: 6px;" /></div>` : ''}
+          if (isEssay) {
+            const studentText = studentEssayAnswers[idx] || studentAnswers[idx] || 'تم تقديم الإجابة';
+            const modelAnswer = q.model_answer || 'موضحة من المعلم';
+            const essayEarned = submission?.essay_score !== undefined ? Number(submission.essay_score) : qPoints;
 
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              ${choices.map((choice, cIdx) => {
-                const isThisCorrect = (cIdx === correctIdx);
-                const isThisSelected = (selectedIdx !== undefined && cIdx === Number(selectedIdx));
-
-                let choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; border: 1.5px solid var(--border-subtle); background: #f8fafc; color: var(--text-muted);';
-                let iconMark = '';
-
-                if (isThisCorrect) {
-                  choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; border: 2px solid #10b981; background: #ecfdf5; color: #065f46; box-shadow: 0 2px 6px rgba(16,185,129,0.15);';
-                  iconMark = '<span style="color: #10b981; font-weight: 900; margin-right: auto;">✔ الإجابة الصحيحة</span>';
-                } else if (isThisSelected && !isCorrect) {
-                  choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; border: 2px solid #ef4444; background: #fef2f2; color: #991b1b;';
-                  iconMark = '<span style="color: #ef4444; font-weight: 900; margin-right: auto;">✖ إجابتك (غير صحيحة)</span>';
-                }
-
-                return `
-                  <div style="${choiceStyle} display: flex; align-items: center; justify-content: space-between;">
-                    <span>${String.fromCharCode(0x0623 + cIdx)}) ${escapeHtml(choice)}</span>
-                    ${iconMark}
+            html += `
+              <div style="border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px; background: #ffffff;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px;">
+                  <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">
+                    السؤال ${idx + 1} (سؤال مقالي): ${escapeHtml(q.text || '')}
                   </div>
-                `;
-              }).join('')}
-            </div>
+                  <span style="font-size: 0.78rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; white-space: nowrap; background: #ecfdf5; color: #065f46;">
+                    +${essayEarned} / ${qPoints} (تم تصحيح المقالي ✔)
+                  </span>
+                </div>
 
-            ${selectedIdx === undefined ? `
-              <div style="margin-top: 8px; font-size: 0.78rem; color: #ef4444; font-weight: 700;">
-                لم تقم باختيار أي إجابة لهذا السؤال.
+                <div style="margin-bottom: 10px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                  <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">إجابتك المسلمة:</div>
+                  <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-main); white-space: pre-wrap;">${escapeHtml(studentText)}</div>
+                </div>
+
+                ${modelAnswer ? `
+                  <div style="background: #ecfdf5; padding: 10px 14px; border-radius: 8px; border: 1px solid #a7f3d0;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #065f46; margin-bottom: 4px;">الإجابة النموذجية المعتمدة:</div>
+                    <div style="font-size: 0.88rem; font-weight: 700; color: #065f46; white-space: pre-wrap;">${escapeHtml(modelAnswer)}</div>
+                  </div>
+                ` : ''}
               </div>
-            ` : ''}
-          </div>
-        `;
-      });
+            `;
+          } else {
+            const choices = (q.choices || q.options || []).filter(c => c && String(c).trim());
+            const correctIdx = Number(q.correct_index !== undefined ? q.correct_index : (q.correct !== undefined ? q.correct : 0));
+            const selectedIdx = studentAnswers[idx] !== undefined ? Number(studentAnswers[idx]) : undefined;
+            const isCorrect = (selectedIdx !== undefined && selectedIdx === correctIdx);
+
+            html += `
+              <div style="border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px; background: #ffffff;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px;">
+                  <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">
+                    السؤال ${idx + 1}: ${escapeHtml(q.text || '')}
+                  </div>
+                  <span style="font-size: 0.78rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; white-space: nowrap; ${isCorrect ? 'background: #ecfdf5; color: #065f46;' : 'background: #fef2f2; color: #991b1b;'}">
+                    ${isCorrect ? `+${qPoints} (إجابة صحيحة ✔)` : `0 / ${qPoints} (إجابة خاطئة ✖)`}
+                  </span>
+                </div>
+
+                ${q.image_url ? `<div style="margin: 8px 0;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 200px; border-radius: 6px;" /></div>` : ''}
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  ${choices.map((choice, cIdx) => {
+                    const isThisCorrect = (cIdx === correctIdx);
+                    const isThisSelected = (selectedIdx !== undefined && cIdx === selectedIdx);
+
+                    let choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; border: 1.5px solid var(--border-subtle); background: #f8fafc; color: var(--text-muted);';
+                    let iconMark = '';
+
+                    if (isThisCorrect) {
+                      choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; border: 2px solid #10b981; background: #ecfdf5; color: #065f46; box-shadow: 0 2px 6px rgba(16,185,129,0.15);';
+                      iconMark = '<span style="color: #10b981; font-weight: 900; margin-right: auto;">✔ الإجابة الصحيحة</span>';
+                    } else if (isThisSelected && !isCorrect) {
+                      choiceStyle = 'padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; border: 2px solid #ef4444; background: #fef2f2; color: #991b1b;';
+                      iconMark = '<span style="color: #ef4444; font-weight: 900; margin-right: auto;">✖ إجابتك (غير صحيحة)</span>';
+                    }
+
+                    return `
+                      <div style="${choiceStyle} display: flex; align-items: center; justify-content: space-between;">
+                        <span>${String.fromCharCode(0x0623 + cIdx)}) ${escapeHtml(choice)}</span>
+                        ${iconMark}
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }
+        });
+      }
 
       html += `
         </div>

@@ -166,11 +166,21 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
         notes = typeof sub.teacher_notes === 'string' ? JSON.parse(sub.teacher_notes) : (sub.teacher_notes || {});
       } catch (_) {}
 
-      const hasEssay = Boolean(notes.has_essay);
-      const isGraded = notes.is_graded === true || sub.status === 'approved';
-      const score = notes.final_score !== undefined && notes.final_score !== null ? Number(notes.final_score) : null;
-      const maxScore = Number(notes.max_score || 10);
-      const quizTitle = notes.title || (notes.quiz_number ? `كويز ${notes.quiz_number}` : 'كويز أونلاين');
+      const hasEssay = Boolean(notes.has_essay || sub.has_essay);
+      const isGraded = notes.is_graded === true || sub.is_graded === true || sub.status === 'approved' || sub.status === 'graded';
+      const score = (notes.final_score !== undefined && notes.final_score !== null)
+        ? Number(notes.final_score)
+        : (notes.total_score !== undefined && notes.total_score !== null)
+          ? Number(notes.total_score)
+          : (sub.total_score !== undefined && sub.total_score !== null)
+            ? Number(sub.total_score)
+            : (sub.score !== undefined && sub.score !== null)
+              ? Number(sub.score)
+              : (sub.final_score !== undefined && sub.final_score !== null)
+                ? Number(sub.final_score)
+                : null;
+      const maxScore = Number(notes.max_score || sub.max_score || 10);
+      const quizTitle = notes.title || sub.quiz_title || notes.quiz_title || (notes.quiz_number ? `كويز ${notes.quiz_number}` : (sub.quiz_number ? `كويز ${sub.quiz_number}` : 'كويز أونلاين'));
 
       if (!isGraded && hasEssay) {
         return {

@@ -43,6 +43,11 @@ export default async function handler(req, res) {
         submissions = submissions.filter(s => !s.group_id || s.group_id === targetGroupId);
       }
 
+      const targetStudentCode = req.query?.student_code;
+      if (targetStudentCode) {
+        submissions = submissions.filter(s => String(s.student_code || '').trim() === String(targetStudentCode).trim());
+      }
+
       return res.status(200).json({
         success: true,
         submissions
@@ -106,6 +111,8 @@ export default async function handler(req, res) {
         sub.is_graded = true;
         sub.essay_score = Number(essay_score || 0);
         sub.total_score = newScore;
+        sub.score = newScore;
+        sub.final_score = newScore;
         sub.graded_at = new Date().toISOString();
 
         await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?id=eq.${targetRow.id}`, {
@@ -123,9 +130,37 @@ export default async function handler(req, res) {
         });
 
         return res.status(200).json({ success: true, submission: sub, final_score: newScore });
+      } else {
+        const fallbackSub = {
+          id: submission_id || `sub_${material_id}_${student_code}_${Date.now()}`,
+          material_id,
+          quiz_id: material_id,
+          student_code,
+          status: 'approved',
+          is_graded: true,
+          essay_score: Number(essay_score || 0),
+          total_score: Number(essay_score || 0),
+          score: Number(essay_score || 0),
+          final_score: Number(essay_score || 0),
+          graded_at: new Date().toISOString()
+        };
+        await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            phone: subPhone,
+            direction: 'inbound',
+            status: 'approved',
+            student_name: body?.student_name || 'طالب',
+            message_body: JSON.stringify(fallbackSub)
+          })
+        });
+        return res.status(200).json({ success: true, submission: fallbackSub, final_score: Number(essay_score || 0) });
       }
-
-      return res.status(404).json({ error: { message: 'Submission not found' } });
     } catch (err) {
       console.error('[api/quizzes/submissions] POST error:', err);
       return res.status(500).json({ error: { message: err.message || 'Grading failed' } });
