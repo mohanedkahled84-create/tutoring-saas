@@ -863,62 +863,60 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
     `;
   }
 
-  // STEP 2: Question-by-Question Builder (سؤال بسؤال)
+  // STEP 2: Question-by-Question Builder (سؤال بسؤال - Swiss Minimal)
   const isMcq = currentQ.type !== 'essay';
   const isImageOnly = currentQ.format === 'image_only' || (currentQ.format !== 'standard' && !currentQ.text?.trim() && !!currentQ.image_url);
   const progressPct = Math.round(((currentQIdx + 1) / totalQuestions) * 100);
 
   return `
-    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
       
-      <!-- Top Stepper Toolbar -->
-      <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <!-- Top Stepper Toolbar (Swiss Minimal) -->
+      <div class="card" style="margin: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1.15rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <span class="badge badge-blue" style="font-size: 0.85rem; font-weight: 900; padding: 4px 10px;">
+              <span style="background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; font-size: 0.74rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
                 السؤال ${currentQIdx + 1} من ${totalQuestions}
               </span>
-              <span style="font-weight: 800; font-size: 1rem; color: #0f172a;">
+              <span style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">
                 ${escapeHtml(activeQuiz.title || 'امتحان أونلاين')} (${escapeHtml(activeQuiz.subject || 'الفيزياء')})
               </span>
             </div>
-            <div style="font-size: 0.78rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              يمكنك التنقل بين الأسئلة عبر الأرقام أدناه أو الضغط على زر "السؤال التالي".
+            <div style="font-size: 0.76rem; color: #64748b; margin-top: 0.2rem;">
+              يمكنك التنقل بين الأسئلة عبر أرقام الانتقال السريع أو زر "السؤال التالي".
             </div>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <button 
               type="button" 
-              class="btn btn-secondary" 
-              style="font-size: 0.82rem; font-weight: 700;"
+              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #e2e8f0; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
               onclick="window.centrlyApp.backToWizardStep1()"
             >
-              ${getIcon('edit', 14)}
+              ${getIcon('edit', 13)}
               <span>تعديل بيانات الامتحان</span>
             </button>
 
             <button 
               type="button" 
-              class="btn btn-primary" 
-              style="font-size: 0.88rem; font-weight: 900; padding: 0.55rem 1.25rem; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 10px rgba(37,99,235,0.25);"
+              style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
               onclick="window.centrlyApp.saveOnlineExamNow()"
             >
-              ${getIcon('check', 16, '#ffffff')}
-              <span>حفظ ونشر الامتحان الآن</span>
+              ${getIcon('check', 13, '#ffffff')}
+              <span>حفظ ونشر الامتحان</span>
             </button>
           </div>
         </div>
 
         <!-- Visual Progress Bar -->
-        <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 4px; margin-top: 1rem; overflow: hidden;">
-          <div style="height: 100%; background: var(--centrly-blue-700); width: ${progressPct}%; transition: width 0.2s ease;"></div>
+        <div style="width: 100%; height: 4px; background: #f1f5f9; border-radius: 2px; margin-top: 0.75rem; overflow: hidden;">
+          <div style="height: 100%; background: #0f172a; width: ${progressPct}%; transition: width 0.2s ease;"></div>
         </div>
 
         <!-- Question Fast Jumpers (1, 2, 3 ... N) -->
-        <div style="display: flex; gap: 0.4rem; overflow-x: auto; padding: 0.75rem 0 0.25rem 0; margin-top: 0.5rem; align-items: center;">
-          <span style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-ink); margin-left: 0.5rem; white-space: nowrap;">الانتقال السريع:</span>
+        <div style="display: flex; gap: 0.35rem; overflow-x: auto; padding: 0.65rem 0 0.15rem 0; margin-top: 0.35rem; align-items: center;">
+          <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; margin-left: 0.4rem; white-space: nowrap;">الانتقال السريع:</span>
           ${Array.from({ length: totalQuestions }).map((_, idx) => {
             const isCur = idx === currentQIdx;
             const qData = activeQuiz.questions?.[idx];
@@ -927,7 +925,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
             return `
               <button 
                 type="button"
-                style="min-width: 34px; height: 34px; border-radius: 8px; font-weight: 900; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isCur ? 'var(--centrly-blue-700)' : (hasContent ? '#10b981' : '#cbd5e1')}; background: ${isCur ? 'var(--centrly-blue-700)' : (hasContent ? '#ecfdf5' : '#ffffff')}; color: ${isCur ? '#ffffff' : (hasContent ? '#065f46' : '#64748b')};"
+                style="min-width: 30px; height: 30px; border-radius: 5px; font-weight: 700; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; border: 1px solid ${isCur ? '#0f172a' : (hasContent ? '#cbd5e1' : '#e2e8f0')}; background: ${isCur ? '#0f172a' : (hasContent ? '#f8fafc' : '#ffffff')}; color: ${isCur ? '#ffffff' : (hasContent ? '#0f172a' : '#94a3b8')};"
                 onclick="window.centrlyApp.jumpToQuestion(${idx})"
                 title="سؤال ${idx + 1}"
               >
@@ -938,30 +936,28 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
         </div>
       </div>
 
-      <!-- Current Question Card -->
-      <div class="card" style="margin: 0; border: 1.5px solid ${isMcq ? '#93c5fd' : '#fbcfe8'}; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.04);">
+      <!-- Current Question Card (Swiss Minimal) -->
+      <div class="card" style="margin: 0; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
         
         <!-- Question Type, Format & Points Toolbar -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.85rem; margin-bottom: 1rem;">
-          <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
-            <span style="background: var(--centrly-blue-700); color: #fff; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.85rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span style="background: #0f172a; color: #ffffff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem;">
               ${currentQIdx + 1}
             </span>
             
             <!-- Type Selector: MCQ vs Essay -->
-            <div style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="display: inline-flex; background: #f8fafc; padding: 2px; border-radius: 6px; border: 1px solid #e2e8f0;">
               <button 
                 type="button" 
-                class="btn ${isMcq ? 'btn-primary' : 'btn-secondary'}" 
-                style="padding: 0.35rem 0.85rem; font-size: 0.82rem; font-weight: 800; border-radius: 6px;"
+                style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; border-radius: 4px; border: 1px solid ${isMcq ? '#0f172a' : 'transparent'}; background: ${isMcq ? '#0f172a' : 'transparent'}; color: ${isMcq ? '#ffffff' : '#475569'}; cursor: pointer;"
                 onclick="window.centrlyApp.updateCurrentQuestionType('mcq')"
               >
                 اختيار من متعدد (MCQ)
               </button>
               <button 
                 type="button" 
-                class="btn ${!isMcq ? 'btn-primary' : 'btn-secondary'}" 
-                style="padding: 0.35rem 0.85rem; font-size: 0.82rem; font-weight: 800; border-radius: 6px;"
+                style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; border-radius: 4px; border: 1px solid ${!isMcq ? '#0f172a' : 'transparent'}; background: ${!isMcq ? '#0f172a' : 'transparent'}; color: ${!isMcq ? '#ffffff' : '#475569'}; cursor: pointer;"
                 onclick="window.centrlyApp.updateCurrentQuestionType('essay')"
               >
                 سؤال مقالي (Essay)
@@ -969,30 +965,28 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
             </div>
 
             <!-- Format Selector: Standard Text vs Image-Only -->
-            <div style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="display: inline-flex; background: #f8fafc; padding: 2px; border-radius: 6px; border: 1px solid #e2e8f0;">
               <button 
                 type="button" 
-                class="btn ${!isImageOnly ? 'btn-primary' : 'btn-secondary'}" 
-                style="padding: 0.35rem 0.85rem; font-size: 0.82rem; font-weight: 800; border-radius: 6px;"
+                style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; border-radius: 4px; border: 1px solid ${!isImageOnly ? '#0f172a' : 'transparent'}; background: ${!isImageOnly ? '#0f172a' : 'transparent'}; color: ${!isImageOnly ? '#ffffff' : '#475569'}; cursor: pointer;"
                 onclick="window.centrlyApp.setWizardQuestionFormat('standard')"
               >
                 سؤال نصي
               </button>
               <button 
                 type="button" 
-                class="btn ${isImageOnly ? 'btn-primary' : 'btn-secondary'}" 
-                style="padding: 0.35rem 0.85rem; font-size: 0.82rem; font-weight: 800; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem; ${isImageOnly ? 'background: #0284c7; border-color: #0284c7; color: #fff;' : ''}"
+                style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; border-radius: 4px; border: 1px solid ${isImageOnly ? '#0f172a' : 'transparent'}; background: ${isImageOnly ? '#0f172a' : 'transparent'}; color: ${isImageOnly ? '#ffffff' : '#475569'}; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                 onclick="window.centrlyApp.setWizardQuestionFormat('image_only')"
                 title="تفعيل وضع صورة السؤال بالكامل من الكتاب أو المذكرة دون الحاجة لكتابة نص"
               >
-                ${getIcon('camera', 14, isImageOnly ? '#fff' : 'var(--centrly-blue-700)')}
+                ${getIcon('camera', 13)}
                 <span>السؤال صورة بالكامل</span>
               </button>
             </div>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <label style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink);">درجة السؤال:</label>
+          <div style="display: flex; align-items: center; gap: 0.45rem;">
+            <label style="font-size: 0.78rem; font-weight: 700; color: #64748b;">درجة السؤال:</label>
             <input 
               type="number" 
               id="currentQPoints" 
@@ -1000,30 +994,30 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
               value="${currentQ.points || 2}" 
               min="0.5" 
               step="0.5" 
-              style="width: 75px; text-align: center; font-weight: 900; font-size: 1rem; border: 2px solid var(--centrly-blue-700);"
+              style="width: 60px; height: 30px; text-align: center; font-weight: 800; font-size: 0.88rem; border: 1px solid #cbd5e1; border-radius: 4px;"
               onchange="window.centrlyApp.updateCurrentQuestionField('points', this.value)"
             />
-            <span style="font-size: 0.85rem; font-weight: 700; color: var(--centrly-text);">درجات</span>
+            <span style="font-size: 0.76rem; font-weight: 600; color: #64748b;">درجات</span>
           </div>
         </div>
 
         <!-- Question Body (Image-Only vs Standard Text) -->
         ${isImageOnly ? `
           <!-- Image-Only Hero Box -->
-          <div style="background: #f0fdf4; border: 2px dashed ${currentQ.image_url ? '#10b981' : '#86efac'}; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; text-align: center; transition: all 0.2s ease;">
+          <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
             
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; text-align: right;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem; text-align: right;">
               <div>
-                <span style="font-size: 0.95rem; font-weight: 900; color: #166534; display: flex; align-items: center; gap: 0.4rem;">
-                  ${getIcon('camera', 18, '#166534')}
+                <span style="font-size: 0.88rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.35rem;">
+                  ${getIcon('camera', 16)}
                   <span>صورة السؤال بالكامل (قص / لقطة شاشة من كتاب أو مذكرة):</span>
                 </span>
-                <span style="font-size: 0.75rem; color: #15803d; font-weight: 600;">
+                <span style="font-size: 0.74rem; color: #64748b;">
                   صيغة المسألة معروضة بالصورة كاملة دون الحاجة لكتابة أي نص.
                 </span>
               </div>
 
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.45rem;">
                 <input 
                   type="file" 
                   id="wizardQImageInput" 
@@ -1034,23 +1028,21 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
                 />
                 <button 
                   type="button" 
-                  class="btn btn-primary" 
-                  style="font-size: 0.82rem; font-weight: 800; padding: 0.45rem 0.95rem; display: inline-flex; align-items: center; gap: 0.4rem;"
+                  style="height: 30px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                   onclick="document.getElementById('wizardQImageInput').click()"
                 >
-                  ${getIcon('upload', 14, '#ffffff')}
+                  ${getIcon('upload', 13, '#ffffff')}
                   <span>${currentQ.image_url ? 'تغيير صورة السؤال' : 'رفع / تصوير صورة السؤال'}</span>
                 </button>
 
                 ${currentQ.image_url ? `
                   <button 
                     type="button" 
-                    class="btn btn-secondary" 
-                    style="color: #dc2626; border-color: #fecaca; font-size: 0.82rem; font-weight: 800; padding: 0.45rem 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem;"
+                    style="height: 30px; padding: 0 9px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #b91c1c; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                     onclick="window.centrlyApp.removeWizardImage()"
                     title="إزالة الصورة"
                   >
-                    ${getIcon('delete', 14, '#dc2626')}
+                    ${getIcon('delete', 13, '#b91c1c')}
                     <span>حذف الصورة</span>
                   </button>
                 ` : ''}
@@ -1058,34 +1050,31 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
             </div>
 
             ${currentQ.image_url ? `
-              <div style="background: #ffffff; padding: 0.75rem; border-radius: 8px; border: 1px solid #bbf7d0; display: inline-block; max-width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+              <div style="background: #ffffff; padding: 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0; display: inline-block; max-width: 100%;">
                 <img 
                   src="${escapeHtml(currentQ.image_url)}" 
                   alt="صورة السؤال بالكامل" 
-                  style="max-height: 280px; max-width: 100%; border-radius: 6px; object-fit: contain;"
+                  style="max-height: 260px; max-width: 100%; border-radius: 4px; object-fit: contain;"
                 />
               </div>
             ` : `
               <div 
-                style="padding: 1.5rem 1rem; border: 1.5px dashed #86efac; background: #ffffff; border-radius: 8px; cursor: pointer;"
+                style="padding: 1.5rem 1rem; border: 1px dashed #cbd5e1; background: #ffffff; border-radius: 6px; cursor: pointer;"
                 onclick="document.getElementById('wizardQImageInput').click()"
               >
-                <div style="background: #dcfce7; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem auto; color: #15803d;">
-                  ${getIcon('camera', 28, '#15803d')}
-                </div>
-                <div style="font-weight: 800; font-size: 0.95rem; color: #166534; margin-bottom: 0.25rem;">
+                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.2rem;">
                   اضغط هنا لاختيار أو التقاط صورة السؤال
                 </div>
-                <div style="font-size: 0.78rem; color: #15803d;">
+                <div style="font-size: 0.74rem; color: #64748b;">
                   (أو الصق لقطة الشاشة مباشرة بالضغط على <b>Ctrl + V</b> في أي مكان في الصفحة)
                 </div>
               </div>
             `}
 
             <!-- Optional heading for the teacher -->
-            <div style="margin-top: 0.75rem; text-align: right;">
-              <details style="font-size: 0.8rem; color: #475569;">
-                <summary style="cursor: pointer; font-weight: 700; color: #166534;">
+            <div style="margin-top: 0.65rem; text-align: right;">
+              <details style="font-size: 0.78rem; color: #64748b;">
+                <summary style="cursor: pointer; font-weight: 600; color: #475569;">
                   + إضافة عنوان أو ملاحظة نصية اختيارية تظهر فوق الصورة
                 </summary>
                 <input 
@@ -1093,7 +1082,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
                   class="form-input" 
                   value="${escapeHtml(currentQ.text || '')}" 
                   placeholder="ملاحظة أو عنوان اختياري (اتركه فارغاً إذا كنت تريد الصورة فقط)..." 
-                  style="margin-top: 0.5rem; font-size: 0.85rem;"
+                  style="margin-top: 0.4rem; font-size: 0.82rem; height: 32px;"
                   onchange="window.centrlyApp.updateCurrentQuestionField('text', this.value)"
                 />
               </details>
@@ -1102,8 +1091,8 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
           </div>
         ` : `
           <!-- Standard Question Text Textarea & Secondary Image Upload -->
-          <div style="margin-bottom: 1rem;">
-            <label style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); margin-bottom: 0.35rem; display: block;">
+          <div style="margin-bottom: 0.85rem;">
+            <label style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem; display: block;">
               نص السؤال ${currentQIdx + 1}:
             </label>
             <textarea 
@@ -1111,22 +1100,22 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
               class="form-input" 
               rows="3" 
               placeholder="اكتب صيغة السؤال هنا بوضوح..."
-              style="font-size: 0.95rem; font-weight: 700; width: 100%; border: 1.5px solid #cbd5e1; border-radius: 8px;"
+              style="font-size: 0.88rem; font-weight: 600; width: 100%; border: 1px solid #cbd5e1; border-radius: 5px;"
               onchange="window.centrlyApp.updateCurrentQuestionField('text', this.value)"
             >${escapeHtml(currentQ.text || '')}</textarea>
           </div>
 
           <!-- Question Image Upload (Mobile / Desktop) -->
-          <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="color: var(--centrly-blue-700);">${getIcon('camera', 24, 'var(--centrly-blue-700)')}</div>
+          <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem;">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <div style="color: #64748b;">${getIcon('camera', 20)}</div>
               <div>
-                <span style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); display: block;">صورة مسألة أو رسم توضيحي للسؤال (اختياري):</span>
-                <span style="font-size: 0.75rem; color: var(--centrly-text);">التقط صورة بالكاميرا أو اختر صورة من المعرض أو اضغط Ctrl+V</span>
+                <span style="font-size: 0.78rem; font-weight: 700; color: #0f172a; display: block;">صورة مسألة أو رسم توضيحي للسؤال (اختياري):</span>
+                <span style="font-size: 0.72rem; color: #64748b;">التقط صورة بالكاميرا أو اختر صورة أو اضغط Ctrl+V</span>
               </div>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.45rem;">
               <input 
                 type="file" 
                 id="wizardQImageInput" 
@@ -1137,34 +1126,32 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
               />
               <button 
                 type="button" 
-                class="btn btn-secondary" 
-                style="font-size: 0.82rem; font-weight: 800; padding: 0.45rem 0.95rem;"
+                style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                 onclick="document.getElementById('wizardQImageInput').click()"
               >
-                ${getIcon('upload', 14)}
+                ${getIcon('upload', 13)}
                 <span>${currentQ.image_url ? 'تغيير الصورة' : 'رفع / تصوير صورة'}</span>
               </button>
 
               ${currentQ.image_url ? `
                 <button 
                   type="button" 
-                  class="btn btn-secondary" 
-                  style="color: #dc2626; font-size: 0.82rem; padding: 0.45rem 0.75rem;"
+                  style="height: 28px; padding: 0 8px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #b91c1c; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                   onclick="window.centrlyApp.removeWizardImage()"
                   title="إزالة الصورة"
                 >
-                  ${getIcon('delete', 14, '#dc2626')}
+                  ${getIcon('delete', 13, '#b91c1c')}
                   <span>حذف الصورة</span>
                 </button>
               ` : ''}
             </div>
 
             ${currentQ.image_url ? `
-              <div style="width: 100%; margin-top: 0.75rem; text-align: center;">
+              <div style="width: 100%; margin-top: 0.5rem; text-align: center;">
                 <img 
                   src="${escapeHtml(currentQ.image_url)}" 
                   alt="صورة السؤال" 
-                  style="max-height: 200px; max-width: 100%; border-radius: 8px; border: 1.5px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.08);"
+                  style="max-height: 180px; max-width: 100%; border-radius: 4px; border: 1px solid #cbd5e1;"
                 />
               </div>
             ` : ''}
@@ -1174,36 +1161,36 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
         <!-- MCQ Choices or Essay Model Answer -->
         ${isMcq ? `
           <div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
-              <span style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; flex-wrap: wrap; gap: 0.45rem;">
+              <span style="font-size: 0.78rem; font-weight: 700; color: #334155;">
                 خيارات الإجابة (اختر الدائرة المقابلة للإجابة الصحيحة):
               </span>
               ${isImageOnly ? `
-                <span style="font-size: 0.75rem; background: #e0f2fe; color: #0369a1; padding: 0.2rem 0.6rem; border-radius: 6px; font-weight: 700;">
-                  إذا كانت الاختيارات (أ/ب/ج/د) موجودة داخل الصورة، يكفيك اختيار الدائرة الصحيحة فقط دون كتابة نص
+                <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+                  إذا كانت الاختيارات موجودة بالصورة، اختر الدائرة الصحيحة فقط دون كتابة نص
                 </span>
               ` : ''}
             </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.65rem;">
               ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
                 const isCorrect = Number(currentQ.correct_index) === optIdx;
                 return `
-                  <div style="display: flex; align-items: center; gap: 0.65rem; background: ${isCorrect ? '#f0fdf4' : '#ffffff'}; border: 2px solid ${isCorrect ? '#10b981' : '#e2e8f0'}; border-radius: 8px; padding: 0.5rem 0.75rem; transition: all 0.15s ease;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem; background: ${isCorrect ? '#f8fafc' : '#ffffff'}; border: 1px solid ${isCorrect ? '#0f172a' : '#e2e8f0'}; border-radius: 6px; padding: 0.45rem 0.65rem; transition: all 0.15s ease;">
                     <input 
                       type="radio" 
                       name="correctChoiceRadio" 
                       value="${optIdx}" 
                       ${isCorrect ? 'checked' : ''} 
-                      style="width: 20px; height: 20px; cursor: pointer; accent-color: #10b981;"
+                      style="width: 18px; height: 18px; cursor: pointer; accent-color: #0f172a;"
                       onchange="window.centrlyApp.setWizardCorrectChoice(${optIdx})"
                     />
-                    <span style="font-weight: 900; font-size: 0.95rem; color: ${isCorrect ? '#047857' : '#64748b'}; width: 24px;">(${letter})</span>
+                    <span style="font-weight: 800; font-size: 0.88rem; color: ${isCorrect ? '#0f172a' : '#64748b'}; width: 22px;">(${letter})</span>
                     <input 
                       type="text" 
                       class="form-input" 
                       value="${escapeHtml(currentQ.choices?.[optIdx] || '')}" 
                       placeholder="${isImageOnly ? `خيار (${letter}) - اختياري...` : `خيار (${letter})...`}" 
-                      style="flex: 1; padding: 0.4rem 0.5rem; font-size: 0.9rem; font-weight: 700; border: none; background: transparent;"
+                      style="flex: 1; padding: 0.35rem 0.45rem; font-size: 0.85rem; font-weight: 600; border: none; background: transparent;"
                       onchange="window.centrlyApp.updateWizardChoice(${optIdx}, this.value)"
                     />
                   </div>
@@ -1213,40 +1200,37 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
           </div>
         ` : `
           <!-- Essay Model Answer Box -->
-          <div style="background: #fdf2f8; border: 1.5px solid #fbcfe8; border-radius: 8px; padding: 1rem;">
-            <label style="font-size: 0.85rem; font-weight: 800; color: #9d174d; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem;">
-              ${getIcon('lightbulb', 18, '#9d174d')}
-              <span>الإجابة النموذجية الاسترشادية (تظهر للمصحح عند تصحيح المقالي بالعين):</span>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
+            <label style="font-size: 0.78rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
+              <span>الإجابة النموذجية الاسترشادية:</span>
             </label>
             <textarea 
               class="form-input" 
               rows="3" 
-              placeholder="اكتب خطوات الحل أو الإجابة النموذجية المعتمدة ليسترشد بها المصحح أثناء تقدير درجة الطالب..."
-              style="font-size: 0.9rem; font-weight: 700; width: 100%; border: 1px solid #f472b6; background: #ffffff;"
+              placeholder="اكتب خطوات الحل أو الإجابة النموذجية المعتمدة ليسترشد بها المعلم أثناء التصحيح..."
+              style="font-size: 0.85rem; font-weight: 600; width: 100%; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 4px;"
               onchange="window.centrlyApp.updateCurrentQuestionField('model_answer', this.value)"
             >${escapeHtml(currentQ.model_answer || '')}</textarea>
           </div>
         `}
 
         <!-- Step Navigation Bar -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; border-top: 1px solid #f1f5f9; padding-top: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem; margin-top: 1rem; border-top: 1px solid #f1f5f9; padding-top: 0.85rem;">
           
           <button 
             type="button" 
-            class="btn btn-secondary" 
-            style="padding: 0.55rem 1.25rem; font-weight: 800; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 0.4rem;"
-            ${currentQIdx === 0 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}
+            style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #e2e8f0; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; ${currentQIdx === 0 ? 'opacity: 0.4; cursor: not-allowed;' : ''}"
+            ${currentQIdx === 0 ? 'disabled' : ''}
             onclick="window.centrlyApp.prevQuestion()"
           >
-            ${getIcon('arrowRight', 16)}
+            ${getIcon('arrowRight', 14)}
             <span>السؤال السابق</span>
           </button>
 
-          <div style="display: flex; gap: 0.65rem; align-items: center;">
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
             <button 
               type="button" 
-              class="btn btn-secondary" 
-              style="font-size: 0.85rem; font-weight: 700;"
+              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 600; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; border-radius: 5px; cursor: pointer;"
               onclick="window.centrlyApp.cancelOnlineExamWizard()"
             >
               إلغاء والعودة
@@ -1255,22 +1239,20 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
             ${currentQIdx < totalQuestions - 1 ? `
               <button 
                 type="button" 
-                class="btn btn-primary" 
-                style="padding: 0.6rem 1.5rem; font-weight: 800; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 10px rgba(37,99,235,0.25);"
+                style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                 onclick="window.centrlyApp.nextQuestion()"
               >
                 <span>السؤال التالي</span>
-                ${getIcon('arrowLeft', 16, '#ffffff')}
+                ${getIcon('arrowLeft', 14, '#ffffff')}
               </button>
             ` : `
               <button 
                 type="button" 
-                class="btn btn-primary" 
-                style="padding: 0.6rem 1.75rem; font-weight: 900; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; background: #059669; border-color: #059669; box-shadow: 0 4px 12px rgba(5,150,105,0.3);"
+                style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                 onclick="window.centrlyApp.saveOnlineExamNow()"
               >
-                ${getIcon('check', 18, '#ffffff')}
-                <span>إنهاء وحفظ ونشر الامتحان الآن</span>
+                ${getIcon('check', 13, '#ffffff')}
+                <span>إنهاء وحفظ الامتحان</span>
               </button>
             `}
           </div>
@@ -1307,16 +1289,15 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
             </p>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <button 
               type="button" 
-              class="btn ${gradingViewMode === 'pending' ? 'btn-primary' : 'btn-secondary'}" 
-              style="font-size: 0.82rem; font-weight: 800; border-radius: 6px; position: relative;"
+              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; border-radius: 5px; border: 1px solid ${gradingViewMode === 'pending' ? '#0f172a' : '#e2e8f0'}; background: ${gradingViewMode === 'pending' ? '#0f172a' : '#ffffff'}; color: ${gradingViewMode === 'pending' ? '#ffffff' : '#475569'}; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
               onclick="window.centrlyApp.switchGradingViewMode('pending')"
             >
               <span>امتحانات تحتاج تصحيح يدوي (مقالي)</span>
               ${pending.length > 0 ? `
-                <span style="background: #ef4444; color: #ffffff; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: 900; margin-right: 0.35rem;">
+                <span style="background: ${gradingViewMode === 'pending' ? '#ef4444' : '#fee2e2'}; color: ${gradingViewMode === 'pending' ? '#ffffff' : '#991b1b'}; font-size: 0.68rem; padding: 1px 6px; border-radius: 10px; font-weight: 800;">
                   ${pending.length}
                 </span>
               ` : ''}
@@ -1324,25 +1305,24 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
 
             <button 
               type="button" 
-              class="btn ${gradingViewMode === 'graded' ? 'btn-primary' : 'btn-secondary'}" 
-              style="font-size: 0.82rem; font-weight: 800; border-radius: 6px;"
+              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; border-radius: 5px; border: 1px solid ${gradingViewMode === 'graded' ? '#0f172a' : '#e2e8f0'}; background: ${gradingViewMode === 'graded' ? '#0f172a' : '#ffffff'}; color: ${gradingViewMode === 'graded' ? '#ffffff' : '#475569'}; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
               onclick="window.centrlyApp.switchGradingViewMode('graded')"
             >
-              <span>الامتحانات المصححة تلقائياً (MCQ) والنتائج</span>
+              <span>الامتحانات المصححة والنتائج</span>
               ${gradedSubmissions.length > 0 ? `
-                <span style="background: #059669; color: #ffffff; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: 900; margin-right: 0.35rem;">
+                <span style="background: ${gradingViewMode === 'graded' ? '#334155' : '#f1f5f9'}; color: ${gradingViewMode === 'graded' ? '#ffffff' : '#334155'}; font-size: 0.68rem; padding: 1px 6px; border-radius: 10px; font-weight: 800;">
                   ${gradedSubmissions.length}
                 </span>
               ` : ''}
             </button>
 
             <button 
-              class="btn btn-secondary" 
-              style="font-size: 0.82rem; font-weight: 700; height: 32px; padding: 0 10px;"
+              type="button"
+              style="height: 32px; width: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; color: #64748b; cursor: pointer;"
               onclick="window.centrlyApp.loadOnlineSubmissions(); window.centrlyApp.renderMainContent();"
               title="تحديث البيانات"
             >
-              ${getIcon('refresh', 14)}
+              ${getIcon('refresh', 13)}
             </button>
           </div>
         </div>
@@ -1365,30 +1345,30 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
           const totalMcq = sub.total_mcq_points || 0;
 
           return `
-            <div class="card" style="margin: 0; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div class="card" style="margin: 0; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 1rem;">
               
               <!-- Student Header -->
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.75rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.65rem;">
                 <div>
-                  <div style="font-weight: 800; font-size: 0.98rem; color: #0f172a;">
+                  <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a;">
                     ${escapeHtml(sub.student_name || 'طالب')} 
-                    <span style="font-size: 0.78rem; color: #1e40af; font-weight: 700; margin-right: 0.35rem;">(كود: ${escapeHtml(sub.student_code || '1006')})</span>
+                    <span style="font-size: 0.76rem; color: #64748b; font-weight: 600; margin-right: 0.35rem;">(كود: ${escapeHtml(sub.student_code || '1006')})</span>
                   </div>
-                  <div style="font-size: 0.76rem; color: #64748b; margin-top: 0.15rem;">
+                  <div style="font-size: 0.74rem; color: #64748b; margin-top: 0.15rem;">
                     ${escapeHtml(sub.quiz_title || 'كويز إلكتروني')} • كويز ${sub.quiz_number || 1} • تاريخ التسليم: ${escapeHtml((sub.submitted_at || '').slice(0, 16).replace('T', ' '))}
                   </div>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.25rem 0.65rem; text-align: center;">
-                    <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; display: block;">درجة الاختياري (تلقائي)</span>
-                    <span style="font-weight: 800; color: #0f172a; font-size: 0.92rem;">${mcqScore} / ${totalMcq}</span>
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 0.25rem 0.65rem; text-align: center;">
+                    <span style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">درجة الاختياري (تلقائي)</span>
+                    <span style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">${mcqScore} / ${totalMcq}</span>
                   </div>
                 </div>
               </div>
 
               <!-- Essay Questions to Grade -->
-              <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                 ${essayQuestions.map((eq, eqIdx) => {
                   const qRealIdx = questions.findIndex(q => q === eq || (eq.id && q.id === eq.id));
                   const studentAns = 
@@ -1404,42 +1384,42 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                   const fieldKey = eq.id || String(eqIdx);
 
                   return `
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem;">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
                       
-                      <div style="font-weight: 800; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.4rem;">
+                      <div style="font-weight: 700; font-size: 0.85rem; color: #0f172a; margin-bottom: 0.35rem;">
                         سؤال مقالي (${eqIdx + 1}): ${escapeHtml(eq.text || '')}
                       </div>
 
                       ${eq.image_url ? `
-                        <div style="margin-bottom: 0.5rem;">
-                          <img src="${escapeHtml(eq.image_url)}" alt="صورة السؤال" style="max-height: 140px; border-radius: 6px; border: 1px solid #cbd5e1;" />
+                        <div style="margin-bottom: 0.45rem;">
+                          <img src="${escapeHtml(eq.image_url)}" alt="صورة السؤال" style="max-height: 130px; border-radius: 5px; border: 1px solid #cbd5e1;" />
                         </div>
                       ` : ''}
 
-                      <!-- Model Answer Box (Soft Green) -->
-                      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.55rem 0.75rem; margin-bottom: 0.55rem;">
-                        <div style="font-size: 0.75rem; font-weight: 800; color: #166534; margin-bottom: 0.15rem;">
-                          ${getIcon('lightbulb', 13, '#166534')} الإجابة النموذجية الاسترشادية:
+                      <!-- Model Answer Box -->
+                      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; padding: 0.5rem 0.7rem; margin-bottom: 0.5rem;">
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; margin-bottom: 0.15rem;">
+                          الإجابة النموذجية الاسترشادية:
                         </div>
-                        <div style="font-size: 0.82rem; color: #14532d; line-height: 1.5;">
+                        <div style="font-size: 0.8rem; color: #334155; line-height: 1.5;">
                           ${escapeHtml(eq.model_answer || 'لا توجد إجابة نموذجية مسجلة')}
                         </div>
                       </div>
 
-                      <!-- Student Written Answer Box (Soft Blue) -->
-                      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 0.65rem;">
-                        <div style="font-size: 0.75rem; font-weight: 800; color: #1e40af; margin-bottom: 0.2rem;">
-                          ${getIcon('edit', 13, '#1e40af')} حل وإجابة الطالب:
+                      <!-- Student Written Answer Box -->
+                      <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 5px; padding: 0.55rem 0.75rem; margin-bottom: 0.55rem;">
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #0f172a; margin-bottom: 0.2rem;">
+                          حل وإجابة الطالب:
                         </div>
-                        <div style="font-size: 0.88rem; font-weight: 700; color: #1e3a8a; line-height: 1.6; white-space: pre-wrap;">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: #0f172a; line-height: 1.6; white-space: pre-wrap;">
                           ${escapeHtml(studentAns)}
                         </div>
                       </div>
 
                       <!-- Score Input for this Question -->
                       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                          <label style="font-size: 0.82rem; font-weight: 800; color: #0f172a;">تقدير درجة المقالي لهذا السؤال:</label>
+                        <div style="display: flex; align-items: center; gap: 0.45rem;">
+                          <label style="font-size: 0.78rem; font-weight: 700; color: #0f172a;">تقدير درجة المقالي:</label>
                           <input 
                             type="number" 
                             id="essay_pts_${sub.id}_${fieldKey}" 
@@ -1448,9 +1428,9 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                             step="0.5" 
                             value="${eq.points || 5}" 
                             class="form-input" 
-                            style="width: 70px; height: 32px; text-align: center; font-weight: 800; font-size: 0.95rem; border: 1.5px solid #2563eb; border-radius: 6px;"
+                            style="width: 65px; height: 30px; text-align: center; font-weight: 800; font-size: 0.88rem; border: 1px solid #cbd5e1; border-radius: 4px;"
                           />
-                          <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">من ${eq.points || 5} درجات</span>
+                          <span style="font-size: 0.76rem; font-weight: 600; color: #64748b;">من ${eq.points || 5} درجات</span>
                         </div>
                       </div>
 
@@ -1460,22 +1440,21 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
               </div>
 
               <!-- Grading Footer Actions -->
-              <div style="border-top: 1px solid #f1f5f9; padding-top: 0.75rem; margin-top: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
+              <div style="border-top: 1px solid #f1f5f9; padding-top: 0.65rem; margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
                 <input 
                   type="text" 
                   id="grading_note_${sub.id}" 
                   class="form-input" 
                   placeholder="ملاحظة أو تعليق للطالب على حله المقالي (اختياري)..." 
-                  style="flex: 1; min-width: 240px; height: 34px; font-size: 0.82rem;"
+                  style="flex: 1; min-width: 220px; height: 32px; font-size: 0.78rem; border: 1px solid #cbd5e1; border-radius: 4px;"
                 />
 
                 <button 
                   type="button" 
-                  class="btn btn-primary" 
-                  style="font-weight: 800; font-size: 0.82rem; height: 34px; padding: 0 1.25rem; display: inline-flex; align-items: center; gap: 0.4rem; background: #0f172a; border-color: #0f172a;"
+                  style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                   onclick="window.centrlyApp.submitManualEssayGrade('${sub.id}', '${sub.student_code || sub.student_id || '1006'}', ${sub.quiz_number || 1})"
                 >
-                  ${getIcon('check', 15, '#ffffff')}
+                  ${getIcon('check', 13, '#ffffff')}
                   <span>اعتماد الدرجة النهائية وتثبيتها</span>
                 </button>
               </div>
@@ -1483,30 +1462,27 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
             </div>
           `;
         }).join('') : `
-          <div class="card" style="text-align: center; padding: 2.5rem 1.5rem; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px;">
-            <div style="display: flex; justify-content: center; margin-bottom: 0.5rem; color: #059669;">
-              ${getIcon('check', 32, '#059669')}
-            </div>
-            <h4 style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin: 0 0 0.25rem 0;">رائع جداً! لا توجد أسئلة مقالية معلقة في انتظار التصحيح</h4>
-            <p style="font-size: 0.8rem; color: #64748b; margin: 0;">
+          <div style="text-align: center; padding: 2.5rem 1.5rem; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px;">
+            <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a; margin-bottom: 0.25rem;">لا توجد أسئلة مقالية معلقة في انتظار التصحيح</div>
+            <p style="font-size: 0.78rem; color: #64748b; margin: 0;">
               كافة إجابات الطلاب مصححة بالكامل، أو لم يقم الطلاب بتسليم امتحانات مقالية جديدة بعد.
             </p>
           </div>
         `}
       ` : `
         <!-- VIEW B: GRADED RESULTS OVERVIEW -->
-        <div class="card" style="margin: 0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div class="card" style="margin: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1.15rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
             <div>
-              <h4 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">
+              <h4 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0;">
                 نتائج ودرجات الامتحانات الإلكترونية المعتمدة
               </h4>
-              <p style="font-size: 0.8rem; color: #64748b; margin: 0.2rem 0 0 0;">
-                هنا تظهر فقط تسليمات الامتحانات التي أجاب عليها الطلاب إلكترونياً عبر هواتفهم وحساباتهم
+              <p style="font-size: 0.76rem; color: #64748b; margin: 0.15rem 0 0 0;">
+                هنا تظهر تسليمات الامتحانات التي أجاب عليها الطلاب إلكترونياً عبر هواتفهم
               </p>
             </div>
             ${gradedSubmissions.length > 0 ? `
-              <span class="badge badge-success" style="font-size: 0.82rem; font-weight: 800;">
+              <span style="background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; font-size: 0.74rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
                 إجمالي التسليمات: ${gradedSubmissions.length}
               </span>
             ` : ''}
@@ -1514,17 +1490,17 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
 
           ${gradedSubmissions.length > 0 ? `
             <div style="overflow-x: auto;">
-              <table class="data-table">
+              <table class="data-table" style="width: 100%; border-collapse: collapse;">
                 <thead>
-                  <tr>
-                    <th>كود الطالب</th>
-                    <th>اسم الطالب</th>
-                    <th>الامتحان الإلكتروني</th>
-                    <th style="text-align: center;">الدرجة المحققة</th>
-                    <th style="text-align: center;">النسبة المئوية</th>
-                    <th style="text-align: center;">تاريخ الحل</th>
-                    <th>نوع التقييم</th>
-                    <th style="text-align: center;">إجراءات</th>
+                  <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: right;">
+                    <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">كود الطالب</th>
+                    <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">اسم الطالب</th>
+                    <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">الامتحان</th>
+                    <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">الدرجة المحققة</th>
+                    <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">النسبة</th>
+                    <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">تاريخ الحل</th>
+                    <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">نوع التقييم</th>
+                    <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1533,27 +1509,31 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                     const maxSc = Number(sub.max_score || 10);
                     const pct = Math.round((numScore / (maxSc || 1)) * 100);
 
-                    let badge = '<span class="badge badge-success">تصحيح تلقائي 100%</span>';
+                    let badge = '<span style="background: #f1f5f9; color: #0f172a; font-size: 0.72rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">تلقائي 100%</span>';
                     if (sub.has_essay) {
-                      badge = '<span class="badge badge-blue">تم اعتماد المقالي</span>';
+                      badge = '<span style="background: #f1f5f9; color: #0f172a; font-size: 0.72rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">معتمد يدوياً</span>';
                     }
 
                     return `
-                      <tr>
-                        <td style="font-family: monospace; font-weight: 800; color: #1e40af;">${escapeHtml(sub.student_code || '—')}</td>
-                        <td style="font-weight: 700;">${escapeHtml(sub.student_name || 'طالب')}</td>
-                        <td style="font-weight: 600;">${escapeHtml(sub.quiz_title || `كويز ${sub.quiz_number || 1}`)}</td>
-                        <td style="text-align: center; font-weight: 900; font-size: 1rem; color: #059669;">${numScore} / ${maxSc}</td>
-                        <td style="text-align: center; font-weight: 800; color: ${pct >= 50 ? '#059669' : '#dc2626'};">${pct}%</td>
-                        <td style="text-align: center; font-size: 0.78rem; color: #64748b;">${escapeHtml((sub.submitted_at || '').slice(0, 16).replace('T', ' '))}</td>
-                        <td>${badge}</td>
-                        <td style="text-align: center;">
+                      <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 0.65rem 0.75rem; font-family: monospace; font-weight: 700; font-size: 0.85rem; color: #0f172a;">${escapeHtml(sub.student_code || '—')}</td>
+                        <td style="padding: 0.65rem 0.75rem; font-weight: 700; font-size: 0.85rem; color: #0f172a;">${escapeHtml(sub.student_name || 'طالب')}</td>
+                        <td style="padding: 0.65rem 0.75rem; font-weight: 600; font-size: 0.8rem; color: #475569;">${escapeHtml(sub.quiz_title || `كويز ${sub.quiz_number || 1}`)}</td>
+                        <td style="padding: 0.65rem 0.75rem; text-align: center; font-weight: 800; font-size: 0.95rem; color: #0f172a;">${numScore} / ${maxSc}</td>
+                        <td style="padding: 0.65rem 0.75rem; text-align: center;">
+                          <span style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 6px; font-weight: 700; font-size: 0.76rem; color: #0f172a;">
+                            ${pct}%
+                          </span>
+                        </td>
+                        <td style="padding: 0.65rem 0.75rem; text-align: center; font-size: 0.74rem; color: #64748b;">${escapeHtml((sub.submitted_at || '').slice(0, 16).replace('T', ' '))}</td>
+                        <td style="padding: 0.65rem 0.75rem;">${badge}</td>
+                        <td style="padding: 0.65rem 0.75rem; text-align: center;">
                           <button 
-                            class="btn btn-secondary" 
-                            style="font-size: 0.78rem; font-weight: 700; color: #059669;"
+                            type="button" 
+                            style="height: 26px; padding: 0 8px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #166534; border: 1px solid #86efac; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                             onclick="window.centrlyApp.sendQuizScoreWhatsApp('${sub.student_id}', '${escapeHtml(sub.student_name)}', '${escapeHtml(sub.quiz_title || `كويز ${sub.quiz_number || 1}`)}', 'both', ${numScore}, ${maxSc})"
                           >
-                            ${getIcon('whatsapp', 14, '#059669')}
+                            ${getIcon('whatsapp', 12, '#166534')}
                             <span>واتساب</span>
                           </button>
                         </td>
@@ -1564,34 +1544,20 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
               </table>
             </div>
           ` : `
-            <div style="text-align: center; padding: 3.5rem 1.5rem; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px;">
-              <div style="display: flex; justify-content: center; margin-bottom: 0.75rem; color: #94a3b8;">
-                ${getIcon('award', 44, '#94a3b8')}
-              </div>
-              <h4 style="font-weight: 800; color: #1e293b; margin: 0 0 0.4rem 0; font-size: 1.1rem;">
+            <div style="text-align: center; padding: 2.5rem 1.5rem; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px;">
+              <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a; margin-bottom: 0.25rem;">
                 لا توجد تسليمات للامتحانات الإلكترونية بعد
-              </h4>
-              <p style="font-size: 0.85rem; color: #64748b; margin: 0 auto; max-width: 520px; line-height: 1.6;">
-                هذا التبويب مخصص حصرياً للامتحانات التي يؤديها الطلاب أونلاين عبر هواتفهم وحساباتهم. لم يقم أي طالب بتسليم امتحان إلكتروني في هذه المجموعة حتى الآن.
-              </p>
-              <div style="margin-top: 1.25rem; display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
-                <button 
-                  class="btn btn-primary" 
-                  style="font-size: 0.85rem; font-weight: 800; border-radius: 8px;"
-                  onclick="window.centrlyApp.switchQuizSubTab('online_builder')"
-                >
-                  ${getIcon('plus', 15)}
-                  <span>إنشاء امتحان أونلاين جديد للطلاب</span>
-                </button>
-                <button 
-                  class="btn btn-secondary" 
-                  style="font-size: 0.85rem; font-weight: 700; border-radius: 8px;"
-                  onclick="window.centrlyApp.switchQuizSubTab('roster')"
-                >
-                  ${getIcon('check', 15)}
-                  <span>الانتقال لرصد درجات الكويزات العادية يدوياً</span>
-                </button>
               </div>
+              <p style="font-size: 0.78rem; color: #64748b; margin: 0 auto 1rem auto; max-width: 440px; line-height: 1.5;">
+                هذا القسم مخصص للامتحانات التي يؤديها الطلاب أونلاين عبر هواتفهم. لم يقم أي طالب بتسليم امتحان إلكتروني في هذه المجموعة حتى الآن.
+              </p>
+              <button 
+                type="button" 
+                style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer;"
+                onclick="window.centrlyApp.switchQuizSubTab('online_builder')"
+              >
+                + إنشاء امتحان أونلاين جديد للطلاب
+              </button>
             </div>
           `}
         </div>
@@ -1887,26 +1853,24 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
       const isQImageOnly = q.format === 'image_only' || (q.format !== 'standard' && !q.text?.trim() && !!q.image_url);
 
       return `
-        <div class="card" style="margin: 0; border: 1.5px solid ${isMcq ? '#cbd5e1' : '#fbcfe8'}; background: #ffffff; border-radius: 12px; position: relative;" onclick="if(window.centrlyApp) window.centrlyApp.quizzesState.activePaperPasteQIdx = ${qIdx}">
+        <div class="card" style="margin: 0; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02); position: relative;" onclick="if(window.centrlyApp) window.centrlyApp.quizzesState.activePaperPasteQIdx = ${qIdx}">
           
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
-              <span style="background: var(--centrly-blue-700); color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.95rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span style="background: #0f172a; color: #ffffff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem;">
                 ${qIdx + 1}
               </span>
-              <div style="display: flex; gap: 0.35rem; background: #f1f5f9; padding: 3px; border-radius: 8px;">
+              <div style="display: inline-flex; gap: 0.25rem; background: #f8fafc; padding: 2px; border-radius: 6px; border: 1px solid #e2e8f0;">
                 <button 
                   type="button" 
-                  class="btn ${isMcq ? 'btn-primary' : 'btn-secondary'}" 
-                  style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
+                  style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; border-radius: 4px; border: 1px solid ${isMcq ? '#0f172a' : 'transparent'}; background: ${isMcq ? '#0f172a' : 'transparent'}; color: ${isMcq ? '#ffffff' : '#475569'}; cursor: pointer;"
                   onclick="window.centrlyApp.updatePaperQuestion(${qIdx}, 'type', 'mcq')"
                 >
                   اختيار من متعدد (MCQ)
                 </button>
                 <button 
                   type="button" 
-                  class="btn ${!isMcq ? 'btn-primary' : 'btn-secondary'}" 
-                  style="padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
+                  style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; border-radius: 4px; border: 1px solid ${!isMcq ? '#0f172a' : 'transparent'}; background: ${!isMcq ? '#0f172a' : 'transparent'}; color: ${!isMcq ? '#ffffff' : '#475569'}; cursor: pointer;"
                   onclick="window.centrlyApp.updatePaperQuestion(${qIdx}, 'type', 'essay')"
                 >
                   سؤال مقالي (Essay)
@@ -1914,50 +1878,47 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
               </div>
 
               <!-- Format Selector: Standard vs Image-Only -->
-              <div style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="display: inline-flex; background: #f8fafc; padding: 2px; border-radius: 6px; border: 1px solid #e2e8f0;">
                 <button 
                   type="button" 
-                  class="btn ${!isQImageOnly ? 'btn-primary' : 'btn-secondary'}" 
-                  style="padding: 0.3rem 0.65rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px;"
+                  style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; border-radius: 4px; border: 1px solid ${!isQImageOnly ? '#0f172a' : 'transparent'}; background: ${!isQImageOnly ? '#0f172a' : 'transparent'}; color: ${!isQImageOnly ? '#ffffff' : '#475569'}; cursor: pointer;"
                   onclick="window.centrlyApp.setPaperQuestionFormat(${qIdx}, 'standard')"
                 >
                   سؤال نصي
                 </button>
                 <button 
                   type="button" 
-                  class="btn ${isQImageOnly ? 'btn-primary' : 'btn-secondary'}" 
-                  style="padding: 0.3rem 0.65rem; font-size: 0.78rem; font-weight: 800; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem; ${isQImageOnly ? 'background: #0284c7; border-color: #0284c7; color: #fff;' : ''}"
+                  style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; border-radius: 4px; border: 1px solid ${isQImageOnly ? '#0f172a' : 'transparent'}; background: ${isQImageOnly ? '#0f172a' : 'transparent'}; color: ${isQImageOnly ? '#ffffff' : '#475569'}; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                   onclick="window.centrlyApp.setPaperQuestionFormat(${qIdx}, 'image_only')"
                   title="تفعيل وضع صورة السؤال بالكامل من الكتاب أو المذكرة دون كتابة نص"
                 >
-                  ${getIcon('camera', 13, isQImageOnly ? '#fff' : 'var(--centrly-blue-700)')}
+                  ${getIcon('camera', 13)}
                   <span>السؤال صورة بالكامل</span>
                 </button>
               </div>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                <label style="font-size: 0.8rem; font-weight: 700; color: var(--centrly-text);">درجة السؤال:</label>
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                <label style="font-size: 0.78rem; font-weight: 700; color: #64748b;">درجة السؤال:</label>
                 <input 
                   type="number" 
                   class="form-input" 
                   value="${q.points !== undefined && q.points !== null ? q.points : 2}" 
                   min="0.5" 
                   step="0.5" 
-                  style="width: 65px; text-align: center; padding: 0.25rem; font-weight: 800;"
+                  style="width: 60px; height: 30px; text-align: center; padding: 0; font-weight: 800; font-size: 0.88rem; border: 1px solid #cbd5e1; border-radius: 4px;"
                   onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'points', this.value)"
                 />
               </div>
 
               <button 
                 type="button" 
-                class="btn btn-secondary" 
-                style="color: #dc2626; padding: 0.35rem 0.65rem; font-size: 0.78rem;"
+                style="height: 28px; padding: 0 8px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #b91c1c; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                 onclick="window.centrlyApp.removePaperQuestion(${qIdx})"
                 title="حذف هذا السؤال"
               >
-                ${getIcon('delete', 14, '#dc2626')}
+                ${getIcon('delete', 13, '#b91c1c')}
                 <span>حذف</span>
               </button>
             </div>
@@ -1965,19 +1926,19 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
 
           ${isQImageOnly ? `
             <!-- Image-Only Hero Box for Paper Exam -->
-            <div style="background: #f0fdf4; border: 2px dashed ${q.image_url ? '#10b981' : '#86efac'}; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
+            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem; text-align: right;">
                 <div>
-                  <span style="font-size: 0.9rem; font-weight: 800; color: #166534; display: flex; align-items: center; gap: 0.35rem;">
-                    ${getIcon('camera', 16, '#166534')}
-                    <span>صورة السؤال بالكامل (قص من كتاب أو مذكرة للطباعة في ورقة الامتحان):</span>
+                  <span style="font-size: 0.88rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.35rem;">
+                    ${getIcon('camera', 16)}
+                    <span>صورة السؤال بالكامل (قص للطباعة في ورقة الامتحان):</span>
                   </span>
-                  <span style="font-size: 0.72rem; color: #15803d;">
+                  <span style="font-size: 0.74rem; color: #64748b;">
                     صيغة المسألة معروضة بالصورة كاملة دون الحاجة لكتابة أي نص.
                   </span>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.45rem;">
                   <input 
                     type="file" 
                     id="paperQImageInput_${qIdx}" 
@@ -1988,23 +1949,21 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                   />
                   <button 
                     type="button" 
-                    class="btn btn-primary" 
-                    style="font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem;"
+                    style="height: 30px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                     onclick="document.getElementById('paperQImageInput_${qIdx}').click()"
                   >
-                    ${getIcon('upload', 14, '#ffffff')}
+                    ${getIcon('upload', 13, '#ffffff')}
                     <span>${q.image_url ? 'تغيير صورة السؤال' : 'رفع / تصوير صورة السؤال'}</span>
                   </button>
 
                   ${q.image_url ? `
                     <button 
                       type="button" 
-                      class="btn btn-secondary" 
-                      style="color: #dc2626; border-color: #fecaca; font-size: 0.8rem; padding: 0.35rem 0.65rem;"
+                      style="height: 30px; padding: 0 9px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #b91c1c; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                       onclick="window.centrlyApp.removePaperImage(${qIdx})"
                       title="إزالة الصورة"
                     >
-                      ${getIcon('delete', 14, '#dc2626')}
+                      ${getIcon('delete', 13, '#b91c1c')}
                       <span>حذف الصورة</span>
                     </button>
                   ` : ''}
@@ -2012,35 +1971,32 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
               </div>
 
               ${q.image_url ? `
-                <div style="background: #ffffff; padding: 0.5rem; border-radius: 6px; border: 1px solid #bbf7d0; display: inline-block; max-width: 100%;">
+                <div style="background: #ffffff; padding: 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0; display: inline-block; max-width: 100%;">
                   <img 
                     src="${escapeHtml(q.image_url)}" 
                     alt="صورة السؤال" 
-                    style="max-height: 240px; max-width: 100%; border-radius: 6px; object-fit: contain;"
+                    style="max-height: 240px; max-width: 100%; border-radius: 4px; object-fit: contain;"
                   />
                 </div>
               ` : `
                 <div 
-                  style="padding: 1.25rem 1rem; border: 1.5px dashed #86efac; background: #ffffff; border-radius: 6px; cursor: pointer;"
+                  style="padding: 1.5rem 1rem; border: 1px dashed #cbd5e1; background: #ffffff; border-radius: 6px; cursor: pointer;"
                   onclick="document.getElementById('paperQImageInput_${qIdx}').click()"
                 >
-                  <div style="background: #dcfce7; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem auto; color: #15803d;">
-                    ${getIcon('camera', 24, '#15803d')}
-                  </div>
-                  <div style="font-weight: 800; font-size: 0.9rem; color: #166534;">اضغط لرفع أو تصوير صورة السؤال بالكامل</div>
-                  <div style="font-size: 0.72rem; color: #15803d;">(أو انقر هنا والصق الصورة بـ <b>Ctrl + V</b>)</div>
+                  <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 0.2rem;">اضغط لرفع أو تصوير صورة السؤال بالكامل</div>
+                  <div style="font-size: 0.74rem; color: #64748b;">(أو انقر هنا والصق الصورة بـ <b>Ctrl + V</b>)</div>
                 </div>
               `}
 
-              <div style="margin-top: 0.5rem; text-align: right;">
-                <details style="font-size: 0.78rem; color: #475569;">
-                  <summary style="cursor: pointer; font-weight: 700; color: #166534;">+ إضافة عنوان أو رأس سؤال اختياري</summary>
+              <div style="margin-top: 0.65rem; text-align: right;">
+                <details style="font-size: 0.78rem; color: #64748b;">
+                  <summary style="cursor: pointer; font-weight: 600; color: #475569;">+ إضافة عنوان أو رأس سؤال اختياري</summary>
                   <input 
                     type="text" 
                     class="form-input" 
                     value="${escapeHtml(q.text || '')}" 
                     placeholder="عنوان أو ملاحظة اختيارية..." 
-                    style="margin-top: 0.35rem; font-size: 0.82rem;"
+                    style="margin-top: 0.4rem; font-size: 0.82rem; height: 32px;"
                     onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'text', this.value)"
                   />
                 </details>
@@ -2049,29 +2005,29 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
           ` : `
             <!-- Standard Question Textarea -->
             <div style="margin-bottom: 0.75rem;">
-              <label style="font-size: 0.82rem; font-weight: 700; color: var(--centrly-ink); margin-bottom: 0.35rem; display: block;">
+              <label style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem; display: block;">
                 نص السؤال:
               </label>
               <textarea 
                 class="form-input" 
                 rows="2" 
                 placeholder="اكتب صيغة السؤال هنا بوضوح..."
-                style="font-size: 0.92rem; font-weight: 700; width: 100%;"
+                style="font-size: 0.88rem; font-weight: 600; width: 100%; border: 1px solid #cbd5e1; border-radius: 5px;"
                 onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'text', this.value)"
               >${escapeHtml(q.text || '')}</textarea>
             </div>
 
             <!-- Question Image Uploader -->
-            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div style="color: var(--centrly-blue-700);">${getIcon('camera', 22, 'var(--centrly-blue-700)')}</div>
+            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem;">
+              <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <div style="color: #64748b;">${getIcon('camera', 20)}</div>
                 <div>
-                  <span style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); display: block;">صورة مسألة أو رسم بياني للسؤال:</span>
-                  <span style="font-size: 0.72rem; color: var(--centrly-text);">التقط صورة بكاميرا الهاتف أو اختر صورة من جهازك</span>
+                  <span style="font-size: 0.78rem; font-weight: 700; color: #0f172a; display: block;">صورة مسألة أو رسم بياني للسؤال:</span>
+                  <span style="font-size: 0.72rem; color: #64748b;">التقط صورة بكاميرا الهاتف أو اختر صورة من جهازك</span>
                 </div>
               </div>
 
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.45rem;">
                 <input 
                   type="file" 
                   id="paperQImageInput_${qIdx}" 
@@ -2082,23 +2038,22 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 />
                 <button 
                   type="button" 
-                  class="btn btn-secondary" 
-                  style="font-size: 0.8rem; font-weight: 800; padding: 0.35rem 0.85rem;"
+                  style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                   onclick="document.getElementById('paperQImageInput_${qIdx}').click()"
                 >
-                  ${getIcon('upload', 14)}
+                  ${getIcon('upload', 13)}
                   <span>${q.image_url ? 'تغيير الصورة' : 'رفع / تصوير صورة'}</span>
                 </button>
 
                 ${q.image_url ? `
                   <button 
                     type="button" 
-                    class="btn btn-secondary" 
-                    style="color: #dc2626; font-size: 0.8rem; padding: 0.35rem 0.65rem;"
+                    style="height: 28px; padding: 0 8px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #b91c1c; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                     onclick="window.centrlyApp.removePaperImage(${qIdx})"
                     title="إزالة الصورة"
                   >
-                    ${getIcon('delete', 14, '#dc2626')}
+                    ${getIcon('delete', 13, '#b91c1c')}
+                    <span>حذف</span>
                   </button>
                 ` : ''}
               </div>
@@ -2108,7 +2063,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                   <img 
                     src="${escapeHtml(q.image_url)}" 
                     alt="صورة السؤال" 
-                    style="max-height: 180px; max-width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 4px rgba(0,0,0,0.1);"
+                    style="max-height: 180px; max-width: 100%; border-radius: 4px; border: 1px solid #cbd5e1;"
                   />
                 </div>
               ` : ''}
@@ -2118,12 +2073,12 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
           <!-- MCQ Choices or Essay Model Answer -->
           ${isMcq ? `
             <div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
-                <span style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-ink);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; flex-wrap: wrap; gap: 0.45rem;">
+                <span style="font-size: 0.78rem; font-weight: 700; color: #334155;">
                   خيارات الإجابة (اختر الدائرة المقابلة للإجابة الصحيحة):
                 </span>
                 ${isQImageOnly ? `
-                  <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">
+                  <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
                     إذا كانت الاختيارات موجودة داخل الصورة، اختر الدائرة الصحيحة فقط دون كتابة نص
                   </span>
                 ` : ''}
@@ -2132,22 +2087,22 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
                   const isCorrect = Number(q.correct_index) === optIdx;
                   return `
-                    <div style="display: flex; align-items: center; gap: 0.5rem; background: ${isCorrect ? '#f0fdf4' : '#ffffff'}; border: 1.5px solid ${isCorrect ? '#10b981' : '#e2e8f0'}; border-radius: 8px; padding: 0.45rem 0.65rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; background: ${isCorrect ? '#f8fafc' : '#ffffff'}; border: 1px solid ${isCorrect ? '#0f172a' : '#e2e8f0'}; border-radius: 6px; padding: 0.45rem 0.65rem; transition: all 0.15s ease;">
                       <input 
                         type="radio" 
                         name="paperCorrectRadio_${qIdx}" 
                         value="${optIdx}" 
                         ${isCorrect ? 'checked' : ''} 
-                        style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981;"
+                        style="width: 18px; height: 18px; cursor: pointer; accent-color: #0f172a;"
                         onchange="window.centrlyApp.setPaperCorrectChoice(${qIdx}, ${optIdx})"
                       />
-                      <span style="font-weight: 900; font-size: 0.9rem; color: ${isCorrect ? '#047857' : '#64748b'}; width: 22px;">(${letter})</span>
+                      <span style="font-weight: 800; font-size: 0.88rem; color: ${isCorrect ? '#0f172a' : '#64748b'}; width: 22px;">(${letter})</span>
                       <input 
                         type="text" 
                         class="form-input" 
                         value="${escapeHtml(q.choices?.[optIdx] || '')}" 
                         placeholder="${isQImageOnly ? `خيار (${letter}) - اختياري...` : `خيار (${letter})...`}" 
-                        style="flex: 1; padding: 0.35rem 0.55rem; font-size: 0.88rem; font-weight: 700; border: none; background: transparent;"
+                        style="flex: 1; padding: 0.35rem 0.45rem; font-size: 0.85rem; font-weight: 600; border: none; background: transparent;"
                         onchange="window.centrlyApp.updatePaperChoice(${qIdx}, ${optIdx}, this.value)"
                       />
                     </div>
@@ -2156,16 +2111,15 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
               </div>
             </div>
           ` : `
-            <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 8px; padding: 0.85rem;">
-              <label style="font-size: 0.82rem; font-weight: 800; color: #9d174d; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
-                ${getIcon('lightbulb', 16, '#9d174d')}
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
+              <label style="font-size: 0.78rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
                 <span>الإجابة النموذجية الاسترشادية:</span>
               </label>
               <textarea 
                 class="form-input" 
                 rows="2" 
                 placeholder="اكتب خطوات الحل أو الإجابة النموذجية..."
-                style="font-size: 0.88rem; width: 100%; border: 1px solid #f472b6; background: #ffffff;"
+                style="font-size: 0.85rem; font-weight: 600; width: 100%; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 4px;"
                 onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'model_answer', this.value)"
               >${escapeHtml(q.model_answer || '')}</textarea>
             </div>
@@ -2176,81 +2130,78 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
     };
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
         
-        <!-- Step 2 Stepper Toolbar Card -->
-        <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
+        <!-- Step 2 Stepper Toolbar Card (Swiss Minimal) -->
+        <div class="card" style="margin: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1.15rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
           
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem;">
             <div>
               <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <span class="badge badge-blue" style="font-size: 0.85rem; font-weight: 900; padding: 4px 10px;">
+                <span style="background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; font-size: 0.74rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
                   الخطوة 2 من 2: كتابة وتصميم الأسئلة
                 </span>
-                <span style="font-weight: 800; font-size: 1rem; color: #0f172a;">
+                <span style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">
                   ${escapeHtml(activePaperQuiz.title || 'امتحان ورقي جديد')} (${escapeHtml(activePaperQuiz.subject || 'الفيزياء')})
                 </span>
               </div>
               
-              <div style="font-size: 0.78rem; color: var(--centrly-text); margin-top: 0.35rem;">
+              <div style="font-size: 0.76rem; color: #64748b; margin-top: 0.2rem;">
                 الزمن المخصص: <b>${activePaperQuiz.time_limit_minutes || 45} دقيقة</b> • عدد الأسئلة: <b>${totalQuestions} سؤال</b>
               </div>
             </div>
 
             <!-- Score Summary & Action Buttons -->
-            <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
               
               <!-- Live Score Pill -->
-              <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 0.4rem 0.95rem; text-align: center;">
-                <span style="font-size: 0.72rem; color: #1e40af; font-weight: 700; display: block;">
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.3rem 0.75rem; text-align: center;">
+                <span style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">
                   إجمالي درجات الامتحان
                 </span>
-                <span style="font-size: 1.05rem; font-weight: 900; color: #1e3a8a;">
+                <span style="font-size: 0.95rem; font-weight: 800; color: #0f172a;">
                   ${totalCurrentPoints} درجات
                 </span>
               </div>
 
               <button 
                 type="button" 
-                class="btn btn-secondary" 
-                style="font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;"
+                style="height: 32px; padding: 0 11px; font-size: 0.76rem; font-weight: 600; background: #ffffff; color: #475569; border: 1px solid #e2e8f0; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                 onclick="window.centrlyApp.backToPaperStep1Settings()"
               >
-                ${getIcon('edit', 14)}
-                <span>تعديل إعدادات الامتحان (الخطوة 1)</span>
+                ${getIcon('edit', 13)}
+                <span>تعديل الإعدادات</span>
               </button>
 
               <button 
                 type="button" 
-                class="btn btn-secondary" 
-                style="font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;"
+                style="height: 32px; padding: 0 11px; font-size: 0.76rem; font-weight: 600; background: #ffffff; color: #475569; border: 1px solid #e2e8f0; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                 onclick="window.centrlyApp.togglePaperQuestionsViewMode()"
               >
-                <span>${layoutMode === 'all' ? 'عرض سؤال بسؤال' : 'عرض كافة الأسئلة في شاشة واحدة'}</span>
+                <span>${layoutMode === 'all' ? 'عرض سؤال بسؤال' : 'عرض كافة الأسئلة'}</span>
               </button>
 
               <button 
                 type="button" 
-                class="btn btn-primary" 
-                style="font-size: 0.9rem; font-weight: 900; padding: 0.6rem 1.4rem; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
+                style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                 onclick="window.centrlyApp.savePaperExam()"
               >
-                ${getIcon('check', 16, '#ffffff')}
-                <span>حفظ وتوليد نماذج الامتحان والـ Bubble Sheet</span>
+                ${getIcon('check', 13, '#ffffff')}
+                <span>حفظ وتوليد نماذج الامتحان</span>
               </button>
             </div>
           </div>
 
           <!-- Visual Progress Bar (if in single mode) -->
           ${layoutMode === 'single' ? `
-            <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 4px; margin-top: 1rem; overflow: hidden;">
-              <div style="height: 100%; background: var(--centrly-blue-700); width: ${progressPct}%; transition: width 0.2s ease;"></div>
+            <div style="width: 100%; height: 4px; background: #f1f5f9; border-radius: 2px; margin-top: 0.75rem; overflow: hidden;">
+              <div style="height: 100%; background: #0f172a; width: ${progressPct}%; transition: width 0.2s ease;"></div>
             </div>
           ` : ''}
 
           <!-- Fast Question Jumpers (1..N) -->
-          <div style="display: flex; gap: 0.4rem; overflow-x: auto; padding: 0.75rem 0 0.25rem 0; margin-top: 0.5rem; align-items: center;">
-            <span style="font-size: 0.8rem; font-weight: 800; color: var(--centrly-ink); margin-left: 0.5rem; white-space: nowrap;">الانتقال السريع:</span>
+          <div style="display: flex; gap: 0.35rem; overflow-x: auto; padding: 0.65rem 0 0.15rem 0; margin-top: 0.35rem; align-items: center;">
+            <span style="font-size: 0.76rem; font-weight: 700; color: #64748b; margin-left: 0.4rem; white-space: nowrap;">الانتقال السريع:</span>
             ${Array.from({ length: totalQuestions }).map((_, idx) => {
               const isCur = idx === currentPaperQIdx;
               const qData = questions[idx];
@@ -2259,7 +2210,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
               return `
                 <button 
                   type="button"
-                  style="min-width: 34px; height: 34px; border-radius: 8px; font-weight: 900; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isCur ? 'var(--centrly-blue-700)' : (hasContent ? '#10b981' : '#cbd5e1')}; background: ${isCur ? 'var(--centrly-blue-700)' : (hasContent ? '#ecfdf5' : '#ffffff')}; color: ${isCur ? '#ffffff' : (hasContent ? '#065f46' : '#64748b')};"
+                  style="min-width: 30px; height: 30px; border-radius: 5px; font-weight: 700; font-size: 0.78rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; border: 1px solid ${isCur ? '#0f172a' : (hasContent ? '#cbd5e1' : '#e2e8f0')}; background: ${isCur ? '#0f172a' : (hasContent ? '#f8fafc' : '#ffffff')}; color: ${isCur ? '#ffffff' : (hasContent ? '#0f172a' : '#94a3b8')};"
                   onclick="window.centrlyApp.jumpToPaperQuestion(${idx})"
                   title="سؤال ${idx + 1}"
                 >
@@ -2278,13 +2229,12 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
             ${renderQuestionCardInner(questions[currentPaperQIdx] || { id: 'pq_1', type: 'mcq', choices: ['', '', '', ''], points: 2 }, currentPaperQIdx)}
 
             <!-- Stepper Footer Navigation -->
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; background: #ffffff; padding: 1rem 1.25rem; border-radius: 12px; border: 1px solid var(--centrly-line);">
-              <div style="display: flex; gap: 0.65rem; align-items: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem; background: #ffffff; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <button 
                   type="button" 
-                  class="btn btn-secondary" 
-                  style="font-weight: 800; font-size: 0.85rem; padding: 0.55rem 1.15rem;"
-                  ${currentPaperQIdx === 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
+                  style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #e2e8f0; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; ${currentPaperQIdx === 0 ? 'opacity: 0.4; cursor: not-allowed;' : ''}"
+                  ${currentPaperQIdx === 0 ? 'disabled' : ''}
                   onclick="window.centrlyApp.prevPaperQuestion()"
                 >
                   ◀ السؤال السابق
@@ -2293,8 +2243,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 ${currentPaperQIdx < totalQuestions - 1 ? `
                   <button 
                     type="button" 
-                    class="btn btn-primary" 
-                    style="font-weight: 800; font-size: 0.85rem; padding: 0.55rem 1.25rem;"
+                    style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                     onclick="window.centrlyApp.nextPaperQuestion()"
                   >
                     السؤال التالي ▶
@@ -2302,8 +2251,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 ` : `
                   <button 
                     type="button" 
-                    class="btn btn-primary" 
-                    style="font-weight: 900; font-size: 0.85rem; padding: 0.55rem 1.25rem; background: #059669; border-color: #059669;"
+                    style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                     onclick="window.centrlyApp.savePaperExam()"
                   >
                     إنهاء وحفظ الامتحان
@@ -2311,25 +2259,23 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 `}
               </div>
 
-              <div style="display: flex; gap: 0.65rem; align-items: center;">
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <button 
                   type="button" 
-                  class="btn btn-secondary" 
-                  style="font-weight: 800; font-size: 0.85rem; color: var(--centrly-blue-700); border-style: dashed; border-color: var(--centrly-blue-700);"
+                  style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 600; background: #f8fafc; color: #475569; border: 1px dashed #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                   onclick="window.centrlyApp.addPaperQuestion()"
                 >
-                  ${getIcon('add', 16, 'var(--centrly-blue-700)')}
-                  <span>+ إضافة سؤال تالٍ للامتحان</span>
+                  ${getIcon('add', 13)}
+                  <span>+ إضافة سؤال تالٍ</span>
                 </button>
 
                 <button 
                   type="button" 
-                  class="btn btn-primary" 
-                  style="font-weight: 900; font-size: 0.92rem; padding: 0.6rem 1.5rem; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
+                  style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                   onclick="window.centrlyApp.savePaperExam()"
                 >
-                  ${getIcon('check', 16, '#ffffff')}
-                  <span>حفظ وتوليد نماذج الامتحان والـ Bubble Sheet</span>
+                  ${getIcon('check', 13, '#ffffff')}
+                  <span>حفظ وتوليد نماذج الامتحان</span>
                 </button>
               </div>
             </div>
@@ -2341,22 +2287,20 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
             ${questions.map((q, qIdx) => renderQuestionCardInner(q, qIdx)).join('')}
 
             <!-- Bottom Action Bar -->
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem; border-top: 1px solid var(--centrly-line); padding-top: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem; border-top: 1px solid #f1f5f9; padding-top: 0.85rem;">
               <button 
                 type="button" 
-                class="btn btn-secondary" 
-                style="padding: 0.65rem 1.25rem; font-weight: 800; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem; border-style: dashed; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700);"
+                style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 600; background: #f8fafc; color: #475569; border: 1px dashed #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                 onclick="window.centrlyApp.addPaperQuestion()"
               >
-                ${getIcon('add', 18, 'var(--centrly-blue-700)')}
+                ${getIcon('add', 13)}
                 <span>+ إضافة سؤال جديد للامتحان</span>
               </button>
 
-              <div style="display: flex; gap: 0.75rem; align-items: center;">
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <button 
                   type="button" 
-                  class="btn btn-secondary" 
-                  style="padding: 0.65rem 1.25rem; font-weight: 800;"
+                  style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 600; background: #ffffff; color: #475569; border: 1px solid #e2e8f0; border-radius: 5px; cursor: pointer;"
                   onclick="window.centrlyApp.cancelPaperExamCreate()"
                 >
                   إلغاء
@@ -2364,12 +2308,11 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
 
                 <button 
                   type="button" 
-                  class="btn btn-primary" 
-                  style="font-weight: 900; padding: 0.65rem 1.75rem; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.3);"
+                  style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                   onclick="window.centrlyApp.savePaperExam()"
                 >
-                  ${getIcon('check', 18, '#ffffff')}
-                  <span>حفظ وتوليد نماذج الامتحان والـ Bubble Sheet</span>
+                  ${getIcon('check', 13, '#ffffff')}
+                  <span>حفظ وتوليد نماذج الامتحان</span>
                 </button>
               </div>
             </div>
@@ -2450,7 +2393,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
             <button 
               type="button" 
               onclick="window.centrlyApp.triggerPrint('bubble')"
-              style="height: 32px; padding: 0 13px; font-size: 0.76rem; font-weight: 700; background: #059669; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
+              style="height: 32px; padding: 0 13px; font-size: 0.76rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
             >
               ${getIcon('check', 13, '#ffffff')}
               <span>طباعة البابل شيت (A4)</span>
@@ -2484,15 +2427,6 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
 
           <!-- Stealth Notice Pill -->
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 0.25rem 0.65rem; font-size: 0.72rem; color: #475569; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
-            <span>التشفير الذكي نشط: لا يظهر كود النموذج للطالب ويُقرأ عبر الباركود فقط</span>
-          </div>
-        </div>
-      </div>
-          </div>
-
-          <!-- Stealth Notice Pill -->
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.78rem; color: #166534; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem;">
-            ${getIcon('check', 14, '#166534')}
             <span>التشفير الذكي نشط: لا يظهر كود النموذج للطالب ويُقرأ عبر الباركود فقط</span>
           </div>
         </div>
@@ -2758,16 +2692,15 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
   return `
     <div style="display: flex; flex-direction: column; gap: 1.25rem;">
       
-      <!-- Top Control Card -->
-      <div class="card" style="margin: 0; border-top: 4px solid #059669;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <!-- Top Control Card (Swiss Minimal) -->
+      <div class="card" style="margin: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1.15rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem;">
           <div>
-            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #065f46; display: flex; align-items: center; gap: 0.4rem;">
-              ${getIcon('camera', 20, '#059669')}
-              <span>ماسح البابل شيت والتصحيح الآلي (OMR Scanner)</span>
+            <h3 style="margin: 0; font-size: 0.98rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+              <span>ماسح البابل شيت والتصحيح الآلي (OMR)</span>
             </h3>
-            <p style="font-size: 0.82rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
-              التعرف التلقائي على أوراق الإجابة ورصد درجات الطلاب وراء بعضها فوراً عبر الكاميرا الرأسية أو رفع الصور.
+            <p style="font-size: 0.78rem; color: #64748b; margin: 0.2rem 0 0 0;">
+              التعرف التلقائي على أوراق الإجابة ورصد درجات الطلاب فوراً عبر الكاميرا أو رفع الصور.
             </p>
           </div>
 
@@ -2776,21 +2709,19 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
             ${isCameraOpen ? `
               <button 
                 type="button" 
-                class="btn btn-secondary" 
-                style="color: #dc2626; border-color: #fecaca; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem;"
+                style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #ffffff; color: #b91c1c; border: 1px solid #fecaca; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                 onclick="window.centrlyApp.stopOmrCamera()"
               >
-                ${getIcon('close', 16, '#dc2626')}
+                ${getIcon('close', 14, '#b91c1c')}
                 <span>إغلاق الكاميرا</span>
               </button>
             ` : `
               <button 
                 type="button" 
-                class="btn btn-primary" 
-                style="background: #059669; border-color: #059669; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(5,150,105,0.25);"
+                style="height: 32px; padding: 0 14px; font-size: 0.76rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                 onclick="window.centrlyApp.startOmrCamera()"
               >
-                ${getIcon('camera', 16, '#ffffff')}
+                ${getIcon('camera', 14, '#ffffff')}
                 <span>فتح الكاميرا للمسح المباشر</span>
               </button>
             `}
@@ -2805,35 +2736,33 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
             />
             <button 
               type="button" 
-              class="btn btn-secondary" 
-              style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem;"
+              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
               onclick="document.getElementById('omrImageFileInput').click()"
             >
-              ${getIcon('upload', 16)}
+              ${getIcon('upload', 14)}
               <span>رفع صورة ورقة بابل شيت</span>
             </button>
 
             <button 
               type="button" 
-              class="btn btn-secondary" 
-              style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; border-style: dashed; color: #059669; border-color: #86efac; background: #f0fdf4;"
+              style="height: 32px; padding: 0 11px; font-size: 0.76rem; font-weight: 600; background: #f8fafc; color: #475569; border: 1px dashed #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
               onclick="window.centrlyApp.simulateOmrScan()"
               title="تجربة مسح ورقة نموذجية للاختبار"
             >
-              ${getIcon('check', 16, '#059669')}
+              ${getIcon('check', 13)}
               <span>تجربة مسح ورقة للاختبار</span>
             </button>
           </div>
         </div>
 
         <!-- Exam Filter Selector Bar -->
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--centrly-line); align-items: center;">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9; align-items: center;">
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <label style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink);">الامتحان الورقي المراد تصحيحه:</label>
+            <label style="font-size: 0.78rem; font-weight: 700; color: #64748b;">الامتحان المراد تصحيحه:</label>
             <select 
               id="omrTargetExamSelect" 
               class="form-select" 
-              style="min-width: 260px; font-weight: 800; font-size: 0.88rem;" 
+              style="min-width: 240px; height: 32px; font-size: 0.78rem; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 5px; padding: 0 8px; color: #0f172a;" 
               onchange="window.centrlyApp.selectOmrTargetExam(this.value)"
             >
               ${paperExams.length > 0 ? paperExams.map(pe => `
@@ -2847,7 +2776,7 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
           </div>
 
           ${activePaperExam ? `
-            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.78rem; color: #1e40af; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 0.25rem 0.65rem; font-size: 0.74rem; color: #475569; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
               <span>المادة: ${escapeHtml(activePaperExam.subject || 'الفيزياء')}</span>
               <span>•</span>
               <span>كود الامتحان: EX-${activePaperExam.quiz_number || 1}</span>
@@ -2872,31 +2801,29 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
             <canvas id="omrCanvas" style="display: none;"></canvas>
 
             <!-- Vertical A4 Frame Guide -->
-            <div id="omrFrameGuide" style="position: absolute; inset: 16px; border: 2.5px dashed #10b981; border-radius: 8px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; padding: 10px;">
-              <div style="background: rgba(16,185,129,0.92); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; align-self: flex-start;">
+            <div id="omrFrameGuide" style="position: absolute; inset: 16px; border: 2px dashed rgba(255,255,255,0.7); border-radius: 8px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; padding: 10px;">
+              <div style="background: rgba(15,23,42,0.85); color: #fff; font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; align-self: flex-start; border: 1px solid rgba(255,255,255,0.2);">
                 ضع ورقة البابل شيت بالكامل داخل الإطار
               </div>
-              <div style="text-align: center; color: rgba(255,255,255,0.9); font-size: 0.72rem; font-weight: 700; background: rgba(0,0,0,0.6); padding: 3px 6px; border-radius: 4px;">
+              <div style="text-align: center; color: rgba(255,255,255,0.85); font-size: 0.7rem; font-weight: 600; background: rgba(0,0,0,0.6); padding: 3px 6px; border-radius: 4px;">
                 تأكد من إضاءة الورقة ووضوح كود الطالب
               </div>
             </div>
           </div>
 
-          <div style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center;">
+          <div style="margin-top: 0.85rem; display: flex; gap: 0.65rem; align-items: center;">
             <button 
               type="button" 
-              class="btn btn-primary" 
-              style="background: #10b981; border-color: #10b981; font-weight: 900; font-size: 0.95rem; padding: 0.65rem 1.8rem; border-radius: 30px; box-shadow: 0 4px 15px rgba(16,185,129,0.45); display: inline-flex; align-items: center; gap: 0.45rem;"
+              style="background: #ffffff; color: #0f172a; font-weight: 700; font-size: 0.82rem; height: 34px; padding: 0 1.25rem; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
               onclick="window.centrlyApp.captureAndAnalyzeOmr()"
             >
-              ${getIcon('camera', 18, '#ffffff')}
+              ${getIcon('camera', 14, '#0f172a')}
               <span>التقاط وتصحيح الورقة الآن</span>
             </button>
 
             <button 
               type="button" 
-              class="btn btn-secondary" 
-              style="color: #ef4444; font-weight: 800; font-size: 0.85rem;"
+              style="background: transparent; border: 1px solid #475569; color: #f87171; font-weight: 600; font-size: 0.78rem; height: 34px; padding: 0 12px; border-radius: 5px; cursor: pointer;"
               onclick="window.centrlyApp.stopOmrCamera()"
             >
               إغلاق الكاميرا
@@ -2906,38 +2833,36 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
         </div>
       ` : ''}
 
-      <!-- Scanned Scores Live Stream & Records Table (سجل الدرجات المرصودة وراء بعضها) -->
-      <div class="card" style="margin: 0;">
+      <!-- Scanned Scores Live Stream & Records Table (Swiss Minimal) -->
+      <div class="card" style="margin: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1.15rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.75rem;">
           <div>
-            <h4 style="font-size: 1.05rem; font-weight: 900; color: var(--centrly-ink); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-              ${getIcon('check', 18, '#059669')}
-              <span>سجل درجات الطلاب المرصودة بالماسح الضوئي (مباشر)</span>
+            <h4 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+              <span>سجل درجات الطلاب المرصودة بالماسح الضوئي</span>
             </h4>
-            <div style="font-size: 0.8rem; color: var(--centrly-text); margin-top: 0.2rem;">
-              تظهر هنا فوراً كل ورقة يتم مسحها وتصحيحها وراء بعضها مع إمكانية إرسال النتيجة واتساب لولي الأمر مباشرة.
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
+              تظهر هنا كل ورقة يتم مسحها وتصحيحها فوراً مع إمكانية إرسال النتيجة واتساب لولي الأمر.
             </div>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.35rem 0.75rem; text-align: center;">
-              <span style="font-size: 0.7rem; color: #047857; font-weight: 700; display: block;">أوراق مصححة</span>
-              <span style="font-size: 1rem; font-weight: 900; color: #065f46;">${scannedCount}</span>
+          <div style="display: flex; gap: 0.45rem; align-items: center;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.3rem 0.7rem; text-align: center;">
+              <span style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">أوراق مصححة</span>
+              <span style="font-size: 0.95rem; font-weight: 800; color: #0f172a;">${scannedCount}</span>
             </div>
-            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.35rem 0.75rem; text-align: center;">
-              <span style="font-size: 0.7rem; color: #1e40af; font-weight: 700; display: block;">متوسط الدرجات</span>
-              <span style="font-size: 1rem; font-weight: 900; color: #1e3a8a;">${avgScore}</span>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.3rem 0.7rem; text-align: center;">
+              <span style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">متوسط الدرجات</span>
+              <span style="font-size: 0.95rem; font-weight: 800; color: #0f172a;">${avgScore}</span>
             </div>
-            <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 0.35rem 0.75rem; text-align: center;">
-              <span style="font-size: 0.7rem; color: #92400e; font-weight: 700; display: block;">أعلى درجة</span>
-              <span style="font-size: 1rem; font-weight: 900; color: #b45309;">${highestScore}</span>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.3rem 0.7rem; text-align: center;">
+              <span style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">أعلى درجة</span>
+              <span style="font-size: 0.95rem; font-weight: 800; color: #0f172a;">${highestScore}</span>
             </div>
             ${scannedCount > 0 ? `
               <button 
                 type="button" 
-                class="btn btn-secondary" 
-                style="font-size: 0.78rem; color: #dc2626; border-color: #fecaca;" 
+                style="height: 28px; padding: 0 9px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #b91c1c; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer;" 
                 onclick="window.centrlyApp.clearOmrScannedList()"
                 title="مسح سجل جلسة التصحيح الحالية"
               >
@@ -2951,61 +2876,53 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
           <div style="overflow-x: auto;">
             <table class="data-table" style="width: 100%; border-collapse: collapse;">
               <thead>
-                <tr style="background: #f8fafc; border-bottom: 2px solid var(--centrly-line); text-align: right;">
-                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">#</th>
-                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">كود الطالب</th>
-                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">اسم الطالب</th>
-                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">الامتحان</th>
-                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">النموذج</th>
-                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">الدرجة المحققة</th>
-                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">النسبة</th>
-                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800;">توقيت الرصد</th>
-                  <th style="padding: 0.75rem; font-size: 0.8rem; font-weight: 800; text-align: center;">إجراءات</th>
+                <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: right;">
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">#</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">كود الطالب</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">اسم الطالب</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">الامتحان</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">النموذج</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">الدرجة المحققة</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">النسبة</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">توقيت الرصد</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 ${scannedList.map((item, idx) => {
-                  const isExcellent = item.percentage >= 85;
-                  const isGood = item.percentage >= 65 && item.percentage < 85;
-                  const pillColor = isExcellent ? '#059669' : (isGood ? '#0284c7' : '#dc2626');
-                  const pillBg = isExcellent ? '#ecfdf5' : (isGood ? '#f0f9ff' : '#fef2f2');
-
                   return `
-                    <tr style="border-bottom: 1px solid var(--centrly-line); transition: background 0.15s ease;">
-                      <td style="padding: 0.75rem; font-size: 0.85rem; font-weight: 800; color: #64748b;">${idx + 1}</td>
-                      <td style="padding: 0.75rem; font-size: 0.9rem; font-weight: 900; font-family: monospace; color: var(--centrly-blue-700);">${escapeHtml(item.student_code || '—')}</td>
-                      <td style="padding: 0.75rem; font-size: 0.92rem; font-weight: 800; color: #0f172a;">${escapeHtml(item.student_name || 'طالب')}</td>
-                      <td style="padding: 0.75rem; font-size: 0.82rem; font-weight: 700; color: #475569;">
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                      <td style="padding: 0.65rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #64748b;">${idx + 1}</td>
+                      <td style="padding: 0.65rem 0.75rem; font-size: 0.85rem; font-weight: 700; font-family: monospace; color: #0f172a;">${escapeHtml(item.student_code || '—')}</td>
+                      <td style="padding: 0.65rem 0.75rem; font-size: 0.85rem; font-weight: 700; color: #0f172a;">${escapeHtml(item.student_name || 'طالب')}</td>
+                      <td style="padding: 0.65rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #475569;">
                         ${escapeHtml(item.exam_title || 'امتحان ورقي')} 
-                        <span style="font-size: 0.75rem; font-family: monospace; color: #64748b;">(${escapeHtml(item.exam_code || '')})</span>
+                        <span style="font-size: 0.72rem; font-family: monospace; color: #64748b;">(${escapeHtml(item.exam_code || '')})</span>
                       </td>
-                      <td style="padding: 0.75rem;">
-                        <span class="badge" style="background: #f1f5f9; color: #0f172a; font-weight: 800; font-size: 0.78rem;">نموذج ${escapeHtml(item.model || 'أ')}</span>
+                      <td style="padding: 0.65rem 0.75rem;">
+                        <span style="background: #f1f5f9; color: #0f172a; font-weight: 700; font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0;">نموذج ${escapeHtml(item.model || 'أ')}</span>
                       </td>
-                      <td style="padding: 0.75rem; font-size: 1.05rem; font-weight: 900; color: ${pillColor};">
+                      <td style="padding: 0.65rem 0.75rem; font-size: 0.95rem; font-weight: 800; color: #0f172a;">
                         ${item.score} / ${item.max_score}
                       </td>
-                      <td style="padding: 0.75rem;">
-                        <span style="background: ${pillBg}; color: ${pillColor}; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 6px;">
+                      <td style="padding: 0.65rem 0.75rem;">
+                        <span style="background: #f8fafc; color: #0f172a; font-weight: 700; font-size: 0.76rem; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0;">
                           ${item.percentage}%
                         </span>
                       </td>
-                      <td style="padding: 0.75rem; font-size: 0.78rem; color: #64748b; font-weight: 700;">
+                      <td style="padding: 0.65rem 0.75rem; font-size: 0.74rem; color: #64748b; font-weight: 600;">
                         ${item.timestamp || 'الآن'}
                       </td>
-                      <td style="padding: 0.75rem; text-align: center;">
-                        <div style="display: inline-flex; gap: 0.35rem; align-items: center;">
-                          <button 
-                            type="button" 
-                            class="btn btn-secondary" 
-                            style="padding: 0.35rem 0.75rem; font-size: 0.78rem; font-weight: 800; color: #166534; border-color: #86efac; background: #f0fdf4;"
-                            onclick="window.centrlyApp.sendScannedStudentWhatsApp('${item.id}')"
-                            title="إرسال النتيجة لولي الأمر على واتساب"
-                          >
-                            ${getIcon('whatsapp', 14, '#166534')}
-                            <span>واتساب</span>
-                          </button>
-                        </div>
+                      <td style="padding: 0.65rem 0.75rem; text-align: center;">
+                        <button 
+                          type="button" 
+                          style="height: 26px; padding: 0 8px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #166534; border: 1px solid #86efac; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                          onclick="window.centrlyApp.sendScannedStudentWhatsApp('${item.id}')"
+                          title="إرسال النتيجة لولي الأمر على واتساب"
+                        >
+                          ${getIcon('whatsapp', 12, '#166534')}
+                          <span>واتساب</span>
+                        </button>
                       </td>
                     </tr>
                   `;
@@ -3014,23 +2931,19 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
             </table>
           </div>
         ` : `
-          <div style="text-align: center; padding: 3rem 1.5rem; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px; color: #64748b;">
-            <div style="width: 52px; height: 52px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem auto;">
-              ${getIcon('camera', 26, '#0284c7')}
-            </div>
-            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.35rem;">
+          <div style="text-align: center; padding: 2.5rem 1.5rem; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
+            <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a; margin-bottom: 0.25rem;">
               لم يتم مسح أي ورقة بابل شيت حتى الآن
             </div>
-            <p style="font-size: 0.82rem; max-width: 420px; margin: 0 auto 1.25rem auto; line-height: 1.6;">
+            <p style="font-size: 0.78rem; color: #64748b; max-width: 420px; margin: 0 auto 1rem auto; line-height: 1.5;">
               اضغط على زر <b>«فتح الكاميرا للمسح المباشر»</b> أو <b>«رفع صورة ورقة بابل شيت»</b> للبدء في قراءة الأوراق ورصد درجات الطلاب تلقائياً وراء بعضها هنا.
             </p>
             <button 
               type="button" 
-              class="btn btn-secondary" 
-              style="font-size: 0.85rem; font-weight: 800; border-color: #059669; color: #059669; background: #ffffff;"
+              style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
               onclick="window.centrlyApp.simulateOmrScan()"
             >
-              ${getIcon('check', 15, '#059669')}
+              ${getIcon('check', 13)}
               <span>تجربة مسح ورقة نموذجية للاختبار</span>
             </button>
           </div>
