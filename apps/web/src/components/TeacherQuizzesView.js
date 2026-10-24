@@ -91,6 +91,12 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
 
   return `
     <div style="display: flex; flex-direction: column; gap: 0.75rem;" dir="rtl">
+      <style>
+        @keyframes centrlySpin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
       
       <!-- Top Title & Group Selector Header Card (Calm Minimal Swiss) -->
       <div class="card" style="margin: 0; padding: 0.75rem 1rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
@@ -133,7 +139,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
             <div style="display: flex; align-items: center; gap: 6px;">
               <button type="button" onclick="window.centrlyApp.switchQuizSubTab('online_builder')"
                 style="height: 28px; padding: 0 11px; font-size: 0.74rem; font-weight: 700; border-radius: 5px; border: 1px solid ${activeSubTab === 'online_builder' ? '#0f172a' : '#e2e8f0'}; background: ${activeSubTab === 'online_builder' ? '#0f172a' : '#ffffff'}; color: ${activeSubTab === 'online_builder' ? '#ffffff' : '#475569'}; cursor: pointer;">
-                بنك الكويزات (${onlineQuizzes.length})
+                بنك الكويزات (${state.isLoadingRichQuizzes ? '<span style="display:inline-block; animation: centrlySpin 0.75s linear infinite; width:9px; height:9px; border:1.5px solid #cbd5e1; border-top-color:#0f172a; border-radius:50%; vertical-align:middle;"></span>' : onlineQuizzes.length})
               </button>
               <button type="button" onclick="window.centrlyApp.switchQuizSubTab('online_grading')"
                 style="height: 28px; padding: 0 11px; font-size: 0.74rem; font-weight: 700; border-radius: 5px; border: 1px solid ${activeSubTab === 'online_grading' ? '#0f172a' : '#e2e8f0'}; background: ${activeSubTab === 'online_grading' ? '#0f172a' : '#ffffff'}; color: ${activeSubTab === 'online_grading' ? '#ffffff' : '#475569'}; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
@@ -156,7 +162,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
             <div style="display: flex; align-items: center; gap: 6px;">
               <button type="button" onclick="window.centrlyApp.switchQuizSubTab('paper_builder')"
                 style="height: 28px; padding: 0 11px; font-size: 0.74rem; font-weight: 700; border-radius: 5px; border: 1px solid ${activeSubTab === 'paper_builder' ? '#0f172a' : '#e2e8f0'}; background: ${activeSubTab === 'paper_builder' ? '#0f172a' : '#ffffff'}; color: ${activeSubTab === 'paper_builder' ? '#ffffff' : '#475569'}; cursor: pointer;">
-                نماذج الامتحانات الورقية (${paperQuizzes.length})
+                نماذج الامتحانات الورقية (${state.isLoadingRichQuizzes ? '<span style="display:inline-block; animation: centrlySpin 0.75s linear infinite; width:9px; height:9px; border:1.5px solid #cbd5e1; border-top-color:#0f172a; border-radius:50%; vertical-align:middle;"></span>' : paperQuizzes.length})
               </button>
               <button type="button" onclick="window.centrlyApp.switchQuizSubTab('paper_scanner')"
                 style="height: 28px; padding: 0 11px; font-size: 0.74rem; font-weight: 700; border-radius: 5px; border: 1px solid ${activeSubTab === 'paper_scanner' ? '#0f172a' : '#e2e8f0'}; background: ${activeSubTab === 'paper_scanner' ? '#0f172a' : '#ffffff'}; color: ${activeSubTab === 'paper_scanner' ? '#ffffff' : '#475569'}; cursor: pointer;">
@@ -581,8 +587,46 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
     return `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         
-        <!-- Online Exams Cards Grid (Swiss Minimal) -->
-        ${richQuizzes.length > 0 ? `
+        <!-- Online Exams Cards Grid / Loading / Empty (Swiss Minimal) -->
+        ${state.isLoadingRichQuizzes ? `
+          <!-- Loading State (Calm Minimal Swiss) -->
+          <div class="card" style="text-align: center; padding: 3.5rem 1.5rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 0.85rem;">
+              <span style="width: 20px; height: 20px; border: 2.5px solid #cbd5e1; border-top-color: #0f172a; border-radius: 50%; display: inline-block; animation: centrlySpin 0.75s linear infinite;"></span>
+            </div>
+            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.35rem;">
+              جاري تحميل الكويزات والامتحانات الإلكترونية...
+            </div>
+            <p style="font-size: 0.78rem; color: #64748b; margin: 0 auto; max-width: 420px; line-height: 1.5;">
+              يتم الآن جلب بيانات بنك الكويزات المنشأة لهذه المجموعة من السيرفر، لحظات وستظهر الامتحانات...
+            </p>
+          </div>
+          <!-- Clean Calm Skeletons -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; opacity: 0.45;">
+            <div class="card" style="margin: 0; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; padding: 1.1rem; height: 150px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="height: 14px; width: 55%; background: #e2e8f0; border-radius: 4px; margin-bottom: 0.8rem;"></div>
+                <div style="display: flex; gap: 0.4rem; margin-bottom: 0.6rem;">
+                  <div style="height: 18px; width: 60px; background: #f1f5f9; border-radius: 4px;"></div>
+                  <div style="height: 18px; width: 50px; background: #f1f5f9; border-radius: 4px;"></div>
+                  <div style="height: 18px; width: 70px; background: #f1f5f9; border-radius: 4px;"></div>
+                </div>
+              </div>
+              <div style="height: 28px; width: 100%; background: #f1f5f9; border-radius: 4px;"></div>
+            </div>
+            <div class="card" style="margin: 0; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; padding: 1.1rem; height: 150px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="height: 14px; width: 65%; background: #e2e8f0; border-radius: 4px; margin-bottom: 0.8rem;"></div>
+                <div style="display: flex; gap: 0.4rem; margin-bottom: 0.6rem;">
+                  <div style="height: 18px; width: 60px; background: #f1f5f9; border-radius: 4px;"></div>
+                  <div style="height: 18px; width: 50px; background: #f1f5f9; border-radius: 4px;"></div>
+                  <div style="height: 18px; width: 70px; background: #f1f5f9; border-radius: 4px;"></div>
+                </div>
+              </div>
+              <div style="height: 28px; width: 100%; background: #f1f5f9; border-radius: 4px;"></div>
+            </div>
+          </div>
+        ` : richQuizzes.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
             ${richQuizzes.map(rq => {
               const qCount = rq.questions?.length || 0;
@@ -1601,8 +1645,35 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
     return `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         
-        <!-- Paper Exams Cards Grid (Swiss Minimal) -->
-        ${paperQuizzes.length > 0 ? `
+        <!-- Paper Exams Cards Grid / Loading / Empty (Swiss Minimal) -->
+        ${state.isLoadingRichQuizzes ? `
+          <!-- Loading State (Calm Minimal Swiss) -->
+          <div class="card" style="text-align: center; padding: 3.5rem 1.5rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 0.85rem;">
+              <span style="width: 20px; height: 20px; border: 2.5px solid #cbd5e1; border-top-color: #0f172a; border-radius: 50%; display: inline-block; animation: centrlySpin 0.75s linear infinite;"></span>
+            </div>
+            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.35rem;">
+              جاري تحميل نماذج الامتحانات الورقية...
+            </div>
+            <p style="font-size: 0.78rem; color: #64748b; margin: 0 auto; max-width: 420px; line-height: 1.5;">
+              يتم الآن جلب نماذج البابل شيت والامتحانات المطبوعة لهذه المجموعة، لحظات وستظهر النماذج...
+            </p>
+          </div>
+          <!-- Clean Calm Skeletons -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; opacity: 0.45;">
+            <div class="card" style="margin: 0; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; padding: 1.1rem; height: 150px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="height: 14px; width: 60%; background: #e2e8f0; border-radius: 4px; margin-bottom: 0.8rem;"></div>
+                <div style="display: flex; gap: 0.4rem; margin-bottom: 0.6rem;">
+                  <div style="height: 18px; width: 60px; background: #f1f5f9; border-radius: 4px;"></div>
+                  <div style="height: 18px; width: 50px; background: #f1f5f9; border-radius: 4px;"></div>
+                  <div style="height: 18px; width: 70px; background: #f1f5f9; border-radius: 4px;"></div>
+                </div>
+              </div>
+              <div style="height: 28px; width: 100%; background: #f1f5f9; border-radius: 4px;"></div>
+            </div>
+          </div>
+        ` : paperQuizzes.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
             ${paperQuizzes.map(rq => {
               const qCount = rq.questions?.length || 0;
@@ -2994,15 +3065,21 @@ export function registerTeacherQuizzesActions(app) {
 
     this.quizzesState.activeSubTab = tabName;
     if (tabName === 'online_builder' || tabName === 'paper_builder') {
+      this.quizzesState.isLoadingRichQuizzes = true;
+      this.renderMainContent();
       await this.loadRichQuizzes();
     } else if (tabName === 'online_grading') {
+      this.quizzesState.isLoadingSubmissions = true;
+      this.renderMainContent();
       await this.loadOnlineSubmissions();
+    } else {
+      this.renderMainContent();
     }
-    this.renderMainContent();
   };
 
   // Rich quizzes loader
   app.loadRichQuizzes = async function() {
+    this.quizzesState.isLoadingRichQuizzes = true;
     try {
       const gid = this.quizzesState.selectedGroupId;
       let res = await fetch(`/api/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null);
@@ -3017,11 +3094,15 @@ export function registerTeacherQuizzesActions(app) {
       }
     } catch (err) {
       console.warn('[Centrly] Could not load rich quizzes:', err);
+    } finally {
+      this.quizzesState.isLoadingRichQuizzes = false;
+      this.renderMainContent();
     }
   };
 
   // Online exam submissions loader (Both Pending Essay & Graded MCQ)
   app.loadOnlineSubmissions = async function() {
+    this.quizzesState.isLoadingSubmissions = true;
     try {
       const gid = this.quizzesState.selectedGroupId;
       let allData = null;
@@ -3097,6 +3178,9 @@ export function registerTeacherQuizzesActions(app) {
       } catch (_) {}
     } catch (err) {
       console.warn('[Centrly] Could not load online submissions:', err);
+    } finally {
+      this.quizzesState.isLoadingSubmissions = false;
+      this.renderMainContent();
     }
   };
 
@@ -4258,11 +4342,15 @@ export function registerTeacherQuizzesActions(app) {
     this.quizzesState.selectedGroupId = groupId;
     // Synchronously switch to the selected group's isolated data (zero bleed-over)
     this.syncActiveGroupQuizzes(groupId);
+    this.quizzesState.isLoadingRichQuizzes = true;
+    this.quizzesState.isLoadingSubmissions = true;
     this.renderMainContent();
 
     await this.loadQuizzesForGroup(groupId);
     await this.loadRichQuizzes();
     await this.loadOnlineSubmissions();
+    this.quizzesState.isLoadingRichQuizzes = false;
+    this.quizzesState.isLoadingSubmissions = false;
     this.renderMainContent();
   };
 
