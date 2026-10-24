@@ -2894,15 +2894,6 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
               <span>رفع صورة ورقة بابل شيت</span>
             </button>
 
-            <button 
-              type="button" 
-              style="height: 32px; padding: 0 11px; font-size: 0.76rem; font-weight: 600; background: #f8fafc; color: #475569; border: 1px dashed #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
-              onclick="window.centrlyApp.simulateOmrScan()"
-              title="تجربة مسح ورقة نموذجية للاختبار"
-            >
-              ${getIcon('check', 13)}
-              <span>تجربة مسح ورقة للاختبار</span>
-            </button>
           </div>
         </div>
 
@@ -3089,14 +3080,6 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
             <p style="font-size: 0.78rem; color: #64748b; max-width: 420px; margin: 0 auto 1rem auto; line-height: 1.5;">
               اضغط على زر <b>«فتح الكاميرا للمسح المباشر»</b> أو <b>«رفع صورة ورقة بابل شيت»</b> للبدء في قراءة الأوراق ورصد درجات الطلاب تلقائياً وراء بعضها هنا.
             </p>
-            <button 
-              type="button" 
-              style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
-              onclick="window.centrlyApp.simulateOmrScan()"
-            >
-              ${getIcon('check', 13)}
-              <span>تجربة مسح ورقة نموذجية للاختبار</span>
-            </button>
           </div>
         `}
 
