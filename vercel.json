@@ -150,27 +150,7 @@
       "destination": "/apps/web/src/:path*"
     },
     {
-      "source": "/(dashboard|dashboard/.*|index\\.html)",
-      "has": [
-        {
-          "type": "host",
-          "value": "mr-omar.centerly-eg.com"
-        }
-      ],
-      "destination": "/teacher-platform-sample/index.html"
-    },
-    {
-      "source": "/(dashboard|dashboard/.*|index\\.html)",
-      "has": [
-        {
-          "type": "host",
-          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
-        }
-      ],
-      "destination": "/teacher-platform-sample/index.html"
-    },
-    {
-      "source": "/((?!api/|apps/|teacher-platform-sample/|src/|.*\\.(?:png|ico|jpg|jpeg|svg|webp|woff2|woff|ttf|css|js|webmanifest)).*)",
+      "source": "/",
       "has": [
         {
           "type": "host",
@@ -180,7 +160,67 @@
       "destination": "/teacher-platform-sample/login.html"
     },
     {
-      "source": "/((?!api/|apps/|teacher-platform-sample/|src/|.*\\.(?:png|ico|jpg|jpeg|svg|webp|woff2|woff|ttf|css|js|webmanifest)).*)",
+      "source": "/portal",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
+      "source": "/portal/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
+      "source": "/login",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
+      "source": "/dashboard",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/index.html"
+    },
+    {
+      "source": "/dashboard/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/index.html"
+    },
+    {
+      "source": "/index.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/index.html"
+    },
+    {
+      "source": "/",
       "has": [
         {
           "type": "host",
@@ -188,6 +228,66 @@
         }
       ],
       "destination": "/teacher-platform-sample/login.html"
+    },
+    {
+      "source": "/portal",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
+      "source": "/portal/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
+      "source": "/login",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/login.html"
+    },
+    {
+      "source": "/dashboard",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/index.html"
+    },
+    {
+      "source": "/dashboard/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/index.html"
+    },
+    {
+      "source": "/index.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/teacher-platform-sample/index.html"
     },
     {
       "source": "/mr-omar",
