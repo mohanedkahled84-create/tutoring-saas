@@ -444,6 +444,113 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
 }
 
 // ============================================================================
+// HELPER: MULTI-GROUP SELECTOR COMPONENT (اختيار كذا مجموعة مع بعض)
+// ============================================================================
+function renderMultiGroupSelector(prefix, groupsList, targetGroupIds, targetGroupId, isDropdownOpen) {
+  const groups = Array.isArray(groupsList) ? groupsList : [];
+  let selectedIds = Array.isArray(targetGroupIds) && targetGroupIds.length > 0
+    ? targetGroupIds
+    : (targetGroupId && targetGroupId !== 'all' ? [targetGroupId] : groups.map(g => g.id));
+
+  const isAll = (targetGroupId === 'all') || (groups.length > 0 && selectedIds.length === groups.length);
+
+  let labelText = '';
+  if (isAll) {
+    labelText = `جميع المجاميع (${groups.length} مجموعات)`;
+  } else if (selectedIds.length === 1) {
+    const single = groups.find(g => g.id === selectedIds[0]);
+    labelText = single ? single.name : 'مجموعة واحدة محددة';
+  } else if (selectedIds.length > 1) {
+    labelText = `${selectedIds.length} مجموعات محددة`;
+  } else {
+    labelText = 'اختر المجموعات المستهدفة...';
+  }
+
+  return `
+    <div style="position: relative;" id="${prefix}GroupSelectorContainer">
+      <button 
+        type="button" 
+        id="${prefix}GroupDropdownBtn"
+        onclick="window.centrlyApp.toggleGroupDropdown('${prefix}')"
+        style="width: 100%; height: 34px; padding: 0 10px; font-size: 0.82rem; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 5px; color: #0f172a; display: flex; justify-content: space-between; align-items: center; cursor: pointer; text-align: right;"
+      >
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 88%;">
+          ${escapeHtml(labelText)}
+        </span>
+        <span style="font-size: 0.72rem; color: #64748b; margin-right: 4px;">▼</span>
+      </button>
+
+      <!-- Dropdown Popover List -->
+      ${isDropdownOpen ? `
+        <div 
+          id="${prefix}GroupDropdownMenu" 
+          style="position: absolute; top: calc(100% + 4px); right: 0; left: 0; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.12); z-index: 1000; padding: 6px; max-height: 240px; overflow-y: auto;"
+        >
+          <!-- Option: All Groups -->
+          <label style="display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-weight: 800; color: #0f172a; background: ${isAll ? '#eff6ff' : 'transparent'};">
+            <input 
+              type="checkbox" 
+              ${isAll ? 'checked' : ''} 
+              onchange="window.centrlyApp.toggleAllGroupsSelect('${prefix}', this.checked)"
+              style="width: 15px; height: 15px; cursor: pointer; accent-color: #2563eb;"
+            />
+            <span>تحديد جميع المجاميع (${groups.length})</span>
+          </label>
+
+          <div style="height: 1px; background: #e2e8f0; margin: 4px 0;"></div>
+
+          <!-- Individual Group Checkboxes -->
+          ${groups.map(g => {
+            const isChecked = isAll || selectedIds.includes(g.id);
+            return `
+              <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: #1e293b; transition: background 0.15s ease;"
+                onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='transparent'">
+                <input 
+                  type="checkbox" 
+                  value="${escapeHtml(g.id)}"
+                  ${isChecked ? 'checked' : ''}
+                  onchange="window.centrlyApp.toggleSingleGroupSelect('${prefix}', '${escapeHtml(g.id)}', this.checked)"
+                  style="width: 15px; height: 15px; cursor: pointer; accent-color: #2563eb;"
+                />
+                <span style="flex: 1;">${escapeHtml(g.name)}</span>
+              </label>
+            `;
+          }).join('')}
+          
+          <div style="padding-top: 6px; border-top: 1px solid #f1f5f9; text-align: left;">
+            <button 
+              type="button" 
+              onclick="window.centrlyApp.toggleGroupDropdown('${prefix}')"
+              style="padding: 2px 10px; font-size: 0.72rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 4px; cursor: pointer;"
+            >
+              تم
+            </button>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Selected Badges Row (Below Button) -->
+      <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+        ${isAll ? `
+          <span style="font-size: 0.72rem; font-weight: 700; background: #f1f5f9; color: #334155; padding: 2px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
+            جميع المجاميع (${groups.length})
+          </span>
+        ` : selectedIds.map(gid => {
+          const gObj = groups.find(g => g.id === gid);
+          if (!gObj) return '';
+          return `
+            <span style="font-size: 0.72rem; font-weight: 700; background: #f8fafc; color: #1e293b; padding: 2px 7px; border-radius: 4px; border: 1px solid #cbd5e1; display: inline-flex; align-items: center; gap: 4px;">
+              <span>${escapeHtml(gObj.name)}</span>
+              <span onclick="event.stopPropagation(); window.centrlyApp.toggleSingleGroupSelect('${prefix}', '${escapeHtml(gid)}', false)" style="cursor: pointer; color: #94a3b8; font-weight: 900; font-size: 0.8rem; margin-right: 2px;" title="إزالة">✕</span>
+            </span>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================================
 // TAB 2: ONLINE BUILDER (إنشاء امتحان أونلاين - سؤال بسؤال + وقت الامتحان)
 // ============================================================================
 function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) {
@@ -613,23 +720,12 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
             
-            <!-- Group Selector in Wizard Step 1 -->
+            <!-- Multi-Group Selector in Wizard Step 1 -->
             <div>
-              <label class="form-label" style="font-weight: 700; font-size: 0.8rem; color: #334155;">المجموعة المستهدفة بالامتحان:</label>
-              <select 
-                id="wizardGroupId" 
-                class="form-select" 
-                style="height: 34px; font-size: 0.82rem; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 5px; width: 100%; color: #0f172a; padding: 0 8px;"
-              >
-                <option value="all" ${(activeQuiz.target_group_id === 'all' || activeQuiz.group_id === 'all') ? 'selected' : ''}>
-                  جميع المجاميع (شامل لكافة الطلاب)
-                </option>
-                ${groups.map(g => `
-                  <option value="${escapeHtml(g.id)}" ${(activeQuiz.target_group_id === g.id || activeQuiz.group_id === g.id || (!activeQuiz.target_group_id && g.id === selectedGroupId)) ? 'selected' : ''}>
-                    ${escapeHtml(g.name)}
-                  </option>
-                `).join('')}
-              </select>
+              <label class="form-label" style="font-weight: 700; font-size: 0.8rem; color: #334155; margin-bottom: 0.35rem; display: block;">
+                المجموعات المستهدفة بالامتحان:
+              </label>
+              ${renderMultiGroupSelector('online', groups, activeQuiz.target_group_ids, activeQuiz.target_group_id || selectedGroupId, state.groupDropdownState?.online)}
             </div>
 
             <div>
@@ -1666,23 +1762,12 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
               
-              <!-- Target Group Selector -->
+              <!-- Multi-Group Selector in Paper Wizard Step 1 -->
               <div>
-                <label class="form-label" style="font-weight: 700; font-size: 0.8rem; color: #334155;">المجموعة المستهدفة بالامتحان الورقي:</label>
-                <select 
-                  id="paperQuizGroupId" 
-                  class="form-select" 
-                  style="height: 34px; font-size: 0.82rem; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 5px; width: 100%; color: #0f172a; padding: 0 8px;"
-                >
-                  <option value="all" ${(activePaperQuiz.target_group_id === 'all' || activePaperQuiz.group_id === 'all') ? 'selected' : ''}>
-                    جميع المجاميع (شامل لكافة الطلاب)
-                  </option>
-                  ${groups.map(g => `
-                    <option value="${escapeHtml(g.id)}" ${(activePaperQuiz.target_group_id === g.id || activePaperQuiz.group_id === g.id || (!activePaperQuiz.target_group_id && g.id === selectedGroupId)) ? 'selected' : ''}>
-                      ${escapeHtml(g.name)}
-                    </option>
-                  `).join('')}
-                </select>
+                <label class="form-label" style="font-weight: 700; font-size: 0.8rem; color: #334155; margin-bottom: 0.35rem; display: block;">
+                  المجموعات المستهدفة بالامتحان الورقي:
+                </label>
+                ${renderMultiGroupSelector('paper', groups, activePaperQuiz.target_group_ids, activePaperQuiz.target_group_id || selectedGroupId, state.groupDropdownState?.paper)}
               </div>
 
               <div>
@@ -3102,6 +3187,7 @@ export function registerTeacherQuizzesActions(app) {
       : 1;
 
     const activeGroup = (this.groups || []).find(g => g.id === this.quizzesState.selectedGroupId) || null;
+    const activeGid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id);
 
     this.quizzesState.onlineViewMode = 'wizard';
     this.quizzesState.wizardStep = 1;
@@ -3111,7 +3197,9 @@ export function registerTeacherQuizzesActions(app) {
       quiz_number: nextNum,
       title: `كويز ${nextNum}`,
       subject: activeGroup?.subject || 'الفيزياء',
-      target_group_id: this.quizzesState.selectedGroupId,
+      target_group_ids: activeGid ? [activeGid] : [],
+      target_group_id: activeGid || 'all',
+      group_id: activeGid || 'all',
       question_count: 10,
       time_limit_minutes: 20,
       available_date: new Date().toISOString().slice(0, 10),
@@ -3131,7 +3219,6 @@ export function registerTeacherQuizzesActions(app) {
   app.proceedToQuestionsStep = function() {
     const title = document.getElementById('wizardTitle')?.value?.trim() || `كويز ${this.quizzesState.activeOnlineQuiz?.quiz_number || 1}`;
     const subject = document.getElementById('wizardSubject')?.value?.trim() || 'الفيزياء';
-    const targetGroupId = document.getElementById('wizardGroupId')?.value || this.quizzesState.selectedGroupId;
     const quizNum = Number(document.getElementById('wizardQuizNumber')?.value || 1);
     const count = Number(document.getElementById('wizardQuestionCount')?.value || 10);
     const timeLimit = Number(document.getElementById('wizardTimeLimit')?.value || 20);
@@ -3142,8 +3229,17 @@ export function registerTeacherQuizzesActions(app) {
     const qz = this.quizzesState.activeOnlineQuiz || {};
     qz.title = title;
     qz.subject = subject;
-    qz.target_group_id = targetGroupId;
-    qz.group_id = targetGroupId;
+
+    // Multi-group resolution
+    if (!Array.isArray(qz.target_group_ids) || qz.target_group_ids.length === 0) {
+      const fallbackGid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id);
+      qz.target_group_ids = fallbackGid ? [fallbackGid] : [];
+    }
+    qz.target_group_id = (qz.target_group_ids.length === (this.groups || []).length)
+      ? 'all'
+      : (qz.target_group_ids.length === 1 ? qz.target_group_ids[0] : 'multiple');
+    qz.group_id = qz.target_group_id;
+
     qz.quiz_number = quizNum;
     qz.time_limit_minutes = timeLimit;
     qz.available_date = availableDate;
@@ -3319,9 +3415,16 @@ export function registerTeacherQuizzesActions(app) {
     try {
       this.showToast('جاري حفظ ونشر الامتحان الإلكتروني...', 'info');
 
-      const targetGroupIds = (targetGroupId === 'all' && Array.isArray(this.groups) && this.groups.length > 0)
-        ? this.groups.map(g => g.id)
-        : [targetGroupId];
+      let targetGroupIds = [];
+      if (Array.isArray(qz?.target_group_ids) && qz.target_group_ids.length > 0) {
+        targetGroupIds = qz.target_group_ids;
+      } else if (targetGroupId === 'all' && Array.isArray(this.groups)) {
+        targetGroupIds = this.groups.map(g => g.id);
+      } else if (targetGroupId && targetGroupId !== 'multiple') {
+        targetGroupIds = [targetGroupId];
+      } else if (currentGid) {
+        targetGroupIds = [currentGid];
+      }
 
       for (const gid of targetGroupIds) {
         const payload = {
@@ -3478,12 +3581,15 @@ export function registerTeacherQuizzesActions(app) {
     this.quizzesState.paperWizardStep = 1;
     this.quizzesState.currentPaperQIdx = 0;
     this.quizzesState.paperLayoutMode = 'single';
+    const activeGid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id);
     this.quizzesState.activePaperQuiz = {
       id: null,
       quiz_number: nextNum,
       title: `امتحان ورقي جديد ${nextNum}`,
       subject: activeGroup?.subject || 'الفيزياء',
-      target_group_id: this.quizzesState.selectedGroupId,
+      target_group_ids: activeGid ? [activeGid] : [],
+      target_group_id: activeGid || 'all',
+      group_id: activeGid || 'all',
       question_count: 10,
       max_score: 20,
       time_limit_minutes: 45,
@@ -3595,15 +3701,23 @@ export function registerTeacherQuizzesActions(app) {
     const qz = this.quizzesState.activePaperQuiz || {};
     const title = document.getElementById('paperQuizTitle')?.value?.trim() || qz.title || `امتحان ورقي ${qz.quiz_number || 1}`;
     const subject = document.getElementById('paperQuizSubject')?.value?.trim() || qz.subject || 'الفيزياء';
-    const targetGroupId = document.getElementById('paperQuizGroupId')?.value || this.quizzesState.selectedGroupId;
     const quizNum = Number(document.getElementById('paperQuizNumber')?.value || qz.quiz_number || 1);
     const count = Math.max(1, Math.min(100, Number(document.getElementById('paperQuizQuestionCount')?.value || qz.question_count || 10)));
     const timeLimit = Math.max(5, Number(document.getElementById('paperQuizTimeLimit')?.value || qz.time_limit_minutes || 45));
 
     qz.title = title;
     qz.subject = subject;
-    qz.target_group_id = targetGroupId;
-    qz.group_id = targetGroupId;
+
+    // Multi-group resolution
+    if (!Array.isArray(qz.target_group_ids) || qz.target_group_ids.length === 0) {
+      const fallbackGid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id);
+      qz.target_group_ids = fallbackGid ? [fallbackGid] : [];
+    }
+    qz.target_group_id = (qz.target_group_ids.length === (this.groups || []).length)
+      ? 'all'
+      : (qz.target_group_ids.length === 1 ? qz.target_group_ids[0] : 'multiple');
+    qz.group_id = qz.target_group_id;
+
     qz.quiz_number = quizNum;
     qz.question_count = count;
     qz.time_limit_minutes = timeLimit;
@@ -3817,9 +3931,16 @@ export function registerTeacherQuizzesActions(app) {
     try {
       this.showToast('جاري حفظ وتوليد نماذج الامتحان الورقي والـ Bubble Sheet...', 'info');
 
-      const targetGroupIds = (targetGroupId === 'all' && Array.isArray(this.groups) && this.groups.length > 0)
-        ? this.groups.map(g => g.id)
-        : [targetGroupId];
+      let targetGroupIds = [];
+      if (Array.isArray(qz?.target_group_ids) && qz.target_group_ids.length > 0) {
+        targetGroupIds = qz.target_group_ids;
+      } else if (targetGroupId === 'all' && Array.isArray(this.groups)) {
+        targetGroupIds = this.groups.map(g => g.id);
+      } else if (targetGroupId && targetGroupId !== 'multiple') {
+        targetGroupIds = [targetGroupId];
+      } else if (currentGid) {
+        targetGroupIds = [currentGid];
+      }
 
       for (const gid of targetGroupIds) {
         const payload = {
@@ -4133,6 +4254,59 @@ export function registerTeacherQuizzesActions(app) {
     await this.loadQuizzesForGroup(groupId);
     await this.loadRichQuizzes();
     await this.loadOnlineSubmissions();
+    this.renderMainContent();
+  };
+
+  // Multi-Group Selection Handlers (online & paper wizards)
+  app.toggleGroupDropdown = function(prefix) {
+    if (!this.quizzesState.groupDropdownState) this.quizzesState.groupDropdownState = {};
+    this.quizzesState.groupDropdownState[prefix] = !this.quizzesState.groupDropdownState[prefix];
+    this.renderMainContent();
+  };
+
+  app.toggleAllGroupsSelect = function(prefix, isChecked) {
+    const qz = prefix === 'paper' ? this.quizzesState.activePaperQuiz : this.quizzesState.activeOnlineQuiz;
+    if (!qz) return;
+    if (isChecked) {
+      qz.target_group_ids = (this.groups || []).map(g => g.id);
+      qz.target_group_id = 'all';
+      qz.group_id = 'all';
+    } else {
+      const fallbackGid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id);
+      qz.target_group_ids = fallbackGid ? [fallbackGid] : [];
+      qz.target_group_id = fallbackGid || null;
+      qz.group_id = fallbackGid || null;
+    }
+    this.renderMainContent();
+  };
+
+  app.toggleSingleGroupSelect = function(prefix, groupId, isChecked) {
+    const qz = prefix === 'paper' ? this.quizzesState.activePaperQuiz : this.quizzesState.activeOnlineQuiz;
+    if (!qz) return;
+    let currentIds = Array.isArray(qz.target_group_ids) && qz.target_group_ids.length > 0
+      ? [...qz.target_group_ids]
+      : (qz.target_group_id === 'all' ? (this.groups || []).map(g => g.id) : [qz.target_group_id || this.quizzesState.selectedGroupId]);
+
+    if (isChecked) {
+      if (!currentIds.includes(groupId)) currentIds.push(groupId);
+    } else {
+      currentIds = currentIds.filter(id => id !== groupId);
+    }
+
+    if (currentIds.length === 0) {
+      this.showToast('يجب اختيار مجموعة واحدة على الأقل', 'warning');
+      currentIds = [groupId];
+    }
+
+    qz.target_group_ids = currentIds;
+    if (currentIds.length === (this.groups || []).length) {
+      qz.target_group_id = 'all';
+    } else if (currentIds.length === 1) {
+      qz.target_group_id = currentIds[0];
+    } else {
+      qz.target_group_id = 'multiple';
+    }
+    qz.group_id = qz.target_group_id;
     this.renderMainContent();
   };
 
