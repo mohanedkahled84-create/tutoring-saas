@@ -98,22 +98,27 @@ export function renderTeacherAssistantsView(
       ` : `
         <!-- Main Unlocked View -->
         
-        <!-- Top Title & Action -->
-        <div class="card" style="margin: 0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <!-- Top Title & Action (Swiss Minimalist) -->
+        <div class="card" style="margin: 0; padding: 0.85rem 1.15rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
             <div>
-              <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                <span>${getIcon('assistants', 22, 'var(--centrly-blue-700)')}</span>
-                <span>إدارة المساعدين والأسستنت (Assistants)</span>
-              </h2>
-              <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
-                تنظيم فريق المساعدين وتحديد المجموعات المسندة إليهم، طبيعة العمل (إداري/تعليمي)، ونظام المحاسبة (بالحصة أم بالشهر).
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                <h2 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
+                  إدارة المساعدين والأسستنت
+                </h2>
+                <span style="font-size: 0.72rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px; font-weight: 600;">
+                  ${totalAssistants} مساعد
+                </span>
+              </div>
+              <p style="margin: 2px 0 0 0; font-size: 0.76rem; color: #64748b;">
+                تنظيم فريق المساعدين وتحديد المجموعات المسندة إليهم ونظام المحاسبة
               </p>
             </div>
 
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn btn-primary" onclick="window.centrlyApp.openAddTeacherAssistantModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-                ${getIcon('add', 16)}
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="window.centrlyApp.openAddTeacherAssistantModal()" style="height: 30px; font-size: 0.76rem; font-weight: 700;">
+                ${getIcon('add', 14, '#ffffff')}
                 <span>إضافة مساعد جديد</span>
               </button>
             </div>

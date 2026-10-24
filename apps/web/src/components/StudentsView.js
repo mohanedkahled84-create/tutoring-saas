@@ -123,46 +123,46 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
       
       ${quotaBannerHtml}
 
-      <!-- Top Action Bar -->
-      <div class="card" style="margin: 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <!-- Top Action Bar (Swiss Minimalist) -->
+      <div class="card" style="margin: 0; padding: 0.85rem 1.15rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
           <div>
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
-              <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                <span>${getIcon('students', 22, 'var(--centrly-blue-700)')}</span>
-                <span>دليل الطلاب وقاعدة البيانات</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+              <h2 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
+                دليل الطلاب وقاعدة البيانات
               </h2>
-              <span style="background: ${isReachedOrExceeded ? '#fee2e2' : '#f1f5f9'}; color: ${isReachedOrExceeded ? '#b91c1c' : '#334155'}; font-size: 0.8rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 9999px; border: 1px solid ${isReachedOrExceeded ? '#fca5a5' : '#cbd5e1'};">
-                ${(!hasLoaded || isLoading) ? 'المقاعد: جارٍ التحميل...' : `المقاعد: ${currentCount} / ${studentLimit} طالب`}
+              <span style="font-size: 0.72rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px; font-weight: 600;">
+                ${(!hasLoaded || isLoading) ? 'جارٍ التحميل...' : `المقاعد: ${currentCount} / ${studentLimit}`}
               </span>
             </div>
-            <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              إدارة بيانات الطلاب، أرقام الهواتف الإلزامية، إرسال الملاحظات، والاستثناءات المالية
+            <p style="margin: 2px 0 0 0; font-size: 0.76rem; color: #64748b;">
+              إدارة بيانات الطلاب، الحسابات، كروت الباركود، وبوابات المتابعة
             </p>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-            <button class="btn btn-primary" onclick="window.centrlyApp.openBatchPortalLinksModal()" style="display: flex; align-items: center; gap: 0.4rem; background-color: #0284c7; border-color: #0284c7; font-weight: 700;" title="${isPaidActive ? 'إرسال روابط المتابعة والمنصة للطلاب الجدد' : 'ميزة خاصة بالمشتركين: إرسال روابط المتابعة والمنصة'}">
-              ${getIcon('whatsapp', 18)}
-              <span>إرسال الروابط للطلاب الجدد</span>
+          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-secondary" onclick="window.centrlyApp.openBatchPortalLinksModal()" style="height: 30px; font-size: 0.76rem; font-weight: 600;" title="${isPaidActive ? 'إرسال روابط المتابعة والمنصة للطلاب الجدد' : 'ميزة خاصة بالمشتركين: إرسال روابط المتابعة والمنصة'}">
+              ${getIcon('whatsapp', 14, '#166534')}
+              <span>إرسال الروابط</span>
               ${!isPaidActive 
-                ? `<span style="display: inline-flex; align-items: center; margin-right: 0.2rem; color: #f59e0b;" title="ميزة خاصة بالمشتركين">${getIcon('crown', 15, '#f59e0b')}</span>`
+                ? `<span style="display: inline-flex; align-items: center; color: #f59e0b;">${getIcon('crown', 12, '#f59e0b')}</span>`
                 : (unsentCount > 0 
-                  ? `<span style="background: #ef4444; color: #fff; font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 9999px; font-weight: 900;">${unsentCount}</span>` 
-                  : `<span style="background: #10b981; color: #fff; font-size: 0.75rem; padding: 0.15rem 0.45rem; border-radius: 9999px; display: inline-flex; align-items: center;">${getIcon('check', 10, '#fff')}</span>`)
+                  ? `<span style="background: #ef4444; color: #fff; font-size: 0.65rem; padding: 1px 5px; border-radius: 6px; font-weight: 800;">${unsentCount}</span>` 
+                  : `<span style="background: #ecfdf5; color: #065f46; font-size: 0.65rem; padding: 1px 5px; border-radius: 6px; font-weight: 800;">✔</span>`)
               }
             </button>
-            <button class="btn btn-primary" onclick="window.centrlyApp.openAddStudentModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-              ${getIcon('add', 18)}
+            <button class="btn btn-primary" onclick="window.centrlyApp.openAddStudentModal()" style="height: 30px; font-size: 0.76rem; font-weight: 700;">
+              ${getIcon('add', 14, '#ffffff')}
               <span>طالب جديد</span>
             </button>
-            <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('student-cards')" style="display: flex; align-items: center; gap: 0.4rem;">
-              ${getIcon('cards', 18)}
-              <span>طلب كروت الطلاب</span>
+            <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('student-cards')" style="height: 30px; font-size: 0.76rem; font-weight: 600;">
+              ${getIcon('cards', 14)}
+              <span>كروت الطلاب</span>
             </button>
-            <button class="btn btn-secondary" onclick="window.centrlyApp.openImportModal()" style="display: flex; align-items: center; gap: 0.4rem;">
-              ${getIcon('download', 18)}
-              <span>استيراد Excel / CSV</span>
+            <button class="btn btn-secondary" onclick="window.centrlyApp.openImportModal()" style="height: 30px; font-size: 0.76rem; font-weight: 600;">
+              ${getIcon('download', 14)}
+              <span>استيراد Excel</span>
             </button>
           </div>
         </div>

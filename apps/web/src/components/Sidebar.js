@@ -144,25 +144,20 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
 
   return `
     <aside class="app-sidebar" id="appSidebar">
-      <div class="sidebar-header" style="position: relative; flex-shrink: 0;">
-        <div class="brand-logo-badge" style="background: linear-gradient(135deg, #1e3a8a, #2563eb); border-radius: 10px; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(37,99,235,0.3); flex-shrink: 0;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <div class="sidebar-header" style="position: relative; flex-shrink: 0; padding: 0.85rem 1rem; border-bottom: 1px solid var(--centrly-line); display: flex; align-items: center; gap: 0.65rem;">
+        <div class="brand-logo-badge" style="background: #0f172a; border-radius: 6px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); flex-shrink: 0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" fill="#F59E0B"/>
             <path d="M12 15L3 10.09L12 5.18L21 10.09L12 15Z" fill="#FFFFFF" fill-opacity="0.95"/>
           </svg>
         </div>
-        <div style="flex: 1;">
-          <div class="brand-name" style="font-family: 'Changa', sans-serif; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">
-            <span style="color: var(--centrly-blue-700);">سنتر</span><span style="color: #f59e0b;">لي</span>
-            <span style="font-size: 0.82rem; font-weight: 600; color: var(--centrly-text);">| Centrly</span>
+        <div style="flex: 1; min-width: 0;">
+          <div class="brand-name" style="font-size: 1.02rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 4px;">
+            <span>سنترلي</span>
+            <span style="font-size: 0.72rem; font-weight: 600; color: #64748b;">| Centrly</span>
           </div>
-          <div class="brand-tagline" style="font-size: 0.72rem; color: var(--centrly-text); font-weight: 500;">
-            ${isAdmin ? 'لوحة الإدارة المركزية المستقلة' : (isCenterOwner ? 'منظومة إدارة السنتر والقاعات' : 'المنظومة الذكية لإدارة الحصص')}
-          </div>
-          <div>
-            <span class="badge ${isAdmin ? 'badge-primary' : (isCenterOwner ? 'badge-blue' : 'badge-warning')}" style="font-size: 0.65rem; padding: 0.15rem 0.5rem; margin-top: 0.2rem; display: inline-block;">
-              ${isAdmin ? 'المدير والمؤسس (Centrly HQ)' : (isCenterOwner ? 'حساب سنتر تعليمي' : 'حساب مدرس')}
-            </span>
+          <div class="brand-tagline" style="font-size: 0.68rem; color: #64748b; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${isAdmin ? 'لوحة الإدارة المركزية' : (isCenterOwner ? 'منظومة إدارة السنتر' : 'المنظومة الذكية لإدارة الحصص')}
           </div>
         </div>
         <button class="mobile-close-btn" onclick="window.centrlyApp.toggleSidebar()" style="display: none; background: transparent; border: none; cursor: pointer; color: var(--centrly-text); padding: 0.25rem;">
@@ -183,16 +178,15 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
                 const isLocked = Boolean(securityState?.hasPin && !securityState?.isUnlocked && ['assistants', 'dashboard'].includes(r.id));
                 return `
                   <button class="nav-link ${isActive ? 'active' : ''}" onclick="window.centrlyApp.navigate('${r.id}')" 
-                    style="position: relative; display: flex; align-items: center; gap: 0.7rem; background: ${isActive ? '#eff6ff' : 'transparent'}; border-radius: 8px; padding: 0.55rem 0.75rem; border: none; width: 100%; cursor: pointer; text-align: right; transition: background 0.15s ease;">
-                    <span class="nav-icon" style="display: inline-flex; align-items: center; justify-content: center; color: ${isActive ? 'var(--centrly-blue-700)' : '#64748b'};">
-                      ${getIcon(r.icon, 18)}
+                    style="position: relative; display: flex; align-items: center; gap: 0.65rem; background: ${isActive ? '#0f172a' : 'transparent'}; border-radius: 6px; padding: 0.48rem 0.7rem; border: none; width: 100%; cursor: pointer; text-align: right; transition: all 0.12s ease;">
+                    <span class="nav-icon" style="display: inline-flex; align-items: center; justify-content: center; color: ${isActive ? '#ffffff' : '#64748b'};">
+                      ${getIcon(r.icon, 16, isActive ? '#ffffff' : '#64748b')}
                     </span>
-                    <span style="font-weight: ${isActive ? '800' : '600'}; color: ${isActive ? 'var(--centrly-blue-800)' : '#334155'}; font-size: 0.875rem; flex: 1; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-weight: ${isActive ? '700' : '600'}; color: ${isActive ? '#ffffff' : '#334155'}; font-size: 0.82rem; flex: 1; display: flex; align-items: center; justify-content: space-between;">
                       <span>${escapeHtml(r.title)}</span>
-                      ${r.isPro ? `<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.65rem; font-weight: 900; padding: 1px 6px; border-radius: 4px; letter-spacing: 0.5px;">PRO</span>` : ''}
+                      ${r.isPro ? `<span style="background: ${isActive ? '#1e293b' : '#fef3c7'}; color: ${isActive ? '#fde68a' : '#b45309'}; border: 1px solid ${isActive ? '#334155' : '#fde68a'}; font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; letter-spacing: 0.5px;">PRO</span>` : ''}
                     </span>
-                    ${isLocked ? `<span title="محمي برمز الأمان (PIN)" style="display: inline-flex; align-items: center; margin-right: 0.35rem; opacity: 0.85;">${getIcon('lock', 13, '#f59e0b')}</span>` : ''}
-                    ${isActive ? `<span class="active-indicator" style="width: 3.5px; height: 18px; border-radius: 4px; background: var(--centrly-blue-700); position: absolute; right: 0;"></span>` : ''}
+                    ${isLocked ? `<span title="محمي برمز الأمان (PIN)" style="display: inline-flex; align-items: center; margin-right: 0.35rem; opacity: 0.85;">${getIcon('lock', 12, isActive ? '#fde68a' : '#f59e0b')}</span>` : ''}
                   </button>
                 `;
               }).join('')}

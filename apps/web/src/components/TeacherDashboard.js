@@ -210,23 +210,26 @@ export function renderTeacherDashboard(
         </div>
       </div>
 
-      <!-- Welcome & Quick Start Banner -->
-      <div class="card" style="margin: 0; background: linear-gradient(135deg, var(--centrly-blue-900), var(--centrly-blue-700)); color: #fff; border: none; box-shadow: var(--shadow-md);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
+      <!-- Welcome & Quick Start Banner (Swiss Minimalist) -->
+      <div class="card" style="margin: 0; background: #0f172a; color: #ffffff; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem;">
           <div>
-            <div style="font-size: 0.85rem; color: #93c5fd; font-weight: 700; margin-bottom: 0.25rem;">لوحة المتابعة والأرباح العامة للمدرس</div>
-            <h2 style="font-size: 1.5rem; font-weight: 900; margin: 0; color: #fff;">مرحباً بك، ${escapeHtml(displayName)}</h2>
-            <p style="font-size: 0.875rem; color: #e2e8f0; margin-top: 0.35rem; max-width: 600px; line-height: 1.5;">
-              إليك ملخص أرباحك الفعلية المحصلة من واقع الحضور، تقديرات الدخل، وجدول الحصص.
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+              <span style="font-size: 0.78rem; color: #94a3b8; font-weight: 700;">لوحة المتابعة والأرباح العامة للمدرس</span>
+            </div>
+            <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0.25rem 0 0 0; color: #ffffff;">مرحباً بك، ${escapeHtml(displayName)}</h2>
+            <p style="font-size: 0.78rem; color: #94a3b8; margin: 0.2rem 0 0 0; line-height: 1.5;">
+              ملخص أرباحك الفعلية المحصلة من واقع الحضور، تقديرات الدخل، وجدول الحصص.
             </p>
           </div>
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <button class="btn" style="background: rgba(255,255,255,0.15); color: #fff; font-weight: 700; border: 1px solid rgba(255,255,255,0.3); display: flex; align-items: center; gap: 0.4rem;" onclick="window.centrlyApp.navigate('calendar')">
-              ${getIcon('calendar', 16, '#ffffff')}
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn" style="background: rgba(255,255,255,0.08); color: #ffffff; font-weight: 600; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; height: 30px; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="window.centrlyApp.navigate('calendar')">
+              ${getIcon('calendar', 14, '#ffffff')}
               <span>جدول الحصص</span>
             </button>
-            <button class="btn btn-primary" style="font-weight: 800; display: flex; align-items: center; gap: 0.4rem;" onclick="window.centrlyApp.navigate('sessions')">
-              ${getIcon('sessions', 16)}
+            <button class="btn" style="background: #ffffff; color: #0f172a; font-weight: 700; border: 1px solid #ffffff; border-radius: 6px; height: 30px; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="window.centrlyApp.navigate('sessions')">
+              ${getIcon('sessions', 14, '#0f172a')}
               <span>لوحة الحصص</span>
             </button>
           </div>

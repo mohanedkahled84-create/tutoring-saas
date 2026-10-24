@@ -39,16 +39,21 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
       
-      <!-- Top Title & Action Header -->
-      <div class="card" style="margin: 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <!-- Top Title & Action Header (Swiss Minimalist) -->
+      <div class="card" style="margin: 0; padding: 0.85rem 1.15rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
           <div>
-            <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-              <span>${getIcon('materials', 22, 'var(--centrly-blue-700)')}</span>
-              <span>المذكرات والماتريال التعليمية (Study Materials)</span>
-            </h2>
-            <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              إرفاق المذكرات بصيغة PDF وروابط شروحات الفيديو لتظهر مباشرة للطلاب وأولياء الأمور في بواباتهم.
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+              <h2 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
+                المذكرات والماتريال التعليمية
+              </h2>
+              <span style="font-size: 0.72rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px; font-weight: 600;">
+                ${totalMaterials} ملف
+              </span>
+            </div>
+            <p style="margin: 2px 0 0 0; font-size: 0.76rem; color: #64748b;">
+              إرفاق المذكرات بصيغة PDF وروابط الشروحات لتظهر مباشرة للطلاب في بواباتهم
             </p>
           </div>
 

@@ -61,7 +61,7 @@ export function renderNavbar(user, activeSessionSummary = null) {
           <div class="topbar-user-name" style="font-weight: 700; font-size: 0.875rem; white-space: nowrap;">${displayName}</div>
           <div class="topbar-user-role" style="font-size: 0.72rem; color: var(--centrly-text); white-space: nowrap;">${roleName}</div>
         </div>
-        <div class="topbar-avatar" style="width: 38px; height: 38px; border-radius: var(--radius-full); background-color: var(--centrly-blue-100); color: var(--centrly-blue-800); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">
+        <div class="topbar-avatar" style="width: 38px; height: 38px; border-radius: 6px; background-color: #0f172a; color: #ffffff; font-size: 0.82rem; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">
           ${avatarLetter}
         </div>
       </div>

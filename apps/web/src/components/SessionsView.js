@@ -61,30 +61,35 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
           </div>
         ` : ''}
 
-        <!-- Standby Header -->
-        <div class="card" style="margin: 0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <!-- Standby Header (Swiss Minimalist) -->
+        <div class="card" style="margin: 0; padding: 0.85rem 1.15rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
             <div>
-              <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                <span>${getIcon('sessions', 22, 'var(--centrly-blue-700)')}</span>
-                <span>الحصص ولوحة المساعد الذكية</span>
-              </h2>
-              <p style="font-size: 0.825rem; color: var(--centrly-text); margin-top: 0.25rem;">
-                اليوم: <b style="color: var(--centrly-ink);">${todayFormatted}</b> • اختر مجموعتك لبدء رصد الحضور بالباركود أو الكاميرا
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                <h2 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
+                  الحصص ولوحة المساعد الذكية
+                </h2>
+                <span style="font-size: 0.72rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px; font-weight: 600;">
+                  ${todayFormatted}
+                </span>
+              </div>
+              <p style="margin: 2px 0 0 0; font-size: 0.76rem; color: #64748b;">
+                اختر مجموعتك لبدء رصد الحضور بالباركود أو الكاميرا السريعة
               </p>
             </div>
 
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-              <button class="btn btn-secondary" onclick="window.centrlyApp.openOtherSessionsModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--centrly-blue-700); border-color: var(--centrly-blue-700); background: #f0f9ff;">
-                ${getIcon('calendar', 18)}
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openOtherSessionsModal()" style="height: 30px; font-size: 0.76rem; font-weight: 600;">
+                ${getIcon('calendar', 14)}
                 <span>حصص أخرى (${otherGroups.length})</span>
               </button>
-              <button class="btn btn-primary" onclick="window.centrlyApp.openStartNewSessionModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700;">
-                ${getIcon('sessions', 18)}
+              <button class="btn btn-primary" onclick="window.centrlyApp.openStartNewSessionModal()" style="height: 30px; font-size: 0.76rem; font-weight: 700;">
+                ${getIcon('sessions', 14, '#ffffff')}
                 <span>بدء حصة جديدة</span>
               </button>
-              <button class="btn btn-secondary" onclick="window.centrlyApp.openScheduleSessionModal()" style="display: flex; align-items: center; gap: 0.4rem;">
-                ${getIcon('calendar', 18)}
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openScheduleSessionModal()" style="height: 30px; font-size: 0.76rem; font-weight: 600;">
+                ${getIcon('calendar', 14)}
                 <span>جدولة استثنائية</span>
               </button>
             </div>

@@ -319,19 +319,19 @@ export function renderVideoLessonsView(
         </div>
       ` : ''}
 
-      <!-- Top Title & Action Header -->
-      <div class="card" style="margin: 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <!-- Top Title & Action Header (Swiss Minimalist) -->
+      <div class="card" style="margin: 0; padding: 0.85rem 1.15rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
           <div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: var(--centrly-blue-900);">
-                <span>${getIcon('video', 24, 'var(--centrly-blue-700)')}</span>
-                <span>فيديوهات الشرح والحل (منظومة يوتيوب المشروطة)</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+              <h2 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
+                فيديوهات الشرح والحل (يوتيوب المشروط)
               </h2>
-              <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.68rem; font-weight: 900; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px;">PRO</span>
+              <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.65rem; font-weight: 800; padding: 1px 6px; border-radius: 4px;">PRO</span>
             </div>
-            <p style="font-size: 0.85rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              مشاركة فيديوهات يوتيوب غير مدرجة مع تقييد الفتح فقط للطلاب الذين <strong>تم اعتماد واجبهم</strong> أو تم منحهم <strong>استثناء يدوي</strong>.
+            <p style="margin: 2px 0 0 0; font-size: 0.76rem; color: #64748b;">
+              مشاركة فيديوهات يوتيوب غير مدرجة مع تقييد الفتح فقط للطلاب الذين تم اعتماد واجبهم
             </p>
           </div>
 
