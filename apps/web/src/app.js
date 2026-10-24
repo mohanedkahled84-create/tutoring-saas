@@ -24,7 +24,7 @@ import { renderRiskWatchlistView, registerRiskWatchlistActions } from './compone
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=7.6.0';
+import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=7.7.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -1464,6 +1464,7 @@ class CentrlyApp {
           if (route === 'online-quizzes') {
             this.quizzesState.activeSubTab = this.quizzesState.activeSubTab === 'online_grading' ? 'online_grading' : 'online_builder';
             if (this.loadRichQuizzes) await this.loadRichQuizzes();
+            if (this.loadOnlineSubmissions) await this.loadOnlineSubmissions();
           } else if (route === 'paper-exams') {
             this.quizzesState.activeSubTab = this.quizzesState.activeSubTab === 'paper_scanner' ? 'paper_scanner' : 'paper_builder';
             if (this.loadRichQuizzes) await this.loadRichQuizzes();

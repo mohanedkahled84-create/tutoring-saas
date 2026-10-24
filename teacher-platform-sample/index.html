@@ -771,26 +771,33 @@
     }
 
     .exam-choice {
-      padding: 11px 16px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: var(--radius-sm);
+      padding: 12px 18px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
       margin-bottom: 8px;
-      background: rgba(15, 23, 42, 0.6);
+      background: #ffffff;
+      color: #0f172a !important;
       cursor: pointer;
-      font-size: 0.88rem;
+      font-size: 0.92rem;
+      font-weight: 700;
       transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .exam-choice:hover {
-      background: rgba(37, 99, 235, 0.15);
-      border-color: var(--brand-primary);
+      background: #f8fafc;
+      border-color: #94a3b8;
+      color: #0f172a !important;
     }
 
     .exam-choice.selected {
-      background: var(--brand-primary);
-      border-color: var(--brand-primary);
-      color: #ffffff;
-      font-weight: 700;
+      background: #eff6ff !important;
+      border-color: #2563eb !important;
+      color: #1e40af !important;
+      font-weight: 800 !important;
+      box-shadow: 0 0 0 1px #2563eb inset;
     }
 
     /* العلامة المائية المتحركة الخاصة بالامتحان */
@@ -1459,8 +1466,8 @@
 
     </div>
 
-    <!-- علامة مائية متحركة خاصة بالطالب أثناء الامتحان -->
-    <div class="exam-watermark" id="examWatermark">مهند خالد • 01123671177 • 1006</div>
+    <!-- علامة مائية متحركة خاصة بالطالب أثناء الامتحان (كود الطالب فقط) -->
+    <div class="exam-watermark" id="examWatermark">1006</div>
 
   </div>
 
@@ -1568,7 +1575,7 @@
 
       const examWatermarkEl = document.getElementById('examWatermark');
       if (examWatermarkEl) {
-        examWatermarkEl.innerText = `${currentStudent.name} • ${currentStudent.phone || currentStudent.student_phone || '01123671177'} • ${currentStudent.code || currentStudent.student_code || '1006'}`;
+        examWatermarkEl.innerText = `${currentStudent.code || currentStudent.student_code || '1006'}`;
       }
 
       const examStudentLabel = document.getElementById('examStudentLabel');
@@ -2696,7 +2703,7 @@
               ${!isEssay ? `
                 <div class="exam-choices-list" style="display: flex; flex-direction: column; gap: 8px;">
                   ${(q.choices || q.options || []).filter(c => c && String(c).trim()).map((choice, cIdx) => `
-                    <div class="exam-choice" onclick="selectChoice(this, ${idx}, ${cIdx})" style="padding: 10px 14px; border: 1.5px solid var(--border-subtle); border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 0.88rem; font-weight: 600;">
+                    <div class="exam-choice" onclick="selectChoice(this, ${idx}, ${cIdx})" style="padding: 12px 18px; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 0.92rem; font-weight: 700; color: #0f172a; background: #ffffff;">
                       ${String.fromCharCode(0x0623 + cIdx)}) ${escapeHtml(choice)}
                     </div>
                   `).join('')}
@@ -2738,6 +2745,7 @@
 
       const wm = document.getElementById('examWatermark');
       if (wm) {
+        wm.innerText = `${currentStudent.code || currentStudent.student_code || '1006'}`;
         if (examWatermarkTimer) clearInterval(examWatermarkTimer);
         examWatermarkTimer = setInterval(() => {
           const top = Math.floor(Math.random() * 60 + 20);
@@ -2758,12 +2766,14 @@
       const parent = el.parentElement;
       parent.querySelectorAll('.exam-choice').forEach(c => {
         c.classList.remove('selected');
-        c.style.borderColor = 'var(--border-subtle)';
+        c.style.borderColor = '#cbd5e1';
         c.style.background = '#ffffff';
+        c.style.color = '#0f172a';
       });
       el.classList.add('selected');
       el.style.borderColor = '#2563eb';
       el.style.background = '#eff6ff';
+      el.style.color = '#1e40af';
       currentExamAnswers[qIdx] = cIdx;
     }
 
@@ -2792,22 +2802,27 @@
 
       const questions = Array.isArray(currentActiveQuiz.questions) ? currentActiveQuiz.questions : [];
       const hasEssay = questions.some(q => q.type === 'essay');
-      const subKey = `centrly_submission_${currentStudent.code || '1006'}_${currentActiveQuiz.id}`;
+      const studentCode = currentStudent.code || currentStudent.student_code || '1006';
+      const studentName = currentStudent.name || currentStudent.student_name || 'مهند خالد';
+      const subKey = `centrly_submission_${studentCode}_${currentActiveQuiz.id}`;
 
       if (hasEssay) {
         // ----------------------------------------------------
-        // حالة: الامتحان يحتوي على مقالي
-        // ممنوع التصحيح التلقائي، لا تظهر أي درجة ولا نموذج إجابة!
+        // حالة: الامتحان يحتوي على أسئلة مقالية
+        // بانتظار تصحيح المعلم، لا تظهر درجات حتى الاعتماد
         // ----------------------------------------------------
         const submissionRecord = {
           quiz_id: currentActiveQuiz.id,
           quiz_title: currentActiveQuiz.title,
-          student_code: currentStudent.code || '1006',
-          student_name: currentStudent.name || 'مهند خالد',
+          quiz_number: currentActiveQuiz.quiz_number || 1,
+          group_id: currentActiveQuiz.group_id || null,
+          student_code: studentCode,
+          student_name: studentName,
           status: 'pending',
           score: null,
           max_score: questions.reduce((sum, q) => sum + Number(q.points || 1), 0),
           submitted_at: new Date().toISOString(),
+          questions: questions,
           answers: currentExamAnswers,
           essay_answers: currentExamEssayAnswers
         };
@@ -2815,22 +2830,31 @@
           localStorage.setItem(subKey, JSON.stringify(submissionRecord));
         } catch (_) {}
 
-        // إرسال التسليم للسيرفر
+        // إرسال التسليم للسيرفر (عبر /api/quizzes/submit المعتمد)
         try {
           const submitPayload = {
             token: localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN,
             material_id: currentActiveQuiz.id,
-            answers: { ...currentExamAnswers, ...currentExamEssayAnswers },
+            quiz_id: currentActiveQuiz.id,
+            quiz_title: currentActiveQuiz.title,
+            quiz_number: currentActiveQuiz.quiz_number || 1,
+            group_id: currentActiveQuiz.group_id || null,
+            student_code: studentCode,
+            student_name: studentName,
+            questions: questions,
+            has_essay: true,
+            answers: currentExamAnswers,
+            essay_answers: currentExamEssayAnswers,
             elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds
           };
-          fetch('/api/public/quizzes/submit', {
+          fetch('/api/quizzes/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(submitPayload)
           }).catch(() => null);
         } catch (_) {}
 
-        showPortalToast('تم استلام إجاباتك بنجاح! يتضمن الامتحان أسئلة مقالية (قيد التصحيح والاعتماد بالعين من المعلم).', 'info');
+        showPortalToast('تم استلام إجاباتك بنجاح! يتضمن الامتحان أسئلة مقالية (قيد التصحيح والاعتماد من المعلم).', 'info');
         openPendingReviewModal(currentActiveQuiz);
         renderAllPanels();
       } else {
@@ -2862,13 +2886,16 @@
         const submissionRecord = {
           quiz_id: currentActiveQuiz.id,
           quiz_title: currentActiveQuiz.title,
-          student_code: currentStudent.code || '1006',
-          student_name: currentStudent.name || 'مهند خالد',
+          quiz_number: currentActiveQuiz.quiz_number || 1,
+          group_id: currentActiveQuiz.group_id || null,
+          student_code: studentCode,
+          student_name: studentName,
           status: 'graded',
           score: earnedPoints,
           max_score: totalPoints,
           submitted_at: new Date().toISOString(),
           gradedDetails,
+          questions: questions,
           answers: currentExamAnswers
         };
         try {
@@ -2879,10 +2906,18 @@
           const submitPayload = {
             token: localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN,
             material_id: currentActiveQuiz.id,
+            quiz_id: currentActiveQuiz.id,
+            quiz_title: currentActiveQuiz.title,
+            quiz_number: currentActiveQuiz.quiz_number || 1,
+            group_id: currentActiveQuiz.group_id || null,
+            student_code: studentCode,
+            student_name: studentName,
+            questions: questions,
+            has_essay: false,
             answers: currentExamAnswers,
             elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds
           };
-          fetch('/api/public/quizzes/submit', {
+          fetch('/api/quizzes/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(submitPayload)
@@ -2912,19 +2947,16 @@
             تم استلام إجاباتك بنجاح — قيد التصحيح والاعتماد
           </h3>
           <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; max-width: 480px; margin: 0 auto 20px auto;">
-            يتضمن هذا الامتحان أسئلة مقالية تخضع للمراجعة والتقدير بالعين من المعلم.<br>
+            يتضمن هذا الامتحان أسئلة مقالية تخضع للمراجعة والتقدير من المعلم.<br>
             <strong>لن تظهر أي درجات أو نموذج إجابة</strong> إلا بعد اعتماد المعلم للتصحيح رسمياً.
           </p>
           <div style="display: inline-flex; gap: 8px; align-items: center; background: #f8fafc; border: 1px solid var(--border-subtle); padding: 10px 18px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; color: var(--text-main);">
             <span>الحالة الحالية:</span>
-            <span style="color: #d97706; font-weight: 800;">بانتظار تصحيح المقالي بالعين من المعلم</span>
+            <span style="color: #d97706; font-weight: 800;">بانتظار تصحيح الأسئلة المقالية من المعلم</span>
           </div>
           <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-            <button type="button" class="btn btn-secondary" style="padding: 0 24px; height: 38px; font-size: 0.88rem; font-weight: 800;" onclick="closeModelAnswerModal()">
+            <button type="button" class="btn btn-secondary" style="padding: 0 28px; height: 40px; font-size: 0.9rem; font-weight: 800; background: #0f172a; color: #ffffff; border: none; border-radius: 8px; cursor: pointer;" onclick="closeModelAnswerModal()">
               إغلاق
-            </button>
-            <button type="button" class="btn btn-secondary" style="padding: 0 20px; height: 38px; font-size: 0.85rem; font-weight: 800; border-color: #f59e0b; color: #b45309;" onclick="localStorage.removeItem('centrly_submission_' + (currentStudent.code || '1006') + '_${quiz?.id}'); closeModelAnswerModal(); startSecureExam('${escapeJsStr(quiz?.id || '')}', '${escapeJsStr(quiz?.title || '')}');">
-              🔄 إعادة حل الامتحان (للتجربة)
             </button>
           </div>
         </div>
@@ -3023,11 +3055,8 @@
       html += `
         </div>
         <div style="text-align: center; margin-top: 24px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-          <button type="button" class="btn btn-secondary" style="padding: 0 28px; height: 38px; font-size: 0.88rem; font-weight: 800;" onclick="closeModelAnswerModal()">
+          <button type="button" class="btn btn-secondary" style="padding: 0 28px; height: 38px; font-size: 0.88rem; font-weight: 800; background: #0f172a; color: #ffffff; border: none; border-radius: 8px; cursor: pointer;" onclick="closeModelAnswerModal()">
             إغلاق المراجعة
-          </button>
-          <button type="button" class="btn btn-secondary" style="padding: 0 20px; height: 38px; font-size: 0.85rem; font-weight: 800; border-color: #3b82f6; color: #2563eb;" onclick="localStorage.removeItem('centrly_submission_' + (currentStudent.code || '1006') + '_${quiz?.id}'); closeModelAnswerModal(); startSecureExam('${escapeJsStr(quiz?.id || '')}', '${escapeJsStr(quiz?.title || '')}');">
-            🔄 إعادة حل الامتحان (للتجربة)
           </button>
         </div>
       `;

@@ -1497,7 +1497,7 @@ if (typeof window !== 'undefined') {
     const token = window.__portalToken || (typeof location !== 'undefined' ? new URLSearchParams(location.search).get('token') : '');
 
     try {
-      const res = await fetch('/api/public/quizzes/submit', {
+      const res = await fetch('/api/quizzes/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

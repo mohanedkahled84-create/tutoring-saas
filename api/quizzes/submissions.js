@@ -25,7 +25,8 @@ export default async function handler(req, res) {
         for (const row of (rows || [])) {
           try {
             const parsed = JSON.parse(row.message_body || '{}');
-            if (parsed && parsed.quiz_id) {
+            if (parsed && (parsed.quiz_id || parsed.material_id)) {
+              parsed.db_row_id = row.id;
               submissions.push(parsed);
             }
           } catch (_) {}
@@ -34,7 +35,12 @@ export default async function handler(req, res) {
 
       const isPendingReq = (req.url || '').includes('pending') || (req.query?.type === 'pending');
       if (isPendingReq) {
-        submissions = submissions.filter(s => s.status === 'pending' || !s.is_graded);
+        submissions = submissions.filter(s => s.status === 'pending' || !s.is_graded || s.status === 'needs_grading');
+      }
+
+      const targetGroupId = req.query?.group_id;
+      if (targetGroupId && targetGroupId !== 'all') {
+        submissions = submissions.filter(s => !s.group_id || s.group_id === targetGroupId);
       }
 
       return res.status(200).json({
@@ -57,8 +63,10 @@ export default async function handler(req, res) {
 
       const { submission_id, student_code, material_id, essay_score } = body || {};
 
-      // Find submission
       const subPhone = `QUIZ_SUB_${material_id}_${student_code}`;
+      let targetRow = null;
+
+      // 1. Try find by phone first
       const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(subPhone)}&select=*`, {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
       });
@@ -66,33 +74,55 @@ export default async function handler(req, res) {
       if (checkRes.ok) {
         const rows = await checkRes.json();
         if (rows && rows[0]) {
-          const row = rows[0];
-          let sub = {};
-          try { sub = JSON.parse(row.message_body || '{}'); } catch (_) {}
-
-          const newScore = Number(sub.mcq_score || 0) + Number(essay_score || 0);
-          sub.status = 'approved';
-          sub.is_graded = true;
-          sub.essay_score = Number(essay_score || 0);
-          sub.total_score = newScore;
-          sub.graded_at = new Date().toISOString();
-
-          await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?id=eq.${row.id}`, {
-            method: 'PATCH',
-            headers: {
-              apikey: SUPABASE_ANON_KEY,
-              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              message_body: JSON.stringify(sub),
-              status: 'approved',
-              updated_at: new Date().toISOString()
-            })
-          });
-
-          return res.status(200).json({ success: true, submission: sub });
+          targetRow = rows[0];
         }
+      }
+
+      // 2. If not found by phone, search by submission_id
+      if (!targetRow && submission_id) {
+        const allRes = await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=like.QUIZ_SUB_%25&select=*`, {
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        if (allRes.ok) {
+          const allRows = await allRes.json();
+          for (const r of (allRows || [])) {
+            try {
+              const p = JSON.parse(r.message_body || '{}');
+              if (p && p.id === submission_id) {
+                targetRow = r;
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      if (targetRow) {
+        let sub = {};
+        try { sub = JSON.parse(targetRow.message_body || '{}'); } catch (_) {}
+
+        const newScore = Number(sub.mcq_score || 0) + Number(essay_score || 0);
+        sub.status = 'approved';
+        sub.is_graded = true;
+        sub.essay_score = Number(essay_score || 0);
+        sub.total_score = newScore;
+        sub.graded_at = new Date().toISOString();
+
+        await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?id=eq.${targetRow.id}`, {
+          method: 'PATCH',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message_body: JSON.stringify(sub),
+            status: 'approved',
+            updated_at: new Date().toISOString()
+          })
+        });
+
+        return res.status(200).json({ success: true, submission: sub, final_score: newScore });
       }
 
       return res.status(404).json({ error: { message: 'Submission not found' } });

@@ -238,6 +238,10 @@
       "destination": "/apps/web/src/:path*"
     },
     {
+      "source": "/api/public/quizzes/submit",
+      "destination": "/api/quizzes/submit"
+    },
+    {
       "source": "/",
       "has": [
         {
