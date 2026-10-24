@@ -41,7 +41,7 @@ import { renderTeacherSettingsView, registerTeacherSettingsActions } from './com
 import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=4.7.6';
 import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=1.0.0';
 import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.3.0';
-import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.7.0';
+import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.7.1';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.9.21';
@@ -1940,18 +1940,24 @@ class CentrlyApp {
           break;
         }
         case 'platform-builder': {
-          let [res, viewsRes, onlineSubsRes] = await Promise.all([
+          let [res, viewsRes, onlineSubsRes, stdRes] = await Promise.all([
             request('/platform/settings').catch(() => null),
             fetch('/api/video-tracking').then(r => r.json()).catch(() => null),
-            fetch('https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/homework_submissions?file_name=like.online_quiz%25&select=*&order=submitted_at.desc', {
-              headers: {
-                apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-                Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz'
-              }
-            }).then(r => r.json()).catch(() => [])
+            fetch('/api/quizzes/submissions')
+              .then(r => r.json())
+              .catch(() => fetch('https://centerly-eg.com/api/quizzes/submissions').then(r => r.json()).catch(() => null)),
+            (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students)
           ]);
 
-          const onlineSubmissions = Array.isArray(onlineSubsRes) ? onlineSubsRes : [];
+          if (Array.isArray(stdRes) && stdRes.length > 0) {
+            this.students = stdRes;
+          } else if (stdRes?.students && Array.isArray(stdRes.students)) {
+            this.students = stdRes.students;
+          }
+
+          const onlineSubmissions = Array.isArray(onlineSubsRes) 
+            ? onlineSubsRes 
+            : (Array.isArray(onlineSubsRes?.submissions) ? onlineSubsRes.submissions : (this.quizzesState?.onlineSubmissions || []));
           window.__centrlyOnlineSubmissions = onlineSubmissions;
 
           const tenantKey = this.user?.tenant_id || 'active';

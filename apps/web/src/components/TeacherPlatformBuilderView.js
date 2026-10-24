@@ -148,37 +148,90 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   const notWatchedCount = totalStudents - watchedCount - watchingCount;
   const hwSubmittedCount = 1; // Mohaned submitted homework
 
-      // فحص نتائج الكويزات الأونلاين الحقيقية فقط بدون أي نتائج ورقية أو وهمية
+  // Self-healing async fetch for online submissions if not already loaded
+  if (typeof window !== 'undefined' && (!window.__centrlyOnlineSubmissions || window.__centrlyOnlineSubmissions.length === 0) && !window.__fetchingCentrlyOnlineSubs) {
+    window.__fetchingCentrlyOnlineSubs = true;
+    fetch('/api/quizzes/submissions')
+      .then(r => r.json())
+      .then(res => {
+        const subs = Array.isArray(res) ? res : (res?.submissions || []);
+        if (subs && subs.length > 0) {
+          window.__centrlyOnlineSubmissions = subs;
+          if (window.centrlyApp) {
+            if (window.centrlyApp.platformBuilderState) {
+              window.centrlyApp.platformBuilderState.onlineSubmissions = subs;
+            }
+            if (window.centrlyApp.currentRoute === 'platform-builder') {
+              window.centrlyApp.renderMainContent();
+            }
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setTimeout(() => { window.__fetchingCentrlyOnlineSubs = false; }, 3000);
+      });
+  }
+
+  // فحص نتائج الكويزات الأونلاين الحقيقية فقط بدون أي نتائج ورقية أو وهمية
   function resolveStudentOnlineQuiz(studentCode, studentId) {
     const sCode = String(studentCode || '').trim();
     const sId = String(studentId || '').trim();
 
-    // 1. فحص تسليمات الكويزات الأونلاين الفعلية القادمة من قاعدة البيانات
-    const onlineSubs = state.onlineSubmissions || window.__centrlyOnlineSubmissions || [];
-    const sub = onlineSubs.find(s => 
-      (sId && String(s.student_id).trim() === sId) || 
-      (sCode && String(s.student_code || '').trim() === sCode)
+    // 1. فحص تسليمات الكويزات الأونلاين الفعلية القادمة من قاعدة البيانات مع دمج كافة المصادر
+    const rawOnlineSubs = [
+      ...(Array.isArray(state?.onlineSubmissions) ? state.onlineSubmissions : []),
+      ...(Array.isArray(window.__centrlyOnlineSubmissions) ? window.__centrlyOnlineSubmissions : []),
+      ...(Array.isArray(window.centrlyApp?.quizzesState?.onlineSubmissions) ? window.centrlyApp.quizzesState.onlineSubmissions : [])
+    ];
+
+    const seen = new Set();
+    const onlineSubs = [];
+    for (const item of rawOnlineSubs) {
+      if (!item) continue;
+      const key = item.id || `${item.student_code}_${item.quiz_id || item.material_id}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        onlineSubs.push(item);
+      }
+    }
+
+    const studentSubs = onlineSubs.filter(s => 
+      (sCode && String(s.student_code || '').trim() === sCode) || 
+      (sId && String(s.student_id || '').trim() === sId)
     );
 
-    if (sub) {
+    if (studentSubs.length > 0) {
+      // رتّب التسليمات من الأحدث للأقدم بناء على تاريخ التصحيح أو التسليم
+      studentSubs.sort((a, b) => {
+        const timeA = new Date(b.graded_at || b.submitted_at || 0).getTime();
+        const timeB = new Date(a.graded_at || a.submitted_at || 0).getTime();
+        return timeA - timeB;
+      });
+      const sub = studentSubs[0];
+
       let notes = {};
       try {
         notes = typeof sub.teacher_notes === 'string' ? JSON.parse(sub.teacher_notes) : (sub.teacher_notes || {});
       } catch (_) {}
 
-      const hasEssay = Boolean(notes.has_essay || sub.has_essay);
+      const hasEssay = Boolean(notes.has_essay || sub.has_essay || (Array.isArray(sub.questions) && sub.questions.some(q => q.type === 'essay')));
       const isGraded = notes.is_graded === true || sub.is_graded === true || sub.status === 'approved' || sub.status === 'graded';
+      
       const score = (notes.final_score !== undefined && notes.final_score !== null)
         ? Number(notes.final_score)
         : (notes.total_score !== undefined && notes.total_score !== null)
           ? Number(notes.total_score)
           : (sub.total_score !== undefined && sub.total_score !== null)
             ? Number(sub.total_score)
-            : (sub.score !== undefined && sub.score !== null)
-              ? Number(sub.score)
-              : (sub.final_score !== undefined && sub.final_score !== null)
-                ? Number(sub.final_score)
-                : null;
+            : (sub.final_score !== undefined && sub.final_score !== null)
+              ? Number(sub.final_score)
+              : (sub.score !== undefined && sub.score !== null)
+                ? Number(sub.score)
+                : ((sub.mcq_score !== undefined || sub.essay_score !== undefined)
+                    ? (Number(sub.mcq_score || 0) + Number(sub.essay_score || 0))
+                    : null);
+
       const maxScore = Number(notes.max_score || sub.max_score || 10);
       const quizTitle = notes.title || sub.quiz_title || notes.quiz_title || (notes.quiz_number ? `كويز ${notes.quiz_number}` : (sub.quiz_number ? `كويز ${sub.quiz_number}` : 'كويز أونلاين'));
 
@@ -212,15 +265,22 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
             const raw = localStorage.getItem(key);
             if (raw) {
               const data = JSON.parse(raw);
-              if (data.has_essay && !data.is_graded) {
-                return { title: data.title || 'كويز أونلاين', status: 'pending_grading', displayText: 'قيد التصحيح' };
+              if (data.has_essay && !data.is_graded && data.status !== 'approved') {
+                return { title: data.title || data.quiz_title || 'كويز أونلاين', status: 'pending_grading', displayText: 'قيد التصحيح' };
               }
-              if (data.score !== undefined && data.score !== null) {
+              const localScore = (data.final_score !== undefined && data.final_score !== null)
+                ? Number(data.final_score)
+                : (data.total_score !== undefined && data.total_score !== null)
+                  ? Number(data.total_score)
+                  : (data.score !== undefined && data.score !== null)
+                    ? Number(data.score)
+                    : null;
+              if (localScore !== null && !isNaN(localScore)) {
                 const max = Number(data.max_score || 10);
-                const pct = Math.round((Number(data.score) / max) * 100);
+                const pct = Math.round((localScore / max) * 100);
                 return {
-                  title: data.title || 'كويز أونلاين',
-                  score: data.score,
+                  title: data.title || data.quiz_title || 'كويز أونلاين',
+                  score: localScore,
                   maxScore: max,
                   pct,
                   tier: pct >= 85 ? 'ممتاز' : (pct >= 75 ? 'جيد جداً' : (pct >= 60 ? 'جيد' : 'يحتاج متابعة')),
