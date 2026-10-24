@@ -24,7 +24,7 @@ import { renderRiskWatchlistView, registerRiskWatchlistActions } from './compone
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=7.5.0';
+import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=7.6.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -1125,11 +1125,13 @@ class CentrlyApp {
 
     if (route === 'online-quizzes') {
       this.quizzesState = this.quizzesState || {};
+      this.quizzesState.onlineViewMode = 'list';
       if (this.quizzesState.activeSubTab !== 'online_grading') {
         this.quizzesState.activeSubTab = 'online_builder';
       }
     } else if (route === 'paper-exams') {
       this.quizzesState = this.quizzesState || {};
+      this.quizzesState.paperViewMode = 'list';
       if (this.quizzesState.activeSubTab !== 'paper_scanner') {
         this.quizzesState.activeSubTab = 'paper_builder';
       }
@@ -1450,15 +1452,6 @@ class CentrlyApp {
         case 'online-quizzes':
         case 'paper-exams':
         case 'quizzes': {
-          if (route === 'online-quizzes') {
-            this.quizzesState.activeSubTab = this.quizzesState.activeSubTab === 'online_grading' ? 'online_grading' : 'online_builder';
-            if (this.loadRichQuizzes) await this.loadRichQuizzes();
-          } else if (route === 'paper-exams') {
-            this.quizzesState.activeSubTab = this.quizzesState.activeSubTab === 'paper_scanner' ? 'paper_scanner' : 'paper_builder';
-            if (this.loadRichQuizzes) await this.loadRichQuizzes();
-          } else if (route === 'quizzes') {
-            this.quizzesState.activeSubTab = 'roster';
-          }
           const [grpRes, studRes] = await Promise.all([
             (!this.groups || this.groups.length === 0) ? request('/groups').catch(() => []) : Promise.resolve(this.groups),
             (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students),
@@ -1467,6 +1460,15 @@ class CentrlyApp {
           this.students = Array.isArray(studRes) ? studRes : (studRes?.students || []);
           if (!this.quizzesState.selectedGroupId && this.groups.length > 0) {
             this.quizzesState.selectedGroupId = this.groups[0].id;
+          }
+          if (route === 'online-quizzes') {
+            this.quizzesState.activeSubTab = this.quizzesState.activeSubTab === 'online_grading' ? 'online_grading' : 'online_builder';
+            if (this.loadRichQuizzes) await this.loadRichQuizzes();
+          } else if (route === 'paper-exams') {
+            this.quizzesState.activeSubTab = this.quizzesState.activeSubTab === 'paper_scanner' ? 'paper_scanner' : 'paper_builder';
+            if (this.loadRichQuizzes) await this.loadRichQuizzes();
+          } else if (route === 'quizzes') {
+            this.quizzesState.activeSubTab = 'roster';
           }
           if (this.quizzesState.selectedGroupId) {
             try {
