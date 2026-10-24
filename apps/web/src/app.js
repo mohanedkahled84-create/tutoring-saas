@@ -24,7 +24,7 @@ import { renderRiskWatchlistView, registerRiskWatchlistActions } from './compone
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=7.4.0';
+import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=7.5.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -385,6 +385,8 @@ class CentrlyApp {
       case 'sessions':
         return Boolean(this.sessionState?.id || (Array.isArray(this.groups) && this.groups.length > 0));
       case 'quizzes':
+      case 'online-quizzes':
+      case 'paper-exams':
         return Boolean(Array.isArray(this.groups) && this.groups.length > 0);
       case 'homework':
         return Boolean(this.homeworkState?.assignments);
@@ -862,7 +864,7 @@ class CentrlyApp {
       (this.user?.tenant_name || '').includes('عمر') ||
       isAdmin;
     const validTeacherRoutes = [
-      'sessions', ...(isOmarMohamadi ? ['video-lessons'] : []), 'quizzes', 'homework', 'materials',
+      'sessions', ...(isOmarMohamadi ? ['video-lessons'] : []), 'online-quizzes', 'paper-exams', 'quizzes', 'homework', 'materials',
       'students', 'groups', 'assistants', 'calendar', 'student-cards',
       'dashboard', 'reports', 'risk-watchlist', 'settings', 'billing', 'whatsapp'
     ];
@@ -1121,6 +1123,20 @@ class CentrlyApp {
       route = isCenter ? 'center-dashboard' : 'dashboard';
     }
 
+    if (route === 'online-quizzes') {
+      this.quizzesState = this.quizzesState || {};
+      if (this.quizzesState.activeSubTab !== 'online_grading') {
+        this.quizzesState.activeSubTab = 'online_builder';
+      }
+    } else if (route === 'paper-exams') {
+      this.quizzesState = this.quizzesState || {};
+      if (this.quizzesState.activeSubTab !== 'paper_scanner') {
+        this.quizzesState.activeSubTab = 'paper_builder';
+      }
+    } else if (route === 'quizzes') {
+      this.quizzesState = this.quizzesState || {};
+      this.quizzesState.activeSubTab = 'roster';
+    }
     this.currentRoute = route;
     try {
       localStorage.setItem('centrly_current_route', route);
@@ -1431,7 +1447,18 @@ class CentrlyApp {
           this.renderMainContent();
           break;
         }
+        case 'online-quizzes':
+        case 'paper-exams':
         case 'quizzes': {
+          if (route === 'online-quizzes') {
+            this.quizzesState.activeSubTab = this.quizzesState.activeSubTab === 'online_grading' ? 'online_grading' : 'online_builder';
+            if (this.loadRichQuizzes) await this.loadRichQuizzes();
+          } else if (route === 'paper-exams') {
+            this.quizzesState.activeSubTab = this.quizzesState.activeSubTab === 'paper_scanner' ? 'paper_scanner' : 'paper_builder';
+            if (this.loadRichQuizzes) await this.loadRichQuizzes();
+          } else if (route === 'quizzes') {
+            this.quizzesState.activeSubTab = 'roster';
+          }
           const [grpRes, studRes] = await Promise.all([
             (!this.groups || this.groups.length === 0) ? request('/groups').catch(() => []) : Promise.resolve(this.groups),
             (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students),
@@ -2177,14 +2204,17 @@ class CentrlyApp {
         return renderCenterAssistantsView(this.centerAssistants, this.centerTeachers);
       case 'center-rooms':
         return renderCenterRoomsView(this.centerRooms);
+      case 'online-quizzes':
+      case 'paper-exams':
       case 'quizzes':
         return renderTeacherQuizzesView(
           this.quizzesState, 
           this.groups, 
           this.students, 
           isRouteFetching, 
-          Boolean(this.dataLoadedState['quizzes']),
-          this.user
+          Boolean(this.dataLoadedState['quizzes'] || this.dataLoadedState[this.currentRoute]),
+          this.user,
+          this.currentRoute
         );
       case 'calendar':
         return renderTeacherCalendar(this.calendarState);

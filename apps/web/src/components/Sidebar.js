@@ -86,7 +86,6 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
   // 5. Administration & Settings (Assistants, WhatsApp, Billing, Activity)
   const teacherDailyRoutes = [
     { id: 'sessions', title: 'بدء حصة ورصد الحضور', icon: 'sessions' },
-    ...(isOmarMohamadi ? [] : [{ id: 'quizzes', title: 'رصد درجات الكويزات', icon: 'reports' }]),
     { id: 'homework', title: 'مراجعة وتصحيح الواجبات', icon: 'homework' },
     { id: 'materials', title: 'المذكرات والماتريال', icon: 'materials' },
   ];
@@ -96,13 +95,20 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       category: 'العمليات اليومية للحصة',
       routes: teacherDailyRoutes,
     },
+    {
+      category: 'منظومة الكويزات والامتحانات',
+      routes: [
+        { id: 'online-quizzes', title: 'الكويزات الإلكترونية (أونلاين)', icon: 'edit' },
+        { id: 'paper-exams', title: 'الامتحانات الورقية وبابل شيت', icon: 'print' },
+        { id: 'quizzes', title: 'رصد درجات الكويزات يدوياً', icon: 'reports' },
+      ],
+    },
     ...(isOmarMohamadi ? [
       {
         category: 'منصتي والتعليم الذكي (PRO)',
         routes: [
           { id: 'platform-builder', title: 'إنشاء منصتك المستقلة', icon: 'globe', isPro: true },
           { id: 'video-lessons', title: 'فيديوهات الشرح والحل', icon: 'video', isPro: true },
-          { id: 'quizzes', title: 'الكويزات والامتحانات الشاملة', icon: 'reports', isPro: true },
         ],
       }
     ] : []),

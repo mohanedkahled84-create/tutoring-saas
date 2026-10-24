@@ -13,12 +13,30 @@ import { getIcon } from "../utils/icons.js";
  * 5. paper_scanner: تصحيح الامتحانات الورقية (Camera & Photo Barcode/OMR Bubble Sheet Scanner)
  */
 
-export function renderTeacherQuizzesView(state = {}, groups = [], students = [], isLoading = false, hasLoaded = true, currentUser = null) {
-  const user = currentUser || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
+export function renderTeacherQuizzesView(state = {}, groups = [], students = [], isLoading = false, hasLoaded = true, currentUser = null, currentRoute = 'online-quizzes') {
+    const user = currentUser || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
   const userEmail = (user?.email || '').toLowerCase();
   const isAdmin = user?.role === 'admin' || user?.is_superadmin;
   const isPro = isUserPro(user);
-  const activeSubTab = state.activeSubTab || (isPro ? 'online_builder' : 'roster');
+
+  // تحديد الوجهة والتبويب النشط بهدوء ووضوح
+  let effectiveRoute = currentRoute || (typeof window !== 'undefined' ? window.centrlyApp?.currentRoute : '') || 'online-quizzes';
+  if (!['online-quizzes', 'paper-exams', 'quizzes'].includes(effectiveRoute)) {
+    if (state.activeSubTab === 'roster') effectiveRoute = 'quizzes';
+    else if (state.activeSubTab === 'paper_builder' || state.activeSubTab === 'paper_scanner') effectiveRoute = 'paper-exams';
+    else effectiveRoute = 'online-quizzes';
+  }
+
+  let activeSubTab = state.activeSubTab;
+  if (effectiveRoute === 'online-quizzes') {
+    if (activeSubTab !== 'online_grading') activeSubTab = 'online_builder';
+  } else if (effectiveRoute === 'paper-exams') {
+    if (activeSubTab !== 'paper_scanner') activeSubTab = 'paper_builder';
+  } else if (effectiveRoute === 'quizzes') {
+    activeSubTab = 'roster';
+  }
+  state.activeSubTab = activeSubTab;
+
   const selectedGroupId = state.selectedGroupId || (groups[0]?.id || '');
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
 
@@ -44,34 +62,41 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   const pendingSubmissions = state.pendingSubmissions || [];
   const pendingCount = pendingSubmissions.length;
   const onlineSubmissions = state.onlineSubmissions || [];
-
-
+  const richQuizzes = (state.richQuizzes || []).filter(q => q.exam_mode !== 'paper');
 
   return `
-    <div style="display: flex; flex-direction: column; gap: 1.25rem;" dir="rtl">
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;" dir="rtl">
       
-      <!-- Top Title & Navigation Header Card -->
-      <div class="card" style="margin: 0; padding: 1.25rem 1.5rem; border-top: 4px solid var(--centrly-blue-700);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-          <div>
-            <h2 class="card-title" style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: var(--centrly-ink);">
-              <span style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: #eff6ff; color: var(--centrly-blue-700);">
-                ${getIcon('reports', 20, 'var(--centrly-blue-700)')}
-              </span>
-              <span>منظومة الكويزات والامتحانات الشاملة</span>
-            </h2>
-            <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.35rem 0 0 0;">
-              بناء وإدارة الامتحانات الإلكترونية والورقية، تصحيح المقالي بالعين، والماسح الضوئي للبابل شيت (OMR).
-            </p>
+      <!-- Top Title & Navigation Header Card (Calm Minimal & Segmented) -->
+      <div class="card" style="margin: 0; padding: 0.75rem 1rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          
+          <!-- 3-Pill Modern Segmented Control -->
+          <div style="display: inline-flex; align-items: center; background: #f1f5f9; padding: 3px; border-radius: 7px; gap: 3px;">
+            <button type="button" 
+              onclick="window.centrlyApp.navigate('online-quizzes')"
+              style="height: 30px; padding: 0 13px; font-size: 0.76rem; font-weight: 700; border-radius: 5px; border: none; cursor: pointer; transition: all 0.15s ease; ${effectiveRoute === 'online-quizzes' ? 'background: #0f172a; color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.08);' : 'background: transparent; color: #475569;'}">
+              الكويزات الأونلاين
+            </button>
+            <button type="button" 
+              onclick="window.centrlyApp.navigate('paper-exams')"
+              style="height: 30px; padding: 0 13px; font-size: 0.76rem; font-weight: 700; border-radius: 5px; border: none; cursor: pointer; transition: all 0.15s ease; ${effectiveRoute === 'paper-exams' ? 'background: #0f172a; color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.08);' : 'background: transparent; color: #475569;'}">
+              الامتحانات الورقية وبابل شيت
+            </button>
+            <button type="button" 
+              onclick="window.centrlyApp.navigate('quizzes')"
+              style="height: 30px; padding: 0 13px; font-size: 0.76rem; font-weight: 700; border-radius: 5px; border: none; cursor: pointer; transition: all 0.15s ease; ${effectiveRoute === 'quizzes' ? 'background: #0f172a; color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.08);' : 'background: transparent; color: #475569;'}">
+              رصد الدرجات يدوياً
+            </button>
           </div>
 
-          <!-- Group Switcher -->
-          <div style="display: flex; align-items: center; gap: 0.65rem; background: #f8fafc; padding: 0.4rem 0.85rem; border-radius: 10px; border: 1.5px solid var(--centrly-line);">
-            <label style="font-size: 0.85rem; font-weight: 800; color: var(--centrly-ink); white-space: nowrap;">المجموعة الدراسية:</label>
+          <!-- Group Switcher (Clean, compact) -->
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 0.74rem; color: #64748b; font-weight: 600;">المجموعة:</span>
             <select 
               id="quizGroupSelect" 
               class="form-select" 
-              style="width: 210px; font-weight: 800; background: #ffffff; border-color: #cbd5e1;"
+              style="height: 30px; font-size: 0.76rem; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 5px; padding: 0 8px; color: #0f172a; max-width: 200px;"
               onchange="window.centrlyApp.switchQuizGroup(this.value)"
             >
               ${groups.map(g => `
@@ -81,95 +106,56 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
               `).join('')}
             </select>
           </div>
-        </div>
-
-        <!-- 5-Badge Modular Navigation Bar (Horizontal Segmented Chips) -->
-        <div id="quizSubTabsNav" style="display: flex; gap: 0.65rem; flex-wrap: wrap; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--centrly-line);">
-          
-          <!-- Badge 1: إنشاء امتحان أونلاين -->
-          <button 
-            type="button"
-            class="quiz-nav-badge ${activeSubTab === 'online_builder' ? 'active' : ''}"
-            style="${getBadgeStyle(activeSubTab === 'online_builder')}"
-            onclick="window.centrlyApp.switchQuizSubTab('online_builder')"
-          >
-            ${getIcon('edit', 17, activeSubTab === 'online_builder' ? '#1e40af' : '#64748b')}
-            <span>إنشاء امتحان أونلاين</span>
-            <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.62rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">PRO</span>
-          </button>
-
-          <!-- Badge 2: تصحيح الامتحانات الإلكترونية -->
-          <button 
-            type="button"
-            class="quiz-nav-badge ${activeSubTab === 'online_grading' ? 'active' : ''}"
-            style="${getBadgeStyle(activeSubTab === 'online_grading')}"
-            onclick="window.centrlyApp.switchQuizSubTab('online_grading')"
-          >
-            ${getIcon('eye', 17, activeSubTab === 'online_grading' ? '#1e40af' : '#64748b')}
-            <span>تصحيح الامتحانات الإلكترونية</span>
-            <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.62rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">PRO</span>
-            ${pendingCount > 0 ? `
-              <span style="background: #ef4444; color: #ffffff; font-size: 0.72rem; padding: 1px 7px; border-radius: 12px; font-weight: 900; margin-right: 0.35rem; line-height: 1.4;">
-                ${pendingCount}
-              </span>
-            ` : ''}
-          </button>
-
-          <!-- Badge 3: إنشاء امتحان ورقي -->
-          <button 
-            type="button"
-            class="quiz-nav-badge ${activeSubTab === 'paper_builder' ? 'active' : ''}"
-            style="${getBadgeStyle(activeSubTab === 'paper_builder')}"
-            onclick="window.centrlyApp.switchQuizSubTab('paper_builder')"
-          >
-            ${getIcon('print', 17, activeSubTab === 'paper_builder' ? '#1e40af' : '#64748b')}
-            <span>إنشاء امتحان ورقي</span>
-            <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.62rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">PRO</span>
-          </button>
-
-          <!-- Badge 4: تصحيح الامتحانات الورقية -->
-          <button 
-            type="button"
-            class="quiz-nav-badge ${activeSubTab === 'paper_scanner' ? 'active' : ''}"
-            style="${getBadgeStyle(activeSubTab === 'paper_scanner', true)}"
-            onclick="window.centrlyApp.switchQuizSubTab('paper_scanner')"
-          >
-            ${getIcon('camera', 17, activeSubTab === 'paper_scanner' ? '#047857' : '#64748b')}
-            <span>تصحيح الامتحانات الورقية</span>
-            <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.62rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">PRO</span>
-          </button>
-
-          <!-- Badge 5: رصد درجات امتحان يدوياً (الترتيب الأخير) -->
-          <button 
-            type="button"
-            class="quiz-nav-badge ${activeSubTab === 'roster' ? 'active' : ''}"
-            style="${getBadgeStyle(activeSubTab === 'roster')}"
-            onclick="window.centrlyApp.switchQuizSubTab('roster')"
-          >
-            ${getIcon('check', 17, activeSubTab === 'roster' ? '#1e40af' : '#64748b')}
-            <span>رصد درجات امتحان يدوياً</span>
-            <span style="background: #e2e8f0; color: #475569; font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-right: 0.35rem;">مجاني</span>
-          </button>
 
         </div>
-      </div>
 
-      ${!isPro && activeSubTab !== 'roster' ? `
-        <div style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 14px 18px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 32px; height: 32px; border-radius: 8px; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              ${getIcon('info', 18, '#b45309')}
+        <!-- Contextual Action Strip -->
+        ${effectiveRoute === 'online-quizzes' ? `
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button type="button" onclick="window.centrlyApp.switchQuizSubTab('online_builder')"
+                style="height: 27px; padding: 0 10px; font-size: 0.73rem; font-weight: 600; border-radius: 5px; border: 1px solid ${activeSubTab === 'online_builder' ? '#0f172a' : '#e2e8f0'}; background: ${activeSubTab === 'online_builder' ? '#0f172a' : '#ffffff'}; color: ${activeSubTab === 'online_builder' ? '#ffffff' : '#475569'}; cursor: pointer;">
+                بنك الكويزات (${richQuizzes.length})
+              </button>
+              <button type="button" onclick="window.centrlyApp.switchQuizSubTab('online_grading')"
+                style="height: 27px; padding: 0 10px; font-size: 0.73rem; font-weight: 600; border-radius: 5px; border: 1px solid ${activeSubTab === 'online_grading' ? '#0f172a' : '#e2e8f0'}; background: ${activeSubTab === 'online_grading' ? '#0f172a' : '#ffffff'}; color: ${activeSubTab === 'online_grading' ? '#ffffff' : '#475569'}; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                <span>تصحيح المقالي</span>
+                ${pendingCount > 0 ? `<span style="background: #ef4444; color: #ffffff; font-size: 0.65rem; padding: 0 5px; border-radius: 8px; font-weight: 700;">${pendingCount}</span>` : ''}
+              </button>
             </div>
+
             <div>
-              <div style="font-weight: 800; font-size: 0.88rem;">أنت الآن في وضع المعاينة والاستعراض لميزات باقة PRO</div>
-              <div style="font-size: 0.8rem; color: #b45309; margin-top: 2px;">يمكنك تجربة تجهيز الأسئلة وتوليد النماذج، وعند الرغبة في نشر الامتحان وتفعيله للطلاب يلزم الترقية لباقة PRO.</div>
+              <button type="button" onclick="window.centrlyApp.startNewOnlineExamWizard()"
+                style="height: 29px; padding: 0 11px; font-size: 0.75rem; font-weight: 600; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                <span>+ إنشاء كويز أونلاين جديد</span>
+              </button>
             </div>
           </div>
-          <button type="button" onclick="window.centrlyApp && window.centrlyApp.navigateTo('settings')" style="background: #b45309; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer; white-space: nowrap;">
-            ترقية الحساب لباقة PRO
-          </button>
-        </div>
-      ` : ''}
+        ` : ''}
+
+        ${effectiveRoute === 'paper-exams' ? `
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button type="button" onclick="window.centrlyApp.switchQuizSubTab('paper_builder')"
+                style="height: 27px; padding: 0 10px; font-size: 0.73rem; font-weight: 600; border-radius: 5px; border: 1px solid ${activeSubTab === 'paper_builder' ? '#0f172a' : '#e2e8f0'}; background: ${activeSubTab === 'paper_builder' ? '#0f172a' : '#ffffff'}; color: ${activeSubTab === 'paper_builder' ? '#ffffff' : '#475569'}; cursor: pointer;">
+                نماذج الامتحانات الورقية والبابل شيت
+              </button>
+              <button type="button" onclick="window.centrlyApp.switchQuizSubTab('paper_scanner')"
+                style="height: 27px; padding: 0 10px; font-size: 0.73rem; font-weight: 600; border-radius: 5px; border: 1px solid ${activeSubTab === 'paper_scanner' ? '#0f172a' : '#e2e8f0'}; background: ${activeSubTab === 'paper_scanner' ? '#0f172a' : '#ffffff'}; color: ${activeSubTab === 'paper_scanner' ? '#ffffff' : '#475569'}; cursor: pointer;">
+                تصحيح الورقي بالماسح الضوئي (الكاميرا)
+              </button>
+            </div>
+
+            <div>
+              <button type="button" onclick="window.centrlyApp.startNewPaperExamWizard ? window.centrlyApp.startNewPaperExamWizard() : window.centrlyApp.startNewOnlineExamWizard()"
+                style="height: 29px; padding: 0 11px; font-size: 0.75rem; font-weight: 600; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                <span>+ إنشاء نموذج ورقي جديد</span>
+              </button>
+            </div>
+          </div>
+        ` : ''}
+
+      </div>
 
       <!-- Tab Content Views -->
       ${activeSubTab === 'online_builder' ? renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
@@ -476,32 +462,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
     return `
       <div style="display: flex; flex-direction: column; gap: 1.25rem;">
         
-        <!-- Header & Add Button -->
-        <div class="card" style="margin: 0; border-top: 4px solid var(--centrly-blue-700);">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink); display: flex; align-items: center; gap: 0.4rem;">
-                ${getIcon('edit', 20, 'var(--centrly-blue-700)')}
-                <span>بنك الامتحانات الإلكترونية (أونلاين)</span>
-              </h3>
-              <p style="font-size: 0.82rem; color: var(--centrly-text); margin: 0.25rem 0 0 0;">
-                قم بإنشاء امتحان إلكتروني، تحديد عدد الأسئلة وتعبئتها خطوة بخطوة سؤالاً بسؤال، وضبط توقيت ونافذة إتاحة الامتحان.
-              </p>
-            </div>
 
-            <div>
-              <button 
-                type="button" 
-                class="btn btn-primary" 
-                style="padding: 0.6rem 1.4rem; font-weight: 800; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
-                onclick="window.centrlyApp.startNewOnlineExamWizard()"
-              >
-                ${getIcon('add', 18, '#ffffff')}
-                <span>+ إنشاء امتحان إلكتروني جديد</span>
-              </button>
-            </div>
-          </div>
-        </div>
 
         <!-- Exams Cards Grid -->
         ${richQuizzes.length > 0 ? `
