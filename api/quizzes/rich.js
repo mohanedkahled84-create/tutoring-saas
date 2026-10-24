@@ -110,10 +110,10 @@ export default async function handler(req, res) {
             try {
               const parsed = JSON.parse(row.message_body || '{}');
               if (parsed && parsed.group_id) {
-                if (!group_id || parsed.group_id === group_id) {
+                if (!group_id || String(parsed.group_id).trim() === String(group_id).trim()) {
                   // Dedup against existing richQuizzes
                   const exists = richQuizzes.some(
-                    (q) => q.group_id === parsed.group_id && Number(q.quiz_number) === Number(parsed.quiz_number) && (q.exam_mode || 'online') === (parsed.exam_mode || 'online')
+                    (q) => String(q.group_id).trim() === String(parsed.group_id).trim() && Number(q.quiz_number) === Number(parsed.quiz_number) && (q.exam_mode || 'online') === (parsed.exam_mode || 'online')
                   );
                   if (!exists) {
                     richQuizzes.push(parsed);

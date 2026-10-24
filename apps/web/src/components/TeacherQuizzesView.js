@@ -37,6 +37,9 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   }
   state.activeSubTab = activeSubTab;
 
+  if (!state.selectedGroupId && Array.isArray(groups) && groups.length > 0) {
+    state.selectedGroupId = groups[0].id;
+  }
   const selectedGroupId = state.selectedGroupId || (groups[0]?.id || '');
   const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
 
@@ -1702,7 +1705,10 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
     if (q.exam_mode !== 'paper') return false;
     if (!selectedGroupId) return true;
     if (!q.group_id || q.group_id === 'all') return true;
-    return String(q.group_id) === String(selectedGroupId);
+    if (String(q.group_id).trim() === String(selectedGroupId).trim()) return true;
+    if (Array.isArray(q.target_group_ids) && q.target_group_ids.some(gid => String(gid).trim() === String(selectedGroupId).trim())) return true;
+    if (Array.isArray(q.group_ids) && q.group_ids.some(gid => String(gid).trim() === String(selectedGroupId).trim())) return true;
+    return false;
   });
 
   const selectedQuizId = state.printQuizId || paperQuizzes[0]?.id || null;
@@ -2332,25 +2338,27 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 <span>${layoutMode === 'all' ? 'عرض سؤال بسؤال' : 'عرض كافة الأسئلة'}</span>
               </button>
 
-              ${state.isSavingPaperExam ? `
-                <button 
-                  type="button" 
-                  disabled
-                  style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #64748b; color: #ffffff; border: none; border-radius: 5px; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px; opacity: 0.85;"
-                >
-                  <span style="width: 12px; height: 12px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: centrlySpin 0.75s linear infinite;"></span>
-                  <span>جاري الحفظ والتوليد...</span>
-                </button>
-              ` : `
-                <button 
-                  type="button" 
-                  style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
-                  onclick="window.centrlyApp.savePaperExam()"
-                >
-                  ${getIcon('check', 13, '#ffffff')}
-                  <span>حفظ وتوليد نماذج الامتحان</span>
-                </button>
-              `}
+              ${(layoutMode === 'all' || currentPaperQIdx === totalQuestions - 1) ? `
+                ${state.isSavingPaperExam ? `
+                  <button 
+                    type="button" 
+                    disabled
+                    style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #64748b; color: #ffffff; border: none; border-radius: 5px; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px; opacity: 0.85;"
+                  >
+                    <span style="width: 12px; height: 12px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: centrlySpin 0.75s linear infinite;"></span>
+                    <span>جاري الحفظ والتوليد...</span>
+                  </button>
+                ` : `
+                  <button 
+                    type="button" 
+                    style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
+                    onclick="window.centrlyApp.savePaperExam()"
+                  >
+                    ${getIcon('check', 13, '#ffffff')}
+                    <span>حفظ وتوليد نماذج الامتحان</span>
+                  </button>
+                `}
+              ` : ''}
             </div>
           </div>
 
@@ -2405,7 +2413,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 ${currentPaperQIdx < totalQuestions - 1 ? `
                   <button 
                     type="button" 
-                    style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
+                    style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                     onclick="window.centrlyApp.nextPaperQuestion()"
                   >
                     السؤال التالي ▶
@@ -2426,41 +2434,28 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                     style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                     onclick="window.centrlyApp.savePaperExam()"
                   >
-                    إنهاء وحفظ الامتحان
+                    ${getIcon('check', 13, '#ffffff')}
+                    <span>إنهاء وحفظ الامتحان</span>
                   </button>
                 `)}
               </div>
 
-              <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <button 
-                  type="button" 
-                  style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 600; background: #f8fafc; color: #475569; border: 1px dashed #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
-                  onclick="window.centrlyApp.addPaperQuestion()"
-                >
-                  ${getIcon('add', 13)}
-                  <span>+ إضافة سؤال تالٍ</span>
-                </button>
-
-                ${state.isSavingPaperExam ? `
+              ${currentPaperQIdx === totalQuestions - 1 ? `
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
                   <button 
                     type="button" 
-                    disabled
-                    style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #64748b; color: #ffffff; border: none; border-radius: 5px; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px; opacity: 0.85;"
+                    style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 600; background: #f8fafc; color: #475569; border: 1px dashed #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                    onclick="window.centrlyApp.addPaperQuestion()"
                   >
-                    <span style="width: 12px; height: 12px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: centrlySpin 0.75s linear infinite;"></span>
-                    <span>جاري الحفظ والتوليد...</span>
+                    ${getIcon('add', 13)}
+                    <span>+ إضافة سؤال تالٍ</span>
                   </button>
-                ` : `
-                  <button 
-                    type="button" 
-                    style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
-                    onclick="window.centrlyApp.savePaperExam()"
-                  >
-                    ${getIcon('check', 13, '#ffffff')}
-                    <span>حفظ وتوليد نماذج الامتحان</span>
-                  </button>
-                `}
-              </div>
+                </div>
+              ` : `
+                <div style="font-size: 0.76rem; font-weight: 700; color: #64748b; padding: 0 6px;">
+                  السؤال ${currentPaperQIdx + 1} من ${totalQuestions}
+                </div>
+              `}
             </div>
 
           </div>
@@ -3170,12 +3165,12 @@ export function registerTeacherQuizzesActions(app) {
     this.quizzesState.isLoadingRichQuizzes = true;
     try {
       const gid = this.quizzesState.selectedGroupId;
-      let res = await fetch(`/api/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null);
+      let res = await fetch('/api/quizzes/rich').then(r => r.json()).catch(() => null);
       if (!res || !res.success) {
-        res = await fetch(`https://centerly-eg.com/api/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null);
+        res = await fetch('https://centerly-eg.com/api/quizzes/rich').then(r => r.json()).catch(() => null);
       }
       if (!res || !res.success) {
-        res = await request(`/quizzes/rich${gid ? `?group_id=${gid}` : ''}`).catch(() => null);
+        res = await request('/quizzes/rich').catch(() => null);
       }
       if (res?.success && Array.isArray(res.quizzes)) {
         this.quizzesState.richQuizzes = res.quizzes;
