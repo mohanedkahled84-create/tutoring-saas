@@ -81,11 +81,14 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   const gradedSubmissions = (onlineSubmissions || []).filter(sub => sub.status === 'approved' || sub.is_graded || sub.status === 'graded');
   // Filter quizzes by group
   const filterByGroup = (list) => {
-    if (!selectedGroupId) return list;
+    if (!selectedGroupId || selectedGroupId === 'all') return list;
     return list.filter(q => {
       if (!q.group_id) return true; // legacy unassigned fallback
       if (q.group_id === 'all') return true;
-      return String(q.group_id) === String(selectedGroupId);
+      if (String(q.group_id).trim() === String(selectedGroupId).trim()) return true;
+      if (Array.isArray(q.group_ids) && q.group_ids.some(gid => String(gid).trim() === String(selectedGroupId).trim())) return true;
+      if (Array.isArray(q.target_group_ids) && q.target_group_ids.some(gid => String(gid).trim() === String(selectedGroupId).trim())) return true;
+      return false;
     });
   };
 
@@ -600,9 +603,12 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
   const allRich = state.richQuizzes || [];
   const richQuizzes = allRich.filter(q => {
     if (q.exam_mode === 'paper') return false;
-    if (!selectedGroupId) return true;
+    if (!selectedGroupId || selectedGroupId === 'all') return true;
     if (!q.group_id || q.group_id === 'all') return true;
-    return String(q.group_id) === String(selectedGroupId);
+    if (String(q.group_id).trim() === String(selectedGroupId).trim()) return true;
+    if (Array.isArray(q.group_ids) && q.group_ids.some(gid => String(gid).trim() === String(selectedGroupId).trim())) return true;
+    if (Array.isArray(q.target_group_ids) && q.target_group_ids.some(gid => String(gid).trim() === String(selectedGroupId).trim())) return true;
+    return false;
   });
 
   if (viewMode === 'list') {
@@ -3500,6 +3506,38 @@ export function registerTeacherQuizzesActions(app) {
     }
   };
 
+
+  // Auto-reconciliation: ensure any quiz with student submissions appears in richQuizzes
+  app.reconcileQuizzesFromSubmissions = function() {
+    if (!Array.isArray(this.quizzesState.richQuizzes)) {
+      this.quizzesState.richQuizzes = [];
+    }
+    const submissions = this.quizzesState.onlineSubmissions || [];
+    for (const sub of submissions) {
+      const qId = sub.quiz_id || sub.material_id;
+      if (!qId) continue;
+      const exists = this.quizzesState.richQuizzes.some(
+        q => q.id === qId || (String(q.group_id).trim() === String(sub.group_id).trim() && Number(q.quiz_number) === Number(sub.quiz_number) && (q.exam_mode || 'online') === 'online')
+      );
+      if (!exists && Array.isArray(sub.questions) && sub.questions.length > 0) {
+        this.quizzesState.richQuizzes.push({
+          id: qId,
+          title: sub.quiz_title || `كويز ${sub.quiz_number || 1}`,
+          subject: sub.subject || 'الفيزياء',
+          group_id: sub.group_id,
+          quiz_number: Number(sub.quiz_number) || 1,
+          time_limit_minutes: Number(sub.time_limit_minutes) || 20,
+          available_date: sub.submitted_at ? sub.submitted_at.slice(0, 10) : '',
+          start_time: null,
+          end_time: null,
+          exam_mode: 'online',
+          questions: sub.questions,
+          created_at: sub.submitted_at || new Date().toISOString()
+        });
+      }
+    }
+  };
+
   // Rich quizzes loader
   app.loadRichQuizzes = async function() {
     this.quizzesState.isLoadingRichQuizzes = true;
@@ -3514,6 +3552,9 @@ export function registerTeacherQuizzesActions(app) {
       }
       if (res?.success && Array.isArray(res.quizzes)) {
         this.quizzesState.richQuizzes = res.quizzes;
+      }
+      if (typeof this.reconcileQuizzesFromSubmissions === 'function') {
+        this.reconcileQuizzesFromSubmissions();
       }
     } catch (err) {
       console.warn('[Centrly] Could not load rich quizzes:', err);
@@ -3572,6 +3613,10 @@ export function registerTeacherQuizzesActions(app) {
       this.quizzesState.pendingSubmissions = Array.isArray(pendingData) 
         ? pendingData 
         : this.quizzesState.onlineSubmissions.filter(s => s.status === 'pending' || s.status === 'needs_grading' || (!s.is_graded && s.status !== 'approved'));
+
+      if (typeof this.reconcileQuizzesFromSubmissions === 'function') {
+        this.reconcileQuizzesFromSubmissions();
+      }
 
       // Resilient local test submissions fallback (detects exams submitted in the browser)
       try {
@@ -3908,8 +3953,34 @@ export function registerTeacherQuizzesActions(app) {
         }
       }
 
+      // Optimistically insert into richQuizzes so it appears immediately!
+      if (!Array.isArray(this.quizzesState.richQuizzes)) {
+        this.quizzesState.richQuizzes = [];
+      }
+      for (const gid of targetGroupIds) {
+        const optimisticQuiz = {
+          id: (targetGroupIds.length === 1 && qz?.id) ? qz.id : `online_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          group_id: gid,
+          quiz_number: qz.quiz_number,
+          title: qz.title,
+          subject: qz.subject,
+          time_limit_minutes: qz.time_limit_minutes,
+          available_date: qz.available_date,
+          start_time: qz.start_time,
+          end_time: qz.end_time,
+          exam_mode: 'online',
+          questions,
+          created_at: new Date().toISOString()
+        };
+        this.quizzesState.richQuizzes = this.quizzesState.richQuizzes.filter(
+          q => !(q.id === optimisticQuiz.id || (String(q.group_id).trim() === String(gid).trim() && Number(q.quiz_number) === Number(qz.quiz_number) && (q.exam_mode || 'online') === 'online'))
+        );
+        this.quizzesState.richQuizzes.unshift(optimisticQuiz);
+      }
+
       this.showToast(`تم حفظ ونشر امتحان (${qz.title}) بنجاح!`, 'success');
       this.quizzesState.onlineViewMode = 'list';
+      this.renderMainContent();
       await this.loadRichQuizzes();
       if (currentGid) await this.loadQuizzesForGroup(currentGid);
       this.renderMainContent();

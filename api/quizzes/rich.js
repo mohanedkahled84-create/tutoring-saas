@@ -94,6 +94,16 @@ export default async function handler(req, res) {
         console.warn('study_materials fetch warning:', smErr);
       }
 
+      // Helper to check group match
+      const matchesGroup = (item, gid) => {
+        if (!gid || gid === 'all') return true;
+        if (!item.group_id || item.group_id === 'all') return true;
+        if (String(item.group_id).trim() === String(gid).trim()) return true;
+        if (Array.isArray(item.group_ids) && item.group_ids.some(id => String(id).trim() === String(gid).trim())) return true;
+        if (Array.isArray(item.target_group_ids) && item.target_group_ids.some(id => String(id).trim() === String(gid).trim())) return true;
+        return false;
+      };
+
       // Resilient check: whatsapp_inbox fallback storage
       try {
         const fallbackUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=like.QUIZ_DEF_%25&select=*&order=created_at.desc`;
@@ -110,7 +120,7 @@ export default async function handler(req, res) {
             try {
               const parsed = JSON.parse(row.message_body || '{}');
               if (parsed && parsed.group_id) {
-                if (!group_id || String(parsed.group_id).trim() === String(group_id).trim()) {
+                if (matchesGroup(parsed, group_id)) {
                   // Dedup against existing richQuizzes
                   const exists = richQuizzes.some(
                     (q) => String(q.group_id).trim() === String(parsed.group_id).trim() && Number(q.quiz_number) === Number(parsed.quiz_number) && (q.exam_mode || 'online') === (parsed.exam_mode || 'online')
@@ -125,6 +135,51 @@ export default async function handler(req, res) {
         }
       } catch (fbErr) {
         console.warn('Fallback quiz fetch warning:', fbErr);
+      }
+
+      // Safety net: Recover any online quiz that has submissions if not already in richQuizzes
+      try {
+        const subUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=like.QUIZ_SUB_%25&select=*&order=created_at.desc`;
+        const subRes = await fetch(subUrl, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        });
+        if (subRes.ok) {
+          const subRows = await subRes.json();
+          for (const row of (Array.isArray(subRows) ? subRows : [])) {
+            try {
+              const subData = JSON.parse(row.message_body || '{}');
+              if (subData && (subData.quiz_id || subData.material_id) && subData.group_id) {
+                if (matchesGroup(subData, group_id)) {
+                  const qId = subData.quiz_id || subData.material_id;
+                  const alreadyExists = richQuizzes.some(
+                    (q) => (q.id === qId) || (String(q.group_id).trim() === String(subData.group_id).trim() && Number(q.quiz_number) === Number(subData.quiz_number) && (q.exam_mode || 'online') === 'online')
+                  );
+                  if (!alreadyExists && Array.isArray(subData.questions) && subData.questions.length > 0) {
+                    richQuizzes.push({
+                      id: qId,
+                      title: subData.quiz_title || `كويز ${subData.quiz_number || 1}`,
+                      subject: subData.subject || 'الفيزياء',
+                      group_id: subData.group_id,
+                      quiz_number: Number(subData.quiz_number) || 1,
+                      time_limit_minutes: Number(subData.time_limit_minutes) || 20,
+                      available_date: subData.submitted_at ? subData.submitted_at.slice(0, 10) : '',
+                      start_time: null,
+                      end_time: null,
+                      exam_mode: 'online',
+                      questions: subData.questions,
+                      created_at: subData.submitted_at || row.created_at,
+                    });
+                  }
+                }
+              }
+            } catch (_) {}
+          }
+        }
+      } catch (subErr) {
+        console.warn('Submission recovery warning:', subErr);
       }
 
       return res.status(200).json({
@@ -340,7 +395,7 @@ export default async function handler(req, res) {
 
       // 3. Resilient fallback storage in whatsapp_inbox table (guaranteed write with anon key)
       try {
-        const modePrefix = exam_mode === 'paper' ? 'PAPER_' : '';
+        const modePrefix = exam_mode === 'paper' ? 'PAPER_' : 'ONLINE_';
         const fallbackPhone = `QUIZ_DEF_${modePrefix}${group_id}_${qNum}`;
         const checkInboxUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(fallbackPhone)}&select=id`;
         const checkInboxRes = await fetch(checkInboxUrl, {

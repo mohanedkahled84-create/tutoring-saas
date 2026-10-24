@@ -40,7 +40,7 @@ export default async function handler(req, res) {
 
       const targetGroupId = req.query?.group_id;
       if (targetGroupId && targetGroupId !== 'all') {
-        submissions = submissions.filter(s => !s.group_id || s.group_id === targetGroupId);
+        submissions = submissions.filter(s => !s.group_id || String(s.group_id).trim() === String(targetGroupId).trim());
       }
 
       const targetStudentCode = req.query?.student_code;

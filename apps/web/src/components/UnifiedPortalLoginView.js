@@ -303,6 +303,7 @@ export function registerUnifiedPortalActions(app) {
           if (!Array.isArray(data.materials)) data.materials = [];
           if (!Array.isArray(data.quizzes)) data.quizzes = [];
           richRes.quizzes.forEach(q => {
+            if (q.exam_mode === 'paper') return;
             const maxScore = Array.isArray(q.questions) 
               ? q.questions.reduce((sum, item) => sum + Number(item.points || 1), 0) 
               : 10;
