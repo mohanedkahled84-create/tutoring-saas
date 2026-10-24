@@ -2,6 +2,94 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/login",
+      "permanent": false
+    },
+    {
+      "source": "/portal",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/login",
+      "permanent": false
+    },
+    {
+      "source": "/portal/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/login",
+      "permanent": false
+    },
+    {
+      "source": "/index.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
+      "destination": "/login",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/login",
+      "permanent": false
+    },
+    {
+      "source": "/portal",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/login",
+      "permanent": false
+    },
+    {
+      "source": "/portal/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/login",
+      "permanent": false
+    },
+    {
+      "source": "/index.html",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<subdomain>(?!www|api|app)[^.]+)\\.centerly-eg\\.com"
+        }
+      ],
+      "destination": "/login",
+      "permanent": false
+    },
+    {
       "source": "/(.*)",
       "has": [
         {

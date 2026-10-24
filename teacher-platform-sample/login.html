@@ -746,7 +746,8 @@
             localStorage.setItem('portal_student', JSON.stringify(json.student));
             localStorage.setItem('portal_student_code', json.student.student_code || json.student.code || identifierInput);
           }
-          window.location.href = `./index.html?code=${encodeURIComponent(identifierInput)}&token=${encodeURIComponent(json.token)}`;
+          const dest = window.location.pathname.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard';
+          window.location.href = `${dest}?code=${encodeURIComponent(identifierInput)}&token=${encodeURIComponent(json.token)}`;
         } else {
           // Allow seamless login for all platform students during testing
           const allKnownStudents = {
@@ -760,7 +761,8 @@
             const st = allKnownStudents[identifierInput] || { name: 'طالب سنترلي', code: identifierInput, phone: identifierInput };
             localStorage.setItem('portal_student', JSON.stringify(st));
             localStorage.setItem('portal_student_code', identifierInput);
-            window.location.href = `./index.html?code=${encodeURIComponent(identifierInput)}`;
+            const dest = window.location.pathname.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard';
+            window.location.href = `${dest}?code=${encodeURIComponent(identifierInput)}`;
             return;
           }
 
