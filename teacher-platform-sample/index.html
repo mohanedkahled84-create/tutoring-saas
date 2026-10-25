@@ -1912,12 +1912,26 @@
         '1004': { name: 'احمد عبد الله', code: '1004', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
       };
 
-      const qCode = urlParams.get('code') || localStorage.getItem('portal_student_code');
-      if (qCode && allKnownStudents[qCode]) {
-        currentStudent = { ...currentStudent, ...allKnownStudents[qCode] };
-        localStorage.setItem('portal_student', JSON.stringify(currentStudent));
-        hydrateStudentUI(currentStudent);
+      let qCode = urlParams.get('code') || localStorage.getItem('portal_student_code');
+      if (!qCode) {
+        try {
+          const saved = JSON.parse(localStorage.getItem('portal_student') || '{}');
+          if (saved.code || saved.student_code) qCode = saved.code || saved.student_code;
+        } catch (_) {}
       }
+      qCode = qCode || '1006';
+      localStorage.setItem('portal_student_code', qCode);
+
+      if (allKnownStudents[qCode]) {
+        currentStudent = { ...currentStudent, ...allKnownStudents[qCode] };
+      } else {
+        try {
+          const saved = JSON.parse(localStorage.getItem('portal_student') || '{}');
+          if (saved.name) currentStudent = { ...currentStudent, ...saved };
+        } catch (_) {}
+      }
+      localStorage.setItem('portal_student', JSON.stringify(currentStudent));
+      hydrateStudentUI(currentStudent);
 
       const token = urlParams.get('token') || localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN;
       if (token && !localStorage.getItem('centrly_portal_token')) {
@@ -2862,7 +2876,7 @@
           <div class="clean-item-card" style="display: flex; justify-content: space-between; align-items: center;">
             <div class="item-meta">
               <h3>${escapeHtml(qz.title)}</h3>
-              <p>الدرجة الكلية: ${qz.max_score || 10} • مدة الامتحان: ${qz.time_limit_minutes || 20} دقيقة • بيئة اختبار مؤمنة لمنع تصوير الشاشة</p>
+              <p>الدرجة الكلية: ${qz.max_score || 10} • مدة الامتحان: ${qz.time_limit_minutes || 20} دقيقة • حل إلكتروني تفاعلي وتصحيح فوري</p>
             </div>
             ${actionBtn}
           </div>
@@ -2974,13 +2988,14 @@
 
       remainingSeconds = (Number(targetQz.time_limit_minutes) || 20) * 60;
       const titleEl = document.querySelector('.exam-topbar h3');
-      if (titleEl) titleEl.innerText = `${targetQz.title || 'امتحان إلكتروني'} — بيئة اختبار مؤمنة`;
+      if (titleEl) titleEl.innerText = `${targetQz.title || 'امتحان إلكتروني'}`;
 
       const examBody = document.querySelector('.exam-body');
       if (examBody && Array.isArray(targetQz.questions) && targetQz.questions.length > 0) {
         let qHtml = `
-          <div class="exam-warning-banner">
-            تنبيه أمني: هذه بيئة معزولة مخصصة لمنع الغش. تغيير التاب أو تصوير الشاشة مسجل برقم الطالب ويؤدي لسحب ورقة الإجابة.
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 0.88rem; color: #334155; font-weight: 700;">
+            <span>📝 اقرأ الأسئلة بعناية وحدد الإجابات الصحيحة. يمكنك مراجعة وتعديل حلك في أي وقت قبل الضغط على تسليم.</span>
+            <span style="color: #059669;">⏱️ الوقت متاح ومحسوب بدقة</span>
           </div>
         `;
 
@@ -3038,46 +3053,11 @@
 
       const wm = document.getElementById('examWatermark');
       if (wm) {
-        wm.innerText = `${currentStudent.code || currentStudent.student_code || '1006'}`;
-        if (examWatermarkTimer) clearInterval(examWatermarkTimer);
-        examWatermarkTimer = setInterval(() => {
-          const top = Math.floor(Math.random() * 60 + 20);
-          const left = Math.floor(Math.random() * 55 + 20);
-          wm.style.top = top + '%';
-          wm.style.left = left + '%';
-        }, 3500);
+        wm.style.display = 'none';
       }
-
-      tabSwitchWarnCount = 0;
-      let isSubmittingExam = false;
-
-      const triggerAutoWithdrawal = () => {
-        if (!overlay.classList.contains('active') || isSubmittingExam) return;
-        isSubmittingExam = true;
-        window.onblur = null;
-        document.onvisibilitychange = null;
-        showPortalToast(`تم سحب ورقة الامتحان فوراً وإلغاء المحاولة لتكرار مغادرة نافذة الاختبار وتجاوز الحد الأمني (${tabSwitchWarnCount} من 2)!`, 'error');
-        setTimeout(() => {
-          submitAndFinishExam(true);
-        }, 600);
-      };
-
-      const handleTabSwitch = () => {
-        if (!overlay || !overlay.classList.contains('active') || isSubmittingExam) return;
-        tabSwitchWarnCount++;
-        if (tabSwitchWarnCount >= 2) {
-          triggerAutoWithdrawal();
-        } else {
-          showPortalToast(`تحذير أمني: تم رصد مغادرة نافذة الامتحان (محاولة ${tabSwitchWarnCount} من 2). تكرار المحاولة للمرة الثانية يؤدي لسحب الورقة فوراً!`, 'warning');
-        }
-      };
-
-      window.onblur = handleTabSwitch;
-      document.onvisibilitychange = () => {
-        if (document.visibilityState === 'hidden') {
-          handleTabSwitch();
-        }
-      };
+      // إلغاء قيود الأمان وسحب الورقة عند مغادرة الشاشة (حرية الحركة الكاملة للطالب)
+      window.onblur = null;
+      document.onvisibilitychange = null;
     }
 
     function selectChoice(el, qIdx, cIdx) {
@@ -3529,15 +3509,16 @@
 
     function logoutStudent() {
       localStorage.removeItem('portal_student');
+      localStorage.removeItem('portal_student_code');
       localStorage.removeItem('centrly_portal_token');
       const currentPath = window.location.pathname;
       const isSub = window.location.hostname.includes('mr-omar') || window.location.hostname.split('.').length > 2;
       if (isSub) {
-        window.location.href = '/login' + (window.location.search || '');
+        window.location.href = '/login?logout=1';
       } else if (currentPath.includes('/teacher-platform-sample/')) {
-        window.location.href = '/teacher-platform-sample/login.html' + (window.location.search || '');
+        window.location.href = '/teacher-platform-sample/login.html?logout=1';
       } else {
-        window.location.href = '/mr-omar' + (window.location.search || '');
+        window.location.href = '/mr-omar/login?logout=1';
       }
     }
 

@@ -435,6 +435,39 @@
       } catch (_) {}
     })();
   </script>
+  <script>
+    // تفعيل التذكر التلقائي لتسجيل الدخول (Remember Login Session)
+    (function checkAutoLogin() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('logout') === '1' || urlParams.get('action') === 'logout') {
+          localStorage.removeItem('portal_student');
+          localStorage.removeItem('portal_student_code');
+          localStorage.removeItem('centrly_portal_token');
+          return;
+        }
+
+        const savedStudent = localStorage.getItem('portal_student');
+        const savedCode = localStorage.getItem('portal_student_code');
+        const token = localStorage.getItem('centrly_portal_token');
+
+        if (savedStudent || savedCode) {
+          let code = savedCode;
+          if (!code && savedStudent) {
+            try {
+              const parsed = JSON.parse(savedStudent);
+              code = parsed.code || parsed.student_code;
+            } catch (_) {}
+          }
+          code = code || '1006';
+          const isSub = window.location.hostname.includes('mr-omar') || window.location.hostname.split('.').length > 2;
+          const dest = isSub ? '/dashboard' : (window.location.pathname.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard');
+          const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+          window.location.replace(`${dest}?code=${encodeURIComponent(code)}${tokenParam}`);
+        }
+      } catch (_) {}
+    })();
+  </script>
 </head>
 <body class="theme-navy">
   <script>
