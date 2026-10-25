@@ -2145,9 +2145,47 @@ function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = nu
     : 'background: #ffffff; border: 2px solid #000000; border-radius: 4px; padding: 1.25rem 1.15rem; box-shadow: 0 4px 14px rgba(0,0,0,0.08); font-family: "Cairo", sans-serif; width: 100%; max-width: 800px; min-height: 1020px; margin: 0 auto; box-sizing: border-box; overflow-x: hidden; direction: rtl; display: flex; flex-direction: column; justify-content: space-between;';
 
   const mcqQuestions = (targetQuiz?.questions || []).filter(q => q.type !== 'essay');
+  const essayQuestions = (targetQuiz?.questions || []).filter(q => q.type === 'essay');
   const totalQ = Math.max(1, mcqQuestions.length > 0 ? mcqQuestions.length : 10);
-  const col1Count = Math.ceil(totalQ / 2);
-  const col2Count = totalQ - col1Count;
+
+  // Dynamic layout: 1 column vertically if few questions (<= 15), 2 columns if 16-36, 3 columns if > 36
+  let numCols = 1;
+  if (totalQ > 36) {
+    numCols = 3;
+  } else if (totalQ > 15) {
+    numCols = 2;
+  } else {
+    numCols = 1;
+  }
+
+  const baseCount = Math.floor(totalQ / numCols);
+  const remainder = totalQ % numCols;
+  const colCounts = [];
+  for (let c = 0; c < numCols; c++) {
+    colCounts.push(baseCount + (c < remainder ? 1 : 0));
+  }
+
+  let runningStart = 1;
+  const colStartNums = [];
+  for (let c = 0; c < numCols; c++) {
+    colStartNums.push(runningStart);
+    runningStart += colCounts[c];
+  }
+
+  const isSingleCol = numCols === 1;
+  const gridContainerStyle = isSingleCol
+    ? 'border: 1.5px solid #000000; padding: 0.85rem 1.25rem; display: flex; justify-content: center;'
+    : `border: 1.5px solid #000000; padding: 0.75rem 1rem; display: grid; grid-template-columns: repeat(${numCols}, 1fr); gap: ${numCols === 3 ? '1rem' : '1.5rem'};`;
+
+  const colBoxStyle = isSingleCol
+    ? 'width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 0.35rem;'
+    : 'display: flex; flex-direction: column; gap: 0.25rem;';
+
+  const bubbleSize = isSingleCol ? '20px' : (numCols === 3 ? '16px' : '18px');
+  const bubbleFontSize = isSingleCol ? '0.72rem' : (numCols === 3 ? '0.64rem' : '0.68rem');
+  const bubbleGap = isSingleCol ? '1.15rem' : (numCols === 3 ? '0.55rem' : '0.75rem');
+  const rowPadding = isSingleCol ? '3.5px 0' : '1.5px 0';
+  const headerGap = isSingleCol ? '1.45rem' : (numCols === 3 ? '0.75rem' : '1rem');
 
   return `
     <div class="${containerClass}" style="${containerStyle}">
@@ -2223,15 +2261,15 @@ function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = nu
         </div>
 
         <!-- Answer Bubbles Grid -->
-        <div style="border: 1.5px solid #000000; padding: 0.75rem 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-          ${[0, 1].map(colIdx => {
-            const countThisCol = colIdx === 0 ? col1Count : col2Count;
-            const startNum = colIdx === 0 ? 1 : col1Count + 1;
+        <div style="${gridContainerStyle}">
+          ${Array.from({ length: numCols }).map((_, colIdx) => {
+            const countThisCol = colCounts[colIdx];
+            const startNum = colStartNums[colIdx];
             return `
-              <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                <div style="display: flex; justify-content: space-between; border-bottom: 1.5px solid #000000; padding-bottom: 0.2rem; font-weight: 900; font-size: 0.78rem;">
-                  <span>سؤال</span>
-                  <div style="display: flex; gap: 1rem; padding-left: 0.4rem;">
+              <div style="${colBoxStyle}">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1.5px solid #000000; padding-bottom: 0.25rem; font-weight: 900; font-size: ${isSingleCol ? '0.85rem' : '0.78rem'};">
+                  <span style="width: 28px;">سؤال</span>
+                  <div style="display: flex; gap: ${headerGap}; padding-left: 0.4rem;">
                     <span>أ</span>
                     <span>ب</span>
                     <span>ج</span>
@@ -2242,11 +2280,11 @@ function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = nu
                 ${Array.from({ length: countThisCol }).map((_, rIdx) => {
                   const qNum = startNum + rIdx;
                   return `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5px 0;">
-                      <span style="font-weight: 900; font-size: 0.8rem; width: 24px;">${qNum}</span>
-                      <div style="display: flex; gap: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: ${rowPadding}; border-bottom: ${isSingleCol ? '1px dotted #e2e8f0' : 'none'};">
+                      <span style="font-weight: 900; font-size: ${isSingleCol ? '0.85rem' : '0.8rem'}; width: 28px;">${qNum}</span>
+                      <div style="display: flex; gap: ${bubbleGap};">
                         ${['أ', 'ب', 'ج', 'د'].map(l => `
-                          <span style="width: 18px; height: 18px; border: 1.4px solid #000000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800;">
+                          <span style="width: ${bubbleSize}; height: ${bubbleSize}; border: 1.4px solid #000000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: ${bubbleFontSize}; font-weight: 800;">
                             ${l}
                           </span>
                         `).join('')}
@@ -2258,6 +2296,28 @@ function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = nu
             `;
           }).join('')}
         </div>
+
+        ${essayQuestions.length > 0 ? `
+          <!-- Essay Grading Box for Examiner -->
+          <div style="border: 1.5px solid #000000; padding: 0.65rem 0.85rem; margin-top: 0.75rem; background: #fafafa;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.2px solid #000000; padding-bottom: 0.3rem; margin-bottom: 0.45rem;">
+              <span style="font-weight: 900; font-size: 0.82rem; color: #000000;">رصد درجات الأسئلة المقالية (${essayQuestions.length} أسئلة) — خاص بالمصحح</span>
+              <span style="font-size: 0.72rem; color: #475569; font-weight: 700;">(تُجاب في كراسة الأسئلة الورقية)</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(${Math.min(essayQuestions.length, 6)}, 1fr); gap: 8px; text-align: center;">
+              ${essayQuestions.map((eq, eIdx) => {
+                const qNum = mcqQuestions.length + eIdx + 1;
+                const maxPts = eq.points || 2;
+                return `
+                  <div style="border: 1.2px solid #000000; padding: 4px; background: #ffffff; border-radius: 3px;">
+                    <div style="font-weight: 900; font-size: 0.74rem; border-bottom: 1px solid #000000; padding-bottom: 2px; margin-bottom: 3px; background: #f1f5f9;">سؤال ${qNum}</div>
+                    <div style="font-size: 0.7rem; color: #64748b; font-weight: 800; min-height: 18px; display: flex; align-items: center; justify-content: center;">... / ${maxPts}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
       </div>
 
       <!-- Bottom Markers -->
