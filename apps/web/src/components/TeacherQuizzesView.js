@@ -1975,10 +1975,10 @@ function renderExamSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null
   const questions = getStealthModelQuestions(targetQuiz, selectedModel);
   const totalPoints = questions.reduce((s, q) => s + Number(q.points || 1), 0);
 
-  const containerClass = isPrint ? 'centrly-page-sheet' : 'printable-exam-paper';
+  const containerClass = isPrint ? 'centrly-exam-sheet' : 'printable-exam-paper';
   // Full Page Fit: In print mode, min-height and height fill the full A4 page (calc(297mm - 16mm)) with flex space-between
   const containerStyle = isPrint 
-    ? 'box-sizing: border-box; width: 100%; min-height: 278mm; height: 278mm; padding: 7mm 8mm; background: #ffffff; color: #000000; font-family: "Cairo", sans-serif; direction: rtl; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid #000000;'
+    ? 'box-sizing: border-box; width: 100%; min-height: 278mm; padding: 7mm 8mm; background: #ffffff; color: #000000; font-family: "Cairo", sans-serif; direction: rtl; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid #000000;'
     : 'background: #ffffff; border: 2px solid #000000; border-radius: 4px; padding: 1.25rem 1.15rem; box-shadow: 0 4px 14px rgba(0,0,0,0.08); font-family: "Cairo", sans-serif; width: 100%; max-width: 800px; min-height: 1020px; margin: 0 auto; box-sizing: border-box; overflow-x: hidden; direction: rtl; display: flex; flex-direction: column; justify-content: space-between;';
 
   return `
@@ -2058,35 +2058,37 @@ function renderExamSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null
             <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
               
               ${hasImage && !isImageOnly ? `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.85rem; margin-bottom: 0.45rem;">
-                  <div style="flex: 1; font-weight: 800; font-size: 0.88rem; line-height: 1.45; text-align: right;">
+                <div style="margin-bottom: 0.45rem;">
+                  <div style="font-weight: 800; font-size: 0.90rem; line-height: 1.5; text-align: right; margin-bottom: 0.35rem;">
                     <span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span>
                     <span>${escapeHtml(q.text)}</span>
-                    <span style="font-size: 0.75rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
+                    <span style="font-size: 0.76rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
                   </div>
 
-                  <div style="flex-shrink: 0; text-align: center; max-width: 180px; border: 1px solid #000000; border-radius: 3px; padding: 3px; background: #ffffff;">
-                    <img 
-                      src="${escapeHtml(q.image_url)}" 
-                      alt="الشكل المقابل" 
-                      style="max-height: 110px; max-width: 170px; object-fit: contain; display: block;" 
-                    />
-                    <div style="font-size: 0.62rem; font-weight: 800; color: #444444; border-top: 1px dashed #666666; margin-top: 2px; padding-top: 1px;">
-                      (الشكل المقابل)
+                  <div style="text-align: center; margin: 0.45rem 0;">
+                    <div style="display: inline-block; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; background: #ffffff;">
+                      <img 
+                        src="${escapeHtml(q.image_url)}" 
+                        alt="الشكل المقابل" 
+                        style="max-height: 230px; max-width: 440px; width: auto; object-fit: contain; display: block; margin: 0 auto;" 
+                      />
+                      <div style="font-size: 0.65rem; font-weight: 800; color: #333333; border-top: 1px dashed #666666; margin-top: 3px; padding-top: 2px;">
+                        (الشكل المقابل)
+                      </div>
                     </div>
                   </div>
                 </div>
               ` : isImageOnly ? `
                 <div style="margin-bottom: 0.45rem;">
-                  <div style="font-weight: 800; font-size: 0.88rem; margin-bottom: 0.3rem; display: flex; align-items: center; justify-content: space-between;">
+                  <div style="font-weight: 800; font-size: 0.90rem; margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between;">
                     <span><span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span> ${q.text ? escapeHtml(q.text) : 'سؤال مصور من المسألة الموضحة أدناه:'}</span>
-                    <span style="font-size: 0.75rem; font-weight: 700; color: #555555;">${pointsText}</span>
+                    <span style="font-size: 0.76rem; font-weight: 700; color: #555555;">${pointsText}</span>
                   </div>
-                  <div style="text-align: center; margin: 0.35rem 0;">
+                  <div style="text-align: center; margin: 0.4rem 0;">
                     <img 
                       src="${escapeHtml(q.image_url)}" 
                       alt="صورة السؤال" 
-                      style="max-height: 180px; max-width: 95%; border: 1px solid #000000; border-radius: 3px; object-fit: contain;" 
+                      style="max-height: 280px; max-width: 95%; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; object-fit: contain;" 
                     />
                   </div>
                 </div>
@@ -2139,7 +2141,7 @@ function renderExamSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null
 function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null, totalStudents = null, isPrint = false) {
   const { selectedModel, modelCode, examCode, barcodeSerial } = getModelInfo(targetQuiz, modelLetter);
 
-  const containerClass = isPrint ? 'centrly-page-sheet' : 'printable-bubble-sheet';
+  const containerClass = isPrint ? 'centrly-bubble-sheet' : 'printable-bubble-sheet';
   const containerStyle = isPrint 
     ? 'box-sizing: border-box; width: 100%; min-height: 278mm; height: 278mm; padding: 7mm 8mm; background: #ffffff; color: #000000; font-family: "Cairo", sans-serif; direction: rtl; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid #000000;'
     : 'background: #ffffff; border: 2px solid #000000; border-radius: 4px; padding: 1.25rem 1.15rem; box-shadow: 0 4px 14px rgba(0,0,0,0.08); font-family: "Cairo", sans-serif; width: 100%; max-width: 800px; min-height: 1020px; margin: 0 auto; box-sizing: border-box; overflow-x: hidden; direction: rtl; display: flex; flex-direction: column; justify-content: space-between;';
@@ -5155,21 +5157,37 @@ export function registerTeacherQuizzesActions(app) {
         }
         #centrlyDedicatedPrintArea {
           display: block !important;
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
+          position: relative !important;
           width: 100% !important;
           margin: 0 !important;
           padding: 0 !important;
           background: #ffffff !important;
           z-index: 9999999 !important;
         }
-        .centrly-page-sheet {
+        .centrly-exam-sheet {
+          box-sizing: border-box !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          min-height: calc(297mm - 12mm) !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 7mm 8mm !important;
+          box-shadow: none !important;
+          border: 2px solid #000000 !important;
+          page-break-after: always !important;
+          break-after: page !important;
+          background: #ffffff !important;
+          display: flex !important;
+          flex-direction: column !important;
+          justify-content: space-between !important;
+        }
+        .centrly-bubble-sheet {
           box-sizing: border-box !important;
           width: 100% !important;
           max-width: 100% !important;
           min-height: calc(297mm - 12mm) !important;
           height: calc(297mm - 12mm) !important;
+          max-height: calc(297mm - 12mm) !important;
           margin: 0 !important;
           padding: 7mm 8mm !important;
           box-shadow: none !important;
@@ -5183,7 +5201,8 @@ export function registerTeacherQuizzesActions(app) {
           flex-direction: column !important;
           justify-content: space-between !important;
         }
-        .centrly-page-sheet:last-child {
+        .centrly-exam-sheet:last-child,
+        .centrly-bubble-sheet:last-child {
           page-break-after: auto !important;
           break-after: auto !important;
         }

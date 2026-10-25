@@ -2024,10 +2024,17 @@
           richRes = await fetch('https://centerly-eg.com/api/quizzes/rich').then(r => r.json()).catch(() => null);
         }
         if (richRes && richRes.success && Array.isArray(richRes.quizzes)) {
+          const seenQuizKeys = new Set();
           const validQuizzes = richRes.quizzes.filter(q => {
             const t = (q.title || '').toLowerCase();
             const id = (q.id || '').toLowerCase();
-            return !t.includes('تجريبي') && !t.includes('trial') && !t.includes('test') && !id.includes('trial') && !id.includes('test');
+            const isTrial = t.includes('تجريبي') || t.includes('trial') || t.includes('test') || id.includes('trial') || id.includes('test');
+            const isPaper = (q.exam_mode || '').toLowerCase() === 'paper';
+            if (isTrial || isPaper) return false;
+            const qKey = q.quiz_number ? `qnum_${q.quiz_number}` : q.id;
+            if (seenQuizKeys.has(qKey)) return false;
+            seenQuizKeys.add(qKey);
+            return true;
           });
 
           validQuizzes.forEach(q => {
@@ -2985,7 +2992,7 @@
               <div class="exam-q-title" style="font-weight: 800; font-size: 0.95rem; margin-bottom: 12px; color: var(--text-main);">
                 السؤال ${idx + 1}: ${escapeHtml(q.text || '')} <span style="font-size: 0.8rem; color: var(--brand-navy); font-weight: 700;">(${qPoints} درجات)</span>
               </div>
-              ${q.image_url ? `<div style="margin: 10px 0;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 250px; border-radius: 8px;" /></div>` : ''}
+              ${q.image_url ? `<div style="margin: 14px 0; text-align: center;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 380px; border-radius: 8px; border: 1.5px solid #cbd5e1; padding: 6px; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.06); object-fit: contain;" /></div>` : ''}
               ${!isEssay ? `
                 <div class="exam-choices-list" style="display: flex; flex-direction: column; gap: 8px;">
                   ${(q.choices || q.options || []).filter(c => c && String(c).trim()).map((choice, cIdx) => `
@@ -3355,7 +3362,7 @@
                 </span>
               </div>
 
-              ${q.image_url ? `<div style="margin: 8px 0;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 200px; border-radius: 6px;" /></div>` : ''}
+              ${q.image_url ? `<div style="margin: 12px 0; text-align: center;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 340px; border-radius: 8px; border: 1.5px solid #cbd5e1; padding: 4px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); object-fit: contain;" /></div>` : ''}
 
               <div style="display: flex; flex-direction: column; gap: 8px;">
                 ${choices.map((choice, cIdx) => {
@@ -3435,7 +3442,7 @@
                   </span>
                 </div>
 
-                ${q.image_url ? `<div style="margin: 8px 0;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 200px; border-radius: 6px;" /></div>` : ''}
+                ${q.image_url ? `<div style="margin: 12px 0; text-align: center;"><img src="${escapeHtml(q.image_url)}" style="max-width: 100%; max-height: 340px; border-radius: 8px; border: 1.5px solid #cbd5e1; padding: 4px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); object-fit: contain;" /></div>` : ''}
 
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                   ${choices.map((choice, cIdx) => {
