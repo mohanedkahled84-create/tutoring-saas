@@ -423,8 +423,26 @@
       }
     }
   </style>
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('portal_theme');
+        if (!t) {
+          var s = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
+          if (s.theme_preset) t = s.theme_preset;
+        }
+        if (t) document.documentElement.setAttribute('data-theme', t);
+      } catch (_) {}
+    })();
+  </script>
 </head>
 <body class="theme-navy">
+  <script>
+    try {
+      var t = localStorage.getItem('portal_theme') || (JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}').theme_preset) || 'navy';
+      document.body.className = 'theme-' + t;
+    } catch (_) {}
+  </script>
 
   <!-- 1. الناف بار العلوي مع محدد الألوان الموحدة للتجربة -->
   <header class="navbar">
@@ -554,17 +572,11 @@
         }
       }
       if (!sub) {
-        const cached = localStorage.getItem('centrly_platform_settings');
-        if (cached) {
-          try { 
-            const parsed = JSON.parse(cached);
-            applySettingsToDOM(parsed);
-            checkPublishStatus(parsed);
-          } catch (_) {}
-        } else {
-          checkPublishStatus(null);
-        }
-        return;
+        try {
+          const cached = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
+          if (cached.subdomain) sub = cached.subdomain;
+        } catch (_) {}
+        if (!sub) sub = 'mr-omar';
       }
 
       try {

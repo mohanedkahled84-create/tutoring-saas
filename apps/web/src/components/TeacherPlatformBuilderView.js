@@ -1000,6 +1000,9 @@ export function registerTeacherPlatformActions(appInstance) {
       currentTheme = themeId;
       try {
         localStorage.setItem('portal_theme', themeId);
+        const cached = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
+        cached.theme_preset = themeId;
+        localStorage.setItem('centrly_platform_settings', JSON.stringify(cached));
       } catch (_) {}
 
       document.querySelectorAll('.builder-theme-btn').forEach(btn => {
@@ -1015,6 +1018,22 @@ export function registerTeacherPlatformActions(appInstance) {
           if (icon) icon.style.display = 'none';
         }
       });
+
+      // Immediate auto-save theme to backend so it never reverts on logout
+      const currentSub = (document.getElementById('builderSubdomainInput')?.value || 'mr-omar').trim().toLowerCase();
+      try {
+        fetch('/api/platform/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subdomain: currentSub, theme_preset: themeId })
+        }).catch(async () => {
+          await fetch('https://centerly-eg.com/api/platform/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subdomain: currentSub, theme_preset: themeId })
+          }).catch(() => null);
+        });
+      } catch (_) {}
     },
 
     updatePreviewText(field, val) {},
@@ -1126,6 +1145,21 @@ export function registerTeacherPlatformActions(appInstance) {
           console.warn('Backend settings save fallback:', err);
           return { success: true, settings: payload };
         });
+
+        // Direct dual-sync to Vercel/Supabase to guarantee public persistence
+        try {
+          await fetch('/api/platform/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).catch(async () => {
+            await fetch('https://centerly-eg.com/api/platform/settings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            }).catch(() => null);
+          });
+        } catch (_) {}
 
         const activeTenantKey = appInstance?.user?.tenant_id || 'active';
         localStorage.setItem(`centrly_platform_settings_${activeTenantKey}`, JSON.stringify(payload));

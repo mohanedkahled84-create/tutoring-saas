@@ -1283,6 +1283,9 @@
           </div>
         </div>
 
+        <!-- أحدث نتائج الكويزات والامتحانات المرصودة للرئيسية -->
+        <div id="homeRecentExamResultsContainer"></div>
+
         <!-- صندوق المهام العاجلة -->
         <div class="section-title-clean">
           <span>المهام المطلوب إنجازها</span>
@@ -1636,6 +1639,30 @@
     }
     hydrateSettings();
 
+    async function syncPlatformSettingsOnline() {
+      try {
+        const sub = getSubdomain();
+        let res = await fetch(/api/platform/public/).then(r => r.json()).catch(() => null);
+        if (!res || !res.settings) {
+          res = await fetch(https://centerly-eg.com/api/platform/public/).then(r => r.json()).catch(() => null);
+        }
+        if (res && res.settings) {
+          const s = res.settings;
+          localStorage.setItem('centrly_platform_settings', JSON.stringify(s));
+          if (s.theme_preset) {
+            document.body.className = 'theme-' + s.theme_preset;
+            localStorage.setItem('portal_theme', s.theme_preset);
+          }
+          if (s.display_title) {
+            document.title = ${s.display_title} — بوابة الطالب;
+            const titleEl = document.querySelector('.teacher-titles h2');
+            if (titleEl) titleEl.innerText = s.display_title;
+          }
+        }
+      } catch (_) {}
+    }
+    syncPlatformSettingsOnline();
+
     // 3. تحديد النطاق الفرعي (Subdomain)
     function getSubdomain() {
       const params = new URLSearchParams(window.location.search);
@@ -1950,13 +1977,15 @@
         if (portalData) {
           if (portalData.student) {
             const s = portalData.student;
+            const effectiveCode = qCode || s.student_code || s.code || '1006';
+            const matchedInfo = (qCode && allKnownStudents[qCode]) ? allKnownStudents[qCode] : {};
             currentStudent = {
-              name: s.name || 'مهند خالد',
-              code: s.student_code || s.code || '1006',
-              phone: s.student_phone || s.parent_phone || '01123671177',
-              center: s.center_name || 'الهضبه',
-              group: s.group_name || 'الاحد والأربع تالته ثانوي',
-              subject: s.subject_name || 'فيزياء',
+              name: matchedInfo.name || s.name || 'مهند خالد',
+              code: effectiveCode,
+              phone: matchedInfo.phone || s.student_phone || s.parent_phone || '01123671177',
+              center: matchedInfo.center || s.center_name || 'الهضبه',
+              group: matchedInfo.group || s.group_name || 'الاحد والأربع تالته ثانوي',
+              subject: matchedInfo.subject || s.subject_name || 'فيزياء',
               teacher: s.teacher_name || 'مستر عمر المحمدي',
               teacher_phone: s.teacher_phone || '01010979708'
             };
@@ -2031,7 +2060,7 @@
 
       // 1.6 جلب تسليمات الطالب ونتائج التصحيح المعتمدة من السيرفر بمزامنة فورية
       window._studentOnlineSubmissionsMap = new Map();
-      const currentStudentCode = currentStudent.code || '1006';
+      const currentStudentCode = String(currentStudent.code || qCode || '1005');
       try {
         let subRes = await fetch(`/api/quizzes/submissions?student_code=${encodeURIComponent(currentStudentCode)}`).then(r => r.json()).catch(() => null);
         if (!subRes || !subRes.success) {
@@ -2042,6 +2071,9 @@
             if (sub && (sub.quiz_id || sub.material_id)) {
               const qId = sub.quiz_id || sub.material_id;
               window._studentOnlineSubmissionsMap.set(qId, sub);
+              if (sub.quiz_number) {
+                window._studentOnlineSubmissionsMap.set(`quiz_num_${sub.quiz_number}`, sub);
+              }
               const subKey = `centrly_submission_${currentStudentCode}_${qId}`;
               try {
                 localStorage.setItem(subKey, JSON.stringify(sub));
@@ -2205,8 +2237,9 @@
       const fillEl = document.getElementById('homeProgressFill');
       if (fillEl) fillEl.style.width = `${progressPct}%`;
 
-      // تحديث قائمة المهام العاجلة بالرئيسية
+      // تحديث قائمة المهام العاجلة ونتائج الامتحانات في الرئيسية
       renderHomeTasks(videos, homework, quizzes);
+      renderHomeRecentExamResults(allRecorded, window._studentOnlineSubmissionsMap);
 
       // تصيير الأقسام المتخصصة
       renderLecturesPanel(videos);
@@ -2223,12 +2256,25 @@
 
       const unsubmittedHw = homework.filter(h => getHwStatus(h) === 'unsubmitted');
       const pendingQuizzes = quizzes.filter(qz => {
+        const subFromMap = window._studentOnlineSubmissionsMap?.get(qz.id) ||
+                           window._studentOnlineSubmissionsMap?.get(String(qz.id)) ||
+                           (qz.quiz_number ? window._studentOnlineSubmissionsMap?.get(`quiz_num_${qz.quiz_number}`) : null) ||
+                           (() => {
+                             if (!window._studentOnlineSubmissionsMap) return null;
+                             for (const [k, v] of window._studentOnlineSubmissionsMap.entries()) {
+                               if (v && (v.quiz_id === qz.id || v.material_id === qz.id || (qz.quiz_number && v.quiz_number === qz.quiz_number))) return v;
+                             }
+                             return null;
+                           })();
+
+        if (subFromMap) return false;
+
         const subKey = `centrly_submission_${currentStudent.code || '1006'}_${qz.id}`;
         try {
           const s = localStorage.getItem(subKey);
           if (s) {
             const parsed = JSON.parse(s);
-            if (parsed && (parsed.status === 'pending' || parsed.status === 'graded')) return false;
+            if (parsed && (parsed.status === 'pending' || parsed.status === 'approved' || parsed.status === 'graded')) return false;
           }
         } catch (_) {}
         return true;
@@ -2312,6 +2358,123 @@
 
       container.innerHTML = html;
       renderRecordedScores(window._studentRecordedQuizzes || []);
+    }
+
+    // تصيير كارت أحدث نتائج الامتحانات والكويزات في الرئيسية فوراً
+    function renderHomeRecentExamResults(recorded, subsMap) {
+      const container = document.getElementById('homeRecentExamResultsContainer');
+      if (!container) return;
+
+      const recentItems = [];
+
+      if (Array.isArray(recorded)) {
+        recorded.forEach(item => {
+          recentItems.push({
+            id: item.id,
+            title: item.title,
+            score: Number(item.score || 0),
+            maxScore: Number(item.max_score || 10),
+            percentage: Math.round(Number(item.percentage) || ((Number(item.score) / (Number(item.max_score) || 10)) * 100) || 0),
+            status: 'graded',
+            date: item.date || '',
+            note: item.note || ''
+          });
+        });
+      }
+
+      if (subsMap && subsMap.size > 0) {
+        subsMap.forEach(sub => {
+          if (!sub) return;
+          const isGraded = sub.status === 'approved' || sub.status === 'graded' || sub.is_graded === true;
+          const qId = sub.quiz_id || sub.material_id;
+          const title = sub.quiz_title || (sub.quiz_number ? `كويز ${sub.quiz_number}` : 'كويز أونلاين');
+          const already = recentItems.some(r => r.id === qId || r.title === title);
+
+          if (!already) {
+            const score = Number(sub.total_score !== undefined ? sub.total_score : (sub.score !== undefined ? sub.score : (sub.final_score !== undefined ? sub.final_score : 0)));
+            const maxScore = Number(sub.max_score || 10);
+            const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+
+            if (isGraded) {
+              recentItems.unshift({
+                id: qId,
+                title,
+                score,
+                maxScore,
+                percentage: pct,
+                status: 'graded',
+                date: sub.graded_at ? sub.graded_at.slice(0, 10) : (sub.submitted_at ? sub.submitted_at.slice(0, 10) : ''),
+                note: sub.essay_score !== undefined ? `درجة المقالي: ${sub.essay_score} + الموضوعي: ${sub.mcq_score || 0}` : ''
+              });
+            } else {
+              recentItems.unshift({
+                id: qId,
+                title,
+                score: 0,
+                maxScore,
+                percentage: 0,
+                status: 'pending',
+                date: sub.submitted_at ? sub.submitted_at.slice(0, 10) : '',
+                note: 'تم تسليم ورقة الإجابة • قيد المراجعة والاعتماد'
+              });
+            }
+          }
+        });
+      }
+
+      if (recentItems.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      const latest = recentItems[0];
+      const isGraded = latest.status === 'graded';
+      const pct = Number(latest.percentage) || (latest.maxScore ? Math.round((latest.score / latest.maxScore) * 100) : 0);
+      const tier = pct >= 85 ? 'ممتاز' : (pct >= 75 ? 'جيد جداً' : (pct >= 60 ? 'جيد' : (isGraded ? 'يحتاج متابعة' : 'قيد التصحيح')));
+      const tierColor = !isGraded ? '#d97706' : (pct >= 85 ? '#059669' : (pct >= 75 ? '#2563eb' : (pct >= 60 ? '#d97706' : '#dc2626')));
+      const tierBg = !isGraded ? '#fffbeb' : (pct >= 85 ? '#ecfdf5' : (pct >= 75 ? '#eff6ff' : (pct >= 60 ? '#fffbeb' : '#fef2f2')));
+
+      container.innerHTML = `
+        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-right: 6px solid ${tierColor}; border-radius: 14px; padding: 20px 22px; margin-bottom: 22px; box-shadow: 0 4px 14px rgba(0,0,0,0.04);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+            <div style="flex: 1; min-width: 240px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.74rem; font-weight: 800; color: ${tierColor}; background: ${tierBg}; padding: 3px 10px; border-radius: 999px; border: 1px solid ${tierColor}40;">
+                  ${isGraded ? 'نتيجة معتمدة رسمياً' : 'تم تسليم الإجابة • قيد تصحيح المعلم ⏳'}
+                </span>
+                ${latest.date ? `<span style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(latest.date)}</span>` : ''}
+              </div>
+              <h3 style="font-size: 1.08rem; font-weight: 800; color: var(--text-main); margin-top: 6px;">
+                ${escapeHtml(latest.title)}
+              </h3>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                ${isGraded ? (latest.note || 'تم رصد وتوثيق درجة الكويز بحساب الطالب رسمياً.') : 'تم استلام إجاباتك بنجاح وجاري مراجعة ورصد الدرجة فوراً.'}
+              </p>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 14px;">
+              ${isGraded ? `
+                <div style="text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 18px; min-width: 100px;">
+                  <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">الدرجة المرصودة</div>
+                  <div style="font-size: 1.45rem; font-weight: 900; color: ${tierColor}; line-height: 1.2;">
+                    ${latest.score} <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8;">/ ${latest.maxScore}</span>
+                  </div>
+                  <div style="font-size: 0.72rem; font-weight: 800; color: ${tierColor};">${pct}% (${tier})</div>
+                </div>
+              ` : `
+                <div style="text-align: center; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 8px 14px; color: #b45309; font-size: 0.8rem; font-weight: 800;">
+                  قيد التصحيح والاعتماد
+                </div>
+              `}
+
+              <button type="button" class="btn btn-secondary" style="height: 40px; font-size: 0.82rem; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px;" onclick="viewQuizResult('${latest.id}')">
+                <span>${isGraded ? 'عرض ورقة الإجابة والحل النموذجي' : 'مراجعة إجاباتي المسلمة'}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     // تصيير كشف درجات الامتحانات المرصودة من قاعدة البيانات

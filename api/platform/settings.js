@@ -72,26 +72,20 @@ export default async function handler(req, res) {
   // POST: Save or update platform settings
   if (req.method === 'POST') {
     try {
-      let body = req.body;
-      if (typeof body === 'string') {
-        try {
-          body = JSON.parse(body);
-        } catch (_) {}
+      let body = {};
+      try {
+        if (req.body) {
+          body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        }
+      } catch (_) {
+        body = {};
       }
 
-      const payload = {
-        ...DEFAULT_SETTINGS,
-        ...(body || {}),
-        is_published: true,
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      };
-
-      const subdomain = (payload.subdomain || 'mr-omar').trim().toLowerCase();
+      const subdomain = String(body.subdomain || req.query?.subdomain || 'mr-omar').trim().toLowerCase();
       const phoneKey = `PLATFORM_SETTINGS_${subdomain}`;
 
-      // Upsert into whatsapp_inbox
-      const checkUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(phoneKey)}&select=id`;
+      // Fetch existing row first to merge fields safely
+      const checkUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(phoneKey)}&select=*`;
       const checkRes = await fetch(checkUrl, {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -100,6 +94,23 @@ export default async function handler(req, res) {
       });
 
       const existing = checkRes.ok ? await checkRes.json() : [];
+      let previousSettings = {};
+      if (Array.isArray(existing) && existing.length > 0 && existing[0].message_body) {
+        try {
+          previousSettings = JSON.parse(existing[0].message_body);
+        } catch (_) {}
+      }
+
+      const payload = {
+        ...DEFAULT_SETTINGS,
+        ...previousSettings,
+        ...(body || {}),
+        subdomain,
+        is_published: true,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      };
+
       if (Array.isArray(existing) && existing.length > 0) {
         await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?id=eq.${existing[0].id}`, {
           method: 'PATCH',
