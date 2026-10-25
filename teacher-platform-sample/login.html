@@ -609,10 +609,10 @@
     }
 
     function checkPublishStatus(s) {
-      const isPublished = Boolean(
-        (s && (s.is_published === true || s.is_active === true)) ||
-        localStorage.getItem('centrly_platform_published') === 'true'
-      );
+      // Platform is active by default for students & teacher platforms
+      // Only show overlay if teacher explicitly set is_published to false AND is_active to false
+      const isExplicitlyDraft = Boolean(s && s.is_published === false && s.is_active === false);
+      const isPublished = !isExplicitlyDraft;
       const overlay = document.getElementById('unreleasedOverlay');
       if (overlay) {
         overlay.style.display = isPublished ? 'none' : 'flex';
