@@ -1189,10 +1189,10 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
             </label>
             <textarea 
               id="currentQText"
-              class="form-input" 
-              rows="3" 
-              placeholder="اكتب صيغة السؤال هنا بوضوح..."
-              style="font-size: 0.88rem; font-weight: 600; width: 100%; border: 1px solid #cbd5e1; border-radius: 5px;"
+              class="form-input form-textarea" 
+              rows="4" 
+              placeholder="اكتب صيغة السؤال هنا بوضوح وبالتفصيل..."
+              style="font-size: 0.95rem; font-weight: 600; width: 100%; min-height: 120px; height: auto; padding: 0.75rem 0.85rem; line-height: 1.6; border: 1.5px solid #cbd5e1; border-radius: 6px; resize: vertical;"
               onchange="window.centrlyApp.updateCurrentQuestionField('text', this.value)"
             >${escapeHtml(currentQ.text || '')}</textarea>
           </div>
@@ -1297,10 +1297,10 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
               <span>الإجابة النموذجية الاسترشادية:</span>
             </label>
             <textarea 
-              class="form-input" 
+              class="form-input form-textarea" 
               rows="3" 
               placeholder="اكتب خطوات الحل أو الإجابة النموذجية المعتمدة ليسترشد بها المعلم أثناء التصحيح..."
-              style="font-size: 0.85rem; font-weight: 600; width: 100%; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 4px;"
+              style="font-size: 0.88rem; font-weight: 600; width: 100%; min-height: 90px; height: auto; padding: 0.65rem 0.75rem; border: 1.5px solid #cbd5e1; background: #ffffff; border-radius: 6px; resize: vertical;"
               onchange="window.centrlyApp.updateCurrentQuestionField('model_answer', this.value)"
             >${escapeHtml(currentQ.model_answer || '')}</textarea>
           </div>
@@ -2566,10 +2566,10 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 نص السؤال:
               </label>
               <textarea 
-                class="form-input" 
-                rows="2" 
+                class="form-input form-textarea" 
+                rows="4" 
                 placeholder="اكتب صيغة السؤال هنا بوضوح..."
-                style="font-size: 0.88rem; font-weight: 600; width: 100%; border: 1px solid #cbd5e1; border-radius: 5px;"
+                style="font-size: 0.95rem; font-weight: 600; width: 100%; min-height: 110px; height: auto; padding: 0.75rem 0.85rem; line-height: 1.6; border: 1.5px solid #cbd5e1; border-radius: 6px; resize: vertical;"
                 onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'text', this.value)"
               >${escapeHtml(q.text || '')}</textarea>
             </div>
@@ -2708,10 +2708,10 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                   <span>الإجابة النموذجية الاسترشادية:</span>
                 </label>
                 <textarea 
-                  class="form-input" 
-                  rows="2" 
+                  class="form-input form-textarea" 
+                  rows="3" 
                   placeholder="اكتب خطوات الحل أو الإجابة النموذجية..."
-                  style="font-size: 0.85rem; font-weight: 600; width: 100%; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 4px;"
+                  style="font-size: 0.88rem; font-weight: 600; width: 100%; min-height: 85px; height: auto; padding: 0.65rem 0.75rem; border: 1.5px solid #cbd5e1; background: #ffffff; border-radius: 6px; resize: vertical;"
                   onchange="window.centrlyApp.updatePaperQuestion(${qIdx}, 'model_answer', this.value)"
                 >${escapeHtml(q.model_answer || '')}</textarea>
               </div>
