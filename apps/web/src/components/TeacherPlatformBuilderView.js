@@ -59,7 +59,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
   const headlineText = settings.headline_text || "بوابتك التعليمية الشاملة للتفوق والدرجة النهائية";
   const subtitleText = settings.subtitle_text || "هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.";
-  const themePreset = settings.theme_preset || "navy";
+  const themePreset = settings.theme_preset || localStorage.getItem('portal_theme') || "emerald";
   const cutoutAvatarUrl = settings.cutout_avatar_url || "";
 
   // Official live URL (الرابط الرسمي على السابدومين الخاص بالمدرس)
@@ -687,7 +687,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 export function registerTeacherPlatformActions(appInstance) {
   let isSaving = false;
   let subdomainCheckTimer = null;
-  let currentTheme = localStorage.getItem('portal_theme') || 'navy';
+  let cachedSettings = {};
+  try {
+    cachedSettings = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
+  } catch (e) {}
+  let currentTheme = localStorage.getItem('portal_theme') || cachedSettings.theme_preset || 'emerald';
 
   function notify(msg, type = 'success') {
     if (appInstance && typeof appInstance.showToast === 'function') {
@@ -1122,7 +1126,7 @@ export function registerTeacherPlatformActions(appInstance) {
         subject_title: subjectInput ? subjectInput.value.trim() : '',
         headline_text: 'بوابتك التعليمية الشاملة للتفوق والدرجة النهائية',
         subtitle_text: 'هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.',
-        theme_preset: currentTheme || 'navy',
+        theme_preset: currentTheme || 'emerald',
         cutout_avatar_url: cutoutInput ? cutoutInput.value.trim() : '',
         is_published: true,
         is_active: true

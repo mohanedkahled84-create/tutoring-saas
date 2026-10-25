@@ -469,10 +469,10 @@
     })();
   </script>
 </head>
-<body class="theme-navy">
+<body class="theme-emerald">
   <script>
     try {
-      var t = localStorage.getItem('portal_theme') || (JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}').theme_preset) || 'navy';
+      var t = localStorage.getItem('portal_theme') || (JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}').theme_preset) || 'emerald';
       document.body.className = 'theme-' + t;
     } catch (_) {}
   </script>
@@ -613,7 +613,13 @@
       }
 
       try {
-        const res = await fetch(`/api/platform/public/${encodeURIComponent(sub)}`);
+        let res = await fetch(`/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).catch(() => null);
+      if (!res || !res.ok) {
+        res = await fetch(`/api/platform/public/${encodeURIComponent(sub)}`).catch(() => null);
+      }
+      if (!res || !res.ok) {
+        res = await fetch(`https://centerly-eg.com/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).catch(() => null);
+      }
         if (res.ok) {
           const data = await res.json();
           if (data && data.settings) {
@@ -698,7 +704,7 @@
     hydratePlatformFromSubdomain();
 
     // استرجاع اللون الموحد المعتمد لمنصة المعلم
-    const savedTheme = localStorage.getItem('portal_theme') || 'navy';
+    const savedTheme = localStorage.getItem('portal_theme') || 'emerald';
     document.body.className = 'theme-' + savedTheme;
 
     function setMode(mode) {

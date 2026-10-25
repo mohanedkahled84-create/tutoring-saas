@@ -1124,8 +1124,27 @@
       font-size: 0.75rem !important;
     }
   </style>
+  <script>
+    // Early theme hydration to prevent any white/navy flash
+    (function hydrateThemeEarly() {
+      try {
+        var t = localStorage.getItem('portal_theme');
+        if (!t) {
+          var s = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
+          if (s.theme_preset) t = s.theme_preset;
+        }
+        if (t) document.documentElement.setAttribute('data-theme', t);
+      } catch (_) {}
+    })();
+  </script>
 </head>
-<body>
+<body class="theme-emerald">
+  <script>
+    try {
+      var t = localStorage.getItem('portal_theme') || (JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}').theme_preset) || 'emerald';
+      document.body.className = 'theme-' + t;
+    } catch (_) {}
+  </script>
 
   <div class="app-layout">
 
@@ -1642,9 +1661,9 @@
     async function syncPlatformSettingsOnline() {
       try {
         const sub = getSubdomain();
-        let res = await fetch(/api/platform/public/).then(r => r.json()).catch(() => null);
+        let res = await fetch(`/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).then(r => r.json()).catch(() => null);
         if (!res || !res.settings) {
-          res = await fetch(https://centerly-eg.com/api/platform/public/).then(r => r.json()).catch(() => null);
+          res = await fetch(`https://centerly-eg.com/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).then(r => r.json()).catch(() => null);
         }
         if (res && res.settings) {
           const s = res.settings;
@@ -1654,7 +1673,7 @@
             localStorage.setItem('portal_theme', s.theme_preset);
           }
           if (s.display_title) {
-            document.title = ${s.display_title} — بوابة الطالب;
+            document.title = `${s.display_title} — بوابة الطالب`;
             const titleEl = document.querySelector('.teacher-titles h2');
             if (titleEl) titleEl.innerText = s.display_title;
           }

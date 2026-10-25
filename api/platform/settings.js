@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS = {
   subject_title: 'فيزياء الثانوية العامة',
   headline_text: 'بوابتك التعليمية الشاملة للتفوق والدرجة النهائية',
   subtitle_text: 'هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.',
-  theme_preset: 'navy',
+  theme_preset: 'emerald',
   cutout_avatar_url: '/teacher-platform-sample/teacher_cutout.png',
   is_published: true,
   is_active: true,

@@ -1940,8 +1940,12 @@ class CentrlyApp {
           break;
         }
         case 'platform-builder': {
-          let [res, viewsRes, onlineSubsRes, stdRes] = await Promise.all([
+          const sub = (this.user?.subdomain || 'mr-omar');
+          let [res, vercelSettingsRes, viewsRes, onlineSubsRes, stdRes] = await Promise.all([
             request('/platform/settings').catch(() => null),
+            fetch(`/api/platform/settings?subdomain=${encodeURIComponent(sub)}`)
+              .then(r => r.json())
+              .catch(() => fetch(`https://centerly-eg.com/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).then(r => r.json()).catch(() => null)),
             fetch('/api/video-tracking').then(r => r.json()).catch(() => null),
             fetch('/api/quizzes/submissions')
               .then(r => r.json())
@@ -1975,9 +1979,15 @@ class CentrlyApp {
             }
           } catch (_) {}
 
-          const finalSettings = res?.settings || localSettings || null;
+          const finalSettings = vercelSettingsRes?.settings || res?.settings || localSettings || null;
           if (finalSettings && finalSettings.subject_title && (finalSettings.subject_title.includes('الإنجليزية') || finalSettings.subject_title.includes('خبير'))) {
             finalSettings.subject_title = this.user?.subject || 'فيزياء الثانوية العامة';
+          }
+          if (finalSettings && finalSettings.theme_preset) {
+            try {
+              localStorage.setItem('portal_theme', finalSettings.theme_preset);
+              localStorage.setItem('centrly_platform_settings', JSON.stringify(finalSettings));
+            } catch (_) {}
           }
 
           this.platformBuilderState = {
