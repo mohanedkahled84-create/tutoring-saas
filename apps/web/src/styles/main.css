@@ -88,14 +88,14 @@
   gap: 0.65rem;
   padding: 0.48rem 0.7rem;
   border-radius: 6px;
-  color: #334155;
+  color: #334155 !important;
+  background-color: transparent !important;
   text-decoration: none;
   font-weight: 600;
   font-size: 0.82rem;
   transition: all 0.12s ease;
   cursor: pointer;
   border: none;
-  background: transparent;
   width: 100%;
   text-align: right;
 }
@@ -104,29 +104,46 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #64748b;
+  color: #64748b !important;
   flex-shrink: 0;
 }
 
-.nav-link:hover:not(.active) {
-  background-color: #f1f5f9;
-  color: #0f172a;
+.nav-link .nav-title {
+  color: #334155 !important;
+  font-weight: 600;
 }
 
-.nav-link:hover:not(.active) .nav-icon {
-  color: #0f172a;
+.nav-link svg {
+  stroke: #64748b !important;
+}
+
+.nav-link:hover:not(.active) {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.nav-link:hover:not(.active) .nav-icon,
+.nav-link:hover:not(.active) .nav-title {
+  color: #0f172a !important;
+}
+
+.nav-link:hover:not(.active) svg {
+  stroke: #0f172a !important;
 }
 
 .nav-link.active {
   background-color: #0f172a !important;
   color: #ffffff !important;
-  font-weight: 700;
+  font-weight: 700 !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .nav-link.active .nav-icon,
 .nav-link.active .nav-title,
 .nav-link.active span {
   color: #ffffff !important;
+  font-weight: 700 !important;
 }
 
 .nav-link.active svg {

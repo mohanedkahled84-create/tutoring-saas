@@ -4,7 +4,7 @@ import { registerStudentImportActions } from './components/StudentImportModal.js
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=1.0.0';
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
-import { renderSidebar } from './components/Sidebar.js?v=5.2.0';
+import { renderSidebar } from './components/Sidebar.js?v=5.2.1';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.1';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.9.21';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
@@ -2093,6 +2093,13 @@ class CentrlyApp {
         const isActive = btnRoute === this.currentRoute;
         btn.classList.toggle('active', isActive);
         btn.style.background = '';
+        btn.style.color = '';
+        const title = btn.querySelector('.nav-title');
+        if (title) title.style.color = '';
+        const icon = btn.querySelector('.nav-icon');
+        if (icon) icon.style.color = '';
+        const svg = btn.querySelector('svg');
+        if (svg) svg.setAttribute('stroke', isActive ? '#ffffff' : '#64748b');
       });
 
       this.renderMainContent();
