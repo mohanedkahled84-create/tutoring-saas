@@ -213,6 +213,9 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
       ${activeSubTab === 'paper_scanner' ? renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents) : ''}
       ${activeSubTab === 'roster' ? renderRosterTab(state, groups, students, activeGroup, groupStudents, quizzes, currentQuiz, isLoading, hasLoaded) : ''}
 
+      <!-- Unsaved Exam Exit Dialog Modal -->
+      ${state.exitPromptMode ? renderUnsavedExamExitModal(state) : ''}
+
     </div>
   `;
 }
@@ -225,6 +228,84 @@ function getBadgeStyle(isActive, isGreen = false) {
     return `padding: 0.6rem 1.15rem; font-size: 0.88rem; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.5rem; background: #eff6ff; color: #1e40af; border: 2px solid var(--centrly-blue-700); box-shadow: 0 2px 6px rgba(37,99,235,0.15); cursor: pointer; transition: all 0.15s ease;`;
   }
   return `padding: 0.6rem 1.15rem; font-size: 0.88rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.5rem; background: #f8fafc; color: var(--centrly-ink); border: 1.5px solid var(--centrly-line); cursor: pointer; transition: all 0.15s ease;`;
+}
+
+function renderUnsavedExamExitModal(state) {
+  const mode = state.exitPromptMode || 'online'; // 'online' | 'paper'
+  const isOnline = mode === 'online';
+  const qz = isOnline ? state.activeOnlineQuiz : state.activePaperQuiz;
+  const qCount = qz?.questions?.filter(q => (q.text && q.text.trim()) || q.image_url)?.length || 0;
+  const examTitle = qz?.title || (isOnline ? 'الامتحان الإلكتروني' : 'الامتحان الورقي');
+
+  return `
+    <div style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.72); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(4px); font-family: 'Cairo', sans-serif;" dir="rtl">
+      <div style="background: #ffffff; border-radius: 12px; max-width: 470px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35); border: 1px solid #e2e8f0; overflow: hidden; animation: centrlyFadeIn 0.2s ease;">
+        
+        <!-- Header -->
+        <div style="background: #fffbeb; border-bottom: 1px solid #fef3c7; padding: 1.15rem 1.25rem; display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 42px; height: 42px; border-radius: 50%; background: #fef3c7; border: 1.5px solid #fde68a; display: flex; align-items: center; justify-content: center; color: #b45309; flex-shrink: 0;">
+            ${getIcon('archive', 22, '#b45309')}
+          </div>
+          <div>
+            <h3 style="font-size: 0.98rem; font-weight: 800; color: #92400e; margin: 0;">
+              لم تقم بحفظ الامتحان بعد!
+            </h3>
+            <span style="font-size: 0.76rem; color: #b45309; font-weight: 600;">
+              ${escapeHtml(examTitle)} • (${qCount} أسئلة مضافة)
+            </span>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 1.25rem;">
+          <p style="font-size: 0.85rem; color: #334155; line-height: 1.6; margin: 0 0 1.25rem 0; font-weight: 600;">
+            أنت الآن بصدد مغادرة صفحة إعداد الامتحان دون حفظه. هل ترغب في <b>حفظه في الأرشيف (مسودة)</b> للرجوع إليه وإكماله في أي وقت، أم تريد <b>مسحه وتجاهله نهائياً</b>؟
+          </p>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+            
+            <!-- Button 1: Save to Archive (Draft) -->
+            <button 
+              type="button" 
+              onclick="window.centrlyApp.saveExamToArchive('${mode}')"
+              style="width: 100%; height: 42px; background: #0f172a; color: #ffffff; border: none; border-radius: 8px; font-size: 0.84rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 4px rgba(15,23,42,0.15); transition: background 0.15s ease;"
+              onmouseover="this.style.background='#1e293b'"
+              onmouseout="this.style.background='#0f172a'"
+            >
+              ${getIcon('archive', 16, '#f59e0b')}
+              <span>حفظ في الأرشيف (مسودة للاستكمال لاحقاً)</span>
+            </button>
+
+            <!-- Button 2: Discard / Delete -->
+            <button 
+              type="button" 
+              onclick="window.centrlyApp.discardUnsavedExam('${mode}')"
+              style="width: 100%; height: 38px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s ease;"
+              onmouseover="this.style.background='#fee2e2'"
+              onmouseout="this.style.background='#fef2f2'"
+            >
+              ${getIcon('trash', 15, '#dc2626')}
+              <span>مسح وتجاهل الامتحان</span>
+            </button>
+
+            <!-- Button 3: Stay and Continue Editing -->
+            <button 
+              type="button" 
+              onclick="window.centrlyApp.dismissExitPrompt()"
+              style="width: 100%; height: 36px; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;"
+              onmouseover="this.style.background='#f1f5f9'"
+              onmouseout="this.style.background='#f8fafc'"
+            >
+              <span>الرجوع ومتابعة التعديل الآن</span>
+            </button>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
 }
 
 // ============================================================================
@@ -611,10 +692,105 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
     return false;
   });
 
+  const allDrafts = state.examDrafts || [];
+  const onlineDrafts = allDrafts.filter(d => (d.exam_mode || 'online') !== 'paper');
+  const activeListTab = state.onlineListTab || 'published'; // 'published' | 'drafts'
+
   if (viewMode === 'list') {
     return `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         
+        <!-- Header Bar with Filter Tabs and New Exam Button -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem;">
+          <div style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <button 
+              type="button" 
+              onclick="window.centrlyApp.setOnlineListTab('published')"
+              style="height: 30px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s ease; ${activeListTab === 'published' ? 'background: #ffffff; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.06);' : 'background: transparent; color: #64748b;'}"
+            >
+              الامتحانات المنشورة (${richQuizzes.length})
+            </button>
+            <button 
+              type="button" 
+              onclick="window.centrlyApp.setOnlineListTab('drafts')"
+              style="height: 30px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px; ${activeListTab === 'drafts' ? 'background: #ffffff; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.06);' : 'background: transparent; color: #64748b;'}"
+            >
+              ${getIcon('archive', 13, activeListTab === 'drafts' ? '#b45309' : '#64748b')}
+              <span>الأرشيف والمسودات</span>
+              ${onlineDrafts.length > 0 ? `<span style="background: #f59e0b; color: #ffffff; font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 10px;">${onlineDrafts.length}</span>` : ''}
+            </button>
+          </div>
+
+          <button type="button" onclick="window.centrlyApp.startNewOnlineExamWizard()"
+            style="height: 30px; padding: 0 14px; font-size: 0.76rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+            <span>+ إنشاء امتحان إلكتروني جديد</span>
+          </button>
+        </div>
+
+        ${activeListTab === 'drafts' ? `
+          <!-- Drafts / Archive View -->
+          ${onlineDrafts.length === 0 ? `
+            <div class="card" style="text-align: center; padding: 3rem 1.5rem; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px;">
+              <div style="color: #94a3b8; margin-bottom: 0.5rem; display: flex; justify-content: center;">${getIcon('archive', 36, '#94a3b8')}</div>
+              <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.25rem;">الأرشيف فارغ حالياً</div>
+              <p style="font-size: 0.78rem; color: #64748b; margin: 0 auto; max-width: 420px; line-height: 1.5;">
+                عندما تقوم بإعداد امتحان إلكتروني وتختار حفظه في الأرشيف (مسودة) بدلاً من حذفه، سيظهر هنا فوراً لتستأنف كتابته وتعديله ونشره متى شئت.
+              </p>
+            </div>
+          ` : `
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+              ${onlineDrafts.map(d => {
+                const qCount = d.questions?.length || 0;
+                const dateStr = d.archived_at ? new Date(d.archived_at).toLocaleDateString('ar-EG') : 'مسودة حديثة';
+                return `
+                  <div class="card" style="margin: 0; border: 1.5px dashed #f59e0b; border-radius: 8px; background: #fffdfa; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                    <div>
+                      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.65rem;">
+                        <span style="font-weight: 800; font-size: 0.95rem; color: #0f172a; line-height: 1.4;">
+                          ${escapeHtml(d.title || 'مسودة امتحان إلكتروني')}
+                        </span>
+                        <span style="font-size: 0.72rem; font-weight: 800; background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">
+                          ${getIcon('archive', 11, '#b45309')}
+                          <span>مسودة بالأرشيف</span>
+                        </span>
+                      </div>
+                      <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem;">
+                        <span style="background: #ffffff; border: 1px solid #e2e8f0; color: #475569; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px;">
+                          المادة: ${escapeHtml(d.subject || 'الفيزياء')}
+                        </span>
+                        <span style="background: #ffffff; border: 1px solid #e2e8f0; color: #475569; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px;">
+                          ${qCount} أسئلة
+                        </span>
+                        <span style="background: #ffffff; border: 1px solid #e2e8f0; color: #64748b; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px;">
+                          محفوظ بتاريخ: ${escapeHtml(dateStr)}
+                        </span>
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: 0.45rem; align-items: center; margin-top: 1rem; padding-top: 0.65rem; border-top: 1px solid #fed7aa;">
+                      <button 
+                        type="button" 
+                        style="flex: 1; height: 32px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px;"
+                        onclick="window.centrlyApp.resumeExamDraft('${escapeHtml(d.id)}', 'online')"
+                      >
+                        ${getIcon('edit', 12, '#ffffff')}
+                        <span>استئناف وتعديل</span>
+                      </button>
+                      <button 
+                        type="button" 
+                        style="height: 32px; font-size: 0.75rem; font-weight: 700; background: #fef2f2; color: #dc2626; border-radius: 5px; border: 1px solid #fecaca; cursor: pointer; padding: 0 10px; display: inline-flex; align-items: center; gap: 4px;"
+                        onclick="window.centrlyApp.deleteExamDraft('${escapeHtml(d.id)}')"
+                        title="حذف هذه المسودة نهائياً"
+                      >
+                        ${getIcon('trash', 12, '#dc2626')}
+                        <span>حذف</span>
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+        ` : `
         <!-- Online Exams Cards Grid / Loading / Empty (Swiss Minimal) -->
         ${state.isLoadingRichQuizzes ? `
           <!-- Loading State (Calm Minimal Swiss) -->
@@ -744,6 +920,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
             </button>
           </div>
         `}
+      `}
 
         <!-- Results Table Card inside Online Builder -->
         ${gradedSubmissions && gradedSubmissions.length > 0 ? `
@@ -2111,6 +2288,10 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
     return false;
   });
 
+  const allDrafts = state.examDrafts || [];
+  const paperDrafts = allDrafts.filter(d => (d.exam_mode || '') === 'paper');
+  const activePaperListTab = state.paperListTab || 'published'; // 'published' | 'drafts'
+
   const selectedQuizId = state.printQuizId || paperQuizzes[0]?.id || null;
   const targetQuiz = paperQuizzes.find(q => q.id === selectedQuizId) || paperQuizzes[0] || allRich.find(q => q.id === selectedQuizId && q.exam_mode === 'paper') || null;
 
@@ -2118,6 +2299,97 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
     return `
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         
+        <!-- Header Bar with Filter Tabs and New Paper Exam Button -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem;">
+          <div style="display: inline-flex; background: #f1f5f9; padding: 3px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <button 
+              type="button" 
+              onclick="window.centrlyApp.setPaperListTab('published')"
+              style="height: 30px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s ease; ${activePaperListTab === 'published' ? 'background: #ffffff; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.06);' : 'background: transparent; color: #64748b;'}"
+            >
+              الامتحانات الورقية (${paperQuizzes.length})
+            </button>
+            <button 
+              type="button" 
+              onclick="window.centrlyApp.setPaperListTab('drafts')"
+              style="height: 30px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px; ${activePaperListTab === 'drafts' ? 'background: #ffffff; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.06);' : 'background: transparent; color: #64748b;'}"
+            >
+              ${getIcon('archive', 13, activePaperListTab === 'drafts' ? '#b45309' : '#64748b')}
+              <span>الأرشيف والمسودات</span>
+              ${paperDrafts.length > 0 ? `<span style="background: #f59e0b; color: #ffffff; font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 10px;">${paperDrafts.length}</span>` : ''}
+            </button>
+          </div>
+
+          <button type="button" onclick="window.centrlyApp.startNewPaperExam()"
+            style="height: 30px; padding: 0 14px; font-size: 0.76rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+            <span>+ إنشاء امتحان ورقي جديد</span>
+          </button>
+        </div>
+
+        ${activePaperListTab === 'drafts' ? `
+          <!-- Paper Drafts / Archive View -->
+          ${paperDrafts.length === 0 ? `
+            <div class="card" style="text-align: center; padding: 3rem 1.5rem; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px;">
+              <div style="color: #94a3b8; margin-bottom: 0.5rem; display: flex; justify-content: center;">${getIcon('archive', 36, '#94a3b8')}</div>
+              <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.25rem;">الأرشيف فارغ حالياً</div>
+              <p style="font-size: 0.78rem; color: #64748b; margin: 0 auto; max-width: 420px; line-height: 1.5;">
+                عندما تقوم بإعداد امتحان ورقي وتختار حفظه في الأرشيف (مسودة) بدلاً من حذفه، سيظهر هنا فوراً لتستأنف كتابته وتعديله وطباعته متى شئت.
+              </p>
+            </div>
+          ` : `
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+              ${paperDrafts.map(d => {
+                const qCount = d.questions?.length || 0;
+                const dateStr = d.archived_at ? new Date(d.archived_at).toLocaleDateString('ar-EG') : 'مسودة حديثة';
+                return `
+                  <div class="card" style="margin: 0; border: 1.5px dashed #f59e0b; border-radius: 8px; background: #fffdfa; padding: 1.1rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                    <div>
+                      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.65rem;">
+                        <span style="font-weight: 800; font-size: 0.95rem; color: #0f172a; line-height: 1.4;">
+                          ${escapeHtml(d.title || 'مسودة امتحان ورقي')}
+                        </span>
+                        <span style="font-size: 0.72rem; font-weight: 800; background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">
+                          ${getIcon('archive', 11, '#b45309')}
+                          <span>مسودة بالأرشيف</span>
+                        </span>
+                      </div>
+                      <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem;">
+                        <span style="background: #ffffff; border: 1px solid #e2e8f0; color: #475569; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px;">
+                          المادة: ${escapeHtml(d.subject || 'الفيزياء')}
+                        </span>
+                        <span style="background: #ffffff; border: 1px solid #e2e8f0; color: #475569; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px;">
+                          ${qCount} أسئلة
+                        </span>
+                        <span style="background: #ffffff; border: 1px solid #e2e8f0; color: #64748b; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px;">
+                          محفوظ بتاريخ: ${escapeHtml(dateStr)}
+                        </span>
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: 0.45rem; align-items: center; margin-top: 1rem; padding-top: 0.65rem; border-top: 1px solid #fed7aa;">
+                      <button 
+                        type="button" 
+                        style="flex: 1; height: 32px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px;"
+                        onclick="window.centrlyApp.resumeExamDraft('${escapeHtml(d.id)}', 'paper')"
+                      >
+                        ${getIcon('edit', 12, '#ffffff')}
+                        <span>استئناف وتعديل</span>
+                      </button>
+                      <button 
+                        type="button" 
+                        style="height: 32px; font-size: 0.75rem; font-weight: 700; background: #fef2f2; color: #dc2626; border-radius: 5px; border: 1px solid #fecaca; cursor: pointer; padding: 0 10px; display: inline-flex; align-items: center; gap: 4px;"
+                        onclick="window.centrlyApp.deleteExamDraft('${escapeHtml(d.id)}')"
+                        title="حذف هذه المسودة نهائياً"
+                      >
+                        ${getIcon('trash', 12, '#dc2626')}
+                        <span>حذف</span>
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+        ` : `
         <!-- Paper Exams Cards Grid / Loading / Empty (Swiss Minimal) -->
         ${state.isLoadingRichQuizzes ? `
           <!-- Loading State (Calm Minimal Swiss) -->
@@ -2234,6 +2506,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
             </button>
           </div>
         `}
+      `}
 
       </div>
     `;
@@ -3467,6 +3740,204 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
 // ============================================================================
 export function registerTeacherQuizzesActions(app) {
 
+  // Initialize drafts cache
+  try {
+    const cachedDrafts = localStorage.getItem('centrly_quiz_drafts');
+    if (cachedDrafts) {
+      app.quizzesState.examDrafts = JSON.parse(cachedDrafts);
+    }
+  } catch (_) {}
+  if (!Array.isArray(app.quizzesState.examDrafts)) {
+    app.quizzesState.examDrafts = [];
+  }
+
+  // Detect unsaved exam
+  app.checkHasUnsavedExam = function(mode) {
+    if (mode === 'online') {
+      const qz = this.quizzesState.activeOnlineQuiz;
+      if (!qz) return false;
+      const hasQuestions = Array.isArray(qz.questions) && qz.questions.some(q => (q.text && q.text.trim()) || q.image_url);
+      const isCustomTitle = qz.title && !qz.title.startsWith('كويز') && qz.title.trim().length > 0;
+      const isStep2 = (this.quizzesState.wizardStep || 1) >= 2;
+      return Boolean(hasQuestions || (isCustomTitle && isStep2));
+    } else if (mode === 'paper') {
+      const qz = this.quizzesState.activePaperQuiz;
+      if (!qz) return false;
+      const hasQuestions = Array.isArray(qz.questions) && qz.questions.some(q => (q.text && q.text.trim()) || q.image_url);
+      const isCustomTitle = qz.title && !qz.title.startsWith('امتحان') && qz.title.trim().length > 0;
+      const isStep2 = (this.quizzesState.paperWizardStep || 1) >= 2;
+      return Boolean(hasQuestions || (isCustomTitle && isStep2));
+    }
+    return false;
+  };
+
+  app.promptUnsavedExamExit = function(mode, targetAction = null) {
+    this.quizzesState.exitPromptMode = mode;
+    this.quizzesState.exitPromptTargetAction = targetAction;
+    this.renderMainContent();
+  };
+
+  app.dismissExitPrompt = function() {
+    this.quizzesState.exitPromptMode = null;
+    this.quizzesState.exitPromptTargetAction = null;
+    this.renderMainContent();
+  };
+
+  app.saveExamToArchive = async function(mode) {
+    const isOnline = mode === 'online';
+    const qz = isOnline ? this.quizzesState.activeOnlineQuiz : this.quizzesState.activePaperQuiz;
+    if (!qz) {
+      this.dismissExitPrompt();
+      return;
+    }
+
+    if (isOnline) {
+      const t = document.getElementById('wizardTitle')?.value?.trim();
+      if (t) qz.title = t;
+      const s = document.getElementById('wizardSubject')?.value?.trim();
+      if (s) qz.subject = s;
+      const curTxt = document.getElementById('currentQText')?.value?.trim();
+      const curIdx = this.quizzesState.currentQuestionIndex || 0;
+      if (curTxt && qz.questions?.[curIdx]) {
+        qz.questions[curIdx].text = curTxt;
+      }
+    } else {
+      const t = document.getElementById('paperQuizTitle')?.value?.trim();
+      if (t) qz.title = t;
+      const s = document.getElementById('paperQuizSubject')?.value?.trim();
+      if (s) qz.subject = s;
+    }
+
+    const draftId = qz.id || `draft_${mode}_${Date.now()}`;
+    const draftObject = {
+      ...qz,
+      id: draftId,
+      exam_mode: isOnline ? 'online' : 'paper',
+      title: qz.title || (isOnline ? 'مسودة امتحان إلكتروني' : 'مسودة امتحان ورقي'),
+      subject: qz.subject || 'الفيزياء',
+      is_draft: true,
+      is_archived: true,
+      status: 'draft',
+      archived_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    if (!Array.isArray(this.quizzesState.examDrafts)) {
+      this.quizzesState.examDrafts = [];
+    }
+
+    this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftId);
+    this.quizzesState.examDrafts.unshift(draftObject);
+
+    try {
+      localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+    } catch (_) {}
+
+    fetch('/api/quizzes/rich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(draftObject)
+    }).catch(() => {});
+
+    const targetAction = this.quizzesState.exitPromptTargetAction;
+    this.quizzesState.exitPromptMode = null;
+    this.quizzesState.exitPromptTargetAction = null;
+    if (isOnline) {
+      this.quizzesState.activeOnlineQuiz = null;
+      this.quizzesState.onlineViewMode = 'list';
+      this.quizzesState.onlineListTab = 'drafts';
+    } else {
+      this.quizzesState.activePaperQuiz = null;
+      this.quizzesState.paperViewMode = 'list';
+      this.quizzesState.paperListTab = 'drafts';
+    }
+
+    this.showToast('تم حفظ الامتحان في الأرشيف بنجاح! يمكنك استئنافه بأي وقت.', 'success');
+    if (typeof targetAction === 'function') {
+      targetAction();
+    } else {
+      this.renderMainContent();
+    }
+  };
+
+  app.discardUnsavedExam = function(mode) {
+    const isOnline = mode === 'online';
+    const targetAction = this.quizzesState.exitPromptTargetAction;
+    this.quizzesState.exitPromptMode = null;
+    this.quizzesState.exitPromptTargetAction = null;
+
+    if (isOnline) {
+      this.quizzesState.activeOnlineQuiz = null;
+      this.quizzesState.onlineViewMode = 'list';
+    } else {
+      this.quizzesState.activePaperQuiz = null;
+      this.quizzesState.paperViewMode = 'list';
+    }
+
+    this.showToast('تم تجاهل ومسح الامتحان.', 'info');
+    if (typeof targetAction === 'function') {
+      targetAction();
+    } else {
+      this.renderMainContent();
+    }
+  };
+
+  app.resumeExamDraft = function(draftId, mode) {
+    const list = this.quizzesState.examDrafts || [];
+    const draft = list.find(d => d.id === draftId);
+    if (!draft) {
+      this.showToast('لم يتم العثور على المسودة المطلوبة', 'warning');
+      return;
+    }
+
+    const cloned = JSON.parse(JSON.stringify(draft));
+    if (mode === 'online') {
+      this.quizzesState.activeOnlineQuiz = cloned;
+      this.quizzesState.onlineViewMode = 'wizard';
+      this.quizzesState.wizardStep = (cloned.questions && cloned.questions.length > 0) ? 2 : 1;
+      this.quizzesState.currentQuestionIndex = 0;
+    } else {
+      this.quizzesState.activePaperQuiz = cloned;
+      this.quizzesState.paperViewMode = 'create';
+      this.quizzesState.paperWizardStep = (cloned.questions && cloned.questions.length > 0) ? 2 : 1;
+      this.quizzesState.currentPaperQIdx = 0;
+    }
+    this.renderMainContent();
+    this.showToast(`تم استعادة مسودة (${cloned.title || 'الامتحان'}) بنجاح!`, 'info');
+  };
+
+  app.deleteExamDraft = async function(draftId) {
+    if (!confirm('هل أنت متأكد من حذف هذه المسودة من الأرشيف نهائياً؟ لا يمكن التراجع عن هذا الإجراء.')) {
+      return;
+    }
+
+    if (Array.isArray(this.quizzesState.examDrafts)) {
+      this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftId);
+      try {
+        localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+      } catch (_) {}
+    }
+
+    fetch('/api/quizzes/rich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete_draft', id: draftId })
+    }).catch(() => {});
+
+    this.showToast('تم حذف المسودة من الأرشيف بنجاح.', 'success');
+    this.renderMainContent();
+  };
+
+  app.setOnlineListTab = function(tab) {
+    this.quizzesState.onlineListTab = tab;
+    this.renderMainContent();
+  };
+
+  app.setPaperListTab = function(tab) {
+    this.quizzesState.paperListTab = tab;
+    this.renderMainContent();
+  };
+
   // Subtab switcher
   app.switchQuizSubTab = async function(tabName, gradingMode) {
     const user = this.user || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
@@ -3483,6 +3954,15 @@ export function registerTeacherQuizzesActions(app) {
       isAdmin;
 
     if (!isOmarMohamadi && tabName !== 'roster') {
+      return;
+    }
+
+    if (this.quizzesState.activeSubTab === 'online_builder' && this.quizzesState.onlineViewMode === 'wizard' && this.checkHasUnsavedExam('online')) {
+      this.promptUnsavedExamExit('online', () => this.switchQuizSubTab(tabName, gradingMode));
+      return;
+    }
+    if (this.quizzesState.activeSubTab === 'paper_builder' && this.quizzesState.paperViewMode === 'create' && this.checkHasUnsavedExam('paper')) {
+      this.promptUnsavedExamExit('paper', () => this.switchQuizSubTab(tabName, gradingMode));
       return;
     }
 
@@ -3552,6 +4032,20 @@ export function registerTeacherQuizzesActions(app) {
       }
       if (res?.success && Array.isArray(res.quizzes)) {
         this.quizzesState.richQuizzes = res.quizzes;
+      }
+      if (res?.success && Array.isArray(res.drafts)) {
+        const serverDrafts = res.drafts;
+        const localDrafts = this.quizzesState.examDrafts || [];
+        const combined = [...localDrafts];
+        for (const sd of serverDrafts) {
+          if (!combined.some(d => d.id === sd.id)) {
+            combined.push(sd);
+          }
+        }
+        this.quizzesState.examDrafts = combined;
+        try {
+          localStorage.setItem('centrly_quiz_drafts', JSON.stringify(combined));
+        } catch (_) {}
       }
       if (typeof this.reconcileQuizzesFromSubmissions === 'function') {
         this.reconcileQuizzesFromSubmissions();
@@ -3704,8 +4198,12 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.cancelOnlineExamWizard = function() {
-    this.quizzesState.onlineViewMode = 'list';
-    this.renderMainContent();
+    if (this.checkHasUnsavedExam('online')) {
+      this.promptUnsavedExamExit('online');
+    } else {
+      this.quizzesState.onlineViewMode = 'list';
+      this.renderMainContent();
+    }
   };
 
   app.proceedToQuestionsStep = function() {
@@ -4122,8 +4620,12 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.cancelPaperExamCreate = function() {
-    this.quizzesState.paperViewMode = 'list';
-    this.renderMainContent();
+    if (this.checkHasUnsavedExam('paper')) {
+      this.promptUnsavedExamExit('paper');
+    } else {
+      this.quizzesState.paperViewMode = 'list';
+      this.renderMainContent();
+    }
   };
 
   app.backToPaperList = function() {

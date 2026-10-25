@@ -148,6 +148,8 @@ export default async function handler(req, res) {
       student_name: sName,
       status,
       is_graded: isGraded,
+      is_withdrawn: Boolean(body?.is_withdrawn),
+      withdrawal_reason: body?.withdrawal_reason || null,
       mcq_score: mcqScore,
       total_mcq_points: totalMcqPoints,
       total_score: finalScore,

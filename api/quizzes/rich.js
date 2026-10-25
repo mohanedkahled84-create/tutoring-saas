@@ -49,6 +49,7 @@ export default async function handler(req, res) {
     try {
       const { group_id } = req.query || {};
       let richQuizzes = [];
+      let draftQuizzes = [];
 
       // Primary check: study_materials table
       try {
@@ -119,14 +120,23 @@ export default async function handler(req, res) {
           for (const row of (Array.isArray(fbRows) ? fbRows : [])) {
             try {
               const parsed = JSON.parse(row.message_body || '{}');
-              if (parsed && parsed.group_id) {
-                if (matchesGroup(parsed, group_id)) {
-                  // Dedup against existing richQuizzes
-                  const exists = richQuizzes.some(
-                    (q) => String(q.group_id).trim() === String(parsed.group_id).trim() && Number(q.quiz_number) === Number(parsed.quiz_number) && (q.exam_mode || 'online') === (parsed.exam_mode || 'online')
-                  );
-                  if (!exists) {
-                    richQuizzes.push(parsed);
+              if (parsed) {
+                const isDraft = Boolean(parsed.is_draft || row.status === 'draft' || String(row.phone).includes('DRAFT'));
+                if (isDraft) {
+                  parsed.is_draft = true;
+                  parsed.is_archived = true;
+                  if (!draftQuizzes.some(d => d.id === parsed.id)) {
+                    draftQuizzes.push(parsed);
+                  }
+                } else if (parsed.group_id) {
+                  if (matchesGroup(parsed, group_id)) {
+                    // Dedup against existing richQuizzes
+                    const exists = richQuizzes.some(
+                      (q) => String(q.group_id).trim() === String(parsed.group_id).trim() && Number(q.quiz_number) === Number(parsed.quiz_number) && (q.exam_mode || 'online') === (parsed.exam_mode || 'online')
+                    );
+                    if (!exists) {
+                      richQuizzes.push(parsed);
+                    }
                   }
                 }
               }
@@ -185,6 +195,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         quizzes: richQuizzes,
+        drafts: draftQuizzes,
       });
     } catch (err) {
       console.error('[api/quizzes/rich] GET error:', err);
@@ -218,7 +229,96 @@ export default async function handler(req, res) {
         exam_mode,
         questions,
         stealth_models,
+        action,
+        is_draft,
+        status,
       } = body || {};
+
+      // Handle draft deletion
+      if (action === 'delete_draft' && id) {
+        try {
+          const draftPhone = `QUIZ_DEF_DRAFT_${id}`;
+          await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(draftPhone)}`, {
+            method: 'DELETE',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          });
+        } catch (_) {}
+        return res.status(200).json({ success: true, message: 'Draft deleted successfully' });
+      }
+
+      // Handle draft saving (Archive)
+      if (is_draft || status === 'draft') {
+        const draftId = id || `draft_${exam_mode || 'online'}_${Date.now()}`;
+        const draftObject = {
+          ...body,
+          id: draftId,
+          title: (title && String(title).trim()) || (exam_mode === 'paper' ? 'مسودة امتحان ورقي' : 'مسودة امتحان إلكتروني'),
+          subject: (subject && String(subject).trim()) || 'الفيزياء',
+          exam_mode: exam_mode || 'online',
+          questions: Array.isArray(questions) ? questions : [],
+          is_draft: true,
+          is_archived: true,
+          status: 'draft',
+          archived_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        try {
+          const draftPhone = `QUIZ_DEF_DRAFT_${draftId}`;
+          const checkUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(draftPhone)}&select=id`;
+          const cRes = await fetch(checkUrl, {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          });
+          const existingD = cRes.ok ? await cRes.json() : [];
+
+          if (Array.isArray(existingD) && existingD.length > 0) {
+            await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?id=eq.${existingD[0].id}`, {
+              method: 'PATCH',
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                message_body: JSON.stringify(draftObject),
+                status: 'draft',
+                updated_at: new Date().toISOString(),
+              }),
+            });
+          } else {
+            await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox`, {
+              method: 'POST',
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                phone: draftPhone,
+                direction: 'outbound',
+                message_body: JSON.stringify(draftObject),
+                status: 'draft',
+                updated_at: new Date().toISOString(),
+              }),
+            });
+          }
+        } catch (draftErr) {
+          console.warn('Draft save error in whatsapp_inbox:', draftErr);
+        }
+
+        return res.status(200).json({
+          success: true,
+          quiz: draftObject,
+          draft: draftObject,
+          is_draft: true,
+        });
+      }
 
       if (!group_id || quiz_number === undefined) {
         return res.status(400).json({

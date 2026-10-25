@@ -2878,10 +2878,35 @@
         }, 3500);
       }
 
-      window.onblur = () => {
-        if (!overlay.classList.contains('active')) return;
+      tabSwitchWarnCount = 0;
+      let isSubmittingExam = false;
+
+      const triggerAutoWithdrawal = () => {
+        if (!overlay.classList.contains('active') || isSubmittingExam) return;
+        isSubmittingExam = true;
+        window.onblur = null;
+        document.onvisibilitychange = null;
+        showPortalToast(`تم سحب ورقة الامتحان فوراً وإلغاء المحاولة لتكرار مغادرة نافذة الاختبار وتجاوز الحد الأمني (${tabSwitchWarnCount} من 2)!`, 'error');
+        setTimeout(() => {
+          submitAndFinishExam(true);
+        }, 600);
+      };
+
+      const handleTabSwitch = () => {
+        if (!overlay || !overlay.classList.contains('active') || isSubmittingExam) return;
         tabSwitchWarnCount++;
-        showPortalToast(`تحذير أمني: تم رصد مغادرة نافذة الامتحان (محاولة ${tabSwitchWarnCount} من 2). تكرار المحاولة يؤدي لسحب الورقة.`, 'warning');
+        if (tabSwitchWarnCount >= 2) {
+          triggerAutoWithdrawal();
+        } else {
+          showPortalToast(`تحذير أمني: تم رصد مغادرة نافذة الامتحان (محاولة ${tabSwitchWarnCount} من 2). تكرار المحاولة للمرة الثانية يؤدي لسحب الورقة فوراً!`, 'warning');
+        }
+      };
+
+      window.onblur = handleTabSwitch;
+      document.onvisibilitychange = () => {
+        if (document.visibilityState === 'hidden') {
+          handleTabSwitch();
+        }
       };
     }
 
@@ -2917,9 +2942,10 @@
       if (examWatermarkTimer) clearInterval(examWatermarkTimer);
       if (examTimerInterval) clearInterval(examTimerInterval);
       window.onblur = null;
+      document.onvisibilitychange = null;
     }
 
-    function submitAndFinishExam() {
+    function submitAndFinishExam(isWithdrawn = false) {
       exitSecureExam();
       if (!currentActiveQuiz) return;
 
@@ -2942,6 +2968,8 @@
           student_code: studentCode,
           student_name: studentName,
           status: 'pending',
+          is_withdrawn: Boolean(isWithdrawn),
+          withdrawal_reason: isWithdrawn ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان' : null,
           score: null,
           max_score: questions.reduce((sum, q) => sum + Number(q.points || 1), 0),
           submitted_at: new Date().toISOString(),
@@ -2966,6 +2994,8 @@
             student_name: studentName,
             questions: questions,
             has_essay: true,
+            is_withdrawn: Boolean(isWithdrawn),
+            withdrawal_reason: isWithdrawn ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان' : null,
             answers: currentExamAnswers,
             essay_answers: currentExamEssayAnswers,
             elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds
@@ -2977,7 +3007,11 @@
           }).catch(() => null);
         } catch (_) {}
 
-        showPortalToast('تم استلام إجاباتك بنجاح! يتضمن الامتحان أسئلة مقالية (قيد التصحيح والاعتماد من المعلم).', 'info');
+        if (isWithdrawn) {
+          showPortalToast('⚠️ تم سحب ورقة الامتحان فوراً وإلغاء المحاولة لتكرار مغادرة شاشة الاختبار. تم تسليم الإجابات المكتوبة.', 'error');
+        } else {
+          showPortalToast('تم استلام إجاباتك بنجاح! يتضمن الامتحان أسئلة مقالية (قيد التصحيح والاعتماد من المعلم).', 'info');
+        }
         openPendingReviewModal(currentActiveQuiz);
         renderAllPanels();
       } else {
@@ -3014,6 +3048,8 @@
           student_code: studentCode,
           student_name: studentName,
           status: 'graded',
+          is_withdrawn: Boolean(isWithdrawn),
+          withdrawal_reason: isWithdrawn ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان' : null,
           score: earnedPoints,
           max_score: totalPoints,
           submitted_at: new Date().toISOString(),
@@ -3037,6 +3073,8 @@
             student_name: studentName,
             questions: questions,
             has_essay: false,
+            is_withdrawn: Boolean(isWithdrawn),
+            withdrawal_reason: isWithdrawn ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان' : null,
             answers: currentExamAnswers,
             elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds
           };
@@ -3047,7 +3085,11 @@
           }).catch(() => null);
         } catch (_) {}
 
-        showPortalToast(`تم تصحيح الامتحان الإلكتروني بنجاح! النتيجة: ${earnedPoints} من ${totalPoints}`, 'success');
+        if (isWithdrawn) {
+          showPortalToast(`⚠️ تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة الشاشة! نتيجتك حتى لحظة السحب: ${earnedPoints} من ${totalPoints}`, 'error');
+        } else {
+          showPortalToast(`تم تصحيح الامتحان الإلكتروني بنجاح! النتيجة: ${earnedPoints} من ${totalPoints}`, 'success');
+        }
         openExamReviewModal(currentActiveQuiz, gradedDetails, earnedPoints, totalPoints);
         renderAllPanels();
       }
