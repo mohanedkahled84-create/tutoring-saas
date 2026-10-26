@@ -1867,6 +1867,77 @@
     let videoWatermarkInterval = null;
     let activeVideoTitle = 'فيديو حل واجب الباب الرابع';
 
+    // فحص ما إذا كانت المحاضرة قد شوهدت وتوثق حضورها بالفعل
+    function isVideoWatched(vidOrTitle) {
+      if (!vidOrTitle) return false;
+      const studentCode = String(currentStudent.code || currentStudent.student_code || '1006').trim();
+      const vTitle = (typeof vidOrTitle === 'string' ? vidOrTitle : (vidOrTitle.title || '')).trim();
+      const vId = (typeof vidOrTitle === 'object' && vidOrTitle?.id ? vidOrTitle.id : '').trim();
+
+      // 1. فحص من خلال localStorage المباشر
+      if (vTitle && localStorage.getItem(`centrly_video_watched_${studentCode}_${vTitle}`) === 'watched') return true;
+      if (vId && localStorage.getItem(`centrly_video_watched_${studentCode}_${vId}`) === 'watched') return true;
+
+      // 2. فحص من خلال الذاكرة الحية للجلسة
+      if (window._studentWatchedVideos) {
+        if (vTitle && window._studentWatchedVideos.has(vTitle)) return true;
+        if (vId && window._studentWatchedVideos.has(vId)) return true;
+      }
+
+      // 3. فحص خريطة التتبع المجمعة centrly_video_tracking_map
+      try {
+        const rawMap = localStorage.getItem('centrly_video_tracking_map');
+        if (rawMap) {
+          const map = JSON.parse(rawMap);
+          const studentTrack = map[studentCode];
+          if (studentTrack && (studentTrack.status === 'watched' || studentTrack.status === 'watching')) {
+            const trackTitle = (studentTrack.materialTitle || '').trim();
+            if (trackTitle && vTitle) {
+              if (trackTitle === vTitle || trackTitle.includes(vTitle) || vTitle.includes(trackTitle)) return true;
+            } else if (studentTrack.status === 'watched') {
+              return true;
+            }
+          }
+        }
+      } catch (_) {}
+
+      // 4. فحص قائمة الفيديوهات المشاهدة المجمعة
+      try {
+        const listRaw = localStorage.getItem(`centrly_watched_list_${studentCode}`);
+        if (listRaw) {
+          const list = JSON.parse(listRaw);
+          if (Array.isArray(list)) {
+            if (vTitle && list.includes(vTitle)) return true;
+            if (vId && list.includes(vId)) return true;
+          }
+        }
+      } catch (_) {}
+
+      return false;
+    }
+
+    // تسجيل وحفظ حالة المشاهدة محلياً ودولياً
+    function markVideoWatched(vidOrTitle, vidId) {
+      const studentCode = String(currentStudent.code || currentStudent.student_code || '1006').trim();
+      const title = (typeof vidOrTitle === 'string' ? vidOrTitle : (vidOrTitle?.title || '')).trim();
+      const id = (vidId || (typeof vidOrTitle === 'object' ? vidOrTitle?.id : '') || '').trim();
+
+      if (!window._studentWatchedVideos) window._studentWatchedVideos = new Set();
+      if (title) window._studentWatchedVideos.add(title);
+      if (id) window._studentWatchedVideos.add(id);
+
+      if (title) localStorage.setItem(`centrly_video_watched_${studentCode}_${title}`, 'watched');
+      if (id) localStorage.setItem(`centrly_video_watched_${studentCode}_${id}`, 'watched');
+
+      try {
+        const listKey = `centrly_watched_list_${studentCode}`;
+        const list = JSON.parse(localStorage.getItem(listKey) || '[]');
+        if (title && !list.includes(title)) list.push(title);
+        if (id && !list.includes(id)) list.push(id);
+        localStorage.setItem(listKey, JSON.stringify(list));
+      } catch (_) {}
+    }
+
     function reportVideoTelemetry(newStatus, vTitle) {
       const studentCode = String(currentStudent.code || currentStudent.student_code || '1006').trim();
       const studentName = currentStudent.name || 'طالب';
@@ -1878,6 +1949,10 @@
         status: newStatus,
         watched_at: new Date().toISOString()
       };
+
+      if (newStatus === 'watched') {
+        markVideoWatched(actualTitle);
+      }
 
       // A. التحديث المحلي الفوري لجميع التابات
       try {
@@ -1969,8 +2044,18 @@
       document.getElementById('videoModal').classList.add('active');
 
       // توثيق فوري: بمجرد فتح الفيديو وبدء المشاهدة يسجل فورياً كـ (شاهد ✔)
+      markVideoWatched(activeVideoTitle);
       reportVideoTelemetry('watched', activeVideoTitle);
       showPortalToast(`تم فتح المحاضرة وتوثيق حضورك بنجاح (شاهد ✔)`, 'success');
+
+      // تحديث فوري لقائمة المهام والمحاضرات لاستبعاد المحاضرة من المهام المعلقة مباشرة
+      setTimeout(() => {
+        const videos = platformContent.filter(m => m.type === 'video');
+        const homework = platformContent.filter(m => m.type === 'homework' || m.type === 'assignment');
+        const quizzes = platformContent.filter(m => m.is_quiz || m.type === 'quiz' || m.type === 'online_quiz');
+        renderHomeTasks(videos, homework, quizzes);
+        renderLecturesPanel(videos);
+      }, 50);
 
       // تشغيل تحريك العلامة المائية العائمة لمنع التصوير
       const wm = document.getElementById('videoFloatingWatermark');
@@ -1999,6 +2084,8 @@
         clearInterval(videoWatermarkInterval);
         videoWatermarkInterval = null;
       }
+      // تحديث فوري لكافة القوائم عند إغلاق المشغل لضمان إزالة أي محاضرة شوهدت
+      renderAllPanels();
     }
 
     // حساب وتحديث ترتيب الطالب على المجموعة ديناميكياً بما يتطابق 100% مع لوحة تقارير المعلم
@@ -2325,6 +2412,30 @@
         console.warn('Quiz submissions fetch warning in student platform:', subErr);
       }
 
+      // 1.7 جلب ومزامنة سجل مشاهدات الفيديو للطالب لضمان استبعاد المحاضرات التي تم حضورها بالفعل
+      if (!window._studentWatchedVideos) window._studentWatchedVideos = new Set();
+      try {
+        let vtRes = await fetch(`/api/video-tracking?_t=${Date.now()}`).then(r => r.json()).catch(() => null);
+        if (!vtRes || !vtRes.success) {
+          vtRes = await fetch(`https://centerly-eg.com/api/video-tracking?_t=${Date.now()}`).then(r => r.json()).catch(() => null);
+        }
+        if (vtRes && vtRes.success && Array.isArray(vtRes.views)) {
+          const myViews = vtRes.views.filter(v => String(v.student_code || '').trim() === currentStudentCode && v.status === 'watched');
+          myViews.forEach(v => {
+            if (v.material_title) markVideoWatched(v.material_title);
+          });
+        }
+      } catch (vtErr) {
+        console.warn('Video tracking fetch warning:', vtErr);
+      }
+      try {
+        const trackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
+        const st = trackingMap[currentStudentCode];
+        if (st && st.status === 'watched' && st.materialTitle) {
+          markVideoWatched(st.materialTitle);
+        }
+      } catch (_) {}
+
       // 2. تنظيف ودمج أي محتوى إضافي تم رفعه محلياً مع إزالة أي كويز تجريبي نهائياً
       let localMaterials = [];
       try {
@@ -2373,27 +2484,52 @@
       const allRecorded = Array.isArray(window._studentRecordedQuizzes) ? [...window._studentRecordedQuizzes] : [];
       if (window._studentOnlineSubmissionsMap) {
         window._studentOnlineSubmissionsMap.forEach(sub => {
+          if (!sub) return;
           const isGraded = sub.status === 'approved' || sub.status === 'graded' || sub.is_graded === true || (sub.total_score !== undefined && sub.total_score !== null) || (sub.score !== undefined && sub.score !== null);
           if (isGraded) {
+            const qId = sub.quiz_id || sub.material_id || sub.id;
             const quizTitle = sub.quiz_title || sub.title || (sub.quiz_number ? `كويز ${sub.quiz_number}` : 'كويز أونلاين');
             const score = Number(sub.total_score !== undefined ? sub.total_score : (sub.score !== undefined ? sub.score : (sub.final_score !== undefined ? sub.final_score : 0)));
             const maxScore = Number(sub.max_score || 10);
             const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-            const exists = allRecorded.some(r => r.title === quizTitle || r.id === sub.quiz_id || r.id === sub.material_id);
-            if (!exists) {
-              allRecorded.unshift({
-                id: sub.quiz_id || sub.material_id,
-                title: quizTitle,
-                score: score,
-                max_score: maxScore,
-                percentage: pct,
-                date: sub.graded_at ? sub.graded_at.slice(0, 10) : (sub.submitted_at ? sub.submitted_at.slice(0, 10) : ''),
-                note: sub.essay_score !== undefined ? `درجة المقالي: ${sub.essay_score} + الموضوعي: ${sub.mcq_score || 0}` : 'كويز أونلاين معتمد'
-              });
+            const rawDate = sub.graded_at || sub.submitted_at || sub.date || '';
+            const dateStr = sub.graded_at ? sub.graded_at.slice(0, 10) : (sub.submitted_at ? sub.submitted_at.slice(0, 10) : (sub.date || ''));
+            const qNum = Number(sub.quiz_number || (quizTitle.match(/\d+/) ? quizTitle.match(/\d+/)[0] : 0));
+
+            const existingIdx = allRecorded.findIndex(r => (r.id && r.id === qId) || (r.title && r.title === quizTitle));
+            const recordObj = {
+              id: qId,
+              title: quizTitle,
+              quiz_number: qNum,
+              score: score,
+              max_score: maxScore,
+              percentage: pct,
+              date: dateStr,
+              rawDate: rawDate,
+              note: sub.essay_score !== undefined ? `درجة المقالي: ${sub.essay_score} + الموضوعي: ${sub.mcq_score || 0}` : 'كويز أونلاين معتمد'
+            };
+
+            if (existingIdx >= 0) {
+              allRecorded[existingIdx] = { ...allRecorded[existingIdx], ...recordObj };
+            } else {
+              allRecorded.push(recordObj);
             }
           }
         });
       }
+
+      // فرز جميع الامتحانات تنازلياً حسب التاريخ والوقت، ثم رقم الكويز (الأحدث يظهر أولاً دائماً)
+      allRecorded.sort((a, b) => {
+        const timeA = a.rawDate ? new Date(a.rawDate).getTime() : (a.date ? new Date(a.date).getTime() : 0);
+        const timeB = b.rawDate ? new Date(b.rawDate).getTime() : (b.date ? new Date(b.date).getTime() : 0);
+        if (timeB && timeA && Math.abs(timeB - timeA) > 1000) return timeB - timeA;
+        const numA = Number(a.quiz_number || (a.title && a.title.match(/\d+/) ? a.title.match(/\d+/)[0] : 0));
+        const numB = Number(b.quiz_number || (b.title && b.title.match(/\d+/) ? b.title.match(/\d+/)[0] : 0));
+        if (numB !== numA) return numB - numA;
+        if (timeB !== timeA) return timeB - timeA;
+        return 0;
+      });
+
       window._studentAllRecordedQuizzes = allRecorded;
       try {
         localStorage.setItem(`centrly_cached_recorded_${currentStudentCode}`, JSON.stringify(allRecorded));
@@ -2498,7 +2634,7 @@
       renderMaterialsPanel(materials);
     }
 
-    // تصيير قائمة المهام في الصفحة الرئيسية
+    // تصيير قائمة المهام في الصفحة الرئيسية (مع استبعاد المحاضرات التي تمت مشاهدتها تلقائياً)
     function renderHomeTasks(videos, homework, quizzes) {
       const container = document.getElementById('homeTodoListContainer');
       const countEl = document.getElementById('homePendingCount');
@@ -2530,15 +2666,18 @@
         return true;
       });
 
-      const totalPending = unsubmittedHw.length + pendingQuizzes.length;
+      // استبعاد أي محاضرة تمت مشاهدتها وتوثيق حضورها بالفعل
+      const unwatchedVideos = (videos || []).filter(v => !isVideoWatched(v));
+
+      const totalPending = unsubmittedHw.length + pendingQuizzes.length + unwatchedVideos.length;
       if (countEl) countEl.innerText = `${totalPending} مهمة معلقة`;
 
-      if (videos.length === 0 && unsubmittedHw.length === 0 && pendingQuizzes.length === 0) {
+      if (unwatchedVideos.length === 0 && unsubmittedHw.length === 0 && pendingQuizzes.length === 0) {
         container.innerHTML = `
           <div class="empty-state-card">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             <h3>لا توجد مهام دراسية معلقة حالياً</h3>
-            <p>ممتاز! لقد أنجزت جميع واجباتك واختباراتك المتاحة حتى الآن.</p>
+            <p>ممتاز! لقد أنجزت جميع واجباتك واختباراتك ومشاهدة محاضراتك حتى الآن.</p>
           </div>
         `;
         return;
@@ -2573,7 +2712,7 @@
         `;
       });
 
-      videos.slice(0, 2).forEach(vid => {
+      unwatchedVideos.slice(0, 2).forEach(vid => {
         let reqHwId = vid.pages;
         if (vid.questions) {
           try {
@@ -2609,72 +2748,97 @@
       container.innerHTML = html;
     }
 
-    // تصيير كارت أحدث نتائج الامتحانات والكويزات في الرئيسية فوراً
+    // تصيير كارت أحدث نتائج الامتحانات والكويزات في الرئيسية فوراً مع الأولوية التامة لآخر كويز معتمد
     function renderHomeRecentExamResults(recorded, subsMap) {
       const container = document.getElementById('homeRecentExamResultsContainer');
       if (!container) return;
 
-      const recentItems = [];
+      const recentMap = new Map();
 
+      // 1. استيعاب كافة الامتحانات المسجلة
       if (Array.isArray(recorded)) {
         recorded.forEach(item => {
-          recentItems.push({
-            id: item.id,
-            title: item.title,
-            score: Number(item.score || 0),
-            maxScore: Number(item.max_score || 10),
-            percentage: Math.round(Number(item.percentage) || ((Number(item.score) / (Number(item.max_score) || 10)) * 100) || 0),
-            status: 'graded',
-            date: item.date || '',
-            note: item.note || ''
+          if (!item) return;
+          const id = item.id || item.title;
+          const title = item.title || 'كويز دوري';
+          const score = Number(item.score !== undefined ? item.score : (item.total_score || 0));
+          const maxScore = Number(item.max_score || item.maxScore || 10);
+          const pct = Math.round(Number(item.percentage) || (maxScore > 0 ? (score / maxScore) * 100 : 0));
+          const rawDate = item.rawDate || item.graded_at || item.submitted_at || item.date || '';
+          const dateStr = item.date || (item.graded_at ? item.graded_at.slice(0, 10) : (item.submitted_at ? item.submitted_at.slice(0, 10) : ''));
+          const qNum = Number(item.quiz_number || (title.match(/\d+/) ? title.match(/\d+/)[0] : 0));
+
+          recentMap.set(id, {
+            id: item.id || id,
+            title: title,
+            quiz_number: qNum,
+            score: score,
+            maxScore: maxScore,
+            percentage: pct,
+            status: item.status || 'graded',
+            date: dateStr,
+            rawDate: rawDate,
+            note: item.note || item.notes || ''
           });
         });
       }
 
+      // 2. مزامنة تسليمات الأونلاين (المعتمدة وقيد التصحيح) وتحديث السجلات
       if (subsMap && subsMap.size > 0) {
         subsMap.forEach(sub => {
           if (!sub) return;
-          const isGraded = sub.status === 'approved' || sub.status === 'graded' || sub.is_graded === true;
-          const qId = sub.quiz_id || sub.material_id;
-          const title = sub.quiz_title || (sub.quiz_number ? `كويز ${sub.quiz_number}` : 'كويز أونلاين');
-          const already = recentItems.some(r => r.id === qId || r.title === title);
+          const isGraded = sub.status === 'approved' || sub.status === 'graded' || sub.is_graded === true || (sub.total_score !== undefined && sub.total_score !== null);
+          const qId = sub.quiz_id || sub.material_id || sub.id;
+          const title = sub.quiz_title || sub.title || (sub.quiz_number ? `كويز ${sub.quiz_number}` : 'كويز أونلاين');
+          const score = Number(sub.total_score !== undefined ? sub.total_score : (sub.score !== undefined ? sub.score : (sub.final_score !== undefined ? sub.final_score : 0)));
+          const maxScore = Number(sub.max_score || 10);
+          const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+          const rawDate = sub.graded_at || sub.submitted_at || sub.date || '';
+          const dateStr = sub.graded_at ? sub.graded_at.slice(0, 10) : (sub.submitted_at ? sub.submitted_at.slice(0, 10) : (sub.date || ''));
+          const qNum = Number(sub.quiz_number || (title.match(/\d+/) ? title.match(/\d+/)[0] : 0));
 
-          if (!already) {
-            const score = Number(sub.total_score !== undefined ? sub.total_score : (sub.score !== undefined ? sub.score : (sub.final_score !== undefined ? sub.final_score : 0)));
-            const maxScore = Number(sub.max_score || 10);
-            const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+          const existingKey = Array.from(recentMap.keys()).find(k => k === qId || recentMap.get(k)?.title === title);
+          const itemData = {
+            id: qId,
+            title: title,
+            quiz_number: qNum,
+            score: isGraded ? score : 0,
+            maxScore: maxScore,
+            percentage: isGraded ? pct : 0,
+            status: isGraded ? 'graded' : 'pending',
+            date: dateStr,
+            rawDate: rawDate,
+            note: isGraded 
+              ? (sub.essay_score !== undefined ? `درجة المقالي: ${sub.essay_score} + الموضوعي: ${sub.mcq_score || 0}` : (sub.note || 'تم رصد وتوثيق درجة الكويز بحساب الطالب رسمياً.'))
+              : 'تم تسليم ورقة الإجابة • قيد المراجعة والاعتماد'
+          };
 
-            if (isGraded) {
-              recentItems.unshift({
-                id: qId,
-                title,
-                score,
-                maxScore,
-                percentage: pct,
-                status: 'graded',
-                date: sub.graded_at ? sub.graded_at.slice(0, 10) : (sub.submitted_at ? sub.submitted_at.slice(0, 10) : ''),
-                note: sub.essay_score !== undefined ? `درجة المقالي: ${sub.essay_score} + الموضوعي: ${sub.mcq_score || 0}` : ''
-              });
-            } else {
-              recentItems.unshift({
-                id: qId,
-                title,
-                score: 0,
-                maxScore,
-                percentage: 0,
-                status: 'pending',
-                date: sub.submitted_at ? sub.submitted_at.slice(0, 10) : '',
-                note: 'تم تسليم ورقة الإجابة • قيد المراجعة والاعتماد'
-              });
-            }
+          if (existingKey) {
+            recentMap.set(existingKey, { ...recentMap.get(existingKey), ...itemData });
+          } else {
+            recentMap.set(qId, itemData);
           }
         });
       }
+
+      const recentItems = Array.from(recentMap.values());
 
       if (recentItems.length === 0) {
         container.innerHTML = '';
         return;
       }
+
+      // فرز حاسم: التاريخ والوقت الأحدث أولاً، ثم رقم الكويز التنازلي
+      recentItems.sort((a, b) => {
+        const timeA = a.rawDate ? new Date(a.rawDate).getTime() : (a.date ? new Date(a.date).getTime() : 0);
+        const timeB = b.rawDate ? new Date(b.rawDate).getTime() : (b.date ? new Date(b.date).getTime() : 0);
+        if (timeB && timeA && Math.abs(timeB - timeA) > 1000) return timeB - timeA;
+        const numA = Number(a.quiz_number || (a.title && a.title.match(/\d+/) ? a.title.match(/\d+/)[0] : 0));
+        const numB = Number(b.quiz_number || (b.title && b.title.match(/\d+/) ? b.title.match(/\d+/)[0] : 0));
+        if (numB !== numA) return numB - numA;
+        if (timeB !== timeA) return timeB - timeA;
+        return 0;
+      });
 
       const latest = recentItems[0];
       const isGraded = latest.status === 'graded';
@@ -2832,11 +2996,19 @@
             </div>
           `;
         } else {
+          const watched = isVideoWatched(v);
           html += `
-            <div class="clean-item-card">
+            <div class="clean-item-card ${watched ? 'completed' : ''}">
               <div class="item-meta">
-                <h3>${escapeHtml(v.title)}</h3>
-                <p>${escapeHtml(v.description || 'فيديو شرح ومسائل تدريبية')} • محاضرة متاحة للمشاهدة</p>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <h3 style="margin: 0;">${escapeHtml(v.title)}</h3>
+                  ${watched ? `
+                    <span style="font-size: 0.74rem; font-weight: 800; color: #059669; background: #ecfdf5; padding: 2px 8px; border-radius: 6px; border: 1px solid #10b98140; display: inline-flex; align-items: center; gap: 4px;">
+                      ✔ تمت المشاهدة (حضور موثق)
+                    </span>
+                  ` : ''}
+                </div>
+                <p style="margin-top: 4px;">${escapeHtml(v.description || 'فيديو شرح ومسائل تدريبية')} • محاضرة متاحة للمشاهدة</p>
                 ${isGated ? `
                   <div style="font-size: 0.78rem; color: var(--status-success); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -2844,9 +3016,9 @@
                   </div>
                 ` : ''}
               </div>
-              <button class="btn btn-primary" onclick="launchVideo('${escapeJsStr(v.title)}', '${escapeJsStr(v.url)}')">
+              <button class="btn ${watched ? 'btn-secondary' : 'btn-primary'}" onclick="launchVideo('${escapeJsStr(v.title)}', '${escapeJsStr(v.url)}')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                <span>مشاهدة المحاضرة</span>
+                <span>${watched ? 'إعادة المشاهدة' : 'مشاهدة المحاضرة'}</span>
               </button>
             </div>
           `;
@@ -3117,7 +3289,7 @@
     }
 
     function viewQuizResult(quizId) {
-      const qz = platformContent.find(m => m.id === quizId) || { id: quizId, title: 'كويز' };
+      let qz = platformContent.find(m => m.id === quizId) || null;
       const studentCode = currentStudent.code || '1006';
       let sub = window._studentOnlineSubmissionsMap?.get(quizId) || null;
       if (!sub) {
@@ -3125,6 +3297,23 @@
           const s = localStorage.getItem(`centrly_submission_${studentCode}_${quizId}`);
           if (s) sub = JSON.parse(s);
         } catch (_) {}
+      }
+      if (!sub && window._studentOnlineSubmissionsMap) {
+        for (const [k, v] of window._studentOnlineSubmissionsMap.entries()) {
+          if (v && (v.quiz_id === quizId || v.material_id === quizId || v.id === quizId || (qz && qz.quiz_number && v.quiz_number === qz.quiz_number))) {
+            sub = v;
+            break;
+          }
+        }
+      }
+      if (!qz) {
+        qz = {
+          id: quizId,
+          title: sub?.quiz_title || 'كويز',
+          quiz_number: sub?.quiz_number || 1,
+          questions: sub?.questions || [],
+          max_score: sub?.max_score || 10
+        };
       }
       const score = Number(sub?.total_score !== undefined ? sub.total_score : (sub?.score !== undefined ? sub.score : (sub?.final_score !== undefined ? sub.final_score : 0)));
       const maxScore = Number(sub?.max_score || qz.max_score || 10);
