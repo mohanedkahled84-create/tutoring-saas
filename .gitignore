@@ -42,3 +42,5 @@ profile_logos/
 telegram_teachers_leads.*
 *.csv
 supabase/.temp/
+__pycache__/
+*.pyc
