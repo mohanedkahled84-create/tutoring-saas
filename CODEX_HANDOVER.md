@@ -247,12 +247,12 @@ Base URL (Local): `http://localhost:3000/api`
 ## ⚙️ 6. Development, Testing, and Deployment Workflow
 
 ### 1. Running Backend Tests
-The backend has **341 automated unit and integration tests** verifying all business rules, security boundaries, rate limits, and billing calculations:
+The backend has **364 automated unit and integration tests** verifying all business rules, security boundaries, rate limits, and billing calculations:
 ```bash
 cd apps/tutoring
 npm test
 ```
-> ⚠️ **Codex Requirement:** Every new backend feature or bugfix must pass all 341 tests (`pass 341, fail 0`). Never commit code that breaks existing tests.
+> ⚠️ **Codex Requirement:** Every new backend feature or bugfix must pass all 364 tests (`pass 364, fail 0`). Never commit code that breaks existing tests.
 
 ### 2. Verifying TypeScript Compilation
 ```bash
@@ -269,10 +269,24 @@ node --check apps/web/src/components/BusinessOwnerDashboard.js
 ```
 Whenever making changes to frontend files, **bump the version parameter** in `apps/web/index.html` (e.g., `src="./src/app.js?v=5.2.0"`) and in module imports to prevent browser caching issues for existing users.
 
-### 4. Git Deployment (Vercel + Railway)
+### 4. Dedicated Supabase Test Database & CI Secrets
+To run live security tests (`audit-c01-rls.test.mjs`, `audit-c02-rpcs.test.mjs`, `security-lockdown-verification.test.mjs`) without touching the production customer database:
+1. **GitHub Repository Secrets required by `.github/workflows/ci.yml`:**
+   * `SUPABASE_TEST_URL`: The API URL of the dedicated test Supabase project (e.g. `https://xxx.supabase.co`).
+   * `SUPABASE_TEST_ANON_KEY`: The publishable anon key for the test Supabase project.
+   * `SUPABASE_TEST_SERVICE_ROLE_KEY`: The service role secret key for the test Supabase project.
+2. **Automated Migration Setup:**
+   Run the setup script against the test database connection string to apply all 60 migrations and verify RLS:
+   ```bash
+   node scripts/setup-test-db.mjs "postgres://postgres:[PASSWORD]@[HOST]:5432/postgres"
+   ```
+3. **Safety Guarantee:** The live test runner prioritizes `SUPABASE_TEST_URL` over `SUPABASE_URL`. When set, all exploit and authorization tests execute exclusively in the isolated test sandbox.
+
+### 5. Git Deployment (Vercel + Railway)
 Pushing to the `main` branch of GitHub automatically triggers:
-1. **Railway:** Builds and deploys the backend API via Nixpacks (`railway.json`).
-2. **Vercel:** Deploys the web client instantly.
+1. **GitHub Actions CI:** Runs build, linter, full 364-test suite, and live security tests via `.github/workflows/ci.yml`.
+2. **Railway:** Builds and deploys the backend API via Nixpacks (`railway.json`).
+3. **Vercel:** Deploys the web client instantly.
 
 ---
 

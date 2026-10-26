@@ -10,6 +10,7 @@
     "start": "node dist/server.js",
     "dev": "node --watch src/server.ts",
     "test": "node --test --test-concurrency=1 tests/**/*.test.mjs",
+    "setup:test-db": "node ../../scripts/setup-test-db.mjs",
     "lint": "eslint src/ --ext .ts",
     "lint:fix": "eslint src/ --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",

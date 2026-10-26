@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.SUPABASE_TEST_URL || process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_TEST_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
 test("C-01: RLS Tenant Isolation & Anon Rejection", async (t) => {
   if (!supabaseUrl || !supabaseAnonKey) {

@@ -9,8 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.SUPABASE_TEST_URL || process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_TEST_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
 test("FOLLOW-UP (F): confirm_user_email_direct rejects unauthorized calls without verified OTP", async (t) => {
   if (!supabaseUrl || !supabaseAnonKey) {

@@ -41,3 +41,4 @@ audit_airtable.js
 profile_logos/
 telegram_teachers_leads.*
 *.csv
+supabase/.temp/
