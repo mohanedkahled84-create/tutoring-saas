@@ -8,3 +8,12 @@ tests/
 .git/
 .github/
 .husky/
+remotion-video/
+scratch/
+centrly-design/
+sample_exam_images/
+*.mp4
+*.mp3
+*.wav
+*.zip
+*.tar.gz

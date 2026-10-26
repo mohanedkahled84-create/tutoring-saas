@@ -3982,6 +3982,17 @@ export function registerTeacherQuizzesActions(app) {
     app.quizzesState.examDrafts = [];
   }
 
+  // Initialize rich quizzes cache for instant UI rendering (0ms load time)
+  try {
+    const cachedQuizzes = localStorage.getItem('centrly_cached_rich_quizzes');
+    if (cachedQuizzes) {
+      app.quizzesState.richQuizzes = JSON.parse(cachedQuizzes);
+    }
+  } catch (_) {}
+  if (!Array.isArray(app.quizzesState.richQuizzes)) {
+    app.quizzesState.richQuizzes = [];
+  }
+
   // Detect unsaved exam
   app.checkHasUnsavedExam = function(mode) {
     if (mode === 'online') {
@@ -4202,7 +4213,10 @@ export function registerTeacherQuizzesActions(app) {
       this.quizzesState.gradingViewMode = gradingMode;
     }
     if (tabName === 'online_builder' || tabName === 'paper_builder') {
-      this.quizzesState.isLoadingRichQuizzes = true;
+      const hasQuizzes = Array.isArray(this.quizzesState.richQuizzes) && this.quizzesState.richQuizzes.length > 0;
+      if (!hasQuizzes) {
+        this.quizzesState.isLoadingRichQuizzes = true;
+      }
       this.renderMainContent();
       await Promise.all([
         this.loadRichQuizzes(),
@@ -4251,18 +4265,25 @@ export function registerTeacherQuizzesActions(app) {
 
   // Rich quizzes loader
   app.loadRichQuizzes = async function() {
-    this.quizzesState.isLoadingRichQuizzes = true;
+    const hasQuizzes = Array.isArray(this.quizzesState.richQuizzes) && this.quizzesState.richQuizzes.length > 0;
+    if (!hasQuizzes) {
+      this.quizzesState.isLoadingRichQuizzes = true;
+    }
     try {
       const gid = this.quizzesState.selectedGroupId;
-      let res = await fetch('/api/quizzes/rich').then(r => r.json()).catch(() => null);
+      const qParam = gid ? `?group_id=${encodeURIComponent(gid)}` : '';
+      let res = await fetch(`/api/quizzes/rich${qParam}`).then(r => r.json()).catch(() => null);
       if (!res || !res.success) {
-        res = await fetch('https://centerly-eg.com/api/quizzes/rich').then(r => r.json()).catch(() => null);
+        res = await fetch(`https://centerly-eg.com/api/quizzes/rich${qParam}`).then(r => r.json()).catch(() => null);
       }
       if (!res || !res.success) {
-        res = await request('/quizzes/rich').catch(() => null);
+        res = await request(`/quizzes/rich${qParam}`).catch(() => null);
       }
       if (res?.success && Array.isArray(res.quizzes)) {
         this.quizzesState.richQuizzes = res.quizzes;
+        try {
+          localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(res.quizzes));
+        } catch (_) {}
       }
       if (res?.success && Array.isArray(res.drafts)) {
         const serverDrafts = res.drafts;
@@ -5900,13 +5921,19 @@ export function registerTeacherQuizzesActions(app) {
     this.quizzesState.selectedGroupId = groupId;
     // Synchronously switch to the selected group's isolated data (zero bleed-over)
     this.syncActiveGroupQuizzes(groupId);
-    this.quizzesState.isLoadingRichQuizzes = true;
-    this.quizzesState.isLoadingSubmissions = true;
+    const hasQuizzes = Array.isArray(this.quizzesState.richQuizzes) && this.quizzesState.richQuizzes.length > 0;
+    if (!hasQuizzes) {
+      this.quizzesState.isLoadingRichQuizzes = true;
+    }
     this.renderMainContent();
 
     await this.loadQuizzesForGroup(groupId);
     await this.loadRichQuizzes();
     await this.loadOnlineSubmissions();
+    this.quizzesState.isLoadingRichQuizzes = false;
+    this.quizzesState.isLoadingSubmissions = false;
+    this.renderMainContent();
+  };
     this.quizzesState.isLoadingRichQuizzes = false;
     this.quizzesState.isLoadingSubmissions = false;
     this.renderMainContent();

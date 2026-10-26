@@ -46,53 +46,56 @@ export default async function handler(req, res) {
 
   // GET: Fetch rich quizzes
   if (req.method === 'GET') {
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
     try {
       const { group_id } = req.query || {};
       let richQuizzes = [];
       let draftQuizzes = [];
 
-      // Primary check: study_materials table
-      try {
-        let url = `${SUPABASE_URL}/rest/v1/study_materials?type=eq.online_quiz&select=*&order=created_at.desc`;
-        if (group_id) {
-          url += `&group_id=eq.${encodeURIComponent(group_id)}`;
-        }
+      const headers = {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      };
 
-        const response = await fetch(url, {
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          },
+      let smUrl = `${SUPABASE_URL}/rest/v1/study_materials?type=eq.online_quiz&select=*&order=created_at.desc`;
+      if (group_id) {
+        smUrl += `&group_id=eq.${encodeURIComponent(group_id)}`;
+      }
+      const fallbackUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=like.QUIZ_DEF_%25&select=*&order=created_at.desc`;
+      const subUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=like.QUIZ_SUB_%25&select=*&order=created_at.desc`;
+
+      // Parallel concurrent execution for ultra-fast response
+      const [smRows, fbRows, subRows] = await Promise.all([
+        fetch(smUrl, { headers }).then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch(fallbackUrl, { headers }).then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch(subUrl, { headers }).then(r => r.ok ? r.json() : []).catch(() => [])
+      ]);
+
+      // 1. Process study_materials
+      if (Array.isArray(smRows)) {
+        richQuizzes = smRows.map((row) => {
+          let meta = {};
+          try {
+            meta = JSON.parse(row.questions || '{}');
+          } catch (_) {}
+
+          return {
+            id: row.id,
+            title: row.title || 'كويز بدون عنوان',
+            subject: row.description || meta.subject || 'الفيزياء',
+            group_id: row.group_id,
+            quiz_number: Number(meta.quiz_number) || 1,
+            time_limit_minutes: Number(meta.time_limit_minutes) || 20,
+            available_date: meta.available_date || (row.created_at ? row.created_at.slice(0, 10) : ''),
+            start_time: meta.start_time || null,
+            end_time: meta.end_time || null,
+            exam_mode: meta.exam_mode || 'online',
+            questions: Array.isArray(meta.questions) ? meta.questions : [],
+            stealth_models: meta.stealth_models || null,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+          };
         });
-
-        if (response.ok) {
-          const rows = await response.json();
-          richQuizzes = (Array.isArray(rows) ? rows : []).map((row) => {
-            let meta = {};
-            try {
-              meta = JSON.parse(row.questions || '{}');
-            } catch (_) {}
-
-            return {
-              id: row.id,
-              title: row.title || 'كويز بدون عنوان',
-              subject: row.description || meta.subject || 'الفيزياء',
-              group_id: row.group_id,
-              quiz_number: Number(meta.quiz_number) || 1,
-              time_limit_minutes: Number(meta.time_limit_minutes) || 20,
-              available_date: meta.available_date || (row.created_at ? row.created_at.slice(0, 10) : ''),
-              start_time: meta.start_time || null,
-              end_time: meta.end_time || null,
-              exam_mode: meta.exam_mode || 'online',
-              questions: Array.isArray(meta.questions) ? meta.questions : [],
-              stealth_models: meta.stealth_models || null,
-              created_at: row.created_at,
-              updated_at: row.updated_at,
-            };
-          });
-        }
-      } catch (smErr) {
-        console.warn('study_materials fetch warning:', smErr);
       }
 
       // Helper to check group match
@@ -105,91 +108,65 @@ export default async function handler(req, res) {
         return false;
       };
 
-      // Resilient check: whatsapp_inbox fallback storage
-      try {
-        const fallbackUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=like.QUIZ_DEF_%25&select=*&order=created_at.desc`;
-        const fbRes = await fetch(fallbackUrl, {
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-        });
-
-        if (fbRes.ok) {
-          const fbRows = await fbRes.json();
-          for (const row of (Array.isArray(fbRows) ? fbRows : [])) {
-            try {
-              const parsed = JSON.parse(row.message_body || '{}');
-              if (parsed) {
-                const isDraft = Boolean(parsed.is_draft || row.status === 'draft' || String(row.phone).includes('DRAFT'));
-                if (isDraft) {
-                  parsed.is_draft = true;
-                  parsed.is_archived = true;
-                  if (!draftQuizzes.some(d => d.id === parsed.id)) {
-                    draftQuizzes.push(parsed);
-                  }
-                } else if (parsed.group_id) {
-                  if (matchesGroup(parsed, group_id)) {
-                    // Dedup against existing richQuizzes
-                    const exists = richQuizzes.some(
-                      (q) => String(q.group_id).trim() === String(parsed.group_id).trim() && Number(q.quiz_number) === Number(parsed.quiz_number) && (q.exam_mode || 'online') === (parsed.exam_mode || 'online')
-                    );
-                    if (!exists) {
-                      richQuizzes.push(parsed);
-                    }
+      // 2. Process whatsapp_inbox fallback definitions
+      if (Array.isArray(fbRows)) {
+        for (const row of fbRows) {
+          try {
+            const parsed = JSON.parse(row.message_body || '{}');
+            if (parsed) {
+              const isDraft = Boolean(parsed.is_draft || row.status === 'draft' || String(row.phone).includes('DRAFT'));
+              if (isDraft) {
+                parsed.is_draft = true;
+                parsed.is_archived = true;
+                if (!draftQuizzes.some(d => d.id === parsed.id)) {
+                  draftQuizzes.push(parsed);
+                }
+              } else if (parsed.group_id) {
+                if (matchesGroup(parsed, group_id)) {
+                  const exists = richQuizzes.some(
+                    (q) => (q.id === parsed.id) || (String(q.group_id).trim() === String(parsed.group_id).trim() && Number(q.quiz_number) === Number(parsed.quiz_number) && (q.exam_mode || 'online') === (parsed.exam_mode || 'online'))
+                  );
+                  if (!exists) {
+                    richQuizzes.push(parsed);
                   }
                 }
               }
-            } catch (_) {}
-          }
+            }
+          } catch (_) {}
         }
-      } catch (fbErr) {
-        console.warn('Fallback quiz fetch warning:', fbErr);
       }
 
-      // Safety net: Recover any online quiz that has submissions if not already in richQuizzes
-      try {
-        const subUrl = `${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=like.QUIZ_SUB_%25&select=*&order=created_at.desc`;
-        const subRes = await fetch(subUrl, {
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-        });
-        if (subRes.ok) {
-          const subRows = await subRes.json();
-          for (const row of (Array.isArray(subRows) ? subRows : [])) {
-            try {
-              const subData = JSON.parse(row.message_body || '{}');
-              if (subData && (subData.quiz_id || subData.material_id) && subData.group_id) {
-                if (matchesGroup(subData, group_id)) {
-                  const qId = subData.quiz_id || subData.material_id;
-                  const alreadyExists = richQuizzes.some(
-                    (q) => (q.id === qId) || (String(q.group_id).trim() === String(subData.group_id).trim() && Number(q.quiz_number) === Number(subData.quiz_number) && (q.exam_mode || 'online') === 'online')
-                  );
-                  if (!alreadyExists && Array.isArray(subData.questions) && subData.questions.length > 0) {
-                    richQuizzes.push({
-                      id: qId,
-                      title: subData.quiz_title || `كويز ${subData.quiz_number || 1}`,
-                      subject: subData.subject || 'الفيزياء',
-                      group_id: subData.group_id,
-                      quiz_number: Number(subData.quiz_number) || 1,
-                      time_limit_minutes: Number(subData.time_limit_minutes) || 20,
-                      available_date: subData.submitted_at ? subData.submitted_at.slice(0, 10) : '',
-                      start_time: null,
-                      end_time: null,
-                      exam_mode: 'online',
-                      questions: subData.questions,
-                      created_at: subData.submitted_at || row.created_at,
-                    });
-                  }
+      // 3. Process submissions safety net
+      if (Array.isArray(subRows)) {
+        for (const row of subRows) {
+          try {
+            const subData = JSON.parse(row.message_body || '{}');
+            if (subData && (subData.quiz_id || subData.material_id) && subData.group_id) {
+              if (matchesGroup(subData, group_id)) {
+                const qId = subData.quiz_id || subData.material_id;
+                const alreadyExists = richQuizzes.some(
+                  (q) => (q.id === qId) || (String(q.group_id).trim() === String(subData.group_id).trim() && Number(q.quiz_number) === Number(subData.quiz_number) && (q.exam_mode || 'online') === 'online')
+                );
+                if (!alreadyExists && Array.isArray(subData.questions) && subData.questions.length > 0) {
+                  richQuizzes.push({
+                    id: qId,
+                    title: subData.quiz_title || `كويز ${subData.quiz_number || 1}`,
+                    subject: subData.subject || 'الفيزياء',
+                    group_id: subData.group_id,
+                    quiz_number: Number(subData.quiz_number) || 1,
+                    time_limit_minutes: Number(subData.time_limit_minutes) || 20,
+                    available_date: subData.submitted_at ? subData.submitted_at.slice(0, 10) : '',
+                    start_time: null,
+                    end_time: null,
+                    exam_mode: 'online',
+                    questions: subData.questions,
+                    created_at: subData.submitted_at || row.created_at,
+                  });
                 }
               }
-            } catch (_) {}
-          }
+            }
+          } catch (_) {}
         }
-      } catch (subErr) {
-        console.warn('Submission recovery warning:', subErr);
       }
 
       return res.status(200).json({
