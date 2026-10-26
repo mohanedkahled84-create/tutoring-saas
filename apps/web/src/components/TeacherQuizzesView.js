@@ -1422,6 +1422,31 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
                   alt="صورة السؤال" 
                   style="max-height: 180px; max-width: 100%; border-radius: 4px; border: 1px solid #cbd5e1;"
                 />
+                <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 0.5rem; background: #ffffff; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.78rem; font-weight: 700; color: #1e293b; flex-wrap: wrap;">
+                  <span>موضع الصورة في الورقة المطبوعة:</span>
+                  <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input 
+                      type="radio" 
+                      name="wizardImgPlacement" 
+                      value="side" 
+                      ${currentQ.image_placement !== 'bottom' ? 'checked' : ''} 
+                      onchange="window.centrlyApp.updateCurrentQuestionField('image_placement', 'side')"
+                      style="accent-color: #0f172a;"
+                    />
+                    <span>بجانب السؤال (الشكل المقابل - قياسي)</span>
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input 
+                      type="radio" 
+                      name="wizardImgPlacement" 
+                      value="bottom" 
+                      ${currentQ.image_placement === 'bottom' ? 'checked' : ''} 
+                      onchange="window.centrlyApp.updateCurrentQuestionField('image_placement', 'bottom')"
+                      style="accent-color: #0f172a;"
+                    />
+                    <span>أسفل السؤال بعرض كامل (صورة كبيرة)</span>
+                  </label>
+                </div>
               </div>
             ` : ''}
           </div>
@@ -2050,14 +2075,99 @@ function renderExamSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null
           const hasImage = !!q.image_url;
           const hasText = !!(q.text && q.text.trim());
           const isImageOnly = (q.format === 'image_only') || (!hasText && hasImage);
+          const isWideImage = q.image_placement === 'bottom' || q.image_size === 'large';
           const isMcq = q.type !== 'essay';
           const pointsText = `[${q.points || 1} درجات]`;
           const essayLineCount = Math.max(1, Number(q.essay_lines) || 4);
 
-          return `
-            <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
-              
-              ${hasImage && !isImageOnly ? `
+          // Auto-detect choice column layout
+          const maxChoiceLen = (q.choices || []).reduce((max, c) => Math.max(max, (c || '').length), 0);
+          const choiceGridCols = maxChoiceLen > 28 ? '1fr' : 'repeat(2, 1fr)';
+
+          const renderChoices = (paddingRight = '1.25rem') => `
+            <div style="display: grid; grid-template-columns: ${choiceGridCols}; gap: 0.35rem 0.65rem; padding-right: ${paddingRight}; width: 100%;">
+              ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
+                const optText = q.choices?.[optIdx]?.trim();
+                return `
+                  <div style="font-size: 0.84rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
+                    <span style="display: inline-block; width: 18px; height: 18px; border: 1.5px solid #000000; border-radius: 50%; text-align: center; line-height: 16px; font-weight: 900; font-size: 0.74rem; flex-shrink: 0;">${letter}</span>
+                    <span>${optText ? escapeHtml(optText) : ''}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+
+          const renderEssayLines = () => `
+            <div style="margin-top: 0.45rem; width: 100%; display: flex; flex-direction: column; gap: 0;">
+              ${Array.from({ length: essayLineCount }).map((_, lIdx) => `
+                <div style="height: 27px; border-bottom: 1.2px dotted #444444; width: 100%; display: flex; align-items: flex-end; padding-bottom: 1px;">
+                  <span style="font-size: 0.65rem; color: #888888; font-family: monospace; user-select: none;">${lIdx + 1}.</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+
+          // CASE 1: Standard Question with Normal Image -> SIDE-BY-SIDE (الوضع القياسي في امتحانات الثانوية)
+          if (hasImage && !isImageOnly && !isWideImage) {
+            return `
+              <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
+                <div style="display: flex; gap: 0.85rem; align-items: flex-start; justify-content: space-between;">
+                  <!-- Right Column: Question Text + Choices / Ruled Lines -->
+                  <div style="flex: 1 1 0%; min-width: 0;">
+                    <div style="font-weight: 800; font-size: 0.90rem; line-height: 1.5; text-align: right; margin-bottom: 0.4rem;">
+                      <span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span>
+                      <span>${escapeHtml(q.text)}</span>
+                      <span style="font-size: 0.76rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
+                    </div>
+
+                    ${isMcq ? renderChoices('0.35rem') : renderEssayLines()}
+                  </div>
+
+                  <!-- Left Column: Figure Box (الشكل المقابل) -->
+                  <div style="flex-shrink: 0; width: 220px; max-width: 36%; text-align: center;">
+                    <div style="display: inline-block; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; background: #ffffff; width: 100%; box-sizing: border-box;">
+                      <img 
+                        src="${escapeHtml(q.image_url)}" 
+                        alt="الشكل المقابل" 
+                        style="max-height: 140px; max-width: 100%; width: auto; object-fit: contain; display: block; margin: 0 auto;" 
+                      />
+                      <div style="font-size: 0.65rem; font-weight: 800; color: #333333; border-top: 1px dashed #666666; margin-top: 3px; padding-top: 2px;">
+                        (الشكل المقابل)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+
+          // CASE 2: Image-Only Question (Hero Image centered)
+          if (isImageOnly) {
+            return `
+              <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
+                <div style="margin-bottom: 0.45rem;">
+                  <div style="font-weight: 800; font-size: 0.90rem; margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span><span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span> ${q.text ? escapeHtml(q.text) : 'سؤال مصور من المسألة الموضحة أدناه:'}</span>
+                    <span style="font-size: 0.76rem; font-weight: 700; color: #555555;">${pointsText}</span>
+                  </div>
+                  <div style="text-align: center; margin: 0.4rem 0;">
+                    <img 
+                      src="${escapeHtml(q.image_url)}" 
+                      alt="صورة السؤال" 
+                      style="max-height: 280px; max-width: 95%; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; object-fit: contain;" 
+                    />
+                  </div>
+                </div>
+                ${isMcq ? renderChoices('1.25rem') : renderEssayLines()}
+              </div>
+            `;
+          }
+
+          // CASE 3: Wide / Large Image (Centered below Question Text)
+          if (hasImage && isWideImage) {
+            return `
+              <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
                 <div style="margin-bottom: 0.45rem;">
                   <div style="font-weight: 800; font-size: 0.90rem; line-height: 1.5; text-align: right; margin-bottom: 0.35rem;">
                     <span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span>
@@ -2078,52 +2188,20 @@ function renderExamSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null
                     </div>
                   </div>
                 </div>
-              ` : isImageOnly ? `
-                <div style="margin-bottom: 0.45rem;">
-                  <div style="font-weight: 800; font-size: 0.90rem; margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between;">
-                    <span><span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span> ${q.text ? escapeHtml(q.text) : 'سؤال مصور من المسألة الموضحة أدناه:'}</span>
-                    <span style="font-size: 0.76rem; font-weight: 700; color: #555555;">${pointsText}</span>
-                  </div>
-                  <div style="text-align: center; margin: 0.4rem 0;">
-                    <img 
-                      src="${escapeHtml(q.image_url)}" 
-                      alt="صورة السؤال" 
-                      style="max-height: 280px; max-width: 95%; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; object-fit: contain;" 
-                    />
-                  </div>
-                </div>
-              ` : `
-                <div style="font-weight: 800; font-size: 0.88rem; line-height: 1.45; margin-bottom: 0.45rem; text-align: right;">
-                  <span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span>
-                  <span>${escapeHtml(q.text || '')}</span>
-                  <span style="font-size: 0.75rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
-                </div>
-              `}
+                ${isMcq ? renderChoices('1.25rem') : renderEssayLines()}
+              </div>
+            `;
+          }
 
-              ${isMcq ? `
-                <!-- MCQ 4 Choices (Shuffled per Model) -->
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.35rem 0.65rem; padding-right: 1.25rem; width: 100%;">
-                  ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
-                    const optText = q.choices?.[optIdx]?.trim();
-                    return `
-                      <div style="font-size: 0.84rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
-                        <span style="display: inline-block; width: 18px; height: 18px; border: 1.5px solid #000000; border-radius: 50%; text-align: center; line-height: 16px; font-weight: 900; font-size: 0.74rem; flex-shrink: 0;">${letter}</span>
-                        <span>${optText ? escapeHtml(optText) : ''}</span>
-                      </div>
-                    `;
-                  }).join('')}
-                </div>
-              ` : `
-                <!-- Essay Question Ruled / Dotted Lines (Adjustable Line Count) -->
-                <div style="margin-top: 0.45rem; width: 100%; display: flex; flex-direction: column; gap: 0;">
-                  ${Array.from({ length: essayLineCount }).map((_, lIdx) => `
-                    <div style="height: 27px; border-bottom: 1.2px dotted #444444; width: 100%; display: flex; align-items: flex-end; padding-bottom: 1px;">
-                      <span style="font-size: 0.65rem; color: #888888; font-family: monospace; user-select: none;">${lIdx + 1}.</span>
-                    </div>
-                  `).join('')}
-                </div>
-              `}
-
+          // CASE 4: Standard Question without Image
+          return `
+            <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
+              <div style="font-weight: 800; font-size: 0.88rem; line-height: 1.45; margin-bottom: 0.45rem; text-align: right;">
+                <span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span>
+                <span>${escapeHtml(q.text || '')}</span>
+                <span style="font-size: 0.75rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
+              </div>
+              ${isMcq ? renderChoices('1.25rem') : renderEssayLines()}
             </div>
           `;
         }).join('')}
@@ -4348,9 +4426,16 @@ export function registerTeacherQuizzesActions(app) {
     }
   };
 
+  const getActiveQuizTarget = (appCtx) => {
+    return appCtx.quizzesState.activeSubTab === 'paper_builder'
+      ? (appCtx.quizzesState.activePaperQuiz || appCtx.quizzesState.activeOnlineQuiz)
+      : (appCtx.quizzesState.activeOnlineQuiz || appCtx.quizzesState.activePaperQuiz);
+  };
+
   app.updateCurrentQuestionType = function(type) {
     const idx = this.quizzesState.currentQuestionIndex || 0;
-    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+    const qz = getActiveQuizTarget(this);
+    const q = qz?.questions?.[idx];
     if (q) {
       q.type = type;
       this.renderMainContent();
@@ -4359,7 +4444,8 @@ export function registerTeacherQuizzesActions(app) {
 
   app.updateCurrentQuestionField = function(field, value) {
     const idx = this.quizzesState.currentQuestionIndex || 0;
-    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+    const qz = getActiveQuizTarget(this);
+    const q = qz?.questions?.[idx];
     if (q) {
       q[field] = value;
     }
@@ -4367,7 +4453,8 @@ export function registerTeacherQuizzesActions(app) {
 
   app.updateWizardChoice = function(choiceIdx, value) {
     const idx = this.quizzesState.currentQuestionIndex || 0;
-    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+    const qz = getActiveQuizTarget(this);
+    const q = qz?.questions?.[idx];
     if (q) {
       if (!Array.isArray(q.choices)) q.choices = ['', '', '', ''];
       q.choices[choiceIdx] = value;
@@ -4376,7 +4463,8 @@ export function registerTeacherQuizzesActions(app) {
 
   app.setWizardCorrectChoice = function(choiceIdx) {
     const idx = this.quizzesState.currentQuestionIndex || 0;
-    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+    const qz = getActiveQuizTarget(this);
+    const q = qz?.questions?.[idx];
     if (q) {
       q.correct_index = Number(choiceIdx);
       this.renderMainContent();
@@ -4385,7 +4473,8 @@ export function registerTeacherQuizzesActions(app) {
 
   app.setWizardQuestionFormat = function(format) {
     const idx = this.quizzesState.currentQuestionIndex || 0;
-    const q = this.quizzesState.activeOnlineQuiz?.questions?.[idx];
+    const qz = getActiveQuizTarget(this);
+    const q = qz?.questions?.[idx];
     if (q) {
       q.format = format;
       this.renderMainContent();
