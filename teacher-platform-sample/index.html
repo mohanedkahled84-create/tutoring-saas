@@ -1346,7 +1346,7 @@
               <span class="kpi-badge badge-warning" id="kpiHomeworkBadge">متابعة</span>
             </div>
             <div class="kpi-value" id="kpiHomeworkVal"><span class="skeleton-shimmer" style="width: 38px; height: 26px; border-radius: 6px;"></span></div>
-            <div class="kpi-note" id="kpiHomeworkNote">واجب دراسي مسجل بالداتابيز</div>
+            <div class="kpi-note" id="kpiHomeworkNote">واجب دراسي مسجل للمتابعة</div>
           </div>
 
           <div class="kpi-card">
@@ -2475,7 +2475,7 @@
       const kpiHomeworkVal = document.getElementById('kpiHomeworkVal');
       if (kpiHomeworkVal) kpiHomeworkVal.innerText = homework.length;
       const kpiHomeworkNote = document.getElementById('kpiHomeworkNote');
-      if (kpiHomeworkNote) kpiHomeworkNote.innerText = homework.length > 0 ? `${homework.length} تكليف مسجل بالداتابيز` : 'لا توجد تكليفات مطلوبة حالياً';
+      if (kpiHomeworkNote) kpiHomeworkNote.innerText = homework.length > 0 ? `${homework.length} تكليف مسجل للمتابعة` : 'لا توجد تكليفات مطلوبة حالياً';
 
       // شريط تقدم المنهج
       const totalWork = homework.length + videos.length;
