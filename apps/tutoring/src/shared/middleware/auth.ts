@@ -2,7 +2,7 @@ import { Response, NextFunction } from "express";
 import { AuthenticatedRequest, UserRole } from "../types/index.js";
 import { supabasePublic, getScopedSupabaseClient } from "../../supabase.js";
 
-// Helper to extract token from Authorization header or httpOnly cookie
+// Authentication uses explicit Bearer tokens to avoid ambient-cookie CSRF.
 export const PLATFORM_ADMIN_EMAILS = [
   "mohanedkahled84@gmail.com",
   "mohanedkhaled84@gmail.com",
@@ -20,11 +20,6 @@ export function extractToken(req: AuthenticatedRequest): string | null {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
     return authHeader.split(" ")[1];
-  }
-
-  // httpOnly cookie fallback (mitigates XSS token theft)
-  if (req.cookies && (req.cookies.access_token || req.cookies["sb-access-token"])) {
-    return req.cookies.access_token || req.cookies["sb-access-token"];
   }
 
   return null;
@@ -50,7 +45,7 @@ export async function authenticateUser(
       error: {
         code: "UNAUTHORIZED",
         message:
-          "Missing or invalid authentication token (expected Bearer header or httpOnly cookie)",
+          "Missing or invalid authentication token (expected Bearer header)",
       },
     });
     return;

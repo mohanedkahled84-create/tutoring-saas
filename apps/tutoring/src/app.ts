@@ -1,11 +1,9 @@
 import express, { Express } from "express";
 import * as Sentry from "@sentry/node";
 import cors from "cors";
-import cookieParser from "cookie-parser";
 import {
   authenticateUser,
   authenticateInternalSecret,
-  createCookieCsrfGuard,
   globalRateLimiter,
   authRateLimiter,
   securityHeadersMiddleware,
@@ -95,8 +93,6 @@ export function createApp(): Express {
       credentials: true,
     })
   );
-  app.use(cookieParser());
-  app.use(createCookieCsrfGuard(isAllowedOrigin));
   app.use(express.json({ limit: "150mb" }));
   app.use(express.urlencoded({ extended: true, limit: "150mb" }));
 
