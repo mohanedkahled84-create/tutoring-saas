@@ -1481,7 +1481,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
                       onchange="window.centrlyApp.updateCurrentQuestionField('image_placement', 'side')"
                       style="accent-color: #0f172a;"
                     />
-                    <span>بجانب السؤال (الشكل المقابل - قياسي)</span>
+                    <span>بجانب السؤال (قياسي)</span>
                   </label>
                   <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input 
@@ -2232,12 +2232,9 @@ function renderExamSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null
                     <div style="display: inline-block; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; background: #ffffff; width: 100%; box-sizing: border-box;">
                       <img 
                         src="${escapeHtml(q.image_url)}" 
-                        alt="الشكل المقابل" 
+                        alt="صورة السؤال" 
                         style="max-height: 140px; max-width: 100%; width: auto; object-fit: contain; display: block; margin: 0 auto;" 
                       />
-                      <div style="font-size: 0.65rem; font-weight: 800; color: #333333; border-top: 1px dashed #666666; margin-top: 3px; padding-top: 2px;">
-                        (الشكل المقابل)
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -2282,12 +2279,9 @@ function renderExamSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null
                     <div style="display: inline-block; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; background: #ffffff;">
                       <img 
                         src="${escapeHtml(q.image_url)}" 
-                        alt="الشكل المقابل" 
+                        alt="صورة السؤال" 
                         style="max-height: 230px; max-width: 440px; width: auto; object-fit: contain; display: block; margin: 0 auto;" 
                       />
-                      <div style="font-size: 0.65rem; font-weight: 800; color: #333333; border-top: 1px dashed #666666; margin-top: 3px; padding-top: 2px;">
-                        (الشكل المقابل)
-                      </div>
                     </div>
                   </div>
                 </div>
