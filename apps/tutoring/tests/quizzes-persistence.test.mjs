@@ -4,10 +4,80 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { QuizzesService, FakeQuizzesRepository } from "../dist/features/quizzes/index.js";
+import { mergeLegacyQuizRows } from "../dist/features/quizzes/routes.js";
 import { WhatsAppNotificationsService } from "../dist/features/whatsapp-notifications/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+test("LEGACY-QUIZ: restores inbox-backed exams only for groups owned by the current tenant", () => {
+  const ownedGroupId = "group-owned";
+  const foreignGroupId = "group-foreign";
+  const richQuizzes = [{
+    id: "paper-4",
+    group_id: ownedGroupId,
+    quiz_number: 4,
+    exam_mode: "paper",
+    questions: [{ text: "existing copy" }],
+  }];
+  const drafts = [];
+  const rows = [
+    {
+      phone: "QUIZ_DEF_PAPER_group-owned_4",
+      status: "paper",
+      created_at: "2026-10-20T10:00:00Z",
+      message_body: JSON.stringify({
+        id: "paper-4",
+        group_id: ownedGroupId,
+        quiz_number: 4,
+        exam_mode: "paper",
+        questions: [{ text: "paper question" }],
+      }),
+    },
+    {
+      phone: "QUIZ_DEF_ONLINE_group-owned_5",
+      status: "online",
+      created_at: "2026-10-20T11:00:00Z",
+      message_body: JSON.stringify({
+        id: "online-5",
+        group_id: ownedGroupId,
+        quiz_number: 5,
+        exam_mode: "online",
+        questions: [{ text: "online question" }],
+      }),
+    },
+    {
+      phone: "QUIZ_DEF_PAPER_group-foreign_6",
+      status: "paper",
+      message_body: JSON.stringify({
+        id: "foreign-paper-6",
+        group_id: foreignGroupId,
+        quiz_number: 6,
+        exam_mode: "paper",
+        questions: [{ text: "foreign question" }],
+      }),
+    },
+    {
+      phone: "QUIZ_DEF_DRAFT_draft-1",
+      status: "draft",
+      message_body: JSON.stringify({
+        id: "draft-1",
+        group_id: ownedGroupId,
+        exam_mode: "paper",
+        questions: [{ text: "draft question" }],
+      }),
+    },
+  ];
+
+  mergeLegacyQuizRows(rows, new Set([ownedGroupId]), "all", richQuizzes, drafts);
+
+  assert.deepEqual(richQuizzes.map((quiz) => quiz.id), ["paper-4", "online-5"]);
+  assert.equal(richQuizzes[1].created_at, "2026-10-20T11:00:00Z");
+  assert.equal(drafts.length, 1);
+  assert.equal(drafts[0].id, "draft-1");
+  assert.equal(drafts[0].is_draft, true);
+  assert.equal(drafts[0].is_archived, true);
+});
 
 // Clean Architecture Check
 test("DEV-QUIZ.5: Clean Architecture Rule 1 compliance - service.ts has ZERO direct Supabase imports", () => {
