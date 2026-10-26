@@ -3,6 +3,7 @@ export * from "./errors/index.js";
 export * from "./config/index.js";
 export * from "./utils/logger.js";
 export * from "./middleware/auth.js";
+export * from "./middleware/csrf.js";
 export * from "./middleware/validation.js";
 export * from "./middleware/internalAuth.js";
 export * from "./middleware/rateLimit.js";

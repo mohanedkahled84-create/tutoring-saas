@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import {
   authenticateUser,
   authenticateInternalSecret,
+  createCookieCsrfGuard,
   globalRateLimiter,
   authRateLimiter,
   securityHeadersMiddleware,
@@ -65,17 +66,24 @@ export function createApp(): Express {
   const configuredOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
     : defaultAllowedOrigins;
+  const isAllowedOrigin = (origin: string): boolean => {
+    const isLocalNetwork = /^http:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin);
+    const isAllowedDomainPattern =
+      /^https:\/\/([a-z0-9-]+\.)*centerly-eg\.com$/i.test(origin) ||
+      /^https:\/\/([a-z0-9-]+\.)*centrly\.app$/i.test(origin) ||
+      /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i.test(origin);
+    return (
+      configuredOrigins.includes(origin) ||
+      defaultAllowedOrigins.includes(origin) ||
+      isLocalNetwork ||
+      isAllowedDomainPattern
+    );
+  };
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        const isLocalNetwork = origin && /^http:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin);
-        const isAllowedDomainPattern = origin && (
-          /^https:\/\/([a-z0-9-]+\.)*centerly-eg\.com$/i.test(origin) ||
-          /^https:\/\/([a-z0-9-]+\.)*centrly\.app$/i.test(origin) ||
-          /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i.test(origin)
-        );
-        if (!origin || configuredOrigins.includes(origin) || defaultAllowedOrigins.includes(origin) || isLocalNetwork || isAllowedDomainPattern) {
+        if (!origin || isAllowedOrigin(origin)) {
           callback(null, true);
         } else {
           const corsErr: Error & { statusCode?: number; code?: string } = new Error("CORS: Origin not allowed");
@@ -88,6 +96,7 @@ export function createApp(): Express {
     })
   );
   app.use(cookieParser());
+  app.use(createCookieCsrfGuard(isAllowedOrigin));
   app.use(express.json({ limit: "150mb" }));
   app.use(express.urlencoded({ extended: true, limit: "150mb" }));
 
