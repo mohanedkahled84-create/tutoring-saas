@@ -2485,17 +2485,22 @@ class CentrlyApp {
       container.id = 'centrlyToastContainer';
       container.style.cssText = `
         position: fixed;
-        bottom: 24px;
-        left: 24px;
+        bottom: 16px;
+        left: 16px;
         z-index: 999999;
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        max-width: 440px;
-        width: calc(100% - 48px);
+        gap: 8px;
+        max-width: 420px;
+        width: calc(100% - 32px);
         pointer-events: none;
       `;
       document.body.appendChild(container);
+    }
+
+    // Limit active toasts to 2 max so they never pile up on mobile screens
+    while (container.children.length >= 2) {
+      container.firstElementChild.remove();
     }
 
     const toast = document.createElement('div');
@@ -2562,7 +2567,7 @@ class CentrlyApp {
       toast.style.transform = 'translateY(20px)';
       toast.style.opacity = '0';
       setTimeout(() => toast.remove(), 350);
-    }, 3500);
+    }, 2500);
   }
 
   showConfirmModal({ title, message, confirmText = 'حذف', cancelText = 'إلغاء', onConfirm, isDanger = true }) {
