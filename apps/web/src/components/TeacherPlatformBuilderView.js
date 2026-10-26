@@ -151,8 +151,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   // Self-healing async fetch for online submissions if not already loaded
   if (typeof window !== 'undefined' && (!window.__centrlyOnlineSubmissions || window.__centrlyOnlineSubmissions.length === 0) && !window.__fetchingCentrlyOnlineSubs) {
     window.__fetchingCentrlyOnlineSubs = true;
-    fetch('/api/quizzes/submissions')
-      .then(r => r.json())
+    request('/quizzes/submissions')
       .then(res => {
         const subs = Array.isArray(res) ? res : (res?.submissions || []);
         if (subs && subs.length > 0) {
@@ -961,21 +960,15 @@ export function registerTeacherPlatformActions(appInstance) {
         }
       });
 
-      // Immediate auto-save theme to backend so it never reverts on logout
+      // Persist theme changes only through the authenticated backend API.
       const currentSub = (document.getElementById('builderSubdomainInput')?.value || 'mr-omar').trim().toLowerCase();
-      try {
-        fetch('/api/platform/settings', {
+      const currentSettings = appInstance?.platformBuilderState?.settings;
+      if (currentSettings) {
+        request('/platform/settings', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subdomain: currentSub, theme_preset: themeId })
-        }).catch(async () => {
-          await fetch('https://centerly-eg.com/api/platform/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subdomain: currentSub, theme_preset: themeId })
-          }).catch(() => null);
-        });
-      } catch (_) {}
+          body: { ...currentSettings, subdomain: currentSub, theme_preset: themeId }
+        }).catch((err) => console.warn('Theme save failed; use Save Settings to retry.', err));
+      }
     },
 
     updatePreviewText(field, val) {},
@@ -1082,26 +1075,8 @@ export function registerTeacherPlatformActions(appInstance) {
       try {
         const res = await request('/platform/settings', {
           method: 'POST',
-          body: JSON.stringify(payload)
-        }).catch((err) => {
-          console.warn('Backend settings save fallback:', err);
-          return { success: true, settings: payload };
+          body: payload
         });
-
-        // Direct dual-sync to Vercel/Supabase to guarantee public persistence
-        try {
-          await fetch('/api/platform/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          }).catch(async () => {
-            await fetch('https://centerly-eg.com/api/platform/settings', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            }).catch(() => null);
-          });
-        } catch (_) {}
 
         const activeTenantKey = appInstance?.user?.tenant_id || 'active';
         localStorage.setItem(`centrly_platform_settings_${activeTenantKey}`, JSON.stringify(payload));

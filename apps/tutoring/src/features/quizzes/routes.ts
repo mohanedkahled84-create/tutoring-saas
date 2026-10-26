@@ -7,6 +7,72 @@ import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
 
 export const quizzesRouter = Router();
 
+function parseQuizPayload(value: unknown): Record<string, unknown> {
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : {};
+    } catch {
+      return {};
+    }
+  }
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+async function saveTenantQuizDraft(
+  supabase: ReturnType<typeof getServiceSupabaseClient>,
+  tenantId: string,
+  draft: Record<string, unknown>
+): Promise<void> {
+  const id = String(draft.id || `draft_${draft.exam_mode || "online"}_${Date.now()}`);
+  const examMode = String(draft.exam_mode || "online");
+  const phone = `QUIZ_DEF_DRAFT_${id}`;
+  const now = new Date().toISOString();
+  const normalizedDraft = {
+    ...draft,
+    id,
+    title: String(draft.title || "").trim() || (examMode === "paper" ? "مسودة امتحان ورقي" : "مسودة امتحان إلكتروني"),
+    subject: String(draft.subject || "").trim() || "الفيزياء",
+    questions: Array.isArray(draft.questions) ? draft.questions : [],
+    is_draft: true,
+    is_archived: true,
+    status: "draft",
+    updated_at: now,
+  };
+
+  const { data: existing, error: lookupError } = await supabase
+    .from("whatsapp_inbox")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("phone", phone)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+
+  if (existing) {
+    const { error } = await supabase
+      .from("whatsapp_inbox")
+      .update({ message_body: JSON.stringify(normalizedDraft), status: "draft", updated_at: now })
+      .eq("id", existing.id)
+      .eq("tenant_id", tenantId);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabase.from("whatsapp_inbox").insert({
+    tenant_id: tenantId,
+    phone,
+    direction: "outbound",
+    message_body: JSON.stringify(normalizedDraft),
+    status: "draft",
+    updated_at: now,
+  });
+  if (error) throw error;
+}
+
 // GET /api/quizzes - Fetch quizzes and all student scores for a given group
 quizzesRouter.get(
   "/",
@@ -242,6 +308,14 @@ quizzesRouter.get(
       const { data, error } = await query;
       if (error) throw error;
 
+      const { data: draftRows, error: draftError } = await supabase
+        .from("whatsapp_inbox")
+        .select("message_body")
+        .eq("tenant_id", tenantId)
+        .like("phone", "QUIZ_DEF_DRAFT_%")
+        .order("updated_at", { ascending: false });
+      if (draftError) throw draftError;
+
       const richQuizzes = (data || []).map((row: any) => {
         let payload: any = {};
         try {
@@ -271,7 +345,12 @@ quizzesRouter.get(
         };
       });
 
-      res.status(200).json({ success: true, quizzes: richQuizzes });
+      const drafts = (draftRows || [])
+        .map((row) => parseQuizPayload(row.message_body))
+        .filter((draft) => typeof draft.id === "string" && Array.isArray(draft.questions))
+        .map((draft) => ({ ...draft, is_draft: true, is_archived: true }));
+
+      res.status(200).json({ success: true, quizzes: richQuizzes, drafts });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch rich quizzes";
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
@@ -284,6 +363,66 @@ quizzesRouter.post(
   "/rich",
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id || "default";
+    const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
+    const action = req.body?.action;
+
+    if (action === "delete_draft") {
+      const id = typeof req.body?.id === "string" ? req.body.id : "";
+      if (!id) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: "Draft id is required" } });
+        return;
+      }
+      try {
+        const { error } = await supabase
+          .from("whatsapp_inbox")
+          .delete()
+          .eq("tenant_id", tenantId)
+          .eq("phone", `QUIZ_DEF_DRAFT_${id}`);
+        if (error) throw error;
+        res.status(200).json({ success: true, message: "Draft deleted successfully" });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to delete quiz draft";
+        res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+      }
+      return;
+    }
+
+    if (action === "delete_quiz" || action === "archive_quiz") {
+      const id = typeof req.body?.id === "string" ? req.body.id : "";
+      const quizToArchive = parseQuizPayload(req.body?.quiz ?? req.body);
+      try {
+        if (action === "archive_quiz") {
+          await saveTenantQuizDraft(supabase, tenantId, {
+            ...quizToArchive,
+            id: id || quizToArchive.id,
+            is_draft: true,
+            is_archived: true,
+            status: "draft",
+            archived_at: new Date().toISOString(),
+          });
+        }
+
+        if (id && id.length > 20) {
+          const { error } = await supabase
+            .from("study_materials")
+            .delete()
+            .eq("id", id)
+            .eq("tenant_id", tenantId)
+            .eq("type", "online_quiz");
+          if (error) throw error;
+        }
+
+        res.status(200).json({
+          success: true,
+          message: action === "archive_quiz" ? "Quiz archived successfully" : "Quiz deleted successfully",
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to update quiz";
+        res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+      }
+      return;
+    }
+
     const {
       id,
       group_id,
@@ -297,7 +436,20 @@ quizzesRouter.post(
       exam_mode,
       questions,
       stealth_models,
+      is_draft,
+      status,
     } = req.body;
+
+    if (is_draft === true || status === "draft") {
+      try {
+        await saveTenantQuizDraft(supabase, tenantId, parseQuizPayload(req.body || {}));
+        res.status(200).json({ success: true, is_draft: true, draft: req.body, quiz: req.body });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to save quiz draft";
+        res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+      }
+      return;
+    }
 
     if (!group_id || quiz_number === undefined) {
       res.status(400).json({
@@ -316,8 +468,6 @@ quizzesRouter.post(
     try {
       const services = getServices(req);
       const quizzesService = services.quizzes;
-      const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
-
       // 1. Ensure record exists in quizzes table for group tracking
       await quizzesService.upsertQuiz(tenantId, {
         group_id,
@@ -343,7 +493,7 @@ quizzesRouter.post(
 
       let materialRecord: any;
       if (id && id.length > 20) {
-        const { data, error } = await supabase
+        const { data: updated, error } = await supabase
           .from("study_materials")
           .update({
             title: cleanTitle,
@@ -354,10 +504,30 @@ quizzesRouter.post(
           .eq("id", id)
           .eq("tenant_id", tenantId)
           .select()
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
-        materialRecord = data;
+        if (updated) {
+          materialRecord = updated;
+        } else {
+          const { data, error: insertError } = await supabase
+            .from("study_materials")
+            .insert({
+              id,
+              tenant_id: tenantId,
+              teacher_id: req.user?.id || null,
+              title: cleanTitle,
+              description: cleanSubject,
+              type: "online_quiz",
+              group_id,
+              is_homework: false,
+              questions: questionsPayload,
+            })
+            .select()
+            .single();
+          if (insertError) throw insertError;
+          materialRecord = data;
+        }
       } else {
         // Check if one already exists for this group and quiz_number
         const { data: existingRows } = await supabase
@@ -648,7 +818,7 @@ quizzesRouter.get(
           submitted_at
         `)
         .eq("tenant_id", tenantId)
-        .eq("status", "needs_grading")
+        .eq("status", "pending")
         .order("submitted_at", { ascending: false });
 
       if (subsError) throw subsError;

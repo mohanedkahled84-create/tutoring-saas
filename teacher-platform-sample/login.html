@@ -619,13 +619,7 @@
       }
 
       try {
-        let res = await fetch(`/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).catch(() => null);
-      if (!res || !res.ok) {
-        res = await fetch(`/api/platform/public/${encodeURIComponent(sub)}`).catch(() => null);
-      }
-      if (!res || !res.ok) {
-        res = await fetch(`https://centerly-eg.com/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).catch(() => null);
-      }
+        const res = await fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(sub)}`).catch(() => null);
         if (res.ok) {
           const data = await res.json();
           if (data && data.settings) {

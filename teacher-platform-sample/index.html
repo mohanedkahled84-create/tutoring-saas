@@ -1585,10 +1585,8 @@
   </div>
 
     <script>
-    // 1. استرجاع وتحديث بيانات الطالب الحقيقية من قاعدة البيانات
-    const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFiOjlkYTNhYWUwLTk3ZGYtNDdhNi04MmU5LTA2YzYxMzlmNjNlNToxODI0Mjk2NTI4OjRmYWZmZTVkNWU3NzZiNzI0ZWQyYzgzMWYxNWI2NWM3ZDU4NTZkNDc2ZDc0YTVjNmVjZWM0YzdjZWRhNTJjMjU';
-
-    let currentStudent = {
+    // 1. استرجاع وتحديث بيانات الطالب الحقيقية من قاعدة البيانات
+let currentStudent = {
       name: 'مهند خالد',
       code: '1006',
       phone: '01123671177',
@@ -1765,10 +1763,7 @@
     async function syncPlatformSettingsOnline() {
       try {
         const sub = getSubdomain();
-        let res = await fetch(`/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).then(r => r.json()).catch(() => null);
-        if (!res || !res.settings) {
-          res = await fetch(`https://centerly-eg.com/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).then(r => r.json()).catch(() => null);
-        }
+        const res = await fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(sub)}`).then(r => r.ok ? r.json() : null).catch(() => null);
         if (res && res.settings) {
           const s = res.settings;
           localStorage.setItem('centrly_platform_settings', JSON.stringify(s));
@@ -1972,44 +1967,19 @@
         }
       } catch (_) {}
 
-      // B. إرسال إلى سيرفر المنصة وسيرفر Vercel
-      try {
-        fetch('https://centerly-eg.com/api/video-tracking', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).catch(() => {});
-        if (typeof window !== 'undefined' && window.location.origin.startsWith('http')) {
-          fetch('/api/video-tracking', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          }).catch(() => {});
-        }
-      } catch (_) {}
-
-      // C. إرسال مباشر لقاعدة بيانات Supabase
-      try {
-        fetch('https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/whatsapp_inbox', {
-          method: 'POST',
-          headers: {
-            'apikey': 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-            'Authorization': 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify({
-            phone: `VIDEO_TRACK_${studentCode}`,
-            student_name: studentName,
-            message_body: actualTitle,
-            direction: 'inbound',
-            status: newStatus
-          })
-        }).catch(() => {});
-      } catch (_) {}
-
-    }
-
+      // Persist through the tenant-resolved backend platform route.
+      try {
+        const subdomain = getSubdomain();
+        const isWatched = payload.status === 'watched';
+        fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(subdomain)}/video-view`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, progress_percent: isWatched ? 100 : 10, status: isWatched ? 'completed' : 'watching' })
+        }).catch(() => {});
+      } catch (_) {}
+
+    }
+
     // الاستماع الحقيقي لأحداث مشغل اليوتيوب
     window.addEventListener('message', function(event) {
       if (!event.data) return;
@@ -2105,13 +2075,7 @@
         { code: '1004', name: 'احمد عبد الله', attendanceRate: 80 }
       ];
 
-      let allSubmissions = [];
-      try {
-        const subRes = await fetch('https://centerly-eg.com/api/quizzes/submissions').then(r => r.json()).catch(() => null);
-        if (subRes && subRes.success && Array.isArray(subRes.submissions)) {
-          allSubmissions = subRes.submissions;
-        }
-      } catch (_) {}
+      const allSubmissions = Array.isArray(window._studentRecordedQuizzes) ? window._studentRecordedQuizzes : [];
 
       const scoredStudents = defaultGroupMembers.map(member => {
         const mCode = String(member.code);
@@ -2239,32 +2203,20 @@
       localStorage.setItem('portal_student', JSON.stringify(currentStudent));
       hydrateStudentUI(currentStudent);
 
-      let token = urlParams.get('token') || localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN;
+      let token = urlParams.get('token') || localStorage.getItem('centrly_portal_token');
       if (token && !localStorage.getItem('centrly_portal_token')) {
         localStorage.setItem('centrly_portal_token', token);
       }
 
       let dbMaterials = [];
 
-      // Dynamic student resolution by code if token is not known
-      if (qCode && (!token || token === MOHANED_FALLBACK_TOKEN)) {
-        try {
-          const sRes = await fetch(`https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/students?or=(student_code.eq.${encodeURIComponent(qCode)},code.eq.${encodeURIComponent(qCode)})&select=*`, {
-            headers: { apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz', Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz' }
-          });
-          if (sRes.ok) {
-            const sList = await sRes.json();
-            if (Array.isArray(sList) && sList.length > 0) {
-              const matchedS = sList[0];
-              if (matchedS.parent_portal_token) {
-                token = matchedS.parent_portal_token;
-                localStorage.setItem('centrly_portal_token', token);
-              }
-            }
-          }
-        } catch (_) {}
-      }
-
+      if (!token) {
+        window.location.assign('/portal');
+        return;
+      }
+
+      let dbMaterials = [];
+
       // 1. جلب بيانات الطالب والمحتوى الفعلي من قاعدة البيانات عبر Railway Backend مع fallback مباشر لـ Supabase RPC
       try {
         let portalData = null;
@@ -2275,24 +2227,6 @@
             portalData = await res.json();
           }
         } catch (_) {}
-
-        // Fallback to Supabase RPC if Railway backend is unreachable or timed out
-        if (!portalData || !portalData.student) {
-          try {
-            const rpcRes = await fetch('https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/rpc/get_parent_portal_payload', {
-              method: 'POST',
-              headers: {
-                apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-                Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ p_token: token })
-            });
-            if (rpcRes.ok) {
-              portalData = await rpcRes.json();
-            }
-          } catch (_) {}
-        }
 
         if (portalData) {
           if (portalData.student) {
@@ -2337,97 +2271,63 @@
         console.warn('Backend parent-portal fetch warning:', err);
       }
 
-      // 1.5 جلب الامتحانات والكويزات المباشرة من السيرفر (/api/quizzes/rich) مع استبعاد أي كويز تجريبي
-      try {
-        let richRes = await fetch('/api/quizzes/rich').then(r => r.json()).catch(() => null);
-        if (!richRes || !richRes.success) {
-          richRes = await fetch('https://centerly-eg.com/api/quizzes/rich').then(r => r.json()).catch(() => null);
-        }
-        if (richRes && richRes.success && Array.isArray(richRes.quizzes)) {
-          const seenQuizKeys = new Set();
-          const validQuizzes = richRes.quizzes.filter(q => {
-            const t = (q.title || '').toLowerCase();
-            const id = (q.id || '').toLowerCase();
-            const isTrial = t.includes('تجريبي') || t.includes('trial') || t.includes('test') || id.includes('trial') || id.includes('test');
-            const isPaper = (q.exam_mode || '').toLowerCase() === 'paper';
-            if (isTrial || isPaper) return false;
-            const qKey = q.quiz_number ? `qnum_${q.quiz_number}` : q.id;
-            if (seenQuizKeys.has(qKey)) return false;
-            seenQuizKeys.add(qKey);
-            return true;
-          });
-
-          validQuizzes.forEach(q => {
-            const maxScore = Array.isArray(q.questions) 
-              ? q.questions.reduce((sum, item) => sum + Number(item.points || 1), 0) 
-              : 10;
-            dbMaterials.push({
-              id: q.id,
-              title: q.title || `كويز ${q.quiz_number}`,
-              description: q.subject || 'الفيزياء',
-              type: 'online_quiz',
-              is_quiz: true,
-              group_id: q.group_id,
-              quiz_number: q.quiz_number,
-              time_limit_minutes: Number(q.time_limit_minutes) || 20,
-              available_date: q.available_date,
-              start_time: q.start_time,
-              end_time: q.end_time,
-              exam_mode: q.exam_mode || 'online',
-              questions: Array.isArray(q.questions) ? q.questions : [],
-              stealth_models: q.stealth_models,
-              max_score: maxScore,
-              created_at: q.created_at
-            });
-          });
-        }
-      } catch (richErr) {
-        console.warn('Rich quizzes fetch warning in student platform:', richErr);
-      }
-
-      // 1.6 جلب تسليمات الطالب ونتائج التصحيح المعتمدة من السيرفر بمزامنة فورية
-      window._studentOnlineSubmissionsMap = new Map();
-      const currentStudentCode = String(currentStudent.code || qCode || '1005');
-      try {
-        let subRes = await fetch(`/api/quizzes/submissions?student_code=${encodeURIComponent(currentStudentCode)}`).then(r => r.json()).catch(() => null);
-        if (!subRes || !subRes.success) {
-          subRes = await fetch(`https://centerly-eg.com/api/quizzes/submissions?student_code=${encodeURIComponent(currentStudentCode)}`).then(r => r.json()).catch(() => null);
-        }
-        if (subRes && subRes.success && Array.isArray(subRes.submissions)) {
-          subRes.submissions.forEach(sub => {
-            if (sub && (sub.quiz_id || sub.material_id)) {
-              const qId = sub.quiz_id || sub.material_id;
-              window._studentOnlineSubmissionsMap.set(qId, sub);
-              if (sub.quiz_number) {
-                window._studentOnlineSubmissionsMap.set(`quiz_num_${sub.quiz_number}`, sub);
-              }
-              const subKey = `centrly_submission_${currentStudentCode}_${qId}`;
-              try {
-                localStorage.setItem(subKey, JSON.stringify(sub));
-              } catch (_) {}
-            }
-          });
-        }
-      } catch (subErr) {
-        console.warn('Quiz submissions fetch warning in student platform:', subErr);
-      }
-
+      // Normalize quizzes from the signed, tenant-scoped parent-portal response.
+      const onlineQuizMaterials = dbMaterials
+        .filter(material => material.type === 'online_quiz')
+        .map(material => {
+          let payload = {};
+          try { payload = typeof material.questions === 'string' ? JSON.parse(material.questions) : (material.questions || {}); } catch (_) {}
+          const questions = Array.isArray(payload.questions) ? payload.questions : [];
+          return {
+            ...material,
+            is_quiz: true,
+            quiz_number: Number(payload.quiz_number) || 1,
+            subject: material.description || payload.subject || 'الفيزياء',
+            time_limit_minutes: Number(payload.time_limit_minutes) || 20,
+            available_date: payload.available_date || material.created_date || '',
+            start_time: payload.start_time || null,
+            end_time: payload.end_time || null,
+            exam_mode: payload.exam_mode || 'online',
+            questions,
+            stealth_models: payload.stealth_models || null,
+            max_score: questions.reduce((sum, item) => sum + Number(item.points || 1), 0) || 10,
+          };
+        })
+        .filter(quiz => quiz.exam_mode !== 'paper' && !/تجريبي|trial|test/i.test(`${quiz.title || ''} ${quiz.id || ''}`));
+      dbMaterials = [...dbMaterials.filter(material => material.type !== 'online_quiz'), ...onlineQuizMaterials];
+
+      // Derive submission state from the token-scoped portal response, not by student_code.
+      window._studentOnlineSubmissionsMap = new Map();
+      const currentStudentCode = String(currentStudent.code || qCode || '').trim();
+      for (const material of dbMaterials.filter(item => item.type === 'online_quiz' && item.submission_status !== 'unsubmitted')) {
+        let quizPayload = {};
+        let notes = {};
+        try { quizPayload = typeof material.questions === 'string' ? JSON.parse(material.questions) : (material.questions || {}); } catch (_) {}
+        try { notes = typeof material.teacher_feedback === 'string' ? JSON.parse(material.teacher_feedback) : (material.teacher_feedback || {}); } catch (_) {}
+        const submission = {
+          id: material.submission_id || material.id,
+          quiz_id: material.id,
+          material_id: material.id,
+          quiz_number: Number(quizPayload.quiz_number) || 1,
+          student_code: currentStudentCode,
+          student_name: currentStudent.name,
+          status: material.submission_status,
+          is_graded: notes.is_graded === true || material.submission_status === 'approved',
+          has_essay: Boolean(notes.has_essay),
+          score: notes.final_score ?? notes.mcq_score ?? null,
+          mcq_score: Number(notes.mcq_score || 0),
+          max_score: Number(notes.max_score || 10),
+          answers: notes.answers || {},
+          submitted_at: material.submitted_at,
+        };
+        window._studentOnlineSubmissionsMap.set(material.id, submission);
+        window._studentOnlineSubmissionsMap.set(`quiz_num_${submission.quiz_number}`, submission);
+        try { localStorage.setItem(`centrly_submission_${currentStudentCode}_${material.id}`, JSON.stringify(submission)); } catch (_) {}
+      }
+
       // 1.7 جلب ومزامنة سجل مشاهدات الفيديو للطالب لضمان استبعاد المحاضرات التي تم حضورها بالفعل
       if (!window._studentWatchedVideos) window._studentWatchedVideos = new Set();
-      try {
-        let vtRes = await fetch(`/api/video-tracking?_t=${Date.now()}`).then(r => r.json()).catch(() => null);
-        if (!vtRes || !vtRes.success) {
-          vtRes = await fetch(`https://centerly-eg.com/api/video-tracking?_t=${Date.now()}`).then(r => r.json()).catch(() => null);
-        }
-        if (vtRes && vtRes.success && Array.isArray(vtRes.views)) {
-          const myViews = vtRes.views.filter(v => String(v.student_code || '').trim() === currentStudentCode && v.status === 'watched');
-          myViews.forEach(v => {
-            if (v.material_title) markVideoWatched(v.material_title);
-          });
-        }
-      } catch (vtErr) {
-        console.warn('Video tracking fetch warning:', vtErr);
-      }
+            // Read local watch state only; the legacy public tracking read has been removed.
       try {
         const trackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
         const st = trackingMap[currentStudentCode];
@@ -3184,7 +3084,7 @@
       const file = event.target.files && event.target.files[0];
       if (!file) return;
 
-      const token = localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN;
+      const token = localStorage.getItem('centrly_portal_token') || '';
       showPortalToast('جاري رفع وتأمين ملف الواجب في قاعدة البيانات...', 'info');
 
       const reader = new FileReader();
@@ -3543,198 +3443,100 @@
       document.onvisibilitychange = null;
     }
 
-    function submitAndFinishExam(isWithdrawn = false) {
-      exitSecureExam();
-      if (!currentActiveQuiz) return;
-
-      const questions = Array.isArray(currentActiveQuiz.questions) ? currentActiveQuiz.questions : [];
-      const hasEssay = questions.some(q => q.type === 'essay');
-      const studentCode = currentStudent.code || currentStudent.student_code || '1006';
-      const studentName = currentStudent.name || currentStudent.student_name || 'مهند خالد';
-      const subKey = `centrly_submission_${studentCode}_${currentActiveQuiz.id}`;
-
-      if (hasEssay) {
-        // ----------------------------------------------------
-        // حالة: الامتحان يحتوي على أسئلة مقالية
-        // بانتظار تصحيح المعلم، لا تظهر درجات حتى الاعتماد
-        // ----------------------------------------------------
-        const submissionRecord = {
-          quiz_id: currentActiveQuiz.id,
-          quiz_title: currentActiveQuiz.title,
-          quiz_number: currentActiveQuiz.quiz_number || 1,
-          group_id: currentActiveQuiz.group_id || null,
-          student_code: studentCode,
-          student_name: studentName,
-          status: 'pending',
-          is_withdrawn: Boolean(isWithdrawn),
-          withdrawal_reason: isWithdrawn ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان' : null,
-          score: null,
-          max_score: questions.reduce((sum, q) => sum + Number(q.points || 1), 0),
-          submitted_at: new Date().toISOString(),
-          questions: questions,
-          answers: currentExamAnswers,
-          essay_answers: currentExamEssayAnswers
-        };
-        try {
-          localStorage.setItem(subKey, JSON.stringify(submissionRecord));
-        } catch (_) {}
-
-        if (!window._studentOnlineSubmissionsMap) window._studentOnlineSubmissionsMap = new Map();
-        window._studentOnlineSubmissionsMap.set(currentActiveQuiz.id, submissionRecord);
-        if (currentActiveQuiz.quiz_number) {
-          window._studentOnlineSubmissionsMap.set(`quiz_num_${currentActiveQuiz.quiz_number}`, submissionRecord);
-        }
-
-        // إرسال التسليم للسيرفر (عبر /api/quizzes/submit المعتمد)
-        try {
-          const submitPayload = {
-            token: localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN,
-            material_id: currentActiveQuiz.id,
-            quiz_id: currentActiveQuiz.id,
-            quiz_title: currentActiveQuiz.title,
-            quiz_number: currentActiveQuiz.quiz_number || 1,
-            group_id: currentActiveQuiz.group_id || null,
-            student_code: studentCode,
-            student_name: studentName,
-            questions: questions,
-            has_essay: true,
-            is_withdrawn: Boolean(isWithdrawn),
-            withdrawal_reason: isWithdrawn ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان' : null,
-            answers: currentExamAnswers,
-            essay_answers: currentExamEssayAnswers,
-            elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds
-          };
-          fetch('/api/quizzes/submit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(submitPayload)
-          }).catch(() => null);
-        } catch (_) {}
-
-        if (isWithdrawn) {
-          showPortalToast('⚠️ تم سحب ورقة الامتحان فوراً وإلغاء المحاولة لتكرار مغادرة شاشة الاختبار. تم تسليم الإجابات المكتوبة.', 'error');
-        } else {
-          showPortalToast('تم استلام إجاباتك بنجاح! يتضمن الامتحان أسئلة مقالية (قيد التصحيح والاعتماد من المعلم).', 'info');
-        }
-        openPendingReviewModal(currentActiveQuiz);
-        renderAllPanels();
-      } else {
-        // ----------------------------------------------------
-        // حالة: الامتحان اختياري فقط (MCQ Only)
-        // تصحيح فوري حقيقي بناءً على إجابات الطالب
-        // ----------------------------------------------------
-        let earnedPoints = 0;
-        let totalPoints = 0;
-
-        const gradedDetails = questions.map((q, idx) => {
-          const qPts = Number(q.points || 1);
-          totalPoints += qPts;
-          const selectedIdx = currentExamAnswers[idx];
-          const correctIdx = Number(q.correct_index !== undefined ? q.correct_index : (q.correct !== undefined ? q.correct : 0));
-          const isCorrect = selectedIdx !== undefined && Number(selectedIdx) === correctIdx;
-          if (isCorrect) {
-            earnedPoints += qPts;
-          }
-          return {
-            q,
-            selectedIdx,
-            correctIdx,
-            isCorrect,
-            pts: qPts
-          };
-        });
-
-        const submissionRecord = {
-          quiz_id: currentActiveQuiz.id,
-          quiz_title: currentActiveQuiz.title,
-          quiz_number: currentActiveQuiz.quiz_number || 1,
-          group_id: currentActiveQuiz.group_id || null,
-          student_code: studentCode,
-          student_name: studentName,
-          status: 'graded',
-          is_withdrawn: Boolean(isWithdrawn),
-          withdrawal_reason: isWithdrawn ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان' : null,
-          score: earnedPoints,
-          max_score: totalPoints,
-          submitted_at: new Date().toISOString(),
-          gradedDetails,
-          questions: questions,
-          answers: currentExamAnswers
-        };
-        try {
-          localStorage.setItem(subKey, JSON.stringify(submissionRecord));
-        } catch (_) {}
-
-        if (!window._studentOnlineSubmissionsMap) window._studentOnlineSubmissionsMap = new Map();
-        window._studentOnlineSubmissionsMap.set(currentActiveQuiz.id, submissionRecord);
-        if (currentActiveQuiz.quiz_number) {
-          window._studentOnlineSubmissionsMap.set(`quiz_num_${currentActiveQuiz.quiz_number}`, submissionRecord);
-        }
-
-        try {
-          const submitPayload = {
-            token: localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN,
-            material_id: currentActiveQuiz.id,
-            quiz_id: currentActiveQuiz.id,
-            quiz_title: currentActiveQuiz.title,
-            quiz_number: currentActiveQuiz.quiz_number || 1,
-            group_id: currentActiveQuiz.group_id || null,
-            student_code: studentCode,
-            student_name: studentName,
-            questions: questions,
-            has_essay: false,
-            is_withdrawn: Boolean(isWithdrawn),
-            withdrawal_reason: isWithdrawn ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان' : null,
-            answers: currentExamAnswers,
-            elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds
-          };
-          fetch('/api/quizzes/submit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(submitPayload)
-          }).catch(() => null);
-        } catch (_) {}
-
-        if (!window._studentAllRecordedQuizzes) window._studentAllRecordedQuizzes = [];
-        const existingIdx = window._studentAllRecordedQuizzes.findIndex(r => r.id === currentActiveQuiz.id || r.title === currentActiveQuiz.title);
-        const recordedObj = {
-          id: currentActiveQuiz.id,
-          title: currentActiveQuiz.title,
-          score: earnedPoints,
-          max_score: totalPoints,
-          percentage: totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0,
-          date: new Date().toISOString().slice(0, 10),
-          note: 'كويز أونلاين معتمد'
-        };
-        if (existingIdx >= 0) {
-          window._studentAllRecordedQuizzes[existingIdx] = recordedObj;
-        } else {
-          window._studentAllRecordedQuizzes.unshift(recordedObj);
-        }
-        try {
-          localStorage.setItem(`centrly_cached_recorded_${studentCode}`, JSON.stringify(window._studentAllRecordedQuizzes));
-        } catch (_) {}
-        renderRecordedScores(window._studentAllRecordedQuizzes);
-
-        const qAvgEl = document.getElementById('kpiQuizAvgVal');
-        if (qAvgEl && window._studentAllRecordedQuizzes.length > 0) {
-          const totalPct = window._studentAllRecordedQuizzes.reduce((sum, item) => sum + (Number(item.percentage) || ((Number(item.score) / (Number(item.max_score) || 10)) * 100) || 0), 0);
-          const avgPct = Math.round(totalPct / window._studentAllRecordedQuizzes.length);
-          qAvgEl.innerText = `${avgPct}%`;
-        }
-
-        computeAndRenderStudentRank(studentCode, currentStudent.group, currentStudent, window._studentAllRecordedQuizzes);
-
-        if (isWithdrawn) {
-          showPortalToast(`⚠️ تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة الشاشة! نتيجتك حتى لحظة السحب: ${earnedPoints} من ${totalPoints}`, 'error');
-        } else {
-          showPortalToast(`تم تصحيح الامتحان الإلكتروني بنجاح! النتيجة: ${earnedPoints} من ${totalPoints}`, 'success');
-        }
-        openExamReviewModal(currentActiveQuiz, gradedDetails, earnedPoints, totalPoints);
-        renderAllPanels();
-      }
-    }
-
+    async function submitAndFinishExam(isWithdrawn = false) {
+      exitSecureExam();
+      if (!currentActiveQuiz) return;
+
+      const token = localStorage.getItem('centrly_portal_token');
+      if (!token) {
+        showPortalToast('انتهت صلاحية الجلسة. سجّل الدخول مرة أخرى لتسليم الامتحان.', 'error');
+        window.location.assign('/portal');
+        return;
+      }
+
+      const studentCode = String(currentStudent.code || currentStudent.student_code || '').trim();
+      const studentName = currentStudent.name || currentStudent.student_name || 'طالب';
+      const quizNumber = Number(currentActiveQuiz.quiz_number) || 1;
+      const materialId = currentActiveQuiz.id || currentActiveQuiz.material_id;
+      const withdrawalReason = isWithdrawn
+        ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان'
+        : null;
+
+      try {
+        const response = await fetch('https://tutoring-backend-production-c8dd.up.railway.app/api/public/quizzes/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token,
+            material_id: materialId,
+            answers: currentExamAnswers,
+            essay_answers: currentExamEssayAnswers,
+            elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds,
+            is_withdrawn: Boolean(isWithdrawn),
+            withdrawal_reason: withdrawalReason,
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) {
+          throw new Error(result?.error?.message || 'تعذر تسليم الامتحان');
+        }
+
+        const submissionRecord = {
+          quiz_id: materialId,
+          material_id: materialId,
+          quiz_title: currentActiveQuiz.title,
+          quiz_number: quizNumber,
+          group_id: currentActiveQuiz.group_id || null,
+          student_code: studentCode,
+          student_name: studentName,
+          status: result.is_graded ? 'approved' : 'pending',
+          is_graded: Boolean(result.is_graded),
+          has_essay: Boolean(result.has_essay),
+          is_withdrawn: Boolean(isWithdrawn),
+          withdrawal_reason: withdrawalReason,
+          score: result.is_graded ? Number(result.score || 0) : null,
+          mcq_score: Number(result.mcq_score || 0),
+          max_score: Number(result.max_score || 0),
+          submitted_at: new Date().toISOString(),
+          answers: { ...currentExamAnswers, ...currentExamEssayAnswers },
+        };
+        try {
+          localStorage.setItem(`centrly_submission_${studentCode}_${materialId}`, JSON.stringify(submissionRecord));
+        } catch (_) {}
+
+        if (!window._studentOnlineSubmissionsMap) window._studentOnlineSubmissionsMap = new Map();
+        window._studentOnlineSubmissionsMap.set(materialId, submissionRecord);
+        window._studentOnlineSubmissionsMap.set(`quiz_num_${quizNumber}`, submissionRecord);
+
+        if (result.is_graded) {
+          if (!Array.isArray(window._studentAllRecordedQuizzes)) window._studentAllRecordedQuizzes = [];
+          const existingIndex = window._studentAllRecordedQuizzes.findIndex(item => item.id === materialId || Number(item.quiz_number) === quizNumber);
+          const recordedResult = {
+            id: materialId,
+            quiz_id: materialId,
+            title: currentActiveQuiz.title,
+            quiz_number: quizNumber,
+            score: submissionRecord.score,
+            max_score: submissionRecord.max_score,
+            status: 'approved',
+            submitted_at: submissionRecord.submitted_at,
+          };
+          if (existingIndex >= 0) window._studentAllRecordedQuizzes[existingIndex] = recordedResult;
+          else window._studentAllRecordedQuizzes.push(recordedResult);
+          renderRecordedScores(window._studentAllRecordedQuizzes);
+          showPortalToast(result.message || `تم تصحيح الامتحان: ${submissionRecord.score} من ${submissionRecord.max_score}`, isWithdrawn ? 'error' : 'success');
+          openExamReviewModal({ ...currentActiveQuiz, questions: [] }, null, submissionRecord.score, submissionRecord.max_score);
+        } else {
+          showPortalToast(result.message || 'تم تسليم الامتحان، وهو بانتظار مراجعة المعلم.', isWithdrawn ? 'error' : 'info');
+          openPendingReviewModal(currentActiveQuiz);
+        }
+        renderAllPanels();
+      } catch (error) {
+        showPortalToast(error?.message || 'تعذر الاتصال بخدمة تسليم الامتحان. لم يتم تأكيد التسليم.', 'error');
+      }
+    }
+
+
     function openPendingReviewModal(quiz) {
       const modal = document.getElementById('modelAnswerModal');
       const titleEl = document.getElementById('reviewModalTitle');

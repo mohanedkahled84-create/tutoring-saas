@@ -205,19 +205,6 @@ export async function request(endpoint, options = {}) {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      if (res.status === 404 && endpoint.includes('/quizzes')) {
-        try {
-          const fallbackUrl = `/api${endpoint}`;
-          const fallbackRes = await fetch(fallbackUrl, { ...options, headers, body });
-          if (fallbackRes.ok) return await fallbackRes.json();
-        } catch (_) {}
-        try {
-          const prodUrl = `https://centerly-eg.com/api${endpoint}`;
-          const prodRes = await fetch(prodUrl, { ...options, headers, body });
-          if (prodRes.ok) return await prodRes.json();
-        } catch (_) {}
-      }
-
       if (res.status === 401) {
         // Attempt silent session refresh if refresh token is available (skip for auth and public endpoints)
         const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/refresh') || endpoint.includes('/auth/signup') || endpoint.startsWith('/public/');
