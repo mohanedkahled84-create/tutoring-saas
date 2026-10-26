@@ -11,13 +11,13 @@
 
   <style>
     :root {
-      /* لوحة ألوان موحدة ومطابقة لصفحة تسجيل الدخول */
-      --brand-dark: #0d173b;
-      --brand-navy: #11204d;
-      --brand-primary: #2563eb;
-      --brand-primary-hover: #1d4ed8;
-      --brand-light: #60a5fa;
-      --brand-subtle: #f0f4fa;
+      /* لوحة ألوان زمردية موحدة وافتراضية لمنصة المعلم */
+      --brand-dark: #022c22;
+      --brand-navy: #064e3b;
+      --brand-primary: #10b981;
+      --brand-primary-hover: #059669;
+      --brand-light: #34d399;
+      --brand-subtle: #ecfdf5;
       
       --bg-page: #f8fafc;
       --bg-sidebar: #ffffff;
@@ -28,7 +28,7 @@
       --text-dim: #94a3b8;
       
       --border-subtle: #e2e8f0;
-      --border-focus: #2563eb;
+      --border-focus: #10b981;
       
       --status-success: #059669;
       --status-success-bg: #ecfdf5;
@@ -45,6 +45,14 @@
     }
 
     /* مزامنة الثيمات الموحدة */
+    body.theme-navy {
+      --brand-navy: #11204d;
+      --brand-dark: #0d173b;
+      --brand-primary: #2563eb;
+      --brand-primary-hover: #1d4ed8;
+      --brand-light: #60a5fa;
+      --brand-subtle: #f0f4fa;
+    }
     body.theme-red {
       --brand-navy: #b91c1c;
       --brand-dark: #7f1d1d;
@@ -1648,11 +1656,11 @@
             if (avatarImg) avatarImg.src = s.cutout_avatar_url;
           }
         } else {
-          const activeTheme = localStorage.getItem('portal_theme') || 'navy';
+          const activeTheme = localStorage.getItem('portal_theme') || 'emerald';
           document.body.className = 'theme-' + activeTheme;
         }
       } catch (_) {
-        const activeTheme = localStorage.getItem('portal_theme') || 'navy';
+        const activeTheme = localStorage.getItem('portal_theme') || 'emerald';
         document.body.className = 'theme-' + activeTheme;
       }
     }
@@ -1931,6 +1939,27 @@
         '1004': { name: 'احمد عبد الله', code: '1004', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
       };
 
+      // التحقق من حالة تسجيل الخروج الصريح لمنع حلقة تسجيل الدخول التلقائي
+      const isExplicitLoggedOut = localStorage.getItem('centrly_explicit_logout') === '1';
+      if (isExplicitLoggedOut && !urlParams.get('code') && !urlParams.get('token')) {
+        const host = window.location.hostname;
+        const path = window.location.pathname;
+        const isCustomSub = host.includes('mr-omar') || (host.split('.').length > 2 && !host.includes('vercel.app') && !host.includes('localhost') && !host.includes('127.0.0.1'));
+        if (path.includes('/teacher-platform-sample/')) {
+          window.location.href = 'login.html';
+        } else if (isCustomSub) {
+          window.location.href = '/login';
+        } else if (path.startsWith('/mr-omar')) {
+          window.location.href = '/mr-omar/login';
+        } else {
+          window.location.href = '/login';
+        }
+        return;
+      }
+      if (urlParams.get('code') || urlParams.get('token')) {
+        localStorage.removeItem('centrly_explicit_logout');
+      }
+
       let qCode = urlParams.get('code') || localStorage.getItem('portal_student_code');
       if (!qCode) {
         try {
@@ -1952,7 +1981,7 @@
       localStorage.setItem('portal_student', JSON.stringify(currentStudent));
       hydrateStudentUI(currentStudent);
 
-      const token = urlParams.get('token') || localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN;
+      let token = urlParams.get('token') || localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN;
       if (token && !localStorage.getItem('centrly_portal_token')) {
         localStorage.setItem('centrly_portal_token', token);
       }
@@ -2194,6 +2223,7 @@
           }
         });
       }
+      window._studentAllRecordedQuizzes = allRecorded;
       renderRecordedScores(allRecorded);
 
       const qAvgEl = document.getElementById('kpiQuizAvgVal');
@@ -2279,7 +2309,8 @@
 
       // تحديث قائمة المهام العاجلة ونتائج الامتحانات في الرئيسية
       renderHomeTasks(videos, homework, quizzes);
-      renderHomeRecentExamResults(allRecorded, window._studentOnlineSubmissionsMap);
+      const recordedForHome = window._studentAllRecordedQuizzes || window._studentRecordedQuizzes || [];
+      renderHomeRecentExamResults(recordedForHome, window._studentOnlineSubmissionsMap);
 
       // تصيير الأقسام المتخصصة
       renderLecturesPanel(videos);
@@ -3527,17 +3558,26 @@
     }
 
     function logoutStudent() {
-      localStorage.removeItem('portal_student');
-      localStorage.removeItem('portal_student_code');
-      localStorage.removeItem('centrly_portal_token');
+      try {
+        localStorage.removeItem('portal_student');
+        localStorage.removeItem('portal_student_code');
+        localStorage.removeItem('centrly_portal_token');
+        sessionStorage.clear();
+        localStorage.setItem('centrly_explicit_logout', '1');
+      } catch (_) {}
+
+      const host = window.location.hostname;
       const currentPath = window.location.pathname;
-      const isSub = window.location.hostname.includes('mr-omar') || window.location.hostname.split('.').length > 2;
-      if (isSub) {
+      const isSub = host.includes('mr-omar') || (host.split('.').length > 2 && !host.includes('vercel.app') && !host.includes('localhost') && !host.includes('127.0.0.1'));
+
+      if (currentPath.includes('/teacher-platform-sample/')) {
+        window.location.href = 'login.html?logout=1';
+      } else if (isSub) {
         window.location.href = '/login?logout=1';
-      } else if (currentPath.includes('/teacher-platform-sample/')) {
-        window.location.href = '/teacher-platform-sample/login.html?logout=1';
-      } else {
+      } else if (currentPath.startsWith('/mr-omar')) {
         window.location.href = '/mr-omar/login?logout=1';
+      } else {
+        window.location.href = '/login?logout=1';
       }
     }
 

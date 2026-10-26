@@ -440,10 +440,12 @@
     (function checkAutoLogin() {
       try {
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('logout') === '1' || urlParams.get('action') === 'logout') {
+        const explicitLogout = urlParams.get('logout') === '1' || urlParams.get('action') === 'logout' || localStorage.getItem('centrly_explicit_logout') === '1';
+        if (explicitLogout) {
           localStorage.removeItem('portal_student');
           localStorage.removeItem('portal_student_code');
           localStorage.removeItem('centrly_portal_token');
+          localStorage.removeItem('centrly_explicit_logout');
           return;
         }
 
@@ -459,11 +461,15 @@
               code = parsed.code || parsed.student_code;
             } catch (_) {}
           }
-          code = code || '1006';
-          const isSub = window.location.hostname.includes('mr-omar') || window.location.hostname.split('.').length > 2;
-          const dest = isSub ? '/dashboard' : (window.location.pathname.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard');
-          const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
-          window.location.replace(`${dest}?code=${encodeURIComponent(code)}${tokenParam}`);
+          if (code) {
+            const host = window.location.hostname;
+            const currentPath = window.location.pathname;
+            const isSub = host.includes('mr-omar') || (host.split('.').length > 2 && !host.includes('vercel.app') && !host.includes('localhost') && !host.includes('127.0.0.1'));
+            const isSample = currentPath.includes('/teacher-platform-sample/');
+            const dest = isSample ? 'index.html' : (isSub ? '/dashboard' : (currentPath.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard'));
+            const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+            window.location.replace(`${dest}?code=${encodeURIComponent(code)}${tokenParam}`);
+          }
         }
       } catch (_) {}
     })();
@@ -792,12 +798,17 @@
         const json = await res.json();
         
         if (json && json.success && json.token) {
+          localStorage.removeItem('centrly_explicit_logout');
           localStorage.setItem('centrly_portal_token', json.token);
           if (json.student) {
             localStorage.setItem('portal_student', JSON.stringify(json.student));
             localStorage.setItem('portal_student_code', json.student.student_code || json.student.code || identifierInput);
           }
-          const dest = window.location.pathname.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard';
+          const host = window.location.hostname;
+          const currentPath = window.location.pathname;
+          const isSub = host.includes('mr-omar') || (host.split('.').length > 2 && !host.includes('vercel.app') && !host.includes('localhost') && !host.includes('127.0.0.1'));
+          const isSample = currentPath.includes('/teacher-platform-sample/');
+          const dest = isSample ? 'index.html' : (isSub ? '/dashboard' : (currentPath.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard'));
           window.location.href = `${dest}?code=${encodeURIComponent(identifierInput)}&token=${encodeURIComponent(json.token)}`;
         } else {
           // Allow seamless login for all platform students during testing
@@ -809,10 +820,15 @@
             '1004': { name: 'احمد عبد الله', code: '1004', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
           };
           if (allKnownStudents[identifierInput] || identifierInput.length >= 3) {
+            localStorage.removeItem('centrly_explicit_logout');
             const st = allKnownStudents[identifierInput] || { name: 'طالب سنترلي', code: identifierInput, phone: identifierInput };
             localStorage.setItem('portal_student', JSON.stringify(st));
             localStorage.setItem('portal_student_code', identifierInput);
-            const dest = window.location.pathname.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard';
+            const host = window.location.hostname;
+            const currentPath = window.location.pathname;
+            const isSub = host.includes('mr-omar') || (host.split('.').length > 2 && !host.includes('vercel.app') && !host.includes('localhost') && !host.includes('127.0.0.1'));
+            const isSample = currentPath.includes('/teacher-platform-sample/');
+            const dest = isSample ? 'index.html' : (isSub ? '/dashboard' : (currentPath.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard'));
             window.location.href = `${dest}?code=${encodeURIComponent(identifierInput)}`;
             return;
           }

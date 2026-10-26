@@ -59,7 +59,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
   const headlineText = settings.headline_text || "بوابتك التعليمية الشاملة للتفوق والدرجة النهائية";
   const subtitleText = settings.subtitle_text || "هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.";
-  const themePreset = settings.theme_preset || localStorage.getItem('portal_theme') || "emerald";
+  const themePreset = settings.theme_preset || cachedSettings?.theme_preset || "emerald";
   const cutoutAvatarUrl = settings.cutout_avatar_url || "";
 
   // Official live URL (الرابط الرسمي على السابدومين الخاص بالمدرس)
@@ -691,7 +691,7 @@ export function registerTeacherPlatformActions(appInstance) {
   try {
     cachedSettings = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
   } catch (e) {}
-  let currentTheme = localStorage.getItem('portal_theme') || cachedSettings.theme_preset || 'emerald';
+  let currentTheme = cachedSettings.theme_preset || localStorage.getItem('portal_theme') || 'emerald';
 
   function notify(msg, type = 'success') {
     if (appInstance && typeof appInstance.showToast === 'function') {
