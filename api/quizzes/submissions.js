@@ -6,6 +6,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -66,7 +69,7 @@ export default async function handler(req, res) {
         try { body = JSON.parse(body); } catch (_) {}
       }
 
-      const { submission_id, student_code, material_id, essay_score } = body || {};
+      const { submission_id, student_code, material_id, essay_score, essay_scores, notes } = body || {};
 
       const subPhone = `QUIZ_SUB_${material_id}_${student_code}`;
       let targetRow = null;
@@ -110,6 +113,12 @@ export default async function handler(req, res) {
         sub.status = 'approved';
         sub.is_graded = true;
         sub.essay_score = Number(essay_score || 0);
+        if (essay_scores && typeof essay_scores === 'object') {
+          sub.essay_scores = essay_scores;
+        }
+        if (notes) {
+          sub.teacher_notes = notes;
+        }
         sub.total_score = newScore;
         sub.score = newScore;
         sub.final_score = newScore;
