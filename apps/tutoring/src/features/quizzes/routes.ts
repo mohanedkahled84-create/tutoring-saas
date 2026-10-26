@@ -23,6 +23,39 @@ function parseQuizPayload(value: unknown): Record<string, unknown> {
     : {};
 }
 
+export function mergeLegacyQuizRows(
+  rows: any[],
+  allowedGroupIds: Set<string>,
+  groupId: string,
+  richQuizzes: any[],
+  drafts: any[]
+): void {
+  for (const row of rows || []) {
+    const legacyQuiz = parseQuizPayload(row.message_body);
+    const legacyGroupId = String(legacyQuiz.group_id || "");
+    if (!legacyGroupId || !allowedGroupIds.has(legacyGroupId)) continue;
+    if (groupId && groupId !== "all" && legacyGroupId !== groupId) continue;
+
+    const isDraft = Boolean(legacyQuiz.is_draft || row.status === "draft" || String(row.phone).includes("DRAFT"));
+    if (isDraft) {
+      const draft: any = { ...legacyQuiz, is_draft: true, is_archived: true };
+      if (!drafts.some((existing: any) => existing.id === draft.id)) drafts.push(draft);
+      continue;
+    }
+
+    const alreadyLoaded = richQuizzes.some((quiz: any) =>
+      quiz.id === legacyQuiz.id || (
+        String(quiz.group_id) === legacyGroupId &&
+        Number(quiz.quiz_number) === Number(legacyQuiz.quiz_number) &&
+        (quiz.exam_mode || "online") === (legacyQuiz.exam_mode || "online")
+      )
+    );
+    if (!alreadyLoaded && Array.isArray(legacyQuiz.questions)) {
+      richQuizzes.push({ ...legacyQuiz, created_at: legacyQuiz.created_at || row.created_at });
+    }
+  }
+}
+
 async function saveTenantQuizDraft(
   supabase: ReturnType<typeof getServiceSupabaseClient>,
   tenantId: string,
@@ -301,22 +334,41 @@ quizzesRouter.get(
         .eq("type", "online_quiz")
         .order("created_at", { ascending: false });
 
-      if (groupId) {
+      if (groupId && groupId !== "all") {
         query = query.or(`group_id.eq.${groupId},group_id.is.null`);
       }
 
       const { data, error } = await query;
       if (error) throw error;
 
-      const { data: draftRows, error: draftError } = await supabase
-        .from("whatsapp_inbox")
-        .select("message_body")
-        .eq("tenant_id", tenantId)
-        .like("phone", "QUIZ_DEF_DRAFT_%")
-        .order("updated_at", { ascending: false });
-      if (draftError) throw draftError;
+      // Older Vercel quiz definitions were stored in whatsapp_inbox with a
+      // null tenant_id. Keep reading them, but only when their group belongs
+      // to the authenticated tenant; never expose the old global fallback.
+      const { data: tenantGroups, error: groupsError } = await supabase
+        .from("groups")
+        .select("id")
+        .eq("tenant_id", tenantId);
+      if (groupsError) throw groupsError;
+      const allowedGroupIds = new Set((tenantGroups || []).map((group: any) => String(group.id)));
 
-      const richQuizzes = (data || []).map((row: any) => {
+      const [{ data: draftRows, error: draftError }, { data: legacyRows, error: legacyError }] = await Promise.all([
+        supabase
+          .from("whatsapp_inbox")
+          .select("message_body, phone, status")
+          .eq("tenant_id", tenantId)
+          .like("phone", "QUIZ_DEF_DRAFT_%")
+          .order("updated_at", { ascending: false }),
+        supabase
+          .from("whatsapp_inbox")
+          .select("message_body, phone, status, created_at")
+          .is("tenant_id", null)
+          .like("phone", "QUIZ_DEF_%")
+          .order("created_at", { ascending: false }),
+      ]);
+      if (draftError) throw draftError;
+      if (legacyError) throw legacyError;
+
+      const richQuizzes: any[] = (data || []).map((row: any) => {
         let payload: any = {};
         try {
           payload = typeof row.questions === "string" ? JSON.parse(row.questions) : (row.questions || {});
@@ -345,10 +397,12 @@ quizzesRouter.get(
         };
       });
 
-      const drafts = (draftRows || [])
+      const drafts: any[] = (draftRows || [])
         .map((row) => parseQuizPayload(row.message_body))
         .filter((draft) => typeof draft.id === "string" && Array.isArray(draft.questions))
         .map((draft) => ({ ...draft, is_draft: true, is_archived: true }));
+
+      mergeLegacyQuizRows(legacyRows || [], allowedGroupIds, groupId, richQuizzes, drafts);
 
       res.status(200).json({ success: true, quizzes: richQuizzes, drafts });
     } catch (err: unknown) {
