@@ -78,4 +78,5 @@ export interface IPlatformBuilderRepository {
   getPublicMaterials(tenantId: string): Promise<any[]>;
   recordVideoView(tenantId: string, data: VideoViewLogDto): Promise<void>;
   getVideoViews(tenantId: string): Promise<StudentVideoTrackingItem[]>;
+  resetVideoView(tenantId: string, studentCode: string): Promise<void>;
 }

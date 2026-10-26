@@ -293,55 +293,34 @@ export function registerUnifiedPortalActions(app) {
         throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة الطالب');
       }
 
-      // Enrich with rich quizzes from /api/quizzes/rich
-      try {
-        let richRes = await fetch('/api/quizzes/rich').then(r => r.json()).catch(() => null);
-        if (!richRes || !richRes.success) {
-          richRes = await fetch('https://centerly-eg.com/api/quizzes/rich').then(r => r.json()).catch(() => null);
-        }
-        if (richRes && richRes.success && Array.isArray(richRes.quizzes)) {
-          if (!Array.isArray(data.materials)) data.materials = [];
-          if (!Array.isArray(data.quizzes)) data.quizzes = [];
-          richRes.quizzes.forEach(q => {
-            if (q.exam_mode === 'paper') return;
-            const maxScore = Array.isArray(q.questions) 
-              ? q.questions.reduce((sum, item) => sum + Number(item.points || 1), 0) 
-              : 10;
-            const exists = data.materials.some(m => m.id === q.id);
-            if (!exists) {
-              data.materials.push({
-                id: q.id,
-                title: q.title || `كويز ${q.quiz_number}`,
-                description: q.subject || 'الفيزياء',
-                type: 'online_quiz',
-                is_quiz: true,
-                group_id: q.group_id,
-                quiz_number: q.quiz_number,
-                time_limit_minutes: Number(q.time_limit_minutes) || 20,
-                available_date: q.available_date,
-                start_time: q.start_time,
-                end_time: q.end_time,
-                exam_mode: q.exam_mode || 'online',
-                questions: Array.isArray(q.questions) ? q.questions : [],
-                stealth_models: q.stealth_models,
-                max_score: maxScore,
-                created_at: q.created_at
-              });
-            }
-            const qExists = data.quizzes.some(qz => qz.id === q.id || qz.quiz_number === q.quiz_number);
-            if (!qExists) {
-              data.quizzes.push({
-                id: q.id,
-                title: q.title || `كويز ${q.quiz_number}`,
-                quiz_number: q.quiz_number,
-                max_score: maxScore,
-                quiz_date: q.available_date || (q.created_at ? q.created_at.slice(0, 10) : ''),
-                questions: q.questions
-              });
-            }
-          });
-        }
-      } catch (_) {}
+      // Online quiz definitions and scores are already scoped to this student by
+      // the parent-portal API. Never load them through the legacy public quiz API.
+      if (!Array.isArray(data.materials)) data.materials = [];
+      if (!Array.isArray(data.quizzes)) data.quizzes = [];
+      data.materials
+        .filter(material => material.type === 'online_quiz')
+        .forEach(material => {
+          let payload = {};
+          try {
+            payload = typeof material.questions === 'string'
+              ? JSON.parse(material.questions)
+              : (material.questions || {});
+          } catch (_) {}
+          const questions = Array.isArray(payload.questions) ? payload.questions : [];
+          const quizNumber = Number(payload.quiz_number) || 1;
+          const maxScore = questions.reduce((sum, question) => sum + Number(question.points || 1), 0) || 10;
+          const exists = data.quizzes.some(quiz => quiz.id === material.id || Number(quiz.quiz_number) === quizNumber);
+          if (!exists) {
+            data.quizzes.push({
+              id: material.id,
+              title: material.title || `كويز ${quizNumber}`,
+              quiz_number: quizNumber,
+              max_score: maxScore,
+              quiz_date: payload.available_date || material.created_date || '',
+              questions,
+            });
+          }
+        });
 
       const appEl = this.getAppEl();
       if (appEl) {

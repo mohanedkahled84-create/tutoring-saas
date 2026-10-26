@@ -238,20 +238,17 @@ settingsRouter.post(
 
       // Record in Supabase email_verifications table
       try {
-        const { error: rpcErr } = await supabasePublic.rpc("record_email_otp", {
-          p_email: userEmail,
-          p_code: code,
-          p_expires_at: new Date(expiresAt).toISOString(),
+        await getServices(req).auth.recordEmailOtp(userEmail, code, new Date(expiresAt).toISOString());
+      } catch (error) {
+        console.error("[Settings] Failed to persist PIN reset OTP:", error);
+        pinResetOtpStore.delete(userEmail);
+        if (userId) pinResetOtpStore.delete(userId);
+        res.status(503).json({
+          success: false,
+          error: { code: "OTP_STORAGE_UNAVAILABLE", message: "تعذر تجهيز رمز الاستعادة. حاول مرة أخرى." },
         });
-        if (rpcErr) {
-          await supabasePublic.from("email_verifications").insert({
-            email: userEmail,
-            code,
-            expires_at: new Date(expiresAt).toISOString(),
-            attempts: 0,
-          });
-        }
-      } catch (_) {}
+        return;
+      }
 
       // Send email via defaultEmailVerificationService (Resend)
       let sentViaResend = false;

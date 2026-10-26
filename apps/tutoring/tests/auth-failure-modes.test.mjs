@@ -78,12 +78,12 @@ test("AUTH FAILURE MODES - 403 NO_PROFILE when user account exists but has no pr
         return { data: { user: { id: "user-no-profile", email: "noprofile@example.com" } }, error: null };
       },
     },
-    async rpc(name, params) {
-      return { data: null, error: null };
-    },
   };
 
   authClientResolver.getScopedSupabaseClient = (token) => ({
+    async rpc() {
+      return { data: null, error: null };
+    },
     from(table) {
       return {
         select(cols) {
@@ -137,12 +137,12 @@ test("AUTH FAILURE MODES - 503 AUTH_BACKEND_ERROR when PostgREST / DB error occu
         return { data: { user: { id: "user-db-error", email: "error@example.com" } }, error: null };
       },
     },
-    async rpc(name, params) {
-      return { data: null, error: { message: "function get_user_profile does not exist", code: "42883" } };
-    },
   };
 
   authClientResolver.getScopedSupabaseClient = (token) => ({
+    async rpc() {
+      return { data: null, error: { message: "function get_user_profile does not exist", code: "42883" } };
+    },
     from(table) {
       return {
         select(cols) {
@@ -195,7 +195,9 @@ test("AUTH FAILURE MODES - 200 & next() called when profile exists", async () =>
         return { data: { user: { id: "user-ok", email: "user@example.com" } }, error: null };
       },
     },
-    async rpc(name, params) {
+  };
+  authClientResolver.getScopedSupabaseClient = () => ({
+    async rpc() {
       return {
         data: {
           id: "user-ok",
@@ -207,7 +209,7 @@ test("AUTH FAILURE MODES - 200 & next() called when profile exists", async () =>
         error: null,
       };
     },
-  };
+  });
 
   try {
     const req = createMockReq("valid-token-ok");
@@ -239,7 +241,9 @@ test("AUTH PLATFORM ADMIN - founder account receives admin role and passes requi
         return { data: { user: { id: "founder-1", email: "mohanedkahled84@gmail.com" } }, error: null };
       },
     },
-    async rpc(name, params) {
+  };
+  authClientResolver.getScopedSupabaseClient = () => ({
+    async rpc() {
       return {
         data: {
           id: "founder-1",
@@ -251,7 +255,7 @@ test("AUTH PLATFORM ADMIN - founder account receives admin role and passes requi
         error: null,
       };
     },
-  };
+  });
 
   try {
     const req = createMockReq("valid-founder-token");

@@ -4,6 +4,7 @@ import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from ".
 import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=6.5.0";
 import { openVideoPlayerModal } from "./VideoLessonsView.js";
 import { isMohanedKhaledStudent } from "../utils/proGating.js";
+import { request } from "../services/api.js";
 
 /**
  * Centrly Student Web Portal Component
@@ -1497,18 +1498,15 @@ if (typeof window !== 'undefined') {
     const token = window.__portalToken || (typeof location !== 'undefined' ? new URLSearchParams(location.search).get('token') : '');
 
     try {
-      const res = await fetch('/api/quizzes/submit', {
+      const data = await request('/public/quizzes/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           token: token,
           material_id: exam.materialId,
           answers: exam.answers,
           elapsed_seconds: (exam.timeLimitMinutes * 60) - exam.timeRemaining
-        })
+        }
       });
-
-      const data = await res.json();
       const modalEl = document.getElementById('studentExamModalOverlay');
 
       if (data?.success) {
@@ -1547,7 +1545,7 @@ if (typeof window !== 'undefined') {
         alert(data?.error?.message || 'حدث خطأ أثناء تسليم الامتحان');
       }
     } catch (err) {
-      alert('تعذر إرسال الإجابات، يرجى التحقق من اتصال الإنترنت');
+      alert(err?.message || 'تعذر إرسال الإجابات، يرجى التحقق من اتصال الإنترنت');
     }
   };
 }

@@ -9,6 +9,28 @@ import { normalizeMaterialUrl } from "../../features/materials/routes.js";
 
 export const publicRouter = Router();
 
+const quizAnswerFieldNames = new Set([
+  "correct_index",
+  "correct",
+  "answer",
+  "answer_index",
+  "correctanswer",
+  "correctanswerindex",
+  "correctoption",
+  "correctoptionindex",
+]);
+
+function removeQuizAnswerKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(removeQuizAnswerKeys);
+  if (!value || typeof value !== "object") return value;
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => !quizAnswerFieldNames.has(key.toLowerCase().replace(/[^a-z0-9_]/g, "")))
+      .map(([key, nested]) => [key, removeQuizAnswerKeys(nested)])
+  );
+}
+
 // POST /api/public/register - Student Self-Registration from shareable link
 publicRouter.post(
   "/register",
@@ -84,11 +106,24 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
     }
 
     if (portalData && Array.isArray(portalData.materials)) {
-      portalData.materials = portalData.materials.map((m: any) => ({
-        ...m,
-        url: normalizeMaterialUrl(m.url),
-        submission_url: normalizeMaterialUrl(m.submission_url),
-      }));
+      portalData.materials = portalData.materials.map((m: any) => {
+        let questions = m.questions;
+        if (m.type === "online_quiz" && questions) {
+          try {
+            const parsed = typeof questions === "string" ? JSON.parse(questions) : questions;
+            const sanitized = removeQuizAnswerKeys(parsed);
+            questions = typeof m.questions === "string" ? JSON.stringify(sanitized) : sanitized;
+          } catch {
+            questions = null;
+          }
+        }
+        return {
+          ...m,
+          ...(m.type === "online_quiz" ? { questions } : {}),
+          url: normalizeMaterialUrl(m.url),
+          submission_url: normalizeMaterialUrl(m.submission_url),
+        };
+      });
     }
 
     if (portalData && portalData.student) {
@@ -491,7 +526,7 @@ publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<
 
 // DEV-QUIZ.PORTAL: POST /api/public/quizzes/submit - Submit online quiz from student portal
 publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promise<void> => {
-  const { token, material_id, answers, elapsed_seconds } = req.body;
+  const { token, material_id, answers, essay_answers, elapsed_seconds, is_withdrawn, withdrawal_reason } = req.body;
   if (!token || !material_id) {
     res.status(400).json({ error: { code: "BAD_REQUEST", message: "Token and material_id are required" } });
     return;
@@ -542,7 +577,7 @@ publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promis
 
     const questionsList: any[] = Array.isArray(payload.questions) ? payload.questions : [];
     const qNum = Number(payload.quiz_number || 1);
-    const studentAnswers = answers || {};
+    const studentAnswers = { ...(answers || {}), ...(essay_answers || {}) };
 
     let mcqScore = 0;
     let totalMcqPoints = 0;
@@ -577,14 +612,16 @@ publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promis
       total_mcq_points: totalMcqPoints,
       max_score: totalMaxScore,
       elapsed_seconds: elapsed_seconds || 0,
+      is_withdrawn: Boolean(is_withdrawn),
+      withdrawal_reason: typeof withdrawal_reason === "string" ? withdrawal_reason.slice(0, 500) : null,
       has_essay: hasEssay,
       is_graded: isGraded,
       final_score: finalScore,
     };
 
-    const statusVal = isGraded ? "approved" : "needs_grading";
+    const statusVal = isGraded ? "approved" : "pending";
 
-    await supabase
+    const { error: submissionError } = await supabase
       .from("homework_submissions")
       .upsert(
         {
@@ -599,10 +636,11 @@ publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promis
         },
         { onConflict: "material_id,student_id" }
       );
+    if (submissionError) throw submissionError;
 
     if (isGraded) {
       const idempotencyKey = `${tenantId}:${material.group_id || "default"}:${studentId}:quiz-${qNum}`;
-      await supabase.from("quiz_scores").upsert(
+      const { error: scoreError } = await supabase.from("quiz_scores").upsert(
         {
           tenant_id: tenantId,
           group_id: material.group_id,
@@ -616,6 +654,7 @@ publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promis
         },
         { onConflict: "idempotency_key" }
       );
+      if (scoreError) throw scoreError;
     }
 
     res.status(200).json({

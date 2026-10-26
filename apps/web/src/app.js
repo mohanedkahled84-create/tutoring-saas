@@ -1940,16 +1940,10 @@ class CentrlyApp {
           break;
         }
         case 'platform-builder': {
-          const sub = (this.user?.subdomain || 'mr-omar');
-          let [res, vercelSettingsRes, viewsRes, onlineSubsRes, stdRes] = await Promise.all([
+          let [res, viewsRes, onlineSubsRes, stdRes] = await Promise.all([
             request('/platform/settings').catch(() => null),
-            fetch(`/api/platform/settings?subdomain=${encodeURIComponent(sub)}`)
-              .then(r => r.json())
-              .catch(() => fetch(`https://centerly-eg.com/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).then(r => r.json()).catch(() => null)),
-            fetch('/api/video-tracking').then(r => r.json()).catch(() => null),
-            fetch('/api/quizzes/submissions')
-              .then(r => r.json())
-              .catch(() => fetch('https://centerly-eg.com/api/quizzes/submissions').then(r => r.json()).catch(() => null)),
+            request('/platform/video-views').catch(() => null),
+            request('/quizzes/submissions').catch(() => null),
             (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students)
           ]);
 
@@ -1979,7 +1973,7 @@ class CentrlyApp {
             }
           } catch (_) {}
 
-          const finalSettings = vercelSettingsRes?.settings || res?.settings || localSettings || null;
+          const finalSettings = res?.settings || localSettings || null;
           if (finalSettings && finalSettings.subject_title && (finalSettings.subject_title.includes('الإنجليزية') || finalSettings.subject_title.includes('خبير'))) {
             finalSettings.subject_title = this.user?.subject || 'فيزياء الثانوية العامة';
           }

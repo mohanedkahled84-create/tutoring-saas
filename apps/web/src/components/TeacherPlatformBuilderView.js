@@ -151,8 +151,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   // Self-healing async fetch for online submissions if not already loaded
   if (typeof window !== 'undefined' && (!window.__centrlyOnlineSubmissions || window.__centrlyOnlineSubmissions.length === 0) && !window.__fetchingCentrlyOnlineSubs) {
     window.__fetchingCentrlyOnlineSubs = true;
-    fetch('/api/quizzes/submissions')
-      .then(r => r.json())
+    request('/quizzes/submissions')
       .then(res => {
         const subs = Array.isArray(res) ? res : (res?.submissions || []);
         if (subs && subs.length > 0) {
@@ -746,36 +745,9 @@ export function registerTeacherPlatformActions(appInstance) {
         btn.style.pointerEvents = 'none';
       }
       try {
-        let res = await fetch('/api/video-tracking').then(r => r.json()).catch(() => null);
-        if (!res || !Array.isArray(res.views) || res.views.length === 0) {
-          res = await fetch('https://centerly-eg.com/api/video-tracking').then(r => r.json()).catch(() => null);
-        }
-        if (!res || !Array.isArray(res.views) || res.views.length === 0) {
-          try {
-            const supaUrl = 'https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/whatsapp_inbox?phone=like.VIDEO_TRACK_%25&select=*&order=created_at.desc';
-            const supaRes = await fetch(supaUrl, {
-              headers: {
-                apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-                Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz'
-              }
-            });
-            if (supaRes.ok) {
-              const rows = await supaRes.json();
-              res = {
-                views: (Array.isArray(rows) ? rows : []).map(r => ({
-                  student_code: String(r.phone || '').replace('VIDEO_TRACK_', '').trim(),
-                  student_name: r.student_name,
-                  material_title: r.message_body,
-                  status: 'watched',
-                  watched_at: r.created_at
-                }))
-              };
-            }
-          } catch (_) {}
-        }
-        if (!res || !Array.isArray(res.views)) {
-          res = await (appInstance?.request ? appInstance.request('/platform/video-views') : fetch(`${API_BASE_URL}/platform/video-views`).then(r => r.json()).catch(() => null));
-        }
+        const res = await (appInstance?.request
+          ? appInstance.request('/platform/video-views')
+          : request('/platform/video-views').catch(() => null));
         if (res && Array.isArray(res.views)) {
           window.__centrlyServerVideoViews = res.views;
           if (appInstance && typeof appInstance.renderMainContent === 'function') {
@@ -810,37 +782,16 @@ export function registerTeacherPlatformActions(appInstance) {
           watched_at: new Date().toISOString()
         };
 
-        // 1. Send to server
-        await fetch('https://centerly-eg.com/api/video-tracking', {
+        await request(`/platform/public/${encodeURIComponent(subdomain)}/video-view`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).catch(() => {});
-        if (typeof window !== 'undefined' && window.location.origin.startsWith('http')) {
-          await fetch('/api/video-tracking', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          }).catch(() => {});
-        }
-
-        // 2. Direct Supabase insert
-        await fetch('https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/whatsapp_inbox', {
-          method: 'POST',
-          headers: {
-            apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-            Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-            'Content-Type': 'application/json',
-            Prefer: 'return=minimal'
+          body: {
+            student_code: payload.student_code,
+            student_name: payload.student_name,
+            material_title: payload.material_title,
+            progress_percent: 100,
+            status: 'completed',
           },
-          body: JSON.stringify({
-            phone: `VIDEO_TRACK_${sCode}`,
-            student_name: sName || 'طالب',
-            message_body: vTitle || 'فيديو حل واجب الباب الرابع',
-            direction: 'inbound',
-            status: 'watched'
-          })
-        }).catch(() => {});
+        });
 
         // 3. Local reactive update
         const trackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
@@ -873,21 +824,7 @@ export function registerTeacherPlatformActions(appInstance) {
         btnEl.disabled = true;
       }
       try {
-        // 1. Delete from Supabase
-        await fetch(`https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/whatsapp_inbox?phone=eq.VIDEO_TRACK_${sCode}`, {
-          method: 'DELETE',
-          headers: {
-            apikey: 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-            Authorization: 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz'
-          }
-        }).catch(() => {});
-
-        // 2. Delete from API
-        await fetch('https://centerly-eg.com/api/video-tracking', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ student_code: sCode })
-        }).catch(() => {});
+        await request(`/platform/video-views/${encodeURIComponent(sCode)}`, { method: 'DELETE' });
 
         // 3. Update local storage
         const trackingMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
@@ -1023,21 +960,15 @@ export function registerTeacherPlatformActions(appInstance) {
         }
       });
 
-      // Immediate auto-save theme to backend so it never reverts on logout
+      // Persist theme changes only through the authenticated backend API.
       const currentSub = (document.getElementById('builderSubdomainInput')?.value || 'mr-omar').trim().toLowerCase();
-      try {
-        fetch('/api/platform/settings', {
+      const currentSettings = appInstance?.platformBuilderState?.settings;
+      if (currentSettings) {
+        request('/platform/settings', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subdomain: currentSub, theme_preset: themeId })
-        }).catch(async () => {
-          await fetch('https://centerly-eg.com/api/platform/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subdomain: currentSub, theme_preset: themeId })
-          }).catch(() => null);
-        });
-      } catch (_) {}
+          body: { ...currentSettings, subdomain: currentSub, theme_preset: themeId }
+        }).catch((err) => console.warn('Theme save failed; use Save Settings to retry.', err));
+      }
     },
 
     updatePreviewText(field, val) {},
@@ -1144,26 +1075,8 @@ export function registerTeacherPlatformActions(appInstance) {
       try {
         const res = await request('/platform/settings', {
           method: 'POST',
-          body: JSON.stringify(payload)
-        }).catch((err) => {
-          console.warn('Backend settings save fallback:', err);
-          return { success: true, settings: payload };
+          body: payload
         });
-
-        // Direct dual-sync to Vercel/Supabase to guarantee public persistence
-        try {
-          await fetch('/api/platform/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          }).catch(async () => {
-            await fetch('https://centerly-eg.com/api/platform/settings', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            }).catch(() => null);
-          });
-        } catch (_) {}
 
         const activeTenantKey = appInstance?.user?.tenant_id || 'active';
         localStorage.setItem(`centrly_platform_settings_${activeTenantKey}`, JSON.stringify(payload));

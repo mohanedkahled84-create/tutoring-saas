@@ -236,6 +236,19 @@ export class SupabasePlatformBuilderRepository implements IPlatformBuilderReposi
 
     return Array.from(mapByCode.values());
   }
+
+  async resetVideoView(tenantId: string, studentCode: string): Promise<void> {
+    const { error } = await this.queryClient
+      .from("telemetry_events")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("event_name", "video_view")
+      .filter("properties->>student_code", "eq", studentCode);
+
+    if (error) {
+      throw new Error(`Failed to reset video view: ${error.message}`);
+    }
+  }
 }
 
 /**
@@ -345,5 +358,10 @@ export class FakePlatformBuilderRepository implements IPlatformBuilderRepository
 
   async getVideoViews(tenantId: string): Promise<StudentVideoTrackingItem[]> {
     return this.fakeVideoViews.get(tenantId) || [];
+  }
+
+  async resetVideoView(tenantId: string, studentCode: string): Promise<void> {
+    const list = this.fakeVideoViews.get(tenantId) || [];
+    this.fakeVideoViews.set(tenantId, list.filter((item) => item.student_code !== studentCode));
   }
 }

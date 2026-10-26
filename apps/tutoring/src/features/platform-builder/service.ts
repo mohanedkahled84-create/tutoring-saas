@@ -229,4 +229,10 @@ export class PlatformBuilderService {
   async getVideoViews(tenantId: string): Promise<StudentVideoTrackingItem[]> {
     return await this.repository.getVideoViews(tenantId);
   }
+
+  async resetVideoView(tenantId: string, studentCode: string): Promise<void> {
+    const cleanCode = (studentCode || "").trim();
+    if (!cleanCode) throw new Error("كود الطالب مطلوب");
+    await this.repository.resetVideoView(tenantId, cleanCode);
+  }
 }

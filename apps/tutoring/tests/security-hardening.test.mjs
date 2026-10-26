@@ -25,14 +25,14 @@ test.after((t, done) => {
 // DEV-21: Authentication & Authorization Hardening Tests
 // ========================================================
 
-test("DEV-AUTH.1: Token extraction supports both Bearer header and httpOnly cookie", () => {
+test("DEV-AUTH.1: Token extraction accepts explicit Bearer headers only", () => {
   // 1. From header
   const reqWithHeader = { headers: { authorization: "Bearer my-secret-jwt" } };
   assert.equal(extractToken(reqWithHeader), "my-secret-jwt");
 
-  // 2. From cookie
+  // Ambient cookies are rejected to avoid CSRF on state-changing requests.
   const reqWithCookie = { headers: {}, cookies: { access_token: "my-cookie-jwt" } };
-  assert.equal(extractToken(reqWithCookie), "my-cookie-jwt");
+  assert.equal(extractToken(reqWithCookie), null);
 
   // 3. None
   const reqEmpty = { headers: {}, cookies: {} };

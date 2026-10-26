@@ -29,13 +29,6 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
     const authService = getServices(req as AuthenticatedRequest).auth;
     const result = await authService.login({ email: rawIdentifier, password });
 
-    res.cookie("access_token", result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: result.expires_in * 1000,
-    });
-
     let hasSecurityPin = false;
     let dbUser: any = null;
     try {
@@ -177,13 +170,6 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
         }
       }
     } catch (_) {}
-
-    res.cookie("access_token", result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: result.expires_in * 1000,
-    });
 
     res.json({
       message: "Token refreshed successfully",
@@ -366,15 +352,6 @@ authRouter.post("/verify-email", authRateLimiter, async (req: Request, res: Resp
     const authService = getServices(req as AuthenticatedRequest).auth;
     const result = await authService.verifyEmail({ email, code, password });
 
-    if (result.token) {
-      res.cookie("access_token", result.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: (result.expires_in || 3600) * 1000,
-      });
-    }
-
     let verifiedUser: any = result.user;
     if (result.token && result.user?.id) {
       try {
@@ -554,13 +531,8 @@ authRouter.post("/validate-password", (req: Request, res: Response): void => {
   res.json(result);
 });
 
-// POST /api/auth/logout - Clear httpOnly access token cookie
+// POST /api/auth/logout - End the current bearer-token session.
 authRouter.post("/logout", (_req: Request, res: Response): void => {
-  res.clearCookie("access_token", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-  });
   res.status(200).json({ message: "Logged out successfully" });
 });
 

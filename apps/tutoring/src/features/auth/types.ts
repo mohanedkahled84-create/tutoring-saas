@@ -98,6 +98,7 @@ export interface IAuthRepository {
   requestPasswordReset(email: string, redirectTo?: string): Promise<void>;
   resetPassword(token: string, newPassword: string): Promise<void>;
   changePassword?(token: string, email: string, currentPassword: string, newPassword: string): Promise<void>;
+  recordEmailOtp(email: string, code: string, expiresAt: string): Promise<void>;
 }
 
 export interface TenantSettings {

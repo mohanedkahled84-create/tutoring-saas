@@ -98,42 +98,17 @@ export function openVideoPlayerModal(url, title, watermarkText = "") {
       }
     } catch (_) {}
 
-    // B. Direct Server API call to /api/video-tracking (Vercel Serverless Function -> Supabase)
+    // B. Record through the tenant-scoped backend endpoint; never write to Supabase from the browser.
     try {
-      const liveEndpoint = 'https://centerly-eg.com/api/video-tracking';
-      fetch(liveEndpoint, {
+      fetch(`${API_BASE_URL}/platform/public/${encodeURIComponent(activeSubdomain)}/video-view`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        keepalive: true
-      }).catch(() => {});
-
-      if (typeof window !== 'undefined' && window.location.origin.startsWith('http') && !window.location.origin.includes('centerly-eg.com')) {
-        fetch('/api/video-tracking', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          keepalive: true
-        }).catch(() => {});
-      }
-    } catch (_) {}
-
-    // C. Backup direct insert to Supabase whatsapp_inbox
-    try {
-      fetch('https://ofaraxqrpcdiregxjyyb.supabase.co/rest/v1/whatsapp_inbox', {
-        method: 'POST',
-        headers: {
-          'apikey': 'sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-          'Authorization': 'Bearer sb_publishable_wHmQPRNF0WmysskPAcD7yw_6tet5Zyz',
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
         body: JSON.stringify({
-          phone: `VIDEO_TRACK_${activeStudentCode}`,
-          student_name: activeStudentName || 'طالب',
-          message_body: title || 'فيديو حل واجب الباب الرابع',
-          direction: 'inbound',
-          status: newStatus
+          student_code: payload.student_code,
+          student_name: payload.student_name,
+          material_title: payload.material_title,
+          progress_percent: payload.status === 'watched' ? 100 : 0,
+          status: payload.status === 'watched' ? 'completed' : 'watching',
         }),
         keepalive: true
       }).catch(() => {});

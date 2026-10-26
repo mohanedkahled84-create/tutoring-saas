@@ -9,20 +9,29 @@
 -- ============================================================================
 
 -- 1. Restrict Security Definer RPCs to service_role and postgres
-REVOKE ALL ON FUNCTION public.confirm_user_email_direct(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.confirm_user_email_direct(uuid) TO service_role, postgres;
-
-REVOKE ALL ON FUNCTION public.get_email_by_phone(text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.get_email_by_phone(text) TO service_role, postgres;
-
-REVOKE ALL ON FUNCTION public.get_emails_by_phone(text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.get_emails_by_phone(text) TO service_role, postgres;
+DO $$
+BEGIN
+  IF to_regprocedure('public.confirm_user_email_direct(uuid)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.confirm_user_email_direct(uuid) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.confirm_user_email_direct(uuid) TO service_role, postgres;
+  END IF;
+  IF to_regprocedure('public.get_email_by_phone(text)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.get_email_by_phone(text) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.get_email_by_phone(text) TO service_role, postgres;
+  END IF;
+  IF to_regprocedure('public.get_emails_by_phone(text)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.get_emails_by_phone(text) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.get_emails_by_phone(text) TO service_role, postgres;
+  END IF;
+  IF to_regprocedure('public.is_email_confirmed(text)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.is_email_confirmed(text) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.is_email_confirmed(text) TO service_role, postgres;
+  END IF;
+END
+$$;
 
 REVOKE ALL ON FUNCTION public.register_tenant_owner_direct(text, text, text, text, text, text, timestamptz) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.register_tenant_owner_direct(text, text, text, text, text, text, timestamptz) TO service_role, postgres;
-
-REVOKE ALL ON FUNCTION public.is_email_confirmed(text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.is_email_confirmed(text) TO service_role, postgres;
 
 -- Drop unreferenced, vulnerable procedure
 DROP FUNCTION IF EXISTS public.update_portal_password(uuid, text, text);

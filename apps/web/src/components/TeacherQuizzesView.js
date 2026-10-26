@@ -5166,7 +5166,7 @@ export function registerTeacherQuizzesActions(app) {
       localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
     } catch (_) {}
 
-    fetch('/api/quizzes/rich', {
+    request('/quizzes/rich', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(draftObject)
@@ -5268,7 +5268,7 @@ export function registerTeacherQuizzesActions(app) {
           } catch (_) {}
         }
 
-        fetch('/api/quizzes/rich', {
+        request('/quizzes/rich', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'delete_draft', id: draftId })
@@ -5382,13 +5382,7 @@ export function registerTeacherQuizzesActions(app) {
     try {
       const gid = this.quizzesState.selectedGroupId;
       const qParam = gid ? `?group_id=${encodeURIComponent(gid)}` : '';
-      let res = await fetch(`/api/quizzes/rich${qParam}`).then(r => r.json()).catch(() => null);
-      if (!res || !res.success) {
-        res = await fetch(`https://centerly-eg.com/api/quizzes/rich${qParam}`).then(r => r.json()).catch(() => null);
-      }
-      if (!res || !res.success) {
-        res = await request(`/quizzes/rich${qParam}`).catch(() => null);
-      }
+      const res = await request(`/quizzes/rich${qParam}`);
       if (res?.success && Array.isArray(res.quizzes)) {
         this.quizzesState.richQuizzes = res.quizzes;
         try {
@@ -5454,44 +5448,16 @@ export function registerTeacherQuizzesActions(app) {
   app.loadOnlineSubmissions = async function() {
     this.quizzesState.isLoadingSubmissions = true;
     try {
-      let allData = null;
-      let pendingData = null;
-      const ts = Date.now();
-
-      try {
-        const [r1, r2] = await Promise.all([
-          fetch(`/api/quizzes/submissions?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-          fetch(`/api/quizzes/submissions?type=pending&_t=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null)
-        ]);
-        if (r1?.success && Array.isArray(r1.submissions)) allData = r1.submissions;
-        if (r2?.success && Array.isArray(r2.submissions)) pendingData = r2.submissions;
-      } catch (_) {}
-
-      if (!allData || allData.length === 0) {
-        try {
-          const [fb1, fb2] = await Promise.all([
-            fetch(`https://centerly-eg.com/api/quizzes/submissions?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-            fetch(`https://centerly-eg.com/api/quizzes/submissions?type=pending&_t=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null)
-          ]);
-          if (fb1?.success && Array.isArray(fb1.submissions)) allData = fb1.submissions;
-          if (fb2?.success && Array.isArray(fb2.submissions)) pendingData = fb2.submissions;
-        } catch (_) {}
-      }
-
-      if (!allData || allData.length === 0) {
-        const [allRes, pendingRes] = await Promise.allSettled([
-          request('/quizzes/submissions'),
-          request('/quizzes/submissions/pending')
-        ]);
-
-        if (allRes.status === 'fulfilled' && allRes.value?.success && Array.isArray(allRes.value.submissions)) {
-          allData = allRes.value.submissions;
-        }
-        if (pendingRes.status === 'fulfilled' && pendingRes.value?.success && Array.isArray(pendingRes.value.submissions)) {
-          pendingData = pendingRes.value.submissions;
-        }
-      }
-
+      const [allRes, pendingRes] = await Promise.allSettled([
+        request('/quizzes/submissions'),
+        request('/quizzes/submissions/pending')
+      ]);
+      const allData = allRes.status === 'fulfilled' && allRes.value?.success && Array.isArray(allRes.value.submissions)
+        ? allRes.value.submissions
+        : [];
+      const pendingData = pendingRes.status === 'fulfilled' && pendingRes.value?.success && Array.isArray(pendingRes.value.submissions)
+        ? pendingRes.value.submissions
+        : [];
       const serverSubmissions = (Array.isArray(allData) ? allData : []).map(s => {
         const fullScore = s.total_score !== undefined && s.total_score !== null 
           ? Number(s.total_score) 
@@ -5883,24 +5849,8 @@ export function registerTeacherQuizzesActions(app) {
           questions
         };
 
-        let res = null;
-        try {
-          const fb1 = await fetch('/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          if (fb1.ok) res = await fb1.json();
-        } catch (_) {}
-
-        if (!res || !res.success) {
-          try {
-            const fb2 = await fetch('https://centerly-eg.com/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (fb2.ok) res = await fb2.json();
-          } catch (_) {}
-        }
-
-        if (!res || !res.success) {
-          try {
-            res = await request('/quizzes/rich', { method: 'POST', body: payload });
-          } catch (_) {}
-        }
+        const res = await request('/quizzes/rich', { method: 'POST', body: payload });
+        if (!res?.success) throw new Error(res?.error?.message || 'فشل حفظ الامتحان');
       }
 
       // Optimistically insert into richQuizzes so it appears immediately!
@@ -5937,7 +5887,7 @@ export function registerTeacherQuizzesActions(app) {
             localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
           } catch (_) {}
         }
-        fetch('/api/quizzes/rich', {
+        request('/quizzes/rich', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'delete_draft', id: draftToDelete })
@@ -6023,7 +5973,7 @@ export function registerTeacherQuizzesActions(app) {
         } catch (_) {}
 
         // 3. Call serverless API
-        fetch('/api/quizzes/rich', {
+        request('/quizzes/rich', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -6059,7 +6009,7 @@ export function registerTeacherQuizzesActions(app) {
           localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
         } catch (_) {}
 
-        fetch('/api/quizzes/rich', {
+        request('/quizzes/rich', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -6117,37 +6067,17 @@ export function registerTeacherQuizzesActions(app) {
 
     try {
       this.showToast('جاري اعتماد وتثبيت الدرجة...', 'info');
-      let res = null;
-      try {
-        res = await request('/quizzes/submissions/grade-essay', {
-          method: 'POST',
-          body: {
-            submission_id: subId,
-            student_id: studentId,
-            quiz_number: quizNumber,
-            group_id: sub.group_id || this.quizzesState.selectedGroupId,
-            essay_scores: essayScores,
-            notes: note
-          }
-        });
-      } catch (err) {
-        console.warn('Primary /quizzes/submissions/grade-essay failed, attempting fallback...', err);
-        const totalEssay = Object.values(essayScores).reduce((a, b) => a + Number(b), 0);
-        const fbRes = await fetch('/api/quizzes/submissions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            submission_id: subId,
-            student_code: sub.student_code || studentId,
-            material_id: sub.material_id || sub.quiz_id,
-            essay_score: totalEssay,
-            essay_scores: essayScores,
-            notes: note
-          })
-        }).then(r => r.json()).catch(() => null);
-        if (fbRes?.success) res = fbRes;
-        if (!res) throw err;
-      }
+      const res = await request('/quizzes/submissions/grade-essay', {
+        method: 'POST',
+        body: {
+          submission_id: subId,
+          student_id: studentId,
+          quiz_number: quizNumber,
+          group_id: sub.group_id || this.quizzesState.selectedGroupId,
+          essay_scores: essayScores,
+          notes: note
+        }
+      });
 
       if (res?.success) {
         const totalEssay = Object.values(essayScores).reduce((a, b) => a + Number(b), 0);
@@ -6633,30 +6563,9 @@ export function registerTeacherQuizzesActions(app) {
           questions
         };
 
-        let res = null;
-        try {
-          const fb1 = await fetch('/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          if (fb1.ok) res = await fb1.json();
-        } catch (_) {}
-
-        if (!res || !res.success) {
-          try {
-            const fb2 = await fetch('https://centerly-eg.com/api/quizzes/rich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (fb2.ok) res = await fb2.json();
-          } catch (_) {}
-        }
-
-        if (!res || !res.success) {
-          try {
-            res = await request('/quizzes/rich', { method: 'POST', body: payload });
-          } catch (_) {}
-        }
-
-        const savedItem = res?.quiz || {
-          ...payload,
-          id: payload.id || `paper_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-          created_at: new Date().toISOString()
-        };
+        const res = await request('/quizzes/rich', { method: 'POST', body: payload });
+        if (!res?.success) throw new Error(res?.error?.message || 'فشل حفظ الامتحان الورقي');
+        const savedItem = res.quiz || { ...payload, created_at: new Date().toISOString() };
         savedQuizzes.push(savedItem);
       }
 
@@ -6680,7 +6589,7 @@ export function registerTeacherQuizzesActions(app) {
             localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
           } catch (_) {}
         }
-        fetch('/api/quizzes/rich', {
+        request('/quizzes/rich', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'delete_draft', id: draftToDelete })
@@ -7116,7 +7025,7 @@ export function registerTeacherQuizzesActions(app) {
     this.quizzesState.isOmrScanningNow = false;
   };
 
-  app.recordOmrScanResult = function(scanData) {
+  app.recordOmrScanResult = async function(scanData) {
     if (!Array.isArray(this.quizzesState.scannedResultsList)) {
       this.quizzesState.scannedResultsList = [];
     }
@@ -7127,6 +7036,42 @@ export function registerTeacherQuizzesActions(app) {
       (scanData.student_code && scanData.student_code !== '—' && String(item.student_code) === String(scanData.student_code))
     );
 
+    const qNum = scanData.quiz_number || 1;
+    if (!scanData.student_code || scanData.student_code === '—') {
+      this.showToast('لا يمكن اعتماد التصحيح قبل تحديد كود الطالب.', 'danger');
+      return;
+    }
+      const modelCode = String(scanData.model || '').trim().toUpperCase();
+      const modelMatch = String(scanData.model || '').match(/[أبج]/);
+      const model = ({ A: 'أ', B: 'ب', C: 'ج', '01': 'أ', '02': 'ب', '03': 'ج' })[modelCode] || modelMatch?.[0] || 'أ';
+      const answers = Object.fromEntries((scanData.breakdown || [])
+        .filter(item => item && item.question_number != null && item.student_choice != null && item.student_choice !== 'لم يُظلل')
+        .map(item => {
+          const choice = String(item.student_choice).trim();
+          const choiceIndex = ({ 'أ': 0, 'ب': 1, 'ج': 2, 'د': 3 })[choice];
+          return [String(item.question_number), choiceIndex !== undefined ? choiceIndex : Number(choice)];
+        }));
+      try {
+        const saved = await request('/quizzes/omr-scan', {
+          method: 'POST',
+          body: {
+            quiz_number: qNum,
+            group_id: scanData.group_id || this.quizzesState.selectedGroupId,
+            student_code: scanData.student_code,
+            model,
+            barcode: scanData.barcode,
+            serial: scanData.serial,
+            answers,
+          },
+        });
+        if (!saved?.success) throw new Error(saved?.error?.message || 'فشل حفظ نتيجة التصحيح');
+        scanData.score = saved.score;
+        scanData.max_score = saved.max_score;
+      } catch (error) {
+        console.error('[recordOmrScanResult] backend save failed:', error);
+        this.showToast('تعذر حفظ نتيجة التصحيح على الخادم؛ لم يتم اعتمادها.', 'danger');
+        return;
+      }
     let isUpdate = false;
     if (existingIdx >= 0) {
       // Update existing record in-place
@@ -7138,7 +7083,6 @@ export function registerTeacherQuizzesActions(app) {
     this.quizzesState.lastOmrScanResult = scanData;
 
     // Persist score to scoresMap and local storage
-    const qNum = scanData.quiz_number || 1;
     if (!this.quizzesState.scoresMap) this.quizzesState.scoresMap = {};
     if (!this.quizzesState.scoresMap[qNum]) this.quizzesState.scoresMap[qNum] = {};
     if (scanData.student_id) {
@@ -7175,32 +7119,14 @@ export function registerTeacherQuizzesActions(app) {
         breakdown: scanData.breakdown,
         submitted_at: new Date().toISOString()
       };
+
+
+      localSub.score = scanData.score;
+      localSub.total_score = scanData.score;
+      localSub.max_score = scanData.max_score;
       try {
         localStorage.setItem(`centrly_submission_${scanData.student_code}_${examTargetId}`, JSON.stringify(localSub));
       } catch (_) {}
-
-      fetch('/api/quizzes/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          material_id: examTargetId,
-          quiz_id: examTargetId,
-          quiz_title: scanData.exam_title || `امتحان ورقي ${qNum}`,
-          quiz_number: qNum,
-          group_id: scanData.group_id || this.quizzesState.selectedGroupId,
-          student_code: scanData.student_code,
-          student_name: scanData.student_name,
-          score: scanData.score,
-          total_score: scanData.score,
-          max_score: scanData.max_score,
-          percentage: scanData.percentage,
-          is_graded: true,
-          status: 'approved',
-          exam_mode: 'paper',
-          model: scanData.model,
-          breakdown: scanData.breakdown
-        })
-      }).catch(e => console.warn('[recordOmrScanResult] submit sync error:', e));
     }
     
     if (isUpdate) {
