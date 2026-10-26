@@ -197,7 +197,7 @@ CREATE OR REPLACE FUNCTION public.submit_homework_portal(
   p_material_id uuid,
   p_file_url text,
   p_file_name text,
-  p_student_id uuid
+  p_student_id uuid DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -260,7 +260,7 @@ CREATE OR REPLACE FUNCTION public.submit_homework_portal(
   p_portal_token text,
   p_material_id uuid,
   p_file_url text,
-  p_file_name text
+  p_file_name text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE sql
