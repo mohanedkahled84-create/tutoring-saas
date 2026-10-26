@@ -27,7 +27,8 @@ export const authService = {
           parsed.is_superadmin = true;
           parsed.name = 'مهند خالد';
           parsed.full_name = 'مهند خالد';
-          parsed.tenant_id = 'df534fa1-c1a6-4b29-a6ab-80cb4aceb9e9';
+          // Preserve authenticated tenant context from backend; fallback to active tenant if unset
+          parsed.tenant_id = parsed.tenant_id || '0c67b644-ae42-49e8-975f-85b9d0af0e1b';
           parsed.tenant_name = 'إدارة المنظومة (Centrly HQ)';
         } else if (email === 'mohanedabdulhalim@gmail.com') {
           // Strictly protect Mr. Omar El-Mohamady's teacher identity & tenant

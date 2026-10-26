@@ -204,14 +204,14 @@ export class AdminOpsService {
   }
 
   async deleteTenant(tenantId: string): Promise<void> {
-    if (tenantId === "df534fa1-c1a6-4b29-a6ab-80cb4aceb9e9") {
+    if (tenantId === "df534fa1-c1a6-4b29-a6ab-80cb4aceb9e9" || tenantId === "0c67b644-ae42-49e8-975f-85b9d0af0e1b") {
       throw new Error("لا يمكن حذف حساب إدارة المنظومة الرئيسي");
     }
     await this.repo.deleteTenant(tenantId);
   }
 
   async archiveTenant(tenantId: string): Promise<AdminTenantSummary> {
-    if (tenantId === "df534fa1-c1a6-4b29-a6ab-80cb4aceb9e9") {
+    if (tenantId === "df534fa1-c1a6-4b29-a6ab-80cb4aceb9e9" || tenantId === "0c67b644-ae42-49e8-975f-85b9d0af0e1b") {
       throw new Error("لا يمكن أرشفة حساب إدارة المنظومة الرئيسي");
     }
     return this.repo.archiveTenant(tenantId);

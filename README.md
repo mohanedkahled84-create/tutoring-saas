@@ -33,7 +33,7 @@ Ai business/
 │   │   │   ├── server.ts     # HTTP server entrypoint
 │   │   │   └── supabase.ts   # Supabase client factory
 │   │   └── tests/            # Fast, 100% in-memory unit tests using Fake repositories
-│   └── web/                  # Next.js 14 Web Application (Arabic-First / RTL)
+│   └── web/                  # Vanilla ES Modules SPA (Arabic-First / RTL)
 ├── packages/                 # Shared domain packages and contracts
 └── supabase/
     └── migrations/           # Multi-tenant PostgreSQL migrations & RLS policies
@@ -116,7 +116,7 @@ cp apps/tutoring/.env.example apps/tutoring/.env
 ```
 Ensure the following variables are configured:
 ```env
-PORT=3001
+PORT=3000
 NODE_ENV=development
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
@@ -127,12 +127,8 @@ INTERNAL_API_SECRET=your-internal-secret
 
 ### 2. Install Dependencies
 ```bash
-# Root & backend
+# Backend
 cd apps/tutoring
-npm install
-
-# Frontend
-cd ../web
 npm install
 ```
 
@@ -141,15 +137,11 @@ npm install
 cd apps/tutoring
 npm run dev
 ```
-The API server will launch at `http://localhost:3001`.
-Health check: `http://localhost:3001/health`
+The API server will launch at `http://localhost:3000`.
+Health check: `http://localhost:3000/health/ping`
 
-### 4. Run Frontend Development Server
-```bash
-cd apps/web
-npm run dev
-```
-The Next.js web application will launch at `http://localhost:3000`.
+### 4. Run Frontend (Static Web SPA)
+The frontend in `apps/web` is a vanilla ES Modules single-page application. You can serve it with any static web server (e.g. `npx serve apps/web -p 5000` or Live Server) or open directly in production via Vercel.
 
 ---
 
