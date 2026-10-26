@@ -234,24 +234,25 @@ function renderUnsavedExamExitModal(state) {
   const mode = state.exitPromptMode || 'online'; // 'online' | 'paper'
   const isOnline = mode === 'online';
   const qz = isOnline ? state.activeOnlineQuiz : state.activePaperQuiz;
+  const isExistingPublished = Boolean(qz?._isExistingPublished || (qz?.id && !qz.is_draft));
   const qCount = qz?.questions?.filter(q => (q.text && q.text.trim()) || q.image_url)?.length || 0;
   const examTitle = qz?.title || (isOnline ? 'الامتحان الإلكتروني' : 'الامتحان الورقي');
 
   return `
     <div style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.72); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(4px); font-family: 'Cairo', sans-serif;" dir="rtl">
-      <div style="background: #ffffff; border-radius: 12px; max-width: 470px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35); border: 1px solid #e2e8f0; overflow: hidden; animation: centrlyFadeIn 0.2s ease;">
+      <div style="background: #ffffff; border-radius: 12px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35); border: 1px solid #e2e8f0; overflow: hidden; animation: centrlyFadeIn 0.2s ease;">
         
         <!-- Header -->
-        <div style="background: #fffbeb; border-bottom: 1px solid #fef3c7; padding: 1.15rem 1.25rem; display: flex; align-items: center; gap: 0.75rem;">
-          <div style="width: 42px; height: 42px; border-radius: 50%; background: #fef3c7; border: 1.5px solid #fde68a; display: flex; align-items: center; justify-content: center; color: #b45309; flex-shrink: 0;">
-            ${getIcon('archive', 22, '#b45309')}
+        <div style="background: ${isExistingPublished ? '#f0fdf4' : '#fffbeb'}; border-bottom: 1px solid ${isExistingPublished ? '#bbf7d0' : '#fef3c7'}; padding: 1.15rem 1.25rem; display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 42px; height: 42px; border-radius: 50%; background: ${isExistingPublished ? '#dcfce7' : '#fef3c7'}; border: 1.5px solid ${isExistingPublished ? '#86efac' : '#fde68a'}; display: flex; align-items: center; justify-content: center; color: ${isExistingPublished ? '#15803d' : '#b45309'}; flex-shrink: 0;">
+            ${isExistingPublished ? getIcon('check', 22, '#15803d') : getIcon('archive', 22, '#b45309')}
           </div>
           <div>
-            <h3 style="font-size: 0.98rem; font-weight: 800; color: #92400e; margin: 0;">
-              لم تقم بحفظ الامتحان بعد!
+            <h3 style="font-size: 0.98rem; font-weight: 800; color: ${isExistingPublished ? '#166534' : '#92400e'}; margin: 0;">
+              ${isExistingPublished ? 'الرجوع من تعديل الامتحان' : 'لم تقم بحفظ الامتحان بعد!'}
             </h3>
-            <span style="font-size: 0.76rem; color: #b45309; font-weight: 600;">
-              ${escapeHtml(examTitle)} • (${qCount} أسئلة مضافة)
+            <span style="font-size: 0.76rem; color: ${isExistingPublished ? '#15803d' : '#b45309'}; font-weight: 700;">
+              ${escapeHtml(examTitle)} • ${isExistingPublished ? 'الامتحان منشور بالفعل للطلاب' : `(${qCount} أسئلة مضافة)`}
             </span>
           </div>
         </div>
@@ -259,35 +260,64 @@ function renderUnsavedExamExitModal(state) {
         <!-- Body -->
         <div style="padding: 1.25rem;">
           <p style="font-size: 0.85rem; color: #334155; line-height: 1.6; margin: 0 0 1.25rem 0; font-weight: 600;">
-            أنت الآن بصدد مغادرة صفحة إعداد الامتحان دون حفظه. هل ترغب في <b>حفظه في الأرشيف (مسودة)</b> للرجوع إليه وإكماله في أي وقت، أم تريد <b>مسحه وتجاهله نهائياً</b>؟
+            ${isExistingPublished 
+              ? 'أنت الآن بصدد الخروج من وضع التعديل. هل ترغب في <b>الرجوع لقائمة الامتحانات المنشورة دون تطبيق تعديلات جديدة</b> (سيبقى الامتحان الأصلي منشوراً كما هو دون أي تغيير)، أم ترغب في <b>حفظ التعديلات كمسودة مؤقتة في الأرشيف</b>؟'
+              : 'أنت الآن بصدد مغادرة صفحة إعداد الامتحان دون حفظه. هل ترغب في <b>حفظه في الأرشيف (مسودة)</b> للرجوع إليه وإكماله في أي وقت، أم تريد <b>إلغاء وتجاهل هذه المسودة</b>؟'
+            }
           </p>
 
           <!-- Action Buttons -->
           <div style="display: flex; flex-direction: column; gap: 0.65rem;">
             
-            <!-- Button 1: Save to Archive (Draft) -->
-            <button 
-              type="button" 
-              onclick="window.centrlyApp.saveExamToArchive('${mode}')"
-              style="width: 100%; height: 42px; background: #0f172a; color: #ffffff; border: none; border-radius: 8px; font-size: 0.84rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 4px rgba(15,23,42,0.15); transition: background 0.15s ease;"
-              onmouseover="this.style.background='#1e293b'"
-              onmouseout="this.style.background='#0f172a'"
-            >
-              ${getIcon('archive', 16, '#f59e0b')}
-              <span>حفظ في الأرشيف (مسودة للاستكمال لاحقاً)</span>
-            </button>
+            ${isExistingPublished ? `
+              <!-- Button 1: Return to Published (Keep published untouched) -->
+              <button 
+                type="button" 
+                onclick="window.centrlyApp.discardUnsavedExam('${mode}')"
+                style="width: 100%; height: 44px; background: #0f172a; color: #ffffff; border: none; border-radius: 8px; font-size: 0.84rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 4px rgba(15,23,42,0.15); transition: background 0.15s ease;"
+                onmouseover="this.style.background='#1e293b'"
+                onmouseout="this.style.background='#0f172a'"
+              >
+                ${getIcon('check', 16, '#ffffff')}
+                <span>الرجوع (سيبقى الامتحان منشوراً كما هو دون مساس)</span>
+              </button>
 
-            <!-- Button 2: Discard / Delete -->
-            <button 
-              type="button" 
-              onclick="window.centrlyApp.discardUnsavedExam('${mode}')"
-              style="width: 100%; height: 38px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s ease;"
-              onmouseover="this.style.background='#fee2e2'"
-              onmouseout="this.style.background='#fef2f2'"
-            >
-              ${getIcon('trash', 15, '#dc2626')}
-              <span>مسح وتجاهل الامتحان</span>
-            </button>
+              <!-- Button 2: Save modifications as draft in archive -->
+              <button 
+                type="button" 
+                onclick="window.centrlyApp.saveExamToArchive('${mode}')"
+                style="width: 100%; height: 38px; background: #fffdfa; color: #b45309; border: 1.5px solid #fde68a; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s ease;"
+                onmouseover="this.style.background='#fef3c7'"
+                onmouseout="this.style.background='#fffdfa'"
+              >
+                ${getIcon('archive', 15, '#b45309')}
+                <span>حفظ التعديلات كمسودة جديدة في الأرشيف</span>
+              </button>
+            ` : `
+              <!-- Button 1: Save to Archive (Draft) -->
+              <button 
+                type="button" 
+                onclick="window.centrlyApp.saveExamToArchive('${mode}')"
+                style="width: 100%; height: 42px; background: #0f172a; color: #ffffff; border: none; border-radius: 8px; font-size: 0.84rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 4px rgba(15,23,42,0.15); transition: background 0.15s ease;"
+                onmouseover="this.style.background='#1e293b'"
+                onmouseout="this.style.background='#0f172a'"
+              >
+                ${getIcon('archive', 16, '#f59e0b')}
+                <span>حفظ في الأرشيف (مسودة للاستكمال لاحقاً)</span>
+              </button>
+
+              <!-- Button 2: Discard / Delete Draft -->
+              <button 
+                type="button" 
+                onclick="window.centrlyApp.discardUnsavedExam('${mode}')"
+                style="width: 100%; height: 38px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s ease;"
+                onmouseover="this.style.background='#fee2e2'"
+                onmouseout="this.style.background='#fef2f2'"
+              >
+                ${getIcon('trash', 15, '#dc2626')}
+                <span>إلغاء وتجاهل هذه المسودة</span>
+              </button>
+            `}
 
             <!-- Button 3: Stay and Continue Editing -->
             <button 
@@ -297,7 +327,7 @@ function renderUnsavedExamExitModal(state) {
               onmouseover="this.style.background='#f1f5f9'"
               onmouseout="this.style.background='#f8fafc'"
             >
-              <span>الرجوع ومتابعة التعديل الآن</span>
+              <span>الاستمرار ومتابعة التعديل الآن</span>
             </button>
 
           </div>
@@ -3998,6 +4028,43 @@ export function registerTeacherQuizzesActions(app) {
     if (mode === 'online') {
       const qz = this.quizzesState.activeOnlineQuiz;
       if (!qz) return false;
+
+      // If this is an existing published exam, compare with original snapshot
+      if (qz._isExistingPublished && qz._originalSnapshot) {
+        try {
+          const snap = JSON.parse(qz._originalSnapshot);
+          const curTitle = document.getElementById('wizardTitle')?.value?.trim() ?? qz.title;
+          const curSubject = document.getElementById('wizardSubject')?.value?.trim() ?? qz.subject;
+          if (curTitle !== snap.title || curSubject !== snap.subject) return true;
+
+          const curQInput = document.getElementById('currentQText')?.value?.trim();
+          const curQIdx = this.quizzesState.currentQuestionIndex || 0;
+          if (curQInput !== undefined && qz.questions?.[curQIdx]) {
+            if (curQInput !== (snap.questions?.[curQIdx]?.text || '')) return true;
+          }
+
+          if ((qz.questions?.length || 0) !== (snap.questions?.length || 0)) return true;
+
+          const qzSimplified = (qz.questions || []).map(q => ({
+            text: (q.text || '').trim(),
+            image_url: q.image_url || '',
+            correct_answer: q.correct_answer,
+            choices: q.choices || [],
+            points: q.points || 1
+          }));
+          const snapSimplified = (snap.questions || []).map(q => ({
+            text: (q.text || '').trim(),
+            image_url: q.image_url || '',
+            correct_answer: q.correct_answer,
+            choices: q.choices || [],
+            points: q.points || 1
+          }));
+          if (JSON.stringify(qzSimplified) !== JSON.stringify(snapSimplified)) return true;
+
+          return false; // Published exam has not been altered
+        } catch (_) {}
+      }
+
       const hasQuestions = Array.isArray(qz.questions) && qz.questions.some(q => (q.text && q.text.trim()) || q.image_url);
       const isCustomTitle = qz.title && !qz.title.startsWith('كويز') && qz.title.trim().length > 0;
       const isStep2 = (this.quizzesState.wizardStep || 1) >= 2;
@@ -4005,6 +4072,37 @@ export function registerTeacherQuizzesActions(app) {
     } else if (mode === 'paper') {
       const qz = this.quizzesState.activePaperQuiz;
       if (!qz) return false;
+
+      // If this is an existing published paper exam, compare with original snapshot
+      if (qz._isExistingPublished && qz._originalSnapshot) {
+        try {
+          const snap = JSON.parse(qz._originalSnapshot);
+          const curTitle = document.getElementById('paperQuizTitle')?.value?.trim() ?? qz.title;
+          const curSubject = document.getElementById('paperQuizSubject')?.value?.trim() ?? qz.subject;
+          if (curTitle !== snap.title || curSubject !== snap.subject) return true;
+
+          if ((qz.questions?.length || 0) !== (snap.questions?.length || 0)) return true;
+
+          const qzSimplified = (qz.questions || []).map(q => ({
+            text: (q.text || '').trim(),
+            image_url: q.image_url || '',
+            correct_answer: q.correct_answer,
+            choices: q.choices || [],
+            points: q.points || 1
+          }));
+          const snapSimplified = (snap.questions || []).map(q => ({
+            text: (q.text || '').trim(),
+            image_url: q.image_url || '',
+            correct_answer: q.correct_answer,
+            choices: q.choices || [],
+            points: q.points || 1
+          }));
+          if (JSON.stringify(qzSimplified) !== JSON.stringify(snapSimplified)) return true;
+
+          return false; // Published exam has not been altered
+        } catch (_) {}
+      }
+
       const hasQuestions = Array.isArray(qz.questions) && qz.questions.some(q => (q.text && q.text.trim()) || q.image_url);
       const isCustomTitle = qz.title && !qz.title.startsWith('امتحان') && qz.title.trim().length > 0;
       const isStep2 = (this.quizzesState.paperWizardStep || 1) >= 2;
@@ -4050,12 +4148,17 @@ export function registerTeacherQuizzesActions(app) {
       if (s) qz.subject = s;
     }
 
-    const draftId = qz.id || `draft_${mode}_${Date.now()}`;
+    const isExistingPublished = Boolean(qz._isExistingPublished || (qz.id && !qz.is_draft));
+    // If it's an existing published exam, create a separate draft copy so the published exam remains 100% active and untouched
+    const draftId = isExistingPublished 
+      ? `draft_copy_${qz.id}_${Date.now()}`
+      : (qz.id || `draft_${mode}_${Date.now()}`);
+
     const draftObject = {
       ...qz,
       id: draftId,
       exam_mode: isOnline ? 'online' : 'paper',
-      title: qz.title || (isOnline ? 'مسودة امتحان إلكتروني' : 'مسودة امتحان ورقي'),
+      title: (qz.title || (isOnline ? 'مسودة امتحان إلكتروني' : 'مسودة امتحان ورقي')) + (isExistingPublished ? ' (مسودة تعديل)' : ''),
       subject: qz.subject || 'الفيزياء',
       is_draft: true,
       is_archived: true,
@@ -4094,7 +4197,7 @@ export function registerTeacherQuizzesActions(app) {
       this.quizzesState.paperListTab = 'drafts';
     }
 
-    this.showToast('تم حفظ الامتحان في الأرشيف بنجاح! يمكنك استئنافه بأي وقت.', 'success');
+    this.showToast('تم حفظ مسودة التعديلات في الأرشيف بنجاح! وسيبقى الامتحان الأصلي منشوراً كما هو.', 'success');
     if (typeof targetAction === 'function') {
       targetAction();
     } else {
@@ -4104,6 +4207,8 @@ export function registerTeacherQuizzesActions(app) {
 
   app.discardUnsavedExam = function(mode) {
     const isOnline = mode === 'online';
+    const qz = isOnline ? this.quizzesState.activeOnlineQuiz : this.quizzesState.activePaperQuiz;
+    const isExistingPublished = Boolean(qz?._isExistingPublished || (qz?.id && !qz.is_draft));
     const targetAction = this.quizzesState.exitPromptTargetAction;
     this.quizzesState.exitPromptMode = null;
     this.quizzesState.exitPromptTargetAction = null;
@@ -4116,7 +4221,12 @@ export function registerTeacherQuizzesActions(app) {
       this.quizzesState.paperViewMode = 'list';
     }
 
-    this.showToast('تم تجاهل ومسح الامتحان.', 'info');
+    if (isExistingPublished) {
+      this.showToast('تم الرجوع بنجاح، والامتحان ما زال منشوراً للطلاب كما هو دون أي تغيير.', 'info');
+    } else {
+      this.showToast('تم تجاهل ومسح الامتحان.', 'info');
+    }
+
     if (typeof targetAction === 'function') {
       targetAction();
     } else {
@@ -4753,7 +4863,10 @@ export function registerTeacherQuizzesActions(app) {
   app.editOnlineExamWizard = function(quizId) {
     const matched = (this.quizzesState.richQuizzes || []).find(q => q.id === quizId);
     if (matched) {
-      this.quizzesState.activeOnlineQuiz = JSON.parse(JSON.stringify(matched));
+      const cloned = JSON.parse(JSON.stringify(matched));
+      cloned._isExistingPublished = !cloned.is_draft;
+      cloned._originalSnapshot = JSON.stringify(cloned);
+      this.quizzesState.activeOnlineQuiz = cloned;
       this.quizzesState.onlineViewMode = 'wizard';
       this.quizzesState.wizardStep = 1;
       this.quizzesState.currentQuestionIndex = 0;
@@ -4996,6 +5109,8 @@ export function registerTeacherQuizzesActions(app) {
       cloned.question_count = qCount;
       cloned.max_score = totalPoints;
       cloned.target_group_id = cloned.group_id || this.quizzesState.selectedGroupId;
+      cloned._isExistingPublished = !cloned.is_draft;
+      cloned._originalSnapshot = JSON.stringify(cloned);
       this.quizzesState.activePaperQuiz = cloned;
     }
     this.quizzesState.paperViewMode = 'create';
@@ -5015,6 +5130,8 @@ export function registerTeacherQuizzesActions(app) {
       cloned.question_count = qCount;
       cloned.max_score = totalPoints;
       cloned.target_group_id = cloned.group_id || this.quizzesState.selectedGroupId;
+      cloned._isExistingPublished = !cloned.is_draft;
+      cloned._originalSnapshot = JSON.stringify(cloned);
       this.quizzesState.activePaperQuiz = cloned;
     } else {
       const nextNum = (this.quizzesState.quizzes?.length > 0)
@@ -5930,10 +6047,6 @@ export function registerTeacherQuizzesActions(app) {
     await this.loadQuizzesForGroup(groupId);
     await this.loadRichQuizzes();
     await this.loadOnlineSubmissions();
-    this.quizzesState.isLoadingRichQuizzes = false;
-    this.quizzesState.isLoadingSubmissions = false;
-    this.renderMainContent();
-  };
     this.quizzesState.isLoadingRichQuizzes = false;
     this.quizzesState.isLoadingSubmissions = false;
     this.renderMainContent();
