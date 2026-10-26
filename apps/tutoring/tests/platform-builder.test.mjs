@@ -243,4 +243,8 @@ test("PlatformBuilderService - Real video view logging and retrieval", async () 
   assert.equal(updatedViews.length, 2);
   const ahmedUpdated = updatedViews.find((v) => v.student_code === "1005");
   assert.equal(ahmedUpdated.progress_percent, 65);
+
+  await service.resetVideoView(tenantId, "1005");
+  const resetViews = await service.getVideoViews(tenantId);
+  assert.deepEqual(resetViews.map((view) => view.student_code), ["1006"]);
 });

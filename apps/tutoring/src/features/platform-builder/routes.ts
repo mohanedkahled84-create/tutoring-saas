@@ -251,3 +251,28 @@ platformRouter.get(
     }
   }
 );
+
+platformRouter.delete(
+  "/video-views/:studentCode",
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const tenantId = req.user?.tenant_id;
+    const studentCode = String(req.params.studentCode || "").trim();
+    if (!tenantId) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Unauthorized" } });
+      return;
+    }
+    if (!studentCode || studentCode.length > 100) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: "كود الطالب غير صالح" } });
+      return;
+    }
+
+    try {
+      const service = (getServices(req) as any).platformBuilder;
+      await service.resetVideoView(tenantId, studentCode);
+      res.status(200).json({ success: true });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to reset video view";
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+    }
+  }
+);

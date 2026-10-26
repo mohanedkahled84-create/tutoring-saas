@@ -1946,7 +1946,7 @@ class CentrlyApp {
             fetch(`/api/platform/settings?subdomain=${encodeURIComponent(sub)}`)
               .then(r => r.json())
               .catch(() => fetch(`https://centerly-eg.com/api/platform/settings?subdomain=${encodeURIComponent(sub)}`).then(r => r.json()).catch(() => null)),
-            fetch('/api/video-tracking').then(r => r.json()).catch(() => null),
+            request('/platform/video-views').catch(() => null),
             fetch('/api/quizzes/submissions')
               .then(r => r.json())
               .catch(() => fetch('https://centerly-eg.com/api/quizzes/submissions').then(r => r.json()).catch(() => null)),
