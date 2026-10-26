@@ -41,10 +41,10 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
     state.selectedGroupId = groups[0].id;
   }
   const selectedGroupId = state.selectedGroupId || (groups[0]?.id || '');
-  const activeGroup = groups.find(g => g.id === selectedGroupId) || groups[0] || null;
+  const activeGroup = selectedGroupId === 'all' ? { id: 'all', name: 'جميع المجموعات (الكل)' } : (groups.find(g => g.id === selectedGroupId) || groups[0] || null);
 
   const groupStudents = (students || []).filter(s => {
-    if (!selectedGroupId) return true;
+    if (!selectedGroupId || selectedGroupId === 'all') return true;
     if (String(s.group_id) === String(selectedGroupId) || String(s.groupId) === String(selectedGroupId)) return true;
     if (Array.isArray(s.group_ids) && s.group_ids.some(gid => String(gid) === String(selectedGroupId))) return true;
     if (s.group_name && activeGroup?.name && s.group_name.trim().toLowerCase() === activeGroup.name.trim().toLowerCase()) return true;
@@ -78,7 +78,10 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   const pendingSubmissions = state.pendingSubmissions || [];
   const pendingCount = pendingSubmissions.length;
   const onlineSubmissions = state.onlineSubmissions || [];
-  const gradedSubmissions = (onlineSubmissions || []).filter(sub => sub.status === 'approved' || sub.is_graded || sub.status === 'graded');
+  const filteredOnlineSubmissions = (!selectedGroupId || selectedGroupId === 'all')
+    ? onlineSubmissions
+    : onlineSubmissions.filter(sub => !sub.group_id || String(sub.group_id).trim() === String(selectedGroupId).trim());
+  const gradedSubmissions = (filteredOnlineSubmissions || []).filter(sub => sub.status === 'approved' || sub.is_graded || sub.status === 'graded');
   // Filter quizzes by group
   const filterByGroup = (list) => {
     if (!selectedGroupId || selectedGroupId === 'all') return list;
@@ -130,6 +133,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
               style="height: 32px; font-size: 0.78rem; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; color: #0f172a; min-width: 175px;"
               onchange="window.centrlyApp.switchQuizGroup(this.value)"
             >
+              ${groups.length > 1 ? `<option value="all" ${selectedGroupId === 'all' ? 'selected' : ''}>جميع المجموعات (الكل)</option>` : ''}
               ${groups.map(g => `
                 <option value="${escapeHtml(g.id)}" ${g.id === selectedGroupId ? 'selected' : ''}>
                   ${escapeHtml(g.name)}
@@ -1870,6 +1874,8 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
           }
           const mcqScore = sub.mcq_score || 0;
           const totalMcq = sub.total_mcq_points || 0;
+          const studentGroup = (groups || []).find(g => String(g.id).trim() === String(sub.group_id).trim());
+          const groupBadge = studentGroup ? `<span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">${escapeHtml(studentGroup.name)}</span>` : '';
 
           return `
             <div class="card" style="margin: 0; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 1rem;">
@@ -1877,9 +1883,10 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
               <!-- Student Header -->
               <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem; margin-bottom: 0.75rem; flex-wrap: gap; gap: 0.65rem;">
                 <div>
-                  <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a;">
-                    ${escapeHtml(sub.student_name || 'طالب')} 
-                    <span style="font-size: 0.76rem; color: #64748b; font-weight: 600; margin-right: 0.35rem;">(كود: ${escapeHtml(sub.student_code || '1006')})</span>
+                  <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                    <span>${escapeHtml(sub.student_name || 'طالب')}</span>
+                    <span style="font-size: 0.76rem; color: #64748b; font-weight: 600;">(كود: ${escapeHtml(sub.student_code || '1006')})</span>
+                    ${groupBadge}
                   </div>
                   <div style="font-size: 0.74rem; color: #64748b; margin-top: 0.15rem;">
                     ${escapeHtml(sub.quiz_title || 'كويز إلكتروني')} • كويز ${sub.quiz_number || 1} • تاريخ التسليم: ${escapeHtml((sub.submitted_at || '').slice(0, 16).replace('T', ' '))}
@@ -4427,14 +4434,13 @@ export function registerTeacherQuizzesActions(app) {
   app.loadOnlineSubmissions = async function() {
     this.quizzesState.isLoadingSubmissions = true;
     try {
-      const gid = this.quizzesState.selectedGroupId;
       let allData = null;
       let pendingData = null;
 
       try {
         const [r1, r2] = await Promise.all([
-          fetch(`/api/quizzes/submissions${gid ? `?group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null),
-          fetch(`/api/quizzes/submissions?type=pending${gid ? `&group_id=${gid}` : ''}`).then(r => r.json()).catch(() => null)
+          fetch('/api/quizzes/submissions').then(r => r.json()).catch(() => null),
+          fetch('/api/quizzes/submissions?type=pending').then(r => r.json()).catch(() => null)
         ]);
         if (r1?.success && Array.isArray(r1.submissions)) allData = r1.submissions;
         if (r2?.success && Array.isArray(r2.submissions)) pendingData = r2.submissions;
@@ -4442,8 +4448,8 @@ export function registerTeacherQuizzesActions(app) {
 
       if (!allData || allData.length === 0) {
         const [allRes, pendingRes] = await Promise.allSettled([
-          request(`/quizzes/submissions${gid ? `?group_id=${gid}` : ''}`),
-          request(`/quizzes/submissions/pending${gid ? `?group_id=${gid}` : ''}`)
+          request('/quizzes/submissions'),
+          request('/quizzes/submissions/pending')
         ]);
 
         if (allRes.status === 'fulfilled' && allRes.value?.success && Array.isArray(allRes.value.submissions)) {
@@ -5034,7 +5040,7 @@ export function registerTeacherQuizzesActions(app) {
             submission_id: subId,
             student_id: studentId,
             quiz_number: quizNumber,
-            group_id: this.quizzesState.selectedGroupId,
+            group_id: sub.group_id || this.quizzesState.selectedGroupId,
             essay_scores: essayScores,
             notes: note
           }
@@ -6100,14 +6106,14 @@ export function registerTeacherQuizzesActions(app) {
     if (!groupId) return;
     this.quizzesState.selectedGroupId = groupId;
     // Synchronously switch to the selected group's isolated data (zero bleed-over)
-    this.syncActiveGroupQuizzes(groupId);
+    if (groupId !== 'all') this.syncActiveGroupQuizzes(groupId);
     const hasQuizzes = Array.isArray(this.quizzesState.richQuizzes) && this.quizzesState.richQuizzes.length > 0;
     if (!hasQuizzes) {
       this.quizzesState.isLoadingRichQuizzes = true;
     }
     this.renderMainContent();
 
-    await this.loadQuizzesForGroup(groupId);
+    if (groupId !== 'all') await this.loadQuizzesForGroup(groupId);
     await this.loadRichQuizzes();
     await this.loadOnlineSubmissions();
     this.quizzesState.isLoadingRichQuizzes = false;

@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       }
 
       const targetGroupId = req.query?.group_id;
-      if (targetGroupId && targetGroupId !== 'all') {
+      if (targetGroupId && targetGroupId !== 'all' && (!isPendingReq || req.query?.strict_group === 'true')) {
         submissions = submissions.filter(s => !s.group_id || String(s.group_id).trim() === String(targetGroupId).trim());
       }
 
