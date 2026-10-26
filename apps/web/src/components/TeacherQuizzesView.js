@@ -2127,9 +2127,7 @@ function renderExamSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null
                 <span style="font-family: monospace; font-weight: 900; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; border: 1px solid #cbd5e1; font-size: 0.78rem;">
                   كود: ${escapeHtml(examCode)}
                 </span>
-                <span style="font-weight: 900; background: #0f172a; color: #ffffff; padding: 1px 7px; border-radius: 3px; font-size: 0.75rem;">
-                  نموذج ${selectedModel}
-                </span>
+
                 ${studentNumber ? `
                   <span style="font-size: 0.72rem; font-weight: 800; color: #0f172a; background: #e2e8f0; padding: 1px 6px; border-radius: 3px;">
                     طالب (${studentNumber} من ${totalStudents})
@@ -2383,9 +2381,7 @@ function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = nu
               <span style="font-family: monospace; font-weight: 900; background: #eee; padding: 1px 6px; border-radius: 3px; border: 1px solid #aaa; font-size: 0.75rem;">
                 كود: ${escapeHtml(examCode)}
               </span>
-              <span style="font-weight: 900; background: #0f172a; color: #ffffff; padding: 1px 7px; border-radius: 3px; font-size: 0.75rem;">
-                نموذج ${selectedModel}
-              </span>
+
               ${studentNumber ? `
                 <span style="font-size: 0.72rem; font-weight: 800; color: #0f172a; background: #e2e8f0; padding: 1px 6px; border-radius: 3px;">
                   طالب (${studentNumber} من ${totalStudents})
