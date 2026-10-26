@@ -326,7 +326,7 @@ export function renderVideoLessonsView(
             <div style="display: flex; align-items: center; gap: 6px;">
               <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
               <h2 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
-                فيديوهات الشرح والحل (يوتيوب المشروط)
+                فيديوهات الشرح والحل
               </h2>
               <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.65rem; font-weight: 800; padding: 1px 6px; border-radius: 4px;">PRO</span>
             </div>

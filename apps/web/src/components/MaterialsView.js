@@ -60,7 +60,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button class="btn btn-secondary" onclick="window.centrlyApp.navigate('video-lessons')" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
               ${getIcon('video', 16, '#1d4ed8')}
-              <span>فيديوهات الشرح والحل (يوتيوب المشروط)</span>
+              <span>فيديوهات الشرح والحل</span>
             </button>
             <button class="btn btn-primary" onclick="window.centrlyApp.openAddMaterialModal()" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 800;">
               ${getIcon('add', 16, '#ffffff')}
@@ -149,7 +149,8 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
 
                 const isPdf = m.type === 'pdf';
                 const isVideo = m.type === 'video';
-                const isTextbook = Boolean(m.book_name || m.pages || m.questions);
+                const isGatingMeta = m.book_name === 'approved_homework' || m.book_name === 'open' || (typeof m.questions === 'string' && m.questions.trim().startsWith('{'));
+                const isTextbook = !isVideo && !isGatingMeta && Boolean(m.book_name || m.pages || m.questions);
                 const hasUrl = Boolean(m.url && m.url !== '#' && m.url.trim().length > 0);
                 const typeBadge = isTextbook
                   ? `<span class="badge badge-amber" style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.3rem;">${getIcon('book', 12, 'currentColor')} كتاب / كشكول</span>`
@@ -161,6 +162,14 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
                   <tr>
                     <td style="font-weight: 800; color: #0f172a; max-width: 280px;">
                       <div>${escapeHtml(m.title)}</div>
+                      ${isVideo && m.book_name === 'approved_homework' ? `
+                        <div style="margin-top: 0.25rem;">
+                          <span style="font-size: 0.72rem; color: #92400e; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                            ${getIcon('lock', 11, '#92400e')}
+                            <span>مشروط باعتماد الواجب</span>
+                          </span>
+                        </div>
+                      ` : ''}
                       ${isTextbook ? `
                         <div style="font-size: 0.75rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.2rem 0.45rem; border-radius: 0.35rem; margin-top: 0.25rem; display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
                           <span style="display: inline-flex; align-items: center; gap: 0.2rem;">${getIcon('book', 12, '#1e40af')} ${escapeHtml(m.book_name || 'الكتاب')}</span>
