@@ -2166,211 +2166,283 @@ function renderExamSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null
   const totalPoints = questions.reduce((s, q) => s + Number(q.points || 1), 0);
 
   const containerClass = isPrint ? 'centrly-exam-sheet' : 'printable-exam-paper';
-  // Full Page Fit: In print mode, min-height and height fill the full A4 page (calc(297mm - 16mm)) with flex space-between
-  const containerStyle = isPrint 
-    ? 'box-sizing: border-box; width: 100%; min-height: 278mm; padding: 7mm 8mm; background: #ffffff; color: #000000; font-family: "Cairo", sans-serif; direction: rtl; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid #000000;'
-    : 'background: #ffffff; border: 2px solid #000000; border-radius: 4px; padding: 1.25rem 1.15rem; box-shadow: 0 4px 14px rgba(0,0,0,0.08); font-family: "Cairo", sans-serif; width: 100%; max-width: 800px; min-height: 1020px; margin: 0 auto; box-sizing: border-box; overflow-x: hidden; direction: rtl; display: flex; flex-direction: column; justify-content: space-between;';
+  const baseContainerStyle = isPrint 
+    ? 'box-sizing: border-box; width: 100%; min-height: 278mm; height: 278mm; padding: 7mm 8mm; background: #ffffff; color: #000000; font-family: "Cairo", sans-serif; direction: rtl; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid #000000; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid;'
+    : 'background: #ffffff; border: 2px solid #000000; border-radius: 4px; padding: 1.25rem 1.15rem; box-shadow: 0 4px 14px rgba(0,0,0,0.08); font-family: "Cairo", sans-serif; width: 100%; max-width: 800px; min-height: 1020px; margin: 0 auto 2rem auto; box-sizing: border-box; overflow-x: hidden; direction: rtl; display: flex; flex-direction: column; justify-content: space-between;';
 
-  return `
-    <div class="${containerClass}" style="${containerStyle}">
-      
-      <!-- Top Section: Header & Student Info -->
-      <div style="flex-shrink: 0;">
-        <!-- Compact Exam Header (Fits cleanly on A4) -->
-        <div style="border-bottom: 2px solid #000000; padding-bottom: 0.5rem; margin-bottom: 0.65rem;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-            <div style="text-align: right; flex: 1; min-width: 180px;">
-              <h1 style="font-size: 1.25rem; font-weight: 900; margin: 0 0 0.15rem 0; color: #000000; line-height: 1.25;">
-                امتحان مادة ${escapeHtml(targetQuiz.subject || 'الفيزياء')}
-              </h1>
-              <div style="font-size: 0.82rem; font-weight: 800; color: #222222; display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
-                <span>${escapeHtml(targetQuiz.title || 'اختبار دوري')}</span>
-                <span>•</span>
-                <span style="font-family: monospace; font-weight: 900; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; border: 1px solid #cbd5e1; font-size: 0.78rem;">
-                  كود: ${escapeHtml(examCode)}
-                </span>
+  // Question Weight for Natural A4 Page Distribution
+  const getQuestionWeight = (q) => {
+    if (q.type === 'essay') {
+      const lines = Math.max(1, Number(q.essay_lines) || 4);
+      return 1.8 + (lines * 0.35); // essay with 4 lines ~ 3.2
+    }
+    if (q.format === 'image_only' || (!q.text && q.image_url)) {
+      return 4.2;
+    }
+    if (q.image_url) {
+      return 3.2;
+    }
+    const maxChoiceLen = (q.choices || []).reduce((max, c) => Math.max(max, (c || '').length), 0);
+    return maxChoiceLen > 28 ? 1.4 : 1.0;
+  };
 
-                ${studentNumber ? `
-                  <span style="font-size: 0.72rem; font-weight: 800; color: #0f172a; background: #e2e8f0; padding: 1px 6px; border-radius: 3px;">
-                    طالب (${studentNumber} من ${totalStudents})
-                  </span>
-                ` : ''}
-              </div>
-            </div>
+  // Split questions across pages so each page fills a full A4 sheet
+  const pages = [];
+  let currentPage = [];
+  let currentWeight = 0;
+  const page1Limit = 12.0; // Header takes room on page 1
+  const pageNLimit = 15.0; // Subsequent pages have compact header
 
-            <!-- Stealth Barcode in Header -->
-            <div style="border: 1.5px solid #000000; padding: 0.25rem 0.6rem; border-radius: 3px; text-align: center; background: #ffffff; flex-shrink: 0;">
-              <div style="font-family: monospace; font-size: 0.72rem; font-weight: 900; letter-spacing: 1px; color: #000000; line-height: 1;">
-                ||||| | |||| ||| |||| | ||
-              </div>
-              <div style="font-family: monospace; font-size: 0.65rem; font-weight: 800; color: #333333; margin-top: 2px;">
-                ${escapeHtml(barcodeSerial)}
-              </div>
-            </div>
-          </div>
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    const w = getQuestionWeight(q);
+    const limit = (pages.length === 0) ? page1Limit : pageNLimit;
 
-          <!-- Responsive Student Info Line -->
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px dashed #000000; font-size: 0.82rem; font-weight: 800;">
-            <div style="flex: 2; min-width: 140px; display: flex; align-items: baseline; gap: 4px;">
-              <span style="white-space: nowrap;">اسم الطالب:</span>
-              <div style="flex: 1; border-bottom: 1.5px dotted #000000; min-height: 12px;"></div>
-            </div>
-            <div style="flex: 1.2; min-width: 110px; display: flex; align-items: baseline; gap: 4px;">
-              <span style="white-space: nowrap;">المجموعة:</span>
-              <div style="flex: 1; border-bottom: 1.5px dotted #000000; min-height: 12px;"></div>
-            </div>
-            <div style="flex: 1; min-width: 90px; display: flex; align-items: baseline; gap: 4px;">
-              <span style="white-space: nowrap;">كود الطالب:</span>
-              <div style="flex: 1; border-bottom: 1.5px dotted #000000; min-height: 12px;"></div>
-            </div>
-          </div>
+    if (currentPage.length > 0 && (currentWeight + w > limit)) {
+      pages.push(currentPage);
+      currentPage = [q];
+      currentWeight = w;
+    } else {
+      currentPage.push(q);
+      currentWeight += w;
+    }
+  }
+  if (currentPage.length > 0) {
+    pages.push(currentPage);
+  }
+  if (pages.length === 0) {
+    pages.push([]);
+  }
 
-          <div style="display: flex; justify-content: space-between; margin-top: 0.35rem; font-size: 0.78rem; font-weight: 700; color: #444444;">
-            <span>الزمن المخصص: <b>${targetQuiz.time_limit_minutes || 30} دقيقة</b></span>
-            <span>الدرجة العظمى: <b>${totalPoints} درجات</b></span>
-          </div>
-        </div>
-      </div>
+  const totalPages = pages.length;
 
-      <!-- Center Section: Questions List (MCQs First, Essay at the End) -->
-      <div class="centrly-questions-container" style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 0.65rem;">
-        ${questions.map((q, idx) => {
-          const hasImage = !!q.image_url;
-          const hasText = !!(q.text && q.text.trim());
-          const isImageOnly = (q.format === 'image_only') || (!hasText && hasImage);
-          const isWideImage = q.image_placement === 'bottom' || q.image_size === 'large';
-          const isMcq = q.type !== 'essay';
-          const pointsText = `[${q.points || 1} درجات]`;
-          const essayLineCount = Math.max(1, Number(q.essay_lines) || 4);
+  // Single Question HTML Renderer
+  const renderSingleQuestion = (q) => {
+    const globalIdx = questions.indexOf(q) + 1;
+    const hasImage = !!q.image_url;
+    const hasText = !!(q.text && q.text.trim());
+    const isImageOnly = (q.format === 'image_only') || (!hasText && hasImage);
+    const isWideImage = q.image_placement === 'bottom' || q.image_size === 'large';
+    const isMcq = q.type !== 'essay';
+    const pointsText = `[${q.points || 1} درجات]`;
+    const essayLineCount = Math.max(1, Number(q.essay_lines) || 4);
 
-          // Auto-detect choice column layout
-          const maxChoiceLen = (q.choices || []).reduce((max, c) => Math.max(max, (c || '').length), 0);
-          const choiceGridCols = maxChoiceLen > 28 ? '1fr' : 'repeat(2, 1fr)';
+    const maxChoiceLen = (q.choices || []).reduce((max, c) => Math.max(max, (c || '').length), 0);
+    const choiceGridCols = maxChoiceLen > 28 ? '1fr' : 'repeat(2, 1fr)';
 
-          const renderChoices = (paddingRight = '1.25rem') => `
-            <div style="display: grid; grid-template-columns: ${choiceGridCols}; gap: 0.35rem 0.65rem; padding-right: ${paddingRight}; width: 100%;">
-              ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
-                const optText = q.choices?.[optIdx]?.trim();
-                return `
-                  <div style="font-size: 0.84rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
-                    <span style="display: inline-block; width: 18px; height: 18px; border: 1.5px solid #000000; border-radius: 50%; text-align: center; line-height: 16px; font-weight: 900; font-size: 0.74rem; flex-shrink: 0;">${letter}</span>
-                    <span>${optText ? escapeHtml(optText) : ''}</span>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          `;
-
-          const renderEssayLines = () => `
-            <div style="margin-top: 0.45rem; width: 100%; display: flex; flex-direction: column; gap: 0;">
-              ${Array.from({ length: essayLineCount }).map((_, lIdx) => `
-                <div style="height: 27px; border-bottom: 1.2px dotted #444444; width: 100%; display: flex; align-items: flex-end; padding-bottom: 1px;">
-                  <span style="font-size: 0.65rem; color: #888888; font-family: monospace; user-select: none;">${lIdx + 1}.</span>
-                </div>
-              `).join('')}
-            </div>
-          `;
-
-          // CASE 1: Standard Question with Normal Image -> SIDE-BY-SIDE (الوضع القياسي في امتحانات الثانوية)
-          if (hasImage && !isImageOnly && !isWideImage) {
-            return `
-              <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
-                <div style="display: flex; gap: 0.85rem; align-items: flex-start; justify-content: space-between;">
-                  <!-- Right Column: Question Text + Choices / Ruled Lines -->
-                  <div style="flex: 1 1 0%; min-width: 0;">
-                    <div style="font-weight: 800; font-size: 0.90rem; line-height: 1.5; text-align: right; margin-bottom: 0.4rem;">
-                      <span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span>
-                      <span>${escapeHtml(q.text)}</span>
-                      <span style="font-size: 0.76rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
-                    </div>
-
-                    ${isMcq ? renderChoices('0.35rem') : renderEssayLines()}
-                  </div>
-
-                  <!-- Left Column: Figure Box (الشكل المقابل) -->
-                  <div style="flex-shrink: 0; width: 220px; max-width: 36%; text-align: center;">
-                    <div style="display: inline-block; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; background: #ffffff; width: 100%; box-sizing: border-box;">
-                      <img 
-                        src="${escapeHtml(q.image_url)}" 
-                        alt="صورة السؤال" 
-                        style="max-height: 140px; max-width: 100%; width: auto; object-fit: contain; display: block; margin: 0 auto;" 
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            `;
-          }
-
-          // CASE 2: Image-Only Question (Hero Image centered)
-          if (isImageOnly) {
-            return `
-              <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
-                <div style="margin-bottom: 0.45rem;">
-                  <div style="font-weight: 800; font-size: 0.90rem; margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between;">
-                    <span><span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span> ${q.text ? escapeHtml(q.text) : 'سؤال مصور من المسألة الموضحة أدناه:'}</span>
-                    <span style="font-size: 0.76rem; font-weight: 700; color: #555555;">${pointsText}</span>
-                  </div>
-                  <div style="text-align: center; margin: 0.4rem 0;">
-                    <img 
-                      src="${escapeHtml(q.image_url)}" 
-                      alt="صورة السؤال" 
-                      style="max-height: 280px; max-width: 95%; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; object-fit: contain;" 
-                    />
-                  </div>
-                </div>
-                ${isMcq ? renderChoices('1.25rem') : renderEssayLines()}
-              </div>
-            `;
-          }
-
-          // CASE 3: Wide / Large Image (Centered below Question Text)
-          if (hasImage && isWideImage) {
-            return `
-              <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
-                <div style="margin-bottom: 0.45rem;">
-                  <div style="font-weight: 800; font-size: 0.90rem; line-height: 1.5; text-align: right; margin-bottom: 0.35rem;">
-                    <span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span>
-                    <span>${escapeHtml(q.text)}</span>
-                    <span style="font-size: 0.76rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
-                  </div>
-
-                  <div style="text-align: center; margin: 0.45rem 0;">
-                    <div style="display: inline-block; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; background: #ffffff;">
-                      <img 
-                        src="${escapeHtml(q.image_url)}" 
-                        alt="صورة السؤال" 
-                        style="max-height: 230px; max-width: 440px; width: auto; object-fit: contain; display: block; margin: 0 auto;" 
-                      />
-                    </div>
-                  </div>
-                </div>
-                ${isMcq ? renderChoices('1.25rem') : renderEssayLines()}
-              </div>
-            `;
-          }
-
-          // CASE 4: Standard Question without Image
+    const renderChoices = (paddingRight = '1.25rem') => `
+      <div style="display: grid; grid-template-columns: ${choiceGridCols}; gap: 0.35rem 0.65rem; padding-right: ${paddingRight}; width: 100%;">
+        ${['أ', 'ب', 'ج', 'د'].map((letter, optIdx) => {
+          const optText = q.choices?.[optIdx]?.trim();
           return `
-            <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
-              <div style="font-weight: 800; font-size: 0.88rem; line-height: 1.45; margin-bottom: 0.45rem; text-align: right;">
-                <span style="font-weight: 900; margin-left: 0.25rem;">(${idx + 1})</span>
-                <span>${escapeHtml(q.text || '')}</span>
-                <span style="font-size: 0.75rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
-              </div>
-              ${isMcq ? renderChoices('1.25rem') : renderEssayLines()}
+            <div style="font-size: 0.84rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
+              <span style="display: inline-block; width: 18px; height: 18px; border: 1.5px solid #000000; border-radius: 50%; text-align: center; line-height: 16px; font-weight: 900; font-size: 0.74rem; flex-shrink: 0;">${letter}</span>
+              <span>${optText ? escapeHtml(optText) : ''}</span>
             </div>
           `;
         }).join('')}
       </div>
+    `;
 
-      <!-- Bottom Pinned Footer Notice -->
-      <div style="text-align: center; margin-top: auto; padding-top: 0.6rem; border-top: 1.5px solid #000000; font-weight: 800; font-size: 0.82rem; color: #111111; flex-shrink: 0;">
-        « مع أطيب التمنيات لكم بالنجاح والتفوق الباهر »
+    const renderEssayLines = () => `
+      <div style="margin-top: 0.45rem; width: 100%; display: flex; flex-direction: column; gap: 0;">
+        ${Array.from({ length: essayLineCount }).map((_, lIdx) => `
+          <div style="height: 27px; border-bottom: 1.2px dotted #444444; width: 100%; display: flex; align-items: flex-end; padding-bottom: 1px;">
+            <span style="font-size: 0.65rem; color: #888888; font-family: monospace; user-select: none;">${lIdx + 1}.</span>
+          </div>
+        `).join('')}
       </div>
+    `;
 
-    </div>
-  `;
+    if (hasImage && !isImageOnly && !isWideImage) {
+      return `
+        <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
+          <div style="display: flex; gap: 0.85rem; align-items: flex-start; justify-content: space-between;">
+            <div style="flex: 1 1 0%; min-width: 0;">
+              <div style="font-weight: 800; font-size: 0.90rem; line-height: 1.5; text-align: right; margin-bottom: 0.4rem;">
+                <span style="font-weight: 900; margin-left: 0.25rem;">(${globalIdx})</span>
+                <span>${escapeHtml(q.text)}</span>
+                <span style="font-size: 0.76rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
+              </div>
+              ${isMcq ? renderChoices('0.35rem') : renderEssayLines()}
+            </div>
+            <div style="flex-shrink: 0; width: 220px; max-width: 36%; text-align: center;">
+              <div style="display: inline-block; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; background: #ffffff; width: 100%; box-sizing: border-box;">
+                <img src="${escapeHtml(q.image_url)}" alt="صورة السؤال" style="max-height: 140px; max-width: 100%; width: auto; object-fit: contain; display: block; margin: 0 auto;" />
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (isImageOnly) {
+      return `
+        <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
+          <div style="margin-bottom: 0.45rem;">
+            <div style="font-weight: 800; font-size: 0.90rem; margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between;">
+              <span><span style="font-weight: 900; margin-left: 0.25rem;">(${globalIdx})</span> ${q.text ? escapeHtml(q.text) : 'سؤال مصور من المسألة الموضحة أدناه:'}</span>
+              <span style="font-size: 0.76rem; font-weight: 700; color: #555555;">${pointsText}</span>
+            </div>
+            <div style="text-align: center; margin: 0.4rem 0;">
+              <img src="${escapeHtml(q.image_url)}" alt="صورة السؤال" style="max-height: 280px; max-width: 95%; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; object-fit: contain;" />
+            </div>
+          </div>
+          ${isMcq ? renderChoices('1.25rem') : renderEssayLines()}
+        </div>
+      `;
+    }
+
+    if (hasImage && isWideImage) {
+      return `
+        <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
+          <div style="margin-bottom: 0.45rem;">
+            <div style="font-weight: 800; font-size: 0.90rem; line-height: 1.5; text-align: right; margin-bottom: 0.35rem;">
+              <span style="font-weight: 900; margin-left: 0.25rem;">(${globalIdx})</span>
+              <span>${escapeHtml(q.text)}</span>
+              <span style="font-size: 0.76rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
+            </div>
+            <div style="text-align: center; margin: 0.45rem 0;">
+              <div style="display: inline-block; border: 1.5px solid #000000; border-radius: 4px; padding: 4px; background: #ffffff;">
+                <img src="${escapeHtml(q.image_url)}" alt="صورة السؤال" style="max-height: 230px; max-width: 440px; width: auto; object-fit: contain; display: block; margin: 0 auto;" />
+              </div>
+            </div>
+          </div>
+          ${isMcq ? renderChoices('1.25rem') : renderEssayLines()}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="no-split-question" style="break-inside: avoid !important; page-break-inside: avoid !important; padding-bottom: 0.45rem; border-bottom: 1px dashed #cbd5e1;">
+        <div style="font-weight: 800; font-size: 0.88rem; line-height: 1.45; margin-bottom: 0.45rem; text-align: right;">
+          <span style="font-weight: 900; margin-left: 0.25rem;">(${globalIdx})</span>
+          <span>${escapeHtml(q.text || '')}</span>
+          <span style="font-size: 0.75rem; font-weight: 700; color: #555555; margin-right: 0.35rem;">${pointsText}</span>
+        </div>
+        ${isMcq ? renderChoices('1.25rem') : renderEssayLines()}
+      </div>
+    `;
+  };
+
+  // Render Each Page into a Discrete Full A4 Container
+  return pages.map((pageQuestions, pIdx) => {
+    const isFirstPage = pIdx === 0;
+    const isLastPage = pIdx === totalPages - 1;
+    let pageStyle = baseContainerStyle;
+    if (isPrint && isLastPage) {
+      pageStyle = pageStyle.replace('page-break-after: always; break-after: page;', 'page-break-after: auto; break-after: auto;');
+    }
+
+    return `
+      <div class="${containerClass}" style="${pageStyle}">
+        
+        <!-- Top Section -->
+        <div style="flex-shrink: 0;">
+          ${isFirstPage ? `
+            <!-- Compact Exam Header (Page 1) -->
+            <div style="border-bottom: 2px solid #000000; padding-bottom: 0.5rem; margin-bottom: 0.65rem;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="text-align: right; flex: 1; min-width: 180px;">
+                  <h1 style="font-size: 1.25rem; font-weight: 900; margin: 0 0 0.15rem 0; color: #000000; line-height: 1.25;">
+                    امتحان مادة ${escapeHtml(targetQuiz.subject || 'الفيزياء')}
+                  </h1>
+                  <div style="font-size: 0.82rem; font-weight: 800; color: #222222; display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                    <span>${escapeHtml(targetQuiz.title || 'اختبار دوري')}</span>
+                    <span>•</span>
+                    <span style="font-family: monospace; font-weight: 900; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; border: 1px solid #cbd5e1; font-size: 0.78rem;">
+                      كود: ${escapeHtml(examCode)}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Stealth Barcode in Header -->
+                <div style="border: 1.5px solid #000000; padding: 0.25rem 0.6rem; border-radius: 3px; text-align: center; background: #ffffff; flex-shrink: 0;">
+                  <div style="font-family: monospace; font-size: 0.72rem; font-weight: 900; letter-spacing: 1px; color: #000000; line-height: 1;">
+                    ||||| | |||| ||| |||| | ||
+                  </div>
+                  <div style="font-family: monospace; font-size: 0.65rem; font-weight: 800; color: #333333; margin-top: 2px;">
+                    ${escapeHtml(barcodeSerial)}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Responsive Student Info Line -->
+              <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px dashed #000000; font-size: 0.82rem; font-weight: 800;">
+                <div style="flex: 2; min-width: 140px; display: flex; align-items: baseline; gap: 4px;">
+                  <span style="white-space: nowrap;">اسم الطالب:</span>
+                  <div style="flex: 1; border-bottom: 1.5px dotted #000000; min-height: 12px;"></div>
+                </div>
+                <div style="flex: 1.2; min-width: 110px; display: flex; align-items: baseline; gap: 4px;">
+                  <span style="white-space: nowrap;">المجموعة:</span>
+                  <div style="flex: 1; border-bottom: 1.5px dotted #000000; min-height: 12px;"></div>
+                </div>
+                <div style="flex: 1; min-width: 90px; display: flex; align-items: baseline; gap: 4px;">
+                  <span style="white-space: nowrap;">كود الطالب:</span>
+                  <div style="flex: 1; border-bottom: 1.5px dotted #000000; min-height: 12px;"></div>
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; margin-top: 0.35rem; font-size: 0.78rem; font-weight: 700; color: #444444;">
+                <span>الزمن المخصص: <b>${targetQuiz.time_limit_minutes || 30} دقيقة</b></span>
+                <span>الدرجة العظمى: <b>${totalPoints} درجات</b></span>
+              </div>
+            </div>
+          ` : `
+            <!-- Subsequent Pages Compact Header -->
+            <div style="border-bottom: 2px solid #000000; padding-bottom: 0.4rem; margin-bottom: 0.65rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+                <span style="font-weight: 900; font-size: 1.05rem; color: #000000;">
+                  امتحان مادة ${escapeHtml(targetQuiz.subject || 'الفيزياء')}
+                </span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #444444;">
+                  (${escapeHtml(targetQuiz.title || 'اختبار دوري')}) — تابع الأسئلة
+                </span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <span style="font-family: monospace; font-weight: 900; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; border: 1px solid #cbd5e1; font-size: 0.74rem;">
+                  كود: ${escapeHtml(examCode)}
+                </span>
+                <span style="font-size: 0.74rem; font-weight: 800; color: #444444;">
+                  صفحة ${pIdx + 1} من ${totalPages}
+                </span>
+              </div>
+            </div>
+          `}
+        </div>
+
+        <!-- Questions on this page -->
+        <div class="centrly-questions-container" style="display: flex; flex-direction: column; gap: 0.65rem;">
+          ${pageQuestions.map(q => renderSingleQuestion(q)).join('')}
+        </div>
+
+        <!-- Flexible blank area between last question and footer -->
+        <div style="flex: 1 1 auto; min-height: 25px;"></div>
+
+        <!-- Bottom Pinned Footer Notice (Always pinned to the very bottom of the page) -->
+        <div style="text-align: center; margin-top: auto; padding-top: 0.6rem; border-top: 1.5px solid #000000; font-weight: 800; font-size: 0.82rem; color: #111111; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
+          ${isLastPage ? `
+            <div style="width: 80px;"></div>
+            <div style="flex: 1; text-align: center; font-weight: 900; font-size: 0.85rem; color: #000000;">
+              « مع أطيب التمنيات لكم بالنجاح والتفوق الباهر »
+            </div>
+            <div style="width: 80px; text-align: left; font-size: 0.72rem; color: #555555; font-family: monospace;">
+              ${totalPages > 1 ? `صفحة ${pIdx + 1} من ${totalPages}` : ''}
+            </div>
+          ` : `
+            <div style="width: 80px;"></div>
+            <div style="flex: 1; text-align: center; font-weight: 800; font-size: 0.8rem; color: #444444;">
+              (انتقل إلى الصفحة التالية ⬅)
+            </div>
+            <div style="width: 80px; text-align: left; font-size: 0.72rem; color: #555555; font-family: monospace;">
+              صفحة ${pIdx + 1} من ${totalPages}
+            </div>
+          `}
+        </div>
+
+      </div>
+    `;
+  }).join('');
 }
 
 function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = null, totalStudents = null, isPrint = false) {
@@ -2415,7 +2487,7 @@ function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = nu
     : `border: 1.5px solid #000000; padding: 0.75rem 1rem; display: grid; grid-template-columns: repeat(${numCols}, 1fr); gap: ${numCols === 3 ? '1rem' : '1.5rem'};`;
 
   const colBoxStyle = isSingleCol
-    ? 'width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 0.35rem;'
+    ? 'width: 100%; max-width: 330px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.35rem;'
     : 'display: flex; flex-direction: column; gap: 0.25rem;';
 
   const bubbleSize = isSingleCol ? '20px' : (numCols === 3 ? '16px' : '18px');
@@ -2444,11 +2516,7 @@ function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = nu
                 كود: ${escapeHtml(examCode)}
               </span>
 
-              ${studentNumber ? `
-                <span style="font-size: 0.72rem; font-weight: 800; color: #0f172a; background: #e2e8f0; padding: 1px 6px; border-radius: 3px;">
-                  طالب (${studentNumber} من ${totalStudents})
-                </span>
-              ` : ''}
+
             </div>
           </div>
           <div style="width: 18px; height: 18px; background: #000000;"></div>
@@ -2508,21 +2576,20 @@ function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = nu
             const startNum = colStartNums[colIdx];
             return `
               <div style="${colBoxStyle}">
-                <div style="display: flex; justify-content: space-between; border-bottom: 1.5px solid #000000; padding-bottom: 0.25rem; font-weight: 900; font-size: ${isSingleCol ? '0.85rem' : '0.78rem'};">
-                  <span style="width: 28px;">سؤال</span>
-                  <div style="display: flex; gap: ${headerGap}; padding-left: 0.4rem;">
-                    <span>أ</span>
-                    <span>ب</span>
-                    <span>ج</span>
-                    <span>د</span>
+                <div style="display: flex; justify-content: center; align-items: center; gap: ${isSingleCol ? '1.5rem' : '0.9rem'}; border-bottom: 1.5px solid #000000; padding-bottom: 0.25rem; font-weight: 900; font-size: ${isSingleCol ? '0.85rem' : '0.78rem'};">
+                  <span style="width: ${isSingleCol ? '36px' : '28px'}; text-align: center;">سؤال</span>
+                  <div style="display: flex; gap: ${bubbleGap};">
+                    ${['أ', 'ب', 'ج', 'د'].map(l => `
+                      <span style="width: ${bubbleSize}; text-align: center; display: inline-block;">${l}</span>
+                    `).join('')}
                   </div>
                 </div>
 
                 ${Array.from({ length: countThisCol }).map((_, rIdx) => {
                   const qNum = startNum + rIdx;
                   return `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: ${rowPadding}; border-bottom: ${isSingleCol ? '1px dotted #e2e8f0' : 'none'};">
-                      <span style="font-weight: 900; font-size: ${isSingleCol ? '0.85rem' : '0.8rem'}; width: 28px;">${qNum}</span>
+                    <div style="display: flex; justify-content: center; align-items: center; gap: ${isSingleCol ? '1.5rem' : '0.9rem'}; padding: ${rowPadding}; border-bottom: ${isSingleCol ? '1px dotted #e2e8f0' : 'none'};">
+                      <span style="font-weight: 900; font-size: ${isSingleCol ? '0.88rem' : '0.8rem'}; width: ${isSingleCol ? '36px' : '28px'}; text-align: center;">${qNum}</span>
                       <div style="display: flex; gap: ${bubbleGap};">
                         ${['أ', 'ب', 'ج', 'د'].map(l => `
                           <span style="width: ${bubbleSize}; height: ${bubbleSize}; border: 1.4px solid #000000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: ${bubbleFontSize}; font-weight: 800;">
@@ -5709,13 +5776,16 @@ export function registerTeacherQuizzesActions(app) {
           width: 100% !important;
           max-width: 100% !important;
           min-height: calc(297mm - 12mm) !important;
-          height: auto !important;
+          height: calc(297mm - 12mm) !important;
+          max-height: calc(297mm - 12mm) !important;
           margin: 0 !important;
           padding: 7mm 8mm !important;
           box-shadow: none !important;
           border: 2px solid #000000 !important;
           page-break-after: always !important;
           break-after: page !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
           background: #ffffff !important;
           display: flex !important;
           flex-direction: column !important;
