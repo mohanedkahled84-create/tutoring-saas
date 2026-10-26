@@ -1723,6 +1723,7 @@
         localStorage.setItem('portal_student', JSON.stringify(currentStudent));
         localStorage.setItem('portal_student_code', code);
         hydrateStudentUI(currentStudent);
+        computeAndRenderStudentRank(code, currentStudent.group, currentStudent, window._studentAllRecordedQuizzes);
         showPortalToast(`تم التبديل لتجربة الطالب: ${currentStudent.name} (كود: ${code})`, 'info');
       }
     };
@@ -3749,8 +3750,7 @@
       homework: { title: 'الواجبات والتسليم', sub: 'تسليم ومتابعة الواجبات والتصحيح الفوري' },
       exams: { title: 'الامتحانات', sub: 'الامتحانات الدورية والبيئة المعزولة ونماذج الإجابة' },
       lectures: { title: 'المحاضرات وفيديوهات الشرح', sub: 'الفصل الدراسي الأول • دفعة 2026' },
-      materials: { title: 'المذكرات والملازم', sub: 'تحميل مذكرات الشرح وبنوك الأسئلة المعتمدة' },
-      pass: { title: 'بطاقة الحضور والباركود', sub: 'كود الحضور بالسنتر وإشعار ولي الأمر' }
+      materials: { title: 'المذكرات والملازم', sub: 'تحميل مذكرات الشرح وبنوك الأسئلة المعتمدة' }
     };
 
     function switchPanel(panelId, btnEl) {
