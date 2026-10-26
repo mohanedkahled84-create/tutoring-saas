@@ -24,14 +24,14 @@ import { renderRiskWatchlistView, registerRiskWatchlistActions } from './compone
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=8.3.0';
+import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=9.0.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
 import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
 import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.8.7';
-import { renderMaterialsView, registerMaterialsActions } from './components/MaterialsView.js?v=3.0.0';
+import { renderMaterialsView, registerMaterialsActions } from './components/MaterialsView.js?v=3.1.0';
 import { renderTeacherAssistantsView, registerTeacherAssistantsActions } from './components/TeacherAssistantsView.js?v=2.1.0';
 import { renderBusinessOwnerDashboard, registerBusinessOwnerActions } from './components/BusinessOwnerDashboard.js?v=5.2.0';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
@@ -40,7 +40,7 @@ import { renderAdminOutreachView } from './components/AdminOutreachView.js?v=1.0
 import { renderTeacherSettingsView, registerTeacherSettingsActions } from './components/TeacherSettingsView.js?v=4.9.9';
 import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=4.7.6';
 import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=1.0.0';
-import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.3.0';
+import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.4.0';
 import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.8.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';

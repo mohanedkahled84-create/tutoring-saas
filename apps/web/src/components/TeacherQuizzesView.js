@@ -2702,10 +2702,10 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                   </div>
 
                   <!-- Actions -->
-                  <div style="display: flex; gap: 0.45rem; align-items: center; margin-top: 1rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;">
+                  <div style="display: flex; gap: 0.45rem; align-items: center; margin-top: 1rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9; flex-wrap: wrap;">
                     <button 
                       type="button" 
-                      style="flex: 1; height: 30px; font-size: 0.75rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"
+                      style="flex: 1 1 120px; height: 30px; font-size: 0.75rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"
                       onclick="window.centrlyApp.previewPaperExam('${escapeHtml(rq.id)}')"
                     >
                       ${getIcon('print', 13, '#ffffff')}
@@ -4176,6 +4176,7 @@ export function registerTeacherQuizzesActions(app) {
 
     try {
       localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+      localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
     } catch (_) {}
 
     fetch('/api/quizzes/rich', {
@@ -4913,6 +4914,7 @@ export function registerTeacherQuizzesActions(app) {
 
     try {
       localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+      localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
     } catch (_) {}
 
     // 3. Call serverless API
@@ -4939,6 +4941,10 @@ export function registerTeacherQuizzesActions(app) {
     }
     const q = (this.quizzesState.richQuizzes || []).find(x => x.id === quizId);
     this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
+
+    try {
+      localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
+    } catch (_) {}
 
     fetch('/api/quizzes/rich', {
       method: 'POST',
