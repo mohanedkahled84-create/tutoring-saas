@@ -112,9 +112,16 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   const pendingSubmissions = state.pendingSubmissions || [];
   const pendingCount = pendingSubmissions.length;
   const onlineSubmissions = state.onlineSubmissions || [];
+  const allGradedOnlineSubmissions = (onlineSubmissions || []).filter(sub => sub.status === 'approved' || sub.is_graded || sub.status === 'graded');
   const filteredOnlineSubmissions = (!selectedGroupId || selectedGroupId === 'all')
     ? onlineSubmissions
-    : onlineSubmissions.filter(sub => !sub.group_id || String(sub.group_id).trim() === String(selectedGroupId).trim());
+    : onlineSubmissions.filter(sub => {
+        if (!sub.group_id || sub.group_id === 'all') return true;
+        if (String(sub.group_id).trim() === String(selectedGroupId).trim()) return true;
+        if (Array.isArray(sub.group_ids) && sub.group_ids.some(gid => String(gid).trim() === String(selectedGroupId).trim())) return true;
+        if (Array.isArray(sub.target_group_ids) && sub.target_group_ids.some(gid => String(gid).trim() === String(selectedGroupId).trim())) return true;
+        return false;
+      });
   const gradedSubmissions = (filteredOnlineSubmissions || []).filter(sub => sub.status === 'approved' || sub.is_graded || sub.status === 'graded');
   // Filter quizzes by group
   const filterByGroup = (list) => {
@@ -196,7 +203,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
                 style="height: 30px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; border-radius: 5px; border: 1px solid ${(activeSubTab === 'online_grading' && (state.gradingViewMode || 'graded') === 'graded') ? '#0f172a' : '#e2e8f0'}; background: ${(activeSubTab === 'online_grading' && (state.gradingViewMode || 'graded') === 'graded') ? '#0f172a' : '#ffffff'}; color: ${(activeSubTab === 'online_grading' && (state.gradingViewMode || 'graded') === 'graded') ? '#ffffff' : '#475569'}; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
                 <span>نتائج ودرجات الطلاب (المعتمدة)</span>
                 <span style="font-size: 0.68rem; padding: 1px 6px; border-radius: 8px; font-weight: 800; background: ${(activeSubTab === 'online_grading' && (state.gradingViewMode || 'graded') === 'graded') ? '#10b981' : '#ecfdf5'}; color: ${(activeSubTab === 'online_grading' && (state.gradingViewMode || 'graded') === 'graded') ? '#ffffff' : '#065f46'};">
-                  ${gradedSubmissions.length}
+                  ${allGradedOnlineSubmissions.length}
                 </span>
               </button>
 
@@ -254,7 +261,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
       </div>
 
       <!-- Tab Content Views -->
-      ${activeSubTab === 'online_builder' ? renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz, gradedSubmissions) : ''}
+      ${activeSubTab === 'online_builder' ? renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz, allGradedOnlineSubmissions) : ''}
       ${activeSubTab === 'online_grading' ? renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, onlineSubmissions) : ''}
       ${activeSubTab === 'paper_builder' ? renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
       ${activeSubTab === 'paper_scanner' ? renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents) : ''}
@@ -1020,7 +1027,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
         <!-- Results Table Card inside Online Builder -->
         ${gradedSubmissions && gradedSubmissions.length > 0 ? `
           <div style="margin-top: 0.5rem;">
-            ${renderOnlineGradingResultsCard(gradedSubmissions, activeGroup, false, state)}
+            ${renderOnlineGradingResultsCard(gradedSubmissions, activeGroup, false, state, groups)}
           </div>
         ` : ''}
 
@@ -1657,7 +1664,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
 // ============================================================================
 // ONLINE RESULTS COMPONENT (نتائج ودرجات الامتحانات الإلكترونية)
 // ============================================================================
-function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = null, showCreateBtn = true, state = {}) {
+function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = null, showCreateBtn = true, state = {}, groups = []) {
   const isPaperQuiz = (q) => {
     if (!q) return false;
     if (q.exam_mode === 'paper') return true;
@@ -1669,11 +1676,29 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
   };
 
   // Strictly filter out paper exams from online results view (ممنوع خلط الورقي مع الأونلاين)
-  const allList = (Array.isArray(gradedSubmissions) ? gradedSubmissions : []).filter(s => !isPaperQuiz(s));
+  let allList = (Array.isArray(gradedSubmissions) ? gradedSubmissions : []).filter(s => !isPaperQuiz(s));
   const appQuizzesState = window.centrlyApp?.quizzesState || {};
   const currentFilter = (state && state.gradingFilterQuizNumber !== undefined && state.gradingFilterQuizNumber !== null)
     ? String(state.gradingFilterQuizNumber)
     : (appQuizzesState.gradingFilterQuizNumber || 'all');
+  const currentGroupFilter = (state && state.gradingFilterGroupId !== undefined && state.gradingFilterGroupId !== null)
+    ? String(state.gradingFilterGroupId)
+    : (appQuizzesState.gradingFilterGroupId || 'all');
+
+  const availableGroups = (Array.isArray(groups) && groups.length > 0)
+    ? groups
+    : (window.centrlyApp?.groups || []);
+
+  // Filter by group if specific group chosen
+  if (currentGroupFilter !== 'all') {
+    allList = allList.filter(s => {
+      if (!s.group_id || s.group_id === 'all') return true;
+      if (String(s.group_id).trim() === String(currentGroupFilter).trim()) return true;
+      if (Array.isArray(s.group_ids) && s.group_ids.some(gid => String(gid).trim() === String(currentGroupFilter).trim())) return true;
+      if (Array.isArray(s.target_group_ids) && s.target_group_ids.some(gid => String(gid).trim() === String(currentGroupFilter).trim())) return true;
+      return false;
+    });
+  }
 
   // Extract distinct quizzes from submissions and richQuizzes (ONLY online quizzes)
   const quizMap = new Map();
@@ -1719,6 +1744,24 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
         </div>
 
         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <!-- Dropdown Group Filter (if multiple groups exist) -->
+          ${availableGroups.length > 1 ? `
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 3px 8px;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #1e293b; white-space: nowrap;">المجموعة:</span>
+              <select 
+                style="height: 28px; font-size: 0.76rem; font-weight: 700; color: #0f172a; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; cursor: pointer; padding: 0 6px;"
+                onchange="window.centrlyApp.setGradingGroupFilter(this.value)"
+              >
+                <option value="all" ${currentGroupFilter === 'all' ? 'selected' : ''}>كافة المجموعات</option>
+                ${availableGroups.map(g => `
+                  <option value="${escapeHtml(g.id)}" ${currentGroupFilter === String(g.id) ? 'selected' : ''}>
+                    ${escapeHtml(g.name)}
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+          ` : ''}
+
           <!-- Dropdown Quiz Filter -->
           <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 3px 8px;">
             <span style="font-size: 0.75rem; font-weight: 800; color: #1e293b; white-space: nowrap;">تصفية حسب الكويز:</span>
@@ -1757,6 +1800,7 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
               <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: right;">
                 <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">كود الطالب</th>
                 <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">اسم الطالب</th>
+                ${availableGroups.length > 1 ? '<th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">المجموعة</th>' : ''}
                 <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">الامتحان الإلكتروني</th>
                 <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">الدرجة المحققة (الكاملة)</th>
                 <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">النسبة المئوية</th>
@@ -1767,6 +1811,8 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
             </thead>
             <tbody>
               ${list.map(sub => {
+                const sGrp = availableGroups.find(g => String(g.id).trim() === String(sub.group_id).trim());
+                const sGrpName = sGrp ? sGrp.name : (sub.group_name || 'عامة');
                 const rawScore = sub.total_score !== undefined && sub.total_score !== null
                   ? sub.total_score
                   : (sub.final_score !== undefined && sub.final_score !== null
@@ -1788,6 +1834,13 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
                   <tr style="border-bottom: 1px solid #f1f5f9;">
                     <td style="padding: 0.65rem 0.75rem; font-family: monospace; font-weight: 700; font-size: 0.85rem; color: #0f172a;">${escapeHtml(sub.student_code || '—')}</td>
                     <td style="padding: 0.65rem 0.75rem; font-weight: 700; font-size: 0.85rem; color: #0f172a;">${escapeHtml(sub.student_name || 'طالب')}</td>
+                    ${availableGroups.length > 1 ? `
+                      <td style="padding: 0.65rem 0.75rem;">
+                        <span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-weight: 700; white-space: nowrap;">
+                          ${escapeHtml(sGrpName)}
+                        </span>
+                      </td>
+                    ` : ''}
                     <td style="padding: 0.65rem 0.75rem; font-weight: 600; font-size: 0.8rem; color: #475569;">${escapeHtml(sub.quiz_title || `كويز ${sub.quiz_number || 1}`)}</td>
                     <td style="padding: 0.65rem 0.75rem; text-align: center;">
                       <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">${numScore} / ${maxSc}</div>
@@ -1828,13 +1881,13 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
           <p style="font-size: 0.78rem; color: #64748b; margin: 0 auto 0.75rem auto; max-width: 440px; line-height: 1.5;">
             ${currentFilter !== 'all' ? 'يمكنك اختيار كويز آخر من القائمة بالأعلى أو الضغط أدناه للعودة لعرض كافة النتائج.' : 'هذا القسم يعرض نتائج الامتحانات التي سلمها الطلاب إلكترونياً بعد اعتماد درجاتها كاملة.'}
           </p>
-          ${currentFilter !== 'all' ? `
+          ${(currentFilter !== 'all' || currentGroupFilter !== 'all') ? `
             <button 
               type="button" 
               style="height: 30px; padding: 0 14px; font-size: 0.76rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer;"
-              onclick="window.centrlyApp.setGradingQuizFilter('all')"
+              onclick="window.centrlyApp.setGradingQuizFilter('all'); window.centrlyApp.setGradingGroupFilter('all');"
             >
-              عرض نتائج جميع الامتحانات
+              عرض نتائج كافة الامتحانات والمجموعات
             </button>
           ` : (showCreateBtn ? `
             <button 
@@ -2062,7 +2115,7 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
         `}
       ` : `
         <!-- VIEW B: GRADED RESULTS OVERVIEW -->
-        ${renderOnlineGradingResultsCard(gradedSubmissions, activeGroup, true, state)}
+        ${renderOnlineGradingResultsCard(gradedSubmissions, activeGroup, true, state, groups)}
       `}
 
     </div>
@@ -4582,15 +4635,27 @@ export function registerTeacherQuizzesActions(app) {
     try {
       let allData = null;
       let pendingData = null;
+      const ts = Date.now();
 
       try {
         const [r1, r2] = await Promise.all([
-          fetch('/api/quizzes/submissions').then(r => r.json()).catch(() => null),
-          fetch('/api/quizzes/submissions?type=pending').then(r => r.json()).catch(() => null)
+          fetch(`/api/quizzes/submissions?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+          fetch(`/api/quizzes/submissions?type=pending&_t=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null)
         ]);
         if (r1?.success && Array.isArray(r1.submissions)) allData = r1.submissions;
         if (r2?.success && Array.isArray(r2.submissions)) pendingData = r2.submissions;
       } catch (_) {}
+
+      if (!allData || allData.length === 0) {
+        try {
+          const [fb1, fb2] = await Promise.all([
+            fetch(`https://centerly-eg.com/api/quizzes/submissions?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+            fetch(`https://centerly-eg.com/api/quizzes/submissions?type=pending&_t=${ts}`, { cache: 'no-store' }).then(r => r.json()).catch(() => null)
+          ]);
+          if (fb1?.success && Array.isArray(fb1.submissions)) allData = fb1.submissions;
+          if (fb2?.success && Array.isArray(fb2.submissions)) pendingData = fb2.submissions;
+        } catch (_) {}
+      }
 
       if (!allData || allData.length === 0) {
         const [allRes, pendingRes] = await Promise.allSettled([
@@ -4606,7 +4671,7 @@ export function registerTeacherQuizzesActions(app) {
         }
       }
 
-      this.quizzesState.onlineSubmissions = (Array.isArray(allData) ? allData : []).map(s => {
+      const serverSubmissions = (Array.isArray(allData) ? allData : []).map(s => {
         const fullScore = s.total_score !== undefined && s.total_score !== null 
           ? Number(s.total_score) 
           : (s.final_score !== undefined && s.final_score !== null 
@@ -4621,6 +4686,25 @@ export function registerTeacherQuizzesActions(app) {
           total_score: fullScore
         };
       });
+
+      // Merge with any in-memory recently graded submissions to prevent race conditions
+      const mergedMap = new Map();
+      serverSubmissions.forEach(s => {
+        const key = `${s.material_id || s.quiz_id}_${s.student_code || s.student_id}`;
+        mergedMap.set(key, s);
+      });
+
+      // Retain any existing locally graded submissions in state
+      (this.quizzesState.onlineSubmissions || []).forEach(existing => {
+        const key = `${existing.material_id || existing.quiz_id}_${existing.student_code || existing.student_id}`;
+        if (!mergedMap.has(key)) {
+          mergedMap.set(key, existing);
+        } else if (existing.status === 'approved' && mergedMap.get(key).status === 'pending') {
+          mergedMap.set(key, existing);
+        }
+      });
+
+      this.quizzesState.onlineSubmissions = Array.from(mergedMap.values());
       this.quizzesState.pendingSubmissions = Array.isArray(pendingData) 
         ? pendingData 
         : this.quizzesState.onlineSubmissions.filter(s => s.status === 'pending' || s.status === 'needs_grading' || (!s.is_graded && s.status !== 'approved'));
@@ -4637,7 +4721,8 @@ export function registerTeacherQuizzesActions(app) {
             const raw = localStorage.getItem(key);
             if (raw) {
               const parsed = JSON.parse(raw);
-              if (parsed && (parsed.status === 'pending' || !parsed.is_graded)) {
+              if (parsed) {
+                const isGraded = parsed.status === 'graded' || parsed.status === 'approved' || parsed.is_graded === true;
                 const subObj = {
                   id: `local_${parsed.quiz_id}_${parsed.student_code || '1006'}`,
                   material_id: parsed.quiz_id,
@@ -4646,23 +4731,38 @@ export function registerTeacherQuizzesActions(app) {
                   quiz_number: parsed.quiz_number || 1,
                   group_id: parsed.group_id || null,
                   student_code: parsed.student_code || '1006',
-                  student_name: parsed.student_name || 'مهند خالد',
-                  status: 'pending',
-                  is_graded: false,
+                  student_name: parsed.student_name || 'طالب',
+                  status: isGraded ? 'approved' : 'pending',
+                  is_graded: isGraded,
                   mcq_score: parsed.mcq_score || 0,
+                  essay_score: parsed.essay_score || 0,
                   total_mcq_points: parsed.total_mcq_points || 0,
-                  total_score: null,
+                  total_score: parsed.score || parsed.total_score || (Number(parsed.mcq_score || 0) + Number(parsed.essay_score || 0)),
+                  score: parsed.score || parsed.total_score || (Number(parsed.mcq_score || 0) + Number(parsed.essay_score || 0)),
+                  final_score: parsed.score || parsed.total_score || (Number(parsed.mcq_score || 0) + Number(parsed.essay_score || 0)),
                   max_score: parsed.max_score || 10,
                   questions: parsed.questions || [],
                   answers: parsed.answers || {},
                   essay_answers: parsed.essay_answers || {},
                   submitted_at: parsed.submitted_at || new Date().toISOString()
                 };
-                const alreadyExists = this.quizzesState.pendingSubmissions.some(
-                  s => (s.quiz_id === subObj.quiz_id && s.student_code === subObj.student_code) || s.id === subObj.id
-                );
-                if (!alreadyExists) {
-                  this.quizzesState.pendingSubmissions.unshift(subObj);
+
+                if (isGraded) {
+                  const alreadyGraded = this.quizzesState.onlineSubmissions.some(
+                    s => (String(s.quiz_id) === String(subObj.quiz_id) || String(s.material_id) === String(subObj.material_id)) &&
+                         String(s.student_code) === String(subObj.student_code)
+                  );
+                  if (!alreadyGraded) {
+                    this.quizzesState.onlineSubmissions.unshift(subObj);
+                  }
+                } else {
+                  const alreadyPending = this.quizzesState.pendingSubmissions.some(
+                    s => (String(s.quiz_id) === String(subObj.quiz_id) || String(s.material_id) === String(subObj.material_id)) &&
+                         String(s.student_code) === String(subObj.student_code)
+                  );
+                  if (!alreadyPending) {
+                    this.quizzesState.pendingSubmissions.unshift(subObj);
+                  }
                 }
               }
             }
@@ -5061,6 +5161,11 @@ export function registerTeacherQuizzesActions(app) {
     this.renderMainContent();
   };
 
+  app.setGradingGroupFilter = function(groupId) {
+    this.quizzesState.gradingFilterGroupId = groupId;
+    this.renderMainContent();
+  };
+
   app.archiveOnlineExam = function(quizId) {
     const q = (this.quizzesState.richQuizzes || []).find(x => x.id === quizId);
     if (!q) {
@@ -5224,23 +5329,78 @@ export function registerTeacherQuizzesActions(app) {
       }
 
       if (res?.success) {
+        const totalEssay = Object.values(essayScores).reduce((a, b) => a + Number(b), 0);
+        const finalCalculated = res.final_score !== undefined && res.final_score !== null
+          ? Number(res.final_score)
+          : (res.submission?.total_score !== undefined
+              ? Number(res.submission.total_score)
+              : (Number(sub.mcq_score || 0) + totalEssay));
+
+        // Immediately update in-memory objects
+        const updatedSub = {
+          ...sub,
+          ...(res.submission || {}),
+          status: 'approved',
+          is_graded: true,
+          essay_score: totalEssay,
+          essay_scores: essayScores,
+          teacher_notes: note,
+          score: finalCalculated,
+          total_score: finalCalculated,
+          final_score: finalCalculated,
+          graded_at: new Date().toISOString()
+        };
+
+        // 1. Remove from pending submissions
+        this.quizzesState.pendingSubmissions = (this.quizzesState.pendingSubmissions || []).filter(
+          s => s.id !== subId && s.id !== sub.id
+        );
+
+        // 2. Upsert into online submissions
+        if (!Array.isArray(this.quizzesState.onlineSubmissions)) {
+          this.quizzesState.onlineSubmissions = [];
+        }
+        const existingIdx = this.quizzesState.onlineSubmissions.findIndex(
+          s => s.id === subId || s.id === sub.id || (
+            (String(s.quiz_id) === String(sub.quiz_id) || String(s.material_id) === String(sub.material_id)) &&
+            String(s.student_code || s.student_id) === String(sub.student_code || studentId)
+          )
+        );
+        if (existingIdx >= 0) {
+          this.quizzesState.onlineSubmissions[existingIdx] = updatedSub;
+        } else {
+          this.quizzesState.onlineSubmissions.unshift(updatedSub);
+        }
+
         // Also update local storage if present
         try {
           const sCode = sub.student_code || studentId;
           const qId = sub.material_id || sub.quiz_id;
           const subKey = `centrly_submission_${sCode}_${qId}`;
           const raw = localStorage.getItem(subKey);
-          if (raw) {
-            const p = JSON.parse(raw);
-            p.status = 'graded';
-            p.is_graded = true;
-            p.score = res.final_score || (Number(sub.mcq_score || 0) + Object.values(essayScores).reduce((a, b) => a + Number(b), 0));
-            localStorage.setItem(subKey, JSON.stringify(p));
-          }
+          const p = raw ? JSON.parse(raw) : {};
+          p.status = 'graded';
+          p.is_graded = true;
+          p.essay_score = totalEssay;
+          p.essay_scores = essayScores;
+          p.score = finalCalculated;
+          p.total_score = finalCalculated;
+          p.final_score = finalCalculated;
+          localStorage.setItem(subKey, JSON.stringify(p));
         } catch (_) {}
 
-        this.showToast(`تم اعتماد وتثبيت الدرجة النهائية (${res.final_score || res.submission?.total_score || 'المعتمدة'}) للطالب بنجاح!`, 'success');
-        await this.loadOnlineSubmissions();
+        // Switch to 'graded' view mode if no more pending submissions left
+        if ((this.quizzesState.pendingSubmissions || []).length === 0) {
+          this.quizzesState.gradingViewMode = 'graded';
+        }
+
+        this.showToast(`تم اعتماد وتثبيت الدرجة النهائية (${finalCalculated}) للطالب بنجاح!`, 'success');
+        this.renderMainContent();
+
+        // Background server sync with cache buster
+        try {
+          await this.loadOnlineSubmissions();
+        } catch (_) {}
         this.renderMainContent();
       }
     } catch (err) {
