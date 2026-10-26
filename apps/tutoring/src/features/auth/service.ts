@@ -51,6 +51,10 @@ export function resetLoginAttempts(key: string): void {
 export class AuthService {
   constructor(private readonly repo: IAuthRepository) {}
 
+  async recordEmailOtp(email: string, code: string, expiresAt: string): Promise<void> {
+    return this.repo.recordEmailOtp(email, code, expiresAt);
+  }
+
   validatePassword(password: string): { valid: boolean; reason?: string } {
     return validatePasswordStrength(password);
   }

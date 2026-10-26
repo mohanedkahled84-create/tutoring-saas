@@ -42,14 +42,12 @@ ON public.tenant_platform_settings
 FOR ALL
 TO authenticated
 USING (
-    tenant_id IN (
-        SELECT p.tenant_id FROM public.profiles p WHERE p.id = auth.uid()
-    )
+    tenant_id = public.get_current_user_tenant_id()
+    AND public.get_current_user_role() = ANY (ARRAY['admin'::text, 'owner'::text, 'center_owner'::text])
 )
 WITH CHECK (
-    tenant_id IN (
-        SELECT p.tenant_id FROM public.profiles p WHERE p.id = auth.uid()
-    )
+    tenant_id = public.get_current_user_tenant_id()
+    AND public.get_current_user_role() = ANY (ARRAY['admin'::text, 'owner'::text, 'center_owner'::text])
 );
 
 -- Trigger to automatically update updated_at timestamp
@@ -59,7 +57,8 @@ BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = pg_catalog;
 
 DROP TRIGGER IF EXISTS set_timestamp_tenant_platform_settings ON public.tenant_platform_settings;
 CREATE TRIGGER set_timestamp_tenant_platform_settings

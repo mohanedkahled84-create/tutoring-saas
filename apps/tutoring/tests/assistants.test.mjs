@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { app } from "../dist/app.js";
+import { assistantsRouter } from "../dist/features/assistants/routes.js";
 
 let server;
 let baseUrl;
@@ -62,5 +63,21 @@ test("DEV-ASSISTANTS.5: assistants routes use robust select without unindexed jo
 
   assert.ok(src.includes('.select("*")'), "GET /api/assistants must use select('*') for stability");
   assert.ok(!src.includes("groups:group_id(id, name)"), "Must not use risky PostgREST join syntax that fails without relation cache");
+});
+
+test("SEC-ASSISTANTS: assistant accounts cannot list or manage staff records", async () => {
+  for (const layer of assistantsRouter.stack.filter((entry) => entry.route)) {
+    const methods = Object.keys(layer.route.methods);
+    const method = methods[0];
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle;
+    const res = {
+      statusCode: 200,
+      status(code) { this.statusCode = code; return this; },
+      json(body) { this.body = body; return this; },
+    };
+    await handler({ user: { id: "assistant-user", role: "assistant", tenant_id: "tenant-a" }, body: {} }, res);
+    assert.equal(res.statusCode, 403, `${method.toUpperCase()} ${layer.route.path} should reject assistant role`);
+    assert.equal(res.body?.error?.code, "FORBIDDEN");
+  }
 });
 

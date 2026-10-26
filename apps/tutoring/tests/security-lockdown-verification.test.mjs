@@ -1,48 +1,52 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertRpcExists, assertServiceRoleReady, createIsolatedSupabaseClients, requireIsolatedSupabaseProject } from "./helpers/live-supabase.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-const supabaseUrl = process.env.SUPABASE_TEST_URL || process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_TEST_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+test("FOLLOW-UP (F): anon cannot invoke service-only email verification RPCs", async (t) => {
+  if (!requireIsolatedSupabaseProject(t)) return;
 
-test("FOLLOW-UP (F): confirm_user_email_direct rejects unauthorized calls without verified OTP", async (t) => {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    t.skip("Missing Supabase credentials for live test");
-    return;
-  }
-
-  const anonClient = createClient(supabaseUrl, supabaseAnonKey);
-  const fakeUserId = "00000000-0000-0000-0000-000000000001";
-
-  // 1. confirm_user_email_direct MUST be rejected without a verified OTP record
-  const { error: err1 } = await anonClient.rpc("confirm_user_email_direct", {
-    p_user_id: fakeUserId,
+  const { anonClient, serviceClient } = createIsolatedSupabaseClients();
+  await assertServiceRoleReady(serviceClient);
+  const email = `security-test-${Date.now()}-${Math.random()}@example.invalid`;
+  await assertRpcExists(serviceClient, "confirm_user_email_direct", { p_email: email });
+  await assertRpcExists(serviceClient, "is_email_confirmed", { p_email: email });
+  await assertRpcExists(serviceClient, "record_email_otp", {
+    p_email: email,
+    p_code: "000000",
+    p_expires_at: new Date(Date.now() + 60_000).toISOString(),
   });
-  assert.ok(err1, "Anon must be denied confirmation without verified OTP");
-  assert.ok(["42501", "PGRST202", "P0001"].includes(err1.code) || (err1.message && err1.message.includes("UNAUTHORIZED")), `Expected unauthorized error, got ${err1.code}: ${err1.message}`);
+  await serviceClient.from("email_verifications").delete().eq("email", email);
 
-  // 2. is_email_confirmed safely returns boolean status
-  const { data: confirmedStatus, error: err2 } = await anonClient.rpc("is_email_confirmed", {
+  const { error: confirmError } = await anonClient.rpc("confirm_user_email_direct", {
+    p_email: "security-test-nonexistent@centerly-eg.com",
+  });
+  assert.ok(confirmError, "Anon must not execute confirm_user_email_direct");
+
+  const { error: isConfirmedError } = await anonClient.rpc("is_email_confirmed", {
     p_email: "nonexistent-test-user-check@centerly-eg.com",
   });
-  assert.equal(err2, null, "is_email_confirmed must execute cleanly for login preflight checks");
-  assert.equal(confirmedStatus, false, "Nonexistent user returns false");
+  assert.ok(isConfirmedError, "Anon must not enumerate email verification state");
+
+  const { error: otpError } = await anonClient.rpc("record_email_otp", {
+    p_email: "security-test-nonexistent@centerly-eg.com",
+    p_code: "000000",
+    p_expires_at: new Date(Date.now() + 60_000).toISOString(),
+  });
+  assert.ok(otpError, "Anon must not create or replace email OTP records");
 });
 
 test("FOLLOW-UP (F): Anon cannot write or update public.tenants table directly", async (t) => {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    t.skip("Missing Supabase credentials for live test");
-    return;
-  }
+  if (!requireIsolatedSupabaseProject(t)) return;
 
-  const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+  const { anonClient, serviceClient } = createIsolatedSupabaseClients();
+  await assertServiceRoleReady(serviceClient);
 
   // Anon INSERT must fail
   const { error: insertErr } = await anonClient.from("tenants").insert({

@@ -1,30 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertServiceRoleReady, createIsolatedSupabaseClients, requireIsolatedSupabaseProject } from "./helpers/live-supabase.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-const supabaseUrl = process.env.SUPABASE_TEST_URL || process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_TEST_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-
 test("C-01: RLS Tenant Isolation & Anon Rejection", async (t) => {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    t.skip("Missing Supabase credentials for live test");
-    return;
-  }
+  if (!requireIsolatedSupabaseProject(t)) return;
 
-  const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+  const { anonClient, serviceClient } = createIsolatedSupabaseClients();
+  await assertServiceRoleReady(serviceClient);
+  for (const table of ["study_materials", "message_templates", "quizzes", "homework_submissions", "teachers", "assistants", "rooms"]) {
+    const { error } = await serviceClient.from(table).select("id").limit(0);
+    assert.equal(error, null, `Required security-test table ${table} must exist: ${error?.message ?? "unknown error"}`);
+  }
 
   // 1. Anon MUST NOT be able to read private study_materials (non-homework)
   const { data: anonMaterials, error: anonMatErr } = await anonClient
     .from("study_materials")
     .select("*")
     .eq("is_homework", false);
-  assert.equal(anonMaterials?.length || 0, 0, "Anon must not read any non-homework study materials");
+  assert.ok(anonMatErr || (anonMaterials?.length || 0) === 0, "Anon must not read any non-homework study materials");
 
   // 2. Anon MUST NOT be able to insert into study_materials
   const fakeTenantId = "00000000-0000-0000-0000-000000000001";
@@ -39,10 +38,10 @@ test("C-01: RLS Tenant Isolation & Anon Rejection", async (t) => {
   assert.ok(anonMatInsertErr, "Anon insert on study_materials must be rejected by RLS");
 
   // 3. Anon MUST NOT be able to read message_templates
-  const { data: anonTemplates } = await anonClient
+  const { data: anonTemplates, error: anonTemplateErr } = await anonClient
     .from("message_templates")
     .select("*");
-  assert.equal(anonTemplates?.length || 0, 0, "Anon must not read any message templates");
+  assert.ok(anonTemplateErr || (anonTemplates?.length || 0) === 0, "Anon must not read any message templates");
 
   // 4. Anon MUST NOT be able to insert into message_templates
   const { error: anonTplInsertErr } = await anonClient
@@ -55,16 +54,16 @@ test("C-01: RLS Tenant Isolation & Anon Rejection", async (t) => {
   assert.ok(anonTplInsertErr, "Anon insert on message_templates must be rejected by RLS");
 
   // 5. Anon MUST NOT be able to read quizzes
-  const { data: anonQuizzes } = await anonClient
+  const { data: anonQuizzes, error: anonQuizErr } = await anonClient
     .from("quizzes")
     .select("*");
-  assert.equal(anonQuizzes?.length || 0, 0, "Anon must not read quizzes");
+  assert.ok(anonQuizErr || (anonQuizzes?.length || 0) === 0, "Anon must not read quizzes");
 
   // 6. Anon MUST NOT be able to read or modify homework_submissions
-  const { data: anonSubmissions } = await anonClient
+  const { data: anonSubmissions, error: anonSubmissionErr } = await anonClient
     .from("homework_submissions")
     .select("*");
-  assert.equal(anonSubmissions?.length || 0, 0, "Anon must not read homework submissions");
+  assert.ok(anonSubmissionErr || (anonSubmissions?.length || 0) === 0, "Anon must not read homework submissions");
 
   const { error: anonSubInsertErr } = await anonClient
     .from("homework_submissions")

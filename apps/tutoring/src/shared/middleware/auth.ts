@@ -83,7 +83,8 @@ export async function authenticateUser(
 
     // Fast, rock-solid resolution via SECURITY DEFINER RPC
     try {
-      const { data: rpcProfile, error: rpcError } = await authClientResolver.supabasePublic.rpc("get_user_profile", {
+      // The profile RPC is scoped to auth.uid(); never call it with the anonymous client.
+      const { data: rpcProfile, error: rpcError } = await userClient.rpc("get_user_profile", {
         p_user_id: userId,
       });
       if (!rpcError) {

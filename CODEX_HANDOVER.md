@@ -274,17 +274,19 @@ To run live security tests (`audit-c01-rls.test.mjs`, `audit-c02-rpcs.test.mjs`,
 1. **GitHub Repository Secrets required by `.github/workflows/ci.yml`:**
    * `SUPABASE_TEST_URL`: The API URL of the dedicated test Supabase project (e.g. `https://xxx.supabase.co`).
    * `SUPABASE_TEST_ANON_KEY`: The publishable anon key for the test Supabase project.
-   * `SUPABASE_TEST_SERVICE_ROLE_KEY`: The service role secret key for the test Supabase project.
+   * `SUPABASE_TEST_SERVICE_ROLE_KEY`: Used only against the isolated test project to confirm expected RPCs exist before checking that anon is denied. It must never be a production key.
+   * The non-secret `SUPABASE_TEST_PROJECT_REF` is set directly in the workflow and must match the test URL.
+   * The live security tests require `SUPABASE_TEST_ENV=isolated` and fail when the dedicated test secrets are missing. They never fall back to production `SUPABASE_URL` or `SUPABASE_ANON_KEY`.
 2. **Automated Migration Setup:**
-   Run the setup script against the test database connection string to apply all 60 migrations and verify RLS:
+   Use a fresh dedicated test project. Set `SUPABASE_TEST_DB_URL`, `SUPABASE_TEST_PROJECT_REF`, `SUPABASE_TEST_ENV=isolated`, and `APPLY_TEST_MIGRATIONS=true`, then run:
    ```bash
-   node scripts/setup-test-db.mjs "postgres://postgres:[PASSWORD]@[HOST]:5432/postgres"
+   npm run setup:test-db
    ```
-3. **Safety Guarantee:** The live test runner prioritizes `SUPABASE_TEST_URL` over `SUPABASE_URL`. When set, all exploit and authorization tests execute exclusively in the isolated test sandbox.
+   The script checks the database host against the test project ref, rejects the configured production ref, requires Supabase's real managed Auth schema, applies migrations one at a time, and stops on the first failure. It does not create fake Auth tables or continue past failed migrations. It verifies RLS on every public table and does not claim production schema parity.
 
 ### 5. Git Deployment (Vercel + Railway)
 Pushing to the `main` branch of GitHub automatically triggers:
-1. **GitHub Actions CI:** Runs build, linter, full 364-test suite, and live security tests via `.github/workflows/ci.yml`.
+1. **GitHub Actions CI:** Runs the backend build and full test suite, including live security tests via `.github/workflows/ci.yml`.
 2. **Railway:** Builds and deploys the backend API via Nixpacks (`railway.json`).
 3. **Vercel:** Deploys the web client instantly.
 

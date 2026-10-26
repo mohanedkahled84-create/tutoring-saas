@@ -56,7 +56,7 @@ export class SupabaseCentersRepository implements ICentersRepository {
       .single();
 
     if (error) {
-      const { data: rpcRow, error: rpcErr } = await client.rpc("create_teacher_secure", {
+      const { data: rpcRow, error: rpcErr } = await this.adminClient.rpc("create_teacher_secure", {
         p_tenant_id: tenantId,
         p_name: data.name,
         p_phone: data.phone,
@@ -157,7 +157,7 @@ export class SupabaseCentersRepository implements ICentersRepository {
       .single();
 
     if (error) {
-      const fallbackClient = this.adminClient || client;
+      const fallbackClient = this.adminClient;
       const { data: rpcRow, error: rpcErr } = await fallbackClient.rpc("create_assistant_secure", {
         p_tenant_id: tenantId,
         p_name: data.name,
@@ -261,7 +261,7 @@ export class SupabaseCentersRepository implements ICentersRepository {
       .single();
 
     if (error) {
-      const { data: rpcRow, error: rpcErr } = await client.rpc("create_room_secure", {
+      const { data: rpcRow, error: rpcErr } = await this.adminClient.rpc("create_room_secure", {
         p_tenant_id: tenantId,
         p_name: data.name,
         p_capacity: data.capacity,

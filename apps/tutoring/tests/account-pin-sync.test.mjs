@@ -8,6 +8,8 @@ import { settingsRouter } from '../dist/features/auth/settingsRoutes.js';
 
 test('SEC-PIN: Account-Level Security PIN synchronization across mobile and desktop devices', async () => {
   const fakeTenantsRepo = new FakeTenantsRepository();
+  const persistedOtpRecords = [];
+  let failOtpPersistence = false;
   const app = express();
   app.use(express.json());
 
@@ -23,7 +25,15 @@ test('SEC-PIN: Account-Level Security PIN synchronization across mobile and desk
 
   app.use((req, res, next) => {
     req.user = currentUser ? { ...currentUser } : null;
-    req.services = { tenants: fakeTenantsRepo };
+    req.services = {
+      tenants: fakeTenantsRepo,
+      auth: {
+        recordEmailOtp: async (...args) => {
+          if (failOtpPersistence) throw new Error('simulated OTP storage failure');
+          persistedOtpRecords.push(args);
+        },
+      },
+    };
     next();
   });
 
@@ -159,6 +169,8 @@ test('SEC-PIN: Account-Level Security PIN synchronization across mobile and desk
     const bodyReqReset = await resReqReset.json();
     assert.equal(bodyReqReset.success, true);
     assert.match(bodyReqReset.email, /mo\*\*\*.*@gmail\.com/);
+    assert.equal(persistedOtpRecords.length, 1, 'OTP must be persisted before the endpoint reports success');
+    assert.equal(persistedOtpRecords[0][0], 'mohanedkahled84@gmail.com');
 
     // 11. Reading the generated OTP code from the store and resetting PIN
     const { pinResetOtpStore } = await import('../dist/features/auth/settingsRoutes.js');
@@ -183,6 +195,17 @@ test('SEC-PIN: Account-Level Security PIN synchronization across mobile and desk
     assert.equal(resVerifyFinal.status, 200);
     const bodyVerifyFinal = await resVerifyFinal.json();
     assert.equal(bodyVerifyFinal.valid, true, 'New PIN 9090 set via email verification must unlock');
+
+    // Persistence failures must not create an in-memory-only OTP or report success.
+    failOtpPersistence = true;
+    const failedPersistenceResponse = await fetch(`${baseUrl}/api/settings/security-pin/request-reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    assert.equal(failedPersistenceResponse.status, 503);
+    assert.equal((await failedPersistenceResponse.json()).error.code, 'OTP_STORAGE_UNAVAILABLE');
+    assert.equal(pinResetOtpStore.has('mohanedkahled84@gmail.com'), false);
   } finally {
     server.close();
   }

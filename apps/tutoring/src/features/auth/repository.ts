@@ -21,6 +21,25 @@ export class SupabaseAuthRepository implements IAuthRepository {
     private readonly emailService: EmailVerificationService = defaultEmailVerificationService
   ) {}
 
+  async recordEmailOtp(email: string, code: string, expiresAt: string): Promise<void> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { error: rpcError } = await this.adminClient.rpc("record_email_otp", {
+      p_email: normalizedEmail,
+      p_code: code,
+      p_expires_at: expiresAt,
+    });
+    if (!rpcError) return;
+
+    await this.adminClient.from("email_verifications").delete().eq("email", normalizedEmail);
+    const { error: insertError } = await this.adminClient.from("email_verifications").insert({
+      email: normalizedEmail,
+      code,
+      expires_at: expiresAt,
+      attempts: 0,
+    });
+    if (insertError) throw new Error(`تعذر حفظ رمز التحقق: ${insertError.message}`);
+  }
+
   private async _authenticateWithEmail(targetEmail: string, password: string): Promise<LoginResult> {
     // 1. Mandatory email verification check before login
     try {
@@ -596,6 +615,16 @@ export class FakeAuthRepository implements IAuthRepository {
   public users: Array<{ id: string; email: string; password: string; tenant_id: string; role: string; phone?: string; email_confirmed?: boolean }> = [];
   public tenants: Array<{ id: string; name: string; trial_ends_at: string; subscription_status: string }> = [];
   public verifications: Map<string, { code: string; expires_at: number; verified: boolean; attempts: number; created_at: number }> = new Map();
+
+  async recordEmailOtp(email: string, code: string, expiresAt: string): Promise<void> {
+    this.verifications.set(email.trim().toLowerCase(), {
+      code,
+      expires_at: new Date(expiresAt).getTime(),
+      verified: false,
+      attempts: 0,
+      created_at: Date.now(),
+    });
+  }
 
   async signIn(emailOrPhone: string, password: string): Promise<LoginResult> {
     const raw = emailOrPhone.trim();

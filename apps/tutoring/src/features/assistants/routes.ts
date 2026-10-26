@@ -9,8 +9,18 @@ function getSupabase(req: AuthenticatedRequest) {
 
 export const assistantsRouter = Router();
 
+const ASSISTANT_MANAGER_ROLES = new Set(["admin", "owner", "center_owner", "teacher"]);
+
+function canManageAssistants(req: AuthenticatedRequest): boolean {
+  return ASSISTANT_MANAGER_ROLES.has(req.user?.role || "");
+}
+
 // GET /api/assistants - List assistants
 assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!canManageAssistants(req)) {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "Insufficient permissions to view assistants" } });
+    return;
+  }
   const tenantId = req.user?.tenant_id;
   if (!tenantId && req.user?.role !== "admin") {
     res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
@@ -29,13 +39,13 @@ assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Prom
     if (!error && Array.isArray(data)) {
       assistants = data;
     } else {
-      const { data: rpcData, error: rpcErr } = await supabasePublic.rpc("list_assistants_secure", {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc("list_assistants_secure", {
         p_tenant_id: tenantId,
       });
       if (!rpcErr && Array.isArray(rpcData)) {
         assistants = rpcData;
       } else {
-        const { data: pubData } = await supabasePublic
+        const { data: pubData } = await supabase
           .from("assistants")
           .select("*")
           .eq("tenant_id", tenantId)
@@ -52,6 +62,10 @@ assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Prom
 
 // POST /api/assistants - Create an assistant
 assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!canManageAssistants(req)) {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "Insufficient permissions to manage assistants" } });
+    return;
+  }
   const tenantId = req.user?.tenant_id;
   if (!tenantId && req.user?.role !== "admin") {
     res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
@@ -73,7 +87,7 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
     // Safely resolve teacher_id against teachers table foreign key
     let resolvedTeacherId: string | null = req.user?.teacher_id || null;
     if (!resolvedTeacherId && req.user?.id) {
-      const { data: teacherRow } = await supabasePublic
+      const { data: teacherRow } = await supabase
         .from("teachers")
         .select("id")
         .eq("tenant_id", tenantId)
@@ -108,8 +122,8 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
     if (!directErr && directData) {
       createdAssistant = directData;
     } else {
-      // Fallback 1: secure RPC executed via supabasePublic
-      const { data: rpcRow, error: rpcErr } = await supabasePublic.rpc("create_assistant_secure", {
+      // Fallback 1: secure RPC through the authenticated or service-role client
+      const { data: rpcRow, error: rpcErr } = await supabase.rpc("create_assistant_secure", {
         p_tenant_id: tenantId,
         p_name: name.trim(),
         p_phone: phone.trim(),
@@ -126,8 +140,8 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
       if (!rpcErr && rpcRow) {
         createdAssistant = rpcRow;
       } else {
-        // Fallback 2: direct insert via supabasePublic
-        const { data: pubData, error: pubErr } = await supabasePublic
+        // Fallback 2: direct insert through the authenticated client (RLS applies)
+        const { data: pubData, error: pubErr } = await supabase
           .from("assistants")
           .insert({
             tenant_id: tenantId,
@@ -160,6 +174,10 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
 
 // PUT /api/assistants/:id - Update an assistant
 assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!canManageAssistants(req)) {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "Insufficient permissions to manage assistants" } });
+    return;
+  }
   const tenantId = req.user?.tenant_id;
   const { id } = req.params;
 
@@ -200,7 +218,7 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
     if (!directErr && directData) {
       updatedAssistant = directData;
     } else {
-      const { data: rpcRow, error: rpcErr } = await supabasePublic.rpc("update_assistant_secure", {
+      const { data: rpcRow, error: rpcErr } = await supabase.rpc("update_assistant_secure", {
         p_id: id,
         p_tenant_id: tenantId,
         p_name: name ? name.trim() : undefined,
@@ -216,7 +234,7 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
       if (!rpcErr && rpcRow) {
         updatedAssistant = rpcRow;
       } else {
-        const { data: pubData, error: pubErr } = await supabasePublic
+        const { data: pubData, error: pubErr } = await supabase
           .from("assistants")
           .update(updates)
           .eq("id", id)
@@ -239,6 +257,10 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
 
 // DELETE /api/assistants/:id - Delete an assistant
 assistantsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!canManageAssistants(req)) {
+    res.status(403).json({ error: { code: "FORBIDDEN", message: "Insufficient permissions to manage assistants" } });
+    return;
+  }
   const tenantId = req.user?.tenant_id;
   const { id } = req.params;
 
@@ -256,12 +278,12 @@ assistantsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response)
       .eq("tenant_id", tenantId);
 
     if (directErr) {
-      const { error: rpcErr } = await supabasePublic.rpc("delete_assistant_secure", {
+      const { error: rpcErr } = await supabase.rpc("delete_assistant_secure", {
         p_id: id,
         p_tenant_id: tenantId,
       });
       if (rpcErr) {
-        const { error: pubErr } = await supabasePublic
+        const { error: pubErr } = await supabase
           .from("assistants")
           .delete()
           .eq("id", id)

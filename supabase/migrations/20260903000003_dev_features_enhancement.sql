@@ -21,7 +21,8 @@ begin
     end if;
     return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql
+set search_path = pg_catalog, pg_temp;
 
 drop trigger if exists trg_assign_student_code on public.students;
 create trigger trg_assign_student_code
