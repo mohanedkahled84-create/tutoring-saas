@@ -72,6 +72,7 @@ export interface StudentVideoTrackingItem {
 export interface IPlatformBuilderRepository {
   getByTenantId(tenantId: string): Promise<TenantPlatformSettings | null>;
   getBySubdomain(subdomain: string): Promise<TenantPlatformSettings | null>;
+  getPublicBySubdomain(subdomain: string): Promise<TenantPlatformSettings | null>;
   isSubdomainTaken(subdomain: string, excludeTenantId?: string): Promise<boolean>;
   upsert(tenantId: string, settings: SavePlatformSettingsDto): Promise<TenantPlatformSettings>;
   getTenantPlan(tenantId: string): Promise<TenantPlanDetails>;

@@ -50,6 +50,64 @@ export class SupabasePlatformBuilderRepository implements IPlatformBuilderReposi
     return (data as TenantPlatformSettings) || null;
   }
 
+  async getPublicBySubdomain(subdomain: string): Promise<TenantPlatformSettings | null> {
+    const clean = subdomain.trim().toLowerCase();
+    const current = await this.getBySubdomain(clean);
+    if (current) return current;
+
+    // Settings created by the retired Vercel endpoint remain in whatsapp_inbox.
+    // Read only the exact public subdomain key and only published settings so
+    // existing teacher branding survives the API migration without exposing
+    // other inbox rows.
+    const { data: legacyRow, error: legacyError } = await this.queryClient
+      .from("whatsapp_inbox")
+      .select("message_body, status, updated_at")
+      .eq("phone", `PLATFORM_SETTINGS_${clean}`)
+      .eq("status", "published")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (legacyError && legacyError.code !== "PGRST116") throw legacyError;
+    if (!legacyRow?.message_body) return null;
+
+    let legacy: Record<string, unknown>;
+    try {
+      const parsed = typeof legacyRow.message_body === "string"
+        ? JSON.parse(legacyRow.message_body)
+        : legacyRow.message_body;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+      legacy = parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+
+    if (
+      String(legacy.subdomain || "").trim().toLowerCase() !== clean ||
+      legacy.is_published === false ||
+      legacy.is_active === false
+    ) {
+      return null;
+    }
+
+    return {
+      id: `legacy-${clean}`,
+      tenant_id: "",
+      subdomain: clean,
+      display_title: String(legacy.display_title || ""),
+      subject_title: String(legacy.subject_title || ""),
+      headline_text: typeof legacy.headline_text === "string" ? legacy.headline_text : null,
+      subtitle_text: typeof legacy.subtitle_text === "string" ? legacy.subtitle_text : null,
+      cutout_avatar_url: typeof legacy.cutout_avatar_url === "string" ? legacy.cutout_avatar_url : null,
+      theme_preset: typeof legacy.theme_preset === "string" ? legacy.theme_preset : "navy",
+      custom_primary_color: typeof legacy.custom_primary_color === "string" ? legacy.custom_primary_color : null,
+      is_active: true,
+      allow_public_signup: legacy.allow_public_signup !== false,
+      require_approval: Boolean(legacy.require_approval),
+      updated_at: legacyRow.updated_at || undefined,
+    };
+  }
+
   async isSubdomainTaken(subdomain: string, excludeTenantId?: string): Promise<boolean> {
     const clean = subdomain.trim().toLowerCase();
     let query = this.queryClient
@@ -274,6 +332,10 @@ export class FakePlatformBuilderRepository implements IPlatformBuilderRepository
       }
     }
     return null;
+  }
+
+  async getPublicBySubdomain(subdomain: string): Promise<TenantPlatformSettings | null> {
+    return this.getBySubdomain(subdomain);
   }
 
   async isSubdomainTaken(subdomain: string, excludeTenantId?: string): Promise<boolean> {

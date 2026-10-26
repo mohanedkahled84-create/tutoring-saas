@@ -6,6 +6,7 @@ import { getServices } from "../../composition.js";
 import { AuthenticatedRequest } from "../types/index.js";
 import { authRateLimiter } from "../middleware/rateLimit.js";
 import { normalizeMaterialUrl } from "../../features/materials/routes.js";
+import { mergeLegacyPortalQuizzes } from "../utils/legacyPortalQuizzes.js";
 
 export const publicRouter = Router();
 
@@ -128,6 +129,95 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
 
     if (portalData && portalData.student) {
       try {
+        // Older online quizzes were stored in whatsapp_inbox rather than
+        // study_materials. Rehydrate only quizzes for groups linked to the
+        // HMAC-verified student and tenant; never use the old global endpoint.
+        if (studentId && tenantId) {
+          const [{ data: studentRow }, { data: memberships }, { data: tenantGroups }] = await Promise.all([
+            supabase.from("students").select("group_id").eq("id", studentId).eq("tenant_id", tenantId).maybeSingle(),
+            supabase.from("group_students").select("group_id").eq("student_id", studentId).eq("tenant_id", tenantId),
+            supabase.from("groups").select("id").eq("tenant_id", tenantId),
+          ]);
+          const tenantGroupIds = new Set((tenantGroups || []).map((group: any) => String(group.id)));
+          const allowedGroupIds = new Set<string>();
+          if (studentRow?.group_id && tenantGroupIds.has(String(studentRow.group_id))) {
+            allowedGroupIds.add(String(studentRow.group_id));
+          }
+          for (const membership of memberships || []) {
+            const groupId = String(membership.group_id || "");
+            if (tenantGroupIds.has(groupId)) allowedGroupIds.add(groupId);
+          }
+
+          if (allowedGroupIds.size > 0) {
+            const { data: legacyRows, error: legacyError } = await supabase
+              .from("whatsapp_inbox")
+              .select("message_body, phone, status, created_at")
+              .is("tenant_id", null)
+              .like("phone", "QUIZ_DEF_%")
+              .order("created_at", { ascending: false })
+              .limit(1000);
+            if (legacyError) throw legacyError;
+
+            const candidateMaterialIds = (legacyRows || []).flatMap((row: any) => {
+              try {
+                const quiz = typeof row.message_body === "string" ? JSON.parse(row.message_body) : row.message_body;
+                const groupId = String(quiz?.group_id || "");
+                const isDraft = Boolean(quiz?.is_draft || row.status === "draft" || String(row.phone).toUpperCase().includes("DRAFT"));
+                return !isDraft && allowedGroupIds.has(groupId) && quiz?.id ? [String(quiz.id)] : [];
+              } catch {
+                return [];
+              }
+            });
+            const uniqueMaterialIds = [...new Set(candidateMaterialIds)];
+            let legacySubmissions: any[] = [];
+            if (uniqueMaterialIds.length > 0) {
+              const uuidMaterialIds = uniqueMaterialIds.filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id));
+              const submissionsQuery = uuidMaterialIds.length > 0
+                ? supabase
+                  .from("homework_submissions")
+                  .select("material_id, status, file_url, teacher_notes, submitted_at")
+                  .eq("student_id", studentId)
+                  .eq("tenant_id", tenantId)
+                  .in("material_id", uuidMaterialIds)
+                : Promise.resolve({ data: [], error: null });
+              const [{ data: submissionRows, error: submissionError }, { data: legacySubmissionRows, error: legacySubmissionError }] = await Promise.all([
+                submissionsQuery,
+                supabase
+                  .from("whatsapp_inbox")
+                  .select("message_body, status, created_at")
+                  .is("tenant_id", null)
+                  .like("phone", "QUIZ_SUB_%")
+                  .order("created_at", { ascending: false })
+                  .limit(2000),
+              ]);
+              if (submissionError) throw submissionError;
+              if (legacySubmissionError) throw legacySubmissionError;
+              legacySubmissions = submissionRows || [];
+
+              const studentCode = String(portalData.student.student_code || portalData.student.code || "").trim();
+              const legacyQuizIds = new Set(uniqueMaterialIds);
+              for (const row of legacySubmissionRows || []) {
+                try {
+                  const sub = typeof row.message_body === "string" ? JSON.parse(row.message_body) : row.message_body;
+                  const materialId = String(sub?.material_id || sub?.quiz_id || "");
+                  const rowCode = String(sub?.student_code || "").trim();
+                  const groupId = String(sub?.group_id || "");
+                  if (!legacyQuizIds.has(materialId) || !studentCode || rowCode !== studentCode || (groupId && !allowedGroupIds.has(groupId))) continue;
+                  legacySubmissions.push({
+                    material_id: materialId,
+                    quiz_id: materialId,
+                    status: sub.status || row.status || "pending",
+                    file_url: sub.file_url || sub.submission_url || null,
+                    teacher_notes: JSON.stringify(sub),
+                    submitted_at: sub.submitted_at || sub.created_at || row.created_at || null,
+                  });
+                } catch {}
+              }
+            }
+            mergeLegacyPortalQuizzes(portalData, legacyRows || [], allowedGroupIds, legacySubmissions);
+          }
+        }
+
         let teacherPhone = portalData.teacher_phone || portalData.student.teacher_phone || "";
         const targetTenantId = tenantId || portalData.student.tenant_id;
         if (!teacherPhone && targetTenantId) {

@@ -107,7 +107,7 @@ export class PlatformBuilderService {
   async getPublicSettings(subdomain: string): Promise<TenantPlatformSettings | null> {
     if (!subdomain) return null;
     const clean = subdomain.trim().toLowerCase();
-    const settings = await this.repository.getBySubdomain(clean);
+    const settings = await this.repository.getPublicBySubdomain(clean);
     if (!settings || !settings.is_active) {
       return null;
     }
