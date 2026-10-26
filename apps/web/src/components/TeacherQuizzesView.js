@@ -2013,13 +2013,15 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                             type="number" 
                             id="essay_pts_${sub.id}_${fieldKey}" 
                             min="0" 
-                            max="${eq.points || 5}" 
+                            max="${eq.points || 4}" 
                             step="0.5" 
-                            value="${eq.points || 5}" 
+                            value="${eq.points || 4}" 
+                            oninput="const m = Number(this.max || ${eq.points || 4}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0) this.value = 0;"
+                            onblur="const m = Number(this.max || ${eq.points || 4}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0 || this.value === '') this.value = 0;"
                             class="form-input" 
                             style="width: 65px; height: 30px; text-align: center; font-weight: 800; font-size: 0.88rem; border: 1px solid #cbd5e1; border-radius: 4px;"
                           />
-                          <span style="font-size: 0.76rem; font-weight: 600; color: #64748b;">من ${eq.points || 5} درجات</span>
+                          <span style="font-size: 0.76rem; font-weight: 600; color: #64748b;">من ${eq.points || 4} درجات</span>
                         </div>
                       </div>
 
@@ -5166,11 +5168,24 @@ export function registerTeacherQuizzesActions(app) {
     }
 
     const essayScores = {};
+    let adjustedExceeded = false;
     essayQuestions.forEach((eq, eqIdx) => {
       const fieldKey = eq.id || String(eqIdx);
       const inp = document.getElementById(`essay_pts_${sub.id}_${fieldKey}`);
-      essayScores[fieldKey] = Number(inp?.value || 0);
+      const maxPts = Number(eq.points || 4);
+      let val = Number(inp?.value ?? maxPts);
+      if (val > maxPts) {
+        val = maxPts;
+        if (inp) inp.value = maxPts;
+        adjustedExceeded = true;
+      }
+      if (val < 0 || isNaN(val)) val = 0;
+      essayScores[fieldKey] = val;
     });
+
+    if (adjustedExceeded) {
+      this.showToast('تم ضبط الدرجة تلقائياً لتطابق الحد الأقصى للسؤال المقالي', 'warning');
+    }
 
     const note = document.getElementById(`grading_note_${sub.id}`)?.value?.trim() || '';
 
@@ -5199,7 +5214,9 @@ export function registerTeacherQuizzesActions(app) {
             submission_id: subId,
             student_code: sub.student_code || studentId,
             material_id: sub.material_id || sub.quiz_id,
-            essay_score: totalEssay
+            essay_score: totalEssay,
+            essay_scores: essayScores,
+            notes: note
           })
         }).then(r => r.json()).catch(() => null);
         if (fbRes?.success) res = fbRes;

@@ -66,7 +66,7 @@ export default async function handler(req, res) {
         try { body = JSON.parse(body); } catch (_) {}
       }
 
-      const { submission_id, student_code, material_id, essay_score } = body || {};
+      const { submission_id, student_code, material_id, essay_score, essay_scores, notes } = body || {};
 
       const subPhone = `QUIZ_SUB_${material_id}_${student_code}`;
       let targetRow = null;
@@ -110,6 +110,12 @@ export default async function handler(req, res) {
         sub.status = 'approved';
         sub.is_graded = true;
         sub.essay_score = Number(essay_score || 0);
+        if (essay_scores && typeof essay_scores === 'object') {
+          sub.essay_scores = essay_scores;
+        }
+        if (notes) {
+          sub.teacher_notes = notes;
+        }
         sub.total_score = newScore;
         sub.score = newScore;
         sub.final_score = newScore;

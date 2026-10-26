@@ -3651,7 +3651,32 @@
           if (isEssay) {
             const studentText = studentEssayAnswers[idx] || studentAnswers[idx] || 'تم تقديم الإجابة';
             const modelAnswer = q.model_answer || 'موضحة من المعلم';
-            const essayEarned = submission?.essay_score !== undefined ? Number(submission.essay_score) : qPoints;
+            
+            // Per-question specific score lookup
+            let essayEarned = null;
+            const fieldKey = q.id || String(idx);
+            if (submission?.essay_scores && typeof submission.essay_scores === 'object') {
+              if (submission.essay_scores[fieldKey] !== undefined) {
+                essayEarned = Number(submission.essay_scores[fieldKey]);
+              } else if (submission.essay_scores[String(idx)] !== undefined) {
+                essayEarned = Number(submission.essay_scores[String(idx)]);
+              } else if (submission.essay_scores[String(idx + 1)] !== undefined) {
+                essayEarned = Number(submission.essay_scores[String(idx + 1)]);
+              }
+            }
+
+            if (essayEarned === null || isNaN(essayEarned)) {
+              const totalEssayQ = questionsList.filter(item => item.type === 'essay').length;
+              if (totalEssayQ <= 1 && submission?.essay_score !== undefined) {
+                essayEarned = Math.min(qPoints, Number(submission.essay_score));
+              } else if (submission?.essay_score !== undefined && totalEssayQ > 1) {
+                essayEarned = Math.min(qPoints, Math.round(Number(submission.essay_score) / totalEssayQ));
+              } else {
+                essayEarned = qPoints;
+              }
+            }
+            // Strict clamp: essayEarned can NEVER exceed question's maximum points (qPoints)
+            essayEarned = Math.min(qPoints, Math.max(0, essayEarned));
 
             html += `
               <div style="border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px; background: #ffffff;">
