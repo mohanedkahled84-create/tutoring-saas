@@ -330,7 +330,7 @@ export default async function handler(req, res) {
       }
 
       // Handle draft saving (Archive)
-      if (is_draft || status === 'draft') {
+      if (is_draft === true || (status === 'draft' && is_draft !== false)) {
         const draftId = id || `draft_${exam_mode || 'online'}_${Date.now()}`;
         const draftObject = {
           ...body,

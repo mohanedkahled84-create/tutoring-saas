@@ -4234,6 +4234,13 @@ export function registerTeacherQuizzesActions(app) {
     }
 
     const cloned = JSON.parse(JSON.stringify(draft));
+    cloned._sourceDraftId = draft.id;
+    cloned.is_draft = false;
+    cloned.is_archived = false;
+    cloned.status = 'published';
+    if (cloned.id && String(cloned.id).startsWith('draft_')) {
+      cloned.id = null;
+    }
     if (mode === 'online') {
       this.quizzesState.activeOnlineQuiz = cloned;
       this.quizzesState.onlineViewMode = 'wizard';
@@ -4246,7 +4253,7 @@ export function registerTeacherQuizzesActions(app) {
       this.quizzesState.currentPaperQIdx = 0;
     }
     this.renderMainContent();
-    this.showToast(`تم استعادة مسودة (${cloned.title || 'الامتحان'}) بنجاح!`, 'info');
+    this.showToast(`تم استعادة مسودة (${cloned.title || 'الامتحان'}) للاستكمال والنشر!`, 'info');
   };
 
   app.deleteExamDraft = async function(draftId) {
@@ -4782,7 +4789,7 @@ export function registerTeacherQuizzesActions(app) {
 
       for (const gid of targetGroupIds) {
         const payload = {
-          id: (targetGroupIds.length === 1) ? qz?.id : null,
+          id: (targetGroupIds.length === 1 && qz?.id && !String(qz.id).startsWith('draft_')) ? qz.id : null,
           group_id: gid,
           quiz_number: qz.quiz_number,
           title: qz.title,
@@ -4792,6 +4799,9 @@ export function registerTeacherQuizzesActions(app) {
           start_time: qz.start_time,
           end_time: qz.end_time,
           exam_mode: 'online',
+          is_draft: false,
+          is_archived: false,
+          status: 'published',
           questions
         };
 
@@ -4840,8 +4850,25 @@ export function registerTeacherQuizzesActions(app) {
         this.quizzesState.richQuizzes.unshift(optimisticQuiz);
       }
 
+      // If resumed from a draft, clean up from archive
+      const draftToDelete = qz?._sourceDraftId || (String(qz?.id).startsWith('draft_') ? qz.id : null);
+      if (draftToDelete) {
+        if (Array.isArray(this.quizzesState.examDrafts)) {
+          this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftToDelete);
+          try {
+            localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+          } catch (_) {}
+        }
+        fetch('/api/quizzes/rich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete_draft', id: draftToDelete })
+        }).catch(() => {});
+      }
+
       this.showToast(`تم حفظ ونشر امتحان (${qz.title}) بنجاح!`, 'success');
       this.quizzesState.onlineViewMode = 'list';
+      this.quizzesState.onlineListTab = 'published';
       this.renderMainContent();
       await this.loadRichQuizzes();
       if (currentGid) await this.loadQuizzesForGroup(currentGid);
@@ -5425,13 +5452,16 @@ export function registerTeacherQuizzesActions(app) {
 
       for (const gid of targetGroupIds) {
         const payload = {
-          id: (targetGroupIds.length === 1) ? qz?.id : null,
+          id: (targetGroupIds.length === 1 && qz?.id && !String(qz.id).startsWith('draft_')) ? qz.id : null,
           group_id: gid,
           quiz_number: quizNumber,
           title,
           subject,
           time_limit_minutes: timeLimit,
           exam_mode: 'paper',
+          is_draft: false,
+          is_archived: false,
+          status: 'published',
           questions
         };
 
@@ -5473,7 +5503,24 @@ export function registerTeacherQuizzesActions(app) {
         this.quizzesState.richQuizzes.unshift(sq);
       }
 
+      // If resumed from a draft, clean up from archive upon publishing
+      const draftToDelete = qz?._sourceDraftId || (String(qz?.id).startsWith('draft_') ? qz.id : null);
+      if (draftToDelete) {
+        if (Array.isArray(this.quizzesState.examDrafts)) {
+          this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftToDelete);
+          try {
+            localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+          } catch (_) {}
+        }
+        fetch('/api/quizzes/rich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete_draft', id: draftToDelete })
+        }).catch(() => {});
+      }
+
       this.quizzesState.paperViewMode = 'list';
+      this.quizzesState.paperListTab = 'published';
       this.quizzesState.isSavingPaperExam = false;
       this.quizzesState.printQuizId = savedQuizzes[0]?.id;
       this.renderMainContent();
