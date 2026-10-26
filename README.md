@@ -1,5 +1,8 @@
 # Centrly — Arabic-First Tutoring & Center Management SaaS
 
+> 📘 **Looking for Codex & Developer Onboarding?**  
+> Check out the complete master handover guide: [`CODEX_HANDOVER.md`](./CODEX_HANDOVER.md) for full architecture, security standards, API catalog, and deployment guidelines.
+
 **Centrly** is a production-grade, multi-tenant SaaS platform engineered specifically for private tutors and educational centers in Egypt. It streamlines student attendance, automated WhatsApp communication with parents, quiz grade tracking, make-up sessions, automated risk watchlists, and subscription billing.
 
 ---
