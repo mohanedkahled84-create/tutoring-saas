@@ -110,7 +110,7 @@ $function$;
 
 CREATE OR REPLACE FUNCTION public.get_student_for_portal(
   p_identifier text,
-  p_password text
+  p_password text DEFAULT NULL
 )
 RETURNS TABLE(
   id uuid, tenant_id uuid, code text, student_code text, name text,
@@ -299,3 +299,8 @@ FOR EACH ROW EXECUTE FUNCTION public.prevent_self_privilege_escalation();
 REVOKE ALL ON ALL ROUTINES IN SCHEMA public FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON ALL ROUTINES IN SCHEMA public TO service_role, postgres;
 GRANT EXECUTE ON FUNCTION public.get_user_profile(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_current_user_view_financials() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_current_user_role() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_current_user_teacher_id() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_current_user_tenant_id() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
