@@ -880,23 +880,41 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
                     </div>
                   </div>
 
-                  <!-- Actions -->
-                  <div style="display: flex; gap: 0.45rem; align-items: center; margin-top: 1rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;">
+                  <!-- Actions (Edit, Grades, Archive, Delete) -->
+                  <div style="display: flex; gap: 0.4rem; align-items: center; margin-top: 1rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9; flex-wrap: wrap;">
                     <button 
                       type="button" 
-                      style="flex: 1; height: 30px; font-size: 0.75rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"
+                      style="flex: 1 1 100px; height: 30px; font-size: 0.75rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"
                       onclick="window.centrlyApp.editOnlineExamWizard('${escapeHtml(rq.id)}')"
                     >
                       ${getIcon('edit', 12)}
-                      <span>تعديل الامتحان</span>
+                      <span>تعديل</span>
                     </button>
                     <button 
                       type="button" 
-                      style="height: 30px; font-size: 0.75rem; font-weight: 600; background: #f8fafc; color: #334155; border-radius: 5px; border: 1px solid #e2e8f0; cursor: pointer; padding: 0 10px;"
+                      style="height: 30px; font-size: 0.75rem; font-weight: 600; background: #f8fafc; color: #334155; border-radius: 5px; border: 1px solid #e2e8f0; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
                       onclick="window.centrlyApp.switchToRosterForQuiz(${rq.quiz_number})"
                       title="عرض كشف درجات هذا الكويز"
                     >
                       <span>كشف الدرجات</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fffdfa; color: #b45309; border-radius: 5px; border: 1px solid #fde68a; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
+                      onclick="window.centrlyApp.archiveOnlineExam('${escapeHtml(rq.id)}')"
+                      title="نقل الامتحان إلى الأرشيف والمسودات لإخفائه عن الطلاب"
+                    >
+                      ${getIcon('archive', 11, '#b45309')}
+                      <span>أرشفة</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fef2f2; color: #dc2626; border-radius: 5px; border: 1px solid #fecaca; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
+                      onclick="window.centrlyApp.deleteOnlineExam('${escapeHtml(rq.id)}')"
+                      title="حذف هذا الامتحان نهائياً"
+                    >
+                      ${getIcon('trash', 11, '#dc2626')}
+                      <span>حذف</span>
                     </button>
                   </div>
 
@@ -925,7 +943,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
         <!-- Results Table Card inside Online Builder -->
         ${gradedSubmissions && gradedSubmissions.length > 0 ? `
           <div style="margin-top: 0.5rem;">
-            ${renderOnlineGradingResultsCard(gradedSubmissions, activeGroup, false)}
+            ${renderOnlineGradingResultsCard(gradedSubmissions, activeGroup, false, state)}
           </div>
         ` : ''}
 
@@ -1562,12 +1580,43 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
 // ============================================================================
 // ONLINE RESULTS COMPONENT (نتائج ودرجات الامتحانات الإلكترونية)
 // ============================================================================
-function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = null, showCreateBtn = true) {
-  const list = Array.isArray(gradedSubmissions) ? gradedSubmissions : [];
+function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = null, showCreateBtn = true, state = {}) {
+  const allList = Array.isArray(gradedSubmissions) ? gradedSubmissions : [];
+  const appQuizzesState = window.centrlyApp?.quizzesState || {};
+  const currentFilter = (state && state.gradingFilterQuizNumber !== undefined && state.gradingFilterQuizNumber !== null)
+    ? String(state.gradingFilterQuizNumber)
+    : (appQuizzesState.gradingFilterQuizNumber || 'all');
+
+  // Extract distinct quizzes from submissions and richQuizzes
+  const quizMap = new Map();
+  allList.forEach(s => {
+    const qNum = s.quiz_number !== undefined ? String(s.quiz_number) : (s.quiz_id ? String(s.quiz_id) : '1');
+    const qTitle = s.quiz_title || `كويز ${qNum}`;
+    if (!quizMap.has(qNum)) {
+      quizMap.set(qNum, { number: qNum, title: qTitle, count: 0 });
+    }
+    quizMap.get(qNum).count++;
+  });
+
+  const richList = (state && state.richQuizzes) || appQuizzesState.richQuizzes || [];
+  richList.forEach(rq => {
+    const qNum = String(rq.quiz_number || 1);
+    const qTitle = rq.title || `كويز ${qNum}`;
+    if (!quizMap.has(qNum)) {
+      quizMap.set(qNum, { number: qNum, title: qTitle, count: 0 });
+    }
+  });
+
+  const availableQuizzes = Array.from(quizMap.values()).sort((a, b) => Number(a.number) - Number(b.number));
+
+  // Filter submissions by chosen quiz
+  const list = (currentFilter === 'all')
+    ? allList
+    : allList.filter(s => String(s.quiz_number) === currentFilter || String(s.quiz_id) === currentFilter);
 
   return `
     <div class="card" style="margin: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1.15rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.65rem;">
         <div>
           <h4 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 6px;">
             <span>نتائج ودرجات الامتحانات الإلكترونية المعتمدة</span>
@@ -1579,12 +1628,28 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
             تظهر هنا درجات الطلاب المعتمدة للاختبارات الإلكترونية عبر هواتفهم شاملة التصحيح التلقائي والمقالي.
           </p>
         </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          ${list.length > 0 ? `
-            <span style="background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; font-size: 0.74rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
-              إجمالي النتائج: ${list.length}
-            </span>
-          ` : ''}
+
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <!-- Dropdown Quiz Filter -->
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 3px 8px;">
+            <span style="font-size: 0.75rem; font-weight: 800; color: #1e293b; white-space: nowrap;">تصفية حسب الكويز:</span>
+            <select 
+              style="height: 28px; font-size: 0.76rem; font-weight: 700; color: #0f172a; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; cursor: pointer; padding: 0 6px;"
+              onchange="window.centrlyApp.setGradingQuizFilter(this.value)"
+            >
+              <option value="all" ${currentFilter === 'all' ? 'selected' : ''}>جميع الامتحانات (${allList.length} نتيجة)</option>
+              ${availableQuizzes.map(q => `
+                <option value="${q.number}" ${currentFilter === String(q.number) ? 'selected' : ''}>
+                  ${escapeHtml(q.title || 'كويز ' + q.number)} (${q.count} طلاب)
+                </option>
+              `).join('')}
+            </select>
+          </div>
+
+          <span style="background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; font-size: 0.74rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; white-space: nowrap;">
+            المعروض: ${list.length}
+          </span>
+
           <button 
             type="button"
             style="height: 28px; width: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; color: #64748b; cursor: pointer;"
@@ -1669,12 +1734,20 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
       ` : `
         <div style="text-align: center; padding: 2.2rem 1.5rem; background: #fafafa; border: 1px dashed #cbd5e1; border-radius: 8px;">
           <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a; margin-bottom: 0.25rem;">
-            لا توجد درجات معتمدة للامتحانات الإلكترونية بعد
+            ${currentFilter !== 'all' ? 'لا توجد نتائج مسجلة لهذا الكويز حتى الآن' : 'لا توجد درجات معتمدة للامتحانات الإلكترونية بعد'}
           </div>
-          <p style="font-size: 0.78rem; color: #64748b; margin: 0 auto ${showCreateBtn ? '1rem' : '0'} auto; max-width: 440px; line-height: 1.5;">
-            هذا القسم يعرض نتائج الامتحانات التي سلمها الطلاب إلكترونياً بعد اعتماد درجاتها كاملة.
+          <p style="font-size: 0.78rem; color: #64748b; margin: 0 auto 0.75rem auto; max-width: 440px; line-height: 1.5;">
+            ${currentFilter !== 'all' ? 'يمكنك اختيار كويز آخر من القائمة بالأعلى أو الضغط أدناه للعودة لعرض كافة النتائج.' : 'هذا القسم يعرض نتائج الامتحانات التي سلمها الطلاب إلكترونياً بعد اعتماد درجاتها كاملة.'}
           </p>
-          ${showCreateBtn ? `
+          ${currentFilter !== 'all' ? `
+            <button 
+              type="button" 
+              style="height: 30px; padding: 0 14px; font-size: 0.76rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer;"
+              onclick="window.centrlyApp.setGradingQuizFilter('all')"
+            >
+              عرض نتائج جميع الامتحانات
+            </button>
+          ` : (showCreateBtn ? `
             <button 
               type="button" 
               style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer;"
@@ -1682,7 +1755,7 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
             >
               + إنشاء كويز أونلاين جديد للطلاب
             </button>
-          ` : ''}
+          ` : '')}
         </div>
       `}
     </div>
@@ -1895,7 +1968,7 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
         `}
       ` : `
         <!-- VIEW B: GRADED RESULTS OVERVIEW -->
-        ${renderOnlineGradingResultsCard(gradedSubmissions, activeGroup, true)}
+        ${renderOnlineGradingResultsCard(gradedSubmissions, activeGroup, true, state)}
       `}
 
     </div>
@@ -2623,6 +2696,24 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                       title="تعديل هذا الامتحان"
                     >
                       ${getIcon('edit', 12)}
+                    </button>
+                    <button 
+                      type="button" 
+                      style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fffdfa; color: #b45309; border-radius: 5px; border: 1px solid #fde68a; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
+                      onclick="window.centrlyApp.archiveOnlineExam('${escapeHtml(rq.id)}')"
+                      title="نقل الامتحان إلى الأرشيف والمسودات"
+                    >
+                      ${getIcon('archive', 11, '#b45309')}
+                      <span>أرشفة</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fef2f2; color: #dc2626; border-radius: 5px; border: 1px solid #fecaca; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
+                      onclick="window.centrlyApp.deleteOnlineExam('${escapeHtml(rq.id)}')"
+                      title="حذف هذا الامتحان نهائياً"
+                    >
+                      ${getIcon('trash', 11, '#dc2626')}
+                      <span>حذف</span>
                     </button>
                   </div>
 
@@ -4650,8 +4741,84 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.switchToRosterForQuiz = function(quizNum) {
-    this.quizzesState.currentQuizNumber = quizNum;
-    this.quizzesState.activeSubTab = 'roster';
+    this.quizzesState.gradingFilterQuizNumber = String(quizNum);
+    this.quizzesState.activeSubTab = 'online_grading';
+    this.quizzesState.gradingViewMode = 'graded';
+    this.renderMainContent();
+  };
+
+  app.setGradingQuizFilter = function(quizNum) {
+    this.quizzesState.gradingFilterQuizNumber = quizNum;
+    this.renderMainContent();
+  };
+
+  app.archiveOnlineExam = async function(quizId) {
+    if (!confirm('هل تريد نقل هذا الامتحان إلى الأرشيف والمسودات؟\n(سيتم إخفاؤه عن الطلاب وعن الامتحانات المنشورة، مع إمكانية استعادته وتعديله متى شئت).')) {
+      return;
+    }
+    const q = (this.quizzesState.richQuizzes || []).find(x => x.id === quizId);
+    if (!q) {
+      this.showToast('لم يتم العثور على الامتحان المطلوب', 'warning');
+      return;
+    }
+
+    // 1. Remove from richQuizzes
+    this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
+
+    // 2. Add to examDrafts
+    const draftItem = {
+      ...q,
+      id: q.id || `draft_online_${Date.now()}`,
+      is_archived: true,
+      is_draft: true,
+      status: 'draft',
+      archived_at: new Date().toISOString()
+    };
+    if (!Array.isArray(this.quizzesState.examDrafts)) this.quizzesState.examDrafts = [];
+    this.quizzesState.examDrafts.unshift(draftItem);
+
+    try {
+      localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+    } catch (_) {}
+
+    // 3. Call serverless API
+    fetch('/api/quizzes/rich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'archive_quiz',
+        id: q.id,
+        group_id: q.group_id,
+        quiz_number: q.quiz_number,
+        exam_mode: q.exam_mode || 'online',
+        quiz: draftItem
+      })
+    }).catch(() => {});
+
+    this.showToast('تم نقل الامتحان إلى الأرشيف والمسودات بنجاح.', 'success');
+    this.renderMainContent();
+  };
+
+  app.deleteOnlineExam = async function(quizId) {
+    if (!confirm('هل أنت متأكد من حذف هذا الامتحان نهائياً؟\nتحذير: سيتم حذف هذا الامتحان نهائياً ولن يظهر للطلاب مرة أخرى.')) {
+      return;
+    }
+    const q = (this.quizzesState.richQuizzes || []).find(x => x.id === quizId);
+    this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
+
+    fetch('/api/quizzes/rich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'delete_quiz',
+        id: quizId,
+        group_id: q?.group_id,
+        quiz_number: q?.quiz_number,
+        exam_mode: q?.exam_mode || 'online'
+      })
+    }).catch(() => {});
+
+    this.showToast('تم حذف الامتحان نهائياً بنجاح.', 'success');
     this.renderMainContent();
   };
 

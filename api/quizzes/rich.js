@@ -249,6 +249,109 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, message: 'Draft deleted successfully' });
       }
 
+      // Handle full quiz deletion (Delete Completely)
+      if (action === 'delete_quiz') {
+        const qId = id;
+        const qGid = group_id || 'all';
+        const qNum = quiz_number;
+        const mode = exam_mode === 'paper' ? 'PAPER_' : 'ONLINE_';
+
+        try {
+          if (qId && String(qId).length > 20) {
+            await fetch(`${SUPABASE_URL}/rest/v1/study_materials?id=eq.${encodeURIComponent(qId)}`, {
+              method: 'DELETE',
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+            });
+          }
+
+          if (qGid && qNum !== undefined) {
+            const phoneKey = `QUIZ_DEF_${mode}${qGid}_${qNum}`;
+            await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(phoneKey)}`, {
+              method: 'DELETE',
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+            });
+          }
+
+          if (qId) {
+            await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=like.%${encodeURIComponent(qId)}%`, {
+              method: 'DELETE',
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+            });
+          }
+        } catch (delErr) {
+          console.warn('Delete quiz error:', delErr);
+        }
+        return res.status(200).json({ success: true, message: 'Quiz deleted successfully' });
+      }
+
+      // Handle quiz archiving (Move from Published to Archive/Drafts)
+      if (action === 'archive_quiz') {
+        const qId = id || `draft_${exam_mode || 'online'}_${Date.now()}`;
+        const qGid = group_id || 'all';
+        const qNum = quiz_number;
+        const mode = exam_mode === 'paper' ? 'PAPER_' : 'ONLINE_';
+
+        try {
+          if (qGid && qNum !== undefined) {
+            const publishedPhone = `QUIZ_DEF_${mode}${qGid}_${qNum}`;
+            await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox?phone=eq.${encodeURIComponent(publishedPhone)}`, {
+              method: 'DELETE',
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+            });
+          }
+          if (qId && String(qId).length > 20) {
+            await fetch(`${SUPABASE_URL}/rest/v1/study_materials?id=eq.${encodeURIComponent(qId)}`, {
+              method: 'DELETE',
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+            });
+          }
+
+          const draftPhone = `QUIZ_DEF_DRAFT_${qId}`;
+          const draftData = body.quiz || {
+            ...body,
+            id: qId,
+            is_draft: true,
+            is_archived: true,
+            status: 'draft',
+            archived_at: new Date().toISOString()
+          };
+
+          await fetch(`${SUPABASE_URL}/rest/v1/whatsapp_inbox`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              phone: draftPhone,
+              direction: 'outbound',
+              message_body: JSON.stringify(draftData),
+              status: 'draft',
+              updated_at: new Date().toISOString(),
+            }),
+          });
+        } catch (arcErr) {
+          console.warn('Archive quiz error:', arcErr);
+        }
+        return res.status(200).json({ success: true, message: 'Quiz archived successfully' });
+      }
+
       // Handle draft saving (Archive)
       if (is_draft || status === 'draft') {
         const draftId = id || `draft_${exam_mode || 'online'}_${Date.now()}`;
