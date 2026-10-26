@@ -4256,26 +4256,31 @@ export function registerTeacherQuizzesActions(app) {
     this.showToast(`تم استعادة مسودة (${cloned.title || 'الامتحان'}) للاستكمال والنشر!`, 'info');
   };
 
-  app.deleteExamDraft = async function(draftId) {
-    if (!confirm('هل أنت متأكد من حذف هذه المسودة من الأرشيف نهائياً؟ لا يمكن التراجع عن هذا الإجراء.')) {
-      return;
-    }
+  app.deleteExamDraft = function(draftId) {
+    this.showConfirmModal({
+      title: 'حذف المسودة من الأرشيف',
+      message: 'هل أنت متأكد من حذف هذه المسودة من الأرشيف نهائياً؟\nلا يمكن التراجع عن هذا الإجراء بعد الحذف.',
+      confirmText: 'حذف المسودة',
+      cancelText: 'إلغاء',
+      isDanger: true,
+      onConfirm: async () => {
+        if (Array.isArray(this.quizzesState.examDrafts)) {
+          this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftId);
+          try {
+            localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+          } catch (_) {}
+        }
 
-    if (Array.isArray(this.quizzesState.examDrafts)) {
-      this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftId);
-      try {
-        localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
-      } catch (_) {}
-    }
+        fetch('/api/quizzes/rich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete_draft', id: draftId })
+        }).catch(() => {});
 
-    fetch('/api/quizzes/rich', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete_draft', id: draftId })
-    }).catch(() => {});
-
-    this.showToast('تم حذف المسودة من الأرشيف بنجاح.', 'success');
-    this.renderMainContent();
+        this.showToast('تم حذف المسودة من الأرشيف بنجاح.', 'success');
+        this.renderMainContent();
+      }
+    });
   };
 
   app.setOnlineListTab = function(tab) {
@@ -4904,79 +4909,94 @@ export function registerTeacherQuizzesActions(app) {
     this.renderMainContent();
   };
 
-  app.archiveOnlineExam = async function(quizId) {
-    if (!confirm('هل تريد نقل هذا الامتحان إلى الأرشيف والمسودات؟\n(سيتم إخفاؤه عن الطلاب وعن الامتحانات المنشورة، مع إمكانية استعادته وتعديله متى شئت).')) {
-      return;
-    }
+  app.archiveOnlineExam = function(quizId) {
     const q = (this.quizzesState.richQuizzes || []).find(x => x.id === quizId);
     if (!q) {
       this.showToast('لم يتم العثور على الامتحان المطلوب', 'warning');
       return;
     }
+    const examTitle = q.title ? `«${q.title}»` : 'هذا الامتحان';
 
-    // 1. Remove from richQuizzes
-    this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
+    this.showConfirmModal({
+      title: 'أرشفة الامتحان ونقله للمسودات',
+      message: `هل تريد نقل امتحان ${examTitle} إلى الأرشيف والمسودات؟\n(سيتم إخفاؤه عن الطلاب وعن الامتحانات المنشورة، مع إمكانية استعادته وتعديله متى شئت).`,
+      confirmText: 'نقل للأرشيف',
+      cancelText: 'إلغاء',
+      isDanger: false,
+      onConfirm: async () => {
+        // 1. Remove from richQuizzes
+        this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
 
-    // 2. Add to examDrafts
-    const draftItem = {
-      ...q,
-      id: q.id || `draft_online_${Date.now()}`,
-      is_archived: true,
-      is_draft: true,
-      status: 'draft',
-      archived_at: new Date().toISOString()
-    };
-    if (!Array.isArray(this.quizzesState.examDrafts)) this.quizzesState.examDrafts = [];
-    this.quizzesState.examDrafts.unshift(draftItem);
+        // 2. Add to examDrafts
+        const draftItem = {
+          ...q,
+          id: q.id || `draft_online_${Date.now()}`,
+          is_archived: true,
+          is_draft: true,
+          status: 'draft',
+          archived_at: new Date().toISOString()
+        };
+        if (!Array.isArray(this.quizzesState.examDrafts)) this.quizzesState.examDrafts = [];
+        this.quizzesState.examDrafts.unshift(draftItem);
 
-    try {
-      localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
-      localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
-    } catch (_) {}
+        try {
+          localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+          localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
+        } catch (_) {}
 
-    // 3. Call serverless API
-    fetch('/api/quizzes/rich', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'archive_quiz',
-        id: q.id,
-        group_id: q.group_id,
-        quiz_number: q.quiz_number,
-        exam_mode: q.exam_mode || 'online',
-        quiz: draftItem
-      })
-    }).catch(() => {});
+        // 3. Call serverless API
+        fetch('/api/quizzes/rich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'archive_quiz',
+            id: q.id,
+            group_id: q.group_id,
+            quiz_number: q.quiz_number,
+            exam_mode: q.exam_mode || (this.quizzesState.activeSubTab === 'paper_builder' ? 'paper' : 'online'),
+            quiz: draftItem
+          })
+        }).catch(() => {});
 
-    this.showToast('تم نقل الامتحان إلى الأرشيف والمسودات بنجاح.', 'success');
-    this.renderMainContent();
+        this.showToast('تم نقل الامتحان إلى الأرشيف والمسودات بنجاح.', 'success');
+        this.renderMainContent();
+      }
+    });
   };
 
-  app.deleteOnlineExam = async function(quizId) {
-    if (!confirm('هل أنت متأكد من حذف هذا الامتحان نهائياً؟\nتحذير: سيتم حذف هذا الامتحان نهائياً ولن يظهر للطلاب مرة أخرى.')) {
-      return;
-    }
+  app.deleteOnlineExam = function(quizId) {
     const q = (this.quizzesState.richQuizzes || []).find(x => x.id === quizId);
-    this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
+    const examTitle = q?.title ? `«${q.title}»` : 'هذا الامتحان';
 
-    try {
-      localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
-    } catch (_) {}
+    this.showConfirmModal({
+      title: 'حذف الامتحان نهائياً',
+      message: `هل أنت متأكد من حذف امتحان ${examTitle} نهائياً؟\nتحذير: سيتم حذف هذا الامتحان نهائياً ولن يظهر للطلاب مرة أخرى.`,
+      confirmText: 'حذف الامتحان نهائياً',
+      cancelText: 'إلغاء التراجع',
+      isDanger: true,
+      onConfirm: async () => {
+        this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
 
-    fetch('/api/quizzes/rich', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'delete_quiz',
-        id: quizId,
-        group_id: q?.group_id,
-        quiz_number: q?.quiz_number,
-        exam_mode: q?.exam_mode || 'online'
-      })
-    }).catch(() => {});
+        try {
+          localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
+        } catch (_) {}
 
-    this.showToast('تم حذف الامتحان نهائياً بنجاح.', 'success');
-    this.renderMainContent();
+        fetch('/api/quizzes/rich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'delete_quiz',
+            id: quizId,
+            group_id: q?.group_id,
+            quiz_number: q?.quiz_number,
+            exam_mode: q?.exam_mode || (this.quizzesState.activeSubTab === 'paper_builder' ? 'paper' : 'online')
+          })
+        }).catch(() => {});
+
+        this.showToast('تم حذف الامتحان نهائياً بنجاح.', 'success');
+        this.renderMainContent();
+      }
+    });
   };
 
   // Grading Tab Actions
@@ -6536,26 +6556,33 @@ export function registerTeacherQuizzesActions(app) {
       return;
     }
 
-    if (confirm(`هل أنت متأكد من رغبتك في إرسال درجات (${studentsToDispatch.length}) طالب عبر الواتساب دفعة واحدة؟`)) {
-      this.sessionState.isDispatchingQuizWhatsApp = true;
-      request('/quizzes/dispatch-scores', {
-        method: 'POST',
-        body: {
-          group_id: selectedGroupId,
-          quiz_number: currQuizNum,
-          quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
-          max_score: currentQuiz.maxScore || 10,
-          students: studentsToDispatch,
-          target: 'both',
-        },
-      }).then(res => {
-        this.showToast(`تم إتمام إرسال درجات الكويز بنجاح!`, 'success');
-      }).catch(err => {
-        this.showToast(`حدث خطأ أثناء الإرسال الجماعي: ${err.message}`, 'danger');
-      }).finally(() => {
-        this.sessionState.isDispatchingQuizWhatsApp = false;
-      });
-    }
+    this.showConfirmModal({
+      title: 'إرسال درجات الكويز عبر الواتساب',
+      message: `هل أنت متأكد من رغبتك في إرسال درجات (${studentsToDispatch.length}) طالب عبر الواتساب دفعة واحدة؟`,
+      confirmText: 'إرسال الآن',
+      cancelText: 'إلغاء',
+      isDanger: false,
+      onConfirm: () => {
+        this.sessionState.isDispatchingQuizWhatsApp = true;
+        request('/quizzes/dispatch-scores', {
+          method: 'POST',
+          body: {
+            group_id: selectedGroupId,
+            quiz_number: currQuizNum,
+            quiz_title: currentQuiz.title || `كويز ${currQuizNum}`,
+            max_score: currentQuiz.maxScore || 10,
+            students: studentsToDispatch,
+            target: 'both',
+          },
+        }).then(res => {
+          this.showToast(`تم إتمام إرسال درجات الكويز بنجاح!`, 'success');
+        }).catch(err => {
+          this.showToast(`حدث خطأ أثناء الإرسال الجماعي: ${err.message}`, 'danger');
+        }).finally(() => {
+          this.sessionState.isDispatchingQuizWhatsApp = false;
+        });
+      }
+    });
   };
 
   // Global Clipboard Image Paste Handler (Ctrl + V to quickly paste question screenshot)

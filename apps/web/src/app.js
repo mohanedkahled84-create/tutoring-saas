@@ -24,7 +24,7 @@ import { renderRiskWatchlistView, registerRiskWatchlistActions } from './compone
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=9.3.0';
+import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=9.4.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -2587,7 +2587,7 @@ class CentrlyApp {
           </h3>
           <button onclick="document.getElementById('centrlyConfirmModal')?.remove()" style="background: transparent; border: none; cursor: pointer; color: var(--centrly-text); display: flex; align-items: center;">${getIcon('close', 16, 'currentColor')}</button>
         </div>
-        <div style="padding: 1.5rem; font-size: 0.925rem; color: var(--centrly-ink); line-height: 1.6;">
+        <div style="padding: 1.5rem; font-size: 0.925rem; color: var(--centrly-ink); line-height: 1.6; white-space: pre-line;">
           ${escapeHtml(message)}
         </div>
         <div style="padding: 1rem 1.5rem; background: var(--centrly-surface); border-top: 1px solid var(--centrly-line); display: flex; justify-content: flex-end; gap: 0.75rem;">
