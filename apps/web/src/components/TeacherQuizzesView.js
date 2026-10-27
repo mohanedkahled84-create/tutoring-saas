@@ -2729,246 +2729,309 @@ function renderStealthBarcode(serial, height = 20, barWidth = 1.2) {
   `;
 }
 
-function renderModelAnswerSheetHtml(targetQuiz, modelLetter = 'A', isPrint = false) {
+function renderModelAnswerSheetHtml(targetQuiz, requestedModel = 'all', isPrint = false) {
   if (!targetQuiz) return '';
-  const { selectedModel, modelCode, examCode, barcodeSerial } = getModelInfo(targetQuiz, modelLetter);
-  const questions = getStealthModelQuestions(targetQuiz, selectedModel);
+
+  const cleanExamTitle = (targetQuiz.title || 'اختبار دوري')
+    .replace(/\s*[\(\[].*?(?:ورقي|بابل\s*شيت|paper|bubble).*?[\)\]]/gi, '')
+    .trim();
+
+  const questions = Array.isArray(targetQuiz.questions) ? targetQuiz.questions : [];
   const mcqQuestions = questions.filter(q => q.type !== 'essay');
   const essayQuestions = questions.filter(q => q.type === 'essay');
   const totalPoints = questions.reduce((s, q) => s + Number(q.points || 1), 0);
-  const totalQ = Math.max(1, mcqQuestions.length > 0 ? mcqQuestions.length : 10);
-
-  const modelLetterAr = selectedModel === 'B' ? 'ب' : (selectedModel === 'C' ? 'ج' : 'أ');
-
-  const containerClass = isPrint ? 'centrly-model-answer-sheet' : 'printable-model-answer-sheet';
-  const containerStyle = isPrint 
-    ? 'box-sizing: border-box; width: 100%; min-height: 278mm; padding: 7mm 8mm; background: #ffffff; color: #000000; font-family: "Cairo", sans-serif; direction: rtl; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid #000000; page-break-after: always; break-after: page;'
-    : 'background: #ffffff; border: 2px solid #000000; border-radius: 4px; padding: 1.25rem 1.15rem; box-shadow: 0 4px 14px rgba(0,0,0,0.08); font-family: "Cairo", sans-serif; width: 100%; max-width: 800px; min-height: 1020px; margin: 0 auto; box-sizing: border-box; overflow-x: hidden; direction: rtl; display: flex; flex-direction: column; justify-content: space-between;';
-
-  let numCols = 1;
-  if (totalQ > 36) numCols = 3;
-  else if (totalQ > 15) numCols = 2;
-  else numCols = 1;
-
-  const baseCount = Math.floor(totalQ / numCols);
-  const remainder = totalQ % numCols;
-  const colCounts = [];
-  for (let c = 0; c < numCols; c++) {
-    colCounts.push(baseCount + (c < remainder ? 1 : 0));
-  }
-
-  let runningStart = 1;
-  const colStartNums = [];
-  for (let c = 0; c < numCols; c++) {
-    colStartNums.push(runningStart);
-    runningStart += colCounts[c];
-  }
-
-  const isSingleCol = numCols === 1;
-  const gridContainerStyle = isSingleCol
-    ? 'border: 1.5px solid #000000; padding: 0.85rem 1.25rem; display: flex; justify-content: center;'
-    : `border: 1.5px solid #000000; padding: 0.75rem 1rem; display: grid; grid-template-columns: repeat(${numCols}, 1fr); gap: ${numCols === 3 ? '1rem' : '1.5rem'};`;
-
-  const colBoxStyle = isSingleCol
-    ? 'width: 100%; max-width: 330px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.35rem;'
-    : 'display: flex; flex-direction: column; gap: 0.25rem;';
-
-  const bubbleSize = isSingleCol ? '20px' : (numCols === 3 ? '16px' : '18px');
-  const bubbleFontSize = isSingleCol ? '0.72rem' : (numCols === 3 ? '0.64rem' : '0.68rem');
-  const bubbleGap = isSingleCol ? '1.15rem' : (numCols === 3 ? '0.55rem' : '0.75rem');
-  const rowPadding = isSingleCol ? '3.5px 0' : '1.5px 0';
-
   const arabicChoices = ['أ', 'ب', 'ج', 'د'];
 
-  return `
-    <div class="${containerClass}" style="${containerStyle}">
-      <div>
-        <!-- Alignment & Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-          <div style="width: 18px; height: 18px; background: #000000;"></div>
-          <div style="text-align: center;">
-            <div style="display: inline-flex; align-items: center; gap: 6px; background: #0f172a; color: #ffffff; padding: 3px 12px; border-radius: 4px; font-size: 0.82rem; font-weight: 800; margin-bottom: 4px;">
-              <span>🔑</span>
-              <span>نموذج الإجابة الرسمي وتوزيع الدرجات — المعلم</span>
-            </div>
-            <h2 style="font-size: 1.15rem; font-weight: 900; margin: 0; color: #000000; line-height: 1.2;">
-              ${escapeHtml(targetQuiz.title || 'امتحان ورقي')}
-            </h2>
-            <div style="font-size: 0.78rem; font-weight: 800; color: #333333; margin-top: 0.15rem; display: flex; align-items: center; justify-content: center; gap: 0.35rem; flex-wrap: wrap;">
-              <span>المادة: ${escapeHtml(targetQuiz.subject || 'الفيزياء')}</span>
-              <span>•</span>
-              <span>الدرجة الكلية: ${totalPoints} درجات</span>
-              <span>•</span>
-              <span>عدد الأسئلة: ${questions.length}</span>
-            </div>
-          </div>
-          <div style="width: 18px; height: 18px; background: #000000;"></div>
-        </div>
+  const containerClass = isPrint ? 'centrly-model-answer-sheet' : 'printable-model-answer-sheet';
+  const baseContainerStyle = isPrint 
+    ? 'box-sizing: border-box; width: 100%; min-height: 278mm; height: 278mm; padding: 7mm 8mm; background: #ffffff; color: #000000; font-family: "Cairo", sans-serif; direction: rtl; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid #000000; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid;'
+    : 'background: #ffffff; border: 2px solid #000000; border-radius: 4px; padding: 1.25rem 1.15rem; box-shadow: 0 4px 14px rgba(0,0,0,0.08); font-family: "Cairo", sans-serif; width: 100%; max-width: 800px; min-height: 1020px; margin: 0 auto 2rem auto; box-sizing: border-box; overflow-x: hidden; direction: rtl; display: flex; flex-direction: column; justify-content: space-between;';
 
-        <!-- Big Model Badge & Barcode Box -->
-        <div style="border: 2px solid #000000; background: #f8fafc; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="background: #059669; color: #ffffff; border: 2px solid #047857; font-size: 1.25rem; font-weight: 900; padding: 4px 14px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;">
-              <span>نموذج (${modelLetterAr})</span>
-              <span style="font-size: 0.9rem; font-family: monospace;">Model ${selectedModel}</span>
+  // Determine models to render: 'all' renders A, B, and C back-to-back
+  const modelsToRender = (requestedModel === 'all' || !requestedModel) 
+    ? ['A', 'B', 'C'] 
+    : [requestedModel];
+
+  let pagesHtml = '';
+
+  // 1. RENDER BUBBLE SHEET ANSWER KEY FOR EACH MODEL (Pure Black & White, No Colors, No Emojis)
+  modelsToRender.forEach((mLetter) => {
+    const { selectedModel, modelCode, examCode, barcodeSerial } = getModelInfo(targetQuiz, mLetter);
+    const mQuestions = getStealthModelQuestions(targetQuiz, selectedModel);
+    const mMcqs = mQuestions.filter(q => q.type !== 'essay');
+    const totalQ = Math.max(1, mMcqs.length > 0 ? mMcqs.length : 10);
+    const modelLetterAr = selectedModel === 'B' ? 'ب' : (selectedModel === 'C' ? 'ج' : 'أ');
+
+    // Layout columns: 1 column if <= 15, 2 columns if 16..36, 3 columns if > 36
+    let numCols = 1;
+    if (totalQ > 36) numCols = 3;
+    else if (totalQ > 15) numCols = 2;
+    else numCols = 1;
+
+    const baseCount = Math.floor(totalQ / numCols);
+    const remainder = totalQ % numCols;
+    const colCounts = [];
+    for (let c = 0; c < numCols; c++) {
+      colCounts.push(baseCount + (c < remainder ? 1 : 0));
+    }
+
+    let runningStart = 1;
+    const colStartNums = [];
+    for (let c = 0; c < numCols; c++) {
+      colStartNums.push(runningStart);
+      runningStart += colCounts[c];
+    }
+
+    const isSingleCol = numCols === 1;
+    const gridContainerStyle = isSingleCol
+      ? 'border: 1.5px solid #000000; padding: 0.75rem 1.25rem; display: flex; justify-content: center; background: #ffffff;'
+      : `border: 1.5px solid #000000; padding: 0.65rem 0.85rem; display: grid; grid-template-columns: repeat(${numCols}, 1fr); gap: ${numCols === 3 ? '0.75rem' : '1.25rem'}; background: #ffffff;`;
+
+    const colBoxStyle = isSingleCol
+      ? 'width: 100%; max-width: 340px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.3rem;'
+      : 'display: flex; flex-direction: column; gap: 0.2rem;';
+
+    const bubbleSize = isSingleCol ? '20px' : (numCols === 3 ? '16px' : '18px');
+    const bubbleFontSize = isSingleCol ? '0.74rem' : (numCols === 3 ? '0.64rem' : '0.68rem');
+    const bubbleGap = isSingleCol ? '1.15rem' : (numCols === 3 ? '0.55rem' : '0.75rem');
+    const rowPadding = isSingleCol ? '3.5px 0' : '1.5px 0';
+
+    pagesHtml += `
+      <div class="${containerClass}" style="${baseContainerStyle}">
+        <div>
+          <!-- Header (Pure Black & White, Formal Academic Header) -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; border-bottom: 2px solid #000000; padding-bottom: 0.45rem;">
+            <div style="width: 16px; height: 16px; background: #000000;"></div>
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 0.76rem; font-weight: 800; color: #000000; letter-spacing: 0.5px;">
+                وزارة التربية والتعليم • نموذج إجابة رسمي معتمد للتصحيح اليدوي
+              </div>
+              <h2 style="font-size: 1.15rem; font-weight: 900; margin: 2px 0 0 0; color: #000000; line-height: 1.2;">
+                ${escapeHtml(cleanExamTitle)}
+              </h2>
+              <div style="font-size: 0.75rem; font-weight: 700; color: #222222; margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 0.4rem; flex-wrap: wrap;">
+                <span>المادة: ${escapeHtml(targetQuiz.subject || 'الفيزياء')}</span>
+                <span>•</span>
+                <span>الدرجة العظمى: ${totalPoints} درجات</span>
+                <span>•</span>
+                <span>أسئلة البابل شيت: ${mMcqs.length} سؤال</span>
+              </div>
             </div>
-            <div style="font-size: 0.78rem; font-weight: 700; color: #334155;">
-              مفتاح التصحيح اليدوي المعتمد للنموذج المشفر ${selectedModel}
+            <div style="width: 16px; height: 16px; background: #000000;"></div>
+          </div>
+
+          <!-- Model Identification Box (Pure Black & White, No Color, No Emoji) -->
+          <div style="border: 2px solid #000000; background: #ffffff; padding: 0.45rem 0.75rem; margin-bottom: 0.65rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="background: #000000; color: #ffffff; border: 2px solid #000000; font-size: 1.1rem; font-weight: 900; padding: 3px 12px; border-radius: 3px;">
+                نموذج (${modelLetterAr}) — Model ${selectedModel}
+              </div>
+              <div style="font-size: 0.8rem; font-weight: 800; color: #000000;">
+                مفتاح تصحيح البابل شيت للنموذج المشفر ${selectedModel}
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="text-align: left; font-family: monospace; font-size: 0.72rem; font-weight: 900; color: #000000;">
+                <div>${escapeHtml(barcodeSerial)}</div>
+                <div style="font-size: 0.65rem; color: #333333;">CODE: ${examCode}-${modelCode}</div>
+              </div>
+              <div style="display: inline-flex; flex-direction: column; align-items: center;">
+                ${renderStealthBarcode(barcodeSerial, 18, 1.2)}
+              </div>
             </div>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="text-align: left; font-family: monospace; font-size: 0.72rem; font-weight: 800; color: #000000;">
-              <div>${escapeHtml(barcodeSerial)}</div>
-              <div style="font-size: 0.65rem; color: #64748b;">CODE: ${examCode}-${modelCode}</div>
+          <!-- Quick Solution Ribbon (جدول الحل السريع - أبيض وأسود بدون ألوان وبدون إيموجيز) -->
+          <div style="border: 1.5px solid #000000; background: #ffffff; padding: 0.45rem 0.65rem; margin-bottom: 0.65rem;">
+            <div style="font-size: 0.76rem; font-weight: 900; color: #000000; margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between;">
+              <span>مفتاح الإجابات السريع (نظرة خاطفة للتصحيح اليدوي):</span>
+              <span style="font-size: 0.72rem; font-weight: 700; color: #333333;">نموذج ${selectedModel} (${modelLetterAr})</span>
             </div>
-            <div style="display: inline-flex; flex-direction: column; align-items: center;">
-              ${renderStealthBarcode(barcodeSerial, 18, 1.2)}
+            <div style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
+              ${mMcqs.map((q, qIdx) => {
+                const qNum = qIdx + 1;
+                const corrIdx = Number(q.correct_index ?? 0);
+                const corrLetter = arabicChoices[corrIdx] || 'أ';
+                const pts = Number(q.points || 1);
+                return `
+                  <div style="background: #ffffff; border: 1.5px solid #000000; border-radius: 3px; padding: 2px 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    <span style="font-size: 0.72rem; font-weight: 800; color: #000000;">س${qNum}:</span>
+                    <span style="background: #000000; color: #ffffff; font-weight: 900; font-size: 0.76rem; width: 19px; height: 19px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
+                      ${corrLetter}
+                    </span>
+                    ${pts > 1 ? `<span style="font-size: 0.64rem; font-weight: 800; color: #000000;">(${pts}د)</span>` : ''}
+                  </div>
+                `;
+              }).join('')}
             </div>
           </div>
-        </div>
 
-        <!-- SECTION 1: QUICK ANSWER KEY RIBBON (شريط الإجابات السريع للتصحيح اليدوي الخاطف) -->
-        <div style="border: 1.5px solid #059669; background: #ecfdf5; border-radius: 6px; padding: 0.55rem 0.75rem; margin-bottom: 0.85rem;">
-          <div style="font-size: 0.78rem; font-weight: 800; color: #065f46; margin-bottom: 0.45rem; display: flex; align-items: center; justify-content: space-between;">
-            <span>⚡ مفتاح الإجابات السريع (نظرة خاطفة للتصحيح اليدوي):</span>
-            <span style="font-size: 0.72rem; font-weight: 700; color: #047857;">مجموع أسئلة الاختياري: ${mcqQuestions.length} سؤال</span>
+          <!-- Bubble Sheet Grid (شبكة البابل شيت المظللة بالكامل - أبيض وأسود) -->
+          <div style="font-size: 0.78rem; font-weight: 900; color: #000000; margin-bottom: 0.35rem;">
+            شبكة البابل شيت المظللة للنموذج (${modelLetterAr}): (الدائرة السوداء المظللة هي الإجابة النموذجية الصحيحة)
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-            ${mcqQuestions.map((q, qIdx) => {
-              const qNum = qIdx + 1;
-              const corrIdx = Number(q.correct_index ?? 0);
-              const corrLetter = arabicChoices[corrIdx] || 'أ';
-              const pts = Number(q.points || 1);
+
+          <div style="${gridContainerStyle}">
+            ${colCounts.map((count, cIdx) => {
+              const startNum = colStartNums[cIdx];
               return `
-                <div style="background: #ffffff; border: 1.5px solid #10b981; border-radius: 4px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-                  <span style="font-size: 0.72rem; font-weight: 700; color: #475569;">س${qNum}:</span>
-                  <span style="background: #0f172a; color: #ffffff; font-weight: 900; font-size: 0.78rem; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
-                    ${corrLetter}
-                  </span>
-                  ${pts > 1 ? `<span style="font-size: 0.65rem; font-weight: 800; color: #059669;">(${pts}د)</span>` : ''}
+                <div style="${colBoxStyle}">
+                  <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #000000; padding-bottom: 2px; margin-bottom: 2px;">
+                    <span style="font-size: 0.75rem; font-weight: 900; color: #000000;">رقم</span>
+                    <div style="display: flex; gap: ${bubbleGap}; padding-left: 2px;">
+                      ${arabicChoices.map(c => `
+                        <span style="width: ${bubbleSize}; text-align: center; font-size: 0.72rem; font-weight: 900; color: #000000;">${c}</span>
+                      `).join('')}
+                    </div>
+                    <span style="font-size: 0.72rem; font-weight: 900; color: #000000;">الحل</span>
+                  </div>
+
+                  ${Array.from({ length: count }).map((_, rIdx) => {
+                    const qNum = startNum + rIdx;
+                    const q = mMcqs[qNum - 1];
+                    const corrIdx = Number(q?.correct_index ?? 0);
+                    const corrLetter = arabicChoices[corrIdx] || 'أ';
+
+                    return `
+                      <div style="display: flex; align-items: center; justify-content: space-between; padding: ${rowPadding}; border-bottom: 1px dotted #888888;">
+                        <div style="font-size: 0.76rem; font-weight: 900; font-family: monospace; color: #000000; width: 22px;">
+                          ${qNum}
+                        </div>
+
+                        <div style="display: flex; gap: ${bubbleGap};">
+                          ${arabicChoices.map((choiceLetter, optIdx) => {
+                            const isCorrect = (optIdx === corrIdx);
+                            const bubbleStyle = isCorrect
+                              ? `width: ${bubbleSize}; height: ${bubbleSize}; border-radius: 50%; border: 2px solid #000000; background: #000000; color: #ffffff; font-weight: 900; font-size: ${bubbleFontSize}; display: inline-flex; align-items: center; justify-content: center;`
+                              : `width: ${bubbleSize}; height: ${bubbleSize}; border-radius: 50%; border: 1.5px solid #000000; background: #ffffff; color: #000000; font-weight: 700; font-size: ${bubbleFontSize}; display: inline-flex; align-items: center; justify-content: center;`;
+
+                            return `
+                              <div style="${bubbleStyle}">
+                                ${choiceLetter}
+                              </div>
+                            `;
+                          }).join('')}
+                        </div>
+
+                        <div style="font-size: 0.74rem; font-weight: 900; color: #000000; width: 30px; text-align: left; font-family: monospace;">
+                          [ ${corrLetter} ]
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
                 </div>
               `;
             }).join('')}
           </div>
         </div>
 
-        <!-- SECTION 2: MASTER BUBBLE GRID WITH HIGHLIGHTED ANSWERS (شبكة البابل شيت المظللة بالكامل) -->
-        <div style="font-size: 0.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 5px;">
-          <span>📋 شبكة البابل شيت المظللة للنموذج (${modelLetterAr}):</span>
-          <span style="font-size: 0.72rem; font-weight: 600; color: #64748b;">(الدائرة المظللة بالأسود هي الإجابة النموذجية المعتمدة)</span>
+        <!-- Footer (Pure Black & White) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 0.5rem; border-top: 1.5px solid #000000;">
+          <div style="width: 16px; height: 16px; background: #000000;"></div>
+          <span style="font-size: 0.72rem; font-weight: 800; color: #000000;">
+            Centrly Exam Engine • نموذج إجابة البابل شيت (${modelLetterAr}) • صفحة مخصصة للمعلم للتصحيح اليدوي
+          </span>
+          <div style="width: 16px; height: 16px; background: #000000;"></div>
         </div>
+      </div>
+    `;
+  });
 
-        <div style="${gridContainerStyle}">
-          ${colCounts.map((count, cIdx) => {
-            const startNum = colStartNums[cIdx];
-            return `
-              <div style="${colBoxStyle}">
-                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #000000; padding-bottom: 3px; margin-bottom: 3px;">
-                  <span style="font-size: 0.75rem; font-weight: 900; color: #000000;">رقم</span>
-                  <div style="display: flex; gap: ${bubbleGap}; padding-left: 2px;">
-                    ${arabicChoices.map(c => `
-                      <span style="width: ${bubbleSize}; text-align: center; font-size: 0.72rem; font-weight: 900; color: #000000;">${c}</span>
-                    `).join('')}
-                  </div>
-                  <span style="font-size: 0.72rem; font-weight: 800; color: #059669;">الحل</span>
-                </div>
+  // 2. RENDER DEDICATED SHEET FOR ESSAY QUESTIONS (وواحدة للمقالي - أبيض وأسود، بدون ألوان وبدون إيموجيز)
+  if (essayQuestions.length > 0) {
+    const totalEssayPoints = essayQuestions.reduce((s, q) => s + Number(q.points || 4), 0);
+    const useGrid = essayQuestions.length >= 3;
 
-                ${Array.from({ length: count }).map((_, rIdx) => {
-                  const qNum = startNum + rIdx;
-                  const q = mcqQuestions[qNum - 1];
-                  const corrIdx = Number(q?.correct_index ?? 0);
-                  const pts = Number(q?.points || 1);
-                  const corrLetter = arabicChoices[corrIdx] || 'أ';
-
-                  return `
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: ${rowPadding}; border-bottom: 1px dotted #cccccc;">
-                      <div style="font-size: 0.76rem; font-weight: 800; font-family: monospace; color: #000000; width: 24px;">
-                        ${qNum}
-                      </div>
-
-                      <div style="display: flex; gap: ${bubbleGap};">
-                        ${arabicChoices.map((choiceLetter, optIdx) => {
-                          const isCorrect = (optIdx === corrIdx);
-                          const bubbleStyle = isCorrect
-                            ? `width: ${bubbleSize}; height: ${bubbleSize}; border-radius: 50%; border: 2px solid #000000; background: #0f172a; color: #ffffff; font-weight: 900; font-size: ${bubbleFontSize}; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3);`
-                            : `width: ${bubbleSize}; height: ${bubbleSize}; border-radius: 50%; border: 1.5px dashed #cbd5e1; background: #ffffff; color: #94a3b8; font-weight: 600; font-size: ${bubbleFontSize}; display: inline-flex; align-items: center; justify-content: center;`;
-
-                          return `
-                            <div style="${bubbleStyle}">
-                              ${choiceLetter}
-                            </div>
-                          `;
-                        }).join('')}
-                      </div>
-
-                      <div style="font-size: 0.74rem; font-weight: 900; color: #059669; width: 34px; text-align: left; display: inline-flex; align-items: center; gap: 2px;">
-                        <span>✔</span>
-                        <span>${corrLetter}</span>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
+    pagesHtml += `
+      <div class="${containerClass}" style="${baseContainerStyle}">
+        <div>
+          <!-- Header (Pure Black & White) -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.55rem; border-bottom: 2px solid #000000; padding-bottom: 0.45rem;">
+            <div style="width: 16px; height: 16px; background: #000000;"></div>
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 0.76rem; font-weight: 800; color: #000000; letter-spacing: 0.5px;">
+                وزارة التربية والتعليم • نموذج إجابة رسمي وسلم توزيع الدرجات
               </div>
-            `;
-          }).join('')}
-        </div>
-
-        <!-- SECTION 3: ESSAY MODEL ANSWERS (نموذج إجابة الأسئلة المقالية وتوزيع الدرجات) -->
-        ${essayQuestions.length > 0 ? `
-          <div style="margin-top: 1rem; border-top: 2px solid #000000; padding-top: 0.75rem;">
-            <div style="font-size: 0.85rem; font-weight: 900; color: #0f172a; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px;">
-              <span>✍️ نموذج إجابة الأسئلة المقالية وتوزيع الدرجات:</span>
+              <h2 style="font-size: 1.15rem; font-weight: 900; margin: 2px 0 0 0; color: #000000; line-height: 1.2;">
+                ${escapeHtml(cleanExamTitle)}
+              </h2>
+              <div style="font-size: 0.75rem; font-weight: 700; color: #222222; margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 0.4rem; flex-wrap: wrap;">
+                <span>المادة: ${escapeHtml(targetQuiz.subject || 'الفيزياء')}</span>
+                <span>•</span>
+                <span>القسم: الأسئلة المقالية فقط</span>
+                <span>•</span>
+                <span>إجمالي درجات المقالي: ${totalEssayPoints} درجات</span>
+              </div>
             </div>
+            <div style="width: 16px; height: 16px; background: #000000;"></div>
+          </div>
 
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              ${essayQuestions.map((eq, eIdx) => {
-                const eqNum = mcqQuestions.length + eIdx + 1;
-                const eqPts = Number(eq.points || 4);
-                return `
-                  <div style="border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0.65rem 0.85rem; background: #f8fafc;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                      <span style="font-weight: 800; font-size: 0.82rem; color: #0f172a;">
-                        سؤال مقالي (${eqNum}): ${escapeHtml(eq.text || '')}
+          <!-- Essay Model Answer Banner (Pure Black & White) -->
+          <div style="border: 2px solid #000000; background: #000000; color: #ffffff; padding: 0.45rem 0.85rem; margin-bottom: 0.65rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.88rem; font-weight: 900;">
+              دليل تصحيح الأسئلة المقالية المعتمد للمعلم وسلم توزيع الخطوات والدرجات
+            </span>
+            <span style="font-size: 0.75rem; font-weight: 800; border: 1px solid #ffffff; padding: 1px 6px; border-radius: 3px;">
+              عدد الأسئلة: ${essayQuestions.length}
+            </span>
+          </div>
+
+          <!-- Essay Questions Container (Grid layout if multiple questions to fit on one sheet) -->
+          <div style="${useGrid ? 'display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.65rem;' : 'display: flex; flex-direction: column; gap: 0.65rem;'}">
+            ${essayQuestions.map((eq, eIdx) => {
+              const eqNum = mcqQuestions.length + eIdx + 1;
+              const eqPts = Number(eq.points || 4);
+              return `
+                <div style="border: 1.5px solid #000000; border-radius: 4px; padding: 0.55rem 0.75rem; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; border-bottom: 1px solid #000000; padding-bottom: 0.25rem;">
+                      <span style="font-weight: 900; font-size: 0.82rem; color: #000000;">
+                        سؤال مقالي (${eqNum})
                       </span>
-                      <span style="background: #f1f5f9; color: #0f172a; font-weight: 800; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                      <span style="background: #000000; color: #ffffff; font-weight: 900; font-size: 0.7rem; padding: 1px 7px; border-radius: 3px;">
                         ${eqPts} درجات
                       </span>
                     </div>
 
+                    <div style="font-size: 0.78rem; font-weight: 800; color: #000000; line-height: 1.45; margin-bottom: 0.35rem;">
+                      ${escapeHtml(eq.text || '')}
+                    </div>
+
                     ${eq.image_url ? `
-                      <div style="margin-bottom: 0.45rem;">
-                        <img src="${escapeHtml(eq.image_url)}" alt="صورة السؤال" style="max-height: 120px; border-radius: 4px; border: 1px solid #cbd5e1;" />
+                      <div style="text-align: center; margin: 0.3rem 0;">
+                        <img src="${escapeHtml(eq.image_url)}" alt="رسم توضيحي للسؤال" style="max-height: 85px; border: 1px solid #000000; padding: 2px;" />
                       </div>
                     ` : ''}
+                  </div>
 
-                    <div style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 5px; padding: 0.5rem 0.75rem;">
-                      <div style="font-size: 0.72rem; font-weight: 800; color: #065f46; margin-bottom: 0.2rem;">
-                        الإجابة النموذجية المعتمدة وتوزيع الدرجات:
-                      </div>
-                      <div style="font-size: 0.82rem; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">
-                        ${escapeHtml(eq.model_answer || eq.answer || 'تُمنح الدرجة كاملة إذا كتب الطالب خطوات الحل الصحيحة والناتج النهائي.')}
-                      </div>
+                  <div style="border: 1px solid #000000; border-radius: 3px; padding: 0.45rem 0.65rem; background: #ffffff; margin-top: 0.35rem;">
+                    <div style="font-size: 0.72rem; font-weight: 900; color: #000000; margin-bottom: 0.15rem; text-decoration: underline;">
+                      الإجابة النموذجية وسلم توزيع الخطوات:
+                    </div>
+                    <div style="font-size: 0.76rem; color: #000000; line-height: 1.5; white-space: pre-wrap; font-weight: 600;">
+                      ${escapeHtml(eq.model_answer || eq.answer || 'تُمنح الدرجة كاملة إذا كتب الطالب القانون، التعويض، الناتج النهائي الصحيح، ووحدة القياس.')}
                     </div>
                   </div>
-                `;
-              }).join('')}
-            </div>
+                </div>
+              `;
+            }).join('')}
           </div>
-        ` : ''}
+        </div>
 
+        <!-- Footer (Pure Black & White) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 0.5rem; border-top: 1.5px solid #000000;">
+          <div style="width: 16px; height: 16px; background: #000000;"></div>
+          <span style="font-size: 0.72rem; font-weight: 800; color: #000000;">
+            نهاية نموذج إجابة الأسئلة المقالية • مع تمنياتنا بالتوفيق لجميع الطلاب
+          </span>
+          <div style="width: 16px; height: 16px; background: #000000;"></div>
+        </div>
       </div>
+    `;
+  }
 
-      <!-- Footer & Alignment Markers -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 0.65rem; border-top: 1px solid #e2e8f0;">
-        <div style="width: 18px; height: 18px; background: #000000;"></div>
-        <span style="font-size: 0.7rem; font-weight: 700; color: #555555;">
-          Centrly Exam Security & Automated Grading Engine • نموذج (${modelLetterAr})
-        </span>
-        <div style="width: 18px; height: 18px; background: #000000;"></div>
-      </div>
-    </div>
-  `;
+  return pagesHtml;
 }
 
 // ============================================================================
@@ -3677,12 +3740,11 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                     </button>
                     <button 
                       type="button" 
-                      style="height: 30px; font-size: 0.74rem; font-weight: 800; background: #ecfdf5; color: #065f46; border-radius: 5px; border: 1.5px solid #a7f3d0; cursor: pointer; padding: 0 10px; display: inline-flex; align-items: center; gap: 4px;"
-                      onclick="window.centrlyApp.printPaperExamModelAnswer('${escapeHtml(rq.id)}')"
-                      title="طباعة نموذج الإجابة الرسمي للمعلم للتصحيح اليدوي ومطابقة الدرجات"
+                      style="height: 30px; font-size: 0.74rem; font-weight: 800; background: #ffffff; color: #000000; border-radius: 5px; border: 1.5px solid #000000; cursor: pointer; padding: 0 10px; display: inline-flex; align-items: center; gap: 4px;"
+                      onclick="window.centrlyApp.previewPaperExam('${escapeHtml(rq.id)}', 'models')"
+                      title="معاينة وطباعة نماذج الإجابة الشاملة A و B و C والمقالي للتصحيح اليدوي"
                     >
-                      <span>🔑</span>
-                      <span>نموذج الإجابة</span>
+                      <span>نماذج الإجابة (A/B/C)</span>
                     </button>
                     <button 
                       type="button" 
@@ -4446,6 +4508,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
   }
 
   const selectedModel = state.printModel || 'A'; // 'A' | 'B' | 'C'
+  const previewSheetType = state.previewSheetType || 'exam'; // 'exam' | 'models'
   const { modelCode, examCode, barcodeSerial: stealthBarcodeSerial } = getModelInfo(targetQuiz, selectedModel);
 
   if (!targetQuiz) {
@@ -4540,11 +4603,10 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
             <button 
               type="button" 
               onclick="window.centrlyApp.triggerPrint('answer_key')"
-              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
-              title="طباعة نموذج الإجابة الرسمي وتوزيع الدرجات للمعلم لنموذج ${selectedModel} الحالي للتصحيح اليدوي"
+              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 800; background: #ffffff; color: #000000; border: 1.5px solid #000000; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
+              title="طباعة نماذج الإجابة الشاملة A و B و C وورقة المقالي للتصحيح اليدوي"
             >
-              <span>🔑</span>
-              <span>طباعة نموذج الإجابة للمعلم (A4)</span>
+              <span>طباعة نماذج الإجابة (A/B/C والمقالي)</span>
             </button>
 
             <button 
@@ -4560,6 +4622,26 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
 
         <!-- Exam & Model Pickers -->
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9; align-items: center;">
+          <!-- Preview Mode Toggle: Student Sheets vs Teacher Model Answer Pack -->
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <label style="font-size: 0.76rem; font-weight: 800; color: #0f172a;">نوع المعاينة المعروضة:</label>
+            <div style="display: inline-flex; border: 1.5px solid #000000; border-radius: 5px; overflow: hidden; background: #ffffff;">
+              <button 
+                type="button" 
+                onclick="window.centrlyApp.setPaperPreviewSheetType('exam')"
+                style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 800; border: none; cursor: pointer; background: ${previewSheetType === 'exam' ? '#000000' : '#ffffff'}; color: ${previewSheetType === 'exam' ? '#ffffff' : '#000000'};"
+              >
+                أوراق الطلاب (أسئلة + بابل شيت)
+              </button>
+              <button 
+                type="button" 
+                onclick="window.centrlyApp.setPaperPreviewSheetType('models')"
+                style="height: 28px; padding: 0 10px; font-size: 0.74rem; font-weight: 800; border: none; border-right: 1.5px solid #000000; cursor: pointer; background: ${previewSheetType === 'models' ? '#000000' : '#ffffff'}; color: ${previewSheetType === 'models' ? '#ffffff' : '#000000'};"
+              >
+                نماذج الإجابة (A و B و C ومقالي)
+              </button>
+            </div>
+          </div>
           <div style="display: flex; align-items: center; gap: 0.4rem;">
             <label style="font-size: 0.76rem; font-weight: 700; color: #64748b;">اختر الامتحان:</label>
             <select class="form-select" style="min-width: 190px; height: 30px; font-size: 0.76rem; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 5px; padding: 0 8px;" onchange="window.centrlyApp.selectPrintQuiz(this.value)">
@@ -4700,15 +4782,18 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
         </div>
       ` : ''}
 
-      <!-- Live Printable Preview Container (Responsive & Screen-Fitted - Questions and Bubble Sheet ONLY to prevent cheating) -->
+      <!-- Live Printable Preview Container (Responsive & Screen-Fitted) -->
       <div id="centrlyPrintContainer" style="display: flex; flex-direction: column; gap: 2rem; width: 100%; box-sizing: border-box;">
-        
-        <!-- Printable Exam Paper (A4 Sheet Preview) -->
-        ${renderExamSheetHtml(targetQuiz, selectedModel, null, null, false)}
+        ${previewSheetType === 'models' ? `
+          <!-- Comprehensive Model Answers Pack Preview (Models A, B, C, and Essay - Pure Black & White) -->
+          ${renderModelAnswerSheetHtml(targetQuiz, 'all', false)}
+        ` : `
+          <!-- Printable Exam Paper (A4 Sheet Preview) -->
+          ${renderExamSheetHtml(targetQuiz, selectedModel, null, null, false)}
 
-        <!-- Printable Bubble Sheet (A4 Sheet Preview) -->
-        ${renderBubbleSheetHtml(targetQuiz, selectedModel, null, null, false)}
-
+          <!-- Printable Bubble Sheet (A4 Sheet Preview) -->
+          ${renderBubbleSheetHtml(targetQuiz, selectedModel, null, null, false)}
+        `}
       </div>
 
     </div>
@@ -6253,9 +6338,15 @@ export function registerTeacherQuizzesActions(app) {
     this.renderMainContent();
   };
 
-  app.previewPaperExam = function(quizId) {
+  app.previewPaperExam = function(quizId, subView = 'exam') {
     this.quizzesState.printQuizId = quizId;
     this.quizzesState.paperViewMode = 'preview';
+    this.quizzesState.previewSheetType = subView;
+    this.renderMainContent();
+  };
+
+  app.setPaperPreviewSheetType = function(type) {
+    this.quizzesState.previewSheetType = type;
     this.renderMainContent();
   };
 
@@ -6765,8 +6856,29 @@ export function registerTeacherQuizzesActions(app) {
           flex-direction: column !important;
           justify-content: space-between !important;
         }
+        .centrly-model-answer-sheet {
+          box-sizing: border-box !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          min-height: calc(297mm - 12mm) !important;
+          height: calc(297mm - 12mm) !important;
+          max-height: calc(297mm - 12mm) !important;
+          margin: 0 !important;
+          padding: 7mm 8mm !important;
+          box-shadow: none !important;
+          border: 2px solid #000000 !important;
+          page-break-after: always !important;
+          break-after: page !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          background: #ffffff !important;
+          display: flex !important;
+          flex-direction: column !important;
+          justify-content: space-between !important;
+        }
         .centrly-exam-sheet:last-child,
-        .centrly-bubble-sheet:last-child {
+        .centrly-bubble-sheet:last-child,
+        .centrly-model-answer-sheet:last-child {
           page-break-after: auto !important;
           break-after: auto !important;
         }
@@ -6793,7 +6905,7 @@ export function registerTeacherQuizzesActions(app) {
       const html = renderBubbleSheetHtml(targetQuiz, model, null, null, true);
       this.executeCentrlyPrint(html);
     } else if (type === 'answer_key') {
-      const html = renderModelAnswerSheetHtml(targetQuiz, model, true);
+      const html = renderModelAnswerSheetHtml(targetQuiz, 'all', true);
       this.executeCentrlyPrint(html);
     } else {
       const html = renderExamSheetHtml(targetQuiz, model, null, null, true);
@@ -6942,7 +7054,7 @@ export function registerTeacherQuizzesActions(app) {
     this.renderMainContent();
   };
 
-  app.printPaperExamModelAnswer = function(quizId, model = 'A') {
+  app.printPaperExamModelAnswer = function(quizId, model = 'all') {
     const allRich = this.quizzesState.richQuizzes || [];
     const targetQuiz = allRich.find(q => q.id === quizId) || (this.quizzesState.quizzes || []).find(q => q.id === quizId);
     if (!targetQuiz) {
