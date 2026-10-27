@@ -1,0 +1,9 @@
+{
+  "name": "centrly-saas",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd apps/tutoring && npm run build",
+    "start": "cd apps/tutoring && npm run start"
+  }
+}

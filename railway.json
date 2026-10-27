@@ -2,10 +2,10 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm run build"
+    "buildCommand": "cd apps/tutoring && npm install && npm run build"
   },
   "deploy": {
-    "startCommand": "npm run start",
+    "startCommand": "cd apps/tutoring && npm run start",
     "healthcheckPath": "/health/ping",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",

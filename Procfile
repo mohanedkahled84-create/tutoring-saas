@@ -1,2 +1,1 @@
-web: npm run build && npm run start
-
+web: cd apps/tutoring && npm run build && npm run start
