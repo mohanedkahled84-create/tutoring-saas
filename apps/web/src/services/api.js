@@ -204,6 +204,22 @@ export async function request(endpoint, options = {}) {
 
     const data = await res.json().catch(() => ({}));
 
+    if (!res.ok && (endpoint.startsWith('/quizzes') || endpoint.startsWith('/platform')) && !options._fallbackAttempted) {
+      try {
+        const fbRes = await fetch('/api' + endpoint, {
+          credentials: 'same-origin',
+          ...options,
+          headers,
+          body,
+          _fallbackAttempted: true,
+        });
+        if (fbRes.ok) {
+          const fbData = await fbRes.json().catch(() => null);
+          if (fbData && fbData.success) return fbData;
+        }
+      } catch (_) {}
+    }
+
     if (!res.ok) {
       if (res.status === 401) {
         // Attempt silent session refresh if refresh token is available (skip for auth and public endpoints)
