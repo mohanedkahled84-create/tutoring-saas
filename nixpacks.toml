@@ -1,8 +1,0 @@
-[phases.install]
-cmds = ["cd apps/tutoring && npm ci --include=dev"]
-
-[phases.build]
-cmds = ["cd apps/tutoring && npm run build"]
-
-[start]
-cmd = "cd apps/tutoring && npm run start"
