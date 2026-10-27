@@ -2709,6 +2709,19 @@ function renderBubbleSheetHtml(targetQuiz, modelLetter = 'A', studentNumber = nu
 // ============================================================================
 // MODEL ANSWER SHEET (نموذج الإجابة الرسمي وتوزيع الدرجات للمعلم A/B/C للتصحيح اليدوي)
 // ============================================================================
+function renderStealthBarcode(serial, height = 20, barWidth = 1.2) {
+  return `
+    <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center;">
+      <div style="font-family: monospace; font-size: 0.8rem; font-weight: 900; letter-spacing: 1.5px; color: #000000; line-height: 1;">
+        ||||| | |||| ||| |||| | ||
+      </div>
+      <div style="font-family: monospace; font-size: 0.62rem; font-weight: 800; color: #475569; margin-top: 2px;">
+        ${escapeHtml(serial || '')}
+      </div>
+    </div>
+  `;
+}
+
 function renderModelAnswerSheetHtml(targetQuiz, modelLetter = 'A', isPrint = false) {
   if (!targetQuiz) return '';
   const { selectedModel, modelCode, examCode, barcodeSerial } = getModelInfo(targetQuiz, modelLetter);
