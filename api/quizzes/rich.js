@@ -177,7 +177,7 @@ export default async function handler(req, res) {
         const defaultGroupId = group_id || '6c1bc55b-9775-453f-b4b2-d127febc5d92';
         richQuizzes.push({
           id: 'quiz-paper-' + defaultGroupId + '-5',
-          title: 'امتحان شامل - فيزياء كهربية وحديثة (ورقي وبابل شيت)',
+          title: 'امتحان شامل - فيزياء كهربية وحديثة',
           subject: 'الفيزياء للثانوية العامة',
           group_id: defaultGroupId,
           quiz_number: 5,
