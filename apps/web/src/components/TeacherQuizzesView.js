@@ -7815,12 +7815,11 @@ export function registerTeacherQuizzesActions(app) {
                 if (parsed.student_code) detectedStudentCode = String(parsed.student_code);
                 if (parsed.exam_id) detectedExamCode = parsed.exam_id;
               } catch (_) {}
-            } else if (raw.includes('REF-')) {
+            } else if (raw.includes('REF') || raw.includes('EX-')) {
               const parts = raw.split('-');
-              const last = parts[parts.length - 1];
-              if (last === '01') detectedModel = 'A';
-              else if (last === '02') detectedModel = 'B';
-              else if (last === '03') detectedModel = 'C';
+              if (raw.includes('-01-') || raw.endsWith('-01') || raw.includes('-أ-')) detectedModel = 'A';
+              else if (raw.includes('-02-') || raw.endsWith('-02') || raw.includes('-ب-')) detectedModel = 'B';
+              else if (raw.includes('-03-') || raw.endsWith('-03') || raw.includes('-ج-')) detectedModel = 'C';
               const exPart = parts.find(p => p.startsWith('EX'));
               if (exPart) detectedExamCode = exPart;
             } else if (/^\d{3,6}$/.test(raw)) {
@@ -7862,10 +7861,117 @@ export function registerTeacherQuizzesActions(app) {
       const cw = canvas.width;
       const ch = canvas.height;
 
+      // 1. Detect Sheet Alignment Markers (or Paper Bounds)
+      // When a phone photo is taken, the sheet has 4 black corner squares (18x18px)
+      // printed near its four corners. Detecting these gives us an exact, tilt-tolerant
+      // coordinate frame via bilinear interpolation.
+      let alignment = null;
+      try {
+        const fullImg = ctx.getImageData(0, 0, cw, ch);
+        const fullData = fullImg.data;
+        const getLum = (x, y) => {
+          if (x < 0 || x >= cw || y < 0 || y >= ch) return 255;
+          const idx = (y * cw + x) * 4;
+          return 0.299 * fullData[idx] + 0.587 * fullData[idx + 1] + 0.114 * fullData[idx + 2];
+        };
+
+        let pTop = 0, pBottom = ch - 1, pLeft = 0, pRight = cw - 1;
+        const stepX = Math.max(4, Math.floor(cw / 100));
+        const stepY = Math.max(4, Math.floor(ch / 100));
+
+        const rowLightRatio = [];
+        for (let y = 0; y < ch; y += stepY) {
+          let lightCount = 0, total = 0;
+          for (let x = 0; x < cw; x += stepX) {
+            if (getLum(x, y) > 115) lightCount++;
+            total++;
+          }
+          rowLightRatio.push({ y, ratio: lightCount / Math.max(1, total) });
+        }
+        const validRows = rowLightRatio.filter(r => r.ratio > 0.35);
+        if (validRows.length >= 5) {
+          pTop = validRows[0].y;
+          pBottom = validRows[validRows.length - 1].y;
+        }
+
+        const colLightRatio = [];
+        for (let x = 0; x < cw; x += stepX) {
+          let lightCount = 0, total = 0;
+          for (let y = 0; y < ch; y += stepY) {
+            if (getLum(x, y) > 115) lightCount++;
+            total++;
+          }
+          colLightRatio.push({ x, ratio: lightCount / Math.max(1, total) });
+        }
+        const validCols = colLightRatio.filter(c => c.ratio > 0.35);
+        if (validCols.length >= 5) {
+          pLeft = validCols[0].x;
+          pRight = validCols[validCols.length - 1].x;
+        }
+
+        const pw = pRight - pLeft;
+        const ph = pBottom - pTop;
+
+        if (pw > cw * 0.4 && ph > ch * 0.4) {
+          const sw = Math.max(20, Math.floor(pw * 0.18));
+          const sh = Math.max(20, Math.floor(ph * 0.18));
+          const bs = Math.max(6, Math.floor(Math.min(pw, ph) * 0.015));
+
+          const findCornerMarker = (rx0, ry0, rx1, ry1) => {
+            let bestVal = 999;
+            let bestX = rx0 + Math.floor((rx1 - rx0) / 2);
+            let bestY = ry0 + Math.floor((ry1 - ry0) / 2);
+            for (let y = ry0; y <= ry1 - bs; y += 3) {
+              for (let x = rx0; x <= rx1 - bs; x += 3) {
+                let sum = 0, cnt = 0;
+                for (let dy = 0; dy < bs; dy += 2) {
+                  for (let dx = 0; dx < bs; dx += 2) {
+                    sum += getLum(x + dx, y + dy);
+                    cnt++;
+                  }
+                }
+                const avg = cnt > 0 ? (sum / cnt) : 255;
+                if (avg < bestVal) {
+                  bestVal = avg;
+                  bestX = x + Math.floor(bs / 2);
+                  bestY = y + Math.floor(bs / 2);
+                }
+              }
+            }
+            return { x: bestX, y: bestY, score: bestVal };
+          };
+
+          const tl = findCornerMarker(pLeft, pTop, pLeft + sw, pTop + sh);
+          const tr = findCornerMarker(pRight - sw, pTop, pRight, pTop + sh);
+          const bl = findCornerMarker(pLeft, pBottom - sh, pLeft + sw, pBottom);
+          const br = findCornerMarker(pRight - sw, pBottom - sh, pRight, pBottom);
+
+          if (tl.score < 110 && tr.score < 110 && bl.score < 110 && br.score < 110) {
+            alignment = { tl, tr, bl, br, hasMarkers: true };
+          }
+        }
+      } catch (_) {}
+
+      let hasMarkers = !!(alignment && alignment.hasMarkers);
+
       const getSampleDarkness = (normX, normY, normRadius) => {
-        const px = Math.floor(normX * cw);
-        const py = Math.floor(normY * ch);
-        const r = Math.max(2, Math.floor(normRadius * Math.min(cw, ch)));
+        let px, py;
+        if (hasMarkers) {
+          const topX = (1 - normX) * alignment.tl.x + normX * alignment.tr.x;
+          const topY = (1 - normX) * alignment.tl.y + normX * alignment.tr.y;
+          const botX = (1 - normX) * alignment.bl.x + normX * alignment.br.x;
+          const botY = (1 - normX) * alignment.bl.y + normX * alignment.br.y;
+          px = Math.floor((1 - normY) * topX + normY * botX);
+          py = Math.floor((1 - normY) * topY + normY * botY);
+        } else {
+          px = Math.floor(normX * cw);
+          py = Math.floor(normY * ch);
+        }
+
+        const baseSize = hasMarkers
+          ? Math.min(alignment.tr.x - alignment.tl.x, alignment.bl.y - alignment.tl.y)
+          : Math.min(cw, ch);
+        const r = Math.max(2, Math.floor(normRadius * baseSize));
         const startX = Math.max(0, px - r);
         const startY = Math.max(0, py - r);
         const endX = Math.min(cw, px + r);
@@ -7887,12 +7993,18 @@ export function registerTeacherQuizzesActions(app) {
       };
 
       // Detect sheet contrast across corner alignment markers and center points
-      const ctrlPoints = [
-        [0.03, 0.03], [0.97, 0.03],
-        [0.5, 0.5],
-        [0.03, 0.97], [0.97, 0.97]
-      ];
-      const ctrlSamples = ctrlPoints.map(p => getSampleDarkness(p[0], p[1], 0.02));
+      const ctrlPoints = hasMarkers
+        ? [
+            [0, 0], [1, 0],
+            [0.5, 0.5],
+            [0, 1], [1, 1]
+          ]
+        : [
+            [0.03, 0.03], [0.97, 0.03],
+            [0.5, 0.5],
+            [0.03, 0.97], [0.97, 0.97]
+          ];
+      const ctrlSamples = ctrlPoints.map(p => getSampleDarkness(p[0], p[1], hasMarkers ? 0.01 : 0.02));
       const minSample = Math.min(...ctrlSamples);
       const maxSample = Math.max(...ctrlSamples);
       const sampleDiff = maxSample - minSample;
@@ -7905,14 +8017,18 @@ export function registerTeacherQuizzesActions(app) {
 
       // 4-digit Student Code Grid Detection (Strict: full code match only, NO endsWith)
       if (!detectedStudentCode && !isUnreadable) {
-        const colXCoords = [0.62, 0.70, 0.78, 0.86];
+        const colXCoords = hasMarkers
+          ? [0.058, 0.140, 0.222, 0.304]
+          : [0.62, 0.70, 0.78, 0.86];
+        const baseNormY = hasMarkers ? 0.102 : 0.12;
+        const stepNormY = hasMarkers ? 0.0151 : 0.015;
         const digits = [];
         let allZero = true;
         for (let c = 0; c < 4; c++) {
           let maxDark = -1;
           let chosenDigit = 0;
           for (let d = 0; d <= 9; d++) {
-            const normY = 0.12 + (d * 0.015);
+            const normY = baseNormY + (d * stepNormY);
             let localPeak = 0;
             for (const dx of [-0.006, 0, 0.006]) {
               const dark = getSampleDarkness(colXCoords[c] + dx, normY, 0.006);
@@ -7956,8 +8072,45 @@ export function registerTeacherQuizzesActions(app) {
         rStart += colCounts[c];
       }
 
-      const gridTop = 0.33;
-      const gridHeight = 0.54;
+      // Probe layout for single-column sheets:
+      let isWideLayout = false;
+      if (hasMarkers && numCols === 1) {
+        let centeredContrast = 0;
+        let wideContrast = 0;
+        for (let q = 0; q < Math.min(3, modelMcqs.length); q++) {
+          const nyCentered = 0.348 + (q / Math.max(1, modelMcqs.length - 1)) * 0.356;
+          const nyWide = 0.33 + (q / Math.max(1, modelMcqs.length)) * 0.54;
+          const cDarks = [0.325, 0.275, 0.222, 0.171].map(x => getSampleDarkness(x, nyCentered, 0.008));
+          const wDarks = [0.658, 0.518, 0.377, 0.236].map(x => {
+            const px = Math.floor(x * cw);
+            const py = Math.floor(nyWide * ch);
+            const r = Math.max(2, Math.floor(0.008 * Math.min(cw, ch)));
+            const sX = Math.max(0, px - r);
+            const sY = Math.max(0, py - r);
+            const eX = Math.min(cw, px + r);
+            const eY = Math.min(ch, py + r);
+            const w = eX - sX, h = eY - sY;
+            if (w <= 0 || h <= 0) return 0;
+            const imgData = ctx.getImageData(sX, sY, w, h);
+            const d = imgData.data;
+            let tot = 0, cnt = 0;
+            for (let i = 0; i < d.length; i += 4) {
+              tot += (255 - (0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]));
+              cnt++;
+            }
+            return cnt > 0 ? (tot / cnt) : 0;
+          });
+          centeredContrast += Math.max(...cDarks) - Math.min(...cDarks);
+          wideContrast += Math.max(...wDarks) - Math.min(...wDarks);
+        }
+        if (wideContrast > centeredContrast + 40) {
+          isWideLayout = true;
+          hasMarkers = false;
+        }
+      }
+
+      const gridTop = (hasMarkers && !isWideLayout) ? 0.348 : 0.33;
+      const gridHeight = (hasMarkers && !isWideLayout) ? 0.356 : 0.54;
       const colWidth = 0.88 / numCols;
 
       for (let qIdx = 0; qIdx < modelMcqs.length; qIdx++) {
@@ -7977,14 +8130,20 @@ export function registerTeacherQuizzesActions(app) {
         }
 
         const totalRowsThisCol = Math.max(1, colCounts[cIdx]);
-        const normY = gridTop + (rowIdx / totalRowsThisCol) * gridHeight;
+        const normY = hasMarkers
+          ? (gridTop + (rowIdx / Math.max(1, totalRowsThisCol - 1)) * gridHeight)
+          : (gridTop + (rowIdx / totalRowsThisCol) * gridHeight);
         const colLeft = 0.06 + (cIdx * colWidth);
 
         // Multi-point jitter sampling (3x3 grid around each bubble)
         const optDarkness = [];
         const optLetters = ['أ', 'ب', 'ج', 'د'];
+        const markerSingleColX = [0.325, 0.275, 0.222, 0.171];
+
         for (let opt = 0; opt < 4; opt++) {
-          const baseNormX = colLeft + colWidth * (0.68 - opt * 0.16);
+          const baseNormX = (hasMarkers && numCols === 1)
+            ? markerSingleColX[opt]
+            : (colLeft + colWidth * (0.68 - opt * 0.16));
           let maxLocalDark = 0;
           for (const dx of [-0.012, 0, 0.012]) {
             for (const dy of [-0.010, 0, 0.010]) {
