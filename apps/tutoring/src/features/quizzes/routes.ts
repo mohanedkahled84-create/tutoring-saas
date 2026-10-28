@@ -1180,16 +1180,17 @@ quizzesRouter.post(
       const quizzesService = services.quizzes;
       const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
 
-      // 2. Strict Student Lookup & Group Membership Verification (No auto-attribution/invention of students)
+      // 2. Strict Student Lookup via group_students relation (Matching real DB schema)
       let studentQuery = supabase
         .from("students")
-        .select("id, name, student_code, group_id, group_ids")
+        .select("id, name, code, student_code, group_students(group_id)")
         .eq("tenant_id", tenantId);
 
       if (student_id) {
         studentQuery = studentQuery.eq("id", student_id);
       } else {
-        studentQuery = studentQuery.eq("student_code", String(student_code).trim());
+        const cleanCode = String(student_code).trim();
+        studentQuery = studentQuery.or(`student_code.eq.${cleanCode},code.eq.${cleanCode}`);
       }
 
       const { data: student, error: sErr } = await studentQuery.maybeSingle();
@@ -1201,11 +1202,14 @@ quizzesRouter.post(
         return;
       }
 
-      // Check that student belongs to the requested group if group_id is specified
+      // Extract student's groups from group_students relation
+      const rawGs = (student as any).group_students;
+      const gsList = Array.isArray(rawGs) ? rawGs : (rawGs ? [rawGs] : []);
+      const studentGroupIds = gsList.map((g: any) => String(g.group_id)).filter(Boolean);
+
+      // Verify student belongs to requested group
       if (group_id && group_id !== "all") {
-        const studentGid = String(student.group_id || "");
-        const studentGids = Array.isArray(student.group_ids) ? student.group_ids.map((g: any) => String(g)) : [];
-        const isMember = studentGid === String(group_id) || studentGids.includes(String(group_id));
+        const isMember = studentGroupIds.includes(String(group_id));
         if (!isMember) {
           res.status(400).json({
             error: { code: "GROUP_MISMATCH", message: `الطالب (${student.name}) غير مسجل في هذه المجموعة` },
@@ -1214,8 +1218,9 @@ quizzesRouter.post(
         }
       }
 
-      // 3. Resolve Target Exam Uniquely (Prevent collisions across groups/curriculums)
+      // 3. Resolve Target Exam Uniquely (study_materials + fallback to legacy whatsapp_inbox)
       let targetRow: any = null;
+
       if (exam_id) {
         const { data: row } = await supabase
           .from("study_materials")
@@ -1225,7 +1230,57 @@ quizzesRouter.post(
           .in("type", ["online_quiz", "paper_quiz", "paper_exam"])
           .maybeSingle();
         targetRow = row;
+
+        // Fallback to legacy definitions in whatsapp_inbox if not in study_materials
+        if (!targetRow) {
+          const { data: legacyRows } = await supabase
+            .from("whatsapp_inbox")
+            .select("id, message_body, phone")
+            .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
+            .like("phone", "QUIZ_DEF_%");
+
+          for (const lRow of legacyRows || []) {
+            try {
+              const p = parseQuizPayload(lRow.message_body);
+              if (String(p.id) === String(exam_id) || String(lRow.id) === String(exam_id)) {
+                targetRow = {
+                  id: p.id || lRow.id,
+                  group_id: p.group_id,
+                  questions: JSON.stringify(p),
+                  title: p.title || `امتحان ${p.quiz_number || 1}`,
+                };
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+
+        if (targetRow) {
+          // Verify targetRow.group_id matches requested group_id
+          if (group_id && group_id !== "all" && targetRow.group_id && targetRow.group_id !== "all") {
+            if (String(targetRow.group_id) !== String(group_id)) {
+              res.status(400).json({
+                error: { code: "EXAM_GROUP_MISMATCH", message: `الامتحان المحدد تابع لمجموعة أخرى وليس المجموعة (${group_id})` },
+              });
+              return;
+            }
+          }
+
+          // Verify quiz_number matches if provided
+          if (quiz_number !== undefined) {
+            try {
+              const p = JSON.parse(targetRow.questions || "{}");
+              if (p.quiz_number !== undefined && Number(p.quiz_number) !== Number(quiz_number)) {
+                res.status(400).json({
+                  error: { code: "QUIZ_NUMBER_MISMATCH", message: `رقم الامتحان (${quiz_number}) لا يطابق رقم الامتحان المسجل (${p.quiz_number})` },
+                });
+                return;
+              }
+            } catch (_) {}
+          }
+        }
       } else {
+        // No exam_id: search study_materials scoped strictly to tenant_id AND group_id
         let matQuery = supabase
           .from("study_materials")
           .select("id, group_id, questions, title")
@@ -1255,7 +1310,48 @@ quizzesRouter.post(
           });
           return;
         }
-        targetRow = matchingRows[0];
+
+        if (matchingRows.length === 1) {
+          targetRow = matchingRows[0];
+        } else {
+          // Search legacy whatsapp_inbox
+          const { data: legacyRows } = await supabase
+            .from("whatsapp_inbox")
+            .select("id, message_body, phone")
+            .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
+            .like("phone", "QUIZ_DEF_%");
+
+          const matchingLegacy = (legacyRows || []).filter((lRow: any) => {
+            try {
+              const p = parseQuizPayload(lRow.message_body);
+              const matchesNumber = Number(p.quiz_number) === Number(quiz_number);
+              const matchesGroup = !group_id || group_id === "all" || !p.group_id || p.group_id === "all" || String(p.group_id) === String(group_id);
+              return matchesNumber && matchesGroup;
+            } catch (_) {
+              return false;
+            }
+          });
+
+          if (matchingLegacy.length > 1) {
+            res.status(400).json({
+              error: {
+                code: "AMBIGUOUS_EXAM",
+                message: "يوجد أكثر من امتحان قديم بنفس الرقم في هذه المجموعة. يرجى تمرير exam_id للتحديد الدقيق.",
+              },
+            });
+            return;
+          }
+
+          if (matchingLegacy.length === 1) {
+            const p = parseQuizPayload(matchingLegacy[0].message_body);
+            targetRow = {
+              id: p.id || matchingLegacy[0].id,
+              group_id: p.group_id,
+              questions: JSON.stringify(p),
+              title: p.title || `امتحان ${p.quiz_number || quiz_number}`,
+            };
+          }
+        }
       }
 
       if (!targetRow) {
@@ -1306,7 +1402,7 @@ quizzesRouter.post(
         });
       }
 
-      const resolvedGroupId = group_id || targetRow.group_id || student.group_id || "default-group";
+      const resolvedGroupId = group_id || targetRow.group_id || studentGroupIds[0] || "default-group";
       const qNum = quiz_number !== undefined ? Number(quiz_number) : (Number(parsedQuiz.quiz_number) || 1);
 
       await quizzesService.saveScores(tenantId, {
@@ -1327,7 +1423,7 @@ quizzesRouter.post(
         student: {
           id: student.id,
           name: student.name,
-          code: student.student_code,
+          code: (student as any).student_code || (student as any).code,
           group_id: resolvedGroupId,
         },
         exam: {

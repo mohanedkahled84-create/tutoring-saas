@@ -3290,6 +3290,7 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
                   <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">النموذج</th>
                   <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">الدرجة المحققة</th>
                   <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">النسبة</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">حالة الاعتماد</th>
                   <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">وقت الرصد</th>
                   <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">الإجراءات</th>
                 </tr>
@@ -3300,6 +3301,7 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
                   const sGrpName = sGrp ? sGrp.name : (item.group_name || 'عامة');
                   const pct = Number(item.percentage || Math.round(((Number(item.score || 0)) / (Number(item.max_score || 10))) * 100));
                   const mLabel = item.model?.startsWith('نموذج') ? item.model : `نموذج ${item.model || 'أ'}`;
+                  const isConfirmed = item.server_confirmed || item.sync_status === 'synced';
 
                   return `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -3331,11 +3333,37 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
                           ${pct}%
                         </span>
                       </td>
+                      <td style="padding: 0.65rem 0.75rem; text-align: center; white-space: nowrap;">
+                        ${isConfirmed ? `
+                          <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #16a34a;"></span>
+                            معتمد بالسيرفر
+                          </span>
+                        ` : `
+                          <span style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="${escapeHtml(item.sync_error || 'لم يتم اعتماد الحفظ على السيرفر')}">
+                            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #dc2626;"></span>
+                            مسودة (غير متزامن)
+                          </span>
+                        `}
+                      </td>
                       <td style="padding: 0.65rem 0.75rem; text-align: center; font-size: 0.74rem; color: #64748b; font-weight: 600; white-space: nowrap;">
                         ${escapeHtml(item.timestamp || 'الآن')}
                       </td>
                       <td style="padding: 0.65rem 0.75rem; text-align: center; white-space: nowrap;">
                         <div style="display: inline-flex; align-items: center; gap: 5px;">
+                          <!-- Retry Sync Button if unapproved/unconfirmed -->
+                          ${!isConfirmed ? `
+                            <button 
+                              type="button" 
+                              style="height: 28px; padding: 0 8px; font-size: 0.72rem; font-weight: 700; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                              onclick="window.centrlyApp.retrySyncOmrResult('${escapeHtml(item.id)}')"
+                              title="إعادة محاولة المزامنة والاعتماد على السيرفر"
+                            >
+                              ${getIcon('refresh', 11, '#dc2626')}
+                              <span>إعادة المزامنة</span>
+                            </button>
+                          ` : ''}
+
                           <!-- Breakdown Preview Modal Button -->
                           <button 
                             type="button" 
@@ -7463,75 +7491,26 @@ export function registerTeacherQuizzesActions(app) {
     }
 
     const qNum = scanData.quiz_number || 1;
-
-    // Deduplication check: check if student was already scanned
-    const existingIdx = this.quizzesState.scannedResultsList.findIndex(item => 
-      (scanData.student_id && String(item.student_id) === String(scanData.student_id)) ||
-      (scanData.student_code && String(item.student_code) === String(scanData.student_code))
-    );
-
-    let isUpdate = false;
-    if (existingIdx >= 0) {
-      this.quizzesState.scannedResultsList[existingIdx] = scanData;
-      isUpdate = true;
-    } else {
-      this.quizzesState.scannedResultsList.unshift(scanData);
-    }
-    this.quizzesState.lastOmrScanResult = scanData;
-
-    // 1. Immediately persist score in scoresMap
-    if (!this.quizzesState.scoresMap) this.quizzesState.scoresMap = {};
-    if (!this.quizzesState.scoresMap[qNum]) this.quizzesState.scoresMap[qNum] = {};
-    if (scanData.student_id) {
-      this.quizzesState.scoresMap[qNum][scanData.student_id] = scanData.score;
-    }
-    this.saveQuizzesToLocalStorage();
-
-    // 2. Immediately persist to localStorage (Offline-first resilient storage)
-    try {
-      localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
-    } catch (_) {}
-
-    // 3. Save local submission record
     const examTargetId = scanData.exam_id || `quiz_paper_${qNum}`;
-    const localSub = {
-      id: scanData.id,
-      material_id: examTargetId,
-      quiz_id: examTargetId,
-      quiz_title: scanData.exam_title || `امتحان ورقي ${qNum}`,
-      quiz_number: qNum,
-      group_id: scanData.group_id || this.quizzesState.selectedGroupId,
-      student_code: scanData.student_code,
-      student_name: scanData.student_name,
-      score: scanData.score,
-      total_score: scanData.score,
-      max_score: scanData.max_score,
-      percentage: scanData.percentage,
-      is_graded: true,
-      status: 'approved',
-      exam_mode: 'paper',
-      model: scanData.model,
-      breakdown: scanData.breakdown,
-      submitted_at: new Date().toISOString()
-    };
-    try {
-      localStorage.setItem(`centrly_submission_${scanData.student_code}_${examTargetId}`, JSON.stringify(localSub));
-    } catch (_) {}
 
-    // 4. Background non-blocking sync to server
-    try {
-      const modelCode = String(scanData.model || '').trim().toUpperCase();
-      const modelMatch = String(scanData.model || '').match(/[أبج]/);
-      const model = ({ A: 'أ', B: 'ب', C: 'ج', '01': 'أ', '02': 'ب', '03': 'ج' })[modelCode] || modelMatch?.[0] || 'أ';
-      const answers = Object.fromEntries((scanData.breakdown || [])
-        .filter(item => item && item.question_number != null && item.student_choice != null && item.student_choice !== 'لم يُظلل')
-        .map(item => {
-          const choice = String(item.student_choice).trim();
-          const choiceIndex = ({ 'أ': 0, 'ب': 1, 'ج': 2, 'د': 3 })[choice];
-          return [String(item.question_number), choiceIndex !== undefined ? choiceIndex : Number(choice)];
-        }));
+    // Prepare model & answers for backend verification & grading
+    const modelCode = String(scanData.model || '').trim().toUpperCase();
+    const modelMatch = String(scanData.model || '').match(/[أبج]/);
+    const model = ({ A: 'أ', B: 'ب', C: 'ج', '01': 'أ', '02': 'ب', '03': 'ج' })[modelCode] || modelMatch?.[0] || 'أ';
+    const answers = Object.fromEntries((scanData.breakdown || [])
+      .filter(item => item && item.question_number != null && item.student_choice != null && item.student_choice !== 'لم يُظلل')
+      .map(item => {
+        const choice = String(item.student_choice).trim();
+        const choiceIndex = ({ 'أ': 0, 'ب': 1, 'ج': 2, 'د': 3 })[choice];
+        return [String(item.question_number), choiceIndex !== undefined ? choiceIndex : Number(choice)];
+      }));
 
-      request('/quizzes/omr-scan', {
+    // Step 1: Await Server Confirmation (Do NOT optimistically approve or mark as synced before backend validates)
+    let serverSuccess = false;
+    let serverErrorMsg = '';
+
+    try {
+      const saved = await request('/quizzes/omr-scan', {
         method: 'POST',
         body: {
           exam_id: scanData.exam_id,
@@ -7546,27 +7525,97 @@ export function registerTeacherQuizzesActions(app) {
           score: scanData.score,
           max_score: scanData.max_score
         },
-      }).then(saved => {
-        if (saved?.success) {
-          if (typeof saved.score === 'number' && (saved.score > 0 || (saved.breakdown && saved.breakdown.length > 0))) {
-            scanData.score = saved.score;
-            scanData.max_score = saved.max_score || scanData.max_score;
-            scanData.percentage = Math.round((scanData.score / scanData.max_score) * 100);
-            try {
-              localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
-            } catch (_) {}
-          }
-        }
-      }).catch(err => {
-        console.warn('[Centrly OMR] Background server sync skipped, score preserved locally:', err);
       });
+
+      if (saved?.success) {
+        serverSuccess = true;
+        if (typeof saved.score === 'number') {
+          scanData.score = saved.score;
+          scanData.max_score = saved.max_score || scanData.max_score;
+          scanData.percentage = Math.round((scanData.score / scanData.max_score) * 100);
+        }
+      } else {
+        serverErrorMsg = saved?.error?.message || 'رفض الخادم اعتماد النتيجة';
+      }
+    } catch (err) {
+      serverErrorMsg = err?.message || 'تعذر الاتصال بالخادم';
+      console.warn('[Centrly OMR] Server sync failed:', err);
+    }
+
+    // Step 2: Set strict synchronization flags
+    if (serverSuccess) {
+      scanData.sync_status = 'synced';
+      scanData.server_confirmed = true;
+      delete scanData.sync_error;
+
+      // Persist confirmed score in scoresMap
+      if (!this.quizzesState.scoresMap) this.quizzesState.scoresMap = {};
+      if (!this.quizzesState.scoresMap[qNum]) this.quizzesState.scoresMap[qNum] = {};
+      if (scanData.student_id) {
+        this.quizzesState.scoresMap[qNum][scanData.student_id] = scanData.score;
+      }
+      this.saveQuizzesToLocalStorage();
+    } else {
+      scanData.sync_status = 'failed';
+      scanData.server_confirmed = false;
+      scanData.sync_error = serverErrorMsg;
+      // Note: Score is intentionally NOT recorded into official scoresMap to prevent falsified local data
+    }
+
+    // Step 3: Deduplication check & update scanned list
+    const existingIdx = this.quizzesState.scannedResultsList.findIndex(item => 
+      (scanData.student_id && String(item.student_id) === String(scanData.student_id)) ||
+      (scanData.student_code && String(item.student_code) === String(scanData.student_code))
+    );
+
+    const isUpdate = (existingIdx >= 0);
+    if (existingIdx >= 0) {
+      this.quizzesState.scannedResultsList[existingIdx] = scanData;
+    } else {
+      this.quizzesState.scannedResultsList.unshift(scanData);
+    }
+    this.quizzesState.lastOmrScanResult = scanData;
+
+    // Step 4: Persist to localStorage with explicit sync status
+    try {
+      localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
     } catch (_) {}
 
-    // Show clean toast without emojis
-    const actionLabel = isUpdate ? 'تم تحديث ورقة الطالب' : 'تم رصد ورقة الطالب';
-    this.showToast(`${actionLabel} (${scanData.student_name}): ${scanData.score} من ${scanData.max_score}`, 'success');
+    const localSub = {
+      id: scanData.id,
+      material_id: examTargetId,
+      quiz_id: examTargetId,
+      quiz_title: scanData.exam_title || `امتحان ورقي ${qNum}`,
+      quiz_number: qNum,
+      group_id: scanData.group_id || this.quizzesState.selectedGroupId,
+      student_code: scanData.student_code,
+      student_name: scanData.student_name,
+      score: scanData.score,
+      total_score: scanData.score,
+      max_score: scanData.max_score,
+      percentage: scanData.percentage,
+      is_graded: serverSuccess,
+      status: serverSuccess ? 'approved' : 'draft_unapproved',
+      sync_status: scanData.sync_status,
+      server_confirmed: scanData.server_confirmed,
+      exam_mode: 'paper',
+      model: scanData.model,
+      breakdown: scanData.breakdown,
+      submitted_at: new Date().toISOString()
+    };
+    try {
+      localStorage.setItem(`centrly_submission_${scanData.student_code}_${examTargetId}`, JSON.stringify(localSub));
+    } catch (_) {}
 
-    // If camera is open, update DOM dynamically without re-rendering to keep video active!
+    // Step 5: Inform user with accurate status toast
+    if (serverSuccess) {
+      const actionLabel = isUpdate ? 'تم تحديث ورقة الطالب' : 'تم اعتماد ورقة الطالب بالسيرفر';
+      this.showToast(`${actionLabel} (${scanData.student_name}): ${scanData.score} من ${scanData.max_score}`, 'success');
+    } else {
+      this.showToast(`تعذر اعتماد ورقة (${scanData.student_name}) على السيرفر: ${serverErrorMsg}. حُفظت كمسودة غير متزامنة.`, 'warning');
+    }
+
+    // Step 6: Update DOM
     if (this.quizzesState.isOmrCameraOpen) {
       const countEl = document.getElementById('omrScannedCount');
       const avgEl = document.getElementById('omrAvgScore');
@@ -7575,19 +7624,18 @@ export function registerTeacherQuizzesActions(app) {
 
       const list = this.quizzesState.scannedResultsList;
       const count = list.length;
-      const scores = list.map(r => Number(r.score) || 0);
-      const avg = count > 0 ? (scores.reduce((a, b) => a + b, 0) / count).toFixed(1) : 0;
-      const highest = count > 0 ? Math.max(...scores) : 0;
+      const scores = list.filter(r => r.server_confirmed).map(r => Number(r.score) || 0);
+      const avg = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 0;
+      const highest = scores.length > 0 ? Math.max(...scores) : 0;
 
       if (countEl) countEl.innerText = count;
       if (avgEl) avgEl.innerText = avg;
       if (highestEl) highestEl.innerText = highest;
 
-      const modelLabel = scanData.model?.startsWith('نموذج') ? scanData.model : `نموذج ${scanData.model || 'أ'}`;
-
       if (tableBody) {
         tableBody.innerHTML = list.map((item, idx) => {
           const mLabel = item.model?.startsWith('نموذج') ? item.model : `نموذج ${item.model || 'أ'}`;
+          const isConfirmed = !!item.server_confirmed;
           return `
             <tr style="border-bottom: 1px solid #f1f5f9; ${item.id === scanData.id ? 'background: #f8fafc;' : ''}">
               <td style="padding: 0.65rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #64748b; white-space: nowrap;">${idx + 1}</td>
@@ -7608,19 +7656,38 @@ export function registerTeacherQuizzesActions(app) {
                   ${item.percentage}%
                 </span>
               </td>
+              <td style="padding: 0.65rem 0.75rem; text-align: center; white-space: nowrap;">
+                ${isConfirmed ? `
+                  <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">معتمد</span>
+                ` : `
+                  <span style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">غير متزامن</span>
+                `}
+              </td>
               <td style="padding: 0.65rem 0.75rem; font-size: 0.74rem; color: #64748b; font-weight: 600; white-space: nowrap;">
                 ${item.timestamp || 'الآن'}
               </td>
               <td style="padding: 0.65rem 0.75rem; text-align: center; white-space: nowrap;">
-                <button 
-                  type="button" 
-                  style="height: 28px; padding: 0 8px; font-size: 0.72rem; font-weight: 700; background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
-                  onclick="window.centrlyApp.sendScannedStudentWhatsApp('${item.id}')"
-                  title="إرسال النتيجة عبر واتساب"
-                >
-                  ${getIcon('whatsapp', 13, '#059669')}
-                  <span>واتساب</span>
-                </button>
+                <div style="display: inline-flex; align-items: center; gap: 4px;">
+                  ${!isConfirmed ? `
+                    <button 
+                      type="button" 
+                      style="height: 28px; padding: 0 7px; font-size: 0.72rem; font-weight: 700; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer;"
+                      onclick="window.centrlyApp.retrySyncOmrResult('${item.id}')"
+                      title="إعادة محاولة المزامنة مع السيرفر"
+                    >
+                      إعادة المزامنة
+                    </button>
+                  ` : ''}
+                  <button 
+                    type="button" 
+                    style="height: 28px; padding: 0 8px; font-size: 0.72rem; font-weight: 700; background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                    onclick="window.centrlyApp.sendScannedStudentWhatsApp('${item.id}')"
+                    title="إرسال النتيجة عبر واتساب"
+                  >
+                    ${getIcon('whatsapp', 13, '#059669')}
+                    <span>واتساب</span>
+                  </button>
+                </div>
               </td>
             </tr>
           `;
@@ -7629,6 +7696,17 @@ export function registerTeacherQuizzesActions(app) {
     } else {
       this.renderMainContent();
     }
+  };
+
+  app.retrySyncOmrResult = async function(scanId) {
+    if (!Array.isArray(this.quizzesState.scannedResultsList)) return;
+    const item = this.quizzesState.scannedResultsList.find(s => String(s.id) === String(scanId));
+    if (!item) {
+      this.showToast('تعذر العثور على سجل الورقة المطلوب مزامنتها', 'danger');
+      return;
+    }
+    this.showToast(`جاري إعادة محاولة مزامنة ورقة الطالب (${item.student_name || item.student_code})...`, 'info');
+    await this.recordOmrScanResult(item);
   };
 
   app.analyzeOmrCanvas = async function(canvas, isManual = false) {
