@@ -24,7 +24,7 @@ import { renderRiskWatchlistView, registerRiskWatchlistActions } from './compone
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=9.10.0';
+import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=9.11.0';
 import { renderCenterSessionsView } from './components/CenterSessionsView.js';
 import { renderCenterTeachersView } from './components/CenterTeachersView.js';
 import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
@@ -1068,6 +1068,18 @@ class CentrlyApp {
   // ==========================================================================
   async logout() {
     this.stopWhatsAppStatusPolling();
+    if (typeof this.stopOmrCamera === 'function') {
+      try { this.stopOmrCamera(true); } catch (_) {}
+    } else if (this.quizzesState?.cameraStream) {
+      try {
+        this.quizzesState.cameraStream.getTracks().forEach(t => { try { t.stop(); } catch(_) {} });
+      } catch (_) {}
+      this.quizzesState.cameraStream = null;
+      this.quizzesState.isOmrCameraOpen = false;
+    }
+    if (typeof this.closeCameraModal === 'function') {
+      try { this.closeCameraModal(); } catch (_) {}
+    }
     this.resetTenantState();
     await authService.logout();
   }
@@ -1101,6 +1113,25 @@ class CentrlyApp {
   async navigate(route) {
     unlockAudio();
     this.stopWhatsAppStatusPolling();
+    // Automatically stop OMR camera and release hardware sensor whenever navigating away from paper_scanner
+    if (typeof this.stopOmrCamera === 'function') {
+      const isStayingOnScanner = (route === 'paper-exams' && this.quizzesState?.activeSubTab === 'paper_scanner');
+      if (!isStayingOnScanner && (this.quizzesState?.isOmrCameraOpen || this.quizzesState?.cameraStream)) {
+        this.stopOmrCamera(true);
+      }
+    } else if (this.quizzesState?.cameraStream) {
+      const isStayingOnScanner = (route === 'paper-exams' && this.quizzesState?.activeSubTab === 'paper_scanner');
+      if (!isStayingOnScanner) {
+        try {
+          this.quizzesState.cameraStream.getTracks().forEach(t => { try { t.stop(); } catch(_) {} });
+        } catch (_) {}
+        this.quizzesState.cameraStream = null;
+        this.quizzesState.isOmrCameraOpen = false;
+      }
+    }
+    if (typeof this.closeCameraModal === 'function') {
+      try { this.closeCameraModal(); } catch (_) {}
+    }
     // Auto-lock sensitive pages automatically upon changing or switching pages
     if (this.hasSecurityPin && this.isFinancialUnlocked) {
       this.isFinancialUnlocked = false;

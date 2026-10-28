@@ -71,6 +71,33 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   }
   state.activeSubTab = activeSubTab;
 
+  // إغلاق الكاميرا فوراً وتحرير الحساس عند مغادرة تبويب تصحيح البابل شيت
+  if (effectiveRoute !== 'paper-exams' || activeSubTab !== 'paper_scanner') {
+    if (state.cameraStream || state.isOmrCameraOpen) {
+      if (state.cameraStream) {
+        try {
+          state.cameraStream.getTracks().forEach(t => { try { t.stop(); } catch (_) {} });
+        } catch (_) {}
+        state.cameraStream = null;
+      }
+      state.isOmrCameraOpen = false;
+      if (typeof document !== 'undefined') {
+        const v = document.getElementById('omrVideo');
+        if (v) {
+          try {
+            v.pause();
+            if (v.srcObject) {
+              if (typeof v.srcObject.getTracks === 'function') {
+                v.srcObject.getTracks().forEach(t => { try { t.stop(); } catch (_) {} });
+              }
+              v.srcObject = null;
+            }
+          } catch (_) {}
+        }
+      }
+    }
+  }
+
   if (!state.selectedGroupId && Array.isArray(groups) && groups.length > 0) {
     state.selectedGroupId = groups[0].id;
   }
@@ -5089,6 +5116,27 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
 }
 export function registerTeacherQuizzesActions(app) {
 
+  // ضمان إيقاف الكاميرا وتحرير الموارد عند إغلاق أو مغادرة النافذة أو الرجوع في المتصفح
+  if (typeof window !== 'undefined' && !window._centrlyOmrExitHandlersRegistered) {
+    window._centrlyOmrExitHandlersRegistered = true;
+    const releaseOmrCameraResources = () => {
+      if (app.quizzesState?.isOmrCameraOpen || app.quizzesState?.cameraStream) {
+        if (typeof app.stopOmrCamera === 'function') {
+          app.stopOmrCamera(true);
+        } else if (app.quizzesState?.cameraStream) {
+          try {
+            app.quizzesState.cameraStream.getTracks().forEach(t => { try { t.stop(); } catch (_) {} });
+          } catch (_) {}
+          app.quizzesState.cameraStream = null;
+          app.quizzesState.isOmrCameraOpen = false;
+        }
+      }
+    };
+    window.addEventListener('popstate', releaseOmrCameraResources);
+    window.addEventListener('pagehide', releaseOmrCameraResources);
+    window.addEventListener('beforeunload', releaseOmrCameraResources);
+  }
+
   // Initialize scanned results cache
   try {
     const cachedScans = localStorage.getItem('centrly_paper_scanned_results');
@@ -5428,6 +5476,11 @@ export function registerTeacherQuizzesActions(app) {
     if (this.quizzesState.activeSubTab === 'paper_builder' && this.quizzesState.paperViewMode === 'create' && this.checkHasUnsavedExam('paper')) {
       this.promptUnsavedExamExit('paper', () => this.switchQuizSubTab(tabName, gradingMode));
       return;
+    }
+
+    // إغلاق الكاميرا فوراً عند الانتقال لأي تبويب آخر
+    if (tabName !== 'paper_scanner' && (this.quizzesState?.isOmrCameraOpen || this.quizzesState?.cameraStream)) {
+      this.stopOmrCamera(true);
     }
 
     this.quizzesState.activeSubTab = tabName;
@@ -6273,6 +6326,9 @@ export function registerTeacherQuizzesActions(app) {
 
   // Paper Exam Builder Actions
   app.startNewPaperExam = function() {
+    if (this.quizzesState?.isOmrCameraOpen || this.quizzesState?.cameraStream) {
+      this.stopOmrCamera(true);
+    }
     const nextNum = (this.quizzesState.quizzes?.length > 0)
       ? Math.max(...this.quizzesState.quizzes.map(q => q.number)) + 1
       : 1;
@@ -7056,39 +7112,76 @@ export function registerTeacherQuizzesActions(app) {
       return;
     }
 
+    // إيقاف أي بث نشط مسبقاً قبل فتح اتصال جديد
+    if (this.quizzesState?.cameraStream) {
+      try {
+        this.quizzesState.cameraStream.getTracks().forEach(t => { try { t.stop(); } catch (_) {} });
+      } catch (_) {}
+      this.quizzesState.cameraStream = null;
+    }
+
     this.quizzesState.isOmrCameraOpen = true;
     this.renderMainContent();
 
     setTimeout(async () => {
+      // التحقق من أن المعلم لم يغلق الكاميرا أو يغادر الصفحة خلال مهلة التهيئة
+      if (!this.quizzesState?.isOmrCameraOpen || this.quizzesState?.activeSubTab !== 'paper_scanner') {
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment', width: { ideal: 720 }, height: { ideal: 1280 } }
         });
+
+        // فحص أمني: هل غادر المعلم الصفحة أثناء انتظار الموافقة على إذن الكاميرا؟
+        if (!this.quizzesState?.isOmrCameraOpen || this.quizzesState?.activeSubTab !== 'paper_scanner' || (this.currentRoute && this.currentRoute !== 'paper-exams')) {
+          stream.getTracks().forEach(t => { try { t.stop(); } catch (_) {} });
+          return;
+        }
+
         const video = document.getElementById('omrVideo');
         if (video) {
           video.srcObject = stream;
-          video.play();
+          video.play().catch(() => {});
         }
         this.quizzesState.cameraStream = stream;
         this.showToast('تم تشغيل الكاميرا بنجاح. وجّه الكاميرا نحو ورقة الإجابة واضغط "التقاط وتصحيح الورقة"', 'success');
       } catch (err) {
-        this.showToast('تعذر تشغيل الكاميرا: ' + (err.message || 'يرجى التأكد من منح الإذن للمتصفح'), 'danger');
-        this.quizzesState.isOmrCameraOpen = false;
-        this.renderMainContent();
+        if (this.quizzesState?.isOmrCameraOpen) {
+          this.showToast('تعذر تشغيل الكاميرا: ' + (err.message || 'يرجى التأكد من منح الإذن للمتصفح'), 'danger');
+          this.quizzesState.isOmrCameraOpen = false;
+          this.renderMainContent();
+        }
       }
     }, 150);
   };
 
-  app.stopOmrCamera = function() {
+  app.stopOmrCamera = function(silent = false) {
     this.stopOmrAutoScanner();
-    if (this.quizzesState.cameraStream) {
+    const video = typeof document !== 'undefined' ? document.getElementById('omrVideo') : null;
+    if (video) {
       try {
-        this.quizzesState.cameraStream.getTracks().forEach(t => t.stop());
+        video.pause();
+        if (video.srcObject) {
+          if (typeof video.srcObject.getTracks === 'function') {
+            video.srcObject.getTracks().forEach(t => { try { t.stop(); } catch (_) {} });
+          }
+          video.srcObject = null;
+        }
+      } catch (_) {}
+    }
+    if (this.quizzesState?.cameraStream) {
+      try {
+        this.quizzesState.cameraStream.getTracks().forEach(t => { try { t.stop(); } catch (_) {} });
       } catch (_) {}
       this.quizzesState.cameraStream = null;
     }
-    this.quizzesState.isOmrCameraOpen = false;
-    this.renderMainContent();
+    if (this.quizzesState) {
+      this.quizzesState.isOmrCameraOpen = false;
+    }
+    if (!silent) {
+      this.renderMainContent();
+    }
   };
 
   app.captureAndAnalyzeOmr = function(isManual = false) {
