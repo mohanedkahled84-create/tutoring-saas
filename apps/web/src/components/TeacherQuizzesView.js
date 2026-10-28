@@ -3576,9 +3576,26 @@ function renderOmrReviewModal(pendingScan) {
             <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 0.85rem 1rem; font-size: 0.78rem; color: #991b1b; line-height: 1.5;">
               <strong>تنبيه فحص الثقة (ورقة بيضاء):</strong> لم يتم رصد أي تظليلات على ورقة الإجابة (الدرجة صفر).
               <br/>
-              • إذا كان الطالب قد سلّم الورقة فارغة بالفعل، اضغط <b>«اعتماد وتأكيد الدرجة كصفر»</b>.
+              • لحماية حقوق الطلاب، يُمنع اعتماد درجة الصفر تلقائياً.
               <br/>
-              • إذا كانت الورقة تحتوي على حل، فهذا يعني أن زاوية التصوير أو الإضاءة لم تكن واضحة؛ اضغط <b>«إعادة التقاط الورقة»</b>.
+              • إذا كانت الورقة تحتوي على إجابات، يرجى إدخالها من الجدول أدناه أو الضغط على «إعادة التقاط الورقة».
+              <br/>
+              • إذا سلّم الطالب الورقة بيضاء بالفعل، فعّل خيار «الإقرار الصريح» أدناه للاعتماد، أو احفظها كمسودة.
+            </div>
+          ` : ''}
+
+          <!-- Explicit Zero Confirmation Checkbox for Blank or Unreadable Sheets -->
+          ${(isAllBlank || isUnreadable) ? `
+            <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 6px; padding: 0.75rem 1rem;">
+              <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="confirmExplicitZeroCheck" 
+                  ${pendingScan.explicit_zero_confirmed ? 'checked' : ''} 
+                  onchange="window.centrlyApp.toggleExplicitZeroConfirm(this.checked)"
+                  style="margin-top: 3px; accent-color: #e11d48; width: 16px; height: 16px; cursor: pointer;" />
+                <span style="font-size: 0.78rem; font-weight: 800; color: #9f1239; line-height: 1.4;">
+                  أقر بأن الطالب سلّم الورقة فارغة تماماً دون أي تظليل، وأتحمل مسؤولية اعتماد الصفر رسمياً.
+                </span>
+              </label>
             </div>
           ` : ''}
 
@@ -3653,15 +3670,21 @@ function renderOmrReviewModal(pendingScan) {
 
         </div>
 
-        <div style="padding: 0.85rem 1.25rem; border-top: 1px solid #f1f5f9; background: #f8fafc; display: flex; justify-content: flex-end; gap: 0.65rem;">
-          <button type="button" onclick="window.centrlyApp.closeOmrReviewModal()" 
-            style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer;">
-            إعادة التقاط الورقة
+        <div style="padding: 0.85rem 1.25rem; border-top: 1px solid #f1f5f9; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; gap: 0.65rem;">
+          <button type="button" onclick="window.centrlyApp.saveOmrScanAsDraft()" 
+            style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 5px; cursor: pointer;" title="حفظ محلياً دون اعتماد رسمي">
+            حفظ كمسودة غير معتمدة
           </button>
-          <button type="button" onclick="window.centrlyApp.confirmOmrScanReview()" 
-            style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer;">
-            اعتماد وتأكيد الدرجة
-          </button>
+          <div style="display: flex; gap: 0.65rem;">
+            <button type="button" onclick="window.centrlyApp.closeOmrReviewModal()" 
+              style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer;">
+              إعادة التقاط الورقة
+            </button>
+            <button type="button" onclick="window.centrlyApp.confirmOmrScanReview()" 
+              style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: ${(isAllBlank || isUnreadable) && !pendingScan.explicit_zero_confirmed ? '#94a3b8' : '#0f172a'}; color: #ffffff; border: none; border-radius: 5px; cursor: pointer;">
+              اعتماد وتأكيد الدرجة
+            </button>
+          </div>
         </div>
 
       </div>
@@ -7863,11 +7886,11 @@ export function registerTeacherQuizzesActions(app) {
         return count > 0 ? (totalDarkness / count) : 0;
       };
 
-      // Detect sheet contrast across 9 control points
+      // Detect sheet contrast across corner alignment markers and center points
       const ctrlPoints = [
-        [0.2, 0.2], [0.5, 0.2], [0.8, 0.2],
-        [0.2, 0.5], [0.5, 0.5], [0.8, 0.5],
-        [0.2, 0.8], [0.5, 0.8], [0.8, 0.8]
+        [0.03, 0.03], [0.97, 0.03],
+        [0.5, 0.5],
+        [0.03, 0.97], [0.97, 0.97]
       ];
       const ctrlSamples = ctrlPoints.map(p => getSampleDarkness(p[0], p[1], 0.02));
       const minSample = Math.min(...ctrlSamples);
@@ -7875,9 +7898,9 @@ export function registerTeacherQuizzesActions(app) {
       const sampleDiff = maxSample - minSample;
 
       // Check if image is blank white, pitch black, or entirely washed out
-      if (minSample > 220 || maxSample < 20 || (sampleDiff < 8 && maxSample < 40)) {
+      if (minSample > 220 || maxSample < 40 || (sampleDiff < 15 && maxSample < 60)) {
         isUnreadable = true;
-        unreadableReason = 'الصورة غير واضحة أو شديدة الظلمة/البياض؛ تعذر تمييز علامات الورقة بدقة';
+        unreadableReason = 'الصورة غير واضحة أو شديدة الظلمة/البياض؛ تعذر تمييز علامات محاذاة الورقة بدقة';
       }
 
       // 4-digit Student Code Grid Detection (Strict: full code match only, NO endsWith)
@@ -8147,9 +8170,9 @@ export function registerTeacherQuizzesActions(app) {
 
     // Preserves all detected answers and checks review gate
     if (pending.model_unconfirmed || pending.is_unreadable || pending.is_all_blank || pending.is_ambiguous || pending.overall_confidence < 40) {
-      this.promptOmrScanReview(pending);
+      return this.promptOmrScanReview(pending);
     } else {
-      this.recordOmrScanResult(pending);
+      return this.recordOmrScanResult(pending);
     }
   };
 
@@ -8203,6 +8226,41 @@ export function registerTeacherQuizzesActions(app) {
     this.renderMainContent();
   };
 
+  app.toggleExplicitZeroConfirm = function(checked) {
+    const pending = this.quizzesState.activeOmrReviewModal;
+    if (pending) {
+      pending.explicit_zero_confirmed = Boolean(checked);
+      this.renderMainContent();
+    }
+  };
+
+  app.saveOmrScanAsDraft = function() {
+    const pending = this.quizzesState.activeOmrReviewModal;
+    if (!pending) return;
+
+    pending.sync_status = 'draft';
+    pending.server_confirmed = false;
+    pending.is_approved = false;
+
+    if (!Array.isArray(this.quizzesState.scannedResultsList)) {
+      this.quizzesState.scannedResultsList = [];
+    }
+    const existingIdx = this.quizzesState.scannedResultsList.findIndex(item => 
+      (pending.student_id && String(item.student_id) === String(pending.student_id)) ||
+      (pending.student_code && String(item.student_code) === String(pending.student_code))
+    );
+    if (existingIdx >= 0) {
+      this.quizzesState.scannedResultsList[existingIdx] = pending;
+    } else {
+      this.quizzesState.scannedResultsList.unshift(pending);
+    }
+    this.quizzesState.lastOmrScanResult = pending;
+    this.saveQuizzesToLocalStorage();
+    this.quizzesState.activeOmrReviewModal = null;
+    this.showToast('تم حفظ ورقة الطالب كمسودة غير معتمدة للمراجعة لاحقاً', 'info');
+    this.renderMainContent();
+  };
+
   app.confirmOmrScanReview = function() {
     const pending = this.quizzesState.activeOmrReviewModal;
     if (!pending) return;
@@ -8212,8 +8270,16 @@ export function registerTeacherQuizzesActions(app) {
       return;
     }
 
+    // Strict guard: NEVER auto-approve all-blank or unreadable sheets as zero
+    if (pending.is_all_blank || pending.is_unreadable) {
+      if (!pending.explicit_zero_confirmed) {
+        this.showToast('لا يمكن اعتماد الصفر تلقائياً لورقة غير مقروءة أو فارغة. الرجاء تفعيل الإقرار الصريح أو حفظها كمسودة.', 'warning');
+        return;
+      }
+    }
+
     this.quizzesState.activeOmrReviewModal = null;
-    this.recordOmrScanResult(pending);
+    return this.recordOmrScanResult(pending);
   };
 
   app.updateReviewQuestionChoice = function(qNum, choiceLetter) {
