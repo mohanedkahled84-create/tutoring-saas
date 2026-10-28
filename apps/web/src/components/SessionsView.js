@@ -1,4 +1,4 @@
-import { request } from "../services/api.js";
+import { request, API_BASE_URL } from "../services/api.js";
 import { normalizeDigits } from "../utils/normalizeDigits.js";
 import { renderNavLiveBadgeHtml } from "./Navbar.js";
 import { generateBarcode128Svg } from "../utils/studentBarcodeCard.js";

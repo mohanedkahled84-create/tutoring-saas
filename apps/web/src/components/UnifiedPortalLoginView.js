@@ -1,4 +1,4 @@
-import { request } from '../services/api.js';
+import { request, API_BASE_URL } from '../services/api.js';
 import { renderParentPortalView } from './ParentPortalView.js';
 import { renderStudentPortalView } from './StudentPortalView.js';
 import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js';
