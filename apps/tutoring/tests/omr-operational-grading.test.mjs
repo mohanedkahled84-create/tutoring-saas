@@ -431,16 +431,66 @@ test("CASE 7 - Optical Scan on Actual Image Files via Real Frontend JavaScript C
   assert.equal(resReal.percentage, 80);
   assert.equal(resReal.breakdown.length, 10);
 
-  // Verify per-question optical readings
-  assert.equal(resReal.breakdown[0].student_choice, "ج");
-  assert.equal(resReal.breakdown[0].is_correct, true);
-  assert.equal(resReal.breakdown[1].student_choice, "أ");
-  assert.equal(resReal.breakdown[1].is_correct, true);
-  assert.equal(resReal.breakdown[6].student_choice, "أ"); // Student answered A
-  assert.equal(resReal.breakdown[6].is_correct, false);  // Correct is B
-  assert.equal(resReal.breakdown[6].points, 0);
+  // Capture breakdown BEFORE manual student selection
+  const breakdownBefore = resReal.breakdown.map(b => ({
+    question_number: b.question_number,
+    student_choice: b.student_choice,
+    correct_letter: b.correct_letter,
+    points: b.points,
+    is_correct: b.is_correct
+  }));
+
+  // Verify per-question optical readings before manual student selection
+  assert.equal(breakdownBefore[0].student_choice, "ج");
+  assert.equal(breakdownBefore[0].is_correct, true);
+  assert.equal(breakdownBefore[1].student_choice, "أ");
+  assert.equal(breakdownBefore[1].is_correct, true);
+  assert.equal(breakdownBefore[6].student_choice, "أ"); // Student answered A
+  assert.equal(breakdownBefore[6].is_correct, false);  // Correct is B
+  assert.equal(breakdownBefore[6].points, 0);
+
+  // ACT 1.1: Complete the Full Pipeline: Execute confirmManualStudentSelection
+  await app.confirmManualStudentSelection("std_omar_1");
+
+  // Since barcode model was not embedded in raw canvas, safety gate routes to OmrReviewModal
+  assert.ok(
+    app.quizzesState.activeOmrReviewModal,
+    "When model is not detected via barcode, system must gate to OmrReviewModal for teacher model confirmation"
+  );
+  assert.equal(app.quizzesState.activeOmrReviewModal.student_name, "عمر جمال");
+  assert.equal(app.quizzesState.activeOmrReviewModal.student_id, "std_omar_1");
+
+  // Teacher confirms Model A in review modal and clicks confirm
+  app.setReviewModel("A");
+  await app.confirmOmrScanReview();
+
+  // Verify result AFTER manual student selection and model confirmation
+  assert.equal(app.quizzesState.scannedResultsList.length, 1);
+  const recordedAfter = app.quizzesState.scannedResultsList[0];
+
+  assert.equal(recordedAfter.student_id, "std_omar_1");
+  assert.equal(recordedAfter.student_name, "عمر جمال");
+  assert.equal(recordedAfter.score, 16, "Score must remain 16/20 after manual selection, never reset to 0");
+  assert.equal(recordedAfter.percentage, 80);
+
+  // Capture breakdown AFTER manual student selection
+  const breakdownAfter = recordedAfter.breakdown.map(b => ({
+    question_number: b.question_number,
+    student_choice: b.student_choice,
+    correct_letter: b.correct_letter,
+    points: b.points,
+    is_correct: b.is_correct
+  }));
+
+  // Assert question-by-question choices are 100% IDENTICAL before and after selection
+  assert.deepEqual(
+    breakdownBefore,
+    breakdownAfter,
+    "Every single question choice and points must be strictly preserved before and after manual student selection"
+  );
 
   // ACT 2: Run actual analyzeOmrCanvas on Image 2 (User's Real Camera Screenshot)
+  app.quizzesState.scannedResultsList = [];
   app.quizzesState.activeManualStudentModal = null;
   app.quizzesState.activeOmrReviewModal = null;
   await app.analyzeOmrCanvas(userCanvas);
