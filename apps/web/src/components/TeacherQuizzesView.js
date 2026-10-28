@@ -3512,21 +3512,24 @@ function renderManualStudentSelectionModal(pendingScan, groupStudents = [], allS
 }
 
 // ============================================================================
-// MODAL: OMR HUMAN REVIEW GATE (حماية الصفر والتأكيد البشري للتظليل الملتبس)
+// MODAL: OMR HUMAN REVIEW GATE (حماية الصفر، تأكيد النموذج، ومراجعة جودة التصوير)
 // ============================================================================
 function renderOmrReviewModal(pendingScan) {
   if (!pendingScan) return '';
   const isAllBlank = Boolean(pendingScan.is_all_blank);
   const isAmbiguous = Boolean(pendingScan.is_ambiguous);
+  const isUnreadable = Boolean(pendingScan.is_unreadable);
+  const isModelUnconfirmed = Boolean(pendingScan.model_unconfirmed);
   const breakdown = pendingScan.breakdown || [];
+  const overallConf = pendingScan.overall_confidence !== undefined ? pendingScan.overall_confidence : 85;
 
   return `
     <div style="position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(2px); font-family: 'Cairo', sans-serif; direction: rtl;">
-      <div style="background: #ffffff; border-radius: 8px; max-width: 580px; width: 100%; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.18); display: flex; flex-direction: column; max-height: 90vh; overflow: hidden;">
+      <div style="background: #ffffff; border-radius: 8px; max-width: 620px; width: 100%; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.18); display: flex; flex-direction: column; max-height: 92vh; overflow: hidden;">
         
         <div style="padding: 1rem 1.25rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">مراجعة نتيجة التصحيح الورقي قبل الاعتماد</h3>
+            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">مراجعة وتشخيص فحص الورقة قبل الاعتماد</h3>
             <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #64748b;">
               الطالب: <strong>${escapeHtml(pendingScan.student_name || 'غير محدد')}</strong> (${escapeHtml(pendingScan.student_code || '')})
             </p>
@@ -3536,16 +3539,50 @@ function renderOmrReviewModal(pendingScan) {
 
         <div style="padding: 1.15rem 1.25rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0.85rem;">
           
-          ${isAllBlank ? `
+          <!-- Model Selection Required Alert -->
+          ${isModelUnconfirmed ? `
+            <div style="background: #fffbeb; border: 1.5px dashed #f59e0b; border-radius: 6px; padding: 0.85rem 1rem;">
+              <div style="font-size: 0.8rem; font-weight: 800; color: #92400e; margin-bottom: 0.45rem;">
+                ⚠️ نموذج الامتحان غير محدد بالباركود؛ الرجاء تحديد النموذج لمقارنة الإجابات بمفتاح الحل الصحيح:
+              </div>
+              <div style="display: flex; gap: 8px;">
+                ${['A', 'B', 'C'].map(m => {
+                  const mAr = m === 'B' ? 'ب' : (m === 'C' ? 'ج' : 'أ');
+                  const isSel = (pendingScan.model_letter === m);
+                  return `
+                    <button type="button" onclick="window.centrlyApp.setReviewModel('${m}')"
+                      style="flex: 1; height: 34px; font-size: 0.82rem; font-weight: 800; border-radius: 5px; cursor: pointer; border: 1.5px solid ${isSel ? '#0f172a' : '#cbd5e1'}; background: ${isSel ? '#0f172a' : '#ffffff'}; color: ${isSel ? '#ffffff' : '#0f172a'};">
+                      نموذج ${mAr} (${m})
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Unreadable / Blurry Image Alert -->
+          ${isUnreadable ? `
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 0.85rem 1rem; font-size: 0.78rem; color: #991b1b; line-height: 1.5;">
+              <strong>⚠️ تنبيه جودة التصوير:</strong> ${escapeHtml(pendingScan.unreadable_reason || 'الصورة غير واضحة أو لم يتم العثور على حدود ورقة الإجابة بدقة.')}
+              <br/>
+              • لحماية درجة الطالب، <b>لن يتم تسجيل أي صفر تلقائيًا</b> في حال رداءة الصورة.
+              <br/>
+              • يرجى الضغط على <b>«إعادة التقاط الورقة»</b> وتثبيت الكاميرا بمحاذاة الإطار، أو إدخال الإجابات يدويًا من الجدول أدناه.
+            </div>
+          ` : ''}
+
+          <!-- All Blank Alert -->
+          ${(!isUnreadable && isAllBlank) ? `
             <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 0.85rem 1rem; font-size: 0.78rem; color: #991b1b; line-height: 1.5;">
               <strong>تنبيه فحص الثقة (ورقة بيضاء):</strong> لم يتم رصد أي تظليلات على ورقة الإجابة (الدرجة صفر).
               <br/>
-              • إذا كان الطالب قد سلّم الورقة فارغة بالفعل، اضغط <b>«اعتماد وتأكيد الدرجة»</b>.
+              • إذا كان الطالب قد سلّم الورقة فارغة بالفعل، اضغط <b>«اعتماد وتأكيد الدرجة كصفر»</b>.
               <br/>
               • إذا كانت الورقة تحتوي على حل، فهذا يعني أن زاوية التصوير أو الإضاءة لم تكن واضحة؛ اضغط <b>«إعادة التقاط الورقة»</b>.
             </div>
           ` : ''}
 
+          <!-- Ambiguous Shading Alert -->
           ${isAmbiguous ? `
             <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 0.85rem 1rem; font-size: 0.78rem; color: #92400e; line-height: 1.5;">
               <strong>تنبيه تظليل ملتبس:</strong> تم رصد تظليلات متعددة أو غير واضحة لبعض الأسئلة. يمكنك مراجعة الأسئلة وتعديل الاختيار يدوياً قبل الاعتماد.
@@ -3557,6 +3594,8 @@ function renderOmrReviewModal(pendingScan) {
               <span>الامتحان: <strong>${escapeHtml(pendingScan.exam_title || '')}</strong></span>
               <span style="margin: 0 4px;">•</span>
               <span>${escapeHtml(pendingScan.model || 'أ')}</span>
+              <span style="margin: 0 4px;">•</span>
+              <span style="font-size: 0.72rem; color: #64748b;">ثقة القراءة: <b>${overallConf}%</b></span>
             </div>
             <div style="font-size: 0.92rem; font-weight: 800; color: #0f172a;">
               الدرجة الحالية: ${pendingScan.score} / ${pendingScan.max_score} (${pendingScan.percentage}%)
@@ -3571,6 +3610,7 @@ function renderOmrReviewModal(pendingScan) {
                   <th style="padding: 6px;">إجابة الطالب</th>
                   <th style="padding: 6px;">الصحيحة</th>
                   <th style="padding: 6px;">النقاط</th>
+                  <th style="padding: 6px;">الثقة</th>
                   <th style="padding: 6px;">تعديل يدوي</th>
                 </tr>
               </thead>
@@ -3587,6 +3627,7 @@ function renderOmrReviewModal(pendingScan) {
                       </td>
                       <td style="padding: 6px; font-weight: 700; color: #334155;">${escapeHtml(b.correct_letter || 'أ')}</td>
                       <td style="padding: 6px; font-weight: 800;">${b.points || 0} / ${b.max_points || 1}</td>
+                      <td style="padding: 6px; font-size: 0.72rem; color: #64748b; font-weight: 700;">${b.confidence || 0}%</td>
                       <td style="padding: 4px;">
                         <div style="display: inline-flex; gap: 2px;">
                           ${['أ', 'ب', 'ج', 'د'].map(letter => `
@@ -7710,9 +7751,10 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.analyzeOmrCanvas = async function(canvas, isManual = false) {
-    this.showToast('جاري فحص ورقة البابل شيت وتصحيح الإجابات...', 'info');
+    this.showToast('جاري فحص ورقة البابل شيت وتحليل العلامات...', 'info');
 
-    // 1. Identify Target Exam
+    // 1. Identify Target Exam with Strict Group & Model Scoping
+    const activeGroupId = this.quizzesState.selectedGroupId;
     const paperExams = (this.quizzesState.richQuizzes || []).filter(q => q.exam_mode === 'paper');
     const selectedExamId = this.quizzesState.omrSelectedExamId;
     let targetExam = paperExams.find(q => String(q.id) === String(selectedExamId));
@@ -7720,19 +7762,15 @@ export function registerTeacherQuizzesActions(app) {
       targetExam = (this.quizzesState.richQuizzes || []).find(q => String(q.id) === String(selectedExamId));
     }
     if (!targetExam) {
-      targetExam = paperExams[0] || (this.quizzesState.richQuizzes || [])[0] || {
-        id: 'default_paper',
-        title: 'امتحان ورقي تجريبي',
-        quiz_number: 1,
-        questions: Array.from({ length: 10 }, (_, i) => ({
-          id: `q_${i+1}`,
-          type: 'mcq',
-          text: `سؤال ${i+1}`,
-          points: 2,
-          correct_index: i % 4,
-          options: ['أ', 'ب', 'ج', 'د']
-        }))
-      };
+      targetExam = paperExams.find(q => !activeGroupId || activeGroupId === 'all' || String(q.group_id) === String(activeGroupId))
+        || paperExams[0]
+        || (this.quizzesState.richQuizzes || [])[0]
+        || null;
+    }
+
+    if (!targetExam) {
+      this.showToast('تعذر العثور على سجل الامتحان المطلوب للتصحيح', 'danger');
+      return;
     }
 
     // 2. Barcode & QR Code Detection
@@ -7760,6 +7798,8 @@ export function registerTeacherQuizzesActions(app) {
               if (last === '01') detectedModel = 'A';
               else if (last === '02') detectedModel = 'B';
               else if (last === '03') detectedModel = 'C';
+              const exPart = parts.find(p => p.startsWith('EX'));
+              if (exPart) detectedExamCode = exPart;
             } else if (/^\d{3,6}$/.test(raw)) {
               detectedStudentCode = raw;
             }
@@ -7768,15 +7808,18 @@ export function registerTeacherQuizzesActions(app) {
       } catch (_) {}
     }
 
-    // 3. Determine Model Letter
+    // 3. Strict Model Resolution (No silent fallback to A!)
     const selectedModelSetting = this.quizzesState.omrSelectedModel || 'auto';
     let assignedModelLetter = 'A';
+    let modelUnconfirmed = false;
+
     if (selectedModelSetting !== 'auto' && ['A', 'B', 'C'].includes(selectedModelSetting)) {
       assignedModelLetter = selectedModelSetting;
     } else if (detectedModel && ['A', 'B', 'C'].includes(detectedModel)) {
       assignedModelLetter = detectedModel;
     } else {
-      assignedModelLetter = 'A';
+      modelUnconfirmed = true;
+      assignedModelLetter = 'A'; // Provisional
     }
 
     const assignedModelArabic = assignedModelLetter === 'B' ? 'ب' : (assignedModelLetter === 'C' ? 'ج' : 'أ');
@@ -7785,9 +7828,11 @@ export function registerTeacherQuizzesActions(app) {
     const totalQ = Math.max(1, modelMcqs.length > 0 ? modelMcqs.length : 10);
     const maxScore = targetExam.questions?.reduce((s, q) => s + (Number(q.points) || 1), 0) || (totalQ * 2);
 
-    // 4. Optical Analysis on Canvas
+    // 4. Optical Analysis with Alignment & Contrast Calibration
     let earnedScore = 0;
     const breakdown = [];
+    let isUnreadable = false;
+    let unreadableReason = '';
 
     if (canvas) {
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -7818,10 +7863,28 @@ export function registerTeacherQuizzesActions(app) {
         return count > 0 ? (totalDarkness / count) : 0;
       };
 
-      // Attempt student code grid detection if not already detected
-      if (!detectedStudentCode) {
+      // Detect sheet contrast across 9 control points
+      const ctrlPoints = [
+        [0.2, 0.2], [0.5, 0.2], [0.8, 0.2],
+        [0.2, 0.5], [0.5, 0.5], [0.8, 0.5],
+        [0.2, 0.8], [0.5, 0.8], [0.8, 0.8]
+      ];
+      const ctrlSamples = ctrlPoints.map(p => getSampleDarkness(p[0], p[1], 0.02));
+      const minSample = Math.min(...ctrlSamples);
+      const maxSample = Math.max(...ctrlSamples);
+      const sampleDiff = maxSample - minSample;
+
+      // Check if image is blank white, pitch black, or entirely washed out
+      if (minSample > 220 || maxSample < 20 || (sampleDiff < 8 && maxSample < 40)) {
+        isUnreadable = true;
+        unreadableReason = 'الصورة غير واضحة أو شديدة الظلمة/البياض؛ تعذر تمييز علامات الورقة بدقة';
+      }
+
+      // 4-digit Student Code Grid Detection (Strict: full code match only, NO endsWith)
+      if (!detectedStudentCode && !isUnreadable) {
         const colXCoords = [0.62, 0.70, 0.78, 0.86];
         const digits = [];
+        let allZero = true;
         for (let c = 0; c < 4; c++) {
           let maxDark = -1;
           let chosenDigit = 0;
@@ -7832,23 +7895,26 @@ export function registerTeacherQuizzesActions(app) {
               const dark = getSampleDarkness(colXCoords[c] + dx, normY, 0.006);
               if (dark > localPeak) localPeak = dark;
             }
-            if (localPeak > maxDark) {
+            if (dark > maxDark) {
               maxDark = localPeak;
               chosenDigit = d;
             }
           }
+          if (chosenDigit !== 0) allZero = false;
           digits.push(chosenDigit);
         }
-        const candidateCode = digits.join('');
-        const matched = (this.students || []).find(s => 
-          String(s.student_code || s.code) === candidateCode || String(s.id).endsWith(candidateCode)
-        );
-        if (matched) {
-          detectedStudentCode = candidateCode;
+        if (!allZero) {
+          const candidateCode = digits.join('');
+          const matched = (this.students || []).find(s => 
+            String(s.student_code || s.code || '').trim() === candidateCode
+          );
+          if (matched) {
+            detectedStudentCode = candidateCode;
+          }
         }
       }
 
-      // Determine column counts
+      // Column layout
       let numCols = 1;
       if (totalQ > 36) numCols = 3;
       else if (totalQ > 15) numCols = 2;
@@ -7891,8 +7957,9 @@ export function registerTeacherQuizzesActions(app) {
         const normY = gridTop + (rowIdx / totalRowsThisCol) * gridHeight;
         const colLeft = 0.06 + (cIdx * colWidth);
 
-        // Multi-point jitter sampling (3x3 grid around each bubble) to handle camera rotation/tilt
+        // Multi-point jitter sampling (3x3 grid around each bubble)
         const optDarkness = [];
+        const optLetters = ['أ', 'ب', 'ج', 'د'];
         for (let opt = 0; opt < 4; opt++) {
           const baseNormX = colLeft + colWidth * (0.68 - opt * 0.16);
           let maxLocalDark = 0;
@@ -7905,25 +7972,31 @@ export function registerTeacherQuizzesActions(app) {
           optDarkness.push(maxLocalDark);
         }
 
-        // Relative contrast ranking
         const sorted = optDarkness.map((dark, idx) => ({ dark, idx })).sort((a, b) => b.dark - a.dark);
         const topOpt = sorted[0];
         const secondOpt = sorted[1];
         const minDark = sorted[3].dark;
         const contrastDiff = topOpt.dark - secondOpt.dark;
-        const totalContrast = topOpt.dark - minDark;
+        const relDarkness = topOpt.dark - minDark;
 
-        // Distinguish single shaded, unshaded, and multiple shaded (ambiguous)
-        const isMultipleShaded = (topOpt.dark >= 35 && secondOpt.dark >= 30 && contrastDiff < 8);
-        const isShaded = !isMultipleShaded && ((contrastDiff >= 10 && topOpt.dark >= 35) || (totalContrast >= 16 && topOpt.dark >= 40));
+        // Dynamic thresholding relative to paper background
+        const isMultipleShaded = (topOpt.dark >= 35 && secondOpt.dark >= 28 && contrastDiff < 8);
+        const isShaded = !isMultipleShaded && ((contrastDiff >= 10 && topOpt.dark >= 35) || (relDarkness >= 16 && topOpt.dark >= 38));
 
         let studentChoiceLabel = 'لم يُظلل';
         let studentOptIdx = -1;
+        let confidence = 95;
+
         if (isMultipleShaded) {
           studentChoiceLabel = 'تظليل ملتبس';
+          confidence = 20;
         } else if (isShaded) {
           studentOptIdx = topOpt.idx;
-          studentChoiceLabel = ['أ', 'ب', 'ج', 'د'][studentOptIdx];
+          studentChoiceLabel = optLetters[studentOptIdx] || 'أ';
+          confidence = Math.min(100, Math.round(contrastDiff * 3 + relDarkness));
+        } else {
+          studentChoiceLabel = 'لم يُظلل';
+          confidence = 90;
         }
 
         const isCorrect = (studentOptIdx >= 0) && (studentOptIdx === correctIdx);
@@ -7934,11 +8007,20 @@ export function registerTeacherQuizzesActions(app) {
         breakdown.push({
           question_number: qNum,
           student_choice: studentChoiceLabel,
-          correct_letter: ['أ', 'ب', 'ج', 'د'][correctIdx] || 'أ',
+          student_choice_index: studentOptIdx >= 0 ? studentOptIdx : null,
+          correct_letter: optLetters[correctIdx] || 'أ',
+          correct_index: correctIdx,
           is_correct: isCorrect,
           points: isCorrect ? pts : 0,
           max_points: pts,
-          is_ambiguous: isMultipleShaded
+          confidence: confidence,
+          is_ambiguous: isMultipleShaded,
+          bubble_darkness: {
+            'أ': optDarkness[0],
+            'ب': optDarkness[1],
+            'ج': optDarkness[2],
+            'د': optDarkness[3]
+          }
         });
       }
     } else {
@@ -7956,16 +8038,19 @@ export function registerTeacherQuizzesActions(app) {
         breakdown.push({
           question_number: qNum,
           student_choice: ['أ', 'ب', 'ج', 'د'][studentOptIdx],
+          student_choice_index: studentOptIdx,
           correct_letter: ['أ', 'ب', 'ج', 'د'][correctIdx] || 'أ',
+          correct_index: correctIdx,
           is_correct: isCorrect,
           points: isCorrect ? pts : 0,
-          max_points: pts
+          max_points: pts,
+          confidence: 90,
+          is_ambiguous: false
         });
       }
     }
 
-    // Match student from roster strictly (No auto-assignment fallback)
-    const activeGroupId = this.quizzesState.selectedGroupId;
+    // Match student from roster strictly (No endsWith fallback)
     const groupStudents = (this.students || []).filter(s => {
       if (!activeGroupId || activeGroupId === 'all') return true;
       return String(s.group_id) === String(activeGroupId) || String(s.groupId) === String(activeGroupId);
@@ -7973,10 +8058,11 @@ export function registerTeacherQuizzesActions(app) {
 
     let targetStudent = null;
     if (detectedStudentCode) {
+      const cleanCandidate = String(detectedStudentCode).trim();
       targetStudent = groupStudents.find(s => 
-        String(s.student_code || s.code) === String(detectedStudentCode) || String(s.id).endsWith(String(detectedStudentCode))
+        String(s.student_code || s.code || '').trim() === cleanCandidate
       ) || (this.students || []).find(s => 
-        String(s.student_code || s.code) === String(detectedStudentCode) || String(s.id).endsWith(String(detectedStudentCode))
+        String(s.student_code || s.code || '').trim() === cleanCandidate
       ) || null;
     }
 
@@ -7986,6 +8072,9 @@ export function registerTeacherQuizzesActions(app) {
     const answeredCount = breakdown.filter(b => b.student_choice && b.student_choice !== 'لم يُظلل' && b.student_choice !== 'تظليل ملتبس').length;
     const isAllBlank = (answeredCount === 0);
     const isAmbiguous = breakdown.some(b => b.is_ambiguous);
+    const avgConfidence = breakdown.length > 0
+      ? Math.round(breakdown.reduce((s, b) => s + (b.confidence || 0), 0) / breakdown.length)
+      : 0;
 
     const pendingScan = {
       id: `scan_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -7995,10 +8084,11 @@ export function registerTeacherQuizzesActions(app) {
       parent_phone: targetStudent ? (targetStudent.parent_phone || targetStudent.parentPhone || targetStudent.phone || '') : '',
       exam_id: targetExam.id,
       exam_title: targetExam.title,
-      exam_code: `EX-${targetExam.quiz_number || 1}`,
+      exam_code: targetExam.exam_code || `EX-${targetExam.quiz_number || 1}`,
       quiz_number: targetExam.quiz_number || 1,
       model: `نموذج ${assignedModelArabic}`,
       model_letter: assignedModelLetter,
+      model_unconfirmed: modelUnconfirmed,
       score: calculatedScore,
       max_score: maxScore,
       percentage: calculatedPercentage,
@@ -8007,17 +8097,20 @@ export function registerTeacherQuizzesActions(app) {
       group_id: activeGroupId,
       is_all_blank: isAllBlank,
       is_ambiguous: isAmbiguous,
+      is_unreadable: isUnreadable,
+      unreadable_reason: unreadableReason,
+      overall_confidence: avgConfidence,
       detected_student_code: detectedStudentCode || ''
     };
 
-    // Case 1: Student code not recognized or not found in database -> Stop & prompt manual student selection
+    // Case 1: Student not recognized -> Prompt manual student selection (without altering answers!)
     if (!targetStudent) {
       this.promptManualStudentSelectionForScan(pendingScan);
       return;
     }
 
-    // Case 2: All answers blank OR Ambiguous multiple shading -> Stop & prompt human review gate
-    if (isAllBlank || isAmbiguous) {
+    // Case 2: Model unconfirmed OR Unreadable image OR All blank OR Ambiguous shading -> Prompt Human Review Gate
+    if (modelUnconfirmed || isUnreadable || isAllBlank || isAmbiguous || avgConfidence < 40) {
       this.promptOmrScanReview(pendingScan);
       return;
     }
@@ -8052,11 +8145,52 @@ export function registerTeacherQuizzesActions(app) {
 
     this.quizzesState.activeManualStudentModal = null;
 
-    if (pending.is_all_blank || pending.is_ambiguous) {
+    // Preserves all detected answers and checks review gate
+    if (pending.model_unconfirmed || pending.is_unreadable || pending.is_all_blank || pending.is_ambiguous || pending.overall_confidence < 40) {
       this.promptOmrScanReview(pending);
     } else {
       this.recordOmrScanResult(pending);
     }
+  };
+
+  app.setReviewModel = function(modelLetter) {
+    const pending = this.quizzesState.activeOmrReviewModal;
+    if (!pending || !pending.exam_id) return;
+    const paperExams = (this.quizzesState.richQuizzes || []).filter(q => q.exam_mode === 'paper');
+    const exam = paperExams.find(q => String(q.id) === String(pending.exam_id)) || (this.quizzesState.richQuizzes || []).find(q => String(q.id) === String(pending.exam_id));
+    if (!exam) return;
+
+    const mLetter = (modelLetter || 'A').toUpperCase();
+    const mArabic = mLetter === 'B' ? 'ب' : (mLetter === 'C' ? 'ج' : 'أ');
+    pending.model = `نموذج ${mArabic}`;
+    pending.model_letter = mLetter;
+    pending.model_unconfirmed = false;
+
+    // Recalculate breakdown against newly chosen model
+    const modelQuestions = getStealthModelQuestions(exam, mLetter);
+    const mcqs = modelQuestions.filter(q => q.type !== 'essay');
+    const arabicLetters = ['أ', 'ب', 'ج', 'د'];
+
+    pending.breakdown.forEach((item, idx) => {
+      const q = mcqs[idx];
+      if (q) {
+        const corrIdx = Number(q.correct_index ?? 0);
+        item.correct_letter = arabicLetters[corrIdx] || 'أ';
+        item.correct_index = corrIdx;
+        item.max_points = Number(q.points || 1);
+        if (item.student_choice && item.student_choice !== 'لم يُظلل' && item.student_choice !== 'تظليل ملتبس') {
+          item.is_correct = (item.student_choice === item.correct_letter);
+          item.points = item.is_correct ? item.max_points : 0;
+        } else {
+          item.is_correct = false;
+          item.points = 0;
+        }
+      }
+    });
+
+    pending.score = pending.breakdown.reduce((sum, b) => sum + (b.points || 0), 0);
+    pending.percentage = Math.round((pending.score / pending.max_score) * 100);
+    this.renderMainContent();
   };
 
   app.promptOmrScanReview = function(pendingScan) {
@@ -8072,6 +8206,12 @@ export function registerTeacherQuizzesActions(app) {
   app.confirmOmrScanReview = function() {
     const pending = this.quizzesState.activeOmrReviewModal;
     if (!pending) return;
+
+    if (pending.model_unconfirmed) {
+      this.showToast('يرجى تحديد نموذج الامتحان أولاً (أ أو ب أو ج) لحساب الدرجة بدقة', 'warning');
+      return;
+    }
+
     this.quizzesState.activeOmrReviewModal = null;
     this.recordOmrScanResult(pending);
   };

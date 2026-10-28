@@ -5,6 +5,7 @@ import { getServiceSupabaseClient } from "../../supabase.js";
 import { config } from "../../shared/config/index.js";
 import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
 import { getStealthModelQuestions } from "./stealthModels.js";
+import { gradeOmrSubmission, normalizeModelLetter } from "./omrGrader.js";
 
 export const quizzesRouter = Router();
 
@@ -1361,46 +1362,34 @@ quizzesRouter.post(
         return;
       }
 
-      // 4. Resolve Model Letter
-      let resolvedModel = "أ";
-      const codeToTest = (model || barcode || serial || "").toString().trim().toUpperCase();
-      if (codeToTest.includes("B") || codeToTest.includes("ب") || codeToTest.endsWith("-02") || codeToTest.endsWith("-2") || codeToTest.includes("MOD-B")) {
-        resolvedModel = "ب";
-      } else if (codeToTest.includes("C") || codeToTest.includes("ج") || codeToTest.endsWith("-03") || codeToTest.endsWith("-3") || codeToTest.includes("MOD-C")) {
-        resolvedModel = "ج";
-      } else {
-        resolvedModel = "أ";
-      }
-
-      // 5. Deterministic Stealth Model Permutation
-      const parsedQuiz = JSON.parse(targetRow.questions || "{}");
-      const quizQuestions = getStealthModelQuestions(parsedQuiz, resolvedModel);
-      const totalMaxScore = quizQuestions.reduce((sum: number, q: any) => sum + Number(q.points || 1), 0) || 10;
-
-      // 6. Score calculation against the resolved model answer key
-      let calculatedScore = 0;
-      const questionBreakdown: any[] = [];
-      const studentAnswers = answers || {};
-
-      if (quizQuestions.length === 0 && req.body.score !== undefined) {
-        calculatedScore = Number(req.body.score);
-      } else {
-        quizQuestions.forEach((q: any, idx: number) => {
-          const qNum = idx + 1;
-          const studentChoice = studentAnswers[qNum] ?? studentAnswers[q.id];
-          const isCorrect = studentChoice !== undefined && studentChoice !== null && Number(studentChoice) === Number(q.correct_index);
-          const pts = isCorrect ? Number(q.points || 1) : 0;
-          calculatedScore += pts;
-          questionBreakdown.push({
-            question_number: qNum,
-            student_choice: studentChoice !== undefined ? studentChoice : null,
-            correct_choice: q.correct_index,
-            is_correct: isCorrect,
-            points: pts,
-            max_points: Number(q.points || 1),
-          });
+      // 4. Strict Model Resolution (No silent fallback to A)
+      const normModel = normalizeModelLetter(model || barcode || serial);
+      if (!normModel) {
+        res.status(400).json({
+          error: {
+            code: "MODEL_REQUIRED",
+            message: "النموذج غير محدد بدقة. يرجى تمرير نموذج الامتحان (أ أو ب أو ج).",
+          },
         });
+        return;
       }
+      const resolvedModel = normModel.modelArabic;
+      const resolvedModelLetter = normModel.modelLetter;
+
+      // 5. Deterministic Grading via omrGrader Engine
+      const parsedQuiz = parseQuizPayload(targetRow.questions);
+      const studentAnswers = answers || {};
+      const diagnosticsInput = req.body.diagnostics || {};
+
+      const gradingResult = gradeOmrSubmission(
+        parsedQuiz,
+        resolvedModelLetter,
+        studentAnswers,
+        diagnosticsInput
+      );
+
+      const calculatedScore = gradingResult.score;
+      const totalMaxScore = gradingResult.max_score;
 
       const resolvedGroupId = group_id || targetRow.group_id || studentGroupIds[0] || "default-group";
       const qNum = quiz_number !== undefined ? Number(quiz_number) : (Number(parsedQuiz.quiz_number) || 1);
@@ -1414,7 +1403,7 @@ quizzesRouter.post(
           [student.id]: calculatedScore,
         },
         notes: {
-          [student.id]: `تصحيح بابل شيت (نموذج ${resolvedModel})`,
+          [student.id]: `تصحيح بابل شيت (نموذج ${resolvedModel}) - ${gradingResult.diagnostic_summary.explanation}`,
         },
       });
 
@@ -1431,11 +1420,17 @@ quizzesRouter.post(
           title: targetRow.title,
           quiz_number: qNum,
           model: resolvedModel,
+          model_letter: resolvedModelLetter,
         },
         score: calculatedScore,
         max_score: totalMaxScore,
-        percentage: Math.round((calculatedScore / totalMaxScore) * 100),
-        breakdown: questionBreakdown,
+        percentage: gradingResult.percentage,
+        is_all_blank: gradingResult.is_all_blank,
+        answered_count: gradingResult.answered_count,
+        blank_count: gradingResult.blank_count,
+        overall_confidence: gradingResult.overall_confidence,
+        diagnostic: gradingResult.diagnostic_summary,
+        breakdown: gradingResult.breakdown,
       });
     } catch (err: any) {
       const message = err?.message || "Failed to process OMR scan";
