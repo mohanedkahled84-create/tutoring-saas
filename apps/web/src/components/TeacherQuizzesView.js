@@ -3584,8 +3584,8 @@ function renderOmrReviewModal(pendingScan) {
             </div>
           ` : ''}
 
-          <!-- Explicit Zero Confirmation Checkbox for Blank or Unreadable Sheets -->
-          ${(isAllBlank || isUnreadable) ? `
+          <!-- Explicit Zero Confirmation Checkbox for Readable but Blank Sheets ONLY -->
+          ${(!isUnreadable && isAllBlank) ? `
             <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 6px; padding: 0.75rem 1rem;">
               <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
                 <input type="checkbox" id="confirmExplicitZeroCheck" 
@@ -7918,7 +7918,7 @@ export function registerTeacherQuizzesActions(app) {
               const dark = getSampleDarkness(colXCoords[c] + dx, normY, 0.006);
               if (dark > localPeak) localPeak = dark;
             }
-            if (dark > maxDark) {
+            if (localPeak > maxDark) {
               maxDark = localPeak;
               chosenDigit = d;
             }
@@ -8270,10 +8270,16 @@ export function registerTeacherQuizzesActions(app) {
       return;
     }
 
-    // Strict guard: NEVER auto-approve all-blank or unreadable sheets as zero
-    if (pending.is_all_blank || pending.is_unreadable) {
+    // Strict guard 1: NEVER approve an unreadable image as a zero, even with explicit acknowledgment
+    if (pending.is_unreadable) {
+      this.showToast('الصورة غير مقروءة أو معتمة؛ يُمنع اعتماد أي صفر رسمي. يرجى إعادة التصوير أو حفظ الورقة كمسودة فقط.', 'danger');
+      return;
+    }
+
+    // Strict guard 2: A readable paper with all blank answers requires conscious confirmation
+    if (pending.is_all_blank) {
       if (!pending.explicit_zero_confirmed) {
-        this.showToast('لا يمكن اعتماد الصفر تلقائياً لورقة غير مقروءة أو فارغة. الرجاء تفعيل الإقرار الصريح أو حفظها كمسودة.', 'warning');
+        this.showToast('لا يمكن اعتماد درجة الصفر لورقة فارغة دون إقرار صريح. الرجاء تفعيل الإقرار الصريح أو حفظها كمسودة.', 'warning');
         return;
       }
     }

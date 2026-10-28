@@ -24,9 +24,34 @@ import {
 } from "../dist/features/quizzes/omrGrader.js";
 import { getStealthModelQuestions } from "../dist/features/quizzes/stealthModels.js";
 import { registerTeacherQuizzesActions } from "../../web/src/components/TeacherQuizzesView.js";
+import { PNG } from "../node_modules/pngjs/lib/png.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Helper to create an HTML5 Canvas shim from a decoded PNG
+function createMockCanvasFromPng(png) {
+  return {
+    width: png.width,
+    height: png.height,
+    getContext: () => ({
+      getImageData: (sx, sy, sw, sh) => {
+        const data = new Uint8ClampedArray(sw * sh * 4);
+        for (let y = 0; y < sh; y++) {
+          for (let x = 0; x < sw; x++) {
+            const srcIdx = ((sy + y) * png.width + (sx + x)) * 4;
+            const dstIdx = (y * sw + x) * 4;
+            data[dstIdx] = png.data[srcIdx];
+            data[dstIdx + 1] = png.data[srcIdx + 1];
+            data[dstIdx + 2] = png.data[srcIdx + 2];
+            data[dstIdx + 3] = png.data[srcIdx + 3];
+          }
+        }
+        return { data, width: sw, height: sh };
+      }
+    })
+  };
+}
 
 // Sample Quiz Definition for Testing
 const sampleQuiz = {
@@ -177,8 +202,6 @@ test("CASE 3 - Unreadable Image: Flagged as unreadable, auto-zero strictly rejec
 // TEST 4: استدعاء دالة اختيار الطالب يدويًا الفعلية (Real confirmManualStudentSelection)
 // ============================================================================
 test("CASE 4 - Real Function Execution: confirmManualStudentSelection preserves answers, scores, and does not reset to zero", async () => {
-  let promptReviewCalledWith = null;
-
   const app = {
     quizzesState: {
       activeManualStudentModal: {
@@ -214,11 +237,9 @@ test("CASE 4 - Real Function Execution: confirmManualStudentSelection preserves 
     ],
     showToast: () => {},
     renderMainContent: () => {},
-    saveQuizzesToLocalStorage: () => {},
-    promptOmrScanReview: (pending) => { promptReviewCalledWith = pending; }
+    saveQuizzesToLocalStorage: () => {}
   };
 
-  // Register real action methods onto app
   registerTeacherQuizzesActions(app);
 
   // ACT: Call actual function app.confirmManualStudentSelection with Omar Gamal
@@ -243,9 +264,9 @@ test("CASE 4 - Real Function Execution: confirmManualStudentSelection preserves 
 });
 
 // ============================================================================
-// TEST 5: حماية الصفر وحفظ المسودة (Review Gate, Draft, & Explicit Zero Confirmation)
+// TEST 5: حماية الصفر وحفظ المسودة ومنع الصفر للصور غير المقروءة تماماً
 // ============================================================================
-test("CASE 5 - Review Gate & Draft: Zero auto-approval blocked, draft saved unapproved, explicit zero required", async () => {
+test("CASE 5 - Review Gate & Draft: Zero auto-approval blocked, unreadable sheets strictly forbid zero, draft saved unapproved", async () => {
   const toastLog = [];
   const app = {
     quizzesState: {
@@ -280,13 +301,20 @@ test("CASE 5 - Review Gate & Draft: Zero auto-approval blocked, draft saved unap
 
   registerTeacherQuizzesActions(app);
 
-  // Subtest 5.1: Attempt to confirm zero without explicit confirmation -> MUST BE REJECTED
+  // Subtest 5.1: Attempt to confirm zero without explicit confirmation on blank sheet -> MUST BE REJECTED
   await app.confirmOmrScanReview();
   assert.equal(app.quizzesState.scannedResultsList.length, 0, "No score should be recorded without explicit confirmation");
   assert.equal(app.quizzesState.activeOmrReviewModal !== null, true, "Modal must remain open");
-  assert.ok(toastLog.some(t => t.m.includes("لا يمكن اعتماد الصفر تلقائياً")), "Security warning toast must be displayed");
+  assert.ok(toastLog.some(t => t.m.includes("لا يمكن اعتماد درجة الصفر")), "Security warning toast must be displayed");
 
-  // Subtest 5.2: Save as unapproved draft -> MUST SAVE LOCALLY WITH sync_status='draft'
+  // Subtest 5.2: UNREADABLE IMAGE RULE -> Zero is STRICTLY FORBIDDEN even if explicit confirmation is checked!
+  app.quizzesState.activeOmrReviewModal.is_unreadable = true;
+  app.quizzesState.activeOmrReviewModal.explicit_zero_confirmed = true;
+  await app.confirmOmrScanReview();
+  assert.equal(app.quizzesState.scannedResultsList.length, 0, "Unreadable sheet MUST NOT be approved as zero under any circumstance");
+  assert.ok(toastLog.some(t => t.m.includes("الصورة غير مقروءة أو معتمة؛ يُمنع اعتماد أي صفر رسمي")), "Strict unreadable rejection toast must be shown");
+
+  // Subtest 5.3: Save as unapproved draft -> MUST SAVE LOCALLY WITH sync_status='draft'
   app.saveOmrScanAsDraft();
   assert.equal(app.quizzesState.scannedResultsList.length, 1);
   const draft = app.quizzesState.scannedResultsList[0];
@@ -295,10 +323,10 @@ test("CASE 5 - Review Gate & Draft: Zero auto-approval blocked, draft saved unap
   assert.equal(draft.is_approved, false);
   assert.equal(app.quizzesState.activeOmrReviewModal, null);
 
-  // Subtest 5.3: Explicit conscious confirmation by teacher -> ONLY THEN ALLOW CONFIRMATION
-  app.quizzesState.activeOmrReviewModal = { ...draft, explicit_zero_confirmed: true };
+  // Subtest 5.4: Legitimate readable sheet with student submitting blank -> ONLY THEN ALLOW CONFIRMATION
+  app.quizzesState.activeOmrReviewModal = { ...draft, is_unreadable: false, is_all_blank: true, explicit_zero_confirmed: true };
   await app.confirmOmrScanReview();
-  assert.equal(app.quizzesState.activeOmrReviewModal, null, "Modal closed after verified confirmation");
+  assert.equal(app.quizzesState.activeOmrReviewModal, null, "Modal closed after verified conscious teacher confirmation");
 });
 
 // ============================================================================
@@ -337,19 +365,98 @@ test("CASE 6 - Models B and C: Correct answer keys applied deterministically, si
 });
 
 // ============================================================================
-// TEST 7: فحص صورة حقيقية (Optical Scanning on Actual Disk Images)
+// TEST 7: فحص الصور الفعلي باستخدام نفس كود الواجهة الحقيقي (TeacherQuizzesView.js)
 // ============================================================================
-test("CASE 7 - Optical Scan on Actual Image Files: sample_real_bubble_sheet.png and user camera session", () => {
-  const realImgPath = path.resolve(__dirname, "../../../sample_real_bubble_sheet.png");
-  assert.ok(fs.existsSync(realImgPath), "sample_real_bubble_sheet.png must exist on disk");
+test("CASE 7 - Optical Scan on Actual Image Files via Real Frontend JavaScript Code (analyzeOmrCanvas)", async () => {
+  // Image 1: Digitally Rendered Test Sheet with real dark pencil shadings
+  const realImgPath = path.resolve(__dirname, "./fixtures/sample_real_bubble_sheet.png");
+  assert.ok(fs.existsSync(realImgPath), "sample_real_bubble_sheet.png must exist in tests/fixtures");
 
-  // Read image bytes and verify dimensions
-  const stats = fs.statSync(realImgPath);
-  assert.ok(stats.size > 5000, `Image file size must be valid, got ${stats.size} bytes`);
+  const realImgBuf = fs.readFileSync(realImgPath);
+  assert.ok(realImgBuf.length > 5000, `Image file size must be valid, got ${realImgBuf.length} bytes`);
+  const realPng = PNG.sync.read(realImgBuf);
+  assert.equal(realPng.width, 800);
+  assert.equal(realPng.height, 1100);
 
-  const userCamPath = path.resolve(__dirname, "../../../../.gemini/antigravity/brain/1f95c81f-7d4e-42b2-b71d-0b0f71375201/.user_uploaded/media_1793185609721_04a8840b.png");
-  if (fs.existsSync(userCamPath)) {
-    const camStats = fs.statSync(userCamPath);
-    assert.ok(camStats.size > 1000, "User camera screen screenshot exists and is accessible");
-  }
+  const realCanvas = createMockCanvasFromPng(realPng);
+
+  // Image 2: User's Actual Uploaded Camera Session Screen Capture
+  const userCamPath = path.resolve(__dirname, "./fixtures/user_camera_scan_real.png");
+  assert.ok(fs.existsSync(userCamPath), "User real camera screen screenshot must exist in tests/fixtures");
+  const userCamBuf = fs.readFileSync(userCamPath);
+  const userPng = PNG.sync.read(userCamBuf);
+  const userCanvas = createMockCanvasFromPng(userPng);
+
+  // Setup app for running frontend code
+  const app = {
+    quizzesState: {
+      selectedGroupId: "all",
+      omrSelectedExamId: "exam_test_7",
+      omrSelectedModel: "A",
+      richQuizzes: [{
+        id: "exam_test_7",
+        title: "امتحان الفيزياء التجريبي",
+        exam_mode: "paper",
+        questions: [
+          { id: "q1", type: "multiple_choice", points: 2, correct_index: 2 }, // ج
+          { id: "q2", type: "multiple_choice", points: 2, correct_index: 0 }, // أ
+          { id: "q3", type: "multiple_choice", points: 2, correct_index: 1 }, // ب
+          { id: "q4", type: "multiple_choice", points: 2, correct_index: 0 }, // أ
+          { id: "q5", type: "multiple_choice", points: 2, correct_index: 2 }, // ج
+          { id: "q6", type: "multiple_choice", points: 2, correct_index: 3 }, // د
+          { id: "q7", type: "multiple_choice", points: 2, correct_index: 1 }, // ب (student shaded A -> wrong)
+          { id: "q8", type: "multiple_choice", points: 2, correct_index: 0 }, // أ
+          { id: "q9", type: "multiple_choice", points: 2, correct_index: 2 }, // ج
+          { id: "q10", type: "multiple_choice", points: 2, correct_index: 3 } // د (student unshaded -> blank)
+        ]
+      }],
+      scannedResultsList: []
+    },
+    students: [{ id: "std_omar_1", name: "عمر جمال", student_code: "5021" }],
+    showToast: () => {},
+    renderMainContent: () => {},
+    saveQuizzesToLocalStorage: () => {}
+  };
+
+  registerTeacherQuizzesActions(app);
+
+  // ACT 1: Run actual analyzeOmrCanvas on Image 1 (Digitally Rendered Test Sheet)
+  await app.analyzeOmrCanvas(realCanvas);
+  const resReal = app.quizzesState.activeManualStudentModal || app.quizzesState.activeOmrReviewModal;
+
+  assert.ok(resReal, "analyzeOmrCanvas must return a result object for Image 1");
+  assert.equal(resReal.is_unreadable, false, "Rendered test sheet must be readable");
+  assert.equal(resReal.score, 16, "Score must be 16/20 (80%) based on shaded answers");
+  assert.equal(resReal.max_score, 20);
+  assert.equal(resReal.percentage, 80);
+  assert.equal(resReal.breakdown.length, 10);
+
+  // Verify per-question optical readings
+  assert.equal(resReal.breakdown[0].student_choice, "ج");
+  assert.equal(resReal.breakdown[0].is_correct, true);
+  assert.equal(resReal.breakdown[1].student_choice, "أ");
+  assert.equal(resReal.breakdown[1].is_correct, true);
+  assert.equal(resReal.breakdown[6].student_choice, "أ"); // Student answered A
+  assert.equal(resReal.breakdown[6].is_correct, false);  // Correct is B
+  assert.equal(resReal.breakdown[6].points, 0);
+
+  // ACT 2: Run actual analyzeOmrCanvas on Image 2 (User's Real Camera Screenshot)
+  app.quizzesState.activeManualStudentModal = null;
+  app.quizzesState.activeOmrReviewModal = null;
+  await app.analyzeOmrCanvas(userCanvas);
+  const resCam = app.quizzesState.activeManualStudentModal || app.quizzesState.activeOmrReviewModal;
+
+  assert.ok(resCam, "analyzeOmrCanvas must return a result object for Image 2");
+  assert.equal(resCam.is_unreadable, true, "Camera screenshot with dark feed must be marked UNREADABLE");
+  assert.ok(
+    resCam.unreadable_reason.includes("الصورة غير واضحة أو شديدة الظلمة"),
+    `Expected unreadable reason to explain dark camera, got: ${resCam.unreadable_reason}`
+  );
+  assert.equal(resCam.score, 0);
+
+  // Verify that calling confirmOmrScanReview on this unreadable image is strictly REJECTED
+  app.quizzesState.activeOmrReviewModal = resCam;
+  resCam.explicit_zero_confirmed = true; // Even if teacher tries to check the box!
+  await app.confirmOmrScanReview();
+  assert.equal(app.quizzesState.scannedResultsList.length, 0, "Unreadable real user image must NEVER be approved as zero");
 });
