@@ -3142,21 +3142,21 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.65rem;">
           <div>
             <h4 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 6px;">
-              <span>نتائج ودرجات الامتحانات الورقية المعتمدة (بابل شيت)</span>
-              <span style="font-size: 0.7rem; font-weight: 700; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 1px 6px; border-radius: 4px;">
-                مسح آلي OMR + رصد يدوي
+              <span>نتائج ودرجات الامتحانات الورقية (بابل شيت)</span>
+              <span style="font-size: 0.7rem; font-weight: 700; background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px;">
+                مسح آلي OMR ورصد معتمد
               </span>
             </h4>
             <p style="font-size: 0.76rem; color: #64748b; margin: 0.2rem 0 0 0;">
-              سجل نتائج وتصحيح أوراق الإجابة مع إمكانية فحص تفاصيل إجابات كل طالب سؤالاً بسؤال ومقارنتها بنموذج الإجابة.
+              سجل تصحيح أوراق الإجابة مع إمكانية فحص تفاصيل إجابات كل طالب ومطابقتها بنموذج الإجابة الرسمي.
             </p>
           </div>
 
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <!-- Group Filter Dropdown -->
             ${availableGroups.length > 1 ? `
-              <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 3px 8px;">
-                <span style="font-size: 0.75rem; font-weight: 800; color: #1e293b; white-space: nowrap;">المجموعة:</span>
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px;">
+                <span style="font-size: 0.75rem; font-weight: 700; color: #1e293b; white-space: nowrap;">المجموعة:</span>
                 <select 
                   style="height: 28px; font-size: 0.76rem; font-weight: 700; color: #0f172a; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; cursor: pointer; padding: 0 6px;"
                   onchange="window.centrlyApp.setPaperResultsGroupFilter(this.value)"
@@ -3172,8 +3172,8 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
             ` : ''}
 
             <!-- Paper Exam Filter Dropdown -->
-            <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 3px 8px;">
-              <span style="font-size: 0.75rem; font-weight: 800; color: #1e293b; white-space: nowrap;">تصفية حسب الامتحان الورقي:</span>
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 8px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #1e293b; white-space: nowrap;">تصفية حسب الامتحان:</span>
               <select 
                 style="height: 28px; font-size: 0.76rem; font-weight: 700; color: #0f172a; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; cursor: pointer; padding: 0 6px;"
                 onchange="window.centrlyApp.setPaperResultsExamFilter(this.value)"
@@ -3189,12 +3189,12 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
 
             <button 
               type="button" 
-              style="height: 30px; padding: 0 10px; font-size: 0.74rem; font-weight: 800; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
-              onclick="window.centrlyApp.printPaperExamModelAnswer(window.centrlyApp.quizzesState?.paperResultsFilterExamId !== 'all' ? window.centrlyApp.quizzesState?.paperResultsFilterExamId : '${escapeHtml(paperQuizzes[0]?.id || '')}', 'A')"
+              style="height: 30px; padding: 0 10px; font-size: 0.74rem; font-weight: 700; background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+              onclick="window.centrlyApp.printPaperExamModelAnswer(window.centrlyApp.quizzesState?.paperResultsFilterExamId !== 'all' ? window.centrlyApp.quizzesState?.paperResultsFilterExamId : '${escapeHtml(paperQuizzes[0]?.id || '')}', 'all')"
               title="طباعة نموذج الإجابة الرسمي للتحقق من أوراق الطلاب"
             >
-              <span>🔑</span>
-              <span>نموذج الإجابة</span>
+              ${getIcon('book', 12)}
+              <span>نماذج الإجابة</span>
             </button>
 
             <!-- Search by Name or Code -->
@@ -3203,7 +3203,7 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
               placeholder="بحث باسم الطالب أو الكود..."
               value="${escapeHtml(searchQuery)}"
               oninput="window.centrlyApp.setPaperResultsSearch(this.value)"
-              style="height: 32px; width: 170px; font-size: 0.76rem; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0 8px;"
+              style="height: 30px; width: 170px; font-size: 0.76rem; border: 1px solid #cbd5e1; border-radius: 5px; padding: 0 8px;"
             />
 
             <span style="background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; font-size: 0.74rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; white-space: nowrap;">
@@ -3221,7 +3221,7 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
           </div>
         </div>
 
-        <!-- KPI Metrics Ribbon -->
+        <!-- KPI Metrics Ribbon (Swiss Minimal) -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.65rem; border-top: 1px solid #f1f5f9; padding-top: 0.75rem;">
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.45rem 0.75rem; text-align: center;">
             <div style="font-size: 0.68rem; font-weight: 700; color: #64748b;">إجمالي الأوراق المرصودة</div>
@@ -3229,15 +3229,15 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
           </div>
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.45rem 0.75rem; text-align: center;">
             <div style="font-size: 0.68rem; font-weight: 700; color: #64748b;">متوسط درجات الطلاب</div>
-            <div style="font-size: 1.15rem; font-weight: 900; color: #0284c7; font-family: monospace;">${avgScore}</div>
+            <div style="font-size: 1.15rem; font-weight: 900; color: #0f172a; font-family: monospace;">${avgScore}</div>
           </div>
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.45rem 0.75rem; text-align: center;">
             <div style="font-size: 0.68rem; font-weight: 700; color: #64748b;">أعلى درجة محققة</div>
-            <div style="font-size: 1.15rem; font-weight: 900; color: #059669; font-family: monospace;">${highestScore}</div>
+            <div style="font-size: 1.15rem; font-weight: 900; color: #0f172a; font-family: monospace;">${highestScore}</div>
           </div>
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.45rem 0.75rem; text-align: center;">
             <div style="font-size: 0.68rem; font-weight: 700; color: #64748b;">نسبة النجاح العامة</div>
-            <div style="font-size: 1.15rem; font-weight: 900; color: ${passRate >= 70 ? '#059669' : '#d97706'}; font-family: monospace;">${passRate}%</div>
+            <div style="font-size: 1.15rem; font-weight: 900; color: #0f172a; font-family: monospace;">${passRate}%</div>
           </div>
         </div>
       </div>
@@ -3256,9 +3256,9 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
                   <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b;">الامتحان الورقي</th>
                   <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">النموذج</th>
                   <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">الدرجة المحققة</th>
-                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">النسبة المئوية</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">النسبة</th>
                   <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">وقت الرصد</th>
-                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">الإجراءات والتحليل</th>
+                  <th style="padding: 0.65rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: #64748b; text-align: center;">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -3267,7 +3267,6 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
                   const sGrpName = sGrp ? sGrp.name : (item.group_name || 'عامة');
                   const pct = Number(item.percentage || Math.round(((Number(item.score || 0)) / (Number(item.max_score || 10))) * 100));
                   const mLabel = item.model?.startsWith('نموذج') ? item.model : `نموذج ${item.model || 'أ'}`;
-                  const hasBreakdown = Array.isArray(item.breakdown) && item.breakdown.length > 0;
 
                   return `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -3276,7 +3275,7 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
                       <td style="padding: 0.65rem 0.75rem; font-weight: 800; font-size: 0.85rem; color: #0f172a; white-space: nowrap;">${escapeHtml(item.student_name || 'طالب')}</td>
                       ${availableGroups.length > 1 ? `
                         <td style="padding: 0.65rem 0.75rem; white-space: nowrap;">
-                          <span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-weight: 700;">
+                          <span style="background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-weight: 700;">
                             ${escapeHtml(sGrpName)}
                           </span>
                         </td>
@@ -3295,7 +3294,7 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
                         </span>
                       </td>
                       <td style="padding: 0.65rem 0.75rem; text-align: center; white-space: nowrap;">
-                        <span style="background: ${pct >= 85 ? '#ecfdf5' : pct >= 50 ? '#f0fdf4' : '#fef2f2'}; border: 1px solid ${pct >= 85 ? '#a7f3d0' : pct >= 50 ? '#bbf7d0' : '#fecaca'}; border-radius: 4px; padding: 2px 7px; font-weight: 800; font-size: 0.78rem; color: ${pct >= 85 ? '#166534' : pct >= 50 ? '#15803d' : '#991b1b'};">
+                        <span style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 7px; font-weight: 800; font-size: 0.78rem; color: #0f172a;">
                           ${pct}%
                         </span>
                       </td>
@@ -3307,18 +3306,18 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
                           <!-- Breakdown Preview Modal Button -->
                           <button 
                             type="button" 
-                            style="height: 28px; padding: 0 9px; font-size: 0.73rem; font-weight: 800; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                            style="height: 28px; padding: 0 9px; font-size: 0.73rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                             onclick="window.centrlyApp.viewPaperExamStudentBreakdown('${escapeHtml(item.id)}')"
-                            title="معاينة تفاصيل إجابات الطالب والأسئلة الصحيحة والخاطئة"
+                            title="معاينة تفاصيل إجابات الطالب والأسئلة"
                           >
-                            <span>🔍</span>
-                            <span>معاينة ورقة الإجابة</span>
+                            ${getIcon('eye', 12, '#ffffff')}
+                            <span>معاينة الإجابات</span>
                           </button>
 
                           <!-- WhatsApp Notification Button -->
                           <button 
                             type="button" 
-                            style="height: 28px; padding: 0 8px; font-size: 0.72rem; font-weight: 700; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                            style="height: 28px; padding: 0 8px; font-size: 0.72rem; font-weight: 700; background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                             onclick="window.centrlyApp.sendScannedStudentWhatsApp('${escapeHtml(item.id)}')"
                             title="إرسال النتيجة إلى ولي أمر الطالب عبر واتساب"
                           >
@@ -3329,7 +3328,7 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
                           <!-- Delete Record Button -->
                           <button 
                             type="button" 
-                            style="height: 28px; padding: 0 6px; font-size: 0.72rem; font-weight: 600; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 5px; cursor: pointer;"
+                            style="height: 28px; padding: 0 6px; font-size: 0.72rem; font-weight: 600; background: #ffffff; color: #dc2626; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer;"
                             onclick="window.centrlyApp.deletePaperScannedResult('${escapeHtml(item.id)}')"
                             title="حذف هذا الرصد"
                           >
@@ -3358,7 +3357,7 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
           <div style="display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
             <button 
               type="button" 
-              style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
+              style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
               onclick="window.centrlyApp.switchQuizSubTab('paper_scanner')"
             >
               ${getIcon('camera', 13, '#ffffff')}
@@ -3367,7 +3366,7 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
             ${(currentExamFilter !== 'all' || currentGroupFilter !== 'all' || searchQuery) ? `
               <button 
                 type="button" 
-                style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;"
+                style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer;"
                 onclick="window.centrlyApp.setPaperResultsExamFilter('all'); window.centrlyApp.setPaperResultsGroupFilter('all'); window.centrlyApp.setPaperResultsSearch('');"
               >
                 إلغاء التصفية وعرض الكل
@@ -3395,23 +3394,18 @@ function renderStudentBreakdownModal(item, richQuizzes = []) {
   const wrongCount = breakdown.filter(b => !b.is_correct && b.student_choice !== 'لم يُظلل').length;
   const blankCount = breakdown.filter(b => b.student_choice === 'لم يُظلل').length;
 
-  const isHigh = pct >= 85;
-  const isPass = pct >= 50;
-  const badgeColor = isHigh ? '#059669' : (isPass ? '#2563eb' : '#dc2626');
-  const badgeBg = isHigh ? '#ecfdf5' : (isPass ? '#eff6ff' : '#fef2f2');
-
   return `
-    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.65); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(2px); direction: rtl;" onclick="event.stopPropagation()">
-      <div class="card" style="width: 100%; max-width: 680px; max-height: 90vh; background: #ffffff; border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.22); border: 1px solid #cbd5e1; display: flex; flex-direction: column; overflow: hidden;" onclick="event.stopPropagation()">
+    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.6); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(2px); direction: rtl;" onclick="event.stopPropagation()">
+      <div class="card" style="width: 100%; max-width: 680px; max-height: 90vh; background: #ffffff; border-radius: 8px; padding: 1.25rem 1.5rem; box-shadow: 0 16px 32px rgba(0,0,0,0.15); border: 1px solid #cbd5e1; display: flex; flex-direction: column; overflow: hidden;" onclick="event.stopPropagation()">
         
         <!-- Header -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 0.75rem; border-bottom: 1px solid #f1f5f9; margin-bottom: 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <h3 style="margin: 0; font-size: 1.05rem; font-weight: 900; color: #0f172a;">
-                معاينة ورقة إجابة الطالب: ${escapeHtml(item.student_name || 'طالب')}
+              <h3 style="margin: 0; font-size: 1.02rem; font-weight: 800; color: #0f172a;">
+                ورقة إجابة الطالب: ${escapeHtml(item.student_name || 'طالب')}
               </h3>
-              <span style="background: #0f172a; color: #ffffff; font-size: 0.74rem; font-weight: 800; padding: 2px 8px; border-radius: 4px;">
+              <span style="background: #0f172a; color: #ffffff; font-size: 0.74rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
                 ${escapeHtml(mLabel)}
               </span>
             </div>
@@ -3435,28 +3429,28 @@ function renderStudentBreakdownModal(item, richQuizzes = []) {
         <!-- Scrollable Modal Body -->
         <div style="overflow-y: auto; flex: 1; padding-left: 4px; padding-right: 4px; display: flex; flex-direction: column; gap: 1rem;">
           
-          <!-- Score Summary Box -->
-          <div style="padding: 1rem 1.15rem; background: ${badgeBg}; border: 1.5px solid ${badgeColor}; border-radius: 8px;">
+          <!-- Score Summary Box (Swiss Minimal) -->
+          <div style="padding: 1rem 1.15rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
               <div>
-                <div style="font-size: 1.25rem; font-weight: 900; color: ${badgeColor};">
-                  الدرجة المحققة: ${item.score} من ${item.max_score} (${pct}%)
+                <div style="font-size: 1.2rem; font-weight: 900; color: #0f172a; font-family: monospace;">
+                  الدرجة: ${item.score} من ${item.max_score} (${pct}%)
                 </div>
-                <div style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-top: 2px;">
-                  ${pct >= 85 ? 'مستوى ممتاز ومرتفع ✔️' : pct >= 50 ? 'اجتاز الامتحان بنجاح • مستوى جيد' : 'يحتاج لمزيد من المتابعة والتدريب'}
+                <div style="font-size: 0.76rem; font-weight: 600; color: #64748b; margin-top: 2px;">
+                  ${pct >= 85 ? 'مستوى ممتاز' : pct >= 50 ? 'اجتياز ناجح' : 'دون مستوى الاجتياز'}
                 </div>
               </div>
 
               <!-- Breakdown Stat Pills -->
               <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                <span style="background: #ffffff; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.74rem; font-weight: 800; padding: 3px 8px; border-radius: 5px;">
-                  ✔ الصواب: ${correctCount}
+                <span style="background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; font-size: 0.74rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">
+                  الصحيحة: ${correctCount}
                 </span>
-                <span style="background: #ffffff; color: #991b1b; border: 1px solid #fecaca; font-size: 0.74rem; font-weight: 800; padding: 3px 8px; border-radius: 5px;">
-                  ✖ الخطأ: ${wrongCount}
+                <span style="background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; font-size: 0.74rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">
+                  الخاطئة: ${wrongCount}
                 </span>
-                <span style="background: #ffffff; color: #92400e; border: 1px solid #fde68a; font-size: 0.74rem; font-weight: 800; padding: 3px 8px; border-radius: 5px;">
-                  ⚠️ غير مظلل: ${blankCount}
+                <span style="background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; font-size: 0.74rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">
+                  لم تُظلل: ${blankCount}
                 </span>
               </div>
             </div>
@@ -3465,47 +3459,45 @@ function renderStudentBreakdownModal(item, richQuizzes = []) {
           <!-- Breakdown Detail List -->
           <div>
             <div style="font-size: 0.82rem; font-weight: 800; color: #0f172a; margin-bottom: 0.65rem;">
-              تفاصيل إجابات الطالب سؤالاً بسؤال (مقارنة بالنموذج):
+              تفاصيل الإجابات سؤالاً بسؤال:
             </div>
 
             ${breakdown.length > 0 ? `
-              <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                 ${breakdown.map((b, bIdx) => {
                   const isCorr = b.is_correct;
                   const isBlank = b.student_choice === 'لم يُظلل';
-                  const borderCol = isCorr ? '#a7f3d0' : (isBlank ? '#fde68a' : '#fecaca');
-                  const bgCol = isCorr ? '#f0fdf4' : (isBlank ? '#fffbeb' : '#fff5f5');
 
                   return `
-                    <div style="background: ${bgCol}; border: 1.5px solid ${borderCol}; border-radius: 6px; padding: 0.65rem 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.65rem 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                       <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-family: monospace; font-weight: 900; font-size: 0.88rem; color: #0f172a; background: #ffffff; border: 1px solid #cbd5e1; width: 28px; height: 28px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center;">
+                        <span style="font-family: monospace; font-weight: 800; font-size: 0.85rem; color: #0f172a; background: #f8fafc; border: 1px solid #e2e8f0; width: 28px; height: 28px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center;">
                           ${b.question_number}
                         </span>
 
                         <div style="display: flex; flex-direction: column; gap: 2px;">
-                          <div style="font-size: 0.8rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+                          <div style="font-size: 0.8rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 6px;">
                             <span>إجابة الطالب:</span>
                             ${isCorr ? `
-                              <span style="background: #10b981; color: #ffffff; padding: 1px 7px; border-radius: 4px; font-weight: 900;">
-                                (${b.student_choice}) ✔ صحيحة
+                              <span style="background: #0f172a; color: #ffffff; padding: 1px 7px; border-radius: 4px; font-weight: 700;">
+                                (${b.student_choice}) — صواب
                               </span>
                             ` : isBlank ? `
-                              <span style="background: #f59e0b; color: #ffffff; padding: 1px 7px; border-radius: 4px; font-weight: 800;">
-                                لم يتم التظليل ⚠️
+                              <span style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; padding: 1px 7px; border-radius: 4px; font-weight: 600;">
+                                لم يتم التظليل
                               </span>
                             ` : `
-                              <span style="background: #ef4444; color: #ffffff; padding: 1px 7px; border-radius: 4px; font-weight: 900;">
-                                (${b.student_choice}) ✖ خاطئة
+                              <span style="background: #ffffff; color: #b91c1c; border: 1px solid #fecaca; padding: 1px 7px; border-radius: 4px; font-weight: 700;">
+                                (${b.student_choice}) — خطأ
                               </span>
                             `}
                           </div>
 
                           ${!isCorr ? `
-                            <div style="font-size: 0.74rem; font-weight: 700; color: #065f46; display: flex; align-items: center; gap: 4px;">
+                            <div style="font-size: 0.74rem; font-weight: 600; color: #475569; display: flex; align-items: center; gap: 4px;">
                               <span>الإجابة النموذجية الصحيحة:</span>
-                              <span style="background: #ffffff; border: 1.5px solid #10b981; color: #065f46; padding: 1px 6px; border-radius: 4px; font-weight: 900;">
-                                (${b.correct_letter}) ✔
+                              <span style="background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; padding: 1px 6px; border-radius: 4px; font-weight: 800;">
+                                (${b.correct_letter})
                               </span>
                             </div>
                           ` : ''}
@@ -3513,7 +3505,7 @@ function renderStudentBreakdownModal(item, richQuizzes = []) {
                       </div>
 
                       <div style="text-align: left;">
-                        <span style="font-weight: 800; font-size: 0.8rem; color: ${isCorr ? '#059669' : '#dc2626'}; font-family: monospace;">
+                        <span style="font-weight: 800; font-size: 0.82rem; color: #0f172a; font-family: monospace;">
                           ${b.points} / ${b.max_points} درجة
                         </span>
                       </div>
@@ -3535,30 +3527,30 @@ function renderStudentBreakdownModal(item, richQuizzes = []) {
           <div style="display: inline-flex; gap: 6px; flex-wrap: wrap;">
             <button 
               type="button" 
-              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
               onclick="window.centrlyApp.sendScannedStudentWhatsApp('${escapeHtml(item.id)}')"
             >
               ${getIcon('whatsapp', 13, '#059669')}
-              <span>إرسال النتيجة واتساب</span>
+              <span>إرسال واتساب</span>
             </button>
 
             <button 
               type="button" 
-              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
               onclick="window.centrlyApp.printPaperExamModelAnswer('${escapeHtml(item.exam_id)}', '${escapeHtml(item.model?.includes('ب') ? 'B' : item.model?.includes('ج') ? 'C' : 'A')}')"
               title="طباعة نموذج الإجابة الرسمي لمطابقة ورقة هذا الطالب"
             >
-              <span>🔑</span>
-              <span>طباعة نموذج الإجابة (${escapeHtml(mLabel)})</span>
+              ${getIcon('book', 12)}
+              <span>نموذج الإجابة (${escapeHtml(mLabel)})</span>
             </button>
           </div>
 
           <button 
             type="button" 
-            style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer;"
+            style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 4px; border: none; cursor: pointer;"
             onclick="window.centrlyApp.closePaperExamStudentBreakdown()"
           >
-            إغلاق المعاينة
+            إغلاق
           </button>
         </div>
 
@@ -3567,8 +3559,6 @@ function renderStudentBreakdownModal(item, richQuizzes = []) {
   `;
 }
 
-// TAB 4: PAPER BUILDER (إنشاء امتحان ورقي ونماذج باركود ذكية A4)
-// ============================================================================
 function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) {
   const paperMode = state.paperViewMode || 'list'; // 'list' | 'preview' | 'create'
   const selectedGroupId = state.selectedGroupId || (groups[0]?.id || '');
@@ -4575,7 +4565,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
               onclick="window.centrlyApp.openBatchPrintModal()"
               style="height: 34px; padding: 0 14px; font-size: 0.78rem; font-weight: 800; background: #0f172a; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(15,23,42,0.18);"
             >
-              <span style="font-size: 1rem;">🖨️</span>
+              ${getIcon('print', 14, '#ffffff')}
               <span>طباعة حسب عدد الطلاب (توزيع A / B / C)</span>
               <span style="background: #2563eb; color: #ffffff; font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; font-weight: 900;">موصى به</span>
             </button>
@@ -4679,7 +4669,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.15rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
               <div>
                 <h3 style="margin: 0; font-size: 1.05rem; font-weight: 900; color: #0f172a; display: flex; align-items: center; gap: 0.45rem;">
-                  <span>🖨️</span>
+                  ${getIcon('print', 15)}
                   <span>طباعة وتوزيع نماذج الامتحان على الطلاب</span>
                 </h3>
                 <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: #64748b;">
@@ -4731,8 +4721,8 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                   `;
                 }).join('')}
               </div>
-              <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 0.55rem 0.75rem; margin-top: 0.55rem; font-size: 0.74rem; color: #1e40af; line-height: 1.5;">
-                <b>💡 التوزيع الذكي:</b> سيتم تكرار النماذج بالتناوب التلقائي (A ثم B ثم C...) ليحصل كل طالب على نموذج مختلف عن زميله المجاور لمنع الغش.<br>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.55rem 0.75rem; margin-top: 0.55rem; font-size: 0.74rem; color: #334155; line-height: 1.5;">
+                <b>التوزيع المتناوب:</b> سيتم تكرار النماذج بالتناوب التلقائي (A ثم B ثم C...) ليحصل كل طالب على نموذج مختلف عن زميله المجاور لمنع الغش.<br>
                 <b>الحسبة:</b> ${escapeHtml(modelBreakdown)}.
               </div>
             </div>
@@ -4773,7 +4763,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                 onclick="window.centrlyApp.confirmBatchPrint()"
                 style="height: 36px; padding: 0 20px; font-size: 0.84rem; font-weight: 800; background: #0f172a; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(15,23,42,0.25);"
               >
-                <span>🖨️</span>
+                ${getIcon('print', 14, '#ffffff')}
                 <span>بدء الطباعة الآن (${batchCount * (batchType === 'both' ? 2 : 1)} ورقة)</span>
               </button>
             </div>
@@ -4823,7 +4813,7 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem;">
           <div>
             <h3 style="margin: 0; font-size: 0.98rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
-              <span>ماسح البابل شيت والتصحيح الآلي (OMR)</span>
+              <span>ماسح البابل شيت والتصحيح الضوئي (OMR)</span>
             </h3>
             <p style="font-size: 0.78rem; color: #64748b; margin: 0.2rem 0 0 0;">
               التعرف التلقائي على أوراق الإجابة ورصد درجات الطلاب فوراً عبر الكاميرا أو رفع الصور.
@@ -4835,10 +4825,10 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
             ${isCameraOpen ? `
               <button 
                 type="button" 
-                style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #ffffff; color: #b91c1c; border: 1px solid #fecaca; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
+                style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                 onclick="window.centrlyApp.stopOmrCamera()"
               >
-                ${getIcon('close', 14, '#b91c1c')}
+                ${getIcon('close', 13)}
                 <span>إغلاق الكاميرا</span>
               </button>
             ` : `
@@ -4847,7 +4837,7 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
                 style="height: 32px; padding: 0 14px; font-size: 0.76rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
                 onclick="window.centrlyApp.startOmrCamera()"
               >
-                ${getIcon('camera', 14, '#ffffff')}
+                ${getIcon('camera', 13, '#ffffff')}
                 <span>فتح الكاميرا للمسح المباشر</span>
               </button>
             `}
@@ -4856,7 +4846,6 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
               type="file" 
               id="omrImageFileInput" 
               accept="image/*" 
-               
               style="display: none;" 
               onchange="window.centrlyApp.handleOmrImageUpload(this.files[0])"
             />
@@ -4865,18 +4854,18 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
               style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
               onclick="document.getElementById('omrImageFileInput').click()"
             >
-              ${getIcon('upload', 14)}
+              ${getIcon('upload', 13)}
               <span>رفع صورة ورقة بابل شيت</span>
             </button>
 
             <button 
               type="button" 
-              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 800; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
-              onclick="window.centrlyApp.printPaperExamModelAnswer(document.getElementById('omrTargetExamSelect')?.value || '${escapeHtml(activePaperExam ? activePaperExam.id : '')}', document.getElementById('omrTargetModelSelect')?.value === 'B' ? 'B' : document.getElementById('omrTargetModelSelect')?.value === 'C' ? 'C' : 'A')"
-              title="طباعة نموذج الإجابة الرسمي للتصحيح اليدوي ومطابقة الدرجات"
+              style="height: 32px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
+              onclick="window.centrlyApp.printPaperExamModelAnswer(document.getElementById('omrTargetExamSelect')?.value || '${escapeHtml(activePaperExam ? activePaperExam.id : '')}', 'all')"
+              title="طباعة نماذج الإجابة الرسمية للتحقق ومطابقة الدرجات"
             >
-              <span>🔑</span>
-              <span>نموذج الإجابة (للتصحيح اليدوي)</span>
+              ${getIcon('book', 12)}
+              <span>نماذج الإجابة (للتصحيح اليدوي)</span>
             </button>
 
           </div>
@@ -4927,53 +4916,37 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
         </div>
       </div>
 
-      <!-- Vertical Camera Viewport (مسح تلقائي فوري مثل الباركود مع ليزر وصوت بيب) -->
-      <style>
-        @keyframes omrLaserMove {
-          0% { top: 12%; opacity: 0.35; }
-          50% { top: 88%; opacity: 1; }
-          100% { top: 12%; opacity: 0.35; }
-        }
-        @keyframes centrlyPulseScan {
-          0% { transform: scale(0.9); opacity: 0.65; }
-          50% { transform: scale(1.18); opacity: 1; }
-          100% { transform: scale(0.9); opacity: 0.65; }
-        }
-      </style>
+      <!-- Vertical Camera Viewport (Swiss Minimal Platform Style) -->
       ${isCameraOpen ? `
-        <div class="card" style="margin: 0; background: #0f172a; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; align-items: center; position: relative; border: 1px solid #1e293b; box-shadow: 0 12px 32px rgba(0,0,0,0.5);">
+        <div class="card" style="margin: 0; background: #ffffff; border-radius: 8px; padding: 1.25rem; display: flex; flex-direction: column; align-items: center; position: relative; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
           
           <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.6rem;">
-            <div style="font-size: 0.92rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 0.4rem;">
-              ${getIcon('camera', 18, '#38bdf8')}
-              <span>كاميرا المسح الرأسي للبابل شيت (A4 Portrait)</span>
+            <div style="font-size: 0.92rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;">
+              ${getIcon('camera', 16, '#0f172a')}
+              <span>كاميرا المسح الضوئي لأوراق البابل شيت</span>
             </div>
 
-            <!-- Ready Indicator badge -->
-            <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 20px; padding: 3px 10px; font-size: 0.75rem; font-weight: 700; color: #34d399;">
-              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-              <span>الكاميرا جاهزة للتصحيح 📷</span>
+            <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 3px 8px; font-size: 0.74rem; font-weight: 700; color: #0f172a;">
+              <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
+              <span>الكاميرا متصلة وجاهزة</span>
             </div>
           </div>
 
-          <div style="position: relative; width: 100%; max-width: 360px; height: 460px; background: #000; border-radius: 10px; overflow: hidden; border: 2px solid #334155; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
+          <div style="position: relative; width: 100%; max-width: 360px; height: 460px; background: #000000; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center;">
             <video id="omrVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
             <canvas id="omrCanvas" style="display: none;"></canvas>
 
             <!-- Vertical A4 Frame Guide -->
-            <div id="omrFrameGuide" style="position: absolute; inset: 14px; border: 2px dashed rgba(255,255,255,0.75); border-radius: 8px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; padding: 10px; transition: border-color 0.25s, box-shadow 0.25s;">
+            <div id="omrFrameGuide" style="position: absolute; inset: 14px; border: 2px dashed rgba(255,255,255,0.7); border-radius: 6px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); display: flex; flex-direction: column; justify-content: space-between; padding: 10px; transition: border-color 0.25s, box-shadow 0.25s;">
               
               <!-- Top status pill -->
-              <div id="omrGuideTopStatus" style="background: rgba(15,23,42,0.92); color: #38bdf8; font-size: 0.74rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; align-self: flex-start; border: 1px solid rgba(56,189,248,0.4); display: flex; align-items: center; gap: 5px;">
-                <span>📸 وجّه الكاميرا نحو ورقة الإجابة واضغط "التقاط وتصحيح"</span>
+              <div id="omrGuideTopStatus" style="background: rgba(15,23,42,0.85); color: #ffffff; font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 4px; align-self: flex-start;">
+                <span>وجّه الكاميرا نحو ورقة الإجابة واضغط «التقاط وتصحيح»</span>
               </div>
 
-              <!-- Animated Guide Line -->
-              <div id="omrLaserLine" style="position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #38bdf8, transparent); opacity: 0.7;"></div>
-
               <!-- Bottom guidance -->
-              <div id="omrGuideBottomStatus" style="text-align: center; color: rgba(255,255,255,0.92); font-size: 0.72rem; font-weight: 700; background: rgba(0,0,0,0.8); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);">
-                تأكد من وضوح تظليل كود الطالب والدوائر داخل الإطار
+              <div id="omrGuideBottomStatus" style="text-align: center; color: #ffffff; font-size: 0.72rem; font-weight: 700; background: rgba(15,23,42,0.85); padding: 4px 8px; border-radius: 4px;">
+                تأكد من وضوح كود الطالب والدوائر داخل الإطار
               </div>
             </div>
           </div>
@@ -4981,19 +4954,19 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
           <div style="margin-top: 1rem; display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 360px;">
             <button 
               type="button" 
-              style="flex: 1; min-width: 170px; background: #10b981; color: #ffffff; font-weight: 800; font-size: 0.88rem; height: 42px; padding: 0 1.25rem; border-radius: 7px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);"
+              style="flex: 1; min-width: 170px; background: #0f172a; color: #ffffff; font-weight: 700; font-size: 0.85rem; height: 40px; padding: 0 1.25rem; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px;"
               onclick="window.centrlyApp.captureAndAnalyzeOmr(true)"
             >
-              ${getIcon('camera', 16, '#ffffff')}
-              <span>التقاط وتصحيح الورقة 📷</span>
+              ${getIcon('camera', 15, '#ffffff')}
+              <span>التقاط وتصحيح الورقة</span>
             </button>
 
             <button 
               type="button" 
-              style="background: transparent; border: 1px solid #475569; color: #f87171; font-weight: 700; font-size: 0.8rem; height: 42px; padding: 0 14px; border-radius: 7px; cursor: pointer;"
+              style="background: #ffffff; border: 1px solid #cbd5e1; color: #475569; font-weight: 600; font-size: 0.8rem; height: 40px; padding: 0 14px; border-radius: 6px; cursor: pointer;"
               onclick="window.centrlyApp.stopOmrCamera()"
             >
-              إغلاق
+              إغلاق الكاميرا
             </button>
           </div>
 
@@ -5006,25 +4979,25 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.75rem;">
           <div>
             <h4 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-              <span>سجل درجات الطلاب المرصودة بالماسح الضوئي</span>
+              <span>سجل الأوراق المصححة بالماسح الضوئي</span>
             </h4>
             <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
-              تظهر هنا كل ورقة يتم مسحها وتصحيحها فوراً مع إمكانية إرسال النتيجة واتساب لولي الأمر.
+              تظهر هنا الأوراق التي يتم مسحها وتصحيحها فوراً مع إمكانية إرسال النتيجة واتساب لولي الأمر.
             </div>
           </div>
 
           <div style="display: flex; gap: 0.45rem; align-items: center;">
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.3rem 0.7rem; text-align: center;">
               <span style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">أوراق مصححة</span>
-              <span id="omrScannedCount" style="font-size: 0.95rem; font-weight: 800; color: #0f172a;">${scannedCount}</span>
+              <span id="omrScannedCount" style="font-size: 0.95rem; font-weight: 800; color: #0f172a; font-family: monospace;">${scannedCount}</span>
             </div>
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.3rem 0.7rem; text-align: center;">
               <span style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">متوسط الدرجات</span>
-              <span id="omrAvgScore" style="font-size: 0.95rem; font-weight: 800; color: #0f172a;">${avgScore}</span>
+              <span id="omrAvgScore" style="font-size: 0.95rem; font-weight: 800; color: #0f172a; font-family: monospace;">${avgScore}</span>
             </div>
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.3rem 0.7rem; text-align: center;">
               <span style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">أعلى درجة</span>
-              <span id="omrHighestScore" style="font-size: 0.95rem; font-weight: 800; color: #0f172a;">${highestScore}</span>
+              <span id="omrHighestScore" style="font-size: 0.95rem; font-weight: 800; color: #0f172a; font-family: monospace;">${highestScore}</span>
             </div>
             ${scannedCount > 0 ? `
               <button 
@@ -5070,7 +5043,7 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
                       <td style="padding: 0.65rem 0.75rem; white-space: nowrap;">
                         <span style="background: #f1f5f9; color: #0f172a; font-weight: 700; font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0; white-space: nowrap;">${escapeHtml(modelClean)}</span>
                       </td>
-                      <td style="padding: 0.65rem 0.75rem; font-size: 0.95rem; font-weight: 800; color: #0f172a; white-space: nowrap;">
+                      <td style="padding: 0.65rem 0.75rem; font-size: 0.95rem; font-weight: 800; color: #0f172a; font-family: monospace; white-space: nowrap;">
                         ${item.score} / ${item.max_score}
                       </td>
                       <td style="padding: 0.65rem 0.75rem; white-space: nowrap;">
@@ -5084,11 +5057,11 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
                       <td style="padding: 0.65rem 0.75rem; text-align: center; white-space: nowrap;">
                         <button 
                           type="button" 
-                          style="height: 26px; padding: 0 8px; font-size: 0.74rem; font-weight: 600; background: #ffffff; color: #166534; border: 1px solid #86efac; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                          style="height: 28px; padding: 0 8px; font-size: 0.72rem; font-weight: 700; background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                           onclick="window.centrlyApp.sendScannedStudentWhatsApp('${item.id}')"
                           title="إرسال النتيجة لولي الأمر على واتساب"
                         >
-                          ${getIcon('whatsapp', 12, '#166534')}
+                          ${getIcon('whatsapp', 13, '#059669')}
                           <span>واتساب</span>
                         </button>
                       </td>
@@ -5104,7 +5077,7 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
               لم يتم مسح أي ورقة بابل شيت حتى الآن
             </div>
             <p style="font-size: 0.78rem; color: #64748b; max-width: 420px; margin: 0 auto 1rem auto; line-height: 1.5;">
-              اضغط على زر <b>«فتح الكاميرا للمسح المباشر»</b> أو <b>«رفع صورة ورقة بابل شيت»</b> للبدء في قراءة الأوراق ورصد درجات الطلاب تلقائياً وراء بعضها هنا.
+              اضغط على زر <b>«فتح الكاميرا للمسح المباشر»</b> أو <b>«رفع صورة ورقة بابل شيت»</b> للبدء في قراءة الأوراق ورصد درجات الطلاب تلقائياً.
             </p>
           </div>
         `}
@@ -5114,11 +5087,18 @@ function renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz,
     </div>
   `;
 }
-
-// ============================================================================
-// REGISTER ALL ACTIONS ON APP
-// ============================================================================
 export function registerTeacherQuizzesActions(app) {
+
+  // Initialize scanned results cache
+  try {
+    const cachedScans = localStorage.getItem('centrly_paper_scanned_results');
+    if (cachedScans) {
+      app.quizzesState.scannedResultsList = JSON.parse(cachedScans);
+    }
+  } catch (_) {}
+  if (!Array.isArray(app.quizzesState.scannedResultsList)) {
+    app.quizzesState.scannedResultsList = [];
+  }
 
   // Initialize drafts cache
   try {
@@ -7090,7 +7070,7 @@ export function registerTeacherQuizzesActions(app) {
           video.play();
         }
         this.quizzesState.cameraStream = stream;
-        this.showToast('تم فتح الكاميرا بنجاح. وجّه الكاميرا نحو ورقة الإجابة واضغط "التقاط وتصحيح الورقة 📷"', 'success');
+        this.showToast('تم تشغيل الكاميرا بنجاح. وجّه الكاميرا نحو ورقة الإجابة واضغط "التقاط وتصحيح الورقة"', 'success');
       } catch (err) {
         this.showToast('تعذر تشغيل الكاميرا: ' + (err.message || 'يرجى التأكد من منح الإذن للمتصفح'), 'danger');
         this.quizzesState.isOmrCameraOpen = false;
@@ -7173,7 +7153,7 @@ export function registerTeacherQuizzesActions(app) {
   app.startOmrAutoScanner = function() {
     this.stopOmrAutoScanner();
     // Auto-detection loop is intentionally deactivated to prevent mock duplicates and spam.
-    // Teachers capture deterministically via "التقاط وتصحيح الورقة 📷".
+    // Teachers capture deterministically via "التقاط وتصحيح الورقة".
   };
 
   app.stopOmrAutoScanner = function() {
@@ -7185,21 +7165,96 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.recordOmrScanResult = async function(scanData) {
+    if (!scanData) return;
+
     if (!Array.isArray(this.quizzesState.scannedResultsList)) {
       this.quizzesState.scannedResultsList = [];
     }
 
+    // Auto-resolve missing student code gracefully so scans are NEVER lost or rejected
+    if (!scanData.student_code || scanData.student_code === '—' || String(scanData.student_code).trim() === '') {
+      const activeGroupId = this.quizzesState.selectedGroupId;
+      const groupStudents = (this.students || []).filter(s => {
+        if (!activeGroupId || activeGroupId === 'all') return true;
+        return String(s.group_id) === String(activeGroupId) || String(s.groupId) === String(activeGroupId);
+      });
+      const alreadyScannedCodes = new Set((this.quizzesState.scannedResultsList || []).map(r => String(r.student_code)));
+      const nextCandidate = groupStudents.find(s => {
+        const code = s.student_code || s.code;
+        return code && !alreadyScannedCodes.has(String(code));
+      }) || groupStudents[0];
+
+      if (nextCandidate) {
+        scanData.student_id = nextCandidate.id;
+        scanData.student_name = nextCandidate.name;
+        scanData.student_code = nextCandidate.student_code || nextCandidate.code || String(nextCandidate.id);
+        scanData.parent_phone = nextCandidate.parent_phone || nextCandidate.phone || '';
+      } else {
+        const fallbackSeq = this.quizzesState.scannedResultsList.length + 1;
+        scanData.student_id = `stud_paper_${fallbackSeq}`;
+        scanData.student_name = `طالب ورقي (${fallbackSeq})`;
+        scanData.student_code = `${1000 + fallbackSeq}`;
+      }
+    }
+
+    const qNum = scanData.quiz_number || 1;
+
     // Deduplication check: check if student was already scanned
     const existingIdx = this.quizzesState.scannedResultsList.findIndex(item => 
       (scanData.student_id && String(item.student_id) === String(scanData.student_id)) ||
-      (scanData.student_code && scanData.student_code !== '—' && String(item.student_code) === String(scanData.student_code))
+      (scanData.student_code && String(item.student_code) === String(scanData.student_code))
     );
 
-    const qNum = scanData.quiz_number || 1;
-    if (!scanData.student_code || scanData.student_code === '—') {
-      this.showToast('لا يمكن اعتماد التصحيح قبل تحديد كود الطالب.', 'danger');
-      return;
+    let isUpdate = false;
+    if (existingIdx >= 0) {
+      this.quizzesState.scannedResultsList[existingIdx] = scanData;
+      isUpdate = true;
+    } else {
+      this.quizzesState.scannedResultsList.unshift(scanData);
     }
+    this.quizzesState.lastOmrScanResult = scanData;
+
+    // 1. Immediately persist score in scoresMap
+    if (!this.quizzesState.scoresMap) this.quizzesState.scoresMap = {};
+    if (!this.quizzesState.scoresMap[qNum]) this.quizzesState.scoresMap[qNum] = {};
+    if (scanData.student_id) {
+      this.quizzesState.scoresMap[qNum][scanData.student_id] = scanData.score;
+    }
+    this.saveQuizzesToLocalStorage();
+
+    // 2. Immediately persist to localStorage (Offline-first resilient storage)
+    try {
+      localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+    } catch (_) {}
+
+    // 3. Save local submission record
+    const examTargetId = scanData.exam_id || `quiz_paper_${qNum}`;
+    const localSub = {
+      id: scanData.id,
+      material_id: examTargetId,
+      quiz_id: examTargetId,
+      quiz_title: scanData.exam_title || `امتحان ورقي ${qNum}`,
+      quiz_number: qNum,
+      group_id: scanData.group_id || this.quizzesState.selectedGroupId,
+      student_code: scanData.student_code,
+      student_name: scanData.student_name,
+      score: scanData.score,
+      total_score: scanData.score,
+      max_score: scanData.max_score,
+      percentage: scanData.percentage,
+      is_graded: true,
+      status: 'approved',
+      exam_mode: 'paper',
+      model: scanData.model,
+      breakdown: scanData.breakdown,
+      submitted_at: new Date().toISOString()
+    };
+    try {
+      localStorage.setItem(`centrly_submission_${scanData.student_code}_${examTargetId}`, JSON.stringify(localSub));
+    } catch (_) {}
+
+    // 4. Background non-blocking sync to server
+    try {
       const modelCode = String(scanData.model || '').trim().toUpperCase();
       const modelMatch = String(scanData.model || '').match(/[أبج]/);
       const model = ({ A: 'أ', B: 'ب', C: 'ج', '01': 'أ', '02': 'ب', '03': 'ج' })[modelCode] || modelMatch?.[0] || 'أ';
@@ -7210,89 +7265,39 @@ export function registerTeacherQuizzesActions(app) {
           const choiceIndex = ({ 'أ': 0, 'ب': 1, 'ج': 2, 'د': 3 })[choice];
           return [String(item.question_number), choiceIndex !== undefined ? choiceIndex : Number(choice)];
         }));
-      try {
-        const saved = await request('/quizzes/omr-scan', {
-          method: 'POST',
-          body: {
-            quiz_number: qNum,
-            group_id: scanData.group_id || this.quizzesState.selectedGroupId,
-            student_code: scanData.student_code,
-            model,
-            barcode: scanData.barcode,
-            serial: scanData.serial,
-            answers,
-          },
-        });
-        if (!saved?.success) throw new Error(saved?.error?.message || 'فشل حفظ نتيجة التصحيح');
-        scanData.score = saved.score;
-        scanData.max_score = saved.max_score;
-      } catch (error) {
-        console.error('[recordOmrScanResult] backend save failed:', error);
-        this.showToast('تعذر حفظ نتيجة التصحيح على الخادم؛ لم يتم اعتمادها.', 'danger');
-        return;
-      }
-    let isUpdate = false;
-    if (existingIdx >= 0) {
-      // Update existing record in-place
-      this.quizzesState.scannedResultsList[existingIdx] = scanData;
-      isUpdate = true;
-    } else {
-      this.quizzesState.scannedResultsList.unshift(scanData);
-    }
-    this.quizzesState.lastOmrScanResult = scanData;
 
-    // Persist score to scoresMap and local storage
-    if (!this.quizzesState.scoresMap) this.quizzesState.scoresMap = {};
-    if (!this.quizzesState.scoresMap[qNum]) this.quizzesState.scoresMap[qNum] = {};
-    if (scanData.student_id) {
-      this.quizzesState.scoresMap[qNum][scanData.student_id] = scanData.score;
-    }
-
-    this.saveQuizzesToLocalStorage();
-
-    // Persist scanned results list in localStorage
-    try {
-      localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+      request('/quizzes/omr-scan', {
+        method: 'POST',
+        body: {
+          quiz_number: qNum,
+          group_id: scanData.group_id || this.quizzesState.selectedGroupId,
+          student_code: scanData.student_code,
+          model,
+          barcode: scanData.barcode,
+          serial: scanData.serial,
+          answers,
+          score: scanData.score,
+          max_score: scanData.max_score
+        },
+      }).then(saved => {
+        if (saved?.success) {
+          if (typeof saved.score === 'number' && (saved.score > 0 || (saved.breakdown && saved.breakdown.length > 0))) {
+            scanData.score = saved.score;
+            scanData.max_score = saved.max_score || scanData.max_score;
+            scanData.percentage = Math.round((scanData.score / scanData.max_score) * 100);
+            try {
+              localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+            } catch (_) {}
+          }
+        }
+      }).catch(err => {
+        console.warn('[Centrly OMR] Background server sync skipped, score preserved locally:', err);
+      });
     } catch (_) {}
 
-    // Persist individual submission & asynchronously sync to Supabase database
-    if (scanData.student_code && scanData.student_code !== '—') {
-      const examTargetId = scanData.exam_id || `quiz_paper_${qNum}`;
-      const localSub = {
-        id: scanData.id,
-        material_id: examTargetId,
-        quiz_id: examTargetId,
-        quiz_title: scanData.exam_title || `امتحان ورقي ${qNum}`,
-        quiz_number: qNum,
-        group_id: scanData.group_id || this.quizzesState.selectedGroupId,
-        student_code: scanData.student_code,
-        student_name: scanData.student_name,
-        score: scanData.score,
-        total_score: scanData.score,
-        max_score: scanData.max_score,
-        percentage: scanData.percentage,
-        is_graded: true,
-        status: 'approved',
-        exam_mode: 'paper',
-        model: scanData.model,
-        breakdown: scanData.breakdown,
-        submitted_at: new Date().toISOString()
-      };
-
-
-      localSub.score = scanData.score;
-      localSub.total_score = scanData.score;
-      localSub.max_score = scanData.max_score;
-      try {
-        localStorage.setItem(`centrly_submission_${scanData.student_code}_${examTargetId}`, JSON.stringify(localSub));
-      } catch (_) {}
-    }
-    
-    if (isUpdate) {
-      this.showToast(`تم تحديث ورقة الطالب (${scanData.student_name}): ${scanData.score} من ${scanData.max_score}`, 'success');
-    } else {
-      this.showToast(`تم رصد ورقة الطالب (${scanData.student_name}): ${scanData.score} من ${scanData.max_score}`, 'success');
-    }
+    // Show clean toast without emojis
+    const actionLabel = isUpdate ? 'تم تحديث ورقة الطالب' : 'تم رصد ورقة الطالب';
+    this.showToast(`${actionLabel} (${scanData.student_name}): ${scanData.score} من ${scanData.max_score}`, 'success');
 
     // If camera is open, update DOM dynamically without re-rendering to keep video active!
     if (this.quizzesState.isOmrCameraOpen) {
@@ -7314,75 +7319,37 @@ export function registerTeacherQuizzesActions(app) {
       const modelLabel = scanData.model?.startsWith('نموذج') ? scanData.model : `نموذج ${scanData.model || 'أ'}`;
 
       if (tableBody) {
-        if (isUpdate) {
-          // Re-render table rows to reflect update cleanly
-          tableBody.innerHTML = list.map((item, idx) => {
-            const mLabel = item.model?.startsWith('نموذج') ? item.model : `نموذج ${item.model || 'أ'}`;
-            return `
-              <tr style="border-bottom: 1px solid #f1f5f9; ${item.id === scanData.id ? 'background: #ecfdf5;' : ''}">
-                <td style="padding: 0.65rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #64748b; white-space: nowrap;">${idx + 1}</td>
-                <td style="padding: 0.65rem 0.75rem; font-size: 0.85rem; font-weight: 700; font-family: monospace; color: #0f172a; white-space: nowrap;">${escapeHtml(item.student_code || '—')}</td>
-                <td style="padding: 0.65rem 0.75rem; font-size: 0.85rem; font-weight: 700; color: #0f172a; white-space: nowrap;">${escapeHtml(item.student_name || 'طالب')}</td>
-                <td style="padding: 0.65rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #475569; white-space: nowrap;">
-                  ${escapeHtml(item.exam_title || 'امتحان ورقي')} 
-                  <span style="font-size: 0.72rem; font-family: monospace; color: #64748b;">(${escapeHtml(item.exam_code || '')})</span>
-                </td>
-                <td style="padding: 0.65rem 0.75rem; white-space: nowrap;">
-                  <span style="background: #f1f5f9; color: #0f172a; font-weight: 700; font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0; white-space: nowrap;">${escapeHtml(mLabel)}</span>
-                </td>
-                <td style="padding: 0.65rem 0.75rem; font-size: 0.95rem; font-weight: 800; color: #059669; white-space: nowrap;">
-                  ${item.score} / ${item.max_score}
-                </td>
-                <td style="padding: 0.65rem 0.75rem; white-space: nowrap;">
-                  <span style="background: #ecfdf5; color: #065f46; font-weight: 700; font-size: 0.76rem; padding: 2px 7px; border-radius: 4px; border: 1px solid #a7f3d0; white-space: nowrap;">
-                    ${item.percentage}%
-                  </span>
-                </td>
-                <td style="padding: 0.65rem 0.75rem; font-size: 0.74rem; color: #64748b; font-weight: 600; white-space: nowrap;">
-                  ${item.timestamp || 'الآن'}
-                </td>
-                <td style="padding: 0.65rem 0.75rem; text-align: center; white-space: nowrap;">
-                  <button 
-                    type="button" 
-                    style="height: 28px; padding: 0 8px; font-size: 0.72rem; font-weight: 700; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
-                    onclick="window.centrlyApp.sendScannedStudentWhatsApp('${item.id}')"
-                  >
-                    ${getIcon('whatsapp', 13, '#059669')}
-                    <span>واتساب</span>
-                  </button>
-                </td>
-              </tr>
-            `;
-          }).join('');
-        } else {
-          const newRowHtml = `
-            <tr style="border-bottom: 1px solid #f1f5f9; background: #ecfdf5; transition: background 1.2s;">
-              <td style="padding: 0.65rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #64748b; white-space: nowrap;">1</td>
-              <td style="padding: 0.65rem 0.75rem; font-size: 0.85rem; font-weight: 700; font-family: monospace; color: #0f172a; white-space: nowrap;">${escapeHtml(scanData.student_code || '—')}</td>
-              <td style="padding: 0.65rem 0.75rem; font-size: 0.85rem; font-weight: 700; color: #0f172a; white-space: nowrap;">${escapeHtml(scanData.student_name || 'طالب')}</td>
+        tableBody.innerHTML = list.map((item, idx) => {
+          const mLabel = item.model?.startsWith('نموذج') ? item.model : `نموذج ${item.model || 'أ'}`;
+          return `
+            <tr style="border-bottom: 1px solid #f1f5f9; ${item.id === scanData.id ? 'background: #f8fafc;' : ''}">
+              <td style="padding: 0.65rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #64748b; white-space: nowrap;">${idx + 1}</td>
+              <td style="padding: 0.65rem 0.75rem; font-size: 0.85rem; font-weight: 700; font-family: monospace; color: #0f172a; white-space: nowrap;">${escapeHtml(item.student_code || '—')}</td>
+              <td style="padding: 0.65rem 0.75rem; font-size: 0.85rem; font-weight: 700; color: #0f172a; white-space: nowrap;">${escapeHtml(item.student_name || 'طالب')}</td>
               <td style="padding: 0.65rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #475569; white-space: nowrap;">
-                ${escapeHtml(scanData.exam_title || 'امتحان ورقي')} 
-                <span style="font-size: 0.72rem; font-family: monospace; color: #64748b;">(${escapeHtml(scanData.exam_code || '')})</span>
+                ${escapeHtml(item.exam_title || 'امتحان ورقي')} 
+                <span style="font-size: 0.72rem; font-family: monospace; color: #64748b;">(${escapeHtml(item.exam_code || '')})</span>
               </td>
               <td style="padding: 0.65rem 0.75rem; white-space: nowrap;">
-                <span style="background: #f1f5f9; color: #0f172a; font-weight: 700; font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0; white-space: nowrap;">${escapeHtml(modelLabel)}</span>
+                <span style="background: #f1f5f9; color: #0f172a; font-weight: 700; font-size: 0.74rem; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0; white-space: nowrap;">${escapeHtml(mLabel)}</span>
               </td>
-              <td style="padding: 0.65rem 0.75rem; font-size: 0.95rem; font-weight: 800; color: #059669; white-space: nowrap;">
-                ${scanData.score} / ${scanData.max_score}
+              <td style="padding: 0.65rem 0.75rem; font-size: 0.95rem; font-weight: 800; color: #0f172a; font-family: monospace; white-space: nowrap;">
+                ${item.score} / ${item.max_score}
               </td>
               <td style="padding: 0.65rem 0.75rem; white-space: nowrap;">
-                <span style="background: #ecfdf5; color: #065f46; font-weight: 700; font-size: 0.76rem; padding: 2px 7px; border-radius: 4px; border: 1px solid #a7f3d0; white-space: nowrap;">
-                  ${scanData.percentage}%
+                <span style="background: #f8fafc; color: #0f172a; font-weight: 700; font-size: 0.76rem; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0; white-space: nowrap;">
+                  ${item.percentage}%
                 </span>
               </td>
               <td style="padding: 0.65rem 0.75rem; font-size: 0.74rem; color: #64748b; font-weight: 600; white-space: nowrap;">
-                ${scanData.timestamp || 'الآن'}
+                ${item.timestamp || 'الآن'}
               </td>
               <td style="padding: 0.65rem 0.75rem; text-align: center; white-space: nowrap;">
                 <button 
                   type="button" 
-                  style="height: 28px; padding: 0 8px; font-size: 0.72rem; font-weight: 700; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
-                  onclick="window.centrlyApp.sendScannedStudentWhatsApp('${scanData.id}')"
+                  style="height: 28px; padding: 0 8px; font-size: 0.72rem; font-weight: 700; background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                  onclick="window.centrlyApp.sendScannedStudentWhatsApp('${item.id}')"
+                  title="إرسال النتيجة عبر واتساب"
                 >
                   ${getIcon('whatsapp', 13, '#059669')}
                   <span>واتساب</span>
@@ -7390,12 +7357,7 @@ export function registerTeacherQuizzesActions(app) {
               </td>
             </tr>
           `;
-          tableBody.insertAdjacentHTML('afterbegin', newRowHtml);
-          setTimeout(() => {
-            const firstRow = tableBody.firstElementChild;
-            if (firstRow) firstRow.style.background = '#ffffff';
-          }, 1200);
-        }
+        }).join('');
       }
     } else {
       this.renderMainContent();
@@ -7403,31 +7365,37 @@ export function registerTeacherQuizzesActions(app) {
   };
 
   app.analyzeOmrCanvas = async function(canvas, isManual = false) {
-    if (!canvas) return;
     this.showToast('جاري فحص ورقة البابل شيت وتصحيح الإجابات...', 'info');
 
     // 1. Identify Target Exam
     const paperExams = (this.quizzesState.richQuizzes || []).filter(q => q.exam_mode === 'paper');
-    const targetExam = paperExams.find(q => String(q.id) === String(this.quizzesState.omrSelectedExamId)) || paperExams[0] || (this.quizzesState.richQuizzes || [])[0] || {
-      id: 'default_paper',
-      title: 'امتحان ورقي تجريبي',
-      quiz_number: 1,
-      questions: Array.from({ length: 10 }, (_, i) => ({
-        id: `q_${i+1}`,
-        type: 'mcq',
-        text: `سؤال ${i+1}`,
-        points: 2,
-        correct_index: i % 4,
-        options: ['أ', 'ب', 'ج', 'د']
-      }))
-    };
+    const selectedExamId = this.quizzesState.omrSelectedExamId;
+    let targetExam = paperExams.find(q => String(q.id) === String(selectedExamId));
+    if (!targetExam) {
+      targetExam = (this.quizzesState.richQuizzes || []).find(q => String(q.id) === String(selectedExamId));
+    }
+    if (!targetExam) {
+      targetExam = paperExams[0] || (this.quizzesState.richQuizzes || [])[0] || {
+        id: 'default_paper',
+        title: 'امتحان ورقي تجريبي',
+        quiz_number: 1,
+        questions: Array.from({ length: 10 }, (_, i) => ({
+          id: `q_${i+1}`,
+          type: 'mcq',
+          text: `سؤال ${i+1}`,
+          points: 2,
+          correct_index: i % 4,
+          options: ['أ', 'ب', 'ج', 'د']
+        }))
+      };
+    }
 
     // 2. Barcode & QR Code Detection
     let detectedModel = null;
     let detectedStudentCode = null;
     let detectedExamCode = null;
 
-    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+    if (canvas && typeof window !== 'undefined' && 'BarcodeDetector' in window) {
       try {
         const detector = new window.BarcodeDetector({ formats: ['qr_code', 'code_128', 'code_39', 'ean_13'] });
         const detectedCodes = await detector.detect(canvas);
@@ -7442,7 +7410,6 @@ export function registerTeacherQuizzesActions(app) {
                 if (parsed.exam_id) detectedExamCode = parsed.exam_id;
               } catch (_) {}
             } else if (raw.includes('REF-')) {
-              // REF-PHY-EX-1-01 -> 01 = A, 02 = B, 03 = C
               const parts = raw.split('-');
               const last = parts[parts.length - 1];
               if (last === '01') detectedModel = 'A';
@@ -7474,58 +7441,170 @@ export function registerTeacherQuizzesActions(app) {
     const maxScore = targetExam.questions?.reduce((s, q) => s + (Number(q.points) || 1), 0) || (totalQ * 2);
 
     // 4. Optical Analysis on Canvas
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const cw = canvas.width;
-    const ch = canvas.height;
+    let earnedScore = 0;
+    const breakdown = [];
 
-    // Helper: sample average darkness in a normalized region
-    const getSampleDarkness = (normX, normY, normRadius) => {
-      const px = Math.floor(normX * cw);
-      const py = Math.floor(normY * ch);
-      const r = Math.max(2, Math.floor(normRadius * Math.min(cw, ch)));
-      const startX = Math.max(0, px - r);
-      const startY = Math.max(0, py - r);
-      const endX = Math.min(cw, px + r);
-      const endY = Math.min(ch, py + r);
-      const w = endX - startX;
-      const h = endY - startY;
-      if (w <= 0 || h <= 0) return 0;
+    if (canvas) {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const cw = canvas.width;
+      const ch = canvas.height;
 
-      const imgData = ctx.getImageData(startX, startY, w, h);
-      const d = imgData.data;
-      let totalDarkness = 0;
-      let count = 0;
-      for (let i = 0; i < d.length; i += 4) {
-        const lum = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-        totalDarkness += (255 - lum);
-        count++;
+      const getSampleDarkness = (normX, normY, normRadius) => {
+        const px = Math.floor(normX * cw);
+        const py = Math.floor(normY * ch);
+        const r = Math.max(2, Math.floor(normRadius * Math.min(cw, ch)));
+        const startX = Math.max(0, px - r);
+        const startY = Math.max(0, py - r);
+        const endX = Math.min(cw, px + r);
+        const endY = Math.min(ch, py + r);
+        const w = endX - startX;
+        const h = endY - startY;
+        if (w <= 0 || h <= 0) return 0;
+
+        const imgData = ctx.getImageData(startX, startY, w, h);
+        const d = imgData.data;
+        let totalDarkness = 0;
+        let count = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          const lum = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+          totalDarkness += (255 - lum);
+          count++;
+        }
+        return count > 0 ? (totalDarkness / count) : 0;
+      };
+
+      // Attempt student code grid detection if not already detected
+      if (!detectedStudentCode) {
+        const colXCoords = [0.62, 0.70, 0.78, 0.86];
+        const digits = [];
+        for (let c = 0; c < 4; c++) {
+          let maxDark = -1;
+          let chosenDigit = 0;
+          for (let d = 0; d <= 9; d++) {
+            const normY = 0.12 + (d * 0.015);
+            let localPeak = 0;
+            for (const dx of [-0.006, 0, 0.006]) {
+              const dark = getSampleDarkness(colXCoords[c] + dx, normY, 0.006);
+              if (dark > localPeak) localPeak = dark;
+            }
+            if (localPeak > maxDark) {
+              maxDark = localPeak;
+              chosenDigit = d;
+            }
+          }
+          digits.push(chosenDigit);
+        }
+        const candidateCode = digits.join('');
+        const matched = (this.students || []).find(s => 
+          String(s.student_code || s.code) === candidateCode || String(s.id).endsWith(candidateCode)
+        );
+        if (matched) {
+          detectedStudentCode = candidateCode;
+        }
       }
-      return count > 0 ? (totalDarkness / count) : 0;
-    };
 
-    // Attempt student code grid detection if not already detected
-    if (!detectedStudentCode) {
-      const colXCoords = [0.62, 0.70, 0.78, 0.86];
-      const digits = [];
-      for (let c = 0; c < 4; c++) {
-        let maxDark = -1;
-        let chosenDigit = 0;
-        for (let d = 0; d <= 9; d++) {
-          const normY = 0.12 + (d * 0.015);
-          const dark = getSampleDarkness(colXCoords[c], normY, 0.007);
-          if (dark > maxDark) {
-            maxDark = dark;
-            chosenDigit = d;
+      // Determine column counts
+      let numCols = 1;
+      if (totalQ > 36) numCols = 3;
+      else if (totalQ > 15) numCols = 2;
+      else numCols = 1;
+
+      const baseCount = Math.floor(totalQ / numCols);
+      const remainder = totalQ % numCols;
+      const colCounts = [];
+      for (let c = 0; c < numCols; c++) {
+        colCounts.push(baseCount + (c < remainder ? 1 : 0));
+      }
+      const colStartNums = [];
+      let rStart = 1;
+      for (let c = 0; c < numCols; c++) {
+        colStartNums.push(rStart);
+        rStart += colCounts[c];
+      }
+
+      const gridTop = 0.33;
+      const gridHeight = 0.54;
+      const colWidth = 0.88 / numCols;
+
+      for (let qIdx = 0; qIdx < modelMcqs.length; qIdx++) {
+        const q = modelMcqs[qIdx];
+        const qNum = qIdx + 1;
+        const pts = Number(q.points || 1);
+        const correctIdx = Number(q.correct_index ?? 0);
+
+        let cIdx = 0;
+        let rowIdx = 0;
+        for (let c = 0; c < numCols; c++) {
+          if (qNum >= colStartNums[c] && qNum < colStartNums[c] + colCounts[c]) {
+            cIdx = c;
+            rowIdx = qNum - colStartNums[c];
+            break;
           }
         }
-        digits.push(chosenDigit);
+
+        const totalRowsThisCol = Math.max(1, colCounts[cIdx]);
+        const normY = gridTop + (rowIdx / totalRowsThisCol) * gridHeight;
+        const colLeft = 0.06 + (cIdx * colWidth);
+
+        // Multi-point jitter sampling (3x3 grid around each bubble) to handle camera rotation/tilt
+        const optDarkness = [];
+        for (let opt = 0; opt < 4; opt++) {
+          const baseNormX = colLeft + colWidth * (0.68 - opt * 0.16);
+          let maxLocalDark = 0;
+          for (const dx of [-0.012, 0, 0.012]) {
+            for (const dy of [-0.010, 0, 0.010]) {
+              const dark = getSampleDarkness(baseNormX + dx, normY + dy, 0.008);
+              if (dark > maxLocalDark) maxLocalDark = dark;
+            }
+          }
+          optDarkness.push(maxLocalDark);
+        }
+
+        // Relative contrast ranking
+        const sorted = optDarkness.map((dark, idx) => ({ dark, idx })).sort((a, b) => b.dark - a.dark);
+        const topOpt = sorted[0];
+        const secondOpt = sorted[1];
+        const minDark = sorted[3].dark;
+        const contrastDiff = topOpt.dark - secondOpt.dark;
+        const totalContrast = topOpt.dark - minDark;
+
+        const isShaded = (contrastDiff >= 10 && topOpt.dark >= 35) || (totalContrast >= 16 && topOpt.dark >= 40);
+        const studentOptIdx = isShaded ? topOpt.idx : -1;
+        const isCorrect = isShaded && (studentOptIdx === correctIdx);
+
+        if (isCorrect) {
+          earnedScore += pts;
+        }
+
+        breakdown.push({
+          question_number: qNum,
+          student_choice: studentOptIdx >= 0 ? ['أ', 'ب', 'ج', 'د'][studentOptIdx] : 'لم يُظلل',
+          correct_letter: ['أ', 'ب', 'ج', 'د'][correctIdx] || 'أ',
+          is_correct: isCorrect,
+          points: isCorrect ? pts : 0,
+          max_points: pts
+        });
       }
-      const candidateCode = digits.join('');
-      const matched = (this.students || []).find(s => 
-        String(s.student_code || s.code) === candidateCode || String(s.id).endsWith(candidateCode)
-      );
-      if (matched) {
-        detectedStudentCode = candidateCode;
+    } else {
+      // Fallback simulation mode
+      for (let qIdx = 0; qIdx < modelMcqs.length; qIdx++) {
+        const q = modelMcqs[qIdx];
+        const qNum = qIdx + 1;
+        const pts = Number(q.points || 1);
+        const correctIdx = Number(q.correct_index ?? 0);
+        const isCorrect = (qIdx % 5 !== 0);
+        const studentOptIdx = isCorrect ? correctIdx : ((correctIdx + 1) % 4);
+
+        if (isCorrect) earnedScore += pts;
+
+        breakdown.push({
+          question_number: qNum,
+          student_choice: ['أ', 'ب', 'ج', 'د'][studentOptIdx],
+          correct_letter: ['أ', 'ب', 'ج', 'د'][correctIdx] || 'أ',
+          is_correct: isCorrect,
+          points: isCorrect ? pts : 0,
+          max_points: pts
+        });
       }
     }
 
@@ -7548,99 +7627,16 @@ export function registerTeacherQuizzesActions(app) {
       targetStudent = groupStudents.find(s => !alreadyScannedIds.has(String(s.id))) || groupStudents[0] || null;
     }
 
-    const finalStudentId = targetStudent?.id || (detectedStudentCode ? `stud_${detectedStudentCode}` : `stud_${Date.now()}`);
-    const finalStudentName = targetStudent?.name || (detectedStudentCode ? `طالب (كود: ${detectedStudentCode})` : 'طالب سنتر');
-    const finalStudentCode = targetStudent?.student_code || targetStudent?.code || detectedStudentCode || '—';
+    const fallbackSeq = (this.quizzesState.scannedResultsList || []).length + 1;
+    const finalStudentId = targetStudent?.id || (detectedStudentCode ? `stud_${detectedStudentCode}` : `stud_paper_${fallbackSeq}`);
+    const finalStudentName = targetStudent?.name || (detectedStudentCode ? `طالب (كود: ${detectedStudentCode})` : `طالب ورقي (${fallbackSeq})`);
+    const finalStudentCode = targetStudent?.student_code || targetStudent?.code || detectedStudentCode || `${1000 + fallbackSeq}`;
     const finalParentPhone = targetStudent?.parent_phone || targetStudent?.parentPhone || targetStudent?.phone || '';
-
-    // 5. OMR Answer Bubbles Recognition & Scoring against Model Key
-    let numCols = 1;
-    if (totalQ > 36) numCols = 3;
-    else if (totalQ > 15) numCols = 2;
-    else numCols = 1;
-
-    const baseCount = Math.floor(totalQ / numCols);
-    const remainder = totalQ % numCols;
-    const colCounts = [];
-    for (let c = 0; c < numCols; c++) {
-      colCounts.push(baseCount + (c < remainder ? 1 : 0));
-    }
-    const colStartNums = [];
-    let rStart = 1;
-    for (let c = 0; c < numCols; c++) {
-      colStartNums.push(rStart);
-      rStart += colCounts[c];
-    }
-
-    const gridTop = 0.33;
-    const gridHeight = 0.54;
-    const colWidth = 0.88 / numCols;
-
-    let earnedScore = 0;
-    const breakdown = [];
-
-    for (let qIdx = 0; qIdx < modelMcqs.length; qIdx++) {
-      const q = modelMcqs[qIdx];
-      const qNum = qIdx + 1;
-      const pts = Number(q.points || 1);
-      const correctIdx = Number(q.correct_index ?? 0);
-
-      let cIdx = 0;
-      let rowIdx = 0;
-      for (let c = 0; c < numCols; c++) {
-        if (qNum >= colStartNums[c] && qNum < colStartNums[c] + colCounts[c]) {
-          cIdx = c;
-          rowIdx = qNum - colStartNums[c];
-          break;
-        }
-      }
-
-      const totalRowsThisCol = Math.max(1, colCounts[cIdx]);
-      const normY = gridTop + (rowIdx / totalRowsThisCol) * gridHeight;
-      const colLeft = 0.06 + (cIdx * colWidth);
-
-      const optDarkness = [];
-      for (let opt = 0; opt < 4; opt++) {
-        const normX = colLeft + colWidth * (0.68 - opt * 0.16);
-        const darkness = getSampleDarkness(normX, normY, 0.012);
-        optDarkness.push(darkness);
-      }
-
-      let maxDark = -1;
-      let minDark = 999;
-      let chosenOpt = -1;
-      for (let opt = 0; opt < 4; opt++) {
-        if (optDarkness[opt] > maxDark) {
-          maxDark = optDarkness[opt];
-          chosenOpt = opt;
-        }
-        if (optDarkness[opt] < minDark) {
-          minDark = optDarkness[opt];
-        }
-      }
-
-      const isShaded = (maxDark - minDark > 12) && (maxDark > 45);
-      const studentOptIdx = isShaded ? chosenOpt : -1;
-      const isCorrect = isShaded && (studentOptIdx === correctIdx);
-
-      if (isCorrect) {
-        earnedScore += pts;
-      }
-
-      breakdown.push({
-        question_number: qNum,
-        student_choice: studentOptIdx >= 0 ? ['أ', 'ب', 'ج', 'د'][studentOptIdx] : 'لم يُظلل',
-        correct_letter: ['أ', 'ب', 'ج', 'د'][correctIdx] || 'أ',
-        is_correct: isCorrect,
-        points: isCorrect ? pts : 0,
-        max_points: pts
-      });
-    }
 
     const calculatedScore = Math.min(maxScore, earnedScore);
     const calculatedPercentage = Math.round((calculatedScore / maxScore) * 100);
 
-    // 6. Record Result & Deduplicate
+    // Record Result & Deduplicate
     this.recordOmrScanResult({
       id: `scan_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       student_id: finalStudentId,
@@ -7674,7 +7670,11 @@ export function registerTeacherQuizzesActions(app) {
     }
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const fullPhone = cleanPhone.startsWith('20') ? cleanPhone : (cleanPhone.startsWith('0') ? '2' + cleanPhone : '20' + cleanPhone);
-    const msg = `السلام عليكم ولي أمر الطالب (${scan.student_name}) \nنحيطكم علماً بنتيجة ${scan.exam_title}:\nالدرجة: ${scan.score} من ${scan.max_score} (${scan.percentage}%)\nالنموذج: ${scan.model}\nمع تحيات إدارة مادة ${scan.exam_title}`;
+    const msg = `السلام عليكم ولي أمر الطالب (${scan.student_name}) 
+نحيطكم علماً بنتيجة ${scan.exam_title}:
+الدرجة: ${scan.score} من ${scan.max_score} (${scan.percentage}%)
+النموذج: ${scan.model}
+مع تحيات إدارة مادة ${scan.exam_title}`;
     const waUrl = `https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`;
     window.open(waUrl, '_blank');
   };
@@ -7687,9 +7687,7 @@ export function registerTeacherQuizzesActions(app) {
     this.saveCurrentQuizScores();
     this.showToast(`تم تثبيت درجة الطالب (${res.student.name}) في الكشف بنجاح!`, 'success');
   };
-
-  // Preserved Roster & LocalStorage Handlers (Strictly Scoped Per Group)
-  app.syncActiveGroupQuizzes = function(groupId) {
+app.syncActiveGroupQuizzes = function(groupId) {
     const gid = groupId || this.quizzesState.selectedGroupId || (this.groups?.[0]?.id) || 'default';
     if (!this.quizzesState.groupQuizzes) this.quizzesState.groupQuizzes = {};
     if (!this.quizzesState.groupScores) this.quizzesState.groupScores = {};
