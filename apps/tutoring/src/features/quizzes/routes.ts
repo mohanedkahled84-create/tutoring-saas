@@ -4,6 +4,7 @@ import { getServices } from "../../composition.js";
 import { getServiceSupabaseClient } from "../../supabase.js";
 import { config } from "../../shared/config/index.js";
 import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
+import { getStealthModelQuestions } from "./stealthModels.js";
 
 export const quizzesRouter = Router();
 
@@ -1156,12 +1157,20 @@ quizzesRouter.post(
 quizzesRouter.post(
   "/omr-scan",
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const tenantId = req.user?.tenant_id || "default";
-    const { group_id, quiz_number, student_code, model, barcode, serial, answers } = req.body;
+    // 1. Strict tenant authentication from session only
+    const tenantId = req.user?.tenant_id;
+    if (!tenantId) {
+      res.status(401).json({
+        error: { code: "UNAUTHORIZED", message: "جلسة العمل غير موثقة (tenant_id مطلوب من الخادم)" },
+      });
+      return;
+    }
 
-    if (!student_code || quiz_number === undefined) {
+    const { exam_id, group_id, quiz_number, student_code, student_id, model, barcode, serial, answers } = req.body;
+
+    if ((!student_code && !student_id) || (quiz_number === undefined && !exam_id)) {
       res.status(400).json({
-        error: { code: "BAD_REQUEST", message: "student_code and quiz_number are required" },
+        error: { code: "BAD_REQUEST", message: "student_code (or student_id) and exam_id (or quiz_number) are required" },
       });
       return;
     }
@@ -1171,75 +1180,124 @@ quizzesRouter.post(
       const quizzesService = services.quizzes;
       const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
 
-      // Stealth model resolution from barcode/serial
-      let resolvedModel = model || "أ";
-      const codeToTest = (barcode || serial || "").toString().trim().toUpperCase();
-      if (codeToTest.endsWith("-01") || codeToTest.endsWith("-1") || codeToTest.includes("MOD-A")) {
-        resolvedModel = "أ";
-      } else if (codeToTest.endsWith("-02") || codeToTest.endsWith("-2") || codeToTest.includes("MOD-B")) {
-        resolvedModel = "ب";
-      } else if (codeToTest.endsWith("-03") || codeToTest.endsWith("-3") || codeToTest.includes("MOD-C")) {
-        resolvedModel = "ج";
-      }
-
-      const { data: student, error: sErr } = await supabase
+      // 2. Strict Student Lookup & Group Membership Verification (No auto-attribution/invention of students)
+      let studentQuery = supabase
         .from("students")
-        .select("id, name, student_code, group_id")
-        .eq("tenant_id", tenantId)
-        .eq("student_code", String(student_code).trim())
-        .maybeSingle();
+        .select("id, name, student_code, group_id, group_ids")
+        .eq("tenant_id", tenantId);
 
-      let resolvedStudent = student;
-      if (!resolvedStudent) {
-        resolvedStudent = {
-          id: `stud_${student_code}`,
-          name: `طالب (${student_code})`,
-          student_code: String(student_code).trim(),
-          group_id: group_id || "default-group",
-        };
+      if (student_id) {
+        studentQuery = studentQuery.eq("id", student_id);
+      } else {
+        studentQuery = studentQuery.eq("student_code", String(student_code).trim());
       }
 
-      const { data: existingRows } = await supabase
-        .from("study_materials")
-        .select("questions")
-        .eq("tenant_id", tenantId)
-        .in("type", ["online_quiz", "paper_quiz", "paper_exam"]);
+      const { data: student, error: sErr } = await studentQuery.maybeSingle();
 
-      let quizQuestions: any[] = [];
-      let totalMaxScore = 10;
-      for (const row of existingRows || []) {
-        try {
-          const p = JSON.parse(row.questions || "{}");
-          if (Number(p.quiz_number) === Number(quiz_number)) {
-            // Check if stealth_models exist for the resolved model
-            if (p.stealth_models && p.stealth_models[resolvedModel]) {
-              quizQuestions = p.stealth_models[resolvedModel].questions || p.questions || [];
-            } else {
-              quizQuestions = p.questions || [];
-            }
-            totalMaxScore = quizQuestions.reduce((sum: number, q: any) => sum + Number(q.points || 1), 0) || 10;
-            break;
+      if (!student) {
+        res.status(404).json({
+          error: { code: "STUDENT_NOT_FOUND", message: `كود الطالب (${student_code || student_id}) غير مسجل في النظام` },
+        });
+        return;
+      }
+
+      // Check that student belongs to the requested group if group_id is specified
+      if (group_id && group_id !== "all") {
+        const studentGid = String(student.group_id || "");
+        const studentGids = Array.isArray(student.group_ids) ? student.group_ids.map((g: any) => String(g)) : [];
+        const isMember = studentGid === String(group_id) || studentGids.includes(String(group_id));
+        if (!isMember) {
+          res.status(400).json({
+            error: { code: "GROUP_MISMATCH", message: `الطالب (${student.name}) غير مسجل في هذه المجموعة` },
+          });
+          return;
+        }
+      }
+
+      // 3. Resolve Target Exam Uniquely (Prevent collisions across groups/curriculums)
+      let targetRow: any = null;
+      if (exam_id) {
+        const { data: row } = await supabase
+          .from("study_materials")
+          .select("id, group_id, questions, title")
+          .eq("tenant_id", tenantId)
+          .eq("id", exam_id)
+          .in("type", ["online_quiz", "paper_quiz", "paper_exam"])
+          .maybeSingle();
+        targetRow = row;
+      } else {
+        let matQuery = supabase
+          .from("study_materials")
+          .select("id, group_id, questions, title")
+          .eq("tenant_id", tenantId)
+          .in("type", ["online_quiz", "paper_quiz", "paper_exam"]);
+
+        if (group_id && group_id !== "all") {
+          matQuery = matQuery.eq("group_id", group_id);
+        }
+
+        const { data: rows } = await matQuery;
+        const matchingRows = (rows || []).filter((r: any) => {
+          try {
+            const p = JSON.parse(r.questions || "{}");
+            return Number(p.quiz_number) === Number(quiz_number);
+          } catch (_) {
+            return false;
           }
-        } catch (_) {}
+        });
+
+        if (matchingRows.length > 1) {
+          res.status(400).json({
+            error: {
+              code: "AMBIGUOUS_EXAM",
+              message: "يوجد أكثر من امتحان بنفس الرقم في هذه المجموعة. يرجى تمرير exam_id للتحديد الدقيق.",
+            },
+          });
+          return;
+        }
+        targetRow = matchingRows[0];
       }
 
+      if (!targetRow) {
+        res.status(404).json({
+          error: { code: "EXAM_NOT_FOUND", message: "تعذر العثور على سجل الامتحان المطلوب في هذه المجموعة" },
+        });
+        return;
+      }
+
+      // 4. Resolve Model Letter
+      let resolvedModel = "أ";
+      const codeToTest = (model || barcode || serial || "").toString().trim().toUpperCase();
+      if (codeToTest.includes("B") || codeToTest.includes("ب") || codeToTest.endsWith("-02") || codeToTest.endsWith("-2") || codeToTest.includes("MOD-B")) {
+        resolvedModel = "ب";
+      } else if (codeToTest.includes("C") || codeToTest.includes("ج") || codeToTest.endsWith("-03") || codeToTest.endsWith("-3") || codeToTest.includes("MOD-C")) {
+        resolvedModel = "ج";
+      } else {
+        resolvedModel = "أ";
+      }
+
+      // 5. Deterministic Stealth Model Permutation
+      const parsedQuiz = JSON.parse(targetRow.questions || "{}");
+      const quizQuestions = getStealthModelQuestions(parsedQuiz, resolvedModel);
+      const totalMaxScore = quizQuestions.reduce((sum: number, q: any) => sum + Number(q.points || 1), 0) || 10;
+
+      // 6. Score calculation against the resolved model answer key
       let calculatedScore = 0;
       const questionBreakdown: any[] = [];
       const studentAnswers = answers || {};
 
       if (quizQuestions.length === 0 && req.body.score !== undefined) {
         calculatedScore = Number(req.body.score);
-        totalMaxScore = Number(req.body.max_score) || 10;
       } else {
         quizQuestions.forEach((q: any, idx: number) => {
           const qNum = idx + 1;
           const studentChoice = studentAnswers[qNum] ?? studentAnswers[q.id];
-          const isCorrect = Number(studentChoice) === Number(q.correct_index);
+          const isCorrect = studentChoice !== undefined && studentChoice !== null && Number(studentChoice) === Number(q.correct_index);
           const pts = isCorrect ? Number(q.points || 1) : 0;
           calculatedScore += pts;
           questionBreakdown.push({
             question_number: qNum,
-            student_choice: studentChoice,
+            student_choice: studentChoice !== undefined ? studentChoice : null,
             correct_choice: q.correct_index,
             is_correct: isCorrect,
             points: pts,
@@ -1248,35 +1306,43 @@ quizzesRouter.post(
         });
       }
 
-      const resolvedGroupId = group_id || resolvedStudent.group_id || "default-group";
+      const resolvedGroupId = group_id || targetRow.group_id || student.group_id || "default-group";
+      const qNum = quiz_number !== undefined ? Number(quiz_number) : (Number(parsedQuiz.quiz_number) || 1);
+
       await quizzesService.saveScores(tenantId, {
         group_id: resolvedGroupId,
-        quiz_number: Number(quiz_number),
-        quiz_title: `كويز ${quiz_number}`,
+        quiz_number: qNum,
+        quiz_title: targetRow.title || parsedQuiz.title || `كويز ${qNum}`,
         max_score: totalMaxScore,
         scores: {
-          [resolvedStudent.id]: calculatedScore,
+          [student.id]: calculatedScore,
         },
         notes: {
-          [resolvedStudent.id]: `تصحيح بابل شيت (نموذج ${resolvedModel} - باركود تلقائي)`,
+          [student.id]: `تصحيح بابل شيت (نموذج ${resolvedModel})`,
         },
       });
 
       res.status(200).json({
         success: true,
         student: {
-          id: resolvedStudent.id,
-          name: resolvedStudent.name,
-          code: resolvedStudent.student_code,
+          id: student.id,
+          name: student.name,
+          code: student.student_code,
+          group_id: resolvedGroupId,
+        },
+        exam: {
+          id: targetRow.id,
+          title: targetRow.title,
+          quiz_number: qNum,
+          model: resolvedModel,
         },
         score: calculatedScore,
         max_score: totalMaxScore,
-        model: resolvedModel || "أ",
+        percentage: Math.round((calculatedScore / totalMaxScore) * 100),
         breakdown: questionBreakdown,
-        message: `تم رصد درجة الطالب ${resolvedStudent.name}: (${calculatedScore} / ${totalMaxScore}) بنجاح!`,
       });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to process OMR scan";
+    } catch (err: any) {
+      const message = err?.message || "Failed to process OMR scan";
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
     }
   }

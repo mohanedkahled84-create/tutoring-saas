@@ -304,6 +304,12 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
       <!-- Student Paper Exam Breakdown Modal -->
       ${state.activeStudentBreakdownModal ? renderStudentBreakdownModal(state.activeStudentBreakdownModal, state.richQuizzes) : ''}
 
+      <!-- Manual Student Selection Modal (No auto-assignment fallback) -->
+      ${state.activeManualStudentModal ? renderManualStudentSelectionModal(state.activeManualStudentModal, groupStudents, students) : ''}
+
+      <!-- OMR Human Review Gate Modal (Confidence & Zero-score Protection) -->
+      ${state.activeOmrReviewModal ? renderOmrReviewModal(state.activeOmrReviewModal) : ''}
+
       <!-- Unsaved Exam Exit Dialog Modal -->
       ${state.exitPromptMode ? renderUnsavedExamExitModal(state) : ''}
 
@@ -3407,6 +3413,192 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
   `;
 }
 
+
+// ============================================================================
+// MODAL: MANUAL STUDENT SELECTION (حماية هوية الطالب - منع الإسناد العشوائي)
+// ============================================================================
+function renderManualStudentSelectionModal(pendingScan, groupStudents = [], allStudents = []) {
+  if (!pendingScan) return '';
+  const studentsList = (groupStudents && groupStudents.length > 0) ? groupStudents : allStudents;
+
+  return `
+    <div style="position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(2px); font-family: 'Cairo', sans-serif; direction: rtl;">
+      <div style="background: #ffffff; border-radius: 8px; max-width: 500px; width: 100%; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden;">
+        
+        <div style="padding: 1rem 1.25rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">تحديد هوية الطالب (الباركود غير مقروء)</h3>
+            <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #64748b;">تعذر التعرف على كود الطالب آلياً من الورقة. حدد الطالب يدوياً أو أعد التصوير.</p>
+          </div>
+          <button type="button" onclick="window.centrlyApp.closeManualStudentModal()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8; line-height: 1;">&times;</button>
+        </div>
+
+        <div style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 0.75rem 1rem; font-size: 0.78rem; color: #92400e; line-height: 1.5;">
+            <b>حماية درجات الطلاب:</b> النظام يرفض ربط الورقة بأي طالب افتراضياً. يرجى اختيار اسم الطالب الفعلي صاحب هذه الورقة لربط درجاته به بدقة.
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 0.78rem;">
+            <div>
+              <span style="color: #64748b;">الامتحان:</span>
+              <strong style="color: #0f172a; margin-right: 4px;">${escapeHtml(pendingScan.exam_title || '')}</strong>
+              <span style="color: #94a3b8; margin: 0 4px;">•</span>
+              <span style="color: #64748b;">النموذج:</span>
+              <strong style="color: #0f172a; margin-right: 4px;">${escapeHtml(pendingScan.model || 'أ')}</strong>
+            </div>
+            <div>
+              <span style="color: #64748b;">الدرجة المقروءة:</span>
+              <strong style="color: #0f172a; font-size: 0.88rem; margin-right: 4px;">${pendingScan.score} / ${pendingScan.max_score}</strong>
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
+              اختر الطالب من المجموعة:
+            </label>
+            <select id="manualOmrStudentSelect" style="width: 100%; height: 38px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 0.75rem; font-size: 0.82rem; font-family: inherit; color: #0f172a; background: #ffffff;">
+              <option value="">-- اضغط لاختيار اسم الطالب --</option>
+              ${studentsList.map(s => `
+                <option value="${s.id}">
+                  [كود: ${s.student_code || s.code || s.id}] - ${escapeHtml(s.name)}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div style="padding: 0.85rem 1.25rem; border-top: 1px solid #f1f5f9; background: #f8fafc; display: flex; justify-content: flex-end; gap: 0.65rem;">
+          <button type="button" onclick="window.centrlyApp.closeManualStudentModal()" 
+            style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer;">
+            إلغاء وإعادة التصوير
+          </button>
+          <button type="button" onclick="const val = document.getElementById('manualOmrStudentSelect')?.value; if (val) { window.centrlyApp.confirmManualStudentSelection(val); } else { window.centrlyApp.showToast('يرجى اختيار طالب من القائمة أولاً', 'warning'); }" 
+            style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer;">
+            اعتماد وربط النتيجة بالطالب
+          </button>
+        </div>
+
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================================
+// MODAL: OMR HUMAN REVIEW GATE (حماية الصفر والتأكيد البشري للتظليل الملتبس)
+// ============================================================================
+function renderOmrReviewModal(pendingScan) {
+  if (!pendingScan) return '';
+  const isAllBlank = Boolean(pendingScan.is_all_blank);
+  const isAmbiguous = Boolean(pendingScan.is_ambiguous);
+  const breakdown = pendingScan.breakdown || [];
+
+  return `
+    <div style="position: fixed; inset: 0; background: rgba(15,23,42,0.65); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(2px); font-family: 'Cairo', sans-serif; direction: rtl;">
+      <div style="background: #ffffff; border-radius: 8px; max-width: 580px; width: 100%; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.18); display: flex; flex-direction: column; max-height: 90vh; overflow: hidden;">
+        
+        <div style="padding: 1rem 1.25rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #0f172a;">مراجعة نتيجة التصحيح الورقي قبل الاعتماد</h3>
+            <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #64748b;">
+              الطالب: <strong>${escapeHtml(pendingScan.student_name || 'غير محدد')}</strong> (${escapeHtml(pendingScan.student_code || '')})
+            </p>
+          </div>
+          <button type="button" onclick="window.centrlyApp.closeOmrReviewModal()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8; line-height: 1;">&times;</button>
+        </div>
+
+        <div style="padding: 1.15rem 1.25rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0.85rem;">
+          
+          ${isAllBlank ? `
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 0.85rem 1rem; font-size: 0.78rem; color: #991b1b; line-height: 1.5;">
+              <strong>تنبيه فحص الثقة (ورقة بيضاء):</strong> لم يتم رصد أي تظليلات على ورقة الإجابة (الدرجة صفر).
+              <br/>
+              • إذا كان الطالب قد سلّم الورقة فارغة بالفعل، اضغط <b>«اعتماد وتأكيد الدرجة»</b>.
+              <br/>
+              • إذا كانت الورقة تحتوي على حل، فهذا يعني أن زاوية التصوير أو الإضاءة لم تكن واضحة؛ اضغط <b>«إعادة التقاط الورقة»</b>.
+            </div>
+          ` : ''}
+
+          ${isAmbiguous ? `
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 0.85rem 1rem; font-size: 0.78rem; color: #92400e; line-height: 1.5;">
+              <strong>تنبيه تظليل ملتبس:</strong> تم رصد تظليلات متعددة أو غير واضحة لبعض الأسئلة. يمكنك مراجعة الأسئلة وتعديل الاختيار يدوياً قبل الاعتماد.
+            </div>
+          ` : ''}
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 0.78rem; color: #475569;">
+              <span>الامتحان: <strong>${escapeHtml(pendingScan.exam_title || '')}</strong></span>
+              <span style="margin: 0 4px;">•</span>
+              <span>${escapeHtml(pendingScan.model || 'أ')}</span>
+            </div>
+            <div style="font-size: 0.92rem; font-weight: 800; color: #0f172a;">
+              الدرجة الحالية: ${pendingScan.score} / ${pendingScan.max_score} (${pendingScan.percentage}%)
+            </div>
+          </div>
+
+          <div style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.76rem; text-align: center;">
+              <thead style="background: #f1f5f9; color: #475569; font-weight: 800;">
+                <tr>
+                  <th style="padding: 6px;">السؤال</th>
+                  <th style="padding: 6px;">إجابة الطالب</th>
+                  <th style="padding: 6px;">الصحيحة</th>
+                  <th style="padding: 6px;">النقاط</th>
+                  <th style="padding: 6px;">تعديل يدوي</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${breakdown.map(b => {
+                  const isAmb = Boolean(b.is_ambiguous);
+                  const isBlank = b.student_choice === 'لم يُظلل';
+                  const rowBg = isAmb ? '#fffbeb' : (isBlank ? '#f8fafc' : (b.is_correct ? '#f0fdf4' : '#fef2f2'));
+                  return `
+                    <tr style="background: ${rowBg}; border-top: 1px solid #e2e8f0;">
+                      <td style="padding: 6px; font-weight: 800;">س ${b.question_number}</td>
+                      <td style="padding: 6px; font-weight: 800; color: ${isAmb ? '#b45309' : (isBlank ? '#94a3b8' : (b.is_correct ? '#166534' : '#991b1b'))};">
+                        ${escapeHtml(b.student_choice || 'لم يُظلل')}
+                      </td>
+                      <td style="padding: 6px; font-weight: 700; color: #334155;">${escapeHtml(b.correct_letter || 'أ')}</td>
+                      <td style="padding: 6px; font-weight: 800;">${b.points || 0} / ${b.max_points || 1}</td>
+                      <td style="padding: 4px;">
+                        <div style="display: inline-flex; gap: 2px;">
+                          ${['أ', 'ب', 'ج', 'د'].map(letter => `
+                            <button type="button" 
+                              onclick="window.centrlyApp.updateReviewQuestionChoice(${b.question_number}, '${letter}')"
+                              style="width: 22px; height: 22px; font-size: 0.68rem; font-weight: 800; border-radius: 3px; border: 1px solid ${b.student_choice === letter ? '#0f172a' : '#cbd5e1'}; background: ${b.student_choice === letter ? '#0f172a' : '#ffffff'}; color: ${b.student_choice === letter ? '#ffffff' : '#334155'}; cursor: pointer;">
+                              ${letter}
+                            </button>
+                          `).join('')}
+                          <button type="button"
+                            onclick="window.centrlyApp.updateReviewQuestionChoice(${b.question_number}, 'لم يُظلل')"
+                            style="padding: 0 4px; height: 22px; font-size: 0.65rem; border-radius: 3px; border: 1px solid #cbd5e1; background: ${isBlank ? '#64748b' : '#ffffff'}; color: ${isBlank ? '#ffffff' : '#64748b'}; cursor: pointer;" title="مسح التظليل">
+                            مسح
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+        <div style="padding: 0.85rem 1.25rem; border-top: 1px solid #f1f5f9; background: #f8fafc; display: flex; justify-content: flex-end; gap: 0.65rem;">
+          <button type="button" onclick="window.centrlyApp.closeOmrReviewModal()" 
+            style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; cursor: pointer;">
+            إعادة التقاط الورقة
+          </button>
+          <button type="button" onclick="window.centrlyApp.confirmOmrScanReview()" 
+            style="height: 32px; padding: 0 16px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border: none; border-radius: 5px; cursor: pointer;">
+            اعتماد وتأكيد الدرجة
+          </button>
+        </div>
+
+      </div>
+    </div>
+  `;
+}
 // ============================================================================
 // MODAL: STUDENT PAPER EXAM BREAKDOWN (معاينة وتحليل ورقة إجابة الطالب سؤالاً بسؤال)
 // ============================================================================
@@ -7264,30 +7456,10 @@ export function registerTeacherQuizzesActions(app) {
       this.quizzesState.scannedResultsList = [];
     }
 
-    // Auto-resolve missing student code gracefully so scans are NEVER lost or rejected
-    if (!scanData.student_code || scanData.student_code === '—' || String(scanData.student_code).trim() === '') {
-      const activeGroupId = this.quizzesState.selectedGroupId;
-      const groupStudents = (this.students || []).filter(s => {
-        if (!activeGroupId || activeGroupId === 'all') return true;
-        return String(s.group_id) === String(activeGroupId) || String(s.groupId) === String(activeGroupId);
-      });
-      const alreadyScannedCodes = new Set((this.quizzesState.scannedResultsList || []).map(r => String(r.student_code)));
-      const nextCandidate = groupStudents.find(s => {
-        const code = s.student_code || s.code;
-        return code && !alreadyScannedCodes.has(String(code));
-      }) || groupStudents[0];
-
-      if (nextCandidate) {
-        scanData.student_id = nextCandidate.id;
-        scanData.student_name = nextCandidate.name;
-        scanData.student_code = nextCandidate.student_code || nextCandidate.code || String(nextCandidate.id);
-        scanData.parent_phone = nextCandidate.parent_phone || nextCandidate.phone || '';
-      } else {
-        const fallbackSeq = this.quizzesState.scannedResultsList.length + 1;
-        scanData.student_id = `stud_paper_${fallbackSeq}`;
-        scanData.student_name = `طالب ورقي (${fallbackSeq})`;
-        scanData.student_code = `${1000 + fallbackSeq}`;
-      }
+    // Strict identity verification: NEVER auto-assign an unknown paper to an arbitrary student
+    if (!scanData.student_id || !scanData.student_code || scanData.student_code === '—' || String(scanData.student_code).trim() === '') {
+      this.showToast('تعذر حفظ النتيجة: هوية الطالب غير مؤكدة. يرجى اختيار الطالب يدوياً.', 'danger');
+      return;
     }
 
     const qNum = scanData.quiz_number || 1;
@@ -7362,9 +7534,11 @@ export function registerTeacherQuizzesActions(app) {
       request('/quizzes/omr-scan', {
         method: 'POST',
         body: {
+          exam_id: scanData.exam_id,
           quiz_number: qNum,
           group_id: scanData.group_id || this.quizzesState.selectedGroupId,
           student_code: scanData.student_code,
+          student_id: scanData.student_id,
           model,
           barcode: scanData.barcode,
           serial: scanData.serial,
@@ -7661,21 +7835,32 @@ export function registerTeacherQuizzesActions(app) {
         const contrastDiff = topOpt.dark - secondOpt.dark;
         const totalContrast = topOpt.dark - minDark;
 
-        const isShaded = (contrastDiff >= 10 && topOpt.dark >= 35) || (totalContrast >= 16 && topOpt.dark >= 40);
-        const studentOptIdx = isShaded ? topOpt.idx : -1;
-        const isCorrect = isShaded && (studentOptIdx === correctIdx);
+        // Distinguish single shaded, unshaded, and multiple shaded (ambiguous)
+        const isMultipleShaded = (topOpt.dark >= 35 && secondOpt.dark >= 30 && contrastDiff < 8);
+        const isShaded = !isMultipleShaded && ((contrastDiff >= 10 && topOpt.dark >= 35) || (totalContrast >= 16 && topOpt.dark >= 40));
 
+        let studentChoiceLabel = 'لم يُظلل';
+        let studentOptIdx = -1;
+        if (isMultipleShaded) {
+          studentChoiceLabel = 'تظليل ملتبس';
+        } else if (isShaded) {
+          studentOptIdx = topOpt.idx;
+          studentChoiceLabel = ['أ', 'ب', 'ج', 'د'][studentOptIdx];
+        }
+
+        const isCorrect = (studentOptIdx >= 0) && (studentOptIdx === correctIdx);
         if (isCorrect) {
           earnedScore += pts;
         }
 
         breakdown.push({
           question_number: qNum,
-          student_choice: studentOptIdx >= 0 ? ['أ', 'ب', 'ج', 'د'][studentOptIdx] : 'لم يُظلل',
+          student_choice: studentChoiceLabel,
           correct_letter: ['أ', 'ب', 'ج', 'د'][correctIdx] || 'أ',
           is_correct: isCorrect,
           points: isCorrect ? pts : 0,
-          max_points: pts
+          max_points: pts,
+          is_ambiguous: isMultipleShaded
         });
       }
     } else {
@@ -7701,7 +7886,7 @@ export function registerTeacherQuizzesActions(app) {
       }
     }
 
-    // Match student from roster
+    // Match student from roster strictly (No auto-assignment fallback)
     const activeGroupId = this.quizzesState.selectedGroupId;
     const groupStudents = (this.students || []).filter(s => {
       if (!activeGroupId || activeGroupId === 'all') return true;
@@ -7710,43 +7895,126 @@ export function registerTeacherQuizzesActions(app) {
 
     let targetStudent = null;
     if (detectedStudentCode) {
-      targetStudent = (this.students || []).find(s => 
+      targetStudent = groupStudents.find(s => 
         String(s.student_code || s.code) === String(detectedStudentCode) || String(s.id).endsWith(String(detectedStudentCode))
-      );
+      ) || (this.students || []).find(s => 
+        String(s.student_code || s.code) === String(detectedStudentCode) || String(s.id).endsWith(String(detectedStudentCode))
+      ) || null;
     }
-
-    if (!targetStudent) {
-      const alreadyScannedIds = new Set((this.quizzesState.scannedResultsList || []).map(r => String(r.student_id)));
-      targetStudent = groupStudents.find(s => !alreadyScannedIds.has(String(s.id))) || groupStudents[0] || null;
-    }
-
-    const fallbackSeq = (this.quizzesState.scannedResultsList || []).length + 1;
-    const finalStudentId = targetStudent?.id || (detectedStudentCode ? `stud_${detectedStudentCode}` : `stud_paper_${fallbackSeq}`);
-    const finalStudentName = targetStudent?.name || (detectedStudentCode ? `طالب (كود: ${detectedStudentCode})` : `طالب ورقي (${fallbackSeq})`);
-    const finalStudentCode = targetStudent?.student_code || targetStudent?.code || detectedStudentCode || `${1000 + fallbackSeq}`;
-    const finalParentPhone = targetStudent?.parent_phone || targetStudent?.parentPhone || targetStudent?.phone || '';
 
     const calculatedScore = Math.min(maxScore, earnedScore);
     const calculatedPercentage = Math.round((calculatedScore / maxScore) * 100);
 
-    // Record Result & Deduplicate
-    this.recordOmrScanResult({
+    const answeredCount = breakdown.filter(b => b.student_choice && b.student_choice !== 'لم يُظلل' && b.student_choice !== 'تظليل ملتبس').length;
+    const isAllBlank = (answeredCount === 0);
+    const isAmbiguous = breakdown.some(b => b.is_ambiguous);
+
+    const pendingScan = {
       id: `scan_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-      student_id: finalStudentId,
-      student_name: finalStudentName,
-      student_code: finalStudentCode,
-      parent_phone: finalParentPhone,
+      student_id: targetStudent ? targetStudent.id : null,
+      student_name: targetStudent ? targetStudent.name : null,
+      student_code: targetStudent ? (targetStudent.student_code || targetStudent.code) : (detectedStudentCode || null),
+      parent_phone: targetStudent ? (targetStudent.parent_phone || targetStudent.parentPhone || targetStudent.phone || '') : '',
       exam_id: targetExam.id,
       exam_title: targetExam.title,
       exam_code: `EX-${targetExam.quiz_number || 1}`,
       quiz_number: targetExam.quiz_number || 1,
       model: `نموذج ${assignedModelArabic}`,
+      model_letter: assignedModelLetter,
       score: calculatedScore,
       max_score: maxScore,
       percentage: calculatedPercentage,
       timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-      breakdown: breakdown
-    });
+      breakdown: breakdown,
+      group_id: activeGroupId,
+      is_all_blank: isAllBlank,
+      is_ambiguous: isAmbiguous,
+      detected_student_code: detectedStudentCode || ''
+    };
+
+    // Case 1: Student code not recognized or not found in database -> Stop & prompt manual student selection
+    if (!targetStudent) {
+      this.promptManualStudentSelectionForScan(pendingScan);
+      return;
+    }
+
+    // Case 2: All answers blank OR Ambiguous multiple shading -> Stop & prompt human review gate
+    if (isAllBlank || isAmbiguous) {
+      this.promptOmrScanReview(pendingScan);
+      return;
+    }
+
+    // Case 3: Confirmed valid scan -> Record result
+    this.recordOmrScanResult(pendingScan);
+  };
+
+  app.promptManualStudentSelectionForScan = function(pendingScan) {
+    this.quizzesState.activeManualStudentModal = pendingScan;
+    this.renderMainContent();
+  };
+
+  app.closeManualStudentModal = function() {
+    this.quizzesState.activeManualStudentModal = null;
+    this.renderMainContent();
+  };
+
+  app.confirmManualStudentSelection = function(studentId) {
+    const pending = this.quizzesState.activeManualStudentModal;
+    if (!pending) return;
+    const student = (this.students || []).find(s => String(s.id) === String(studentId));
+    if (!student) {
+      this.showToast('يرجى اختيار طالب من القائمة', 'warning');
+      return;
+    }
+
+    pending.student_id = student.id;
+    pending.student_name = student.name;
+    pending.student_code = student.student_code || student.code || String(student.id);
+    pending.parent_phone = student.parent_phone || student.parentPhone || student.phone || '';
+
+    this.quizzesState.activeManualStudentModal = null;
+
+    if (pending.is_all_blank || pending.is_ambiguous) {
+      this.promptOmrScanReview(pending);
+    } else {
+      this.recordOmrScanResult(pending);
+    }
+  };
+
+  app.promptOmrScanReview = function(pendingScan) {
+    this.quizzesState.activeOmrReviewModal = pendingScan;
+    this.renderMainContent();
+  };
+
+  app.closeOmrReviewModal = function() {
+    this.quizzesState.activeOmrReviewModal = null;
+    this.renderMainContent();
+  };
+
+  app.confirmOmrScanReview = function() {
+    const pending = this.quizzesState.activeOmrReviewModal;
+    if (!pending) return;
+    this.quizzesState.activeOmrReviewModal = null;
+    this.recordOmrScanResult(pending);
+  };
+
+  app.updateReviewQuestionChoice = function(qNum, choiceLetter) {
+    const pending = this.quizzesState.activeOmrReviewModal;
+    if (!pending || !Array.isArray(pending.breakdown)) return;
+    const item = pending.breakdown.find(b => b.question_number === qNum);
+    if (!item) return;
+
+    item.student_choice = choiceLetter;
+    item.is_ambiguous = false;
+    item.is_correct = (choiceLetter === item.correct_letter);
+    item.points = item.is_correct ? item.max_points : 0;
+
+    pending.score = pending.breakdown.reduce((sum, b) => sum + (b.points || 0), 0);
+    pending.percentage = Math.round((pending.score / pending.max_score) * 100);
+    pending.is_all_blank = !pending.breakdown.some(b => b.student_choice !== 'لم يُظلل' && b.student_choice !== 'تظليل ملتبس');
+    pending.is_ambiguous = pending.breakdown.some(b => b.is_ambiguous);
+
+    this.renderMainContent();
   };
 
   app.simulateOmrScan = function() {
