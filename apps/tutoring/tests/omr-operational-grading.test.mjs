@@ -1065,3 +1065,46 @@ test("CASE 13 - Permanent Database Multi-Ledger Persistence & Desktop Paper Resu
     global.localStorage = prevLocal;
   }
 });
+
+test("CASE 14 - Student Homework Submission Loading Indicator & Progress Tracking", () => {
+  const indexHtml = fs.readFileSync(path.resolve(__dirname, '../../../teacher-platform-sample/index.html'), 'utf8');
+
+  // 1. Verify CSS styles for uploading and success states
+  assert.ok(
+    indexHtml.includes('.file-dropzone-box.is-uploading') &&
+    indexHtml.includes('.file-dropzone-box.is-success') &&
+    indexHtml.includes('portalSpin'),
+    "CSS must define is-uploading, is-success, and portalSpin keyframe animations"
+  );
+
+  // 2. Verify Card Elements IDs for Targeted UI State updates
+  assert.ok(
+    indexHtml.includes('id="dropzone_${escapeJsStr(hw.id)}"') &&
+    indexHtml.includes('id="badge_hw_${escapeJsStr(hw.id)}"'),
+    "Active homework dropzone and status badge must have deterministic DOM IDs"
+  );
+
+  // 3. Verify handleHwFileSelected Progress & Loading Logic
+  assert.ok(
+    indexHtml.includes('dropzone.className = \'file-dropzone-box is-uploading\'') &&
+    indexHtml.includes('hw_bar_') &&
+    indexHtml.includes('hw_status_') &&
+    indexHtml.includes('جارٍ تسليم ورفع الواجب إلى المستر...'),
+    "Selecting homework file must immediately transform dropzone into active progress indicator"
+  );
+
+  // 4. Verify Multi-Tier Upload & Real-time Upload Progress
+  assert.ok(
+    indexHtml.includes('xhr.upload.onprogress') &&
+    indexHtml.includes('/api/public/homework/submit'),
+    "Upload must track real-time byte progress via XHR and submit to /api/public/homework/submit"
+  );
+
+  // 5. Verify Success Confirmation & Archive Transition
+  assert.ok(
+    indexHtml.includes('dropzone.className = \'file-dropzone-box is-success\'') &&
+    indexHtml.includes('تم تسليم الواجب بنجاح وإرساله للمستر!') &&
+    indexHtml.includes('switchHwSubTab(\'archive\')'),
+    "Successful upload must display celebratory green confirmation and auto-transition to archive"
+  );
+});

@@ -1918,6 +1918,31 @@
 
     }
 
+    @keyframes portalSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .portal-spin {
+      animation: portalSpin 0.85s linear infinite;
+      display: inline-block;
+    }
+
+    .file-dropzone-box.is-uploading {
+      background: #eff6ff !important;
+      border: 2px solid #3b82f6 !important;
+      cursor: wait !important;
+      pointer-events: none !important;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.12) !important;
+    }
+
+    .file-dropzone-box.is-success {
+      background: #f0fdf4 !important;
+      border: 2px solid #22c55e !important;
+      cursor: default !important;
+      pointer-events: none !important;
+    }
+
     /* تبويبات الأقسام والأرشيف الداخلي (Subtabs & Archive) */
 
     .panel-subtabs {
@@ -5360,7 +5385,7 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
                 </div>
 
-                <span class="kpi-badge badge-danger">
+                <span id="badge_hw_${escapeJsStr(hw.id)}" class="kpi-badge badge-danger">
 
                   مطلوب التسليم
 
@@ -5386,9 +5411,9 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
               <!-- منطقة رفع الواجب الفعلية -->
 
-              <div class="file-dropzone-box" style="margin-top: 10px;" onclick="triggerHwUpload('${escapeJsStr(hw.id)}')">
+              <div class="file-dropzone-box" id="dropzone_${escapeJsStr(hw.id)}" style="margin-top: 10px;" onclick="triggerHwUpload('${escapeJsStr(hw.id)}')">
 
-                <input type="file" id="file_input_${hw.id}" accept="image/*,.pdf" style="display: none;" onchange="handleHwFileSelected(event, '${escapeJsStr(hw.id)}')">
+                <input type="file" id="file_input_${escapeJsStr(hw.id)}" accept="image/*,.pdf" style="display: none;" onchange="handleHwFileSelected(event, '${escapeJsStr(hw.id)}')">
 
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: var(--brand-navy); margin-bottom: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
 
@@ -5536,75 +5561,265 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       if (!file) return;
 
-      const token = localStorage.getItem('centrly_portal_token') || '';
+      const dropzone = document.getElementById('dropzone_' + hwId);
+      const badge = document.getElementById('badge_hw_' + hwId);
+      const fileInput = document.getElementById('file_input_' + hwId);
 
-      showPortalToast('جاري رفع وتأمين ملف الواجب في قاعدة البيانات...', 'info');
+      // Validate file format
+      const isImage = (file.type && file.type.startsWith('image/')) || (file.name && /\.(jpg|jpeg|png|webp|heic|bmp)$/i.test(file.name));
+      const isPdf = (file.type && file.type.includes('pdf')) || (file.name && /\.pdf$/i.test(file.name));
 
-      const reader = new FileReader();
+      if (!isImage && !isPdf) {
+        showPortalToast('يرجى اختيار صور لكشكول الحل (JPG, PNG) أو ملف PDF.', 'warning');
+        if (fileInput) fileInput.value = '';
+        return;
+      }
 
-      reader.onload = async function(e) {
+      // 1. Immediate UI Feedback: Transform Dropzone to Active Uploading State
+      if (badge) {
+        badge.className = 'kpi-badge';
+        badge.style.background = '#eff6ff';
+        badge.style.color = '#1d4ed8';
+        badge.style.border = '1px solid #bfdbfe';
+        badge.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 4px;"><svg class="portal-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> <span>جارٍ التسليم...</span></span>`;
+      }
 
-        const base64Data = e.target.result;
+      const fileSizeMb = (file.size / (1024 * 1024)).toFixed(2);
+      if (dropzone) {
+        dropzone.className = 'file-dropzone-box is-uploading';
+        dropzone.onclick = null;
+        dropzone.innerHTML = `
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 16px; gap: 9px;">
+            <div style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #ffffff; border: 2px solid #bfdbfe; color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,0.12);">
+              <svg class="portal-spin" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+              </svg>
+            </div>
+            <div style="text-align: center; width: 100%;">
+              <h4 id="hw_title_${escapeJsStr(hwId)}" style="font-size: 0.95rem; font-weight: 800; color: #1e3a8a; margin: 0 0 5px 0;">
+                جارٍ تسليم ورفع الواجب إلى المستر...
+              </h4>
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: #ffffff; border: 1px solid #bfdbfe; padding: 3px 10px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; color: #1d4ed8; margin-bottom: 8px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span>${escapeHtml(file.name)} (${fileSizeMb} MB)</span>
+              </div>
+              <div style="width: 100%; max-width: 320px; height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin: 0 auto 6px auto;">
+                <div id="hw_bar_${escapeJsStr(hwId)}" style="width: 20%; height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb); border-radius: 999px; transition: width 0.3s ease;"></div>
+              </div>
+              <p id="hw_status_${escapeJsStr(hwId)}" style="font-size: 0.76rem; font-weight: 700; color: #475569; margin: 0;">
+                جارٍ تجهيز وقراءة الملف بأمان...
+              </p>
+              <span style="font-size: 0.7rem; color: #94a3b8; display: block; margin-top: 3px;">
+                يرجى عدم إغلاق الصفحة أثناء الرفع لضمان وصول الواجب للسيرفر
+              </span>
+            </div>
+          </div>
+        `;
+      }
 
-        try {
+      showPortalToast('جارٍ رفع ملف الواجب وتأمينه في قاعدة البيانات...', 'info');
 
-          const res = await fetch('https://tutoring-backend-production-c8dd.up.railway.app/api/public/homework/submit', {
+      // 2. High-Performance File Reading with Image Optimization for Mobile
+      const updateProgress = (pct, statusText) => {
+        const bar = document.getElementById('hw_bar_' + hwId);
+        const st = document.getElementById('hw_status_' + hwId);
+        if (bar && pct !== undefined) bar.style.width = pct + '%';
+        if (st && statusText) st.innerText = statusText;
+      };
 
-            method: 'POST',
+      try {
+        let uploadBase64 = null;
 
-            headers: { 'Content-Type': 'application/json' },
-
-            body: JSON.stringify({
-
-              token: token,
-
-              material_id: hwId,
-
-              file_data: base64Data,
-
-              file_name: file.name
-
-            })
-
+        if (isImage && file.size > 2 * 1024 * 1024 && typeof document !== 'undefined') {
+          // Fast mobile canvas compression for large smartphone photos
+          updateProgress(15, 'جارٍ تحسين حجم الصورة لسرعة التسليم...');
+          uploadBase64 = await new Promise((resolve) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+              URL.revokeObjectURL(url);
+              const maxDim = 1920;
+              let w = img.width, h = img.height;
+              if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                else { w = Math.round((w * maxDim) / h); h = maxDim; }
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = w;
+              canvas.height = h;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, w, h);
+              resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(url);
+              resolve(null);
+            };
+            img.src = url;
           });
-
-          const data = await res.json();
-
-          if (res.ok && data.success) {
-
-            showPortalToast('تم رفع الواجب بنجاح وإرساله للمستر للمراجعة والاعتماد!', 'success');
-
-            window._userSwitchedHwTab = false;
-
-            await fetchPlatformContent();
-
-            switchHwSubTab('archive');
-
-          } else {
-
-            const msg = data?.error?.message || data?.error || 'تعذر رفع الواجب، يرجى المحاولة لاحقاً';
-
-            showPortalToast(msg, 'error');
-
-          }
-
-        } catch (err) {
-
-          console.error('Upload network error:', err);
-
-          showPortalToast('تعذر الاتصال بالسيرفر، تأكد من اتصال الإنترنت وحاول مجدداً', 'error');
-
         }
 
-      };
+        if (!uploadBase64) {
+          updateProgress(25, 'جارٍ قراءة وتشفير الملف بأمان...');
+          uploadBase64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(new Error('حدث خطأ أثناء قراءة الملف من جهازك'));
+            reader.readAsDataURL(file);
+          });
+        }
 
-      reader.onerror = function() {
+        updateProgress(45, 'جارٍ الاتصال بقاعدة البيانات وبدء الرفع...');
 
-        showPortalToast('حدث خطأ أثناء قراءة الملف من جهازك', 'error');
+        const token = localStorage.getItem('centrly_portal_token') || '';
+        const payload = {
+          token: token,
+          material_id: hwId,
+          file_data: uploadBase64,
+          file_name: file.name
+        };
 
-      };
+        // 3. Multi-Tier Resilient Network Upload with Progress Tracking
+        const candidateUrls = [
+          'https://tutoring-backend-production-c8dd.up.railway.app/api/public/homework/submit',
+          'https://centerly-eg.com/api/public/homework/submit',
+          '/api/public/homework/submit'
+        ];
 
-      reader.readAsDataURL(file);
+        const uploadWithProgress = (url) => {
+          return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.timeout = 30000;
+
+            xhr.upload.onprogress = (evt) => {
+              if (evt.lengthComputable) {
+                const percent = Math.min(94, Math.round((evt.loaded / evt.total) * 90) + 5);
+                const loadedMb = (evt.loaded / (1024 * 1024)).toFixed(1);
+                const totalMb = (evt.total / (1024 * 1024)).toFixed(1);
+                updateProgress(percent, `جارٍ الرفع (${percent}% • ${loadedMb}/${totalMb} MB)... برجاء الانتظار`);
+              }
+            };
+
+            xhr.upload.onload = () => {
+              updateProgress(95, 'تم رفع الملف بالكامل (100%)! جارٍ الحفظ والتوثيق في قاعدة البيانات...');
+            };
+
+            xhr.onload = () => {
+              let resp = {};
+              try { resp = JSON.parse(xhr.responseText); } catch (_) {}
+              if (xhr.status >= 200 && xhr.status < 300 && resp.success) {
+                resolve(resp);
+              } else {
+                const msg = resp?.error?.message || resp?.error || `فشل في السيرفر (${xhr.status})`;
+                reject(new Error(msg));
+              }
+            };
+
+            xhr.onerror = () => reject(new Error('تعذر الاتصال بالسيرفر'));
+            xhr.ontimeout = () => reject(new Error('انتهت مهلة الاتصال بالسيرفر، تأكد من سرعة الإنترنت'));
+            xhr.send(JSON.stringify(payload));
+          });
+        };
+
+        let uploadSuccess = false;
+        let lastError = null;
+
+        for (const targetUrl of candidateUrls) {
+          try {
+            await uploadWithProgress(targetUrl);
+            uploadSuccess = true;
+            break;
+          } catch (netErr) {
+            lastError = netErr;
+            console.warn(`[Homework Upload] Failed via ${targetUrl}, trying fallback...`, netErr);
+          }
+        }
+
+        if (!uploadSuccess) {
+          throw lastError || new Error('تعذر تسليم الواجب لجميع مسارات السيرفر');
+        }
+
+        // 4. Success State UI Feedback
+        updateProgress(100, 'تم استلام وتوثيق الواجب بنجاح!');
+        if (badge) {
+          badge.className = 'kpi-badge badge-success';
+          badge.style.background = '#dcfce7';
+          badge.style.color = '#15803d';
+          badge.style.border = '1px solid #86efac';
+          badge.innerHTML = 'تم التسليم بنجاح ✓';
+        }
+
+        if (dropzone) {
+          dropzone.className = 'file-dropzone-box is-success';
+          dropzone.style.background = '#f0fdf4';
+          dropzone.style.border = '2px solid #22c55e';
+          dropzone.onclick = null;
+          dropzone.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 16px; gap: 8px;">
+              <div style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #dcfce7; border: 2px solid #86efac; color: #16a34a;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <h4 style="font-size: 0.95rem; font-weight: 800; color: #15803d; margin: 0;">
+                تم تسليم الواجب بنجاح وإرساله للمستر!
+              </h4>
+              <p style="font-size: 0.76rem; color: #166534; margin: 0;">
+                تم توثيق التسليم في قاعدة البيانات • جارٍ النقل إلى أرشيف الواجبات...
+              </p>
+            </div>
+          `;
+        }
+
+        showPortalToast('تم رفع الواجب بنجاح وإرساله للمستر للمراجعة والاعتماد!', 'success');
+        window._userSwitchedHwTab = false;
+
+        // Smooth transition to archive after visual confirmation
+        setTimeout(async () => {
+          try {
+            await fetchPlatformContent();
+            switchHwSubTab('archive');
+          } catch (_) {}
+        }, 1200);
+
+      } catch (err) {
+        console.error('Upload error:', err);
+        const errorMsg = err?.message || 'تعذر الاتصال بالسيرفر، تأكد من اتصال الإنترنت وحاول مجدداً';
+        showPortalToast(errorMsg, 'error');
+
+        // Revert UI to Error State with explicit Retry action
+        if (badge) {
+          badge.className = 'kpi-badge badge-danger';
+          badge.style.background = '';
+          badge.style.color = '';
+          badge.style.border = '';
+          badge.innerHTML = 'مطلوب التسليم';
+        }
+
+        if (dropzone) {
+          dropzone.className = 'file-dropzone-box';
+          dropzone.style.background = '#fef2f2';
+          dropzone.style.border = '2px dashed #ef4444';
+          dropzone.style.pointerEvents = 'auto';
+          dropzone.style.cursor = 'pointer';
+          dropzone.onclick = () => triggerHwUpload(hwId);
+          dropzone.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px; gap: 6px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <h4 style="font-size: 0.9rem; font-weight: 800; color: #b91c1c; margin: 0;">
+                تعذر استكمال تسليم الواجب: ${escapeHtml(errorMsg)}
+              </h4>
+              <p style="font-size: 0.76rem; color: #991b1b; margin: 0;">
+                اضغط هنا لإعادة المحاولة واختيار الملف مرة أخرى
+              </p>
+            </div>
+          `;
+        }
+
+        if (fileInput) fileInput.value = '';
+      }
 
     }
 
