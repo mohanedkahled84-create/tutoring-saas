@@ -837,7 +837,7 @@ quizzesRouter.get(
       const studentMap = new Map((studentsData || []).map((s: any) => [s.id, s]));
       const materialMap = new Map((materialsData || []).map((m: any) => [m.id, m]));
 
-      let results = onlineSubs
+      let results: any[] = onlineSubs
         .filter((sub: any) => {
           if (!groupId) return true;
           const s = studentMap.get(sub.student_id);
