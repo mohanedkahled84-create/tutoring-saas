@@ -3960,156 +3960,155 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       }
 
-      let dbMaterials = [];
-
-// Token check bypassed to allow seamless student experience
-
-      // 1. جلب بيانات الطالب والمحتوى الفعلي من قاعدة البيانات عبر Railway Backend مع fallback مباشر لـ Supabase RPC
-
+      // 0. Instant Cache-First Hydration (0ms load time - renders immediately from localStorage)
       try {
-
-        let portalData = null;
-
-        try {
-
-          const portalUrl = `https://tutoring-backend-production-c8dd.up.railway.app/api/public/parent-portal?token=${encodeURIComponent(token)}`;
-
-          const res = await fetch(portalUrl);
-
-          if (res.ok) {
-
-            portalData = await res.json();
-
+        const cachedRaw = localStorage.getItem('centrly_platform_content') || localStorage.getItem('centrly_materials');
+        if (cachedRaw) {
+          const cachedParsed = JSON.parse(cachedRaw);
+          if (Array.isArray(cachedParsed) && cachedParsed.length > 0) {
+            platformContent = cachedParsed.filter(m => {
+              const t = (m.title || '').toLowerCase();
+              const id = (m.id || '').toLowerCase();
+              return !t.includes('تجريبي') && !t.includes('trial') && !t.includes('test') && !id.includes('trial') && !id.includes('test');
+            });
+            renderAllPanels();
           }
-
-        } catch (_) {}
-
-        if (portalData) {
-
-          if (portalData.student) {
-
-            const s = portalData.student;
-
-            const effectiveCode = qCode || s.student_code || s.code || '1006';
-
-            const matchedInfo = (qCode && allKnownStudents[qCode]) ? allKnownStudents[qCode] : {};
-
-            currentStudent = {
-
-              name: matchedInfo.name || s.name || 'مهند خالد',
-
-              code: effectiveCode,
-
-              phone: matchedInfo.phone || s.student_phone || s.parent_phone || '01123671177',
-
-              center: matchedInfo.center || s.center_name || 'الهضبه',
-
-              group: matchedInfo.group || s.group_name || 'الاحد والأربع تالته ثانوي',
-
-              subject: matchedInfo.subject || s.subject_name || 'فيزياء',
-
-              teacher: s.teacher_name || 'مستر عمر المحمدي',
-
-              teacher_phone: s.teacher_phone || '01010979708'
-
-            };
-
-            localStorage.setItem('portal_student', JSON.stringify(currentStudent));
-
-            hydrateStudentUI(currentStudent);
-
-          }
-
-          if (portalData.summary) {
-
-            if (portalData.summary.attendance_rate) {
-
-              const attEl = document.getElementById('kpiAttendanceVal');
-
-              if (attEl) attEl.innerText = portalData.summary.attendance_rate;
-
-            }
-
-            const qAvgEl = document.getElementById('kpiQuizAvgVal');
-
-            if (qAvgEl) {
-
-              qAvgEl.innerText = portalData.summary.quiz_average_percentage || '—';
-
-            }
-
-          }
-
-          if (Array.isArray(portalData.quizzes)) {
-
-            window._studentRecordedQuizzes = portalData.quizzes;
-
-            renderRecordedScores(portalData.quizzes);
-
-          }
-
-          if (Array.isArray(portalData.materials)) {
-
-            dbMaterials = portalData.materials;
-
-          }
-
         }
 
-      } catch (err) {
+        const cachedSummary = JSON.parse(localStorage.getItem(`centrly_cached_summary_${qCode}`) || '{}');
+        if (cachedSummary && cachedSummary.attendance_rate) {
+          const attEl = document.getElementById('kpiAttendanceVal');
+          if (attEl) attEl.innerText = cachedSummary.attendance_rate;
+        }
 
-        console.warn('Backend parent-portal fetch warning:', err);
-
+        const cachedRecRaw = localStorage.getItem(`centrly_cached_recorded_${qCode}`);
+        if (cachedRecRaw) {
+          const cachedRec = JSON.parse(cachedRecRaw);
+          if (Array.isArray(cachedRec) && cachedRec.length > 0) {
+            window._studentAllRecordedQuizzes = cachedRec;
+            renderRecordedScores(cachedRec);
+            const totalPct = cachedRec.reduce((sum, item) => sum + (Number(item.percentage) || ((Number(item.score) / (Number(item.max_score) || 10)) * 100) || 0), 0);
+            const avgPct = Math.round(totalPct / cachedRec.length);
+            const qAvgEl = document.getElementById('kpiQuizAvgVal');
+            if (qAvgEl) qAvgEl.innerText = `${avgPct}%`;
+          }
+        }
+      } catch (cacheErr) {
+        console.warn('Cache-first initial render warning:', cacheErr);
       }
 
-            // 1.5 Fetch rich quizzes and online exams with seamless fallback
+      let dbMaterials = [];
+
+      // 1. Parallel High-Speed Network Fetching with AbortController Timeout (5s max)
+      const fetchController = new AbortController();
+      const fetchTimer = setTimeout(() => fetchController.abort(), 5000);
+
+      const portalUrl = `https://tutoring-backend-production-c8dd.up.railway.app/api/public/parent-portal?token=${encodeURIComponent(token)}`;
+
+      const fetchPortalPromise = fetch(portalUrl, { signal: fetchController.signal })
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null);
+
+      const fetchRichQuizzesPromise = (async () => {
+        const tryEndpoint = (url) => fetch(url, { signal: fetchController.signal }).then(r => r.ok ? r.json() : null).catch(() => null);
+        let res = await tryEndpoint('/api/quizzes/rich');
+        if (res && res.success) return res;
+        res = await tryEndpoint('https://centerly-eg.com/api/quizzes/rich');
+        if (res && res.success) return res;
+        return await tryEndpoint('https://tutoring-backend-production-c8dd.up.railway.app/api/quizzes/rich');
+      })();
+
+      let portalData = null;
+      let richRes = null;
+
       try {
-        let richRes = await fetch('/api/quizzes/rich').then(r => r.json()).catch(() => null);
-        if (!richRes || !richRes.success) {
-          richRes = await fetch('https://centerly-eg.com/api/quizzes/rich').then(r => r.json()).catch(() => null);
-        }
-        if (!richRes || !richRes.success) {
-          richRes = await fetch('https://tutoring-backend-production-c8dd.up.railway.app/api/quizzes/rich').then(r => r.json()).catch(() => null);
-        }
-        if (richRes && richRes.success && Array.isArray(richRes.quizzes)) {
-          const seenQuizKeys = new Set(dbMaterials.map(m => m.id));
-          richRes.quizzes.forEach(q => {
-            const t = (q.title || '').toLowerCase();
-            const id = (q.id || '').toLowerCase();
-            const isTrial = t.includes('تجريبي') || t.includes('trial') || t.includes('test') || id.includes('trial') || id.includes('test');
-            const isPaper = (q.exam_mode || '').toLowerCase() === 'paper';
-            if (isTrial || isPaper) return;
-            const qKey = q.quiz_number ? qnum_ : q.id;
-            if (seenQuizKeys.has(qKey) || seenQuizKeys.has(q.id)) return;
-            seenQuizKeys.add(qKey);
-            seenQuizKeys.add(q.id);
+        const [portalResult, richResult] = await Promise.allSettled([fetchPortalPromise, fetchRichQuizzesPromise]);
+        clearTimeout(fetchTimer);
+        portalData = portalResult.status === 'fulfilled' ? portalResult.value : null;
+        richRes = richResult.status === 'fulfilled' ? richResult.value : null;
+      } catch (_) {
+        clearTimeout(fetchTimer);
+      }
 
-            const maxScore = Array.isArray(q.questions) 
-              ? q.questions.reduce((sum, item) => sum + Number(item.points || 1), 0) 
-              : 10;
+      if (portalData) {
+        if (portalData.student) {
+          const s = portalData.student;
+          const effectiveCode = qCode || s.student_code || s.code || '1006';
+          const matchedInfo = (qCode && allKnownStudents[qCode]) ? allKnownStudents[qCode] : {};
+          currentStudent = {
+            name: matchedInfo.name || s.name || 'مهند خالد',
+            code: effectiveCode,
+            phone: matchedInfo.phone || s.student_phone || s.parent_phone || '01123671177',
+            center: matchedInfo.center || s.center_name || 'الهضبه',
+            group: matchedInfo.group || s.group_name || 'الاحد والأربع تالته ثانوي',
+            subject: matchedInfo.subject || s.subject_name || 'فيزياء',
+            teacher: s.teacher_name || 'مستر عمر المحمدي',
+            teacher_phone: s.teacher_phone || '01010979708'
+          };
+          localStorage.setItem('portal_student', JSON.stringify(currentStudent));
+          hydrateStudentUI(currentStudent);
+        }
 
-            dbMaterials.push({
-              id: q.id,
-              title: q.title || كويز ,
-              description: q.subject || 'الفيزياء',
-              type: 'online_quiz',
-              is_quiz: true,
-              group_id: q.group_id,
-              quiz_number: q.quiz_number,
-              time_limit_minutes: Number(q.time_limit_minutes) || 20,
-              available_date: q.available_date,
-              start_time: q.start_time,
-              end_time: q.end_time,
-              exam_mode: q.exam_mode || 'online',
-              questions: Array.isArray(q.questions) ? q.questions : [],
-              stealth_models: q.stealth_models,
-              max_score: maxScore,
-              created_at: q.created_at
-            });
+        if (portalData.summary) {
+          try {
+            localStorage.setItem(`centrly_cached_summary_${qCode}`, JSON.stringify(portalData.summary));
+          } catch (_) {}
+          if (portalData.summary.attendance_rate) {
+            const attEl = document.getElementById('kpiAttendanceVal');
+            if (attEl) attEl.innerText = portalData.summary.attendance_rate;
+          }
+          const qAvgEl = document.getElementById('kpiQuizAvgVal');
+          if (qAvgEl) {
+            qAvgEl.innerText = portalData.summary.quiz_average_percentage || '—';
+          }
+        }
+
+        if (Array.isArray(portalData.quizzes)) {
+          window._studentRecordedQuizzes = portalData.quizzes;
+          renderRecordedScores(portalData.quizzes);
+        }
+
+        if (Array.isArray(portalData.materials)) {
+          dbMaterials = portalData.materials;
+        }
+      }
+
+      if (richRes && richRes.success && Array.isArray(richRes.quizzes)) {
+        const seenQuizKeys = new Set(dbMaterials.map(m => m.id));
+        richRes.quizzes.forEach(q => {
+          const t = (q.title || '').toLowerCase();
+          const id = (q.id || '').toLowerCase();
+          const isTrial = t.includes('تجريبي') || t.includes('trial') || t.includes('test') || id.includes('trial') || id.includes('test');
+          const isPaper = (q.exam_mode || '').toLowerCase() === 'paper';
+          if (isTrial || isPaper) return;
+          const qKey = q.quiz_number ? `quiz_num_${q.quiz_number}` : q.id;
+          if (seenQuizKeys.has(qKey) || seenQuizKeys.has(q.id)) return;
+          seenQuizKeys.add(qKey);
+          seenQuizKeys.add(q.id);
+
+          const maxScore = Array.isArray(q.questions) 
+            ? q.questions.reduce((sum, item) => sum + Number(item.points || 1), 0) 
+            : 10;
+
+          dbMaterials.push({
+            id: q.id,
+            title: q.title || (q.quiz_number ? `كويز ${q.quiz_number}` : 'كويز أونلاين'),
+            description: q.subject || 'الفيزياء',
+            type: 'online_quiz',
+            is_quiz: true,
+            group_id: q.group_id,
+            quiz_number: q.quiz_number,
+            time_limit_minutes: Number(q.time_limit_minutes) || 20,
+            available_date: q.available_date,
+            start_time: q.start_time,
+            end_time: q.end_time,
+            exam_mode: q.exam_mode || 'online',
+            questions: Array.isArray(q.questions) ? q.questions : [],
+            stealth_models: q.stealth_models,
+            max_score: maxScore,
+            created_at: q.created_at
           });
-        }
-      } catch (richErr) {
-        console.warn('Rich quizzes fetch warning in student platform:', richErr);
+        });
       }
 
       // Normalize quizzes from the signed, tenant-scoped parent-portal response.
@@ -4390,7 +4389,7 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
       computeAndRenderStudentRank(currentStudentCode, currentStudent.group, currentStudent, allRecorded);
 
       platformContent = Array.from(map.values());
-
+      try { localStorage.setItem('centrly_platform_content', JSON.stringify(platformContent)); } catch (_) {}
       renderAllPanels();
 
     }
@@ -6967,9 +6966,10 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
     });
 
     window.addEventListener('focus', () => {
-
+      const now = Date.now();
+      if (now - (window._lastPlatformFetchTime || 0) < 60000) return;
+      window._lastPlatformFetchTime = now;
       fetchPlatformContent();
-
     });
 
     // البدء الفوري عند تحميل الصفحة
