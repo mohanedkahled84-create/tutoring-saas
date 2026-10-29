@@ -856,3 +856,81 @@ test("CASE 11 - Secure Online Exam: Screen Departure Warning, Auto-Withdrawal on
     "Public quiz submit must properly record is_withdrawn status and reason"
   );
 });
+
+test("CASE 12 - Real-Time Quiz Tab Title Update: live typing reflects in top tab bar and persists correctly", async () => {
+  const moduleUrl = new URL('../../web/src/components/TeacherQuizzesView.js', import.meta.url);
+  const { formatQuizTabDisplayTitle, registerTeacherQuizzesActions } = await import(moduleUrl.href);
+
+  // 1. Verify title formatting helper
+  assert.equal(formatQuizTabDisplayTitle(1, "الامتحان الاول"), "كويز 1: الامتحان الاول");
+  assert.equal(formatQuizTabDisplayTitle(1, "كويز 1: الامتحان الاول"), "كويز 1: الامتحان الاول");
+  assert.equal(formatQuizTabDisplayTitle(1, "كويز 1"), "كويز 1");
+  assert.equal(formatQuizTabDisplayTitle(1, ""), "كويز 1");
+  assert.equal(formatQuizTabDisplayTitle(3, "مراجعة شاملة"), "كويز 3: مراجعة شاملة");
+  assert.equal(formatQuizTabDisplayTitle(3, "كويز 3: مراجعة شاملة"), "كويز 3: مراجعة شاملة");
+
+  // 2. Setup mock DOM and app state
+  const prevDoc = global.document;
+  const domElements = {};
+
+  const fakeTabLabel = { textContent: 'كويز 1' };
+  const fakeTabBtn = {
+    attributes: {},
+    querySelector(selector) {
+      if (selector === '.quiz-tab-label' || selector === 'span') return fakeTabLabel;
+      return null;
+    },
+    setAttribute(k, v) {
+      this.attributes[k] = v;
+    }
+  };
+
+  domElements['quizTabBtn_1'] = fakeTabBtn;
+
+  global.document = {
+    getElementById(id) {
+      return domElements[id] || null;
+    }
+  };
+
+  try {
+    const app = {};
+    app.quizzesState = {
+      selectedGroupId: 'group_test_1',
+      currentQuizNumber: 1,
+      quizzes: [
+        { number: 1, title: 'كويز 1', maxScore: 10 },
+        { number: 2, title: 'كويز 2', maxScore: 10 },
+        { number: 3, title: 'كويز 3: مراجعة شاملة', maxScore: 10 },
+      ],
+      groupQuizzes: {
+        'group_test_1': [
+          { number: 1, title: 'كويز 1', maxScore: 10 },
+          { number: 2, title: 'كويز 2', maxScore: 10 },
+          { number: 3, title: 'كويز 3: مراجعة شاملة', maxScore: 10 },
+        ]
+      }
+    };
+    app.saveQuizzesToLocalStorage = () => {};
+
+    registerTeacherQuizzesActions(app);
+
+    // 3. Simulate user typing "الامتحان الاول" into quizTitleInput
+    app.onQuizTitleLiveInput(1, "الامتحان الاول");
+
+    // Must immediately update DOM tab text
+    assert.equal(fakeTabLabel.textContent, "كويز 1: الامتحان الاول");
+    assert.equal(fakeTabBtn.attributes['title'], "كويز 1: الامتحان الاول");
+
+    // Must immediately update in-memory model
+    assert.equal(app.quizzesState.quizzes[0].title, "كويز 1: الامتحان الاول");
+    assert.equal(app.quizzesState.groupQuizzes['group_test_1'][0].title, "كويز 1: الامتحان الاول");
+
+    // If cleared, reverts cleanly to "كويز 1"
+    app.onQuizTitleLiveInput(1, "");
+    assert.equal(fakeTabLabel.textContent, "كويز 1");
+    assert.equal(app.quizzesState.quizzes[0].title, "كويز 1");
+  } finally {
+    global.document = prevDoc;
+  }
+});

@@ -37,6 +37,24 @@ import { request } from "../services/api.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 
+export function formatQuizTabDisplayTitle(quizNum, rawTitle) {
+  const num = Number(quizNum) || 1;
+  const trimmed = (rawTitle || '').trim();
+  if (!trimmed || trimmed === `كويز ${num}` || trimmed === 'كويز' || trimmed === String(num)) {
+    return `كويز ${num}`;
+  }
+  const prefixRegex = new RegExp(`^كويز\\s*${num}\\s*[:\\-–—]?\\s*`, 'i');
+  if (prefixRegex.test(trimmed)) {
+    const after = trimmed.replace(prefixRegex, '').trim();
+    return after ? `كويز ${num}: ${after}` : `كويز ${num}`;
+  }
+  if (/^كويز\\s*[:\\-–—]?\\s*/i.test(trimmed)) {
+    const after = trimmed.replace(/^كويز\\s*[:\\-–—]?\\s*/i, '').trim();
+    return after ? `كويز ${num}: ${after}` : `كويز ${num}`;
+  }
+  return `كويز ${num}: ${trimmed}`;
+}
+
 /**
  * Centrly Advanced Teacher Quizzes & Examination Engine
  * 5 Comprehensive Modules:
@@ -443,6 +461,15 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
   const scoresMap = state.scoresMap || {};
   const currentScores = scoresMap[currentQuiz.number] || {};
 
+  const rawTitle = currentQuiz.title || '';
+  let currentQuizTopic = rawTitle;
+  const prefixRegex = new RegExp(`^كويز\\s*${currentQuiz.number}\\s*[:\\-–—]?\\s*`, 'i');
+  if (rawTitle === `كويز ${currentQuiz.number}`) {
+    currentQuizTopic = '';
+  } else if (prefixRegex.test(rawTitle)) {
+    currentQuizTopic = rawTitle.replace(prefixRegex, '').trim();
+  }
+
   let gradedCount = 0;
   let totalScore = 0;
   let highestScore = 0;
@@ -470,7 +497,7 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
           <span style="font-size: 0.78rem; font-weight: 700; color: #64748b; margin-left: 0.4rem;">الكويز:</span>
           ${quizzes.map(q => {
             const isSelected = q.number === currentQuizNumber;
-            const displayTitle = q.title || `كويز ${q.number}`;
+            const displayTitle = formatQuizTabDisplayTitle(q.number, q.title);
             return `
               <button 
                 id="quizTabBtn_${q.number}"
@@ -479,7 +506,7 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
                 onclick="window.centrlyApp.selectQuizNumber(${q.number})"
                 title="${escapeHtml(displayTitle)}"
               >
-                <span>${escapeHtml(displayTitle)}</span>
+                <span class="quiz-tab-label">${escapeHtml(displayTitle)}</span>
                 ${q.skipped ? '<span style="font-size: 0.65rem; color: #d97706;">(مُتخطى)</span>' : ''}
               </button>
             `;
@@ -535,8 +562,8 @@ function renderRosterTab(state, groups, students, activeGroup, groupStudents, qu
             id="quizTitleInput"
             type="text" 
             class="form-input" 
-            value="${escapeHtml(currentQuiz.title || `كويز ${currentQuiz.number}`)}" 
-            placeholder="اسم الكويز..."
+            value="${escapeHtml(currentQuizTopic)}" 
+            placeholder="اسم أو موضوع الكويز (مثال: الامتحان الأول)..."
             style="font-size: 0.85rem; font-weight: 700; color: #0f172a; height: 32px; padding: 0 8px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 5px; flex: 1;"
             oninput="window.centrlyApp.onQuizTitleLiveInput(${currentQuiz.number}, this.value)"
             onchange="window.centrlyApp.onQuizTitleLiveInput(${currentQuiz.number}, this.value)"
@@ -8990,17 +9017,31 @@ app.syncActiveGroupQuizzes = function(groupId) {
   };
 
   app.onQuizTitleLiveInput = function(quizNum, val) {
-    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    const gid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id) || 'default';
+    const formattedTitle = formatQuizTabDisplayTitle(quizNum, val);
+
+    // 1. Update in-memory active quizzes
+    const quiz = (this.quizzesState.quizzes || []).find(q => q.number === quizNum);
     if (quiz) {
-      quiz.title = val ? val.trim() : `كويز ${quizNum}`;
-      const tabBtn = document.getElementById(`quizTabBtn_${quizNum}`);
-      if (tabBtn) {
-        const span = tabBtn.querySelector('.quiz-tab-label');
-        if (span) span.textContent = val || `كويز ${quizNum}`;
-        tabBtn.setAttribute('title', val || `كويز ${quizNum}`);
-      }
-      this.saveQuizzesToLocalStorage();
+      quiz.title = formattedTitle;
     }
+    if (this.quizzesState.groupQuizzes?.[gid]) {
+      const gQuiz = this.quizzesState.groupQuizzes[gid].find(q => q.number === quizNum);
+      if (gQuiz) gQuiz.title = formattedTitle;
+    }
+
+    // 2. Real-time update DOM tab button immediately
+    const tabBtn = document.getElementById(`quizTabBtn_${quizNum}`);
+    if (tabBtn) {
+      const span = tabBtn.querySelector('.quiz-tab-label') || tabBtn.querySelector('span');
+      if (span) {
+        span.textContent = formattedTitle;
+      }
+      tabBtn.setAttribute('title', formattedTitle);
+    }
+
+    // 3. Persist to localStorage
+    this.saveQuizzesToLocalStorage(gid);
   };
 
   app.onQuizMaxScoreLiveInput = function(quizNum, val) {
@@ -9015,10 +9056,16 @@ app.syncActiveGroupQuizzes = function(groupId) {
   };
 
   app.updateQuizTitle = function(quizNum, newTitle, silent = false) {
-    const quiz = this.quizzesState.quizzes.find(q => q.number === quizNum);
+    const gid = this.quizzesState.selectedGroupId || (this.groups?.[0]?.id) || 'default';
+    const formattedTitle = formatQuizTabDisplayTitle(quizNum, newTitle);
+    const quiz = (this.quizzesState.quizzes || []).find(q => q.number === quizNum);
     if (quiz) {
-      quiz.title = newTitle ? newTitle.trim() : `كويز ${quizNum}`;
-      this.saveQuizzesToLocalStorage();
+      quiz.title = formattedTitle;
+      if (this.quizzesState.groupQuizzes?.[gid]) {
+        const gQuiz = this.quizzesState.groupQuizzes[gid].find(q => q.number === quizNum);
+        if (gQuiz) gQuiz.title = formattedTitle;
+      }
+      this.saveQuizzesToLocalStorage(gid);
 
       if (this.quizzesState.selectedGroupId) {
         request('/quizzes', {
@@ -9102,14 +9149,22 @@ app.syncActiveGroupQuizzes = function(groupId) {
 
     // Read latest title and max score inputs directly
     const titleInput = document.getElementById('quizTitleInput');
-    if (titleInput && titleInput.value.trim()) {
-      currentQuiz.title = titleInput.value.trim();
+    if (titleInput) {
+      const enteredVal = titleInput.value.trim();
+      currentQuiz.title = formatQuizTabDisplayTitle(currQuizNum, enteredVal);
     }
     const maxScoreInput = document.getElementById('quizMaxScoreInput');
     if (maxScoreInput && Number(maxScoreInput.value) > 0) {
       currentQuiz.maxScore = Number(maxScoreInput.value);
     }
     currentQuiz.group_id = gid;
+    if (this.quizzesState.groupQuizzes?.[gid]) {
+      const gQuiz = this.quizzesState.groupQuizzes[gid].find(q => q.number === currQuizNum);
+      if (gQuiz) {
+        gQuiz.title = currentQuiz.title;
+        gQuiz.maxScore = currentQuiz.maxScore;
+      }
+    }
 
     const scores = this.quizzesState.scoresMap?.[currQuizNum] || {};
     const notes = this.quizzesState.notesMap?.[currQuizNum] || {};
