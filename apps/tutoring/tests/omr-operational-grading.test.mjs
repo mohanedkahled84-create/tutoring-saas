@@ -597,3 +597,96 @@ test("CASE 8 - Genuine Mobile Phone Photo of Student Bubble Sheet with Paper Mar
     "All question choices must be identical before and after manual student selection"
   );
 });
+
+test("CASE 9 - Second Genuine Mobile Phone Photo with Blue Ballpoint Pen Shading and Model A Key", async () => {
+  // Load second real student mobile phone photo
+  const sheet2Path = path.resolve(__dirname, "./fixtures/real_student_phone_sheet_2.png");
+  assert.ok(fs.existsSync(sheet2Path), "Second real student phone sheet fixture must exist in tests/fixtures");
+  const sheet2Buf = fs.readFileSync(sheet2Path);
+  const sheet2Png = PNG.sync.read(sheet2Buf);
+  const sheet2Canvas = createMockCanvasFromPng(sheet2Png);
+
+  // Setup app for running frontend code with Exam 5 Model A
+  const app = {
+    quizzesState: {
+      selectedGroupId: "all",
+      omrSelectedExamId: "exam_physics_5",
+      omrSelectedModel: "A",
+      richQuizzes: [{
+        id: "exam_physics_5",
+        title: "امتحان شامل - فيزياء كهربية وحديثة (ورقي وبابل شيت)",
+        exam_mode: "paper",
+        questions: [
+          { id: "p_q1", type: "multiple_choice", points: 2, correct_index: 0 }, // أ (student shaded ب -> 0)
+          { id: "p_q2", type: "multiple_choice", points: 2, correct_index: 1 }, // ب (student shaded أ -> 0)
+          { id: "p_q3", type: "multiple_choice", points: 2, correct_index: 1 }, // ب (student shaded ب -> 2)
+          { id: "p_q4", type: "multiple_choice", points: 2, correct_index: 1 }, // ب (student shaded ب -> 2)
+          { id: "p_q5", type: "multiple_choice", points: 2, correct_index: 0 }, // أ (student shaded ب -> 0)
+          { id: "p_q6", type: "multiple_choice", points: 2, correct_index: 1 }, // ب (student shaded ب -> 2)
+          { id: "p_q7", type: "multiple_choice", points: 2, correct_index: 1 }, // ب (student shaded ج -> 0)
+          { id: "p_q8", type: "multiple_choice", points: 2, correct_index: 0 }, // أ (student shaded ج -> 0)
+          { id: "p_q9", type: "multiple_choice", points: 2, correct_index: 1 }, // ب (student shaded ج -> 0)
+          { id: "p_q10", type: "multiple_choice", points: 2, correct_index: 1 }  // ب (student shaded ج -> 0)
+        ]
+      }],
+      scannedResultsList: []
+    },
+    students: [
+      { id: "std_student_3", name: "طالب 3", student_code: "3112" }
+    ],
+    showToast: () => {},
+    renderMainContent: () => {},
+    saveQuizzesToLocalStorage: () => {}
+  };
+
+  registerTeacherQuizzesActions(app);
+
+  // ACT: Optical analysis on genuine second mobile photograph
+  await app.analyzeOmrCanvas(sheet2Canvas);
+  const scanResult = app.quizzesState.activeManualStudentModal || app.quizzesState.activeOmrReviewModal || app.quizzesState.scannedResultsList[0];
+
+  assert.ok(scanResult, "Scanner must produce a scan result from the second genuine mobile photograph");
+  assert.equal(scanResult.is_unreadable, false, "Second real phone sheet must be recognized as readable through corner markers");
+  assert.equal(scanResult.is_all_blank, false, "Second real phone sheet must not be falsely flagged as all blank");
+  assert.equal(scanResult.max_score, 20);
+
+  // Verify exact shaded answers detected from the mobile photo (shaded in blue ballpoint pen)
+  const expectedAnswers = ["ب", "أ", "ب", "ب", "ب", "ب", "ج", "ج", "ج", "ج"];
+  for (let i = 0; i < 10; i++) {
+    assert.equal(
+      scanResult.breakdown[i].student_choice,
+      expectedAnswers[i],
+      `Question ${i + 1} choice detected from photo 2 must be ${expectedAnswers[i]}`
+    );
+  }
+
+  // Real earned score is 6 / 20 (Q3=ب (+2), Q4=ب (+2), Q6=ب (+2))
+  assert.equal(scanResult.score, 6, "Calculated score on real photo 2 must be 6/20, NOT 0");
+  assert.equal(scanResult.percentage, 30);
+
+  // Verify breakdown details for blue pen detection
+  assert.equal(scanResult.breakdown[0].points, 0); // Q1: ب vs أ
+  assert.equal(scanResult.breakdown[1].points, 0); // Q2: أ vs ب
+  assert.equal(scanResult.breakdown[2].points, 2); // Q3: ب vs ب -> Correct!
+  assert.equal(scanResult.breakdown[3].points, 2); // Q4: ب vs ب -> Correct!
+  assert.equal(scanResult.breakdown[4].points, 0); // Q5: ب vs أ
+  assert.equal(scanResult.breakdown[5].points, 2); // Q6: ب vs ب -> Correct!
+  assert.equal(scanResult.breakdown[6].points, 0); // Q7: ج vs ب
+  assert.equal(scanResult.breakdown[7].points, 0); // Q8: ج vs أ
+  assert.equal(scanResult.breakdown[8].points, 0); // Q9: ج vs ب
+  assert.equal(scanResult.breakdown[9].points, 0); // Q10: ج vs ب
+
+  // If student was matched or needs manual selection, confirm identity safely
+  if (app.quizzesState.activeManualStudentModal) {
+    await app.confirmManualStudentSelection("std_student_3");
+  }
+  if (app.quizzesState.activeOmrReviewModal) {
+    app.setReviewModel("A");
+    await app.confirmOmrScanReview();
+  }
+
+  assert.equal(app.quizzesState.scannedResultsList.length, 1);
+  const recorded = app.quizzesState.scannedResultsList[0];
+  assert.equal(recorded.score, 6, "Final recorded score must remain 6/20");
+  assert.equal(recorded.percentage, 30);
+});

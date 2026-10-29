@@ -7913,8 +7913,8 @@ export function registerTeacherQuizzesActions(app) {
         const ph = pBottom - pTop;
 
         if (pw > cw * 0.4 && ph > ch * 0.4) {
-          const sw = Math.max(20, Math.floor(pw * 0.18));
-          const sh = Math.max(20, Math.floor(ph * 0.18));
+          const sw = Math.max(20, Math.floor(pw * 0.26));
+          const sh = Math.max(20, Math.floor(ph * 0.20));
           const bs = Math.max(6, Math.floor(Math.min(pw, ph) * 0.015));
 
           const findCornerMarker = (rx0, ry0, rx1, ry1) => {
@@ -7943,8 +7943,60 @@ export function registerTeacherQuizzesActions(app) {
 
           const tl = findCornerMarker(pLeft, pTop, pLeft + sw, pTop + sh);
           const tr = findCornerMarker(pRight - sw, pTop, pRight, pTop + sh);
-          const bl = findCornerMarker(pLeft, pBottom - sh, pLeft + sw, pBottom);
-          const br = findCornerMarker(pRight - sw, pBottom - sh, pRight, pBottom);
+          let bl = findCornerMarker(pLeft, pBottom - sh, pLeft + sw, pBottom);
+          let br = findCornerMarker(pRight - sw, pBottom - sh, pRight, pBottom);
+
+          // Contrast check around bottom markers to prevent locking onto dark desk outside paper
+          const checkContrast = (pt) => {
+            let sumBox = 0, cntBox = 0;
+            for (let dy = -3; dy <= 3; dy++) {
+              for (let dx = -3; dx <= 3; dx++) {
+                sumBox += getLum(pt.x + dx, pt.y + dy);
+                cntBox++;
+              }
+            }
+            const boxMean = cntBox > 0 ? (sumBox / cntBox) : 255;
+            let sumSurr = 0, cntSurr = 0;
+            for (let dy = -8; dy <= 8; dy++) {
+              for (let dx = -8; dx <= 8; dx++) {
+                if (Math.abs(dx) <= 4 && Math.abs(dy) <= 4) continue;
+                sumSurr += getLum(pt.x + dx, pt.y + dy);
+                cntSurr++;
+              }
+            }
+            const surrMean = cntSurr > 0 ? (sumSurr / cntSurr) : 255;
+            return surrMean - boxMean;
+          };
+
+          if (checkContrast(br) < 15) {
+            let bestC = -1;
+            let bestPt = br;
+            for (let y = pBottom - Math.floor(sh * 1.5); y <= pBottom - Math.floor(sh * 0.3); y += 3) {
+              for (let x = pRight - sw; x <= pRight; x += 3) {
+                const c = checkContrast({ x, y });
+                if (c > bestC) {
+                  bestC = c;
+                  bestPt = { x, y, score: getLum(x, y) };
+                }
+              }
+            }
+            if (bestC > 30) br = bestPt;
+          }
+
+          if (checkContrast(bl) < 15) {
+            let bestC = -1;
+            let bestPt = bl;
+            for (let y = pBottom - Math.floor(sh * 1.5); y <= pBottom - Math.floor(sh * 0.3); y += 3) {
+              for (let x = pLeft; x <= pLeft + sw; x += 3) {
+                const c = checkContrast({ x, y });
+                if (c > bestC) {
+                  bestC = c;
+                  bestPt = { x, y, score: getLum(x, y) };
+                }
+              }
+            }
+            if (bestC > 30) bl = bestPt;
+          }
 
           if (tl.score < 110 && tr.score < 110 && bl.score < 110 && br.score < 110) {
             alignment = { tl, tr, bl, br, hasMarkers: true };
@@ -7983,13 +8035,18 @@ export function registerTeacherQuizzesActions(app) {
         const imgData = ctx.getImageData(startX, startY, w, h);
         const d = imgData.data;
         let totalDarkness = 0;
+        let maxBlue = 0;
         let count = 0;
         for (let i = 0; i < d.length; i += 4) {
-          const lum = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+          const R = d[i], G = d[i+1], B = d[i+2];
+          const lum = 0.299 * R + 0.587 * G + 0.114 * B;
           totalDarkness += (255 - lum);
+          const blue = (B - R) + (B - G);
+          if (blue > maxBlue) maxBlue = blue;
           count++;
         }
-        return count > 0 ? (totalDarkness / count) : 0;
+        const avgDark = count > 0 ? (totalDarkness / count) : 0;
+        return avgDark + (maxBlue > 20 ? maxBlue * 0.8 : 0);
       };
 
       // Detect sheet contrast across corner alignment markers and center points
@@ -8017,40 +8074,51 @@ export function registerTeacherQuizzesActions(app) {
 
       // 4-digit Student Code Grid Detection (Strict: full code match only, NO endsWith)
       if (!detectedStudentCode && !isUnreadable) {
-        const colXCoords = hasMarkers
-          ? [0.058, 0.140, 0.222, 0.304]
-          : [0.62, 0.70, 0.78, 0.86];
+        const candidateColSets = hasMarkers
+          ? [
+              [0.080, 0.168, 0.258, 0.346], // Standard Layout (Sheet 2)
+              [0.058, 0.140, 0.222, 0.304]  // Compact Layout (Sheet 1)
+            ]
+          : [
+              [0.62, 0.70, 0.78, 0.86]
+            ];
         const baseNormY = hasMarkers ? 0.102 : 0.12;
         const stepNormY = hasMarkers ? 0.0151 : 0.015;
-        const digits = [];
-        let allZero = true;
-        for (let c = 0; c < 4; c++) {
-          let maxDark = -1;
-          let chosenDigit = 0;
-          for (let d = 0; d <= 9; d++) {
-            const normY = baseNormY + (d * stepNormY);
-            let localPeak = 0;
-            for (const dx of [-0.006, 0, 0.006]) {
-              const dark = getSampleDarkness(colXCoords[c] + dx, normY, 0.006);
-              if (dark > localPeak) localPeak = dark;
+
+        for (const colXCoords of candidateColSets) {
+          const digits = [];
+          let allZero = true;
+          for (let c = 0; c < 4; c++) {
+            let maxDark = -1;
+            let chosenDigit = 0;
+            for (let d = 0; d <= 9; d++) {
+              const normY = baseNormY + (d * stepNormY);
+              let localPeak = 0;
+              for (const dx of [-0.006, 0, 0.006]) {
+                const dark = getSampleDarkness(colXCoords[c] + dx, normY, 0.006);
+                if (dark > localPeak) localPeak = dark;
+              }
+              if (localPeak > maxDark) {
+                maxDark = localPeak;
+                chosenDigit = d;
+              }
             }
-            if (localPeak > maxDark) {
-              maxDark = localPeak;
-              chosenDigit = d;
-            }
+            if (chosenDigit !== 0) allZero = false;
+            digits.push(chosenDigit);
           }
-          if (chosenDigit !== 0) allZero = false;
-          digits.push(chosenDigit);
-        }
-        if (!allZero) {
-          const candidateCode = digits.join('');
-          const candidateReversed = digits.slice().reverse().join('');
-          const matched = (this.students || []).find(s => {
-            const sc = String(s.student_code || s.code || '').trim();
-            return sc === candidateCode || sc === candidateReversed;
-          });
-          if (matched) {
-            detectedStudentCode = String(matched.student_code || matched.code || candidateCode).trim();
+          if (!allZero) {
+            const candidateCode = digits.join('');
+            const candidateReversed = digits.slice().reverse().join('');
+            const matched = (this.students || []).find(s => {
+              const sc = String(s.student_code || s.code || '').trim();
+              return sc === candidateCode || sc === candidateReversed;
+            });
+            if (matched) {
+              detectedStudentCode = String(matched.student_code || matched.code || candidateCode).trim();
+              break;
+            } else if (!detectedStudentCode) {
+              detectedStudentCode = candidateCode;
+            }
           }
         }
       }
@@ -8111,8 +8179,23 @@ export function registerTeacherQuizzesActions(app) {
         }
       }
 
-      const gridTop = (hasMarkers && !isWideLayout) ? 0.348 : 0.33;
-      const gridHeight = (hasMarkers && !isWideLayout) ? 0.356 : 0.54;
+      let s2Contrast = 0;
+      if (hasMarkers && numCols === 1 && !isWideLayout) {
+        for (let q = 0; q < 5; q++) {
+          const ny = 0.388 + (q / 9) * 0.347;
+          const d = [0.364, 0.308, 0.248, 0.190].map(x => getSampleDarkness(x, ny, 0.008));
+          const sorted = [...d].sort((a,b) => b - a);
+          s2Contrast += (sorted[0] - sorted[1]);
+        }
+      }
+
+      const isSheet2Style = s2Contrast > 250;
+      const markerSingleColX = isSheet2Style
+        ? [0.364, 0.308, 0.248, 0.190]
+        : [0.325, 0.275, 0.222, 0.171];
+      const gridTop = isSheet2Style ? 0.388 : ((hasMarkers && !isWideLayout) ? 0.348 : 0.33);
+      const gridHeight = isSheet2Style ? 0.347 : ((hasMarkers && !isWideLayout) ? 0.356 : 0.54);
+
       const colWidth = 0.88 / numCols;
 
       for (let qIdx = 0; qIdx < modelMcqs.length; qIdx++) {
@@ -8140,7 +8223,6 @@ export function registerTeacherQuizzesActions(app) {
         // Multi-point jitter sampling (3x3 grid around each bubble)
         const optDarkness = [];
         const optLetters = ['أ', 'ب', 'ج', 'د'];
-        const markerSingleColX = [0.325, 0.275, 0.222, 0.171];
 
         for (let opt = 0; opt < 4; opt++) {
           const baseNormX = (hasMarkers && numCols === 1)
@@ -8250,8 +8332,19 @@ export function registerTeacherQuizzesActions(app) {
       ) || null;
     }
 
-    const calculatedScore = Math.min(maxScore, earnedScore);
-    const calculatedPercentage = Math.round((calculatedScore / maxScore) * 100);
+    if (isUnreadable) {
+      earnedScore = 0;
+      breakdown.forEach(b => {
+        b.student_choice = 'غير مقروء';
+        b.student_choice_index = null;
+        b.is_correct = false;
+        b.points = 0;
+        b.confidence = 0;
+      });
+    }
+
+    const calculatedScore = isUnreadable ? 0 : Math.min(maxScore, earnedScore);
+    const calculatedPercentage = isUnreadable ? 0 : Math.round((calculatedScore / maxScore) * 100);
 
     const answeredCount = breakdown.filter(b => b.student_choice && b.student_choice !== 'لم يُظلل' && b.student_choice !== 'تظليل ملتبس').length;
     const isAllBlank = (answeredCount === 0);
