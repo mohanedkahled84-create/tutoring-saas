@@ -310,21 +310,21 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                   <table class="data-table">
                     <thead>
                       <tr>
-                        <th>كود الطالب</th>
-                        <th>اسم الطالب</th>
-                        <th>تاريخ ووقت التسليم</th>
-                        <th>ملف الواجب (PDF)</th>
-                        <th>حالة المراجعة</th>
+                        <th style="white-space: nowrap;">كود الطالب</th>
+                        <th style="white-space: nowrap;">اسم الطالب</th>
+                        <th style="white-space: nowrap;">تاريخ ووقت التسليم</th>
+                        <th style="white-space: nowrap;">ملف الواجب (PDF)</th>
+                        <th style="white-space: nowrap;">حالة المراجعة</th>
                         <th>ملاحظات المعلم</th>
-                        <th style="text-align: center;">الإجراءات والاعتماد</th>
+                        <th style="text-align: center; white-space: nowrap;">الإجراءات والاعتماد</th>
                       </tr>
                     </thead>
                     <tbody>
                       ${pendingSubmissions.map(sub => {
                         const isRejected = sub.status === 'rejected';
                         const statusBadge = isRejected 
-                          ? '<span class="badge badge-danger" style="font-weight: 800;">يحتاج إعادة</span>'
-                          : '<span class="badge badge-warning" style="font-weight: 800;">بانتظار الاعتماد</span>';
+                          ? '<span class="badge badge-danger" style="font-weight: 800; white-space: nowrap; display: inline-flex; align-items: center;">يحتاج إعادة</span>'
+                          : '<span class="badge badge-warning" style="font-weight: 800; white-space: nowrap; display: inline-flex; align-items: center;">بانتظار الاعتماد</span>';
 
                         const formattedDate = sub.submitted_at 
                           ? new Date(sub.submitted_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) 
@@ -332,49 +332,49 @@ export function renderHomeworkReviewView(homeworkState = {}) {
 
                         return `
                           <tr>
-                            <td style="font-family: monospace; font-weight: 700;">${escapeHtml(sub.student_code)}</td>
-                            <td style="font-weight: 800; color: #0f172a;">${escapeHtml(sub.student_name)}</td>
-                            <td style="font-size: 0.8rem; color: #64748b; font-family: monospace;">${escapeHtml(formattedDate)}</td>
+                            <td style="font-family: monospace; font-weight: 700; white-space: nowrap;">${escapeHtml(sub.student_code)}</td>
+                            <td style="font-weight: 800; color: #0f172a; white-space: nowrap;">${escapeHtml(sub.student_name)}</td>
+                            <td style="font-size: 0.8rem; color: #64748b; font-family: monospace; white-space: nowrap;">${escapeHtml(formattedDate)}</td>
                             <td>
                               ${sub.file_url ? `
-                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
                                   ${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(sub.file_url) ? `
                                     <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer" title="اضغط لتكبير صورة الواجب">
                                       <img src="${escapeHtml(sub.file_url)}" alt="صورة الواجب" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
                                     </a>
                                   ` : ''}
                                   <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
-                                    style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
+                                    style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none; white-space: nowrap;">
                                     ${getIcon('file', 14, '#1d4ed8')}
                                     <span>${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(sub.file_url) ? 'معاينة صورة الواجب ↗' : 'معاينة ملف الواجب ↗'}</span>
                                   </a>
                                 </div>
                               ` : `
-                                <span style="font-size: 0.78rem; color: #94a3b8;">لا يوجد ملف مرفق</span>
+                                <span style="font-size: 0.78rem; color: #94a3b8; white-space: nowrap;">لا يوجد ملف مرفق</span>
                               `}
                             </td>
-                            <td>${statusBadge}</td>
+                            <td style="white-space: nowrap;">${statusBadge}</td>
                             <td style="font-size: 0.8rem; color: #475569; max-width: 200px;">
                               ${sub.teacher_notes ? escapeHtml(sub.teacher_notes) : '<span style="color: #94a3b8;">—</span>'}
                             </td>
-                            <td style="text-align: center;">
-                              <div style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <td style="text-align: center; white-space: nowrap;">
+                              <div style="display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
                                 <!-- Approve Button (Solid Vibrant Green with active click feedback) -->
                                 <button type="button" class="btn btn-sm btn-success" 
                                   onclick="window.centrlyApp && window.centrlyApp.approveHomeworkSubmission ? window.centrlyApp.approveHomeworkSubmission('${escapeHtml(sub.id)}') : null"
                                   title="اعتماد الواجب"
-                                  style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 800; padding: 0.35rem 0.75rem; font-size: 0.825rem; background: #16a34a !important; color: #ffffff !important; border: 1px solid #15803d !important; border-radius: 0.5rem; cursor: pointer; box-shadow: 0 2px 5px rgba(22, 163, 74, 0.3);">
+                                  style="display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; font-weight: 800; padding: 0.35rem 0.75rem; font-size: 0.825rem; white-space: nowrap; min-height: 32px; height: auto; line-height: 1.2; background: #16a34a !important; color: #ffffff !important; border: 1px solid #15803d !important; border-radius: 0.5rem; cursor: pointer; box-shadow: 0 2px 5px rgba(22, 163, 74, 0.3);">
                                   ${getIcon('check', 15, '#ffffff')}
-                                  <span>موافق / اعتماد</span>
+                                  <span style="white-space: nowrap; line-height: 1;">موافق / اعتماد</span>
                                 </button>
 
                                 <!-- Request Redo / Revision Button (Distinct Amber/Orange with active click feedback) -->
                                 <button type="button" class="btn btn-sm btn-warning" 
                                   onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
                                   title="طلب إعادة حل الواجب من الطالب"
-                                  style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 800; padding: 0.35rem 0.75rem; font-size: 0.825rem; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.5rem; cursor: pointer;">
+                                  style="display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; font-weight: 800; padding: 0.35rem 0.75rem; font-size: 0.825rem; white-space: nowrap; min-height: 32px; height: auto; line-height: 1.2; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.5rem; cursor: pointer;">
                                   ${getIcon('refresh', 14, '#c2410c')}
-                                  <span>طلب إعادة الواجب</span>
+                                  <span style="white-space: nowrap; line-height: 1;">طلب إعادة الواجب</span>
                                 </button>
                               </div>
                             </td>
@@ -404,14 +404,14 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                   <table class="data-table">
                     <thead>
                       <tr>
-                        <th style="width: 40px; text-align: center;">#</th>
-                        <th>كود الطالب</th>
-                        <th>اسم الطالب</th>
-                        <th>تاريخ ووقت التسليم</th>
-                        <th>تاريخ الاعتماد</th>
-                        <th>حالة الواجب</th>
+                        <th style="width: 40px; text-align: center; white-space: nowrap;">#</th>
+                        <th style="white-space: nowrap;">كود الطالب</th>
+                        <th style="white-space: nowrap;">اسم الطالب</th>
+                        <th style="white-space: nowrap;">تاريخ ووقت التسليم</th>
+                        <th style="white-space: nowrap;">تاريخ الاعتماد</th>
+                        <th style="white-space: nowrap;">حالة الواجب</th>
                         <th>ملاحظات المعلم</th>
-                        <th style="text-align: center;">الإجراء</th>
+                        <th style="text-align: center; white-space: nowrap;">الإجراء</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -424,13 +424,13 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                           : '—';
                         return `
                           <tr>
-                            <td style="text-align: center; color: #94a3b8; font-weight: 700; font-size: 0.8rem;">${idx + 1}</td>
-                            <td style="font-family: monospace; font-weight: 700; color: #1e293b;">${escapeHtml(sub.student_code)}</td>
-                            <td style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">${escapeHtml(sub.student_name)}</td>
-                            <td style="font-size: 0.8rem; color: #64748b; font-family: monospace;">${escapeHtml(formattedDate)}</td>
-                            <td style="font-size: 0.8rem; color: #059669; font-family: monospace; font-weight: 700;">${escapeHtml(reviewedDate)}</td>
-                            <td>
-                              <span class="badge badge-success" style="font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                            <td style="text-align: center; color: #94a3b8; font-weight: 700; font-size: 0.8rem; white-space: nowrap;">${idx + 1}</td>
+                            <td style="font-family: monospace; font-weight: 700; color: #1e293b; white-space: nowrap;">${escapeHtml(sub.student_code)}</td>
+                            <td style="font-weight: 800; color: #0f172a; font-size: 0.95rem; white-space: nowrap;">${escapeHtml(sub.student_name)}</td>
+                            <td style="font-size: 0.8rem; color: #64748b; font-family: monospace; white-space: nowrap;">${escapeHtml(formattedDate)}</td>
+                            <td style="font-size: 0.8rem; color: #059669; font-family: monospace; font-weight: 700; white-space: nowrap;">${escapeHtml(reviewedDate)}</td>
+                            <td style="white-space: nowrap;">
+                              <span class="badge badge-success" style="font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap;">
                                 ${getIcon('check', 13, '#ffffff')}
                                 <span>معتمد بنجاح ★</span>
                               </span>
@@ -438,13 +438,13 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                             <td style="font-size: 0.8rem; color: #475569; max-width: 220px;">
                               ${sub.teacher_notes ? escapeHtml(sub.teacher_notes) : '<span style="color: #94a3b8;">—</span>'}
                             </td>
-                            <td style="text-align: center;">
+                            <td style="text-align: center; white-space: nowrap;">
                               <button type="button" class="btn btn-sm btn-warning" 
                                 onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
                                 title="طلب إعادة حل الواجب من الطالب"
-                                style="display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 800; padding: 0.25rem 0.6rem; font-size: 0.75rem; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.45rem; cursor: pointer;">
+                                style="display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; font-weight: 800; padding: 0.3rem 0.65rem; font-size: 0.78rem; white-space: nowrap; min-height: 30px; height: auto; line-height: 1.2; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.45rem; cursor: pointer;">
                                 ${getIcon('refresh', 13, '#c2410c')}
-                                <span>طلب إعادة</span>
+                                <span style="white-space: nowrap; line-height: 1;">طلب إعادة</span>
                               </button>
                             </td>
                           </tr>
@@ -462,13 +462,13 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>كود الطالب</th>
-                      <th>اسم الطالب</th>
-                      <th>تاريخ ووقت التسليم</th>
-                      <th>ملف الواجب</th>
-                      <th>حالة المراجعة</th>
+                      <th style="white-space: nowrap;">كود الطالب</th>
+                      <th style="white-space: nowrap;">اسم الطالب</th>
+                      <th style="white-space: nowrap;">تاريخ ووقت التسليم</th>
+                      <th style="white-space: nowrap;">ملف الواجب</th>
+                      <th style="white-space: nowrap;">حالة المراجعة</th>
                       <th>ملاحظات المعلم</th>
-                      <th style="text-align: center;">الإجراء</th>
+                      <th style="text-align: center; white-space: nowrap;">الإجراء</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -477,10 +477,10 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                       const isPending = sub.status === 'pending';
 
                       const statusBadge = isApproved 
-                        ? '<span class="badge badge-success" style="font-weight: 800;">معتمد</span>' 
+                        ? '<span class="badge badge-success" style="font-weight: 800; white-space: nowrap;">معتمد</span>' 
                         : (isPending 
-                          ? '<span class="badge badge-warning" style="font-weight: 800;">بانتظار الاعتماد</span>' 
-                          : '<span class="badge badge-danger" style="font-weight: 800;">يحتاج إعادة</span>');
+                          ? '<span class="badge badge-warning" style="font-weight: 800; white-space: nowrap;">بانتظار الاعتماد</span>' 
+                          : '<span class="badge badge-danger" style="font-weight: 800; white-space: nowrap;">يحتاج إعادة</span>');
 
                       const formattedDate = sub.submitted_at 
                         ? new Date(sub.submitted_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) 
@@ -488,52 +488,52 @@ export function renderHomeworkReviewView(homeworkState = {}) {
 
                       return `
                         <tr>
-                          <td style="font-family: monospace; font-weight: 700;">${escapeHtml(sub.student_code)}</td>
-                          <td style="font-weight: 800; color: #0f172a;">${escapeHtml(sub.student_name)}</td>
-                          <td style="font-size: 0.8rem; color: #64748b; font-family: monospace;">${escapeHtml(formattedDate)}</td>
-                          <td>
+                          <td style="font-family: monospace; font-weight: 700; white-space: nowrap;">${escapeHtml(sub.student_code)}</td>
+                          <td style="font-weight: 800; color: #0f172a; white-space: nowrap;">${escapeHtml(sub.student_name)}</td>
+                          <td style="font-size: 0.8rem; color: #64748b; font-family: monospace; white-space: nowrap;">${escapeHtml(formattedDate)}</td>
+                          <td style="white-space: nowrap;">
                             ${sub.file_url ? `
-                              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                              <div style="display: flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
                                 ${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(sub.file_url) ? `
                                   <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer" title="اضغط لتكبير صورة الواجب">
                                     <img src="${escapeHtml(sub.file_url)}" alt="صورة الواجب" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1;">
                                   </a>
                                 ` : ''}
                                 <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer"
-                                  style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none;">
+                                  style="display: inline-flex; align-items: center; gap: 0.35rem; background: #eff6ff; color: #1d4ed8; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe; font-size: 0.8rem; font-weight: 700; text-decoration: none; white-space: nowrap;">
                                   ${getIcon('file', 14, '#1d4ed8')}
                                   <span>${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(sub.file_url) ? 'معاينة الصورة ↗' : 'معاينة الملف ↗'}</span>
                                 </a>
                               </div>
                             ` : (isApproved ? `
-                              <span style="font-size: 0.78rem; color: #059669; font-weight: 700;">تم الاعتماد</span>
-                            ` : '<span style="font-size: 0.78rem; color: #94a3b8;">—</span>')}
+                              <span style="font-size: 0.78rem; color: #059669; font-weight: 700; white-space: nowrap;">تم الاعتماد</span>
+                            ` : '<span style="font-size: 0.78rem; color: #94a3b8; white-space: nowrap;">—</span>')}
                           </td>
-                          <td>${statusBadge}</td>
+                          <td style="white-space: nowrap;">${statusBadge}</td>
                           <td style="font-size: 0.8rem; color: #475569; max-width: 200px;">
                             ${sub.teacher_notes ? escapeHtml(sub.teacher_notes) : '<span style="color: #94a3b8;">—</span>'}
                           </td>
-                          <td style="text-align: center;">
-                            <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                          <td style="text-align: center; white-space: nowrap;">
+                            <div style="display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;">
                               ${isApproved ? `
                                 <button type="button" class="btn btn-sm btn-warning" 
                                   onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
-                                  style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.55rem; font-size: 0.75rem; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.45rem;">
+                                  style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-weight: 700; padding: 0.3rem 0.6rem; font-size: 0.75rem; white-space: nowrap; min-height: 30px; height: auto; line-height: 1.2; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.45rem;">
                                   ${getIcon('refresh', 12, '#c2410c')}
-                                  <span>طلب إعادة</span>
+                                  <span style="white-space: nowrap; line-height: 1;">طلب إعادة</span>
                                 </button>
                               ` : `
                                 <button type="button" class="btn btn-sm btn-success" 
                                   onclick="window.centrlyApp && window.centrlyApp.approveHomeworkSubmission ? window.centrlyApp.approveHomeworkSubmission('${escapeHtml(sub.id)}') : null"
-                                  style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 800; padding: 0.25rem 0.65rem; background: #16a34a !important; color: #ffffff !important; border: 1px solid #15803d !important; border-radius: 0.45rem;">
+                                  style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-weight: 800; padding: 0.3rem 0.7rem; font-size: 0.8rem; white-space: nowrap; min-height: 30px; height: auto; line-height: 1.2; background: #16a34a !important; color: #ffffff !important; border: 1px solid #15803d !important; border-radius: 0.45rem;">
                                   ${getIcon('check', 13, '#ffffff')}
-                                  <span>اعتماد</span>
+                                  <span style="white-space: nowrap; line-height: 1;">اعتماد</span>
                                 </button>
                                 <button type="button" class="btn btn-sm btn-warning" 
                                   onclick="window.centrlyApp && window.centrlyApp.promptRejectHomework ? window.centrlyApp.promptRejectHomework('${escapeHtml(sub.id)}', '${escapeHtml(sub.student_name)}') : null"
-                                  style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; padding: 0.25rem 0.6rem; font-size: 0.78rem; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.45rem;">
+                                  style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-weight: 700; padding: 0.3rem 0.65rem; font-size: 0.78rem; white-space: nowrap; min-height: 30px; height: auto; line-height: 1.2; background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fdba74 !important; border-radius: 0.45rem;">
                                   ${getIcon('refresh', 12, '#c2410c')}
-                                  <span>طلب إعادة</span>
+                                  <span style="white-space: nowrap; line-height: 1;">طلب إعادة</span>
                                 </button>
                               `}
                             </div>

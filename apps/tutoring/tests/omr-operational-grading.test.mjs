@@ -1108,3 +1108,36 @@ test("CASE 14 - Student Homework Submission Loading Indicator & Progress Trackin
     "Successful upload must display celebratory green confirmation and auto-transition to archive"
   );
 });
+
+test("CASE 15 - UI Stability: Non-wrapping and flexible height prevent button and badge text distortion", () => {
+  const mainCss = fs.readFileSync(path.resolve(__dirname, '../../../apps/web/src/styles/main.css'), 'utf8');
+  const hwReviewJs = fs.readFileSync(path.resolve(__dirname, '../../../apps/web/src/components/HomeworkReviewView.js'), 'utf8');
+
+  // 1. Verify global CSS styles for buttons and badges prevent overflow & wrapping
+  assert.match(mainCss, /\.btn\s*\{[^}]*min-height:\s*32px;[^}]*white-space:\s*nowrap;/s, "Global .btn must have min-height: 32px and white-space: nowrap");
+  assert.match(mainCss, /\.btn-sm\s*\{[^}]*min-height:\s*28px;[^}]*white-space:\s*nowrap;/s, "Global .btn-sm must have min-height: 28px and white-space: nowrap");
+  assert.match(mainCss, /\.badge\s*\{[^}]*white-space:\s*nowrap;/s, "Global .badge must have white-space: nowrap");
+
+  // 2. Verify HomeworkReviewView action buttons have explicit non-wrapping and flexible height
+  assert.ok(
+    hwReviewJs.includes('white-space: nowrap') &&
+    hwReviewJs.includes('min-height: 32px') &&
+    hwReviewJs.includes('طلب إعادة الواجب') &&
+    hwReviewJs.includes('موافق / اعتماد'),
+    "HomeworkReviewView must enforce non-wrapping and flexible height on review buttons"
+  );
+
+  // 3. Verify HomeworkReviewView table headers and cells protect action columns from table squeezing
+  assert.ok(
+    hwReviewJs.includes('<th style="text-align: center; white-space: nowrap;">الإجراءات والاعتماد</th>') &&
+    hwReviewJs.includes('<th style="white-space: nowrap;">حالة المراجعة</th>'),
+    "HomeworkReviewView must protect action and status table headers from squishing"
+  );
+
+  // 4. Verify status badge rendering does not break onto multiple lines
+  assert.ok(
+    hwReviewJs.includes('<span class="badge badge-warning" style="font-weight: 800; white-space: nowrap;') &&
+    hwReviewJs.includes('<span class="badge badge-danger" style="font-weight: 800; white-space: nowrap;'),
+    "Status badges must be locked to single-line nowrap"
+  );
+});

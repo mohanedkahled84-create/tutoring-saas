@@ -241,10 +241,13 @@
   justify-content: center;
   gap: 0.4rem;
   padding: 0 0.75rem;
-  height: 32px;
+  min-height: 32px;
+  height: auto;
+  white-space: nowrap;
   border-radius: var(--radius-md);
   font-weight: 600;
   font-size: 0.76rem;
+  line-height: 1.4;
   cursor: pointer;
   transition: all 0.12s ease;
   border: 1px solid transparent;
@@ -315,9 +318,12 @@
 }
 
 .btn-sm {
-  height: 28px;
-  padding: 0 0.6rem;
-  font-size: 0.72rem;
+  min-height: 28px;
+  height: auto;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  line-height: 1.3;
 }
 
 /* Form Controls */
@@ -451,6 +457,8 @@ button.password-toggle-btn:active {
   border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 700;
+  white-space: nowrap;
+  line-height: 1.3;
 }
 
 .badge-success {
