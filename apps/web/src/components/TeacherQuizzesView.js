@@ -3163,10 +3163,32 @@ function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quiz
     } catch (_) {}
   }
 
+  // Automatic desktop server sync if local list is empty
+  if (scannedList.length === 0 && !state.isLoadingSubmissions && typeof window !== 'undefined' && window.centrlyApp && typeof window.centrlyApp.loadOnlineSubmissions === 'function') {
+    const qState = window.centrlyApp.quizzesState || {};
+    if (!qState._hasAutoLoadedPaperSubmissions) {
+      qState._hasAutoLoadedPaperSubmissions = true;
+      setTimeout(() => {
+        Promise.all([
+          window.centrlyApp.loadOnlineSubmissions(),
+          (!qState.richQuizzes || qState.richQuizzes.length === 0) && typeof window.centrlyApp.loadRichQuizzes === 'function' ? window.centrlyApp.loadRichQuizzes() : Promise.resolve()
+        ]).then(() => {
+          if (typeof window.centrlyApp.renderMainContent === 'function') {
+            window.centrlyApp.renderMainContent();
+          }
+        }).catch(() => {});
+      }, 20);
+    }
+  }
+
   // Also merge paper exam submissions from onlineSubmissions if any
   const onlineSubs = Array.isArray(state.onlineSubmissions) ? state.onlineSubmissions : [];
   onlineSubs.forEach(sub => {
-    if (sub.exam_mode === 'paper' || (Array.isArray(sub.breakdown) && sub.breakdown.length > 0)) {
+    const isPaper = sub.exam_mode === 'paper' ||
+      (Array.isArray(sub.breakdown) && sub.breakdown.length > 0) ||
+      (typeof sub.notes === 'string' && (sub.notes.includes('بابل شيت') || sub.notes.includes('ورقي') || sub.notes.includes('OMR'))) ||
+      (typeof sub.teacher_notes === 'string' && (sub.teacher_notes.includes('بابل شيت') || sub.teacher_notes.includes('ورقي') || sub.teacher_notes.includes('OMR')));
+    if (isPaper) {
       const exists = scannedList.some(s => s.id === sub.id || (s.student_code === sub.student_code && String(s.exam_id) === String(sub.quiz_id || sub.material_id)));
       if (!exists) {
         scannedList.push({
@@ -5861,10 +5883,15 @@ export function registerTeacherQuizzesActions(app) {
         this.loadRichQuizzes(),
         this.loadOnlineSubmissions()
       ]);
-    } else if (tabName === 'online_grading') {
+    } else if (tabName === 'online_grading' || tabName === 'paper_results') {
       this.quizzesState.isLoadingSubmissions = true;
       this.renderMainContent();
-      await this.loadOnlineSubmissions();
+      await Promise.all([
+        this.loadOnlineSubmissions(),
+        (!this.quizzesState.richQuizzes || this.quizzesState.richQuizzes.length === 0) ? this.loadRichQuizzes() : Promise.resolve()
+      ]);
+      this.quizzesState.isLoadingSubmissions = false;
+      this.renderMainContent();
     } else {
       this.renderMainContent();
     }
@@ -6028,6 +6055,54 @@ export function registerTeacherQuizzesActions(app) {
       if (typeof this.reconcileQuizzesFromSubmissions === 'function') {
         this.reconcileQuizzesFromSubmissions();
       }
+
+      // Seamless paper results sync: merge paper/OMR submissions from database into scannedResultsList
+      if (!Array.isArray(this.quizzesState.scannedResultsList)) {
+        this.quizzesState.scannedResultsList = [];
+      }
+      const paperSubs = this.quizzesState.onlineSubmissions.filter(s =>
+        s.exam_mode === 'paper' ||
+        (Array.isArray(s.breakdown) && s.breakdown.length > 0) ||
+        (typeof s.notes === 'string' && (s.notes.includes('بابل شيت') || s.notes.includes('ورقي') || s.notes.includes('OMR'))) ||
+        (typeof s.teacher_notes === 'string' && (s.teacher_notes.includes('بابل شيت') || s.teacher_notes.includes('ورقي') || s.teacher_notes.includes('OMR')))
+      );
+      paperSubs.forEach(sub => {
+        const existingIdx = this.quizzesState.scannedResultsList.findIndex(
+          item => (item.id && String(item.id) === String(sub.id)) ||
+                  (item.student_code && String(item.student_code) === String(sub.student_code) && String(item.exam_id) === String(sub.quiz_id || sub.material_id))
+        );
+        const mappedItem = {
+          id: sub.id,
+          student_id: sub.student_id || sub.student_code,
+          student_code: sub.student_code,
+          student_name: sub.student_name,
+          exam_id: sub.quiz_id || sub.material_id,
+          exam_title: sub.quiz_title,
+          quiz_number: sub.quiz_number,
+          group_id: sub.group_id,
+          model: sub.model || 'نموذج أ',
+          score: sub.total_score !== undefined ? sub.total_score : (sub.score || 0),
+          max_score: sub.max_score || 10,
+          percentage: sub.percentage || Math.round(((sub.total_score || sub.score || 0) / (sub.max_score || 10)) * 100),
+          timestamp: sub.submitted_at ? new Date(sub.submitted_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : 'مسجل',
+          breakdown: sub.breakdown,
+          server_confirmed: true,
+          sync_status: 'synced'
+        };
+        if (existingIdx >= 0) {
+          this.quizzesState.scannedResultsList[existingIdx] = {
+            ...mappedItem,
+            ...this.quizzesState.scannedResultsList[existingIdx],
+            server_confirmed: true,
+            sync_status: 'synced'
+          };
+        } else {
+          this.quizzesState.scannedResultsList.push(mappedItem);
+        }
+      });
+      try {
+        localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+      } catch (_) {}
 
       // Resilient local test submissions fallback (detects exams submitted in the browser)
       try {

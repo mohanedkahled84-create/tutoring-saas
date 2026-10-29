@@ -802,38 +802,42 @@ quizzesRouter.get(
       const { data: subs, error: subsError } = await query;
       if (subsError) throw subsError;
 
-      // Filter only online quiz submissions (file_name starts with online_quiz_ or teacher_notes contains quiz metadata)
+      // Filter quiz submissions (online or paper OMR)
       const onlineSubs = (subs || []).filter((s: any) => {
-        if (s.file_name && s.file_name.startsWith("online_quiz_")) return true;
+        if (s.file_name && (s.file_name.startsWith("online_quiz_") || s.file_name.startsWith("paper_omr_") || s.file_name.startsWith("paper_quiz_"))) return true;
         try {
           const notes = typeof s.teacher_notes === "string" ? JSON.parse(s.teacher_notes) : s.teacher_notes;
-          if (notes && (notes.quiz_number !== undefined || notes.mcq_score !== undefined)) return true;
+          if (notes && (notes.quiz_number !== undefined || notes.mcq_score !== undefined || notes.exam_mode !== undefined)) return true;
         } catch (_) {}
         return false;
       });
 
-      if (onlineSubs.length === 0) {
-        res.status(200).json({ success: true, submissions: [] });
-        return;
-      }
-
       const studentIds = [...new Set(onlineSubs.map((s: any) => s.student_id))];
       const materialIds = [...new Set(onlineSubs.map((s: any) => s.material_id))];
 
-      const { data: studentsData } = await supabase
-        .from("students")
-        .select("id, name, student_code, group_id, student_phone")
-        .in("id", studentIds);
+      let studentsData: any[] = [];
+      let materialsData: any[] = [];
 
-      const { data: materialsData } = await supabase
-        .from("study_materials")
-        .select("id, title, description, questions, group_id")
-        .in("id", materialIds);
+      if (studentIds.length > 0) {
+        const { data: sData } = await supabase
+          .from("students")
+          .select("id, name, student_code, group_id, student_phone")
+          .in("id", studentIds);
+        studentsData = sData || [];
+      }
+
+      if (materialIds.length > 0) {
+        const { data: mData } = await supabase
+          .from("study_materials")
+          .select("id, title, description, questions, group_id")
+          .in("id", materialIds);
+        materialsData = mData || [];
+      }
 
       const studentMap = new Map((studentsData || []).map((s: any) => [s.id, s]));
       const materialMap = new Map((materialsData || []).map((m: any) => [m.id, m]));
 
-      const results = onlineSubs
+      let results = onlineSubs
         .filter((sub: any) => {
           if (!groupId) return true;
           const s = studentMap.get(sub.student_id);
@@ -947,6 +951,96 @@ quizzesRouter.get(
         }
       } catch (inboxErr) {
         console.warn("[Quizzes] Could not merge legacy whatsapp_inbox submissions:", inboxErr);
+      }
+
+      try {
+        const { data: scoreRows } = await supabase
+          .from("quiz_scores")
+          .select("id, tenant_id, group_id, quiz_id, quiz_number, student_id, score, max_score, note, updated_at")
+          .eq("tenant_id", tenantId)
+          .order("updated_at", { ascending: false })
+          .limit(500);
+
+        if (Array.isArray(scoreRows) && scoreRows.length > 0) {
+          const missingStudentIds = scoreRows
+            .map((r: any) => r.student_id)
+            .filter((sid: string) => sid && !studentMap.has(sid));
+
+          if (missingStudentIds.length > 0) {
+            const { data: extraStudents } = await supabase
+              .from("students")
+              .select("id, name, student_code, group_id, student_phone")
+              .in("id", [...new Set(missingStudentIds)]);
+            (extraStudents || []).forEach((s: any) => studentMap.set(s.id, s));
+          }
+
+          const missingMaterialIds = scoreRows
+            .map((r: any) => r.quiz_id)
+            .filter((mid: string) => mid && !materialMap.has(mid));
+
+          if (missingMaterialIds.length > 0) {
+            const { data: extraMaterials } = await supabase
+              .from("study_materials")
+              .select("id, title, description, questions, group_id")
+              .in("id", [...new Set(missingMaterialIds)]);
+            (extraMaterials || []).forEach((m: any) => materialMap.set(m.id, m));
+          }
+
+          for (const sRow of scoreRows) {
+            const student = studentMap.get(sRow.student_id) || {};
+            const material = materialMap.get(sRow.quiz_id) || {};
+            const sCode = (student as any).student_code || (student as any).code || "—";
+            const sMaterialId = sRow.quiz_id || `paper_quiz_${sRow.quiz_number}`;
+
+            const alreadyExists = results.some((r: any) =>
+              (r.student_id === sRow.student_id || String(r.student_code) === String(sCode)) &&
+              (String(r.material_id) === String(sMaterialId) || Number(r.quiz_number) === Number(sRow.quiz_number))
+            );
+
+            if (!alreadyExists) {
+              const noteText = String(sRow.note || "");
+              const isPaperScan = noteText.includes("بابل شيت") || noteText.includes("ورقي") || noteText.includes("OMR") || (typeof (material as any)?.questions === "string" && (material as any).questions.includes("paper"));
+
+              let model = "نموذج أ";
+              const modelMatch = noteText.match(/نموذج\s*([أ-يA-Da-d])/);
+              if (modelMatch) {
+                model = `نموذج ${modelMatch[1]}`;
+              }
+
+              results.push({
+                id: `score_${sRow.id}`,
+                submission_id: `score_${sRow.id}`,
+                student_id: sRow.student_id,
+                student_name: (student as any).name || "طالب",
+                student_code: sCode,
+                student_phone: (student as any).student_phone || "",
+                material_id: sMaterialId,
+                quiz_title: (material as any).title || `امتحان ورقي ${sRow.quiz_number || 1}`,
+                subject: (material as any).description || "الفيزياء",
+                quiz_number: Number(sRow.quiz_number) || 1,
+                group_id: sRow.group_id || (student as any).group_id || (material as any).group_id || null,
+                model: model,
+                exam_mode: isPaperScan ? "paper" : "online",
+                status: "approved",
+                is_graded: true,
+                has_essay: false,
+                score: Number(sRow.score || 0),
+                total_score: Number(sRow.score || 0),
+                max_score: Number(sRow.max_score || 10),
+                percentage: Math.round(((Number(sRow.score || 0)) / Number(sRow.max_score || 10)) * 100),
+                breakdown: [],
+                mcq_score: Number(sRow.score || 0),
+                total_mcq_points: Number(sRow.max_score || 10),
+                questions: [],
+                answers: {},
+                notes: sRow.note,
+                submitted_at: sRow.updated_at || new Date().toISOString(),
+              });
+            }
+          }
+        }
+      } catch (scoreErr) {
+        console.warn("[Quizzes] Could not reconcile quiz_scores into submissions:", scoreErr);
       }
 
       res.status(200).json({ success: true, submissions: results });
@@ -1415,6 +1509,89 @@ quizzesRouter.post(
           [student.id]: `تصحيح بابل شيت (نموذج ${resolvedModel}) - ${gradingResult.diagnostic_summary.explanation}`,
         },
       });
+
+      const studentCode = (student as any).student_code || (student as any).code || student_code || "—";
+      const studentName = student.name || "طالب";
+
+      const paperSubmissionNotes = {
+        quiz_number: qNum,
+        quiz_title: targetRow.title || parsedQuiz.title || `امتحان ورقي ${qNum}`,
+        model: resolvedModel,
+        model_letter: resolvedModelLetter,
+        exam_mode: "paper",
+        is_graded: true,
+        mcq_score: calculatedScore,
+        final_score: calculatedScore,
+        score: calculatedScore,
+        total_score: calculatedScore,
+        max_score: totalMaxScore,
+        percentage: gradingResult.percentage,
+        breakdown: gradingResult.breakdown,
+        answers: studentAnswers,
+        diagnostic: gradingResult.diagnostic_summary,
+        submitted_at: new Date().toISOString(),
+      };
+
+      try {
+        await supabase
+          .from("homework_submissions")
+          .upsert(
+            {
+              tenant_id: tenantId,
+              material_id: targetRow.id,
+              student_id: student.id,
+              file_name: `paper_omr_${qNum}_${student.id}.json`,
+              file_url: null,
+              status: "approved",
+              teacher_notes: JSON.stringify(paperSubmissionNotes),
+              submitted_at: new Date().toISOString(),
+            },
+            { onConflict: "material_id,student_id" }
+          );
+      } catch (subErr) {
+        console.warn("[Quizzes OMR] Could not persist to homework_submissions:", subErr);
+      }
+
+      try {
+        await supabase
+          .from("whatsapp_inbox")
+          .upsert(
+            {
+              tenant_id: tenantId,
+              phone: `QUIZ_SUB_${targetRow.id}_${studentCode}`,
+              message_body: JSON.stringify({
+                id: `sub_paper_${targetRow.id}_${studentCode}`,
+                submission_id: `sub_paper_${targetRow.id}_${studentCode}`,
+                material_id: targetRow.id,
+                quiz_id: targetRow.id,
+                quiz_title: targetRow.title || parsedQuiz.title || `امتحان ورقي ${qNum}`,
+                quiz_number: qNum,
+                group_id: resolvedGroupId,
+                student_id: student.id,
+                student_code: studentCode,
+                student_name: studentName,
+                model: resolvedModel,
+                model_letter: resolvedModelLetter,
+                exam_mode: "paper",
+                status: "approved",
+                is_graded: true,
+                score: calculatedScore,
+                total_score: calculatedScore,
+                max_score: totalMaxScore,
+                percentage: gradingResult.percentage,
+                breakdown: gradingResult.breakdown,
+                answers: studentAnswers,
+                diagnostic: gradingResult.diagnostic_summary,
+                submitted_at: new Date().toISOString(),
+              }),
+              status: "approved",
+              created_at: new Date().toISOString(),
+            },
+            { onConflict: "phone" }
+          );
+      } catch (inboxErr) {
+        console.warn("[Quizzes OMR] Could not persist to whatsapp_inbox:", inboxErr);
+      }
 
       res.status(200).json({
         success: true,

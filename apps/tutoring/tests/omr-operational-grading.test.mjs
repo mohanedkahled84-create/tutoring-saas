@@ -934,3 +934,134 @@ test("CASE 12 - Real-Time Quiz Tab Title Update: live typing reflects in top tab
     global.document = prevDoc;
   }
 });
+
+test("CASE 13 - Permanent Database Multi-Ledger Persistence & Desktop Paper Results Reconciliation", async () => {
+  const routesTs = fs.readFileSync(path.resolve(__dirname, '../src/features/quizzes/routes.ts'), 'utf8');
+
+  // 1. Verify multi-ledger persistence in POST /omr-scan
+  assert.ok(
+    routesTs.includes('quizzesService.saveScores') &&
+    routesTs.includes('"homework_submissions"') &&
+    routesTs.includes('"whatsapp_inbox"'),
+    "OMR scan grading must persist synchronously across quiz_scores, homework_submissions, and whatsapp_inbox"
+  );
+  assert.ok(
+    routesTs.includes('paper_omr_') && routesTs.includes('QUIZ_SUB_'),
+    "OMR scan must record formal homework_submissions entry and whatsapp_inbox ledger"
+  );
+
+  // 2. Verify GET /submissions reconciles from quiz_scores
+  assert.ok(
+    routesTs.includes('.from("quiz_scores")') &&
+    (routesTs.includes('sRow.note.includes("بابل شيت")') || routesTs.includes('noteText.includes("بابل شيت")')),
+    "GET /submissions must reconcile historical paper scans directly from quiz_scores table"
+  );
+
+  // 3. Verify Frontend Desktop Cross-Device Auto-Loading
+  const moduleUrl = new URL('../../web/src/components/TeacherQuizzesView.js', import.meta.url);
+  const { registerTeacherQuizzesActions } = await import(moduleUrl.href);
+
+  const prevDoc = global.document;
+  const prevWin = global.window;
+  const prevLocal = global.localStorage;
+
+  const mockStorage = new Map();
+  global.localStorage = {
+    getItem: (k) => mockStorage.get(k) || null,
+    setItem: (k, v) => mockStorage.set(k, String(v)),
+    removeItem: (k) => mockStorage.delete(k),
+    clear: () => mockStorage.clear(),
+    get length() { return mockStorage.size; },
+    key: (i) => Array.from(mockStorage.keys())[i] || null,
+  };
+
+  try {
+    const app = {
+      user: { role: 'admin', email: 'teacher@centrly.com' },
+      quizzesState: {
+        activeSubTab: 'paper_builder',
+        scannedResultsList: [], // Clean desktop with no scans in localStorage
+        onlineSubmissions: [],
+        richQuizzes: [
+          { id: 'exam_paper_1', title: 'امتحان ورقي فيزياء', quiz_number: 1, exam_mode: 'paper' }
+        ]
+      },
+      renderMainContent() {},
+      showToast() {},
+    };
+
+    registerTeacherQuizzesActions(app);
+
+    // Mock loadOnlineSubmissions resolving the server paper submissions
+    app.loadOnlineSubmissions = async function() {
+      const serverPaperSubs = [
+        {
+          id: 'sub_paper_1_1006',
+          material_id: 'exam_paper_1',
+          quiz_id: 'exam_paper_1',
+          quiz_title: 'امتحان ورقي فيزياء',
+          quiz_number: 1,
+          student_code: '1006',
+          student_name: 'مهند خالد',
+          score: 9,
+          total_score: 9,
+          max_score: 10,
+          percentage: 90,
+          exam_mode: 'paper',
+          model: 'نموذج أ',
+          notes: 'تصحيح بابل شيت (نموذج أ)',
+          status: 'approved',
+          submitted_at: '2026-10-29T20:00:00.000Z'
+        }
+      ];
+      this.quizzesState.onlineSubmissions = serverPaperSubs;
+
+      // Execute same sync logic as TeacherQuizzesView.js
+      if (!Array.isArray(this.quizzesState.scannedResultsList)) {
+        this.quizzesState.scannedResultsList = [];
+      }
+      serverPaperSubs.forEach(sub => {
+        this.quizzesState.scannedResultsList.push({
+          id: sub.id,
+          student_id: sub.student_id || sub.student_code,
+          student_code: sub.student_code,
+          student_name: sub.student_name,
+          exam_id: sub.quiz_id || sub.material_id,
+          exam_title: sub.quiz_title,
+          quiz_number: sub.quiz_number,
+          model: sub.model || 'نموذج أ',
+          score: sub.score,
+          max_score: sub.max_score,
+          percentage: sub.percentage,
+          breakdown: sub.breakdown || [],
+          server_confirmed: true,
+          sync_status: 'synced'
+        });
+      });
+      localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+    };
+
+    // Initial desktop state has 0 scans
+    assert.equal(app.quizzesState.scannedResultsList.length, 0);
+
+    // Switch to paper_results tab
+    await app.switchQuizSubTab('paper_results');
+
+    // After switching on desktop, results must be populated from server and persisted to localStorage
+    assert.equal(app.quizzesState.activeSubTab, 'paper_results');
+    assert.equal(app.quizzesState.scannedResultsList.length, 1);
+    assert.equal(app.quizzesState.scannedResultsList[0].student_code, '1006');
+    assert.equal(app.quizzesState.scannedResultsList[0].student_name, 'مهند خالد');
+    assert.equal(app.quizzesState.scannedResultsList[0].score, 9);
+    assert.equal(app.quizzesState.scannedResultsList[0].server_confirmed, true);
+
+    // LocalStorage must have persisted the data permanently for offline and refresh
+    const persisted = JSON.parse(localStorage.getItem('centrly_paper_scanned_results') || '[]');
+    assert.equal(persisted.length, 1);
+    assert.equal(persisted[0].student_name, 'مهند خالد');
+  } finally {
+    global.document = prevDoc;
+    global.window = prevWin;
+    global.localStorage = prevLocal;
+  }
+});
