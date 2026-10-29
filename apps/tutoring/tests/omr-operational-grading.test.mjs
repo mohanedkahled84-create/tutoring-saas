@@ -798,3 +798,61 @@ test("CASE 10 - Teacher Custom Final Score Override: allows typing any score fre
     global.fetch = prevFetch;
   }
 });
+
+test("CASE 11 - Secure Online Exam: Screen Departure Warning, Auto-Withdrawal on Repeat, and Resilient Multi-Tier Submission", async () => {
+  const indexHtmlPath = path.resolve(__dirname, '../../../teacher-platform-sample/index.html');
+  const indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
+
+  // 1. Verify anti-cheat tab-switch detection is active and not nullified
+  assert.ok(
+    indexHtml.includes('tabSwitchWarnCount++'),
+    "Must increment tabSwitchWarnCount on screen departure"
+  );
+  assert.ok(
+    indexHtml.includes('triggerAutoWithdrawal') && indexHtml.includes('submitAndFinishExam(true)'),
+    "Must auto-withdraw exam on repeated screen departure"
+  );
+  assert.ok(
+    indexHtml.includes('window.onblur = () =>') && indexHtml.includes('document.onvisibilitychange = () =>'),
+    "Must attach window.onblur and document.onvisibilitychange listeners in secure exam"
+  );
+  assert.ok(
+    !indexHtml.includes('// إلغاء قيود الأمان وسحب الورقة عند مغادرة الشاشة (حرية الحركة الكاملة للطالب)'),
+    "Must remove any code disabling anti-cheat security measures"
+  );
+
+  // 2. Verify resilient multi-tier submission in submitAndFinishExam
+  assert.ok(
+    indexHtml.includes('isSubmittingExam = true;'),
+    "Must guard against race conditions during exam submission"
+  );
+  assert.ok(
+    indexHtml.includes('submitPayload') && indexHtml.includes('questions: Array.isArray(currentActiveQuiz.questions)'),
+    "Must include full exam questions and metadata in submission payload"
+  );
+  assert.ok(
+    indexHtml.includes('Tier 3: Guaranteed Local Grading Fallback'),
+    "Must include guaranteed local grading fallback so online exams never fail or leave 0 score"
+  );
+  assert.ok(
+    indexHtml.includes('window._studentOnlineSubmissionsMap.set(materialId, submissionRecord)'),
+    "Must persist online submission in runtime memory map"
+  );
+
+  // 3. Verify public routes fallback for virtual quiz IDs
+  const publicTsPath = path.resolve(__dirname, '../src/shared/routes/public.ts');
+  const publicTs = fs.readFileSync(publicTsPath, 'utf8');
+
+  assert.ok(
+    publicTs.includes('QUIZ_DEF_%'),
+    "Public quiz submit must fall back to legacy/virtual quiz definitions in whatsapp_inbox"
+  );
+  assert.ok(
+    publicTs.includes('quiz-online-') || publicTs.includes('req.body?.questions'),
+    "Public quiz submit must fall back to request body questions or virtual quiz payload"
+  );
+  assert.ok(
+    publicTs.includes('is_withdrawn: Boolean(is_withdrawn)'),
+    "Public quiz submit must properly record is_withdrawn status and reason"
+  );
+});

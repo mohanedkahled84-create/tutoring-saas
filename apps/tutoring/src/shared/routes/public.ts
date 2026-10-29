@@ -646,16 +646,85 @@ publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promis
   }
 
   try {
-    const { data: material, error: mErr } = await supabase
+    let material: any = null;
+    const { data: dbMat } = await supabase
       .from("study_materials")
       .select("*")
       .eq("id", material_id)
       .eq("tenant_id", tenantId)
-      .single();
+      .maybeSingle();
 
-    if (mErr || !material) {
+    material = dbMat;
+
+    // 1. Fallback: Search whatsapp_inbox for legacy or seeded QUIZ_DEF_ rows
+    if (!material) {
+      const { data: legacyRows } = await supabase
+        .from("whatsapp_inbox")
+        .select("id, message_body, phone")
+        .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
+        .like("phone", "QUIZ_DEF_%");
+
+      for (const lRow of legacyRows || []) {
+        try {
+          const p = typeof lRow.message_body === "string" ? JSON.parse(lRow.message_body) : lRow.message_body;
+          if (
+            String(p.id) === String(material_id) ||
+            String(lRow.id) === String(material_id) ||
+            (p.quiz_number && String(material_id).endsWith(`-${p.quiz_number}`)) ||
+            (p.quiz_number && String(material_id).includes("quiz-online-") && String(material_id).endsWith(`-${p.quiz_number}`))
+          ) {
+            material = {
+              id: material_id,
+              tenant_id: tenantId,
+              group_id: p.group_id || null,
+              title: p.title || `كويز ${p.quiz_number || 1}`,
+              questions: JSON.stringify(p),
+            };
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+
+    // 2. Fallback: Check if client provided questions or rich quiz payload in request body
+    if (!material && (Array.isArray(req.body?.questions) || String(material_id).startsWith("quiz-online-"))) {
+      const qList = Array.isArray(req.body?.questions) && req.body.questions.length > 0
+        ? req.body.questions
+        : [];
+      const qNum = Number(req.body?.quiz_number || 5);
+      const qTitle = req.body?.quiz_title || `كويز أونلاين ${qNum}`;
+      material = {
+        id: material_id,
+        tenant_id: tenantId,
+        group_id: req.body?.group_id || null,
+        title: qTitle,
+        questions: JSON.stringify({
+          id: material_id,
+          title: qTitle,
+          quiz_number: qNum,
+          questions: qList,
+        }),
+      };
+    }
+
+    if (!material) {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "الامتحان غير موجود" } });
       return;
+    }
+
+    // Persist to study_materials so future queries or foreign keys succeed
+    if (!dbMat && material) {
+      try {
+        await supabase.from("study_materials").upsert({
+          id: material_id,
+          tenant_id: tenantId,
+          group_id: material.group_id,
+          title: material.title || "كويز أونلاين",
+          type: "online_quiz",
+          questions: typeof material.questions === "string" ? material.questions : JSON.stringify(material.questions || {}),
+          created_at: new Date().toISOString(),
+        }, { onConflict: "id" });
+      } catch (_) {}
     }
 
     let payload: any = {};
@@ -665,8 +734,10 @@ publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promis
       payload = {};
     }
 
-    const questionsList: any[] = Array.isArray(payload.questions) ? payload.questions : [];
-    const qNum = Number(payload.quiz_number || 1);
+    const questionsList: any[] = Array.isArray(payload.questions) && payload.questions.length > 0
+      ? payload.questions
+      : (Array.isArray(req.body?.questions) ? req.body.questions : []);
+    const qNum = Number(payload.quiz_number || req.body?.quiz_number || 1);
     const studentAnswers = { ...(answers || {}), ...(essay_answers || {}) };
 
     let mcqScore = 0;
@@ -677,13 +748,14 @@ publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promis
     questionsList.forEach((q: any, idx: number) => {
       const qPts = Number(q.points || 1);
       totalMaxScore += qPts;
-      const qAns = studentAnswers[q.id] ?? studentAnswers[idx + 1];
+      const qAns = studentAnswers[q.id] ?? studentAnswers[idx] ?? studentAnswers[idx + 1];
 
       if (q.type === "essay") {
         hasEssay = true;
       } else {
         totalMcqPoints += qPts;
-        const isCorrect = Number(qAns) === Number(q.correct_index);
+        const correctIdx = Number(q.correct_index !== undefined ? q.correct_index : (q.correct !== undefined ? q.correct : 0));
+        const isCorrect = qAns !== undefined && Number(qAns) === correctIdx;
         if (isCorrect) {
           mcqScore += qPts;
         }
@@ -738,7 +810,7 @@ publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promis
           student_id: studentId,
           score: mcqScore,
           max_score: totalMaxScore,
-          note: "تصحيح إلكتروني تلقائي 100%",
+          note: is_withdrawn ? "تم سحب الورقة تلقائياً لمغادرة الشاشة" : "تصحيح إلكتروني تلقائي 100%",
           idempotency_key: idempotencyKey,
           updated_at: new Date().toISOString(),
         },
@@ -751,13 +823,18 @@ publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promis
       success: true,
       is_graded: isGraded,
       has_essay: hasEssay,
+      is_withdrawn: Boolean(is_withdrawn),
       score: isGraded ? mcqScore : undefined,
       max_score: totalMaxScore,
       mcq_score: mcqScore,
       total_mcq_points: totalMcqPoints,
       message: isGraded
-        ? `أحسنت! تم تصحيح الامتحان تلقائياً ودرجتك هي: (${mcqScore} من ${totalMaxScore})`
-        : "تم تسليم الامتحان بنجاح! سيتم إعلان درجتك النهائية فور مراجعة وتصحيح الأسئلة المقالية بالعين من المعلم.",
+        ? (is_withdrawn
+            ? `⚠️ تم سحب ورقة الامتحان لمغادرة الشاشة، ودرجتك حتى لحظة السحب: (${mcqScore} من ${totalMaxScore})`
+            : `أحسنت! تم تصحيح الامتحان تلقائياً ودرجتك هي: (${mcqScore} من ${totalMaxScore})`)
+        : (is_withdrawn
+            ? "⚠️ تم سحب ورقة الامتحان تلقائياً لمغادرة الشاشة. إجاباتك مسجلة وبانتظار اعتماد المعلم."
+            : "تم تسليم الامتحان بنجاح! سيتم إعلان درجتك النهائية فور مراجعة وتصحيح الأسئلة المقالية بالعين من المعلم."),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to submit quiz";

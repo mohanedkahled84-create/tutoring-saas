@@ -145,7 +145,7 @@ export default async function handler(req, res) {
     const status = isPaper ? (body?.status || 'approved') : (isGraded ? 'approved' : 'pending');
 
     const subObject = {
-      id: sub___,
+      id: `sub_${Date.now()}_${sCode}`,
       material_id: targetId,
       quiz_id: targetId,
       quiz_title: quizDef?.title || quiz_title || (isPaper ? 'امتحان ورقي' : 'كويز إلكتروني'),

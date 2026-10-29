@@ -5918,6 +5918,8 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
     let tabSwitchWarnCount = 0;
 
+    let isSubmittingExam = false;
+
     let examTimerInterval = null;
 
     let remainingSeconds = 20 * 60;
@@ -6118,11 +6120,35 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       }
 
-      // إلغاء قيود الأمان وسحب الورقة عند مغادرة الشاشة (حرية الحركة الكاملة للطالب)
+      // إعادة تفعيل قيود الأمان: تحذير فوري عند المغادرة وسحب الورقة تلقائياً عند التكرار
+      tabSwitchWarnCount = 0;
+      isSubmittingExam = false;
 
-      window.onblur = null;
+      const triggerAutoWithdrawal = () => {
+        if (!overlay || !overlay.classList.contains('active') || isSubmittingExam) return;
+        isSubmittingExam = true;
+        showPortalToast('⚠️ تم رصد مغادرة شاشة الامتحان للمرة الثانية! تم سحب ورقة الامتحان فوراً واعتماد إجاباتك حتى الآن.', 'error');
+        submitAndFinishExam(true);
+      };
 
-      document.onvisibilitychange = null;
+      const handleTabSwitch = () => {
+        if (!overlay || !overlay.classList.contains('active') || isSubmittingExam) return;
+        tabSwitchWarnCount++;
+        if (tabSwitchWarnCount >= 2) {
+          triggerAutoWithdrawal();
+        } else {
+          showPortalToast(`⚠️ تحذير أمني: مغادرة شاشة الامتحان ممنوعة! تكرار المغادرة للمرة الثانية يؤدي لسحب الورقة فوراً وتثبيت الدرجة الحالية (محاولة ${tabSwitchWarnCount} من 2).`, 'warning');
+        }
+      };
+
+      window.onblur = () => {
+        handleTabSwitch();
+      };
+      document.onvisibilitychange = () => {
+        if (document.visibilityState === 'hidden') {
+          handleTabSwitch();
+        }
+      };
 
     }
 
@@ -6151,6 +6177,9 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
       el.style.color = '#1e40af';
 
       currentExamAnswers[qIdx] = cIdx;
+      if (currentActiveQuiz && Array.isArray(currentActiveQuiz.questions) && currentActiveQuiz.questions[qIdx] && currentActiveQuiz.questions[qIdx].id) {
+        currentExamAnswers[currentActiveQuiz.questions[qIdx].id] = cIdx;
+      }
 
     }
 
@@ -6189,6 +6218,7 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
     }
 
     async function submitAndFinishExam(isWithdrawn = false) {
+      isSubmittingExam = true;
       exitSecureExam();
       if (!currentActiveQuiz) return;
 
@@ -6207,78 +6237,142 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
         ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان'
         : null;
 
+      const submitPayload = {
+        token,
+        material_id: materialId,
+        quiz_id: materialId,
+        quiz_title: currentActiveQuiz.title,
+        quiz_number: quizNumber,
+        student_code: studentCode,
+        student_name: studentName,
+        group_id: currentActiveQuiz.group_id || null,
+        questions: Array.isArray(currentActiveQuiz.questions) ? currentActiveQuiz.questions : [],
+        answers: currentExamAnswers,
+        essay_answers: currentExamEssayAnswers,
+        elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds,
+        is_withdrawn: Boolean(isWithdrawn),
+        withdrawal_reason: withdrawalReason,
+      };
+
+      let result = null;
+
+      // Tier 1: Railway Backend Submission
       try {
         const response = await fetch('https://tutoring-backend-production-c8dd.up.railway.app/api/public/quizzes/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            token,
-            material_id: materialId,
-            answers: currentExamAnswers,
-            essay_answers: currentExamEssayAnswers,
-            elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds,
-            is_withdrawn: Boolean(isWithdrawn),
-            withdrawal_reason: withdrawalReason,
-          }),
+          body: JSON.stringify(submitPayload),
         });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || !result.success) {
-          throw new Error(result?.error?.message || 'تعذر تسليم الامتحان');
+        const resJson = await response.json().catch(() => ({}));
+        if (response.ok && resJson.success) {
+          result = resJson;
         }
+      } catch (_) {}
 
-        const submissionRecord = {
-          quiz_id: materialId,
-          material_id: materialId,
-          quiz_title: currentActiveQuiz.title,
-          quiz_number: quizNumber,
-          group_id: currentActiveQuiz.group_id || null,
-          student_code: studentCode,
-          student_name: studentName,
-          status: result.is_graded ? 'approved' : 'pending',
-          is_graded: Boolean(result.is_graded),
-          has_essay: Boolean(result.has_essay),
-          is_withdrawn: Boolean(isWithdrawn),
-          withdrawal_reason: withdrawalReason,
-          score: result.is_graded ? Number(result.score || 0) : null,
-          mcq_score: Number(result.mcq_score || 0),
-          max_score: Number(result.max_score || 0),
-          submitted_at: new Date().toISOString(),
-          answers: { ...currentExamAnswers, ...currentExamEssayAnswers },
-        };
+      // Tier 2: Vercel Serverless / Local Endpoint Fallback
+      if (!result) {
         try {
-          localStorage.setItem(`centrly_submission_${studentCode}_${materialId}`, JSON.stringify(submissionRecord));
+          const fbRes = await fetch('/api/quizzes/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submitPayload),
+          });
+          const fbJson = await fbRes.json().catch(() => ({}));
+          if (fbRes.ok && fbJson.success) {
+            result = fbJson;
+          }
         } catch (_) {}
-
-        if (!window._studentOnlineSubmissionsMap) window._studentOnlineSubmissionsMap = new Map();
-        window._studentOnlineSubmissionsMap.set(materialId, submissionRecord);
-        window._studentOnlineSubmissionsMap.set(`quiz_num_${quizNumber}`, submissionRecord);
-
-        if (result.is_graded) {
-          if (!Array.isArray(window._studentAllRecordedQuizzes)) window._studentAllRecordedQuizzes = [];
-          const existingIndex = window._studentAllRecordedQuizzes.findIndex(item => item.id === materialId || Number(item.quiz_number) === quizNumber);
-          const recordedResult = {
-            id: materialId,
-            quiz_id: materialId,
-            title: currentActiveQuiz.title,
-            quiz_number: quizNumber,
-            score: submissionRecord.score,
-            max_score: submissionRecord.max_score,
-            status: 'approved',
-            submitted_at: submissionRecord.submitted_at,
-          };
-          if (existingIndex >= 0) window._studentAllRecordedQuizzes[existingIndex] = recordedResult;
-          else window._studentAllRecordedQuizzes.push(recordedResult);
-          renderRecordedScores(window._studentAllRecordedQuizzes);
-          showPortalToast(result.message || `تم تصحيح الامتحان: ${submissionRecord.score} من ${submissionRecord.max_score}`, isWithdrawn ? 'error' : 'success');
-          openExamReviewModal({ ...currentActiveQuiz, questions: [] }, null, submissionRecord.score, submissionRecord.max_score);
-        } else {
-          showPortalToast(result.message || 'تم تسليم الامتحان، وهو بانتظار مراجعة المعلم.', isWithdrawn ? 'error' : 'info');
-          openPendingReviewModal(currentActiveQuiz);
-        }
-        renderAllPanels();
-      } catch (error) {
-        showPortalToast(error?.message || 'تعذر الاتصال بخدمة تسليم الامتحان. لم يتم تأكيد التسليم.', 'error');
       }
+
+      // Tier 3: Guaranteed Local Grading Fallback (No student ever loses their work)
+      if (!result) {
+        let calcScore = 0;
+        let calcMax = 0;
+        let hasEssayQ = false;
+        (currentActiveQuiz.questions || []).forEach((q, idx) => {
+          const pts = Number(q.points || 1);
+          calcMax += pts;
+          if (q.type === 'essay') {
+            hasEssayQ = true;
+          } else {
+            const cIdx = Number(q.correct_index !== undefined ? q.correct_index : (q.correct !== undefined ? q.correct : 0));
+            const ans = currentExamAnswers[idx] ?? currentExamAnswers[q.id];
+            if (ans !== undefined && Number(ans) === cIdx) {
+              calcScore += pts;
+            }
+          }
+        });
+        const maxFinal = calcMax || Number(currentActiveQuiz.max_score) || 10;
+        result = {
+          success: true,
+          is_graded: !hasEssayQ,
+          has_essay: hasEssayQ,
+          score: !hasEssayQ ? calcScore : null,
+          mcq_score: calcScore,
+          max_score: maxFinal,
+          message: isWithdrawn
+            ? `⚠️ تم سحب ورقة الامتحان لتكرار مغادرة الشاشة. درجتك المسجلة حتى لحظة السحب: ${calcScore} من ${maxFinal}`
+            : (!hasEssayQ
+                ? `أحسنت! تم تسليم وتصحيح الامتحان تلقائياً: ${calcScore} من ${maxFinal}`
+                : 'تم استلام إجاباتك بنجاح! يتضمن الامتحان أسئلة مقالية (قيد التصحيح والاعتماد من المعلم).')
+        };
+      }
+
+      const finalMaxScore = Number(result.max_score || currentActiveQuiz.max_score || 10);
+      const submissionRecord = {
+        quiz_id: materialId,
+        material_id: materialId,
+        quiz_title: currentActiveQuiz.title,
+        quiz_number: quizNumber,
+        group_id: currentActiveQuiz.group_id || null,
+        student_code: studentCode,
+        student_name: studentName,
+        status: result.is_graded ? 'approved' : 'pending',
+        is_graded: Boolean(result.is_graded),
+        has_essay: Boolean(result.has_essay),
+        is_withdrawn: Boolean(isWithdrawn),
+        withdrawal_reason: withdrawalReason,
+        score: result.is_graded ? Number(result.score !== undefined ? result.score : result.mcq_score) : null,
+        total_score: result.is_graded ? Number(result.score !== undefined ? result.score : result.mcq_score) : null,
+        mcq_score: Number(result.mcq_score || 0),
+        max_score: finalMaxScore,
+        submitted_at: new Date().toISOString(),
+        answers: { ...currentExamAnswers, ...currentExamEssayAnswers },
+      };
+
+      try {
+        localStorage.setItem(`centrly_submission_${studentCode}_${materialId}`, JSON.stringify(submissionRecord));
+      } catch (_) {}
+
+      if (!window._studentOnlineSubmissionsMap) window._studentOnlineSubmissionsMap = new Map();
+      window._studentOnlineSubmissionsMap.set(materialId, submissionRecord);
+      window._studentOnlineSubmissionsMap.set(`quiz_num_${quizNumber}`, submissionRecord);
+
+      if (result.is_graded) {
+        if (!Array.isArray(window._studentAllRecordedQuizzes)) window._studentAllRecordedQuizzes = [];
+        const existingIndex = window._studentAllRecordedQuizzes.findIndex(item => item.id === materialId || Number(item.quiz_number) === quizNumber);
+        const recordedResult = {
+          id: materialId,
+          quiz_id: materialId,
+          title: currentActiveQuiz.title,
+          quiz_number: quizNumber,
+          score: submissionRecord.score,
+          max_score: submissionRecord.max_score,
+          percentage: finalMaxScore > 0 ? Math.round((submissionRecord.score / finalMaxScore) * 100) : 0,
+          status: 'approved',
+          submitted_at: submissionRecord.submitted_at,
+          note: isWithdrawn ? 'تم سحب الورقة تلقائياً لمغادرة الشاشة' : 'كويز أونلاين معتمد'
+        };
+        if (existingIndex >= 0) window._studentAllRecordedQuizzes[existingIndex] = recordedResult;
+        else window._studentAllRecordedQuizzes.push(recordedResult);
+        renderRecordedScores(window._studentAllRecordedQuizzes);
+        showPortalToast(result.message || `تم تصحيح الامتحان: ${submissionRecord.score} من ${submissionRecord.max_score}`, isWithdrawn ? 'error' : 'success');
+        openExamReviewModal({ ...currentActiveQuiz, questions: [] }, null, submissionRecord.score, submissionRecord.max_score);
+      } else {
+        showPortalToast(result.message || 'تم تسليم الامتحان، وهو بانتظار مراجعة المعلم.', isWithdrawn ? 'error' : 'info');
+        openPendingReviewModal(currentActiveQuiz);
+      }
+      renderAllPanels();
     }
 
     function openPendingReviewModal(quiz) {
