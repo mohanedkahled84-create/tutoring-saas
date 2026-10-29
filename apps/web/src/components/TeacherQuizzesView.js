@@ -2023,16 +2023,23 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
               model_answer: 'لا توجد إجابة نموذجية مسجلة'
             }));
           }
-          const mcqScore = sub.mcq_score || 0;
-          const totalMcq = sub.total_mcq_points || 0;
+          const mcqScore = Number(sub.mcq_score || 0);
+          const totalMcq = Number(sub.total_mcq_points || 0);
           const studentGroup = (groups || []).find(g => String(g.id).trim() === String(sub.group_id).trim());
           const groupBadge = studentGroup ? `<span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">${escapeHtml(studentGroup.name)}</span>` : '';
+          const defaultEssayPoints = essayQuestions.reduce((sum, eq) => sum + Number(eq.points || 4), 0);
+          const maxScore = Number(sub.max_score || (totalMcq + defaultEssayPoints) || 20);
+          const initialFinalScore = (sub.final_score !== undefined && sub.final_score !== null)
+            ? Number(sub.final_score)
+            : ((sub.score !== undefined && sub.score !== null)
+                ? Number(sub.score)
+                : (mcqScore + defaultEssayPoints));
 
           return `
             <div class="card" style="margin: 0; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 1rem;">
               
               <!-- Student Header -->
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem; margin-bottom: 0.75rem; flex-wrap: gap; gap: 0.65rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.65rem;">
                 <div>
                   <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
                     <span>${escapeHtml(sub.student_name || 'طالب')}</span>
@@ -2044,13 +2051,57 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                   </div>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 0.65rem;">
-                  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 0.25rem 0.65rem; text-align: center;">
-                    <span style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">درجة الاختياري (تلقائي)</span>
-                    <span style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">${mcqScore} / ${totalMcq}</span>
+                <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                  ${(totalMcq > 0 || mcqScore > 0) ? `
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 0.25rem 0.65rem; text-align: center;">
+                      <span style="font-size: 0.68rem; color: #64748b; font-weight: 600; display: block;">درجة الاختياري (تلقائي)</span>
+                      <span style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">${mcqScore} / ${totalMcq}</span>
+                    </div>
+                  ` : ''}
+
+                  <!-- Editable Final Score Box -->
+                  <div style="background: #f0fdf4; border: 1.5px solid #22c55e; border-radius: 6px; padding: 0.25rem 0.65rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <div>
+                      <span style="font-size: 0.72rem; color: #15803d; font-weight: 800; display: block; line-height: 1.2;">الدرجة النهائية:</span>
+                      <span style="font-size: 0.62rem; color: #16a34a; font-weight: 600; display: block;">(اكتب أي درجة تريدها)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <input 
+                        type="number" 
+                        id="final_score_${sub.id}" 
+                        value="${initialFinalScore}" 
+                        min="0" 
+                        step="0.5" 
+                        class="form-input" 
+                        title="اكتب الدرجة المراد رصدها للطالب"
+                        style="width: 70px; height: 32px; text-align: center; font-weight: 900; font-size: 1.05rem; color: #15803d; background: #ffffff; border: 1.5px solid #86efac; border-radius: 5px;"
+                      />
+                      <span style="font-size: 0.85rem; font-weight: 800; color: #166534;">/</span>
+                      <input 
+                        type="number" 
+                        id="max_score_${sub.id}" 
+                        value="${maxScore}" 
+                        min="1" 
+                        step="1" 
+                        class="form-input" 
+                        title="الدرجة العظمى للامتحان"
+                        style="width: 55px; height: 32px; text-align: center; font-weight: 800; font-size: 0.88rem; color: #334155; background: #ffffff; border: 1px dashed #94a3b8; border-radius: 5px;"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
+
+              ${essayQuestions.length === 0 ? `
+                <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; text-align: center;">
+                  <div style="font-weight: 700; font-size: 0.82rem; color: #334155; margin-bottom: 0.2rem;">
+                    كويز إلكتروني بدون أسئلة مقالية معلقة
+                  </div>
+                  <div style="font-size: 0.74rem; color: #64748b;">
+                    يمكنك تعديل وكتابة أي درجة نهائية تريد رصدها للطالب مباشرة في خانة "الدرجة النهائية" بالأعلى، ثم الضغط على زر الاعتماد بالأسفل.
+                  </div>
+                </div>
+              ` : ''}
 
               <!-- Essay Questions to Grade -->
               <div style="display: flex; flex-direction: column; gap: 0.75rem;">
@@ -2112,8 +2163,8 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                             max="${eq.points || 4}" 
                             step="0.5" 
                             value="${eq.points || 4}" 
-                            oninput="const m = Number(this.max || ${eq.points || 4}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0) this.value = 0;"
-                            onblur="const m = Number(this.max || ${eq.points || 4}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0 || this.value === '') this.value = 0;"
+                            oninput="const m = Number(this.max || ${eq.points || 4}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0) this.value = 0; window.centrlyApp.recalcManualFinalScore?.('${sub.id}', ${mcqScore});"
+                            onblur="const m = Number(this.max || ${eq.points || 4}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0 || this.value === '') this.value = 0; window.centrlyApp.recalcManualFinalScore?.('${sub.id}', ${mcqScore});"
                             class="form-input" 
                             style="width: 65px; height: 30px; text-align: center; font-weight: 800; font-size: 0.88rem; border: 1px solid #cbd5e1; border-radius: 4px;"
                           />
@@ -2133,17 +2184,19 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                   id="grading_note_${sub.id}" 
                   class="form-input" 
                   placeholder="ملاحظة أو تعليق للطالب على حله المقالي (اختياري)..." 
-                  style="flex: 1; min-width: 220px; height: 32px; font-size: 0.78rem; border: 1px solid #cbd5e1; border-radius: 4px;"
+                  style="flex: 1; min-width: 200px; height: 34px; font-size: 0.78rem; border: 1px solid #cbd5e1; border-radius: 5px;"
                 />
 
-                <button 
-                  type="button" 
-                  style="height: 32px; padding: 0 14px; font-size: 0.78rem; font-weight: 700; background: #0f172a; color: #ffffff; border-radius: 5px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;"
-                  onclick="window.centrlyApp.submitManualEssayGrade('${sub.id}', '${sub.student_code || sub.student_id || '1006'}', ${sub.quiz_number || 1})"
-                >
-                  ${getIcon('check', 13, '#ffffff')}
-                  <span>اعتماد الدرجة النهائية وتثبيتها</span>
-                </button>
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                  <button 
+                    type="button" 
+                    style="height: 34px; padding: 0 16px; font-size: 0.8rem; font-weight: 800; background: #0f172a; color: #ffffff; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"
+                    onclick="window.centrlyApp.submitManualEssayGrade('${sub.id}', '${sub.student_code || sub.student_id || '1006'}', ${sub.quiz_number || 1})"
+                  >
+                    ${getIcon('check', 13, '#ffffff')}
+                    <span>اعتماد الدرجة النهائية وتثبيتها</span>
+                  </button>
+                </div>
               </div>
 
             </div>
@@ -6482,6 +6535,18 @@ export function registerTeacherQuizzesActions(app) {
     this.renderMainContent();
   };
 
+  app.recalcManualFinalScore = function(subId, mcqScore) {
+    const finalInp = document.getElementById(`final_score_${subId}`);
+    if (!finalInp) return;
+    const essayInputs = document.querySelectorAll(`[id^="essay_pts_${subId}_"]`);
+    let essaySum = 0;
+    essayInputs.forEach(inp => {
+      const v = Number(inp.value);
+      if (!isNaN(v)) essaySum += v;
+    });
+    finalInp.value = Number(mcqScore || 0) + essaySum;
+  };
+
   app.submitManualEssayGrade = async function(subId, studentId, quizNumber) {
     const sub = (this.quizzesState.pendingSubmissions || []).find(s => s.id === subId);
     if (!sub) return;
@@ -6513,6 +6578,15 @@ export function registerTeacherQuizzesActions(app) {
     }
 
     const note = document.getElementById(`grading_note_${sub.id}`)?.value?.trim() || '';
+    const finalScoreInp = document.getElementById(`final_score_${sub.id}`);
+    const finalScoreVal = (finalScoreInp && finalScoreInp.value !== '' && !isNaN(Number(finalScoreInp.value)))
+      ? Number(finalScoreInp.value)
+      : undefined;
+
+    const maxScoreInp = document.getElementById(`max_score_${sub.id}`);
+    const maxScoreVal = (maxScoreInp && maxScoreInp.value !== '' && !isNaN(Number(maxScoreInp.value)))
+      ? Number(maxScoreInp.value)
+      : undefined;
 
     try {
       this.showToast('جاري اعتماد وتثبيت الدرجة...', 'info');
@@ -6524,17 +6598,21 @@ export function registerTeacherQuizzesActions(app) {
           quiz_number: quizNumber,
           group_id: sub.group_id || this.quizzesState.selectedGroupId,
           essay_scores: essayScores,
-          notes: note
+          notes: note,
+          final_score: finalScoreVal,
+          max_score: maxScoreVal
         }
       });
 
       if (res?.success) {
         const totalEssay = Object.values(essayScores).reduce((a, b) => a + Number(b), 0);
-        const finalCalculated = res.final_score !== undefined && res.final_score !== null
+        const finalCalculated = (res.final_score !== undefined && res.final_score !== null)
           ? Number(res.final_score)
-          : (res.submission?.total_score !== undefined
-              ? Number(res.submission.total_score)
-              : (Number(sub.mcq_score || 0) + totalEssay));
+          : (finalScoreVal !== undefined
+              ? finalScoreVal
+              : (res.submission?.total_score !== undefined
+                  ? Number(res.submission.total_score)
+                  : (Number(sub.mcq_score || 0) + totalEssay)));
 
         // Immediately update in-memory objects
         const updatedSub = {

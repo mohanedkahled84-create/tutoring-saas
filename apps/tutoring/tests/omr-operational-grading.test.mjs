@@ -690,3 +690,111 @@ test("CASE 9 - Second Genuine Mobile Phone Photo with Blue Ballpoint Pen Shading
   assert.equal(recorded.score, 6, "Final recorded score must remain 6/20");
   assert.equal(recorded.percentage, 30);
 });
+
+test("CASE 10 - Teacher Custom Final Score Override: allows typing any score freely and saves without locking to 0 or auto-sum", async () => {
+  let domValues = {
+    'essay_pts_sub_1_0': '3.5',
+    'essay_pts_sub_1_1': '4',
+    'final_score_sub_1': '0',
+    'max_score_sub_1': '20'
+  };
+
+  const fakeDom = {
+    getElementById(id) {
+      if (domValues[id] !== undefined) {
+        return {
+          id,
+          get value() { return domValues[id]; },
+          set value(v) { domValues[id] = String(v); }
+        };
+      }
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector.includes('essay_pts_sub_1_')) {
+        return [
+          { value: domValues['essay_pts_sub_1_0'] },
+          { value: domValues['essay_pts_sub_1_1'] }
+        ];
+      }
+      return [];
+    }
+  };
+
+  const prevDoc = global.document;
+  const prevFetch = global.fetch;
+  global.document = fakeDom;
+
+  let capturedPayload = null;
+  global.fetch = async (url, opts) => {
+    const urlStr = String(url);
+    if (urlStr.includes('/submissions/grade-essay')) {
+      const parsedBody = JSON.parse(opts.body);
+      capturedPayload = parsedBody;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          final_score: parsedBody.final_score,
+          max_score: parsedBody.max_score,
+          submission: {
+            id: parsedBody.submission_id,
+            total_score: parsedBody.final_score
+          }
+        })
+      };
+    }
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  try {
+    const app = {};
+    app.quizzesState = {
+      pendingSubmissions: [
+        {
+          id: 'sub_1',
+          student_id: 'std_1004',
+          student_code: '1004',
+          quiz_number: 1,
+          mcq_score: 0,
+          total_mcq_points: 0,
+          questions: []
+        }
+      ],
+      onlineSubmissions: []
+    };
+    app.showToast = () => {};
+    app.renderMainContent = () => {};
+
+    // Load action
+    const moduleUrl = new URL('../../web/src/components/TeacherQuizzesView.js', import.meta.url);
+    const { registerTeacherQuizzesActions } = await import(moduleUrl.href);
+    registerTeacherQuizzesActions(app);
+
+    // 1. Verify recalculation function
+    app.recalcManualFinalScore('sub_1', 2);
+    // 2 (mcq) + 3.5 + 4 = 9.5
+    assert.equal(domValues['final_score_sub_1'], '9.5');
+
+    // 2. Verify that teacher can manually override to ANY custom score (e.g. 17.5 out of 20)
+    domValues['final_score_sub_1'] = '17.5';
+    domValues['max_score_sub_1'] = '20';
+
+    await app.submitManualEssayGrade('sub_1', '1004', 1);
+
+    assert.ok(capturedPayload, "Request payload must be dispatched to API");
+    assert.equal(capturedPayload.final_score, 17.5, "Custom teacher override score must be sent to server");
+    assert.equal(capturedPayload.max_score, 20, "Custom max score must be sent to server");
+
+    // Check in-memory update
+    const savedSub = app.quizzesState.onlineSubmissions.find(s => s.id === 'sub_1');
+    assert.ok(savedSub, "Submission must be moved to onlineSubmissions");
+    assert.equal(savedSub.score, 17.5);
+    assert.equal(savedSub.total_score, 17.5);
+    assert.equal(savedSub.final_score, 17.5);
+  } finally {
+    global.document = prevDoc;
+    global.fetch = prevFetch;
+  }
+});

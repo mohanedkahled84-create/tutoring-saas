@@ -1069,6 +1069,8 @@ quizzesRouter.post(
       group_id,
       essay_scores,
       notes,
+      final_score,
+      max_score,
     } = req.body;
 
     if (!submission_id || !student_id || quiz_number === undefined) {
@@ -1110,7 +1112,12 @@ quizzesRouter.post(
         }
       }
 
-      const finalScore = mcqScore + essayTotal;
+      const finalScore = (final_score !== undefined && final_score !== null && !isNaN(Number(final_score)))
+        ? Number(final_score)
+        : (mcqScore + essayTotal);
+      const resolvedMaxScore = (max_score !== undefined && max_score !== null && !isNaN(Number(max_score)))
+        ? Number(max_score)
+        : (parsedNotes.max_score || 20);
       const resolvedGroupId = group_id || parsedNotes.group_id || "default-group";
       const qNum = Number(quiz_number);
 
@@ -1118,7 +1125,7 @@ quizzesRouter.post(
         group_id: resolvedGroupId,
         quiz_number: qNum,
         quiz_title: `كويز ${qNum}`,
-        max_score: parsedNotes.max_score || 20,
+        max_score: resolvedMaxScore,
         scores: {
           [student_id]: finalScore,
         },
@@ -1129,6 +1136,7 @@ quizzesRouter.post(
 
       parsedNotes.essay_scores = essay_scores;
       parsedNotes.final_score = finalScore;
+      parsedNotes.max_score = resolvedMaxScore;
       parsedNotes.teacher_comment = notes || "";
       parsedNotes.graded_at = new Date().toISOString();
 
@@ -1143,6 +1151,7 @@ quizzesRouter.post(
       res.status(200).json({
         success: true,
         final_score: finalScore,
+        max_score: resolvedMaxScore,
         mcq_score: mcqScore,
         essay_score: essayTotal,
         message: "تم اعتماد وتثبيت درجة الطالب بنجاح",
