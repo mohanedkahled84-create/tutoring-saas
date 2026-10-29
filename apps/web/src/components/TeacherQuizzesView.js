@@ -8044,11 +8044,13 @@ export function registerTeacherQuizzesActions(app) {
         }
         if (!allZero) {
           const candidateCode = digits.join('');
-          const matched = (this.students || []).find(s => 
-            String(s.student_code || s.code || '').trim() === candidateCode
-          );
+          const candidateReversed = digits.slice().reverse().join('');
+          const matched = (this.students || []).find(s => {
+            const sc = String(s.student_code || s.code || '').trim();
+            return sc === candidateCode || sc === candidateReversed;
+          });
           if (matched) {
-            detectedStudentCode = candidateCode;
+            detectedStudentCode = String(matched.student_code || matched.code || candidateCode).trim();
           }
         }
       }
