@@ -3285,15 +3285,12 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
     // 4. حالة الواجبات الحقيقية (من قاعدة البيانات)
 
     function getHwStatus(hw) {
-
       if (!hw) return 'unsubmitted';
-
       if (hw.submission_status === 'approved') return 'approved';
-
-      if (hw.submission_status === 'pending' || Boolean(hw.submission_url)) return 'pending';
-
+      if (hw.submission_status === 'rejected') return 'rejected';
+      if (hw.submission_status === 'pending') return 'pending';
+      if (Boolean(hw.submission_url)) return 'pending';
       return 'unsubmitted';
-
     }
 
     // 5. محرك الإشعارات النظيف (Zero Alert popups)
@@ -4271,24 +4268,15 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       } catch (_) {}
 
-      // دمج وتحديث المعرفات (قاعدة البيانات هي الأساس وتتكامل مع التعديلات الحديثة)
-
+      // دمج وتحديث المعرفات (بيانات قاعدة البيانات هي الأساس الحي وتتفوق دائماً على الكاش)
       const map = new Map();
-
-      dbMaterials.forEach(item => {
-
-        if (item && item.id) map.set(item.id, item);
-
-      });
-
       localMaterials.forEach(item => {
-
+        if (item && item.id) map.set(item.id, item);
+      });
+      dbMaterials.forEach(item => {
         if (item && item.id) {
-
           map.set(item.id, { ...(map.get(item.id) || {}), ...item });
-
         }
-
       });
 
       // 2.5 دمج الكويزات الأونلاين المعتمدة داخل كشف الدرجات المرصودة وتحديث النسبة
@@ -4489,7 +4477,10 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       }
 
-      const unsubmittedCount = homework.filter(h => getHwStatus(h) === 'unsubmitted').length;
+      const unsubmittedCount = homework.filter(h => {
+        const s = getHwStatus(h);
+        return s === 'unsubmitted' || s === 'rejected';
+      }).length;
 
       const hwBadge = document.getElementById('sidebarHwBadge');
 
@@ -4573,7 +4564,10 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       if (!container) return;
 
-      const unsubmittedHw = homework.filter(h => getHwStatus(h) === 'unsubmitted');
+      const unsubmittedHw = homework.filter(h => {
+        const s = getHwStatus(h);
+        return s === 'unsubmitted' || s === 'rejected';
+      });
 
       const pendingQuizzes = quizzes.filter(qz => {
 
@@ -4650,29 +4644,18 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
       let html = '';
 
       unsubmittedHw.forEach(hw => {
-
+        const isRejected = getHwStatus(hw) === 'rejected';
         html += `
-
-          <div class="todo-card urgent">
-
+          <div class="todo-card urgent" style="${isRejected ? 'border-right: 4px solid #ea580c; background: #fffaf5;' : ''}">
             <div class="todo-info">
-
-              <h4>تسليم واجب: ${escapeHtml(hw.title)}</h4>
-
-              <p>${escapeHtml(hw.description || 'واجب دوري مطلوب تسليمه لفك قفل المحاضرات المشروطة')}</p>
-
+              <h4 style="${isRejected ? 'color: #c2410c;' : ''}">${isRejected ? 'إعادة تسليم واجب:' : 'تسليم واجب:'} ${escapeHtml(hw.title)}</h4>
+              <p style="${isRejected ? 'color: #9a3412; font-weight: 700;' : ''}">${escapeHtml(isRejected ? (hw.teacher_feedback || hw.teacher_notes || 'طلب المستر إعادة حل هذا الواجب • يرجى مراجعة الحل وإعادة التسليم') : (hw.description || 'واجب دوري مطلوب تسليمه لفك قفل المحاضرات المشروطة'))}</p>
             </div>
-
-            <button class="btn btn-primary" onclick="switchPanel('homework', document.querySelectorAll('.menu-item')[1])">
-
-              <span>تسليم الواجب الآن</span>
-
+            <button class="btn ${isRejected ? 'btn-warning' : 'btn-primary'}" onclick="switchPanel('homework', document.querySelectorAll('.menu-item')[1])" style="${isRejected ? 'background: #ea580c !important; border-color: #ea580c !important; color: #fff !important; font-weight: 800;' : ''}">
+              <span>${isRejected ? 'إعادة حل وتسليم الواجب' : 'تسليم الواجب الآن'}</span>
             </button>
-
           </div>
-
         `;
-
       });
 
       pendingQuizzes.forEach(qz => {
@@ -5306,243 +5289,169 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
     function renderHomeworkPanel(homework) {
 
       const activeContainer = document.getElementById('homeworkActiveContainer');
-
       const archiveContainer = document.getElementById('homeworkArchiveContainer');
-
       const countActiveEl = document.getElementById('countHwActive');
-
       const countArchiveEl = document.getElementById('countHwArchive');
 
       if (!activeContainer || !archiveContainer) return;
 
-      const activeHomework = homework.filter(h => getHwStatus(h) === 'unsubmitted');
+      const activeHomework = homework.filter(h => {
+        const s = getHwStatus(h);
+        return s === 'unsubmitted' || s === 'rejected';
+      });
 
-      const archivedHomework = homework.filter(h => getHwStatus(h) !== 'unsubmitted');
+      const archivedHomework = homework.filter(h => {
+        const s = getHwStatus(h);
+        return s === 'approved' || s === 'pending';
+      });
 
       if (countActiveEl) {
-
         countActiveEl.innerText = activeHomework.length;
-
         countActiveEl.className = 'subtab-count' + (activeHomework.length > 0 ? ' has-items' : '');
-
       }
 
       if (countArchiveEl) {
-
         countArchiveEl.innerText = archivedHomework.length;
-
         countArchiveEl.className = 'subtab-count' + (archivedHomework.length > 0 ? ' has-items' : '');
-
       }
 
-      // توجيه تلقائي للأرشيف إذا لم تكن هناك واجبات نشطة
-
-      if (activeHomework.length === 0 && archivedHomework.length > 0 && !window._userSwitchedHwTab) {
-
+      // توجيه تلقائي للواجبات النشطة إذا وُجد واجب مطلوب أو طلب المستر إعادته، أو للأرشيف عند اكتمال كل شيء
+      if (activeHomework.length > 0 && !window._userSwitchedHwTab) {
+        switchHwSubTab('active');
+      } else if (activeHomework.length === 0 && archivedHomework.length > 0 && !window._userSwitchedHwTab) {
         switchHwSubTab('archive');
-
       }
 
       // 1. تصيير الواجبات النشطة المطلوبة
-
       if (activeHomework.length === 0) {
-
         activeContainer.innerHTML = `
-
           <div class="empty-state-card">
-
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-
             <h3>لا توجد واجبات معلقة مطلوب تسليمها حالياً</h3>
-
             <p>رائع! لقد سلمت جميع التكليفات المطلوبة. يمكنك مراجعة واجباتك وحلولك السابقة في تبويب «أرشيف الواجبات المسلّمة».</p>
-
           </div>
-
         `;
-
       } else {
-
         let activeHtml = '';
-
         activeHomework.forEach(hw => {
+          const isRejected = getHwStatus(hw) === 'rejected';
+          const teacherNote = hw.teacher_feedback || hw.teacher_notes || '';
 
           activeHtml += `
-
-            <div class="clean-item-card" style="flex-direction: column; align-items: stretch;">
-
+            <div class="clean-item-card" style="flex-direction: column; align-items: stretch; ${isRejected ? 'border: 1.5px solid #fdba74; background: #fffaf5;' : ''}">
               <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-
                 <div>
-
-                  <h3 style="font-size: 1rem; font-weight: 800;">${escapeHtml(hw.title)}</h3>
-
+                  <h3 style="font-size: 1rem; font-weight: 800; color: ${isRejected ? '#9a3412' : 'inherit'};">${escapeHtml(hw.title)}</h3>
                   <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-
                     ${escapeHtml(hw.description || (hw.book_name ? `المطلوب: حل ${hw.book_name} ص ${hw.pages || ''}` : 'حل الأسئلة المطلوبة ورفع كشكول الحل'))}
-
                   </p>
-
                 </div>
-
-                <span id="badge_hw_${escapeJsStr(hw.id)}" class="kpi-badge badge-danger">
-
-                  مطلوب التسليم
-
+                <span id="badge_hw_${escapeJsStr(hw.id)}" class="kpi-badge ${isRejected ? 'badge-warning' : 'badge-danger'}" style="${isRejected ? 'background: #fff7ed; color: #c2410c; border: 1.5px solid #fdba74; font-weight: 800; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px;' : ''}">
+                  ${isRejected ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> <span>مطلوب إعادة الواجب ⚠️</span>' : 'مطلوب التسليم'}
                 </span>
-
               </div>
 
-              ${hw.url ? `
-
-                <div style="margin: 10px 0 4px 0;">
-
-                  <a href="${escapeHtml(hw.url)}" target="_blank" class="btn btn-secondary" style="height: 32px; font-size: 0.78rem;">
-
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-
-                    <span>فتح شيت الأسئلة (PDF)</span>
-
-                  </a>
-
+              ${isRejected ? `
+                <div style="background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 8px; padding: 10px 14px; margin: 10px 0; color: #9a3412;">
+                  <div style="display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 0.85rem; margin-bottom: 4px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span style="color: #c2410c;">ملاحظات وتوجيهات المستر لإعادة الحل:</span>
+                  </div>
+                  <div style="font-size: 0.85rem; font-weight: 700; line-height: 1.5; color: #7c2d12;">${escapeHtml(teacherNote || 'يرجى مراجعة الحل وإعادة إرسال الواجب مرة أخرى.')}</div>
                 </div>
-
               ` : ''}
 
-              <!-- منطقة رفع الواجب الفعلية -->
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: ${isRejected ? '4px 0' : '10px 0 4px 0'};">
+                ${hw.url ? `
+                  <a href="${escapeHtml(hw.url)}" target="_blank" class="btn btn-secondary" style="height: 32px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>فتح شيت الأسئلة (PDF)</span>
+                  </a>
+                ` : ''}
 
-              <div class="file-dropzone-box" id="dropzone_${escapeJsStr(hw.id)}" style="margin-top: 10px;" onclick="triggerHwUpload('${escapeJsStr(hw.id)}')">
-
-                <input type="file" id="file_input_${escapeJsStr(hw.id)}" accept="image/*,.pdf" style="display: none;" onchange="handleHwFileSelected(event, '${escapeJsStr(hw.id)}')">
-
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: var(--brand-navy); margin-bottom: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-
-                <h4 style="font-size: 0.92rem; font-weight: 800; margin-bottom: 2px;">
-
-                  اضغط هنا لرفع صور أو ملف الواجب المحلول
-
-                </h4>
-
-                <p style="font-size: 0.78rem; color: var(--text-muted);">
-
-                  الصيغ المدعومة: صور الكشكول (JPG, PNG) أو ملف PDF • يتم رفعه فورياً لقاعدة البيانات
-
-                </p>
-
+                ${(isRejected && hw.submission_url) ? `
+                  <a href="${escapeHtml(hw.submission_url)}" target="_blank" class="btn btn-secondary" style="height: 32px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span>معاينة حلي السابق ↗</span>
+                  </a>
+                ` : ''}
               </div>
 
+              <!-- منطقة رفع الواجب الفعلية -->
+              <div class="file-dropzone-box" id="dropzone_${escapeJsStr(hw.id)}" style="margin-top: 10px; ${isRejected ? 'border-color: #f97316; background: #fffaf5;' : ''}" onclick="triggerHwUpload('${escapeJsStr(hw.id)}')">
+                <input type="file" id="file_input_${escapeJsStr(hw.id)}" accept="image/*,.pdf" style="display: none;" onchange="handleHwFileSelected(event, '${escapeJsStr(hw.id)}')">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: ${isRejected ? '#ea580c' : 'var(--brand-navy)'}; margin-bottom: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <h4 style="font-size: 0.92rem; font-weight: 800; margin-bottom: 2px; color: ${isRejected ? '#c2410c' : 'inherit'};">
+                  ${isRejected ? 'اضغط هنا لرفع صور أو ملف الواجب بعد إعادة الحل والتعديل' : 'اضغط هنا لرفع صور أو ملف الواجب المحلول'}
+                </h4>
+                <p style="font-size: 0.78rem; color: var(--text-muted);">
+                  الصيغ المدعومة: صور الكشكول (JPG, PNG) أو ملف PDF • يتم رفعه فورياً لقاعدة البيانات
+                </p>
+              </div>
             </div>
-
           `;
-
         });
-
         activeContainer.innerHTML = activeHtml;
-
       }
 
       // 2. تصيير أرشيف الواجبات المسلّمة (شرائط مدمجة وصغيرة)
-
       if (archivedHomework.length === 0) {
-
         archiveContainer.innerHTML = `
-
           <div class="empty-state-card">
-
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-
             <h3>أرشيف الواجبات فارغ حالياً</h3>
-
             <p>ستظهر هنا كشرائط مدمجة وصغيرة جميع الواجبات التي قمت بتسليمها للمستر أو تم اعتمادها.</p>
-
           </div>
-
         `;
-
       } else {
-
         let archiveHtml = '<div class="archive-compact-list">';
-
         archivedHomework.forEach(hw => {
-
           const isApproved = hw.submission_status === 'approved';
-
-          const statusTitle = isApproved ? 'تم الاعتماد بنجاح • الدرجة: 10 من 10' : 'تم تسليم كشكول الحل • قيد مراجعة واعتماد المستر';
+          const isRejected = hw.submission_status === 'rejected';
+          const statusTitle = isApproved 
+            ? 'تم الاعتماد بنجاح • الدرجة: 10 من 10' 
+            : (isRejected 
+              ? 'طلب المستر إعادة حل هذا الواجب • مطلوب إعادة التسليم' 
+              : 'تم تسليم كشكول الحل • قيد مراجعة واعتماد المستر');
 
           archiveHtml += `
-
             <div class="archive-compact-row">
-
               <div class="archive-meta">
-
                 <div class="archive-check-circle ${isApproved ? 'approved' : 'pending'}">
-
                   ${isApproved
-
                     ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
-
                     : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
-
                   }
-
                 </div>
-
                 <div>
-
                   <h4 class="archive-title">${escapeHtml(hw.title)}</h4>
-
                   <span class="archive-date">${statusTitle}</span>
-
                 </div>
-
               </div>
 
               <div class="archive-actions">
-
                 ${hw.submission_url ? `
-
                   <a href="${escapeHtml(hw.submission_url)}" target="_blank" class="btn btn-secondary btn-compact">
-
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-
                     <span>معاينة حلي المرفوع</span>
-
                   </a>
-
                 ` : ''}
-
                 ${hw.url ? `
-
                   <a href="${escapeHtml(hw.url)}" target="_blank" class="btn btn-secondary btn-compact">
-
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-
                     <span>شيت الأسئلة</span>
-
                   </a>
-
                 ` : ''}
-
-                <span class="kpi-badge ${isApproved ? 'badge-success' : 'badge-warning'}" style="font-size: 0.72rem; padding: 4px 9px;">
-
-                  ${isApproved ? 'معتمد (10 / 10)' : 'قيد المراجعة'}
-
+                <span class="kpi-badge ${isApproved ? 'badge-success' : 'badge-warning'}" style="font-size: 0.72rem; padding: 4px 9px; ${isRejected ? 'background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;' : ''}">
+                  ${isApproved ? 'معتمد (10 / 10)' : (isRejected ? 'طلب إعادة ⚠️' : 'قيد المراجعة')}
                 </span>
-
               </div>
-
             </div>
-
           `;
-
         });
-
         archiveHtml += '</div>';
-
         archiveContainer.innerHTML = archiveHtml;
-
       }
-
     }
 
     // رفع الواجب الفعلي لقاعدة البيانات عبر Backend Railway

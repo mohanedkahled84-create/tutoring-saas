@@ -1141,3 +1141,42 @@ test("CASE 15 - UI Stability: Non-wrapping and flexible height prevent button an
     "Status badges must be locked to single-line nowrap"
   );
 });
+
+test("CASE 16 - Student Homework Redo Workflow: Requested redo moves assignment from archive to required with teacher notes", () => {
+  const indexHtml = fs.readFileSync(path.resolve(__dirname, '../../../teacher-platform-sample/index.html'), 'utf8');
+
+  // 1. Verify getHwStatus explicitly detects 'rejected' status
+  assert.ok(
+    indexHtml.includes("if (hw.submission_status === 'rejected') return 'rejected';"),
+    "getHwStatus must explicitly detect rejected submission status"
+  );
+
+  // 2. Verify active homework includes both unsubmitted and rejected assignments
+  assert.ok(
+    indexHtml.includes("const activeHomework = homework.filter(h => {") &&
+    indexHtml.includes("return s === 'unsubmitted' || s === 'rejected';"),
+    "Active homework list must include assignments requiring redo (rejected)"
+  );
+
+  // 3. Verify archived homework only contains approved or pending submissions
+  assert.ok(
+    indexHtml.includes("const archivedHomework = homework.filter(h => {") &&
+    indexHtml.includes("return s === 'approved' || s === 'pending';"),
+    "Archived homework must only contain approved or pending submissions"
+  );
+
+  // 4. Verify teacher feedback banner and redo badge are rendered for rejected assignments
+  assert.ok(
+    indexHtml.includes("مطلوب إعادة الواجب ⚠️") &&
+    indexHtml.includes("ملاحظات وتوجيهات المستر لإعادة الحل:") &&
+    indexHtml.includes("معاينة حلي السابق"),
+    "Rejected assignments must render redo badge, teacher notes banner, and link to previous submission"
+  );
+
+  // 5. Verify live server data (dbMaterials) takes precedence over stale cache (localMaterials)
+  assert.ok(
+    indexHtml.includes("بيانات قاعدة البيانات هي الأساس الحي وتتفوق دائماً على الكاش") &&
+    indexHtml.includes("dbMaterials.forEach(item => {"),
+    "Server database materials must override local cached materials to prevent stale status"
+  );
+});
