@@ -51,13 +51,17 @@ test('LIVE: profile permissions, self-only helpers and current admin/assistant/p
   assert.equal(ok(await clients[1].rpc('is_admin')),true);
   assert.equal(ok(await clients[2].rpc('can_current_user_view_financials')),false);
   // The default/global queue must not become visible to arbitrary tenants.
-  const queueId=randomUUID();
+  const queueId=randomUUID(),ownQueueId=randomUUID();
   const portalCode=String(Date.now()),portalPassword='839162';
   const parentPhone='010'+String(Math.floor(Math.random()*1e8)).padStart(8,'0'),studentPhone='011'+String(Math.floor(Math.random()*1e8)).padStart(8,'0');
   const student=ok(await admin.from('students').insert({tenant_id:otherTenant,name:'isolated-profile-queue-student',parent_phone:parentPhone,student_phone:studentPhone,code:portalCode,student_code:portalCode,portal_password:portalPassword}).select('id').single());
   ok(await admin.from('meta_portal_dispatch_queue').insert({id:queueId,tenant_id:'default',student_id:student.id,recipient_type:'parent',recipient_phone:'201000000000',template_name:'audit-test',language_code:'ar',parameters:[],scheduled_date:new Date().toISOString().slice(0,10),status:'pending'}));
-  try {assert.equal(ok(await owner.from('meta_portal_dispatch_queue').select('id').eq('id',queueId)).length,0);}
-  finally {ok(await admin.from('meta_portal_dispatch_queue').delete().eq('id',queueId));}
+  const ownStudent=ok(await admin.from('students').insert({tenant_id:tenant,name:'isolated-profile-own-queue-student',parent_phone:'01000000000',code:'1001',student_code:'1001'}).select('id').single());
+  ok(await admin.from('meta_portal_dispatch_queue').insert({id:ownQueueId,tenant_id:tenant,student_id:ownStudent.id,recipient_type:'parent',recipient_phone:'201000000000',template_name:'audit-test',language_code:'ar',parameters:[],scheduled_date:new Date().toISOString().slice(0,10),status:'pending'}));
+  try {
+    const visible=ok(await owner.from('meta_portal_dispatch_queue').select('id').in('id',[queueId,ownQueueId]));
+    assert.deepEqual(visible.map(row=>row.id),[ownQueueId],'Own queue reads work; default/global queue stays hidden');
+  } finally {ok(await admin.from('meta_portal_dispatch_queue').delete().in('id',[queueId,ownQueueId]));}
   const {createApp}=await import('../dist/app.js');server=createApp().listen(0,'127.0.0.1');await once(server,'listening');
   const base=`http://127.0.0.1:${server.address().port}`;
   for(const [i,role] of ['owner','admin','assistant'].entries()) {

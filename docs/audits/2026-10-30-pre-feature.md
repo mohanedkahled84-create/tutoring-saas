@@ -25,7 +25,7 @@ The new isolated live test checks role/membership/PIN mutation rejection, safe p
 1. Apply the migration to the dedicated test project and pass CI, including all live checks, with no skips.
 2. Record current production versions, user grants and function definitions. Verify existing administrators retain their stored roles.
 3. Deploy the compatible backend **before** the production migration. It accepts both the old hash-bearing profile RPC and the new `has_security_pin` boolean, while returning only the boolean to clients.
-4. Apply `20261030212328_protect_user_security_fields.sql` then `20261030214324_reconcile_profile_helper_execution.sql`. Profile editing keeps the listed safe columns. The second migration reconciles missing helper execution grants in test replay; it grants only the six self-context helpers to authenticated/service roles and revokes anonymous/public access. Recheck grants and the self-only RPC.
+4. Apply the three `20261030` migrations added by this change in timestamp order: protect user columns, reconcile helper execution, then reconcile queue reads. Profile editing keeps the listed safe columns. Helper execution is limited to signed-in/service roles, and queue access to authenticated read-only access under tenant RLS. The latter two reconcile grants present in production but missing from historical test replay. Recheck grants and the self-only RPC.
 5. Deploy the frontend, verify real authenticated fixture journeys and public pages, remove the fixtures, and record the release.
 
 Do not roll back to the old backend's direct selection of restricted PIN columns after this migration. Prefer a forward fix; restoring broad user-column grants would reopen the privilege boundary.
