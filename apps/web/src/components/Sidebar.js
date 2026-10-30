@@ -99,7 +99,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       category: 'منظومة الكويزات والامتحانات',
       routes: [
         { id: 'online-quizzes', title: 'الكويزات الإلكترونية (أونلاين)', icon: 'edit' },
-        { id: 'paper-exams', title: 'الامتحانات الورقية وبابل شيت', icon: 'print' },
+        { id: 'paper-exams', title: 'الامتحانات الورقية وبابل شيت', icon: 'print', badge: 'قريباً' },
         { id: 'quizzes', title: 'رصد درجات الكويزات يدوياً', icon: 'reports' },
       ],
     },
@@ -185,6 +185,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
                     <span class="nav-title" style="font-size: 0.82rem; flex: 1; display: flex; align-items: center; justify-content: space-between;">
                       <span>${escapeHtml(r.title)}</span>
                       ${r.isPro ? `<span style="background: ${isActive ? '#1e293b' : '#fef3c7'}; color: ${isActive ? '#fde68a' : '#b45309'}; border: 1px solid ${isActive ? '#334155' : '#fde68a'}; font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; letter-spacing: 0.5px;">PRO</span>` : ''}
+                      ${r.badge ? `<span style="background: ${isActive ? '#1e293b' : '#f1f5f9'}; color: ${isActive ? '#f8fafc' : '#64748b'}; border: 1px solid ${isActive ? '#334155' : '#e2e8f0'}; font-size: 0.62rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">${escapeHtml(r.badge)}</span>` : ''}
                     </span>
                     ${isLocked ? `<span title="محمي برمز الأمان (PIN)" style="display: inline-flex; align-items: center; margin-right: 0.35rem; opacity: 0.85;">${getIcon('lock', 12, isActive ? '#fde68a' : '#f59e0b')}</span>` : ''}
                   </button>

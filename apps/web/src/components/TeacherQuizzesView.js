@@ -187,6 +187,37 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
   const activePaperListTab = state.paperListTab || 'published';
   const paperDrafts = (state.paperDrafts || []).filter(d => !selectedGroupId || selectedGroupId === 'all' || !d.group_id || String(d.group_id) === String(selectedGroupId));
 
+  if (effectiveRoute === 'paper-exams') {
+    if (state.cameraStream || state.isOmrCameraOpen) {
+      if (state.cameraStream) {
+        try {
+          state.cameraStream.getTracks().forEach(t => { try { t.stop(); } catch (_) {} });
+        } catch (_) {}
+        state.cameraStream = null;
+      }
+      state.isOmrCameraOpen = false;
+    }
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;" dir="rtl">
+        <div class="card" style="margin: 0; padding: 2rem 1.75rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; text-align: right; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.85rem;">
+            <h2 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0;">الامتحانات الورقية وبابل شيت</h2>
+            <span style="font-size: 0.72rem; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 4px;">قريباً</span>
+          </div>
+          <p style="font-size: 0.88rem; color: #475569; line-height: 1.7; margin: 0 0 1.25rem 0;">
+            خاصية جديدة قادمة لإدارة وطباعة وتصحيح الامتحانات الورقية داخل المنظومة:
+          </p>
+          <ul style="list-style-type: disc; padding-right: 1.25rem; margin: 0; font-size: 0.85rem; color: #334155; line-height: 2;">
+            <li>إنشاء وتجهيز الامتحانات الورقية بنماذج متعددة.</li>
+            <li>توليد وتصميم أوراق بابل شيت مخصصة وجاهزة للطباعة لكل امتحان.</li>
+            <li>تصحيح أوراق البابل شيت ورصد درجات الطلاب تلقائياً في كشوف الدرجات.</li>
+          </ul>
+        </div>
+      </div>
+    `;
+  }
+
   return `
     <div style="display: flex; flex-direction: column; gap: 0.75rem;" dir="rtl">
       <style>

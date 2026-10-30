@@ -1180,3 +1180,47 @@ test("CASE 16 - Student Homework Redo Workflow: Requested redo moves assignment 
     "Server database materials must override local cached materials to prevent stale status"
   );
 });
+
+test("CASE 17 - Paper Exams Clean 'قريباً' Freeze State: Minimalist card, no emojis, clear feature roadmap", () => {
+  const sidebarJs = fs.readFileSync(path.resolve(__dirname, '../../web/src/components/Sidebar.js'), 'utf8');
+  const teacherQuizzesJs = fs.readFileSync(path.resolve(__dirname, '../../web/src/components/TeacherQuizzesView.js'), 'utf8');
+
+  // 1. Sidebar badge verification
+  assert.ok(
+    sidebarJs.includes("{ id: 'paper-exams', title: 'الامتحانات الورقية وبابل شيت', icon: 'print', badge: 'قريباً' }"),
+    "Sidebar must register paper-exams with badge 'قريباً'"
+  );
+  assert.ok(
+    sidebarJs.includes("${r.badge ?") && sidebarJs.includes("escapeHtml(r.badge)"),
+    "Sidebar must render the badge text cleanly"
+  );
+
+  // 2. TeacherQuizzesView clean freeze state
+  assert.ok(
+    teacherQuizzesJs.includes("if (effectiveRoute === 'paper-exams')"),
+    "TeacherQuizzesView must handle paper-exams route early"
+  );
+  assert.ok(
+    teacherQuizzesJs.includes("الامتحانات الورقية وبابل شيت"),
+    "Must display clean paper exams title"
+  );
+  assert.ok(
+    teacherQuizzesJs.includes(">قريباً</span>"),
+    "Must display 'قريباً' badge"
+  );
+  assert.ok(
+    teacherQuizzesJs.includes("<li>إنشاء وتجهيز الامتحانات الورقية بنماذج متعددة.</li>") &&
+    teacherQuizzesJs.includes("<li>توليد وتصميم أوراق بابل شيت مخصصة وجاهزة للطباعة لكل امتحان.</li>") &&
+    teacherQuizzesJs.includes("<li>تصحيح أوراق البابل شيت ورصد درجات الطلاب تلقائياً في كشوف الدرجات.</li>"),
+    "Must clearly present the 3 key features without exaggeration"
+  );
+
+  // 3. Strict negations
+  const paperRouteIdx = teacherQuizzesJs.indexOf("if (effectiveRoute === 'paper-exams')");
+  const paperRouteBlock = teacherQuizzesJs.slice(paperRouteIdx, paperRouteIdx + 1200);
+  assert.ok(!paperRouteBlock.includes('(أ، ب، ج)'), "Must not contain (أ، ب، ج)");
+  assert.ok(!paperRouteBlock.includes('الخيارات المتاحة للعمل حالياً'), "Must not contain options buttons/section");
+  // Emoji check: ensure no emoji characters in the card block
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+  assert.ok(!emojiRegex.test(paperRouteBlock), "Must not contain any emojis");
+});
