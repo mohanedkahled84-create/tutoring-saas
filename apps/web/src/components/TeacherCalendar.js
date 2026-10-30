@@ -1,5 +1,6 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import { calendarDateKey, calendarWeekRange } from '../utils/calendarDateRange.js';
 
 /**
  * Centrly Teacher Calendar (DEV-89)
@@ -253,7 +254,7 @@ export function renderTeacherCalendar(data = {}) {
       { key: 'الجمعة', label: 'الجمعة' },
     ];
 
-    const todayIso = new Date().toISOString().slice(0, 10);
+    const todayIso = calendarDateKey(new Date());
 
     return dayLabels.map((dl, idx) => {
       const d = new Date(sat);
@@ -488,6 +489,9 @@ export function renderTeacherCalendar(data = {}) {
 }
 
 export function registerTeacherCalendarActions(app) {
+  app.getCalendarRequestRange = function() {
+    return calendarWeekRange(this.calendarState.weekOffset);
+  };
   app.switchCalendarView = function(view) {
     this.calendarState.view = view;
     this.renderMainContent();
@@ -522,12 +526,14 @@ export function registerTeacherCalendarActions(app) {
     this.calendarState.weekOffset = (this.calendarState.weekOffset || 0) - 1;
     this.updateCalendarDateLabel();
     this.renderMainContent();
+    return this.loadRouteData('calendar');
   }
 
   app.calendarNext = function() {
     this.calendarState.weekOffset = (this.calendarState.weekOffset || 0) + 1;
     this.updateCalendarDateLabel();
     this.renderMainContent();
+    return this.loadRouteData('calendar');
   }
 
   app.calendarToday = function() {
@@ -545,6 +551,7 @@ export function registerTeacherCalendarActions(app) {
     this.updateCalendarDateLabel();
     this.renderMainContent();
     this.showToast('عرض جدول اليوم الحالي', 'info');
+    return this.loadRouteData('calendar');
   }
 
   app.filterCalendarByGroup = function(groupId) {

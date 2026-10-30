@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { getServices } from "../../composition.js";
-import { extractToken, authenticateUser } from "../../shared/middleware/auth.js";
+import { extractToken, authenticateUser, profileHasSecurityPin } from "../../shared/middleware/auth.js";
 import { getScopedSupabaseClient } from "../../supabase.js";
 import { authRateLimiter } from "../../shared/middleware/rateLimit.js";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
@@ -29,7 +29,7 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
     const authService = getServices(req as AuthenticatedRequest).auth;
     const result = await authService.login({ email: rawIdentifier, password });
 
-    let hasSecurityPin = false;
+    let hasSecurityPin = true;
     let dbUser: any = null;
     try {
       const client = getScopedSupabaseClient(result.token);
@@ -37,9 +37,7 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
 
       if (uRec) {
         dbUser = uRec;
-        if (uRec.has_security_pin ?? uRec.financial_pin_hash) {
-          hasSecurityPin = true;
-        }
+        hasSecurityPin = profileHasSecurityPin(uRec);
       }
     } catch (_) {}
 
@@ -121,7 +119,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
     const authService = getServices(req as AuthenticatedRequest).auth;
     const result = await authService.refresh(refresh_token);
 
-    let hasSecurityPin = false;
+    let hasSecurityPin = true;
     try {
       const client = getScopedSupabaseClient(result.token);
       const { data: uRec } = await client.rpc("get_user_profile", { p_user_id: result.user.id });
@@ -137,9 +135,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
         }
         if (uRec.phone) (result.user as any).phone = uRec.phone;
         if (uRec.subject) (result.user as any).subject = uRec.subject;
-        if (uRec.has_security_pin ?? uRec.financial_pin_hash) {
-          hasSecurityPin = true;
-        }
+        hasSecurityPin = profileHasSecurityPin(uRec);
         if (uRec.tenant_id) {
           const { data: tRec } = await client
             .from("tenants")
@@ -349,7 +345,7 @@ authRouter.post("/verify-email", authRateLimiter, async (req: Request, res: Resp
             subject: uRec.subject || (result.user as any)?.subject,
             role: uRec.role || (result.user as any)?.role,
             tenant_id: uRec.tenant_id || (result.user as any)?.tenant_id,
-            has_security_pin: Boolean(uRec.has_security_pin ?? uRec.financial_pin_hash),
+            has_security_pin: profileHasSecurityPin(uRec),
           };
         }
       } catch (_) {}

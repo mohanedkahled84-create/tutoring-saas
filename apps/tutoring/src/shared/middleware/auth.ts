@@ -12,6 +12,14 @@ export function extractToken(req: AuthenticatedRequest): string | null {
   return null;
 }
 
+// An unavailable PIN state must not unlock financial screens. Accept the old
+// self-only RPC shape during the coordinated rollout, then the new boolean.
+export function profileHasSecurityPin(profile: { has_security_pin?: boolean; financial_pin_hash?: string | null } | null): boolean {
+  if (typeof profile?.has_security_pin === "boolean") return profile.has_security_pin;
+  if (profile && Object.prototype.hasOwnProperty.call(profile, "financial_pin_hash")) return Boolean(profile.financial_pin_hash);
+  return true;
+}
+
 // Exported client resolver to allow deterministic testing and mocking
 export const authClientResolver = {
   supabasePublic,
@@ -142,7 +150,7 @@ export async function authenticateUser(
     const fullName = (userRecord as { full_name?: string | null })?.full_name || authData.user.user_metadata?.full_name || null;
     const phone = (userRecord as { phone?: string | null })?.phone || (authData.user.user_metadata?.phone as string) || null;
     const subject = (userRecord as { subject?: string | null })?.subject || (authData.user.user_metadata?.subject as string) || null;
-    const hasSecurityPin = Boolean(userRecord.has_security_pin ?? userRecord.financial_pin_hash);
+    const hasSecurityPin = profileHasSecurityPin(userRecord);
 
     req.user = {
       id: userId,

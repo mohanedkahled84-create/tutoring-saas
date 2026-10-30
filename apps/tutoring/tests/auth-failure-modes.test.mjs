@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { authenticateUser, authClientResolver, requireAdmin } from "../dist/shared/middleware/auth.js";
+import { authenticateUser, authClientResolver, requireAdmin, profileHasSecurityPin } from "../dist/shared/middleware/auth.js";
+
+test('PIN profile state supports both rollout contracts and locks an unknown state',()=>{
+  assert.equal(profileHasSecurityPin({has_security_pin:false}),false);
+  assert.equal(profileHasSecurityPin({has_security_pin:true}),true);
+  assert.equal(profileHasSecurityPin({financial_pin_hash:null}),false);
+  assert.equal(profileHasSecurityPin({financial_pin_hash:'opaque'}),true);
+  assert.equal(profileHasSecurityPin({}),true);
+  assert.equal(profileHasSecurityPin(null),true);
+});
 
 function createMockReq(token) {
   return {

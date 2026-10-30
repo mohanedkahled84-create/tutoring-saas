@@ -10,6 +10,7 @@ This release closes existing audit defects before new features. Commercial plans
 - Load staff workspace components/actions on authenticated entry, preserving action registration order and cross-page operations. Public entry screens retain their own dependencies. Module-load failure presents an accessible retry/reload state and preserves the session.
 - Propagate primary screen read errors into the existing retry state instead of fabricated empty lists, disconnected states or invented admin totals. Preserve previous student and payment-proof records. Bound route-level session-refresh retries; alternate legacy endpoints are tried only for a 404.
 - A failed assistant-table read no longer becomes a successful empty list after all fallbacks fail.
+- Calendar reads use the selected Saturday-Friday week instead of hardcoded September dates. Previous/next/today navigation reloads the correct range, including month/year boundaries, and stale responses do not overwrite a newer selection.
 
 ## Verification
 
@@ -24,7 +25,7 @@ The new isolated live test checks role/membership/PIN mutation rejection, safe p
 1. Apply the migration to the dedicated test project and pass CI, including all live checks, with no skips.
 2. Record current production versions, user grants and function definitions. Verify existing administrators retain their stored roles.
 3. Deploy the compatible backend **before** the production migration. It accepts both the old hash-bearing profile RPC and the new `has_security_pin` boolean, while returning only the boolean to clients.
-4. Apply `20261030212328_protect_user_security_fields.sql`. Profile editing keeps the listed safe columns. Recheck grants and the self-only RPC.
+4. Apply `20261030212328_protect_user_security_fields.sql` then `20261030214324_reconcile_profile_helper_execution.sql`. Profile editing keeps the listed safe columns. The second migration reconciles missing helper execution grants in test replay; it grants only the six self-context helpers to authenticated/service roles and revokes anonymous/public access. Recheck grants and the self-only RPC.
 5. Deploy the frontend, verify real authenticated fixture journeys and public pages, remove the fixtures, and record the release.
 
 Do not roll back to the old backend's direct selection of restricted PIN columns after this migration. Prefer a forward fix; restoring broad user-column grants would reopen the privilege boundary.

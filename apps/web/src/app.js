@@ -1255,10 +1255,13 @@ class CentrlyApp {
           break;
         }
         case 'calendar': {
+          const weekOffset = Number(this.calendarState.weekOffset) || 0;
+          const range = this.getCalendarRequestRange();
           const [calRes, grpRes] = await Promise.all([
-            request('/sessions/calendar?from=2026-09-01&to=2026-09-30'),
+            request(`/sessions/calendar?from=${range.from}&to=${range.to}`),
             request('/groups'),
           ]);
+          if (weekOffset !== (Number(this.calendarState.weekOffset) || 0)) break;
           const rawSessions = Array.isArray(calRes) ? calRes : (calRes.sessions || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           

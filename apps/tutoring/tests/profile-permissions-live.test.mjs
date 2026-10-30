@@ -7,7 +7,7 @@ import {requireIsolatedSupabaseProject,createIsolatedSupabaseClients} from './he
 
 test('LIVE: profile permissions, self-only helpers and current admin/assistant/portal roles', {timeout:180000}, async t=>{
   if(!requireIsolatedSupabaseProject(t))return;
-  const {serviceClient:admin}=createIsolatedSupabaseClients();
+  const {serviceClient:admin,anonClient}=createIsolatedSupabaseClients();
   const tenant=randomUUID(),otherTenant=randomUUID(),users=[];let server;
   const ok=r=>{assert.equal(r.error,null);return r.data;};
   t.after(async()=>{
@@ -44,6 +44,9 @@ test('LIVE: profile permissions, self-only helpers and current admin/assistant/p
   const adminProfile=ok(await clients[1].rpc('get_user_profile',{p_user_id:users[1]}));assert.equal(adminProfile.has_security_pin,true);assert.ok(!('financial_pin_hash' in adminProfile));
   assert.equal(ok(await owner.rpc('get_current_user_tenant_id')),tenant);
   assert.equal(ok(await owner.rpc('get_current_user_role')),'owner');
+  assert.equal(ok(await owner.rpc('get_current_user_teacher_id')),null);
+  assert.equal((await anonClient.rpc('is_admin')).error?.code,'42501');
+  assert.equal((await anonClient.rpc('get_user_profile',{p_user_id:users[0]})).error?.code,'42501');
   assert.equal(ok(await owner.rpc('is_admin')),false);
   assert.equal(ok(await clients[1].rpc('is_admin')),true);
   assert.equal(ok(await clients[2].rpc('can_current_user_view_financials')),false);
