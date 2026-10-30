@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { verifyParentPortalToken, generateParentPortalToken } from "./tokens.js";
+import { verifyParentPortalToken, generateParentPortalTokenUntil } from "./tokens.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const reserved = new Set(["www", "app", "api", "admin", "dev", "mail", "portal", "login"]);
@@ -28,7 +28,7 @@ export async function verifiedPortalStudent(db: SupabaseClient, token: unknown) 
     : query.eq("parent_portal_token", token);
   const { data, error } = await query.maybeSingle();
   if (error) throw error;
-  return data?.id && data?.tenant_id ? data : null;
+  return data?.id && data?.tenant_id ? { ...data, expires_at: identity?.expires_at || Math.floor(Date.now()/1000) + 31536000 } : null;
 }
 export async function currentPortalDestination(db: SupabaseClient, tenantId: string) {
   const { data, error } = await db.from("tenant_platform_settings")
@@ -43,13 +43,13 @@ export async function currentPortalDestination(db: SupabaseClient, tenantId: str
       theme_preset: data.theme_preset, custom_primary_color: data.custom_primary_color } : null,
   };
 }
-export async function createPortalHandoff(db: SupabaseClient, student: {id: string; tenant_id: string}, role: "student" | "parent", targetOrigin: string) {
+export async function createPortalHandoff(db: SupabaseClient, student: {id: string; tenant_id: string; expires_at: number}, role: "student" | "parent", targetOrigin: string) {
   const ticket = randomBytes(32).toString("base64url");
   const now = new Date();
   const cleanup = await db.from("portal_handoffs").delete().lt("expires_at", now.toISOString());
   if (cleanup.error) throw cleanup.error;
   const { error } = await db.from("portal_handoffs").insert({ ticket_hash: hashPortalTicket(ticket),
-    tenant_id: student.tenant_id, student_id: student.id, portal_role: role, target_origin: targetOrigin,
+    tenant_id: student.tenant_id, student_id: student.id, portal_role: role, target_origin: targetOrigin, session_expires_at: student.expires_at,
     expires_at: new Date(now.getTime() + 90_000).toISOString() });
   if (error) throw error;
   return ticket;
@@ -59,9 +59,9 @@ export async function consumePortalHandoff(db: SupabaseClient, ticket: unknown, 
   // DELETE ... RETURNING is one atomic statement: concurrent workers cannot redeem twice.
   const { data, error } = await db.from("portal_handoffs").delete().eq("ticket_hash", hashPortalTicket(ticket))
     .eq("target_origin", origin).gt("expires_at", new Date().toISOString())
-    .select("student_id,tenant_id,portal_role").maybeSingle();
+    .select("student_id,tenant_id,portal_role,session_expires_at").maybeSingle();
   if (error) throw error;
-  if (!data) return null;
+  if (!data || Number(data.session_expires_at) <= Math.floor(Date.now()/1000)) return null;
   const { data: student, error: studentError } = await db.from("students").select("id")
     .eq("id", data.student_id).eq("tenant_id", data.tenant_id).maybeSingle();
   if (studentError) throw studentError;
@@ -69,6 +69,6 @@ export async function consumePortalHandoff(db: SupabaseClient, ticket: unknown, 
   const destination = await currentPortalDestination(db, data.tenant_id);
   // Reject a ticket for a platform that was deactivated or renamed during transfer.
   if (destination.origin !== origin) return null;
-  return { token: generateParentPortalToken(data.student_id, data.tenant_id), role: data.portal_role,
+  return { token: generateParentPortalTokenUntil(data.student_id, data.tenant_id, Number(data.session_expires_at)), role: data.portal_role,
     ...destination };
 }
