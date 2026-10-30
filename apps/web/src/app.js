@@ -609,6 +609,29 @@ class CentrlyApp {
       }
     });
 
+    // Cross-origin arrival: remove the one-time fragment before any asynchronous work.
+    const handoff = new URLSearchParams(window.location.hash.slice(1)).get('handoff');
+    if (window.location.pathname === '/portal-entry' && handoff) {
+      window.history.replaceState(null, '', '/portal-entry');
+      try {
+        const arrival = await request('/public/portal/handoff', { method: 'POST', body: { ticket: handoff } });
+        if (!arrival?.token || !['parent', 'student'].includes(arrival.role)) throw new Error('تعذر إكمال الانتقال');
+        // A shared device must not briefly hydrate another pupil from the old platform cache.
+        for (const key of Object.keys(localStorage)) {
+          if (key.startsWith('centrly_cached_') || ['portal_student', 'portal_student_code', 'centrly_platform_content', 'centrly_materials'].includes(key)) localStorage.removeItem(key);
+        }
+        localStorage.removeItem('centrly_explicit_logout');
+        localStorage.setItem('centrly_portal_token', arrival.token);
+        localStorage.setItem('centrly_portal_role', arrival.role);
+        sessionStorage.setItem('centrly_portal_token', arrival.token);
+        sessionStorage.setItem('centrly_portal_role', arrival.role);
+        if (arrival.role === 'student' && arrival.presentation) window.location.replace('/dashboard');
+        else if (arrival.role === 'student') await this.loadStudentPortal(arrival.token);
+        else await this.loadParentPortal(arrival.token);
+      } catch (error) { this.renderPortalLogin(error?.message || 'افتح رابط المتابعة الأصلي مجددًا'); }
+      return;
+    }
+
     // Check if Short Portal URL is present (/p/:code or /s/:code or /p:code or /s:code or ?s=:code or ?p=:code)
     const urlParams = new URLSearchParams(window.location.search);
     const pathname = (window.location.pathname || '').trim();
@@ -675,7 +698,7 @@ class CentrlyApp {
       window.__teacherSubdomain = detectedTeacherSubdomain;
     }
 
-    const isPortalRoute = cleanPath === '/portal' || 
+    const isPortalRoute = cleanPath === '/portal' || cleanPath === '/portal-entry' ||
                           urlParams.get('view') === 'portal' || 
                           (urlParams.get('portal') === 'login' && !portalToken) ||
                           Boolean(detectedTeacherSubdomain);
@@ -693,7 +716,7 @@ class CentrlyApp {
 
         try {
           if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
-            window.history.replaceState(null, '', '/portal');
+            window.history.replaceState(null, '', cleanPath === '/portal-entry' ? '/portal-entry' : '/portal');
           }
           if (effectiveRole) {
             localStorage.setItem('centrly_portal_role', effectiveRole);

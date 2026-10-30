@@ -180,6 +180,19 @@
   ],
   "headers": [
     {
+      "source": "/portal-entry",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    },
+    {
       "source": "/apps/web/src/(.*)",
       "headers": [
         {
@@ -233,6 +246,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/portal-entry",
+      "destination": "/index.html"
+    },
     {
       "source": "/src/:path*",
       "destination": "/apps/web/src/:path*"

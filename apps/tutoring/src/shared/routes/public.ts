@@ -9,8 +9,39 @@ import { normalizeMaterialUrl } from "../../features/materials/routes.js";
 import { mergeLegacyPortalQuizzes } from "../utils/legacyPortalQuizzes.js";
 
 import { signHomeworkFile } from "../../features/homework/files.js";
+import { verifiedPortalStudent, currentPortalDestination, createPortalHandoff, consumePortalHandoff, trustedPortalOrigin } from "../utils/portalDestination.js";
 
 export const publicRouter = Router();
+
+publicRouter.post("/portal/destination", authRateLimiter, async (req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  if (!trustedPortalOrigin(req.headers.origin) || !["student", "parent"].includes(req.body?.role)) {
+    res.status(400).json({ error: { code: "BAD_REQUEST", message: "وجهة الدخول غير صالحة" } }); return;
+  }
+  try {
+    const db = getServiceSupabaseClient();
+    const student = await verifiedPortalStudent(db, req.body?.token);
+    if (!student) { res.status(401).json({ error: { code: "UNAUTHORIZED", message: "يرجى تسجيل الدخول مجددًا" } }); return; }
+    const destination = await currentPortalDestination(db, student.tenant_id);
+    const ticket = destination.origin === req.headers.origin ? null : await createPortalHandoff(db, student, req.body.role, destination.origin);
+    res.json({ ...destination, ticket });
+  } catch {
+    res.status(503).json({ error: { code: "UNAVAILABLE", message: "تعذر تجهيز المتابعة، يرجى إعادة المحاولة" } });
+  }
+});
+
+publicRouter.post("/portal/handoff", authRateLimiter, async (req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  try {
+    const result = await consumePortalHandoff(getServiceSupabaseClient(), req.body?.ticket, req.headers.origin);
+    if (!result) { res.status(401).json({ error: { code: "UNAUTHORIZED", message: "انتهت صلاحية الانتقال؛ افتح رابط المتابعة الأصلي مجددًا" } }); return; }
+    res.json(result);
+  } catch {
+    res.status(503).json({ error: { code: "UNAVAILABLE", message: "تعذر إكمال الانتقال، افتح رابط المتابعة الأصلي مجددًا" } });
+  }
+});
 
 const quizAnswerFieldNames = new Set([
   "correct_index",
@@ -285,6 +316,8 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
 
 // GET /api/public/short-links/:code - Resolve short code to portal token
 publicRouter.get("/short-links/:code", async (req: Request, res: Response): Promise<void> => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Referrer-Policy", "no-referrer");
   const code = (
     (typeof req.query.code === "string" && req.query.code.trim()) ||
     (req.params.code !== "portal" ? req.params.code : "") ||

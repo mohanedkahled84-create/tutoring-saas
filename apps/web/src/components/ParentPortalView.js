@@ -27,6 +27,10 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
   }
 
   const student = portalData.student;
+  const presentation = portalData.portal_presentation;
+  const portalColors = { navy: '#0f172a', slate: '#0f172a', emerald: '#065f46', red: '#991b1b', purple: '#581c87' };
+  const portalBrandColor = /^#[0-9a-f]{6}$/i.test(presentation?.custom_primary_color || '')
+    ? presentation.custom_primary_color : (portalColors[presentation?.theme_preset] || '#0f172a');
   const parentKey = (student.id || student.parent_phone || student.student_code || student.code || '').toString().trim();
   if (typeof window !== 'undefined') {
     if (parentKey) window._centrlyCurrentParentId = parentKey;
@@ -63,6 +67,7 @@ export function renderParentPortalView(portalData = {}, activeTab = 'attendance'
     <div style="min-height: 100vh; background-color: #f8fafc; padding: 1rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
       <div style="max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;">
         
+        ${presentation ? `<header style="background:${portalBrandColor};color:#fff;padding:1.25rem 1.5rem;border-radius:1rem;"><strong style="font-size:1.125rem;">${escapeHtml(presentation.display_title || 'منصة المدرس')}</strong><p style="margin:.35rem 0 0;color:inherit;font-size:.8rem;">متابعة ابني · بواسطة سنترلي</p></header>` : ''}
         <!-- Portal Header -->
         <div style="background: #fff; border-radius: 1rem; padding: 1.25rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; text-align: center; position: relative;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">

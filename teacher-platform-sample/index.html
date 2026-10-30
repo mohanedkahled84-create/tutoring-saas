@@ -2886,39 +2886,7 @@
     <script>
 
     // 1. استرجاع وتحديث بيانات الطالب الحقيقية من قاعدة البيانات
-const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFiOjlkYTNhYWUwLTk3ZGYtNDdhNi04MmU5LTA2YzYxMzlmNjNlNToxODI0Mjk2NTI4OjRmYWZmZTVkNWU3NzZiNzI0ZWQyYzgzMWYxNWI2NWM3ZDU4NTZkNDc2ZDc0YTVjNmVjZWM0YzdjZWRhNTJjMjU';
-
-    let currentStudent = {
-
-      name: 'مهند خالد',
-
-      code: '1006',
-
-      phone: '01123671177',
-
-      center: 'الهضبه',
-
-      group: 'الاحد والأربع تالته ثانوي',
-
-      subject: 'فيزياء',
-
-      teacher: 'مستر عمر المحمدي',
-
-      teacher_phone: '01010979708'
-
-    };
-
-    try {
-
-      const studentStored = JSON.parse(localStorage.getItem('portal_student') || '{}');
-
-      if (studentStored && studentStored.name) {
-
-        currentStudent = { ...currentStudent, ...studentStored };
-
-      }
-
-    } catch (_) {}
+    let currentStudent = { name: 'الطالب', code: '', phone: '', center: '', group: '', subject: '', teacher: '', teacher_phone: '' };
 
     function hydrateStudentUI(s) {
 
@@ -2928,7 +2896,7 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       const nameEl = document.getElementById('sidebarStudentName');
 
-      if (nameEl) nameEl.innerText = currentStudent.name || 'مهند خالد';
+      if (nameEl) nameEl.innerText = currentStudent.name || 'الطالب';
 
       const codeEl = document.getElementById('sidebarStudentCode');
 
@@ -2954,7 +2922,7 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       if (greetingSub) {
 
-        greetingSub.innerText = `مرحباً بك في منصتك التعليمية لمادة ${currentStudent.subject || currentStudent.subject_name || 'الفيزياء'} مع ${currentStudent.teacher || currentStudent.teacher_name || 'مستر عمر المحمدي'}. تابع محاضراتك وواجباتك أولاً بأول.`;
+        greetingSub.innerText = `مرحباً بك في منصتك التعليمية لمادة ${currentStudent.subject || currentStudent.subject_name || 'الفيزياء'} مع ${currentStudent.teacher || currentStudent.teacher_name || 'المدرس'}. تابع محاضراتك وواجباتك أولاً بأول.`;
 
       }
 
@@ -3882,20 +3850,6 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       // Student identity resolution
 
-      const allKnownStudents = {
-
-        '1006': { name: 'مهند خالد', code: '1006', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
-
-        '1005': { name: 'احمد محمود', code: '1005', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
-
-        '1002': { name: 'باسل امير', code: '1002', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
-
-        '1003': { name: 'عمر جمال', code: '1003', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
-
-        '1004': { name: 'احمد عبد الله', code: '1004', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
-
-      };
-
       // التحقق من حالة تسجيل الخروج الصريح لمنع حلقة تسجيل الدخول التلقائي
 
       const isExplicitLoggedOut = localStorage.getItem('centrly_explicit_logout') === '1';
@@ -3936,45 +3890,10 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       }
 
-      let qCode = urlParams.get('code') || localStorage.getItem('portal_student_code');
-
-      if (!qCode) {
-
-        try {
-
-          const saved = JSON.parse(localStorage.getItem('portal_student') || '{}');
-
-          if (saved.code || saved.student_code) qCode = saved.code || saved.student_code;
-
-        } catch (_) {}
-
-      }
-
-      qCode = qCode || '1006';
-
-      localStorage.setItem('portal_student_code', qCode);
-
-      if (allKnownStudents[qCode]) {
-
-        currentStudent = { ...currentStudent, ...allKnownStudents[qCode] };
-
-      } else {
-
-        try {
-
-          const saved = JSON.parse(localStorage.getItem('portal_student') || '{}');
-
-          if (saved.name) currentStudent = { ...currentStudent, ...saved };
-
-        } catch (_) {}
-
-      }
-
-      localStorage.setItem('portal_student', JSON.stringify(currentStudent));
-
+      let qCode = '';
       hydrateStudentUI(currentStudent);
-
-      let token = urlParams.get('token') || localStorage.getItem('centrly_portal_token') || MOHANED_FALLBACK_TOKEN;
+      let token = urlParams.get('token') || localStorage.getItem('centrly_portal_token');
+      if (!token) { window.location.replace('/login'); return; }
 
       if (token && !localStorage.getItem('centrly_portal_token')) {
 
@@ -3982,43 +3901,7 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
 
       }
 
-      // 0. Instant Cache-First Hydration (0ms load time - renders immediately from localStorage)
-      try {
-        const cachedRaw = localStorage.getItem('centrly_platform_content') || localStorage.getItem('centrly_materials');
-        if (cachedRaw) {
-          const cachedParsed = JSON.parse(cachedRaw);
-          if (Array.isArray(cachedParsed) && cachedParsed.length > 0) {
-            platformContent = cachedParsed.filter(m => {
-              const t = (m.title || '').toLowerCase();
-              const id = (m.id || '').toLowerCase();
-              return !t.includes('تجريبي') && !t.includes('trial') && !t.includes('test') && !id.includes('trial') && !id.includes('test');
-            });
-            renderAllPanels();
-          }
-        }
-
-        const cachedSummary = JSON.parse(localStorage.getItem(`centrly_cached_summary_${qCode}`) || '{}');
-        if (cachedSummary && cachedSummary.attendance_rate) {
-          const attEl = document.getElementById('kpiAttendanceVal');
-          if (attEl) attEl.innerText = cachedSummary.attendance_rate;
-        }
-
-        const cachedRecRaw = localStorage.getItem(`centrly_cached_recorded_${qCode}`);
-        if (cachedRecRaw) {
-          const cachedRec = JSON.parse(cachedRecRaw);
-          if (Array.isArray(cachedRec) && cachedRec.length > 0) {
-            window._studentAllRecordedQuizzes = cachedRec;
-            renderRecordedScores(cachedRec);
-            const totalPct = cachedRec.reduce((sum, item) => sum + (Number(item.percentage) || ((Number(item.score) / (Number(item.max_score) || 10)) * 100) || 0), 0);
-            const avgPct = Math.round(totalPct / cachedRec.length);
-            const qAvgEl = document.getElementById('kpiQuizAvgVal');
-            if (qAvgEl) qAvgEl.innerText = `${avgPct}%`;
-          }
-        }
-      } catch (cacheErr) {
-        console.warn('Cache-first initial render warning:', cacheErr);
-      }
-
+      // Verify the current token before reading student-specific cached data.
       let dbMaterials = [];
 
       // 1. Parallel High-Speed Network Fetching with AbortController Timeout (5s max)
@@ -4031,14 +3914,7 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
         .then(r => r.ok ? r.json() : null)
         .catch(() => null);
 
-      const fetchRichQuizzesPromise = (async () => {
-        const tryEndpoint = (url) => fetch(url, { signal: fetchController.signal }).then(r => r.ok ? r.json() : null).catch(() => null);
-        let res = await tryEndpoint('/api/quizzes/rich');
-        if (res && res.success) return res;
-        res = await tryEndpoint('https://centerly-eg.com/api/quizzes/rich');
-        if (res && res.success) return res;
-        return await tryEndpoint('https://tutoring-backend-production-c8dd.up.railway.app/api/quizzes/rich');
-      })();
+      const fetchRichQuizzesPromise = Promise.resolve(null); // Use token-scoped quiz materials only.
 
       let portalData = null;
       let richRes = null;
@@ -4052,6 +3928,12 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
         clearTimeout(fetchTimer);
       }
 
+      if (!portalData?.student?.id) {
+        document.getElementById('sidebarStudentName').innerText = 'تعذر تحميل الحساب';
+        document.getElementById('greetingSub').innerText = 'تعذر التحقق من بيانات الطالب. أعد تحميل الصفحة أو سجل الدخول مجددًا.';
+        return;
+      }
+      qCode = String(portalData.student.student_code || portalData.student.code || '');
       if (portalData) {
         if (portalData.student) {
           const s = portalData.student;
@@ -4064,8 +3946,8 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
             center: matchedInfo.center || s.center_name || 'الهضبه',
             group: matchedInfo.group || s.group_name || 'الاحد والأربع تالته ثانوي',
             subject: matchedInfo.subject || s.subject_name || 'فيزياء',
-            teacher: s.teacher_name || 'مستر عمر المحمدي',
-            teacher_phone: s.teacher_phone || '01010979708'
+            teacher: s.teacher_name || 'المدرس',
+            teacher_phone: s.teacher_phone || ''
           };
           localStorage.setItem('portal_student', JSON.stringify(currentStudent));
           hydrateStudentUI(currentStudent);

@@ -5,6 +5,7 @@ import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/s
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { normalizeDigits } from '../utils/normalizeDigits.js';
+import { preparePortalDestination } from '../utils/portalDestination.js';
 
 /**
  * Centrly Unified Student & Parent Portal Login View
@@ -211,13 +212,15 @@ export function registerUnifiedPortalActions(app) {
         sessionStorage.setItem('centrly_portal_token', token);
         sessionStorage.setItem('centrly_portal_role', 'parent');
       }
-      if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
-        window.history.replaceState(null, '', '/portal');
+      if (window.history && window.history.replaceState && (window.location.pathname !== '/portal' || window.location.search || window.location.hash)) {
+        window.history.replaceState(null, '', window.location.pathname === '/portal-entry' ? '/portal-entry' : '/portal');
       }
     } catch (_) {}
 
     try {
+      if (await preparePortalDestination(this, token, 'parent', request)) return;
       const data = await request(`/public/parent-portal?token=${encodeURIComponent(token)}`);
+      data.portal_presentation = this._portalPresentation;
       if (data && (data.error || !data.student)) {
         throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة ولي الأمر');
       }
@@ -282,12 +285,13 @@ export function registerUnifiedPortalActions(app) {
         sessionStorage.setItem('centrly_portal_token', token);
         sessionStorage.setItem('centrly_portal_role', 'student');
       }
-      if (window.history && window.history.replaceState && window.location.pathname !== '/portal') {
-        window.history.replaceState(null, '', '/portal');
+      if (window.history && window.history.replaceState && (window.location.pathname !== '/portal' || window.location.search || window.location.hash)) {
+        window.history.replaceState(null, '', window.location.pathname === '/portal-entry' ? '/portal-entry' : '/portal');
       }
     } catch (_) {}
 
     try {
+      if (await preparePortalDestination(this, token, 'student', request)) return;
       const data = await request(`/public/parent-portal?token=${encodeURIComponent(token)}`);
       if (data && (data.error || !data.student)) {
         throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة الطالب');
@@ -389,7 +393,7 @@ export function registerUnifiedPortalActions(app) {
     if (appEl) {
       appEl.innerHTML = renderUnifiedPortalLoginView(errorMessage);
     }
-    if (window.history?.replaceState && window.location.pathname !== '/portal') {
+    if (window.history?.replaceState && (window.location.pathname !== '/portal' || window.location.search || window.location.hash)) {
       window.history.replaceState(null, '', window.location.search ? `/portal${window.location.search}` : '/portal');
     }
   }
