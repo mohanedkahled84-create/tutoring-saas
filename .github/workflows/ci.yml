@@ -10,6 +10,7 @@ jobs:
   test:
     name: Backend Test Suite & Live Security Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout Codebase

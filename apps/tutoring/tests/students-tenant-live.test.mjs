@@ -5,7 +5,7 @@ import { once } from 'node:events';
 import { createClient } from '@supabase/supabase-js';
 import { requireIsolatedSupabaseProject, createIsolatedSupabaseClients, assertServiceRoleReady } from './helpers/live-supabase.mjs';
 
-test('LIVE: actual authenticated HTTP requests preserve tenant isolation with service-role enabled', async t => {
+test('LIVE: actual authenticated HTTP requests preserve tenant isolation with service-role enabled', {timeout: 240000}, async t => {
   if (!requireIsolatedSupabaseProject(t)) return;
   assert.equal(process.env.SUPABASE_URL,process.env.SUPABASE_TEST_URL,'Backend must target the test project');
   assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY,process.env.SUPABASE_TEST_SERVICE_ROLE_KEY,'Exercise the real privileged-client configuration');
@@ -13,13 +13,17 @@ test('LIVE: actual authenticated HTTP requests preserve tenant isolation with se
   await assertServiceRoleReady(serviceClient);
   const tenantIds=[randomUUID(),randomUUID()]; const students=[]; const authIds=[];
   const materialIds=[]; const privatePaths=[];
+  let server;
   t.after(async()=>{
+    try {
     for(const materialId of materialIds) {
       const prefix=`${tenantIds[0]}/${materialId}`;
       const listed=await serviceClient.storage.from('homework-private').list(prefix,{limit:1000});assert.equal(listed.error,null);
       for(const file of listed.data || []) if(file.id) privatePaths.push(`${prefix}/${file.name}`);
     }
-    if(privatePaths.length) {const removed=await serviceClient.storage.from('homework-private').remove(privatePaths);assert.equal(removed.error,null);}
+    if(privatePaths.length) {const removed=await serviceClient.storage.from('homework-private').remove([...new Set(privatePaths)]);assert.equal(removed.error,null);}
+    // Historical FKs use RESTRICT; remove only this test's submissions first.
+    for(const tenantId of tenantIds) {const removed=await serviceClient.from('homework_submissions').delete().eq('tenant_id',tenantId);assert.equal(removed.error,null);}
     if(materialIds.length) {const removed=await serviceClient.from('study_materials').delete().in('id',materialIds);assert.equal(removed.error,null);}
     for (const tenantId of tenantIds) {
       const removed=await serviceClient.from('students').delete().eq('tenant_id',tenantId); assert.equal(removed.error,null);
@@ -27,6 +31,12 @@ test('LIVE: actual authenticated HTTP requests preserve tenant isolation with se
     }
     for(const id of authIds) {const removed=await serviceClient.auth.admin.deleteUser(id);assert.equal(removed.error,null);}
     const tenants=await serviceClient.from('tenants').delete().in('id',tenantIds);assert.equal(tenants.error,null);
+    } finally {
+      if(server) {
+        server.closeAllConnections();
+        await new Promise(resolve=>server.close(resolve));
+      }
+    }
   });
   const tenants=await serviceClient.from('tenants').insert(tenantIds.map((id,i)=>({id,name:`isolated-audit-${i}`,subscription_status:'active'})));
   assert.equal(tenants.error,null);
@@ -44,8 +54,7 @@ test('LIVE: actual authenticated HTTP requests preserve tenant isolation with se
     }
   }
   const {createApp}=await import('../dist/app.js');
-  const server=createApp().listen(0,'127.0.0.1');await once(server,'listening');
-  t.after(()=>new Promise(resolve=>server.close(resolve)));
+  server=createApp().listen(0,'127.0.0.1');await once(server,'listening');
   const base=`http://127.0.0.1:${server.address().port}/api/students`;
   const headers={Authorization:`Bearer ${tokenA}`,'Content-Type':'application/json'};
   const own=await fetch(`${base}/${students[0].id}`,{headers});assert.equal(own.status,200);
