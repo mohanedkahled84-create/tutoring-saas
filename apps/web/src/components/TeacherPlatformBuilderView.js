@@ -16,20 +16,9 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   // Display entitlement comes from the API; saving is also checked by the server.
   const isPro = Boolean(plan.is_pro);
 
-  // Determine published state
-  const tenantKey = user?.tenant_id || 'active';
-  let localPublished = false;
-  try {
-    localPublished = localStorage.getItem(`centrly_platform_published_${tenantKey}`) === 'true' ||
-                     localStorage.getItem('centrly_platform_published') === 'true';
-  } catch (_) {}
-
-  const isPublished = Boolean(
-    settings &&
-    settings.subdomain &&
-    (settings.is_published === true || localPublished === true) &&
-    settings.is_active !== false
-  );
+  // Canonical records use is_active; legacy records may also carry is_published.
+  const isPublished = Boolean(settings.subdomain && settings.is_active !== false &&
+    (settings.is_published === true || settings.is_active === true));
 
   const subdomain = settings.subdomain || "";
   const displayTitle = (settings.display_title || '').trim() || (user.name ? `منصة ${user.name}` : "منصة الأستاذ");

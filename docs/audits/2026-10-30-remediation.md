@@ -16,6 +16,7 @@ This change implements fixes from the teacher-platform audit. It does not add Go
 - Fix `/portal` short-link resolution, teacher-host detection on local/preview hosts, auth label associations, mobile select sizing, coarse-pointer buttons and unnecessary fetches on the paper-exam coming-soon page.
 - Preserve authenticated identity in frontend storage instead of rewriting tenant/role/name based on email. Pin the patched `qs` version and keep the lockfile.
 - Add repository/HTTP/renderer regressions, actual Supabase private-storage tests, and authenticated HTTP isolation checks against the dedicated test database. CI fails on skipped tests and blocks fetches to production or other external hosts.
+- Reconcile 11 nullable runtime columns missing from the historical test-schema replay, using additive migrations matching production. The first real authenticated HTTP test failed on missing `users.full_name`; its expected success response was retained while the schema gap was repaired. Expanded the same live test to cover actual homework upload, signed teacher and portal reads, and failed replacement preserving the original file.
 
 ## Verification interpretation
 
@@ -26,7 +27,7 @@ Two existing report-test expectations are strengthened to reflect the corrected 
 ## Release order — required
 
 1. Confirm the PR's actual CI result, including all live checks. Record backend and frontend versions; do not infer deployment from a green CI badge.
-2. Apply `20261030173319_homework_private_storage.sql` and `20261030175430_preserve_existing_platform_owner.sql`. The private bucket has no browser object policies. The canonical platform migration preserves the published legacy theme and leaves any existing canonical record untouched.
+2. Apply the four `20261030` migrations in order: private storage, legacy-platform preservation, auth-profile columns and runtime columns. The private bucket has no browser object policies. The canonical platform migration preserves the published legacy theme and leaves any existing canonical record untouched. The column additions use `IF NOT EXISTS`, preserving production columns and their values.
 3. Deploy the backend and verify authenticated teacher reads, public portal payloads, signed assignment URLs, replacement uploads, and existing public teaching assets on authorized test data. Verify the correct service key remains configured.
 4. Run `scripts/migrate-homework-private.mjs` first without flags. Provide `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and an explicitly matching `HOMEWORK_MIGRATION_PROJECT_REF` through the execution environment, never command text or chat.
 5. With a new backup directory outside the repository, run `--apply`. The script writes original references and actual file bytes to that directory, verifies private copies and signed reads, then conditionally updates only matching unchanged references. Nothing is deleted in this mode.

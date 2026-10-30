@@ -14,6 +14,11 @@ test('LIVE: actual authenticated HTTP requests preserve tenant isolation with se
   const tenantIds=[randomUUID(),randomUUID()]; const students=[]; const authIds=[];
   const materialIds=[]; const privatePaths=[];
   t.after(async()=>{
+    for(const materialId of materialIds) {
+      const prefix=`${tenantIds[0]}/${materialId}`;
+      const listed=await serviceClient.storage.from('homework-private').list(prefix,{limit:1000});assert.equal(listed.error,null);
+      for(const file of listed.data || []) if(file.id) privatePaths.push(`${prefix}/${file.name}`);
+    }
     if(privatePaths.length) {const removed=await serviceClient.storage.from('homework-private').remove(privatePaths);assert.equal(removed.error,null);}
     if(materialIds.length) {const removed=await serviceClient.from('study_materials').delete().in('id',materialIds);assert.equal(removed.error,null);}
     for (const tenantId of tenantIds) {
