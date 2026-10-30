@@ -1,60 +1,22 @@
-import { registerCameraScannerActions } from './components/CameraScannerModal.js?v=1.0.0';
-import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=1.0.0';
-import { registerStudentImportActions } from './components/StudentImportModal.js?v=1.0.0';
-import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=1.0.0';
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
 import { renderSidebar } from './components/Sidebar.js?v=5.2.1';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.1';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.9.21';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
-import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.3.0';
-import { renderTeacherCalendar, registerTeacherCalendarActions } from './components/TeacherCalendar.js';
-import { renderSessionsView, registerSessionsActions } from './components/SessionsView.js';
-import { renderStudentsView, registerStudentsActions } from './components/StudentsView.js?v=4.8.17';
-import { renderGroupsView, registerGroupsActions } from './components/GroupsView.js?v=4.8.12';
-import { renderMessageLogsView, registerMessageLogsActions } from './components/MessageLogsView.js';
-import { renderParentPortalView } from './components/ParentPortalView.js?v=6.0.0';
-import { renderStudentPortalView } from './components/StudentPortalView.js?v=8.0.0';
 import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=8.1.0';
-import { renderHomeworkReviewView, registerHomeworkActions } from './components/HomeworkReviewView.js?v=4.0.2';
-import { renderCenterOwnerDashboard, registerCenterOwnerActions } from './components/CenterOwnerDashboard.js?v=4.8.1';
-import { renderStudentReportsView, registerStudentReportsActions } from './components/StudentReportsView.js?v=2.1.0';
-import { renderRiskWatchlistView, registerRiskWatchlistActions } from './components/RiskWatchlistView.js';
-import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
-import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
-import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=4.0.0';
-import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=9.11.0';
-import { renderCenterSessionsView } from './components/CenterSessionsView.js';
-import { renderCenterTeachersView } from './components/CenterTeachersView.js';
-import { renderCenterAssistantsView } from './components/CenterAssistantsView.js';
-import { renderCenterRoomsView } from './components/CenterRoomsView.js';
-import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
 import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.8.7';
-import { renderMaterialsView, registerMaterialsActions } from './components/MaterialsView.js?v=3.1.0';
-import { renderTeacherAssistantsView, registerTeacherAssistantsActions } from './components/TeacherAssistantsView.js?v=2.1.0';
-import { renderBusinessOwnerDashboard, registerBusinessOwnerActions } from './components/BusinessOwnerDashboard.js?v=5.2.0';
-import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
-import { renderAdminTenantsView } from './components/AdminTenantsView.js?v=2.0.0';
-import { renderAdminOutreachView } from './components/AdminOutreachView.js?v=1.0.1';
-import { renderTeacherSettingsView, registerTeacherSettingsActions } from './components/TeacherSettingsView.js?v=4.9.9';
-import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=4.7.6';
-import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=1.0.0';
-import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.4.0';
-import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=1.8.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
-import { generateBarcode128Svg, openFullscreenBarcodeModal, downloadStudentCardAsPng, renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml, cleanTeacherNameString } from './utils/studentBarcodeCard.js?v=4.9.21';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
 import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
+
+let renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView;
 
 class CentrlyApp {
   isPlatformAdmin(user = this.user) {
     if (!user) return false;
-    if (user.role === 'admin' || user.is_superadmin) return true;
-    const email = (user.email || '').toLowerCase();
-    const adminEmails = ['mohanedkahled84@gmail.com', 'mohanedkhaled84@gmail.com', 'mohanedkhaled2367@gmail.com', 'teacher@centrly.app'];
-    return adminEmails.includes(email);
+    return user.role === 'admin';
   }
 
   constructor() {
@@ -180,35 +142,36 @@ class CentrlyApp {
     this.currentTheme = 'light';
     this.restoreCachedData();
     this.initTheme();
-    registerMaterialsActions(this);
-    registerVideoLessonsActions(this);
-    registerTeacherPlatformActions(this);
-    registerCouponsActions(this);
-    registerTeacherAssistantsActions(this);
-    registerHomeworkActions(this);
-    registerTeacherSettingsActions(this);
-    registerBusinessOwnerActions(this);
-    registerStudentReportsActions(this);
-    registerRiskWatchlistActions(this);
-    registerTeacherQuizzesActions(this);
-    registerStudentCardsActions(this);
-    registerBillingActions(this);
-    registerWhatsAppSettingsActions(this);
-    registerCenterOwnerActions(this);
-    registerSecurityPinActions(this);
-    registerStudentsActions(this);
-    registerGroupsActions(this);
     registerOnboardingActions(this);
-    registerWhatsAppCenterActions(this);
-    registerStudentImportActions(this);
-    registerTeacherCalendarActions(this);
-    registerPortalDispatchActions(this);
-    registerCameraScannerActions(this);
-    registerMessageLogsActions(this);
-    registerSessionsActions(this);
     registerAuthActions(this);
     registerLandingActions(this);
     registerUnifiedPortalActions(this);
+  }
+
+  async ensureWorkspaceModules() {
+    if (this.workspaceReady) return;
+    if (!this.workspaceModulesPromise) {
+      this.workspaceModulesPromise = import('./workspace.js?v=1.0.0').then(module => {
+        ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView } = module);
+        module.registerWorkspaceActions(this);
+        this.workspaceReady = true;
+      }).catch(error => {
+        this.workspaceModulesPromise = null;
+        throw error;
+      });
+    }
+    return this.workspaceModulesPromise;
+  }
+
+  renderWorkspaceLoadError() {
+    window.__centrlyLoaded = true;
+    const target = this.getAppEl();
+    if (target) target.innerHTML = `<main dir="rtl" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:var(--centrly-surface)">
+      <section class="card" role="alert" style="max-width:440px;width:100%;padding:2rem;box-shadow:var(--shadow-lg)">
+        <h1 style="font-size:1.5rem">تعذر تحميل الصفحة</h1>
+        <p>تأكد من الاتصال بالإنترنت، ثم اضغط إعادة المحاولة.</p>
+        <button class="btn btn-primary" style="min-height:44px" onclick="window.location.reload()">إعادة المحاولة</button>
+      </section></main>`;
   }
 
   initTheme() {
@@ -549,7 +512,7 @@ class CentrlyApp {
 
   async prefetchCoreData() {
     if (!authService.isAuthenticated()) return;
-    const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+    const isAdmin = this.user?.role === 'admin';
     if (isAdmin) {
       try {
         const [ovRes, proofsRes, tenantsRes] = await Promise.all([
@@ -620,7 +583,7 @@ class CentrlyApp {
     // Offline / Online network listeners for resilient attendance recording
     window.addEventListener('online', () => {
       this.showToast('عادت شبكة الإنترنت! جاري مزامنة الحضور المسجل مع السيرفر...', 'info');
-      this.flushOfflineAttendanceQueue();
+      if (typeof this.flushOfflineAttendanceQueue === 'function') this.flushOfflineAttendanceQueue();
       if (this.sessionState?.id && this.sessionState.status === 'in_progress') {
         this.pollLiveSessionUpdates();
       }
@@ -916,6 +879,12 @@ class CentrlyApp {
       }
     }
 
+    try {
+      await this.ensureWorkspaceModules();
+    } catch (error) {
+      this.renderWorkspaceLoadError();
+      return;
+    }
     this.restoreSessionState();
     this.flushOfflineAttendanceQueue();
 
@@ -1201,22 +1170,23 @@ class CentrlyApp {
     await this.loadRouteData(route);
   }
 
-  async loadRouteData(route) {
+  async loadRouteData(route, retried = false) {
     if (this.routeErrors) this.routeErrors[route] = null;
     try {
+      await this.ensureWorkspaceModules();
       switch (route) {
         case 'admin-dashboard': {
           try {
             const [ovRes, proofsRes, tenantsRes] = await Promise.all([
-              request('/admin/overview').catch(err => { if (err?.status === 401) throw err; return {}; }),
-              request('/admin/payment-proofs').catch(err => { if (err?.status === 401) throw err; return { payment_proofs: [] }; }),
-              request('/admin/tenants').catch(err => { if (err?.status === 401) throw err; return { tenants: [] }; }),
+              request('/admin/overview'),
+              request('/admin/payment-proofs'),
+              request('/admin/tenants'),
             ]);
             this.adminOverviewData = this.buildAdminOverviewData(ovRes, proofsRes, tenantsRes);
             this.adminProofsData = proofsRes;
             this.adminTenantsData = tenantsRes;
             this.saveCache('adminOverviewData', this.adminOverviewData);
-            await this.loadCoupons().catch(() => {});
+            await this.loadCoupons();
           } catch (err) {
             console.warn('admin-dashboard load error', err);
             if (err?.status === 401) {
@@ -1225,7 +1195,7 @@ class CentrlyApp {
               this.renderAuth('login');
               return;
             }
-            this.adminOverviewData = this.adminOverviewData || {};
+            throw err;
           }
           this.routeLoadingState['admin-dashboard'] = false;
           this.dataLoadedState['admin-dashboard'] = true;
@@ -1238,7 +1208,7 @@ class CentrlyApp {
             this.adminProofsData = res || { payment_proofs: [] };
           } catch (err) {
             console.warn('admin-proofs load error', err);
-            this.adminProofsData = { payment_proofs: [] };
+            throw err;
           }
           this.routeLoadingState['admin-proofs'] = false;
           this.dataLoadedState['admin-proofs'] = true;
@@ -1251,7 +1221,7 @@ class CentrlyApp {
             this.adminTenantsData = res || { tenants: [] };
           } catch (err) {
             console.warn('admin-tenants load error', err);
-            this.adminTenantsData = { tenants: [] };
+            throw err;
           }
           this.routeLoadingState['admin-tenants'] = false;
           this.dataLoadedState['admin-tenants'] = true;
@@ -1264,11 +1234,11 @@ class CentrlyApp {
             if (res && res.leads) {
               this.adminOutreachData = res;
             } else {
-              this.adminOutreachData = { leads: [], metrics: { total: 606, ready: 606, sent: 0, replied: 0, interested: 0, converted: 0, not_interested: 0 } };
+              this.adminOutreachData = { leads: [], metrics: { total: 0, ready: 0, sent: 0, replied: 0, interested: 0, converted: 0, not_interested: 0 } };
             }
           } catch (err) {
             console.warn('admin-outreach load error', err);
-            this.adminOutreachData = { leads: [], metrics: { total: 606, ready: 606, sent: 0, replied: 0, interested: 0, converted: 0, not_interested: 0 } };
+            throw err;
           }
           this.routeLoadingState['admin-outreach'] = false;
           this.dataLoadedState['admin-outreach'] = true;
@@ -1276,7 +1246,7 @@ class CentrlyApp {
           break;
         }
         case 'coupons': {
-          if (this.user?.role !== 'admin' && !this.user?.is_superadmin) {
+          if (this.user?.role !== 'admin') {
             this.navigate('dashboard');
             break;
           }
@@ -1285,10 +1255,13 @@ class CentrlyApp {
           break;
         }
         case 'calendar': {
+          const weekOffset = Number(this.calendarState.weekOffset) || 0;
+          const range = this.getCalendarRequestRange();
           const [calRes, grpRes] = await Promise.all([
-            request('/sessions/calendar?from=2026-09-01&to=2026-09-30').catch(() => ({ sessions: [] })),
+            request(`/sessions/calendar?from=${range.from}&to=${range.to}`),
             request('/groups'),
           ]);
+          if (weekOffset !== (Number(this.calendarState.weekOffset) || 0)) break;
           const rawSessions = Array.isArray(calRes) ? calRes : (calRes.sessions || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           
@@ -1394,9 +1367,9 @@ class CentrlyApp {
         case 'center-dashboard': {
           const period = this.centerDashboardState.period || new Date().toISOString().slice(0, 7);
           const [rollupRes, roomsRes, teachersRes] = await Promise.all([
-            request(`/centers/financials/rollup?period=${period}`).catch(() => null),
-            request('/centers/rooms').catch(() => []),
-            request('/centers/teachers').catch(() => []),
+            request(`/centers/financials/rollup?period=${period}`),
+            request('/centers/rooms'),
+            request('/centers/teachers'),
           ]);
           if (rollupRes) this.centerDashboardState.rollup = rollupRes;
           if (roomsRes) this.centerDashboardState.rooms = Array.isArray(roomsRes) ? roomsRes : (roomsRes.rooms || []);
@@ -1406,10 +1379,10 @@ class CentrlyApp {
         }
         case 'center-sessions': {
           const [activeRes, grpRes, roomsRes, teachersRes] = await Promise.all([
-            request('/sessions?status=in_progress').catch(() => []),
+            request('/sessions?status=in_progress'),
             request('/groups'),
-            request('/centers/rooms').catch(() => []),
-            request('/centers/teachers').catch(() => []),
+            request('/centers/rooms'),
+            request('/centers/teachers'),
           ]);
           const activeList = Array.isArray(activeRes) ? activeRes : (activeRes?.sessions || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes?.groups || []);
@@ -1444,7 +1417,7 @@ class CentrlyApp {
         }
         case 'center-teachers': {
           const [teachersRes, grpRes] = await Promise.all([
-            request('/centers/teachers').catch(() => []),
+            request('/centers/teachers'),
             request('/groups'),
           ]);
           this.centerTeachers = Array.isArray(teachersRes) ? teachersRes : (teachersRes?.teachers || []);
@@ -1454,8 +1427,8 @@ class CentrlyApp {
         }
         case 'center-assistants': {
           const [assistantsRes, teachersRes] = await Promise.all([
-            request('/centers/assistants').catch(() => []),
-            request('/centers/teachers').catch(() => []),
+            request('/centers/assistants'),
+            request('/centers/teachers'),
           ]);
           this.centerAssistants = Array.isArray(assistantsRes) ? assistantsRes : (assistantsRes?.assistants || []);
           this.centerTeachers = Array.isArray(teachersRes) ? teachersRes : (teachersRes?.teachers || []);
@@ -1463,7 +1436,7 @@ class CentrlyApp {
           break;
         }
         case 'center-rooms': {
-          const roomsRes = await request('/centers/rooms').catch(() => []);
+          const roomsRes = await request('/centers/rooms');
           this.centerRooms = Array.isArray(roomsRes) ? roomsRes : (roomsRes?.rooms || []);
           this.renderMainContent();
           break;
@@ -1501,7 +1474,7 @@ class CentrlyApp {
           }
           if (this.quizzesState.selectedGroupId) {
             try {
-              const groupRes = await request(`/groups/${this.quizzesState.selectedGroupId}`).catch(() => null);
+              const groupRes = await request(`/groups/${this.quizzesState.selectedGroupId}`);
               if (groupRes?.students && Array.isArray(groupRes.students)) {
                 groupRes.students.forEach(st => {
                   st.group_id = this.quizzesState.selectedGroupId;
@@ -1537,7 +1510,7 @@ class CentrlyApp {
             const [studRes, grpRes, billingRes] = await Promise.all([
               request('/students'),
               request('/groups'),
-              request('/billing/status').catch(() => null),
+              request('/billing/status'),
             ]);
             this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
             this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -1589,8 +1562,8 @@ class CentrlyApp {
             (!this.students || this.students.length === 0) ? request('/students') : Promise.resolve(this.students),
           ];
           if (isCenterOwner) {
-            promises.push(request('/centers/teachers').catch(() => ({ teachers: [] })));
-            promises.push(request('/centers/rooms').catch(() => ({ rooms: [] })));
+            promises.push(request('/centers/teachers'));
+            promises.push(request('/centers/rooms'));
           }
 
           const [grpRes, studRes, teachersRes, roomsRes] = await Promise.all(promises);
@@ -1631,10 +1604,10 @@ class CentrlyApp {
           const [studRes, grpRes, riskRes, repRes, astRes, actEarnRes] = await Promise.all([
             request('/students'),
             request('/groups'),
-            request('/at-risk').catch(() => ({ watchlist: [] })),
-            request(`/reports/monthly?month=${currentMonth}&year=${currentYear}`).catch(() => null),
+            request('/at-risk'),
+            request(`/reports/monthly?month=${currentMonth}&year=${currentYear}`),
             request('/assistants'),
-            request(`/sessions/actual-earnings?month=${currentMonth}&year=${currentYear}`).catch(() => null),
+            request(`/sessions/actual-earnings?month=${currentMonth}&year=${currentYear}`),
           ]);
           const students = Array.isArray(studRes) ? studRes : (studRes.students || []);
           const groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -1702,7 +1675,7 @@ class CentrlyApp {
             ? repRes.leaderboard.slice(0, 5)
             : [];
 
-          await this.loadCoupons().catch(() => {});
+          await this.loadCoupons();
 
           this.dashboardData = {
             stats: {
@@ -1730,7 +1703,7 @@ class CentrlyApp {
         }
         case 'risk-watchlist': {
           const [riskRes, studRes, grpRes] = await Promise.all([
-            request('/at-risk/watchlist').catch(() => request('/at-risk')).catch(() => ({ watchlist: [] })),
+            request('/at-risk/watchlist').catch(err => { if (err?.status === 404) return request('/at-risk'); throw err; }),
             (!this.students || this.students.length === 0) ? request('/students') : Promise.resolve(this.students),
             (!this.groups || this.groups.length === 0) ? request('/groups') : Promise.resolve(this.groups),
           ]);
@@ -1769,11 +1742,11 @@ class CentrlyApp {
           try {
             const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
             const [billingRes, quotaRes, statusRes, tplRes, meRes] = await Promise.all([
-              request('/billing/status').catch(() => null),
-              request('/whatsapp/quota').catch(() => ({})),
-              request(`/whatsapp/status${teacherParam}`).catch(() => ({ status: 'disconnected' })),
-              request('/templates').catch(() => ({ templates: [] })),
-              request('/auth/me').catch(() => null),
+              request('/billing/status'),
+              request('/whatsapp/quota'),
+              request(`/whatsapp/status${teacherParam}`),
+              request('/templates'),
+              request('/auth/me'),
             ]);
             if (meRes?.user) {
               this.user = { ...this.user, ...meRes.user };
@@ -1786,7 +1759,7 @@ class CentrlyApp {
             let qrRes = null;
             if (statusRes?.status !== 'connected') {
               try {
-                qrRes = await request(`/whatsapp/qr${teacherParam}`).catch(() => null);
+                qrRes = await request(`/whatsapp/qr${teacherParam}`);
               } catch (err) {
                 console.warn('Initial QR load failed:', err);
               }
@@ -1800,7 +1773,7 @@ class CentrlyApp {
               pairing_code: qrRes?.pairing_code || null,
               templates: tplRes?.templates || [],
             };
-          } catch (_) {}
+          } catch (err) { throw err; }
           this.renderMainContent();
           if (this.whatsappState?.status !== 'connected' && this.settingsState?.activeTab === 'whatsapp') {
             this.startWhatsAppStatusPolling('settings');
@@ -1854,10 +1827,10 @@ class CentrlyApp {
           const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
           if (isCenter) {
             const period = this.centerDashboardState.period || new Date().toISOString().slice(0, 7);
-            const rollupRes = await request(`/centers/financials/rollup?period=${period}`).catch(() => null);
+            const rollupRes = await request(`/centers/financials/rollup?period=${period}`);
             if (rollupRes) this.centerDashboardState.rollup = rollupRes;
           } else {
-            const logsRes = await request('/whatsapp/logs').catch(() => request('/activity-logs')).catch(() => []);
+            const logsRes = await request('/whatsapp/logs').catch(err => { if (err?.status === 404) return request('/activity-logs'); throw err; });
             this.messageLogs = Array.isArray(logsRes) ? logsRes : (logsRes?.logs || []);
           }
           this.renderMainContent();
@@ -1889,7 +1862,7 @@ class CentrlyApp {
           // Cross-Device Real-Time Sync:
           // 1. If NO active session in local state, check server for in_progress session and auto-resume it!
           if (!this.sessionState?.id) {
-            const todaySessions = await request('/sessions?status=in_progress').catch(() => []);
+            const todaySessions = await request('/sessions?status=in_progress');
             const activeList = Array.isArray(todaySessions) ? todaySessions : (todaySessions?.sessions || []);
             this.ongoingServerSessions = activeList;
             if (activeList.length > 0) {
@@ -2073,12 +2046,12 @@ class CentrlyApp {
         err.message.includes('401')
       );
 
-      if (isAuthErr) {
+      if (isAuthErr && !retried) {
         // Try refreshing token once and re-attempting route load
-        const refreshed = await authService.tryRefreshSession();
+        const refreshed = await authService.tryRefreshSession().catch(() => false);
         if (refreshed) {
           try {
-            await this.loadRouteData(route);
+            await this.loadRouteData(route, true);
             return;
           } catch (_) {}
         }
@@ -2095,6 +2068,14 @@ class CentrlyApp {
   }
 
   renderApp(force = false) {
+    if (!this.workspaceReady) {
+      const target = this.getAppEl();
+      if (target) target.innerHTML = this.renderRouteLoading();
+      this.ensureWorkspaceModules().then(() => this.renderApp(force)).catch(() => {
+        this.renderWorkspaceLoadError();
+      });
+      return;
+    }
     window.__centrlyLoaded = true;
     const appEl = this.getAppEl();
     const mainContentEl = document.getElementById('mainContent');
@@ -2313,7 +2294,7 @@ class CentrlyApp {
         );
       }
       case 'activity-logs': {
-        const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+        const isAdmin = this.user?.role === 'admin';
         if (isAdmin) {
           return renderMessageLogsView(this.messageLogs);
         }
@@ -2324,7 +2305,7 @@ class CentrlyApp {
         return renderMessageLogsView(this.messageLogs);
       }
       default: {
-        const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+        const isAdmin = this.user?.role === 'admin';
         if (isAdmin) {
           return renderBusinessOwnerDashboard(this.adminOverviewData || {});
         }

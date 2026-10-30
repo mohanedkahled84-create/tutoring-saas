@@ -645,7 +645,7 @@ export function registerAuthActions(app) {
         }
       } catch (_) {}
 
-      const isAdmin = this.user?.role === 'admin' || this.user?.is_superadmin;
+      const isAdmin = this.user?.role === 'admin';
       const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
       const adminRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'coupons', 'activity-logs'];
       const redirectRoute = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_redirect_route')) ||

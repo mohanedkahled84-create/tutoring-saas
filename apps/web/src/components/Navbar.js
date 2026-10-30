@@ -2,9 +2,7 @@ import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
 export function renderNavbar(user, activeSessionSummary = null) {
-  const adminEmails = ['mohanedkahled84@gmail.com', 'mohanedkhaled84@gmail.com', 'mohanedkhaled2367@gmail.com', 'teacher@centrly.app'];
-  const userEmail = (user?.email || '').toLowerCase();
-  const isAdmin = user?.role === 'admin' || user?.is_superadmin || adminEmails.includes(userEmail);
+  const isAdmin = user?.role === 'admin';
 
   // Resolve raw name prioritizing full_name, name, teacher_name
   let rawName = (user?.full_name || user?.name || user?.teacher_name || '').trim();
@@ -12,10 +10,8 @@ export function renderNavbar(user, activeSessionSummary = null) {
 
   // If no name is set, or if it matches the email prefix (e.g. mohanedkahled84)
   if (!rawName || rawName === emailPrefix) {
-    if (adminEmails.includes(userEmail)) {
-      rawName = 'مهند خالد';
-    } else if (isAdmin) {
-      rawName = 'مهند خالد';
+    if (isAdmin) {
+      rawName = 'إدارة المنظومة';
     } else if (user?.tenant_name) {
       const cleanTenant = user.tenant_name.replace(/\s*-\s*منظومة تعليمية.*/, '').trim();
       rawName = cleanTenant || 'أستاذ المادة';

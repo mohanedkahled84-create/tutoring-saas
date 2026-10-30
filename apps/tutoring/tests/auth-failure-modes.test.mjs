@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { authenticateUser, authClientResolver, requireAdmin } from "../dist/shared/middleware/auth.js";
+import { authenticateUser, authClientResolver, requireAdmin, profileHasSecurityPin } from "../dist/shared/middleware/auth.js";
+
+test('PIN profile state supports both rollout contracts and locks an unknown state',()=>{
+  assert.equal(profileHasSecurityPin({has_security_pin:false}),false);
+  assert.equal(profileHasSecurityPin({has_security_pin:true}),true);
+  assert.equal(profileHasSecurityPin({financial_pin_hash:null}),false);
+  assert.equal(profileHasSecurityPin({financial_pin_hash:'opaque'}),true);
+  assert.equal(profileHasSecurityPin({}),true);
+  assert.equal(profileHasSecurityPin(null),true);
+});
 
 function createMockReq(token) {
   return {
@@ -231,7 +240,7 @@ test("AUTH FAILURE MODES - 200 & next() called when profile exists", async () =>
   }
 });
 
-test("AUTH PLATFORM ADMIN - founder account receives admin role and passes requireAdmin", async () => {
+test("AUTH PLATFORM ADMIN - stored admin role passes requireAdmin", async () => {
   const originalPub = authClientResolver.supabasePublic;
   const originalScoped = authClientResolver.getScopedSupabaseClient;
 
@@ -248,7 +257,7 @@ test("AUTH PLATFORM ADMIN - founder account receives admin role and passes requi
         data: {
           id: "founder-1",
           tenant_id: "tenant-hq",
-          role: "owner", // DB record is 'owner'
+          role: "admin", // Administrative authority is stored in the database.
           email: "mohanedkahled84@gmail.com",
           full_name: "مهند خالد",
         },
@@ -279,6 +288,35 @@ test("AUTH PLATFORM ADMIN - founder account receives admin role and passes requi
     });
     assert.equal(roleNextCalled, true);
     assert.equal(roleRes.statusCode, 200);
+  } finally {
+    authClientResolver.supabasePublic = originalPub;
+    authClientResolver.getScopedSupabaseClient = originalScoped;
+  }
+});
+
+test("AUTH PLATFORM ADMIN - legacy email and editable metadata cannot elevate a stored owner", async () => {
+  const originalPub = authClientResolver.supabasePublic;
+  const originalScoped = authClientResolver.getScopedSupabaseClient;
+  authClientResolver.supabasePublic = { auth: { async getUser() {
+    return { data: { user: { id: 'owner-legacy', email: 'mohanedkahled84@gmail.com',
+      user_metadata: { role: 'admin', is_superadmin: true } } }, error: null };
+  } } };
+  authClientResolver.getScopedSupabaseClient = () => ({ async rpc() {
+    return { data: { id: 'owner-legacy', tenant_id: 'tenant-normal', role: 'owner',
+      email: 'mohanedkahled84@gmail.com', has_security_pin: true }, error: null };
+  } });
+  try {
+    const req = createMockReq('verified-token');
+    const res = createMockRes();
+    let authenticated = false;
+    await authenticateUser(req, res, () => { authenticated = true; });
+    assert.equal(authenticated, true);
+    assert.equal(req.user.role, 'owner');
+    assert.equal(req.user.has_security_pin, true);
+    const denied = createMockRes(); let granted = false;
+    requireAdmin(req, denied, () => { granted = true; });
+    assert.equal(granted, false);
+    assert.equal(denied.statusCode, 403);
   } finally {
     authClientResolver.supabasePublic = originalPub;
     authClientResolver.getScopedSupabaseClient = originalScoped;

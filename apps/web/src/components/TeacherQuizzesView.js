@@ -68,7 +68,7 @@ export function formatQuizTabDisplayTitle(quizNum, rawTitle) {
 export function renderTeacherQuizzesView(state = {}, groups = [], students = [], isLoading = false, hasLoaded = true, currentUser = null, currentRoute = 'online-quizzes') {
     const user = currentUser || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
   const userEmail = (user?.email || '').toLowerCase();
-  const isAdmin = user?.role === 'admin' || user?.is_superadmin;
+  const isAdmin = user?.role === 'admin';
   const isPro = isUserPro(user);
 
   // تحديد الوجهة والتبويب النشط بهدوء ووضوح
@@ -5900,7 +5900,7 @@ export function registerTeacherQuizzesActions(app) {
   app.switchQuizSubTab = async function(tabName, gradingMode) {
     const user = this.user || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
     const userEmail = (user?.email || '').toLowerCase();
-    const isAdmin = user?.role === 'admin' || user?.is_superadmin;
+    const isAdmin = user?.role === 'admin';
     const isOmarMohamadi = 
       user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' || 
       userEmail === 'mohanedabdulhalim@gmail.com' ||

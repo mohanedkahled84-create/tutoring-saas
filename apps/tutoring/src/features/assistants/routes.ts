@@ -45,11 +45,12 @@ assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Prom
       if (!rpcErr && Array.isArray(rpcData)) {
         assistants = rpcData;
       } else {
-        const { data: pubData } = await supabase
+        const { data: pubData, error: pubErr } = await supabase
           .from("assistants")
           .select("*")
           .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false });
+        if (pubErr) throw pubErr;
         assistants = Array.isArray(pubData) ? pubData : [];
       }
     }
