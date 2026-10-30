@@ -92,9 +92,10 @@ for (const path of objectPaths) {
 }
 // Delete only after ALL copies, backups, signatures and reference updates succeed.
 if (remove) {
+  const current = await client.from('homework_submissions').select('file_url').not('file_url', 'is', null);
+  if (current.error) throw new Error('Unable to verify current references; stopped cleanup');
   for (const entry of manifest) {
-    const { count, error } = await client.from('homework_submissions').select('id', { count: 'exact', head: true }).eq('file_url', `${url}/storage/v1/object/public/${source}/${entry.path}`);
-    if (error || count !== 0) throw new Error('A public reference remains; stopped cleanup');
+    if ((current.data || []).some(row => sourcePath(row.file_url) === entry.path)) throw new Error('A public reference remains; stopped cleanup');
     const deleted = await client.storage.from(source).remove([entry.path]);
     if (deleted.error) throw new Error('Cleanup failed; private data and backup retained');
   }

@@ -252,10 +252,26 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
       } catch (_) {}
     }
 
-    if (Array.isArray(portalData.materials) && portalData.student?.id && portalData.student?.tenant_id) {
+    // Older RPC payloads omit student.tenant_id. Resolve it from the verified
+    // HMAC identity or an exact legacy-token match, never a submitted tenant.
+    let fileTenantId = tenantId;
+    const fileStudentId = portalData.student?.id;
+    if (verified && verified.student_id !== fileStudentId) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "رابط المتابعة غير صالح" } });
+      return;
+    }
+    if (!fileTenantId && fileStudentId) {
+      const { data: owner, error: ownerError } = await supabase.from("students")
+        .select("tenant_id").eq("id", fileStudentId).eq("parent_portal_token", token).maybeSingle();
+      if (ownerError) throw ownerError;
+      fileTenantId = owner?.tenant_id || null;
+    }
+    if (portalData.student && fileTenantId) portalData.student.tenant_id = fileTenantId;
+    if (portalData.summary?.total_sessions === 0) portalData.summary.attendance_rate = "لا توجد بيانات";
+    if (Array.isArray(portalData.materials) && fileStudentId && fileTenantId) {
       portalData.materials = await Promise.all(portalData.materials.map(async (material: any) => ({
         ...material,
-        submission_url: await signHomeworkFile(supabase, material.submission_url, portalData.student.tenant_id, material.id, portalData.student.id),
+        submission_url: await signHomeworkFile(supabase, material.submission_url, fileTenantId!, material.id, fileStudentId),
       })));
     }
     res.setHeader("Cache-Control", "private, no-store");

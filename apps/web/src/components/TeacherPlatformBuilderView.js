@@ -592,12 +592,8 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 export function registerTeacherPlatformActions(appInstance) {
   let isSaving = false;
   let subdomainCheckTimer = null;
-  const tenantKey = appInstance?.user?.tenant_id;
-  let cachedSettings = {};
-  try {
-    cachedSettings = tenantKey ? JSON.parse(localStorage.getItem(`centrly_platform_settings_${tenantKey}`) || '{}') : {};
-  } catch (_) {}
-  let currentTheme = appInstance?.platformBuilderState?.settings?.theme_preset || cachedSettings.theme_preset || 'emerald';
+  let currentTheme = null;
+  let themeTenant = null;
 
   function notify(msg, type = 'success') {
     if (appInstance && typeof appInstance.showToast === 'function') {
@@ -847,13 +843,7 @@ export function registerTeacherPlatformActions(appInstance) {
 
     selectTheme(themeId) {
       currentTheme = themeId;
-      try {
-        localStorage.setItem('portal_theme', themeId);
-        const cached = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
-        cached.theme_preset = themeId;
-        localStorage.setItem('centrly_platform_settings', JSON.stringify(cached));
-      } catch (_) {}
-
+      themeTenant = appInstance?.user?.tenant_id;
       document.querySelectorAll('.builder-theme-btn').forEach(btn => {
         const isCurrent = btn.getAttribute('data-theme') === themeId;
         const icon = btn.querySelector('.theme-check-icon');
@@ -868,15 +858,8 @@ export function registerTeacherPlatformActions(appInstance) {
         }
       });
 
-      // Persist theme changes only through the authenticated backend API.
-      const currentSub = (document.getElementById('builderSubdomainInput')?.value || '').trim().toLowerCase();
-      const currentSettings = appInstance?.platformBuilderState?.settings;
-      if (currentSettings) {
-        request('/platform/settings', {
-          method: 'POST',
-          body: { ...currentSettings, subdomain: currentSub, theme_preset: themeId }
-        }).catch((err) => console.warn('Theme save failed; use Save Settings to retry.', err));
-      }
+      // Preview only. The visible Save action persists the complete settings.
+
     },
 
     updatePreviewText(field, val) {},
@@ -959,13 +942,15 @@ export function registerTeacherPlatformActions(appInstance) {
         return;
       }
 
+      const previous = appInstance?.platformBuilderState?.settings || {};
       const payload = {
+        ...previous,
         subdomain: rawSub,
         display_title: titleInput ? titleInput.value.trim() : '',
         subject_title: subjectInput ? subjectInput.value.trim() : '',
-        headline_text: 'بوابتك التعليمية الشاملة للتفوق والدرجة النهائية',
-        subtitle_text: 'هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.',
-        theme_preset: currentTheme || 'emerald',
+        headline_text: previous.headline_text ?? 'بوابتك التعليمية الشاملة للتفوق والدرجة النهائية',
+        subtitle_text: previous.subtitle_text ?? 'هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.',
+        theme_preset: (themeTenant === appInstance?.user?.tenant_id ? currentTheme : null) || previous.theme_preset || 'emerald',
         cutout_avatar_url: cutoutInput ? cutoutInput.value.trim() : '',
         is_published: true,
         is_active: true
@@ -986,19 +971,23 @@ export function registerTeacherPlatformActions(appInstance) {
           body: payload
         });
 
+        if (!res?.settings) throw new Error('Missing saved platform settings');
+        const savedSettings = res.settings;
+        currentTheme = null;
+        themeTenant = null;
         const activeTenantKey = appInstance?.user?.tenant_id || 'active';
-        localStorage.setItem(`centrly_platform_settings_${activeTenantKey}`, JSON.stringify(payload));
-        localStorage.setItem('centrly_platform_settings', JSON.stringify(payload));
+        localStorage.setItem(`centrly_platform_settings_${activeTenantKey}`, JSON.stringify(savedSettings));
+        localStorage.setItem('centrly_platform_settings', JSON.stringify(savedSettings));
         localStorage.setItem(`centrly_platform_published_${activeTenantKey}`, 'true');
         localStorage.setItem('centrly_platform_published', 'true');
-        localStorage.setItem('portal_theme', payload.theme_preset);
+        localStorage.setItem('portal_theme', savedSettings.theme_preset);
 
         notify('تم حفظ وتحديث إعدادات منصتك بنجاح!', 'success');
 
         if (appInstance && typeof appInstance.navigateTo === 'function') {
           appInstance.platformBuilderState = {
-            settings: payload,
-            plan: { is_pro: true }
+            ...appInstance.platformBuilderState,
+            settings: savedSettings,
           };
           appInstance.saveCache('platformBuilderState', appInstance.platformBuilderState);
           appInstance.renderMainContent();
