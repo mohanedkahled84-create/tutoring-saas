@@ -19,29 +19,7 @@ export const authService = {
           parsed = JSON.parse(session);
         }
       }
-      if (parsed) {
-        const email = (parsed.email || '').toLowerCase();
-        const adminEmails = ['mohanedkahled84@gmail.com', 'mohanedkhaled84@gmail.com', 'mohanedkhaled2367@gmail.com', 'teacher@centrly.app'];
-        if (adminEmails.includes(email)) {
-          parsed.role = 'admin';
-          parsed.is_superadmin = true;
-          parsed.name = 'مهند خالد';
-          parsed.full_name = 'مهند خالد';
-          // Preserve authenticated tenant context from backend; fallback to active tenant if unset
-          parsed.tenant_id = parsed.tenant_id || '0c67b644-ae42-49e8-975f-85b9d0af0e1b';
-          parsed.tenant_name = 'إدارة المنظومة (Centrly HQ)';
-        } else if (email === 'mohanedabdulhalim@gmail.com') {
-          // Strictly protect Mr. Omar El-Mohamady's teacher identity & tenant
-          parsed.role = 'owner';
-          parsed.is_superadmin = false;
-          parsed.name = 'مستر عمر المحمدي';
-          parsed.full_name = 'مستر عمر المحمدي';
-          parsed.teacher_name = 'مستر عمر المحمدي';
-          parsed.subject = 'فيزياء الثانوية العامة';
-          parsed.tenant_id = '0c67b644-ae42-49e8-975f-85b9d0af0e1b';
-          parsed.tenant_name = 'مستر عمر المحمدي - منظومة تعليمية';
-        }
-      }
+      // Preserve the identity and tenant returned by the authenticated server.
       return parsed;
     } catch (_) {
       return null;

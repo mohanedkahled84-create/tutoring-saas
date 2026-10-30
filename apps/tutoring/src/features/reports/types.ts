@@ -49,6 +49,8 @@ export interface MonthlyReportSummary {
   };
   leaderboard: StudentPerformanceRecord[];
   total_students: number;
+  attendance_students?: number;
+  graded_students?: number;
   average_attendance_rate: number;
   average_score: number;
 }

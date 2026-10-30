@@ -6,16 +6,6 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
   const userEmail = (user?.email || '').toLowerCase();
   const isAdmin = user?.role === 'admin' || user?.is_superadmin || adminEmails.includes(userEmail);
   const isCenterOwner = user?.role === 'center_owner' || user?.account_type === 'center';
-  const isOmarMohamadi = 
-    user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' || 
-    userEmail === 'mohanedabdulhalim@gmail.com' ||
-    userEmail.includes('omar') ||
-    userEmail.includes('mohamadi') ||
-    (user?.name || '').includes('عمر') ||
-    (user?.teacher_name || '').includes('عمر') ||
-    (user?.tenant_name || '').includes('عمر') ||
-    isAdmin;
-
   // Dedicated Executive Superadmin HQ Navigation (100% separate for the platform owner)
   const adminSections = [
     {
@@ -103,7 +93,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
         { id: 'quizzes', title: 'رصد درجات الكويزات يدوياً', icon: 'reports' },
       ],
     },
-    ...(isOmarMohamadi ? [
+    ...([
       {
         category: 'منصتي والتعليم الذكي (PRO)',
         routes: [
@@ -111,7 +101,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
           { id: 'video-lessons', title: 'فيديوهات الشرح والحل', icon: 'video', isPro: true },
         ],
       }
-    ] : []),
+    ]),
     {
       category: 'إدارة الطلاب والمجاميع وفريق العمل',
       routes: [

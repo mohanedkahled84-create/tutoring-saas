@@ -411,7 +411,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
             <div style="background: #ffffff; padding: 1rem 0.75rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
               <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">نسبة الحضور</div>
               <div style="font-size: 1.55rem; font-weight: 900; color: #10b981; margin-top: 0.2rem;">
-                ${escapeHtml(summary.attendance_rate || '100%')}
+                ${escapeHtml(summary.attendance_rate ?? 'لا توجد بيانات')}
               </div>
               <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.2rem;">
                 ${escapeHtml(summary.attended_count || 0)} حاضر / ${escapeHtml(summary.total_sessions || 0)} حصة
@@ -754,7 +754,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                             </a>
                           </div>
                         ` : `
-                          <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF أو صورة واضحة (الحد الأقصى 100MB)</span>
+                          <span style="font-size: 0.75rem; color: #94a3b8;">ارفع الحل بصيغة PDF أو صورة واضحة (الحد الأقصى 25MB)</span>
                         `}
 
                         <!-- File Upload Trigger (PDF or Images) -->

@@ -8,6 +8,8 @@ import { authRateLimiter } from "../middleware/rateLimit.js";
 import { normalizeMaterialUrl } from "../../features/materials/routes.js";
 import { mergeLegacyPortalQuizzes } from "../utils/legacyPortalQuizzes.js";
 
+import { signHomeworkFile } from "../../features/homework/files.js";
+
 export const publicRouter = Router();
 
 const quizAnswerFieldNames = new Set([
@@ -250,6 +252,13 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
       } catch (_) {}
     }
 
+    if (Array.isArray(portalData.materials) && portalData.student?.id && portalData.student?.tenant_id) {
+      portalData.materials = await Promise.all(portalData.materials.map(async (material: any) => ({
+        ...material,
+        submission_url: await signHomeworkFile(supabase, material.submission_url, portalData.student.tenant_id, material.id, portalData.student.id),
+      })));
+    }
+    res.setHeader("Cache-Control", "private, no-store");
     res.json(portalData);
   } catch (err: unknown) {
     res.status(500).json({
@@ -430,8 +439,13 @@ publicRouter.post("/portal/change-password", async (req: Request, res: Response)
   }
 
   try {
+    const identity = verifyParentPortalToken(String(req.body.token || ""));
+    if (!identity || identity.student_id !== studentId) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "يرجى تسجيل الدخول مجددًا لتغيير كلمة المرور" } });
+      return;
+    }
     const studentsService = getServices(req as AuthenticatedRequest).students;
-    await studentsService.changePortalPassword(studentId, oldPassword, newPassword);
+    await studentsService.changePortalPassword(studentId, oldPassword, newPassword, identity.tenant_id);
     res.json({ success: true, message: "تم تغيير كلمة المرور بنجاح" });
   } catch (err: unknown) {
     if (err instanceof Error) {

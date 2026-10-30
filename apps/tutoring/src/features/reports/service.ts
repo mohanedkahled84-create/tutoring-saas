@@ -54,16 +54,18 @@ export class ReportsService {
 
     // 4. Compute aggregate stats
     const totalStudents = rankedLeaderboard.length;
+    const attendanceStudents = rankedLeaderboard.filter(s => s.total_sessions > 0);
+    const gradedStudents = rankedLeaderboard.filter(s => s.total_quizzes > 0);
     const avgAttendance =
-      totalStudents > 0
+      attendanceStudents.length > 0
         ? Math.round(
-            rankedLeaderboard.reduce((acc, s) => acc + s.attendance_rate, 0) / totalStudents
+            attendanceStudents.reduce((acc, s) => acc + s.attendance_rate, 0) / attendanceStudents.length
           )
         : 0;
     const avgScore =
-      totalStudents > 0
+      gradedStudents.length > 0
         ? Math.round(
-            (rankedLeaderboard.reduce((acc, s) => acc + s.average_score, 0) / totalStudents) * 10
+            (gradedStudents.reduce((acc, s) => acc + s.average_score, 0) / gradedStudents.length) * 10
           ) / 10
         : 0;
 
@@ -72,6 +74,8 @@ export class ReportsService {
       period: { month, year },
       leaderboard: filteredLeaderboard,
       total_students: totalStudents,
+      attendance_students: attendanceStudents.length,
+      graded_students: gradedStudents.length,
       average_attendance_rate: avgAttendance,
       average_score: avgScore,
     };

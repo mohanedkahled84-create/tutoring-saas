@@ -131,14 +131,14 @@ export class PlatformBuilderService {
    */
   async getTeacherSettings(
     tenantId: string,
-    isAdminOrOmar: boolean = false
+    isPlatformAdmin: boolean = false
   ): Promise<{ settings: TenantPlatformSettings | null; plan: TenantPlanDetails }> {
     const [settings, plan] = await Promise.all([
       this.repository.getByTenantId(tenantId),
       this.repository.getTenantPlan(tenantId),
     ]);
 
-    if (isAdminOrOmar) {
+    if (isPlatformAdmin) {
       plan.is_pro = true;
       plan.is_active = true;
     }
@@ -152,11 +152,11 @@ export class PlatformBuilderService {
   async savePlatformSettings(
     tenantId: string,
     dto: SavePlatformSettingsDto,
-    isAdminOrOmar: boolean = false
+    isPlatformAdmin: boolean = false
   ): Promise<TenantPlatformSettings> {
     // 1. Verify PRO plan subscription requirement
     const plan = await this.repository.getTenantPlan(tenantId);
-    if (!plan.is_pro && !isAdminOrOmar) {
+    if (!plan.is_pro && !isPlatformAdmin) {
       const err = new Error(
         "ميزة تفعيل ونشر منصتك الخاصة متاحة فقط لمشتركي باقة برو (Pro Plan)"
       );

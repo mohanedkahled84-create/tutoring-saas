@@ -114,7 +114,7 @@ test("PlatformBuilderService - PRO Tier Gating: Allows PRO tenants to publish pl
   assert.equal(publicView.display_title, "منصة مستر عمر جمال");
 });
 
-test("PlatformBuilderService - Admin / Omar bypass allows publishing without PRO tier", async () => {
+test("PlatformBuilderService - verified administrator override allows publishing without PRO tier", async () => {
   const repo = new FakePlatformBuilderRepository();
   const service = new PlatformBuilderService(repo);
 
@@ -126,11 +126,11 @@ test("PlatformBuilderService - Admin / Omar bypass allows publishing without PRO
     is_active: true,
   });
 
-  // Verify getTeacherSettings elevates is_pro for adminOrOmar
+  // Verify getTeacherSettings elevates is_pro for platformAdmin
   const settingsData = await service.getTeacherSettings(tenantId, true);
   assert.equal(settingsData.plan.is_pro, true);
 
-  // Verify savePlatformSettings succeeds when isAdminOrOmar is true
+  // Verify savePlatformSettings succeeds when isPlatformAdmin is true
   const saved = await service.savePlatformSettings(
     tenantId,
     {

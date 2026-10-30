@@ -13,25 +13,8 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   const settings = state.settings || {};
   const plan = state.plan || {};
 
-  // Check admin/teacher status
-  const adminEmails = [
-    'mohanedkahled84@gmail.com',
-    'mohanedkhaled84@gmail.com',
-    'mohanedkhaled2367@gmail.com',
-    'teacher@centrly.app',
-    'mohanedabdulhalim@gmail.com',
-  ];
-  const userEmail = (user?.email || '').toLowerCase();
-  const isAdmin = user?.role === 'admin' || Boolean(user?.is_superadmin) || adminEmails.includes(userEmail);
-  const isOmar =
-    user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' ||
-    userEmail === 'mohanedabdulhalim@gmail.com' ||
-    userEmail.includes('omar') ||
-    userEmail.includes('mohamadi') ||
-    (user?.name || '').includes('عمر') ||
-    (user?.teacher_name || '').includes('عمر');
-
-  const isPro = Boolean(plan.is_pro) || isAdmin || isOmar;
+  // Display entitlement comes from the API; saving is also checked by the server.
+  const isPro = Boolean(plan.is_pro);
 
   // Determine published state
   const tenantKey = user?.tenant_id || 'active';
@@ -48,22 +31,19 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
     settings.is_active !== false
   );
 
-  const subdomain = settings.subdomain || (isOmar ? "mr-omar" : "");
-  const displayTitle = (settings.display_title || '').trim() || (user.name ? `منصة ${user.name}` : (isOmar ? "منصة مستر عمر المحمدي" : "منصة الأستاذ"));
+  const subdomain = settings.subdomain || "";
+  const displayTitle = (settings.display_title || '').trim() || (user.name ? `منصة ${user.name}` : "منصة الأستاذ");
   
   let subjectTitle = (settings.subject_title || user.subject || '').trim();
-  // إزالة أي نص توضيحي قديم تم حفظه سابقاً مثل خبير اللغة الإنجليزية
-  if (!subjectTitle || subjectTitle.includes('الإنجليزية') || subjectTitle.includes('خبير')) {
-    subjectTitle = (user?.subject || (isOmar ? "فيزياء الثانوية العامة" : "المرحلة الثانوية")).trim();
-  }
+  if (!subjectTitle) subjectTitle = "المرحلة الثانوية";
 
   const headlineText = settings.headline_text || "بوابتك التعليمية الشاملة للتفوق والدرجة النهائية";
   const subtitleText = settings.subtitle_text || "هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.";
-  const themePreset = settings.theme_preset || cachedSettings?.theme_preset || "emerald";
+  const themePreset = settings.theme_preset || "emerald";
   const cutoutAvatarUrl = settings.cutout_avatar_url || "";
 
   // Official live URL (الرابط الرسمي على السابدومين الخاص بالمدرس)
-  const officialSubdomain = subdomain || (isOmar ? 'mr-omar' : 'yourname');
+  const officialSubdomain = subdomain || 'yourname';
   const livePlatformUrl = `https://${officialSubdomain}.centerly-eg.com`;
   const customSubdomainUrl = livePlatformUrl;
   const internalPlatformPath = `/${officialSubdomain}`;
@@ -79,62 +59,18 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
   // Resolve effective tracking students from real database
   let trackingStudents = Array.isArray(students) && students.length > 0 ? [...students] : [];
-  const hasMohaned = trackingStudents.some(s => (s.code === '1006' || s.student_code === '1006' || (s.name && s.name.includes('مهند'))));
-  if (!hasMohaned) {
-    trackingStudents.unshift({
-      id: '9da3aae0-97df-47a6-82e9-06c6139f63e5',
-      name: 'مهند خالد',
-      code: '1006',
-      student_code: '1006',
-      phone: '01123671177',
-      student_phone: '01123671177',
-      center: 'الهضبه',
-      center_name: 'الهضبه',
-      group: 'الاحد والأربع تالته ثانوي',
-      group_name: 'الاحد والأربع تالته ثانوي',
-    });
-  }
-
-  // Ensure Mohaned is placed first in the list
-  trackingStudents.sort((a, b) => {
-    const isA = a.code === '1006' || a.student_code === '1006';
-    const isB = b.code === '1006' || b.student_code === '1006';
-    if (isA && !isB) return -1;
-    if (!isA && isB) return 1;
-    return 0;
-  });
-
   // Dynamic Student Tracking Map: Combines Database server logs with any active local tracking
   let liveTrackingMap = {};
 
-  // 1. Ingest real database server logs if available
-  if (typeof window !== 'undefined' && Array.isArray(window.__centrlyServerVideoViews)) {
-    window.__centrlyServerVideoViews.forEach(v => {
-      if (v && v.student_code) {
-        liveTrackingMap[String(v.student_code).trim()] = {
-          status: (v.status === 'watching' || v.status === 'in_progress') ? 'watching' : 'watched',
-          studentName: v.student_name,
-          materialTitle: v.material_title,
-          updatedAt: v.watched_at || v.updated_at
-        };
-      }
-    });
+  // Use the tenant-scoped API response, never another account's global/local cache.
+  for (const v of (Array.isArray(state.views) ? state.views : [])) {
+    if (v?.student_code) liveTrackingMap[String(v.student_code).trim()] = {
+      status: ['watching', 'in_progress'].includes(v.status) ? 'watching' : 'watched',
+      studentName: v.student_name,
+      materialTitle: v.material_title,
+      updatedAt: v.watched_at || v.updated_at,
+    };
   }
-
-  // 2. Overlay any client-side real-time watch events from local storage
-  try {
-    const localMap = JSON.parse(localStorage.getItem('centrly_video_tracking_map') || '{}');
-    Object.keys(localMap).forEach(k => {
-      if (localMap[k]?.status) {
-        liveTrackingMap[String(k).trim()] = {
-          status: (localMap[k].status === 'watching' || localMap[k].status === 'in_progress') ? 'watching' : 'watched',
-          studentName: localMap[k].studentName || '',
-          materialTitle: localMap[k].materialTitle || '',
-          updatedAt: localMap[k].updatedAt
-        };
-      }
-    });
-  } catch (_) {}
 
   const totalStudents = trackingStudents.length;
   const watchedCount = trackingStudents.filter(s => {
@@ -146,43 +82,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
     return liveTrackingMap[code]?.status === 'watching';
   }).length;
   const notWatchedCount = totalStudents - watchedCount - watchingCount;
-  const hwSubmittedCount = 1; // Mohaned submitted homework
-
-  // Self-healing async fetch for online submissions if not already loaded
-  if (typeof window !== 'undefined' && (!window.__centrlyOnlineSubmissions || window.__centrlyOnlineSubmissions.length === 0) && !window.__fetchingCentrlyOnlineSubs) {
-    window.__fetchingCentrlyOnlineSubs = true;
-    request('/quizzes/submissions')
-      .then(res => {
-        const subs = Array.isArray(res) ? res : (res?.submissions || []);
-        if (subs && subs.length > 0) {
-          window.__centrlyOnlineSubmissions = subs;
-          if (window.centrlyApp) {
-            if (window.centrlyApp.platformBuilderState) {
-              window.centrlyApp.platformBuilderState.onlineSubmissions = subs;
-            }
-            if (window.centrlyApp.currentRoute === 'platform-builder') {
-              window.centrlyApp.renderMainContent();
-            }
-          }
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        setTimeout(() => { window.__fetchingCentrlyOnlineSubs = false; }, 3000);
-      });
-  }
-
   // فحص نتائج الكويزات الأونلاين الحقيقية فقط بدون أي نتائج ورقية أو وهمية
   function resolveStudentOnlineQuiz(studentCode, studentId) {
     const sCode = String(studentCode || '').trim();
     const sId = String(studentId || '').trim();
 
     // 1. فحص تسليمات الكويزات الأونلاين الفعلية القادمة من قاعدة البيانات مع دمج كافة المصادر
-    const rawOnlineSubs = [
-      ...(Array.isArray(state?.onlineSubmissions) ? state.onlineSubmissions : []),
-      ...(Array.isArray(window.__centrlyOnlineSubmissions) ? window.__centrlyOnlineSubmissions : []),
-      ...(Array.isArray(window.centrlyApp?.quizzesState?.onlineSubmissions) ? window.centrlyApp.quizzesState.onlineSubmissions : [])
-    ];
+    const rawOnlineSubs = Array.isArray(state.onlineSubmissions) ? state.onlineSubmissions : [];
 
     const seen = new Set();
     const onlineSubs = [];
@@ -387,19 +293,19 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
             </thead>
             <tbody id="trackingTableBody">
               ${trackingStudents.map(s => {
-                const sCode = String(s.student_code || s.code || '1006').trim();
+                const sCode = String(s.student_code || s.code || '').trim();
                 const sName = s.name || 'طالب';
-                const sCenter = s.center_name || s.center || 'الهضبه';
+                const sCenter = s.center_name || s.center || '—';
                 const sGroup = s.group_name || s.group || '';
-                const sPhone = s.student_phone || s.phone || s.parent_phone || '01123671177';
-                const sPass = s.portal_password || (sCode === '1117' ? '506438' : (sCode === '1006' ? '1006' : '123456'));
+                const sPhone = s.student_phone || s.phone || s.parent_phone || '';
+                const sPass = s.portal_password || '';
 
                 const quiz = resolveStudentOnlineQuiz(sCode, s.id);
                 const searchAttr = `${sName} ${sCode} ${sCenter} ${sGroup} ${sPhone}`.toLowerCase();
 
                 const cleanPhone = String(sPhone).replace(/\D/g, '').replace(/^2/, '').replace(/^0/, '');
                 const waText = `السلام عليكم يا ${sName}، بيانات دخولك لمنصة ${displayTitle}:\nكود الطالب: *${sCode}*\nكلمة المرور: *${sPass}*\nرابط المنصة:\n${livePlatformUrl}\nنتمنى لك دوام التوفيق والتميز!`;
-                const waUrl = `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}`;
+                const waUrl = sPhone && sCode && sPass ? `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}` : "#";
                 const studentDashboardUrl = `https://${officialSubdomain}.centerly-eg.com/dashboard?code=${encodeURIComponent(sCode)}${s.parent_portal_token ? `&token=${encodeURIComponent(s.parent_portal_token)}` : ''}`;
 
                 return `
@@ -453,7 +359,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                     <!-- 4. إجراء مباشر -->
                     <td style="padding: 10px 14px; text-align: center; vertical-align: middle;">
                       <div style="display: inline-flex; align-items: center; gap: 5px;">
-                        <a href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer"
+                        <a href="${escapeHtml(waUrl)}" aria-disabled="${!sPhone || !sCode || !sPass}" onclick="if(this.getAttribute('aria-disabled')==='true'){event.preventDefault();window.centrlyApp?.showToast('بيانات الدخول غير مكتملة؛ راجع سجل الطالب أولًا','warning');}" target="_blank" rel="noopener noreferrer"
                           style="height: 28px; padding: 0 9px; font-size: 0.73rem; font-weight: 600; background: #ffffff; color: #15803d; border: 1px solid #bbf7d0; border-radius: 5px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                           <span>إرسال الحساب</span>
@@ -475,19 +381,19 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
         <!-- Mobile Card View (<= 768px) -->
         <div class="mobile-tracking-cards">
           ${trackingStudents.map(s => {
-            const sCode = String(s.student_code || s.code || '1006').trim();
+            const sCode = String(s.student_code || s.code || '').trim();
             const sName = s.name || 'طالب';
-            const sCenter = s.center_name || s.center || 'الهضبه';
+            const sCenter = s.center_name || s.center || '—';
             const sGroup = s.group_name || s.group || '';
-            const sPhone = s.student_phone || s.phone || s.parent_phone || '01123671177';
-            const sPass = s.portal_password || (sCode === '1117' ? '506438' : (sCode === '1006' ? '1006' : '123456'));
+            const sPhone = s.student_phone || s.phone || s.parent_phone || '';
+            const sPass = s.portal_password || '';
 
             const quiz = resolveStudentOnlineQuiz(sCode, s.id);
             const searchAttr = `${sName} ${sCode} ${sCenter} ${sGroup} ${sPhone}`.toLowerCase();
 
             const cleanPhone = String(sPhone).replace(/\D/g, '').replace(/^2/, '').replace(/^0/, '');
             const waText = `السلام عليكم يا ${sName}، بيانات دخولك لمنصة ${displayTitle}:\nكود الطالب: *${sCode}*\nكلمة المرور: *${sPass}*\nرابط المنصة:\n${livePlatformUrl}\nنتمنى لك دوام التوفيق والتميز!`;
-            const waUrl = `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}`;
+            const waUrl = sPhone && sCode && sPass ? `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}` : "#";
             const studentDashboardUrl = `https://${officialSubdomain}.centerly-eg.com/dashboard?code=${encodeURIComponent(sCode)}${s.parent_portal_token ? `&token=${encodeURIComponent(s.parent_portal_token)}` : ''}`;
 
             return `
@@ -548,7 +454,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
                 <!-- Bottom Row: Action Buttons -->
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                  <a href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer"
+                  <a href="${escapeHtml(waUrl)}" aria-disabled="${!sPhone || !sCode || !sPass}" onclick="if(this.getAttribute('aria-disabled')==='true'){event.preventDefault();window.centrlyApp?.showToast('بيانات الدخول غير مكتملة؛ راجع سجل الطالب أولًا','warning');}" target="_blank" rel="noopener noreferrer"
                     style="flex: 1; height: 34px; padding: 0 10px; font-size: 0.76rem; font-weight: 700; background: #15803d; color: #ffffff; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 1px 2px rgba(21,128,61,0.15);">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                     <span>إرسال الحساب واتساب</span>
@@ -686,11 +592,12 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 export function registerTeacherPlatformActions(appInstance) {
   let isSaving = false;
   let subdomainCheckTimer = null;
+  const tenantKey = appInstance?.user?.tenant_id;
   let cachedSettings = {};
   try {
-    cachedSettings = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
-  } catch (e) {}
-  let currentTheme = cachedSettings.theme_preset || localStorage.getItem('portal_theme') || 'emerald';
+    cachedSettings = tenantKey ? JSON.parse(localStorage.getItem(`centrly_platform_settings_${tenantKey}`) || '{}') : {};
+  } catch (_) {}
+  let currentTheme = appInstance?.platformBuilderState?.settings?.theme_preset || cachedSettings.theme_preset || 'emerald';
 
   function notify(msg, type = 'success') {
     if (appInstance && typeof appInstance.showToast === 'function') {
@@ -750,6 +657,7 @@ export function registerTeacherPlatformActions(appInstance) {
           : request('/platform/video-views').catch(() => null));
         if (res && Array.isArray(res.views)) {
           window.__centrlyServerVideoViews = res.views;
+          if (appInstance?.platformBuilderState) appInstance.platformBuilderState.views = res.views;
           if (appInstance && typeof appInstance.renderMainContent === 'function') {
             appInstance.renderMainContent();
           }
@@ -961,7 +869,7 @@ export function registerTeacherPlatformActions(appInstance) {
       });
 
       // Persist theme changes only through the authenticated backend API.
-      const currentSub = (document.getElementById('builderSubdomainInput')?.value || 'mr-omar').trim().toLowerCase();
+      const currentSub = (document.getElementById('builderSubdomainInput')?.value || '').trim().toLowerCase();
       const currentSettings = appInstance?.platformBuilderState?.settings;
       if (currentSettings) {
         request('/platform/settings', {

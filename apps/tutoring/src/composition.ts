@@ -124,7 +124,7 @@ export interface AppServices {
 /**
  * Instantiates and wires repositories to services using the provided Supabase client.
  */
-export function createCompositionRoot(client?: SupabaseClient): AppServices {
+export function createCompositionRoot(client?: SupabaseClient, tenantId?: string): AppServices {
   const effectiveClient = client || supabasePublic;
   const adminClient = getServiceSupabaseClient();
   const privilegedClient = config.supabaseServiceRoleKey ? adminClient : effectiveClient;
@@ -145,7 +145,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
       config.meta.dailyLimit
     ),
     billing: new BillingService(new SupabaseBillingRepository(effectiveClient)),
-    students: new StudentsService(new SupabaseStudentsRepository(effectiveClient, privilegedClient)),
+    students: new StudentsService(new SupabaseStudentsRepository(effectiveClient, privilegedClient, tenantId)),
     groups: new GroupsService(new SupabaseGroupsRepository(effectiveClient)),
     auth: new AuthService(new SupabaseAuthRepository(effectiveClient, adminClient)),
     adminOps: new AdminOpsService(new SupabaseAdminOpsRepository(privilegedClient)),
@@ -158,6 +158,7 @@ export function createCompositionRoot(client?: SupabaseClient): AppServices {
     tenants: new SupabaseTenantsRepository(effectiveClient, privilegedClient),
     messageLogs: messageLogsRepo,
     _client: effectiveClient,
+    _tenantId: tenantId,
   };
 }
 
@@ -177,8 +178,8 @@ export function injectServices(defaultClient?: SupabaseClient) {
  */
 export function getServices(req: AuthenticatedRequest): AppServices {
   if (req.supabase) {
-    if (!req.services || (req.services as { _client?: SupabaseClient })._client !== req.supabase) {
-      req.services = createCompositionRoot(req.supabase);
+    if (!req.services || (req.services as { _client?: SupabaseClient })._client !== req.supabase || req.services._tenantId !== req.user?.tenant_id) {
+      req.services = createCompositionRoot(req.supabase, req.user?.tenant_id || undefined);
     }
     return req.services as unknown as AppServices;
   }

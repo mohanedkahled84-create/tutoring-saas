@@ -1,12 +1,14 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
-import { getServiceSupabaseClient, supabasePublic } from "../../supabase.js";
+import { getServiceSupabaseClient } from "../../supabase.js";
 import { config } from "../../shared/config/index.js";
 import { verifyParentPortalToken } from "../../shared/utils/tokens.js";
 import { logger } from "../../shared/utils/logger.js";
 import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
 import { homeworkSubmissionRateLimiter } from "../../shared/middleware/rateLimit.js";
+
+import { HOMEWORK_BUCKET, HOMEWORK_MAX_BYTES, homeworkObject, ownsHomeworkObject, signHomeworkFile } from "./files.js";
 
 export const homeworkRouter = Router();
 export const publicHomeworkRouter = Router();
@@ -76,32 +78,11 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       return;
     }
 
-    // Clean up previous uploaded file asynchronously in background (non-blocking)
-    (async () => {
-      try {
-        const { data: priorSub } = await supabase
-          .from("homework_submissions")
-          .select("file_url")
-          .eq("material_id", material_id)
-          .eq("student_id", studentId)
-          .maybeSingle();
-
-        if (priorSub?.file_url) {
-          const bucketName = "homework-submissions";
-          const marker = `/${bucketName}/`;
-          let oldPath = "";
-          if (priorSub.file_url.includes(marker)) {
-            oldPath = priorSub.file_url.substring(priorSub.file_url.indexOf(marker) + marker.length).split("?")[0];
-          } else if (!priorSub.file_url.startsWith("http")) {
-            oldPath = priorSub.file_url;
-          }
-          if (oldPath) {
-            const clientForStorage = supabasePublic || supabase;
-            await clientForStorage.storage.from(bucketName).remove([decodeURIComponent(oldPath)]).catch(() => {});
-          }
-        }
-      } catch (_) {}
-    })().catch(() => {});
+    // Keep the previous file until the replacement upload AND DB write succeed.
+    const { data: priorSub, error: priorError } = await supabase
+      .from("homework_submissions").select("file_url")
+      .eq("tenant_id", tenantId).eq("material_id", material_id).eq("student_id", studentId).maybeSingle();
+    if (priorError) throw priorError;
 
     // 3. If base64 file_data provided, inspect magic bytes & upload securely (C-05)
     if (file_data) {
@@ -123,15 +104,19 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
         res.status(400).json({ error: { code: "INVALID_FILE", message: "صيغة الملف غير صالحة" } });
         return;
       }
+      if (base64Clean.length > Math.ceil(HOMEWORK_MAX_BYTES / 3) * 4) {
+        res.status(413).json({ error: { code: "FILE_TOO_LARGE", message: "الحد الأقصى لملف الواجب 25 ميجابايت" } });
+        return;
+      }
       const fileBuffer = Buffer.from(base64Clean, "base64");
 
       const defaultFilename = contentType.startsWith("image/") ? "homework.jpg" : "homework.pdf";
-      // Enforce 100MB maximum file size & magic bytes validation (C-05)
+      // Match the private bucket limit; reject before any upload or deletion.
       const validation = validateFileUpload({
         buffer: fileBuffer,
         originalFilename: file_name || defaultFilename,
         declaredMimeType: contentType,
-        maxSizeBytes: 100 * 1024 * 1024,
+        maxSizeBytes: HOMEWORK_MAX_BYTES,
       });
 
       if (!validation.isValid || !validation.sanitizedFilename || !validation.detectedMimeType) {
@@ -141,10 +126,10 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       const storagePath = `${tenantId}/${material_id}/${studentId}_${Date.now()}_${validation.sanitizedFilename}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("homework-submissions")
+        .from(HOMEWORK_BUCKET)
         .upload(storagePath, fileBuffer, {
           contentType: validation.detectedMimeType,
-          upsert: true,
+          upsert: false,
         });
 
       if (uploadError) {
@@ -153,13 +138,15 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
         return;
       }
 
-      // Fast direct CDN public URL without extra latency
-      const { data: publicUrlData } = supabase.storage
-        .from("homework-submissions")
-        .getPublicUrl(storagePath);
-      file_url = publicUrlData.publicUrl;
+      // Persist the durable object path; signed URLs are generated when read.
+      file_url = storagePath;
     }
 
+    const incomingObject = homeworkObject(file_url);
+    if (file_url && (!incomingObject || !ownsHomeworkObject(incomingObject.path, tenantId!, material_id, studentId!))) {
+      res.status(400).json({ error: { code: "INVALID_FILE", message: "رابط الملف لا يخص هذا الطالب والواجب" } });
+      return;
+    }
     if (!file_url) {
       res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "تعذر استخراج رابط ملف الواجب" } });
       return;
@@ -210,6 +197,13 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       return;
     }
 
+    const previousObject = homeworkObject(priorSub?.file_url);
+    if (previousObject && previousObject.path !== incomingObject?.path && ownsHomeworkObject(previousObject.path, tenantId!, material_id, studentId!)) {
+      const { error: cleanupError } = await supabase.storage.from(previousObject.bucket).remove([previousObject.path]);
+      if (cleanupError) logger.warn("[Homework] Previous file cleanup failed; replacement remains saved");
+    }
+    submission.file_url = await signHomeworkFile(supabase, file_url, tenantId!, material_id, studentId!);
+    res.setHeader("Cache-Control", "private, no-store");
     res.json({ success: true, submission });
   } catch (err) {
     logger.error(`[Homework] Submit exception: ${(err as Error).message}`);
@@ -272,6 +266,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
       .from("homework_submissions")
       .select("id, material_id, student_id, file_url, file_name, file_size, status, teacher_notes, submitted_at, reviewed_at")
       .eq("material_id", currentHomework.id)
+      .eq("tenant_id", tenantId)
       .order("submitted_at", { ascending: false });
 
     if (subErr) {
@@ -314,7 +309,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
       }));
 
     // Formatted submitted students list
-    const submitted = (submissions || []).map((sub: any) => {
+    const submitted = await Promise.all((submissions || []).map(async (sub: any) => {
       const student = studentMap.get(sub.student_id) || sub.students || {};
       return {
         id: sub.id,
@@ -322,7 +317,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
         student_name: student.name || sub.students?.name || "طالب",
         student_code: student.student_code || student.code || sub.students?.student_code || sub.students?.code || "—",
         student_phone: student.student_phone || student.parent_phone || sub.students?.student_phone || sub.students?.parent_phone || "",
-        file_url: sub.file_url,
+        file_url: await signHomeworkFile(supabase, sub.file_url, tenantId, sub.material_id, sub.student_id),
         file_name: sub.file_name,
         file_size: sub.file_size,
         status: sub.status,
@@ -330,8 +325,9 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
         submitted_at: sub.submitted_at,
         reviewed_at: sub.reviewed_at,
       };
-    });
+    }));
 
+    res.setHeader("Cache-Control", "private, no-store");
     res.json({
       assignments,
       current_homework: currentHomework,
@@ -358,6 +354,10 @@ homeworkRouter.put("/submissions/:id/review", async (req: AuthenticatedRequest, 
   const submissionId = req.params.id;
   const { status, teacher_notes } = parsed.data;
   const tenantId = req.user?.tenant_id;
+  if (!tenantId) {
+    res.status(403).json({ error: { code: "NO_TENANT_CONTEXT", message: "اختر حساب المدرس أولًا" } });
+    return;
+  }
   const reviewerId = req.user?.id;
   const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
 
@@ -375,61 +375,7 @@ homeworkRouter.put("/submissions/:id/review", async (req: AuthenticatedRequest, 
       return;
     }
 
-    // 2. If approved, purge the physical file and any student files from Supabase Storage
-    if (status === "approved") {
-      try {
-        const bucketName = "homework-submissions";
-        const filesToDelete: string[] = [];
-
-        // Add the direct file URL path if present
-        if (existingSub.file_url) {
-          const marker = `/${bucketName}/`;
-          let storagePath = "";
-          if (existingSub.file_url.includes(marker)) {
-            storagePath = existingSub.file_url.substring(existingSub.file_url.indexOf(marker) + marker.length).split("?")[0];
-          } else if (!existingSub.file_url.startsWith("http")) {
-            storagePath = existingSub.file_url;
-          }
-          if (storagePath) {
-            filesToDelete.push(decodeURIComponent(storagePath));
-          }
-        }
-
-        // Also search folder ${tenantId}/${existingSub.material_id} for any files belonging to this student
-        if (tenantId && existingSub.material_id && existingSub.student_id) {
-          const folderPrefix = `${tenantId}/${existingSub.material_id}`;
-          const { data: folderFiles } = await supabasePublic.storage
-            .from(bucketName)
-            .list(folderPrefix);
-
-          if (Array.isArray(folderFiles)) {
-            for (const f of folderFiles) {
-              if (f.name && f.name.startsWith(`${existingSub.student_id}_`)) {
-                filesToDelete.push(`${folderPrefix}/${f.name}`);
-              }
-            }
-          }
-        }
-
-        // Deduplicate and remove all from storage
-        const uniquePaths = Array.from(new Set(filesToDelete));
-        if (uniquePaths.length > 0) {
-          const storageClient = supabasePublic || supabase;
-          const { error: removeErr } = await storageClient.storage
-            .from(bucketName)
-            .remove(uniquePaths);
-
-          if (removeErr) {
-            logger.warn(`[Homework] Warning removing files from storage: ${removeErr.message}`);
-          } else {
-            logger.info(`[Homework] Successfully purged ${uniquePaths.length} file(s) from storage after approval: ${uniquePaths.join(", ")}`);
-          }
-        }
-      } catch (storageErr) {
-        logger.warn(`[Homework] Error purging file from storage: ${(storageErr as Error).message}`);
-      }
-    }
-
+    // File deletion is performed only after the review has persisted successfully.
     // 3. Update homework_submissions record
     const updatePayload: any = {
       status,
@@ -455,6 +401,14 @@ homeworkRouter.put("/submissions/:id/review", async (req: AuthenticatedRequest, 
     if (error) {
       res.status(500).json({ error: { code: "DB_ERROR", message: error.message } });
       return;
+    }
+
+    if (status === "approved") {
+      const object = homeworkObject(existingSub.file_url);
+      if (object && tenantId && ownsHomeworkObject(object.path, tenantId, existingSub.material_id, existingSub.student_id)) {
+        const { error: cleanupError } = await supabase.storage.from(object.bucket).remove([object.path]);
+        if (cleanupError) logger.warn("[Homework] Approved file cleanup requires retry");
+      }
     }
 
     // 4. Update attendance records for this student to mark homework as 'done'

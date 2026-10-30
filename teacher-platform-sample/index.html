@@ -5484,6 +5484,12 @@ const MOHANED_FALLBACK_TOKEN = 'MGM2N2I2NDQtYWU0Mi00OWU4LTk3NWYtODViOWQwYWYwZTFi
         return;
       }
 
+      if (file.size > 25 * 1024 * 1024) {
+        showPortalToast('الحد الأقصى لملف الواجب 25 ميجابايت', 'warning');
+        if (fileInput) fileInput.value = '';
+        return;
+      }
+
       // 1. Immediate UI Feedback: Transform Dropzone to Active Uploading State
       if (badge) {
         badge.className = 'kpi-badge';
