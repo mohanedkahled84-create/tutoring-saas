@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { getServices } from "../../composition.js";
-import { extractToken, authenticateUser, isPlatformAdminEmail } from "../../shared/middleware/auth.js";
+import { extractToken, authenticateUser } from "../../shared/middleware/auth.js";
 import { getScopedSupabaseClient } from "../../supabase.js";
 import { authRateLimiter } from "../../shared/middleware/rateLimit.js";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
@@ -33,31 +33,17 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
     let dbUser: any = null;
     try {
       const client = getScopedSupabaseClient(result.token);
-      const { data: uRec } = await client
-        .from("users")
-        .select("id, financial_pin_hash, tenant_id, full_name, phone, subject, role")
-        .eq("id", result.user.id)
-        .maybeSingle();
+      const { data: uRec } = await client.rpc("get_user_profile", { p_user_id: result.user.id });
 
       if (uRec) {
         dbUser = uRec;
-        if (uRec.financial_pin_hash) {
+        if (uRec.has_security_pin ?? uRec.financial_pin_hash) {
           hasSecurityPin = true;
         }
       }
     } catch (_) {}
 
-    const userEmail = (result.user.email || dbUser?.email || rawIdentifier || "").toLowerCase().trim();
-    const isPlatformAdmin = isPlatformAdminEmail(userEmail);
-    const resolvedRole = isPlatformAdmin ? "admin" : (dbUser?.role || (result.user as any)?.role);
-
-    if (isPlatformAdmin && dbUser && dbUser.role !== "admin") {
-      try {
-        const client = getScopedSupabaseClient(result.token);
-        await client.from("users").update({ role: "admin" }).eq("id", result.user.id);
-        dbUser.role = "admin";
-      } catch (_) {}
-    }
+    const resolvedRole = dbUser?.role;
 
     res.json({
       message: "Login successful",
@@ -138,11 +124,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
     let hasSecurityPin = false;
     try {
       const client = getScopedSupabaseClient(result.token);
-      const { data: uRec } = await client
-        .from("users")
-        .select("id, tenant_id, role, full_name, phone, subject, teacher_id, assistant_id, financial_pin_hash")
-        .eq("id", result.user.id)
-        .maybeSingle();
+      const { data: uRec } = await client.rpc("get_user_profile", { p_user_id: result.user.id });
 
       if (uRec) {
         if (uRec.role) (result.user as any).role = uRec.role;
@@ -155,7 +137,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
         }
         if (uRec.phone) (result.user as any).phone = uRec.phone;
         if (uRec.subject) (result.user as any).subject = uRec.subject;
-        if (uRec.financial_pin_hash) {
+        if (uRec.has_security_pin ?? uRec.financial_pin_hash) {
           hasSecurityPin = true;
         }
         if (uRec.tenant_id) {
@@ -356,11 +338,7 @@ authRouter.post("/verify-email", authRateLimiter, async (req: Request, res: Resp
     if (result.token && result.user?.id) {
       try {
         const client = getScopedSupabaseClient(result.token);
-        const { data: uRec } = await client
-          .from("users")
-          .select("id, tenant_id, role, full_name, phone, subject, teacher_id, assistant_id, financial_pin_hash")
-          .eq("id", result.user.id)
-          .maybeSingle();
+        const { data: uRec } = await client.rpc("get_user_profile", { p_user_id: result.user.id });
 
         if (uRec) {
           verifiedUser = {
@@ -371,7 +349,7 @@ authRouter.post("/verify-email", authRateLimiter, async (req: Request, res: Resp
             subject: uRec.subject || (result.user as any)?.subject,
             role: uRec.role || (result.user as any)?.role,
             tenant_id: uRec.tenant_id || (result.user as any)?.tenant_id,
-            has_security_pin: Boolean(uRec.financial_pin_hash),
+            has_security_pin: Boolean(uRec.has_security_pin ?? uRec.financial_pin_hash),
           };
         }
       } catch (_) {}

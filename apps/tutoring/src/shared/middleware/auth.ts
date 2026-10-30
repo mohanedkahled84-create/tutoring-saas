@@ -3,19 +3,6 @@ import { AuthenticatedRequest, UserRole } from "../types/index.js";
 import { supabasePublic, getScopedSupabaseClient } from "../../supabase.js";
 
 // Authentication uses explicit Bearer tokens to avoid ambient-cookie CSRF.
-export const PLATFORM_ADMIN_EMAILS = [
-  "mohanedkahled84@gmail.com",
-  "mohanedkhaled84@gmail.com",
-  "mohanedkhaled2367@gmail.com",
-  "teacher@centrly.app",
-];
-
-export function isPlatformAdminEmail(email?: string | null): boolean {
-  if (!email) return false;
-  const normalized = email.toLowerCase().trim();
-  return PLATFORM_ADMIN_EMAILS.some((adminEmail) => adminEmail.toLowerCase() === normalized);
-}
-
 export function extractToken(req: AuthenticatedRequest): string | null {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
@@ -99,7 +86,7 @@ export async function authenticateUser(
     if (!userRecord && !userRowNotFound) {
       const { data: directProfile, error: userError } = await userClient
         .from("users")
-        .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, phone, subject, financial_pin_hash")
+        .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, phone, subject")
         .eq("id", userId)
         .single();
 
@@ -139,22 +126,7 @@ export async function authenticateUser(
       return;
     }
 
-    const userEmail = (email || userRecord.email || "").toLowerCase().trim();
-    const isPlatformAdmin = userRecord.role === "admin" || isPlatformAdminEmail(userEmail);
-
-    if (isPlatformAdmin && userRecord.role !== "admin") {
-      try {
-        const { error: elevateErr } = await userClient.from("users").update({ role: "admin" }).eq("id", userId);
-        if (elevateErr) {
-          console.error(`[auth.middleware] Auto-elevating founder ${userEmail} role in DB failed:`, elevateErr);
-        } else {
-          console.info(`[auth.middleware] Auto-elevated founder ${userEmail} role to admin in DB.`);
-          userRecord.role = "admin";
-        }
-      } catch (elevateErr) {
-        console.warn(`[auth.middleware] Auto-elevating founder ${userEmail} role in DB skipped/failed:`, elevateErr);
-      }
-    }
+    const isPlatformAdmin = userRecord.role === "admin";
 
     if (!userRecord.tenant_id && !isPlatformAdmin) {
       res.status(403).json({
@@ -170,7 +142,7 @@ export async function authenticateUser(
     const fullName = (userRecord as { full_name?: string | null })?.full_name || authData.user.user_metadata?.full_name || null;
     const phone = (userRecord as { phone?: string | null })?.phone || (authData.user.user_metadata?.phone as string) || null;
     const subject = (userRecord as { subject?: string | null })?.subject || (authData.user.user_metadata?.subject as string) || null;
-    const hasSecurityPin = Boolean((userRecord as { financial_pin_hash?: string | null })?.financial_pin_hash);
+    const hasSecurityPin = Boolean(userRecord.has_security_pin ?? userRecord.financial_pin_hash);
 
     req.user = {
       id: userId,
@@ -213,7 +185,7 @@ export function requireRole(allowedRoles: UserRole[]) {
       return;
     }
 
-    const isPlatformAdmin = req.user.role === "admin" || isPlatformAdminEmail(req.user.email);
+    const isPlatformAdmin = req.user.role === "admin";
     if (isPlatformAdmin) {
       return next();
     }
