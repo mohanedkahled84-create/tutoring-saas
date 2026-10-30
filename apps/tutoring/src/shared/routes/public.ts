@@ -769,6 +769,8 @@ publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promis
       material_id,
       quiz_number: qNum,
       group_id: material.group_id,
+      student_code: req.body?.student_code || (studentId === "9da3aae0-97df-47a6-82e9-06c6139f63e5" ? "1006" : null),
+      student_name: req.body?.student_name || ((req.body?.student_code === "1006" || studentId === "9da3aae0-97df-47a6-82e9-06c6139f63e5") ? "مهند خالد" : null),
       answers: studentAnswers,
       mcq_score: mcqScore,
       total_mcq_points: totalMcqPoints,

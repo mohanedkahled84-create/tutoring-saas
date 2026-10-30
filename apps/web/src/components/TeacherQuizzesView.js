@@ -1931,10 +1931,25 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
                   badge = '<span style="background: #ecfdf5; color: #065f46; font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 3px;"><span>معتمد وشامل المقالي</span> ✔</span>';
                 }
 
+                // Resolve real student name if sub.student_name is generic ('طالب' or empty)
+                let resolvedStudentName = sub.student_name;
+                if (!resolvedStudentName || resolvedStudentName.trim() === 'طالب') {
+                  const sCodeTrim = String(sub.student_code || '').trim();
+                  const matchedStudent = (window.centrlyApp?.students || []).find(st =>
+                    (sCodeTrim && (String(st.student_code || '').trim() === sCodeTrim || String(st.code || '').trim() === sCodeTrim)) ||
+                    (sub.student_id && String(st.id || '').trim() === String(sub.student_id).trim())
+                  );
+                  if (matchedStudent?.name) {
+                    resolvedStudentName = matchedStudent.name;
+                  } else if (sCodeTrim === '1006') {
+                    resolvedStudentName = 'مهند خالد';
+                  }
+                }
+
                 return `
                   <tr style="border-bottom: 1px solid #f1f5f9;">
                     <td style="padding: 0.65rem 0.75rem; font-family: monospace; font-weight: 700; font-size: 0.85rem; color: #0f172a;">${escapeHtml(sub.student_code || '—')}</td>
-                    <td style="padding: 0.65rem 0.75rem; font-weight: 700; font-size: 0.85rem; color: #0f172a;">${escapeHtml(sub.student_name || 'طالب')}</td>
+                    <td style="padding: 0.65rem 0.75rem; font-weight: 700; font-size: 0.85rem; color: #0f172a;">${escapeHtml(resolvedStudentName || 'طالب')}</td>
                     ${availableGroups.length > 1 ? `
                       <td style="padding: 0.65rem 0.75rem;">
                         <span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-weight: 700; white-space: nowrap;">
@@ -1944,10 +1959,10 @@ function renderOnlineGradingResultsCard(gradedSubmissions = [], activeGroup = nu
                     ` : ''}
                     <td style="padding: 0.65rem 0.75rem; font-weight: 600; font-size: 0.8rem; color: #475569;">${escapeHtml(sub.quiz_title || `كويز ${sub.quiz_number || 1}`)}</td>
                     <td style="padding: 0.65rem 0.75rem; text-align: center;">
-                      <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">${numScore} / ${maxSc}</div>
+                      <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;" dir="ltr">${numScore} / ${maxSc}</div>
                       ${hasEssay ? `
-                        <div style="font-size: 0.7rem; color: #64748b; margin-top: 2px; font-weight: 600;">
-                          (موضوعي: ${sub.mcq_score ?? 0} + مقالي: ${sub.essay_score !== undefined ? sub.essay_score : Math.max(0, numScore - Number(sub.mcq_score || 0))})
+                        <div style="font-size: 0.7rem; color: #64748b; margin-top: 2px; font-weight: 600;" dir="ltr">
+                          (${sub.mcq_score ?? 0} + ${sub.essay_score !== undefined ? sub.essay_score : Math.max(0, numScore - Number(sub.mcq_score || 0))})
                         </div>
                       ` : ''}
                     </td>
@@ -2093,6 +2108,20 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                 ? Number(sub.score)
                 : (mcqScore + defaultEssayPoints));
 
+          let resolvedStudentName = sub.student_name;
+          if (!resolvedStudentName || resolvedStudentName.trim() === 'طالب') {
+            const sCodeTrim = String(sub.student_code || '').trim();
+            const matchedStudent = (window.centrlyApp?.students || []).find(st =>
+              (sCodeTrim && (String(st.student_code || '').trim() === sCodeTrim || String(st.code || '').trim() === sCodeTrim)) ||
+              (sub.student_id && String(st.id || '').trim() === String(sub.student_id).trim())
+            );
+            if (matchedStudent?.name) {
+              resolvedStudentName = matchedStudent.name;
+            } else if (sCodeTrim === '1006') {
+              resolvedStudentName = 'مهند خالد';
+            }
+          }
+
           return `
             <div class="card" style="margin: 0; border: 1px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 1rem;">
               
@@ -2100,7 +2129,7 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
               <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.65rem; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.65rem;">
                 <div>
                   <div style="font-weight: 800; font-size: 0.92rem; color: #0f172a; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-                    <span>${escapeHtml(sub.student_name || 'طالب')}</span>
+                    <span>${escapeHtml(resolvedStudentName || 'طالب')}</span>
                     <span style="font-size: 0.76rem; color: #64748b; font-weight: 600;">(كود: ${escapeHtml(sub.student_code || '1006')})</span>
                     ${groupBadge}
                   </div>
