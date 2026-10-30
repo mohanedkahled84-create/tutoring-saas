@@ -10,7 +10,8 @@ import { generateParentPortalToken } from "../../shared/utils/tokens.js";
 export class SupabaseStudentsRepository implements IStudentsRepository {
   constructor(
     private readonly client: SupabaseClient,
-    private readonly privilegedClient?: SupabaseClient
+    private readonly privilegedClient?: SupabaseClient,
+    private readonly tenantScope?: string
   ) {}
 
   async list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]> {
@@ -33,10 +34,17 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     const { data, error } = await q;
     if (error) {
       // Fallback to direct select if relational join fails
-      const fallback = await this.client
+      let fallbackQuery = this.client
         .from("students")
         .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
         .order("created_at", { ascending: false });
+      if (tenantId) fallbackQuery = fallbackQuery.eq("tenant_id", tenantId);
+      if (query?.trim()) {
+        const term = query.trim();
+        fallbackQuery = fallbackQuery.or(`name.ilike.%${term}%,code.ilike.%${term}%,parent_phone.ilike.%${term}%,student_phone.ilike.%${term}%`);
+      }
+      if (groupId) fallbackQuery = fallbackQuery.eq("group_id", groupId);
+      const fallback = await fallbackQuery;
       if (fallback.error) {
         throw new Error(fallback.error.message);
       }
@@ -83,13 +91,15 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     return mapped;
   }
 
-  async findById(id: string): Promise<Student | null> {
-    const db = this.privilegedClient || this.client;
-    const { data, error } = await db
+  async findById(id: string, tenantId = this.tenantScope): Promise<Student | null> {
+    // Without explicit trusted context, retain the caller's RLS-scoped client.
+    const db = tenantId ? (this.privilegedClient || this.client) : this.client;
+    let query = db
       .from("students")
       .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
-      .eq("id", id)
-      .maybeSingle();
+      .eq("id", id);
+    if (tenantId) query = query.eq("tenant_id", tenantId);
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
       throw new Error(error.message);
@@ -105,7 +115,8 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   async findByCode(tenantId: string | undefined, code: string): Promise<Student | null> {
     const raw = code.trim();
     if (!raw) return null;
-    const db = this.privilegedClient || this.client;
+    tenantId = tenantId || this.tenantScope;
+    const db = tenantId ? (this.privilegedClient || this.client) : this.client;
     let q = db
       .from("students")
       .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
@@ -189,7 +200,11 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     return data as Student;
   }
 
-  async update(id: string, data: UpdateStudentDTO): Promise<Student | null> {
+  async update(id: string, data: UpdateStudentDTO, tenantId = this.tenantScope): Promise<Student | null> {
+    if (data.group_id && tenantId) {
+      const group = await this.findGroupById(data.group_id);
+      if (!group || group.tenant_id !== tenantId) throw new Error("GROUP_NOT_FOUND");
+    }
     const updatePayload: Record<string, unknown> = {};
     if (data.name !== undefined) updatePayload.name = data.name;
     if (data.parent_phone !== undefined) updatePayload.parent_phone = data.parent_phone;
@@ -205,13 +220,10 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     if (data.portal_password !== undefined) updatePayload.portal_password = data.portal_password;
 
 
-    const db = this.privilegedClient || this.client;
-    const { data: updated, error } = await db
-      .from("students")
-      .update(updatePayload)
-      .eq("id", id)
-      .select()
-      .maybeSingle();
+    const db = tenantId ? (this.privilegedClient || this.client) : this.client;
+    let query = db.from("students").update(updatePayload).eq("id", id);
+    if (tenantId) query = query.eq("tenant_id", tenantId);
+    const { data: updated, error } = await query.select().maybeSingle();
 
     if (error) {
       throw new Error(error.message);
@@ -249,7 +261,9 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await this.client.from("students").delete().eq("id", id);
+    let query = this.client.from("students").delete().eq("id", id);
+    if (this.tenantScope) query = query.eq("tenant_id", this.tenantScope);
+    const { error } = await query;
     if (error) {
       throw new Error(error.message);
     }
@@ -283,11 +297,9 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   }
 
   async findGroupById(groupId: string): Promise<GroupRecord | null> {
-    const { data, error } = await this.client
-      .from("groups")
-      .select("id, name, tenant_id")
-      .eq("id", groupId)
-      .maybeSingle();
+    let query = this.client.from("groups").select("id, name, tenant_id").eq("id", groupId);
+    if (this.tenantScope) query = query.eq("tenant_id", this.tenantScope);
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
       throw new Error(error.message);

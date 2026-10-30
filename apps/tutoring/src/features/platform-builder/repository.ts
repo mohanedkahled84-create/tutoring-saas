@@ -124,7 +124,11 @@ export class SupabasePlatformBuilderRepository implements IPlatformBuilderReposi
       throw error;
     }
 
-    return Boolean(data && data.length > 0);
+    if (data && data.length > 0) return true;
+    const current = await this.getBySubdomain(clean);
+    if (current) return current.tenant_id !== excludeTenantId;
+    // A published legacy subdomain stays reserved until its verified owner is migrated.
+    return Boolean(await this.getPublicBySubdomain(clean));
   }
 
   async upsert(tenantId: string, settings: SavePlatformSettingsDto): Promise<TenantPlatformSettings> {

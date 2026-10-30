@@ -567,14 +567,14 @@ export function renderStudentReportsView(
           <div class="card" style="margin: 0; padding: 1.25rem;">
             <div style="font-size: 0.85rem; color: var(--centrly-text);">متوسط الالتزام بالحضور</div>
             <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: var(--centrly-success);">
-              ${escapeHtml(average_attendance_rate || 0)}%
+              ${state.attendance_students === 0 ? "لا توجد بيانات" : `${escapeHtml(average_attendance_rate || 0)}%`}
             </div>
           </div>
 
           <div class="card" style="margin: 0; padding: 1.25rem;">
             <div style="font-size: 0.85rem; color: var(--centrly-text);">متوسط درجات الاختبارات</div>
             <div style="font-size: 1.75rem; font-weight: bold; margin-top: 0.25rem; color: #7c3aed;">
-              ${escapeHtml(average_score || 0)}%
+              ${state.graded_students === 0 ? "لم تسجل درجات" : `${escapeHtml(average_score || 0)}%`}
             </div>
           </div>
         </div>
@@ -629,7 +629,7 @@ export function renderStudentReportsView(
                     <tr>
                       <td style="text-align: center;">
                         <span class="badge" style="${badgeBg} padding: 0.25rem 0.6rem; border-radius: 9999px; font-size: 0.85rem;">
-                          ${isTop1 ? "#1" : isTop2 ? "#2" : isTop3 ? "#3" : `#${std.rank}`}
+                          ${std.rank === 0 ? "—" : isTop1 ? "#1" : isTop2 ? "#2" : isTop3 ? "#3" : `#${std.rank}`}
                         </span>
                       </td>
                       <td><code style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(std.student_code || "—")}</code></td>
@@ -638,18 +638,18 @@ export function renderStudentReportsView(
                       <td dir="ltr" style="text-align: right; font-family: monospace;">${escapeHtml(std.parent_phone || "—")}</td>
                       <td>
                         <span class="badge ${std.attendance_rate >= 80 ? "badge-success" : std.attendance_rate >= 50 ? "badge-warning" : "badge-danger"}">
-                          ${escapeHtml(std.attendance_rate)}% (${escapeHtml(std.attended_sessions)}/${escapeHtml(std.total_sessions)})
+                          ${std.total_sessions > 0 ? `${escapeHtml(std.attendance_rate)}% (${escapeHtml(std.attended_sessions)}/${escapeHtml(std.total_sessions)})` : "لا توجد بيانات"}
                         </span>
                       </td>
                       <td>
                         <span style="font-weight: 700; color: ${std.average_score >= 70 ? "var(--centrly-success)" : "var(--centrly-danger)"};">
-                          ${escapeHtml(std.average_score)}%
+                          ${std.total_quizzes > 0 ? `${escapeHtml(std.average_score)}%` : "لم تسجل درجات"}
                         </span>
                         <small style="color: var(--centrly-text);"> (${escapeHtml(std.total_quizzes)} كويز)</small>
                       </td>
                       <td>
                         <div style="font-weight: 800; color: var(--centrly-blue-700);">
-                          ${escapeHtml(std.overall_score)}%
+                          ${std.total_sessions > 0 || std.total_quizzes > 0 ? `${escapeHtml(std.overall_score)}%` : "لا توجد بيانات"}
                         </div>
                       </td>
                       <td style="text-align: center;">

@@ -16,14 +16,14 @@ export function calculateStudentSummary(raw: StudentRawPerformanceData): Student
 
   // Attendance rate (percentage 0-100)
   const attendance_rate =
-    total_sessions > 0 ? Math.round((attended_sessions / total_sessions) * 100) : 100;
+    total_sessions > 0 ? Math.round((attended_sessions / total_sessions) * 100) : 0;
 
   // Grade/Quiz Average (normalized to 0-100%)
   let totalNormalizedScore = 0;
   let validGradesCount = 0;
 
   for (const g of grades) {
-    if (typeof g.score === "number" && typeof g.max_score === "number" && g.max_score > 0) {
+    if (Number.isFinite(g.score) && Number.isFinite(g.max_score) && typeof g.score === "number" && typeof g.max_score === "number" && g.max_score > 0) {
       const normalized = (g.score / g.max_score) * 100;
       totalNormalizedScore += Math.max(0, Math.min(100, normalized));
       validGradesCount++;
@@ -33,12 +33,10 @@ export function calculateStudentSummary(raw: StudentRawPerformanceData): Student
   const average_score =
     validGradesCount > 0 ? Math.round((totalNormalizedScore / validGradesCount) * 10) / 10 : 0;
 
-  // Overall performance score: 70% weighted quiz performance + 30% attendance rate
-  // If student took 0 quizzes, overall score reflects attendance weighted at 30%
-  const overall_score =
-    validGradesCount > 0
-      ? Math.round((average_score * 0.7 + attendance_rate * 0.3) * 10) / 10
-      : Math.round((attendance_rate * 0.3) * 10) / 10;
+  // Normalize over recorded components only; no records do not imply 100% attendance.
+  const weight = (validGradesCount > 0 ? 0.7 : 0) + (total_sessions > 0 ? 0.3 : 0);
+  const weightedScore = (validGradesCount > 0 ? average_score * 0.7 : 0) + (total_sessions > 0 ? attendance_rate * 0.3 : 0);
+  const overall_score = weight > 0 ? Math.round(weightedScore / weight * 10) / 10 : 0;
 
   return {
     student_id: student.id,
@@ -69,7 +67,10 @@ export function calculateStudentSummary(raw: StudentRawPerformanceData): Student
  */
 export function rankStudents(students: StudentPerformanceRecord[]): StudentPerformanceRecord[] {
   const sorted = [...students].sort((a, b) => {
-    // 0. Students who took quizzes/exams strictly rank ABOVE students who took 0 quizzes
+    const aHasData = a.total_sessions > 0 || a.total_quizzes > 0;
+    const bHasData = b.total_sessions > 0 || b.total_quizzes > 0;
+    if (aHasData !== bHasData) return aHasData ? -1 : 1;
+    // Students with recorded quizzes rank above students without quizzes.
     const aHasQuizzes = (a.total_quizzes || 0) > 0;
     const bHasQuizzes = (b.total_quizzes || 0) > 0;
     if (aHasQuizzes !== bHasQuizzes) {
@@ -94,7 +95,7 @@ export function rankStudents(students: StudentPerformanceRecord[]): StudentPerfo
 
   return sorted.map((record, index) => ({
     ...record,
-    rank: index + 1,
+    rank: record.total_sessions > 0 || record.total_quizzes > 0 ? index + 1 : 0,
   }));
 }
 
@@ -135,7 +136,7 @@ export function formatStudentReportMessage(
 ): string {
   const periodText = periodName || "الشهر الحالي";
   const rankBadge =
-    record.rank === 1
+    record.rank === 0 ? "لم تتوفر بيانات للترتيب" : record.rank === 1
       ? "المركز الأول"
       : record.rank === 2
         ? "المركز الثاني"
@@ -155,13 +156,13 @@ export function formatStudentReportMessage(
     `• إجمالي الحصص: ${record.total_sessions}`,
     `• عدد مرات الحضور: ${record.attended_sessions}`,
     `• عدد مرات الغياب: ${record.absent_sessions}`,
-    `• نسبة الالتزام بالحضور: ${record.attendance_rate}%`,
+    `• نسبة الالتزام بالحضور: ${record.total_sessions > 0 ? record.attendance_rate + "%" : "لا توجد بيانات"}`,
     ``,
     `*التقييم والدرجات:*`,
     `• عدد الاختبارات / الكويزات: ${record.total_quizzes}`,
-    `• متوسط الدرجات: ${record.average_score}%`,
+    `• متوسط الدرجات: ${record.total_quizzes > 0 ? record.average_score + "%" : "لم تسجل درجات"}`,
     `• الترتيب في لوحة التميز: *${rankBadge}*`,
-    `• التقييم العام: ${record.overall_score}%`,
+    `• التقييم العام: ${record.total_sessions > 0 || record.total_quizzes > 0 ? record.overall_score + "%" : "لا توجد بيانات"}`,
     ``,
     `--------------------------------`,
     `نتمنى لطلابنا دوام التوفيق والتميز الدراسي.`,

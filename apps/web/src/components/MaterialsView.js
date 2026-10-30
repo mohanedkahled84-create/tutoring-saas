@@ -318,7 +318,7 @@ export function registerMaterialsActions(app) {
                 اضغط هنا لاختيار ملف PDF من اللابتوب أو الموبايل
               </div>
               <div style="font-size: 0.78rem; color: #64748b;">
-                ملفات PDF فقط (الحد الأقصى 100 ميجابايت) — أو اسحب الملف وأفلته هنا
+                ملفات PDF فقط (الحد الأقصى 25 ميجابايت) — أو اسحب الملف وأفلته هنا
               </div>
             </div>
 
@@ -378,8 +378,8 @@ export function registerMaterialsActions(app) {
       return;
     }
 
-    if (file.size > 100 * 1024 * 1024) {
-      this.showToast('حجم الملف كبير جداً (أقصى حد مسموح 100 ميجابايت)', 'error');
+    if (file.size > 25 * 1024 * 1024) {
+      this.showToast('حجم الملف كبير جداً (أقصى حد مسموح 25 ميجابايت)', 'error');
       return;
     }
 

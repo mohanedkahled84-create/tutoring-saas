@@ -96,7 +96,7 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
         buffer: fileBuffer,
         originalFilename: file_name || "material.pdf",
         declaredMimeType: contentType,
-        maxSizeBytes: 100 * 1024 * 1024,
+        maxSizeBytes: 25 * 1024 * 1024,
       });
 
       if (!validation.isValid || !validation.sanitizedFilename || !validation.detectedMimeType) {
@@ -206,28 +206,25 @@ materialsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response):
   try {
     const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || supabasePublic;
 
-    // Purge any storage files associated with this homework material
-    try {
-      const bucketName = "homework-submissions";
-      const folderPrefix = `${tenantId}/${id}`;
-      const { data: folderFiles } = await supabasePublic.storage
-        .from(bucketName)
-        .list(folderPrefix);
-
-      if (Array.isArray(folderFiles) && folderFiles.length > 0) {
-        const paths = folderFiles.map((f: any) => `${folderPrefix}/${f.name}`);
-        await supabasePublic.storage.from(bucketName).remove(paths).catch(() => {});
-      }
-    } catch (_) {}
-
-    const { error } = await supabase
+    const { data: deleted, error } = await supabase
       .from("study_materials")
       .delete()
       .eq("id", id)
-      .eq("tenant_id", tenantId);
+      .eq("tenant_id", tenantId)
+      .select("id");
 
     if (error) throw error;
-
+    if (!deleted?.length) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "المادة غير موجودة" } });
+      return;
+    }
+    // Purge only after deletion succeeds, using the authorized server client.
+    for (const bucketName of ["homework-private", "homework-submissions"]) {
+      const folderPrefix = `${tenantId}/${id}`;
+      const { data: files } = await supabase.storage.from(bucketName).list(folderPrefix, { limit: 1000 });
+      const paths = (files || []).filter(f => f.id).map(f => `${folderPrefix}/${f.name}`);
+      if (paths.length) await supabase.storage.from(bucketName).remove(paths);
+    }
     res.json({ success: true, message: "تم حذف المادة بنجاح" });
   } catch (err: unknown) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });

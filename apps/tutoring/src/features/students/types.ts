@@ -95,11 +95,11 @@ export interface PortalLoginResult {
 
 export interface IStudentsRepository {
   list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]>;
-  findById(id: string): Promise<Student | null>;
+  findById(id: string, tenantId?: string): Promise<Student | null>;
   findByCode(tenantId: string | undefined, code: string): Promise<Student | null>;
   findByIdentifier(identifier: string, password?: string): Promise<Student | null>;
   create(tenantId: string | undefined, student: Partial<Student>): Promise<Student>;
-  update(id: string, data: UpdateStudentDTO): Promise<Student | null>;
+  update(id: string, data: UpdateStudentDTO, tenantId?: string): Promise<Student | null>;
   delete(id: string): Promise<void>;
   getHighestSerialCode(tenantId?: string): Promise<number>;
   findGroupById(groupId: string): Promise<GroupRecord | null>;

@@ -93,6 +93,8 @@ export function createApp(): Express {
       credentials: true,
     })
   );
+  // A 25 MiB homework file expands to about 34 MiB as base64.
+  app.use("/api/public/homework", express.json({ limit: "36mb" }));
   app.use(express.json({ limit: "150mb" }));
   app.use(express.urlencoded({ extended: true, limit: "150mb" }));
 

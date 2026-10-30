@@ -13,6 +13,16 @@ import { supabasePublic } from "../../supabase.js";
 export const studentsRouter = Router();
 export const importRouter = Router();
 
+const requireStudentTenant = (req: AuthenticatedRequest, res: Response, next: () => void): void => {
+  if (!req.user?.tenant_id) {
+    res.status(403).json({ error: { code: "NO_TENANT_CONTEXT", message: "اختر حساب المدرس أولًا" } });
+    return;
+  }
+  next();
+};
+studentsRouter.use(requireStudentTenant);
+importRouter.use(requireStudentTenant);
+
 // GET /api/students - List all students for current tenant
 studentsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id || undefined;
@@ -789,6 +799,10 @@ studentsRouter.delete("/:id", async (req: AuthenticatedRequest, res: Response): 
 
   try {
     const studentsService = getServices(req).students;
+    if (!await studentsService.getStudent(id)) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Student not found" } });
+      return;
+    }
     await studentsService.deleteStudent(id);
     res.json({ message: "Student deleted successfully", id });
   } catch (err: unknown) {
@@ -804,7 +818,7 @@ studentsRouter.post(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const studentsService = getServices(req).students;
-      const result = await studentsService.publicRegister(req.body);
+      const result = await studentsService.publicRegister({ ...req.body, tenant_id: req.user!.tenant_id });
 
       res.status(201).json({
         message: "Student registered successfully",

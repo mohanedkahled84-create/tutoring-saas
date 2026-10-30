@@ -1,0 +1,36 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { requireIsolatedSupabaseProject, createIsolatedSupabaseClients, assertServiceRoleReady } from './helpers/live-supabase.mjs';
+
+test('LIVE: private homework permits signed reads and denies anonymous read/write/delete', async t => {
+  if (!requireIsolatedSupabaseProject(t)) return;
+  const {anonClient,serviceClient} = createIsolatedSupabaseClients();
+  await assertServiceRoleReady(serviceClient);
+  const bucket = 'homework-private';
+  const path = `${randomUUID()}/${randomUUID()}/${randomUUID()}_audit.pdf`;
+  const bytes = Buffer.from('%PDF-1.4\n%isolated-security-test\n%%EOF');
+  const details = await serviceClient.storage.getBucket(bucket);
+  assert.equal(details.error,null,'Private bucket migration must be applied to the isolated test project');
+  assert.equal(details.data.public,false); assert.equal(details.data.file_size_limit,26214400);
+  t.after(async () => { const result=await serviceClient.storage.from(bucket).remove([path]); assert.equal(result.error,null); });
+  const uploaded=await serviceClient.storage.from(bucket).upload(path,bytes,{contentType:'application/pdf'});
+  assert.equal(uploaded.error,null);
+  const publicUrl=serviceClient.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+  assert.ok(!(await fetch(publicUrl)).ok,'Unauthenticated public URL must not serve homework');
+  const anonymousRead=await anonClient.storage.from(bucket).download(path);
+  assert.ok(anonymousRead.error,'Anon must not download a private assignment');
+  const anonymousUpload=await anonClient.storage.from(bucket).upload(path+'-unauthorized',bytes,{contentType:'application/pdf'});
+  assert.ok(anonymousUpload.error,'Anon must not write to private storage');
+  const anonymousSign=await anonClient.storage.from(bucket).createSignedUrl(path,60);
+  assert.ok(anonymousSign.error,'Anon must not mint a signed URL');
+  await anonClient.storage.from(bucket).remove([path]);
+  const afterDelete=await serviceClient.storage.from(bucket).download(path);
+  assert.equal(afterDelete.error,null,'Unauthorized deletion must not remove the object');
+  assert.deepEqual(Buffer.from(await afterDelete.data.arrayBuffer()),bytes);
+  const signed=await serviceClient.storage.from(bucket).createSignedUrl(path,60);
+  assert.equal(signed.error,null);
+  const response=await fetch(signed.data.signedUrl);
+  assert.equal(response.status,200);
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()),bytes);
+});

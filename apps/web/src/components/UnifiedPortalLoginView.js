@@ -620,9 +620,9 @@ export function registerUnifiedPortalActions(app) {
       return;
     }
 
-    if (file.size > 100 * 1024 * 1024) {
+    if (file.size > 25 * 1024 * 1024) {
       resetFileInput();
-      this.showToast('حجم الملف يتجاوز الحد الأقصى المسموح به (100 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.', 'warning');
+      this.showToast('حجم الملف يتجاوز الحد الأقصى المسموح به (25 ميجابايت). يرجى ضغط الملف أو تقليل دقة الصور.', 'warning');
       return;
     }
 
@@ -711,7 +711,7 @@ export function registerUnifiedPortalActions(app) {
 
         xhr.onerror = () => reject(new Error('انقطع الاتصال بالإنترنت أثناء الرفع. يرجى التأكد من استقرار الشبكة والمحاولة مجدداً'));
         xhr.ontimeout = () => reject(new Error(`استغرق رفع الملف (${totalMb} ميجا) وقتاً طويلاً بسبب بطء سرعة الرفع لديك. يرجى الاتصال بشبكة أسرع أو تقليل حجم الملف والمحاولة مرة أخرى`));
-        // Dynamic timeout: 6 minutes minimum, up to 15 minutes (900,000ms) for large files up to 100MB on slow ADSL/3G
+        // Dynamic timeout: 6 minutes minimum, up to 15 minutes (900,000ms) for large files up to 25MB on slow ADSL/3G
         const uploadTimeoutMs = Math.min(900000, Math.max(360000, Math.round((uploadFileSize / (25 * 1024)) * 1000) + 120000));
         xhr.timeout = uploadTimeoutMs;
 

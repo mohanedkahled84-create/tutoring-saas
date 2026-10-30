@@ -38,11 +38,11 @@ export function renderAuthScreens() {
         <!-- Login Form -->
         <form id="formLogin" onsubmit="window.centrlyApp.handleLogin(event)">
           <div class="form-group">
-            <label class="form-label">البريد الإلكتروني أو رقم الهاتف</label>
+            <label class="form-label" for="loginEmail">البريد الإلكتروني أو رقم الهاتف</label>
             <input type="text" id="loginEmail" class="form-input" placeholder="example@email.com أو 010xxxxxxxx" required dir="ltr" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username">
           </div>
           <div class="form-group">
-            <label class="form-label">كلمة المرور</label>
+            <label class="form-label" for="loginPassword">كلمة المرور</label>
             <div style="position: relative; display: flex; align-items: center;">
               <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="current-password">
               <button type="button" class="password-toggle-btn" onclick="(window.centrlyApp?.togglePasswordVisibility || window.togglePasswordVisibility)?.('loginPassword', this, event)" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
@@ -67,32 +67,32 @@ export function renderAuthScreens() {
           <!-- Teacher Fields -->
           <div id="roleFieldsTeacher">
             <div class="form-group">
-              <label class="form-label">اسم المدرس *</label>
+              <label class="form-label" for="signupName">اسم المدرس *</label>
               <input type="text" id="signupName" class="form-input" placeholder="اسم المدرس بالكامل" required>
             </div>
             <div class="form-group" style="margin-top: 0.85rem;">
-              <label class="form-label">المادة التعليمية</label>
+              <label class="form-label" for="signupSubject">المادة التعليمية</label>
               <input type="text" id="signupSubject" class="form-input" placeholder="اكتب المادة التعليمية (مثال: لغة عربية، فيزياء، رياضيات...)" autocomplete="off">
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">البريد الإلكتروني *</label>
+            <label class="form-label" for="signupEmail">البريد الإلكتروني *</label>
             <input type="email" id="signupEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="email">
           </div>
           <div class="form-group">
-            <label class="form-label">رقم الهاتف الأساسي (لتسجيل الدخول وتلقي OTP) *</label>
+            <label class="form-label" for="signupPhone">رقم الهاتف الأساسي *</label>
             <input type="tel" id="signupPhone" class="form-input" placeholder="010..." required dir="ltr" autocomplete="tel">
           </div>
           <div class="form-group" style="margin-top: 0.85rem;">
-            <label class="form-label">رقم واتساب للتواصل مع الطلاب وأولياء الأمور 💬</label>
+            <label class="form-label" for="signupContactPhone">رقم واتساب للتواصل مع الطلاب وأولياء الأمور 💬</label>
             <input type="tel" id="signupContactPhone" class="form-input" placeholder="رقم واتساب المدرس أو المساعد (اختياري - إن ترك فارغاً سيتم استخدام نفس الرقم)" dir="ltr" autocomplete="tel">
             <div style="font-size: 0.73rem; color: #64748b; margin-top: 0.25rem;">
               يظهر هذا الرقم في بوابات الطلاب وأولياء الأمور كزر مباشر للتواصل معك عبر واتساب.
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">كلمة المرور *</label>
+            <label class="form-label" for="signupPassword">كلمة المرور *</label>
             <div style="position: relative; display: flex; align-items: center;">
               <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" oninput="window.centrlyApp.validatePasswordLive(this.value)" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
               <button type="button" class="password-toggle-btn" onclick="(window.centrlyApp?.togglePasswordVisibility || window.togglePasswordVisibility)?.('signupPassword', this, event)" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
@@ -118,7 +118,7 @@ export function renderAuthScreens() {
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">تأكيد كلمة المرور *</label>
+            <label class="form-label" for="signupPasswordConfirm">تأكيد كلمة المرور *</label>
             <div style="position: relative; display: flex; align-items: center;">
               <input type="password" id="signupPasswordConfirm" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
               <button type="button" class="password-toggle-btn" onclick="(window.centrlyApp?.togglePasswordVisibility || window.togglePasswordVisibility)?.('signupPasswordConfirm', this, event)" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
@@ -153,7 +153,7 @@ export function renderAuthScreens() {
           <div id="forgotPasswordAlert" style="display: none; padding: 0.65rem 0.75rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.825rem;"></div>
           <form id="formForgotPassword" onsubmit="window.centrlyApp.handleForgotPassword(event)">
             <div class="form-group">
-              <label class="form-label">البريد الإلكتروني المسجل</label>
+              <label class="form-label" for="forgotEmail">البريد الإلكتروني المسجل</label>
               <input type="email" id="forgotEmail" class="form-input" placeholder="teacher@example.com" required dir="ltr" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="email">
             </div>
             <button type="submit" id="forgotSubmitBtn" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem; font-weight: 700;">
@@ -174,7 +174,7 @@ export function renderAuthScreens() {
           <form id="formResetPassword" onsubmit="window.centrlyApp.handleResetPasswordSubmit(event)">
             <input type="hidden" id="resetPasswordToken" value="">
             <div class="form-group">
-              <label class="form-label">كلمة المرور الجديدة</label>
+              <label class="form-label" for="resetNewPassword">كلمة المرور الجديدة</label>
               <div style="position: relative; display: flex; align-items: center;">
                 <input type="password" id="resetNewPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
                 <button type="button" class="password-toggle-btn" onclick="(window.centrlyApp?.togglePasswordVisibility || window.togglePasswordVisibility)?.('resetNewPassword', this, event)" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">
@@ -183,7 +183,7 @@ export function renderAuthScreens() {
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+              <label class="form-label" for="resetConfirmPassword">تأكيد كلمة المرور الجديدة</label>
               <div style="position: relative; display: flex; align-items: center;">
                 <input type="password" id="resetConfirmPassword" class="form-input" placeholder="••••••••" required dir="ltr" style="padding-left: 2.5rem;" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="new-password">
                 <button type="button" class="password-toggle-btn" onclick="(window.centrlyApp?.togglePasswordVisibility || window.togglePasswordVisibility)?.('resetConfirmPassword', this, event)" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار/إخفاء كلمة المرور">

@@ -96,7 +96,9 @@ test("DEV-80: calculateStudentSummary handles zero sessions and zero quizzes saf
   assert.equal(summary.total_sessions, 0);
   assert.equal(summary.attended_sessions, 0);
   assert.equal(summary.absent_sessions, 0);
-  assert.equal(summary.attendance_rate, 100); // 100% default for zero sessions
+  assert.equal(summary.attendance_rate, 0); // No attendance records must not imply perfect attendance.
+  assert.equal(summary.overall_score, 0);
+  assert.equal(rankStudents([summary])[0].rank, 0); // No data means unranked.
   assert.equal(summary.average_score, 0);
   assert.equal(summary.total_quizzes, 0);
 });

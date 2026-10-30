@@ -66,7 +66,7 @@ export class RiskWatchlistService {
 
       // Quiz average across last 3 quiz scores
       const studentQuizzes = quizScores
-        .filter((q) => q.student_id === student.id)
+        .filter((q) => q.student_id === student.id && q.score !== null && q.score !== undefined && Number.isFinite(Number(q.score)) && Number.isFinite(Number(q.max_score)) && Number(q.max_score) > 0)
         .slice(0, 3);
 
       let quizAvg: number | null = null;

@@ -1140,3 +1140,14 @@ button.password-toggle-btn:active {
 }
 
 
+
+/* Keep select text visible with component-specific vertical padding. */
+select.form-input, select.form-select, select.form-control {
+  height: auto;
+  min-height: 40px;
+  line-height: 1.5;
+}
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  input.form-input, input.form-control, select.form-select { min-height: 44px; }
+}

@@ -649,7 +649,7 @@ class CentrlyApp {
     // Check if Short Portal URL is present (/p/:code or /s/:code or /p:code or /s:code or ?s=:code or ?p=:code)
     const urlParams = new URLSearchParams(window.location.search);
     const pathname = (window.location.pathname || '').trim();
-    const shortMatch = pathname.match(/^\/([ps])\/?([a-zA-Z0-9_-]+)$/i);
+    const shortMatch = pathname.match(/^\/([ps])\/([a-zA-Z0-9_-]+)$/i) || pathname.match(/^\/([ps])([ps]?[a-f0-9]{8})$/i);
     const queryShortCode = urlParams.get('s') || urlParams.get('p');
     const queryShortType = urlParams.get('s') ? 's' : (urlParams.get('p') ? 'p' : null);
 
@@ -694,12 +694,9 @@ class CentrlyApp {
 
     // Check if accessed via teacher subdomain (e.g. mr-omar.centerly-eg.com)
     let detectedTeacherSubdomain = null;
-    const hostSegments = currentHost.split('.');
-    if (hostSegments.length >= 3) {
-      const firstSub = hostSegments[0];
-      if (!['www', 'app', 'admin', 'api', 'dev', 'mail', 'centrly-platform'].includes(firstSub)) {
-        detectedTeacherSubdomain = firstSub;
-      }
+    const teacherHostMatch = currentHost.match(/^([a-z0-9-]+)\.(?:centerly-eg\.com|centrly\.app)$/i);
+    if (teacherHostMatch && !['www', 'app', 'admin', 'api', 'dev', 'mail', 'centrly-platform'].includes(teacherHostMatch[1])) {
+      detectedTeacherSubdomain = teacherHostMatch[1];
     }
 
     // Or check if accessed via path (e.g. /mr-omar, /mr-omar/dashboard)
@@ -854,18 +851,8 @@ class CentrlyApp {
 
     const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-    const userEmail = (this.user?.email || '').toLowerCase();
-    const isOmarMohamadi = 
-      this.user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' || 
-      userEmail === 'mohanedabdulhalim@gmail.com' ||
-      userEmail.includes('omar') ||
-      userEmail.includes('mohamadi') ||
-      (this.user?.name || '').includes('عمر') ||
-      (this.user?.teacher_name || '').includes('عمر') ||
-      (this.user?.tenant_name || '').includes('عمر') ||
-      isAdmin;
     const validTeacherRoutes = [
-      'sessions', ...(isOmarMohamadi ? ['video-lessons'] : []), 'online-quizzes', 'paper-exams', 'quizzes', 'homework', 'materials',
+      'sessions', 'video-lessons', 'platform-builder', 'online-quizzes', 'paper-exams', 'quizzes', 'homework', 'materials',
       'students', 'groups', 'assistants', 'calendar', 'student-cards',
       'dashboard', 'reports', 'risk-watchlist', 'settings', 'billing', 'whatsapp'
     ];
@@ -1300,7 +1287,7 @@ class CentrlyApp {
         case 'calendar': {
           const [calRes, grpRes] = await Promise.all([
             request('/sessions/calendar?from=2026-09-01&to=2026-09-30').catch(() => ({ sessions: [] })),
-            request('/groups').catch(() => ({ groups: [] })),
+            request('/groups'),
           ]);
           const rawSessions = Array.isArray(calRes) ? calRes : (calRes.sessions || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -1420,7 +1407,7 @@ class CentrlyApp {
         case 'center-sessions': {
           const [activeRes, grpRes, roomsRes, teachersRes] = await Promise.all([
             request('/sessions?status=in_progress').catch(() => []),
-            request('/groups').catch(() => []),
+            request('/groups'),
             request('/centers/rooms').catch(() => []),
             request('/centers/teachers').catch(() => []),
           ]);
@@ -1458,7 +1445,7 @@ class CentrlyApp {
         case 'center-teachers': {
           const [teachersRes, grpRes] = await Promise.all([
             request('/centers/teachers').catch(() => []),
-            request('/groups').catch(() => []),
+            request('/groups'),
           ]);
           this.centerTeachers = Array.isArray(teachersRes) ? teachersRes : (teachersRes?.teachers || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes?.groups || []);
@@ -1481,12 +1468,15 @@ class CentrlyApp {
           this.renderMainContent();
           break;
         }
+        case 'paper-exams': {
+          this.renderMainContent();
+          break;
+        }
         case 'online-quizzes':
-        case 'paper-exams':
         case 'quizzes': {
           const [grpRes, studRes] = await Promise.all([
-            (!this.groups || this.groups.length === 0) ? request('/groups').catch(() => []) : Promise.resolve(this.groups),
-            (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students),
+            (!this.groups || this.groups.length === 0) ? request('/groups') : Promise.resolve(this.groups),
+            (!this.students || this.students.length === 0) ? request('/students') : Promise.resolve(this.students),
           ]);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes?.groups || []);
           this.students = Array.isArray(studRes) ? studRes : (studRes?.students || []);
@@ -1570,10 +1560,10 @@ class CentrlyApp {
           if (this.reportsState.searchQuery) url += `&q=${encodeURIComponent(this.reportsState.searchQuery)}`;
 
           const [reportsRes, grpRes, astRes, studRes] = await Promise.all([
-            request(url).catch(() => null),
-            request('/groups').catch(() => ({ groups: [] })),
-            request('/assistants').catch(() => ({ assistants: [] })),
-            request('/students').catch(() => ({ students: [] })),
+            request(url),
+            request('/groups'),
+            request('/assistants'),
+            request('/students'),
           ]);
 
           if (reportsRes) {
@@ -1581,6 +1571,8 @@ class CentrlyApp {
             this.reportsState.total_students = reportsRes.total_students || 0;
             this.reportsState.average_attendance_rate = reportsRes.average_attendance_rate || 0;
             this.reportsState.average_score = reportsRes.average_score || 0;
+            this.reportsState.attendance_students = reportsRes.attendance_students;
+            this.reportsState.graded_students = reportsRes.graded_students;
           }
           this.reportsState.groups = Array.isArray(grpRes) ? grpRes : (grpRes?.groups || []);
           this.reportsState.assistants = Array.isArray(astRes) ? astRes : (astRes?.assistants || []);
@@ -1593,8 +1585,8 @@ class CentrlyApp {
         case 'groups': {
           const isCenterOwner = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
           const promises = [
-            request('/groups').catch(() => []),
-            (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students),
+            request('/groups'),
+            (!this.students || this.students.length === 0) ? request('/students') : Promise.resolve(this.students),
           ];
           if (isCenterOwner) {
             promises.push(request('/centers/teachers').catch(() => ({ teachers: [] })));
@@ -1637,11 +1629,11 @@ class CentrlyApp {
           const currentMonth = new Date().getMonth() + 1;
           const currentYear = new Date().getFullYear();
           const [studRes, grpRes, riskRes, repRes, astRes, actEarnRes] = await Promise.all([
-            request('/students').catch(() => ({ students: [] })),
-            request('/groups').catch(() => ({ groups: [] })),
+            request('/students'),
+            request('/groups'),
             request('/at-risk').catch(() => ({ watchlist: [] })),
             request(`/reports/monthly?month=${currentMonth}&year=${currentYear}`).catch(() => null),
-            request('/assistants').catch(() => ({ assistants: [] })),
+            request('/assistants'),
             request(`/sessions/actual-earnings?month=${currentMonth}&year=${currentYear}`).catch(() => null),
           ]);
           const students = Array.isArray(studRes) ? studRes : (studRes.students || []);
@@ -1739,8 +1731,8 @@ class CentrlyApp {
         case 'risk-watchlist': {
           const [riskRes, studRes, grpRes] = await Promise.all([
             request('/at-risk/watchlist').catch(() => request('/at-risk')).catch(() => ({ watchlist: [] })),
-            (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students),
-            (!this.groups || this.groups.length === 0) ? request('/groups').catch(() => []) : Promise.resolve(this.groups),
+            (!this.students || this.students.length === 0) ? request('/students') : Promise.resolve(this.students),
+            (!this.groups || this.groups.length === 0) ? request('/groups') : Promise.resolve(this.groups),
           ]);
           this.students = Array.isArray(studRes) ? studRes : (studRes.students || this.students || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || this.groups || []);
@@ -1873,8 +1865,8 @@ class CentrlyApp {
         }
         case 'sessions': {
           const [grpRes, studRes] = await Promise.all([
-            (!this.groups || this.groups.length === 0) ? request('/groups').catch(() => []) : Promise.resolve(this.groups),
-            (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students),
+            (!this.groups || this.groups.length === 0) ? request('/groups') : Promise.resolve(this.groups),
+            (!this.students || this.students.length === 0) ? request('/students') : Promise.resolve(this.students),
           ]);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || this.groups || []);
           this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
@@ -1923,11 +1915,11 @@ class CentrlyApp {
         }
         case 'student-cards': {
           if (!this.students || this.students.length === 0) {
-            const studentsRes = await request('/students').catch(() => []);
+            const studentsRes = await request('/students');
             this.students = Array.isArray(studentsRes) ? studentsRes : (studentsRes.students || []);
           }
           if (!this.groups || this.groups.length === 0) {
-            const groupsRes = await request('/groups').catch(() => []);
+            const groupsRes = await request('/groups');
             this.groups = Array.isArray(groupsRes) ? groupsRes : (groupsRes.groups || []);
           }
           this.renderMainContent();
@@ -1935,8 +1927,8 @@ class CentrlyApp {
         }
         case 'materials': {
           const [matRes, grpRes] = await Promise.all([
-            request('/materials').catch(() => ({ materials: [] })),
-            request('/groups').catch(() => ({ groups: [] })),
+            request('/materials'),
+            request('/groups'),
           ]);
           this.materials = Array.isArray(matRes) ? matRes : (matRes.materials || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -1952,9 +1944,9 @@ class CentrlyApp {
         }
         case 'video-lessons': {
           const [matRes, grpRes, stdRes] = await Promise.all([
-            request('/materials').catch(() => ({ materials: [] })),
-            request('/groups').catch(() => ({ groups: [] })),
-            request('/students').catch(() => ({ students: [] })),
+            request('/materials'),
+            request('/groups'),
+            request('/students'),
           ]);
           this.materials = Array.isArray(matRes) ? matRes : (matRes.materials || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -1972,10 +1964,10 @@ class CentrlyApp {
         }
         case 'platform-builder': {
           let [res, viewsRes, onlineSubsRes, stdRes] = await Promise.all([
-            request('/platform/settings').catch(() => null),
-            request('/platform/video-views').catch(() => null),
-            request('/quizzes/submissions').catch(() => null),
-            (!this.students || this.students.length === 0) ? request('/students').catch(() => []) : Promise.resolve(this.students)
+            request('/platform/settings'),
+            request('/platform/video-views'),
+            request('/quizzes/submissions'),
+            (!this.students || this.students.length === 0) ? request('/students') : Promise.resolve(this.students)
           ]);
 
           if (Array.isArray(stdRes) && stdRes.length > 0) {
@@ -1995,19 +1987,11 @@ class CentrlyApp {
             const cachedStr = localStorage.getItem(`centrly_platform_settings_${tenantKey}`);
             if (cachedStr) {
               localSettings = JSON.parse(cachedStr);
-              // تنظيف أي قيمة سابقة تخص خبير اللغة الإنجليزية من الكاش المحلي للمتصفح
-              if (localSettings && localSettings.subject_title && (localSettings.subject_title.includes('الإنجليزية') || localSettings.subject_title.includes('خبير'))) {
-                localSettings.subject_title = this.user?.subject || 'فيزياء الثانوية العامة';
-                localStorage.setItem(`centrly_platform_settings_${tenantKey}`, JSON.stringify(localSettings));
-                localStorage.setItem('centrly_platform_settings', JSON.stringify(localSettings));
-              }
+
             }
           } catch (_) {}
 
           const finalSettings = res?.settings || localSettings || null;
-          if (finalSettings && finalSettings.subject_title && (finalSettings.subject_title.includes('الإنجليزية') || finalSettings.subject_title.includes('خبير'))) {
-            finalSettings.subject_title = this.user?.subject || 'فيزياء الثانوية العامة';
-          }
           if (finalSettings && finalSettings.theme_preset) {
             try {
               localStorage.setItem('portal_theme', finalSettings.theme_preset);
@@ -2017,7 +2001,7 @@ class CentrlyApp {
 
           this.platformBuilderState = {
             settings: finalSettings,
-            plan: res?.plan || { is_pro: true },
+            plan: res?.plan || { is_pro: false },
             views: viewsRes?.views || [],
             onlineSubmissions: onlineSubmissions
           };
@@ -2027,8 +2011,8 @@ class CentrlyApp {
         }
         case 'homework': {
           const [matRes, grpRes] = await Promise.all([
-            request('/materials').catch(() => ({ materials: [] })),
-            request('/groups').catch(() => ({ groups: [] })),
+            request('/materials'),
+            request('/groups'),
           ]);
           const materialsList = Array.isArray(matRes) ? matRes : (matRes.materials || []);
           const hwAssignments = materialsList.filter(m => m.is_homework && m.type !== 'online_quiz');
@@ -2041,15 +2025,11 @@ class CentrlyApp {
 
           let submissionsData = { assignments: hwAssignments, submitted: [], missing: [] };
           if (selectedMaterialId) {
-            try {
               let url = `/homework/submissions?material_id=${encodeURIComponent(selectedMaterialId)}`;
               if (selectedGroupId && selectedGroupId !== 'all') {
                 url += `&group_id=${encodeURIComponent(selectedGroupId)}`;
               }
-              submissionsData = await request(url).catch(() => ({ submitted: [], missing: [] }));
-            } catch (err) {
-              console.warn('Failed to load homework submissions:', err);
-            }
+              submissionsData = await request(url);
           }
 
           const currentHw = hwAssignments.find(a => a.id === selectedMaterialId) || hwAssignments[0] || null;
@@ -2074,8 +2054,8 @@ class CentrlyApp {
         }
         case 'assistants': {
           const [astRes, grpRes] = await Promise.all([
-            request('/assistants').catch(() => ({ assistants: [] })),
-            request('/groups').catch(() => ({ groups: [] })),
+            request('/assistants'),
+            request('/groups'),
           ]);
           this.teacherAssistants = Array.isArray(astRes) ? astRes : (astRes.assistants || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -2198,7 +2178,7 @@ class CentrlyApp {
           </div>
           <h3 style="color: var(--centrly-danger); font-size: 1.2rem; font-weight: 800; margin: 0 0 0.5rem 0;">${isAuthErr ? 'انتهت صلاحية الجلسة' : 'تعذر تحميل بيانات هذه الصفحة'}</h3>
           <p style="color: var(--centrly-text); font-size: 0.9rem; margin: 0 0 1.25rem 0; line-height: 1.6;">
-            ${this.routeErrors[route]}
+            ${escapeHtml(this.routeErrors[route])}
           </p>
           ${isAuthErr ? `
             <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.renderAuth('login')" style="font-weight: 700; padding: 0.5rem 1.5rem;">

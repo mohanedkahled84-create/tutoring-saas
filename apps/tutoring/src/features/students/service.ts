@@ -78,7 +78,7 @@ export class StudentsService {
 
       if (student?.id && tenantId) {
         const token = generateParentPortalToken(student.id, tenantId, 365);
-        await this.repo.update(student.id, { parent_portal_token: token }).catch(() => {});
+        await this.repo.update(student.id, { parent_portal_token: token }, student.tenant_id).catch(() => {});
         student.parent_portal_token = token;
       }
       return student;
@@ -151,7 +151,7 @@ export class StudentsService {
 
     // 1. Verify group exists
     const group = await this.repo.findGroupById(groupId);
-    if (!group) {
+    if (!group || (tenantId && group.tenant_id !== tenantId)) {
       throw new Error("GROUP_NOT_FOUND");
     }
 
@@ -383,13 +383,13 @@ export class StudentsService {
   /**
    * DEV-PORTAL: Change portal password
    */
-  async changePortalPassword(studentId: string, oldPassword: string, newPassword: string): Promise<void> {
-    const student = await this.repo.findById(studentId);
+  async changePortalPassword(studentId: string, oldPassword: string, newPassword: string, tenantId?: string): Promise<void> {
+    const student = await this.repo.findById(studentId, tenantId);
     if (!student) {
       throw new Error("STUDENT_NOT_FOUND");
     }
 
-    if (student.portal_password && student.portal_password !== oldPassword.trim()) {
+    if (!student.portal_password || student.portal_password !== oldPassword.trim()) {
       throw new Error("INVALID_OLD_PASSWORD");
     }
 
@@ -399,7 +399,7 @@ export class StudentsService {
 
     await this.repo.update(studentId, {
       portal_password: newPassword.trim(),
-    });
+    }, tenantId);
   }
 }
 
