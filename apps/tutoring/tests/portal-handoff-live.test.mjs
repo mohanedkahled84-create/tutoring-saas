@@ -15,7 +15,7 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   ok(await db.from('tenants').insert([{id:tenant,name:'isolated-stable-portal'},{id:other,name:'isolated-stable-portal-other'}]));
   const student=ok(await db.from('students').insert({tenant_id:tenant,name:'stable-portal-student',code:'1001',student_code:'1001',parent_phone:'01000000000'}).select('id').single());
   const otherStudent=ok(await db.from('students').insert({tenant_id:other,name:'stable-portal-other-student',code:'1001',student_code:'1001',parent_phone:'01000000000'}).select('id').single());
-  const {generateParentPortalToken,verifyParentPortalToken}=await import('../dist/shared/utils/tokens.js');
+  const {generateParentPortalToken,verifyParentPortalToken,deriveShortCode}=await import('../dist/shared/utils/tokens.js');
   const {hashPortalTicket}=await import('../dist/shared/utils/portalDestination.js');
   const token=generateParentPortalToken(student.id,tenant),otherToken=generateParentPortalToken(otherStudent.id,other);
   const sub='t-'+randomUUID().slice(0,8),target=`https://${sub}.centerly-eg.com`,root='https://centerly-eg.com';
@@ -24,6 +24,11 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   const post=async(path,body,origin=root)=>fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)});
   const destination=async(role='parent',credential=token)=>{const res=await post('/destination',{token:credential,role,tenant_id:other,subdomain:'evil'});assert.equal(res.status,200);assert.match(res.headers.get('cache-control'),/no-store/);return res.json();};
   const basic=await destination();assert.equal(basic.origin,root);assert.equal(basic.ticket,null);assert.equal(basic.presentation,null);
+  const resolveOld=async role=>{
+    const response=await fetch(`http://127.0.0.1:${server.address().port}/api/public/short-links/${deriveShortCode(student.id,role)}`);
+    assert.equal(response.status,200);const data=await response.json();assert.equal(data.student_id,student.id);assert.equal(data.portal_type,role);return data;
+  };
+  await resolveOld('parent');await resolveOld('student');
   assert.equal((await post('/destination',{token:'forged',role:'parent'})).status,401);
   assert.equal((await post('/destination',{token,role:'admin'})).status,400);
   // Existing CORS middleware rejects external origins before the portal router.
@@ -46,5 +51,6 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   assert.equal((await anonClient.from('portal_handoffs').select('*')).error?.code,'42501');
   assert.equal((await anonClient.from('portal_handoffs').delete().eq('tenant_id',tenant)).error?.code,'42501');
   const stale=await destination();ok(await db.from('tenant_platform_settings').update({subdomain:sub+'-new'}).eq('tenant_id',tenant));assert.equal((await post('/handoff',{ticket:stale.ticket},target)).status,401);assert.equal((await destination()).origin,`https://${sub}-new.centerly-eg.com`);
+  assert.equal(verifyParentPortalToken((await resolveOld('parent')).token).student_id,student.id);
   const published=await destination();ok(await db.from('tenant_platform_settings').update({is_active:false}).eq('tenant_id',tenant));assert.equal((await post('/handoff',{ticket:published.ticket},published.origin)).status,401);assert.equal((await destination()).origin,root);
 });
