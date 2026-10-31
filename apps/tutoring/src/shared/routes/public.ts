@@ -1,4 +1,6 @@
 import { Router, Response, Request } from "express";
+import compression from "compression";
+import { constants as zlibConstants } from "node:zlib";
 import { validateBody, publicSelfRegisterSchema } from "../middleware/validation.js";
 import { getServiceSupabaseClient } from "../../supabase.js";
 import { verifyParentPortalToken, generateParentPortalToken } from "../utils/tokens.js";
@@ -112,7 +114,9 @@ publicRouter.post(
 );
 
 // DEV-34 & DEV-PORTAL: GET /api/public/parent-portal - Lightweight No-App Student Portal with Live Quizzes & Attendance
-publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<void> => {
+publicRouter.get("/parent-portal", compression({ threshold: 1024, level: 4,
+  brotli: { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 4 } },
+}), async (req: Request, res: Response): Promise<void> => {
   res.setHeader("Cache-Control", "private, no-store");
   const token = (req.query.token as string) || "";
   if (!token) {
@@ -191,72 +195,12 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
           const allowedGroupIds = new Set<string>(context.group_ids || []);
 
           if (allowedGroupIds.size > 0) {
-            const { data: legacyRows, error: legacyError } = await supabase
-              .from("whatsapp_inbox")
-              .select("message_body, phone, status, created_at")
-              .is("tenant_id", null)
-              .like("phone", "QUIZ_DEF_%")
-              .order("created_at", { ascending: false })
-              .limit(1000);
-            if (legacyError) throw legacyError;
-
-            const candidateMaterialIds = (legacyRows || []).flatMap((row: any) => {
-              try {
-                const quiz = typeof row.message_body === "string" ? JSON.parse(row.message_body) : row.message_body;
-                const groupId = String(quiz?.group_id || "");
-                const isDraft = Boolean(quiz?.is_draft || row.status === "draft" || String(row.phone).toUpperCase().includes("DRAFT"));
-                return !isDraft && allowedGroupIds.has(groupId) && quiz?.id ? [String(quiz.id)] : [];
-              } catch {
-                return [];
-              }
+            const { data: legacy, error: legacyError } = await supabase.rpc("portal_legacy_quiz_payload", {
+              p_student_id: studentId, p_tenant_id: tenantId,
+              p_student_code: String(portalData.student.student_code || portalData.student.code || "").trim(),
             });
-            const uniqueMaterialIds = [...new Set(candidateMaterialIds)];
-            let legacySubmissions: any[] = [];
-            if (uniqueMaterialIds.length > 0) {
-              const uuidMaterialIds = uniqueMaterialIds.filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id));
-              const submissionsQuery = uuidMaterialIds.length > 0
-                ? supabase
-                  .from("homework_submissions")
-                  .select("material_id, status, file_url, teacher_notes, submitted_at")
-                  .eq("student_id", studentId)
-                  .eq("tenant_id", tenantId)
-                  .in("material_id", uuidMaterialIds)
-                : Promise.resolve({ data: [], error: null });
-              const [{ data: submissionRows, error: submissionError }, { data: legacySubmissionRows, error: legacySubmissionError }] = await Promise.all([
-                submissionsQuery,
-                supabase
-                  .from("whatsapp_inbox")
-                  .select("message_body, status, created_at")
-                  .is("tenant_id", null)
-                  .like("phone", "QUIZ_SUB_%")
-                  .order("created_at", { ascending: false })
-                  .limit(2000),
-              ]);
-              if (submissionError) throw submissionError;
-              if (legacySubmissionError) throw legacySubmissionError;
-              legacySubmissions = submissionRows || [];
-
-              const studentCode = String(portalData.student.student_code || portalData.student.code || "").trim();
-              const legacyQuizIds = new Set(uniqueMaterialIds);
-              for (const row of legacySubmissionRows || []) {
-                try {
-                  const sub = typeof row.message_body === "string" ? JSON.parse(row.message_body) : row.message_body;
-                  const materialId = String(sub?.material_id || sub?.quiz_id || "");
-                  const rowCode = String(sub?.student_code || "").trim();
-                  const groupId = String(sub?.group_id || "");
-                  if (!legacyQuizIds.has(materialId) || !studentCode || rowCode !== studentCode || (groupId && !allowedGroupIds.has(groupId))) continue;
-                  legacySubmissions.push({
-                    material_id: materialId,
-                    quiz_id: materialId,
-                    status: sub.status || row.status || "pending",
-                    file_url: sub.file_url || sub.submission_url || null,
-                    teacher_notes: JSON.stringify(sub),
-                    submitted_at: sub.submitted_at || sub.created_at || row.created_at || null,
-                  });
-                } catch {}
-              }
-            }
-            mergeLegacyPortalQuizzes(portalData, legacyRows || [], allowedGroupIds, legacySubmissions);
+            if (legacyError) throw legacyError;
+            mergeLegacyPortalQuizzes(portalData, legacy?.definitions || [], allowedGroupIds, legacy?.submissions || []);
           }
         }
 
