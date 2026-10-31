@@ -101,6 +101,7 @@ export async function mountParentPortal(errorMessage = '') {
     _portalPresentation:getParentBranding(),
     renderPortalLogin(message='') {
       window.__centrlyLoaded=true;
+      saveParentBranding(this._portalPresentation || getParentBranding());
       this.getAppEl().innerHTML=renderParentPortalLogin(message,this._portalPresentation || getParentBranding());
       history.replaceState(null,'',location.pathname==='/portal-entry'?'/portal-entry':'/portal?role=parent');
     },
