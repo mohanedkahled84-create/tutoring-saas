@@ -33,3 +33,7 @@ Production order: snapshot deployed versions and relevant counts; apply the addi
 Rollback frontend to its previous deployment before removing new backend routes. Leaving the unused service-only ticket table is safe; do not restore hardcoded fallback credentials or broad table grants. A failed transfer displays an actionable reopen-original-link message, with no silent switch to a different student.
 
 References: [Supabase database functions and invoker/privilege boundaries](https://supabase.com/docs/guides/database/functions), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security). The current changelog was reviewed; the announced November TLS cipher change does not require an application-protocol change for the current Node runtime.
+
+## Dependency audit during release
+
+The new run observed GHSA-g3hv-75wg-m249 on older transitive minimatch versions, after earlier runs had passed. Pin minimatch 11.0.3 through npm overrides and the lockfile. npm audit returned zero findings; TypeScript and ESLint on the changed helper passed without changing audit thresholds. The original advisory and patch are documented at https://github.com/advisories/GHSA-g3hv-75wg-m249.

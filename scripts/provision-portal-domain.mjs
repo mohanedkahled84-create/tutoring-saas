@@ -5,7 +5,7 @@ import https from 'node:https';
 const require=createRequire(new URL('../apps/tutoring/package.json',import.meta.url));
 const {createClient}=require('@supabase/supabase-js');
 const slug=process.argv[2];
-if(!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(slug||'')||['www','api','app','admin','mail','dev','portal','login'].includes(slug))throw Error('Provide a valid teacher subdomain');
+if(typeof slug !== 'string'||slug !== slug.trim()||!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(slug||'')||['www','api','app','admin','mail','dev','portal','login'].includes(slug))throw Error('Provide a valid teacher subdomain');
 if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY)throw Error('Operator database environment is required');
 const db=createClient(process.env.SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const {data:platform,error}=await db.from('tenant_platform_settings').select('tenant_id,subdomain').eq('subdomain',slug).single();
