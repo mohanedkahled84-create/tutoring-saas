@@ -625,6 +625,8 @@ class CentrlyApp {
         localStorage.setItem('centrly_portal_role', arrival.role);
         sessionStorage.setItem('centrly_portal_token', arrival.token);
         sessionStorage.setItem('centrly_portal_role', arrival.role);
+        // Consumption already verified the current destination. Reuse that answer for this render.
+        window.__centrlyPortalArrival = { ...arrival, origin: window.location.origin };
         if (arrival.role === 'student' && arrival.presentation) window.location.replace('/dashboard');
         else if (arrival.role === 'student') await this.loadStudentPortal(arrival.token);
         else await this.loadParentPortal(arrival.token);
