@@ -11,6 +11,7 @@ async function start() {
   const parentModule=isParentEntry ? import('./parentPortal.js') : null;
   parentModule?.catch(()=>{}); // Show the normal retry UI if a module download fails.
   const mountParent = async error => (await (parentModule || import('./parentPortal.js'))).mountParentPortal(error);
+  if(location.pathname==='/portal-entry' && new URLSearchParams(location.hash.slice(1)).has('family')){await mountParent();return;}
   // Consume cross-origin entry before downloading staff authentication and dashboards.
   const ticket = new URLSearchParams(location.hash.slice(1)).get('handoff');
   if (location.pathname === '/portal-entry' && ticket) {

@@ -3,8 +3,10 @@ import {renderParentPortalLogin, getParentBranding, saveParentBranding} from './
 import {portalCache, portalRequest, adoptVerifiedPortalSession} from './utils/portalSession.js';
 import {preparePortalDestination} from './utils/portalDestination.js';
 import {normalizeDigits} from './utils/normalizeDigits.js';
+import {registerFamilyActions,savedFamilyToken,redeemFamilyEntry} from './parentFamily.js';
 function showPortalPending(app) { const root=app.getAppEl(); if(root) window.renderPortalOpening(root); }
 export function registerParentPortalActions(app) {
+  app.setParentFamilyMode=function(value) {this._familyMode=Boolean(value);this.renderPortalLogin();document.getElementById('portalIdentifier')?.focus();};
   app.loadParentPortal = async function loadParentPortal(token, options = {}) {
     window.__centrlyLoaded = true;
     this._parentPortalToken = token;
@@ -87,6 +89,7 @@ export function registerParentPortalActions(app) {
     if (button) { button.disabled = true; button.setAttribute('aria-busy','true'); }
     this._parentPortalRefreshing = true;
     try {
+      if(savedFamilyToken())return await this.loadFamilyPortal({force:true});
       if (!this._parentPortalToken) { window.location.reload(); return false; }
       return await this.loadParentPortal(this._parentPortalToken, {force:true});
     } finally {
@@ -106,10 +109,11 @@ export async function mountParentPortal(errorMessage = '') {
     renderPortalLogin(message='') {
       window.__centrlyLoaded=true;
       saveParentBranding(this._portalPresentation || getParentBranding());
-      this.getAppEl().innerHTML=renderParentPortalLogin(message,this._portalPresentation || getParentBranding());
-      history.replaceState(null,'',location.pathname==='/portal-entry'?'/portal-entry':'/portal?role=parent');
+      this.getAppEl().innerHTML=renderParentPortalLogin(message,this._portalPresentation || getParentBranding(),this._familyMode);
+      history.replaceState(null,'',location.pathname==='/portal-entry'?'/portal-entry':'/portal?role=parent'+(this._familyMode?'&family=1':''));
     },
     handlePortalLogout() {
+      this.logoutFamily();
       saveParentBranding(this._portalPresentation);
       portalCache.clear('parent'); portalCache.clear('student');
       for(const storage of [localStorage,sessionStorage]) {
@@ -127,6 +131,7 @@ export async function mountParentPortal(errorMessage = '') {
       this._loginPending=true;button.disabled=true;button.setAttribute('aria-busy','true');
       alert.hidden=true;
       try {
+        if(this._familyMode){await this.loginFamily(form.elements.identifier.value,form.elements.password.value);return;}
         const response=await portalRequest('/public/portal/login',{method:'POST',body:{identifier:normalizeDigits(form.elements.identifier.value).trim(),password:normalizeDigits(form.elements.password.value).trim(),role:'parent'}});
         if(!response?.success || !response.token) throw Error('تعذر تسجيل الدخول. راجع بياناتك وحاول مجددًا.');
         await adoptVerifiedPortalSession(response.token,'parent');
@@ -143,7 +148,17 @@ export async function mountParentPortal(errorMessage = '') {
       field.type=visible?'text':'password';button.textContent=visible?'إخفاء':'إظهار';button.setAttribute('aria-pressed',String(visible));
     }
   };
-  registerParentPortalActions(app);window.centrlyApp=app;window.__centrlyLoaded=true;
+  registerParentPortalActions(app);registerFamilyActions(app);window.centrlyApp=app;window.__centrlyLoaded=true;
+  app._familyMode=new URLSearchParams(location.search).get('family')==='1' || !!savedFamilyToken();
+  const familyTicket=new URLSearchParams(location.hash.slice(1)).get('family');
+  if(familyTicket){
+    history.replaceState(null,'','/portal-entry');app._familyMode=true;
+    try{await app.loadFamilyPortal({arrival:await redeemFamilyEntry(familyTicket)});}catch(error){app.renderPortalLogin(error.message);}return app;
+  }
+  // An explicit legacy capability stays scoped to that student, even on a family device.
+  if(window.__centrlyPortalArrival?.role==='parent' && savedFamilyToken()){app.logoutFamily();app._familyMode=false;}
+  if(savedFamilyToken() && !errorMessage){await app.loadFamilyPortal();return app;}
+  if(app._familyMode){app.renderPortalLogin(errorMessage);return app;}
   const token=localStorage.getItem('centrly_portal_token') || sessionStorage.getItem('centrly_portal_token');
   const role=localStorage.getItem('centrly_portal_role') || sessionStorage.getItem('centrly_portal_role');
   if(token && role==='parent' && !errorMessage) await app.loadParentPortal(token);
