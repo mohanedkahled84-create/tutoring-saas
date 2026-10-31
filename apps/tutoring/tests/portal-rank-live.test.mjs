@@ -46,7 +46,7 @@ test('LIVE: portal rank is monthly, group-scoped, tied fairly, private and token
     {phone:inboxTags[2],tenant_id:null,status:'pending',message_body:'{malformed historical JSON'},
     {phone:inboxTags[3],tenant_id:null,status:'pending',message_body:JSON.stringify({material_id:quizId,group_id:group,student_code:'201',score:8,total:10})},
     {phone:inboxTags[4],tenant_id:null,status:'pending',message_body:JSON.stringify({material_id:quizId,group_id:group,student_code:'202',score:9,total:10,private_marker:'other-pupil'})},
-  ]));
+  ].map(row=>({...row,direction:'outbound'}))));
   const legacy=ok(await db.rpc('portal_legacy_quiz_payload',{p_student_id:ids[0],p_tenant_id:tenant,p_student_code:'201'}));
   assert.equal(legacy.definitions.length,1);assert.equal(legacy.submissions.length,1);
   assert.ok(!JSON.stringify(legacy).includes('private-other-group'));assert.ok(!JSON.stringify(legacy).includes('other-pupil'));
