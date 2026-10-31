@@ -10,6 +10,7 @@
  */
 
 import {approvedUtilityTemplate} from '../../shared/utils/metaTemplatePolicy.js';
+import {metaTemplateParameters} from '../../shared/utils/metaTemplateParameters.js';
 
 export interface MetaTemplateSendResult {
   success: boolean;
@@ -72,7 +73,7 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
         components: [
           {
             type: "body",
-            parameters: params.bodyParameters.map((val) => ({
+            parameters: metaTemplateParameters(params.templateName,params.bodyParameters).map((val) => ({
               type: "text",
               text: val || "",
             })),

@@ -78,7 +78,7 @@ test('family uses only the existing approved parent template and its three origi
  const original=globalThis.fetch,token=config.meta.accessToken;config.meta.accessToken='isolated-token';let sent;const lookups=[];
  try{
   globalThis.fetch=async(url,options)=>{if(options.body){sent=JSON.parse(options.body);return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};}lookups.push(new URL(url).searchParams.get('name'));return {ok:true,json:async()=>({data:[{name:'centerly_student',language:'en',status:'APPROVED',category:'UTILITY'},{name:'unused_new_template',language:'ar',status:'APPROVED',category:'UTILITY'}]})};};
-  assert.equal(await configuredMetaFamilyGateway().notify(phone,['أحمد، منى','الفيزياء','معلم'],'CENTRLY_FAMILY:id:tenant'),true);
+  assert.equal(await configuredMetaFamilyGateway().notify(phone,['أحمد، منى','الفيزياء','مستر مستر معلم'],'CENTRLY_FAMILY:id:tenant'),true);
   assert.deepEqual(lookups,['centerly_student']);assert.equal(sent.template.name,'centerly_student');assert.deepEqual(sent.template.components[0].parameters.map(p=>p.text),['أحمد، منى','الفيزياء','معلم']);
  }finally{globalThis.fetch=original;config.meta.accessToken=token;}
 });

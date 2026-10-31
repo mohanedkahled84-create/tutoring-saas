@@ -3,6 +3,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {config} from '../config/index.js';
 import {familyError,familyPhone,familyHash,familyRpc,deliverFamilyAccess,familyNamesAtTeacher,familyNamesText} from './parentFamily.js';
 import {approvedUtilityTemplate} from './metaTemplatePolicy.js';
+import {metaTemplateParameters} from './metaTemplateParameters.js';
 
 export interface MetaFamilyGateway {
  notify(phone:string,parameters:string[],payload:string):Promise<boolean>;
@@ -28,7 +29,7 @@ export function configuredMetaFamilyGateway():MetaFamilyGateway {
   notify:async(phone,parameters,payload)=>{
    // Never send a pending, marketing, authentication or unverified template.
    if(!await approved('centerly_student','en'))return false;
-   return send(phone,{type:'template',template:{name:'centerly_student',language:{code:'en'},components:[{type:'body',parameters:parameters.map(text=>({type:'text',text}))},{type:'button',sub_type:'quick_reply',index:'0',parameters:[{type:'payload',payload}]}]}});
+   return send(phone,{type:'template',template:{name:'centerly_student',language:{code:'en'},components:[{type:'body',parameters:metaTemplateParameters('centerly_student',parameters).map(text=>({type:'text',text}))},{type:'button',sub_type:'quick_reply',index:'0',parameters:[{type:'payload',payload}]}]}});
   },
   reply:(phone,text)=>send(phone,{type:'text',text:{preview_url:false,body:text}}),
  };
