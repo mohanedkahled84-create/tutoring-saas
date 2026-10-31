@@ -9,8 +9,13 @@ export function generateParentPortalToken(
   tenantId: string,
   expiresInDays = 365
 ): string {
-  const secret = config.internalApiSecret || "centrly-fallback-parent-secret";
   const expiresAt = Math.floor(Date.now() / 1000) + expiresInDays * 24 * 60 * 60;
+  return generateParentPortalTokenUntil(studentId, tenantId, expiresAt);
+}
+
+export function generateParentPortalTokenUntil(studentId: string, tenantId: string, expiresAt: number): string {
+  const secret = config.internalApiSecret || "centrly-fallback-parent-secret";
+  if (!Number.isSafeInteger(expiresAt)) throw new Error("Invalid portal session expiry");
   const payload = `${tenantId}:${studentId}:${expiresAt}`;
   const hmac = crypto.createHmac("sha256", secret).update(payload).digest("hex");
   return Buffer.from(`${payload}:${hmac}`).toString("base64url");
