@@ -77,7 +77,13 @@ test.after((t, done) => {
   server.close(done);
 });
 
-test("DEV-34: GET /api/public/parent-portal rejects missing or invalid token", async () => {
+test("DEV-34: GET /api/public/parent-portal rejects missing or invalid token", async t => {
+  const originalFetch = globalThis.fetch;
+  t.mock.method(globalThis, 'fetch', async (input, options) => {
+    const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
+    if (url.pathname.endsWith('/rpc/get_parent_portal_payload')) return new Response('null', {headers:{'Content-Type':'application/json'}});
+    return originalFetch(input, options);
+  });
   // Missing token
   const res1 = await fetch(`${baseUrl}/api/public/parent-portal`);
   assert.equal(res1.status, 400);
@@ -87,6 +93,19 @@ test("DEV-34: GET /api/public/parent-portal rejects missing or invalid token", a
   assert.equal(res2.status, 401);
   const body = await res2.json();
   assert.equal(body.error.code, "UNAUTHORIZED");
+});
+
+test("DEV-34: transient portal RPC failure is unavailable, never an invalid-session response", async t => {
+  const originalFetch = globalThis.fetch;
+  t.mock.method(globalThis, 'fetch', async (input, options) => {
+    const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
+    if (url.pathname.endsWith('/rpc/get_parent_portal_payload')) return new Response(JSON.stringify({code:'57014',message:'fixture database timeout'}),{status:500,headers:{'Content-Type':'application/json'}});
+    return originalFetch(input, options);
+  });
+  const response = await fetch(`${baseUrl}/api/public/parent-portal?token=fixture-session`);
+  assert.equal(response.status,503);assert.equal(response.headers.get('retry-after'),'5');
+  assert.match(response.headers.get('cache-control'),/no-store/);
+  const body=await response.json();assert.equal(body.error.code,'UNAVAILABLE');assert.ok(!JSON.stringify(body).includes('fixture database timeout'));
 });
 
 test("DEV-PORTAL.3: generateParentPortalInviteMessage creates natural, respectful message with portal URL and contact saving prompt", () => {

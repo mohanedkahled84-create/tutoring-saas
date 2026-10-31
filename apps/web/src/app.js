@@ -558,9 +558,6 @@ class CentrlyApp {
   }
 
   async init() {
-    const lingeringSplash = document.getElementById('centrlyInitialSplash');
-    if (lingeringSplash) lingeringSplash.remove();
-
     this.setupModalKeyboardShortcuts();
 
     // Prevent accidental mouse wheel number changes across all number inputs

@@ -621,11 +621,19 @@
       }
 
       try {
+        const saved = Number(localStorage.getItem('centrly_platform_settings_saved_at') || 0);
+        const cachedSettings = JSON.parse(localStorage.getItem('centrly_platform_settings') || 'null');
+        if (cachedSettings?.subdomain === sub && Date.now() - saved >= 0 && Date.now() - saved < 300000) {
+          applySettingsToDOM(cachedSettings);
+          checkPublishStatus(cachedSettings);
+          return;
+        }
         const res = await fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(sub)}`).catch(() => null);
         if (res.ok) {
           const data = await res.json();
           if (data && data.settings) {
             localStorage.setItem('centrly_platform_settings', JSON.stringify(data.settings));
+            localStorage.setItem('centrly_platform_settings_saved_at', String(Date.now()));
             applySettingsToDOM(data.settings);
             checkPublishStatus(data.settings);
           } else {
@@ -795,6 +803,10 @@
         
         if (res.ok && json && json.success && json.token) {
           localStorage.removeItem('centrly_explicit_logout');
+          if (localStorage.getItem('centrly_portal_token') !== json.token || localStorage.getItem('centrly_portal_role') !== 'student') {
+            localStorage.removeItem('centrly_portal_snapshot_v1:student');
+            localStorage.removeItem('centrly_portal_snapshot_v1:parent');
+          }
           localStorage.setItem('centrly_portal_token', json.token);
           localStorage.setItem('centrly_portal_role', 'student');
           sessionStorage.setItem('centrly_portal_token', json.token);

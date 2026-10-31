@@ -1,4 +1,4 @@
-import { portalRequest, savePortalSession } from './utils/portalSession.js';
+import { portalRequest, adoptVerifiedPortalSession } from './utils/portalSession.js';
 import { preparePortalDestination } from './utils/portalDestination.js';
 
 // Resolve shared links before importing the dashboard, landing page and staff authentication modules.
@@ -16,7 +16,7 @@ async function start() {
     if (!link.token) throw new Error('رابط المتابعة غير صالح');
     const role = link.portal_type === 'student' || type === 's' ? 'student' : 'parent';
     const app = {};
-    savePortalSession(link.token, role);
+    await adoptVerifiedPortalSession(link.token, role);
     if (await preparePortalDestination(app, link.token, role, portalRequest)) return;
     // The verified destination is already known for this entry. Avoid a second lookup in the SPA.
     window.__centrlyPortalArrival = { token: link.token, role, origin: location.origin, presentation: app._portalPresentation };

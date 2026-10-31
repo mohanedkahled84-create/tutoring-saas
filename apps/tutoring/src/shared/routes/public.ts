@@ -113,6 +113,7 @@ publicRouter.post(
 
 // DEV-34 & DEV-PORTAL: GET /api/public/parent-portal - Lightweight No-App Student Portal with Live Quizzes & Attendance
 publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<void> => {
+  res.setHeader("Cache-Control", "private, no-store");
   const token = (req.query.token as string) || "";
   if (!token) {
     res.status(400).json({ error: { code: "BAD_REQUEST", message: "Token is required" } });
@@ -132,7 +133,12 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
       p_tenant_id: tenantId,
     });
 
-    if (rpcError || !portalData) {
+    if (rpcError) {
+      res.setHeader("Retry-After", "5");
+      res.status(503).json({ error: { code: "UNAVAILABLE", message: "تعذر تحديث البيانات مؤقتًا. يرجى إعادة المحاولة." } });
+      return;
+    }
+    if (!portalData) {
       res.status(401).json({
         error: { code: "UNAUTHORIZED", message: "رابط المتابعة غير صالح أو منتهي الصلاحية. يرجى التواصل مع إدارة السنتر." },
       });
