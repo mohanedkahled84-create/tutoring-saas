@@ -9,7 +9,7 @@ import { normalizeMaterialUrl } from "../../features/materials/routes.js";
 import { mergeLegacyPortalQuizzes } from "../utils/legacyPortalQuizzes.js";
 
 import { signHomeworkFile } from "../../features/homework/files.js";
-import { verifiedPortalStudent, currentPortalDestination, createPortalHandoff, consumePortalHandoff, trustedPortalOrigin } from "../utils/portalDestination.js";
+import { verifiedPortalStudent, portalDestinationFromContext, createPortalHandoff, consumePortalHandoff, trustedPortalOrigin } from "../utils/portalDestination.js";
 
 export const publicRouter = Router();
 
@@ -23,7 +23,7 @@ publicRouter.post("/portal/destination", authRateLimiter, async (req: Request, r
     const db = getServiceSupabaseClient();
     const student = await verifiedPortalStudent(db, req.body?.token);
     if (!student) { res.status(401).json({ error: { code: "UNAUTHORIZED", message: "يرجى تسجيل الدخول مجددًا" } }); return; }
-    const destination = await currentPortalDestination(db, student.tenant_id);
+    const destination = portalDestinationFromContext(student);
     const ticket = destination.origin === req.headers.origin ? null : await createPortalHandoff(db, student, req.body.role, destination.origin);
     res.json({ ...destination, ticket });
   } catch {
@@ -127,6 +127,10 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
   const tenantId = verified?.tenant_id || null;
 
   try {
+    const contextRequest = () => verifiedPortalStudent(supabase, token)
+      .then(data => ({ data, error: null }), error => ({ data: null, error }));
+    // Independent, verified identity/context and account payload reads run together.
+    const contextFlight = verified ? contextRequest() : null;
     const { data: portalData, error: rpcError } = await supabase.rpc("get_parent_portal_payload", {
       p_token: token,
       p_student_id: studentId,
@@ -144,6 +148,18 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
       });
       return;
     }
+
+    const contextResult = await (contextFlight || contextRequest());
+    if (contextResult.error) throw contextResult.error;
+    const context = contextResult.data;
+    if (!context || context.id !== portalData.student?.id) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "رابط المتابعة غير صالح" } }); return;
+    }
+    portalData.student.tenant_id = context.tenant_id;
+    // Run the small aggregate alongside material enrichment, not after it.
+    const rankResult = supabase.rpc("get_portal_monthly_group_rank", {
+      p_student_id: context.id, p_tenant_id: context.tenant_id,
+    }).abortSignal(AbortSignal.timeout(2500)).then(({ data, error }) => !error ? data : null, () => null);
 
     if (portalData && Array.isArray(portalData.materials)) {
       portalData.materials = portalData.materials.map((m: any) => {
@@ -168,24 +184,11 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
 
     if (portalData && portalData.student) {
       try {
-        // Older online quizzes were stored in whatsapp_inbox rather than
-        // study_materials. Rehydrate only quizzes for groups linked to the
-        // HMAC-verified student and tenant; never use the old global endpoint.
+        // Context contains only memberships whose group and student share this tenant.
+        // Legacy capability tokens use the same exact-token verification as signed sessions.
+        const studentId = context.id, tenantId = context.tenant_id;
         if (studentId && tenantId) {
-          const [{ data: studentRow }, { data: memberships }, { data: tenantGroups }] = await Promise.all([
-            supabase.from("students").select("group_id").eq("id", studentId).eq("tenant_id", tenantId).maybeSingle(),
-            supabase.from("group_students").select("group_id").eq("student_id", studentId).eq("tenant_id", tenantId),
-            supabase.from("groups").select("id").eq("tenant_id", tenantId),
-          ]);
-          const tenantGroupIds = new Set((tenantGroups || []).map((group: any) => String(group.id)));
-          const allowedGroupIds = new Set<string>();
-          if (studentRow?.group_id && tenantGroupIds.has(String(studentRow.group_id))) {
-            allowedGroupIds.add(String(studentRow.group_id));
-          }
-          for (const membership of memberships || []) {
-            const groupId = String(membership.group_id || "");
-            if (tenantGroupIds.has(groupId)) allowedGroupIds.add(groupId);
-          }
+          const allowedGroupIds = new Set<string>(context.group_ids || []);
 
           if (allowedGroupIds.size > 0) {
             const { data: legacyRows, error: legacyError } = await supabase
@@ -257,31 +260,7 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
           }
         }
 
-        let teacherPhone = portalData.teacher_phone || portalData.student.teacher_phone || "";
-        const targetTenantId = tenantId || portalData.student.tenant_id;
-        if (!teacherPhone && targetTenantId) {
-          const { data: tenantRow } = await supabase
-            .from("tenants")
-            .select("settings")
-            .eq("id", targetTenantId)
-            .maybeSingle();
-          if (tenantRow?.settings) {
-            teacherPhone = (tenantRow.settings as any)?.contact_phone || (tenantRow.settings as any)?.whatsapp_phone || "";
-          }
-        }
-        if (!teacherPhone && targetTenantId) {
-          const { data: userRow } = await supabase
-            .from("users")
-            .select("phone")
-            .eq("tenant_id", targetTenantId)
-            .in("role", ["owner", "teacher", "center_owner"])
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          if (userRow?.phone) {
-            teacherPhone = userRow.phone;
-          }
-        }
+        const teacherPhone = portalData.teacher_phone || portalData.student.teacher_phone || context.teacher_phone || "";
         if (teacherPhone) {
           portalData.student.teacher_phone = teacherPhone;
           portalData.teacher_phone = teacherPhone;
@@ -289,27 +268,8 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
       } catch (_) {}
     }
 
-    // Older RPC payloads omit student.tenant_id. Resolve it from the verified
-    // HMAC identity or an exact legacy-token match, never a submitted tenant.
-    let fileTenantId = tenantId;
-    const fileStudentId = portalData.student?.id;
-    if (verified && verified.student_id !== fileStudentId) {
-      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "رابط المتابعة غير صالح" } });
-      return;
-    }
-    if (!fileTenantId && fileStudentId) {
-      const { data: owner, error: ownerError } = await supabase.from("students")
-        .select("tenant_id").eq("id", fileStudentId).eq("parent_portal_token", token).maybeSingle();
-      if (ownerError) throw ownerError;
-      fileTenantId = owner?.tenant_id || null;
-    }
-    if (portalData.student && fileTenantId) portalData.student.tenant_id = fileTenantId;
-    // One scoped aggregate query; ranking failure must never hide the student's account.
-    // The response contains only this student's position and cohort size.
-    const rankResult = fileStudentId && fileTenantId
-      ? supabase.rpc("get_portal_monthly_group_rank", { p_student_id: fileStudentId, p_tenant_id: fileTenantId })
-        .abortSignal(AbortSignal.timeout(2500)).then(({ data, error }) => !error ? data : null, () => null)
-      : Promise.resolve(null);
+    const fileTenantId = context.tenant_id;
+    const fileStudentId = context.id;
     if (portalData.summary?.total_sessions === 0) portalData.summary.attendance_rate = "لا توجد بيانات";
     if (Array.isArray(portalData.materials) && fileStudentId && fileTenantId) {
       portalData.materials = await Promise.all(portalData.materials.map(async (material: any) => ({
@@ -329,7 +289,7 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
 });
 
 // GET /api/public/short-links/:code - Resolve short code to portal token
-publicRouter.get("/short-links/:code", async (req: Request, res: Response): Promise<void> => {
+publicRouter.get("/short-links/:code", (req, res, next) => req.query.entry ? authRateLimiter(req, res, next) : next(), async (req: Request, res: Response): Promise<void> => {
   res.setHeader("Cache-Control", "private, no-store");
   res.setHeader("Referrer-Policy", "no-referrer");
   const code = (
@@ -344,6 +304,32 @@ publicRouter.get("/short-links/:code", async (req: Request, res: Response): Prom
   }
 
   const supabase = getServiceSupabaseClient();
+
+  // Resolve capability link + current publication in one query, without a second browser POST.
+  if (["s", "p", "1"].includes(String(req.query.entry))) {
+    if (!trustedPortalOrigin(req.headers.origin)) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: "وجهة الدخول غير صالحة" } }); return;
+    }
+    try {
+      const { data: resolved, error } = await supabase.rpc("resolve_portal_entry_context", { p_code: code });
+      if (error) throw error;
+      if (!resolved?.context?.id) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "رابط المتابعة غير موجود" } }); return;
+      }
+      const role = resolved.portal_type === "student" || req.query.entry === "s" ? "student" : "parent";
+      const token = resolved.token || generateParentPortalToken(resolved.student_id, resolved.tenant_id, 365);
+      const identity = verifyParentPortalToken(token);
+      if (identity ? identity.student_id !== resolved.student_id || identity.tenant_id !== resolved.tenant_id : !resolved.legacy_token_match) {
+        res.status(401).json({ error: { code: "UNAUTHORIZED", message: "رابط المتابعة غير صالح" } }); return;
+      }
+      const student = { ...resolved.context, expires_at: identity?.expires_at || Math.floor(Date.now()/1000) + 31536000 };
+      const destination = portalDestinationFromContext(student);
+      const ticket = destination.origin === req.headers.origin ? null : await createPortalHandoff(supabase, student, role, destination.origin);
+      res.json({ code, token, portal_type: role, student_id: student.id, destination: { ...destination, ticket } }); return;
+    } catch {
+      res.status(503).json({ error: { code: "UNAVAILABLE", message: "تعذر تجهيز الدخول، يرجى إعادة المحاولة" } }); return;
+    }
+  }
 
   try {
     const { data: rpcData, error: rpcError } = await supabase.rpc("resolve_portal_short_code", { p_code: code });

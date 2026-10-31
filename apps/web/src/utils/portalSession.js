@@ -6,10 +6,15 @@ const API = 'https://tutoring-backend-production-c8dd.up.railway.app/api';
 export async function portalRequest(path, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
+  // Origin-checked exchanges accept flat form bodies, avoiding an extra OPTIONS round trip.
+  const formBody = options.body && ['/public/portal/destination', '/public/portal/handoff'].includes(path);
   try {
     const response = await fetch(API + path, {
       method: options.method || 'GET', signal: controller.signal, cache: 'no-store',
-      ...(options.body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(options.body) } : {}),
+      ...(options.body ? {
+        headers: { 'Content-Type': formBody ? 'application/x-www-form-urlencoded;charset=UTF-8' : 'application/json' },
+        body: formBody ? new URLSearchParams(options.body).toString() : JSON.stringify(options.body),
+      } : {}),
     });
     const data = await response.json();
     if (!response.ok) {
