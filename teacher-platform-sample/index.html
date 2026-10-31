@@ -4,11 +4,12 @@
 
 <head>
   <link rel="preconnect" href="https://tutoring-backend-production-c8dd.up.railway.app" crossorigin>
+  <link rel="modulepreload" href="/apps/web/src/utils/portalCache.js">
   <script>
     // Begin the session transfer while the dashboard document is still being parsed.
     window.__centrlyStudentHandoff = new URLSearchParams(location.hash.slice(1)).has('handoff');
     window.__centrlyStudentSession = import('/apps/web/src/utils/portalSession.js').then(async helpers => ({
-      token: await helpers.resolveStudentSession(), request: helpers.portalRequest
+      token: await helpers.resolveStudentSession(), request: helpers.portalRequest, cache: helpers.portalCache
     }));
     // The body attaches the visible error handler after parsing.
     window.__centrlyStudentSession.catch(() => {});
@@ -2353,13 +2354,13 @@
 
         <div class="student-pill">
 
-          <div class="student-avatar">م</div>
+          <div class="student-avatar" aria-hidden="true">•</div>
 
           <div class="student-info">
 
-            <h4 id="sidebarStudentName">مهند خالد</h4>
+            <h4 id="sidebarStudentName">حسابك الدراسي</h4>
 
-            <p id="sidebarStudentCode">كود: 1006 • سنتر الهضبه</p>
+            <p id="sidebarStudentCode"></p>
 
           </div>
 
@@ -2411,7 +2412,7 @@
 
           <div class="greeting-texts">
 
-            <h2 id="homeGreetingName">أهلاً بك يا مهند</h2>
+            <h2 id="homeGreetingName">متابعتك الدراسية</h2>
 
             <p id="homeGreetingSub">
 
@@ -2421,13 +2422,13 @@
 
           </div>
 
-          <div class="level-badge-box" id="studentRankCard">
+          <div class="level-badge-box" id="studentRankCard" style="display:none">
 
             <div class="badge-label">ترتيبك على المجموعة</div>
 
-            <div class="level-title" id="studentRankDisplay">المركز الأول 🥇</div>
+            <div class="level-title" id="studentRankDisplay"></div>
 
-            <div class="badge-sub" id="studentRankSubDisplay">الأول بين طلاب المجموعة</div>
+            <div class="badge-sub" id="studentRankSubDisplay"></div>
 
           </div>
 
@@ -2717,7 +2718,7 @@
 
         <h3 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 2px;">كويز 1: الحركة وقوانين نيوتن — بيئة اختبار مؤمنة</h3>
 
-        <span style="font-size: 0.75rem; color: #94a3b8;" id="examStudentLabel">الطالب: مهند خالد (كود: 1006 • سنتر الهضبه)</span>
+        <span style="font-size: 0.75rem; color: #94a3b8;" id="examStudentLabel"></span>
 
       </div>
 
@@ -2827,7 +2828,7 @@
 
     <!-- علامة مائية متحركة خاصة بالطالب أثناء الامتحان (كود الطالب فقط) -->
 
-    <div class="exam-watermark" id="examWatermark">1006</div>
+    <div class="exam-watermark" id="examWatermark"></div>
 
   </div>
 
@@ -2861,7 +2862,7 @@
 
         <div id="videoFloatingWatermark" class="video-floating-watermark">
 
-          كود: 1006
+
 
         </div>
 
@@ -2898,7 +2899,7 @@
     <script>
 
     // 1. استرجاع وتحديث بيانات الطالب الحقيقية من قاعدة البيانات
-    let currentStudent = { name: 'الطالب', code: '', phone: '', center: '', group: '', subject: '', teacher: '', teacher_phone: '' };
+    let currentStudent = { name: '', code: '', phone: '', center: '', group: '', subject: '', teacher: '', teacher_phone: '' };
 
     function hydrateStudentUI(s) {
 
@@ -2909,6 +2910,8 @@
       const nameEl = document.getElementById('sidebarStudentName');
 
       if (nameEl) nameEl.innerText = currentStudent.name || 'الطالب';
+      const avatar = document.querySelector('.student-avatar');
+      if (avatar) avatar.textContent = currentStudent.name?.trim().charAt(0) || '•';
 
       const codeEl = document.getElementById('sidebarStudentCode');
 
@@ -2916,7 +2919,8 @@
 
         const cName = currentStudent.center || currentStudent.center_name || '';
 
-        codeEl.innerText = 'كود: ' + (currentStudent.code || currentStudent.student_code || '') + ' • سنتر ' + cName;
+        const code = currentStudent.code || currentStudent.student_code || '';
+        codeEl.innerText = [code ? 'كود: ' + code : '', cName ? 'سنتر ' + cName : ''].filter(Boolean).join(' • ');
 
       }
 
@@ -2924,9 +2928,9 @@
 
       if (greetingEl) {
 
-        const firstName = currentStudent.name ? currentStudent.name.split(' ')[0] : 'مهند';
+        const firstName = currentStudent.name ? currentStudent.name.split(' ')[0] : '';
 
-        greetingEl.innerText = 'أهلاً بك يا ' + firstName;
+        greetingEl.innerText = firstName ? 'أهلاً بك يا ' + firstName : 'متابعتك الدراسية';
 
       }
 
@@ -2963,78 +2967,6 @@
         examStudentLabel.innerText = `الطالب: ${currentStudent.name} (كود: ${currentStudent.code || currentStudent.student_code || ''} • سنتر ${currentStudent.center || currentStudent.center_name || ''})`;
 
       }
-
-      // ترطيب فوري لترتيب الطالب على المجموعة من الكاش (0ms Delay)
-
-      const sCode = currentStudent.code || currentStudent.student_code || '';
-
-      const rankTitleEl = document.getElementById('studentRankDisplay');
-
-      const rankSubEl = document.getElementById('studentRankSubDisplay');
-
-      try {
-
-        const cachedRank = JSON.parse(localStorage.getItem(`centrly_student_rank_${sCode}`) || '{}');
-
-        if (cachedRank && cachedRank.rankTitle && rankTitleEl) {
-
-          rankTitleEl.innerText = cachedRank.rankTitle;
-
-          if (rankSubEl && cachedRank.rankSub) rankSubEl.innerText = cachedRank.rankSub;
-
-        } else if (rankTitleEl) {
-
-          rankTitleEl.innerText = 'غير محسوب';
-
-          if (rankSubEl) rankSubEl.innerText = 'يظهر الترتيب بعد رصد النتائج الفعلية';
-
-        }
-
-      } catch (_) {}
-
-      // ترطيب فوري لمؤشرات الـ KPIs لمنع الوميض والقفزات
-
-      try {
-
-        const cachedKpis = JSON.parse(localStorage.getItem(`centrly_cached_kpis_${sCode}`) || '{}');
-
-        if (cachedKpis) {
-
-          if (cachedKpis.attendance) {
-
-            const el = document.getElementById('kpiAttendanceVal');
-
-            if (el) el.innerText = cachedKpis.attendance;
-
-          }
-
-          if (cachedKpis.quizAvg) {
-
-            const el = document.getElementById('kpiQuizAvgVal');
-
-            if (el) el.innerText = cachedKpis.quizAvg;
-
-          }
-
-          if (cachedKpis.lectures !== undefined) {
-
-            const el = document.getElementById('kpiLecturesVal');
-
-            if (el) el.innerText = cachedKpis.lectures;
-
-          }
-
-          if (cachedKpis.homework !== undefined) {
-
-            const el = document.getElementById('kpiHomeworkVal');
-
-            if (el) el.innerText = cachedKpis.homework;
-
-          }
-
-        }
-
-      } catch (_) {}
 
       // استرجاع تسليمات الكويزات المسجلة محلياً في الذاكرة فورياً
 
@@ -3081,8 +3013,6 @@
       } catch (_) {}
 
     }
-
-    hydrateStudentUI(currentStudent);
 
     // 2. تطبيق إعدادات المنصة وثيم المعلم
 
@@ -3155,6 +3085,9 @@
       try {
 
         const sub = getSubdomain();
+        const saved = Number(localStorage.getItem('centrly_platform_settings_saved_at') || 0);
+        const cached = JSON.parse(localStorage.getItem('centrly_platform_settings') || 'null');
+        if (cached?.subdomain === sub && Date.now() - saved >= 0 && Date.now() - saved < 300000) return;
 
         const res = await fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(sub)}`).then(r => r.ok ? r.json() : null).catch(() => null);
 
@@ -3163,6 +3096,7 @@
           const s = res.settings;
 
           localStorage.setItem('centrly_platform_settings', JSON.stringify(s));
+          localStorage.setItem('centrly_platform_settings_saved_at', String(Date.now()));
 
           if (s.theme_preset) {
 
@@ -3674,146 +3608,14 @@
 
     // حساب وتحديث ترتيب الطالب على المجموعة ديناميكياً بما يتطابق 100% مع لوحة تقارير المعلم
 
-    async function computeAndRenderStudentRank(studentCode, groupName, studentObj, recordedQuizzes) {
-
-      const rankTitleEl = document.getElementById('studentRankDisplay');
-
-      const rankSubEl = document.getElementById('studentRankSubDisplay');
-
-      if (!rankTitleEl) return;
-
-      const codeStr = String(studentCode || '').trim();
-
-      const groupStr = (groupName || studentObj?.group || studentObj?.group_name || '').trim();
-
-      const defaultGroupMembers = [
-
-        { code: '1006', name: 'مهند خالد', attendanceRate: 100 },
-
-        { code: '1005', name: 'احمد محمود', attendanceRate: 100 },
-
-        { code: '1002', name: 'باسل امير', attendanceRate: 90 },
-
-        { code: '1003', name: 'عمر جمال', attendanceRate: 85 },
-
-        { code: '1004', name: 'احمد عبد الله', attendanceRate: 80 }
-
-      ];
-
-      const allSubmissions = Array.isArray(window._studentRecordedQuizzes) ? window._studentRecordedQuizzes : [];
-
-      const scoredStudents = defaultGroupMembers.map(member => {
-
-        const mCode = String(member.code);
-
-        let mQuizzes = [];
-
-        if (mCode === codeStr && Array.isArray(recordedQuizzes) && recordedQuizzes.length > 0) {
-
-          mQuizzes = recordedQuizzes;
-
-        } else {
-
-          mQuizzes = allSubmissions.filter(s => String(s.student_code || '').trim() === mCode && (s.status === 'graded' || s.status === 'approved' || s.score !== undefined));
-
-        }
-
-        let avgQuiz = 0;
-
-        const hasQuizzes = mQuizzes.length > 0;
-
-        if (hasQuizzes) {
-
-          const totalPct = mQuizzes.reduce((sum, q) => sum + (Number(q.percentage) || ((Number(q.score) / (Number(q.max_score) || 10)) * 100) || 0), 0);
-
-          avgQuiz = Math.round(totalPct / mQuizzes.length);
-
-        }
-
-        const attRate = member.attendanceRate || 100;
-
-        const overallScore = hasQuizzes ? Math.round((avgQuiz * 0.7 + attRate * 0.3) * 10) / 10 : Math.round((attRate * 0.3) * 10) / 10;
-
-        return {
-
-          code: mCode,
-
-          name: member.name,
-
-          hasQuizzes,
-
-          avgQuiz,
-
-          attendanceRate: attRate,
-
-          overallScore
-
-        };
-
-      });
-
-      scoredStudents.sort((a, b) => {
-
-        if (a.hasQuizzes !== b.hasQuizzes) return b.hasQuizzes ? 1 : -1;
-
-        if (b.overallScore !== a.overallScore) return b.overallScore - a.overallScore;
-
-        if (b.avgQuiz !== a.avgQuiz) return b.avgQuiz - a.avgQuiz;
-
-        return b.attendanceRate - a.attendanceRate;
-
-      });
-
-      const myIndex = scoredStudents.findIndex(s => s.code === codeStr);
-
-      const myRank = myIndex >= 0 ? (myIndex + 1) : 1;
-
-      const totalStudents = scoredStudents.length || 5;
-
-      let rankTitle = `المركز #${myRank}`;
-
-      let rankSub = `بين طلاب المجموعة (${totalStudents} طلاب)`;
-
-      if (myRank === 1) {
-
-        rankTitle = 'المركز الأول 🥇';
-
-        rankSub = `الأول على مجموعة ${groupStr}`;
-
-      } else if (myRank === 2) {
-
-        rankTitle = 'المركز الثاني 🥈';
-
-        rankSub = `الثاني بين طلاب المجموعة (${totalStudents} طلاب)`;
-
-      } else if (myRank === 3) {
-
-        rankTitle = 'المركز الثالث 🥉';
-
-        rankSub = `الثالث بين طلاب المجموعة (${totalStudents} طلاب)`;
-
+    function renderStudentRank(position, total) {
+      const card = document.getElementById('studentRankCard');
+      const valid = Number.isInteger(position) && position > 0 && Number.isInteger(total) && total >= position;
+      card.style.display = valid ? '' : 'none';
+      if (valid) {
+        document.getElementById('studentRankDisplay').textContent = `المركز #${position}`;
+        document.getElementById('studentRankSubDisplay').textContent = `بين ${total} طالبًا في المجموعة`;
       }
-
-      rankTitleEl.innerText = rankTitle;
-
-      if (rankSubEl) rankSubEl.innerText = rankSub;
-
-      try {
-
-        localStorage.setItem(`centrly_student_rank_${codeStr}`, JSON.stringify({
-
-          rank: myRank,
-
-          rankTitle,
-
-          rankSub,
-
-          total: totalStudents
-
-        }));
-
-      } catch (_) {}
-
     }
 
     // 7. جلب المحتوى الحي ومزامنته الحقيقية مع قاعدة البيانات (Supabase & Railway)
@@ -3822,14 +3624,29 @@
 
     let platformContentFlight = null;
     let hasVerifiedPortalData = false;
-    function fetchPlatformContent() {
+    function fetchPlatformContent(options = {}) {
+      if (platformContentFlight && options.afterMutation) return platformContentFlight.then(() => fetchPlatformContent({force:true}));
       if (platformContentFlight) return platformContentFlight;
       window._lastPlatformFetchTime = Date.now();
-      platformContentFlight = fetchPlatformContentOnce().catch(showPortalLoadError).finally(() => { platformContentFlight = null; });
+      platformContentFlight = fetchPlatformContentOnce(options).catch(showPortalLoadError).finally(() => { platformContentFlight = null; });
       return platformContentFlight;
     }
 
     function showPortalLoadError(error) {
+      if (error?.code === 'PORTAL_CACHE_INVALIDATED') return;
+      if (error?.status === 401 || error?.status === 403 || error?.code === 'PORTAL_SESSION_CHANGED') {
+        if (error.code !== 'PORTAL_SESSION_CHANGED') {
+          localStorage.removeItem('centrly_portal_token');
+          localStorage.removeItem('centrly_portal_role');
+          localStorage.removeItem('centrly_portal_snapshot_v1:student');
+          localStorage.removeItem('portal_student');
+          sessionStorage.removeItem('centrly_portal_token');
+          sessionStorage.removeItem('centrly_portal_role');
+        }
+        document.body.replaceChildren();
+        window.location.replace(error.code === 'PORTAL_SESSION_CHANGED' ? '/dashboard' : '/login');
+        return;
+      }
       let notice = document.getElementById('portalLoadError');
       if (!notice) {
         notice = document.createElement('div');
@@ -3845,7 +3662,7 @@
       notice.querySelector('button').addEventListener('click', event => {
         event.currentTarget.disabled = true;
         event.currentTarget.textContent = 'جارِ إعادة المحاولة…';
-        fetchPlatformContent();
+        fetchPlatformContent({force:true});
       }, { once: true });
       if (!hasVerifiedPortalData) {
         document.getElementById('sidebarStudentName').innerText = 'تعذر تحميل الحساب';
@@ -3856,7 +3673,7 @@
       }
     }
 
-    async function fetchPlatformContentOnce() {
+    async function fetchPlatformContentOnce(options = {}) {
 
       hydrateSettings();
 
@@ -3904,8 +3721,6 @@
 
       }
 
-      let qCode = '';
-      hydrateStudentUI(currentStudent);
       const session = await window.__centrlyStudentSession;
       let token = session.token;
       if (!token) { window.location.replace('/login'); return; }
@@ -3916,10 +3731,38 @@
 
       }
 
-      // Verify the current token before reading student-specific cached data.
-      let dbMaterials = [];
+      const result = await session.cache.load(token, {
+        request: session.request, force: options.force === true,
+        onData(data, meta) {
+          if (!meta.cached || !hasVerifiedPortalData) renderPortalPayload(data);
+          setPortalSyncStatus(meta.savedAt, false);
+        }
+      });
+      setPortalSyncStatus(result.savedAt, !!result.error);
+    }
 
-      const portalData = await session.request('/public/parent-portal?token=' + encodeURIComponent(token));
+    function setPortalSyncStatus(savedAt, failed) {
+      let status = document.getElementById('portalSyncStatus');
+      if (!status) {
+        status = document.createElement('div');
+        status.id = 'portalSyncStatus';
+        status.setAttribute('role', 'status');
+        status.style.cssText = 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:0.85rem;color:#475569;margin:12px 0';
+        status.innerHTML = '<span></span><button type="button" style="min-height:44px;padding:8px 16px">تحديث</button>';
+        status.querySelector('button').addEventListener('click', async event => {
+          event.currentTarget.disabled = true;
+          try { await fetchPlatformContent({force:true}); }
+          finally { status.querySelector('button').disabled = false; }
+        });
+        document.getElementById('homeGreetingName').closest('.hero-greeting-card').after(status);
+      }
+      const time = new Date(savedAt).toLocaleTimeString('ar-EG', {hour:'2-digit',minute:'2-digit'});
+      status.querySelector('span').textContent = (failed ? 'تعذر التحديث الآن؛ تظهر آخر بيانات محفوظة • ' : 'آخر تحديث • ') + time;
+    }
+
+    function renderPortalPayload(portalData) {
+      let qCode = '';
+      let dbMaterials = [];
       const richRes = null; // Use token-scoped quiz materials only.
 
       if (!portalData?.student?.id) {
@@ -4083,77 +3926,11 @@
 
       } catch (_) {}
 
-      // 2. تنظيف ودمج أي محتوى إضافي تم رفعه محلياً مع إزالة أي كويز تجريبي نهائياً
-
-      let localMaterials = [];
-
-      try {
-
-        const cached = localStorage.getItem('centrly_materials') || localStorage.getItem('centrly_platform_content');
-
-        if (cached) {
-
-          const parsed = JSON.parse(cached);
-
-          if (Array.isArray(parsed)) {
-
-            localMaterials = parsed.filter(m => {
-
-              const t = (m.title || '').toLowerCase();
-
-              const id = (m.id || '').toLowerCase();
-
-              return !t.includes('تجريبي') && !t.includes('trial') && !t.includes('test') && !id.includes('trial') && !id.includes('test');
-
-            });
-
-          }
-
-        }
-
-      } catch (_) {}
-
-      try {
-
-        ['centrly_materials', 'centrly_platform_content', 'centrly_quizzes'].forEach(k => {
-
-          const raw = localStorage.getItem(k);
-
-          if (raw) {
-
-            let items = JSON.parse(raw);
-
-            if (Array.isArray(items)) {
-
-              items = items.filter(m => {
-
-                const t = (m.title || '').toLowerCase();
-
-                const id = (m.id || '').toLowerCase();
-
-                return !t.includes('تجريبي') && !t.includes('trial') && !t.includes('test') && !id.includes('trial') && !id.includes('test');
-
-              });
-
-              localStorage.setItem(k, JSON.stringify(items));
-
-            }
-
-          }
-
-        });
-
-      } catch (_) {}
-
-      // دمج وتحديث المعرفات (بيانات قاعدة البيانات هي الأساس الحي وتتفوق دائماً على الكاش)
+      // بيانات قاعدة البيانات هي الأساس الحي وتتفوق دائماً على الكاش.
+      // Replace the whole material list; removed assignments must not return from old global storage.
       const map = new Map();
-      localMaterials.forEach(item => {
-        if (item && item.id) map.set(item.id, item);
-      });
       dbMaterials.forEach(item => {
-        if (item && item.id) {
-          map.set(item.id, { ...(map.get(item.id) || {}), ...item });
-        }
+        if (item && item.id) map.set(item.id, item);
       });
 
       // 2.5 دمج الكويزات الأونلاين المعتمدة داخل كشف الدرجات المرصودة وتحديث النسبة
@@ -4276,10 +4053,9 @@
 
       // حساب وتحديث ترتيب الطالب على المجموعة ديناميكياً
 
-      computeAndRenderStudentRank(currentStudentCode, currentStudent.group, currentStudent, allRecorded);
+      renderStudentRank(portalData.summary?.student_rank, portalData.summary?.group_size);
 
       platformContent = Array.from(map.values());
-      try { localStorage.setItem('centrly_platform_content', JSON.stringify(platformContent)); } catch (_) {}
       renderAllPanels();
 
     }
@@ -5567,12 +5343,13 @@
         }
 
         showPortalToast('تم رفع الواجب بنجاح وإرساله للمستر للمراجعة والاعتماد!', 'success');
+        (await window.__centrlyStudentSession).cache.clear('student');
         window._userSwitchedHwTab = false;
 
         // Smooth transition to archive after visual confirmation
         setTimeout(async () => {
           try {
-            await fetchPlatformContent();
+            await fetchPlatformContent({force:true,afterMutation:true});
             switchHwSubTab('archive');
           } catch (_) {}
         }, 1200);
@@ -6274,6 +6051,7 @@
         const resJson = await response.json().catch(() => ({}));
         if (response.ok && resJson.success) {
           result = resJson;
+          (await window.__centrlyStudentSession).cache.clear('student');
         }
       } catch (_) {}
 
@@ -6288,6 +6066,7 @@
           const fbJson = await fbRes.json().catch(() => ({}));
           if (fbRes.ok && fbJson.success) {
             result = fbJson;
+            (await window.__centrlyStudentSession).cache.clear('student');
           }
         } catch (_) {}
       }
@@ -7017,13 +6796,17 @@
 
       try {
 
+        localStorage.removeItem('centrly_portal_snapshot_v1:student');
+        localStorage.removeItem('centrly_portal_snapshot_v1:parent');
         localStorage.removeItem('portal_student');
 
         localStorage.removeItem('portal_student_code');
 
         localStorage.removeItem('centrly_portal_token');
 
-        sessionStorage.clear();
+        localStorage.removeItem('centrly_portal_role');
+        sessionStorage.removeItem('centrly_portal_token');
+        sessionStorage.removeItem('centrly_portal_role');
 
         localStorage.setItem('centrly_explicit_logout', '1');
 

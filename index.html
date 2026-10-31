@@ -58,6 +58,7 @@
 
   <!-- Preconnect & DNS-prefetch to accelerate Supabase backend API connection -->
   <link rel="preconnect" href="https://tutoring-backend-production-c8dd.up.railway.app" crossorigin>
+  <link rel="modulepreload" href="/apps/web/src/utils/portalCache.js">
   <link rel="preconnect" href="https://ofaraxqrpcdiregxjyyb.supabase.co" crossorigin>
   <link rel="dns-prefetch" href="https://ofaraxqrpcdiregxjyyb.supabase.co">
 
@@ -94,6 +95,22 @@
 <body>
   <div id="centrlyProgressBar" class="top-progress-bar"></div>
   <div id="app"></div>
+  <script>
+    // Portal entry must be visible even while its JavaScript modules are downloading.
+    (function () {
+      var path = location.pathname, query = new URLSearchParams(location.search);
+      if (!/^\/(?:portal(?:-entry)?(?:\/|$)|[ps](?:\/|[a-f0-9]))/i.test(path) && !query.has('token') && !query.has('s') && !query.has('p') && query.get('view') !== 'portal') return;
+      var root = document.getElementById('app');
+      root.innerHTML = '<div id="centrlyInitialSplash" role="status" style="max-width:480px;margin:15vh auto;padding:32px;text-align:center;border:1px solid #dbe3ed;border-radius:16px;background:#fff;color:#0f172a;font-family:Arial,sans-serif"><strong style="font-size:24px">سنترلي</strong><p>جارِ فتح المتابعة…</p><button hidden type="button" style="min-height:44px;padding:8px 24px">إعادة المحاولة</button></div>';
+      root.querySelector('button').onclick = function () { location.reload(); };
+      setTimeout(function () {
+        var splash = document.getElementById('centrlyInitialSplash');
+        if (!splash) return;
+        splash.querySelector('p').textContent = 'الاتصال يستغرق وقتًا أطول. يمكنك إعادة المحاولة.';
+        splash.querySelector('button').hidden = false;
+      }, 10000);
+    })();
+  </script>
   <script type="module" src="/apps/web/src/portalBootstrap.js?v=9.21.0"></script>
 </body>
 </html>

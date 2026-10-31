@@ -6,6 +6,32 @@ import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { normalizeDigits } from '../utils/normalizeDigits.js';
 import { preparePortalDestination } from '../utils/portalDestination.js';
+import { portalCache, portalRequest } from '../utils/portalSession.js';
+
+function showPortalPending(app) {
+  const root = app.getAppEl();
+  if (root) root.innerHTML = '<div role="status" style="max-width:480px;margin:15vh auto;padding:32px;text-align:center;border:1px solid #dbe3ed;border-radius:16px;background:white"><strong>سنترلي</strong><p>جارِ فتح المتابعة…</p></div>';
+}
+
+function showPortalCacheStatus(app, savedAt, failed) {
+  const root = app.getAppEl();
+  if (!root) return;
+  let status = root.querySelector('#portalCacheStatus');
+  if (!status) {
+    status = document.createElement('div');
+    status.id = 'portalCacheStatus';
+    status.setAttribute('role', 'status');
+    status.style.cssText = 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 20px;color:#475569;font-size:0.85rem';
+    status.innerHTML = '<span></span><button type="button" style="min-height:44px;padding:8px 16px">تحديث</button>';
+    status.querySelector('button').addEventListener('click', async event => {
+      event.currentTarget.disabled = true;
+      try { await app.reloadStudentPortal(); }
+      finally { if (status.isConnected) status.querySelector('button').disabled = false; }
+    });
+    root.prepend(status);
+  }
+  status.querySelector('span').textContent = (failed ? 'تعذر التحديث؛ تظهر آخر بيانات محفوظة • ' : 'آخر تحديث • ') + new Date(savedAt).toLocaleTimeString('ar-EG', {hour:'2-digit',minute:'2-digit'});
+}
 
 /**
  * Centrly Unified Student & Parent Portal Login View
@@ -217,8 +243,9 @@ export function registerUnifiedPortalActions(app) {
       }
     } catch (_) {}
 
+    if (this._parentPortalRenderedToken !== token) showPortalPending(this);
     try {
-      if (await preparePortalDestination(this, token, 'parent', request)) return;
+      if (await preparePortalDestination(this, token, 'parent', portalRequest)) return;
       const data = await request(`/public/parent-portal?token=${encodeURIComponent(token)}`);
       data.portal_presentation = this._portalPresentation;
       if (data && (data.error || !data.student)) {
@@ -229,6 +256,7 @@ export function registerUnifiedPortalActions(app) {
         const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_parent_tab')) ||
                          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_parent_tab')) || 'attendance';
         appEl.innerHTML = renderParentPortalView(data, savedTab);
+        this._parentPortalRenderedToken = token;
         const parentKey = (data && data.student && (data.student.id || data.student.parent_phone || data.student.student_code || data.student.code)) ? String(data.student.id || data.student.parent_phone || data.student.student_code || data.student.code).trim() : '';
         if (typeof window !== 'undefined' && parentKey) {
           window._centrlyCurrentParentId = parentKey;
@@ -273,7 +301,7 @@ export function registerUnifiedPortalActions(app) {
     }
   }
 
-  app.loadStudentPortal = async function loadStudentPortal(token) {
+  app.loadStudentPortal = async function loadStudentPortal(token, options = {}) {
     window.__centrlyLoaded = true;
     this._studentPortalToken = token;
     try {
@@ -290,13 +318,7 @@ export function registerUnifiedPortalActions(app) {
       }
     } catch (_) {}
 
-    try {
-      if (await preparePortalDestination(this, token, 'student', request)) return;
-      const data = await request(`/public/parent-portal?token=${encodeURIComponent(token)}`);
-      if (data && (data.error || !data.student)) {
-        throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة الطالب');
-      }
-
+    const renderSavedData = data => {
       // Online quiz definitions and scores are already scoped to this student by
       // the parent-portal API. Never load them through the legacy public quiz API.
       if (!Array.isArray(data.materials)) data.materials = [];
@@ -353,11 +375,35 @@ export function registerUnifiedPortalActions(app) {
           }
         }, 500);
       }
+    };
+    try {
+      const cached = await portalCache.read(token, 'student');
+      if (cached) {
+        renderSavedData(cached.data);
+        showPortalCacheStatus(this, cached.savedAt, false);
+      } else showPortalPending(this);
+      // Old shared links still verify their live destination in portalBootstrap.
+      // A direct return to a fresh, verified basic snapshot needs no extra lookup.
+      if (!cached?.fresh || options.force || window.__centrlyPortalArrival) {
+        if (await preparePortalDestination(this, token, 'student', portalRequest)) return;
+      }
+      const result = await portalCache.load(token, {
+        request:portalRequest, force:options.force === true,
+        onData:(data, meta) => {
+          if (!meta.cached || !cached) renderSavedData(data);
+          showPortalCacheStatus(this, meta.savedAt, false);
+        }
+      });
+      showPortalCacheStatus(this, result.savedAt, !!result.error);
+      return !result.error;
     } catch (err) {
+      if (err?.code === 'PORTAL_CACHE_INVALIDATED') return false;
+      if (err?.code === 'PORTAL_SESSION_CHANGED') { showPortalPending(this); window.location.reload(); return false; }
       const msg = err?.message || '';
-      const isExpired = (msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED')) &&
+      const isExpired = (err?.status === 401 || err?.status === 403 || msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED')) &&
                         !msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('Failed to execute');
       if (isExpired) {
+        portalCache.clear('student');
         try {
           localStorage.removeItem('centrly_portal_token');
           localStorage.removeItem('centrly_portal_role');
@@ -366,6 +412,12 @@ export function registerUnifiedPortalActions(app) {
         } catch (_) {}
         this.renderPortalLogin('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً');
         return;
+      }
+      const fallback = await portalCache.read(token, 'student');
+      if (fallback) {
+        renderSavedData(fallback.data);
+        showPortalCacheStatus(this, fallback.savedAt, true);
+        return false;
       }
       const appEl = this.getAppEl();
       if (appEl) {
@@ -378,8 +430,8 @@ export function registerUnifiedPortalActions(app) {
 
   app.reloadStudentPortal = async function reloadStudentPortal() {
     if (this._studentPortalToken) {
-      await this.loadStudentPortal(this._studentPortalToken);
-      this.showToast('تم تحديث بيانات الطالب بنجاح!', 'success');
+      const refreshed = await this.loadStudentPortal(this._studentPortalToken, {force:true});
+      if (refreshed) this.showToast('تم تحديث بيانات الطالب بنجاح!', 'success');
     } else {
       window.location.reload();
     }
@@ -490,6 +542,11 @@ export function registerUnifiedPortalActions(app) {
       if (res && res.success && res.token) {
         const targetRole = (role === 'student' || role === 'parent') ? role : (res.role || 'parent');
         try {
+          localStorage.removeItem('centrly_explicit_logout');
+          if (localStorage.getItem('centrly_portal_token') !== res.token || localStorage.getItem('centrly_portal_role') !== targetRole) {
+            portalCache.clear('student');
+            portalCache.clear('parent');
+          }
           localStorage.setItem('centrly_portal_token', res.token);
           localStorage.setItem('centrly_portal_role', targetRole);
           sessionStorage.setItem('centrly_portal_token', res.token);
@@ -528,6 +585,8 @@ export function registerUnifiedPortalActions(app) {
   }
 
   app.handlePortalLogout = function handlePortalLogout() {
+    portalCache.clear('student');
+    portalCache.clear('parent');
     try {
       localStorage.removeItem('centrly_portal_token');
       localStorage.removeItem('centrly_portal_role');
@@ -536,6 +595,7 @@ export function registerUnifiedPortalActions(app) {
       sessionStorage.removeItem('centrly_student_portal_token');
     } catch (_) {}
     this._parentPortalToken = null;
+    this._parentPortalRenderedToken = null;
     this._studentPortalToken = null;
     this.showToast('تم تسجيل الخروج بنجاح', 'info');
     this.renderPortalLogin();
