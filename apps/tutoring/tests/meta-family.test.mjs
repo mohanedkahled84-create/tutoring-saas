@@ -67,18 +67,32 @@ test('delayed ordinary messages remain in the inbox without assigning an ambiguo
 });
 test('Meta transport sends a quick reply payload; provider failures cannot report sent',async()=>{
  const original=globalThis.fetch,token=config.meta.accessToken;config.meta.accessToken='isolated-token';const captured=[];
- try{globalThis.fetch=async(url,options)=>{if(!options.body)return {ok:true,json:async()=>({data:[{name:'centerly_family_followup_v1',status:'APPROVED',language:'ar'}]})};captured.push(JSON.parse(options.body));return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};};
+ try{globalThis.fetch=async(url,options)=>{if(!options.body)return {ok:true,json:async()=>({data:[{name:'centerly_parent_record_utility_v1',status:'APPROVED',language:'ar',category:'UTILITY'}]})};captured.push(JSON.parse(options.body));return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};};
   const gateway=configuredMetaFamilyGateway();assert.equal(await gateway.notify(phone,['ابن','مادة','معلم'],'CENTRLY_FAMILY:id:tenant'),true);
-  assert.equal(captured[0].template.name,'centerly_family_followup_v1');assert.equal(captured[0].template.language.code,'ar');assert.equal(captured[0].template.components[1].parameters[0].payload,'CENTRLY_FAMILY:id:tenant');
+  assert.equal(captured[0].template.name,'centerly_parent_record_utility_v1');assert.equal(captured[0].template.language.code,'ar');assert.equal(captured[0].template.components[1].parameters[0].payload,'CENTRLY_FAMILY:id:tenant');
   globalThis.fetch=async()=>({ok:false,json:async()=>({error:{message:'private provider detail'}})});assert.equal(await gateway.reply(phone,'fixture response'),false);
  }finally{globalThis.fetch=original;config.meta.accessToken=token;}
 });
 test('Meta review never causes an unapproved template to be sent; the approved fallback still lists siblings',async()=>{
  const original=globalThis.fetch,token=config.meta.accessToken;config.meta.accessToken='isolated-token';let sent;
  try{
-  globalThis.fetch=async(_url,options)=>options.body?(sent=JSON.parse(options.body),{ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})}):{ok:true,json:async()=>({data:[{name:'centerly_family_followup_v1',language:'ar',status:'PENDING'}]})};
+  globalThis.fetch=async(url,options)=>options.body?(sent=JSON.parse(options.body),{ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})}):{ok:true,json:async()=>({data:new URL(url).searchParams.get('name')==='centerly_student'?[{name:'centerly_student',language:'en',status:'APPROVED',category:'UTILITY'}]:[{name:'centerly_parent_record_utility_v1',language:'ar',status:'PENDING',category:'UTILITY'}]})};
   assert.equal(await configuredMetaFamilyGateway().notify(phone,['أحمد، منى','معلم','https://teacher.centerly-eg.com/family'],'CENTRLY_FAMILY:id:tenant'),true);
   assert.equal(sent.template.name,'centerly_student');assert.deepEqual(sent.template.components[0].parameters.map(p=>p.text),['أحمد، منى','متابعة الأبناء','معلم']);
+ }finally{globalThis.fetch=original;config.meta.accessToken=token;}
+});
+test('family notification rejects even approved marketing templates and stops if the fallback is not verified utility',async()=>{
+ const original=globalThis.fetch,token=config.meta.accessToken;config.meta.accessToken='isolated-token';
+ try{
+  for(const fallbackCategory of ['UTILITY','MARKETING',undefined]){
+   const posts=[];globalThis.fetch=async(url,options)=>{
+    if(options.body){posts.push(JSON.parse(options.body));return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};}
+    const name=new URL(url).searchParams.get('name');return {ok:true,json:async()=>({data:[{name,language:name==='centerly_student'?'en':'ar',status:'APPROVED',category:name==='centerly_student'?fallbackCategory:'MARKETING'}]})};
+   };
+   assert.equal(await configuredMetaFamilyGateway().notify(phone,['ابن','معلم','https://teacher.centerly-eg.com/family'],'CENTRLY_FAMILY:id:tenant'),fallbackCategory==='UTILITY');
+   assert.equal(posts.length,fallbackCategory==='UTILITY'?1:0);if(posts.length)assert.equal(posts[0].template.name,'centerly_student');
+  }
+  globalThis.fetch=async()=>{throw Error('Metadata unavailable');};assert.equal(await configuredMetaFamilyGateway().notify(phone,['ابن','معلم','رابط'],'payload'),false);
  }finally{globalThis.fetch=original;config.meta.accessToken=token;}
 });
 test('all webhook aliases reject forged requests before processing and accept signed status events',{timeout:20000},async()=>{

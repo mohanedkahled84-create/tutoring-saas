@@ -2,6 +2,7 @@ import {createHmac,timingSafeEqual} from 'node:crypto';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {config} from '../config/index.js';
 import {familyError,familyPhone,familyHash,familyRpc,deliverFamilyAccess,familyAccessDetails,familyNamesText} from './parentFamily.js';
+import {approvedUtilityTemplate} from './metaTemplatePolicy.js';
 
 export interface MetaFamilyGateway {
  notify(phone:string,parameters:string[],payload:string):Promise<boolean>;
@@ -14,14 +15,8 @@ export function verifyMetaSignature(raw:unknown,signature:unknown,secret=config.
  return received.length===expected.length && timingSafeEqual(received,expected);
 }
 export function configuredMetaFamilyGateway():MetaFamilyGateway {
- const directTemplate='centerly_family_followup_v1';
- const approvedDirectTemplate=async()=>{
-  try{
-   const response=await fetch(`https://graph.facebook.com/v22.0/${config.meta.wabaId}/message_templates?name=${directTemplate}&fields=name,status,language`,{headers:{Authorization:`Bearer ${config.meta.accessToken}`},signal:AbortSignal.timeout(3000)});
-   const result:any=await response.json();
-   return response.ok && result?.data?.some((t:any)=>t.name===directTemplate && t.language==='ar' && t.status==='APPROVED');
-  }catch{return false;}
- };
+ const directTemplate='centerly_parent_record_utility_v1';
+ const approved=(name:string,language:string)=>approvedUtilityTemplate({baseUrl:'https://graph.facebook.com/v22.0',accessToken:config.meta.accessToken,wabaId:config.meta.wabaId,name,language});
  const send=async(phone:string,message:Record<string,unknown>)=>{
   if(!config.meta.accessToken || !config.meta.phoneNumberId)return false;
   try{
@@ -32,8 +27,9 @@ export function configuredMetaFamilyGateway():MetaFamilyGateway {
  };
  return {
   notify:async(phone,parameters,payload)=>{
-   // Keep the approved notification available during Meta review. Never send a pending template.
-   const direct=await approvedDirectTemplate();
+   // Never send a pending, marketing, authentication or unverified template.
+   const direct=await approved(directTemplate,'ar');
+   if(!direct && !await approved('centerly_student','en'))return false;
    const body=direct?parameters:[parameters[0],'متابعة الأبناء',parameters[1]];
    return send(phone,{type:'template',template:{name:direct?directTemplate:'centerly_student',language:{code:direct?'ar':'en'},components:[{type:'body',parameters:body.map(text=>({type:'text',text}))},{type:'button',sub_type:'quick_reply',index:'0',parameters:[{type:'payload',payload}]}]}});
   },
