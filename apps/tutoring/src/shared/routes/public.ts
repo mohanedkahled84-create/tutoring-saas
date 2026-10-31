@@ -304,6 +304,12 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
       fileTenantId = owner?.tenant_id || null;
     }
     if (portalData.student && fileTenantId) portalData.student.tenant_id = fileTenantId;
+    // One scoped aggregate query; ranking failure must never hide the student's account.
+    // The response contains only this student's position and cohort size.
+    const rankResult = fileStudentId && fileTenantId
+      ? supabase.rpc("get_portal_monthly_group_rank", { p_student_id: fileStudentId, p_tenant_id: fileTenantId })
+        .abortSignal(AbortSignal.timeout(2500)).then(({ data, error }) => !error ? data : null, () => null)
+      : Promise.resolve(null);
     if (portalData.summary?.total_sessions === 0) portalData.summary.attendance_rate = "لا توجد بيانات";
     if (Array.isArray(portalData.materials) && fileStudentId && fileTenantId) {
       portalData.materials = await Promise.all(portalData.materials.map(async (material: any) => ({
@@ -311,6 +317,8 @@ publicRouter.get("/parent-portal", async (req: Request, res: Response): Promise<
         submission_url: await signHomeworkFile(supabase, material.submission_url, fileTenantId!, material.id, fileStudentId),
       })));
     }
+    const rank = await rankResult;
+    if (rank && portalData.summary) Object.assign(portalData.summary, rank);
     res.setHeader("Cache-Control", "private, no-store");
     res.json(portalData);
   } catch (err: unknown) {

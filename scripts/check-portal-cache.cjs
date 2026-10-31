@@ -4,7 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const root=path.resolve(__dirname,'..'),results=[];
 const types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.png':'image/png'};
-const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'student-a',tenant_id:'tenant-a',name,student_code:'3210',teacher_name:'مدرس الاختبار'},summary:{total_sessions:1,attendance_rate:'82%'},materials:updated?[]:[{id:'homework-a',type:'homework',title:'واجب الحركة المحفوظ',submission_status:'unsubmitted'}],quizzes:[],sessions:[]});
+const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'student-a',tenant_id:'tenant-a',name,student_code:'3210',teacher_name:'مدرس الاختبار'},summary:{total_sessions:1,attendance_rate:'82%',...(updated?{}:{student_rank:2,group_size:5})},materials:updated?[]:[{id:'homework-a',type:'homework',title:'واجب الحركة المحفوظ',submission_status:'unsubmitted'}],quizzes:[],sessions:[]});
 (async()=>{
  const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
  try {
@@ -19,7 +19,7 @@ const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'
   });
   await bootPage.goto('https://centerly-eg.com/portal',{waitUntil:'domcontentloaded'});
   await bootPage.locator('#centrlyInitialSplash').waitFor();
-  assert.ok((await bootPage.locator('body').innerText()).includes('جارِ فتح المتابعة'));
+  assert.ok((await bootPage.locator('body').innerText()).includes('كل ما يخص رحلتك الدراسية'));
   await bootPage.locator('#centrlyInitialSplash button').waitFor({state:'visible',timeout:12000});
   results.push({stage:'portal remains visible and offers retry when modules fail',passed:true});console.log(JSON.stringify(results.at(-1)));
   await bootContext.close();
@@ -55,6 +55,17 @@ const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'
   async function waitHeld(){const end=Date.now()+10000;while(!held.length&&Date.now()<end)await page.waitForTimeout(10);assert.ok(held.length,'Expected a background API request');}
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.locator(marker).waitFor();
+  assert.equal(await page.locator(marker+' button').getAttribute('aria-label'),'تحديث بياناتك');
+  const buttonSize=await page.locator(marker+' button').boundingBox();assert.ok(buttonSize.width>=44&&buttonSize.height>=44);
+  assert.ok(!(await page.locator('body').innerText()).includes('آخر تحديث'));
+  if(advanced){
+   assert.match(await page.locator('#studentRankDisplay').innerText(),/المركز 2/);
+   for(const width of [320,390,844,1440]){
+    await page.setViewportSize({width,height:844});
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No horizontal overflow at '+width);
+   }
+   await page.setViewportSize({width:390,height:844});
+  }
   assert.ok((await page.locator('body').innerText()).includes('طالب الاختبار أ'));
   assert.ok(await page.evaluate(()=>!!localStorage.getItem('centrly_portal_snapshot_v1:student')));record('cold verified response saved');
   if(advanced)await page.waitForFunction(()=>!!localStorage.getItem('centrly_platform_settings_saved_at'));
@@ -63,7 +74,7 @@ const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'
   await page.reload({waitUntil:'domcontentloaded'});await page.locator(marker).waitFor();
   assert.ok((await page.locator('body').innerText()).includes('طالب الاختبار أ'));
   await page.waitForTimeout(250);assert.deepEqual(calls,[],'Fresh reopen must not make any API request');
-  if(advanced){assert.equal(await page.locator('#studentRankCard').isVisible(),false);assert.ok(!(await page.locator('body').innerText()).includes('غير محسوب'));}
+  if(advanced){assert.equal(await page.locator('#studentRankCard').isVisible(),true);assert.ok(!(await page.locator('body').innerText()).includes('غير محسوب'));}
   record('warm reopen from cache with zero API calls');results.at(-1).renderMs=Date.now()-started;
   async function age(){await page.evaluate(()=>{const k='centrly_portal_snapshot_v1:student',r=JSON.parse(localStorage.getItem(k));r.savedAt=Date.now()-180001;localStorage.setItem(k,JSON.stringify(r));});}
   calls=[];await age();mode='held';current=data('طالب الاختبار أ المحدث',true);

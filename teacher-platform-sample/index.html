@@ -2224,7 +2224,20 @@
 
   </script>
 
-</head>
+<style>
+    .portal-sync{display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .portal-sync button{width:44px;height:44px;display:grid;place-items:center;flex-shrink:0;border:1px solid #dce4ef;border-radius:14px;background:#fff;color:#52627a;cursor:pointer;transition:background .18s,color .18s,box-shadow .18s}
+    .portal-sync button:hover{background:#eef2f8;color:#14213b;box-shadow:0 3px 10px #14213b0a}
+    .portal-sync button:focus-visible{outline:2px solid #385c91;outline-offset:3px}
+    .portal-sync button:disabled{cursor:wait;opacity:.65}
+    .portal-sync button:disabled svg{animation:portal-refresh 1s linear infinite}
+    .portal-sync span:empty{display:none}
+    .portal-sync span{font-size:12px;line-height:1.6;color:#725124;max-width:210px}
+    @keyframes portal-refresh{to{transform:rotate(360deg)}}
+    @media(prefers-reduced-motion:reduce){.portal-sync button:disabled svg{animation:none}.portal-sync button{transition:none}}
+
+.level-badge-box{position:relative;z-index:1;box-shadow:0 8px 24px #0000000a}.level-badge-box .badge-label{letter-spacing:.1px}.top-bar{gap:12px}.top-bar .portal-sync{margin-inline-start:auto}@media(max-width:600px){.hero-greeting-card{padding:22px;gap:22px}.level-badge-box{width:100%;text-align:start;min-width:0}.portal-sync span{max-width:120px}}
+</style></head>
 
 <body class="theme-emerald">
 
@@ -2424,7 +2437,7 @@
 
           <div class="level-badge-box" id="studentRankCard" style="display:none">
 
-            <div class="badge-label">ترتيبك على المجموعة</div>
+            <div class="badge-label">ترتيبك في المجموعة</div>
 
             <div class="level-title" id="studentRankDisplay"></div>
 
@@ -3606,16 +3619,14 @@
 
     }
 
-    // حساب وتحديث ترتيب الطالب على المجموعة ديناميكياً بما يتطابق 100% مع لوحة تقارير المعلم
+    // ترتيب الشهر الحالي من بيانات المجموعة الفعلية؛ المتساوون في الأداء يشتركون في المركز.
 
     function renderStudentRank(position, total) {
       const card = document.getElementById('studentRankCard');
       const valid = Number.isInteger(position) && position > 0 && Number.isInteger(total) && total >= position;
-      card.style.display = valid ? '' : 'none';
-      if (valid) {
-        document.getElementById('studentRankDisplay').textContent = `المركز #${position}`;
-        document.getElementById('studentRankSubDisplay').textContent = `بين ${total} طالبًا في المجموعة`;
-      }
+      card.style.display = '';
+      document.getElementById('studentRankDisplay').textContent = valid ? `المركز ${position}` : 'بانتظار النتائج';
+      document.getElementById('studentRankSubDisplay').textContent = valid ? `من ${total} طالبًا • هذا الشهر` : 'يظهر ترتيبك بعد رصد الحضور والدرجات';
     }
 
     // 7. جلب المحتوى الحي ومزامنته الحقيقية مع قاعدة البيانات (Supabase & Railway)
@@ -3747,17 +3758,18 @@
         status = document.createElement('div');
         status.id = 'portalSyncStatus';
         status.setAttribute('role', 'status');
-        status.style.cssText = 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:0.85rem;color:#475569;margin:12px 0';
-        status.innerHTML = '<span></span><button type="button" style="min-height:44px;padding:8px 16px">تحديث</button>';
+        status.className = 'portal-sync';
+        status.innerHTML = '<span aria-live="polite"></span><button type="button" aria-label="تحديث بياناتك"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 6.1A8 8 0 0 1 19.6 10M4.4 14A8 8 0 0 0 17.9 17.9"/></svg></button>';
         status.querySelector('button').addEventListener('click', async event => {
           event.currentTarget.disabled = true;
           try { await fetchPlatformContent({force:true}); }
           finally { status.querySelector('button').disabled = false; }
         });
-        document.getElementById('homeGreetingName').closest('.hero-greeting-card').after(status);
+        document.querySelector('.top-bar').append(status);
       }
       const time = new Date(savedAt).toLocaleTimeString('ar-EG', {hour:'2-digit',minute:'2-digit'});
-      status.querySelector('span').textContent = (failed ? 'تعذر التحديث الآن؛ تظهر آخر بيانات محفوظة • ' : 'آخر تحديث • ') + time;
+      status.querySelector('button').title = 'تحديث بياناتك • البيانات المحفوظة ' + time;
+      status.querySelector('span').textContent = failed ? 'تعذر التحديث؛ بياناتك المحفوظة متاحة' : '';
     }
 
     function renderPortalPayload(portalData) {
