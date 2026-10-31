@@ -36,10 +36,15 @@ export async function currentPortalDestination(db: SupabaseClient, tenantId: str
     .eq("tenant_id", tenantId).maybeSingle();
   if (error) throw error;
   const sub = typeof data?.subdomain === "string" ? data.subdomain : "";
-  const published = data?.is_active === true && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(sub) && !reserved.has(sub);
+  let published = data?.is_active === true && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(sub) && !reserved.has(sub);
+  if (published) {
+    const binding = await db.from("portal_domain_bindings").select("subdomain").eq("tenant_id", tenantId).maybeSingle();
+    if (binding.error) throw binding.error;
+    published = binding.data?.subdomain === sub;
+  }
   return {
     origin: published ? `https://${sub}.${new URL(portalOrigin()).hostname}` : portalOrigin(),
-    presentation: published ? { subdomain: sub, display_title: data.display_title,
+    presentation: published && data ? { subdomain: sub, display_title: data.display_title,
       theme_preset: data.theme_preset, custom_primary_color: data.custom_primary_color } : null,
   };
 }

@@ -1,5 +1,15 @@
 # Stable portal links and teacher subdomain handoff
 
+## HTTPS readiness discovered in production
+
+The apex DNS is hosted at Cloudflare. Although a Vercel wildcard project alias exists, an arbitrary new teacher hostname initially closed TLS; the existing explicitly registered `mr-omar` hostname worked. Registering the exact QA hostname on the same Vercel project issued a valid individual certificate without changing nameservers. See [Vercel wildcard SSL requirements](https://vercel.com/docs/domains/working-with-ssl) and [domain registration](https://vercel.com/docs/cli/domains).
+
+`portal_domain_bindings` is a service-only registry of a tenant's verified current subdomain. Routing requires both publication and a matching verified binding. Publication without verified HTTPS retains the working basic portal; a rename also stays basic until its new domain is verified. A customer cannot approve their own binding through the Data API. This is an operational readiness boundary, not a paid-plan entitlement.
+
+For each new or renamed platform, an operator runs `node scripts/provision-portal-domain.mjs <subdomain>` in an environment containing the service database credentials and the authorized Vercel CLI session. It registers the exact hostname on the existing project, checks real HTTPS `/portal-entry` content, rechecks the current tenant assignment, then records readiness. If certificate issuance is still pending it refuses the binding; rerun after issuance. It does not copy CLI credentials into the backend, change Cloudflare records, move nameservers, or purchase a plan. **Domain provisioning is an explicit operator step in this release; automated backend provisioning is not claimed.**
+
+Apply `20261031020559_verified_portal_domains.sql` and verify/bind existing published domains before deploying the backend that requires this registry. After publication and readiness, the same old link automatically follows the registered current platform. Keep the registry entry synchronized through the provisioning command on a rename.
+
 Existing `/p/:code`, `/s/:code`, query-code and token links continue through their existing resolver and portal identity. After that identity is validated against the current student/tenant, the server resolves the teacher's currently published platform. A missing/inactive platform stays on the canonical Centerly portal. Publication changes the destination of the same inbound link; renaming the subdomain also resolves the current destination, without recreating student records.
 
 This is publication routing, not a new billing entitlement system. Commercial plans remain unchanged. The later entitlement implementation must feed an authorized publication state into this boundary. Existing legacy links are bearer capabilities under the existing resolver contract; this release does not make them family identities or change their authentication model. Parent-family linking remains a separate phase.

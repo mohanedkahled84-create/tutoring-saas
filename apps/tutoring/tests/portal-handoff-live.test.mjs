@@ -9,7 +9,7 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   const {serviceClient:db,anonClient}=createIsolatedSupabaseClients(),tenant=randomUUID(),other=randomUUID();let server,authUser;
   const ok=r=>{assert.equal(r.error,null,r.error?.message);return r.data;};
   t.after(async()=>{try{
-    for(const id of [tenant,other]){ok(await db.from('portal_handoffs').delete().eq('tenant_id',id));ok(await db.from('tenant_platform_settings').delete().eq('tenant_id',id));ok(await db.from('students').delete().eq('tenant_id',id));ok(await db.from('tenants').delete().eq('id',id));}
+    for(const id of [tenant,other]){ok(await db.from('portal_handoffs').delete().eq('tenant_id',id));ok(await db.from('portal_domain_bindings').delete().eq('tenant_id',id));ok(await db.from('tenant_platform_settings').delete().eq('tenant_id',id));ok(await db.from('students').delete().eq('tenant_id',id));ok(await db.from('tenants').delete().eq('id',id));}
     if(authUser){ok(await db.from('users').delete().eq('id',authUser));ok(await db.auth.admin.deleteUser(authUser));}
   }finally{if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}}});
   ok(await db.from('tenants').insert([{id:tenant,name:'isolated-stable-portal'},{id:other,name:'isolated-stable-portal-other'}]));
@@ -34,6 +34,8 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   // Existing CORS middleware rejects external origins before the portal router.
   const external=await post('/destination',{token,role:'parent'},'https://evil.test');assert.equal(external.status,403);assert.equal((await external.json()).error.code,'CORS_FORBIDDEN');
   ok(await db.from('tenant_platform_settings').update({is_active:true}).eq('tenant_id',tenant));
+  assert.equal((await destination()).origin,root,'Unverified HTTPS domain must keep the working basic portal');
+  ok(await db.from('portal_domain_bindings').insert({tenant_id:tenant,subdomain:sub}));
   const advanced=await destination();assert.equal(advanced.origin,target);assert.match(advanced.ticket,/^[A-Za-z0-9_-]{43}$/);assert.equal((await destination('parent',otherToken)).origin,root);
   const stored=ok(await db.from('portal_handoffs').select('*').eq('ticket_hash',hashPortalTicket(advanced.ticket)).single());assert.equal(stored.student_id,student.id);assert.equal(stored.tenant_id,tenant);assert.ok(!JSON.stringify(stored).includes(token));
   assert.equal((await post('/handoff',{ticket:advanced.ticket},root)).status,401);
@@ -45,12 +47,15 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   const expired=randomBytes(32).toString('base64url');ok(await db.from('portal_handoffs').insert({ticket_hash:hashPortalTicket(expired),student_id:student.id,tenant_id:tenant,portal_role:'parent',target_origin:target,expires_at:new Date(Date.now()-1000).toISOString()}));assert.equal((await post('/handoff',{ticket:expired},target)).status,401);
   assert.equal((await anonClient.from('portal_handoffs').select('*')).error?.code,'42501');
   assert.equal((await anonClient.from('portal_handoffs').insert({ticket_hash:hashPortalTicket('forged')})).error?.code,'42501');
+  assert.equal((await anonClient.from('portal_domain_bindings').select('*')).error?.code,'42501');
   const email=`portal-handoff-${randomUUID()}@example.invalid`,password=`Portal!${randomUUID()}a9`;
   authUser=ok(await db.auth.admin.createUser({email,password,email_confirm:true})).user.id;
   ok(await anonClient.auth.signInWithPassword({email,password}));
   assert.equal((await anonClient.from('portal_handoffs').select('*')).error?.code,'42501');
   assert.equal((await anonClient.from('portal_handoffs').delete().eq('tenant_id',tenant)).error?.code,'42501');
-  const stale=await destination();ok(await db.from('tenant_platform_settings').update({subdomain:sub+'-new'}).eq('tenant_id',tenant));assert.equal((await post('/handoff',{ticket:stale.ticket},target)).status,401);assert.equal((await destination()).origin,`https://${sub}-new.centerly-eg.com`);
+  assert.equal((await anonClient.from('portal_domain_bindings').insert({tenant_id:tenant,subdomain:'forged'})).error?.code,'42501');
+  const stale=await destination();ok(await db.from('tenant_platform_settings').update({subdomain:sub+'-new'}).eq('tenant_id',tenant));assert.equal((await post('/handoff',{ticket:stale.ticket},target)).status,401);assert.equal((await destination()).origin,root);
+  ok(await db.from('portal_domain_bindings').update({subdomain:sub+'-new'}).eq('tenant_id',tenant));assert.equal((await destination()).origin,`https://${sub}-new.centerly-eg.com`);
   assert.equal(verifyParentPortalToken((await resolveOld('parent')).token).student_id,student.id);
   const published=await destination();ok(await db.from('tenant_platform_settings').update({is_active:false}).eq('tenant_id',tenant));assert.equal((await post('/handoff',{ticket:published.ticket},published.origin)).status,401);assert.equal((await destination()).origin,root);
 });
