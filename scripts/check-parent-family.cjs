@@ -44,12 +44,13 @@ const root=path.resolve(__dirname,'..'),types={'.html':'text/html','.js':'applic
     let filename=u.pathname;if(!path.extname(filename))filename='/index.html';const file=path.resolve(root,'.'+filename);if(!file.startsWith(root+path.sep))return route.abort();
     try{return route.fulfill({contentType:types[path.extname(file)] || 'application/octet-stream',body:fs.readFileSync(file)});}catch{return route.fulfill({status:404,body:''});}
    });
+   await page.goto(origin+'/seed');await page.evaluate(()=>{localStorage.setItem('centrly_portal_token','old-student-session');localStorage.setItem('centrly_portal_role','student');});
    await page.goto(origin+'/portal?role=parent&family=1');await page.locator('#portalLoginForm').waitFor();
    assert.equal(await page.locator('#portalSubmitBtn').innerText(),'دخول حساب الأسرة');
    await page.locator('#portalIdentifier').fill('01012345678');await page.locator('#portalPassword').fill('111111');await page.locator('#portalSubmitBtn').click();
    await page.getByRole('alert').filter({hasText:'راجع رقم ولي الأمر'}).waitFor();
    await page.locator('#portalPassword').fill('999888777666');await page.locator('#portalSubmitBtn').click();await page.locator('#family-child').waitFor();
-   assert.equal(await page.locator('#pp-student').innerText(),'أحمد');assert.equal(await page.locator('#family-teacher option').count(),2);assert.equal(await page.locator('#family-child option').count(),2);
+   assert.equal(await page.locator('#pp-student').innerText(),'أحمد');assert.equal(await page.locator('#family-teacher option').count(),2);assert.equal(await page.locator('#family-child option').count(),2);assert.equal(await page.evaluate(()=>localStorage.getItem('centrly_portal_token')),null);
    assert.equal(await page.locator('body').evaluate(el=>el.scrollWidth<=innerWidth),true);
    assert.ok((await page.locator('#family-child').boundingBox()).height>=48);
    const before=reads;assert.equal(await page.evaluate(()=>window.centrlyApp.selectFamilyStudent('foreign-child')),false);assert.equal(reads,before);
@@ -72,6 +73,10 @@ const root=path.resolve(__dirname,'..'),types={'.html':'text/html','.js':'applic
    assert.equal(await page.locator('#pp-student').count(),0);assert.equal(await page.evaluate(()=>localStorage.getItem('centrly_family_snapshot_v1')),null);
    await page.locator('#portalIdentifier').fill('01012345678');await page.locator('#portalPassword').fill('999888777666');await page.locator('#portalSubmitBtn').click();await page.locator('#pp-student').waitFor();
    mode='unauthorized';await page.locator('#parent-refresh-data-btn').click();await page.locator('#portalLoginForm').waitFor();assert.equal(await page.evaluate(()=>localStorage.getItem('centrly_family_snapshot_v1')),null);
+   mode='ok';await page.locator('#portalIdentifier').fill('01012345678');await page.locator('#portalPassword').fill('999888777666');await page.locator('#portalSubmitBtn').click();await page.locator('#pp-student').waitFor();
+   await page.evaluate(async()=>{const {savePortalSession}=await import('/apps/web/src/utils/portalSession.js');savePortalSession('other-student-session','student');});
+   assert.equal(await page.evaluate(()=>localStorage.getItem('centrly_family_token_v1')),null);assert.equal(await page.evaluate(()=>localStorage.getItem('centrly_family_snapshot_v1')),null);
+   await page.goto(origin+'/portal?role=parent&family=1');await page.locator('#portalLoginForm').waitFor();assert.equal(await page.locator('#pp-student').count(),0);
    assert.ok(!modules.some(p=>/\/(?:app|workspace|auth)\.js$|UnifiedPortalLoginView/.test(p)));assert.deepEqual(errors,[]);
    results.push({width,conditionalSelectors:true,cacheBeforeNetwork:true,crossOriginBranding:true,logoutAnd401Clear:true,passed:true});await context.close();
   }

@@ -1,5 +1,6 @@
 import { request, API_BASE_URL } from '../services/api.js';
 import { registerParentPortalActions } from '../parentPortal.js';
+import {clearFamilyForOtherLogin} from '../utils/portalSession.js';
 import { renderParentPortalLogin, getParentBranding, saveParentBranding } from './ParentPortalLoginView.js';
 import { renderStudentPortalView } from './StudentPortalView.js';
 import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js';
@@ -474,6 +475,7 @@ export function registerUnifiedPortalActions(app) {
       });
 
       if (res && res.success && res.token) {
+        clearFamilyForOtherLogin();
         const targetRole = (role === 'student' || role === 'parent') ? role : (res.role || 'parent');
         try {
           localStorage.removeItem('centrly_explicit_logout');
@@ -520,6 +522,7 @@ export function registerUnifiedPortalActions(app) {
   }
 
   app.handlePortalLogout = function handlePortalLogout() {
+    clearFamilyForOtherLogin();
     const logoutRole = localStorage.getItem('centrly_portal_role');
     if (logoutRole === 'parent') saveParentBranding(this._portalPresentation);
     localStorage.setItem('centrly_portal_entry_role', logoutRole || 'parent');

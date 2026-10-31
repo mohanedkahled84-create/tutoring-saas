@@ -6,7 +6,10 @@ import {normalizeDigits} from './utils/normalizeDigits.js';
 import {registerFamilyActions,savedFamilyToken,redeemFamilyEntry} from './parentFamily.js';
 function showPortalPending(app) { const root=app.getAppEl(); if(root) window.renderPortalOpening(root); }
 export function registerParentPortalActions(app) {
-  app.setParentFamilyMode=function(value) {this._familyMode=Boolean(value);this.renderPortalLogin();document.getElementById('portalIdentifier')?.focus();};
+  app.setParentFamilyMode=function(value) {
+    if(value && !this.loginFamily){location.assign('/portal-entry?role=parent&family=1');return;}
+    this._familyMode=Boolean(value);this.renderPortalLogin();document.getElementById('portalIdentifier')?.focus();
+  };
   app.loadParentPortal = async function loadParentPortal(token, options = {}) {
     window.__centrlyLoaded = true;
     this._parentPortalToken = token;

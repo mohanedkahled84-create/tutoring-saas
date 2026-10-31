@@ -29,7 +29,7 @@ async function start() {
     const savedRole = localStorage.getItem('centrly_portal_role') || sessionStorage.getItem('centrly_portal_role');
     const entryRole = localStorage.getItem('centrly_portal_entry_role');
     const portalPath = /^\/portal(?:-entry)?\/?$/.test(location.pathname);
-    if (portalPath && !params.has('token') && params.get('role') !== 'student' && (savedRole === 'parent' || (!savedRole && (entryRole === 'parent' || params.get('role') === 'parent' || (location.pathname === '/portal-entry' && /^[a-z0-9-]+\.centerly-eg\.com$/.test(location.hostname) && !location.hostname.startsWith('www.')))))) {
+    if (portalPath && !params.has('token') && params.get('role') !== 'student' && (params.get('role') === 'parent' || savedRole === 'parent' || (!savedRole && (entryRole === 'parent' || (location.pathname === '/portal-entry' && /^[a-z0-9-]+\.centerly-eg\.com$/.test(location.hostname) && !location.hostname.startsWith('www.')))))) {
       await mountParent(); return;
     }
     // Returning portal users do not need to download the staff/landing SPA just to change origin.
