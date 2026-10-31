@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHmac} from 'node:crypto';
 import {once} from 'node:events';
 import {requireIsolatedSupabaseProject,createIsolatedSupabaseClients} from './helpers/live-supabase.mjs';
 
@@ -25,8 +25,20 @@ test('LIVE: delivered family password opens only the registered family across te
  ]).select('id,tenant_id,name'));
  const own=children.find(s=>s.name==='أحمد' && s.tenant_id===tenant),sibling=children.find(s=>s.name==='منى'),second=children.find(s=>s.name==='أحمد' && s.tenant_id===other),outsider=children.find(s=>s.name==='خارج الأسرة');
  const {deliverFamilyAccess,familyHash}=await import('../dist/shared/utils/parentFamily.js');
+ const {notifyMetaFamily}=await import('../dist/shared/utils/metaFamily.js');
+ const {config}=await import('../dist/shared/config/index.js');
+ const {metaWebhookRuntime}=await import('../dist/shared/routes/metaPortalWebhook.js');
+ const oldSecret=config.meta.appSecret,oldGateway=metaWebhookRuntime.gateway;
+ config.meta.appSecret='isolated-family-meta-secret-not-real';
+ const metaReplies=[],metaNotices=[],metaGateway={notify:async(...args)=>{metaNotices.push(args);return true;},reply:async(...args)=>{metaReplies.push(args);return true;}};
+ metaWebhookRuntime.gateway=()=>metaGateway;
+ t.after(()=>{config.meta.appSecret=oldSecret;metaWebhookRuntime.gateway=oldGateway;});
  t.after(async()=>{ok(await db.from('parent_family_limits').delete().in('key_hash',[familyHash('phone:'+phone),familyHash('phone:'+foreign),familyHash('ip:'+testIp)]));});
  const {generateParentPortalToken}=await import('../dist/shared/utils/tokens.js');
+ const matched=ok(await db.rpc('meta_portal_phone_records',{p_phone:phone}));assert.equal(matched.length,3);assert.ok(matched.every(s=>s.parent_match));
+ assert.equal((await anonClient.rpc('meta_portal_phone_records',{p_phone:phone})).error?.code,'42501');
+ await notifyMetaFamily(db,tenant,own.id,'المعلم',metaGateway,true);assert.equal(metaNotices.length,1);
+ assert.equal(ok(await db.from('parent_family_accounts').select('id').eq('phone',phone)).length,0,'Notification alone cannot provision or disclose a password');
  assert.equal(ok(await db.rpc('parent_family_delivery',{p_tenant_id:tenant,p_student_id:own.id,p_hash:'unused',p_cipher:'unused',p_phone:foreign})),null,'A phone edit during provisioning must not create a mismatched credential');
  let secret,recipient;
  const delivery={ready:async()=>true,send:async(p,password,url)=>{recipient=p;secret=password;assert.match(url,/family=1/);return true;}};
@@ -40,6 +52,17 @@ test('LIVE: delivered family password opens only the registered family across te
  const {createApp}=await import('../dist/app.js');server=createApp().listen(0,'127.0.0.1');await once(server,'listening');
  const base=`http://127.0.0.1:${server.address().port}/api/public/family`;
  const post=async(path,body,origin=root)=>fetch(base+path,{method:'POST',headers:{Origin:origin,'X-Forwarded-For':testIp},body:new URLSearchParams(body)});
+ const webhook=async(msg,valid=true,waba=config.meta.wabaId)=>{
+  const raw=JSON.stringify({object:'whatsapp_business_account',entry:[{id:waba,changes:[{field:'messages',value:{messaging_product:'whatsapp',metadata:{phone_number_id:config.meta.phoneNumberId},messages:[{from:phone,timestamp:String(Math.floor(Date.now()/1000)),type:'button',button:{text:'الحصول على اسم المستخدم وكلمه السر',payload:`CENTRLY_FAMILY:${own.id}:${tenant}`},...msg}]}}]}]});
+  const sig='sha256='+createHmac('sha256',config.meta.appSecret).update(raw).digest('hex');
+  return fetch(base.replace('/api/public/family','')+'/meta/webhook',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Signature-256':valid?sig:'sha256='+'0'.repeat(64)},body:raw});
+ };
+ ok(await db.from('parent_family_accounts').update({last_requested_at:new Date(Date.now()-61000).toISOString()}).eq('id',account.id));
+ assert.equal((await webhook({id:'wamid.'+own.id},false)).status,401);assert.equal(metaReplies.length,0);
+ assert.equal((await webhook({id:'wamid.'+own.id})).status,200);assert.equal(metaReplies.length,1);assert.equal(metaReplies[0][0],phone);assert.ok(metaReplies[0][1].includes(firstSecret));
+ assert.equal((await webhook({id:'wamid.'+own.id})).status,200);assert.equal(metaReplies.length,1,'A replay cannot resend credentials');
+ assert.equal((await webhook({id:'wamid.wrong-phone.'+own.id,from:foreign})).status,200);assert.equal(metaReplies.length,1);
+ assert.equal((await webhook({id:'wamid.wrong-waba.'+own.id},true,'different-waba')).status,200);assert.equal(metaReplies.length,1);
  assert.equal((await post('/login',{phone,password:'111111'})).status,401,'Student PIN cannot open family');
  assert.equal((await post('/account',{family_token:generateParentPortalToken(own.id,tenant)})).status,401);
  assert.equal((await post('/login',{phone,password:secret},'https://evil.example')).status,403);

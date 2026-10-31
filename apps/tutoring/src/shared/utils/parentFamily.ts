@@ -2,7 +2,6 @@ import {createHash, createCipheriv, createDecipheriv, randomBytes, randomInt, ra
 import bcrypt from 'bcryptjs';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {config} from '../config/index.js';
-import {HttpEvolutionGateway} from '../../features/whatsapp-notifications/gateway.js';
 import {portalDestinationFromContext, portalOrigin} from './portalDestination.js';
 import {generateParentPortalTokenUntil} from './tokens.js';
 import {loadPortalAccount} from './portalAccount.js';
@@ -85,23 +84,12 @@ export async function openFamilyAccount(db:SupabaseClient,token:unknown,origin:s
 }
 
 export interface FamilyPasswordDelivery {ready():Promise<boolean>;send(phone:string,password:string,url:string):Promise<boolean>}
-export function configuredFamilyDelivery():FamilyPasswordDelivery {
- const instance=config.evolutionInstanceName,gateway=new HttpEvolutionGateway(config.evolutionApiUrl,config.evolutionApiKey);
- return {
-  async ready(){return Boolean(config.evolutionApiUrl && config.evolutionApiKey && instance && (await gateway.getConnectionState(instance)).status==='connected');},
-  async send(phone,password,url){
-   if(!config.evolutionApiUrl || !config.evolutionApiKey || !instance)return false;
-   const result=await gateway.sendTextMessage(instance,phone,`حساب ولي الأمر على سنترلي\nمتابعات أبنائك في مكان واحد.\nرابط الدخول: ${url}\nرقم الدخول: ${phone}\nكلمة مرور الأسرة: ${password}\nاحتفظ بها لنفسك، ولا تشاركها مع الطلاب أو أي شخص آخر.`);
-   return result.success;
-  }
- };
-}
 export async function deliverFamilyAccess(db:SupabaseClient,tenantId:string,studentId:string,delivery:FamilyPasswordDelivery) {
  const {data:student,error}=await db.from('students').select('parent_phone').eq('id',studentId).eq('tenant_id',tenantId).maybeSingle();
  if(error)throw familyError(503,'تعذر قراءة بيانات ولي الأمر');
  const phone=familyPhone(student?.parent_phone);if(!phone)throw familyError(400,'راجع رقم ولي الأمر المسجل للطالب');
  // Do not provision a credential or pretend to send while the sender is disconnected.
- if(!await delivery.ready())throw familyError(503,'إرسال بيانات الأسرة غير متاح حاليًا؛ يلزم توصيل رقم واتساب سنترلي أولًا');
+ if(!await delivery.ready())throw familyError(503,'إرسال بيانات الأسرة غير متاح حاليًا؛ راجع إعداد استقبال ردود Meta');
  const password=String(randomInt(100000000000,1000000000000)),hash=await bcrypt.hash(password,12),cipher=sealFamilyPassword(password,phone);
  const result=await familyRpc(db,'parent_family_delivery',{p_tenant_id:tenantId,p_student_id:studentId,p_hash:hash,p_cipher:cipher,p_phone:phone});
  if(!result)throw familyError(400,'راجع رقم ولي الأمر المسجل للطالب');

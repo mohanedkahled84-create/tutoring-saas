@@ -10,7 +10,7 @@ import {
 import { generateParentPortalToken, buildShortPortalUrl } from "../../shared/utils/tokens.js";
 import { supabasePublic } from "../../supabase.js";
 import {getServiceSupabaseClient} from '../../supabase.js';
-import {configuredFamilyDelivery,deliverFamilyAccess} from '../../shared/utils/parentFamily.js';
+import {notifyMetaFamily,configuredMetaFamilyGateway} from '../../shared/utils/metaFamily.js';
 import {authRateLimiter} from '../../shared/middleware/rateLimit.js';
 
 export const studentsRouter = Router();
@@ -29,7 +29,7 @@ importRouter.use(requireStudentTenant);
 studentsRouter.post('/:id/send-family-access',authRateLimiter,async(req:AuthenticatedRequest,res:Response):Promise<void>=>{
  try {
   res.setHeader('Cache-Control','private, no-store');
-  const result=await deliverFamilyAccess(getServiceSupabaseClient(),req.user!.tenant_id!,req.params.id,configuredFamilyDelivery());
+  const result=await notifyMetaFamily(getServiceSupabaseClient(),req.user!.tenant_id!,req.params.id,req.user?.full_name || req.user?.name || 'المعلم',configuredMetaFamilyGateway());
   res.json(result);
  }catch(error:any){const status=[400,429,502,503].includes(error?.status)?error.status:503;res.status(status).json({error:{code:'FAMILY_DELIVERY_FAILED',message:error?.status?error.message:'تعذر إرسال بيانات حساب الأسرة'}});}
 });
