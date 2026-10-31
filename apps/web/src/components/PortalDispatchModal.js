@@ -8,6 +8,13 @@ import { getIcon } from '../utils/icons.js';
  * Sends WhatsApp links, copies student/parent portal URLs, and manages batch portal link dispatches.
  */
 export function registerPortalDispatchActions(app) {
+  app.sendFamilyAccess=async function(studentId,button){
+    if(button?.disabled)return;
+    if(button){button.disabled=true;button.setAttribute('aria-busy','true');}
+    try{const result=await request(`/students/${encodeURIComponent(studentId)}/send-family-access`,{method:'POST',body:{}});this.showToast(result.message,'success');}
+    catch(error){this.showToast(error.message || 'تعذر إرسال بيانات حساب الأسرة','danger');}
+    finally{if(button){button.disabled=false;button.removeAttribute('aria-busy');}}
+  };
   app.resendSingleMessage = function(studentId, studentName) {
     const row = (this.sessionState.attendanceList || []).find(a => a.student_id === studentId || a.id === studentId);
     const student = (this.students || []).find(s => s.id === studentId) || {};

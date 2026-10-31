@@ -11,6 +11,7 @@ async function start() {
   const parentModule=isParentEntry ? import('./parentPortal.js') : null;
   parentModule?.catch(()=>{}); // Show the normal retry UI if a module download fails.
   const mountParent = async error => (await (parentModule || import('./parentPortal.js'))).mountParentPortal(error);
+  if(location.pathname==='/portal-entry' && new URLSearchParams(location.hash.slice(1)).has('family')){await mountParent();return;}
   // Consume cross-origin entry before downloading staff authentication and dashboards.
   const ticket = new URLSearchParams(location.hash.slice(1)).get('handoff');
   if (location.pathname === '/portal-entry' && ticket) {
@@ -28,7 +29,7 @@ async function start() {
     const savedRole = localStorage.getItem('centrly_portal_role') || sessionStorage.getItem('centrly_portal_role');
     const entryRole = localStorage.getItem('centrly_portal_entry_role');
     const portalPath = /^\/portal(?:-entry)?\/?$/.test(location.pathname);
-    if (portalPath && !params.has('token') && params.get('role') !== 'student' && (savedRole === 'parent' || (!savedRole && (entryRole === 'parent' || params.get('role') === 'parent' || (location.pathname === '/portal-entry' && /^[a-z0-9-]+\.centerly-eg\.com$/.test(location.hostname) && !location.hostname.startsWith('www.')))))) {
+    if (portalPath && !params.has('token') && params.get('role') !== 'student' && (params.get('role') === 'parent' || savedRole === 'parent' || (!savedRole && (entryRole === 'parent' || (location.pathname === '/portal-entry' && /^[a-z0-9-]+\.centerly-eg\.com$/.test(location.hostname) && !location.hostname.startsWith('www.')))))) {
       await mountParent(); return;
     }
     // Returning portal users do not need to download the staff/landing SPA just to change origin.

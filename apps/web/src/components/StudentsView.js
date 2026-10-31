@@ -323,6 +323,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                       ` : ''}
 
                       <!-- Parent Link Row -->
+                      <button type="button" class="btn btn-secondary btn-sm" style="min-height:48px;margin-bottom:8px" onclick="window.centrlyApp.sendFamilyAccess('${escapeHtml(s.id)}',this)" title="إرسال بيانات الأسرة مباشرة لرقم ولي الأمر؛ كلمة المرور لا تظهر للمدرس">إرسال حساب الأسرة</button>
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
                         <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; width: 35px;">الأمر:</span>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رسالة واتساب كاملة لولي الأمر جاهزة للإرسال اليدوي" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem;">

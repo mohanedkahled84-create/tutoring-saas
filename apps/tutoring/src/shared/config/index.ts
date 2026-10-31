@@ -40,6 +40,7 @@ export const envSchema = z.object({
   META_PHONE_NUMBER_ID: z.string().optional().default("1236924299513397"),
   META_WABA_ID: z.string().optional().default("2155605835380579"),
   META_ACCESS_TOKEN: z.string().optional().default(""),
+  META_APP_SECRET: z.string().optional().default(""),
   META_PORTAL_DAILY_LIMIT: z.coerce.number().default(250),
   // DEV-71: Feature Flags (Default false for MVP-override / in-progress features)
   FEATURE_BUSINESS_DASHBOARD: booleanFlag,
@@ -115,6 +116,7 @@ export const config = {
     phoneNumberId: env.META_PHONE_NUMBER_ID,
     wabaId: env.META_WABA_ID,
     accessToken: env.META_ACCESS_TOKEN,
+    appSecret: env.META_APP_SECRET,
     dailyLimit: env.META_PORTAL_DAILY_LIMIT,
   },
   features: {

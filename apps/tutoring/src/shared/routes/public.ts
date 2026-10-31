@@ -11,8 +11,11 @@ import { authRateLimiter } from "../middleware/rateLimit.js";
 import { verifiedPortalStudent, portalDestinationFromContext, createPortalHandoff, consumePortalHandoff, trustedPortalOrigin } from "../utils/portalDestination.js";
 
 import {loadPortalAccount} from "../utils/portalAccount.js";
+import {parentFamilyRouter} from './parentFamily.js';
+import {metaPortalWebhook} from './metaPortalWebhook.js';
 
 export const publicRouter = Router();
+publicRouter.use('/family',parentFamilyRouter);
 
 publicRouter.post("/portal/destination", authRateLimiter, async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "private, no-store");
@@ -373,143 +376,7 @@ publicRouter.get("/meta/webhook", (req: Request, res: Response): void => {
   }
 });
 
-publicRouter.post("/meta/webhook", async (req: Request, res: Response): Promise<void> => {
-  // Always acknowledge immediately with 200 OK per Meta API standards
-  res.status(200).send("EVENT_RECEIVED");
-
-  try {
-    const body = req.body;
-    console.log("[MetaWebhook] Raw webhook payload:", JSON.stringify(body));
-
-    const entries = Array.isArray(body?.entry) ? body.entry : [];
-    for (const entry of entries) {
-      const changes = Array.isArray(entry?.changes) ? entry.changes : [];
-      for (const change of changes) {
-        const messages = Array.isArray(change?.value?.messages) ? change.value.messages : [];
-        for (const msg of messages) {
-          const from = msg.from; // e.g. "201123671177"
-          if (!from) continue;
-
-          const msgType = msg.type;
-          const buttonText = (msg.button?.text || msg.interactive?.button_reply?.title || "").trim();
-          const buttonPayload = (msg.button?.payload || msg.interactive?.button_reply?.id || "").trim();
-          const textBody = (msg.text?.body || "").trim();
-
-          console.log(`[MetaWebhook] Incoming message: from=${from}, type=${msgType}, buttonText="${buttonText}", buttonPayload="${buttonPayload}", textBody="${textBody}"`);
-
-          const incomingText = (textBody || buttonText || buttonPayload || "[رسالة من الطالب/ولي الأمر]").trim();
-          const cleanFrom = from.replace(/\D/g, "");
-          const last9 = cleanFrom.slice(-9);
-
-          const supabase = getServiceSupabaseClient();
-          const { data: matchedStudents } = await supabase
-            .from("students")
-            .select("id, name, tenant_id, student_code, portal_password, parent_phone, student_phone")
-            .or(`student_phone.ilike.%${last9}%,parent_phone.ilike.%${last9}%`)
-            .order("created_at", { ascending: false })
-            .limit(5);
-
-          const matched = matchedStudents && matchedStudents.length > 0 ? matchedStudents[0] : null;
-
-          // 1. Record incoming message into whatsapp_inbox
-          try {
-            await supabase.from("whatsapp_inbox").insert({
-              tenant_id: matched?.tenant_id || null,
-              student_id: matched?.id || null,
-              phone: cleanFrom,
-              student_name: matched?.name || "طالب / ولي أمر",
-              direction: "inbound",
-              message_body: incomingText,
-              status: "unread",
-              has_replied: true,
-            });
-
-            // Mark previous outbound message as replied
-            if (matched?.id) {
-              await supabase
-                .from("whatsapp_inbox")
-                .update({
-                  has_replied: true,
-                  reply_body: incomingText,
-                  replied_at: new Date().toISOString(),
-                  status: "replied",
-                })
-                .eq("student_id", matched.id)
-                .eq("direction", "outbound");
-            }
-          } catch (inboxErr) {
-            console.warn("[MetaWebhook] Error recording inbound to whatsapp_inbox:", inboxErr);
-          }
-
-          const isButtonAction = msgType === "button" || msgType === "interactive";
-          const isCredentialKeyword =
-            buttonText.includes("المستخدم") ||
-            buttonText.includes("السر") ||
-            buttonText.includes("كلم") ||
-            buttonText.includes("باسورد") ||
-            buttonText.includes("كود") ||
-            buttonPayload.includes("GET_CREDENTIALS") ||
-            textBody.includes("المستخدم") ||
-            textBody.includes("السر") ||
-            textBody.includes("كلم") ||
-            textBody.includes("باسورد") ||
-            textBody.includes("كود");
-
-          // Any button click or credential query
-          if (isButtonAction || isCredentialKeyword) {
-            if (matched) {
-              const s = matched;
-              const pwd = s.portal_password || "غير مسجل";
-              const localPhone = cleanFrom.startsWith("20") ? "0" + cleanFrom.slice(2) : cleanFrom;
-              const loginPhone = localPhone || s.student_phone || s.parent_phone;
-              const replyText = `مرحباً بك في منصة سنترلي\nبيانات دخولك الخاصة بـ (${s.name}):\nاسم المستخدم: *${loginPhone}*\nكلمة المرور: *${pwd}*\n\nرابط تسجيل الدخول:\nhttps://centerly-eg.com/portal`;
-
-              const phoneNumberId = process.env.META_PHONE_NUMBER_ID || "1236924299513397";
-              const accessToken = process.env.META_ACCESS_TOKEN || "EAAadfhdz2egBSpVJ5rnNtBvTfZCMObM8PLytAFhfcT46JLsrtapKqTnw5ZB4ZAQz0U2eviXqBl1ERKuYpyF7zZATiRcFK00HTpPMxBZA2loDSk79HmJmqYfxmweZCEysyEBEOycoJ6VGGsSqFOtPIujKbuFqMTffxU95ZCnQZA1qHbjUBjZCnnvz3vJr2GArCdwZDZD";
-
-              console.log(`[MetaWebhook] Sending credentials to ${cleanFrom} for student ${s.name}...`);
-              const sendRes = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  messaging_product: "whatsapp",
-                  recipient_type: "individual",
-                  to: cleanFrom,
-                  type: "text",
-                  text: { body: replyText },
-                }),
-              });
-
-              const sendJson = await sendRes.json().catch(() => ({}));
-              console.log(`[MetaWebhook] Dispatch status: ${sendRes.status}, response:`, JSON.stringify(sendJson));
-
-              // Record outbound response
-              try {
-                await supabase.from("whatsapp_inbox").insert({
-                  tenant_id: s.tenant_id,
-                  student_id: s.id,
-                  phone: cleanFrom,
-                  student_name: s.name,
-                  direction: "outbound",
-                  message_body: `[إرسال تلقائي لبيانات الدخول] اسم المستخدم: ${loginPhone}`,
-                  status: "sent",
-                  has_replied: true,
-                });
-              } catch (_) {}
-            } else {
-              console.warn(`[MetaWebhook] No students found for phone ending in ${last9}`);
-            }
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.error("[MetaWebhook] Processing error:", err);
-  }
-});
+publicRouter.post("/meta/webhook", metaPortalWebhook);
 
 // DEV-QUIZ.PORTAL: POST /api/public/quizzes/submit - Submit online quiz from student portal
 publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promise<void> => {

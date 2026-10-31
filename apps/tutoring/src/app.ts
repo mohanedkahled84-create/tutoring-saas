@@ -95,6 +95,10 @@ export function createApp(): Express {
   );
   // A 25 MiB homework file expands to about 34 MiB as base64.
   app.use("/api/public/homework", express.json({ limit: "36mb" }));
+  app.use(['/meta/webhook','/api/meta/webhook','/api/public/meta/webhook'],express.json({limit:'2mb',verify:(req,_res,buffer)=>{
+    const request=req as express.Request & {rawMetaBody?:Buffer};
+    if(['/meta/webhook','/api/meta/webhook','/api/public/meta/webhook'].includes(request.originalUrl.split('?')[0].replace(/\/+$/,'')))request.rawMetaBody=Buffer.from(buffer);
+  }}));
   app.use(express.json({ limit: "150mb" }));
   app.use(express.urlencoded({ extended: true, limit: "150mb" }));
 
