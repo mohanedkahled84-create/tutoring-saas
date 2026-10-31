@@ -3,6 +3,16 @@
 <html lang="ar" dir="rtl">
 
 <head>
+  <link rel="preconnect" href="https://tutoring-backend-production-c8dd.up.railway.app" crossorigin>
+  <script>
+    // Begin the session transfer while the dashboard document is still being parsed.
+    window.__centrlyStudentHandoff = new URLSearchParams(location.hash.slice(1)).has('handoff');
+    window.__centrlyStudentSession = import('/apps/web/src/utils/portalSession.js').then(async helpers => ({
+      token: await helpers.resolveStudentSession(), request: helpers.portalRequest
+    }));
+    // The body attaches the visible error handler after parsing.
+    window.__centrlyStudentSession.catch(() => {});
+  </script>
 
   <meta charset="UTF-8">
 
@@ -3808,7 +3818,43 @@
 
     let platformContent = [];
 
-    async function fetchPlatformContent() {
+    let platformContentFlight = null;
+    let hasVerifiedPortalData = false;
+    function fetchPlatformContent() {
+      if (platformContentFlight) return platformContentFlight;
+      window._lastPlatformFetchTime = Date.now();
+      platformContentFlight = fetchPlatformContentOnce().catch(showPortalLoadError).finally(() => { platformContentFlight = null; });
+      return platformContentFlight;
+    }
+
+    function showPortalLoadError(error) {
+      let notice = document.getElementById('portalLoadError');
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'portalLoadError';
+        notice.setAttribute('role', 'alert');
+        notice.style.cssText = 'padding:20px;margin-bottom:20px;border:1px solid #cbd5e1;border-radius:12px;background:white';
+        document.getElementById('homeTodoListContainer').before(notice);
+      }
+      notice.hidden = false;
+      notice.innerHTML = '<p></p><button type="button" style="min-height:44px;padding:8px 20px">إعادة المحاولة</button> <a href="/login" style="padding:12px;display:inline-block">تسجيل الدخول</a>';
+      notice.querySelector('p').textContent = error?.message || 'تعذر الاتصال. تحقق من الإنترنت وحاول مجددًا.';
+      notice.querySelector('button').hidden = !!error?.handoff;
+      notice.querySelector('button').addEventListener('click', event => {
+        event.currentTarget.disabled = true;
+        event.currentTarget.textContent = 'جارِ إعادة المحاولة…';
+        fetchPlatformContent();
+      }, { once: true });
+      if (!hasVerifiedPortalData) {
+        document.getElementById('sidebarStudentName').innerText = 'تعذر تحميل الحساب';
+        document.getElementById('homeGreetingSub').innerText = 'بيانات الحساب لم تكتمل. يمكنك إعادة المحاولة من نفس الصفحة.';
+        for (const id of ['kpiAttendanceVal', 'kpiLecturesVal', 'kpiHomeworkVal', 'kpiQuizAvgVal']) document.getElementById(id).textContent = '—';
+        document.getElementById('homePendingCount').textContent = 'تعذر التحميل';
+        document.getElementById('homeTodoListContainer').replaceChildren();
+      }
+    }
+
+    async function fetchPlatformContentOnce() {
 
       hydrateSettings();
 
@@ -3820,7 +3866,7 @@
 
       const isExplicitLoggedOut = localStorage.getItem('centrly_explicit_logout') === '1';
 
-      if (isExplicitLoggedOut && !urlParams.get('code') && !urlParams.get('token')) {
+      if (isExplicitLoggedOut && !urlParams.get('code') && !urlParams.get('token') && !window.__centrlyStudentHandoff) {
 
         const host = window.location.hostname;
 
@@ -3858,7 +3904,8 @@
 
       let qCode = '';
       hydrateStudentUI(currentStudent);
-      let token = urlParams.get('token') || localStorage.getItem('centrly_portal_token');
+      const session = await window.__centrlyStudentSession;
+      let token = session.token;
       if (!token) { window.location.replace('/login'); return; }
 
       if (token && !localStorage.getItem('centrly_portal_token')) {
@@ -3870,35 +3917,16 @@
       // Verify the current token before reading student-specific cached data.
       let dbMaterials = [];
 
-      // 1. Parallel High-Speed Network Fetching with AbortController Timeout (5s max)
-      const fetchController = new AbortController();
-      const fetchTimer = setTimeout(() => fetchController.abort(), 5000);
-
-      const portalUrl = `https://tutoring-backend-production-c8dd.up.railway.app/api/public/parent-portal?token=${encodeURIComponent(token)}`;
-
-      const fetchPortalPromise = fetch(portalUrl, { signal: fetchController.signal })
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null);
-
-      const fetchRichQuizzesPromise = Promise.resolve(null); // Use token-scoped quiz materials only.
-
-      let portalData = null;
-      let richRes = null;
-
-      try {
-        const [portalResult, richResult] = await Promise.allSettled([fetchPortalPromise, fetchRichQuizzesPromise]);
-        clearTimeout(fetchTimer);
-        portalData = portalResult.status === 'fulfilled' ? portalResult.value : null;
-        richRes = richResult.status === 'fulfilled' ? richResult.value : null;
-      } catch (_) {
-        clearTimeout(fetchTimer);
-      }
+      const portalData = await session.request('/public/parent-portal?token=' + encodeURIComponent(token));
+      const richRes = null; // Use token-scoped quiz materials only.
 
       if (!portalData?.student?.id) {
-        document.getElementById('sidebarStudentName').innerText = 'تعذر تحميل الحساب';
-        document.getElementById('homeGreetingSub').innerText = 'تعذر التحقق من بيانات الطالب. أعد تحميل الصفحة أو سجل الدخول مجددًا.';
-        return;
+        throw new Error('تعذر التحقق من بيانات الحساب. حاول مجددًا أو افتح رابط الطالب الأصلي.');
       }
+      const loadError = document.getElementById('portalLoadError');
+      if (loadError) loadError.hidden = true;
+      document.getElementById('kpiAttendanceVal').textContent = '—';
+      document.getElementById('kpiQuizAvgVal').textContent = '—';
       qCode = String(portalData.student.student_code || portalData.student.code || '');
       if (portalData) {
         if (portalData.student) {
@@ -3922,7 +3950,7 @@
           try {
             localStorage.setItem(`centrly_cached_summary_${qCode}`, JSON.stringify(portalData.summary));
           } catch (_) {}
-          if (portalData.summary.attendance_rate) {
+          if (portalData.summary.attendance_rate != null) {
             const attEl = document.getElementById('kpiAttendanceVal');
             if (attEl) attEl.innerText = portalData.summary.attendance_rate;
           }
@@ -4398,6 +4426,7 @@
       renderExamsPanel(quizzes);
 
       renderMaterialsPanel(materials);
+      hasVerifiedPortalData = true;
 
     }
 
