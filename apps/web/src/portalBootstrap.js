@@ -7,13 +7,16 @@ async function start() {
   const match = location.pathname.match(/^\/([ps])\/([a-zA-Z0-9_-]+)$/i) || location.pathname.match(/^\/([ps])([ps]?[a-f0-9]{8})$/i);
   const code = match?.[2] || params.get('s') || params.get('p');
   const type = match?.[1]?.toLowerCase() || (params.has('s') ? 's' : 'p');
-  const mountParent = async error => (await import('./parentPortal.js')).mountParentPortal(error);
+  const isParentEntry=(code && type==='p') || location.pathname==='/portal-entry' || params.get('role')==='parent' || localStorage.getItem('centrly_portal_role')==='parent' || localStorage.getItem('centrly_portal_entry_role')==='parent';
+  const parentModule=isParentEntry ? import('./parentPortal.js') : null;
+  parentModule?.catch(()=>{}); // Show the normal retry UI if a module download fails.
+  const mountParent = async error => (await (parentModule || import('./parentPortal.js'))).mountParentPortal(error);
   // Consume cross-origin entry before downloading staff authentication and dashboards.
   const ticket = new URLSearchParams(location.hash.slice(1)).get('handoff');
   if (location.pathname === '/portal-entry' && ticket) {
     history.replaceState(null,'','/portal-entry');
     try {
-      const arrival = await portalRequest('/public/portal/handoff',{method:'POST',body:{ticket}});
+      const arrival = await portalRequest('/public/portal/handoff',{method:'POST',body:{ticket,view:'parent'}});
       if (!arrival?.token || !['parent','student'].includes(arrival.role) || arrival.origin !== location.origin) throw Error('افتح رابط المتابعة الأصلي مجددًا.');
       await adoptVerifiedPortalSession(arrival.token,arrival.role);
       window.__centrlyPortalArrival=arrival;
@@ -54,14 +57,14 @@ async function start() {
   if (!root.querySelector('.portal-opening')) window.renderPortalOpening(root);
   try {
     const queryCode = /^[ps]/i.test(code) ? code : type + code;
-    const link = await portalRequest('/public/short-links/' + encodeURIComponent(queryCode) + '?entry=' + type);
+    const link = await portalRequest('/public/short-links/' + encodeURIComponent(queryCode) + '?entry=' + type + (type==='p' ? '&view=parent' : ''));
     if (!link.token) throw new Error('رابط المتابعة غير صالح');
     const role = link.portal_type === 'student' || type === 's' ? 'student' : 'parent';
     const app = {};
     await adoptVerifiedPortalSession(link.token, role);
     if (await preparePortalDestination(app, link.token, role, portalRequest, window.location, link.destination)) return;
     // The verified destination is already known for this entry. Avoid a second lookup in the SPA.
-    window.__centrlyPortalArrival = { token: link.token, role, origin: location.origin, presentation: app._portalPresentation };
+    window.__centrlyPortalArrival = { token: link.token, role, origin: location.origin, presentation: app._portalPresentation, initial_data:link.initial_data };
     history.replaceState(null, '', '/portal-entry');
     if (role === 'parent') await mountParent();
     else await import('./app.js?v=9.21.0');

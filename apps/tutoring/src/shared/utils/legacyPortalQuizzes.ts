@@ -23,7 +23,8 @@ export function mergeLegacyPortalQuizzes(
   portalData: Record<string, any>,
   rows: Array<Record<string, any>>,
   allowedGroupIds: Set<string>,
-  submissions: Array<Record<string, any>> = []
+  submissions: Array<Record<string, any>> = [],
+  monitorOnly = false
 ): void {
   const materials = Array.isArray(portalData.materials) ? portalData.materials : [];
   const existingIds = new Set(materials.map((material: any) => String(material.id)));
@@ -67,7 +68,7 @@ export function mergeLegacyPortalQuizzes(
       continue;
     if (!Array.isArray(quiz.questions)) continue;
 
-    const safeQuestions = stripQuizAnswers(quiz.questions);
+    const safeQuestions = monitorOnly ? quiz.questions : stripQuizAnswers(quiz.questions);
     const submission = submissionByMaterial.get(id);
     let submissionNotes: Record<string, any> = {};
     try {
@@ -80,7 +81,7 @@ export function mergeLegacyPortalQuizzes(
       }
     } catch {}
 
-    materials.push({
+    if (!monitorOnly) materials.push({
       id,
       title: String(quiz.title || `كويز ${quiz.quiz_number || ""}`).trim(),
       description: String(quiz.subject || ""),

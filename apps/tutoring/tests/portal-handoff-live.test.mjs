@@ -47,7 +47,7 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   const fastStudent=await fastEntry();assert.equal(fastStudent.destination.origin,target);
   const fastArrival=await fetch(base+'/handoff',{method:'POST',headers:{Origin:target},body:new URLSearchParams({ticket:fastStudent.destination.ticket})});assert.equal(fastArrival.status,200);assert.equal((await fastArrival.json()).role,'student');
   assert.equal((await post('/handoff',{ticket:fastStudent.destination.ticket},target)).status,401);
-  const fastParent=await fastEntry(student.id,'p');assert.equal((await (await post('/handoff',{ticket:fastParent.destination.ticket},target)).json()).role,'parent');
+  const fastParent=await fastEntry(student.id,'p');const parentInitial=await (await post('/handoff',{ticket:fastParent.destination.ticket,view:'parent'},target)).json();assert.equal(parentInitial.role,'parent');assert.equal(parentInitial.initial_data.student.id,student.id);assert.equal(parentInitial.context,undefined);assert.equal(parentInitial.initial_data.summary.student_rank,undefined);assert.equal((await post('/handoff',{ticket:fastParent.destination.ticket,view:'parent'},target)).status,401);
   const legacy='legacy-'+randomUUID();ok(await db.from('students').update({parent_portal_token:legacy}).eq('tenant_id',other).eq('id',otherStudent.id));
   const legacyEntry=await fastEntry(otherStudent.id);assert.equal(legacyEntry.token,legacy);assert.equal(legacyEntry.destination.origin,root);
   const wrongCode='mismatch-'+randomUUID();ok(await db.from('short_links').insert({code:wrongCode,tenant_id:tenant,student_id:student.id,portal_type:'student',token:otherToken}));

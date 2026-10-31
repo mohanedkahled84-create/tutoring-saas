@@ -62,7 +62,7 @@ export async function createPortalHandoff(db: SupabaseClient, student: {id: stri
   }
   return ticket;
 }
-export async function consumePortalHandoff(db: SupabaseClient, ticket: unknown, origin: unknown) {
+export async function consumePortalHandoff(db: SupabaseClient, ticket: unknown, origin: unknown, includeContext=false) {
   if (typeof ticket !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(ticket) || !trustedPortalOrigin(origin)) return null;
   // Atomic redemption, student existence and current publication in one database trip.
   const { data, error } = await db.rpc("consume_portal_entry_handoff", {
@@ -74,5 +74,5 @@ export async function consumePortalHandoff(db: SupabaseClient, ticket: unknown, 
   // Reject a ticket for a platform that was deactivated or renamed during transfer.
   if (destination.origin !== origin) return null;
   return { token: generateParentPortalTokenUntil(data.student_id, data.tenant_id, Number(data.session_expires_at)), role: data.portal_role,
-    ...destination };
+    ...destination, ...(includeContext ? {context:data.context} : {}) };
 }
