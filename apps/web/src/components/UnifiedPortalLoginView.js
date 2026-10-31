@@ -1,5 +1,6 @@
 import { request, API_BASE_URL } from '../services/api.js';
-import { renderParentPortalView, parentPortalSnapshot } from './ParentPortalView.js';
+import { registerParentPortalActions } from '../parentPortal.js';
+import { renderParentPortalLogin, getParentBranding, saveParentBranding } from './ParentPortalLoginView.js';
 import { renderStudentPortalView } from './StudentPortalView.js';
 import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js';
 import { getIcon } from '../utils/icons.js';
@@ -229,91 +230,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
  */
 export function registerUnifiedPortalActions(app) {
   // DEV-34: No-App Parent Portal
-  app.loadParentPortal = async function loadParentPortal(token, options = {}) {
-    window.__centrlyLoaded = true;
-    this._parentPortalToken = token;
-    try {
-      if (typeof localStorage !== 'undefined' && token) {
-        localStorage.setItem('centrly_portal_token', token);
-        localStorage.setItem('centrly_portal_role', 'parent');
-      }
-      if (typeof sessionStorage !== 'undefined' && token) {
-        sessionStorage.setItem('centrly_portal_token', token);
-        sessionStorage.setItem('centrly_portal_role', 'parent');
-      }
-      if (window.history && window.history.replaceState && (window.location.pathname !== '/portal' || window.location.search || window.location.hash)) {
-        window.history.replaceState(null, '', window.location.pathname === '/portal-entry' ? '/portal-entry' : '/portal');
-      }
-    } catch (_) {}
-
-    const paint = data => {
-      const appEl = this.getAppEl();
-      if (!appEl) return;
-      let tab = 'attendance';
-      try { tab = localStorage.getItem('centrly_portal_parent_tab') || 'attendance'; } catch (_) {}
-      // Branding is refreshed with the verified destination, not inferred from phone numbers.
-      const focused = appEl.contains(document.activeElement) ? document.activeElement.id : '';
-      appEl.innerHTML = renderParentPortalView({...data, portal_presentation:this._portalPresentation || data.portal_presentation}, tab);
-      if (focused) document.getElementById(focused)?.focus({preventScroll:true});
-      this._parentPortalRenderedToken = token;
-      const refresh = appEl.querySelector('#parent-refresh-data-btn');
-      if (refresh && this._parentPortalRefreshing) { refresh.disabled = true; refresh.setAttribute('aria-busy','true'); }
-    };
-    const status = failed => {
-      const node = this.getAppEl()?.querySelector('#parent-sync-status');
-      if (node) node.textContent = failed ? 'تعذر الاتصال؛ نعرض آخر بيانات محفوظة. جرّب التحديث.' : '';
-    };
-    try {
-      const cached = await portalCache.read(token, 'parent');
-      if (cached && (this._parentPortalRenderedToken !== token || !this.getAppEl()?.querySelector('#pp-student'))) paint(cached.data);
-      else if (this._parentPortalRenderedToken !== token) showPortalPending(this);
-      if (!cached?.fresh || options.force || window.__centrlyPortalArrival) {
-        if (await preparePortalDestination(this, token, 'parent', portalRequest)) return false;
-      }
-      const result = await portalCache.load(token, {
-        role:'parent', request:async path => {
-          const data = await portalRequest(path);
-          return {...parentPortalSnapshot(data), portal_presentation:this._portalPresentation};
-        }, force:options.force === true,
-        onData:(data, meta) => { if (!meta.cached || !cached) paint(data); }
-      });
-      status(!!result.error);
-      return !result.error;
-    } catch (err) {
-      if (err?.code === 'PORTAL_CACHE_INVALIDATED') return false;
-      if (err?.code === 'PORTAL_SESSION_CHANGED') return false;
-      if (err?.status === 401 || err?.status === 403) {
-        portalCache.clear('parent');
-        try {
-          localStorage.removeItem('centrly_portal_token'); localStorage.removeItem('centrly_portal_role');
-          sessionStorage.removeItem('centrly_portal_token'); sessionStorage.removeItem('centrly_portal_role');
-        } catch (_) {}
-        this._parentPortalRenderedToken = null;
-        this.renderPortalLogin('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً');
-        return false;
-      }
-      const fallback = await portalCache.read(token, 'parent');
-      if (fallback) { paint(fallback.data); status(true); return false; }
-      const root = this.getAppEl();
-      if (root) root.innerHTML = renderParentPortalView({error:err?.message || 'تعذر تحميل المتابعة. تحقق من الاتصال وأعد المحاولة.'});
-      return false;
-    }
-  }
-
-  app.reloadParentPortal = async function reloadParentPortal() {
-    if (this._parentPortalRefreshing) return false;
-    const button = this.getAppEl()?.querySelector('#parent-refresh-data-btn');
-    if (button) { button.disabled = true; button.setAttribute('aria-busy','true'); }
-    this._parentPortalRefreshing = true;
-    try {
-      if (!this._parentPortalToken) { window.location.reload(); return false; }
-      return await this.loadParentPortal(this._parentPortalToken, {force:true});
-    } finally {
-      this._parentPortalRefreshing = false;
-      const current = this.getAppEl()?.querySelector('#parent-refresh-data-btn');
-      if (current) { current.disabled = false; current.removeAttribute('aria-busy'); }
-    }
-  }
+  registerParentPortalActions(app);
 
   app.loadStudentPortal = async function loadStudentPortal(token, options = {}) {
     window.__centrlyLoaded = true;
@@ -457,7 +374,9 @@ export function registerUnifiedPortalActions(app) {
     this.currentRoute = 'portal';
     const appEl = this.getAppEl();
     if (appEl) {
-      appEl.innerHTML = renderUnifiedPortalLoginView(errorMessage);
+      const parentEntry = this._portalPresentation || getParentBranding();
+      const isParent = this._parentPortalToken || localStorage.getItem('centrly_portal_entry_role') === 'parent';
+      appEl.innerHTML = isParent ? renderParentPortalLogin(errorMessage, parentEntry) : renderUnifiedPortalLoginView(errorMessage);
     }
     if (window.history?.replaceState && (window.location.pathname !== '/portal' || window.location.search || window.location.hash)) {
       window.history.replaceState(null, '', window.location.search ? `/portal${window.location.search}` : '/portal');
@@ -538,6 +457,7 @@ export function registerUnifiedPortalActions(app) {
 
       if (!identifier || !password) {
         if (alertEl) {
+          alertEl.hidden = false;
           alertEl.style.display = 'block';
           alertEl.textContent = 'يرجى كتابة رقم الهاتف أو كود الطالب وكلمة المرور';
         }
@@ -548,7 +468,7 @@ export function registerUnifiedPortalActions(app) {
       if (spinner) spinner.style.display = 'inline';
       if (alertEl) alertEl.style.display = 'none';
 
-      const res = await request('/public/portal/login', {
+      const res = await portalRequest('/public/portal/login', {
         method: 'POST',
         body: { identifier, password, role },
       });
@@ -587,7 +507,8 @@ export function registerUnifiedPortalActions(app) {
       console.error('Portal login error:', err);
       const errorMsg = err?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البيانات.';
       if (alertEl) {
-        alertEl.style.display = 'block';
+        alertEl.hidden = false;
+          alertEl.style.display = 'block';
         alertEl.textContent = errorMsg;
       } else {
         this.renderPortalLogin(errorMsg);
@@ -599,6 +520,9 @@ export function registerUnifiedPortalActions(app) {
   }
 
   app.handlePortalLogout = function handlePortalLogout() {
+    const logoutRole = localStorage.getItem('centrly_portal_role');
+    if (logoutRole === 'parent') saveParentBranding(this._portalPresentation);
+    localStorage.setItem('centrly_portal_entry_role', logoutRole || 'parent');
     portalCache.clear('student');
     portalCache.clear('parent');
     try {
