@@ -2,6 +2,7 @@ import { authService } from '../services/auth.js';
 import { request } from '../services/api.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { getIcon } from '../utils/icons.js';
+import { normalizeDigits } from '../utils/normalizeDigits.js?v=4.8.5';
 
 export function renderAuthScreens() {
   return `
@@ -70,10 +71,6 @@ export function renderAuthScreens() {
               <label class="form-label" for="signupName">اسم المدرس *</label>
               <input type="text" id="signupName" class="form-input" placeholder="اسم المدرس بالكامل" required>
             </div>
-            <div class="form-group" style="margin-top: 0.85rem;">
-              <label class="form-label" for="signupSubject">المادة التعليمية</label>
-              <input type="text" id="signupSubject" class="form-input" placeholder="اكتب المادة التعليمية (مثال: لغة عربية، فيزياء، رياضيات...)" autocomplete="off">
-            </div>
           </div>
 
           <div class="form-group">
@@ -83,13 +80,6 @@ export function renderAuthScreens() {
           <div class="form-group">
             <label class="form-label" for="signupPhone">رقم الهاتف الأساسي *</label>
             <input type="tel" id="signupPhone" class="form-input" placeholder="010..." required dir="ltr" autocomplete="tel">
-          </div>
-          <div class="form-group" style="margin-top: 0.85rem;">
-            <label class="form-label" for="signupContactPhone">رقم واتساب للتواصل مع الطلاب وأولياء الأمور 💬</label>
-            <input type="tel" id="signupContactPhone" class="form-input" placeholder="رقم واتساب المدرس أو المساعد (اختياري - إن ترك فارغاً سيتم استخدام نفس الرقم)" dir="ltr" autocomplete="tel">
-            <div style="font-size: 0.73rem; color: #64748b; margin-top: 0.25rem;">
-              يظهر هذا الرقم في بوابات الطلاب وأولياء الأمور كزر مباشر للتواصل معك عبر واتساب.
-            </div>
           </div>
           <div class="form-group">
             <label class="form-label" for="signupPassword">كلمة المرور *</label>
@@ -289,6 +279,23 @@ export function renderEmailVerificationScreen({ email = '', note = '' } = {}) {
  * Register Authentication & Account Lifecycle Actions (DEV-89)
  */
 export function registerAuthActions(app) {
+  app.openAccountDashboard = async function() {
+    this.resetTenantState();
+    const isAdmin=this.user?.role==='admin';
+    const isCenter=this.user?.role==='center_owner' || this.user?.account_type==='center';
+    this.currentRoute=isAdmin?'admin-dashboard':isCenter?'center-dashboard':'dashboard';
+    for(const storage of [localStorage,sessionStorage]){
+      storage.setItem('centrly_current_route',this.currentRoute);
+      storage.removeItem('centrly_redirect_route');
+    }
+    this.pendingVerification=null;this.signupFormData=null;
+    sessionStorage.removeItem('centrly_signup_form_data');
+    const url=new URL(window.location.href);url.searchParams.delete('view');
+    window.history.replaceState(null,'',url.pathname+url.search+url.hash);
+    this.startProactiveSessionRefresher();
+    this.renderApp();
+    await this.loadRouteData(this.currentRoute);
+  };
   app.renderAuth = function renderAuth(tab = 'login') {
     window.__centrlyLoaded = true;
     this.resetTenantState();
@@ -812,7 +819,7 @@ export function registerAuthActions(app) {
         subject: subject || res.user?.subject,
       };
       authService.setUser(this.user);
-      this.startOnboarding();
+      await this.openAccountDashboard();
     } catch (err) {
       const errMsg = err.message || '';
       const isPhoneExists = err.code === 'PHONE_ALREADY_EXISTS' ||
@@ -984,9 +991,7 @@ export function registerAuthActions(app) {
           }
         } catch (_) {}
         this.restoreCachedData();
-        setTimeout(() => {
-          this.startOnboarding();
-        }, 800);
+        await this.openAccountDashboard();
       } else {
         setTimeout(() => {
           this.renderAuth('login');
