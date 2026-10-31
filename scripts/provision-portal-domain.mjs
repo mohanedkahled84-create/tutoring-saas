@@ -19,7 +19,7 @@ const content=await new Promise((resolve,reject)=>{
   const chunks=[];response.on('data',c=>chunks.push(c));response.on('error',reject);response.on('end',()=>response.statusCode===200?resolve(Buffer.concat(chunks).toString('utf8')):reject(Error('HTTPS arrival is not ready')));
  });request.on('error',reject);request.on('timeout',()=>request.destroy(Error('HTTPS readiness timeout')));
 });
-if(!content.includes('/apps/web/src/app.js'))throw Error('The HTTPS host is not serving the portal entry');
+if(!content.includes('/apps/web/src/portalBootstrap.js')&&!content.includes('/apps/web/src/app.js'))throw Error('The HTTPS host is not serving the portal entry');
 // Recheck assignment after the network operation so a concurrent rename cannot register a stale binding.
 const latest=await db.from('tenant_platform_settings').select('subdomain').eq('tenant_id',platform.tenant_id).single();
 if(latest.error||latest.data.subdomain!==slug)throw Error('Platform changed while provisioning; run again for its current subdomain');
