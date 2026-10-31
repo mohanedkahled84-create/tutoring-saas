@@ -1,7 +1,7 @@
 import {createHmac,timingSafeEqual} from 'node:crypto';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {config} from '../config/index.js';
-import {familyError,familyPhone,familyHash,familyRpc,deliverFamilyAccess,familyAccessDetails,familyNamesText} from './parentFamily.js';
+import {familyError,familyPhone,familyHash,familyRpc,deliverFamilyAccess,familyNamesAtTeacher,familyNamesText} from './parentFamily.js';
 import {approvedUtilityTemplate} from './metaTemplatePolicy.js';
 
 export interface MetaFamilyGateway {
@@ -15,7 +15,6 @@ export function verifyMetaSignature(raw:unknown,signature:unknown,secret=config.
  return received.length===expected.length && timingSafeEqual(received,expected);
 }
 export function configuredMetaFamilyGateway():MetaFamilyGateway {
- const directTemplate='centerly_parent_record_utility_v1';
  const approved=(name:string,language:string)=>approvedUtilityTemplate({baseUrl:'https://graph.facebook.com/v22.0',accessToken:config.meta.accessToken,wabaId:config.meta.wabaId,name,language});
  const send=async(phone:string,message:Record<string,unknown>)=>{
   if(!config.meta.accessToken || !config.meta.phoneNumberId)return false;
@@ -28,10 +27,8 @@ export function configuredMetaFamilyGateway():MetaFamilyGateway {
  return {
   notify:async(phone,parameters,payload)=>{
    // Never send a pending, marketing, authentication or unverified template.
-   const direct=await approved(directTemplate,'ar');
-   if(!direct && !await approved('centerly_student','en'))return false;
-   const body=direct?parameters:[parameters[0],'متابعة الأبناء',parameters[1]];
-   return send(phone,{type:'template',template:{name:direct?directTemplate:'centerly_student',language:{code:direct?'ar':'en'},components:[{type:'body',parameters:body.map(text=>({type:'text',text}))},{type:'button',sub_type:'quick_reply',index:'0',parameters:[{type:'payload',payload}]}]}});
+   if(!await approved('centerly_student','en'))return false;
+   return send(phone,{type:'template',template:{name:'centerly_student',language:{code:'en'},components:[{type:'body',parameters:parameters.map(text=>({type:'text',text}))},{type:'button',sub_type:'quick_reply',index:'0',parameters:[{type:'payload',payload}]}]}});
   },
   reply:(phone,text)=>send(phone,{type:'text',text:{preview_url:false,body:text}}),
  };
@@ -44,8 +41,12 @@ export async function notifyMetaFamily(db:SupabaseClient,tenantId:string,student
  const phone=familyPhone(student?.parent_phone);if(!student || !phone)throw familyError(400,'راجع رقم ولي الأمر المسجل للطالب');
  if(!ready)throw familyError(503,'الإرسال عبر Meta متصل؛ يلزم تفعيل META_APP_SECRET لاستقبال طلب كلمة مرور الأسرة بأمان');
  if(!await familyRpc(db,'parent_family_limit',{p_key:familyHash('meta-notice:'+phone),p_max:3}))throw familyError(429,'تم إرسال طلب بيانات الأسرة مؤخرًا؛ حاول لاحقًا');
- const details=await familyAccessDetails(db,tenantId,phone);
- const sent=await gateway.notify(phone,[familyNamesText(details.names),teacherName || 'المعلم',details.url],`CENTRLY_FAMILY:${student.id}:${tenantId}`);
+ const [names,platform]=await Promise.all([
+  familyNamesAtTeacher(db,tenantId,phone),
+  db.from('tenant_platform_settings').select('subject_title').eq('tenant_id',tenantId).maybeSingle(),
+ ]);
+ if(platform.error)throw familyError(503,'تعذر تجهيز رسالة ولي الأمر');
+ const sent=await gateway.notify(phone,[familyNamesText(names),platform.data?.subject_title || 'المادة الدراسية',teacherName || 'المعلم'],`CENTRLY_FAMILY:${student.id}:${tenantId}`);
  if(!sent)throw familyError(502,'لم تؤكد Meta إرسال الرسالة؛ حاول مجددًا لاحقًا');
  return {success:true,message:'تم إرسال رسالة المتابعة لولي الأمر؛ يضغط زر الرسالة لاستلام بيانات حساب الأسرة'};
 }

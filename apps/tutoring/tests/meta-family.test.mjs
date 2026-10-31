@@ -4,6 +4,7 @@ import {createHmac} from 'node:crypto';
 import {once} from 'node:events';
 import {config} from '../dist/shared/config/index.js';
 import {verifyMetaSignature,configuredMetaFamilyGateway,notifyMetaFamily,processMetaPortalMessage} from '../dist/shared/utils/metaFamily.js';
+import {familyAccessDetails} from '../dist/shared/utils/parentFamily.js';
 
 const secret='isolated-meta-signature-test-not-real',phone='201012345678';
 const signature=raw=>'sha256='+createHmac('sha256',secret).update(raw).digest('hex');
@@ -27,7 +28,7 @@ test('Meta signature verifies exact raw bytes and rejects forgery, mutation and 
 });
 test('family notification uses the approved parent template and never provisions or exposes a password',async()=>{
  const f=fixture();const result=await notifyMetaFamily(f.db,'tenant','own','معلم',f.gateway,true);
- assert.equal(result.success,true);assert.equal(f.notices.length,1);assert.equal(f.notices[0][0],phone);assert.deepEqual(f.notices[0][1],['ابن','معلم','https://teacher.centerly-eg.com/family']);assert.equal(f.notices[0][2],'CENTRLY_FAMILY:own:tenant');
+ assert.equal(result.success,true);assert.equal(f.notices.length,1);assert.equal(f.notices[0][0],phone);assert.deepEqual(f.notices[0][1],['ابن','الفيزياء','معلم']);assert.equal(f.notices[0][2],'CENTRLY_FAMILY:own:tenant');
  assert.ok(!f.calls.some(c=>c.name==='parent_family_delivery'));assert.equal(f.replies.length,0);assert.ok(!JSON.stringify(result).includes('password'));
  await assert.rejects(()=>notifyMetaFamily(f.db,'tenant','own','معلم',f.gateway,false),e=>e.status===503);
 });
@@ -40,11 +41,11 @@ test('verified parent reply receives a separate family secret only on the same p
 test('family notices list siblings only at the sending teacher and resolve current publication on each send',async()=>{
  const f=fixture([{id:'own',tenant_id:'tenant',name:'أحمد',parent_match:true},{id:'sibling',tenant_id:'tenant',name:'منى',parent_match:true},{id:'other',tenant_id:'foreign',name:'اسم خاص بمعلم آخر',parent_match:true},{id:'student',tenant_id:'tenant',name:'طالب فقط',parent_match:false}]);
  await notifyMetaFamily(f.db,'tenant','own','معلم',f.gateway,true);
- assert.deepEqual(f.notices[0][1],['أحمد، منى','معلم','https://teacher.centerly-eg.com/family']);
+ assert.deepEqual(f.notices[0][1],['أحمد، منى','الفيزياء','معلم']);
  const rpc=f.db.rpc;f.db.rpc=async(name,args)=>name==='portal_tenant_context'?{data:{platform:{subdomain:'renamed',is_active:true},bound_subdomain:'renamed'},error:null}:rpc(name,args);
- await notifyMetaFamily(f.db,'tenant','own','معلم',f.gateway,true);assert.equal(f.notices[1][1][2],'https://renamed.centerly-eg.com/family');
+ assert.equal((await familyAccessDetails(f.db,'tenant',phone)).url,'https://renamed.centerly-eg.com/family');
  f.db.rpc=async(name,args)=>name==='portal_tenant_context'?{data:{platform:{subdomain:'renamed',is_active:true},bound_subdomain:'foreign'},error:null}:rpc(name,args);
- await notifyMetaFamily(f.db,'tenant','own','معلم',f.gateway,true);assert.equal(f.notices[2][1][2],'https://centerly-eg.com/family');
+ assert.equal((await familyAccessDetails(f.db,'tenant',phone)).url,'https://centerly-eg.com/family');
 });
 test('stale events, wrong recipients and reassigned teacher/student buttons cannot provision a family',async()=>{
  for(const msg of [message({timestamp:String(Math.floor(Date.now()/1000)-1000)}),message({from:'123'}),message({button:{payload:'CENTRLY_FAMILY:foreign:other',text:'كلمة السر'}})]){
@@ -67,18 +68,18 @@ test('delayed ordinary messages remain in the inbox without assigning an ambiguo
 });
 test('Meta transport sends a quick reply payload; provider failures cannot report sent',async()=>{
  const original=globalThis.fetch,token=config.meta.accessToken;config.meta.accessToken='isolated-token';const captured=[];
- try{globalThis.fetch=async(url,options)=>{if(!options.body)return {ok:true,json:async()=>({data:[{name:'centerly_parent_record_utility_v1',status:'APPROVED',language:'ar',category:'UTILITY'}]})};captured.push(JSON.parse(options.body));return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};};
+ try{globalThis.fetch=async(url,options)=>{if(!options.body)return {ok:true,json:async()=>({data:[{name:'centerly_student',status:'APPROVED',language:'en',category:'UTILITY'}]})};captured.push(JSON.parse(options.body));return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};};
   const gateway=configuredMetaFamilyGateway();assert.equal(await gateway.notify(phone,['ابن','مادة','معلم'],'CENTRLY_FAMILY:id:tenant'),true);
-  assert.equal(captured[0].template.name,'centerly_parent_record_utility_v1');assert.equal(captured[0].template.language.code,'ar');assert.equal(captured[0].template.components[1].parameters[0].payload,'CENTRLY_FAMILY:id:tenant');
+  assert.equal(captured[0].template.name,'centerly_student');assert.equal(captured[0].template.language.code,'en');assert.equal(captured[0].template.components[1].parameters[0].payload,'CENTRLY_FAMILY:id:tenant');
   globalThis.fetch=async()=>({ok:false,json:async()=>({error:{message:'private provider detail'}})});assert.equal(await gateway.reply(phone,'fixture response'),false);
  }finally{globalThis.fetch=original;config.meta.accessToken=token;}
 });
-test('Meta review never causes an unapproved template to be sent; the approved fallback still lists siblings',async()=>{
- const original=globalThis.fetch,token=config.meta.accessToken;config.meta.accessToken='isolated-token';let sent;
+test('family uses only the existing approved parent template and its three original variable slots',async()=>{
+ const original=globalThis.fetch,token=config.meta.accessToken;config.meta.accessToken='isolated-token';let sent;const lookups=[];
  try{
-  globalThis.fetch=async(url,options)=>options.body?(sent=JSON.parse(options.body),{ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})}):{ok:true,json:async()=>({data:new URL(url).searchParams.get('name')==='centerly_student'?[{name:'centerly_student',language:'en',status:'APPROVED',category:'UTILITY'}]:[{name:'centerly_parent_record_utility_v1',language:'ar',status:'PENDING',category:'UTILITY'}]})};
-  assert.equal(await configuredMetaFamilyGateway().notify(phone,['أحمد، منى','معلم','https://teacher.centerly-eg.com/family'],'CENTRLY_FAMILY:id:tenant'),true);
-  assert.equal(sent.template.name,'centerly_student');assert.deepEqual(sent.template.components[0].parameters.map(p=>p.text),['أحمد، منى','متابعة الأبناء','معلم']);
+  globalThis.fetch=async(url,options)=>{if(options.body){sent=JSON.parse(options.body);return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};}lookups.push(new URL(url).searchParams.get('name'));return {ok:true,json:async()=>({data:[{name:'centerly_student',language:'en',status:'APPROVED',category:'UTILITY'},{name:'unused_new_template',language:'ar',status:'APPROVED',category:'UTILITY'}]})};};
+  assert.equal(await configuredMetaFamilyGateway().notify(phone,['أحمد، منى','الفيزياء','معلم'],'CENTRLY_FAMILY:id:tenant'),true);
+  assert.deepEqual(lookups,['centerly_student']);assert.equal(sent.template.name,'centerly_student');assert.deepEqual(sent.template.components[0].parameters.map(p=>p.text),['أحمد، منى','الفيزياء','معلم']);
  }finally{globalThis.fetch=original;config.meta.accessToken=token;}
 });
 test('family notification rejects even approved marketing templates and stops if the fallback is not verified utility',async()=>{
