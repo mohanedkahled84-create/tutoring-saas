@@ -793,9 +793,12 @@
         });
         const json = await res.json();
         
-        if (json && json.success && json.token) {
+        if (res.ok && json && json.success && json.token) {
           localStorage.removeItem('centrly_explicit_logout');
           localStorage.setItem('centrly_portal_token', json.token);
+          localStorage.setItem('centrly_portal_role', 'student');
+          sessionStorage.setItem('centrly_portal_token', json.token);
+          sessionStorage.setItem('centrly_portal_role', 'student');
           if (json.student) {
             localStorage.setItem('portal_student', JSON.stringify(json.student));
             localStorage.setItem('portal_student_code', json.student.student_code || json.student.code || identifierInput);
@@ -805,30 +808,8 @@
           const isSub = host.includes('mr-omar') || (host.split('.').length > 2 && !host.includes('vercel.app') && !host.includes('localhost') && !host.includes('127.0.0.1'));
           const isSample = currentPath.includes('/teacher-platform-sample/');
           const dest = isSample ? 'index.html' : (isSub ? '/dashboard' : (currentPath.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard'));
-          window.location.href = `${dest}?code=${encodeURIComponent(identifierInput)}&token=${encodeURIComponent(json.token)}`;
+          window.location.href = dest;
         } else {
-          // Allow seamless login for all platform students during testing
-          const allKnownStudents = {
-            '1006': { name: 'مهند خالد', code: '1006', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
-            '1005': { name: 'احمد محمود', code: '1005', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
-            '1002': { name: 'باسل امير', code: '1002', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
-            '1003': { name: 'عمر جمال', code: '1003', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
-            '1004': { name: 'احمد عبد الله', code: '1004', phone: '01123671177', center: 'الهضبه', group: 'الاحد والأربع تالته ثانوي' },
-          };
-          if (allKnownStudents[identifierInput] || identifierInput.length >= 3) {
-            localStorage.removeItem('centrly_explicit_logout');
-            const st = allKnownStudents[identifierInput] || { name: 'طالب سنترلي', code: identifierInput, phone: identifierInput };
-            localStorage.setItem('portal_student', JSON.stringify(st));
-            localStorage.setItem('portal_student_code', identifierInput);
-            const host = window.location.hostname;
-            const currentPath = window.location.pathname;
-            const isSub = host.includes('mr-omar') || (host.split('.').length > 2 && !host.includes('vercel.app') && !host.includes('localhost') && !host.includes('127.0.0.1'));
-            const isSample = currentPath.includes('/teacher-platform-sample/');
-            const dest = isSample ? 'index.html' : (isSub ? '/dashboard' : (currentPath.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard'));
-            window.location.href = `${dest}?code=${encodeURIComponent(identifierInput)}`;
-            return;
-          }
-
           const errMsg = json?.error?.message || 'رقم الهاتف أو كلمة المرور غير صحيحة';
           showLoginToast(errMsg, 'error');
           if (submitBtn) {
