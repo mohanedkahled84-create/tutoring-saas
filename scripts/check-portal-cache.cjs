@@ -7,7 +7,23 @@ const types={'.html':'text/html','.js':'application/javascript','.css':'text/css
 const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'student-a',tenant_id:'tenant-a',name,student_code:'3210',teacher_name:'مدرس الاختبار'},summary:{total_sessions:1,attendance_rate:'82%'},materials:updated?[]:[{id:'homework-a',type:'homework',title:'واجب الحركة المحفوظ',submission_status:'unsubmitted'}],quizzes:[],sessions:[]});
 (async()=>{
  const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
- try {for(const advanced of [true,false]){
+ try {
+  // A slow/failed module download must not leave /portal as an empty document.
+  const bootContext=await browser.newContext({viewport:{width:390,height:844}}),bootPage=await bootContext.newPage();
+  await bootContext.route('**/*',async route=>{
+   const u=new URL(route.request().url());
+   if(u.hostname!=='centerly-eg.com'||u.pathname.endsWith('.js'))return route.abort();
+   const file=path.resolve(root,u.pathname==='/portal'?'index.html':'.'+u.pathname);
+   if(!file.startsWith(root+path.sep))return route.abort();
+   try{return route.fulfill({contentType:types[path.extname(file)]||'application/octet-stream',body:fs.readFileSync(file)});}catch{return route.abort();}
+  });
+  await bootPage.goto('https://centerly-eg.com/portal',{waitUntil:'domcontentloaded'});
+  await bootPage.locator('#centrlyInitialSplash').waitFor();
+  assert.ok((await bootPage.locator('body').innerText()).includes('جارِ فتح المتابعة'));
+  await bootPage.locator('#centrlyInitialSplash button').waitFor({state:'visible',timeout:12000});
+  results.push({stage:'portal remains visible and offers retry when modules fail',passed:true});console.log(JSON.stringify(results.at(-1)));
+  await bootContext.close();
+  for(const advanced of [true,false]){
   const origin=advanced?'https://teacher-test.centerly-eg.com':'https://centerly-eg.com';
   const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage(),errors=[];
   let calls=[],mode='ok',current=data('طالب الاختبار أ'),held=[];
