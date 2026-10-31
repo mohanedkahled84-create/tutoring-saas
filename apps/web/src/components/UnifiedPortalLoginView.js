@@ -1,5 +1,5 @@
 import { request, API_BASE_URL } from '../services/api.js';
-import { renderParentPortalView } from './ParentPortalView.js';
+import { renderParentPortalView, parentPortalSnapshot } from './ParentPortalView.js';
 import { renderStudentPortalView } from './StudentPortalView.js';
 import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js';
 import { getIcon } from '../utils/icons.js';
@@ -229,7 +229,7 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
  */
 export function registerUnifiedPortalActions(app) {
   // DEV-34: No-App Parent Portal
-  app.loadParentPortal = async function loadParentPortal(token) {
+  app.loadParentPortal = async function loadParentPortal(token, options = {}) {
     window.__centrlyLoaded = true;
     this._parentPortalToken = token;
     try {
@@ -246,61 +246,72 @@ export function registerUnifiedPortalActions(app) {
       }
     } catch (_) {}
 
-    if (this._parentPortalRenderedToken !== token) showPortalPending(this);
+    const paint = data => {
+      const appEl = this.getAppEl();
+      if (!appEl) return;
+      let tab = 'attendance';
+      try { tab = localStorage.getItem('centrly_portal_parent_tab') || 'attendance'; } catch (_) {}
+      // Branding is refreshed with the verified destination, not inferred from phone numbers.
+      const focused = appEl.contains(document.activeElement) ? document.activeElement.id : '';
+      appEl.innerHTML = renderParentPortalView({...data, portal_presentation:this._portalPresentation || data.portal_presentation}, tab);
+      if (focused) document.getElementById(focused)?.focus({preventScroll:true});
+      this._parentPortalRenderedToken = token;
+      const refresh = appEl.querySelector('#parent-refresh-data-btn');
+      if (refresh && this._parentPortalRefreshing) { refresh.disabled = true; refresh.setAttribute('aria-busy','true'); }
+    };
+    const status = failed => {
+      const node = this.getAppEl()?.querySelector('#parent-sync-status');
+      if (node) node.textContent = failed ? 'تعذر الاتصال؛ نعرض آخر بيانات محفوظة. جرّب التحديث.' : '';
+    };
     try {
-      if (await preparePortalDestination(this, token, 'parent', portalRequest)) return;
-      const data = await request(`/public/parent-portal?token=${encodeURIComponent(token)}`);
-      data.portal_presentation = this._portalPresentation;
-      if (data && (data.error || !data.student)) {
-        throw new Error(data.error?.message || data.error || 'تعذر تحميل بيانات بوابة ولي الأمر');
+      const cached = await portalCache.read(token, 'parent');
+      if (cached && (this._parentPortalRenderedToken !== token || !this.getAppEl()?.querySelector('#pp-student'))) paint(cached.data);
+      else if (this._parentPortalRenderedToken !== token) showPortalPending(this);
+      if (!cached?.fresh || options.force || window.__centrlyPortalArrival) {
+        if (await preparePortalDestination(this, token, 'parent', portalRequest)) return false;
       }
-      const appEl = this.getAppEl();
-      if (appEl) {
-        const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_parent_tab')) ||
-                         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_parent_tab')) || 'attendance';
-        appEl.innerHTML = renderParentPortalView(data, savedTab);
-        this._parentPortalRenderedToken = token;
-        const parentKey = (data && data.student && (data.student.id || data.student.parent_phone || data.student.student_code || data.student.code)) ? String(data.student.id || data.student.parent_phone || data.student.student_code || data.student.code).trim() : '';
-        if (typeof window !== 'undefined' && parentKey) {
-          window._centrlyCurrentParentId = parentKey;
-          window._centrlyCurrentStudentId = String(data.student.id || data.student.student_code || data.student.code || '').trim();
-          try { localStorage.setItem('centrly_portal_last_id', parentKey); } catch (_) {}
-        }
-        setTimeout(() => {
-          if (typeof window !== 'undefined' && window.openParentPortalTour) {
-            window.openParentPortalTour(false, parentKey);
-          }
-        }, 500);
-      }
+      const result = await portalCache.load(token, {
+        role:'parent', request:async path => {
+          const data = await portalRequest(path);
+          return {...parentPortalSnapshot(data), portal_presentation:this._portalPresentation};
+        }, force:options.force === true,
+        onData:(data, meta) => { if (!meta.cached || !cached) paint(data); }
+      });
+      status(!!result.error);
+      return !result.error;
     } catch (err) {
-      const msg = err?.message || '';
-      const isExpired = (msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED')) &&
-                        !msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('Failed to execute');
-      if (isExpired) {
+      if (err?.code === 'PORTAL_CACHE_INVALIDATED') return false;
+      if (err?.code === 'PORTAL_SESSION_CHANGED') return false;
+      if (err?.status === 401 || err?.status === 403) {
+        portalCache.clear('parent');
         try {
-          localStorage.removeItem('centrly_portal_token');
-          localStorage.removeItem('centrly_portal_role');
-          sessionStorage.removeItem('centrly_portal_token');
-          sessionStorage.removeItem('centrly_portal_role');
+          localStorage.removeItem('centrly_portal_token'); localStorage.removeItem('centrly_portal_role');
+          sessionStorage.removeItem('centrly_portal_token'); sessionStorage.removeItem('centrly_portal_role');
         } catch (_) {}
+        this._parentPortalRenderedToken = null;
         this.renderPortalLogin('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً');
-        return;
+        return false;
       }
-      const appEl = this.getAppEl();
-      if (appEl) {
-        appEl.innerHTML = renderParentPortalView({
-          error: msg || 'تعذر تحميل بيانات بوابة ولي الأمر. يرجى التحقق من صحة الرابط.',
-        });
-      }
+      const fallback = await portalCache.read(token, 'parent');
+      if (fallback) { paint(fallback.data); status(true); return false; }
+      const root = this.getAppEl();
+      if (root) root.innerHTML = renderParentPortalView({error:err?.message || 'تعذر تحميل المتابعة. تحقق من الاتصال وأعد المحاولة.'});
+      return false;
     }
   }
 
   app.reloadParentPortal = async function reloadParentPortal() {
-    if (this._parentPortalToken) {
-      await this.loadParentPortal(this._parentPortalToken);
-      this.showToast('تم تحديث بيانات المتابعة بنجاح!', 'success');
-    } else {
-      window.location.reload();
+    if (this._parentPortalRefreshing) return false;
+    const button = this.getAppEl()?.querySelector('#parent-refresh-data-btn');
+    if (button) { button.disabled = true; button.setAttribute('aria-busy','true'); }
+    this._parentPortalRefreshing = true;
+    try {
+      if (!this._parentPortalToken) { window.location.reload(); return false; }
+      return await this.loadParentPortal(this._parentPortalToken, {force:true});
+    } finally {
+      this._parentPortalRefreshing = false;
+      const current = this.getAppEl()?.querySelector('#parent-refresh-data-btn');
+      if (current) { current.disabled = false; current.removeAttribute('aria-busy'); }
     }
   }
 

@@ -12,7 +12,7 @@ async function start() {
     const token = localStorage.getItem('centrly_portal_token'), role = localStorage.getItem('centrly_portal_role');
     if (/^\/portal\/?$/.test(location.pathname) && !location.search && !location.hash && token &&
         ['student','parent'].includes(role) && !localStorage.getItem('centrly_explicit_logout')) {
-      const cached = role === 'student' ? await portalCache.read(token) : null;
+      const cached = await portalCache.read(token, role);
       // Any saved basic dashboard, including stale data, must paint before a network wait.
       if (!cached) {
         try {
