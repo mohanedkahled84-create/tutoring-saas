@@ -41,6 +41,10 @@ export function registerParentPortalActions(app) {
       if (node) node.textContent = failed ? 'تعذر الاتصال؛ نعرض آخر بيانات محفوظة. جرّب التحديث.' : '';
     };
     try {
+      const arrival=window.__centrlyPortalArrival;
+      if(!options.force && arrival?.token===token && arrival.role==='parent' && arrival.origin===location.origin && arrival.initial_data?.student?.id) {
+        await portalCache.write(token,{...parentPortalSnapshot(arrival.initial_data),portal_presentation:arrival.presentation},'parent');
+      }
       const cached = await portalCache.read(token, 'parent');
       if (cached && (this._parentPortalRenderedToken !== token || !this.getAppEl()?.querySelector('#pp-student'))) paint(cached.data);
       else if (this._parentPortalRenderedToken !== token) showPortalPending(this);
@@ -49,7 +53,7 @@ export function registerParentPortalActions(app) {
       }
       const result = await portalCache.load(token, {
         role:'parent', request:async path => {
-          const data = await portalRequest(path);
+          const data = await portalRequest(path+'&view=parent');
           return {...parentPortalSnapshot(data), portal_presentation:this._portalPresentation};
         }, force:options.force === true,
         onData:(data, meta) => { if (!meta.cached || !cached) paint(data); }

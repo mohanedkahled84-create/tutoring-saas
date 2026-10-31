@@ -57,5 +57,7 @@ test('LIVE: portal rank is monthly, group-scoped, tied fairly, private and token
   assert.equal(payload.student.id,ids[0]);assert.equal(payload.summary.student_rank,1);assert.equal(payload.summary.group_size,3);
   assert.equal(response.headers.get('content-encoding'),'gzip');assert.match(response.headers.get('cache-control'),/no-store/);
   const material=payload.materials.find(m=>m.id===quizId);assert.ok(material);
+  const monitorResponse=await fetch(`http://127.0.0.1:${server.address().port}/api/public/parent-portal?token=${generateParentPortalToken(ids[0],tenant)}&view=parent&student_id=${ids[1]}&tenant_id=${other}`);
+  assert.equal(monitorResponse.status,200);const monitor=await monitorResponse.json();assert.equal(monitor.student.id,ids[0]);assert.equal(monitor.summary.student_rank,undefined);assert.ok(!JSON.stringify(monitor).includes(questionText));assert.ok(monitor.materials.every(m=>!m.questions&&!m.url&&!m.submission_url));assert.equal(monitor.summary.attendance_rate,payload.summary.attendance_rate);
   assert.equal(material.questions.questions[0].text,questionText);assert.equal(material.questions.questions[0].correct_index,undefined);
 });

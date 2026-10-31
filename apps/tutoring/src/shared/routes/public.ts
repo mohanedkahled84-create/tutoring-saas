@@ -7,11 +7,10 @@ import { verifyParentPortalToken, generateParentPortalToken } from "../utils/tok
 import { getServices } from "../../composition.js";
 import { AuthenticatedRequest } from "../types/index.js";
 import { authRateLimiter } from "../middleware/rateLimit.js";
-import { normalizeMaterialUrl } from "../../features/materials/routes.js";
-import { mergeLegacyPortalQuizzes } from "../utils/legacyPortalQuizzes.js";
 
-import { signHomeworkFile } from "../../features/homework/files.js";
 import { verifiedPortalStudent, portalDestinationFromContext, createPortalHandoff, consumePortalHandoff, trustedPortalOrigin } from "../utils/portalDestination.js";
+
+import {loadPortalAccount} from "../utils/portalAccount.js";
 
 export const publicRouter = Router();
 
@@ -33,39 +32,24 @@ publicRouter.post("/portal/destination", authRateLimiter, async (req: Request, r
   }
 });
 
-publicRouter.post("/portal/handoff", authRateLimiter, async (req: Request, res: Response) => {
+publicRouter.post("/portal/handoff", compression({threshold:1024,level:4}), authRateLimiter, async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "private, no-store");
   res.setHeader("Referrer-Policy", "no-referrer");
   try {
-    const result = await consumePortalHandoff(getServiceSupabaseClient(), req.body?.ticket, req.headers.origin);
-    if (!result) { res.status(401).json({ error: { code: "UNAUTHORIZED", message: "انتهت صلاحية الانتقال؛ افتح رابط المتابعة الأصلي مجددًا" } }); return; }
-    res.json(result);
+    const db=getServiceSupabaseClient();
+    const redeemed = await consumePortalHandoff(db, req.body?.ticket, req.headers.origin, true);
+    if (!redeemed) { res.status(401).json({ error: { code: "UNAUTHORIZED", message: "انتهت صلاحية الانتقال؛ افتح رابط المتابعة الأصلي مجددًا" } }); return; }
+    const {context,...result}=redeemed;
+    let initial_data;
+    if(req.body?.view==='parent' && result.role==='parent') {
+      try { initial_data=await loadPortalAccount(db,result.token!,true,context); }
+      catch { /* Keep the valid redeemed session; the client can retry its account read. */ }
+    }
+    res.json({...result,...(initial_data ? {initial_data} : {})});
   } catch {
     res.status(503).json({ error: { code: "UNAVAILABLE", message: "تعذر إكمال الانتقال، افتح رابط المتابعة الأصلي مجددًا" } });
   }
 });
-
-const quizAnswerFieldNames = new Set([
-  "correct_index",
-  "correct",
-  "answer",
-  "answer_index",
-  "correctanswer",
-  "correctanswerindex",
-  "correctoption",
-  "correctoptionindex",
-]);
-
-function removeQuizAnswerKeys(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(removeQuizAnswerKeys);
-  if (!value || typeof value !== "object") return value;
-
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>)
-      .filter(([key]) => !quizAnswerFieldNames.has(key.toLowerCase().replace(/[^a-z0-9_]/g, "")))
-      .map(([key, nested]) => [key, removeQuizAnswerKeys(nested)])
-  );
-}
 
 // POST /api/public/register - Student Self-Registration from shareable link
 publicRouter.post(
@@ -124,111 +108,13 @@ publicRouter.get("/parent-portal", compression({ threshold: 1024, level: 4,
     return;
   }
 
-  const supabase = getServiceSupabaseClient();
-  const verified = verifyParentPortalToken(token);
-
-  const studentId = verified?.student_id || null;
-  const tenantId = verified?.tenant_id || null;
-
   try {
-    const contextRequest = () => verifiedPortalStudent(supabase, token)
-      .then(data => ({ data, error: null }), error => ({ data: null, error }));
-    // Independent, verified identity/context and account payload reads run together.
-    const contextFlight = verified ? contextRequest() : null;
-    const { data: portalData, error: rpcError } = await supabase.rpc("get_parent_portal_payload", {
-      p_token: token,
-      p_student_id: studentId,
-      p_tenant_id: tenantId,
-    });
-
-    if (rpcError) {
-      res.setHeader("Retry-After", "5");
-      res.status(503).json({ error: { code: "UNAVAILABLE", message: "تعذر تحديث البيانات مؤقتًا. يرجى إعادة المحاولة." } });
-      return;
-    }
-    if (!portalData) {
-      res.status(401).json({
-        error: { code: "UNAUTHORIZED", message: "رابط المتابعة غير صالح أو منتهي الصلاحية. يرجى التواصل مع إدارة السنتر." },
-      });
-      return;
-    }
-
-    const contextResult = await (contextFlight || contextRequest());
-    if (contextResult.error) throw contextResult.error;
-    const context = contextResult.data;
-    if (!context || context.id !== portalData.student?.id) {
-      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "رابط المتابعة غير صالح" } }); return;
-    }
-    portalData.student.tenant_id = context.tenant_id;
-    // Run the small aggregate alongside material enrichment, not after it.
-    const rankResult = supabase.rpc("get_portal_monthly_group_rank", {
-      p_student_id: context.id, p_tenant_id: context.tenant_id,
-    }).abortSignal(AbortSignal.timeout(2500)).then(({ data, error }) => !error ? data : null, () => null);
-
-    if (portalData && Array.isArray(portalData.materials)) {
-      portalData.materials = portalData.materials.map((m: any) => {
-        let questions = m.questions;
-        if (m.type === "online_quiz" && questions) {
-          try {
-            const parsed = typeof questions === "string" ? JSON.parse(questions) : questions;
-            const sanitized = removeQuizAnswerKeys(parsed);
-            questions = typeof m.questions === "string" ? JSON.stringify(sanitized) : sanitized;
-          } catch {
-            questions = null;
-          }
-        }
-        return {
-          ...m,
-          ...(m.type === "online_quiz" ? { questions } : {}),
-          url: normalizeMaterialUrl(m.url),
-          submission_url: normalizeMaterialUrl(m.submission_url),
-        };
-      });
-    }
-
-    if (portalData && portalData.student) {
-      try {
-        // Context contains only memberships whose group and student share this tenant.
-        // Legacy capability tokens use the same exact-token verification as signed sessions.
-        const studentId = context.id, tenantId = context.tenant_id;
-        if (studentId && tenantId) {
-          const allowedGroupIds = new Set<string>(context.group_ids || []);
-
-          if (allowedGroupIds.size > 0) {
-            const { data: legacy, error: legacyError } = await supabase.rpc("portal_legacy_quiz_payload", {
-              p_student_id: studentId, p_tenant_id: tenantId,
-              p_student_code: String(portalData.student.student_code || portalData.student.code || "").trim(),
-            });
-            if (legacyError) throw legacyError;
-            mergeLegacyPortalQuizzes(portalData, legacy?.definitions || [], allowedGroupIds, legacy?.submissions || []);
-          }
-        }
-
-        const teacherPhone = portalData.teacher_phone || portalData.student.teacher_phone || context.teacher_phone || "";
-        if (teacherPhone) {
-          portalData.student.teacher_phone = teacherPhone;
-          portalData.teacher_phone = teacherPhone;
-        }
-      } catch (_) {}
-    }
-
-    const fileTenantId = context.tenant_id;
-    const fileStudentId = context.id;
-    if (portalData.summary?.total_sessions === 0) portalData.summary.attendance_rate = "لا توجد بيانات";
-    if (Array.isArray(portalData.materials) && fileStudentId && fileTenantId) {
-      portalData.materials = await Promise.all(portalData.materials.map(async (material: any) => ({
-        ...material,
-        submission_url: await signHomeworkFile(supabase, material.submission_url, fileTenantId!, material.id, fileStudentId),
-      })));
-    }
-    const rank = await rankResult;
-    if (rank && portalData.summary) Object.assign(portalData.summary, rank);
-    res.setHeader("Cache-Control", "private, no-store");
-    res.json(portalData);
-  } catch (err: unknown) {
-    res.status(500).json({
-      error: { code: "INTERNAL_ERROR", message: "حدث خطأ أثناء تحميل بيانات المتابعة" },
-    });
+    const data=await loadPortalAccount(getServiceSupabaseClient(),token,req.query.view==='parent');
+    res.json(data);
+  } catch(error:any) {
+    const status=[401,503].includes(error?.status) ? error.status : 500;
+    if(status===503) res.setHeader('Retry-After','5');
+    res.status(status).json({error:{code:status===401?'UNAUTHORIZED':status===503?'UNAVAILABLE':'INTERNAL_ERROR',message:status===500?'حدث خطأ أثناء تحميل بيانات المتابعة':error.message}});
   }
 });
 
@@ -269,7 +155,11 @@ publicRouter.get("/short-links/:code", (req, res, next) => req.query.entry ? aut
       const student = { ...resolved.context, expires_at: identity?.expires_at || Math.floor(Date.now()/1000) + 31536000 };
       const destination = portalDestinationFromContext(student);
       const ticket = destination.origin === req.headers.origin ? null : await createPortalHandoff(supabase, student, role, destination.origin);
-      res.json({ code, token, portal_type: role, student_id: student.id, destination: { ...destination, ticket } }); return;
+      let initial_data;
+      if(req.query.view==='parent' && role==='parent' && destination.origin===req.headers.origin) {
+        try { initial_data=await loadPortalAccount(supabase,token,true,student); } catch { /* Retry the account independently on a temporary read failure. */ }
+      }
+      res.json({ code, token, portal_type: role, student_id: student.id, destination: { ...destination, ticket },...(initial_data ? {initial_data} : {}) }); return;
     } catch {
       res.status(503).json({ error: { code: "UNAVAILABLE", message: "تعذر تجهيز الدخول، يرجى إعادة المحاولة" } }); return;
     }
