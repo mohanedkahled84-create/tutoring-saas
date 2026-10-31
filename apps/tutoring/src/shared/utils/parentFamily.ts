@@ -103,7 +103,7 @@ export async function deliverFamilyAccess(db:SupabaseClient,tenantId:string,stud
  // Do not provision a credential or pretend to send while the sender is disconnected.
  if(!await delivery.ready())throw familyError(503,'إرسال بيانات الأسرة غير متاح حاليًا؛ يلزم توصيل رقم واتساب سنترلي أولًا');
  const password=String(randomInt(100000000000,1000000000000)),hash=await bcrypt.hash(password,12),cipher=sealFamilyPassword(password,phone);
- const result=await familyRpc(db,'parent_family_delivery',{p_tenant_id:tenantId,p_student_id:studentId,p_hash:hash,p_cipher:cipher});
+ const result=await familyRpc(db,'parent_family_delivery',{p_tenant_id:tenantId,p_student_id:studentId,p_hash:hash,p_cipher:cipher,p_phone:phone});
  if(!result)throw familyError(400,'راجع رقم ولي الأمر المسجل للطالب');
  if(result.limited)throw familyError(429,'انتظر دقيقة قبل إعادة إرسال بيانات الأسرة');
  // Existing credentials are resent, never reset by a teacher. No password in a staff response/log.

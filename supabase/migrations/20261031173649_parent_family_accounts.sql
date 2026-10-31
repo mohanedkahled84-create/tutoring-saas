@@ -53,12 +53,12 @@ begin
  return v_attempts <= p_max;
 end; $$;
 
-create function public.parent_family_delivery(p_tenant_id uuid,p_student_id uuid,p_hash text,p_cipher text)
+create function public.parent_family_delivery(p_tenant_id uuid,p_student_id uuid,p_hash text,p_cipher text,p_phone text)
 returns jsonb language plpgsql security invoker set search_path = '' as $$
 declare v_phone text; v_account public.parent_family_accounts;
 begin
  select public.parent_family_phone(parent_phone) into v_phone from public.students where id=p_student_id and tenant_id=p_tenant_id;
- if v_phone is null then return null; end if;
+ if v_phone is null or v_phone is distinct from p_phone then return null; end if;
  insert into public.parent_family_accounts(phone,password_hash,password_cipher) values(v_phone,p_hash,p_cipher)
  on conflict(phone) do nothing;
  select * into v_account from public.parent_family_accounts where phone=v_phone for update;
@@ -129,7 +129,7 @@ begin
  delete from public.parent_family_sessions where root_id=v_root;
 end; $$;
 
-revoke execute on function public.parent_family_phone(text),public.parent_family_limit(text,integer),public.parent_family_delivery(uuid,uuid,text,text),public.parent_family_identity(text,text),public.parent_family_directory(text,text),public.parent_family_context(text,text,uuid),public.parent_family_redeem(text,text,text),public.parent_family_logout(text,text) from public,anon,authenticated;
-grant execute on function public.parent_family_phone(text),public.parent_family_limit(text,integer),public.parent_family_delivery(uuid,uuid,text,text),public.parent_family_identity(text,text),public.parent_family_directory(text,text),public.parent_family_context(text,text,uuid),public.parent_family_redeem(text,text,text),public.parent_family_logout(text,text) to service_role;
+revoke execute on function public.parent_family_phone(text),public.parent_family_limit(text,integer),public.parent_family_delivery(uuid,uuid,text,text,text),public.parent_family_identity(text,text),public.parent_family_directory(text,text),public.parent_family_context(text,text,uuid),public.parent_family_redeem(text,text,text),public.parent_family_logout(text,text) from public,anon,authenticated;
+grant execute on function public.parent_family_phone(text),public.parent_family_limit(text,integer),public.parent_family_delivery(uuid,uuid,text,text,text),public.parent_family_identity(text,text),public.parent_family_directory(text,text),public.parent_family_context(text,text,uuid),public.parent_family_redeem(text,text,text),public.parent_family_logout(text,text) to service_role;
 -- Pure normalization reads no tables; staff student edits also maintain this expression index.
 grant execute on function public.parent_family_phone(text) to authenticated;

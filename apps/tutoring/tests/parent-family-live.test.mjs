@@ -26,6 +26,7 @@ test('LIVE: delivered family password opens only the registered family across te
  const {deliverFamilyAccess,familyHash}=await import('../dist/shared/utils/parentFamily.js');
  t.after(async()=>{ok(await db.from('parent_family_limits').delete().in('key_hash',[familyHash('phone:'+phone),familyHash('phone:'+foreign)]));});
  const {generateParentPortalToken}=await import('../dist/shared/utils/tokens.js');
+ assert.equal(ok(await db.rpc('parent_family_delivery',{p_tenant_id:tenant,p_student_id:own.id,p_hash:'unused',p_cipher:'unused',p_phone:foreign})),null,'A phone edit during provisioning must not create a mismatched credential');
  let secret,recipient;
  const delivery={ready:async()=>true,send:async(p,password,url)=>{recipient=p;secret=password;assert.match(url,/family=1/);return true;}};
  await assert.rejects(()=>deliverFamilyAccess(db,tenant,outsider.id,delivery),e=>e.status===400);
@@ -77,7 +78,7 @@ test('LIVE: delivered family password opens only the registered family across te
  }
  for(const table of ['parent_family_accounts','parent_family_sessions','parent_family_handoffs','parent_family_limits'])assert.equal((await anonClient.from(table).select('*')).error?.code,'42501');
  const privateRpcs=[['parent_family_phone',{p_phone:phone}],['parent_family_limit',{p_key:'forged',p_max:100}],['parent_family_identity',{p_token_hash:'forged',p_origin:root}],['parent_family_directory',{p_token_hash:'forged',p_origin:root}],['parent_family_context',{p_token_hash:'forged',p_origin:root,p_student_id:own.id}],['parent_family_delivery',{p_tenant_id:tenant,p_student_id:own.id,p_hash:'forged',p_cipher:'forged'}],['parent_family_redeem',{p_ticket_hash:'forged',p_origin:root,p_token_hash:'forged'}],['parent_family_logout',{p_token_hash:'forged',p_origin:root}]];
- for(const [name,args] of privateRpcs)assert.equal((await anonClient.rpc(name,args)).error?.code,'42501',name);
+ for(const [name,args] of privateRpcs)assert.equal((await anonClient.rpc(name,{...args,...(name==='parent_family_delivery'?{p_phone:phone}:{})})).error?.code,'42501',name);
  // Persistent limits reject repeated password guesses regardless of process/replica.
  for(let i=0;i<8;i++)await post('/login',{phone:foreign,password:'wrong'});
  const guesses=await Promise.all(Array.from({length:4},()=>post('/login',{phone:foreign,password:'wrong'})));assert.ok(guesses.some(r=>r.status===429));

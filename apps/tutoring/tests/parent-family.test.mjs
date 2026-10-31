@@ -27,7 +27,7 @@ test('family delivery returns only status, resends the existing secret and never
  try{
  const existing=sealFamilyPassword('555444333222','201012345678'),out=[];
  const db={from:()=>({select:()=>({eq:()=>({eq:()=>({maybeSingle:async()=>({data:{parent_phone:'01012345678'},error:null})})})})}),rpc:async(name,args)=>{
- assert.equal(name,'parent_family_delivery');assert.equal(args.p_tenant_id,'tenant');assert.notEqual(args.p_hash,'555444333222');
+ assert.equal(name,'parent_family_delivery');assert.equal(args.p_tenant_id,'tenant');assert.equal(args.p_phone,'201012345678');assert.notEqual(args.p_hash,'555444333222');
  return {data:{phone:'201012345678',password_cipher:existing},error:null};}};
  const result=await deliverFamilyAccess(db,'tenant','student',{ready:async()=>true,send:async(...args)=>{out.push(args);return true;}});
  assert.deepEqual(Object.keys(result).sort(),['message','success']);assert.equal(result.success,true);
