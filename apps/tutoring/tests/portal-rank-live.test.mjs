@@ -9,8 +9,10 @@ test('LIVE: portal rank is monthly, group-scoped, tied fairly, private and token
   const {serviceClient:db,anonClient}=createIsolatedSupabaseClients();
   const tenant=randomUUID(),other=randomUUID(),group=randomUUID(),outside=randomUUID();
   const ids=Array.from({length:5},()=>randomUUID());let server;
+  const marker=randomUUID(),inboxTags=['QUIZ_DEF_','QUIZ_DEF_','QUIZ_DEF_','QUIZ_SUB_','QUIZ_SUB_'].map((prefix,i)=>prefix+marker+'-'+i);
   const ok=r=>{assert.equal(r.error,null,r.error?.message);return r.data;};
   t.after(async()=>{try{
+    ok(await db.from('whatsapp_inbox').delete().in('phone',inboxTags));
     for(const id of [tenant,other]){
       for(const table of ['quiz_scores','attendance','sessions','group_students','students','groups'])ok(await db.from(table).delete().eq('tenant_id',id));
       ok(await db.from('tenants').delete().eq('id',id));
@@ -37,9 +39,23 @@ test('LIVE: portal rank is monthly, group-scoped, tied fairly, private and token
   ok(await db.from('attendance').update({quiz_score:8}).eq('tenant_id',tenant).eq('student_id',ids[1]));
   assert.equal((await rank()).student_rank,1);assert.equal((await rank(ids[1])).student_rank,1,'Equal scores share their position');
   assert.equal((await anonClient.rpc('get_portal_monthly_group_rank',{p_student_id:ids[0],p_tenant_id:tenant})).error?.code,'42501');
+  const quizId=randomUUID(),foreignQuizId=randomUUID(),questionText='سؤال محفوظ '.repeat(1000);
+  ok(await db.from('whatsapp_inbox').insert([
+    {phone:inboxTags[0],tenant_id:null,status:'pending',message_body:JSON.stringify({id:quizId,group_id:group,title:'كويز الحساب فقط',questions:[{text:questionText,options:['أ','ب'],correct_index:0}]})},
+    {phone:inboxTags[1],tenant_id:null,status:'pending',message_body:JSON.stringify({id:foreignQuizId,group_id:outside,title:'private-other-group',questions:[{text:'خارج المجموعة',options:['أ','ب'],correct_index:1}]})},
+    {phone:inboxTags[2],tenant_id:null,status:'pending',message_body:'{malformed historical JSON'},
+    {phone:inboxTags[3],tenant_id:null,status:'pending',message_body:JSON.stringify({material_id:quizId,group_id:group,student_code:'201',score:8,total:10})},
+    {phone:inboxTags[4],tenant_id:null,status:'pending',message_body:JSON.stringify({material_id:quizId,group_id:group,student_code:'202',score:9,total:10,private_marker:'other-pupil'})},
+  ]));
+  const legacy=ok(await db.rpc('portal_legacy_quiz_payload',{p_student_id:ids[0],p_tenant_id:tenant,p_student_code:'201'}));
+  assert.equal(legacy.definitions.length,1);assert.equal(legacy.submissions.length,1);
+  assert.ok(!JSON.stringify(legacy).includes('private-other-group'));assert.ok(!JSON.stringify(legacy).includes('other-pupil'));
   const {createApp}=await import('../dist/app.js');const {generateParentPortalToken}=await import('../dist/shared/utils/tokens.js');
   server=createApp().listen(0,'127.0.0.1');await once(server,'listening');
-  const response=await fetch(`http://127.0.0.1:${server.address().port}/api/public/parent-portal?token=${generateParentPortalToken(ids[0],tenant)}&student_id=${ids[1]}&tenant_id=${other}`);
+  const response=await fetch(`http://127.0.0.1:${server.address().port}/api/public/parent-portal?token=${generateParentPortalToken(ids[0],tenant)}&student_id=${ids[1]}&tenant_id=${other}`,{headers:{'Accept-Encoding':'gzip'}});
   assert.equal(response.status,200);const payload=await response.json();
   assert.equal(payload.student.id,ids[0]);assert.equal(payload.summary.student_rank,1);assert.equal(payload.summary.group_size,3);
+  assert.equal(response.headers.get('content-encoding'),'gzip');assert.match(response.headers.get('cache-control'),/no-store/);
+  const material=payload.materials.find(m=>m.id===quizId);assert.ok(material);
+  assert.equal(material.questions.questions[0].text,questionText);assert.equal(material.questions.questions[0].correct_index,undefined);
 });

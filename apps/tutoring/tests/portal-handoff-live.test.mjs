@@ -63,7 +63,7 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   assert.equal((await anonClient.from('portal_handoffs').select('*')).error?.code,'42501');
   assert.equal((await anonClient.from('portal_handoffs').insert({ticket_hash:hashPortalTicket('forged')})).error?.code,'42501');
   assert.equal((await anonClient.from('portal_domain_bindings').select('*')).error?.code,'42501');
-  const privateQueries=[['portal_student_context',{p_student_id:student.id,p_tenant_id:tenant,p_token:null}],['portal_tenant_context',{p_tenant_id:tenant}],['resolve_portal_entry_context',{p_code:deriveShortCode(student.id,'student')}],['consume_portal_entry_handoff',{p_ticket_hash:hashPortalTicket('not-a-ticket'),p_origin:target}]];
+  const privateQueries=[['portal_student_context',{p_student_id:student.id,p_tenant_id:tenant,p_token:null}],['portal_tenant_context',{p_tenant_id:tenant}],['resolve_portal_entry_context',{p_code:deriveShortCode(student.id,'student')}],['consume_portal_entry_handoff',{p_ticket_hash:hashPortalTicket('not-a-ticket'),p_origin:target}],['portal_parse_legacy_json',{p_body:'{}'}],['portal_legacy_quiz_payload',{p_student_id:student.id,p_tenant_id:tenant,p_student_code:'1001'}]];
   for(const [name,args] of privateQueries)assert.equal((await anonClient.rpc(name,args)).error?.code,'42501');
   const email=`portal-handoff-${randomUUID()}@example.invalid`,password=`Portal!${randomUUID()}a9`;
   authUser=ok(await db.auth.admin.createUser({email,password,email_confirm:true})).user.id;
