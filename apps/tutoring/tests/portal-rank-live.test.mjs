@@ -25,9 +25,9 @@ test('LIVE: portal rank is monthly, group-scoped, tied fairly, private and token
   ok(await db.from('attendance').insert([0,1].map(i=>({tenant_id:tenant,student_id:ids[i],session_id:session.id,attended:true,quiz_score:i===0?8:9,quiz_max_score:10,idempotency_key:randomUUID()}))));
   // Duplicate session score must not be counted twice, and previous-month grades do not affect this month.
   ok(await db.from('quiz_scores').insert([
-    {tenant_id:tenant,student_id:ids[0],group_id:group,session_id:session.id,score:0,max_score:10,idempotency_key:randomUUID()},
+    {tenant_id:tenant,student_id:ids[0],group_id:group,session_id:session.id,score:0,max_score:10,created_at:new Date().toISOString(),idempotency_key:randomUUID()},
     {tenant_id:tenant,student_id:ids[0],group_id:group,score:0,max_score:10,created_at:'2020-01-01T00:00:00Z',idempotency_key:randomUUID()},
-    {tenant_id:tenant,student_id:ids[3],group_id:outside,score:10,max_score:10,idempotency_key:randomUUID()},
+    {tenant_id:tenant,student_id:ids[3],group_id:outside,score:10,max_score:10,created_at:new Date().toISOString(),idempotency_key:randomUUID()},
   ]));
   const rank=async(student=ids[0],owner=tenant)=>ok(await db.rpc('get_portal_monthly_group_rank',{p_student_id:student,p_tenant_id:owner}));
   const first=await rank();assert.equal(first.student_rank,2);assert.equal(first.group_size,3);assert.equal(first.rank_period,cairoDate.slice(0,7));
