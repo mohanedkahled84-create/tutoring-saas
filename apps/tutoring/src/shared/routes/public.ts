@@ -11,8 +11,10 @@ import { authRateLimiter } from "../middleware/rateLimit.js";
 import { verifiedPortalStudent, portalDestinationFromContext, createPortalHandoff, consumePortalHandoff, trustedPortalOrigin } from "../utils/portalDestination.js";
 
 import {loadPortalAccount} from "../utils/portalAccount.js";
+import {parentFamilyRouter} from './parentFamily.js';
 
 export const publicRouter = Router();
+publicRouter.use('/family',parentFamilyRouter);
 
 publicRouter.post("/portal/destination", authRateLimiter, async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "private, no-store");

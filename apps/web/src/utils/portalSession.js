@@ -7,7 +7,7 @@ export async function portalRequest(path, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
   // Origin-checked exchanges accept flat form bodies, avoiding an extra OPTIONS round trip.
-  const formBody = options.body && ['/public/portal/destination', '/public/portal/handoff'].includes(path);
+  const formBody = options.body && (path.startsWith('/public/family/') || ['/public/portal/destination', '/public/portal/handoff'].includes(path));
   try {
     const response = await fetch(API + path, {
       method: options.method || 'GET', signal: controller.signal, cache: 'no-store',
@@ -30,7 +30,14 @@ export async function portalRequest(path, options = {}) {
   } finally { clearTimeout(timer); }
 }
 
+export function clearFamilyForOtherLogin() {
+  const previous=localStorage.getItem('centrly_family_token_v1');
+  for(const storage of [localStorage,sessionStorage])for(const key of ['centrly_family_token_v1','centrly_family_snapshot_v1','centrly_family_selected_v1'])storage.removeItem(key);
+  if(previous)void portalRequest('/public/family/logout',{method:'POST',body:{family_token:previous}}).catch(()=>{});
+}
+
 export function savePortalSession(token, role) {
+  clearFamilyForOtherLogin();
   if (localStorage.getItem('centrly_portal_token') !== token || localStorage.getItem('centrly_portal_role') !== role) {
     portalCache.clear('student');
     portalCache.clear('parent');
