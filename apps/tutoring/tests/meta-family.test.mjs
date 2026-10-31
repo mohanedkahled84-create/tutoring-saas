@@ -22,7 +22,7 @@ function fixture(records=[{id:'own',tenant_id:'tenant',name:'ابن',parent_matc
 }
 test('Meta signature verifies exact raw bytes and rejects forgery, mutation and missing secret',()=>{
  const raw=Buffer.from('{"object":"whatsapp_business_account"}');assert.equal(verifyMetaSignature(raw,signature(raw),secret),true);
- for(const [body,header,key] of [[Buffer.from('{}'),signature(raw),secret],[raw,'sha256='+'0'.repeat(64),secret],[raw,signature(raw),''],[undefined,signature(raw),secret],[raw,'invalid',secret]])assert.equal(verifyMetaSignature(body,header,key),false);
+ for(const [body,header,key] of [[Buffer.from('{}'),signature(raw),secret],[raw,'sha256='+'0'.repeat(64),secret],[raw,signature(raw),''],[raw,signature(raw),'short'],[undefined,signature(raw),secret],[raw,'invalid',secret]])assert.equal(verifyMetaSignature(body,header,key),false);
 });
 test('family notification uses the approved parent template and never provisions or exposes a password',async()=>{
  const f=fixture();const result=await notifyMetaFamily(f.db,'tenant','own','معلم',f.gateway,true);
@@ -48,6 +48,12 @@ test('student-only replies remain student-scoped and ambiguous student records r
   assert.equal(f.replies.length,1);assert.ok(!f.calls.some(c=>c.name==='parent_family_delivery'));
   assert.equal(f.replies[0][1].includes('123456'),count===1);assert.ok(!f.replies[0][1].includes('family=1'));
  }
+});
+test('delayed ordinary messages remain in the inbox without assigning an ambiguous family to a random teacher',async()=>{
+ const f=fixture([{id:'one',tenant_id:'teacher-one',parent_match:true},{id:'two',tenant_id:'teacher-two',parent_match:true}]);
+ await processMetaPortalMessage(f.db,message({type:'text',button:undefined,text:{body:'السلام عليكم'},timestamp:String(Math.floor(Date.now()/1000)-3600)}),f.gateway);
+ assert.equal(f.replies.length,0);assert.equal(f.inbox.length,1);assert.equal(f.inbox[0].message_body,'السلام عليكم');assert.equal(f.inbox[0].tenant_id,null);assert.equal(f.inbox[0].student_id,null);
+ assert.ok(!f.calls.some(c=>c.name==='parent_family_delivery'));
 });
 test('Meta transport sends a quick reply payload; provider failures cannot report sent',async()=>{
  const original=globalThis.fetch,token=config.meta.accessToken;config.meta.accessToken='isolated-token';const captured=[];

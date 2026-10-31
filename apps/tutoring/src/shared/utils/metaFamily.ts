@@ -9,7 +9,7 @@ export interface MetaFamilyGateway {
 }
 export function metaFamilyReady(){return Boolean(config.meta.accessToken && config.meta.phoneNumberId && config.meta.wabaId && config.meta.appSecret.length>=16);}
 export function verifyMetaSignature(raw:unknown,signature:unknown,secret=config.meta.appSecret):boolean {
- if(!secret || !Buffer.isBuffer(raw) || typeof signature!=='string' || !/^sha256=[a-f0-9]{64}$/i.test(signature))return false;
+ if(secret.length<16 || !Buffer.isBuffer(raw) || typeof signature!=='string' || !/^sha256=[a-f0-9]{64}$/i.test(signature))return false;
  const received=Buffer.from(signature.slice(7),'hex'),expected=createHmac('sha256',secret).update(raw).digest();
  return received.length===expected.length && timingSafeEqual(received,expected);
 }
@@ -48,12 +48,13 @@ export function credentialAction(message:any):boolean {
 }
 export async function processMetaPortalMessage(db:SupabaseClient,message:any,gateway:MetaFamilyGateway,now=Date.now()){
  const phone=familyPhone(message?.from),timestamp=Number(message?.timestamp)*1000;
- if(!phone || typeof message?.id!=='string' || message.id.length>256 || !Number.isFinite(timestamp) || timestamp>now+60000 || timestamp<now-15*60000)return;
+ if(!phone || typeof message?.id!=='string' || !message.id || message.id.length>256)return;
+ const credential=credentialAction(message);
+ if(credential && (!Number.isFinite(timestamp) || timestamp>now+60000 || timestamp<now-15*60000))return;
  const key=familyHash('meta-message:'+message.id);
  const claimed=await familyRpc(db,'parent_family_limit',{p_key:key,p_max:1});if(!claimed)return;
  try{
   const records=await familyRpc(db,'meta_portal_phone_records',{p_phone:phone});
-  const credential=credentialAction(message);
   const payload=String(message?.button?.payload || message?.interactive?.button_reply?.id || '');
   const parts=payload.startsWith('CENTRLY_FAMILY:')?payload.split(':'):null;
   const parents=(records || []).filter((s:any)=>s.parent_match);
@@ -64,7 +65,8 @@ export async function processMetaPortalMessage(db:SupabaseClient,message:any,gat
   const selected=parent || (students.length===1?students[0]:null);
   if(!credential){
    // Do not assign an ambiguous inbound conversation to a random teacher.
-   if((records || []).length===1)await db.from('whatsapp_inbox').insert({tenant_id:selected?.tenant_id || records[0].tenant_id,student_id:selected?.id || records[0].id,phone,student_name:records[0].name,direction:'inbound',message_body:String(message?.text?.body || '[رسالة واتساب]').slice(0,4000),status:'unread',has_replied:true});
+   const record=(records || []).length===1?records[0]:null;
+   await db.from('whatsapp_inbox').insert({tenant_id:record?.tenant_id || null,student_id:record?.id || null,phone,student_name:record?.name || 'رسالة واتساب',direction:'inbound',message_body:String(message?.text?.body || '[رسالة واتساب]').slice(0,4000),status:'unread',has_replied:true});
    return;
   }
   if(parent){

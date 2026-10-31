@@ -7,7 +7,7 @@ export const metaWebhookRuntime={gateway:configuredMetaFamilyGateway};
 
 export async function metaPortalWebhook(req:Request,res:Response):Promise<void>{
  res.setHeader('Cache-Control','private, no-store');
- if(!config.meta.appSecret){res.status(503).json({error:'Meta webhook verification is not configured'});return;}
+ if(config.meta.appSecret.length<16){res.status(503).json({error:'Meta webhook verification is not configured'});return;}
  if(!verifyMetaSignature((req as Request & {rawMetaBody?:Buffer}).rawMetaBody,req.headers['x-hub-signature-256'])){res.status(401).json({error:'Invalid Meta signature'});return;}
  if(req.body?.object!=='whatsapp_business_account' || !Array.isArray(req.body.entry)){res.status(400).json({error:'Invalid Meta event'});return;}
  try{
