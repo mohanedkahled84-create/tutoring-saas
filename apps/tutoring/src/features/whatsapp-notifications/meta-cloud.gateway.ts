@@ -9,6 +9,8 @@
  * ============================================================================
  */
 
+import {approvedUtilityTemplate} from '../../shared/utils/metaTemplatePolicy.js';
+
 export interface MetaTemplateSendResult {
   success: boolean;
   messageId?: string;
@@ -53,6 +55,9 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
 
     const cleanTo = params.to.replace(/\D/g, "");
     const languageCode = params.languageCode || "en";
+    if(!await approvedUtilityTemplate({baseUrl:this.baseUrl,accessToken:this.accessToken,wabaId:this.wabaId,name:params.templateName,language:languageCode})){
+      return {success:false,error:'Template must be approved as UTILITY; marketing, other categories and unverified templates are blocked'};
+    }
 
     const payload = {
       messaging_product: "whatsapp",
