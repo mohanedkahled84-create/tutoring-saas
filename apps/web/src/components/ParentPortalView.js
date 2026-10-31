@@ -1,498 +1,99 @@
-import { escapeHtml } from "../utils/escapeHtml.js";
-import { getIcon } from "../utils/icons.js";
-import { renderParentPortalTourHtml } from "./PortalTourModal.js?v=6.5.0";
+import { escapeHtml as esc } from '../utils/escapeHtml.js';
+import { getIcon } from '../utils/icons.js';
 
-/**
- * Centrly Parent Web Portal Component (DEV-34 & DEV-PORTAL)
- * Lightweight, mobile-first, no-app, no-login portal for Egyptian parents
- * to track student attendance, quiz grades, homework status, and teacher notes.
- */
-
-export function renderParentPortalView(portalData = {}, activeTab = 'attendance') {
-  if (portalData.error || !portalData.student) {
-    return `
-      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; padding: 1.5rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
-        <div style="max-width: 480px; width: 100%; background: #fff; border-radius: 1rem; padding: 2.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; text-align: center;">
-          <div style="display: flex; justify-content: center; margin-bottom: 0.75rem;">${getIcon('lock', 48, '#ef4444')}</div>
-          <h2 style="font-size: 1.3rem; font-weight: 800; color: #ef4444; margin: 0 0 0.5rem 0;">رابط غير صالح أو منتهي الصلاحية</h2>
-          <p style="font-size: 0.9rem; color: #64748b; margin: 0 0 1.5rem 0; line-height: 1.6;">
-            ${escapeHtml(portalData.error || 'تعذر تحميل بيانات متابعة الطالب. يرجى التأكد من فتح الرابط الصحيح المرسل عبر الواتساب أو مراجعة إدارة السنتر.')}
-          </p>
-          <div style="font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
-            منظومة سنترلي التعليمية | Centrly
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  const student = portalData.student;
-  const presentation = portalData.portal_presentation;
-  const portalColors = { navy: '#0f172a', slate: '#0f172a', emerald: '#065f46', red: '#991b1b', purple: '#581c87' };
-  const portalBrandColor = /^#[0-9a-f]{6}$/i.test(presentation?.custom_primary_color || '')
-    ? presentation.custom_primary_color : (portalColors[presentation?.theme_preset] || '#0f172a');
-  const parentKey = (student.id || student.parent_phone || student.student_code || student.code || '').toString().trim();
-  if (typeof window !== 'undefined') {
-    if (parentKey) window._centrlyCurrentParentId = parentKey;
-    if (student.id || student.student_code) window._centrlyCurrentStudentId = (student.id || student.student_code || '').toString().trim();
-  }
-  const summary = portalData.summary || {
-    total_sessions: 0,
-    attended_count: 0,
-    absent_count: 0,
-    attendance_rate: '0%',
-    homework_done_count: 0,
-    total_quizzes: 0,
-    quiz_average_percentage: '—',
+// Keep only the fields needed by a read-only parent dashboard in the device cache.
+export function parentPortalSnapshot(data) {
+  const pick = (value, fields) => Object.fromEntries(fields.filter(key => value?.[key] !== undefined).map(key => [key,value[key]]));
+  const list = (value, fields) => (Array.isArray(value) ? value : []).filter(Boolean).map(row => pick(row,fields));
+  return {
+    student:pick(data.student,['id','tenant_id','name','student_code','group_name','teacher_name','subject_name','teacher_phone','contact_phone']),
+    summary:pick(data.summary,['total_sessions','attended_count','absent_count','attendance_rate','quiz_average_percentage']),
+    teacher_phone:data.teacher_phone, contact_phone:data.contact_phone,
+    sessions:list(data.sessions,['session_number','session_date','attended','homework_status','comment']),
+    quizzes:list(data.quizzes,['title','score','max_score','date','tier','note']),
+    materials:list((data.materials || []).filter(h => h && (h.is_homework || h.type === 'homework')),['title','type','is_homework','submission_status','submitted_at','due_date']),
   };
-  const sessions = portalData.sessions || [];
-  const quizzes = portalData.quizzes || [];
-  const materials = portalData.materials || [];
-  const homeworkList = materials.filter(m => m.is_homework);
-
-  const teacherPhone = student.teacher_phone || portalData.teacher_phone || student.contact_phone || portalData.contact_phone || '01010979708';
-  let cleanTeacherPhone = teacherPhone ? teacherPhone.replace(/[^\d+]/g, '') : '';
-  if (cleanTeacherPhone.startsWith('+')) {
-    cleanTeacherPhone = cleanTeacherPhone.substring(1);
-  } else if (cleanTeacherPhone.startsWith('01')) {
-    cleanTeacherPhone = '2' + cleanTeacherPhone;
-  }
-  const teacherNameStr = student.teacher_name || 'المعلم';
-  const parentContactMsg = encodeURIComponent(
-    `السلام عليكم يا ${teacherNameStr}، أنا ولي أمر الطالب ${student.name}${student.student_code ? ` (كود: ${student.student_code})` : ''}${student.group_name ? ` - مجموعة ${student.group_name}` : ''}، وأود الاستفسار والمتابعة بخصوص مستوى ابني.`
-  );
-  const parentTeacherWaUrl = cleanTeacherPhone ? `https://wa.me/${cleanTeacherPhone}?text=${parentContactMsg}` : null;
-
-  return `
-    <div style="min-height: 100vh; background-color: #f8fafc; padding: 1rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
-      <div style="max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;">
-        
-        ${presentation ? `<header style="background:${portalBrandColor};color:#fff;padding:1.25rem 1.5rem;border-radius:1rem;"><strong style="font-size:1.125rem;">${escapeHtml(presentation.display_title || 'منصة المدرس')}</strong><p style="margin:.35rem 0 0;color:inherit;font-size:.8rem;">متابعة ابني · بواسطة سنترلي</p></header>` : ''}
-        <!-- Portal Header -->
-        <div style="background: #fff; border-radius: 1rem; padding: 1.25rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; text-align: center; position: relative;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #10b981; font-weight: 700; background: #ecfdf5; padding: 0.25rem 0.6rem; border-radius: 9999px;">
-              <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%;"></span>
-              محدّث لحظياً
-            </span>
-            <div style="display: flex; gap: 0.4rem; align-items: center;">
-              <button onclick="window.openParentPortalTour ? window.openParentPortalTour(true) : null" 
-                style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="شرح أقسام المتابعة">
-                ${getIcon('lightbulb', 13, '#2563eb')}
-                <span>شرح المنصة</span>
-              </button>
-              <button id="parent-refresh-data-btn" onclick="window.centrlyApp && window.centrlyApp.reloadParentPortal ? window.centrlyApp.reloadParentPortal() : window.location.reload()" 
-                style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #334155; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
-                ${getIcon('refresh', 13, '#334155')}
-                <span>تحديث البيانات</span>
-              </button>
-              <button onclick="window.centrlyApp && window.centrlyApp.handlePortalLogout ? window.centrlyApp.handlePortalLogout() : (window.location.href='/portal')" 
-                style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #b91c1c; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="تسجيل الخروج">
-                ${getIcon('logout', 13, '#b91c1c')}
-                <span>خروج</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="brand-logo-badge" style="margin: 0 auto 0.5rem; width: 44px; height: 44px; font-size: 1.25rem;">سـ</div>
-          <h1 style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0;">بوابة متابعة ولي الأمر | سنترلي</h1>
-          
-          <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap;">
-            <span style="font-size: 1.2rem; font-weight: 900; color: #1d4ed8;">${escapeHtml(student.name)}</span>
-            <span class="badge badge-secondary" style="font-family: monospace; font-size: 0.8rem;">كود: ${escapeHtml(student.student_code)}</span>
-            ${student.group_name ? `<span class="badge badge-blue" style="font-size: 0.8rem;">${escapeHtml(student.group_name)}</span>` : ''}
-          </div>
-          
-          <p style="font-size: 0.8rem; color: #64748b; margin: 0.4rem 0 0 0;">
-            تقرير الحضور والغياب، درجات الكويزات، ومتابعة الواجبات المنزلية
-          </p>
-        </div>
-
-        <!-- Teacher Direct WhatsApp Contact Card for Parents -->
-        ${parentTeacherWaUrl ? `
-          <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; border-radius: 1rem; padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="width: 40px; height: 40px; border-radius: 50%; background: #10b981; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);">
-                ${getIcon('whatsapp', 22, '#ffffff')}
-              </div>
-              <div style="text-align: right;">
-                <div style="font-weight: 800; font-size: 0.9rem; color: #065f46;">
-                  تواصل مباشر مع ${escapeHtml(teacherNameStr)} 💬
-                </div>
-                <div style="font-size: 0.76rem; color: #047857; margin-top: 1px;">
-                  لأي استفسار عن مستوى الطالب والواجبات والحضور
-                </div>
-              </div>
-            </div>
-            <a href="${parentTeacherWaUrl}" target="_blank" rel="noopener noreferrer" 
-              style="background: #10b981; color: #ffffff; text-decoration: none; padding: 0.55rem 0.95rem; border-radius: 0.65rem; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; flex-shrink: 0; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); transition: transform 0.15s ease;"
-              onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-              ${getIcon('whatsapp', 15, '#ffffff')}
-              <span>مراسلة المعلم</span>
-            </a>
-          </div>
-        ` : ''}
-
-        <!-- 3-Tab Navigation Bar: Attendance, Quizzes, Homework Tracking -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); background: #e2e8f0; padding: 4px; border-radius: 0.85rem; gap: 4px;">
-          <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('attendance') : null" id="tab-btn-attendance"
-            style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('calendar', 16, activeTab === 'attendance' ? '#1e3a8a' : '#64748b')}
-            <span>الحضور والغياب</span>
-          </button>
-          
-          <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('quizzes') : null" id="tab-btn-quizzes"
-            style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'quizzes' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'quizzes' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'quizzes' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('chart', 16, activeTab === 'quizzes' ? '#1e3a8a' : '#64748b')}
-            <span>الكويزات (${quizzes.length})</span>
-          </button>
-
-          <button type="button" onclick="window.switchParentPortalTab ? window.switchParentPortalTab('homework') : null" id="tab-btn-homework"
-            style="padding: 0.7rem 0.5rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: ${activeTab === 'homework' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'homework' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'homework' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('homework', 16, activeTab === 'homework' ? '#1e3a8a' : '#64748b')}
-            <span>الواجبات (${homeworkList.length})</span>
-          </button>
-        </div>
-
-        <!-- ================= TAB 1: ATTENDANCE & TIMELINE ================= -->
-        <div id="tab-content-attendance" style="display: ${activeTab === 'attendance' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
-          <!-- KPI Summary Cards -->
-          <div id="parent-kpi-summary-section" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
-            <div style="background: #fff; padding: 1.1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">نسبة الحضور</div>
-              <div style="font-size: 1.6rem; font-weight: 900; color: #10b981; margin-top: 0.2rem;">
-                ${escapeHtml(summary.attendance_rate)}
-              </div>
-              <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
-                ${escapeHtml(summary.attended_count)} حاضر / ${escapeHtml(summary.total_sessions)} حصة
-              </div>
-            </div>
-
-            <div style="background: #fff; padding: 1.1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">مرات الغياب</div>
-              <div style="font-size: 1.6rem; font-weight: 900; color: ${summary.absent_count > 1 ? '#ef4444' : '#64748b'}; margin-top: 0.2rem;">
-                ${escapeHtml(summary.absent_count)}
-              </div>
-              <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
-                ${summary.absent_count === 0 ? 'التزام تام بالحضور' : (summary.absent_count > 1 ? 'تنبيه: تكرار غياب' : 'غياب مرة واحدة')}
-              </div>
-            </div>
-
-            <div style="background: #fff; padding: 1.1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">إنجاز الواجبات</div>
-              <div style="font-size: 1.6rem; font-weight: 900; color: #8b5cf6; margin-top: 0.2rem;">
-                ${summary.homework_done_count > 0 ? `${summary.homework_done_count}` : '—'}
-              </div>
-              <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
-                ${summary.homework_done_count > 0 ? `تم تسليم ${summary.homework_done_count} واجب` : 'لا توجد واجبات مسجلة'}
-              </div>
-            </div>
-          </div>
-
-          <!-- Attendance Records -->
-          <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
-              <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-                ${getIcon('calendar', 18, 'var(--centrly-blue-700)')}
-                <span>سجل الحصص والالتزام</span>
-              </h2>
-              <span class="badge badge-blue" style="font-weight: 700;">${sessions.length} حصة</span>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              ${sessions.length > 0 ? sessions.map(s => `
-                <div style="padding: 0.85rem; border-radius: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.4rem;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a;">
-                      حصة رقم ${escapeHtml(s.session_number)} • ${escapeHtml(s.session_date)}
-                    </div>
-                    <span class="badge ${s.attended ? 'badge-success' : 'badge-danger'}">
-                      ${s.attended ? 'حاضر' : 'غائب'}
-                    </span>
-                  </div>
-
-                  ${s.attended && s.homework_status && s.homework_status !== 'none' ? `
-                    <div style="display: flex; gap: 0.75rem; font-size: 0.8rem; color: #64748b; align-items: center;">
-                      <span>الواجب: 
-                        <b style="color: ${s.homework_status === 'done' ? '#059669' : (s.homework_status === 'partial' ? '#d97706' : '#dc2626')};">
-                          ${s.homework_status === 'done' ? 'تم التسليم بالكامل' : (s.homework_status === 'partial' ? 'تسليم جزئي' : 'لم يُسلم')}
-                        </b>
-                      </span>
-                    </div>
-                  ` : ''}
-
-                  ${s.comment ? `
-                    <div style="font-size: 0.8rem; background: #fff; padding: 0.4rem 0.65rem; border-radius: 0.4rem; border-right: 3px solid #1d4ed8; color: #0f172a; margin-top: 0.25rem;">
-                      <span><b>ملاحظة المعلم:</b> ${escapeHtml(s.comment)}</span>
-                    </div>
-                  ` : ''}
-                </div>
-              `).join('') : `
-                <div style="text-align: center; padding: 2rem 1rem; color: #64748b; font-size: 0.85rem; background: #f8fafc; border-radius: 0.75rem; border: 1px dashed #cbd5e1;">
-                  لا توجد حصص مسجلة حتى الآن لهذا الطالب.
-                </div>
-              `}
-            </div>
-          </div>
-        </div>
-
-        <!-- ================= TAB 2: QUIZZES & EXAMS ================= -->
-        <div id="tab-content-quizzes" style="display: ${activeTab === 'quizzes' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
-          <!-- Quiz KPI -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
-            <div style="background: #fff; padding: 1.1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">معدل الدرجات</div>
-              <div style="font-size: 1.6rem; font-weight: 900; color: #1d4ed8; margin-top: 0.2rem;">
-                ${escapeHtml(summary.quiz_average_percentage || '—')}
-              </div>
-              <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
-                متوسط الأداء العام
-              </div>
-            </div>
-
-            <div style="background: #fff; padding: 1.1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">الكويزات المرصودة</div>
-              <div style="font-size: 1.6rem; font-weight: 900; color: #059669; margin-top: 0.2rem;">
-                ${escapeHtml(summary.total_quizzes || quizzes.length)}
-              </div>
-              <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
-                اختبار دوري
-              </div>
-            </div>
-          </div>
-
-          <!-- Quizzes List -->
-          <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
-              <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                ${getIcon('chart', 18, 'var(--centrly-blue-700)')}
-                <span>درجات الكويزات والامتحانات الدورية</span>
-              </h2>
-              <span class="badge badge-blue" style="font-weight: 700;">${quizzes.length} كويز</span>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              ${quizzes.length > 0 ? quizzes.map(q => {
-                const tierColor = q.percentage >= 85 ? '#059669' : (q.percentage >= 65 ? '#d97706' : '#dc2626');
-                const tierBg = q.percentage >= 85 ? '#ecfdf5' : (q.percentage >= 65 ? '#fffbeb' : '#fef2f2');
-                return `
-                  <div style="padding: 1rem; border-radius: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-                      <div>
-                        <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">${escapeHtml(q.title)}</div>
-                        ${q.date ? `<div style="font-size: 0.75rem; color: #64748b; margin-top: 0.15rem;">تاريخ الكويز: ${escapeHtml(q.date)}</div>` : ''}
-                      </div>
-                      
-                      <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="font-size: 0.75rem; font-weight: 800; color: ${tierColor}; background: ${tierBg}; padding: 0.2rem 0.55rem; border-radius: 0.4rem;">
-                          ${escapeHtml(q.tier)}
-                        </span>
-                        <span style="font-size: 1.1rem; font-weight: 900; color: #1d4ed8; font-family: monospace; background: #eff6ff; padding: 0.25rem 0.65rem; border-radius: 0.4rem; border: 1px solid #bfdbfe;">
-                          ${escapeHtml(q.score)} / ${escapeHtml(q.max_score)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <!-- Visual Progress Bar -->
-                    <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; margin-top: 0.25rem;">
-                      <div style="width: ${Math.min(100, Math.max(0, q.percentage))}%; height: 100%; background: ${tierColor}; border-radius: 9999px;"></div>
-                    </div>
-
-                    ${q.note ? `
-                      <div style="font-size: 0.8rem; background: #fff; padding: 0.4rem 0.65rem; border-radius: 0.4rem; border-right: 3px solid #1d4ed8; color: #334155; margin-top: 0.25rem;">
-                        <b>ملاحظة المعلم:</b> ${escapeHtml(q.note)}
-                      </div>
-                    ` : ''}
-                  </div>
-                `;
-              }).join('') : `
-                <div style="text-align: center; padding: 2rem 1rem; color: #64748b; font-size: 0.85rem; background: #f8fafc; border-radius: 0.75rem; border: 1px dashed #cbd5e1;">
-                  لم يتم رصد أي كويزات لهذا الطالب حتى الآن. ستظهر النتائج فور رصدها من قِبل المعلم مباشرة.
-                </div>
-              `}
-            </div>
-          </div>
-        </div>
-
-        <!-- ================= TAB 3: HOMEWORK STATUS (متابعة حالة الواجبات فقط) ================= -->
-        <div id="tab-content-homework" style="display: ${activeTab === 'homework' || activeTab === 'materials' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
-          
-          <!-- Homework KPI Stats for Parent -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem;">
-            <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">إجمالي الواجبات</div>
-              <div style="font-size: 1.6rem; font-weight: 900; color: #1d4ed8; margin-top: 0.2rem;">
-                ${homeworkList.length}
-              </div>
-              <div style="font-size: 0.725rem; color: #64748b; margin-top: 0.2rem;">
-                مطلوبة لمجموعة الطالب
-              </div>
-            </div>
-
-            <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
-                ${getIcon('check', 14, '#10b981')}
-                <span>تم تسليمه واعتُمِد</span>
-              </div>
-              <div style="font-size: 1.6rem; font-weight: 900; color: #10b981; margin-top: 0.2rem;">
-                ${homeworkList.filter(h => h.submission_status === 'approved').length}
-              </div>
-              <div style="font-size: 0.725rem; color: #10b981; font-weight: 700; margin-top: 0.2rem;">
-                واجبات محلولة ومعتمدة
-              </div>
-            </div>
-
-            <div style="background: #fff; padding: 1rem 0.85rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
-                ${getIcon('close', 14, '#ef4444')}
-                <span>لم يُسلّم بعد</span>
-              </div>
-              <div style="font-size: 1.6rem; font-weight: 900; color: ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length > 0 ? '#ef4444' : '#64748b'}; margin-top: 0.2rem;">
-                ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length}
-              </div>
-              <div style="font-size: 0.725rem; color: ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length > 0 ? '#dc2626' : '#64748b'}; font-weight: 700; margin-top: 0.2rem;">
-                ${homeworkList.filter(h => !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing').length > 0 ? 'بحاجة لمتابعة ولي الأمر' : 'لا توجد واجبات متأخرة'}
-              </div>
-            </div>
-          </div>
-
-          <!-- Homework List Section (Read-only monitoring for parents) -->
-          <div style="background: #fff; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem;">
-              <div>
-                <h2 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                  ${getIcon('homework', 18, 'var(--centrly-blue-700)')}
-                  <span>متابعة تسليم الواجبات المنزلية</span>
-                </h2>
-                <p style="font-size: 0.75rem; color: #64748b; margin: 0.2rem 0 0 0;">
-                  متابعة دقيقة لموقف تسليم الواجبات واعتماد المعلم لها (تسليم الواجبات وتحميل الملازم يتم من بوابة الطالب)
-                </p>
-              </div>
-              <span class="badge badge-blue" style="font-weight: 700;">${homeworkList.length} واجب</span>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-              ${homeworkList.length > 0 ? homeworkList.map(h => {
-                const isApproved = h.submission_status === 'approved';
-                const isPending = h.submission_status === 'pending';
-                const isRejected = h.submission_status === 'rejected';
-                const isMissing = !h.submission_status || h.submission_status === 'unsubmitted' || h.submission_status === 'missing';
-
-                return `
-                  <div style="padding: 1.1rem; border-radius: 0.75rem; background: #f8fafc; border: 1px solid ${isApproved ? '#bbf7d0' : (isMissing ? '#fecaca' : '#e2e8f0')}; display: flex; flex-direction: column; gap: 0.6rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-                      <div style="flex: 1; min-width: 200px;">
-                        <div style="font-size: 0.72rem; font-weight: 800; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; display: inline-block; padding: 0.2rem 0.5rem; border-radius: 0.35rem; margin-bottom: 0.35rem;">
-                          واجب منزلي
-                        </div>
-                        <h3 style="font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0;">
-                          ${escapeHtml(h.title)}
-                        </h3>
-
-                        ${(h.book_name || h.pages || h.questions) ? `
-                          <div style="font-size: 0.8rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.35rem 0.65rem; border-radius: 0.4rem; margin-top: 0.4rem; display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
-                            <span style="display: inline-flex; align-items: center; gap: 0.25rem;">${getIcon('book', 14, '#1e40af')} <b>الكتاب:</b> ${escapeHtml(h.book_name || 'الكتاب المدرسي')}</span>
-                            ${h.pages ? `<span>• <b>ص:</b> ${escapeHtml(h.pages)}</span>` : ''}
-                            ${h.questions ? `<span style="color: #b45309; font-weight: 700;">• <b>الأسئلة:</b> ${escapeHtml(h.questions)}</span>` : ''}
-                          </div>
-                        ` : ''}
-
-                        ${h.description ? `
-                          <div style="font-size: 0.8rem; color: #334155; margin-top: 0.45rem; line-height: 1.5; background: #f8fafc; padding: 0.5rem 0.75rem; border-radius: 0.4rem; border: 1px solid #e2e8f0;">
-                            <b style="color: #1e40af;">وصف الواجب:</b> <span style="white-space: pre-wrap;">${escapeHtml(h.description)}</span>
-                          </div>
-                        ` : ''}
-
-                        ${h.due_date ? `
-                          <div style="font-size: 0.775rem; color: #64748b; margin-top: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
-                            ${getIcon('clock', 13, '#64748b')}
-                            <span>آخر موعد للتسليم: <b>${escapeHtml(h.due_date)}</b></span>
-                          </div>
-                        ` : ''}
-                      </div>
-
-                      <!-- Status Badge for Parent -->
-                      <div>
-                        ${isApproved ? `
-                          <span style="display: inline-flex; align-items: center; gap: 0.4rem; color: #15803d; background: #f0fdf4; border: 1px solid #86efac; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
-                            ${getIcon('check', 14, '#15803d')}
-                            <span>تم التسليم والاعتماد</span>
-                          </span>
-                        ` : (isPending ? `
-                          <span style="display: inline-flex; align-items: center; gap: 0.4rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
-                            ${getIcon('clock', 14, '#b45309')}
-                            <span>تم التسليم • قيد التصحيح</span>
-                          </span>
-                        ` : (isRejected ? `
-                          <span style="display: inline-flex; align-items: center; gap: 0.4rem; color: #b91c1c; background: #fef2f2; border: 1px solid #fca5a5; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
-                            ${getIcon('alertTriangle', 14, '#b91c1c')}
-                            <span>يحتاج إعادة حل وتصحيح</span>
-                          </span>
-                        ` : `
-                          <span style="display: inline-flex; align-items: center; gap: 0.4rem; color: #dc2626; background: #fff1f2; border: 1px solid #fecdd3; padding: 0.4rem 0.85rem; border-radius: 0.5rem; font-weight: 800; font-size: 0.85rem;">
-                            ${getIcon('close', 14, '#dc2626')}
-                            <span>لم يتم تسليم الواجب بعد</span>
-                          </span>
-                        `))}
-                      </div>
-                    </div>
-
-                    ${h.teacher_feedback ? `
-                      <div style="font-size: 0.825rem; background: #fff7ed; border-right: 3px solid #ea580c; padding: 0.5rem 0.75rem; border-radius: 0.35rem; color: #9a3412; margin-top: 0.2rem;">
-                        <b>ملاحظة المعلم لولي الأمر:</b> ${escapeHtml(h.teacher_feedback)}
-                      </div>
-                    ` : ''}
-                  </div>
-                `;
-              }).join('') : `
-                <div style="text-align: center; padding: 2.5rem 1rem; color: #64748b; font-size: 0.85rem; background: #f8fafc; border-radius: 0.75rem; border: 1px dashed #cbd5e1;">
-                  <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('homework', 36, '#94a3b8')}</div>
-                  لا توجد واجبات مطلوبة مسجلة لهذه المجموعة حتى الآن.
-                </div>
-              `}
-            </div>
-          </div>
-        </div>
-
-        <!-- Portal Security & Integrity Note -->
-        <div style="text-align: center; padding: 1rem 0; font-size: 0.75rem; color: #94a3b8; line-height: 1.6; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
-          <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
-            ${getIcon('lock', 13, '#94a3b8')}
-            <span>رابط مشفر وخاص بولي الأمر فقط • تتحدث البيانات تلقائياً مع كل كويز أو حصة</span>
-          </div>
-          <div>مدعوم بواسطة <b>منظومة سنترلي (Centrly)</b></div>
-        </div>
-
-        <!-- Walkthrough Onboarding Tour Modal -->
-        ${renderParentPortalTourHtml()}
-
-      </div>
-    </div>
-  `;
 }
 
-// Global helper for switching tabs
+// Date-only deadlines mean the end of that Cairo calendar day, not UTC midnight.
+export function parentHomeworkTiming(homework) {
+  if (!homework.submitted_at || !homework.due_date) return '';
+  const submitted = new Date(homework.submitted_at);
+  if (!Number.isFinite(submitted.getTime())) return '';
+  const due = String(homework.due_date);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(due)) {
+    const parsed = new Date(due + 'T00:00:00Z');
+    if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10) !== due) return '';
+    const day = new Intl.DateTimeFormat('en-CA', {timeZone:'Africa/Cairo', year:'numeric', month:'2-digit', day:'2-digit'}).format(submitted);
+    return day > due ? 'متأخر' : 'في الموعد';
+  }
+  // A timestamp without a timezone cannot support a reliable lateness judgement.
+  if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(due)) return '';
+  const deadline = new Date(due);
+  return Number.isFinite(deadline.getTime()) ? (submitted > deadline ? 'متأخر' : 'في الموعد') : '';
+}
+const dateLabel = value => {
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return value;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toLocaleString('ar-EG', {timeZone:'Africa/Cairo', dateStyle:'medium', timeStyle:'short'}) : '';
+};
+const submitted = h => Boolean(h.submitted_at || ['approved','pending','rejected','submitted'].includes(h.submission_status));
+const empty = text => `<p class="pp-empty">${esc(text)}</p>`;
+const pill = (text, tone='') => `<span class="pp-pill ${tone}">${esc(text)}</span>`;
+const metric = (label, value, detail='') => `<div class="pp-metric"><span>${esc(label)}</span><strong>${esc(value ?? '—')}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</div>`;
+
+export function renderParentPortalView(data = {}, activeTab = 'attendance') {
+  if (data.error || !data.student) return `<main dir="rtl" style="max-width:440px;margin:12vh auto;padding:24px;font:16px/1.8 system-ui;color:#0f172a"><h1 style="font-size:22px">${!data.error || /غير صالح|منتهي/.test(data.error) ? 'رابط غير صالح أو منتهي الصلاحية' : 'تعذر فتح المتابعة'}</h1><p>${esc(data.error || 'تأكد من رابط المتابعة الخاص بك.')}</p><button style="min-height:48px;padding:8px 20px" onclick="location.reload()">إعادة المحاولة</button></main>`;
+  const s = data.student, summary = data.summary || {}, presentation = data.portal_presentation;
+  const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+  const quizzes = Array.isArray(data.quizzes) ? data.quizzes : [];
+  const homework = (Array.isArray(data.materials) ? data.materials : []).filter(h => h.is_homework || h.type === 'homework');
+  const completed = homework.filter(submitted).length;
+  const palettes = {navy:'#0f172a',slate:'#0f172a',emerald:'#065f46',red:'#991b1b',purple:'#581c87'};
+  const color = /^#[0-9a-f]{6}$/i.test(presentation?.custom_primary_color || '') ? presentation.custom_primary_color : palettes[presentation?.theme_preset] || '#0f172a';
+  // Color is decorative; foreground contrast never depends on an arbitrary teacher color.
+  const phone = String(s.teacher_phone || data.teacher_phone || s.contact_phone || data.contact_phone || '').replace(/\D/g,'');
+  const contact = /^01\d{9}$/.test(phone) ? '2'+phone : phone;
+  const tab = ['attendance','quizzes','homework'].includes(activeTab) ? activeTab : activeTab === 'materials' ? 'homework' : 'attendance';
+  const tabs = [['attendance','الحضور'],['quizzes','الدرجات'],['homework','الواجبات']];
+  return `<style>
+    .pp{--ink:#0f172a;--muted:#475569;--line:#e2e8f0;box-sizing:border-box;min-height:100dvh;background:#f6f8fb;color:var(--ink);font-family:inherit;font-size:16px;line-height:1.7;padding:16px 16px max(24px,env(safe-area-inset-bottom));direction:rtl}
+    .pp *{box-sizing:border-box}.pp-wrap{max-width:780px;margin:auto;display:grid;gap:20px}.pp h1,.pp h2,.pp h3,.pp p{margin:0}.pp h1{font-size:26px;line-height:1.5}.pp h2{font-size:19px}.pp h3{font-size:16px}.pp small{font-size:13px;color:var(--muted)}.pp p,.pp h1,.pp h2,.pp h3,.pp span{overflow-wrap:anywhere}
+    .pp-top,.pp-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.pp-brand{font-size:15px;font-weight:800}.pp-mark{color:#1d4ed8}.pp-actions{display:flex;gap:8px}.pp button,.pp a{font:inherit;touch-action:manipulation}.pp-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;min-width:48px;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:white;color:var(--ink);text-decoration:none;cursor:pointer}.pp button:disabled{opacity:.6;cursor:wait}.pp button:focus-visible,.pp a:focus-visible{outline:3px solid #2563eb;outline-offset:3px}.pp button:active,.pp a:active{background:#e2e8f0}
+    .pp-hero{position:relative;background:white;border:1px solid var(--line);border-top:4px solid ${color};border-radius:22px;padding:24px;display:grid;gap:10px;box-shadow:0 4px 20px #0f172a04}.pp-eyebrow{color:var(--muted);font-size:14px}.pp-subtitle{color:var(--muted);font-size:15px}.pp-code{direction:ltr;unicode-bidi:isolate}.pp-sync{font-size:14px;color:var(--muted)}.pp-sync:empty{display:none}
+    .pp-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pp-metric{border:1px solid var(--line);border-radius:18px;background:white;padding:18px;display:grid;gap:5px;min-width:0}.pp-metric>span{font-size:14px;color:var(--muted)}.pp-metric strong{font-size:26px;line-height:1.4;font-variant-numeric:tabular-nums}.pp-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:#e9eef5;padding:6px;border-radius:18px;scroll-margin:16px}.pp-nav button{border:0;min-height:48px;padding:10px 4px;background:transparent;border-radius:13px;color:#475569;font-weight:700;cursor:pointer}.pp-nav button[aria-selected=true]{background:white;color:#0f172a;box-shadow:0 2px 6px #0f172a0a}
+    .pp-panel{display:flex;flex-direction:column;gap:14px;min-width:0}.pp-panel[hidden]{display:none}.pp-card{padding:20px;background:white;border:1px solid var(--line);border-radius:18px;display:grid;gap:10px;min-width:0}.pp-pill{display:inline-block;width:fit-content;font-size:13px;font-weight:700;border-radius:9px;padding:4px 10px;background:#f1f5f9;color:#334155}.pp-pill.good{background:#edf7f1;color:#166534}.pp-pill.attention{background:#fff7ed;color:#9a3412}.pp-note{font-size:15px;color:var(--muted);padding-top:8px;border-top:1px solid #f1f5f9}.pp-empty{padding:32px 20px;border:1px dashed #cbd5e1;border-radius:18px;color:var(--muted);text-align:center;background:white}.pp-footer{display:grid;gap:12px;padding:8px 0;text-align:center;color:var(--muted);font-size:13px}.pp-contact{width:100%}
+    @media(min-width:700px){.pp{padding:28px}.pp-summary{grid-template-columns:repeat(4,minmax(0,1fr))}.pp-hero{padding:28px}}@media(prefers-reduced-motion:reduce){.pp *{scroll-behavior:auto}}
+  </style><main class="pp" aria-label="متابعة ولي الأمر"><div class="pp-wrap">
+    <header class="pp-top"><span class="pp-brand"><span class="pp-mark">سـ</span> ${esc(presentation?.display_title || 'سنترلي')}<br><small>متابعة ولي الأمر</small></span><div class="pp-actions"><button class="pp-button" id="parent-refresh-data-btn" type="button" aria-label="تحديث بيانات المتابعة" title="تحديث بيانات المتابعة" onclick="window.centrlyApp.reloadParentPortal()">${getIcon('refresh',20,'currentColor')}</button><button class="pp-button" type="button" onclick="window.centrlyApp.handlePortalLogout()">خروج</button></div></header>
+    <section class="pp-hero" aria-labelledby="pp-student"><p class="pp-eyebrow">متابعة ابنك، في مكان واحد</p><h1 id="pp-student">${esc(s.name)}</h1><p class="pp-subtitle">${esc(s.teacher_name || presentation?.display_title || 'متابعة الطالب')}${s.subject_name ? ` · ${esc(s.subject_name)}` : ''}</p><div class="pp-row"><span class="pp-subtitle">${esc(s.group_name || '')}</span>${s.student_code ? `<small>كود الطالب <b class="pp-code">${esc(s.student_code)}</b></small>` : ''}</div><p id="parent-sync-status" class="pp-sync" role="status" aria-live="polite"></p></section>
+    <section class="pp-summary" aria-label="ملخص المتابعة">${metric('الحضور',summary.total_sessions ? summary.attendance_rate : '—',summary.total_sessions ? `${summary.attended_count ?? 0} من ${summary.total_sessions} حصص` : 'لا توجد حصص مسجلة')}${metric('الغياب',summary.total_sessions ? summary.absent_count ?? 0 : '—')}${metric('واجبات تم تسليمها',`${completed} / ${homework.length}`)}${metric('متوسط الدرجات',quizzes.length ? summary.quiz_average_percentage ?? '—' : '—')}</section>
+    <nav class="pp-nav" role="tablist" aria-label="أقسام المتابعة" onkeydown="window.parentPortalTabKey(event)">${tabs.map(([id,label])=>`<button type="button" role="tab" id="tab-btn-${id}" aria-controls="tab-content-${id}" aria-selected="${id===tab}" tabindex="${id===tab?'0':'-1'}" onclick="window.switchParentPortalTab('${id}')">${label}</button>`).join('')}</nav>
+    <section class="pp-panel" id="tab-content-attendance" role="tabpanel" aria-labelledby="tab-btn-attendance" ${tab==='attendance'?'':'hidden'}><h2>سجل الحضور</h2>${sessions.length ? sessions.map(s=>`<article class="pp-card"><div class="pp-row"><h3>حصة ${esc(s.session_number ?? '')}</h3>${pill(s.attended?'حاضر':'غائب',s.attended?'good':'attention')}</div><small>${esc(dateLabel(s.session_date))}</small>${s.attended && ['done','partial','missing'].includes(s.homework_status)?`<p class="pp-subtitle">الواجب: ${s.homework_status==='done'?'تم التسليم بالكامل':s.homework_status==='partial'?'تسليم جزئي':'لم يُسلّم'}</p>`:''}${s.comment?`<p class="pp-note">ملاحظة المعلم: ${esc(s.comment)}</p>`:''}</article>`).join(''):empty('لا توجد حصص مسجلة حتى الآن.')}</section>
+    <section class="pp-panel" id="tab-content-quizzes" role="tabpanel" aria-labelledby="tab-btn-quizzes" ${tab==='quizzes'?'':'hidden'}><h2>الدرجات والنتائج</h2>${quizzes.length?quizzes.map(q=>`<article class="pp-card"><div class="pp-row"><h3>${esc(q.title)}</h3>${pill(`${q.score ?? '—'} / ${q.max_score ?? '—'}`)}</div>${q.date?`<small>${esc(dateLabel(q.date))}</small>`:''}${q.tier?`<p class="pp-subtitle">${esc(q.tier)}</p>`:''}${q.note?`<p class="pp-note">ملاحظة المعلم: ${esc(q.note)}</p>`:''}</article>`).join(''):empty('لم تُرصد درجات بعد. ستظهر هنا بعد رصدها من المعلم.')}</section>
+    <section class="pp-panel" id="tab-content-homework" role="tabpanel" aria-labelledby="tab-btn-homework" ${tab==='homework'?'':'hidden'}><h2>متابعة تسليم الواجبات</h2><p class="pp-subtitle">حالة التسليم وموعده، بخطوة بسيطة.</p>${homework.length?homework.map(h=>{const done=submitted(h),timing=done?parentHomeworkTiming(h):'';return `<article class="pp-card"><h3>${esc(h.title)}</h3><div class="pp-row">${pill(done?'تم التسليم':'لم يُسلّم بعد',done?'good':'attention')}${timing?pill(timing,timing==='متأخر'?'attention':''):''}</div>${h.due_date?`<p class="pp-subtitle">آخر موعد: ${esc(dateLabel(h.due_date))}</p>`:''}${h.submitted_at?`<p class="pp-subtitle">وقت التسليم: ${esc(dateLabel(h.submitted_at))}</p>`:''}${h.submission_status==='rejected'?'<p class="pp-note">طلب المعلم إعادة التسليم.</p>':''}</article>`;}).join(''):empty('لا توجد واجبات مطلوبة حتى الآن.')}</section>
+    <footer class="pp-footer">${/^\d{10,15}$/.test(contact)?`<a class="pp-button pp-contact" href="https://wa.me/${contact}" target="_blank" rel="noopener noreferrer">التواصل مع المعلم ${getIcon('chevronLeft',18,'currentColor')}</a>`:''}<span>متابعة أبسط، وخطوة أقرب لابنك · سنترلي</span></footer>
+  </div></main>`;
+}
+
 if (typeof window !== 'undefined') {
-  window.switchParentPortalTab = function(tabName) {
-    const target = (tabName === 'materials') ? 'homework' : tabName;
-    try {
-      if (typeof localStorage !== 'undefined') localStorage.setItem('centrly_portal_parent_tab', target);
-      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('centrly_portal_parent_tab', target);
-    } catch (_) {}
-    const tabs = ['attendance', 'quizzes', 'homework'];
-    tabs.forEach(t => {
-      const content = document.getElementById('tab-content-' + t);
-      const btn = document.getElementById('tab-btn-' + t);
-      if (content) {
-        content.style.display = (t === target) ? 'flex' : 'none';
-      }
-      if (btn) {
-        btn.style.background = (t === target) ? '#ffffff' : 'transparent';
-        btn.style.color = (t === target) ? '#1e3a8a' : '#64748b';
-        btn.style.boxShadow = (t === target) ? '0 2px 6px rgba(0,0,0,0.08)' : 'none';
-      }
-    });
+  window.switchParentPortalTab = function(name) {
+    const target = name === 'materials' ? 'homework' : name;
+    if (!['attendance','quizzes','homework'].includes(target)) return;
+    try { localStorage.setItem('centrly_portal_parent_tab',target); sessionStorage.setItem('centrly_portal_parent_tab',target); } catch {}
+    for (const tab of ['attendance','quizzes','homework']) {
+      const panel = document.getElementById('tab-content-'+tab), button = document.getElementById('tab-btn-'+tab);
+      if (panel) panel.hidden = tab !== target;
+      if (button) { button.setAttribute('aria-selected',String(tab===target)); button.tabIndex=tab===target?0:-1; }
+    }
+  };
+  window.parentPortalTabKey = function(event) {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    const tabs = ['attendance','quizzes','homework'], index = tabs.findIndex(id=>event.target.id==='tab-btn-'+id);
+    if (index<0) return;
+    event.preventDefault();
+    const next = event.key==='Home'?0:event.key==='End'?2:(index+(event.key==='ArrowLeft'?1:2))%3;
+    window.switchParentPortalTab(tabs[next]); document.getElementById('tab-btn-'+tabs[next])?.focus();
   };
 }
-
-
