@@ -13,7 +13,9 @@ const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'
   await bootContext.route('**/*',async route=>{
    const u=new URL(route.request().url());
    if(u.hostname!=='centerly-eg.com'||u.pathname.endsWith('.js'))return route.abort();
-   const file=path.resolve(root,u.pathname==='/portal'?'index.html':'.'+u.pathname);
+   // Vercel serves physical files before fallback rewrites. Exercise that precedence.
+   const portalEntry=fs.existsSync(path.join(root,'portal/index.html'))?'portal/index.html':'index.html';
+   const file=path.resolve(root,u.pathname==='/portal'?portalEntry:'.'+u.pathname);
    if(!file.startsWith(root+path.sep))return route.abort();
    try{return route.fulfill({contentType:types[path.extname(file)]||'application/octet-stream',body:fs.readFileSync(file)});}catch{return route.abort();}
   });
@@ -44,7 +46,7 @@ const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'
    }
    if(!['teacher-test.centerly-eg.com','centerly-eg.com'].includes(u.hostname))return route.abort();
    let p=u.pathname==='/dashboard'?'/teacher-platform-sample/index.html':u.pathname==='/login'?'/teacher-platform-sample/login.html':u.pathname;
-   if(!path.extname(p))p='/index.html';
+   if(!path.extname(p))p=p==='/portal'&&fs.existsSync(path.join(root,'portal/index.html'))?'/portal/index.html':'/index.html';
    const file=path.resolve(root,'.'+p);if(!file.startsWith(root+path.sep))return route.abort();
    try{return route.fulfill({contentType:types[path.extname(file)]||'application/octet-stream',body:fs.readFileSync(file)});}catch{return route.fulfill({status:404,body:''});}
   });
