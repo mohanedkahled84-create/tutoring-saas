@@ -51,7 +51,7 @@ export async function notifyMetaFamily(db:SupabaseClient,tenantId:string,student
  const details=await familyAccessDetails(db,tenantId,phone);
  const sent=await gateway.notify(phone,[familyNamesText(details.names),teacherName || 'المعلم',details.url],`CENTRLY_FAMILY:${student.id}:${tenantId}`);
  if(!sent)throw familyError(502,'لم تؤكد Meta إرسال الرسالة؛ حاول مجددًا لاحقًا');
- return {success:true,message:'تم إرسال رسالة Meta لولي الأمر؛ يضغط «الحصول على اسم المستخدم وكلمة السر» لاستلام بيانات الأسرة'};
+ return {success:true,message:'تم إرسال رسالة المتابعة لولي الأمر؛ يضغط زر الرسالة لاستلام بيانات حساب الأسرة'};
 }
 export function credentialAction(message:any):boolean {
  const text=String(message?.button?.text || message?.interactive?.button_reply?.title || message?.text?.body || '').trim();
