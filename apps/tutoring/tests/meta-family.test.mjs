@@ -62,7 +62,7 @@ test('all webhook aliases reject forged requests before processing and accept si
  const {createApp}=await import('../dist/app.js');const server=createApp().listen(0,'127.0.0.1');await once(server,'listening');
  try{const base=`http://127.0.0.1:${server.address().port}`;
   const body=JSON.stringify({object:'whatsapp_business_account',entry:[{id:config.meta.wabaId,changes:[{field:'messages',value:{messaging_product:'whatsapp',metadata:{phone_number_id:config.meta.phoneNumberId},statuses:[]}}]}]});
-  for(const route of ['/meta/webhook','/api/meta/webhook','/api/public/meta/webhook']){
+  for(const route of ['/meta/webhook','/api/meta/webhook','/api/public/meta/webhook','/meta/webhook/']){
    const send=header=>fetch(base+route,{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Signature-256':header},body});
    assert.equal((await send('sha256='+'0'.repeat(64))).status,401);assert.equal((await send(signature(Buffer.from(body)))).status,200);
   }
