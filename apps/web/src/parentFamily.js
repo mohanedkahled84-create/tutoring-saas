@@ -66,7 +66,7 @@ export function registerFamilyActions(app){
    if(safe.initial_data && (safe.initial_data.student.id!==safe.selected_id || !safe.students.some(s=>s.id===safe.selected_id && s.tenant_id===safe.initial_data.student.tenant_id)))throw Error('تعذر التحقق من المتابعة');
    paint(safe);localStorage.setItem(SELECTED,safe.selected_id || '');
    try{const encoded=JSON.stringify({session:hash,savedAt:Date.now(),data:safe});if(encoded.length<1500000)localStorage.setItem(CACHE,encoded);}catch{}
-   history.replaceState(null,'',location.pathname==='/portal-entry'?'/portal-entry':'/portal?role=parent&family=1');return true;
+   history.replaceState(null,'',location.pathname==='/family'?'/family':location.pathname==='/portal-entry'?'/portal-entry':'/portal?role=parent&family=1');return true;
   }catch(error){
    if(!active(token,version))return false;
    if(error.status===401){clearFamilyDevice();this._familyData=null;this.renderPortalLogin(error.message);return false;}

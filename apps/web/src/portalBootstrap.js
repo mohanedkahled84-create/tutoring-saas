@@ -7,10 +7,11 @@ async function start() {
   const match = location.pathname.match(/^\/([ps])\/([a-zA-Z0-9_-]+)$/i) || location.pathname.match(/^\/([ps])([ps]?[a-f0-9]{8})$/i);
   const code = match?.[2] || params.get('s') || params.get('p');
   const type = match?.[1]?.toLowerCase() || (params.has('s') ? 's' : 'p');
-  const isParentEntry=(code && type==='p') || location.pathname==='/portal-entry' || params.get('role')==='parent' || localStorage.getItem('centrly_portal_role')==='parent' || localStorage.getItem('centrly_portal_entry_role')==='parent';
+  const isParentEntry=location.pathname==='/family' || (code && type==='p') || location.pathname==='/portal-entry' || params.get('role')==='parent' || localStorage.getItem('centrly_portal_role')==='parent' || localStorage.getItem('centrly_portal_entry_role')==='parent';
   const parentModule=isParentEntry ? import('./parentPortal.js') : null;
   parentModule?.catch(()=>{}); // Show the normal retry UI if a module download fails.
   const mountParent = async error => (await (parentModule || import('./parentPortal.js'))).mountParentPortal(error);
+  if(location.pathname==='/family'){await mountParent();return;}
   if(location.pathname==='/portal-entry' && new URLSearchParams(location.hash.slice(1)).has('family')){await mountParent();return;}
   // Consume cross-origin entry before downloading staff authentication and dashboards.
   const ticket = new URLSearchParams(location.hash.slice(1)).get('handoff');

@@ -36,7 +36,7 @@ const root=path.resolve(__dirname,'..'),types={'.html':'text/html','.js':'applic
      }else if(u.pathname==='/api/public/family/handoff'){
       assert.equal(body.get('ticket'),ticket);data={family_token:derived,...payload(requestOrigin===target?'child-c':'child-a')};
      }else if(u.pathname==='/api/public/family/logout'){revoked=true;data={success:true};}
-     else if(u.pathname.startsWith('/api/platform/public/'))data={platform:{display_title:'منصة المعلم الثاني'}};
+     else if(u.pathname.startsWith('/api/platform/public/'))data={settings:{subdomain:'family-teacher',display_title:'منصة المعلم الثاني',is_active:true,is_published:true}};
      else throw Error('Unexpected API request '+u.pathname);
      return route.fulfill({status,contentType:'application/json',headers:{'Access-Control-Allow-Origin':requestOrigin,'Access-Control-Allow-Credentials':'true','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'content-type'},body:JSON.stringify(data)});
     }
@@ -44,8 +44,13 @@ const root=path.resolve(__dirname,'..'),types={'.html':'text/html','.js':'applic
     let filename=u.pathname;if(!path.extname(filename))filename='/index.html';const file=path.resolve(root,'.'+filename);if(!file.startsWith(root+path.sep))return route.abort();
     try{return route.fulfill({contentType:types[path.extname(file)] || 'application/octet-stream',body:fs.readFileSync(file)});}catch{return route.fulfill({status:404,body:''});}
    });
+   // A clean teacher URL opens the parent family login directly, with teacher identity.
+   await page.goto(target+'/seed');await page.evaluate(()=>localStorage.setItem('centrly_portal_role','student'));
+   await page.goto(target+'/family');await page.locator('#portalLoginForm').waitFor();
+   await page.waitForFunction(()=>document.getElementById('parent-login-brand')?.textContent==='منصة المعلم الثاني');
+   assert.equal(await page.locator('#portalSubmitBtn').innerText(),'دخول حساب الأسرة');assert.equal(page.url(),target+'/family');
    await page.goto(origin+'/seed');await page.evaluate(()=>{localStorage.setItem('centrly_portal_token','old-student-session');localStorage.setItem('centrly_portal_role','student');});
-   await page.goto(origin+'/portal?role=parent&family=1');await page.locator('#portalLoginForm').waitFor();
+   await page.goto(origin+'/family');await page.locator('#portalLoginForm').waitFor();
    assert.equal(await page.locator('#portalSubmitBtn').innerText(),'دخول حساب الأسرة');
    await page.locator('#portalIdentifier').fill('01012345678');await page.locator('#portalPassword').fill('111111');await page.locator('#portalSubmitBtn').click();
    await page.getByRole('alert').filter({hasText:'راجع رقم ولي الأمر'}).waitFor();

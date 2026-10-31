@@ -27,11 +27,13 @@ test('family delivery returns only status, resends the existing secret and never
  try{
  const existing=sealFamilyPassword('555444333222','201012345678'),out=[];
  const db={from:()=>({select:()=>({eq:()=>({eq:()=>({maybeSingle:async()=>({data:{parent_phone:'01012345678'},error:null})})})})}),rpc:async(name,args)=>{
+ if(name==='meta_portal_phone_records')return {data:[{name:'ابن',tenant_id:'tenant',parent_match:true}],error:null};
+ if(name==='portal_tenant_context')return {data:null,error:null};
  assert.equal(name,'parent_family_delivery');assert.equal(args.p_tenant_id,'tenant');assert.equal(args.p_phone,'201012345678');assert.notEqual(args.p_hash,'555444333222');
  return {data:{phone:'201012345678',password_cipher:existing},error:null};}};
  const result=await deliverFamilyAccess(db,'tenant','student',{ready:async()=>true,send:async(...args)=>{out.push(args);return true;}});
  assert.deepEqual(Object.keys(result).sort(),['message','success']);assert.equal(result.success,true);
- assert.equal(out[0][0],'201012345678');assert.equal(out[0][1],'555444333222');assert.ok(out[0][2].endsWith('/portal?role=parent&family=1'));
+ assert.equal(out[0][0],'201012345678');assert.equal(out[0][1],'555444333222');assert.equal(out[0][2],'https://centerly-eg.com/family');assert.deepEqual(out[0][3],['ابن']);
  assert.ok(!JSON.stringify(result).includes('555444333222'));
  }finally{config.internalApiSecret=original;}
 });
@@ -50,6 +52,17 @@ test('logout between directory and context reads expires the session instead of 
  const calls=[],db={rpc:async(name)=>{calls.push(name);return {data:name==='parent_family_directory'?{students:[{id:'own',tenant_id:'tenant'}]}:null,error:null};}};
  await assert.rejects(()=>openFamilyAccount(db,'a'.repeat(43),'https://centerly-eg.com','own'),e=>e.status===401);
  assert.deepEqual(calls,['parent_family_directory','parent_family_context','parent_family_identity']);
+});
+test('a direct teacher login selects that teacher before another family teacher; explicit choices still win',async()=>{
+ for(const explicit of [undefined,'first']){
+  let selected;const db={rpc:async(name,args)=>{
+   if(name==='parent_family_directory')return {data:{students:[{id:'first',tenant_id:'one'},{id:'local',tenant_id:'two',presentation:{subdomain:'teacher'}}]},error:null};
+   if(name==='parent_family_context')selected=args.p_student_id;
+   return {data:null,error:null};
+  }};
+  await assert.rejects(()=>openFamilyAccount(db,'a'.repeat(43),'https://teacher.centerly-eg.com',explicit),e=>e.status===401);
+  assert.equal(selected,explicit || 'local');
+ }
 });
 test('family selectors are conditional and escape identities; they do not offer manual child linking',async()=>{
  const source=await readFile(new URL('../../web/src/parentFamily.js',import.meta.url),'utf8');

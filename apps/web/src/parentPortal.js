@@ -113,7 +113,15 @@ export async function mountParentPortal(errorMessage = '') {
       window.__centrlyLoaded=true;
       saveParentBranding(this._portalPresentation || getParentBranding());
       this.getAppEl().innerHTML=renderParentPortalLogin(message,this._portalPresentation || getParentBranding(),this._familyMode);
-      history.replaceState(null,'',location.pathname==='/portal-entry'?'/portal-entry':'/portal?role=parent'+(this._familyMode?'&family=1':''));
+      history.replaceState(null,'',this._familyMode && location.pathname==='/family'?'/family':location.pathname==='/portal-entry'?'/portal-entry':'/portal?role=parent'+(this._familyMode?'&family=1':''));
+      const slug=location.hostname.match(/^([a-z0-9-]+)\.centerly-eg\.com$/)?.[1];
+      if(!this._portalPresentation && slug && slug!=='www')portalRequest('/platform/public/'+encodeURIComponent(slug)).then(response=>{
+        const settings=response?.settings;
+        if(!settings || settings.subdomain!==slug || settings.is_active===false || settings.is_published===false)return;
+        if(window.centrlyApp!==this || !document.getElementById('parent-login-brand'))return;
+        this._portalPresentation=settings;saveParentBranding(settings);
+        document.getElementById('parent-login-brand').textContent=settings.display_title || 'متابعة ولي الأمر';
+      }).catch(()=>{});
     },
     handlePortalLogout() {
       this.logoutFamily();
@@ -153,7 +161,7 @@ export async function mountParentPortal(errorMessage = '') {
     }
   };
   registerParentPortalActions(app);registerFamilyActions(app);window.centrlyApp=app;window.__centrlyLoaded=true;
-  app._familyMode=new URLSearchParams(location.search).get('family')==='1' || !!savedFamilyToken();
+  app._familyMode=location.pathname==='/family' || new URLSearchParams(location.search).get('family')==='1' || !!savedFamilyToken();
   const familyTicket=new URLSearchParams(location.hash.slice(1)).get('family');
   if(familyTicket){
     history.replaceState(null,'','/portal-entry');app._familyMode=true;
@@ -168,16 +176,5 @@ export async function mountParentPortal(errorMessage = '') {
   if(token && role==='parent' && !errorMessage) await app.loadParentPortal(token);
   else {
     app.renderPortalLogin(errorMessage);
-    const slug=location.hostname.match(/^([a-z0-9-]+)\.(?:centerly-eg\.com|centrly\.app)$/)?.[1];
-    // Only public platform metadata may survive logout. This does not grant access.
-    if(!app._portalPresentation && slug && slug!=='www') {
-      portalRequest('/platform/public/'+encodeURIComponent(slug)).then(response=>{
-        const settings=response?.settings;
-        if(!settings || settings.subdomain!==slug || settings.is_active===false || settings.is_published===false) return;
-        if(window.centrlyApp!==app || !document.getElementById('parent-login-brand'))return;
-        app._portalPresentation=settings;saveParentBranding(settings);
-        document.getElementById('parent-login-brand').textContent=settings.display_title || 'متابعة ولي الأمر';
-      }).catch(()=>{}); // Login stays usable when public metadata is temporarily unavailable.
-    }
   }
 }

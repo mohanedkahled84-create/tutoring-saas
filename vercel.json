@@ -247,6 +247,10 @@
   ],
   "rewrites": [
     {
+      "source": "/family",
+      "destination": "/index.html"
+    },
+    {
       "source": "/portal-entry",
       "destination": "/index.html"
     },

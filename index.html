@@ -63,7 +63,7 @@
       var path=location.pathname,query=new URLSearchParams(location.search),role='',entryRole='';
       try { role=localStorage.getItem('centrly_portal_role')||'';entryRole=localStorage.getItem('centrly_portal_entry_role')||''; } catch (_) {}
       var portal=/^\/portal(?:-entry)?\/?$/.test(path);
-      window.__centrlyParentEntry=/^\/p(?:\/|[a-f0-9])/i.test(path)||query.has('p')||path==='/portal-entry'||(portal&&(role==='parent'||(!role&&entryRole==='parent')||query.get('role')==='parent'));
+      window.__centrlyParentEntry=path==='/family'||/^\/p(?:\/|[a-f0-9])/i.test(path)||query.has('p')||path==='/portal-entry'||(portal&&(role==='parent'||(!role&&entryRole==='parent')||query.get('role')==='parent'));
       var modules=window.__centrlyParentEntry?['parentPortalEntry.js?v=1']:['utils/portalCache.js','utils/portalSession.js','utils/portalDestination.js'];
       modules.forEach(function(name){var link=document.createElement('link');link.rel='modulepreload';link.href='/apps/web/src/'+name;document.head.appendChild(link);});
     })();
