@@ -89,13 +89,15 @@ export async function openFamilyAccount(db:SupabaseClient,token:unknown,origin:s
  return {students,selected_id:selected.id,expires_at:directory.expires_at,initial_data,presentation:destination.presentation};
 }
 
-export async function familyAccessDetails(db:SupabaseClient,tenantId:string,phone:string) {
- const [records,destination]=await Promise.all([
-  familyRpc(db,'meta_portal_phone_records',{p_phone:phone}),currentPortalDestination(db,tenantId),
- ]);
+export async function familyNamesAtTeacher(db:SupabaseClient,tenantId:string,phone:string) {
+ const records=await familyRpc(db,'meta_portal_phone_records',{p_phone:phone});
  // A teacher's notification names only children registered with that teacher.
  const names=[...new Set<string>((records || []).filter((s:any)=>s.parent_match && s.tenant_id===tenantId).map((s:any)=>String(s.name || 'الطالب').replace(/\s+/g,' ').trim()))];
  if(!names.length)throw familyError(400,'تغيّر ارتباط رقم ولي الأمر بالمتابعة');
+ return names;
+}
+export async function familyAccessDetails(db:SupabaseClient,tenantId:string,phone:string) {
+ const [names,destination]=await Promise.all([familyNamesAtTeacher(db,tenantId,phone),currentPortalDestination(db,tenantId)]);
  return {names,url:destination.origin+'/family'};
 }
 export function familyNamesText(names:string[]) {
