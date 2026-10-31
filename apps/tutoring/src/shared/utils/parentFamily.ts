@@ -70,7 +70,11 @@ export async function openFamilyAccount(db:SupabaseClient,token:unknown,origin:s
  const students=directory.students.map((s:any)=>({id:s.id,tenant_id:s.tenant_id,name:s.name,student_code:s.student_code,teacher_name:s.teacher_name}));
  if(!selected)return {students,selected_id:null,expires_at:directory.expires_at};
  const context=await familyRpc(db,'parent_family_context',{p_token_hash:hash,p_origin:origin,p_student_id:selected.id});
- if(!context)throw familyError(403,'تغيّر ارتباط المتابعة بحساب الأسرة؛ حدّث الصفحة');
+ if(!context){
+  // Logout can race the directory read. Expired sessions are 401, not a missing-child 403.
+  await familyIdentity(db,token,origin);
+  throw familyError(403,'تغيّر ارتباط المتابعة بحساب الأسرة؛ حدّث الصفحة');
+ }
  const destination=portalDestinationFromContext(context);
  if(destination.origin!==origin) {
   const identity=await familyIdentity(db,token,origin),ticket=familyToken();

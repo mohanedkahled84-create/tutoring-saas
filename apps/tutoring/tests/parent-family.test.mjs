@@ -46,6 +46,11 @@ test('family authorization never accepts arbitrary child IDs or a student token'
  await assert.rejects(()=>openFamilyAccount(db,token,'https://centerly-eg.com','other'),e=>e.status===403);
  assert.deepEqual(calls,['parent_family_directory']);
 });
+test('logout between directory and context reads expires the session instead of treating it as a removed child',async()=>{
+ const calls=[],db={rpc:async(name)=>{calls.push(name);return {data:name==='parent_family_directory'?{students:[{id:'own',tenant_id:'tenant'}]}:null,error:null};}};
+ await assert.rejects(()=>openFamilyAccount(db,'a'.repeat(43),'https://centerly-eg.com','own'),e=>e.status===401);
+ assert.deepEqual(calls,['parent_family_directory','parent_family_context','parent_family_identity']);
+});
 test('family selectors are conditional and escape identities; they do not offer manual child linking',async()=>{
  const source=await readFile(new URL('../../web/src/parentFamily.js',import.meta.url),'utf8');
  const pure=source.slice(source.indexOf('export function familyGroups'),source.indexOf('function snapshot'));

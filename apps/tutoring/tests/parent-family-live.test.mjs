@@ -96,7 +96,7 @@ test('LIVE: delivered family password opens only the registered family across te
   const fresh=await (await post('/login',{phone,password:secret})).json();assert.ok(fresh.family_token);
   const moving=await (await post('/account',{family_token:fresh.family_token,student_id:second.id})).json();
   const [exiting,redeeming]=await Promise.all([post('/logout',{family_token:fresh.family_token}),post('/handoff',{ticket:moving.destination.ticket},target)]);
-  assert.equal(exiting.status,200);assert.ok([200,401].includes(redeeming.status),'A transfer race must not deadlock');
+  assert.equal(exiting.status,200);assert.ok([200,401].includes(redeeming.status),`A transfer race must not deadlock (HTTP ${redeeming.status})`);
   if(redeeming.status===200){const transferred=await redeeming.json();assert.equal((await post('/account',{family_token:transferred.family_token,student_id:second.id},target)).status,401);}
   assert.equal((await post('/account',{family_token:fresh.family_token})).status,401);
  }
