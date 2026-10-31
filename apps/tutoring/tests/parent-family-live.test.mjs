@@ -8,6 +8,7 @@ test('LIVE: delivered family password opens only the registered family across te
  if(!requireIsolatedSupabaseProject(t))return;
  const {serviceClient:db,anonClient}=createIsolatedSupabaseClients(),tenant=randomUUID(),other=randomUUID(),root='https://centerly-eg.com';
  const phone='2010'+String(Math.floor(Math.random()*1e8)).padStart(8,'0'),foreign='2011'+String(Math.floor(Math.random()*1e8)).padStart(8,'0');
+ const testIp='2001:db8:'+randomUUID().replaceAll('-','').match(/.{4}/g).slice(0,6).join(':');
  let server;
  const ok=r=>{assert.equal(r.error,null,r.error?.message);return r.data;};
  t.after(async()=>{
@@ -24,7 +25,7 @@ test('LIVE: delivered family password opens only the registered family across te
  ]).select('id,tenant_id,name'));
  const own=children.find(s=>s.name==='أحمد' && s.tenant_id===tenant),sibling=children.find(s=>s.name==='منى'),second=children.find(s=>s.name==='أحمد' && s.tenant_id===other),outsider=children.find(s=>s.name==='خارج الأسرة');
  const {deliverFamilyAccess,familyHash}=await import('../dist/shared/utils/parentFamily.js');
- t.after(async()=>{ok(await db.from('parent_family_limits').delete().in('key_hash',[familyHash('phone:'+phone),familyHash('phone:'+foreign)]));});
+ t.after(async()=>{ok(await db.from('parent_family_limits').delete().in('key_hash',[familyHash('phone:'+phone),familyHash('phone:'+foreign),familyHash('ip:'+testIp)]));});
  const {generateParentPortalToken}=await import('../dist/shared/utils/tokens.js');
  assert.equal(ok(await db.rpc('parent_family_delivery',{p_tenant_id:tenant,p_student_id:own.id,p_hash:'unused',p_cipher:'unused',p_phone:foreign})),null,'A phone edit during provisioning must not create a mismatched credential');
  let secret,recipient;
@@ -38,7 +39,7 @@ test('LIVE: delivered family password opens only the registered family across te
  const firstSecret=secret;await deliverFamilyAccess(db,other,second.id,delivery);assert.equal(secret,firstSecret,'Second teacher resends the same password without resetting family access');
  const {createApp}=await import('../dist/app.js');server=createApp().listen(0,'127.0.0.1');await once(server,'listening');
  const base=`http://127.0.0.1:${server.address().port}/api/public/family`;
- const post=async(path,body,origin=root)=>fetch(base+path,{method:'POST',headers:{Origin:origin},body:new URLSearchParams(body)});
+ const post=async(path,body,origin=root)=>fetch(base+path,{method:'POST',headers:{Origin:origin,'X-Forwarded-For':testIp},body:new URLSearchParams(body)});
  assert.equal((await post('/login',{phone,password:'111111'})).status,401,'Student PIN cannot open family');
  assert.equal((await post('/account',{family_token:generateParentPortalToken(own.id,tenant)})).status,401);
  assert.equal((await post('/login',{phone,password:secret},'https://evil.example')).status,403);
