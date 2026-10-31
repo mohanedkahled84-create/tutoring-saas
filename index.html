@@ -91,6 +91,28 @@
       window.cancelIdleCallback = function(id) { clearTimeout(id); };
     }
   </script>
+<style>
+    .portal-opening{min-height:65vh;display:grid;place-content:center;justify-items:center;gap:22px;padding:32px 20px;text-align:center;color:#14213b;font-family:Cairo,Arial,sans-serif}
+    .portal-opening-mark{width:76px;height:76px;position:relative;display:grid;place-items:center}
+    .portal-opening-mark img{width:46px;height:46px;object-fit:contain;border-radius:12px}
+    .portal-opening-mark:after{content:"";position:absolute;inset:0;border:1px solid #dbe3ef;border-top:2px solid #294574;border-radius:25px;animation:portal-orbit 2.4s linear infinite}
+    .portal-opening p{font-size:14px;line-height:1.8;margin:0;color:#52627a;max-width:300px}
+    .portal-opening .opening-caption{font-size:11px;letter-spacing:4px;color:#66758c;font-weight:700;direction:ltr}
+    .portal-opening button{font:inherit;min-height:44px;padding:9px 22px;border:1px solid #d4dfed;border-radius:12px;background:#fff;color:#14213b;cursor:pointer}
+    @keyframes portal-orbit{to{transform:rotate(360deg)}}
+    @media(prefers-reduced-motion:reduce){.portal-opening-mark:after{animation:none}}
+
+    .portal-sync{display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .portal-sync button{width:44px;height:44px;display:grid;place-items:center;flex-shrink:0;border:1px solid #dce4ef;border-radius:14px;background:#fff;color:#52627a;cursor:pointer;transition:background .18s,color .18s,box-shadow .18s}
+    .portal-sync button:hover{background:#eef2f8;color:#14213b;box-shadow:0 3px 10px #14213b0a}
+    .portal-sync button:focus-visible{outline:2px solid #385c91;outline-offset:3px}
+    .portal-sync button:disabled{cursor:wait;opacity:.65}
+    .portal-sync button:disabled svg{animation:portal-refresh 1s linear infinite}
+    .portal-sync span:empty{display:none}
+    .portal-sync span{font-size:12px;line-height:1.6;color:#725124;max-width:210px}
+    @keyframes portal-refresh{to{transform:rotate(360deg)}}
+    @media(prefers-reduced-motion:reduce){.portal-sync button:disabled svg{animation:none}.portal-sync button{transition:none}}
+</style>
 </head>
 <body>
   <div id="centrlyProgressBar" class="top-progress-bar"></div>
@@ -98,19 +120,23 @@
   <script>
     // Portal entry must be visible even while its JavaScript modules are downloading.
     (function () {
+      window.renderPortalOpening = function (root) {
+        root.innerHTML = '<div id="centrlyInitialSplash" class="portal-opening" role="status" aria-label="تجهيز حسابك الدراسي"><div class="portal-opening-mark" aria-hidden="true"><img src="/apps/web/favicon-96x96.png" alt="" width="46" height="46"></div><div class="opening-caption" aria-hidden="true">CENTRLY</div><p>كل ما يخص رحلتك الدراسية، في مكان واحد.</p><button hidden type="button">إعادة المحاولة</button></div>';
+        root.querySelector('button').onclick = function () { location.reload(); };
+        var current = root.firstElementChild;
+        setTimeout(function () {
+          if (!current.isConnected) return;
+          current.querySelector('p').textContent = 'الاتصال يستغرق وقتًا أطول. يمكنك إعادة المحاولة.';
+          current.querySelector('button').hidden = false;
+        }, 10000);
+      };
       var path = location.pathname, query = new URLSearchParams(location.search);
       if (!/^\/(?:portal(?:-entry)?(?:\/|$)|[ps](?:\/|[a-f0-9]))/i.test(path) && !query.has('token') && !query.has('s') && !query.has('p') && query.get('view') !== 'portal') return;
       var root = document.getElementById('app');
-      root.innerHTML = '<div id="centrlyInitialSplash" role="status" style="max-width:480px;margin:15vh auto;padding:32px;text-align:center;border:1px solid #dbe3ed;border-radius:16px;background:#fff;color:#0f172a;font-family:Arial,sans-serif"><strong style="font-size:24px">سنترلي</strong><p>جارِ فتح المتابعة…</p><button hidden type="button" style="min-height:44px;padding:8px 24px">إعادة المحاولة</button></div>';
-      root.querySelector('button').onclick = function () { location.reload(); };
-      setTimeout(function () {
-        var splash = document.getElementById('centrlyInitialSplash');
-        if (!splash) return;
-        splash.querySelector('p').textContent = 'الاتصال يستغرق وقتًا أطول. يمكنك إعادة المحاولة.';
-        splash.querySelector('button').hidden = false;
-      }, 10000);
+      window.renderPortalOpening(root);
     })();
   </script>
   <script type="module" src="/apps/web/src/portalBootstrap.js?v=9.21.0"></script>
 </body>
 </html>
+

@@ -9,7 +9,7 @@ async function start() {
   const type = match?.[1]?.toLowerCase() || (params.has('s') ? 's' : 'p');
   if (!code) { await import('./app.js?v=9.21.0'); return; }
   const root = document.getElementById('app');
-  root.innerHTML = '<p role="status" style="padding:3rem;text-align:center">جارِ فتح المتابعة…</p>';
+  if (!root.querySelector('.portal-opening')) window.renderPortalOpening(root);
   try {
     const queryCode = /^[ps]/i.test(code) ? code : type + code;
     const link = await portalRequest('/public/short-links/' + encodeURIComponent(queryCode));

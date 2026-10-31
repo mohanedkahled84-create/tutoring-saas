@@ -10,7 +10,7 @@ import { portalCache, portalRequest } from '../utils/portalSession.js';
 
 function showPortalPending(app) {
   const root = app.getAppEl();
-  if (root) root.innerHTML = '<div role="status" style="max-width:480px;margin:15vh auto;padding:32px;text-align:center;border:1px solid #dbe3ed;border-radius:16px;background:white"><strong>سنترلي</strong><p>جارِ فتح المتابعة…</p></div>';
+  if (root) window.renderPortalOpening(root);
 }
 
 function showPortalCacheStatus(app, savedAt, failed) {
@@ -21,8 +21,9 @@ function showPortalCacheStatus(app, savedAt, failed) {
     status = document.createElement('div');
     status.id = 'portalCacheStatus';
     status.setAttribute('role', 'status');
-    status.style.cssText = 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 20px;color:#475569;font-size:0.85rem';
-    status.innerHTML = '<span></span><button type="button" style="min-height:44px;padding:8px 16px">تحديث</button>';
+    status.className = 'portal-sync';
+    status.style.cssText = 'justify-content:flex-end;padding:8px 20px';
+    status.innerHTML = '<span aria-live="polite"></span><button type="button" aria-label="تحديث بياناتك"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 6.1A8 8 0 0 1 19.6 10M4.4 14A8 8 0 0 0 17.9 17.9"/></svg></button>';
     status.querySelector('button').addEventListener('click', async event => {
       event.currentTarget.disabled = true;
       try { await app.reloadStudentPortal(); }
@@ -30,7 +31,9 @@ function showPortalCacheStatus(app, savedAt, failed) {
     });
     root.prepend(status);
   }
-  status.querySelector('span').textContent = (failed ? 'تعذر التحديث؛ تظهر آخر بيانات محفوظة • ' : 'آخر تحديث • ') + new Date(savedAt).toLocaleTimeString('ar-EG', {hour:'2-digit',minute:'2-digit'});
+  const time = new Date(savedAt).toLocaleTimeString('ar-EG', {hour:'2-digit',minute:'2-digit'});
+  status.querySelector('button').title = 'تحديث بياناتك • البيانات المحفوظة ' + time;
+  status.querySelector('span').textContent = failed ? 'تعذر التحديث؛ بياناتك المحفوظة متاحة' : '';
 }
 
 /**
