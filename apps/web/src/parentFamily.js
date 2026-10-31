@@ -36,7 +36,7 @@ export function registerFamilyActions(app){
  const active=(token,version)=>savedFamilyToken()===token && revision===version;
  const paint=data=>{
   if(!data.initial_data?.student){
-   app.getAppEl().innerHTML='<main class="parent-login" dir="rtl"><section class="parent-login-card"><h1>حساب الأسرة</h1><p>لا توجد متابعات مرتبطة برقمك حاليًا. تواصل مع المعلم لمراجعة الرقم المسجل.</p><button type="button" onclick="window.centrlyApp.handlePortalLogout()">خروج</button></section></main>';return;
+   app.getAppEl().innerHTML='<main dir="rtl" style="min-height:100dvh;padding:32px 16px;background:#f6f8fb;color:#0f172a;font:16px/1.8 system-ui"><section style="max-width:440px;margin:10vh auto;padding:24px;border:1px solid #e2e8f0;border-radius:24px;background:white"><h1>حساب الأسرة</h1><p>لا توجد متابعات مرتبطة برقمك حاليًا. تواصل مع المعلم لمراجعة الرقم المسجل.</p><button type="button" style="min-height:48px;min-width:80px;font:inherit;border:1px solid #cbd5e1;border-radius:12px;background:white" onclick="window.centrlyApp.handlePortalLogout()">خروج</button></section></main>';return;
   }
   app._portalPresentation=data.presentation;saveParentBranding(data.presentation);app._familyData=data;
   const focused=document.activeElement?.id;
@@ -44,7 +44,7 @@ export function registerFamilyActions(app){
   const hero=app.getAppEl().querySelector('.pp-hero');hero.insertAdjacentHTML('beforebegin',renderFamilySelectors(data.students,data.selected_id));
   if(focused)document.getElementById(focused)?.focus({preventScroll:true});
  };
- app.loadFamilyPortal=async function({force=false,studentId=null,arrival=null}={}){
+ app.loadFamilyPortal=async function({force=false,studentId=null,arrival=null,retry=true}={}){
   const token=savedFamilyToken(),version=++revision;if(!token)return false;
   this._familyMode=true;window.__centrlyLoaded=true;
   let cached=null;
@@ -71,8 +71,8 @@ export function registerFamilyActions(app){
    if(!active(token,version))return false;
    if(error.status===401){clearFamilyDevice();this._familyData=null;this.renderPortalLogin(error.message);return false;}
    if(error.status===403){localStorage.removeItem(CACHE);localStorage.removeItem(SELECTED);this._familyData=null;
-    if(studentId){this.renderPortalLogin(error.message);return false;}
-    return this.loadFamilyPortal({force:true});
+    if(retry)return this.loadFamilyPortal({force:true,retry:false});
+    this.renderPortalLogin(error.message);return false;
    }
    if(cached){const status=document.getElementById('parent-sync-status');if(status)status.textContent='تعذر الاتصال؛ نعرض آخر بيانات محفوظة. جرّب التحديث.';}
    else this.renderPortalLogin(error.message || 'تعذر فتح حساب الأسرة، حاول مجددًا');return false;
@@ -83,7 +83,9 @@ export function registerFamilyActions(app){
   return this.loadFamilyPortal({force:true,studentId:id});
  };
  app.loginFamily=async function(phone,password){
-  const response=await request('login',{phone,password});adoptFamilySession(response.family_token);return this.loadFamilyPortal();
+  const response=await request('login',{phone,password}),previous=savedFamilyToken();
+  if(previous)await request('logout',{family_token:previous});
+  adoptFamilySession(response.family_token);return this.loadFamilyPortal();
  };
  app.logoutFamily=function(){
   const token=savedFamilyToken();++revision;clearFamilyDevice();this._familyData=null;

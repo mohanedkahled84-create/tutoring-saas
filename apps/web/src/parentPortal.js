@@ -134,6 +134,7 @@ export async function mountParentPortal(errorMessage = '') {
         if(this._familyMode){await this.loginFamily(form.elements.identifier.value,form.elements.password.value);return;}
         const response=await portalRequest('/public/portal/login',{method:'POST',body:{identifier:normalizeDigits(form.elements.identifier.value).trim(),password:normalizeDigits(form.elements.password.value).trim(),role:'parent'}});
         if(!response?.success || !response.token) throw Error('تعذر تسجيل الدخول. راجع بياناتك وحاول مجددًا.');
+        this.logoutFamily();this._familyMode=false;
         await adoptVerifiedPortalSession(response.token,'parent');
         await this.loadParentPortal(response.token);
       } catch(error) {

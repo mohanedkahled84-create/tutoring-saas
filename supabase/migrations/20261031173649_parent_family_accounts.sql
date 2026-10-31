@@ -22,6 +22,7 @@ create table public.parent_family_sessions (
 );
 create index parent_family_sessions_root_idx on public.parent_family_sessions(root_id);
 create index parent_family_sessions_family_idx on public.parent_family_sessions(family_id);
+create index parent_family_sessions_expiry_idx on public.parent_family_sessions(expires_at);
 create table public.parent_family_handoffs (
  ticket_hash text primary key, session_id uuid not null references public.parent_family_sessions on delete cascade,
  student_id uuid not null references public.students on delete cascade, target_origin text not null,
@@ -29,9 +30,11 @@ create table public.parent_family_handoffs (
 );
 create index parent_family_handoffs_session_idx on public.parent_family_handoffs(session_id);
 create index parent_family_handoffs_student_idx on public.parent_family_handoffs(student_id);
+create index parent_family_handoffs_expiry_idx on public.parent_family_handoffs(expires_at);
 create table public.parent_family_limits (
  key_hash text primary key, attempts integer not null, resets_at timestamptz not null
 );
+create index parent_family_limits_expiry_idx on public.parent_family_limits(resets_at);
 alter table public.parent_family_accounts enable row level security;
 alter table public.parent_family_sessions enable row level security;
 alter table public.parent_family_handoffs enable row level security;
@@ -76,7 +79,9 @@ language sql stable security invoker set search_path = '' as $$
  with identity as(select public.parent_family_identity(p_token_hash,p_origin) i)
  select case when i is null then null else jsonb_build_object('expires_at',i->>'expires_at','students',coalesce((
  select jsonb_agg(jsonb_build_object('id',s.id,'tenant_id',s.tenant_id,'name',s.name,'student_code',s.student_code,
- 'teacher_name',coalesce(c->'platform'->>'display_title',c->>'teacher_name','المعلم'),
+ 'teacher_name',coalesce(nullif(c->'platform'->>'display_title',''),
+   (select nullif(u.full_name,'') from public.users u where u.tenant_id=s.tenant_id and u.role in ('owner','teacher','center_owner') order by u.created_at,u.id limit 1),
+   (select t.name from public.tenants t where t.id=s.tenant_id),'المعلم'),
  'presentation',c->'platform') order by s.name,s.tenant_id,s.id)
  from public.students s cross join lateral (select public.portal_tenant_context(s.tenant_id) c) ctx
  where public.parent_family_phone(s.parent_phone)=i->>'phone'), '[]'::jsonb)) end from identity;

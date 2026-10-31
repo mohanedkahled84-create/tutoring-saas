@@ -24,6 +24,7 @@ test('LIVE: delivered family password opens only the registered family across te
  ]).select('id,tenant_id,name'));
  const own=children.find(s=>s.name==='أحمد' && s.tenant_id===tenant),sibling=children.find(s=>s.name==='منى'),second=children.find(s=>s.name==='أحمد' && s.tenant_id===other),outsider=children.find(s=>s.name==='خارج الأسرة');
  const {deliverFamilyAccess,familyHash}=await import('../dist/shared/utils/parentFamily.js');
+ t.after(async()=>{ok(await db.from('parent_family_limits').delete().in('key_hash',[familyHash('phone:'+phone),familyHash('phone:'+foreign)]));});
  const {generateParentPortalToken}=await import('../dist/shared/utils/tokens.js');
  let secret,recipient;
  const delivery={ready:async()=>true,send:async(p,password,url)=>{recipient=p;secret=password;assert.match(url,/family=1/);return true;}};
@@ -54,7 +55,7 @@ test('LIVE: delivered family password opens only the registered family across te
  assert.equal((await post('/account',{family_token:session.family_token},target)).status,401,'A root bearer is bound to its original origin');
  assert.equal((await post('/handoff',{ticket:transfer.destination.ticket})).status,401,'Wrong origin does not redeem');
  const raced=await Promise.all([post('/handoff',{ticket:transfer.destination.ticket},target),post('/handoff',{ticket:transfer.destination.ticket},target)]);assert.deepEqual(raced.map(r=>r.status).sort(),[200,401]);
- const arrived=await raced.find(r=>r.status===200).json();assert.equal(arrived.initial_data.student.id,second.id);assert.equal(arrived.presentation.display_title,'معلم الأسرة الثاني');assert.notEqual(arrived.family_token,session.family_token);assert.equal(arrived.expires_at,session.expires_at);
+ const arrived=await raced.find(r=>r.status===200).json();assert.equal(arrived.initial_data.student.id,second.id);assert.equal(arrived.presentation.display_title,'معلم الأسرة الثاني');assert.notEqual(arrived.family_token,session.family_token);assert.equal(new Date(arrived.expires_at).getTime(),new Date(session.expires_at).getTime());
  const ticket=await (await post('/account',{family_token:session.family_token,student_id:second.id})).json();
  ok(await db.from('parent_family_handoffs').update({expires_at:new Date(Date.now()-1000).toISOString()}).eq('ticket_hash',familyHash(ticket.destination.ticket)));
  assert.equal((await post('/handoff',{ticket:ticket.destination.ticket},target)).status,401);

@@ -5,9 +5,20 @@ import {trustedPortalOrigin,portalDestinationFromContext} from '../utils/portalD
 import {familyHash,familyToken,validFamilyToken,familyRpc,loginFamily,openFamilyAccount} from '../utils/parentFamily.js';
 
 export const parentFamilyRouter=Router();
+let lastMaintenance=0;
 parentFamilyRouter.use((req,res,next)=>{
  res.setHeader('Cache-Control','private, no-store');res.setHeader('Referrer-Policy','no-referrer');
- if(!trustedPortalOrigin(req.headers.origin)){res.status(400).json({error:{code:'BAD_ORIGIN',message:'افتح حساب الأسرة من رابط سنترلي'}});return;}next();
+ if(!trustedPortalOrigin(req.headers.origin)){res.status(400).json({error:{code:'BAD_ORIGIN',message:'افتح حساب الأسرة من رابط سنترلي'}});return;}
+ if(Date.now()-lastMaintenance>60000){
+  lastMaintenance=Date.now();const db=getServiceSupabaseClient(),now=new Date().toISOString();
+  // Indexed expiry cleanup never delays account rendering. Failed cleanup retries next minute.
+  void Promise.all([
+   db.from('parent_family_handoffs').delete().lt('expires_at',now),
+   db.from('parent_family_sessions').delete().lt('expires_at',now),
+   db.from('parent_family_limits').delete().lt('resets_at',new Date(Date.now()-86400000).toISOString()),
+  ]).catch(()=>{});
+ }
+ next();
 });
 const endpoint=(fn:(req:Request)=>Promise<unknown>)=>async(req:Request,res:Response)=>{
  try{res.json(await fn(req));}catch(error:any){const status=[400,401,403,429,502,503].includes(error?.status)?error.status:503;res.status(status).json({error:{code:status===401?'UNAUTHORIZED':'FAMILY_ERROR',message:status===503?'تعذر الاتصال بحساب الأسرة، حاول مجددًا':error.message}});}
