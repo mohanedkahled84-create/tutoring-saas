@@ -2,7 +2,7 @@ import {createHash, createCipheriv, createDecipheriv, randomBytes, randomInt, ra
 import bcrypt from 'bcryptjs';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {config} from '../config/index.js';
-import {portalDestinationFromContext, portalOrigin} from './portalDestination.js';
+import {currentPortalDestination, portalDestinationFromContext, portalOrigin} from './portalDestination.js';
 import {generateParentPortalTokenUntil} from './tokens.js';
 import {loadPortalAccount} from './portalAccount.js';
 
@@ -65,7 +65,9 @@ export async function openFamilyAccount(db:SupabaseClient,token:unknown,origin:s
  const directory=await familyRpc(db,'parent_family_directory',{p_token_hash:hash,p_origin:origin});
  if(!directory)throw familyError(401,'انتهت جلسة حساب الأسرة، سجّل الدخول مجددًا');
  // No guessed sibling identities and no client-provided tenant IDs.
- const selected=studentId ? directory.students.find((s:any)=>s.id===studentId) : directory.students[0];
+ // A direct teacher link starts with that teacher, even when the family has other teachers.
+ const preferred=directory.students.find((s:any)=>s.presentation?.subdomain && `https://${s.presentation.subdomain}.${new URL(portalOrigin()).hostname}`===origin);
+ const selected=studentId ? directory.students.find((s:any)=>s.id===studentId) : preferred || directory.students[0];
  if(studentId && !selected)throw familyError(403,'هذه المتابعة غير مرتبطة بحساب الأسرة');
  const students=directory.students.map((s:any)=>({id:s.id,tenant_id:s.tenant_id,name:s.name,student_code:s.student_code,teacher_name:s.teacher_name}));
  if(!selected)return {students,selected_id:null,expires_at:directory.expires_at};
@@ -87,19 +89,34 @@ export async function openFamilyAccount(db:SupabaseClient,token:unknown,origin:s
  return {students,selected_id:selected.id,expires_at:directory.expires_at,initial_data,presentation:destination.presentation};
 }
 
-export interface FamilyPasswordDelivery {ready():Promise<boolean>;send(phone:string,password:string,url:string):Promise<boolean>}
+export async function familyAccessDetails(db:SupabaseClient,tenantId:string,phone:string) {
+ const [records,destination]=await Promise.all([
+  familyRpc(db,'meta_portal_phone_records',{p_phone:phone}),currentPortalDestination(db,tenantId),
+ ]);
+ // A teacher's notification names only children registered with that teacher.
+ const names=[...new Set<string>((records || []).filter((s:any)=>s.parent_match && s.tenant_id===tenantId).map((s:any)=>String(s.name || 'الطالب').replace(/\s+/g,' ').trim()))];
+ if(!names.length)throw familyError(400,'تغيّر ارتباط رقم ولي الأمر بالمتابعة');
+ return {names,url:destination.origin+'/family'};
+}
+export function familyNamesText(names:string[]) {
+ const shown:string[]=[];let size=0;
+ for(const name of names){if(size+name.length>850)break;shown.push(name);size+=name.length+2;}
+ return shown.join('، ')+(shown.length<names.length?`، و${names.length-shown.length} آخرين`:'');
+}
+export interface FamilyPasswordDelivery {ready():Promise<boolean>;send(phone:string,password:string,url:string,names:string[]):Promise<boolean>}
 export async function deliverFamilyAccess(db:SupabaseClient,tenantId:string,studentId:string,delivery:FamilyPasswordDelivery) {
  const {data:student,error}=await db.from('students').select('parent_phone').eq('id',studentId).eq('tenant_id',tenantId).maybeSingle();
  if(error)throw familyError(503,'تعذر قراءة بيانات ولي الأمر');
  const phone=familyPhone(student?.parent_phone);if(!phone)throw familyError(400,'راجع رقم ولي الأمر المسجل للطالب');
  // Do not provision a credential or pretend to send while the sender is disconnected.
  if(!await delivery.ready())throw familyError(503,'إرسال بيانات الأسرة غير متاح حاليًا؛ راجع إعداد استقبال ردود Meta');
+ const details=await familyAccessDetails(db,tenantId,phone);
  const password=String(randomInt(100000000000,1000000000000)),hash=await bcrypt.hash(password,12),cipher=sealFamilyPassword(password,phone);
  const result=await familyRpc(db,'parent_family_delivery',{p_tenant_id:tenantId,p_student_id:studentId,p_hash:hash,p_cipher:cipher,p_phone:phone});
  if(!result)throw familyError(400,'راجع رقم ولي الأمر المسجل للطالب');
  if(result.limited)throw familyError(429,'انتظر دقيقة قبل إعادة إرسال بيانات الأسرة');
  // Existing credentials are resent, never reset by a teacher. No password in a staff response/log.
- const success=await delivery.send(result.phone,openFamilyPassword(result.password_cipher,result.phone),portalOrigin()+'/portal?role=parent&family=1');
+ const success=await delivery.send(result.phone,openFamilyPassword(result.password_cipher,result.phone),details.url,details.names);
  if(!success)throw familyError(502,'تعذر إرسال بيانات الأسرة، حاول مرة أخرى لاحقًا');
  return {success:true,message:'تم إرسال بيانات حساب الأسرة إلى رقم ولي الأمر المسجل'};
 }

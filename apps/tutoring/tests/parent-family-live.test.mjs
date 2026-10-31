@@ -41,7 +41,7 @@ test('LIVE: delivered family password opens only the registered family across te
  assert.equal(ok(await db.from('parent_family_accounts').select('id').eq('phone',phone)).length,0,'Notification alone cannot provision or disclose a password');
  assert.equal(ok(await db.rpc('parent_family_delivery',{p_tenant_id:tenant,p_student_id:own.id,p_hash:'unused',p_cipher:'unused',p_phone:foreign})),null,'A phone edit during provisioning must not create a mismatched credential');
  let secret,recipient;
- const delivery={ready:async()=>true,send:async(p,password,url)=>{recipient=p;secret=password;assert.match(url,/family=1/);return true;}};
+ const delivery={ready:async()=>true,send:async(p,password,url)=>{recipient=p;secret=password;assert.equal(url,root+'/family');return true;}};
  await assert.rejects(()=>deliverFamilyAccess(db,tenant,outsider.id,delivery),e=>e.status===400);
  assert.deepEqual(Object.keys(await deliverFamilyAccess(db,tenant,own.id,delivery)).sort(),['message','success']);
  assert.equal(recipient,phone);assert.match(secret,/^\d{12}$/);assert.notEqual(secret,'111111');
@@ -81,6 +81,8 @@ test('LIVE: delivered family password opens only the registered family across te
  assert.equal((await post('/handoff',{ticket:transfer.destination.ticket})).status,401,'Wrong origin does not redeem');
  const raced=await Promise.all([post('/handoff',{ticket:transfer.destination.ticket},target),post('/handoff',{ticket:transfer.destination.ticket},target)]);assert.deepEqual(raced.map(r=>r.status).sort(),[200,401]);
  const arrived=await raced.find(r=>r.status===200).json();assert.equal(arrived.initial_data.student.id,second.id);assert.equal(arrived.presentation.display_title,'معلم الأسرة الثاني');assert.notEqual(arrived.family_token,session.family_token);assert.equal(new Date(arrived.expires_at).getTime(),new Date(session.expires_at).getTime());
+ const direct=await post('/account',{family_token:arrived.family_token},target);assert.equal(direct.status,200);
+ const directData=await direct.json();assert.equal(directData.selected_id,second.id);assert.equal(directData.destination,undefined,'Teacher-domain family access renders directly without another teacher redirect');
  const ticket=await (await post('/account',{family_token:session.family_token,student_id:second.id})).json();
  ok(await db.from('parent_family_handoffs').update({expires_at:new Date(Date.now()-1000).toISOString()}).eq('ticket_hash',familyHash(ticket.destination.ticket)));
  assert.equal((await post('/handoff',{ticket:ticket.destination.ticket},target)).status,401);
