@@ -5,7 +5,7 @@ const types={'.html':'text/html','.js':'application/javascript','.css':'text/css
 (async()=>{const browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',headless:true});const results=[];
 try{for(const fast of [false,true])for(const width of [390,1440])for(const role of ['parent','student'])for(const published of [false,true]){
  const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors=[],calls=[];let consumed=false;
- page.on('pageerror',e=>errors.push(e.message));const token='browser-private-token',ticket='a'.repeat(43),target='https://teacher-test.centerly-eg.com';
+ const modules=[];page.on('request',r=>{const p=new URL(r.url()).pathname;if(p.endsWith('.js'))modules.push(p);});page.on('pageerror',e=>errors.push(e.message));const token='browser-private-token',ticket='a'.repeat(43),target='https://teacher-test.centerly-eg.com';
  const presentation=published?{subdomain:'teacher-test',display_title:'منصة فحص الروابط',theme_preset:'slate'}:null;
  await context.route('**/*',async route=>{const request=route.request(),u=new URL(request.url());
   if(u.pathname.startsWith('/api/')){calls.push(u.pathname);let data={};
@@ -26,6 +26,7 @@ try{for(const fast of [false,true])for(const width of [390,1440])for(const role 
  try{await page.waitForFunction(()=>document.body.innerText.includes('طالب فحص الروابط'),null,{timeout:25000});}catch(e){console.log(JSON.stringify({width,role,published,url:page.url(),errors,calls,body:(await page.locator('body').innerText()).slice(0,2000)}));throw e;}
  assert.equal(new URL(page.url()).origin,published?target:'https://centerly-eg.com');assert.ok(!page.url().includes(token));assert.ok(!page.url().includes(ticket));
  if(published){assert.equal(consumed,true);assert.equal(new URL(page.url()).pathname,role==='student'?'/dashboard':'/portal-entry');if(role==='parent')assert.ok((await page.locator('body').innerText()).includes('منصة فحص الروابط'));}
+ if(role==='parent')assert.ok(!modules.some(p=>/\/(?:app|workspace|auth)\.js$|UnifiedPortalLoginView/.test(p)),'Parent shared links must avoid the staff/student SPA');
  if(role==='student'&&published)assert.ok(!calls.some(p=>p.includes('/quizzes/rich')),'No global quiz reads');
  assert.equal(calls.filter(p=>p === '/api/public/portal/destination').length,fast?0:1);assert.deepEqual(errors,[]);results.push({fast,width,role,published,url:page.url(),passed:true});await context.close();
 }if(process.env.RESULT_PATH)fs.writeFileSync(process.env.RESULT_PATH,JSON.stringify({scope:'Actual SPA and advanced HTML; simulated APIs; two distinct HTTPS origins; external network blocked',results},null,2));console.log(JSON.stringify({passed:results.length}));

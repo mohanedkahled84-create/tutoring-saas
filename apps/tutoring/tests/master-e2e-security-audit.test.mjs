@@ -372,7 +372,9 @@ test("UI-01: Static DOM Verification — All centrlyApp methods called in onclic
   const onclickRegex = /onclick=["'](?:window\.)?centrlyApp\.([a-zA-Z0-9_]+)\(/g;
   const missingMethods = new Set();
 
-  const allModulesContent = componentFiles.map((f) => fs.readFileSync(path.join(componentsDir, f), "utf8")).join("\n");
+  // The public parent entry registers the same actions without importing the staff SPA.
+  const parentActions = fs.readFileSync(path.resolve(componentsDir, "../parentPortal.js"), "utf8");
+  const allModulesContent = componentFiles.map((f) => fs.readFileSync(path.join(componentsDir, f), "utf8")).join("\n") + parentActions;
 
   for (const file of componentFiles) {
     const filePath = path.join(componentsDir, file);
