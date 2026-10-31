@@ -29,6 +29,10 @@ jobs:
         working-directory: apps/tutoring
         run: npm audit --audit-level=moderate
 
+      - name: Verify parent entry bundle
+        working-directory: apps/tutoring
+        run: npm run build:parent-entry -- --check
+
       - name: Verify TypeScript Compilation
         working-directory: apps/tutoring
         run: npm run build
