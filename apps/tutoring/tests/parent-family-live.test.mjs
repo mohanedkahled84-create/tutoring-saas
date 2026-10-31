@@ -66,6 +66,15 @@ test('LIVE: delivered family password opens only the registered family across te
  assert.equal((await post('/logout',{family_token:arrived.family_token},target)).status,200);
  assert.equal((await post('/account',{family_token:session.family_token})).status,401);
  assert.equal((await post('/handoff',{ticket:pending.destination.ticket},target)).status,401);
+ // Concurrent logout/transfer cannot deadlock or leave a derived session alive.
+ for(let i=0;i<3;i++){
+  const fresh=await (await post('/login',{phone,password:secret})).json();assert.ok(fresh.family_token);
+  const moving=await (await post('/account',{family_token:fresh.family_token,student_id:second.id})).json();
+  const [exiting,redeeming]=await Promise.all([post('/logout',{family_token:fresh.family_token}),post('/handoff',{ticket:moving.destination.ticket},target)]);
+  assert.equal(exiting.status,200);assert.ok([200,401].includes(redeeming.status),'A transfer race must not deadlock');
+  if(redeeming.status===200){const transferred=await redeeming.json();assert.equal((await post('/account',{family_token:transferred.family_token,student_id:second.id},target)).status,401);}
+  assert.equal((await post('/account',{family_token:fresh.family_token})).status,401);
+ }
  for(const table of ['parent_family_accounts','parent_family_sessions','parent_family_handoffs','parent_family_limits'])assert.equal((await anonClient.from(table).select('*')).error?.code,'42501');
  const privateRpcs=[['parent_family_phone',{p_phone:phone}],['parent_family_limit',{p_key:'forged',p_max:100}],['parent_family_identity',{p_token_hash:'forged',p_origin:root}],['parent_family_directory',{p_token_hash:'forged',p_origin:root}],['parent_family_context',{p_token_hash:'forged',p_origin:root,p_student_id:own.id}],['parent_family_delivery',{p_tenant_id:tenant,p_student_id:own.id,p_hash:'forged',p_cipher:'forged'}],['parent_family_redeem',{p_ticket_hash:'forged',p_origin:root,p_token_hash:'forged'}],['parent_family_logout',{p_token_hash:'forged',p_origin:root}]];
  for(const [name,args] of privateRpcs)assert.equal((await anonClient.rpc(name,args)).error?.code,'42501',name);

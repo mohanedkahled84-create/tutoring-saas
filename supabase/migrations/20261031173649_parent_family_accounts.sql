@@ -98,7 +98,9 @@ create function public.parent_family_redeem(p_ticket_hash text,p_origin text,p_t
 language plpgsql security invoker set search_path = '' as $$
 declare v_ticket public.parent_family_handoffs; v_source public.parent_family_sessions; v_account public.parent_family_accounts; v_context jsonb;
 begin
- delete from public.parent_family_handoffs where ticket_hash=p_ticket_hash and target_origin=p_origin and expires_at>now() returning * into v_ticket;
+ -- Inspect without a ticket lock, then acquire the account lock FIRST, as logout does.
+ -- Deleting the ticket first could deadlock against logout's cascading handoff deletion.
+ select * into v_ticket from public.parent_family_handoffs where ticket_hash=p_ticket_hash and target_origin=p_origin and expires_at>now();
  if not found then return null; end if;
  select * into v_source from public.parent_family_sessions where id=v_ticket.session_id and expires_at>now();
  if not found then return null; end if;
@@ -106,6 +108,8 @@ begin
  if not found then return null; end if;
  -- Same account lock as logout: a concurrent transfer cannot survive revocation.
  perform 1 from public.parent_family_sessions where id=v_source.id and expires_at>now();
+ if not found then return null; end if;
+ delete from public.parent_family_handoffs where ticket_hash=p_ticket_hash and target_origin=p_origin and expires_at>now() returning * into v_ticket;
  if not found then return null; end if;
  select public.portal_student_context(s.id,s.tenant_id,null) into v_context from public.students s
  where s.id=v_ticket.student_id and public.parent_family_phone(s.parent_phone)=v_account.phone;
