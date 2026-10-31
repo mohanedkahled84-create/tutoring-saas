@@ -14,7 +14,7 @@ const types = {'.html':'text/html','.js':'application/javascript','.css':'text/c
   const browser = await chromium.launch({headless:true, ...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {})});
   const results = [];
   try {
-    for (const width of [390,1440]) for (const routeName of ['login','dashboard']) for (const version of baseline ? ['before','after'] : ['after']) {
+    for (const width of [390,1440]) for (const routeName of ['login','dashboard','link']) for (const version of baseline ? ['before','after'] : ['after']) {
       const context = await browser.newContext({viewport:{width,height:900}});
       const page = await context.newPage();
       const errors = [];
@@ -32,13 +32,14 @@ const types = {'.html':'text/html','.js':'application/javascript','.css':'text/c
         }
         if (url.pathname.startsWith('/api/')) {
           await pending;
+          if (url.pathname.includes('/short-links/')) return route.fulfill({status:404,contentType:'application/json',headers:{'Access-Control-Allow-Origin':'https://teacher-test.centerly-eg.com'},body:JSON.stringify({error:{message:'رابط اختبار غير صالح'}})});
           const data = url.pathname.includes('parent-portal')
             ? {student:{id:'fixture-id',name:'طالب اختبار الظهور',student_code:'3210'},summary:{total_sessions:0,attendance_rate:'لا توجد بيانات'},materials:[],quizzes:[],sessions:[]}
             : {settings:{subdomain:'teacher-test',is_active:true,theme_preset:'emerald'}};
           return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':'https://teacher-test.centerly-eg.com'},body:JSON.stringify(data)});
         }
         if (url.hostname !== 'teacher-test.centerly-eg.com') return route.abort();
-        const entry = url.pathname === '/login' ? 'teacher-platform-sample/login.html' : url.pathname === '/dashboard' ? 'teacher-platform-sample/index.html' : null;
+        const entry = url.pathname === '/login' ? 'teacher-platform-sample/login.html' : url.pathname === '/dashboard' ? 'teacher-platform-sample/index.html' : url.pathname.startsWith('/s/') ? 'index.html' : null;
         if (entry) {
           const html = version === 'before'
             ? execFileSync('git',['show',baseline+':'+entry],{cwd:root,encoding:'utf8'})
@@ -50,7 +51,7 @@ const types = {'.html':'text/html','.js':'application/javascript','.css':'text/c
         try { return route.fulfill({contentType:types[path.extname(file)]||'application/octet-stream',body:fs.readFileSync(file)}); }
         catch { return route.fulfill({status:404,body:''}); }
       });
-      await page.goto('https://teacher-test.centerly-eg.com/' + routeName, {waitUntil:'commit'});
+      await page.goto('https://teacher-test.centerly-eg.com/' + (routeName === 'link' ? 's/s12345678' : routeName), {waitUntil:'commit'});
       await page.waitForTimeout(1500);
       const early = await page.evaluate(() => ({
         fcp:performance.getEntriesByName('first-contentful-paint')[0]?.startTime || null,
