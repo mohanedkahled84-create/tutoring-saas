@@ -42,6 +42,15 @@ test('invalid credentials remain errors with status, and public requests never s
   await assert.rejects(session.portalRequest('/public/parent-portal'), error => error.status === 401);
 });
 
+test('portal transfers use a flat POST body without putting credentials in the URL',async t=>{
+  t.mock.method(globalThis,'fetch',async(url,options)=>{
+    assert.ok(!url.includes('private-ticket'));assert.match(options.headers['Content-Type'],/^application\/x-www-form-urlencoded/);
+    assert.equal(new URLSearchParams(options.body).get('ticket'),'private-ticket');
+    return{ok:true,json:async()=>({ok:true})};
+  });
+  assert.equal((await session.portalRequest('/public/portal/handoff',{method:'POST',body:{ticket:'private-ticket'}})).ok,true);
+});
+
 test('published students land directly on the dashboard using a one-time transfer', async () => {
   const destinationSource = await readFile(new URL('../../web/src/utils/portalDestination.js', import.meta.url), 'utf8');
   const {preparePortalDestination} = await import('data:text/javascript;base64,' + Buffer.from(destinationSource).toString('base64'));
@@ -49,6 +58,14 @@ test('published students land directly on the dashboard using a one-time transfe
   await preparePortalDestination({},'private-session','student',async()=>({origin:'https://mr-omar.centerly-eg.com',presentation:{subdomain:'mr-omar'},ticket}),{hostname:'centerly-eg.com',origin:'https://centerly-eg.com',replace:url=>moves.push(url)});
   assert.deepEqual(moves,['https://mr-omar.centerly-eg.com/dashboard#handoff='+ticket]);
   assert.ok(!moves[0].includes('private-session'));
+});
+
+test('a server-resolved short link reuses its destination without another HTTP request',async()=>{
+  const source=await readFile(new URL('../../web/src/utils/portalDestination.js',import.meta.url),'utf8');
+  const {preparePortalDestination}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+  const moves=[],ticket='c'.repeat(43),destination={origin:'https://mr-omar.centerly-eg.com',presentation:{subdomain:'mr-omar'},ticket};
+  assert.equal(await preparePortalDestination({},'verified','student',()=>{throw Error('Redundant destination request');},{hostname:'centerly-eg.com',origin:'https://centerly-eg.com',replace:url=>moves.push(url)},destination),true);
+  assert.deepEqual(moves,[destination.origin+'/dashboard#handoff='+ticket]);
 });
 
 test('server-verified renewal retains only the same identity snapshot and preserves its original age', async t => {

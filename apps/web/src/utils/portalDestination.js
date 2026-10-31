@@ -6,11 +6,11 @@ export function validPortalTarget(origin) {
   try { const u = new URL(origin); return u.origin === origin && u.protocol === 'https:' && !u.port && isPortalHost(u.hostname); }
   catch { return false; }
 }
-export async function preparePortalDestination(app, token, role, request, location = window.location) {
+export async function preparePortalDestination(app, token, role, request, location = window.location, verifiedDestination = null) {
   if (!isPortalHost(location.hostname)) return false;
   const arrival = typeof window !== 'undefined' ? window.__centrlyPortalArrival : null;
-  const result = arrival?.token === token && arrival.role === role && arrival.origin === location.origin
-    ? arrival : await request('/public/portal/destination', { method: 'POST', body: { token, role } });
+  const result = verifiedDestination || (arrival?.token === token && arrival.role === role && arrival.origin === location.origin
+    ? arrival : await request('/public/portal/destination', { method: 'POST', body: { token, role } }));
   if (arrival === result) window.__centrlyPortalArrival = null;
   if (!validPortalTarget(result?.origin)) throw new Error('تعذر تحديد وجهة المتابعة');
   app._portalPresentation = result.presentation || null;

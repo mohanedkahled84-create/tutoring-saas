@@ -24,6 +24,12 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   const post=async(path,body,origin=root)=>fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)});
   const destination=async(role='parent',credential=token)=>{const res=await post('/destination',{token:credential,role,tenant_id:other,subdomain:'evil'});assert.equal(res.status,200);assert.match(res.headers.get('cache-control'),/no-store/);return res.json();};
   const basic=await destination();assert.equal(basic.origin,root);assert.equal(basic.ticket,null);assert.equal(basic.presentation,null);
+  const fastEntry=async(id=student.id,entry='s')=>{
+    const response=await fetch(`http://127.0.0.1:${server.address().port}/api/public/short-links/${deriveShortCode(id,entry==='s'?'student':'parent')}?entry=${entry}`,{headers:{Origin:root}});
+    assert.equal(response.status,200);assert.match(response.headers.get('cache-control'),/no-store/);return response.json();
+  };
+  const fastBasic=await fastEntry();assert.equal(fastBasic.destination.origin,root);assert.equal(fastBasic.destination.ticket,null);
+  assert.equal(verifyParentPortalToken(fastBasic.token).student_id,student.id);
   const resolveOld=async role=>{
     const response=await fetch(`http://127.0.0.1:${server.address().port}/api/public/short-links/${deriveShortCode(student.id,role)}`);
     assert.equal(response.status,200);const data=await response.json();assert.equal(data.student_id,student.id);assert.equal(data.portal_type,role);return data;
@@ -33,10 +39,19 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   assert.equal((await post('/destination',{token,role:'admin'})).status,400);
   // Existing CORS middleware rejects external origins before the portal router.
   const external=await post('/destination',{token,role:'parent'},'https://evil.test');assert.equal(external.status,403);assert.equal((await external.json()).error.code,'CORS_FORBIDDEN');
+  assert.equal((await fetch(base+'/destination',{method:'POST',headers:{Origin:'https://evil.test'},body:new URLSearchParams({token,role:'student'})})).status,403);
   ok(await db.from('tenant_platform_settings').update({is_active:true}).eq('tenant_id',tenant));
   assert.equal((await destination()).origin,root,'Unverified HTTPS domain must keep the working basic portal');
   ok(await db.from('portal_domain_bindings').insert({tenant_id:tenant,subdomain:sub}));
   const advanced=await destination();assert.equal(advanced.origin,target);assert.match(advanced.ticket,/^[A-Za-z0-9_-]{43}$/);assert.equal((await destination('parent',otherToken)).origin,root);
+  const fastStudent=await fastEntry();assert.equal(fastStudent.destination.origin,target);
+  const fastArrival=await fetch(base+'/handoff',{method:'POST',headers:{Origin:target},body:new URLSearchParams({ticket:fastStudent.destination.ticket})});assert.equal(fastArrival.status,200);assert.equal((await fastArrival.json()).role,'student');
+  assert.equal((await post('/handoff',{ticket:fastStudent.destination.ticket},target)).status,401);
+  const fastParent=await fastEntry(student.id,'p');assert.equal((await (await post('/handoff',{ticket:fastParent.destination.ticket},target)).json()).role,'parent');
+  const legacy='legacy-'+randomUUID();ok(await db.from('students').update({parent_portal_token:legacy}).eq('tenant_id',other).eq('id',otherStudent.id));
+  const legacyEntry=await fastEntry(otherStudent.id);assert.equal(legacyEntry.token,legacy);assert.equal(legacyEntry.destination.origin,root);
+  const wrongCode='mismatch-'+randomUUID();ok(await db.from('short_links').insert({code:wrongCode,tenant_id:tenant,student_id:student.id,portal_type:'student',token:otherToken}));
+  assert.equal((await fetch(`http://127.0.0.1:${server.address().port}/api/public/short-links/${wrongCode}?entry=s`,{headers:{Origin:root}})).status,401);
   const stored=ok(await db.from('portal_handoffs').select('*').eq('ticket_hash',hashPortalTicket(advanced.ticket)).single());assert.equal(stored.student_id,student.id);assert.equal(stored.tenant_id,tenant);assert.ok(!JSON.stringify(stored).includes(token));
   assert.equal((await post('/handoff',{ticket:advanced.ticket},root)).status,401);
   const race=await Promise.all([post('/handoff',{ticket:advanced.ticket},target),post('/handoff',{ticket:advanced.ticket},target)]);assert.deepEqual(race.map(r=>r.status).sort(),[200,401]);
@@ -48,9 +63,12 @@ test('LIVE: stable links follow publication and rename; handoffs are origin-boun
   assert.equal((await anonClient.from('portal_handoffs').select('*')).error?.code,'42501');
   assert.equal((await anonClient.from('portal_handoffs').insert({ticket_hash:hashPortalTicket('forged')})).error?.code,'42501');
   assert.equal((await anonClient.from('portal_domain_bindings').select('*')).error?.code,'42501');
+  const privateQueries=[['portal_student_context',{p_student_id:student.id,p_tenant_id:tenant,p_token:null}],['portal_tenant_context',{p_tenant_id:tenant}],['resolve_portal_entry_context',{p_code:deriveShortCode(student.id,'student')}],['consume_portal_entry_handoff',{p_ticket_hash:hashPortalTicket('not-a-ticket'),p_origin:target}]];
+  for(const [name,args] of privateQueries)assert.equal((await anonClient.rpc(name,args)).error?.code,'42501');
   const email=`portal-handoff-${randomUUID()}@example.invalid`,password=`Portal!${randomUUID()}a9`;
   authUser=ok(await db.auth.admin.createUser({email,password,email_confirm:true})).user.id;
   ok(await anonClient.auth.signInWithPassword({email,password}));
+  for(const [name,args] of privateQueries)assert.equal((await anonClient.rpc(name,args)).error?.code,'42501');
   assert.equal((await anonClient.from('portal_handoffs').select('*')).error?.code,'42501');
   assert.equal((await anonClient.from('portal_handoffs').delete().eq('tenant_id',tenant)).error?.code,'42501');
   assert.equal((await anonClient.from('portal_domain_bindings').insert({tenant_id:tenant,subdomain:'forged'})).error?.code,'42501');
