@@ -31,5 +31,6 @@
   "assistant_access_audit": ["id", "tenant_id", "assistant_id", "action", "target_id", "created_at", "actor_name", "target_name", "changes"],
   "assistant_phone_verifications": ["invitation_id", "challenge_id", "code_hash", "origin", "expires_at", "requested_at", "attempts", "delivery_status", "consumed_at", "verification_claim_hash"],
   "teacher_phone_verifications": ["user_id", "tenant_id", "phone", "challenge_id", "code_hash", "origin", "expires_at", "requested_at", "attempts", "delivery_status", "confirmed_at"],
-  "phone_otp_daily_budget": ["day", "used"]
+  "phone_otp_daily_budget": ["day", "used"],
+  "phone_otp_provider_attempts": ["challenge_id", "purpose", "subject", "invitation_id", "user_id", "origin", "phone", "request_id", "transaction_id", "expires_at", "attempts", "verified_code_hash"]
 }
