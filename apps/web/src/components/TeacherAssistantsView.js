@@ -4,6 +4,7 @@ import { request } from "../services/api.js";
 import { renderAssistantPayFields, updateAssistantPayFields, readAssistantPayFields } from "./AssistantPayFields.js";
 import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js";
 import { registerAssistantActivityActions } from "./AssistantActivityView.js";
+import { assistantInvitationStatus } from "../utils/assistantInvitation.js";
 import { assistantPay } from "../utils/assistantPay.js";
 
 /**
@@ -198,7 +199,7 @@ export function renderTeacherAssistantsView(
                     <tr>
                       <td style="font-weight: 800; color: #0f172a;">
                         ${escapeHtml(a.name)}
-                        <div style="font-weight:400;font-size:.8rem;margin-top:.35rem;color:var(--centrly-text)">${a.access ? a.status === 'inactive' ? 'الوصول متوقف' : a.status === 'active' ? 'حساب مستقل' : a.invitation?.delivery_status === 'sent' ? 'دعوة مرسلة — بانتظار القبول' : a.invitation?.delivery_status === 'blocked' ? 'الدعوة محفوظة — واتساب متوقف' : 'دعوة محفوظة لم يكتمل إرسالها' : 'سجل قديم — لم يُربط بحساب مستقل'}</div>
+                        <div style="font-weight:400;font-size:.8rem;margin-top:.35rem;color:var(--centrly-text)">${escapeHtml(assistantInvitationStatus(a))}</div>
                       </td>
                       <td>
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
@@ -246,7 +247,7 @@ export function renderTeacherAssistantsView(
                     <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: #64748b;">
                       <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">${getIcon('assistants', 32, '#94a3b8')}</div>
                       لم يتم إضافة مساعدين بعد.<br>
-                      اضغط على زر <b>"إضافة مساعد جديد"</b> لتسجيل أفراد فريقك وتحديد أدوارهم.
+                      اضغط على <b>"دعوة مساعد"</b> وحدد رقم واتساب وصلاحياته. سيكمل اسمه وكلمة مروره بنفسه.
                     </td>
                   </tr>
                 `}
@@ -262,6 +263,7 @@ export function registerTeacherAssistantsActions(app) {
   registerAssistantActivityActions(app);
   const payVisible=()=> (!app.hasSecurityPin || app.isFinancialUnlocked) && !app.hideFinancialNumbers;
   app.updateTeacherAssistantPayFields = updateAssistantPayFields;
+  const beginSave=event=>{const form=event.currentTarget;if(form.dataset.saving)return null;form.dataset.saving='true';const buttons=[...form.elements].filter(el=>el.type==='submit');for(const button of buttons){button.disabled=true;button.dataset.label=button.textContent;button.textContent='جارٍ الحفظ…';}return ()=>{delete form.dataset.saving;for(const button of buttons){button.disabled=false;button.textContent=button.dataset.label;delete button.dataset.label;}};};
   app.prepareAssistantInvitation = function(id) {
     const assistant=(this.teacherAssistants || []).find(a=>a.id===id);
     if(!assistant) return;
@@ -271,11 +273,12 @@ export function registerTeacherAssistantsActions(app) {
   app.sendAssistantReinvitation = async function(event,id) {
     event.preventDefault();
     const a=(this.teacherAssistants || []).find(a=>a.id===id);if(!a)return;
+    const finish=beginSave(event);if(!finish)return;
     try {
       const access=readAssistantAccessFields('reinvite');
-      const result=await request('/assistants/invitations',{method:'POST',body:{assistant_id:id,phone:a.phone,...access,salary_model:a.salary_model || 'monthly',salary:a.salary || 0,work_weekdays:a.work_weekdays || [],pay_start_date:a.pay_start_date || null}});
+      const result=await request('/assistants/invitations',{method:'POST',body:{assistant_id:id,phone:a.phone,...access}});
       this.closeModal();this.showToast(result.message,result.delivery_status==='sent'?'success':'warning');await this.loadRouteData('assistants');
-    } catch(error){this.showToast(error.message || 'تعذر حفظ الدعوة','danger');}
+    } catch(error){this.showToast(error.message || 'تعذر حفظ الدعوة','danger');}finally{finish();}
   };
   app.openAddTeacherAssistantModal = function() {
     if (!payVisible()) {
@@ -316,6 +319,7 @@ export function registerTeacherAssistantsActions(app) {
       return;
     }
 
+    const finish=beginSave(e);if(!finish)return;
     try {
       const pay = readAssistantPayFields('modalTA');
       const access = readAssistantAccessFields('modalTA');
@@ -337,7 +341,7 @@ export function registerTeacherAssistantsActions(app) {
       await this.loadRouteData('assistants');
     } catch (err) {
       this.showToast(`فشل إضافة المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
-    }
+    }finally{finish();}
   };
 
   app.openEditTeacherAssistantModal = function(assistantId) {
@@ -405,6 +409,7 @@ export function registerTeacherAssistantsActions(app) {
     const group_id = document.getElementById('modalEditTA_GroupId')?.value || null;
     const role_type = document.getElementById('modalEditTA_RoleType')?.value || 'both';
 
+    const finish=beginSave(e);if(!finish)return;
     try {
       const pay = payVisible() && document.getElementById('modalEditTA_SalaryModel') ? readAssistantPayFields('modalEditTA') : {};
       const assistant = (this.teacherAssistants || []).find(a => a.id === assistantId);
@@ -427,7 +432,7 @@ export function registerTeacherAssistantsActions(app) {
       await this.loadRouteData('assistants');
     } catch (err) {
       this.showToast(`فشل تعديل بيانات المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
-    }
+    }finally{finish();}
   };
 
   app.deleteTeacherAssistant = function(id, name) {

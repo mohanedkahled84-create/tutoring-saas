@@ -7,7 +7,7 @@ import { config } from '../../shared/config/index.js';
 import type { AuthenticatedRequest } from '../../shared/types/index.js';
 import { familyHash, familyToken, familyPhone, validFamilyToken } from '../../shared/utils/parentFamily.js';
 import { portalOrigin, trustedPortalOrigin } from '../../shared/utils/portalDestination.js';
-import { approvedUtilityTemplate } from '../../shared/utils/metaTemplatePolicy.js';
+import { notifyAssistantInvitation } from './invitationDelivery.js';
 import { validatePay, isPayDate } from './payroll.js';
 import { signHomeworkFile } from '../homework/files.js';
 import {loadAssistantActivity} from './activity.js';
@@ -169,21 +169,16 @@ assistantManagementRouter.get('/activity',async(req:AuthenticatedRequest,res)=>{
  try {res.json(await loadAssistantActivity(getServiceSupabaseClient(),req.user!.tenant_id!,req.query));}
  catch(error){sendError(res,error);}
 });
-async function notifyInvitation(phone:string,teacher:string,invitationId:string,nonce:string) {
- if(!config.meta.appSecret || !await approvedUtilityTemplate({baseUrl:'https://graph.facebook.com/v22.0',accessToken:config.meta.accessToken,wabaId:config.meta.wabaId,name:'centerly_assistant_invitation_v1',language:'ar'})) return 'blocked';
- try {
-  const response=await fetch(`https://graph.facebook.com/v22.0/${config.meta.phoneNumberId}/messages`,{method:'POST',headers:{Authorization:`Bearer ${config.meta.accessToken}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(8000),body:JSON.stringify({messaging_product:'whatsapp',to:phone,type:'template',template:{name:'centerly_assistant_invitation_v1',language:{code:'ar'},components:[{type:'body',parameters:[{type:'text',text:teacher},{type:'text',text:`AST-${invitationId.slice(0,8).toUpperCase()}`}]},{type:'button',sub_type:'quick_reply',index:'0',parameters:[{type:'payload',payload:`CENTRLY_ASSISTANT:${nonce}`}]}]}})});
-  const result:any=await response.json();return response.ok && result?.messages?.[0]?.id ? 'sent':'failed';
- }catch{return 'failed';}
-}
 assistantManagementRouter.post('/invitations',async(req:AuthenticatedRequest,res)=>{
  try {
   const db=getServiceSupabaseClient(),tenant=req.user!.tenant_id,access=validateAssistantAccess(req.body);
   const phone=familyPhone(req.body.phone);if(!phone) throw fault(400,'أدخل رقم واتساب صحيحًا');
   const id=req.body.assistant_id?z.uuid().parse(req.body.assistant_id):null;
   await limit(db,`invite:${tenant}:${phone}`,3);
-  let pay;
-  try {pay=validatePay(req.body);}catch(error){throw fault(400,(error as Error).message);}
+  // Existing records retain pay inside assistant_invite's transaction. Do not
+  // validate or resend a possibly stale salary snapshot just to recover access.
+  let pay:Record<string,unknown>={};
+  if(!id)try {pay=validatePay(req.body);}catch(error){throw fault(400,(error as Error).message);}
   let teacher=req.user?.teacher_id || null;
   if(!teacher) {
    const {data,error}=await db.from('teachers').select('id').eq('tenant_id',tenant).eq('user_id',req.user!.id).maybeSingle();
@@ -192,7 +187,7 @@ assistantManagementRouter.post('/invitations',async(req:AuthenticatedRequest,res
   const nonce=familyToken();
   const invitation=await assistantRpc(db,'assistant_invite',{p_tenant:tenant,p_assistant:id,p_teacher:teacher,p_phone:phone,p_nonce_hash:familyHash(nonce),p_permissions:access.permissions,p_all_groups:access.all_groups,p_group_ids:access.group_ids,p_pay:pay});
   const {data:tenantInfo}=await db.from('tenants').select('name').eq('id',tenant).single();
-  const delivery=await notifyInvitation(phone,tenantInfo?.name || 'المعلم',invitation.invitation_id,nonce);
+  const delivery=await notifyAssistantInvitation(config.meta,phone,tenantInfo?.name || 'المعلم',nonce);
   const {error}=await db.from('assistant_invitations').update({delivery_status:delivery}).eq('id',invitation.invitation_id).eq('tenant_id',tenant);
   if(error) throw error;
   res.status(201).json({...invitation,delivery_status:delivery,message:delivery==='sent'?'تم إرسال الدعوة إلى واتساب':delivery==='blocked'?'تم حفظ الدعوة. إرسال واتساب متوقف لحين اعتماد قالب Utility':'تم حفظ الدعوة، لكن Meta لم تؤكد الإرسال'});
@@ -217,5 +212,5 @@ export async function confirmAssistantMessage(db:SupabaseClient,phone:string,pay
  const record=await assistantRpc(db,'assistant_confirm_invitation',{p_nonce_hash:familyHash(nonce),p_phone:phone,p_claim_hash:familyHash(ticket)});
  if(!record) return;
  const url=`${portalOrigin()}/assistant?workspace=${record.tenant_id}#invite=${ticket}`;
- if(!await reply(phone,`حساب المساعد لدى ${record.teacher_name}\n\nتم تأكيد رقم واتساب. استكمل اسمك وكلمة مرور خاصة بهذا المدرس من الرابط:\n${url}\n\nالرابط صالح لمدة ١٥ دقيقة ويستخدم مرة واحدة. احتفظ به لنفسك.`)) throw fault(502,'تعذر إرسال رابط استكمال الحساب');
+ if(!await reply(phone,`حسابك في فريق ${record.teacher_name}\n\nكمّل اسمك واختار كلمة مرور من هنا:\n${url}\n\nالرابط صالح لمدة ١٥ دقيقة ولمرة واحدة. ما تشاركوش مع حد.`)) throw fault(502,'تعذر إرسال رابط استكمال الحساب');
 }

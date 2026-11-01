@@ -101,6 +101,17 @@ test('LIVE: assistant invitations, independent teacher passwords, group permissi
  const managementResponse={status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
  await updateAccess({user:{tenant_id:tenants[0]},params:{id:invites[0].assistant_id},body:{permissions:{'students.view':true},all_groups:false,group_ids:[groups[0].id],status:'active'}},managementResponse);
  assert.equal(managementResponse.body.success,true);const retainedPay=ok(await db.from('assistants').select('salary,salary_model,work_weekdays,pay_start_date').eq('id',invites[0].assistant_id).single());assert.deepEqual(retainedPay,{salary:100,salary_model:'per_day',work_weekdays:[0,2,4],pay_start_date:'2026-11-01'},'non-financial access saves retain the configured pay');
+ // Reinvitation must work without sending a cached salary, even for daily pay.
+ // Explicitly disable Meta here: live fixtures must never send real messages.
+ const {config}=await import('../dist/shared/config/index.js');
+ const previousAppSecret=config.meta.appSecret;config.meta.appSecret='';
+ const reinviteResponse={status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
+ try {
+  const reinvite=assistantManagementRouter.stack.find(layer=>layer.route?.path==='/invitations').route.stack.at(-1).handle;
+  await reinvite({user:{tenant_id:tenants[0],id:randomUUID()},ip:'127.0.0.1',body:{assistant_id:invites[0].assistant_id,phone,permissions:{'students.view':true},all_groups:false,group_ids:[groups[0].id]}},reinviteResponse);
+ } finally {config.meta.appSecret=previousAppSecret;}
+ assert.equal(reinviteResponse.code,201,JSON.stringify(reinviteResponse.body));assert.equal(reinviteResponse.body.delivery_status,'blocked');
+ assert.deepEqual(ok(await db.from('assistants').select('salary,salary_model,work_weekdays,pay_start_date').eq('id',invites[0].assistant_id).single()),retainedPay,'recovering access never resets daily pay or schedule');
  assert.equal((await request('/me',undefined,session)).status,200,'another tenant cannot reconfigure this assistant');
  ok(await db.rpc('assistant_configure',{p_tenant:tenants[0],p_assistant:invites[0].assistant_id,p_permissions:{},p_all_groups:false,p_group_ids:[],p_status:'inactive',p_pay:pay}));
  assert.equal((await request('/me',undefined,session)).status,401);
