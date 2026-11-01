@@ -2,6 +2,9 @@
 export function redactPhoneAuthTelemetry<T>(value:T):T {
  const visit=(item:any):any=>{
   if(typeof item==='string'){
+   if(item.length<200000 && /^\s*[\[{]/.test(item)){
+    try{return JSON.stringify(visit(JSON.parse(item)));}catch{/* Non-JSON text still gets URL/secret filtering below. */}
+   }
    let text=item.replace(/([?&](?:APIKey|access_token)=)[^&#\s"']*/gi,'$1[Filtered]');
    const secret=process.env.AKEDLY_API_KEY;if(secret && secret.length>8)text=text.split(secret).join('[Filtered]');
    return text;
