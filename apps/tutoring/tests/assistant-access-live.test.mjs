@@ -25,7 +25,7 @@ test('LIVE: assistant invitations, independent teacher passwords, group permissi
  ok(await db.from('tenants').insert(tenants.map((id,i)=>({id,name:`isolated assistant teacher ${i}`}))));
  const groups=ok(await db.from('groups').insert([{tenant_id:tenants[0],name:'allowed group'},{tenant_id:tenants[0],name:'unassigned group'},{tenant_id:tenants[1],name:'other teacher group'}]).select('id,tenant_id'));
  const pay={salary_model:'per_day',salary:100,work_weekdays:[0,2,4],pay_start_date:'2026-11-01'};
- const permissions={'students.view':true,'students.create':true,'students.edit':true,'groups.view':true,'attendance.view':true,'attendance.edit':true,'materials.view':true,'materials.create':true,'materials.edit':true,'quizzes.view':true,'quizzes.create':true,'quizzes.edit':true,'homework.view':true,'homework.edit':true,'reports.view':true};
+ const permissions={'grades.view':true,'grades.edit':true,'students.view':true,'students.create':true,'students.edit':true,'groups.view':true,'attendance.view':true,'attendance.edit':true,'materials.view':true,'materials.create':true,'materials.edit':true,'quizzes.view':true,'quizzes.create':true,'quizzes.edit':true,'homework.view':true,'homework.edit':true,'reports.view':true};
  const invites=[];
  for(let i=0;i<2;i++){
   const nonce=familyToken();
@@ -70,6 +70,28 @@ test('LIVE: assistant invitations, independent teacher passwords, group permissi
  assert.equal((await request('/data/homework/edit',{id:privateSubmission.id,status:'approved',teacher_notes:''},session)).status,403);
  assert.equal((await request('/data/students',undefined,second)).status,200);assert.deepEqual((await (await request('/data/students',undefined,second)).json()).rows,[]);
  const quiz=await request('/data/quizzes/create',{group_id:groups[0].id,title:'test quiz',quiz_number:1,max_score:10,quiz_date:'2026-11-01'},session);assert.equal(quiz.status,200,await quiz.clone().text());
+ const quizId=(await quiz.json()).id;
+ const gradeRequest={quiz_id:quizId,student_id:student,score:0,note:'initial zero'};
+ const gradeList=await request(`/data/grades?quiz_id=${quizId}`,undefined,session);assert.equal(gradeList.status,200);const unrecorded=await gradeList.json();assert.equal(unrecorded.rows.length,1);assert.equal(unrecorded.rows[0].score,null,'unrecorded grades are not zero');assert.equal(unrecorded.quizzes.length,1);
+ assert.equal((await request('/data/grades/edit',gradeRequest,session)).status,200);
+ assert.equal((await request('/data/grades/edit',{...gradeRequest,score:7.5,note:'corrected'},session)).status,200);
+ assert.equal((await request('/data/grades/edit',{...gradeRequest,score:7.5,note:'corrected'},session)).status,200,'unchanged score saves remain idempotent');
+ const scoreRows=ok(await db.from('quiz_scores').select('id,score,max_score,note').eq('quiz_id',quizId));assert.equal(scoreRows.length,1);assert.equal(scoreRows[0].score,7.5);assert.equal(scoreRows[0].max_score,10);
+ for(const payload of [{...gradeRequest,score:11},{...gradeRequest,score:-1},{...gradeRequest,score:'8'},{...gradeRequest,max_score:100}])assert.equal((await request('/data/grades/edit',payload,session)).status,400);
+ assert.equal((await request('/data/grades/create',gradeRequest,session)).status,403);
+ assert.equal((await request('/data/grades/edit',{...gradeRequest,student_id:outsider.id},session)).status,403);
+ assert.equal((await request(`/data/grades?quiz_id=${quizId}`,undefined,second)).status,403);
+ const privateQuiz=ok(await db.from('quizzes').insert({tenant_id:tenants[0],group_id:groups[1].id,title:'out of scope quiz',quiz_number:1,max_score:10}).select('id').single());
+ assert.equal((await request(`/data/grades?quiz_id=${privateQuiz.id}`,undefined,session)).status,403);
+ assert.equal((await request('/data/grades/edit',{...gradeRequest,quiz_id:privateQuiz.id},session)).status,403);
+ const {error:anonGrade}=await anonClient.rpc('assistant_grades',{p_token_hash:familyHash(session),p_origin:origin,p_action:'view',p_data:{quiz_id:quizId}});assert.equal(anonGrade?.code,'42501');
+ ok(await db.from('quizzes').update({is_skipped:true}).eq('id',quizId));assert.equal((await request('/data/grades/edit',gradeRequest,session)).status,400);ok(await db.from('quizzes').update({is_skipped:false}).eq('id',quizId));
+ const gradeAudit=ok(await db.from('assistant_access_audit').select('action,actor_name,changes').eq('tenant_id',tenants[0]).eq('action','grades.edit'));assert.equal(gradeAudit.length,2);assert.ok(gradeAudit.some(h=>h.changes.before.score===0 && h.changes.after.score===7.5));assert.equal(gradeAudit[0].actor_name,me.name);
+ ok(await db.rpc('assistant_configure',{p_tenant:tenants[0],p_assistant:invites[0].assistant_id,p_permissions:{...permissions,'grades.edit':false},p_all_groups:false,p_group_ids:[groups[0].id],p_status:'active',p_pay:pay}));
+ assert.equal((await request(`/data/grades?quiz_id=${quizId}`,undefined,session)).status,200);assert.equal((await request('/data/grades/edit',gradeRequest,session)).status,403,'view-only grade access does not permit changing a result');
+ ok(await db.rpc('assistant_configure',{p_tenant:tenants[0],p_assistant:invites[0].assistant_id,p_permissions:{...permissions,'grades.view':false,'grades.edit':false},p_all_groups:false,p_group_ids:[groups[0].id],p_status:'active',p_pay:pay}));
+ assert.equal((await request('/data/grades',undefined,session)).status,403,'quiz setup access alone does not grant student grades');
+ ok(await db.rpc('assistant_configure',{p_tenant:tenants[0],p_assistant:invites[0].assistant_id,p_permissions:permissions,p_all_groups:false,p_group_ids:[groups[0].id],p_status:'active',p_pay:pay}));
  const material=await request('/data/materials/create',{group_id:groups[0].id,title:'test material',description:'',type:'link',url:'https://example.com/content',is_homework:true,due_date:'2026-11-01'},session);assert.equal(material.status,200,await material.clone().text());
  const sessionRow=ok(await db.from('sessions').insert({tenant_id:tenants[0],group_id:groups[0].id,session_number:1,session_date:'2026-11-01',status:'scheduled'}).select('id').single());
  const roster=(await (await request(`/data/attendance?session_id=${sessionRow.id}`,undefined,session)).json()).rows;assert.equal(roster[0].student_id,student);

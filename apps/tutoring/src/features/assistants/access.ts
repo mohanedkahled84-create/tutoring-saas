@@ -20,6 +20,7 @@ export const assistantCatalog = [
  { key:'homework', label:'مراجعة الواجبات', actions:['view','edit'] },
  { key:'materials', label:'المحاضرات والمذكرات', actions:['view','create','edit'] },
  { key:'quizzes', label:'الاختبارات', actions:['view','create','edit'] },
+ { key:'grades', label:'رصد الدرجات', actions:['view','edit'] },
  { key:'reports', label:'تقارير متابعة الطلاب', actions:['view'] },
 ] as const;
 const allowed = new Set(assistantCatalog.flatMap(p => p.actions.map(action => `${p.key}.${action}`)));
@@ -42,7 +43,7 @@ export async function assistantRpc(db:SupabaseClient,name:string,args:Record<str
   if (error.message.includes('FORBIDDEN')) throw fault(403,'هذه العملية خارج صلاحياتك أو مجموعاتك');
   if (error.message.includes('NOT_FOUND')) throw fault(404,'الحساب غير موجود');
   if (error.message.includes('LEGACY_STAFF_LOGIN')) throw fault(409,'هذا السجل مرتبط بدخول مساعد قديم؛ يلزم نقل الدخول القديم قبل تفعيل الصلاحيات الجديدة');
-  if (error.message.includes('INVALID_INPUT')) throw fault(400,'راجع بيانات الدعوة');
+  if (error.message.includes('INVALID_INPUT')) throw fault(400,'راجع البيانات المدخلة');
   if (error.code==='23505') throw fault(409,'الرقم أو السجل مسجل بالفعل لدى هذا المدرس');
   throw fault(503,'تعذر إتمام العملية الآن، حاول مجددًا');
  }
@@ -78,6 +79,7 @@ const resourceSchemas:Record<string,z.ZodType>={
  attendance:z.object({id:z.uuid().nullable().optional(),student_id:z.uuid(),session_id:z.uuid(),attended:z.boolean(),homework_status:z.enum(['done','partial','missing']),comment:text(2000).default('')}).strict(),
  homework:z.object({id:z.uuid(),status:z.enum(['approved','rejected']),teacher_notes:text(2000).default('')}).strict(),
  materials:z.object({...base,title:name,description:text(4000).default(''),type:z.enum(['pdf','video','link']),url:z.url().refine(u=>new URL(u).protocol==='https:'),is_homework:z.boolean(),due_date:date.or(z.literal('')).default('')}).strict(),
+ grades:z.object({quiz_id:z.uuid(),student_id:z.uuid(),score:z.number().finite().min(0).max(100000),note:text(2000).default('')}).strict(),
  quizzes:z.object({...base,title:name,quiz_number:z.number().int().min(1).max(100000),max_score:z.number().positive().max(100000),quiz_date:date}).strict(),
 };
 
@@ -134,7 +136,8 @@ assistantAccessRouter.post('/logout',async(req,res)=>{
 assistantAccessRouter.get('/data/:resource',async(req,res)=>{
  try {
   if(!assistantCatalog.some(p=>p.key===req.params.resource)) throw fault(403,'صفحة غير مسموحة');
-  const data=req.query.session_id?{session_id:z.uuid().parse(req.query.session_id)}:{};
+  const data=req.params.resource==='grades' ? (req.query.quiz_id?{quiz_id:z.uuid().parse(req.query.quiz_id)}:{}) : req.query.session_id?{session_id:z.uuid().parse(req.query.session_id)}:{};
+  if(req.params.resource==='grades'){res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_grades',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'view',p_data:data}));return;}
   res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_workspace',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_resource:req.params.resource,p_action:'view',p_data:data}));
  }catch(error){sendError(res,error);}
 });
@@ -144,6 +147,7 @@ assistantAccessRouter.post('/data/:resource/:action',async(req,res)=>{
   if(!schema || !['create','edit'].includes(req.params.action)) throw fault(403,'عملية غير مسموحة');
   const selectedSchema=req.params.resource==='quizzes' && req.params.action==='edit' ? z.object({id:z.uuid(),title:name,quiz_date:date}).strict() : schema;
   const data=selectedSchema.parse(req.body) as Record<string,unknown>;
+  if(req.params.resource==='grades'){if(req.params.action!=='edit')throw fault(403,'عملية غير مسموحة');res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_grades',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'edit',p_data:data}));return;}
   if(req.params.action==='edit' && req.params.resource!=='attendance' && !data.id) throw fault(400,'السجل مطلوب');
   if(req.params.action==='create' && req.params.resource!=='groups' && !data.group_id) throw fault(400,'اختر المجموعة');
   res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_workspace',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_resource:req.params.resource,p_action:req.params.action,p_data:data}));

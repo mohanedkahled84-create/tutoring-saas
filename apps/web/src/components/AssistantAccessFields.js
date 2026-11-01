@@ -3,7 +3,7 @@ export const assistantPages = [
  ['groups','المجموعات',['view','create','edit']], ['students','الطلاب',['view','create','edit']],
  ['sessions','الحصص والجدول',['view']], ['attendance','الحضور والمتابعة',['view','edit']],
  ['homework','مراجعة الواجبات',['view','edit']], ['materials','المحاضرات والمذكرات',['view','create','edit']],
- ['quizzes','الاختبارات',['view','create','edit']], ['reports','تقارير متابعة الطلاب',['view']],
+ ['quizzes','الاختبارات',['view','create','edit']], ['grades','رصد الدرجات',['view','edit']], ['reports','تقارير متابعة الطلاب',['view']],
 ];
 const actionLabels={view:'عرض',create:'إنشاء',edit:'تعديل'};
 export function renderAssistantAccessFields(prefix,groups=[],access={}) {

@@ -4,7 +4,7 @@ import {z} from 'zod';
 const fields:Record<string,string[]>={
  groups:['name','subject'],students:['name','parent_phone','student_phone','notes','group_id'],
  attendance:['attended','homework_status','comment'],materials:['title','description','type','url','is_homework','due_date'],
- homework:['status','teacher_notes'],quizzes:['title','quiz_number','max_score','quiz_date'],
+ grades:['score','max_score','note'],homework:['status','teacher_notes'],quizzes:['title','quiz_number','max_score','quiz_date'],
 };
 export function safeAssistantChanges(action:string,changes:any) {
  const keys=fields[action.split('.')[0]] || [];
