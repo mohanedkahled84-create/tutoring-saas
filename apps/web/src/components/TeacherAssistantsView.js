@@ -2,11 +2,11 @@ import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
 import { renderAssistantPayFields, updateAssistantPayFields, readAssistantPayFields } from "./AssistantPayFields.js";
-import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js?v=4";
+import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js?v=5";
 import { registerAssistantActivityActions } from "./AssistantActivityView.js?v=4";
 import { assistantInvitationStatus } from "../utils/assistantInvitation.js";
 import {registerFollowupOwnerActions} from './FollowupReports.js';
-import {registerCollectionOwnerActions} from "./CollectionLedger.js";
+import {registerCollectionOwnerActions} from "./CollectionLedger.js?v=2";
 import { assistantPay } from "../utils/assistantPay.js";
 
 /**
@@ -15,7 +15,7 @@ import { assistantPay } from "../utils/assistantPay.js";
  * - Assigned Group (or all groups)
  * - Nature of work (إداري / تعليمي / شامل)
  * - Salary model (بالحصة / بالشهر)
- * - Security PIN protection & mask numbers toggle
+ * - Optional visual number masking; access is controlled by account permissions
  */
 
 export function renderTeacherAssistantsView(
@@ -24,9 +24,8 @@ export function renderTeacherAssistantsView(
   securityState = { hasPin: false, isUnlocked: true, hideNumbers: false }
 ) {
   const assistantList = assistants || [];
-  const { hasPin, isUnlocked, hideNumbers } = securityState;
-  const salaryLocked = hasPin && !isUnlocked;
-  const concealPay = salaryLocked || hideNumbers;
+  const { hideNumbers } = securityState;
+  const concealPay = !!hideNumbers;
 
   // Compute stats
   const totalAssistants = assistantList.length;
@@ -34,59 +33,13 @@ export function renderTeacherAssistantsView(
   const dailyCount = assistantList.filter(a => a.salary_model === 'per_day').length;
   const monthlyCount = assistantList.filter(a => a.salary_model === 'monthly' || !a.salary_model).length;
 
-  const paySummary = assistantList.filter(a => a.status === 'active').map(a => assistantPay(a));
+  const paySummary = assistantList.filter(a => a.status !== 'inactive').map(a => assistantPay(a));
   const totalMonthlySalaries = paySummary.reduce((sum, p) => sum + p.amount, 0);
   const displayMonthly = concealPay ? '••••••' : paySummary.some(p => !p.available) ? 'غير متاح حاليًا' : `${totalMonthlySalaries.toLocaleString('ar-EG')} ج.م`;
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
       
-      <!-- Security PIN Banner / Status Bar -->
-      <div class="card" style="margin: 0; background: ${!hasPin ? '#fffbeb' : '#f8fafc'}; border: 1px solid ${!hasPin ? '#fde68a' : '#e2e8f0'}; padding: 1rem 1.25rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="display: flex; align-items: center;">${!hasPin ? getIcon('alertTriangle', 22, '#d97706') : (isUnlocked ? getIcon('lock', 22, '#10b981') : getIcon('lock', 22, '#64748b'))}</div>
-            <div>
-              <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">
-                ${!hasPin 
-                  ? 'حماية المرتبات برمز الأمان (PIN) غير مفعلة' 
-                  : (isUnlocked ? 'المرتبات مفتوحة حاليًا' : 'المرتبات مقفلة برمز الأمان')}
-              </div>
-              <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.15rem;">
-                ${!hasPin 
-                  ? 'قم بتعيين رمز PIN مكون من 4 إلى 6 أرقام لمنع أي شخص بجانبك من الاطلاع على مرتبات المساعدين والأرباح.' 
-                  : (isUnlocked ? 'تُقفل المرتبات تلقائيًا عند الانتقال لصفحة أخرى. إدارة الفريق والصلاحيات تظل متاحة.' : 'البيانات المالية محمية برمز الأمان.')}
-              </div>
-            </div>
-          </div>
-
-          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            ${!hasPin ? `
-              <button class="btn btn-warning" onclick="window.centrlyApp.openSetPinModal()" style="font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
-                ${getIcon('lock', 16)}
-                <span>تعيين رمز PIN الآن</span>
-              </button>
-            ` : `
-              <button class="btn btn-secondary" onclick="window.centrlyApp.toggleHideFinancialNumbers()" style="font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
-                <span>${hideNumbers ? getIcon('eye', 16) : getIcon('eyeOff', 16)}</span>
-                <span>${hideNumbers ? 'إظهار الأرقام' : 'إخفاء الأرقام'}</span>
-              </button>
-
-              <button class="btn btn-secondary" onclick="window.centrlyApp.lockFinancials()" style="font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
-                <span>${getIcon('lock', 16)}</span>
-                <span>قفل البيانات</span>
-              </button>
-
-              <button class="btn btn-secondary" onclick="window.centrlyApp.openSetPinModal()" style="font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem;" title="تغيير رمز PIN">
-                ${getIcon('edit', 14)}
-                <span>تغيير PIN</span>
-              </button>
-            `}
-          </div>
-        </div>
-      </div>
-
-      ${salaryLocked ? `<div class="card" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;padding:1rem"><p style="margin:0">المرتبات محمية. تقدر تدير الصلاحيات وتراجع نشاط الفريق.</p><button class="btn btn-primary" style="min-height:44px" onclick="window.centrlyApp.promptUnlockFinancials()">فتح المرتبات</button></div>` : ''}
         <!-- Team controls stay available while pay is concealed -->
         
         <!-- Top Title & Action (Swiss Minimalist) -->
@@ -109,6 +62,7 @@ export function renderTeacherAssistantsView(
 
             <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
               <button class="btn btn-secondary" onclick="window.centrlyApp.openAddTeacherAssistantModal(true)" style="min-height:44px">إضافة سجل بدون دعوة</button>
+              <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.toggleHideFinancialNumbers()">${hideNumbers?'إظهار الأرقام':'إخفاء الأرقام'}</button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openFollowupReports()" style="min-height:44px">متابعة الطلاب وواتساب</button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openCollectionLedger()" style="min-height:44px">سجل التحصيل</button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openAssistantActivityLog()" style="min-height:44px">نشاط الفريق</button>
@@ -228,10 +182,10 @@ export function renderTeacherAssistantsView(
                       <td>
                         ${modelBadge}
                       </td>
-                      <td style="font-weight: 800; color: #1d4ed8; font-family: monospace;">
+                      <td style="font-weight:800;color:#1d4ed8;min-width:175px;line-height:1.7;">
                         ${salaryDisplay}
                         ${concealPay ? '' : `<div style="font-size:.8rem;line-height:1.7;font-weight:400;color:var(--centrly-text);margin-top:.35rem">${escapeHtml(payInfo.basis)}</div>`}
-                        <div style="font-size:.85rem;margin-top:.25rem">${concealPay ? 'الأجر محمي' : payInfo.available ? `${payInfo.amount.toLocaleString('ar-EG')} ج.م للشهر` : 'غير متاح حاليًا'}</div>
+                        <div style="font-size:.85rem;margin-top:.25rem;white-space:nowrap">${concealPay ? 'الأجر محمي' : payInfo.available ? `${payInfo.amount.toLocaleString('ar-EG')} ج.م للشهر` : 'غير متاح حاليًا'}</div>
                       </td>
                       <td>
                         <div style="display: flex; align-items: center; gap: 0.35rem;">
@@ -268,7 +222,7 @@ export function registerTeacherAssistantsActions(app) {
   registerAssistantActivityActions(app);
   registerCollectionOwnerActions(app);
   registerFollowupOwnerActions(app);
-  const payVisible=()=> (!app.hasSecurityPin || app.isFinancialUnlocked) && !app.hideFinancialNumbers;
+  const payVisible=()=> !app.hideFinancialNumbers;
   app.updateTeacherAssistantPayFields = updateAssistantPayFields;
   const beginSave=event=>{const form=event.currentTarget;if(form.dataset.saving)return null;form.dataset.saving='true';const buttons=[...form.elements].filter(el=>el.type==='submit');for(const button of buttons){button.disabled=true;button.dataset.label=button.textContent;button.textContent='جارٍ الحفظ…';}return ()=>{delete form.dataset.saving;for(const button of buttons){button.disabled=false;button.textContent=button.dataset.label;delete button.dataset.label;}};};
   app.prepareAssistantInvitation = function(id) {
@@ -289,8 +243,7 @@ export function registerTeacherAssistantsActions(app) {
   };
   app.openAddTeacherAssistantModal = function(recordOnly = false) {
     if (!payVisible()) {
-      this.showToast('افتح المرتبات لإعداد أجر المساعد الجديد. إدارة الصلاحيات والنشاط متاحة من الصفحة.', 'info');
-      if (this.hasSecurityPin && !this.isFinancialUnlocked) this.promptUnlockFinancials();
+      this.showToast('أظهر الأرقام لإعداد أجر المساعد الجديد.', 'info');
       return;
     }
     const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');

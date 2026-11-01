@@ -1,3 +1,4 @@
+import {teacherPageTitles} from '../utils/teacherPageTitles.js';
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
@@ -73,9 +74,9 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
   // 4. Analytics & Financials (Earnings Dashboard, Reports, Risk Watchlist)
   // 5. Administration & Settings (Assistants, WhatsApp, Billing, Activity)
   const teacherDailyRoutes = [
-    { id: 'sessions', title: 'بدء حصة ورصد الحضور', icon: 'sessions' },
-    { id: 'homework', title: 'مراجعة وتصحيح الواجبات', icon: 'homework' },
-    { id: 'materials', title: 'المذكرات والماتريال', icon: 'materials' },
+    { id: 'sessions', title: teacherPageTitles.attendance, icon: 'sessions' },
+    { id: 'homework', title: teacherPageTitles.homework, icon: 'homework' },
+    { id: 'materials', title: teacherPageTitles.materials, icon: 'materials' },
   ];
 
   const teacherSections = [
@@ -88,7 +89,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       routes: [
         { id: 'online-quizzes', title: 'الكويزات الإلكترونية (أونلاين)', icon: 'edit' },
         { id: 'paper-exams', title: 'الامتحانات الورقية وبابل شيت', icon: 'print', badge: 'قريباً' },
-        { id: 'quizzes', title: 'رصد درجات الكويزات يدوياً', icon: 'reports' },
+        { id: 'quizzes', title: teacherPageTitles.quizzes, icon: 'reports' },
       ],
     },
     ...([
@@ -103,10 +104,10 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
     {
       category: 'إدارة الطلاب والمجاميع وفريق العمل',
       routes: [
-        { id: 'students', title: 'دليل طلابي', icon: 'students' },
-        { id: 'groups', title: 'مجاميعي الدراسية', icon: 'groups' },
+        { id: 'students', title: teacherPageTitles.students, icon: 'students' },
+        { id: 'groups', title: teacherPageTitles.groups, icon: 'groups' },
         { id: 'assistants', title: 'إدارة المساعدين (الأسستنت)', icon: 'assistants' },
-        { id: 'calendar', title: 'جدول الحصص والتقويم', icon: 'calendar' },
+        { id: 'calendar', title: teacherPageTitles.sessions, icon: 'calendar' },
         { id: 'student-cards', title: 'طلب كروت الطلاب', icon: 'cards' },
       ],
     },
@@ -114,7 +115,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       category: 'الأرباح والتقارير الأكاديمية',
       routes: [
         { id: 'dashboard', title: 'لوحة المعلم والأرباح', icon: 'dashboard' },
-        { id: 'reports', title: 'الدرجات ولوحة الشرف', icon: 'reports' },
+        { id: 'reports', title: teacherPageTitles.reports, icon: 'reports' },
         { id: 'risk-watchlist', title: 'مؤشرات الخطر والإنذارات', icon: 'risk' },
       ],
     },
@@ -163,7 +164,6 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
             <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;">
               ${sec.routes.map(r => {
                 const isActive = currentRoute === r.id;
-                const isLocked = Boolean(securityState?.hasPin && !securityState?.isUnlocked && ['assistants', 'dashboard'].includes(r.id));
                 return `
                   <button class="nav-link ${isActive ? 'active' : ''}" onclick="window.centrlyApp.navigate('${r.id}')" 
                     style="position: relative; display: flex; align-items: center; gap: 0.65rem; border-radius: 6px; padding: 0.48rem 0.7rem; border: none; width: 100%; cursor: pointer; text-align: right; transition: all 0.12s ease;">
@@ -175,7 +175,6 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
                       ${r.isPro ? `<span style="background: ${isActive ? '#1e293b' : '#fef3c7'}; color: ${isActive ? '#fde68a' : '#b45309'}; border: 1px solid ${isActive ? '#334155' : '#fde68a'}; font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; letter-spacing: 0.5px;">PRO</span>` : ''}
                       ${r.badge ? `<span style="background: ${isActive ? '#1e293b' : '#f1f5f9'}; color: ${isActive ? '#f8fafc' : '#64748b'}; border: 1px solid ${isActive ? '#334155' : '#e2e8f0'}; font-size: 0.62rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">${escapeHtml(r.badge)}</span>` : ''}
                     </span>
-                    ${isLocked ? `<span title="محمي برمز الأمان (PIN)" style="display: inline-flex; align-items: center; margin-right: 0.35rem; opacity: 0.85;">${getIcon('lock', 12, isActive ? '#fde68a' : '#f59e0b')}</span>` : ''}
                   </button>
                 `;
               }).join('')}

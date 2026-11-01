@@ -623,34 +623,8 @@ export function registerAuthActions(app) {
       } catch (_) {}
       this.restoreCachedData();
 
-      // Cross-Device Security: Bind PIN status directly from account profile
-      if (typeof this.user?.has_security_pin === 'boolean') {
-        this.hasSecurityPin = this.user.has_security_pin;
-        if (this.hasSecurityPin) {
-          this.isFinancialUnlocked = false;
-          try {
-            localStorage.setItem('centrly_has_security_pin', 'true');
-          } catch (_) {}
-        }
-      }
-
-      // Check cloud security PIN status for cross-device synchronization
-      try {
-        const pinStatus = await request('/settings/security-pin').catch(() => null);
-        if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
-          this.hasSecurityPin = pinStatus.has_pin;
-          if (this.hasSecurityPin) {
-            this.isFinancialUnlocked = false;
-          }
-          if (this.user) {
-            this.user.has_security_pin = pinStatus.has_pin;
-            authService.setUser(this.user);
-          }
-          try {
-            localStorage.setItem('centrly_has_security_pin', pinStatus.has_pin ? 'true' : 'false');
-          } catch (_) {}
-        }
-      } catch (_) {}
+      this.hasSecurityPin=false;this.isFinancialUnlocked=true;
+      try {localStorage.removeItem('centrly_has_security_pin');}catch{}
 
       const isAdmin = this.user?.role === 'admin';
       const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';

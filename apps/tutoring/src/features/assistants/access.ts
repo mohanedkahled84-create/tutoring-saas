@@ -15,17 +15,17 @@ import {collectionInput,collectionQuery,voidCollectionInput} from './collectionS
 import {loadAssistantActivity} from './activity.js';
 
 export const assistantCatalog = [
- { key:'groups', label:'المجموعات', actions:['view','create','edit'] },
- { key:'students', label:'الطلاب', actions:['view','create','edit'] },
- { key:'sessions', label:'الحصص والجدول', actions:['view'] },
- { key:'attendance', label:'الحضور والمتابعة', actions:['view','edit'] },
- { key:'homework', label:'مراجعة الواجبات', actions:['view','edit'] },
- { key:'materials', label:'المحاضرات والمذكرات', actions:['view','create','edit'] },
- { key:'quizzes', label:'الاختبارات', actions:['view','create','edit'] },
- { key:'grades', label:'رصد الدرجات', actions:['view','edit'] },
- { key:'collections', label:'التحصيل', actions:['view','create'] },
- { key:'reports', label:'تقارير متابعة الطلاب', actions:['view'] },
- { key:'messages', label:'رسائل المتابعة', actions:['view','send'] },
+ { key:'groups', label:'مجاميعي الدراسية', actions:['view','create','edit'] },
+ { key:'students', label:'دليل طلابي', actions:['view','create','edit'] },
+ { key:'sessions', label:'جدول الحصص والتقويم', actions:['view'] },
+ { key:'attendance', label:'بدء حصة ورصد الحضور', actions:['view','edit'] },
+ { key:'homework', label:'مراجعة وتصحيح الواجبات', actions:['view','edit'] },
+ { key:'materials', label:'المذكرات والماتريال', actions:['view','create','edit'] },
+ { key:'quizzes', label:'رصد درجات الكويزات يدوياً', actions:['view','create','edit'] },
+ { key:'grades', label:'رصد درجات الكويزات يدوياً', actions:['view','edit'] },
+ { key:'collections', label:'سجل التحصيل', actions:['view','create'] },
+ { key:'reports', label:'الدرجات ولوحة الشرف', actions:['view'] },
+ { key:'messages', label:'متابعة الطلاب وواتساب', actions:['view','send'] },
 ] as const;
 const allowed = new Set(assistantCatalog.flatMap(p => p.actions.map(action => `${p.key}.${action}`)));
 const fault = (status:number,message:string) => Object.assign(new Error(message), {status});

@@ -2,13 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { authenticateUser, authClientResolver, requireAdmin, profileHasSecurityPin } from "../dist/shared/middleware/auth.js";
 
-test('PIN profile state supports both rollout contracts and locks an unknown state',()=>{
+test('retired financial PIN stays off even for old profile contracts and unknown state',()=>{
   assert.equal(profileHasSecurityPin({has_security_pin:false}),false);
-  assert.equal(profileHasSecurityPin({has_security_pin:true}),true);
+  assert.equal(profileHasSecurityPin({has_security_pin:true}),false);
   assert.equal(profileHasSecurityPin({financial_pin_hash:null}),false);
-  assert.equal(profileHasSecurityPin({financial_pin_hash:'opaque'}),true);
-  assert.equal(profileHasSecurityPin({}),true);
-  assert.equal(profileHasSecurityPin(null),true);
+  assert.equal(profileHasSecurityPin({financial_pin_hash:'opaque'}),false);
+  assert.equal(profileHasSecurityPin({}),false);
+  assert.equal(profileHasSecurityPin(null),false);
 });
 
 function createMockReq(token) {
@@ -312,7 +312,7 @@ test("AUTH PLATFORM ADMIN - legacy email and editable metadata cannot elevate a 
     await authenticateUser(req, res, () => { authenticated = true; });
     assert.equal(authenticated, true);
     assert.equal(req.user.role, 'owner');
-    assert.equal(req.user.has_security_pin, true);
+    assert.equal(req.user.has_security_pin, false);
     const denied = createMockRes(); let granted = false;
     requireAdmin(req, denied, () => { granted = true; });
     assert.equal(granted, false);

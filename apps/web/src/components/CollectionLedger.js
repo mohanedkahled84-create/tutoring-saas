@@ -60,9 +60,8 @@ export function mountCollectionLedger(host,{request,groups=[],allowCreate=false,
 
 export function registerCollectionOwnerActions(app){
  app.openCollectionLedger=function(){
-  if(this.hasSecurityPin && !this.isFinancialUnlocked){this.promptUnlockFinancials();return;}
   if(this.hideFinancialNumbers){this.showToast('أظهر الأرقام المالية لفتح سجل التحصيل','info');return;}
-  this.showModal('سجل التحصيل الفعلي','<div data-assistant-pay id="collection-ledger"></div>','<button class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>');
+  this.showModal('سجل التحصيل','<div data-assistant-pay id="collection-ledger"></div>','<button class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>');
   mountCollectionLedger(document.getElementById('collection-ledger'),{groups:this.groups || [],allowCreate:true,allowVoid:true,request:(suffix,body)=>ownerRequest(`/assistants/collections${suffix}`,body===undefined?{}:{method:'POST',body,signal:AbortSignal.timeout(15000)})});
  };
 }

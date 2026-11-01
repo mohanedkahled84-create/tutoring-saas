@@ -86,3 +86,12 @@ Preparing a preview checks current permissions, active account/session/tenant an
 Existing teacher report buttons now open this manual flow. Legacy report auto-send HTTP endpoints return 410 MANUAL_WHATSAPP_REQUIRED, preventing old clients from silently dispatching or claiming delivery. Existing family/assistant account-verification delivery is a separate integration. The official link format is documented by [WhatsApp](https://faq.whatsapp.com/5913398998672934).
 
 Permission selection enables the required view checkbox when an action is chosen, and clears dependent actions when view is removed. It never grants all groups implicitly; group creation still requires the owner's explicit all-groups selection. Backend validation remains authoritative.
+
+
+## Payroll and internal-lock correction
+
+Configured work pay now includes assistants awaiting account acceptance: an invitation is a login state, not a suspension of the configured daily/monthly work schedule. Inactive assistants remain excluded. Daily estimates still use the exact calendar weekdays and start date, without attendance entry or a four-week approximation. At 250 EGP/day with Monday/Thursday/Saturday in November 2026, the expected amount is 13 × 250 = 3250 EGP. Team totals use the same eligibility as dashboards/reports.
+
+The owner retired the extra financial PIN across team pay, dashboard, financial reports and settings. Login passwords, tenant isolation and assistant action/group permissions remain enforced. PIN status compatibility returns false; setup, verification and recovery endpoints return 410 without reading/updating PIN storage or sending email. Old cached PIN flags cannot reintroduce dialogs or automatic locks. Optional number masking remains a visual control without a password. Existing inactive hashes are not used; no account credentials are deleted.
+
+Permission labels use the teacher sidebar's exact page names from a shared frontend title map. Quiz setup and student-score access keep separate keys and explicit explanations under the same real page title; renaming grants no additional capability.

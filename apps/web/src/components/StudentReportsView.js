@@ -30,7 +30,7 @@ export function renderStudentReportsView(
     dispatchedMonths = {},
   } = state;
 
-  const { hasPin, isUnlocked, hideNumbers } = securityState;
+  const { hideNumbers } = securityState;
   const currentMonth = period.month || (new Date().getMonth() + 1);
   const currentYear = period.year || new Date().getFullYear();
   const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
@@ -161,12 +161,12 @@ export function renderStudentReportsView(
 
           ${activeTab === 'financial' ? `
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              ${hasPin ? `
+
                 <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleHideFinancialNumbers()" style="font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
                   <span>${hideNumbers ? getIcon('eye', 14) : getIcon('eyeOff', 14)}</span>
                   <span>${hideNumbers ? 'إظهار الأرقام' : 'إخفاء الأرقام'}</span>
                 </button>
-              ` : ''}
+
               <button class="btn btn-secondary btn-sm" onclick="window.print()" style="font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
                 ${getIcon('materials', 14)}
                 <span>طباعة التقرير</span>
@@ -186,25 +186,7 @@ export function renderStudentReportsView(
         </div>
       </div>
 
-      ${activeTab === 'financial' ? (
-        hasPin && !isUnlocked ? `
-          <!-- Locked Gate for Financial Report -->
-          <div class="card" style="margin: 0; padding: 2.5rem 1.5rem; text-align: center; background: #fff;">
-            <div style="max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
-              <div style="width: 56px; height: 56px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1d4ed8;">
-                ${getIcon('lock', 28, '#1d4ed8')}
-              </div>
-              <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0;">التقرير المالي مقفل برمز الأمان</h3>
-              <p style="font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.6;">
-                أدخل رمز الأمان (PIN) للاطلاع على تفاصيل الإيرادات وحصة السنتر ومرتبات المساعدين المستقطعة.
-              </p>
-              <button class="btn btn-primary" onclick="window.centrlyApp.promptUnlockFinancials()" style="padding: 0.65rem 1.75rem; font-size: 0.9rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem; margin-top: 0.35rem;">
-                ${getIcon('lock', 16)}
-                <span>إدخال رمز PIN لفتح التقرير</span>
-              </button>
-            </div>
-          </div>
-        ` : `
+      ${activeTab === 'financial' ? `
           <!-- FINANCIAL TAB CONTENT -->
 
           <!-- Period Selector Banner (Swiss Minimalist) -->
@@ -450,8 +432,7 @@ export function renderStudentReportsView(
               </table>
             </div>
           </div>
-        `
-      ) : `
+        ` : `
         <!-- ACADEMIC TAB CONTENT (Leaderboard & Student Performance) -->
         
         <!-- Top Action & Filter Bar -->

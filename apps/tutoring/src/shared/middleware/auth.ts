@@ -12,12 +12,10 @@ export function extractToken(req: AuthenticatedRequest): string | null {
   return null;
 }
 
-// An unavailable PIN state must not unlock financial screens. Accept the old
-// self-only RPC shape during the coordinated rollout, then the new boolean.
-export function profileHasSecurityPin(profile: { has_security_pin?: boolean; financial_pin_hash?: string | null } | null): boolean {
-  if (typeof profile?.has_security_pin === "boolean") return profile.has_security_pin;
-  if (profile && Object.prototype.hasOwnProperty.call(profile, "financial_pin_hash")) return Boolean(profile.financial_pin_hash);
-  return true;
+// Compatibility field for cached clients. Financial PIN has been retired;
+// authenticated role and tenant permissions remain authoritative.
+export function profileHasSecurityPin(_profile: { has_security_pin?: boolean; financial_pin_hash?: string | null } | null): boolean {
+  return false;
 }
 
 // Exported client resolver to allow deterministic testing and mocking
