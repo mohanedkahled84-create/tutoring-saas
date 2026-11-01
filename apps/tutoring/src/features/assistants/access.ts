@@ -14,6 +14,7 @@ import { signHomeworkFile } from '../homework/files.js';
 import {followupQuery,followupPrepare,whatsappFollowup} from './followup.js';
 import {collectionInput,collectionQuery,voidCollectionInput} from './collectionSchemas.js';
 import {loadAssistantActivity} from './activity.js';
+import {enrichAssistantPage} from './pageDetails.js';
 
 export const assistantCatalog = [
  { key:'groups', label:'مجاميعي الدراسية', actions:['view','create','edit'] },
@@ -164,7 +165,9 @@ assistantAccessRouter.get('/data/:resource',async(req,res)=>{
   if(['reports','messages'].includes(req.params.resource)){res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_followup',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'view',p_data:followupQuery.parse(req.query)}));return;}
   const data=req.params.resource==='grades' ? (req.query.quiz_id?{quiz_id:z.uuid().parse(req.query.quiz_id)}:{}) : req.query.session_id?{session_id:z.uuid().parse(req.query.session_id)}:{};
   if(req.params.resource==='grades'){res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_grades',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'view',p_data:data}));return;}
-  res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_workspace',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_resource:req.params.resource,p_action:'view',p_data:data}));
+  const db=getServiceSupabaseClient();
+  const result=await assistantRpc(db,'assistant_workspace',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_resource:req.params.resource,p_action:'view',p_data:data});
+  res.json(await enrichAssistantPage(db,req.params.resource,result));
  }catch(error){sendError(res,error);}
 });
 assistantAccessRouter.post('/data/:resource/:action',async(req,res)=>{
