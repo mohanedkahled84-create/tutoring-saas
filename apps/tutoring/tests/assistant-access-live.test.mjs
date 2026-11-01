@@ -42,7 +42,7 @@ test('LIVE: assistant invitations, independent teacher passwords, group permissi
  const login=async(tenant,password)=>{const r=await request('/login',{workspace:tenant,phone,password});assert.equal(r.status,200,await r.clone().text());return (await r.json()).token;};
  assert.equal((await request('/login',{workspace:tenants[1],phone,password:passwordA})).status,401,'same phone at teacher B cannot use teacher A password');
  const session=await login(tenants[0],passwordA),second=await login(tenants[1],passwordB);
- ok(await db.from('tenants').update({status:'inactive'}).eq('id',tenants[0]));
+ ok(await db.from('tenants').update({status:'paused'}).eq('id',tenants[0]));
  assert.equal((await request('/me',undefined,session)).status,401,'inactive tenant cannot use a previously issued assistant session');
  assert.equal((await request('/login',{workspace:tenants[0],phone,password:passwordA})).status,401);
  ok(await db.from('tenants').update({status:'active'}).eq('id',tenants[0]));
