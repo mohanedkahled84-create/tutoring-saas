@@ -42,6 +42,10 @@ test('LIVE: assistant invitations, independent teacher passwords, group permissi
  const login=async(tenant,password)=>{const r=await request('/login',{workspace:tenant,phone,password});assert.equal(r.status,200,await r.clone().text());return (await r.json()).token;};
  assert.equal((await request('/login',{workspace:tenants[1],phone,password:passwordA})).status,401,'same phone at teacher B cannot use teacher A password');
  const session=await login(tenants[0],passwordA),second=await login(tenants[1],passwordB);
+ ok(await db.from('tenants').update({status:'inactive'}).eq('id',tenants[0]));
+ assert.equal((await request('/me',undefined,session)).status,401,'inactive tenant cannot use a previously issued assistant session');
+ assert.equal((await request('/login',{workspace:tenants[0],phone,password:passwordA})).status,401);
+ ok(await db.from('tenants').update({status:'active'}).eq('id',tenants[0]));
  assert.equal((await request('/me',undefined,session,'https://other.centerly-eg.com')).status,401,'session is bound to its origin');
  const me=await (await request('/me',undefined,session)).json();assert.equal(me.tenant_id,tenants[0]);assert.deepEqual(me.groups.map(g=>g.id),[groups[0].id]);assert.ok(!JSON.stringify(me).includes('password_hash'));
  assert.equal((await request('/data/students/create',{name:'not allowed',parent_phone:phone,group_id:groups[1].id},session)).status,403);
@@ -72,4 +76,14 @@ test('LIVE: assistant invitations, independent teacher passwords, group permissi
  assert.equal((await request('/login',{workspace:tenants[0],phone,password:passwordA})).status,401);
  assert.equal((await request('/me',undefined,second)).status,200,'revocation at A does not affect B');
  assert.equal((await request('/logout',{},second)).status,200);assert.equal((await request('/me',undefined,second)).status,401);
+ // Expiry and explicit cancellation revoke the capability before account creation.
+ const nonce=familyToken();
+ const pending=ok(await db.rpc('assistant_invite',{p_tenant:tenants[0],p_assistant:null,p_teacher:null,p_phone:'2011'+String(Math.floor(Math.random()*1e8)).padStart(8,'0'),p_nonce_hash:familyHash(nonce),p_permissions:{},p_all_groups:false,p_group_ids:[],p_pay:pay}));
+ const invitedPhone=ok(await db.from('assistant_invitations').select('phone').eq('id',pending.invitation_id).single()).phone;
+ ok(await db.from('assistant_invitations').update({expires_at:new Date(Date.now()-1000).toISOString()}).eq('id',pending.invitation_id));
+ assert.equal(ok(await db.rpc('assistant_confirm_invitation',{p_nonce_hash:familyHash(nonce),p_phone:invitedPhone,p_claim_hash:familyHash(familyToken())})),null);
+ ok(await db.from('assistant_invitations').update({expires_at:new Date(Date.now()+60000).toISOString()}).eq('id',pending.invitation_id));
+ const claim=familyToken();ok(await db.rpc('assistant_confirm_invitation',{p_nonce_hash:familyHash(nonce),p_phone:invitedPhone,p_claim_hash:familyHash(claim)}));
+ ok(await db.rpc('assistant_configure',{p_tenant:tenants[0],p_assistant:pending.assistant_id,p_permissions:{},p_all_groups:false,p_group_ids:[],p_status:'inactive',p_pay:pay}));
+ assert.equal(ok(await db.rpc('assistant_accept_invitation',{p_claim_hash:familyHash(claim),p_name:'دعوة ملغاة',p_password_hash:hashA})),null);
 });

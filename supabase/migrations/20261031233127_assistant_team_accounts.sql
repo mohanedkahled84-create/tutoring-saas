@@ -67,6 +67,7 @@ begin
   perform 1 from public.assistant_accounts where assistant_id=p_assistant and tenant_id=p_tenant for update;
   select * into v_row from public.assistants where id=p_assistant and tenant_id=p_tenant for update;
   if not found then raise exception 'NOT_FOUND'; end if;
+  if v_row.user_id is not null or exists(select 1 from public.users u where u.assistant_id=v_row.id) then raise exception 'LEGACY_STAFF_LOGIN'; end if;
   v_id:=v_row.id;
   -- Reinviting is explicit credential recovery; outstanding links are revoked below.
  end if;
@@ -88,6 +89,7 @@ begin
  select * into v from public.assistant_invitations where nonce_hash=p_nonce_hash and phone=p_phone
   and expires_at>now() and accepted_at is null and revoked_at is null for update;
  if not found then return null; end if;
+ if not exists(select 1 from public.tenants t where t.id=v.tenant_id and t.status='active' and t.deleted_at is null) then return null; end if;
  if not exists(select 1 from public.assistant_accounts where assistant_id=v.assistant_id and phone=p_phone) then return null; end if;
  update public.assistant_invitations set claim_hash=p_claim_hash,verified_at=now(),claim_expires_at=now()+interval '15 minutes' where id=v.id;
  select coalesce(t.name,'المعلم') into v_name from public.tenants t where t.id=v.tenant_id;
@@ -126,6 +128,7 @@ begin
  select * into v from public.assistant_invitations where id=v.id and claim_hash=p_claim_hash
   and verified_at is not null and claim_expires_at>now() and expires_at>now() and revoked_at is null and accepted_at is null for update;
  if not found or length(trim(p_name))<2 or length(p_name)>100 or p_password_hash !~ '^\$2[aby]\$12\$' then return null; end if;
+ if not exists(select 1 from public.tenants t where t.id=v.tenant_id and t.status='active' and t.deleted_at is null) then return null; end if;
  update public.assistant_accounts set password_hash=p_password_hash,credential_version=credential_version+1 where assistant_id=v.assistant_id and phone=v.phone;
  if not found then return null; end if;
  update public.assistants set name=trim(p_name),phone=v.phone,status='active' where id=v.assistant_id;
@@ -139,7 +142,8 @@ create function public.assistant_start_session(p_assistant uuid,p_hash text,p_ve
 language plpgsql security invoker set search_path='' as $$
 begin
  perform 1 from public.assistant_accounts a join public.assistants s on s.id=a.assistant_id
- where a.assistant_id=p_assistant and a.password_hash=p_hash and a.credential_version=p_version and s.status='active' for share of a,s;
+ where a.assistant_id=p_assistant and a.password_hash=p_hash and a.credential_version=p_version and s.status='active'
+ and exists(select 1 from public.tenants t where t.id=a.tenant_id and t.status='active' and t.deleted_at is null) for share of a,s;
  if not found then return false; end if;
  insert into public.assistant_sessions(assistant_id,token_hash,origin,credential_version) values(p_assistant,p_token_hash,p_origin,p_version);
  return true;
@@ -154,6 +158,7 @@ begin
  select ac.* into a from public.assistant_accounts ac join public.assistant_sessions ss on ss.assistant_id=ac.assistant_id
  where ss.token_hash=p_token_hash and ss.origin=p_origin and ss.expires_at>now() and ss.credential_version=ac.credential_version for share of ac;
  if not found then raise exception 'UNAUTHORIZED'; end if;
+ if not exists(select 1 from public.tenants t where t.id=a.tenant_id and t.status='active' and t.deleted_at is null) then raise exception 'UNAUTHORIZED'; end if;
  select * into s from public.assistants where id=a.assistant_id and tenant_id=a.tenant_id and status='active' for share;
  if not found then raise exception 'UNAUTHORIZED'; end if;
  select coalesce(array_agg(g.id),'{}') into ids from public.groups g where g.tenant_id=a.tenant_id

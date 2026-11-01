@@ -40,6 +40,8 @@ export async function assistantRpc(db:SupabaseClient,name:string,args:Record<str
   if (error.message.includes('UNAUTHORIZED')) throw fault(401,'انتهت الجلسة أو تم إيقاف الحساب؛ سجّل الدخول مجددًا');
   if (error.message.includes('FORBIDDEN')) throw fault(403,'هذه العملية خارج صلاحياتك أو مجموعاتك');
   if (error.message.includes('NOT_FOUND')) throw fault(404,'الحساب غير موجود');
+  if (error.message.includes('LEGACY_STAFF_LOGIN')) throw fault(409,'هذا السجل مرتبط بدخول مساعد قديم؛ يلزم نقل الدخول القديم قبل تفعيل الصلاحيات الجديدة');
+  if (error.message.includes('INVALID_INPUT')) throw fault(400,'راجع بيانات الدعوة');
   if (error.code==='23505') throw fault(409,'الرقم أو السجل مسجل بالفعل لدى هذا المدرس');
   throw fault(503,'تعذر إتمام العملية الآن، حاول مجددًا');
  }
