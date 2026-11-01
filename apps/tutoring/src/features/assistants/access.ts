@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
+import {registrationInput,registrationVerify,checkedOtpResult,phoneOtpHash,phoneOtpGateway,requestPhoneOtp} from '../../shared/utils/phoneOtp.js';
 import bcrypt from 'bcryptjs';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabaseClient } from '../../supabase.js';
@@ -114,12 +115,26 @@ assistantAccessRouter.post('/login',async(req,res)=>{
   res.json({token:session});
  }catch(error){sendError(res,error);}
 });
+assistantAccessRouter.post('/registration/info',async(req,res)=>{
+ try{const input=registrationInput.parse(req.body),db=getServiceSupabaseClient(),pageOrigin=origin(req);await limit(db,`registration-info:${req.ip}`,30);const info=checkedOtpResult(await assistantRpc(db,'assistant_registration',{p_nonce_hash:familyHash(input.invitation),p_origin:pageOrigin,p_action:'info',p_data:{}}));res.json({...info,otp_available:await phoneOtpGateway.ready()});}catch(error){sendError(res,error);}
+});
+assistantAccessRouter.post('/registration/request',async(req,res)=>{
+ try{const input=registrationInput.parse(req.body),db=getServiceSupabaseClient(),pageOrigin=origin(req);res.json(await requestPhoneOtp(db,'assistant',req.ip || '',(action,data={})=>assistantRpc(db,'assistant_registration',{p_nonce_hash:familyHash(input.invitation),p_origin:pageOrigin,p_action:action,p_data:data})));}catch(error){sendError(res,error);}
+});
+assistantAccessRouter.post('/registration/verify',async(req,res)=>{
+ try{const input=registrationVerify.parse(req.body),db=getServiceSupabaseClient(),pageOrigin=origin(req);await limit(db,`registration-verify:${req.ip}`,30);const ticket=familyToken();const result=checkedOtpResult(await assistantRpc(db,'assistant_registration',{p_nonce_hash:familyHash(input.invitation),p_origin:pageOrigin,p_action:'verify',p_data:{challenge_id:input.challenge_id,code_hash:phoneOtpHash('assistant',input.challenge_id,input.code),claim_hash:familyHash(ticket)}}));res.json({...result,ticket});}catch(error){sendError(res,error);}
+});
+assistantAccessRouter.post('/registration/claim',async(req,res)=>{
+ try{const input=z.object({ticket:z.string().refine(validFamilyToken)}).strict().parse(req.body),info=await assistantRpc(getServiceSupabaseClient(),'assistant_registration_claim',{p_claim_hash:familyHash(input.ticket),p_origin:origin(req)});if(!info)throw fault(410,'أكد رقم الدعوة بكود واتساب قبل إنشاء الحساب.');res.json(info);}catch(error){sendError(res,error);}
+});
 assistantAccessRouter.post('/accept',async(req,res)=>{
  try {
   const db=getServiceSupabaseClient(),pageOrigin=origin(req);
   await limit(db,`accept:${req.ip}`,10);
   if(!validFamilyToken(req.body.ticket)) throw fault(400,'رابط الدعوة غير صالح');
-  const fullName=name.parse(req.body.name),password=z.string().min(10).max(72).parse(req.body.password);
+  const input=z.object({ticket:z.string().refine(validFamilyToken),name,password:z.string().min(10).max(72)}).strict().parse(req.body);
+  if(!await assistantRpc(db,'assistant_registration_claim',{p_claim_hash:familyHash(input.ticket),p_origin:pageOrigin}))throw fault(410,'أكد رقم الدعوة بكود واتساب قبل إنشاء الحساب.');
+  const fullName=input.name,password=input.password;
   if(Buffer.byteLength(password,'utf8')>72) throw fault(400,'كلمة المرور طويلة جدًا');
   const hash=await bcrypt.hash(password,12);
   const id=await assistantRpc(db,'assistant_accept_invitation',{p_claim_hash:familyHash(req.body.ticket),p_name:fullName,p_password_hash:hash});
@@ -212,6 +227,14 @@ assistantManagementRouter.post('/collections',async(req:AuthenticatedRequest,res
 assistantManagementRouter.post('/collections/:id/void',async(req:AuthenticatedRequest,res)=>{
  try{res.json(await ownerCollection(req,'void',{id:z.uuid().parse(req.params.id),...voidCollectionInput.parse(req.body)}));}catch(error){sendError(res,error);}
 });
+function registrationLinks(tenant:string,phone:string,nonce:string){
+ const url=`${portalOrigin()}/assistant?workspace=${tenant}#registration=${nonce}`;
+ const message=`استكمل حسابك في فريق المدرس من الرابط:\n${url}\nرقم واتساب المسجل ثابت؛ أكّده بالكود ثم اكتب اسمك واختر كلمة مرور.`;
+ return {registration_url:url,registration_whatsapp_url:`https://wa.me/${phone}?text=${encodeURIComponent(message)}`};
+}
+assistantManagementRouter.post('/:id/registration-link',async(req:AuthenticatedRequest,res)=>{
+ try{const db=getServiceSupabaseClient(),id=z.uuid().parse(req.params.id),nonce=familyToken();await limit(db,`registration-link:${req.user!.tenant_id}:${id}`,5);const result=await assistantRpc(db,'assistant_registration_link',{p_tenant:req.user!.tenant_id,p_assistant:id,p_nonce_hash:familyHash(nonce)});res.json({...result,...registrationLinks(result.tenant_id,result.phone,nonce)});}catch(error){sendError(res,error);}
+});
 assistantManagementRouter.get('/activity',async(req:AuthenticatedRequest,res)=>{
  try {res.json(await loadAssistantActivity(getServiceSupabaseClient(),req.user!.tenant_id!,req.query));}
  catch(error){sendError(res,error);}
@@ -237,7 +260,7 @@ assistantManagementRouter.post('/invitations',async(req:AuthenticatedRequest,res
   const delivery=await notifyAssistantInvitation(config.meta,phone,tenantInfo?.name || 'المعلم',nonce);
   const {error}=await db.from('assistant_invitations').update({delivery_status:delivery}).eq('id',invitation.invitation_id).eq('tenant_id',tenant);
   if(error) throw error;
-  res.status(201).json({...invitation,delivery_status:delivery,message:delivery==='sent'?'تم إرسال الدعوة إلى واتساب':delivery==='blocked'?'تم حفظ الدعوة. إرسال واتساب متوقف لحين اعتماد قالب Utility':'تم حفظ الدعوة، لكن Meta لم تؤكد الإرسال'});
+  res.status(201).json({...invitation,phone,...registrationLinks(tenant!,phone,nonce),delivery_status:delivery,message:delivery==='sent'?'تم إرسال الدعوة إلى واتساب':delivery==='blocked'?'تم حفظ الدعوة. إرسال واتساب متوقف لحين اعتماد قالب Utility':'تم حفظ الدعوة، لكن Meta لم تؤكد الإرسال'});
  }catch(error){sendError(res,error);}
 });
 assistantManagementRouter.put('/:id/access',async(req:AuthenticatedRequest,res)=>{
@@ -258,6 +281,6 @@ export async function confirmAssistantMessage(db:SupabaseClient,phone:string,pay
  const ticket=familyToken();
  const record=await assistantRpc(db,'assistant_confirm_invitation',{p_nonce_hash:familyHash(nonce),p_phone:phone,p_claim_hash:familyHash(ticket)});
  if(!record) return;
- const url=`${portalOrigin()}/assistant?workspace=${record.tenant_id}#invite=${ticket}`;
- if(!await reply(phone,`حسابك في فريق ${record.teacher_name}\n\nكمّل اسمك واختار كلمة مرور من هنا:\n${url}\n\nالرابط صالح لمدة ١٥ دقيقة ولمرة واحدة. ما تشاركوش مع حد.`)) throw fault(502,'تعذر إرسال رابط استكمال الحساب');
+ const url=`${portalOrigin()}/assistant?workspace=${record.tenant_id}#registration=${nonce}`;
+ if(!await reply(phone,`حسابك في فريق ${record.teacher_name}\n\nأكد رقمك بكود واتساب، ثم كمّل اسمك واختار كلمة مرور من هنا:\n${url}\n\nاستخدم رابطك الخاص ولا تشاركه مع أي شخص.`)) throw fault(502,'تعذر إرسال رابط استكمال الحساب');
 }

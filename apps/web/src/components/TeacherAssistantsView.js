@@ -193,6 +193,7 @@ export function renderTeacherAssistantsView(
                             ${getIcon('edit', 14)}
                           </button>
                           <button class="btn btn-sm btn-secondary" onclick="window.centrlyApp.prepareAssistantInvitation('${a.id}')" style="min-height:44px" title="${a.access ? 'إعادة دعوة' : 'ربط بحساب مستقل'}">${a.access ? 'إعادة دعوة' : 'دعوة'}</button>
+                          ${a.access && a.status!=='inactive' ? `<button class="btn btn-sm btn-secondary" style="min-height:44px" onclick="window.centrlyApp.getAssistantRegistrationLink('${a.id}')">${a.status==='invited'?'رابط إنشاء الحساب':'رابط استعادة الحساب'}</button>` : ''}
                           ${a.access && a.assistant_login_url ? `<a class="btn btn-sm btn-secondary" href="${escapeHtml(a.assistant_login_url)}" target="_blank" rel="noopener noreferrer" style="min-height:44px">رابط الدخول</a>` : ''}
                           <button class="btn btn-sm btn-danger" onclick="window.centrlyApp.deleteTeacherAssistant('${a.id}')" title="حذف" style="min-width:44px;min-height:44px">
                             ${getIcon('delete', 14)}
@@ -222,6 +223,14 @@ export function registerTeacherAssistantsActions(app) {
   registerAssistantActivityActions(app);
   registerCollectionOwnerActions(app);
   registerFollowupOwnerActions(app);
+  app.showAssistantRegistrationLink = function(result) {
+    if(!result.registration_url)return;
+    this.showModal('رابط حساب المساعد',`<p>الرابط خاص بالرقم <span dir="ltr">${escapeHtml(result.phone || '')}</span>. يؤكد المساعد رقمه على واتساب ثم يكمل اسمه وكلمة مروره. أي رابط تسجيل سابق لم يعد صالحًا.</p><label for="assistant-registration-link">رابط التسجيل</label><input id="assistant-registration-link" class="form-input" dir="ltr" readonly value="${escapeHtml(result.registration_url)}" style="width:100%;min-height:48px"><p style="margin-top:1rem"><a class="btn btn-primary" style="min-height:44px" href="${escapeHtml(result.registration_whatsapp_url)}" target="_blank" rel="noopener noreferrer">فتح واتساب لإرسال الرابط</a></p>`,'');
+    const input=document.getElementById('assistant-registration-link');if(input)input.onclick=()=>input.select();
+  };
+  app.getAssistantRegistrationLink = async function(id) {
+    try{const result=await request(`/assistants/${id}/registration-link`,{method:'POST',body:{}});this.showAssistantRegistrationLink(result);}catch(error){this.showToast(error.message || 'تعذر تجهيز الرابط','danger');}
+  };
   const payVisible=()=> !app.hideFinancialNumbers;
   app.updateTeacherAssistantPayFields = updateAssistantPayFields;
   const beginSave=event=>{const form=event.currentTarget;if(form.dataset.saving)return null;form.dataset.saving='true';const buttons=[...form.elements].filter(el=>el.type==='submit');for(const button of buttons){button.disabled=true;button.dataset.label=button.textContent;button.textContent='جارٍ الحفظ…';}return ()=>{delete form.dataset.saving;for(const button of buttons){button.disabled=false;button.textContent=button.dataset.label;delete button.dataset.label;}};};
@@ -238,7 +247,7 @@ export function registerTeacherAssistantsActions(app) {
     try {
       const access=readAssistantAccessFields('reinvite');
       const result=await request('/assistants/invitations',{method:'POST',body:{assistant_id:id,phone:a.phone,...access}});
-      this.closeModal();this.showToast(result.message,result.delivery_status==='sent'?'success':'warning');await this.loadRouteData('assistants');
+      this.closeModal();this.showToast(result.message,result.delivery_status==='sent'?'success':'warning');await this.loadRouteData('assistants');this.showAssistantRegistrationLink(result);
     } catch(error){this.showToast(error.message || 'تعذر حفظ الدعوة','danger');}finally{finish();}
   };
   app.openAddTeacherAssistantModal = function(recordOnly = false) {
@@ -304,6 +313,7 @@ export function registerTeacherAssistantsActions(app) {
       this.closeModal();
       this.showToast(recordOnly ? 'تم حفظ سجل المساعد بدون إرسال دعوة' : result.message, recordOnly || result.delivery_status === 'sent' ? 'success' : 'warning');
       await this.loadRouteData('assistants');
+      if(!recordOnly)this.showAssistantRegistrationLink(result);
     } catch (err) {
       this.showToast(`فشل إضافة المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
     }finally{finish();}

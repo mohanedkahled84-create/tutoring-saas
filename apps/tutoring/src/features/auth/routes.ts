@@ -1,3 +1,7 @@
+import {z} from 'zod';
+import {getServiceSupabaseClient} from '../../supabase.js';
+import {trustedPortalOrigin} from '../../shared/utils/portalDestination.js';
+import {checkedOtpResult,otpRpc,requestPhoneOtp,teacherOtpVerify,phoneOtpHash,phoneOtpGateway} from '../../shared/utils/phoneOtp.js';
 import { Router, Request, Response } from "express";
 import { getServices } from "../../composition.js";
 import { extractToken, authenticateUser, profileHasSecurityPin } from "../../shared/middleware/auth.js";
@@ -515,4 +519,19 @@ authRouter.get("/me", authenticateUser, (req: AuthenticatedRequest, res: Respons
   // Never return a verification secret, even if an older session still carries it.
   const { financial_pin: _financialPin, ...safeUser } = (req.user || {}) as Record<string, unknown>;
   res.json({ user: safeUser });
+});
+
+function teacherPhoneContext(req:AuthenticatedRequest){
+ const pageOrigin=req.get('Origin');if(!trustedPortalOrigin(pageOrigin) && !(process.env.NODE_ENV!=='production' && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(pageOrigin || '')))throw Object.assign(new Error('افتح تأكيد الرقم من موقع المنصة'),{status:403});
+ return {db:getServiceSupabaseClient(),args:{p_user:req.user!.id,p_tenant:req.user!.tenant_id,p_origin:pageOrigin}};
+}
+function phoneFailure(res:Response,error:unknown){const e=error as Error & {status?:number};res.status(error instanceof z.ZodError?400:e.status || 503).json({error:{message:error instanceof z.ZodError?'راجع كود التأكيد':e.status?e.message:'تعذر تأكيد الرقم الآن'}});}
+authRouter.post('/phone/info',authenticateUser,async(req:AuthenticatedRequest,res)=>{
+ try{z.object({}).strict().parse(req.body);const {db,args}=teacherPhoneContext(req);const info=checkedOtpResult(await otpRpc(db,'teacher_phone_verification',{...args,p_action:'info',p_data:{}}));res.set('Cache-Control','no-store').json({...info,otp_available:await phoneOtpGateway.ready()});}catch(error){phoneFailure(res,error);}
+});
+authRouter.post('/phone/request',authenticateUser,async(req:AuthenticatedRequest,res)=>{
+ try{z.object({}).strict().parse(req.body);const {db,args}=teacherPhoneContext(req);res.set('Cache-Control','no-store').json(await requestPhoneOtp(db,'teacher',req.ip || '',(action,data={})=>otpRpc(db,'teacher_phone_verification',{...args,p_action:action,p_data:data})));}catch(error){phoneFailure(res,error);}
+});
+authRouter.post('/phone/verify',authenticateUser,async(req:AuthenticatedRequest,res)=>{
+ try{const input=teacherOtpVerify.parse(req.body),{db,args}=teacherPhoneContext(req);res.set('Cache-Control','no-store').json(checkedOtpResult(await otpRpc(db,'teacher_phone_verification',{...args,p_action:'verify',p_data:{challenge_id:input.challenge_id,code_hash:phoneOtpHash('teacher',input.challenge_id,input.code)}})));}catch(error){phoneFailure(res,error);}
 });

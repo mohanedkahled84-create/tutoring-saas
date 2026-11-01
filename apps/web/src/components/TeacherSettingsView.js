@@ -1,3 +1,4 @@
+import {mountPhoneVerification} from './PhoneVerification.js';
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { renderBillingView } from './BillingView.js?v=3.8.0';
@@ -138,6 +139,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
               <div class="form-group">
                 <label class="form-label" style="font-weight: 700;">رقم الهاتف الأساسي (تسجيل الدخول)</label>
                 <input type="tel" id="settingsPhone" class="form-input" value="${escapeHtml(phone)}" placeholder="010..." dir="ltr">
+                <button type="button" class="btn btn-secondary" style="min-height:44px;margin-top:.75rem" onclick="window.centrlyApp.openTeacherPhoneVerification()">تأكيد رقم واتساب</button>
               </div>
 
               <div class="form-group">
@@ -303,6 +305,13 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
 }
 
 export function registerTeacherSettingsActions(app) {
+  app.openTeacherPhoneVerification = async function() {
+    try {
+      const info=await request('/auth/phone/info',{method:'POST',body:{}});
+      this.showModal('تأكيد رقم واتساب',`<p>الرقم المحفوظ في حسابك. لو غيرته، احفظ بياناتك أولًا.</p>${info.verified?'<p role="status">رقمك مؤكد على واتساب.</p>':'<div id="teacher-phone-verification"></div>'}`,'');
+      if(!info.verified)mountPhoneVerification(document.getElementById('teacher-phone-verification'),{info,requestCode:()=>request('/auth/phone/request',{method:'POST',body:{}}),verifyCode:body=>request('/auth/phone/verify',{method:'POST',body}),onVerified:()=>{this.closeModal();this.showToast('تم تأكيد رقم واتساب','success');}});
+    } catch(error){this.showToast(error.message || 'تعذر فتح تأكيد الرقم','danger');}
+  };
   app.switchSettingsTab = function(tab) {
     if (!this.settingsState) this.settingsState = {};
     this.settingsState.activeTab = tab;

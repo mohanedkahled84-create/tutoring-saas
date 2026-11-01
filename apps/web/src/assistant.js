@@ -3,12 +3,14 @@ import { assistantPages } from './components/AssistantAccessFields.js?v=5';
 import { API_BASE_URL } from './services/api.js';
 import {mountFollowupReports} from './components/FollowupReports.js';
 import {mountCollectionLedger} from './components/CollectionLedger.js?v=2';
+import {mountPhoneVerification} from './components/PhoneVerification.js';
 import { assistantRequest } from './services/assistantClient.js';
 
 const main=document.getElementById('main'),actions=document.getElementById('account-actions'),dialog=document.getElementById('editor');
 const params=new URLSearchParams(location.search),workspace=params.get('workspace') || '';
-let invitation=new URLSearchParams(location.hash.slice(1)).get('invite');
-if(invitation) history.replaceState(null,'',`${location.pathname}?workspace=${encodeURIComponent(workspace)}`);
+const fragments=new URLSearchParams(location.hash.slice(1));
+let invitation=fragments.get('invite'),registration=fragments.get('registration'),verifiedPhone='',stopVerification;
+if(invitation || registration) history.replaceState(null,'',`${location.pathname}?workspace=${encodeURIComponent(workspace)}`);
 const key=`centrly:assistant:${workspace}`;
 let session;try{session=sessionStorage.getItem(key);}catch{}
 let identity,selected,rows=[],activeSession,activeQuiz,gradeChoices=[],teacherName='حساب المدرس';
@@ -20,9 +22,9 @@ function remember(value){session=value;try{if(value)sessionStorage.setItem(key,v
 function can(page,action='view'){return identity?.permissions?.[`${page}.${action}`]===true;}
 function groupName(id){return identity.groups.find(g=>g.id===id)?.name || 'مجموعة محددة';}
 function auth(error='') {
- stopCollections?.();stopCollections=null;identity=null;gradeChoices=[];activeQuiz=null;pageRequest++;workspaceRequest++;dialog.close();actions.innerHTML='';notice('');
+ stopVerification?.();stopVerification=null;stopCollections?.();stopCollections=null;identity=null;gradeChoices=[];activeQuiz=null;pageRequest++;workspaceRequest++;dialog.close();actions.innerHTML='';notice('');
  const accept=!!invitation;
- main.innerHTML=`<div class="auth-card"><p class="eyebrow">${e(teacherName)}</p><h1>${accept?'استكمل حسابك في الفريق':'دخول المساعد'}</h1><p class="muted">${accept?'رقم واتسابك تم تأكيده. اكتب اسمك واختر كلمة مرور خاصة بحسابك لدى هذا المدرس.':'استخدم رقم واتساب وكلمة المرور الخاصة بك لدى هذا المدرس.'}</p><form id="access-form">${accept?'<div class="field"><label for="full-name">اسمك</label><input id="full-name" name="name" autocomplete="name" minlength="2" maxlength="100" required></div>':'<div class="field"><label for="phone">رقم واتساب</label><input id="phone" name="phone" type="tel" dir="ltr" inputmode="tel" autocomplete="username" maxlength="48" required></div>'}<div class="field"><label for="password">كلمة المرور</label><input id="password" name="password" type="password" autocomplete="${accept?'new-password':'current-password'}" ${accept?'minlength="10"':''} maxlength="72" required>${accept?'<p class="helper">١٠ أحرف على الأقل. كلمة المرور مستقلة عن حساباتك لدى أي مدرس آخر.</p>':''}</div><button type="button" id="show-password" aria-controls="password" aria-pressed="false">إظهار كلمة المرور</button><p class="error" id="auth-error" role="alert">${e(error)}</p><button class="primary" type="submit">${accept?'إنشاء حسابي':'دخول مساحة العمل'}</button></form><p class="helper">${accept?'الرابط صالح لمدة ١٥ دقيقة ويستخدم مرة واحدة.':'لإنشاء حساب أو استعادة الدخول، اطلب دعوة واتساب جديدة من المدرس.'}</p></div>`;
+ main.innerHTML=`<div class="auth-card"><p class="eyebrow">${e(teacherName)}</p><h1>${accept?'استكمل حسابك في الفريق':'دخول المساعد'}</h1><p class="muted">${accept?'رقم واتسابك تم تأكيده. اكتب اسمك واختر كلمة مرور خاصة بحسابك لدى هذا المدرس.':'استخدم رقم واتساب وكلمة المرور الخاصة بك لدى هذا المدرس.'}</p><form id="access-form">${accept?`<div class="field"><label for="registered-phone">رقم واتساب المؤكد</label><input id="registered-phone" type="tel" dir="ltr" value="${e(verifiedPhone)}" readonly required></div>`:''}${accept?'<div class="field"><label for="full-name">اسمك</label><input id="full-name" name="name" autocomplete="name" minlength="2" maxlength="100" required></div>':'<div class="field"><label for="phone">رقم واتساب</label><input id="phone" name="phone" type="tel" dir="ltr" inputmode="tel" autocomplete="username" maxlength="48" required></div>'}<div class="field"><label for="password">كلمة المرور</label><input id="password" name="password" type="password" autocomplete="${accept?'new-password':'current-password'}" ${accept?'minlength="10"':''} maxlength="72" required>${accept?'<p class="helper">١٠ أحرف على الأقل. كلمة المرور مستقلة عن حساباتك لدى أي مدرس آخر.</p>':''}</div><button type="button" id="show-password" aria-controls="password" aria-pressed="false">إظهار كلمة المرور</button><p class="error" id="auth-error" role="alert">${e(error)}</p><button class="primary" type="submit">${accept?'إنشاء حسابي':'دخول مساحة العمل'}</button></form><p class="helper">${accept?'الرابط صالح لمدة ١٥ دقيقة ويستخدم مرة واحدة.':'لإنشاء حساب أو استعادة الدخول، اطلب دعوة واتساب جديدة من المدرس.'}</p></div>`;
  document.getElementById('show-password').onclick=event=>{const input=document.getElementById('password'),show=input.type==='password';input.type=show?'text':'password';event.currentTarget.setAttribute('aria-pressed',String(show));event.currentTarget.textContent=show?'إخفاء كلمة المرور':'إظهار كلمة المرور';};
  document.getElementById('access-form').onsubmit=async event=>{
   event.preventDefault();const form=event.currentTarget,button=form.querySelector('[type=submit]');if(button.disabled)return;button.disabled=true;const label=button.textContent;button.textContent=accept?'جارٍ حفظ حسابك…':'جارٍ الدخول…';
@@ -30,9 +32,17 @@ function auth(error='') {
    const values=new FormData(form);
    const result=await api(accept?'/accept':'/login',accept?{ticket:invitation,name:values.get('name'),password:values.get('password')}:{workspace,phone:values.get('phone'),password:values.get('password')});
    if(result.workspace && result.workspace!==workspace)throw new Error('افتح رابط الدعوة الخاص بالمدرس المقصود');
-   invitation=null;remember(result.token);await openWorkspace();
+   invitation=null;registration=null;verifiedPhone='';remember(result.token);await openWorkspace();
   }catch(error){const target=document.getElementById('auth-error');if(target)target.textContent=error.message;if(accept && error.status===410){const retry=document.createElement('button');retry.type='button';retry.textContent='الرجوع لتسجيل الدخول';retry.onclick=()=>{invitation=null;auth();};target?.append(document.createElement('br'),retry);}button.disabled=false;button.textContent=label;}
  };
+}
+async function beginRegistration() {
+ const info=await api('/registration/info',{invitation:registration});
+ if(info.tenant_id!==workspace)throw new Error('افتح رابط الدعوة الخاص بالمدرس المقصود');
+ brand(info.teacher_name);actions.innerHTML='';
+ main.innerHTML=`<section class="auth-card"><p class="eyebrow">${e(teacherName)}</p><h1>${info.recovery?'استعادة حساب المساعد':'إنشاء حساب المساعد'}</h1><p class="muted">أكد رقمك على واتساب، ثم اكتب اسمك واختر كلمة مرورك.</p><div id="registration-verification"></div><p class="helper">لديك حساب بالفعل؟ <button id="back-to-login" type="button">تسجيل الدخول</button></p></section>`;
+ document.getElementById('back-to-login').onclick=()=>{registration=null;invitation=null;auth();};
+ stopVerification=mountPhoneVerification(main.querySelector('#registration-verification'),{info,requestCode:()=>api('/registration/request',{invitation:registration}),verifyCode:fields=>api('/registration/verify',{invitation:registration,...fields}),onVerified:result=>{invitation=result.ticket;verifiedPhone=result.phone;auth();}});
 }
 async function openWorkspace(){
  const version=++workspaceRequest;pageRequest++;let current;try{current=await api('/me');}catch(error){if(version!==workspaceRequest)return;throw error;}if(version!==workspaceRequest)return;
@@ -120,7 +130,7 @@ function handleFailure(error){if(error.status===401){remember(null);auth(error.m
 document.getElementById('cancel-editor').onclick=()=>dialog.close();
 async function boot(){
  if(!/^[a-f0-9-]{36}$/i.test(workspace)){main.innerHTML='<section class="auth-card"><h1>افتح رابط المدرس</h1><p>استخدم رابط حساب المساعد المرسل إليك على واتساب أو اطلبه من المدرس.</p></section>';return;}
- try {if(session && !invitation){await openWorkspace();return;}const school=await api(`/workspace/${workspace}`);brand(school.name);auth();}
+ try {if(registration){await beginRegistration();return;}if(invitation){const claim=await api('/registration/claim',{ticket:invitation});if(claim.tenant_id!==workspace)throw new Error('افتح رابط المدرس الصحيح');brand(claim.teacher_name);verifiedPhone=claim.phone;auth();return;}if(session && !invitation){await openWorkspace();return;}const school=await api(`/workspace/${workspace}`);brand(school.name);auth();}
  catch(error){if(session && error.status===401){remember(null);try{const school=await api(`/workspace/${workspace}`);brand(school.name);}catch{}auth(error.message);}else{main.innerHTML=`<section class="auth-card"><h1>تعذر فتح مساحة العمل</h1><p class="error">${e(error.message)}</p><button id="retry">حاول مجددًا</button></section>`;document.getElementById('retry').onclick=boot;}}
 }
 boot();
