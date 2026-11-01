@@ -9,7 +9,7 @@ test('LIVE: manual followup uses actual records, independent messaging permissio
  if(!requireIsolatedSupabaseProject(t))return;
  const {serviceClient:db,anonClient}=createIsolatedSupabaseClients(),tenants=[randomUUID(),randomUUID()],origin='https://centerly-eg.com';let server;
  const ok=r=>{assert.equal(r.error,null,r.error?.message);return r.data;};
- t.after(async()=>{if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}for(const id of tenants)ok(await db.from('tenants').delete().eq('id',id));});
+ t.after(async()=>{if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}for(const id of tenants){ok(await db.from('homework_submissions').delete().eq('tenant_id',id));ok(await db.from('study_materials').delete().eq('tenant_id',id));ok(await db.from('tenants').delete().eq('id',id));}});
  ok(await db.from('tenants').insert(tenants.map(id=>({id,name:'isolated manual followup'}))));
  const groups=ok(await db.from('groups').insert([{tenant_id:tenants[0],name:'allowed'},{tenant_id:tenants[0],name:'unassigned'},{tenant_id:tenants[1],name:'foreign'}]).select('id'));
  const students=ok(await db.from('students').insert([{tenant_id:tenants[0],name:'additional member',parent_phone:'01011111111',group_id:groups[1].id},{tenant_id:tenants[0],name:'outside',parent_phone:'01011111111',group_id:groups[1].id},{tenant_id:tenants[1],name:'foreign',parent_phone:'01011111111',group_id:groups[2].id}]).select('id'));
