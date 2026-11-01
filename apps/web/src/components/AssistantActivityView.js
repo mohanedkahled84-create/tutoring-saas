@@ -2,6 +2,7 @@ import {escapeHtml as e} from '../utils/escapeHtml.js';
 import {request} from '../services/api.js';
 
 const actions={
+ 'messages.prepare':'طلب معاينة رسالة واتساب (لا يؤكد الإرسال)',
  'groups.create':'أنشأ مجموعة','groups.edit':'عدّل مجموعة','students.create':'أضاف طالبًا','students.edit':'عدّل بيانات طالب',
  'attendance.edit':'رصد أو صحح الحضور','materials.create':'أضاف محتوى','materials.edit':'عدّل محتوى',
  'collections.create':'سجّل تحصيلًا','collections.void':'ألغى تحصيلًا',
@@ -9,13 +10,13 @@ const actions={
  'homework.edit':'راجع تسليم واجب','quizzes.create':'أنشأ اختبارًا','quizzes.edit':'عدّل اختبارًا',
  invitation_created:'إنشاء دعوة',invitation_accepted:'استكمال الحساب',access_configured:'تعديل الصلاحيات أو إعدادات الحساب',
 };
-const labels={amount:'المبلغ',payment_method:'طريقة الدفع',void_reason:'سبب الإلغاء',score:'الدرجة',note:'ملاحظة الدرجة',name:'الاسم',subject:'المادة',parent_phone:'رقم ولي الأمر',student_phone:'رقم الطالب',notes:'ملاحظات',group_id:'المجموعة',attended:'الحضور',homework_status:'حالة الواجب',comment:'ملاحظة الحضور',title:'العنوان',description:'الوصف',type:'نوع المحتوى',url:'رابط المحتوى',is_homework:'تكليف واجب',due_date:'موعد التسليم',status:'حالة التسليم',teacher_notes:'ملاحظة المراجعة',quiz_number:'رقم الاختبار',max_score:'الدرجة النهائية',quiz_date:'تاريخ الاختبار'};
+const labels={recipient:'المستلم',from:'من',to:'إلى',amount:'المبلغ',payment_method:'طريقة الدفع',void_reason:'سبب الإلغاء',score:'الدرجة',note:'ملاحظة الدرجة',name:'الاسم',subject:'المادة',parent_phone:'رقم ولي الأمر',student_phone:'رقم الطالب',notes:'ملاحظات',group_id:'المجموعة',attended:'الحضور',homework_status:'حالة الواجب',comment:'ملاحظة الحضور',title:'العنوان',description:'الوصف',type:'نوع المحتوى',url:'رابط المحتوى',is_homework:'تكليف واجب',due_date:'موعد التسليم',status:'حالة التسليم',teacher_notes:'ملاحظة المراجعة',quiz_number:'رقم الاختبار',max_score:'الدرجة النهائية',quiz_date:'تاريخ الاختبار'};
 function value(key,v,groups){
  if(v===null || v===undefined || v==='')return '—';
  if(key==='group_id')return groups.find(g=>g.id===v)?.name || 'مجموعة';
  if(key==='attended')return v?'حاضر':'غائب';
  if(typeof v==='boolean')return v?'نعم':'لا';
- return ({done:'مكتمل',partial:'جزئي',missing:'لم يسلم',approved:'مقبول',rejected:'يحتاج إعادة تسليم',cash:'نقدي',instapay:'إنستاباي',vodafone_cash:'فودافون كاش',bank_transfer:'تحويل بنكي',other:'أخرى',active:'مسجل',void:'ملغى',pending:'بانتظار المراجعة',pdf:'ملف PDF',video:'فيديو',link:'رابط'})[v] || String(v);
+ return ({parent:'ولي الأمر',student:'الطالب',done:'مكتمل',partial:'جزئي',missing:'لم يسلم',approved:'مقبول',rejected:'يحتاج إعادة تسليم',cash:'نقدي',instapay:'إنستاباي',vodafone_cash:'فودافون كاش',bank_transfer:'تحويل بنكي',other:'أخرى',active:'مسجل',void:'ملغى',pending:'بانتظار المراجعة',pdf:'ملف PDF',video:'فيديو',link:'رابط'})[v] || String(v);
 }
 export function renderAssistantActivity(entries=[],assistants=[],groups=[]) {
  if(!entries.length)return '<p style="padding:1.5rem .5rem;text-align:center;color:var(--centrly-text)">لا يوجد نشاط مسجل لهذا الاختيار حتى الآن.</p>';
