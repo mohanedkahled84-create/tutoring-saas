@@ -2,12 +2,16 @@ import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServiceSupabaseClient, supabasePublic } from "../../supabase.js";
 import { config } from "../../shared/config/index.js";
+import { attachPayroll, payPeriod, validatePay } from "./payroll.js";
+import { assistantManagementRouter } from "./access.js";
+import { portalOrigin } from "../../shared/utils/portalDestination.js";
 
 function getSupabase(req: AuthenticatedRequest) {
   return (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || supabasePublic;
 }
 
 export const assistantsRouter = Router();
+assistantsRouter.use(assistantManagementRouter);
 
 const ASSISTANT_MANAGER_ROLES = new Set(["admin", "owner", "center_owner", "teacher"]);
 
@@ -29,6 +33,12 @@ assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Prom
 
   try {
     const supabase = getSupabase(req);
+    let period;
+    try { period = payPeriod(req.query.month, req.query.year); }
+    catch (error) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: (error as Error).message } });
+      return;
+    }
     let assistants: any[] = [];
     const { data, error } = await supabase
       .from("assistants")
@@ -55,7 +65,14 @@ assistantsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Prom
       }
     }
 
-    res.json({ assistants, count: assistants.length });
+    const [{data:accessRows,error:accessError},{data:invitations,error:invitationError}] = await Promise.all([
+      supabase.from('assistant_accounts').select('assistant_id,permissions,all_groups,group_ids').eq('tenant_id',tenantId),
+      supabase.from('assistant_invitations').select('assistant_id,delivery_status,expires_at,accepted_at,revoked_at,created_at').eq('tenant_id',tenantId).order('created_at',{ascending:false}),
+    ]);
+    if(accessError || invitationError) throw accessError || invitationError;
+    assistants=assistants.map(a=>({...a,assistant_login_url:`${portalOrigin()}/assistant?workspace=${tenantId}`,access:accessRows?.find(x=>x.assistant_id===a.id) || null,invitation:invitations?.find(x=>x.assistant_id===a.id) || null}));
+    const withPayroll = await attachPayroll(supabase, tenantId!, assistants, period);
+    res.json({ assistants: withPayroll, count: withPayroll.length, period });
   } catch (err: unknown) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: (err as Error).message } });
   }
@@ -79,6 +96,13 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
 
   if (!name || !phone) {
     res.status(400).json({ error: { code: "BAD_REQUEST", message: "الاسم ورقم الهاتف مطلوبان" } });
+    return;
+  }
+
+  let pay;
+  try { pay = validatePay(req.body); }
+  catch (error) {
+    res.status(400).json({ error: { code: "BAD_REQUEST", message: (error as Error).message } });
     return;
   }
 
@@ -113,8 +137,7 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
         assistant_type: "assistant_to_teacher",
         can_view_financials: false,
         group_id: cleanGroupId,
-        salary_model: salary_model || "monthly",
-        salary: salaryVal,
+        ...pay,
         status: "active",
       })
       .select()
@@ -122,6 +145,9 @@ assistantsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Pro
 
     if (!directErr && directData) {
       createdAssistant = directData;
+    } else if (pay.salary_model === "per_day" || pay.pay_start_date || pay.work_weekdays.length) {
+      // Legacy RPC signatures cannot persist a work schedule; never report a partial save as success.
+      throw directErr || new Error("Failed to save assistant pay schedule");
     } else {
       // Fallback 1: secure RPC through the authenticated or service-role client
       const { data: rpcRow, error: rpcErr } = await supabase.rpc("create_assistant_secure", {
@@ -193,6 +219,26 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
 
   try {
     const supabase = getSupabase(req);
+    const { data: previous, error: previousError } = await supabase.from("assistants")
+      .select("salary_model,salary,work_weekdays,pay_start_date")
+      .eq("id", id).eq("tenant_id", tenantId).maybeSingle();
+    if (previousError) throw previousError;
+    if (!previous) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "المساعد غير موجود" } });
+      return;
+    }
+    const {data:linkedAccount,error:linkedError}=await supabase.from('assistant_accounts').select('assistant_id').eq('assistant_id',id).eq('tenant_id',tenantId).maybeSingle();
+    if(linkedError) throw linkedError;
+    if(linkedAccount){
+      res.status(400).json({error:{code:'USE_ACCESS_SETTINGS',message:'استخدم إعدادات صلاحيات المساعد لتعديل حسابه وأجره'}});
+      return;
+    }
+    let pay;
+    try { pay = validatePay(req.body, previous); }
+    catch (error) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: (error as Error).message } });
+      return;
+    }
     const updates: Record<string, any> = {};
     if (name) updates.name = name.trim();
     if (phone) updates.phone = phone.trim();
@@ -200,10 +246,7 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
     if (group_id !== undefined) {
       updates.group_id = cleanGroupId;
     }
-    if (salary_model) updates.salary_model = salary_model;
-    if (req.body.salary !== undefined || req.body.salary_amount !== undefined) {
-      updates.salary = salaryVal;
-    }
+    Object.assign(updates, pay);
     if (status) updates.status = status;
 
     let updatedAssistant: any = null;
@@ -218,6 +261,8 @@ assistantsRouter.put("/:id", async (req: AuthenticatedRequest, res: Response): P
 
     if (!directErr && directData) {
       updatedAssistant = directData;
+    } else if (pay.salary_model === "per_day" || pay.pay_start_date || pay.work_weekdays.length || req.body.pay_start_date !== undefined || req.body.work_weekdays !== undefined) {
+      throw directErr || new Error("Failed to save assistant pay schedule");
     } else {
       const { data: rpcRow, error: rpcErr } = await supabase.rpc("update_assistant_secure", {
         p_id: id,

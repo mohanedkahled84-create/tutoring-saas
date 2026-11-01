@@ -4,6 +4,7 @@ import {config} from '../config/index.js';
 import {familyError,familyPhone,familyHash,familyRpc,deliverFamilyAccess,familyNamesAtTeacher,familyNamesText} from './parentFamily.js';
 import {approvedUtilityTemplate} from './metaTemplatePolicy.js';
 import {metaTemplateParameters} from './metaTemplateParameters.js';
+import {confirmAssistantMessage} from '../../features/assistants/access.js';
 
 export interface MetaFamilyGateway {
  notify(phone:string,parameters:string[],payload:string):Promise<boolean>;
@@ -60,10 +61,13 @@ export async function processMetaPortalMessage(db:SupabaseClient,message:any,gat
  const phone=familyPhone(message?.from),timestamp=Number(message?.timestamp)*1000;
  if(!phone || typeof message?.id!=='string' || !message.id || message.id.length>256)return;
  const credential=credentialAction(message);
- if(credential && (!Number.isFinite(timestamp) || timestamp>now+60000 || timestamp<now-15*60000))return;
+ const assistantPayload=String(message?.button?.payload || message?.interactive?.button_reply?.id || '');
+ const assistantAction=assistantPayload.startsWith('CENTRLY_ASSISTANT:');
+ if((credential || assistantAction) && (!Number.isFinite(timestamp) || timestamp>now+60000 || timestamp<now-15*60000))return;
  const key=familyHash('meta-message:'+message.id);
  const claimed=await familyRpc(db,'parent_family_limit',{p_key:key,p_max:1});if(!claimed)return;
  try{
+  if(assistantAction){await confirmAssistantMessage(db,phone,assistantPayload,(to,text)=>gateway.reply(to,text));return;}
   const records=await familyRpc(db,'meta_portal_phone_records',{p_phone:phone});
   const payload=String(message?.button?.payload || message?.interactive?.button_reply?.id || '');
   const parts=payload.startsWith('CENTRLY_FAMILY:')?payload.split(':'):null;

@@ -1,6 +1,6 @@
 {
   "activity_logs": ["id", "tenant_id", "actor_user_id", "action_type", "entity_type", "entity_id", "before_value", "after_value", "created_at"],
-  "assistants": ["id", "tenant_id", "user_id", "teacher_id", "name", "phone", "assistant_type", "can_view_financials", "status", "invite_token", "created_at", "updated_at", "salary", "group_id", "role_type", "salary_model"],
+  "assistants": ["id", "tenant_id", "user_id", "teacher_id", "name", "phone", "assistant_type", "can_view_financials", "status", "invite_token", "created_at", "updated_at", "salary", "group_id", "role_type", "salary_model", "work_weekdays", "pay_start_date"],
   "attendance": ["id", "tenant_id", "session_id", "student_id", "attended", "comment", "sent", "idempotency_key", "created_at", "is_makeup", "home_group_id", "homework_status", "enrollment_id", "teacher_id", "quiz_score", "quiz_max_score", "checkin_time", "wa_status", "quiz_wa_status"],
   "email_verifications": ["id", "email", "code", "created_at", "expires_at", "verified_at", "attempts"],
   "enrollments": ["id", "tenant_id", "student_id", "teacher_id", "group_id", "status", "joined_at"],
@@ -23,5 +23,9 @@
   "telemetry_events": ["id", "tenant_id", "event_name", "properties", "session_id", "page_path", "created_at"],
   "tenants": ["id", "name", "status", "created_at", "subscription_status", "trial_ends_at", "subscription_ends_at", "deleted_at", "account_type", "subscription_tier", "settings"],
   "users": ["id", "tenant_id", "role", "email", "created_at", "teacher_id", "assistant_id", "full_name", "phone", "subject", "financial_pin_hash", "failed_pin_attempts", "pin_locked_until"],
-  "whatsapp_connections": ["id", "tenant_id", "provider", "instance_url", "instance_status", "api_key_secret_id", "connected_at", "created_at", "sent_today", "last_sent_date", "daily_limit", "teacher_id", "is_legacy_exempt"]
+  "whatsapp_connections": ["id", "tenant_id", "provider", "instance_url", "instance_status", "api_key_secret_id", "connected_at", "created_at", "sent_today", "last_sent_date", "daily_limit", "teacher_id", "is_legacy_exempt"],
+  "assistant_accounts": ["assistant_id", "tenant_id", "phone", "password_hash", "credential_version", "permissions", "all_groups", "group_ids", "created_at"],
+  "assistant_invitations": ["id", "assistant_id", "tenant_id", "phone", "nonce_hash", "claim_hash", "claim_expires_at", "verified_at", "expires_at", "accepted_at", "revoked_at", "delivery_status", "created_at"],
+  "assistant_sessions": ["token_hash", "assistant_id", "origin", "credential_version", "expires_at", "created_at"],
+  "assistant_access_audit": ["id", "tenant_id", "assistant_id", "action", "target_id", "created_at"]
 }

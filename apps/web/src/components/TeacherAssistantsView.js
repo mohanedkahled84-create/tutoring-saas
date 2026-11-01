@@ -1,6 +1,9 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
+import { renderAssistantPayFields, updateAssistantPayFields, readAssistantPayFields } from "./AssistantPayFields.js";
+import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js";
+import { assistantPay } from "../utils/assistantPay.js";
 
 /**
  * Centrly Teacher Assistants Management Component
@@ -22,13 +25,12 @@ export function renderTeacherAssistantsView(
   // Compute stats
   const totalAssistants = assistantList.length;
   const perSessionCount = assistantList.filter(a => a.salary_model === 'per_session').length;
+  const dailyCount = assistantList.filter(a => a.salary_model === 'per_day').length;
   const monthlyCount = assistantList.filter(a => a.salary_model === 'monthly' || !a.salary_model).length;
 
-  const totalMonthlySalaries = assistantList
-    .filter(a => a.salary_model === 'monthly' || !a.salary_model)
-    .reduce((sum, a) => sum + (Number(a.salary ?? a.salary_amount) || 0), 0);
-
-  const displayMonthly = hideNumbers ? '••••••' : `${totalMonthlySalaries.toLocaleString('ar-EG')} ج.م`;
+  const paySummary = assistantList.filter(a => a.status === 'active').map(a => assistantPay(a));
+  const totalMonthlySalaries = paySummary.reduce((sum, p) => sum + p.amount, 0);
+  const displayMonthly = hideNumbers ? '••••••' : paySummary.some(p => !p.available) ? 'غير متاح حاليًا' : `${totalMonthlySalaries.toLocaleString('ar-EG')} ج.م`;
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
@@ -117,7 +119,7 @@ export function renderTeacherAssistantsView(
             </div>
 
             <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-              <button class="btn btn-primary" onclick="window.centrlyApp.openAddTeacherAssistantModal()" style="height: 30px; font-size: 0.76rem; font-weight: 700;">
+              <button class="btn btn-primary" onclick="window.centrlyApp.openAddTeacherAssistantModal()" style="min-height: 44px; font-size: 0.85rem; font-weight: 700;">
                 ${getIcon('add', 14, '#ffffff')}
                 <span>إضافة مساعد جديد</span>
               </button>
@@ -138,12 +140,12 @@ export function renderTeacherAssistantsView(
           </div>
 
           <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-success);">
-            <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">إجمالي المرتبات الشهرية</div>
+            <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">المستحقات المتوقعة لهذا الشهر</div>
             <div style="font-size: 1.8rem; font-weight: 900; color: var(--centrly-success); margin-top: 0.35rem;">
               ${displayMonthly}
             </div>
             <div style="font-size: 0.75rem; color: var(--centrly-text); margin-top: 0.25rem;">
-              ${monthlyCount} مساعد بنظام المرتب الثابت
+              ${monthlyCount} شهري · ${dailyCount} يومي تلقائي · ${perSessionCount} بالحصة
             </div>
           </div>
 
@@ -183,7 +185,7 @@ export function renderTeacherAssistantsView(
               <tbody>
                 ${assistantList.length > 0 ? assistantList.map(a => {
                   const assignedGroup = groups.find(g => g.id === a.group_id);
-                  const groupLabel = assignedGroup ? assignedGroup.name : 'جميع المجموعات (عام)';
+                  const groupLabel = a.access ? a.access.all_groups ? 'كل المجموعات' : `${a.access.group_ids.length} مجموعة محددة` : assignedGroup ? assignedGroup.name : 'جميع المجموعات (عام)';
                   
                   let roleBadge = '<span class="badge badge-blue">إداري وتعليمي شامل</span>';
                   if (a.role_type === 'admin') {
@@ -193,14 +195,13 @@ export function renderTeacherAssistantsView(
                   }
 
                   const isPerSession = a.salary_model === 'per_session';
-                  const modelBadge = isPerSession 
-                    ? '<span class="badge badge-amber">بالحصة</span>' 
-                    : '<span class="badge badge-success">بالشهر</span>';
+                  const payInfo = assistantPay(a);
+                  const modelBadge = `<span class="badge badge-secondary">${payInfo.modelLabel}</span>`;
 
                   const salaryVal = Number(a.salary ?? a.salary_amount) || 0;
                   const salaryDisplay = hideNumbers 
                     ? '••••••' 
-                    : `${salaryVal.toLocaleString('ar-EG')} ج.م ${isPerSession ? '/ حصة' : '/ شهر'}`;
+                    : `${salaryVal.toLocaleString('ar-EG')} ج.م ${a.salary_model === 'per_day' ? '/ يوم' : isPerSession ? '/ حصة' : '/ شهر'}`;
 
                   const phoneClean = (a.phone || '').replace(/[^0-9]/g, '');
                   const waUrl = phoneClean ? `https://wa.me/2${phoneClean}` : null;
@@ -209,6 +210,7 @@ export function renderTeacherAssistantsView(
                     <tr>
                       <td style="font-weight: 800; color: #0f172a;">
                         ${escapeHtml(a.name)}
+                        <div style="font-weight:400;font-size:.8rem;margin-top:.35rem;color:var(--centrly-text)">${a.access ? a.status === 'inactive' ? 'الوصول متوقف' : a.status === 'active' ? 'حساب مستقل' : a.invitation?.delivery_status === 'sent' ? 'دعوة مرسلة — بانتظار القبول' : a.invitation?.delivery_status === 'blocked' ? 'الدعوة محفوظة — واتساب متوقف' : 'دعوة محفوظة لم يكتمل إرسالها' : 'سجل قديم — لم يُربط بحساب مستقل'}</div>
                       </td>
                       <td>
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
@@ -234,13 +236,17 @@ export function renderTeacherAssistantsView(
                       </td>
                       <td style="font-weight: 800; color: #1d4ed8; font-family: monospace;">
                         ${salaryDisplay}
+                        <div style="font:normal .8rem/1.7 inherit;color:var(--centrly-text);margin-top:.35rem">${escapeHtml(payInfo.basis)}</div>
+                        <div style="font-size:.85rem;margin-top:.25rem">${hideNumbers ? '••••••' : payInfo.available ? `${payInfo.amount.toLocaleString('ar-EG')} ج.م للشهر` : 'غير متاح حاليًا'}</div>
                       </td>
                       <td>
                         <div style="display: flex; align-items: center; gap: 0.35rem;">
-                          <button class="btn btn-sm btn-secondary" onclick="window.centrlyApp.openEditTeacherAssistantModal('${a.id}')" title="تعديل">
+                          <button class="btn btn-sm btn-secondary" onclick="window.centrlyApp.openEditTeacherAssistantModal('${a.id}')" title="تعديل" style="min-width:44px;min-height:44px">
                             ${getIcon('edit', 14)}
                           </button>
-                          <button class="btn btn-sm btn-danger" onclick="window.centrlyApp.deleteTeacherAssistant('${a.id}', '${escapeHtml(a.name)}')" title="حذف">
+                          <button class="btn btn-sm btn-secondary" onclick="window.centrlyApp.prepareAssistantInvitation('${a.id}')" style="min-height:44px" title="${a.access ? 'إعادة دعوة' : 'ربط بحساب مستقل'}">${a.access ? 'إعادة دعوة' : 'دعوة'}</button>
+                          ${a.access && a.assistant_login_url ? `<a class="btn btn-sm btn-secondary" href="${escapeHtml(a.assistant_login_url)}" target="_blank" rel="noopener noreferrer" style="min-height:44px">رابط الدخول</a>` : ''}
+                          <button class="btn btn-sm btn-danger" onclick="window.centrlyApp.deleteTeacherAssistant('${a.id}')" title="حذف" style="min-width:44px;min-height:44px">
                             ${getIcon('delete', 14)}
                           </button>
                         </div>
@@ -266,92 +272,74 @@ export function renderTeacherAssistantsView(
 }
 
 export function registerTeacherAssistantsActions(app) {
+  app.updateTeacherAssistantPayFields = updateAssistantPayFields;
+  app.prepareAssistantInvitation = function(id) {
+    const assistant=(this.teacherAssistants || []).find(a=>a.id===id);
+    if(!assistant) return;
+    const body=`<p style="line-height:1.7">إرسال دعوة إلى ${escapeHtml(assistant.name)} على <span dir="ltr">${escapeHtml(assistant.phone || '')}</span>. سيسجل المساعد اسمه وكلمة مرور خاصة بهذا المدرس. الدعوة الجديدة تلغي روابط الدعوات السابقة وتحافظ على الأجر المسجل. عند قبولها، تنتهي جلسات الدخول القديمة.</p><form id="assistantReinviteForm" onsubmit="window.centrlyApp.sendAssistantReinvitation(event,'${id}')">${renderAssistantAccessFields('reinvite',this.groups || [],assistant.access || {})}</form>`;
+    this.showModal('دعوة المساعد',body,`<button class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button><button class="btn btn-primary" type="submit" form="assistantReinviteForm">حفظ الدعوة وإرسالها</button>`);
+  };
+  app.sendAssistantReinvitation = async function(event,id) {
+    event.preventDefault();
+    const a=(this.teacherAssistants || []).find(a=>a.id===id);if(!a)return;
+    try {
+      const access=readAssistantAccessFields('reinvite');
+      const result=await request('/assistants/invitations',{method:'POST',body:{assistant_id:id,phone:a.phone,...access,salary_model:a.salary_model || 'monthly',salary:a.salary || 0,work_weekdays:a.work_weekdays || [],pay_start_date:a.pay_start_date || null}});
+      this.closeModal();this.showToast(result.message,result.delivery_status==='sent'?'success':'warning');await this.loadRouteData('assistants');
+    } catch(error){this.showToast(error.message || 'تعذر حفظ الدعوة','danger');}
+  };
   app.openAddTeacherAssistantModal = function() {
     const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
     const bodyHtml = `
       <form id="modalAddTeacherAssistantForm" onsubmit="window.centrlyApp.handleAddTeacherAssistantSubmit(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">اسم المساعد (الأسستنت) *</label>
-          <input type="text" id="modalTA_Name" class="form-input" placeholder="اسم المساعد" required>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم الهاتف (للتواصل والواتساب) *</label>
           <input type="tel" id="modalTA_Phone" class="form-input" placeholder="010..." dir="ltr" required>
         </div>
 
-        <div class="modal-form-grid">
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">المجموعة المسندة</label>
-            <select id="modalTA_GroupId" class="form-select">
-              <option value="">جميع المجموعات (مسؤول عام)</option>
-              ${groupOptions}
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">طبيعة الدور والعمل *</label>
-            <select id="modalTA_RoleType" class="form-select">
-              <option value="both">إداري وتعليمي شامل</option>
-              <option value="admin">إداري وتنظيمي فقط (حضور وكروت)</option>
-              <option value="educational">تعليمي وتدريسي فقط (شرح ومتابعة)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="modal-form-grid" style="margin-bottom: 1.25rem;">
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">نظام المحاسبة *</label>
-            <select id="modalTA_SalaryModel" class="form-select" onchange="document.getElementById('modalTA_SalaryLabel').innerText = (this.value === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)')">
-              <option value="monthly">مرتب شهري ثابت</option>
-              <option value="per_session">أجر بالحصة الواحدة</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" id="modalTA_SalaryLabel" style="font-weight: 700;">المرتب الشهري الثابت (ج.م)</label>
-            <input type="number" id="modalTA_SalaryAmount" class="form-input" placeholder="0" min="0" value="0">
-          </div>
-        </div>
+        ${renderAssistantAccessFields("modalTA", this.groups || [])}
+        ${renderAssistantPayFields("modalTA")}
       </form>
     `;
 
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-      <button type="submit" form="modalAddTeacherAssistantForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">إضافة المساعد الآن</button>
+      <button type="submit" form="modalAddTeacherAssistantForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">حفظ الدعوة وإرسالها على واتساب</button>
     `;
-    this.showModal('إضافة مساعد (أسستنت) جديد للمعلم', bodyHtml, footerHtml);
+    this.showModal('دعوة مساعد إلى فريقك', bodyHtml, footerHtml);
   };
 
   app.handleAddTeacherAssistantSubmit = async function(e) {
     e.preventDefault();
-    const name = document.getElementById('modalTA_Name')?.value.trim();
     const phone = document.getElementById('modalTA_Phone')?.value.trim();
     const group_id = document.getElementById('modalTA_GroupId')?.value || null;
     const role_type = document.getElementById('modalTA_RoleType')?.value || 'both';
     const salary_model = document.getElementById('modalTA_SalaryModel')?.value || 'monthly';
     const salary_amount = parseFloat(document.getElementById('modalTA_SalaryAmount')?.value) || 0;
 
-    if (!name || !phone) {
-      this.showToast('يرجى كتابة اسم المساعد ورقم هاتفه', 'error');
+    if (!phone) {
+      this.showToast('يرجى كتابة رقم واتساب المساعد', 'error');
       return;
     }
 
     try {
-      await request('/assistants', {
+      const pay = readAssistantPayFields('modalTA');
+      const access = readAssistantAccessFields('modalTA');
+      const result = await request('/assistants/invitations', {
         method: 'POST',
         body: {
-          name,
           phone,
           group_id: group_id || null,
           role_type,
           salary_model,
           salary: salary_amount,
           salary_amount,
+          ...pay,
+          ...access,
         },
       });
       this.closeModal();
-      this.showToast(`تمت إضافة المساعد (${name}) بنجاح!`, 'success');
+      this.showToast(result.message, result.delivery_status === 'sent' ? 'success' : 'warning');
       await this.loadRouteData('assistants');
     } catch (err) {
       this.showToast(`فشل إضافة المساعد: ${err.message || 'حدث خطأ'}`, 'danger');
@@ -365,6 +353,16 @@ export function registerTeacherAssistantsActions(app) {
     const groupOptions = (this.groups || []).map(g => `<option value="${g.id}" ${assistant.group_id === g.id ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join('');
     const bodyHtml = `
       <form id="modalEditTeacherAssistantForm" onsubmit="window.centrlyApp.handleEditTeacherAssistantSubmit(event, '${assistantId}')">
+        ${assistant.access ? `
+          <p style="line-height:1.7">${escapeHtml(assistant.name)} · <span dir="ltr">${escapeHtml(assistant.phone || '')}</span><br>المساعد يحدد اسمه وكلمة مروره عند قبول الدعوة.</p>
+          <label for="modalEditTA_Status" class="form-label">حالة الوصول</label>
+          <select id="modalEditTA_Status" class="form-select" style="min-height:44px;margin-bottom:1rem">
+            <option value="active" ${assistant.status==='active'?'selected':''}>نشط</option>
+            <option value="invited" ${assistant.status==='invited'?'selected':''}>بانتظار قبول الدعوة</option>
+            <option value="inactive" ${assistant.status==='inactive'?'selected':''}>إيقاف الوصول</option>
+          </select>
+          ${renderAssistantAccessFields('modalEditTA', this.groups || [], assistant.access)}
+        ` : `
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">اسم المساعد (الأسستنت) *</label>
           <input type="text" id="modalEditTA_Name" class="form-input" value="${escapeHtml(assistant.name)}" required>
@@ -394,22 +392,8 @@ export function registerTeacherAssistantsActions(app) {
           </div>
         </div>
 
-        <div class="modal-form-grid" style="margin-bottom: 1.25rem;">
-          <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">نظام المحاسبة *</label>
-            <select id="modalEditTA_SalaryModel" class="form-select" onchange="document.getElementById('modalEditTA_SalaryLabel').innerText = (this.value === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)')">
-              <option value="monthly" ${assistant.salary_model === 'monthly' ? 'selected' : ''}>مرتب شهري ثابت</option>
-              <option value="per_session" ${assistant.salary_model === 'per_session' ? 'selected' : ''}>أجر بالحصة الواحدة</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" id="modalEditTA_SalaryLabel" style="font-weight: 700;">
-              ${assistant.salary_model === 'per_session' ? 'أجر الحصة الواحدة (ج.م)' : 'المرتب الشهري الثابت (ج.م)'}
-            </label>
-            <input type="number" id="modalEditTA_SalaryAmount" class="form-input" value="${Number(assistant.salary ?? assistant.salary_amount) || 0}" min="0">
-          </div>
-        </div>
+        `}
+        ${renderAssistantPayFields("modalEditTA", assistant)}
       </form>
     `;
 
@@ -430,7 +414,11 @@ export function registerTeacherAssistantsActions(app) {
     const salary_amount = parseFloat(document.getElementById('modalEditTA_SalaryAmount')?.value) || 0;
 
     try {
-      await request(`/assistants/${assistantId}`, {
+      const pay = readAssistantPayFields('modalEditTA');
+      const assistant = (this.teacherAssistants || []).find(a => a.id === assistantId);
+      const access = assistant?.access ? readAssistantAccessFields('modalEditTA') : {};
+      const status = assistant?.access ? document.getElementById('modalEditTA_Status').value : undefined;
+      await request(assistant?.access ? `/assistants/${assistantId}/access` : `/assistants/${assistantId}`, {
         method: 'PUT',
         body: {
           name,
@@ -440,6 +428,9 @@ export function registerTeacherAssistantsActions(app) {
           salary_model,
           salary: salary_amount,
           salary_amount,
+          ...pay,
+          ...access,
+          status,
         },
       });
       this.closeModal();
@@ -451,6 +442,7 @@ export function registerTeacherAssistantsActions(app) {
   };
 
   app.deleteTeacherAssistant = function(id, name) {
+    name = (this.teacherAssistants || []).find(a=>a.id===id)?.name || 'المساعد';
     const bodyHtml = `
       <div style="text-align: center; padding: 0.5rem 0;">
         <div style="margin-bottom: 0.75rem;">${getIcon('trash', 40, '#ef4444')}</div>
@@ -460,7 +452,7 @@ export function registerTeacherAssistantsActions(app) {
         </p>
         <div style="display: flex; gap: 0.75rem; justify-content: center;">
           <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-          <button type="button" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;" onclick="window.centrlyApp.confirmDeleteTeacherAssistant('${id}', '${escapeHtml(name)}')">
+          <button type="button" class="btn btn-primary" style="background: #ef4444; border-color: #ef4444; font-weight: 800;" onclick="window.centrlyApp.confirmDeleteTeacherAssistant('${id}')">
             حذف نهائي
           </button>
         </div>
@@ -470,6 +462,7 @@ export function registerTeacherAssistantsActions(app) {
   };
 
   app.confirmDeleteTeacherAssistant = async function(id, name) {
+    name = (this.teacherAssistants || []).find(a=>a.id===id)?.name || 'المساعد';
     this.closeModal();
     try {
       await request(`/assistants/${id}`, { method: 'DELETE' });

@@ -1,3 +1,4 @@
+import { assistantPay } from "../utils/assistantPay.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 
@@ -83,25 +84,9 @@ export function renderTeacherDashboard(
   const processedAssistants = activeAssistants.map(a => {
     const isPerSession = a.salary_model === 'per_session';
     const rate = Number(a.salary ?? a.salary_amount ?? 0);
-    let monthlyDeduction = 0;
-    let calculationBasis = '';
-
-    if (isPerSession) {
-      if (a.group_id) {
-        const matched = groups.find(g => g.id === a.group_id);
-        const grpName = matched ? matched.name : 'مجموعة مخصصة';
-        const sessions = matched ? Math.max(1, Number(matched.sessions_per_week || 1)) * 4 : 4;
-        monthlyDeduction = rate * sessions;
-        calculationBasis = `${sessions} حصص شهرياً في ${grpName} (${rate.toLocaleString('ar-EG')} ج.م/حصة)`;
-      } else {
-        const totalSessions = groups.reduce((acc, g) => acc + (Math.max(1, Number(g.sessions_per_week || 1)) * 4), 0) || 4;
-        monthlyDeduction = rate * totalSessions;
-        calculationBasis = `${totalSessions} حصة شهرياً لكافة المجاميع (${rate.toLocaleString('ar-EG')} ج.م/حصة)`;
-      }
-    } else {
-      monthlyDeduction = rate;
-      calculationBasis = 'مرتب شهري ثابت';
-    }
+    const pay = assistantPay(a);
+    const monthlyDeduction = pay.amount;
+    const calculationBasis = pay.basis;
 
     calculatedAssistantSalaries += monthlyDeduction;
 
@@ -598,7 +583,7 @@ export function renderTeacherDashboard(
                       <td><span class="badge badge-blue">${escapeHtml(a.assignedGroupName)}</span></td>
                       <td>
                         <span class="badge ${a.isPerSession ? 'badge-amber' : 'badge-success'}">
-                          ${a.isPerSession ? 'بالحصة' : 'مرتب شهري'}
+                          ${assistantPay(a).modelLabel}
                         </span>
                       </td>
                       <td style="font-size: 0.825rem; color: var(--centrly-text);">

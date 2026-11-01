@@ -1,3 +1,4 @@
+import { assistantPay } from "./utils/assistantPay.js";
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
 import { renderSidebar } from './components/Sidebar.js?v=5.2.1';
@@ -151,7 +152,7 @@ class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=1.0.0').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=1.1.0').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
@@ -1557,7 +1558,7 @@ class CentrlyApp {
           const [reportsRes, grpRes, astRes, studRes] = await Promise.all([
             request(url),
             request('/groups'),
-            request('/assistants'),
+            request(`/assistants?month=${month}&year=${year}`),
             request('/students'),
           ]);
 
@@ -1676,14 +1677,7 @@ class CentrlyApp {
           const activeAssistants = assistants.filter(a => a.status !== 'inactive');
           let totalAssistantSalaries = 0;
           activeAssistants.forEach(a => {
-            const isPerSession = a.salary_model === 'per_session';
-            const rate = Number(a.salary ?? a.salary_amount ?? 0);
-            if (isPerSession) {
-              const sessCount = a.group_id ? 4 : (groups.length > 0 ? groups.length * 4 : 4);
-              totalAssistantSalaries += rate * sessCount;
-            } else {
-              totalAssistantSalaries += rate;
-            }
+            totalAssistantSalaries += assistantPay(a).amount;
           });
 
           const totalCenterCut = Math.max(0, totalMonthlyRev - totalGrossTeacherProfit);
