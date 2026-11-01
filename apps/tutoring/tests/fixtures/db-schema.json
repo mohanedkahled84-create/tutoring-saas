@@ -1,4 +1,5 @@
 {
+  "student_collections": ["id","tenant_id","group_id","student_id","student_name_snapshot","group_name_snapshot","amount","payment_method","note","collected_at","assistant_id","actor_user_id","actor_name","request_id","status","voided_at","voided_by","voided_by_name","void_reason"],
   "activity_logs": ["id", "tenant_id", "actor_user_id", "action_type", "entity_type", "entity_id", "before_value", "after_value", "created_at"],
   "assistants": ["id", "tenant_id", "user_id", "teacher_id", "name", "phone", "assistant_type", "can_view_financials", "status", "invite_token", "created_at", "updated_at", "salary", "group_id", "role_type", "salary_model", "work_weekdays", "pay_start_date"],
   "attendance": ["id", "tenant_id", "session_id", "student_id", "attended", "comment", "sent", "idempotency_key", "created_at", "is_makeup", "home_group_id", "homework_status", "enrollment_id", "teacher_id", "quiz_score", "quiz_max_score", "checkin_time", "wa_status", "quiz_wa_status"],

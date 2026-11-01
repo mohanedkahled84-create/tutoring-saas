@@ -417,7 +417,7 @@ export class SessionsService {
       `• *إجمالي الغياب:* ${absentCount} طالب`,
       makeupCount > 0 ? `• *طلاب التعويض:* ${makeupCount} طالب` : null,
       "━━━━━━━━━━━━━━━━━━━━━",
-      `• *إجمالي النقدية المحصلة:* ${totalRevenue} ج.م`,
+      `• *قيمة الحضور التقديرية:* ${totalRevenue} ج.م`,
       group.billing_model === "no_center"
         ? `• *نظام المحاسبة:* بدون سنتر (صافي المعلم 100%)`
         : `• *حصة السنتر:* ${centerShare} ج.م`,

@@ -1,6 +1,7 @@
 import { escapeHtml as e } from './utils/escapeHtml.js';
-import { assistantPages } from './components/AssistantAccessFields.js?v=2';
+import { assistantPages } from './components/AssistantAccessFields.js?v=3';
 import { API_BASE_URL } from './services/api.js';
+import {mountCollectionLedger} from './components/CollectionLedger.js';
 import { assistantRequest } from './services/assistantClient.js';
 
 const main=document.getElementById('main'),actions=document.getElementById('account-actions'),dialog=document.getElementById('editor');
@@ -13,12 +14,12 @@ let identity,selected,rows=[],activeSession,activeQuiz,gradeChoices=[],teacherNa
 function notice(text){document.getElementById('notice').textContent=text;}
 function api(path,body) { return assistantRequest(API_BASE_URL,path,{body,token:session}); }
 function brand(name) { teacherName=name || teacherName;document.getElementById('workspace-name').textContent=teacherName; }
-let pageRequest=0,workspaceRequest=0;
+let pageRequest=0,workspaceRequest=0,stopCollections;
 function remember(value){session=value;try{if(value)sessionStorage.setItem(key,value);else sessionStorage.removeItem(key);}catch{}}
 function can(page,action='view'){return identity?.permissions?.[`${page}.${action}`]===true;}
 function groupName(id){return identity.groups.find(g=>g.id===id)?.name || 'مجموعة محددة';}
 function auth(error='') {
- identity=null;gradeChoices=[];activeQuiz=null;pageRequest++;workspaceRequest++;dialog.close();actions.innerHTML='';notice('');
+ stopCollections?.();stopCollections=null;identity=null;gradeChoices=[];activeQuiz=null;pageRequest++;workspaceRequest++;dialog.close();actions.innerHTML='';notice('');
  const accept=!!invitation;
  main.innerHTML=`<div class="auth-card"><p class="eyebrow">${e(teacherName)}</p><h1>${accept?'استكمل حسابك في الفريق':'دخول المساعد'}</h1><p class="muted">${accept?'رقم واتسابك تم تأكيده. اكتب اسمك واختر كلمة مرور خاصة بحسابك لدى هذا المدرس.':'استخدم رقم واتساب وكلمة المرور الخاصة بك لدى هذا المدرس.'}</p><form id="access-form">${accept?'<div class="field"><label for="full-name">اسمك</label><input id="full-name" name="name" autocomplete="name" minlength="2" maxlength="100" required></div>':'<div class="field"><label for="phone">رقم واتساب</label><input id="phone" name="phone" type="tel" dir="ltr" inputmode="tel" autocomplete="username" maxlength="48" required></div>'}<div class="field"><label for="password">كلمة المرور</label><input id="password" name="password" type="password" autocomplete="${accept?'new-password':'current-password'}" ${accept?'minlength="10"':''} maxlength="72" required>${accept?'<p class="helper">١٠ أحرف على الأقل. كلمة المرور مستقلة عن حساباتك لدى أي مدرس آخر.</p>':''}</div><button type="button" id="show-password" aria-controls="password" aria-pressed="false">إظهار كلمة المرور</button><p class="error" id="auth-error" role="alert">${e(error)}</p><button class="primary" type="submit">${accept?'إنشاء حسابي':'دخول مساحة العمل'}</button></form><p class="helper">${accept?'الرابط صالح لمدة ١٥ دقيقة ويستخدم مرة واحدة.':'لإنشاء حساب أو استعادة الدخول، اطلب دعوة واتساب جديدة من المدرس.'}</p></div>`;
  document.getElementById('show-password').onclick=event=>{const input=document.getElementById('password'),show=input.type==='password';input.type=show?'text':'password';event.currentTarget.setAttribute('aria-pressed',String(show));event.currentTarget.textContent=show?'إخفاء كلمة المرور':'إظهار كلمة المرور';};
@@ -56,7 +57,9 @@ const translated={ended:'منتهية',scheduled:'مجدولة',cancelled:'مل�
 function valueText(value){if(value===null || value===undefined || value==='')return '—';if(value===true)return 'نعم';if(value===false)return 'لا';return translated[value] || String(value);}
 async function loadPage(){
  const panel=document.getElementById('page-content'),page=selected,request=++pageRequest,sessionId=activeSession,quizId=activeQuiz;
+ stopCollections?.();stopCollections=null;
  if(!panel || !identity)return;
+ if(page==='collections'){panel.innerHTML='<h2>التحصيل</h2><div id="assistant-collection-ledger"></div>';stopCollections=mountCollectionLedger(panel.querySelector('#assistant-collection-ledger'),{groups:identity.groups,allowCreate:can('collections','create'),request:(suffix,body)=>api(`/data/collections${body===undefined?suffix:'/create'}`,body),onFailure:error=>{if(error.status===401)handleFailure(error);}});return;}
  const label=assistantPages.find(([key])=>key===page)?.[1] || '';
  panel.innerHTML=`<div class="panel-top"><h2>${label}</h2><div class="actions"><button id="refresh" aria-label="تحديث بيانات الصفحة">إعادة التحميل</button>${can(page,'create')?'<button id="create" class="primary" disabled>إضافة جديد</button>':''}</div></div>${page==='attendance'?`<div class="session-picker"><label for="attendance-session">اختر الحصة</label><select id="attendance-session">${(identity.sessions || []).map(s=>`<option value="${e(s.id)}" ${s.id===sessionId?'selected':''}>${e(groupName(s.group_id))} · ${e(s.session_date)}</option>`).join('') || '<option value="">لا توجد حصص متاحة</option>'}</select></div>`:''}${page==='grades'?'<div class="session-picker"><label for="grade-quiz">اختر الاختبار</label><select id="grade-quiz"></select></div>':''}<div id="page-rows" aria-busy="true"><div class="opening" role="status">تحميل بيانات الصفحة…</div></div>`;
  panel.querySelector('#refresh').onclick=()=>openWorkspace().catch(handleFailure);
