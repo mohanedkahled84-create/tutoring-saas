@@ -3,7 +3,7 @@ export const assistantPages = [
  ['groups','المجموعات',['view','create','edit']], ['students','الطلاب',['view','create','edit']],
  ['sessions','الحصص والجدول',['view']], ['attendance','الحضور والمتابعة',['view','edit']],
  ['homework','مراجعة الواجبات',['view','edit']], ['materials','المحاضرات والمذكرات',['view','create','edit']],
- ['quizzes','الاختبارات',['view','create','edit']], ['grades','رصد الدرجات',['view','edit']], ['reports','تقارير متابعة الطلاب',['view']],
+ ['quizzes','الاختبارات',['view','create','edit']], ['grades','رصد الدرجات',['view','edit']], ['collections','التحصيل',['view','create']], ['reports','تقارير متابعة الطلاب',['view']],
 ];
 const actionLabels={view:'عرض',create:'إنشاء',edit:'تعديل'};
 export function renderAssistantAccessFields(prefix,groups=[],access={}) {
@@ -11,7 +11,7 @@ export function renderAssistantAccessFields(prefix,groups=[],access={}) {
  return `<fieldset style="border:1px solid var(--centrly-border,#e2e8f0);border-radius:12px;padding:1rem;min-width:0;margin:0 0 1rem">
   <legend style="font-weight:800;padding:0 .4rem">الصفحات والصلاحيات</legend>
   <p style="font-size:.875rem;line-height:1.7;margin:0 0 .75rem;color:var(--centrly-text)">فعّل الصفحات المطلوبة فقط، ثم اختر هل يستطيع المساعد العرض أم الإنشاء والتعديل أيضًا. بيانات الاشتراك والأرباح وإدارة الفريق خاصة بك.</p>
-  ${assistantPages.map(([key,label,actions])=>`<div style="display:flex;flex-wrap:wrap;gap:.25rem 1rem;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--centrly-border,#e2e8f0)"><strong>${label}</strong><div style="display:flex;flex-wrap:wrap;gap:.5rem">${actions.map(action=>`<label style="display:flex;align-items:center;gap:.35rem;min-height:44px"><input type="checkbox" name="${prefix}_Permission" value="${key}.${action}" ${p[`${key}.${action}`]===true?'checked':''}>${actionLabels[action]}</label>`).join('')}</div></div>`).join('')}
+  ${assistantPages.map(([key,label,actions])=>`<div style="display:flex;flex-wrap:wrap;gap:.25rem 1rem;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--centrly-border,#e2e8f0)"><strong>${label}</strong><div style="display:flex;flex-wrap:wrap;gap:.5rem">${actions.map(action=>`<label style="display:flex;align-items:center;gap:.35rem;min-height:44px"><input type="checkbox" name="${prefix}_Permission" value="${key}.${action}" ${p[`${key}.${action}`]===true?'checked':''}>${key==='collections' && action==='create'?'تسجيل تحصيل':actionLabels[action]}</label>`).join('')}</div></div>`).join('')}
   <p style="font-size:.8rem;line-height:1.6;color:var(--centrly-text)">الحذف النهائي وتغيير عضوية الطالب بالمجموعات يظلان من حساب المدرس.</p>
  </fieldset>
  <fieldset style="border:1px solid var(--centrly-border,#e2e8f0);border-radius:12px;padding:1rem;min-width:0;margin:0 0 1rem">

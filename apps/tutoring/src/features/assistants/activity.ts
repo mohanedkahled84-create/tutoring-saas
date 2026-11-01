@@ -4,7 +4,7 @@ import {z} from 'zod';
 const fields:Record<string,string[]>={
  groups:['name','subject'],students:['name','parent_phone','student_phone','notes','group_id'],
  attendance:['attended','homework_status','comment'],materials:['title','description','type','url','is_homework','due_date'],
- grades:['score','max_score','note'],homework:['status','teacher_notes'],quizzes:['title','quiz_number','max_score','quiz_date'],
+ collections:['amount','payment_method','note','status','void_reason'],grades:['score','max_score','note'],homework:['status','teacher_notes'],quizzes:['title','quiz_number','max_score','quiz_date'],
 };
 export function safeAssistantChanges(action:string,changes:any) {
  const keys=fields[action.split('.')[0]] || [];
@@ -21,7 +21,7 @@ export async function loadAssistantActivity(db:SupabaseClient,tenant:string,inpu
  const {data,error}=await query.range(offset,offset+size);
  if(error) throw error;
  const entries=(data || []).slice(0,size).map(row=>({
-  ...row,actor_type:['invitation_created','access_configured'].includes(row.action)?'owner':'assistant',
+  ...row,actor_type:['invitation_created','access_configured','collections.void'].includes(row.action)?'owner':'assistant',
   changes:safeAssistantChanges(row.action,row.changes),
  }));
  return {entries,page,has_more:(data || []).length>size};

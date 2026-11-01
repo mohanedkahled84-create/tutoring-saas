@@ -206,10 +206,11 @@ export function renderTeacherDashboard(
             </div>
             <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0.25rem 0 0 0; color: #ffffff;">مرحباً بك، ${escapeHtml(displayName)}</h2>
             <p style="font-size: 0.78rem; color: #94a3b8; margin: 0.2rem 0 0 0; line-height: 1.5;">
-              ملخص أرباحك الفعلية المحصلة من واقع الحضور، تقديرات الدخل، وجدول الحصص.
+              تقدير قيمة الحصص من واقع الحضور، وجدول العمل. راجع سجل التحصيل للمبالغ المستلمة فعلًا.
             </p>
           </div>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn" style="background:#fff;color:#0f172a;min-height:44px" onclick="window.centrlyApp.openCollectionLedger()">سجل التحصيل الفعلي</button>
             <button class="btn" style="background: rgba(255,255,255,0.08); color: #ffffff; font-weight: 600; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; height: 30px; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="window.centrlyApp.navigate('calendar')">
               ${getIcon('calendar', 14, '#ffffff')}
               <span>جدول الحصص</span>
@@ -230,10 +231,10 @@ export function renderTeacherDashboard(
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
               <span class="badge" style="background: rgba(255,255,255,0.22); color: #ecfdf5; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.6rem; border-radius: 6px;">
-                التحصيل الفعلي • شهر ${escapeHtml(currentMonthName)} ${currentYearNum}
+                قيمة الحضور • شهر ${escapeHtml(currentMonthName)} ${currentYearNum}
               </span>
               <div style="font-size: 1.05rem; font-weight: 800; color: #a7f3d0; margin-top: 0.6rem;">
-                صافي الأرباح الفعلية المحصلة (للمدرس)
+                صافي الاستحقاق التقديري للمدرس
               </div>
             </div>
             <div style="background: rgba(255,255,255,0.18); padding: 0.6rem; border-radius: 10px; display: flex; align-items: center;">
@@ -250,7 +251,7 @@ export function renderTeacherDashboard(
               محسوب من <strong>${completedSessionsCount}</strong> حصة منتهية (<strong>${totalAttendedStudents}</strong> حضور فعلي)
             </div>
             <div style="background: rgba(0,0,0,0.15); padding: 0.2rem 0.5rem; border-radius: 4px;">
-              إجمالي المحصل: <strong>${displayActualRev}</strong>
+              قيمة الحضور: <strong>${displayActualRev}</strong>
             </div>
           </div>
         </div>
@@ -354,7 +355,7 @@ export function renderTeacherDashboard(
           <div>
             <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.4rem; color: #065f46;">
               ${getIcon('billing', 18, '#059669')}
-              <span>كشف أرباح وتحصيل الحصص المنتهية هذا الشهر (التحصيل الفعلي)</span>
+              <span>كشف قيمة الحضور للحصص المنتهية هذا الشهر</span>
             </h3>
             <p style="font-size: 0.78rem; color: var(--centrly-text); margin-top: 0.2rem;">
               يتم احتساب هذه الأرقام تلقائياً من واقع حضور الطلاب الفعلي في كل حصة بعد انتهاء الحصة، مع مراعاة الطلاب المعفيين ونظام محاسبة السنتر.
@@ -376,7 +377,7 @@ export function renderTeacherDashboard(
                 <th>السنتر / القاعة</th>
                 <th>نظام المحاسبة</th>
                 <th>الحضور الفعلي</th>
-                <th>إجمالي التحصيل</th>
+                <th>قيمة الحضور</th>
                 <th>حصة السنتر</th>
                 <th>صافي ربح المدرس</th>
               </tr>
@@ -457,7 +458,7 @@ export function renderTeacherDashboard(
               <tfoot>
                 <tr style="background: #f0fdf4; font-weight: 800; border-top: 2px solid #a7f3d0;">
                   <td colspan="5" style="text-align: left; color: #065f46; font-size: 0.95rem;">
-                    إجمالي التحصيل الفعلي للحصص المنتهية (${escapeHtml(currentMonthName)} ${currentYearNum}):
+                    إجمالي قيمة الحضور للحصص المنتهية (${escapeHtml(currentMonthName)} ${currentYearNum}):
                   </td>
                   <td style="color: var(--centrly-success); font-family: monospace; font-size: 1.05rem;">
                     ${displayActualRev}

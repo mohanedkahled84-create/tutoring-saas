@@ -10,6 +10,7 @@ import { portalOrigin, trustedPortalOrigin } from '../../shared/utils/portalDest
 import { notifyAssistantInvitation } from './invitationDelivery.js';
 import { validatePay, isPayDate } from './payroll.js';
 import { signHomeworkFile } from '../homework/files.js';
+import {collectionInput,collectionQuery,voidCollectionInput} from './collectionSchemas.js';
 import {loadAssistantActivity} from './activity.js';
 
 export const assistantCatalog = [
@@ -21,6 +22,7 @@ export const assistantCatalog = [
  { key:'materials', label:'المحاضرات والمذكرات', actions:['view','create','edit'] },
  { key:'quizzes', label:'الاختبارات', actions:['view','create','edit'] },
  { key:'grades', label:'رصد الدرجات', actions:['view','edit'] },
+ { key:'collections', label:'التحصيل', actions:['view','create'] },
  { key:'reports', label:'تقارير متابعة الطلاب', actions:['view'] },
 ] as const;
 const allowed = new Set(assistantCatalog.flatMap(p => p.actions.map(action => `${p.key}.${action}`)));
@@ -43,6 +45,7 @@ export async function assistantRpc(db:SupabaseClient,name:string,args:Record<str
   if (error.message.includes('FORBIDDEN')) throw fault(403,'هذه العملية خارج صلاحياتك أو مجموعاتك');
   if (error.message.includes('NOT_FOUND')) throw fault(404,'الحساب غير موجود');
   if (error.message.includes('LEGACY_STAFF_LOGIN')) throw fault(409,'هذا السجل مرتبط بدخول مساعد قديم؛ يلزم نقل الدخول القديم قبل تفعيل الصلاحيات الجديدة');
+  if (error.message.includes('IDEMPOTENCY_CONFLICT')) throw fault(409,'هذه المحاولة مسجلة ببيانات مختلفة؛ حدّث السجل قبل إنشاء عملية جديدة');
   if (error.message.includes('INVALID_INPUT')) throw fault(400,'راجع البيانات المدخلة');
   if (error.code==='23505') throw fault(409,'الرقم أو السجل مسجل بالفعل لدى هذا المدرس');
   throw fault(503,'تعذر إتمام العملية الآن، حاول مجددًا');
@@ -79,6 +82,7 @@ const resourceSchemas:Record<string,z.ZodType>={
  attendance:z.object({id:z.uuid().nullable().optional(),student_id:z.uuid(),session_id:z.uuid(),attended:z.boolean(),homework_status:z.enum(['done','partial','missing']),comment:text(2000).default('')}).strict(),
  homework:z.object({id:z.uuid(),status:z.enum(['approved','rejected']),teacher_notes:text(2000).default('')}).strict(),
  materials:z.object({...base,title:name,description:text(4000).default(''),type:z.enum(['pdf','video','link']),url:z.url().refine(u=>new URL(u).protocol==='https:'),is_homework:z.boolean(),due_date:date.or(z.literal('')).default('')}).strict(),
+ collections:collectionInput,
  grades:z.object({quiz_id:z.uuid(),student_id:z.uuid(),score:z.number().finite().min(0).max(100000),note:text(2000).default('')}).strict(),
  quizzes:z.object({...base,title:name,quiz_number:z.number().int().min(1).max(100000),max_score:z.number().positive().max(100000),quiz_date:date}).strict(),
 };
@@ -136,6 +140,7 @@ assistantAccessRouter.post('/logout',async(req,res)=>{
 assistantAccessRouter.get('/data/:resource',async(req,res)=>{
  try {
   if(!assistantCatalog.some(p=>p.key===req.params.resource)) throw fault(403,'صفحة غير مسموحة');
+  if(req.params.resource==='collections'){res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_collections',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'view',p_data:collectionQuery.parse(req.query)}));return;}
   const data=req.params.resource==='grades' ? (req.query.quiz_id?{quiz_id:z.uuid().parse(req.query.quiz_id)}:{}) : req.query.session_id?{session_id:z.uuid().parse(req.query.session_id)}:{};
   if(req.params.resource==='grades'){res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_grades',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'view',p_data:data}));return;}
   res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_workspace',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_resource:req.params.resource,p_action:'view',p_data:data}));
@@ -147,6 +152,7 @@ assistantAccessRouter.post('/data/:resource/:action',async(req,res)=>{
   if(!schema || !['create','edit'].includes(req.params.action)) throw fault(403,'عملية غير مسموحة');
   const selectedSchema=req.params.resource==='quizzes' && req.params.action==='edit' ? z.object({id:z.uuid(),title:name,quiz_date:date}).strict() : schema;
   const data=selectedSchema.parse(req.body) as Record<string,unknown>;
+  if(req.params.resource==='collections'){if(req.params.action!=='create')throw fault(403,'تعديل أو إلغاء التحصيل متاح للمدرس فقط');res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_collections',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'create',p_data:data}));return;}
   if(req.params.resource==='grades'){if(req.params.action!=='edit')throw fault(403,'عملية غير مسموحة');res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_grades',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'edit',p_data:data}));return;}
   if(req.params.action==='edit' && req.params.resource!=='attendance' && !data.id) throw fault(400,'السجل مطلوب');
   if(req.params.action==='create' && req.params.resource!=='groups' && !data.group_id) throw fault(400,'اختر المجموعة');
@@ -169,6 +175,25 @@ assistantManagementRouter.use((req:AuthenticatedRequest,res,next)=>{
  res.set('Cache-Control','no-store');next();
 });
 assistantManagementRouter.get('/access-catalog',(_req,res)=>{res.json({pages:assistantCatalog});});
+async function ownerCollection(req:AuthenticatedRequest,action:string,data:Record<string,unknown>) {
+ const db=getServiceSupabaseClient(),tenant=req.user!.tenant_id!;
+ const groups:string[]=[];
+ for(let offset=0;;offset+=500){
+  let query=db.from('groups').select('id').eq('tenant_id',tenant).order('id').range(offset,offset+499);
+  if(req.user!.role==='teacher' && req.user!.teacher_id){const teacher=z.uuid().parse(req.user!.teacher_id);query=query.or(`teacher_id.eq.${teacher},teacher_id.is.null`);}
+  const {data:batch,error}=await query;if(error)throw error;groups.push(...(batch || []).map(g=>g.id));if(!batch || batch.length<500)break;
+ }
+ return assistantRpc(db,'student_collection_operation',{p_tenant:tenant,p_assistant:null,p_user:req.user!.id,p_actor:(req.user!.full_name || req.user!.name || '').trim() || 'المدرس',p_groups:groups,p_action:action,p_data:data});
+}
+assistantManagementRouter.get('/collections',async(req:AuthenticatedRequest,res)=>{
+ try{res.json(await ownerCollection(req,'view',collectionQuery.parse(req.query)));}catch(error){sendError(res,error);}
+});
+assistantManagementRouter.post('/collections',async(req:AuthenticatedRequest,res)=>{
+ try{res.status(201).json(await ownerCollection(req,'create',collectionInput.parse(req.body)));}catch(error){sendError(res,error);}
+});
+assistantManagementRouter.post('/collections/:id/void',async(req:AuthenticatedRequest,res)=>{
+ try{res.json(await ownerCollection(req,'void',{id:z.uuid().parse(req.params.id),...voidCollectionInput.parse(req.body)}));}catch(error){sendError(res,error);}
+});
 assistantManagementRouter.get('/activity',async(req:AuthenticatedRequest,res)=>{
  try {res.json(await loadAssistantActivity(getServiceSupabaseClient(),req.user!.tenant_id!,req.query));}
  catch(error){sendError(res,error);}
