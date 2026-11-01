@@ -30,6 +30,10 @@ test('homework metadata uses only authorized result IDs and never returns storag
 test('no authorized rows or unrelated page means no metadata query',async()=>{
  const db={from:()=>assert.fail('metadata must not be queried')};for(const resource of ['homework','attendance','students'])await enrichAssistantPage(db,resource,{rows:[]});await enrichAssistantPage(db,'students',{rows:[{id:'allowed'}]});
 });
+test('large authorized rosters use bounded metadata queries without dropping records',async()=>{
+ const sizes=[],ids=Array.from({length:201},(_,n)=>'authorized-'+n),db={from:()=>({select:()=>({in:async(_key,values)=>{sizes.push(values.length);return {data:values.map(id=>({id,material_id:'assignment',file_url:null})),error:null};}})})};
+ const result=await enrichAssistantPage(db,'homework',{rows:ids.map(id=>({id}))});assert.deepEqual(sizes,[100,100,1]);assert.equal(result.rows.length,201);assert.ok(result.rows.every(row=>row.material_id==='assignment' && row.has_file===false));
+});
 test('session status is read from the authorized roster, never invented by the UI',async()=>{
  let id,ids;const db={from:name=>({select:()=>name==='sessions'?{eq:(_key,value)=>{id=value;return {single:async()=>({data:{id:value,status:'ended'},error:null})};}}:{in:async(_key,values)=>{ids=values;return {data:[{id:'allowed-student',student_code:'1002'}],error:null};}}})};
  const result=await enrichAssistantPage(db,'attendance',{rows:[{session_id:'authorized-session',student_id:'allowed-student'}]});assert.equal(id,'authorized-session');assert.equal(result.session.status,'ended');assert.deepEqual(ids,['allowed-student']);assert.equal(result.rows[0].student_code,'1002');
