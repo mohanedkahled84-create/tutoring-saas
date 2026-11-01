@@ -27,7 +27,7 @@ import { renderBusinessOwnerDashboard, registerBusinessOwnerActions } from './co
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js?v=2.0.0';
 import { renderAdminOutreachView } from './components/AdminOutreachView.js?v=1.0.1';
-import { renderTeacherSettingsView, registerTeacherSettingsActions } from './components/TeacherSettingsView.js?v=4.11';
+import { renderTeacherSettingsView, registerTeacherSettingsActions } from './components/TeacherSettingsView.js?v=4.12';
 import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=4.7.6';
 import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=1.0.0';
 import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=1.4.0';

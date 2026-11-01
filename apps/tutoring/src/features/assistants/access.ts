@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import {registrationInput,registrationVerify,checkedOtpResult,phoneOtpHash,phoneOtpGateway,requestPhoneOtp} from '../../shared/utils/phoneOtp.js';
+import {registrationInput,registrationVerify,registrationRequest,checkedOtpResult,phoneOtpInfo,preparePhoneOtp,requestPhoneOtp,verifyPhoneOtp} from '../../shared/utils/phoneOtp.js';
 import bcrypt from 'bcryptjs';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabaseClient } from '../../supabase.js';
@@ -116,16 +116,19 @@ assistantAccessRouter.post('/login',async(req,res)=>{
  }catch(error){sendError(res,error);}
 });
 assistantAccessRouter.post('/registration/info',async(req,res)=>{
- try{const input=registrationInput.parse(req.body),db=getServiceSupabaseClient(),pageOrigin=origin(req);await limit(db,`registration-info:${req.ip}`,30);const info=checkedOtpResult(await assistantRpc(db,'assistant_registration',{p_nonce_hash:familyHash(input.invitation),p_origin:pageOrigin,p_action:'info',p_data:{}}));res.json({...info,otp_available:await phoneOtpGateway.ready()});}catch(error){sendError(res,error);}
+ try{const input=registrationInput.parse(req.body),db=getServiceSupabaseClient(),pageOrigin=origin(req);await limit(db,`registration-info:${req.ip}`,30);const info=checkedOtpResult(await assistantRpc(db,'assistant_registration',{p_nonce_hash:familyHash(input.invitation),p_origin:pageOrigin,p_action:'info',p_data:{}}));res.json({...info,...await phoneOtpInfo()});}catch(error){sendError(res,error);}
+});
+assistantAccessRouter.post('/registration/challenge',async(req,res)=>{
+ try{const input=registrationInput.parse(req.body),db=getServiceSupabaseClient(),pageOrigin=origin(req);res.json(await preparePhoneOtp(db,'assistant',req.ip || '',(action,data={})=>assistantRpc(db,'assistant_registration',{p_nonce_hash:familyHash(input.invitation),p_origin:pageOrigin,p_action:action,p_data:data}),{subject:familyHash(input.invitation),origin:pageOrigin}));}catch(error){sendError(res,error);}
 });
 assistantAccessRouter.post('/registration/request',async(req,res)=>{
- try{const input=registrationInput.parse(req.body),db=getServiceSupabaseClient(),pageOrigin=origin(req);res.json(await requestPhoneOtp(db,'assistant',req.ip || '',(action,data={})=>assistantRpc(db,'assistant_registration',{p_nonce_hash:familyHash(input.invitation),p_origin:pageOrigin,p_action:action,p_data:data})));}catch(error){sendError(res,error);}
+ try{const input=registrationRequest.parse(req.body),db=getServiceSupabaseClient(),pageOrigin=origin(req);res.json(await requestPhoneOtp(db,'assistant',req.ip || '',(action,data={})=>assistantRpc(db,'assistant_registration',{p_nonce_hash:familyHash(input.invitation),p_origin:pageOrigin,p_action:action,p_data:data}),{subject:familyHash(input.invitation),origin:pageOrigin},input.proof));}catch(error){sendError(res,error);}
 });
 assistantAccessRouter.post('/registration/verify',async(req,res)=>{
- try{const input=registrationVerify.parse(req.body),db=getServiceSupabaseClient(),pageOrigin=origin(req);await limit(db,`registration-verify:${req.ip}`,30);const ticket=familyToken();const result=checkedOtpResult(await assistantRpc(db,'assistant_registration',{p_nonce_hash:familyHash(input.invitation),p_origin:pageOrigin,p_action:'verify',p_data:{challenge_id:input.challenge_id,code_hash:phoneOtpHash('assistant',input.challenge_id,input.code),claim_hash:familyHash(ticket)}}));res.json({...result,ticket});}catch(error){sendError(res,error);}
+ try{const input=registrationVerify.parse(req.body),db=getServiceSupabaseClient(),pageOrigin=origin(req);await limit(db,`registration-verify:${req.ip}`,30);const ticket=familyToken();const result=await verifyPhoneOtp(db,'assistant',(action,data={})=>assistantRpc(db,'assistant_registration',{p_nonce_hash:familyHash(input.invitation),p_origin:pageOrigin,p_action:action,p_data:data}),{subject:familyHash(input.invitation),origin:pageOrigin},input.challenge_id,input.code,familyHash(ticket));res.json({...result,ticket});}catch(error){sendError(res,error);}
 });
 assistantAccessRouter.post('/registration/claim',async(req,res)=>{
- try{const input=z.object({ticket:z.string().refine(validFamilyToken)}).strict().parse(req.body),info=await assistantRpc(getServiceSupabaseClient(),'assistant_registration_claim',{p_claim_hash:familyHash(input.ticket),p_origin:origin(req)});if(!info)throw fault(410,'أكد رقم الدعوة بكود واتساب قبل إنشاء الحساب.');res.json(info);}catch(error){sendError(res,error);}
+ try{const input=z.object({ticket:z.string().refine(validFamilyToken)}).strict().parse(req.body),info=await assistantRpc(getServiceSupabaseClient(),'assistant_registration_claim',{p_claim_hash:familyHash(input.ticket),p_origin:origin(req)});if(!info)throw fault(410,'أكد رقم الدعوة بالكود قبل إنشاء الحساب.');res.json(info);}catch(error){sendError(res,error);}
 });
 assistantAccessRouter.post('/accept',async(req,res)=>{
  try {
@@ -133,7 +136,7 @@ assistantAccessRouter.post('/accept',async(req,res)=>{
   await limit(db,`accept:${req.ip}`,10);
   if(!validFamilyToken(req.body.ticket)) throw fault(400,'رابط الدعوة غير صالح');
   const input=z.object({ticket:z.string().refine(validFamilyToken),name,password:z.string().min(10).max(72)}).strict().parse(req.body);
-  if(!await assistantRpc(db,'assistant_registration_claim',{p_claim_hash:familyHash(input.ticket),p_origin:pageOrigin}))throw fault(410,'أكد رقم الدعوة بكود واتساب قبل إنشاء الحساب.');
+  if(!await assistantRpc(db,'assistant_registration_claim',{p_claim_hash:familyHash(input.ticket),p_origin:pageOrigin}))throw fault(410,'أكد رقم الدعوة بالكود قبل إنشاء الحساب.');
   const fullName=input.name,password=input.password;
   if(Buffer.byteLength(password,'utf8')>72) throw fault(400,'كلمة المرور طويلة جدًا');
   const hash=await bcrypt.hash(password,12);

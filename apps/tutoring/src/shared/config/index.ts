@@ -42,6 +42,10 @@ export const envSchema = z.object({
   META_ACCESS_TOKEN: z.string().optional().default(""),
   META_APP_SECRET: z.string().optional().default(""),
   META_PORTAL_DAILY_LIMIT: z.coerce.number().default(250),
+  PHONE_OTP_PROVIDER: z.enum(['meta','akedly']).default('meta'),
+  AKEDLY_API_KEY: z.string().optional().default(''),
+  AKEDLY_PIPELINE_ID: z.string().optional().default(''),
+  PHONE_OTP_DAILY_LIMIT: z.coerce.number().int().min(1).max(5000).default(50),
   // DEV-71: Feature Flags (Default false for MVP-override / in-progress features)
   FEATURE_BUSINESS_DASHBOARD: booleanFlag,
   FEATURE_BEHAVIOR_TRACKING: booleanFlag,
@@ -112,6 +116,7 @@ export const config = {
   evolutionInstanceName: env.EVOLUTION_INSTANCE_NAME,
   n8nAdminAlertWebhookUrl: env.N8N_ADMIN_ALERT_WEBHOOK_URL,
   sentryDsn: env.SENTRY_DSN,
+  phoneOtp: {provider:env.PHONE_OTP_PROVIDER,apiKey:env.AKEDLY_API_KEY,pipelineId:env.AKEDLY_PIPELINE_ID,dailyLimit:env.PHONE_OTP_DAILY_LIMIT},
   meta: {
     phoneNumberId: env.META_PHONE_NUMBER_ID,
     wabaId: env.META_WABA_ID,
