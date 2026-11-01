@@ -400,5 +400,6 @@ test("DEV-80: StudentSearchBar & StudentReportsView render valid Arabic HTML wit
   assert.ok(populatedHtml.includes("#1") || populatedHtml.includes("🥇 1"));
   assert.ok(populatedHtml.includes("95%"));
   assert.ok(populatedHtml.includes("92%"));
-  assert.ok(populatedHtml.includes("إرسال التقرير"));
+  assert.ok(populatedHtml.includes("معاينة واتساب"));
+  assert.ok(!populatedHtml.includes("<span>إرسال التقرير</span>"));
 });
