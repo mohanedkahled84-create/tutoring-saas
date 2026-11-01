@@ -371,7 +371,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
       </div>
 
       <!-- Main Scanning & Attendance Workspace -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.5rem;">
         
         ${!isSessionEnded ? `
         <!-- Barcode / Student Check-in Scanner -->

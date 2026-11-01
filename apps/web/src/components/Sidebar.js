@@ -2,7 +2,7 @@ import {teacherPageTitles} from '../utils/teacherPageTitles.js';
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 
-export function renderSidebar(currentRoute = 'sessions', user = {}, securityState = { hasPin: false, isUnlocked: true }) {
+export function renderSidebar(currentRoute = 'sessions', user = {}, securityState = { hasPin: false, isUnlocked: true }, accessState = null) {
   const isAdmin = user?.role === 'admin';
   const isCenterOwner = user?.role === 'center_owner' || user?.account_type === 'center';
   // Dedicated Executive Superadmin HQ Navigation (100% separate for the platform owner)
@@ -130,6 +130,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
   const baseSections = isCenterOwner ? centerSections : teacherSections;
   // When user is Admin, show ONLY the dedicated admin sections — zero teacher clutter!
   const sections = isAdmin ? adminSections : baseSections;
+  if(accessState?.supplementalRoutes?.length)sections.push({category:'متابعة الطلاب والتحصيل',routes:accessState.supplementalRoutes});
 
   return `
     <aside class="app-sidebar" id="appSidebar">
@@ -163,15 +164,17 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
             
             <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;">
               ${sec.routes.map(r => {
-                const isActive = currentRoute === r.id;
+                const isLocked = accessState?.canNavigate ? !accessState.canNavigate(r.id) : false;
+                const isActive = !isLocked && currentRoute === r.id;
                 return `
-                  <button class="nav-link ${isActive ? 'active' : ''}" onclick="window.centrlyApp.navigate('${r.id}')" 
+                  <button type="button" data-route="${r.id}" class="nav-link ${isActive ? 'active' : ''} ${isLocked?'nav-locked':''}" ${isLocked?'disabled aria-disabled="true" title="غير متاح ضمن صلاحياتك"':`onclick="window.centrlyApp.navigate('${r.id}')"`} ${isActive?'aria-current="page"':''}
                     style="position: relative; display: flex; align-items: center; gap: 0.65rem; border-radius: 6px; padding: 0.48rem 0.7rem; border: none; width: 100%; cursor: pointer; text-align: right; transition: all 0.12s ease;">
                     <span class="nav-icon" style="display: inline-flex; align-items: center; justify-content: center;">
                       ${getIcon(r.icon, 16, 'currentColor')}
                     </span>
                     <span class="nav-title" style="font-size: 0.82rem; flex: 1; display: flex; align-items: center; justify-content: space-between;">
                       <span>${escapeHtml(r.title)}</span>
+                      ${isLocked?`<span class="nav-lock" aria-label="مقفول">${getIcon('lock',14)}</span>`:''}
                       ${r.isPro ? `<span style="background: ${isActive ? '#1e293b' : '#fef3c7'}; color: ${isActive ? '#fde68a' : '#b45309'}; border: 1px solid ${isActive ? '#334155' : '#fde68a'}; font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; letter-spacing: 0.5px;">PRO</span>` : ''}
                       ${r.badge ? `<span style="background: ${isActive ? '#1e293b' : '#f1f5f9'}; color: ${isActive ? '#f8fafc' : '#64748b'}; border: 1px solid ${isActive ? '#334155' : '#e2e8f0'}; font-size: 0.62rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">${escapeHtml(r.badge)}</span>` : ''}
                     </span>

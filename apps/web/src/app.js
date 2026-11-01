@@ -1,8 +1,8 @@
 import { assistantPay } from "./utils/assistantPay.js";
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
-import { renderSidebar } from './components/Sidebar.js?v=5.3.0';
-import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.1';
+import { renderSidebar } from './components/Sidebar.js?v=5.4.0';
+import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.2.0';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.9.22';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
 import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=8.1.0';
@@ -144,7 +144,7 @@ class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=1.10.0').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=1.11.0').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;

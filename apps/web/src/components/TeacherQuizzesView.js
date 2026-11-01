@@ -135,7 +135,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
     ? state.groupQuizzes[selectedGroupId]
     : (state.quizzes || []);
 
-  if (!groupQuizzesList || groupQuizzesList.length === 0) {
+  if ((!groupQuizzesList || groupQuizzesList.length === 0) && !state.allowEmptyQuizzes) {
     const today = new Date().toISOString().slice(0, 10);
     groupQuizzesList = [
       { id: `quiz-${selectedGroupId || 'default'}-1`, group_id: selectedGroupId, number: 1, title: 'كويز 1', maxScore: 10, date: today, skipped: false },
@@ -348,7 +348,7 @@ export function renderTeacherQuizzesView(state = {}, groups = [], students = [],
       ${activeSubTab === 'paper_builder' ? renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz) : ''}
       ${activeSubTab === 'paper_scanner' ? renderPaperScannerTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents) : ''}
       ${activeSubTab === 'paper_results' ? renderPaperResultsTab(state, groups, activeGroup, quizzes, currentQuiz, groupStudents, students) : ''}
-      ${activeSubTab === 'roster' ? renderRosterTab(state, groups, students, activeGroup, groupStudents, quizzes, currentQuiz, isLoading, hasLoaded) : ''}
+      ${activeSubTab === 'roster' && quizzes.length === 0 && state.allowEmptyQuizzes ? '<div class="card"><p>لا توجد كويزات مسجلة لهذه المجموعة.</p></div>' : activeSubTab === 'roster' ? renderRosterTab(state, groups, students, activeGroup, groupStudents, quizzes, currentQuiz, isLoading, hasLoaded) : ''}
 
       <!-- Student Paper Exam Breakdown Modal -->
       ${state.activeStudentBreakdownModal ? renderStudentBreakdownModal(state.activeStudentBreakdownModal, state.richQuizzes) : ''}

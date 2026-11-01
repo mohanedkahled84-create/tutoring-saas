@@ -32,7 +32,8 @@ export function renderHomeworkReviewView(homeworkState = {}) {
   const submitted = homeworkState.submitted || [];
   const missing = homeworkState.missing || [];
 
-  const totalEligible = submitted.length + missing.length;
+  const missingKnown = homeworkState.missingAvailable !== false;
+  const totalEligible = missingKnown ? submitted.length + missing.length : 0;
   const submissionRate = totalEligible > 0 ? Math.round((submitted.length / totalEligible) * 100) : 0;
   const pendingSubmissions = submitted.filter(s => s.status !== 'approved');
   const approvedSubmissions = submitted.filter(s => s.status === 'approved');
@@ -157,7 +158,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                   <span>الطلاب المتأخرون عن التسليم</span>
                 </div>
                 <div style="font-size: 1.8rem; font-weight: 900; color: #dc2626; margin-top: 0.35rem;">
-                  ${missing.length} <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">طالب</span>
+                  ${missingKnown ? missing.length : '—'} <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">طالب</span>
                 </div>
               </div>
               <span class="badge badge-danger" style="font-size: 0.8rem; font-weight: 800;">متأخر</span>
@@ -171,7 +172,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
           <div class="card" style="margin: 0; background: #fff; border-top: 4px solid var(--centrly-blue-700);">
             <div style="font-size: 0.8rem; color: var(--centrly-text); font-weight: 700;">نسبة الالتزام بالتسليم</div>
             <div style="font-size: 1.8rem; font-weight: 900; color: var(--centrly-blue-700); margin-top: 0.35rem;">
-              ${submissionRate}%
+              ${missingKnown ? submissionRate+'%' : '—'}
             </div>
             <!-- Visual Progress Bar -->
             <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; margin-top: 0.4rem;">
@@ -248,7 +249,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
               onclick="window.centrlyApp && window.centrlyApp.switchHomeworkTab ? window.centrlyApp.switchHomeworkTab('missing') : null"
               style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 800; padding: 0.5rem 1.25rem;">
               ${getIcon('clock', 16, activeTab === 'missing' ? '#ffffff' : '#dc2626')}
-              <span>الطلاب المتأخرون (${missing.length})</span>
+              <span>الطلاب المتأخرون (${missingKnown ? missing.length : '—'})</span>
             </button>
           </div>
         </div>
@@ -336,7 +337,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                             <td style="font-weight: 800; color: #0f172a; white-space: nowrap;">${escapeHtml(sub.student_name)}</td>
                             <td style="font-size: 0.8rem; color: #64748b; font-family: monospace; white-space: nowrap;">${escapeHtml(formattedDate)}</td>
                             <td>
-                              ${sub.file_url ? `
+                              ${sub.file_action ? `<button type="button" class="btn btn-secondary btn-sm" data-assistant-file="${escapeHtml(sub.file_action)}">معاينة ملف الواجب</button>` : sub.file_url ? `
                                 <div style="display: flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
                                   ${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(sub.file_url) ? `
                                     <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer" title="اضغط لتكبير صورة الواجب">
@@ -492,7 +493,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                           <td style="font-weight: 800; color: #0f172a; white-space: nowrap;">${escapeHtml(sub.student_name)}</td>
                           <td style="font-size: 0.8rem; color: #64748b; font-family: monospace; white-space: nowrap;">${escapeHtml(formattedDate)}</td>
                           <td style="white-space: nowrap;">
-                            ${sub.file_url ? `
+                            ${sub.file_action ? `<button type="button" class="btn btn-secondary btn-sm" data-assistant-file="${escapeHtml(sub.file_action)}">معاينة ملف الواجب</button>` : sub.file_url ? `
                               <div style="display: flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
                                 ${/\.(jpg|jpeg|png|webp|heic|bmp)($|\?)/i.test(sub.file_url) ? `
                                   <a href="${escapeHtml(sub.file_url)}" target="_blank" rel="noopener noreferrer" title="اضغط لتكبير صورة الواجب">
@@ -560,7 +561,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
               <div>
                 <h3 class="card-title" style="font-size: 1.05rem; display: flex; align-items: center; gap: 0.4rem; margin: 0;">
                   ${getIcon('clock', 18, '#dc2626')}
-                  <span>قائمة الطلاب الذين لم يقوموا برفع الواجب بعد (${missing.length})</span>
+                  <span>قائمة الطلاب الذين لم يقوموا برفع الواجب بعد (${missingKnown ? missing.length : '—'})</span>
                 </h3>
                 <p style="font-size: 0.775rem; color: #64748b; margin: 0.2rem 0 0 0;">
                   يمكنك إرسال رسالة تذكير مباشرة بضغطة زر لكل طالب أو ولي أمره
