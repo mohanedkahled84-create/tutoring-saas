@@ -10,6 +10,7 @@ import { portalOrigin, trustedPortalOrigin } from '../../shared/utils/portalDest
 import { approvedUtilityTemplate } from '../../shared/utils/metaTemplatePolicy.js';
 import { validatePay, isPayDate } from './payroll.js';
 import { signHomeworkFile } from '../homework/files.js';
+import {loadAssistantActivity} from './activity.js';
 
 export const assistantCatalog = [
  { key:'groups', label:'المجموعات', actions:['view','create','edit'] },
@@ -164,6 +165,10 @@ assistantManagementRouter.use((req:AuthenticatedRequest,res,next)=>{
  res.set('Cache-Control','no-store');next();
 });
 assistantManagementRouter.get('/access-catalog',(_req,res)=>{res.json({pages:assistantCatalog});});
+assistantManagementRouter.get('/activity',async(req:AuthenticatedRequest,res)=>{
+ try {res.json(await loadAssistantActivity(getServiceSupabaseClient(),req.user!.tenant_id!,req.query));}
+ catch(error){sendError(res,error);}
+});
 async function notifyInvitation(phone:string,teacher:string,invitationId:string,nonce:string) {
  if(!config.meta.appSecret || !await approvedUtilityTemplate({baseUrl:'https://graph.facebook.com/v22.0',accessToken:config.meta.accessToken,wabaId:config.meta.wabaId,name:'centerly_assistant_invitation_v1',language:'ar'})) return 'blocked';
  try {

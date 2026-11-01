@@ -3,6 +3,7 @@ import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
 import { renderAssistantPayFields, updateAssistantPayFields, readAssistantPayFields } from "./AssistantPayFields.js";
 import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js";
+import { registerAssistantActivityActions } from "./AssistantActivityView.js";
 import { assistantPay } from "../utils/assistantPay.js";
 
 /**
@@ -21,6 +22,8 @@ export function renderTeacherAssistantsView(
 ) {
   const assistantList = assistants || [];
   const { hasPin, isUnlocked, hideNumbers } = securityState;
+  const salaryLocked = hasPin && !isUnlocked;
+  const concealPay = salaryLocked || hideNumbers;
 
   // Compute stats
   const totalAssistants = assistantList.length;
@@ -30,7 +33,7 @@ export function renderTeacherAssistantsView(
 
   const paySummary = assistantList.filter(a => a.status === 'active').map(a => assistantPay(a));
   const totalMonthlySalaries = paySummary.reduce((sum, p) => sum + p.amount, 0);
-  const displayMonthly = hideNumbers ? '••••••' : paySummary.some(p => !p.available) ? 'غير متاح حاليًا' : `${totalMonthlySalaries.toLocaleString('ar-EG')} ج.م`;
+  const displayMonthly = concealPay ? '••••••' : paySummary.some(p => !p.available) ? 'غير متاح حاليًا' : `${totalMonthlySalaries.toLocaleString('ar-EG')} ج.م`;
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
@@ -44,12 +47,12 @@ export function renderTeacherAssistantsView(
               <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">
                 ${!hasPin 
                   ? 'حماية المرتبات برمز الأمان (PIN) غير مفعلة' 
-                  : (isUnlocked ? 'حماية الصفحة: مفتوحة حالياً' : 'الصفحة مقفلة برمز الأمان')}
+                  : (isUnlocked ? 'المرتبات مفتوحة حاليًا' : 'المرتبات مقفلة برمز الأمان')}
               </div>
               <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.15rem;">
                 ${!hasPin 
                   ? 'قم بتعيين رمز PIN مكون من 4 إلى 6 أرقام لمنع أي شخص بجانبك من الاطلاع على مرتبات المساعدين والأرباح.' 
-                  : (isUnlocked ? 'تُقفل الصفحة تلقائياً بمجرد الانتقال لأي صفحة أخرى، ويمكنك إخفاء الأرقام أو قفلها بضغطة زر.' : 'البيانات المالية محمية برمز الأمان.')}
+                  : (isUnlocked ? 'تُقفل المرتبات تلقائيًا عند الانتقال لصفحة أخرى. إدارة الفريق والصلاحيات تظل متاحة.' : 'البيانات المالية محمية برمز الأمان.')}
               </div>
             </div>
           </div>
@@ -80,25 +83,8 @@ export function renderTeacherAssistantsView(
         </div>
       </div>
 
-      ${hasPin && !isUnlocked ? `
-        <!-- Locked Gate Screen -->
-        <div class="card" style="margin: 0; padding: 3rem 1.5rem; text-align: center; background: #fff;">
-          <div style="max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-            <div style="width: 64px; height: 64px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1d4ed8;">
-              ${getIcon('lock', 32, '#1d4ed8')}
-            </div>
-            <h3 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">بيانات المساعدين والمرتبات مقفلة</h3>
-            <p style="font-size: 0.875rem; color: #64748b; margin: 0; line-height: 1.6;">
-              لأسباب الأمان والخصوصية، يرجى إدخال رمز الأمان (PIN) لفتح تفاصيل المساعدين ومستحقاتهم المالية.
-            </p>
-            <button class="btn btn-primary" onclick="window.centrlyApp.promptUnlockFinancials()" style="padding: 0.75rem 2rem; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-              ${getIcon('lock', 16)}
-              <span>إدخال رمز PIN لفتح الصفحة</span>
-            </button>
-          </div>
-        </div>
-      ` : `
-        <!-- Main Unlocked View -->
+      ${salaryLocked ? `<div class="card" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;padding:1rem"><p style="margin:0">المرتبات محمية. تقدر تدير الصلاحيات وتراجع نشاط الفريق.</p><button class="btn btn-primary" style="min-height:44px" onclick="window.centrlyApp.promptUnlockFinancials()">فتح المرتبات</button></div>` : ''}
+        <!-- Team controls stay available while pay is concealed -->
         
         <!-- Top Title & Action (Swiss Minimalist) -->
         <div class="card" style="margin: 0; padding: 0.85rem 1.15rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
@@ -119,6 +105,7 @@ export function renderTeacherAssistantsView(
             </div>
 
             <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openAssistantActivityLog()" style="min-height:44px">نشاط الفريق</button>
               <button class="btn btn-primary" onclick="window.centrlyApp.openAddTeacherAssistantModal()" style="min-height: 44px; font-size: 0.85rem; font-weight: 700;">
                 ${getIcon('add', 14, '#ffffff')}
                 <span>دعوة مساعد</span>
@@ -200,12 +187,12 @@ export function renderTeacherAssistantsView(
                   const modelBadge = `<span class="badge badge-secondary">${payInfo.modelLabel}</span>`;
 
                   const salaryVal = Number(a.salary ?? a.salary_amount) || 0;
-                  const salaryDisplay = hideNumbers 
+                  const salaryDisplay = concealPay
                     ? '••••••' 
                     : `${salaryVal.toLocaleString('ar-EG')} ج.م ${a.salary_model === 'per_day' ? '/ يوم' : isPerSession ? '/ حصة' : '/ شهر'}`;
 
                   const phoneClean = (a.phone || '').replace(/[^0-9]/g, '');
-                  const waUrl = phoneClean ? `https://wa.me/2${phoneClean}` : null;
+                  const waUrl = phoneClean ? `https://wa.me/${phoneClean.startsWith('0') ? '2' + phoneClean : phoneClean}` : null;
 
                   return `
                     <tr>
@@ -237,8 +224,8 @@ export function renderTeacherAssistantsView(
                       </td>
                       <td style="font-weight: 800; color: #1d4ed8; font-family: monospace;">
                         ${salaryDisplay}
-                        <div style="font:normal .8rem/1.7 inherit;color:var(--centrly-text);margin-top:.35rem">${escapeHtml(payInfo.basis)}</div>
-                        <div style="font-size:.85rem;margin-top:.25rem">${hideNumbers ? '••••••' : payInfo.available ? `${payInfo.amount.toLocaleString('ar-EG')} ج.م للشهر` : 'غير متاح حاليًا'}</div>
+                        ${concealPay ? '' : `<div style="font-size:.8rem;line-height:1.7;font-weight:400;color:var(--centrly-text);margin-top:.35rem">${escapeHtml(payInfo.basis)}</div>`}
+                        <div style="font-size:.85rem;margin-top:.25rem">${concealPay ? 'الأجر محمي' : payInfo.available ? `${payInfo.amount.toLocaleString('ar-EG')} ج.م للشهر` : 'غير متاح حاليًا'}</div>
                       </td>
                       <td>
                         <div style="display: flex; align-items: center; gap: 0.35rem;">
@@ -267,12 +254,13 @@ export function renderTeacherAssistantsView(
             </table>
           </div>
         </div>
-      `}
     </div>
   `;
 }
 
 export function registerTeacherAssistantsActions(app) {
+  registerAssistantActivityActions(app);
+  const payVisible=()=> (!app.hasSecurityPin || app.isFinancialUnlocked) && !app.hideFinancialNumbers;
   app.updateTeacherAssistantPayFields = updateAssistantPayFields;
   app.prepareAssistantInvitation = function(id) {
     const assistant=(this.teacherAssistants || []).find(a=>a.id===id);
@@ -290,6 +278,11 @@ export function registerTeacherAssistantsActions(app) {
     } catch(error){this.showToast(error.message || 'تعذر حفظ الدعوة','danger');}
   };
   app.openAddTeacherAssistantModal = function() {
+    if (!payVisible()) {
+      this.showToast('افتح المرتبات لإعداد أجر المساعد الجديد. إدارة الصلاحيات والنشاط متاحة من الصفحة.', 'info');
+      if (this.hasSecurityPin && !this.isFinancialUnlocked) this.promptUnlockFinancials();
+      return;
+    }
     const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
     const bodyHtml = `
       <form id="modalAddTeacherAssistantForm" onsubmit="window.centrlyApp.handleAddTeacherAssistantSubmit(event)">
@@ -394,7 +387,7 @@ export function registerTeacherAssistantsActions(app) {
         </div>
 
         `}
-        ${renderAssistantPayFields("modalEditTA", assistant)}
+        ${payVisible() ? renderAssistantPayFields("modalEditTA", assistant) : '<p style="padding:1rem;border:1px solid var(--centrly-line);border-radius:10px">الأجر محمي حاليًا. حفظ الصلاحيات والبيانات هنا لا يغيّر الأجر المسجل.</p>'}
       </form>
     `;
 
@@ -411,11 +404,9 @@ export function registerTeacherAssistantsActions(app) {
     const phone = document.getElementById('modalEditTA_Phone')?.value.trim();
     const group_id = document.getElementById('modalEditTA_GroupId')?.value || null;
     const role_type = document.getElementById('modalEditTA_RoleType')?.value || 'both';
-    const salary_model = document.getElementById('modalEditTA_SalaryModel')?.value || 'monthly';
-    const salary_amount = parseFloat(document.getElementById('modalEditTA_SalaryAmount')?.value) || 0;
 
     try {
-      const pay = readAssistantPayFields('modalEditTA');
+      const pay = payVisible() && document.getElementById('modalEditTA_SalaryModel') ? readAssistantPayFields('modalEditTA') : {};
       const assistant = (this.teacherAssistants || []).find(a => a.id === assistantId);
       const access = assistant?.access ? readAssistantAccessFields('modalEditTA') : {};
       const status = assistant?.access ? document.getElementById('modalEditTA_Status').value : undefined;
@@ -426,9 +417,6 @@ export function registerTeacherAssistantsActions(app) {
           phone,
           group_id: group_id || null,
           role_type,
-          salary_model,
-          salary: salary_amount,
-          salary_amount,
           ...pay,
           ...access,
           status,

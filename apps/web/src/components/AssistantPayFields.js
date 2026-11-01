@@ -7,7 +7,7 @@ export function renderAssistantPayFields(prefix, assistant = {}) {
   const model = assistant.salary_model || 'monthly';
   const weekdaySet = new Set(assistant.work_weekdays || []);
   return `
-    <div class="modal-form-grid" style="margin-bottom:1rem">
+    <div class="modal-form-grid" data-assistant-pay style="margin-bottom:1rem">
       <div class="form-group">
         <label for="${prefix}_SalaryModel" class="form-label">نظام المحاسبة</label>
         <select id="${prefix}_SalaryModel" class="form-select" style="min-height:44px" onchange="window.centrlyApp.updateTeacherAssistantPayFields('${prefix}')">

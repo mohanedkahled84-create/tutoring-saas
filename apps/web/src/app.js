@@ -152,7 +152,7 @@ class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=1.1.0').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=1.2.0').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
@@ -572,6 +572,7 @@ class CentrlyApp {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.hasSecurityPin && this.isFinancialUnlocked) {
         this.isFinancialUnlocked = false;
+        if (document.querySelector('[data-assistant-pay]')) this.closeModal();
         if (this.currentRoute === 'teacher-dashboard' || this.currentRoute === 'assistants') {
           this.renderMainContent();
         }

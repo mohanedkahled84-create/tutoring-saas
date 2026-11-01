@@ -26,7 +26,18 @@ These are estimates, not a payment ledger or historical salary snapshots. Changi
 
 ## Release checks
 
-1. Apply both migrations to an isolated Supabase project and run the isolated live suite.
+1. Apply all assistant migrations to an isolated Supabase project and run the isolated live suite.
 2. Confirm TypeScript, unit/security tests and responsive browser checks. Live fixtures must never target production.
 3. Resolve the Meta Utility template rejection and verify its approved category.
 4. Apply the final migrations, deploy backend before frontend, and verify the new route and existing portal paths. Run a real invitation only on an explicitly designated recipient.
+
+
+## Owner activity and pay privacy
+
+The team screen stays available while the salary PIN is locked. Names, access controls and activity can be reviewed; salary amounts and edit inputs stay concealed. Saving a permission-only form omits pay fields and retains the configured salary, model, weekdays and start date on the server. Creating a new invitation with pay setup still requires revealing/unlocking pay. Pay dialogs close on automatic lock, manual lock or hiding financial numbers.
+
+The owner activity log supports a member filter and paginated history. Assistant writes capture actor/target names and the changed values in the same transaction, using explicit field allowlists that exclude passwords and private homework links. Actor names survive assistant deletion. Direct owner writes are not attributed to an assistant, and unchanged saves do not create duplicate change events. The owner API sanitizes detail fields again; assistants cannot access it.
+
+### Template copy under review
+
+The user rejected technical account-record wording. The preferred simple template is `centerly_assistant_team_invite_simple_v1` (`ar`, Meta ID `1648801743614579`), submitted as Utility and last checked Pending. If rejected, the user requested a simple account-added notification, prepared as `centerly_assistant_account_added_v1`; that fallback has not been submitted while the first candidate is pending. Do not use `centerly_staff_access_status_v1`, even if Meta approves its technical copy. Template approval and runtime selection still need to be verified before release.

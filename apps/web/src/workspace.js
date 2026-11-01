@@ -22,7 +22,7 @@ import { renderCenterAssistantsView } from './components/CenterAssistantsView.js
 import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
 import { renderMaterialsView, registerMaterialsActions } from './components/MaterialsView.js?v=3.1.0';
-import { renderTeacherAssistantsView, registerTeacherAssistantsActions } from './components/TeacherAssistantsView.js?v=2.2.0';
+import { renderTeacherAssistantsView, registerTeacherAssistantsActions } from './components/TeacherAssistantsView.js?v=2.3.0';
 import { renderBusinessOwnerDashboard, registerBusinessOwnerActions } from './components/BusinessOwnerDashboard.js?v=5.2.0';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js?v=2.0.0';
