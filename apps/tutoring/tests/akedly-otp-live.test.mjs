@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,randomBytes} from 'node:crypto';
 import {once} from 'node:events';
 import {requireIsolatedSupabaseProject,createIsolatedSupabaseClients} from './helpers/live-supabase.mjs';
 
@@ -19,7 +19,10 @@ test('LIVE: Akedly OTP maps private transactions to current invitation, limits a
  akedlyGateway.send=async(p,c)=>{assert.equal(p,phone);code=c;sends++;transaction='isolated-tx-'+randomUUID();return {transactionReqID:'isolated-request-'+sends,transactionID:transaction,channels:['sms'],expiresAt:new Date(Date.now()+180000).toISOString()};};
  akedlyGateway.verify=async(request,c)=>{verifies++;assert.equal(request,'isolated-request-'+sends);if(c!==code)throw Object.assign(new Error('wrong'),{status:400});return {verified:true,transactionID:transaction};};
  const {app}=await import('../dist/app.js');server=app.listen(0);await once(server,'listening');const base=`http://127.0.0.1:${server.address().port}/api/assistant-access`;
- const request=(path,body,requestOrigin=origin)=>fetch(base+path,{method:'POST',headers:{Origin:requestOrigin,'Content-Type':'application/json'},body:JSON.stringify(body)});
+ // Persistent IP buckets survive CI runs; each fixture needs its own client IP.
+ // trust proxy=1 makes this the client identity while transport remains localhost.
+ const clientIp=`198.${18+randomBytes(1)[0]%2}.${randomBytes(1)[0]}.${randomBytes(1)[0]}`;
+ const request=(path,body,requestOrigin=origin)=>fetch(base+path,{method:'POST',headers:{Origin:requestOrigin,'Content-Type':'application/json','X-Forwarded-For':clientIp},body:JSON.stringify(body)});
  const info=await (await request('/registration/info',{invitation:nonce})).json();assert.equal(info.otp_channel,'sms');assert.equal(info.phone,phone);
  const proof=await (await request('/registration/challenge',{invitation:nonce})).json();
  assert.equal((await request('/registration/request',{invitation:nonce,phone:'201122222222',proof:{context:proof.context}})).status,400);

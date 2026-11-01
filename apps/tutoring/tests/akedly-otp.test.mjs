@@ -53,4 +53,6 @@ test('provider rejection never supplies the entered valid local hash to the acce
 test('OTP telemetry strips credentials in URLs, codes and account setup tokens',()=>{
  const result=redactPhoneAuthTelemetry({breadcrumbs:[{data:{url:'https://api.akedly.io/challenge?APIKey=my-secret&pipelineID=public'}}],request:{data:{code:'123456',otp:'123456',password:'private',invitation:'private-nonce',proof:{context:'private-context'}}}});
  const raw=JSON.stringify(result);for(const value of ['my-secret','123456','private-nonce','private-context'])assert.ok(!raw.includes(value));assert.ok(raw.includes('pipelineID=public'));
+ const body=JSON.stringify({code:'123456',proof:{context:'signed-private-context'},APIKey:'secret'});
+ const encoded=redactPhoneAuthTelemetry({request:{data:body}});assert.ok(!JSON.stringify(encoded).includes('123456'));assert.ok(!JSON.stringify(encoded).includes('signed-private-context'));assert.ok(!JSON.stringify(encoded).includes('secret'));
 });

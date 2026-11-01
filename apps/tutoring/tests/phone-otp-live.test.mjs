@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,randomBytes} from 'node:crypto';
 import {once} from 'node:events';
 import {requireIsolatedSupabaseProject,createIsolatedSupabaseClients} from './helpers/live-supabase.mjs';
 
@@ -20,7 +20,9 @@ test('LIVE: locked invitation phone, OTP attempts/resend/claim, no legacy bypass
  const operation=(p_action,p_data={},p_origin=origin)=>db.rpc('assistant_registration',{p_nonce_hash:familyHash(nonce),p_origin,p_action,p_data});
  const {app}=await import('../dist/app.js');server=app.listen(0);await once(server,'listening');
  const base=`http://127.0.0.1:${server.address().port}/api/assistant-access`;
- const request=(path,body,requestOrigin=origin)=>fetch(base+path,{method:'POST',headers:{Origin:requestOrigin,'Content-Type':'application/json'},body:JSON.stringify(body)});
+ // Keep persistent per-IP limits isolated from earlier CI runs and other fixtures.
+ const clientIp=`198.${18+randomBytes(1)[0]%2}.${randomBytes(1)[0]}.${randomBytes(1)[0]}`;
+ const request=(path,body,requestOrigin=origin)=>fetch(base+path,{method:'POST',headers:{Origin:requestOrigin,'Content-Type':'application/json','X-Forwarded-For':clientIp},body:JSON.stringify(body)});
  phoneOtpGateway.ready=async()=>false;
  assert.equal((await request('/registration/info',{invitation:nonce})).status,200);
  assert.equal((await request('/registration/request',{invitation:nonce})).status,503);
