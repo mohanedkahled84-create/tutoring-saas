@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import {registrationInput,registrationVerify,checkedOtpResult,phoneOtpHash,phoneOtpGateway,requestPhoneOtp,otpRpc} from '../../shared/utils/phoneOtp.js';
+import {registrationInput,registrationVerify,checkedOtpResult,phoneOtpHash,phoneOtpGateway,requestPhoneOtp} from '../../shared/utils/phoneOtp.js';
 import bcrypt from 'bcryptjs';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabaseClient } from '../../supabase.js';
@@ -260,7 +260,7 @@ assistantManagementRouter.post('/invitations',async(req:AuthenticatedRequest,res
   const delivery=await notifyAssistantInvitation(config.meta,phone,tenantInfo?.name || 'المعلم',nonce);
   const {error}=await db.from('assistant_invitations').update({delivery_status:delivery}).eq('id',invitation.invitation_id).eq('tenant_id',tenant);
   if(error) throw error;
-  res.status(201).json({...invitation,...registrationLinks(tenant!,phone,nonce),delivery_status:delivery,message:delivery==='sent'?'تم إرسال الدعوة إلى واتساب':delivery==='blocked'?'تم حفظ الدعوة. إرسال واتساب متوقف لحين اعتماد قالب Utility':'تم حفظ الدعوة، لكن Meta لم تؤكد الإرسال'});
+  res.status(201).json({...invitation,phone,...registrationLinks(tenant!,phone,nonce),delivery_status:delivery,message:delivery==='sent'?'تم إرسال الدعوة إلى واتساب':delivery==='blocked'?'تم حفظ الدعوة. إرسال واتساب متوقف لحين اعتماد قالب Utility':'تم حفظ الدعوة، لكن Meta لم تؤكد الإرسال'});
  }catch(error){sendError(res,error);}
 });
 assistantManagementRouter.put('/:id/access',async(req:AuthenticatedRequest,res)=>{
