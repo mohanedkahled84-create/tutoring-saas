@@ -494,12 +494,14 @@ export function registerSecurityPinActions(app) {
 
   app.lockFinancials = function() {
     this.isFinancialUnlocked = false;
+    if (typeof document !== 'undefined' && document.querySelector?.('[data-assistant-pay]')) this.closeModal();
     this.showToast('تم قفل البيانات الحساسة بنجاح.', 'info');
     this.renderApp();
   }
 
   app.toggleHideFinancialNumbers = function() {
     this.hideFinancialNumbers = !this.hideFinancialNumbers;
+    if (this.hideFinancialNumbers && typeof document !== 'undefined' && document.querySelector?.('[data-assistant-pay]')) this.closeModal();
     this.showToast(this.hideFinancialNumbers ? 'تم إخفاء الأرقام المالية.' : 'تم إظهار الأرقام المالية.', 'info');
     this.renderMainContent();
   }

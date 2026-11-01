@@ -2,7 +2,7 @@ import { registerCameraScannerActions } from './components/CameraScannerModal.js
 import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=1.0.0';
 import { registerStudentImportActions } from './components/StudentImportModal.js?v=1.0.0';
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=1.0.0';
-import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.3.0';
+import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.4.0';
 import { renderTeacherCalendar, registerTeacherCalendarActions } from './components/TeacherCalendar.js';
 import { renderSessionsView, registerSessionsActions } from './components/SessionsView.js';
 import { renderStudentsView, registerStudentsActions } from './components/StudentsView.js?v=4.8.17';
@@ -10,7 +10,7 @@ import { renderGroupsView, registerGroupsActions } from './components/GroupsView
 import { renderMessageLogsView, registerMessageLogsActions } from './components/MessageLogsView.js';
 import { renderHomeworkReviewView, registerHomeworkActions } from './components/HomeworkReviewView.js?v=4.0.2';
 import { renderCenterOwnerDashboard, registerCenterOwnerActions } from './components/CenterOwnerDashboard.js?v=4.8.1';
-import { renderStudentReportsView, registerStudentReportsActions } from './components/StudentReportsView.js?v=2.1.0';
+import { renderStudentReportsView, registerStudentReportsActions } from './components/StudentReportsView.js?v=2.2.0';
 import { renderRiskWatchlistView, registerRiskWatchlistActions } from './components/RiskWatchlistView.js';
 import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=4.0.0';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=4.9.6';
@@ -22,7 +22,7 @@ import { renderCenterAssistantsView } from './components/CenterAssistantsView.js
 import { renderCenterRoomsView } from './components/CenterRoomsView.js';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js';
 import { renderMaterialsView, registerMaterialsActions } from './components/MaterialsView.js?v=3.1.0';
-import { renderTeacherAssistantsView, registerTeacherAssistantsActions } from './components/TeacherAssistantsView.js?v=2.1.0';
+import { renderTeacherAssistantsView, registerTeacherAssistantsActions } from './components/TeacherAssistantsView.js?v=2.5.0';
 import { renderBusinessOwnerDashboard, registerBusinessOwnerActions } from './components/BusinessOwnerDashboard.js?v=5.2.0';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js?v=2.0.0';

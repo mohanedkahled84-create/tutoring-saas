@@ -247,6 +247,14 @@
   ],
   "rewrites": [
     {
+      "source": "/assistant",
+      "destination": "/assistant.html"
+    },
+    {
+      "source": "/assistant/:path*",
+      "destination": "/assistant.html"
+    },
+    {
       "source": "/family",
       "destination": "/index.html"
     },

@@ -32,6 +32,7 @@ import { reportsRouter } from "./features/reports/index.js";
 import { quizzesRouter } from "./features/quizzes/routes.js";
 import { materialsRouter } from "./features/materials/routes.js";
 import { assistantsRouter } from "./features/assistants/routes.js";
+import { assistantAccessRouter } from "./features/assistants/access.js";
 import { homeworkRouter, publicHomeworkRouter } from "./features/homework/routes.js";
 import { platformRouter, publicPlatformRouter } from "./features/platform-builder/index.js";
 
@@ -95,6 +96,7 @@ export function createApp(): Express {
   );
   // A 25 MiB homework file expands to about 34 MiB as base64.
   app.use("/api/public/homework", express.json({ limit: "36mb" }));
+  app.use("/api/assistant-access", express.json({limit:'32kb'}));
   app.use(['/meta/webhook','/api/meta/webhook','/api/public/meta/webhook'],express.json({limit:'2mb',verify:(req,_res,buffer)=>{
     const request=req as express.Request & {rawMetaBody?:Buffer};
     if(['/meta/webhook','/api/meta/webhook','/api/public/meta/webhook'].includes(request.originalUrl.split('?')[0].replace(/\/+$/,'')))request.rawMetaBody=Buffer.from(buffer);
@@ -131,6 +133,7 @@ export function createApp(): Express {
 
   // Global rate limiter for protected API routes
   app.use("/api", globalRateLimiter);
+  app.use("/api/assistant-access", assistantAccessRouter);
 
   // Services dependency injection middleware
   app.use(injectServices());

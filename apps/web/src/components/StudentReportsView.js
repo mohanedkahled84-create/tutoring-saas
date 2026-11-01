@@ -1,3 +1,4 @@
+import { assistantPay } from "../utils/assistantPay.js";
 import { request } from "../services/api.js";
 import { renderStudentSearchBar } from "./StudentSearchBar.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
@@ -103,25 +104,9 @@ export function renderStudentReportsView(
   const processedAssistants = activeAssistants.map(a => {
     const isPerSession = a.salary_model === 'per_session';
     const rate = Number(a.salary ?? a.salary_amount ?? 0);
-    let monthlyDeduction = 0;
-    let calculationBasis = '';
-
-    if (isPerSession) {
-      if (a.group_id) {
-        const matched = groups.find(g => g.id === a.group_id);
-        const grpName = matched ? matched.name : 'مجموعة مخصصة';
-        monthlyDeduction = rate * 4;
-        calculationBasis = `4 حصص شهرياً في ${grpName} (${rate.toLocaleString('ar-EG')} ج.م/حصة)`;
-      } else {
-        const totalGroups = groups.length > 0 ? groups.length : 1;
-        const totalSessions = totalGroups * 4;
-        monthlyDeduction = rate * totalSessions;
-        calculationBasis = `${totalSessions} حصة شهرياً لكافة المجاميع (${rate.toLocaleString('ar-EG')} ج.م/حصة)`;
-      }
-    } else {
-      monthlyDeduction = rate;
-      calculationBasis = 'مرتب شهري ثابت';
-    }
+    const pay = assistantPay(a, period);
+    const monthlyDeduction = pay.amount;
+    const calculationBasis = pay.basis;
 
     totalAssistantSalaries += monthlyDeduction;
 
@@ -129,6 +114,7 @@ export function renderStudentReportsView(
     let roleText = 'إداري وتعليمي شامل';
     if (a.role_type === 'admin') roleText = 'إداري وتنظيمي فقط';
     else if (a.role_type === 'educational') roleText = 'تعليمي وتدريسي فقط';
+    if (a.access) roleText = 'صلاحيات محددة';
 
     return {
       ...a,
@@ -434,7 +420,7 @@ export function renderStudentReportsView(
                         <td><span class="badge badge-blue">${escapeHtml(a.assignedGroupName)}</span></td>
                         <td>
                           <span class="badge ${a.isPerSession ? 'badge-amber' : 'badge-success'}">
-                            ${a.isPerSession ? 'بالحصة' : 'مرتب شهري'}
+                            ${assistantPay(a).modelLabel}
                           </span>
                         </td>
                         <td style="font-size: 0.825rem; color: var(--centrly-text);">${escapeHtml(a.calculationBasis)}</td>
