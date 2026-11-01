@@ -136,6 +136,7 @@
       },
       "continue": true
     },
+    { "src": "/assistant(?:/.*)?", "dest": "/assistant.html" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
