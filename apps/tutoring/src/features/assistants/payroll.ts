@@ -81,7 +81,7 @@ export function validatePay(body: Record<string, unknown>, previous?: PayAssista
 export function calculatePay(assistant: PayAssistant, period: PayPeriod, sessions: PaySession[] = []) {
   const model = assistant.salary_model || "monthly";
   const rate = Number(assistant.salary ?? assistant.salary_amount ?? 0);
-  const active = !assistant.status || assistant.status === "active";
+  const active = !assistant.status || ["active", "invited"].includes(assistant.status);
   const start = assistant.pay_start_date || period.from;
   let units = 0;
   let basis = "monthly_fixed";
@@ -116,7 +116,7 @@ export function calculatePay(assistant: PayAssistant, period: PayPeriod, session
 export async function attachPayroll(db: SupabaseClient, tenantId: string, assistants: PayAssistant[], period: PayPeriod) {
   const sessions: PaySession[] = [];
   // Paginate so large tenants do not silently lose sessions to the Data API's row cap.
-  if (assistants.some(a => a.status === "active" && a.salary_model === "per_session")) {
+  if (assistants.some(a => ["active", "invited"].includes(a.status || "active") && a.salary_model === "per_session")) {
     for (let offset = 0; ; offset += 500) {
       const { data, error } = await db.from("sessions")
         .select("id,group_id,teacher_id,session_date,status")

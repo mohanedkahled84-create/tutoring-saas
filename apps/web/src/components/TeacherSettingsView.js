@@ -11,7 +11,7 @@ import { normalizeDigits } from '../utils/normalizeDigits.js';
  * 1. Profile & Teaching Info (Name, subject, phone, governorate)
  * 2. WhatsApp Gateway & Templates (Unified inside Settings)
  * 3. Subscription & Plan Quota (Unified full pricing & proofs inside Settings)
- * 4. Security & Password (Current password required + Forgot password link to email + Financial PIN)
+ * 4. Security & Password (Current password required + Forgot password link to email)
  */
 
 function formatArabicDate(dateStr) {
@@ -57,8 +57,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
     }
   }
 
-  const hasPin = Boolean(securityState?.hasPin !== undefined ? securityState.hasPin : (window.centrlyApp?.hasSecurityPin || user?.has_security_pin || localStorage.getItem('centrly_has_security_pin') === 'true'));
-  const isUnlocked = Boolean(securityState?.isUnlocked !== undefined ? securityState.isUnlocked : window.centrlyApp?.isFinancialUnlocked);
+
 
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem; font-family: 'Cairo', sans-serif;" dir="rtl">
@@ -82,11 +81,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
             <div style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); padding: 0.4rem 0.85rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700;">
               <span>${escapeHtml(user?.tenant_name || 'حساب تعليمي')}</span>
             </div>
-            ${hasPin ? `
-              <span class="badge" style="background: ${isUnlocked ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.25)'}; color: #fff; border: 1px solid ${isUnlocked ? '#34d399' : '#f87171'}; font-size: 0.75rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem;">
-                ${isUnlocked ? '✓ تم فك القفل' : getIcon('lock', 13, '#ffffff') + ' مقفل برمز PIN'}
-              </span>
-            ` : ''}
+
           </div>
         </div>
       </div>
@@ -299,75 +294,6 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
             </div>
           </div>
 
-          <!-- Financial PIN Lock Card -->
-          <div class="card" style="margin: 0; padding: 1.75rem; border-radius: var(--radius-lg);">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.75rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span>${getIcon('lock', 22, hasPin ? '#10b981' : '#f59e0b')}</span>
-                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">
-                  رمز الأمان السحابي (Security PIN)
-                </h3>
-              </div>
-              ${hasPin ? `
-                <span class="badge" style="background: rgba(16,185,129,0.15); color: #047857; border: 1px solid #10b981; font-weight: 800; padding: 0.35rem 0.75rem; border-radius: 8px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
-                  ✓ مفعل ومربوط بحسابك عبر كافة الأجهزة
-                </span>
-              ` : `
-                <span class="badge" style="background: rgba(245,158,11,0.15); color: #b45309; border: 1px solid #f59e0b; font-weight: 800; padding: 0.35rem 0.75rem; border-radius: 8px; font-size: 0.8rem;">
-                  غير مفعل حالياً
-                </span>
-              `}
-            </div>
-
-            <p style="font-size: 0.85rem; color: var(--centrly-text); margin: 0 0 1.25rem 0; line-height: 1.6;">
-              يقوم هذا الرمز السحابي بقفل الإعدادات، والبيانات المالية، والأرباح، ومرتبات المساعدين تلقائياً ومزامنته بحسابك السحابي، بحيث يفتح الحساب من أي جهاز (موبايل، لابتوب) مقفلاً بنفس الرمز لحماية خصوصيتك التامة.
-            </p>
-
-            ${hasPin ? `
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                <div>
-                  <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem; margin-bottom: 0.25rem;">
-                    حالة الحماية: مقفلة ومؤمنة سحابياً
-                  </div>
-                  <div style="font-size: 0.8rem; color: #64748b;">
-                    يمكنك تعديل رمز الأمان (PIN) أو إعادة ضبطه في أي وقت.
-                  </div>
-                </div>
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                  <button type="button" class="btn btn-primary" onclick="window.centrlyApp.openSetPinModal()" style="font-weight: 800; font-size: 0.85rem; padding: 0.55rem 1.15rem; display: inline-flex; align-items: center; gap: 0.4rem;">
-                    ${getIcon('edit', 14)}
-                    <span>تعديل رمز الأمان</span>
-                  </button>
-                  <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.resetFinancialPinPrompt()" style="font-weight: 700; font-size: 0.85rem; padding: 0.55rem 1rem; color: #2563eb; border-color: #bfdbfe; background: #eff6ff;">
-                    <span>إعادة ضبط عبر الإيميل</span>
-                  </button>
-                </div>
-              </div>
-            ` : `
-              <form onsubmit="window.centrlyApp.handleSaveFinancialPin(event)">
-                <div style="max-width: 440px; display: flex; flex-direction: column; gap: 1rem;">
-                  <div class="form-group" style="margin: 0;">
-                    <label class="form-label" style="font-weight: 700;">تعيين رمز أمان سحابي جديد (4 إلى 6 أرقام) *</label>
-                    <div style="position: relative;">
-                      <input type="password" id="settingsFinancialPin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" required dir="ltr" style="letter-spacing: 0.3rem; font-weight: 800; font-size: 1.1rem; text-align: center; padding-left: 2.5rem;" oninput="this.value = this.value.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-1776)).replace(/\D/g, '')">
-                      <button type="button" class="password-toggle-btn" onclick="window.centrlyApp.togglePasswordVisibility('settingsFinancialPin', this, event)" onmousedown="event.preventDefault()" title="إظهار/إخفاء رمز الأمان" aria-label="إظهار/إخفاء رمز الأمان">
-                        ${getIcon('eye', 18)}
-                      </button>
-                    </div>
-                    <span style="font-size: 0.75rem; color: #64748b; margin-top: 0.35rem; display: block;">
-                      أدخل من 4 إلى 6 أرقام سرية لتأمين كافة شاشاتك المالية عبر جميع الأجهزة.
-                    </span>
-                  </div>
-
-                  <div>
-                    <button type="submit" class="btn btn-primary" style="font-weight: 800; padding: 0.65rem 1.75rem; border-radius: 10px;">
-                      <span>حفظ وتفعيل رمز الأمان</span>
-                    </button>
-                  </div>
-                </div>
-              </form>
-            `}
-          </div>
 
         </div>
       </div>
@@ -563,63 +489,4 @@ export function registerTeacherSettingsActions(app) {
     ruleUp.innerHTML = (hasUp ? '✓ ' : '• ') + 'حرف كبير واحد على الأقل (A-Z)';
   };
 
-  app.handleSaveFinancialPin = async function(e) {
-    if (e) e.preventDefault();
-    const pin = normalizeDigits(document.getElementById('settingsFinancialPin')?.value);
-
-    if (!pin) {
-      this.showToast('يرجى كتابة رمز الأمان المكون من 4 إلى 6 أرقام لحفظه وتأمينه.', 'warning');
-      return;
-    }
-
-    if (!/^\d{4,6}$/.test(pin)) {
-      this.showToast('يجب أن يتكون الرمز السري من 4 إلى 6 أرقام فقط.', 'danger');
-      return;
-    }
-
-    try {
-      await request('/settings/security-pin', {
-        method: 'POST',
-        body: { pin }
-      });
-      localStorage.setItem('centrly_has_security_pin', 'true');
-      this.hasSecurityPin = true;
-      this.isFinancialUnlocked = false;
-      if (this.user) {
-        this.user.has_security_pin = true;
-        authService.setUser(this.user);
-      }
-      this.showToast('تم حفظ وتأمين الرمز السري للأرباح بنجاح ومزامنته سحابياً مع حسابك.', 'success');
-      this.renderApp();
-    } catch (err) {
-      this.showToast(err.message || 'فشل حفظ الرمز السري', 'danger');
-    }
-  };
-
-  app.togglePinVisibility = function(inputId, btnEl, event) {
-    if (btnEl && btnEl.querySelector('span')) {
-      if (event) {
-        if (typeof event.preventDefault === 'function') event.preventDefault();
-        if (typeof event.stopPropagation === 'function') event.stopPropagation();
-      }
-      const input = document.getElementById(inputId);
-      if (!input) return;
-      const isPassword = input.type === 'password';
-      const newType = isPassword ? 'text' : 'password';
-      input.type = newType;
-      try { input.setAttribute('type', newType); } catch (_) {}
-      const span = btnEl.querySelector('span') || btnEl;
-      span.innerText = isPassword ? 'إخفاء' : 'إظهار';
-      if (document.activeElement === input) {
-        try {
-          if (input.setSelectionRange && input.value) {
-            const len = input.value.length;
-            input.setSelectionRange(len, len);
-          }
-        } catch (_) {}
-      }
-    } else {
-      this.togglePasswordVisibility(inputId, btnEl, event);
-    }
-  };
 }

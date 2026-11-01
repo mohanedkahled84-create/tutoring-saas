@@ -30,13 +30,13 @@ test('activity rendering escapes actor, target and change text and shows the act
  const html=renderAssistantActivity([{actor_name:'<img src=x onerror=alert(1)>',actor_type:'assistant',target_name:'<script>bad</script>',created_at:'2026-11-01T00:00:00Z',action:'attendance.edit',changes:{before:{attended:true},after:{attended:false,portal_password:'private-password'}}}]);
  assert.ok(!html.includes('<img'));assert.ok(!html.includes('<script>'));assert.ok(!html.includes('private-password'));assert.match(html,/حاضر/);assert.match(html,/غائب/);assert.match(html,/قبل:/);assert.match(html,/بعد:/);
 });
-test('PIN lock conceals all pay amounts while team controls, names and activity remain available',()=>{
+test('optional number masking conceals pay while team controls remain available',()=>{
  const row={id:'10000000-0000-4000-8000-000000000001',name:'مساعد معروف',status:'active',salary:987654.32,salary_model:'monthly',payroll:{amount:987654.32,units:1,month:11,year:2026}};
- const html=renderTeacherAssistantsView([row],[],{hasPin:true,isUnlocked:false,hideNumbers:false});
+ const html=renderTeacherAssistantsView([row],[],{hasPin:false,isUnlocked:true,hideNumbers:true});
  assert.match(html,/مساعد معروف/);assert.match(html,/openEditTeacherAssistantModal/);assert.match(html,/openAssistantActivityLog/);assert.match(html,/الأجر محمي/);assert.ok(!html.includes('٩٨٧'));assert.ok(!html.includes('987654'));
 });
-test('editing permissions with a locked PIN does not render salary fields',()=>{
+test('editing permissions while numbers are hidden preserves the existing salary',()=>{
  let shown;
- const app={hasSecurityPin:true,isFinancialUnlocked:false,teacherAssistants:[{id:'a',name:'مساعد',salary:987654.32,access:{permissions:{'students.view':true},group_ids:[],all_groups:false}}],showModal(title,body){shown=body;}};
+ const app={hideFinancialNumbers:true,teacherAssistants:[{id:'a',name:'مساعد',salary:987654.32,access:{permissions:{'students.view':true},group_ids:[],all_groups:false}}],showModal(title,body){shown=body;}};
  registerTeacherAssistantsActions(app);app.openEditTeacherAssistantModal('a');assert.match(shown,/modalEditTA_Permission/);assert.ok(!shown.includes('modalEditTA_SalaryAmount'));assert.ok(!shown.includes('987654'));
 });

@@ -1,9 +1,9 @@
 import { assistantPay } from "./utils/assistantPay.js";
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
-import { renderSidebar } from './components/Sidebar.js?v=5.2.1';
+import { renderSidebar } from './components/Sidebar.js?v=5.3.0';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.1.1';
-import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.9.21';
+import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.9.22';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
 import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=8.1.0';
 import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.8.7';
@@ -125,17 +125,9 @@ class CentrlyApp {
     this.materials = [];
     this.materialsGroupId = 'all';
     this.teacherAssistants = [];
-    let cachedHasPin = null;
-    try {
-      cachedHasPin = (typeof localStorage !== 'undefined') ? localStorage.getItem('centrly_has_security_pin') : null;
-    } catch (_) {}
-    const cachedUser = authService.getUser();
-    this.hasSecurityPin = (cachedUser && typeof cachedUser.has_security_pin === 'boolean')
-      ? cachedUser.has_security_pin
-      : (cachedHasPin !== null ? cachedHasPin === 'true' : false);
-    try { localStorage.removeItem('centrly_financial_pin'); } catch (_) {}
-    // Cross-Device Security: If account has a PIN, protected views are ALWAYS locked by default
-    this.isFinancialUnlocked = !this.hasSecurityPin;
+    this.hasSecurityPin = false;
+    this.isFinancialUnlocked = true;
+    try { localStorage.removeItem('centrly_financial_pin'); localStorage.removeItem('centrly_has_security_pin'); } catch (_) {}
     this.hideFinancialNumbers = false;
     this.routeLoadingState = {};
     this.dataLoadedState = {};
@@ -152,7 +144,7 @@ class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=1.7.0').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=1.8.0').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
@@ -568,17 +560,6 @@ class CentrlyApp {
       }
     }, { passive: true });
 
-    // Auto-lock sensitive financial pages when browser tab loses focus or is hidden
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.hasSecurityPin && this.isFinancialUnlocked) {
-        this.isFinancialUnlocked = false;
-        if (document.querySelector('[data-assistant-pay]')) this.closeModal();
-        if (this.currentRoute === 'teacher-dashboard' || this.currentRoute === 'assistants') {
-          this.renderMainContent();
-        }
-      }
-    });
-
     // Offline / Online network listeners for resilient attendance recording
     window.addEventListener('online', () => {
       this.showToast('عادت شبكة الإنترنت! جاري مزامنة الحضور المسجل مع السيرفر...', 'info');
@@ -892,17 +873,6 @@ class CentrlyApp {
       }
     } catch (_) {}
 
-    // Cross-Device Account-Level Security: Sync PIN status from user profile and storage
-    if (typeof this.user?.has_security_pin === 'boolean') {
-      this.hasSecurityPin = this.user.has_security_pin;
-      if (this.hasSecurityPin) {
-        this.isFinancialUnlocked = false;
-        try {
-          localStorage.setItem('centrly_has_security_pin', 'true');
-        } catch (_) {}
-      }
-    }
-
     try {
       await this.ensureWorkspaceModules();
     } catch (error) {
@@ -919,27 +889,6 @@ class CentrlyApp {
 
     // Mark app as successfully loaded so watchdog/splash dismisses
     window.__centrlyLoaded = true;
-
-    // Async background security PIN check without blocking initial render
-    request('/settings/security-pin').then(pinStatus => {
-      if (pinStatus && typeof pinStatus.has_pin === 'boolean') {
-        const changed = this.hasSecurityPin !== pinStatus.has_pin;
-        this.hasSecurityPin = pinStatus.has_pin;
-        if (this.hasSecurityPin) {
-          this.isFinancialUnlocked = false;
-        }
-        if (this.user) {
-          this.user.has_security_pin = pinStatus.has_pin;
-          authService.setUser(this.user);
-        }
-        try {
-          localStorage.setItem('centrly_has_security_pin', pinStatus.has_pin ? 'true' : 'false');
-        } catch (_) {}
-        if (changed && this.currentRoute === 'finance') {
-          this.renderMainContent();
-        }
-      }
-    }).catch(() => {});
 
     // Async background active session sync without blocking initial render
     if (!this.sessionState?.id) {
@@ -1112,11 +1061,6 @@ class CentrlyApp {
     if (typeof this.closeCameraModal === 'function') {
       try { this.closeCameraModal(); } catch (_) {}
     }
-    // Auto-lock sensitive pages automatically upon changing or switching pages
-    if (this.hasSecurityPin && this.isFinancialUnlocked) {
-      this.isFinancialUnlocked = false;
-    }
-
     // Unify WhatsApp & Billing directly inside the master Settings Hub
     if (route === 'whatsapp') {
       this.settingsState = this.settingsState || {};

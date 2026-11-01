@@ -40,8 +40,8 @@ test('Cairo day/month boundary is independent of server or browser timezone', ()
   assert.equal(payPeriod(undefined, undefined, new Date('2026-10-31T22:30:00Z')).month, 11);
 });
 
-test('inactive and not-yet-accepted assistants do not add payroll', () => {
-  for (const status of ['inactive', 'invited']) assert.equal(calculatePay({ ...daily, status }, period).amount, 0);
+test('inactive assistants do not add payroll', () => {
+  for (const status of ['inactive']) assert.equal(calculatePay({ ...daily, status }, period).amount, 0);
 });
 
 test('monthly legacy rate remains fixed and is not prorated or migrated', () => {
@@ -124,4 +124,18 @@ test('daily form restores saved weekdays/date and explains automatic calculation
   assert.match(html, /value="4" checked/);
   assert.match(html, /لا يحتاج تسجيل حضور/);
   assert.match(html, /step="0.01"/);
+});
+
+test('pending account acceptance does not zero the configured daily or monthly work pay',()=>{
+ const result=calculatePay({...daily,status:'invited',salary:250,work_weekdays:[1,4,6],pay_start_date:'2026-02-13'},period);
+ assert.equal(result.units,13);assert.equal(result.amount,3250);
+ assert.equal(calculatePay({...daily,status:'invited',salary_model:'monthly',salary:3500},period).amount,3500);
+ assert.equal(calculatePay({...daily,status:'inactive'},period).amount,0);
+});
+
+test('permission page names match teacher navigation, with distinct quiz setup and score explanations',async()=>{
+ const {teacherPageTitles}=await import('../../web/src/utils/teacherPageTitles.js');const {renderSidebar}=await import('../../web/src/components/Sidebar.js');const {assistantPages,renderAssistantAccessFields}=await import('../../web/src/components/AssistantAccessFields.js');
+ const sidebar=renderSidebar('sessions',{role:'teacher'});for(const key of ['groups','students','sessions','attendance','homework','materials','quizzes','grades','reports'])assert.ok(sidebar.includes(teacherPageTitles[key]),key);
+ for(const [key,label] of assistantPages)assert.equal(label,teacherPageTitles[key]);
+ const html=renderAssistantAccessFields('test');assert.match(html,/إعداد الكويز/);assert.match(html,/درجات الطلاب/);
 });

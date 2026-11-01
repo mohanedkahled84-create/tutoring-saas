@@ -1,8 +1,8 @@
 import { escapeHtml as e } from './utils/escapeHtml.js';
-import { assistantPages } from './components/AssistantAccessFields.js?v=4';
+import { assistantPages } from './components/AssistantAccessFields.js?v=5';
 import { API_BASE_URL } from './services/api.js';
 import {mountFollowupReports} from './components/FollowupReports.js';
-import {mountCollectionLedger} from './components/CollectionLedger.js';
+import {mountCollectionLedger} from './components/CollectionLedger.js?v=2';
 import { assistantRequest } from './services/assistantClient.js';
 
 const main=document.getElementById('main'),actions=document.getElementById('account-actions'),dialog=document.getElementById('editor');
@@ -61,7 +61,7 @@ async function loadPage(){
  stopCollections?.();stopCollections=null;
  if(!panel || !identity)return;
  if(['reports','messages'].includes(page)){panel.innerHTML='<div id="assistant-followup"></div>';stopCollections=mountFollowupReports(panel.querySelector('#assistant-followup'),{groups:identity.groups,allowSend:can('messages') && can('messages','send'),request:(suffix,body)=>api(body===undefined?`/data/${page}${suffix}`:'/followup/prepare',body),onFailure:error=>{if([401,403].includes(error.status))handleFailure(error);}});return;}
- if(page==='collections'){panel.innerHTML='<h2>التحصيل</h2><div id="assistant-collection-ledger"></div>';stopCollections=mountCollectionLedger(panel.querySelector('#assistant-collection-ledger'),{groups:identity.groups,allowCreate:can('collections','create'),request:(suffix,body)=>api(`/data/collections${body===undefined?suffix:'/create'}`,body),onFailure:error=>{if(error.status===401)handleFailure(error);}});return;}
+ if(page==='collections'){panel.innerHTML='<h2>سجل التحصيل</h2><div id="assistant-collection-ledger"></div>';stopCollections=mountCollectionLedger(panel.querySelector('#assistant-collection-ledger'),{groups:identity.groups,allowCreate:can('collections','create'),request:(suffix,body)=>api(`/data/collections${body===undefined?suffix:'/create'}`,body),onFailure:error=>{if(error.status===401)handleFailure(error);}});return;}
  const label=assistantPages.find(([key])=>key===page)?.[1] || '';
  panel.innerHTML=`<div class="panel-top"><h2>${label}</h2><div class="actions"><button id="refresh" aria-label="تحديث بيانات الصفحة">إعادة التحميل</button>${can(page,'create')?'<button id="create" class="primary" disabled>إضافة جديد</button>':''}</div></div>${page==='attendance'?`<div class="session-picker"><label for="attendance-session">اختر الحصة</label><select id="attendance-session">${(identity.sessions || []).map(s=>`<option value="${e(s.id)}" ${s.id===sessionId?'selected':''}>${e(groupName(s.group_id))} · ${e(s.session_date)}</option>`).join('') || '<option value="">لا توجد حصص متاحة</option>'}</select></div>`:''}${page==='grades'?'<div class="session-picker"><label for="grade-quiz">اختر الاختبار</label><select id="grade-quiz"></select></div>':''}<div id="page-rows" aria-busy="true"><div class="opening" role="status">تحميل بيانات الصفحة…</div></div>`;
  panel.querySelector('#refresh').onclick=()=>openWorkspace().catch(handleFailure);

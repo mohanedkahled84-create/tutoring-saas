@@ -29,7 +29,7 @@ authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): 
     const authService = getServices(req as AuthenticatedRequest).auth;
     const result = await authService.login({ email: rawIdentifier, password });
 
-    let hasSecurityPin = true;
+    let hasSecurityPin = false;
     let dbUser: any = null;
     try {
       const client = getScopedSupabaseClient(result.token);
@@ -119,7 +119,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
     const authService = getServices(req as AuthenticatedRequest).auth;
     const result = await authService.refresh(refresh_token);
 
-    let hasSecurityPin = true;
+    let hasSecurityPin = false;
     try {
       const client = getScopedSupabaseClient(result.token);
       const { data: uRec } = await client.rpc("get_user_profile", { p_user_id: result.user.id });

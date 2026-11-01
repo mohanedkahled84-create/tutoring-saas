@@ -5,7 +5,7 @@ import { getIcon } from "../utils/icons.js";
 /**
  * Centrly Teacher Dashboard
  * Clean vector icons, dynamic teacher greeting, 3 billing models display,
- * KPI Rollup & Active Groups Breakdown + Security PIN integration
+ * KPI Rollup & Active Groups Breakdown
  */
 
 export function renderTeacherDashboard(
@@ -22,7 +22,7 @@ export function renderTeacherDashboard(
     collectedToday: 0,
   };
 
-  const { hasPin, isUnlocked, hideNumbers } = securityState;
+  const { hideNumbers } = securityState;
   const groups = data.groups || [];
   const displayName = user?.name || data.userName || (user?.email ? user.email.split('@')[0] : 'المعلم');
 
@@ -131,7 +131,7 @@ export function renderTeacherDashboard(
   const currentMonthName = monthNames[currentMonthIdx] || 'الحالي';
   const currentYearNum = actualEarnings?.year || new Date().getFullYear();
 
-  const isFinancialHidden = hideNumbers || (hasPin && !isUnlocked);
+  const isFinancialHidden = !!hideNumbers;
   const displayRev = isFinancialHidden ? '••••••' : `${finalMonthlyRevenue.toLocaleString('ar-EG')} ج.م`;
   const displayCenterCut = isFinancialHidden ? '••••••' : `${totalCenterCut.toLocaleString('ar-EG')} ج.م`;
   const displayAssistants = isFinancialHidden ? '••••••' : `${totalAssistantSalaries.toLocaleString('ar-EG')} ج.م`;
@@ -145,57 +145,7 @@ export function renderTeacherDashboard(
   return `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;" dir="rtl">
       
-      <!-- Security PIN Banner -->
-      <div class="card" style="margin: 0; background: ${!hasPin ? '#fffbeb' : '#f8fafc'}; border: 1px solid ${!hasPin ? '#fde68a' : '#e2e8f0'}; padding: 0.85rem 1.25rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-          <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div style="display: flex; align-items: center;">${!hasPin ? getIcon('alertTriangle', 20, '#d97706') : (isUnlocked ? getIcon('lock', 20, '#10b981') : getIcon('lock', 20, '#64748b'))}</div>
-            <div>
-              <div style="font-weight: 800; font-size: 0.9rem; color: #0f172a;">
-                ${!hasPin 
-                  ? 'حماية الأرباح برمز الأمان (PIN) غير مفعلة' 
-                  : (isUnlocked ? 'الأرباح المالية: معروضة حالياً' : 'الأرباح المالية مقفلة برمز الأمان')}
-              </div>
-              <div style="font-size: 0.75rem; color: #64748b;">
-                ${!hasPin 
-                  ? 'قم بتعيين رمز PIN مكون من 4 إلى 6 أرقام لإخفاء الأرباح وحمايتها من المتطفلين.' 
-                  : (isUnlocked ? 'تُقفل الأرباح تلقائياً بمجرد الانتقال لأي صفحة أخرى، ويمكنك إخفاء الأرقام سريعاً أو إعادة القفل.' : 'أدخل الـ PIN لعرض أرباحك وتفاصيل التحصيل.')}
-              </div>
-            </div>
-          </div>
-
-          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            ${!hasPin ? `
-              <button class="btn btn-warning btn-sm" onclick="window.centrlyApp.openSetPinModal()" style="font-weight: 800; display: flex; align-items: center; gap: 0.35rem;">
-                ${getIcon('lock', 14)}
-                <span>تعيين رمز PIN للأرباح</span>
-              </button>
-            ` : `
-              ${!isUnlocked ? `
-                <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.promptUnlockFinancials()" style="font-weight: 800; display: flex; align-items: center; gap: 0.35rem;">
-                  ${getIcon('lock', 14)}
-                  <span>إدخال رمز PIN لفتح الأرباح</span>
-                </button>
-              ` : `
-                <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.toggleHideFinancialNumbers()" style="font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
-                  <span>${hideNumbers ? getIcon('eye', 14) : getIcon('eyeOff', 14)}</span>
-                  <span>${hideNumbers ? 'إظهار الأرقام' : 'إخفاء الأرقام'}</span>
-                </button>
-
-                <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.lockFinancials()" style="font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
-                  <span>${getIcon('lock', 14)}</span>
-                  <span>قفل الأرباح</span>
-                </button>
-              `}
-
-              <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openSetPinModal()" style="font-weight: 700; display: flex; align-items: center; justify-content: center;" title="تغيير رمز PIN">
-                ${getIcon('edit', 14)}
-              </button>
-            `}
-          </div>
-        </div>
-      </div>
-
+      <div style="display:flex;justify-content:flex-end"><button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.toggleHideFinancialNumbers()">${hideNumbers?'إظهار الأرقام':'إخفاء الأرقام'}</button></div>
       <!-- Welcome & Quick Start Banner (Swiss Minimalist) -->
       <div class="card" style="margin: 0; background: #0f172a; color: #ffffff; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem;">

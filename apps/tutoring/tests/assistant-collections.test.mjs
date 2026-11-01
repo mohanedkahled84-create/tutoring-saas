@@ -12,11 +12,11 @@ test('collection amounts are actual positive money with two decimal places and n
  for(const key of ['tenant_id','assistant_id','actor_name','collected_at','status'])assert.throws(()=>collectionInput.parse({...valid,[key]:'forged'}));
  assert.throws(()=>collectionInput.parse({...valid,request_id:'invalid'}));assert.throws(()=>voidCollectionInput.parse({reason:'x'}));assert.throws(()=>collectionQuery.parse({page:0}));assert.throws(()=>collectionQuery.parse({from:'2026-02-30'}));
 });
-test('owner receipt amounts remain behind the existing financial privacy controls',()=>{
+test('owner receipt amounts respect optional number masking without an extra password',()=>{
  let unlocked=0,notices=0;
- const app={hasSecurityPin:true,isFinancialUnlocked:false,promptUnlockFinancials(){unlocked++;},showToast(){notices++;},showModal(){throw new Error('must not show concealed amounts');}};
- registerCollectionOwnerActions(app);app.openCollectionLedger();assert.equal(unlocked,1);
- app.isFinancialUnlocked=true;app.hideFinancialNumbers=true;app.openCollectionLedger();assert.equal(notices,1);
+ const app={hideFinancialNumbers:true,hasSecurityPin:true,isFinancialUnlocked:false,promptUnlockFinancials(){unlocked++;},showToast(){notices++;},showModal(){throw new Error('must not show concealed amounts');}};
+ registerCollectionOwnerActions(app);app.openCollectionLedger();assert.equal(unlocked,0);
+ app.isFinancialUnlocked=true;app.hideFinancialNumbers=true;app.openCollectionLedger();assert.equal(notices,2);
 });
 test('collection access is closed by default and never offers assistant edit/delete authority',()=>{
  assert.equal(validateAssistantAccess({}).permissions['collections.view'],undefined);
