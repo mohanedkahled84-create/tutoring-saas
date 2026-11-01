@@ -121,7 +121,7 @@ export function renderTeacherAssistantsView(
             <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
               <button class="btn btn-primary" onclick="window.centrlyApp.openAddTeacherAssistantModal()" style="min-height: 44px; font-size: 0.85rem; font-weight: 700;">
                 ${getIcon('add', 14, '#ffffff')}
-                <span>إضافة مساعد جديد</span>
+                <span>دعوة مساعد</span>
               </button>
             </div>
           </div>
@@ -193,6 +193,7 @@ export function renderTeacherAssistantsView(
                   } else if (a.role_type === 'educational') {
                     roleBadge = '<span class="badge badge-warning">تعليمي وشرح فقط</span>';
                   }
+                  if (a.access) roleBadge = '<span class="badge badge-secondary">صلاحيات محددة</span>';
 
                   const isPerSession = a.salary_model === 'per_session';
                   const payInfo = assistantPay(a);
@@ -304,7 +305,7 @@ export function registerTeacherAssistantsActions(app) {
 
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-      <button type="submit" form="modalAddTeacherAssistantForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1.4rem;">حفظ الدعوة وإرسالها على واتساب</button>
+      <button type="submit" form="modalAddTeacherAssistantForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1rem;min-height:44px">حفظ وإرسال الدعوة</button>
     `;
     this.showModal('دعوة مساعد إلى فريقك', bodyHtml, footerHtml);
   };

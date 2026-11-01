@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {assistantCatalog,validateAssistantAccess,confirmAssistantMessage,assistantRpc} from '../dist/features/assistants/access.js';
 import {assistantPages,renderAssistantAccessFields} from '../../web/src/components/AssistantAccessFields.js';
 import {familyHash} from '../dist/shared/utils/parentFamily.js';
-import {registerTeacherAssistantsActions} from '../../web/src/components/TeacherAssistantsView.js';
+import {registerTeacherAssistantsActions,renderTeacherAssistantsView} from '../../web/src/components/TeacherAssistantsView.js';
 
 test('new assistants default to no pages and no group data; catalog only exposes implemented actions',()=>{
  assert.deepEqual(validateAssistantAccess({}),{permissions:{},all_groups:false,group_ids:[]});
@@ -40,4 +40,9 @@ test('teacher creates invitations without providing assistant name, and edit res
  const app={groups:[{id:group,name:'مجموعة أولى'}],showModal:(title,body,footer)=>{shown={title,body,footer};},teacherAssistants:[{id:assistant,name:'مساعد',phone:'201011111111',status:'active',salary_model:'per_day',salary:100,pay_start_date:'2026-11-01',work_weekdays:[1,3],access:{permissions:{'students.view':true},group_ids:[group],all_groups:false}}]};
  registerTeacherAssistantsActions(app);app.openAddTeacherAssistantModal();assert.ok(!shown.body.includes('modalTA_Name'));assert.match(shown.body,/modalTA_Phone/);assert.match(shown.body,/modalTA_Permission/);
  app.openEditTeacherAssistantModal(assistant);assert.match(shown.body,/value="2026-11-01"/);assert.match(shown.body,/value="1" checked/);assert.match(shown.body,/value="students.view" checked/);assert.match(shown.body,/modalEditTA_Status/);
+});
+test('assistant names are displayed as text and never inserted into inline handler code',()=>{
+ const html=renderTeacherAssistantsView([{id:'10000000-0000-4000-8000-000000000001',name:"x');window.injected=true;//<img src=x>",phone:'01000000000',status:'active',salary_model:'monthly',salary:100,payroll:{month:11,year:2026,amount:100,units:1}}]);
+ assert.ok(!html.includes('<img src=x>'));
+ assert.ok(!/onclick="[^"]*injected/.test(html));
 });

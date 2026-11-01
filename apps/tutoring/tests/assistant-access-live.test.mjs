@@ -53,6 +53,13 @@ test('LIVE: assistant invitations, independent teacher passwords, group permissi
  assert.equal((await request('/data/students/create',{name:'permission escalation',parent_phone:phone,group_id:groups[0].id,tenant_id:tenants[1]},session)).status,400);
  const created=await request('/data/students/create',{name:'allowed student',parent_phone:phone,group_id:groups[0].id},session);assert.equal(created.status,200,await created.clone().text());const student=(await created.json()).id;
  const studentRows=(await (await request('/data/students',undefined,session)).json()).rows;assert.equal(studentRows.length,1);assert.equal(studentRows[0].id,student);assert.ok(!JSON.stringify(studentRows).includes('portal_password'));
+ const outsider=ok(await db.from('students').insert({tenant_id:tenants[0],group_id:groups[1].id,name:'out of scope',parent_phone:phone}).select('id').single());
+ assert.equal((await request('/data/students/edit',{id:outsider.id,name:'forbidden edit',parent_phone:phone,student_phone:'',notes:''},session)).status,403);
+ assert.equal(ok(await db.from('students').select('name').eq('id',outsider.id).single()).name,'out of scope');
+ const privateMaterial=ok(await db.from('study_materials').insert({tenant_id:tenants[0],group_id:groups[1].id,title:'private homework',type:'pdf',url:'https://example.com/file',is_homework:true}).select('id').single());
+ const privateSubmission=ok(await db.from('homework_submissions').insert({tenant_id:tenants[0],material_id:privateMaterial.id,student_id:outsider.id,file_url:'https://example.com/private',file_name:'test.pdf',file_size:100}).select('id').single());
+ assert.equal((await request(`/files/${privateSubmission.id}`,undefined,session)).status,403);
+ assert.equal((await request('/data/homework/edit',{id:privateSubmission.id,status:'approved',teacher_notes:''},session)).status,403);
  assert.equal((await request('/data/students',undefined,second)).status,200);assert.deepEqual((await (await request('/data/students',undefined,second)).json()).rows,[]);
  const quiz=await request('/data/quizzes/create',{group_id:groups[0].id,title:'test quiz',quiz_number:1,max_score:10,quiz_date:'2026-11-01'},session);assert.equal(quiz.status,200,await quiz.clone().text());
  const material=await request('/data/materials/create',{group_id:groups[0].id,title:'test material',description:'',type:'link',url:'https://example.com/content',is_homework:true,due_date:'2026-11-01'},session);assert.equal(material.status,200,await material.clone().text());

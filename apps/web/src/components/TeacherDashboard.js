@@ -94,6 +94,7 @@ export function renderTeacherDashboard(
     let roleText = 'إداري وتعليمي شامل';
     if (a.role_type === 'admin') roleText = 'إداري وتنظيمي فقط';
     else if (a.role_type === 'educational') roleText = 'تعليمي وتدريسي فقط';
+    if (a.access) roleText = 'صلاحيات محددة';
 
     return {
       ...a,
