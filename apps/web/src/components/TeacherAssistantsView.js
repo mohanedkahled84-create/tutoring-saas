@@ -2,8 +2,8 @@ import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
 import { renderAssistantPayFields, updateAssistantPayFields, readAssistantPayFields } from "./AssistantPayFields.js";
-import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js";
-import { registerAssistantActivityActions } from "./AssistantActivityView.js";
+import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js?v=2";
+import { registerAssistantActivityActions } from "./AssistantActivityView.js?v=2";
 import { assistantInvitationStatus } from "../utils/assistantInvitation.js";
 import { assistantPay } from "../utils/assistantPay.js";
 

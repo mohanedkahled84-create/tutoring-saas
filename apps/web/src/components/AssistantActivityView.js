@@ -4,10 +4,11 @@ import {request} from '../services/api.js';
 const actions={
  'groups.create':'أنشأ مجموعة','groups.edit':'عدّل مجموعة','students.create':'أضاف طالبًا','students.edit':'عدّل بيانات طالب',
  'attendance.edit':'رصد أو صحح الحضور','materials.create':'أضاف محتوى','materials.edit':'عدّل محتوى',
+ 'grades.edit':'رصد أو صحح درجة',
  'homework.edit':'راجع تسليم واجب','quizzes.create':'أنشأ اختبارًا','quizzes.edit':'عدّل اختبارًا',
  invitation_created:'إنشاء دعوة',invitation_accepted:'استكمال الحساب',access_configured:'تعديل الصلاحيات أو إعدادات الحساب',
 };
-const labels={name:'الاسم',subject:'المادة',parent_phone:'رقم ولي الأمر',student_phone:'رقم الطالب',notes:'ملاحظات',group_id:'المجموعة',attended:'الحضور',homework_status:'حالة الواجب',comment:'ملاحظة الحضور',title:'العنوان',description:'الوصف',type:'نوع المحتوى',url:'رابط المحتوى',is_homework:'تكليف واجب',due_date:'موعد التسليم',status:'حالة التسليم',teacher_notes:'ملاحظة المراجعة',quiz_number:'رقم الاختبار',max_score:'الدرجة النهائية',quiz_date:'تاريخ الاختبار'};
+const labels={score:'الدرجة',note:'ملاحظة الدرجة',name:'الاسم',subject:'المادة',parent_phone:'رقم ولي الأمر',student_phone:'رقم الطالب',notes:'ملاحظات',group_id:'المجموعة',attended:'الحضور',homework_status:'حالة الواجب',comment:'ملاحظة الحضور',title:'العنوان',description:'الوصف',type:'نوع المحتوى',url:'رابط المحتوى',is_homework:'تكليف واجب',due_date:'موعد التسليم',status:'حالة التسليم',teacher_notes:'ملاحظة المراجعة',quiz_number:'رقم الاختبار',max_score:'الدرجة النهائية',quiz_date:'تاريخ الاختبار'};
 function value(key,v,groups){
  if(v===null || v===undefined || v==='')return '—';
  if(key==='group_id')return groups.find(g=>g.id===v)?.name || 'مجموعة';
