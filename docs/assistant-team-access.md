@@ -4,9 +4,9 @@ Teachers invite a WhatsApp number and configure page actions, group scope and pa
 
 ## Rollout status
 
-The implementation is in PR #31. It has not been deployed to production.
+The implementation is in PR #31. The owner authorized publishing the workspace while WhatsApp approval is pending. A separate manual-record action preserves the existing assistant/pay setup without creating an account or sending a message. Account invitations continue to require live APPROVED + UTILITY metadata.
 
-Meta template `centerly_assistant_invitation_v1` (`ar`) was rejected as UTILITY with `INCORRECT_CATEGORY`. Sending checks the live template metadata and requires both `APPROVED` and `UTILITY`. There is no Marketing fallback. Do not replace the existing production assistant creation flow until the invitation delivery dependency is resolved and the full live checks pass.
+Meta template `centerly_assistant_invitation_v1` (`ar`) was rejected as UTILITY with `INCORRECT_CATEGORY`. Sending checks the live template metadata and requires both `APPROVED` and `UTILITY`. There is no Marketing fallback. Keep the manual-record path available while invitation delivery is unavailable. Publishing the workspace does not imply that WhatsApp invitations are active.
 
 ## Boundaries
 
@@ -49,4 +49,4 @@ Reinvitation omits pay fields and the backend skips pay validation for existing 
 
 Stored assistant sessions open directly through the identity endpoint rather than waiting for a redundant public workspace lookup. The teacher name stays in the header and login screen after logout. Requests have a 15-second timeout with retry guidance; writes never retry automatically because a timed-out save may already have committed. Attendance selection remains usable during loading and stale responses cannot replace a newer selection. Authorization expiry closes the editor and clears the local session. Expired invitation links offer a path back to login; the claim fragment is removed before network requests. No student data is cached in persistent browser storage.
 
-Internal browser checks at 320/390/768px cover delayed attendance responses, offline recovery, session expiry during save, identity retention, expired claims and repeated invitation submission. Existing 320/390/768/1280 workspace checks and owner payroll/activity checks remain applicable. Production rollout is still held while the approved Utility invitation is unavailable; no assistant invitation has been sent to a real recipient.
+Internal browser checks at 320/390/768px cover delayed attendance responses, offline recovery, session expiry during save, identity retention, expired claims and repeated invitation submission. Existing 320/390/768/1280 workspace checks and owner payroll/activity checks remain applicable. The owner authorized rollout with invitation delivery blocked pending approval and the separate manual-record path retained. No assistant invitation has been sent to a real recipient.

@@ -106,6 +106,7 @@ export function renderTeacherAssistantsView(
             </div>
 
             <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openAddTeacherAssistantModal(true)" style="min-height:44px">إضافة سجل بدون دعوة</button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openAssistantActivityLog()" style="min-height:44px">نشاط الفريق</button>
               <button class="btn btn-primary" onclick="window.centrlyApp.openAddTeacherAssistantModal()" style="min-height: 44px; font-size: 0.85rem; font-weight: 700;">
                 ${getIcon('add', 14, '#ffffff')}
@@ -280,7 +281,7 @@ export function registerTeacherAssistantsActions(app) {
       this.closeModal();this.showToast(result.message,result.delivery_status==='sent'?'success':'warning');await this.loadRouteData('assistants');
     } catch(error){this.showToast(error.message || 'تعذر حفظ الدعوة','danger');}finally{finish();}
   };
-  app.openAddTeacherAssistantModal = function() {
+  app.openAddTeacherAssistantModal = function(recordOnly = false) {
     if (!payVisible()) {
       this.showToast('افتح المرتبات لإعداد أجر المساعد الجديد. إدارة الصلاحيات والنشاط متاحة من الصفحة.', 'info');
       if (this.hasSecurityPin && !this.isFinancialUnlocked) this.promptUnlockFinancials();
@@ -288,26 +289,29 @@ export function registerTeacherAssistantsActions(app) {
     }
     const groupOptions = (this.groups || []).map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
     const bodyHtml = `
-      <form id="modalAddTeacherAssistantForm" onsubmit="window.centrlyApp.handleAddTeacherAssistantSubmit(event)">
+      <form id="modalAddTeacherAssistantForm" data-record-only="${recordOnly}" onsubmit="window.centrlyApp.handleAddTeacherAssistantSubmit(event)">
+        ${recordOnly ? `<p>احفظ بيانات المساعد وأجره الآن. هذا السجل لا ينشئ حساب دخول ولا يرسل واتساب؛ تقدر تبعت دعوة من السجل لاحقًا.</p><label class="form-label" for="modalTA_Name">اسم المساعد</label><input id="modalTA_Name" class="form-input" maxlength="100" required style="margin-bottom:1rem"><label class="form-label" for="modalTA_GroupId">المجموعة المسندة</label><select id="modalTA_GroupId" class="form-select" style="margin-bottom:1rem"><option value="">جميع المجموعات</option>${groupOptions}</select>` : ''}
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم الهاتف (للتواصل والواتساب) *</label>
           <input type="tel" id="modalTA_Phone" class="form-input" placeholder="010..." dir="ltr" required>
         </div>
 
-        ${renderAssistantAccessFields("modalTA", this.groups || [])}
+        ${recordOnly ? '' : renderAssistantAccessFields("modalTA", this.groups || [])}
         ${renderAssistantPayFields("modalTA")}
       </form>
     `;
 
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
-      <button type="submit" form="modalAddTeacherAssistantForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1rem;min-height:44px">حفظ وإرسال الدعوة</button>
+      <button type="submit" form="modalAddTeacherAssistantForm" class="btn btn-primary" style="font-weight: 800; padding: 0.55rem 1rem;min-height:44px">${recordOnly ? 'حفظ السجل' : 'حفظ وإرسال الدعوة'}</button>
     `;
-    this.showModal('دعوة مساعد إلى فريقك', bodyHtml, footerHtml);
+    this.showModal(recordOnly ? 'إضافة سجل مساعد' : 'دعوة مساعد إلى فريقك', bodyHtml, footerHtml);
   };
 
   app.handleAddTeacherAssistantSubmit = async function(e) {
     e.preventDefault();
+    const recordOnly=e.currentTarget.dataset.recordOnly==='true';
+    const name=recordOnly?document.getElementById('modalTA_Name')?.value.trim():undefined;
     const phone = document.getElementById('modalTA_Phone')?.value.trim();
     const group_id = document.getElementById('modalTA_GroupId')?.value || null;
     const role_type = document.getElementById('modalTA_RoleType')?.value || 'both';
@@ -322,10 +326,12 @@ export function registerTeacherAssistantsActions(app) {
     const finish=beginSave(e);if(!finish)return;
     try {
       const pay = readAssistantPayFields('modalTA');
-      const access = readAssistantAccessFields('modalTA');
-      const result = await request('/assistants/invitations', {
+      if(recordOnly && !name)throw new Error('اكتب اسم المساعد');
+      const access = recordOnly ? {} : readAssistantAccessFields('modalTA');
+      const result = await request(recordOnly ? '/assistants' : '/assistants/invitations', {
         method: 'POST',
         body: {
+          name,
           phone,
           group_id: group_id || null,
           role_type,
@@ -337,7 +343,7 @@ export function registerTeacherAssistantsActions(app) {
         },
       });
       this.closeModal();
-      this.showToast(result.message, result.delivery_status === 'sent' ? 'success' : 'warning');
+      this.showToast(recordOnly ? 'تم حفظ سجل المساعد بدون إرسال دعوة' : result.message, recordOnly || result.delivery_status === 'sent' ? 'success' : 'warning');
       await this.loadRouteData('assistants');
     } catch (err) {
       this.showToast(`فشل إضافة المساعد: ${err.message || 'حدث خطأ'}`, 'danger');

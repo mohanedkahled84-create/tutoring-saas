@@ -46,3 +46,11 @@ test('assistant names are displayed as text and never inserted into inline handl
  assert.ok(!html.includes('<img src=x>'));
  assert.ok(!/onclick="[^"]*injected/.test(html));
 });
+
+test('manual assistant records remain available without enabling WhatsApp account invitations',()=>{
+ let modal;
+ const app={groups:[],showModal(title,body,footer){modal={title,body,footer};}};
+ registerTeacherAssistantsActions(app);app.openAddTeacherAssistantModal(true);
+ assert.equal(modal.title,'إضافة سجل مساعد');assert.match(modal.body,/data-record-only="true"/);assert.match(modal.body,/id="modalTA_Name"/);assert.match(modal.body,/لا ينشئ حساب دخول/);assert.ok(!modal.body.includes('modalTA_Permission'));assert.match(modal.footer,/حفظ السجل/);
+ app.openAddTeacherAssistantModal();assert.match(modal.body,/data-record-only="false"/);assert.ok(!modal.body.includes('id="modalTA_Name"'));assert.match(modal.body,/modalTA_Permission/);
+});
