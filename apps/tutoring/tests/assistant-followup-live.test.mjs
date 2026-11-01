@@ -18,6 +18,9 @@ test('LIVE: manual followup uses actual records, independent messaging permissio
  ok(await db.from('attendance').insert([true,false].map((attended,i)=>({tenant_id:tenants[0],student_id:students[0].id,session_id:sessions[i].id,attended,idempotency_key:randomUUID()}))));
  const quizzes=ok(await db.from('quizzes').insert([false,false,true].map((is_skipped,i)=>({tenant_id:tenants[0],group_id:groups[0].id,quiz_number:i+1,title:'quiz '+i,max_score:10,quiz_date:'2026-10-'+String(i+10),is_skipped}))).select('id'));
  ok(await db.from('quiz_scores').insert({tenant_id:tenants[0],student_id:students[0].id,group_id:groups[0].id,quiz_id:quizzes[0].id,quiz_number:1,score:0,max_score:10,idempotency_key:randomUUID()}));
+ // Legacy imports may use different idempotency keys for the same result.
+ ok(await db.from('attendance').insert({tenant_id:tenants[0],student_id:students[0].id,session_id:sessions[0].id,attended:false,created_at:'2026-01-01T00:00:00Z',idempotency_key:randomUUID()}));
+ ok(await db.from('quiz_scores').insert({tenant_id:tenants[0],student_id:students[0].id,group_id:groups[0].id,quiz_id:quizzes[0].id,quiz_number:1,score:9,max_score:10,created_at:'2026-01-01T00:00:00Z',updated_at:'2026-01-01T00:00:00Z',idempotency_key:randomUUID()}));
  const materials=ok(await db.from('study_materials').insert([0,1,2,3].map(i=>({tenant_id:tenants[0],group_id:groups[0].id,title:'homework '+i,type:'link',url:'https://example.com',is_homework:true,due_date:i===3?null:'2026-10-20',created_at:'2026-10-10T12:00:00Z'}))).select('id'));
  ok(await db.from('homework_submissions').insert([0,1,3].map(i=>({tenant_id:tenants[0],material_id:materials[i].id,student_id:students[0].id,file_url:'private-not-in-report',submitted_at:i===1?'2026-10-21T12:00:00Z':'2026-10-18T12:00:00Z'}))));
  const {familyHash,familyToken}=await import('../dist/shared/utils/parentFamily.js');
