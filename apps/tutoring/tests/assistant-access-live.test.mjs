@@ -37,7 +37,14 @@ test('LIVE: assistant invitations, independent teacher passwords, group permissi
  assert.equal(ok(await db.from('assistant_invitations').select('verified_at').eq('id',invites[0].invitation_id).single()).verified_at,null);
  const replies=[];
  for(const invite of invites)await confirmAssistantMessage(db,phone,`CENTRLY_ASSISTANT:${invite.nonce}`,async(to,text)=>{assert.equal(to,phone);replies.push(text);return true;});
- const tickets=replies.map(text=>text.match(/#invite=([\w-]{43})/)[1]);
+ const tickets=[];
+ for(let i=0;i<invites.length;i++){
+  assert.equal(replies[i].match(/#registration=([\w-]{43})/)[1],invites[i].nonce);
+  const challenge_id=randomUUID(),code_hash=familyHash('isolated-otp-'+i),ticket=familyToken();
+  const registration=(p_action,p_data={})=>db.rpc('assistant_registration',{p_nonce_hash:familyHash(invites[i].nonce),p_origin:origin,p_action,p_data});
+  ok(await registration('request',{challenge_id,code_hash}));ok(await registration('delivery',{challenge_id,status:'sent'}));
+  assert.equal(ok(await registration('verify',{challenge_id,code_hash,claim_hash:familyHash(ticket)})).success,true);tickets.push(ticket);
+ }
  const passwordA='isolated-assistant-A-2026',passwordB='isolated-assistant-B-2026';
  const hashA=await bcrypt.hash(passwordA,12),hashB=await bcrypt.hash(passwordB,12);
  const accepted=await Promise.all([db.rpc('assistant_accept_invitation',{p_claim_hash:familyHash(tickets[0]),p_name:'مساعد أ',p_password_hash:hashA}),db.rpc('assistant_accept_invitation',{p_claim_hash:familyHash(tickets[0]),p_name:'إعادة استخدام',p_password_hash:hashA})]);

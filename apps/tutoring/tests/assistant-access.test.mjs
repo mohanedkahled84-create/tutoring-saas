@@ -23,7 +23,7 @@ test('verified assistant claim link is delivered only to the signed sender, with
  const db={rpc:async(name,input)=>{assert.equal(name,'assistant_confirm_invitation');args=input;return {data:{tenant_id:tenant,teacher_name:'المعلم'},error:null};}};
  await confirmAssistantMessage(db,'201011111111','CENTRLY_ASSISTANT:'+'x'.repeat(43),async(...values)=>{replies.push(values);return true;});
  assert.equal(args.p_phone,'201011111111');assert.equal(args.p_nonce_hash,familyHash('x'.repeat(43)));
- assert.equal(replies[0][0],'201011111111');assert.match(replies[0][1],new RegExp(`/assistant\\?workspace=${tenant}#invite=[\\w-]{43}`));
+ assert.equal(replies[0][0],'201011111111');assert.match(replies[0][1],new RegExp(`/assistant\\?workspace=${tenant}#registration=[\\w-]{43}`));
  assert.equal(args.p_claim_hash.length,64);assert.ok(!replies[0][1].includes(args.p_claim_hash));
  let sent=false;await confirmAssistantMessage({rpc:async()=>({data:null,error:null})},'201011111111','CENTRLY_ASSISTANT:'+'x'.repeat(43),async()=>{sent=true;return true;});assert.equal(sent,false);
 });
