@@ -463,11 +463,12 @@ export function renderStudentReportsView(
                 <span>تقارير الأداء ولوحة الشرف والتميز</span>
               </h2>
               <p style="font-size: 0.85rem; color: var(--centrly-text); margin-top: 0.25rem;">
-                متابعة درجات الكويزات، نسب الحضور والغياب، وإرسال تقارير واتساب الدورية لأولياء الأمور
+                متابعة درجات الكويزات، نسب الحضور والغياب، وتجهيز تقارير واتساب لأولياء الأمور لإرسالها يدويًا
               </p>
             </div>
 
             <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+              <button class="btn btn-primary" style="min-height:44px" onclick="window.centrlyApp.handleBulkSendReports()">متابعة الطلاب وواتساب</button>
               <button
                 class="btn btn-secondary"
                 onclick="window.centrlyApp.loadRouteData('reports')"
@@ -586,7 +587,7 @@ export function renderStudentReportsView(
                   <th>نسبة الحضور</th>
                   <th>متوسط الدرجات</th>
                   <th>التقييم الشامل</th>
-                  <th style="text-align: center;">إرسال تقرير منفصل</th>
+                  <th style="text-align: center;">متابعة عبر واتساب</th>
                 </tr>
               </thead>
               <tbody>
@@ -641,12 +642,12 @@ export function renderStudentReportsView(
                       <td style="text-align: center;">
                         <button
                           class="btn btn-secondary btn-sm"
-                          onclick="window.centrlyApp.handleSendIndividualReport('${escapeHtml(std.student_id)}', '${escapeHtml(std.student_name).replace(/'/g, "\\'")}')"
-                          title="إرسال تقرير الواتساب لولي الأمر"
+                          onclick="window.centrlyApp.handleSendIndividualReport('${escapeHtml(std.student_id)}')"
+                          title="معاينة تقرير المتابعة وفتح واتساب"
                           style="display: inline-flex; align-items: center; gap: 0.35rem;"
                         >
                           ${getIcon('whatsapp', 14)}
-                          <span>إرسال التقرير</span>
+                          <span>معاينة واتساب</span>
                         </button>
                       </td>
                     </tr>
@@ -684,58 +685,18 @@ export function registerStudentReportsActions(app) {
   };
 
   app.handleBulkSendReports = function() {
-    if (this.reportsState.isSubmittingBulk) return;
-    this.showConfirmModal({
-      title: 'إرسال التقارير الشهرية',
-      message: 'هل تريد إرسال تقارير الأداء الشهرية لجميع أولياء الأمور عبر طابور رسائل الواتساب؟',
-      confirmText: 'إرسال التقارير',
-      cancelText: 'إلغاء',
-      isDanger: false,
-      onConfirm: async () => {
-        this.reportsState.isSubmittingBulk = true;
-        this.renderMainContent();
-
-        try {
-          const res = await request('/reports/bulk-send', {
-            method: 'POST',
-            body: JSON.stringify({
-              month: this.reportsState.period.month,
-              year: this.reportsState.period.year,
-              group_id: this.reportsState.selectedGroupId || undefined,
-            }),
-          });
-
-          const currentMonth = this.reportsState.period.month;
-          const currentYear = this.reportsState.period.year;
-          const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-          if (!this.reportsState.dispatchedMonths) this.reportsState.dispatchedMonths = {};
-          this.reportsState.dispatchedMonths[monthKey] = {
-            sentDate: new Date().toLocaleDateString('ar-EG'),
-          };
-
-          this.showToast(`${res.message || 'تم جدولة إرسال التقارير بنجاح'} (إجمالي الطلاب: ${res.total_students} | تمت الجدولة: ${res.queued_count})`, 'success');
-        } catch (err) {
-          this.showToast(`فشل جدولة إرسال التقارير الجماعية: ${err.message || 'خطأ في الخادم'}`, 'danger');
-        } finally {
-          this.reportsState.isSubmittingBulk = false;
-          this.renderMainContent();
-        }
-      }
-    });
+    this.openFollowupReports(reportSelection(this));
   };
-
-  app.handleSendIndividualReport = async function(studentId, studentName) {
-    try {
-      await request(`/reports/${studentId}/send`, {
-        method: 'POST',
-        body: JSON.stringify({
-          month: this.reportsState.period.month,
-          year: this.reportsState.period.year,
-        }),
-      });
-      this.showToast(`تم إرسال التقرير الأكاديمي بنجاح لولي أمر الطالب ${studentName}`, 'success');
-    } catch (err) {
-      this.showToast(`فشل إرسال تقرير الطالب ${studentName}: ${err.message || 'خطأ في الخادم'}`, 'danger');
-    }
+  app.handleSendIndividualReport = function(studentId) {
+    const student=(this.students || []).find(s=>s.id===studentId);
+    const initial=reportSelection(this);
+    const group=initial.group_id || student?.group_id;
+    this.openFollowupReports({...initial,student_id:studentId,group_id:group || '',q:student?.name || ''});
   };
+}
+function reportSelection(app){
+ const period=app.reportsState?.period || {},year=Number(period.year),month=Number(period.month);
+ if(!Number.isInteger(year) || !Number.isInteger(month) || month<1 || month>12)return {};
+ const prefix=`${year}-${String(month).padStart(2,'0')}`;
+ return {from:prefix+'-01',to:prefix+'-'+new Date(Date.UTC(year,month,0)).getUTCDate(),group_id:app.reportsState?.selectedGroupId || ''};
 }

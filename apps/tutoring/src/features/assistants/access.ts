@@ -10,6 +10,7 @@ import { portalOrigin, trustedPortalOrigin } from '../../shared/utils/portalDest
 import { notifyAssistantInvitation } from './invitationDelivery.js';
 import { validatePay, isPayDate } from './payroll.js';
 import { signHomeworkFile } from '../homework/files.js';
+import {followupQuery,followupPrepare,whatsappFollowup} from './followup.js';
 import {collectionInput,collectionQuery,voidCollectionInput} from './collectionSchemas.js';
 import {loadAssistantActivity} from './activity.js';
 
@@ -24,6 +25,7 @@ export const assistantCatalog = [
  { key:'grades', label:'رصد الدرجات', actions:['view','edit'] },
  { key:'collections', label:'التحصيل', actions:['view','create'] },
  { key:'reports', label:'تقارير متابعة الطلاب', actions:['view'] },
+ { key:'messages', label:'رسائل المتابعة', actions:['view','send'] },
 ] as const;
 const allowed = new Set(assistantCatalog.flatMap(p => p.actions.map(action => `${p.key}.${action}`)));
 const fault = (status:number,message:string) => Object.assign(new Error(message), {status});
@@ -141,6 +143,7 @@ assistantAccessRouter.get('/data/:resource',async(req,res)=>{
  try {
   if(!assistantCatalog.some(p=>p.key===req.params.resource)) throw fault(403,'صفحة غير مسموحة');
   if(req.params.resource==='collections'){res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_collections',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'view',p_data:collectionQuery.parse(req.query)}));return;}
+  if(['reports','messages'].includes(req.params.resource)){res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_followup',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'view',p_data:followupQuery.parse(req.query)}));return;}
   const data=req.params.resource==='grades' ? (req.query.quiz_id?{quiz_id:z.uuid().parse(req.query.quiz_id)}:{}) : req.query.session_id?{session_id:z.uuid().parse(req.query.session_id)}:{};
   if(req.params.resource==='grades'){res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_grades',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'view',p_data:data}));return;}
   res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_workspace',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_resource:req.params.resource,p_action:'view',p_data:data}));
@@ -159,6 +162,9 @@ assistantAccessRouter.post('/data/:resource/:action',async(req,res)=>{
   res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_workspace',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_resource:req.params.resource,p_action:req.params.action,p_data:data}));
  }catch(error){sendError(res,error);}
 });
+assistantAccessRouter.post('/followup/prepare',async(req,res)=>{
+ try{const data=followupPrepare.parse(req.body);const report=await assistantRpc(getServiceSupabaseClient(),'assistant_followup',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'prepare',p_data:data});res.json(whatsappFollowup(report,data.recipient));}catch(error){sendError(res,error);}
+});
 assistantAccessRouter.get('/files/:id',async(req,res)=>{
  try {
   const db=getServiceSupabaseClient();
@@ -175,7 +181,7 @@ assistantManagementRouter.use((req:AuthenticatedRequest,res,next)=>{
  res.set('Cache-Control','no-store');next();
 });
 assistantManagementRouter.get('/access-catalog',(_req,res)=>{res.json({pages:assistantCatalog});});
-async function ownerCollection(req:AuthenticatedRequest,action:string,data:Record<string,unknown>) {
+async function ownerGroups(req:AuthenticatedRequest) {
  const db=getServiceSupabaseClient(),tenant=req.user!.tenant_id!;
  const groups:string[]=[];
  for(let offset=0;;offset+=500){
@@ -183,8 +189,20 @@ async function ownerCollection(req:AuthenticatedRequest,action:string,data:Recor
   if(req.user!.role==='teacher' && req.user!.teacher_id){const teacher=z.uuid().parse(req.user!.teacher_id);query=query.or(`teacher_id.eq.${teacher},teacher_id.is.null`);}
   const {data:batch,error}=await query;if(error)throw error;groups.push(...(batch || []).map(g=>g.id));if(!batch || batch.length<500)break;
  }
+ return groups;
+}
+async function ownerCollection(req:AuthenticatedRequest,action:string,data:Record<string,unknown>) {
+ const db=getServiceSupabaseClient(),tenant=req.user!.tenant_id!,groups=await ownerGroups(req);
  return assistantRpc(db,'student_collection_operation',{p_tenant:tenant,p_assistant:null,p_user:req.user!.id,p_actor:(req.user!.full_name || req.user!.name || '').trim() || 'المدرس',p_groups:groups,p_action:action,p_data:data});
 }
+assistantManagementRouter.get('/followup',async(req:AuthenticatedRequest,res)=>{
+ try{res.json(await assistantRpc(getServiceSupabaseClient(),'student_followup_report',{p_tenant:req.user!.tenant_id,p_groups:await ownerGroups(req),p_data:followupQuery.parse(req.query)}));}catch(error){sendError(res,error);}
+});
+assistantManagementRouter.post('/followup/prepare',async(req:AuthenticatedRequest,res)=>{
+ try{const data=followupPrepare.parse(req.body),db=getServiceSupabaseClient(),report=await assistantRpc(db,'student_followup_report',{p_tenant:req.user!.tenant_id,p_groups:await ownerGroups(req),p_data:data});
+ const {data:student,error}=await db.from('students').select('parent_phone,student_phone').eq('id',data.student_id).eq('tenant_id',req.user!.tenant_id!).single();if(error)throw error;
+ res.json(whatsappFollowup({...report,phone:data.recipient==='parent'?student.parent_phone:student.student_phone},data.recipient));}catch(error){sendError(res,error);}
+});
 assistantManagementRouter.get('/collections',async(req:AuthenticatedRequest,res)=>{
  try{res.json(await ownerCollection(req,'view',collectionQuery.parse(req.query)));}catch(error){sendError(res,error);}
 });

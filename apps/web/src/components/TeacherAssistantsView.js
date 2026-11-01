@@ -2,9 +2,10 @@ import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
 import { renderAssistantPayFields, updateAssistantPayFields, readAssistantPayFields } from "./AssistantPayFields.js";
-import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js?v=3";
-import { registerAssistantActivityActions } from "./AssistantActivityView.js?v=3";
+import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js?v=4";
+import { registerAssistantActivityActions } from "./AssistantActivityView.js?v=4";
 import { assistantInvitationStatus } from "../utils/assistantInvitation.js";
+import {registerFollowupOwnerActions} from './FollowupReports.js';
 import {registerCollectionOwnerActions} from "./CollectionLedger.js";
 import { assistantPay } from "../utils/assistantPay.js";
 
@@ -108,6 +109,7 @@ export function renderTeacherAssistantsView(
 
             <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
               <button class="btn btn-secondary" onclick="window.centrlyApp.openAddTeacherAssistantModal(true)" style="min-height:44px">إضافة سجل بدون دعوة</button>
+              <button class="btn btn-secondary" onclick="window.centrlyApp.openFollowupReports()" style="min-height:44px">متابعة الطلاب وواتساب</button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openCollectionLedger()" style="min-height:44px">سجل التحصيل</button>
               <button class="btn btn-secondary" onclick="window.centrlyApp.openAssistantActivityLog()" style="min-height:44px">نشاط الفريق</button>
               <button class="btn btn-primary" onclick="window.centrlyApp.openAddTeacherAssistantModal()" style="min-height: 44px; font-size: 0.85rem; font-weight: 700;">
@@ -265,6 +267,7 @@ export function renderTeacherAssistantsView(
 export function registerTeacherAssistantsActions(app) {
   registerAssistantActivityActions(app);
   registerCollectionOwnerActions(app);
+  registerFollowupOwnerActions(app);
   const payVisible=()=> (!app.hasSecurityPin || app.isFinancialUnlocked) && !app.hideFinancialNumbers;
   app.updateTeacherAssistantPayFields = updateAssistantPayFields;
   const beginSave=event=>{const form=event.currentTarget;if(form.dataset.saving)return null;form.dataset.saving='true';const buttons=[...form.elements].filter(el=>el.type==='submit');for(const button of buttons){button.disabled=true;button.dataset.label=button.textContent;button.textContent='جارٍ الحفظ…';}return ()=>{delete form.dataset.saving;for(const button of buttons){button.disabled=false;button.textContent=button.dataset.label;delete button.dataset.label;}};};
