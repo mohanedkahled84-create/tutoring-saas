@@ -10,7 +10,15 @@ test('LIVE: assistant invitations, independent teacher passwords, group permissi
  const {serviceClient:db,anonClient}=createIsolatedSupabaseClients();
  const tenants=[randomUUID(),randomUUID()],origin='https://centerly-eg.com';let server;
  const ok=r=>{assert.equal(r.error,null,r.error?.message);return r.data;};
- t.after(async()=>{if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}for(const id of tenants)ok(await db.from('tenants').delete().eq('id',id));});
+ t.after(async()=>{
+  if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}
+  for(const id of tenants){
+   // These legacy content FKs deliberately do not cascade from a tenant.
+   ok(await db.from('homework_submissions').delete().eq('tenant_id',id));
+   ok(await db.from('study_materials').delete().eq('tenant_id',id));
+   ok(await db.from('tenants').delete().eq('id',id));
+  }
+ });
  const {familyHash,familyToken}=await import('../dist/shared/utils/parentFamily.js');
  const {confirmAssistantMessage}=await import('../dist/features/assistants/access.js');
  const phone='2010'+String(Math.floor(Math.random()*1e8)).padStart(8,'0');
