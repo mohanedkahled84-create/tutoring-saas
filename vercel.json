@@ -243,9 +243,30 @@
           "value": "no-referrer"
         }
       ]
+    },
+    {
+      "source": "/auth/google/(.*)",
+      "headers": [
+        {
+          "value": "private, no-store",
+          "key": "Cache-Control"
+        },
+        {
+          "value": "no-referrer",
+          "key": "Referrer-Policy"
+        }
+      ]
     }
   ],
   "rewrites": [
+    {
+      "source": "/auth/google/callback",
+      "destination": "/apps/web/google-callback.html"
+    },
+    {
+      "source": "/auth/google/callback/",
+      "destination": "/apps/web/google-callback.html"
+    },
     {
       "source": "/assistant",
       "destination": "/apps/web/assistant.html"

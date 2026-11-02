@@ -828,7 +828,7 @@ export function renderLandingView() {
           <!-- Modal Header -->
           <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--brand-line); display: flex; align-items: center; justify-content: space-between; background: var(--brand-cream);">
             <h3 id="policyModalTitle" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--brand-navy);">المستند القانوني</h3>
-            <button onclick="window.centrlyApp.closePolicyModal()" style="background: transparent; border: none; cursor: pointer; font-size: 1.5rem; color: var(--brand-muted); padding: 0.25rem; line-height: 1;">&times;</button>
+            <button type="button" aria-label="إغلاق المستند" onclick="window.centrlyApp.closePolicyModal()" style="background: transparent; border: none; cursor: pointer; font-size: 1.5rem; color: var(--brand-muted); padding: 0.25rem; line-height: 1;">&times;</button>
           </div>
 
           <!-- Modal Body Content (Comprehensive Text Injected Dynamically) -->
@@ -869,12 +869,18 @@ export function registerLandingActions(app) {
       appEl.innerHTML = renderLandingView();
     }
     this.initCookieConsent();
+    const policy=new URLSearchParams(location.search).get('policy');
+    if(['terms','privacy'].includes(policy))this.openPolicyModal(policy);
     void this.loadProductWalkthrough();
     trackProductEvent('landing_view');
   }
 
   // Kashier Compliance & Legal Policies Modal Flow
   app.openPolicyModal = function openPolicyModal(type) {
+    // Auth screens can replace the landing markup; their legal links still need a dialog.
+    if(!document.getElementById('policyModalOverlay')){
+      document.body.insertAdjacentHTML('beforeend',`<div id="policyModalOverlay" role="dialog" aria-modal="true" aria-labelledby="policyModalTitle" style="display:none;position:fixed;inset:0;background:#172d70b3;z-index:2000;align-items:center;justify-content:center;padding:20px"><section style="background:#fff;width:100%;max-width:680px;max-height:85vh;border-radius:16px;display:flex;flex-direction:column;overflow:hidden"><header style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #e5e9f2"><h2 id="policyModalTitle" style="font-size:1.1rem;margin:0"></h2><button type="button" class="btn btn-secondary" style="min-width:44px;min-height:44px" onclick="window.centrlyApp.closePolicyModal()" aria-label="إغلاق المستند">×</button></header><div id="policyModalBody" style="overflow:auto;padding:20px;font-size:.9rem;line-height:1.9"></div></section></div>`);
+    }
     const overlay = document.getElementById('policyModalOverlay');
     const titleEl = document.getElementById('policyModalTitle');
     const bodyEl = document.getElementById('policyModalBody');
@@ -966,12 +972,21 @@ export function registerLandingActions(app) {
       `;
     }
 
+    this._policyReturnFocus=document.activeElement;
+    overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','policyModalTitle');
     overlay.style.display = 'flex';
+    const focusables=()=>[...overlay.querySelectorAll('button,a[href]')].filter(node=>node.offsetParent!==null);
+    overlay.onkeydown=event=>{
+      if(event.key==='Escape'){event.preventDefault();this.closePolicyModal();}
+      if(event.key==='Tab'){const nodes=focusables(),first=nodes[0],last=nodes.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
+    };
+    focusables()[0]?.focus();
   }
 
   app.closePolicyModal = function closePolicyModal() {
     const overlay = document.getElementById('policyModalOverlay');
     if (overlay) overlay.style.display = 'none';
+    if(this._policyReturnFocus?.isConnected)this._policyReturnFocus.focus();
   }
 
   app.toggleFaq = function toggleFaq(index) {

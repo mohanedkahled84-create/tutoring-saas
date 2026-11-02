@@ -4,6 +4,7 @@ import { escapeHtml } from '../utils/escapeHtml.js';
 import { getIcon } from '../utils/icons.js';
 import { normalizeDigits } from '../utils/normalizeDigits.js?v=4.8.5';
 import {trackProductEvent} from '../services/productFunnel.js';
+import {enableGoogleButton,startGoogleAuth} from '../services/googleAuth.js';
 
 export function renderAuthScreens() {
   return `
@@ -36,6 +37,7 @@ export function renderAuthScreens() {
         </div>
 
         <div id="authAlert" style="display: none; padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.825rem;"></div>
+        <button id="googleAuthButton" type="button" class="btn btn-secondary" hidden style="display:none;width:100%;min-height:48px;margin-bottom:1.25rem;gap:.75rem" onclick="window.centrlyApp.handleGoogleAuth(this)"><span aria-hidden="true" style="font:700 20px Arial;color:#4285f4">G</span><span>المتابعة باستخدام Google</span></button>
 
         <!-- Login Form -->
         <form id="formLogin" onsubmit="window.centrlyApp.handleLogin(event)">
@@ -290,6 +292,7 @@ export function renderEmailVerificationScreen({ email = '', note = '' } = {}) {
  * Register Authentication & Account Lifecycle Actions (DEV-89)
  */
 export function registerAuthActions(app) {
+  app.handleGoogleAuth=async function(button){button.disabled=true;try{await startGoogleAuth();}catch(error){this.showAuthAlert(error.message);}finally{if(button.isConnected)button.disabled=false;}};
   app.updateSignupStages=function(){
     const chosen=[...document.querySelectorAll('input[name="signupStage"]:checked')].map(input=>input.value);
     const first=document.getElementById('signupFirstStage');if(first)first.required=!chosen.length;
@@ -319,6 +322,7 @@ export function registerAuthActions(app) {
     window.scrollTo(0, 0);
     const appEl = this.getAppEl();
     if (appEl) appEl.innerHTML = renderAuthScreens();
+    void enableGoogleButton(document.getElementById('googleAuthButton'));
     if (tab === 'signup') {
       this.switchAuthTab('signup');
     } else {
