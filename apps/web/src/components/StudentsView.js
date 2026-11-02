@@ -3,6 +3,7 @@ import { normalizeDigits } from "../utils/normalizeDigits.js";
 import { renderStudentSearchBar } from "./StudentSearchBar.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import {trackProductEvent} from '../services/productFunnel.js';
 
 /**
  * Centrly Students Directory Component (DEV-89)
@@ -266,8 +267,8 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 const studentPhone = s.studentPhone || s.student_phone;
                 const parentPhone = s.parentPhone || s.parent_phone;
                 const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-                const parentPortalUrl = `${canonicalOrigin}/portal?role=parent&preview=true${parentPhone ? `&phone=${encodeURIComponent(parentPhone)}` : ''}`;
-                const studentPortalUrl = `${canonicalOrigin}/portal?role=student&preview=true${studentPhone ? `&phone=${encodeURIComponent(studentPhone)}` : ''}`;
+                const parentPortalUrl = `${canonicalOrigin}/portal?role=parent`;
+                const studentPortalUrl = `${canonicalOrigin}/portal?role=student`;
                 const portalPassword = s.portal_password || s.portalPassword || (s.code ? String(s.code).padStart(6, '0') : '');
 
                 let isRowVisible = true;
@@ -593,6 +594,7 @@ export function registerStudentsActions(app) {
       });
 
       const studentId = res.student?.id;
+      if(studentId)trackProductEvent('student_added');
       if (studentId && groupId) {
         await request(`/groups/${groupId}/students`, {
           method: 'POST',

@@ -1,3 +1,4 @@
+import {trackProductEvent} from '../services/productFunnel.js';
 import { request, API_BASE_URL } from "../services/api.js";
 import { normalizeDigits } from "../utils/normalizeDigits.js";
 import { renderNavLiveBadgeHtml } from "./Navbar.js";
@@ -2747,6 +2748,7 @@ export function registerSessionsActions(app) {
     }));
 
     const sessionId = serverSession ? serverSession.id : `sess-${cleanId}`;
+    if(serverSession?.id)trackProductEvent('session_started');
     this.sessionState = {
       id: sessionId,
       status: 'in_progress',

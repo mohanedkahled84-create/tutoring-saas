@@ -3,6 +3,7 @@ import { request } from '../services/api.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
 import { getIcon } from '../utils/icons.js';
 import { normalizeDigits } from '../utils/normalizeDigits.js?v=4.8.5';
+import {trackProductEvent} from '../services/productFunnel.js';
 
 export function renderAuthScreens() {
   return `
@@ -337,6 +338,7 @@ export function registerAuthActions(app) {
   }
 
   app.switchAuthTab = function switchAuthTab(tab) {
+    if(tab==='signup')trackProductEvent('signup_open');
     document.title = tab === 'signup' ? 'إنشاء حساب جديد | سنترلي' : 'تسجيل الدخول | سنترلي';
     const formLogin = document.getElementById('formLogin');
     const formSignup = document.getElementById('formSignup');
@@ -817,6 +819,7 @@ export function registerAuthActions(app) {
         subject: subject || res.user?.subject,
       };
       authService.setUser(this.user);
+      trackProductEvent('signup_complete');
       await this.openAccountDashboard();
     } catch (err) {
       const errMsg = err.message || '';
@@ -980,6 +983,7 @@ export function registerAuthActions(app) {
     try {
       const res = await authService.verifyEmail(email, code, password);
       this.showVerificationAlert(res.message || 'تم تأكيد البريد الإلكتروني بنجاح!', 'success');
+      trackProductEvent('signup_complete');
 
       if (res.user && res.token) {
         this.resetTenantState();

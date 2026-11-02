@@ -2,6 +2,7 @@ import { request } from "../services/api.js";
 import { normalizeDigits } from "../utils/normalizeDigits.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import {trackProductEvent} from '../services/productFunnel.js';
 
 /**
  * Centrly Groups Management Component (DEV-89)
@@ -757,6 +758,7 @@ export function registerGroupsActions(app) {
 
       this.closeModal();
       this.showToast(`تم إنشاء المجموعة (${name}) بنجاح!`, 'success');
+      trackProductEvent('group_created');
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
       if (feedback) {
