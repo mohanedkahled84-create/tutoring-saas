@@ -11,7 +11,7 @@ test('new assistants default to no pages and no group data; catalog only exposes
  assert.deepEqual(assistantPages.map(([key,label,actions])=>[key,label,actions]),assistantCatalog.map(p=>[p.key,p.label,[...p.actions]]));
  const html=renderAssistantAccessFields('test',[]);
  assert.doesNotMatch(html,/checked/);
- assert.match(html,/بيانات الاشتراك والأرباح وإدارة الفريق خاصة بك/);
+ assert.match(html,/كل صفحة لها صلاحيات مستقلة/);
 });
 test('permission names, booleans, parent view and group creation scope are enforced',()=>{
  for(const permissions of [{'admin.view':true},{'students.view':'true'},{'students.edit':true},{'groups.view':true,'groups.create':true}])assert.throws(()=>validateAssistantAccess({permissions}));

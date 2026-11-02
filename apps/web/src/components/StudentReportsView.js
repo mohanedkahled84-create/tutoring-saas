@@ -151,7 +151,7 @@ export function renderStudentReportsView(
             </button>
             <button 
               class="btn ${activeTab === 'financial' ? 'btn-primary' : 'btn-secondary'}" 
-              onclick="window.centrlyApp.switchReportsTab('financial')"
+              ${typeof window!=='undefined' && window.centrlyApp?.delegation && !window.centrlyApp.delegation.permissions['dashboard.view']?'disabled aria-disabled="true" title="يحتاج صلاحية لوحة المعلم والأرباح"':''} onclick="window.centrlyApp.switchReportsTab('financial')"
               style="font-weight: 800; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.5rem 1.1rem;"
             >
               ${getIcon('billing', 16)}
@@ -646,6 +646,10 @@ export function renderStudentReportsView(
 
 export function registerStudentReportsActions(app) {
   app.switchReportsTab = function(tab) {
+    if (tab==='financial' && this.delegation && !this.delegation.permissions['dashboard.view']) {
+      this.showToast('عرض التقرير المالي يحتاج صلاحية لوحة المعلم والأرباح', 'warning');
+      return;
+    }
     this.reportsState.activeTab = tab;
     this.renderMainContent();
   };

@@ -4,6 +4,9 @@ export const routeResources = {
  sessions:['attendance'], calendar:['sessions'], students:['students'], groups:['groups'],
  homework:['homework'], materials:['materials'], quizzes:['grades','quizzes'],
  reports:['reports','messages'], collections:['collections'], messages:['messages'],
+ 'online-quizzes':['online-quizzes'], 'paper-exams':['paper-exams'], 'platform-builder':['platform-builder'],
+ 'video-lessons':['video-lessons'], assistants:['assistants'], 'student-cards':['student-cards'],
+ dashboard:['dashboard'], 'risk-watchlist':['risk-watchlist'], settings:['settings'],
 };
 export function assistantCan(permissions,resource,action='view') {
  return permissions?.[`${resource}.view`]===true && permissions?.[`${resource}.${action}`]===true;

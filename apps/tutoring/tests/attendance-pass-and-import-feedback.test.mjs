@@ -102,7 +102,8 @@ test("AUTH: AuthScreens.js removes center field and account type selection from 
     "Must include hidden input signupAccountType with default value teacher"
   );
   assert.ok(content.includes('id="signupName"'), "Must retain teacher name input");
-  assert.ok(!content.includes('id="signupSubject"'), "Subject is deferred until account settings under the minimal-registration requirement");
+  assert.ok(content.includes('id="signupSubject"'), "Current registration collects the teacher subject");
+  assert.ok(content.includes('name="signupStage"'), "Current registration supports one or more teaching stages");
   const settings = fs.readFileSync(path.resolve(__dirname, "../../web/src/components/TeacherSettingsView.js"), "utf-8");
   assert.ok(settings.includes('id="settingsSubject"'), "Teachers can still set their subject after registration");
 });

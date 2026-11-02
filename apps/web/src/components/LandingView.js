@@ -1,3 +1,4 @@
+import {trackProductEvent} from '../services/productFunnel.js';
 /**
  * Centrly SaaS Official Landing Page Component
  * Strictly adhering to official Brand Identity:
@@ -246,17 +247,17 @@ export function renderLandingView() {
           <!-- Official Tag -->
           <div style="display: inline-flex; align-items: center; gap: 8px; background: var(--brand-green-light); border: 1px solid #C9EBD8; color: var(--brand-green); font-size: 13px; font-weight: 700; padding: 6px 16px; border-radius: 9999px; margin-bottom: 1.5rem;">
             <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="var(--brand-green)"/></svg>
-            <span>المنظومة المعتمدة لإدارة المعلمين والمراكز التعليمية في مصر</span>
+            <span>مساحة واحدة لتنظيم شغل المدرس ومتابعة طلابه</span>
           </div>
 
           <!-- Main Catchy Headline -->
           <h1 style="font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 900; line-height: 1.25; color: var(--brand-navy); margin: 0 auto 1.25rem; letter-spacing: -0.02em;">
-            المنظومة الأذكى لإدارة حصصك، كروتك، وطلابك
+            نظّم حصصك وطلابك، وخلي المتابعة أسهل
           </h1>
 
           <!-- Subtitle -->
           <p style="font-size: clamp(1rem, 2vw, 1.2rem); color: var(--brand-text); max-width: 840px; margin: 0 auto 2.25rem; line-height: 1.8; font-weight: 600;">
-            تسجيل حضور بالباركود السريع، كروت ذكية وطباعة فورية، رسائل واتساب آلية، وبوابة متابعة ذكية ومتكاملة للطالب وولي الأمر لمتابعة الحضور والدرجات ورفع الواجبات وملفات الـ PDF وتحميل المذكرات مباشرة بدون الحاجة لتحميل أي تطبيقات.
+            حصص وحضور وواجبات ودرجات في مكان واحد. شغّل مساعديك بصلاحيات واضحة، وخلي الطالب وولي الأمر يتابعوا من الموبايل، بهويتك وروابطك الخاصة.
           </p>
 
           <!-- Dual Hero CTAs -->
@@ -306,6 +307,10 @@ export function renderLandingView() {
       <!-- ================================================================= -->
       <!-- 3. UNIFIED FEATURES (WITH MOBILE HORIZONTAL SIDE-SCROLL)          -->
       <!-- ================================================================= -->
+      <section class="product-demo-section" aria-labelledby="product-demo-title">
+        <div class="product-demo-heading"><span>خد فكرة قبل ما تبدأ</span><h2 id="product-demo-title">حصة واحدة، وفريق وأسرة متابعين</h2><p>مثال تفاعلي ببيانات تجريبية فقط. جرّب تسجيل الحضور ثم افتح متابعة ولي الأمر.</p></div>
+        <div id="product-walkthrough" aria-live="polite"><p style="padding:1rem">جرّب دورة الحصة بين المدرس والمساعد وولي الأمر.</p></div>
+      </section>
       <section id="features" style="padding: 4.5rem 1.25rem 5rem; background: var(--brand-surface); border-top: 1px solid var(--brand-line); border-bottom: 1px solid var(--brand-line);">
         <div style="max-width: 1180px; margin: 0 auto;">
           
@@ -347,7 +352,7 @@ export function renderLandingView() {
               </div>
               <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--brand-navy); margin: 0 0 0.5rem;">رسائل واتساب وتقارير آلية فورية</h3>
               <p style="font-size: 0.875rem; color: var(--brand-text); line-height: 1.7; margin: 0;">
-                إرسال تقارير الحضور والغياب ودرجات الكويزات لأولياء الأمور تلقائياً بنقرة واحدة، لتوفير وقتك وتعزيز التواصل باحترافية وسلاسة تامة.
+                جهّز تقرير الحضور والدرجات وتسليم الواجب، وافتحه على واتساب لمراجعته وإرساله بنفسك إلى ولي الأمر.
               </p>
             </div>
 
@@ -369,7 +374,7 @@ export function renderLandingView() {
               </div>
               <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--brand-navy); margin: 0 0 0.5rem;">رصد وتوزيع درجات الكويزات</h3>
               <p style="font-size: 0.875rem; color: var(--brand-text); line-height: 1.7; margin: 0;">
-                تسجيل نتائج الاختبارات وتعديل الدرجة القصوى وتوزيع النتائج بنقرة زر إلى أرقام أولياء الأمور والطلاب مباشرة.
+                سجّل نتائج الاختبارات وميّز الدرجات غير المرصودة، وشارك تقارير المتابعة يدويًا على واتساب.
               </p>
             </div>
 
@@ -496,7 +501,7 @@ export function renderLandingView() {
               </div>
 
               <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #E2E8F0; text-align: center;">
-                <span style="color: #64748B; font-size: 0.825rem; font-weight: 700;">تعزيز ثقة أولياء الأمور واحترافية معلمي سنترلي المعتمدين</span>
+                <span style="color: #64748B; font-size: 0.825rem; font-weight: 700;">متابعة أوضح بين المدرس والطالب وولي الأمر</span>
               </div>
             </div>
 
@@ -736,7 +741,7 @@ export function renderLandingView() {
                 <svg id="faqIcon6" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
               <div class="faq-answer" id="faqAnswer6">
-                نعم تماماً، يتم تخزين البيانات وتشفيرها سحابياً على خوادم سريعة ومحمية مع نسخ احتياطي دوري، ونلتزم بعدم مشاركة أو بيع أي بيانات لأي طرف ثالث، مع سيطرة وتحكم كامل لك وحدك ومساعديك بحسابات مخصصة.
+                كل حساب له بياناته وصلاحياته. تقدر تحدد الصفحات والمجموعات المتاحة لكل مساعد، وملفات تسليم الواجبات الخاصة تُفتح للمستخدم المسموح له. راجع سياسة الخصوصية لمعرفة تفاصيل استخدام البيانات.
               </div>
             </div>
 
@@ -849,16 +854,23 @@ export function renderLandingView() {
  * Register Landing Page, Legal Policy Modals, and Cookie Consent Actions (DEV-89)
  */
 export function registerLandingActions(app) {
+  app.loadProductWalkthrough=async function(){
+    const target=document.getElementById('product-walkthrough');if(!target)return;
+    try{const module=await import('./ProductWalkthrough.js');if(!target.isConnected)return;module.registerWalkthroughActions(this);target.innerHTML=module.renderProductWalkthrough(this.landingDemoState);}
+    catch{if(target.isConnected)target.innerHTML='<p style="padding:1rem">تعذر تحميل المثال. <button class="btn btn-secondary" onclick="window.centrlyApp.loadProductWalkthrough()">إعادة المحاولة</button></p>';}
+  };
   // Official Landing / Welcome Page
   app.renderLanding = function renderLanding() {
     window.__centrlyLoaded = true;
     window.scrollTo(0, 0);
-    document.title = 'سنترلي | Centrly - المنظومة الأذكى لإدارة المعلمين والمراكز التعليمية';
+    document.title = 'سنترلي | تنظيم حصص المدرس ومتابعة الطلاب';
     const appEl = this.getAppEl();
     if (appEl) {
       appEl.innerHTML = renderLandingView();
     }
     this.initCookieConsent();
+    void this.loadProductWalkthrough();
+    trackProductEvent('landing_view');
   }
 
   // Kashier Compliance & Legal Policies Modal Flow
@@ -990,6 +1002,7 @@ export function registerLandingActions(app) {
   app.acceptCookies = function acceptCookies() {
     try {
       localStorage.setItem('centrly_cookie_consent', 'accepted');
+      trackProductEvent('landing_view');
     } catch (e) {}
     const banner = document.getElementById('centrlyCookieConsent');
     if (banner) banner.style.display = 'none';

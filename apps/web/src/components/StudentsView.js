@@ -3,6 +3,7 @@ import { normalizeDigits } from "../utils/normalizeDigits.js";
 import { renderStudentSearchBar } from "./StudentSearchBar.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import {trackProductEvent} from '../services/productFunnel.js';
 
 /**
  * Centrly Students Directory Component (DEV-89)
@@ -204,17 +205,17 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
       <!-- Students Table -->
       <div class="card" id="studentsTableCard" style="margin: 0; padding: 0; border: 1px solid var(--centrly-line); position: relative; border-radius: var(--radius-lg); overflow: hidden;">
         <div id="studentsTableContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch;" onscroll="window.centrlyApp && window.centrlyApp.syncStudentsTableScroll('table')">
-          <table class="data-table" id="studentsTable" style="margin: 0;">
+          <table class="data-table students-responsive-table" id="studentsTable" style="margin: 0;">
             <thead>
               <tr>
-                <th>كود الطالب</th>
-                <th>اسم الطالب</th>
-                <th>المجموعة</th>
-                <th>هاتف الطالب *</th>
-                <th>هاتف ولي الأمر *</th>
-                <th>الرسوم والخصم</th>
-                <th>رابط المتابعة</th>
-                <th>إجراءات</th>
+                <th scope="col">كود الطالب</th>
+                <th scope="col">اسم الطالب</th>
+                <th scope="col">المجموعة</th>
+                <th scope="col">هاتف الطالب *</th>
+                <th scope="col">هاتف ولي الأمر *</th>
+                <th scope="col">الرسوم والخصم</th>
+                <th scope="col">رابط المتابعة</th>
+                <th scope="col">إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -266,8 +267,8 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 const studentPhone = s.studentPhone || s.student_phone;
                 const parentPhone = s.parentPhone || s.parent_phone;
                 const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-                const parentPortalUrl = `${canonicalOrigin}/portal?role=parent&preview=true${parentPhone ? `&phone=${encodeURIComponent(parentPhone)}` : ''}`;
-                const studentPortalUrl = `${canonicalOrigin}/portal?role=student&preview=true${studentPhone ? `&phone=${encodeURIComponent(studentPhone)}` : ''}`;
+                const parentPortalUrl = `${canonicalOrigin}/portal?role=parent`;
+                const studentPortalUrl = `${canonicalOrigin}/portal?role=student`;
                 const portalPassword = s.portal_password || s.portalPassword || (s.code ? String(s.code).padStart(6, '0') : '');
 
                 let isRowVisible = true;
@@ -296,34 +297,25 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
 
                 return `
                 <tr data-code="${escapeHtml(s.code || s.student_code || '')}" data-name="${escapeHtml(s.name || s.full_name || '')}" data-phone="${escapeHtml(studentPhone || '')}" data-parent-phone="${escapeHtml(parentPhone || '')}" data-group="${escapeHtml(displayGroupName)}" data-group-id="${escapeHtml(sGroupId)}" style="${isRowVisible ? '' : 'display: none;'}">
-                  <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>
-                  <td style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(s.name || s.full_name || '—')}</td>
-                  <td style="max-width: 150px;">
+                  <td data-label="كود الطالب" class="student-code" style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>
+                  <td data-label="اسم الطالب" class="student-name" style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(s.name || s.full_name || '—')}</td>
+                  <td data-label="المجموعة" class="student-group" style="max-width: 150px;">
                     <span class="badge badge-blue" title="${escapeHtml(displayGroupName)}" style="font-weight: 700; display: inline-block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; padding: 0.3rem 0.65rem; border-radius: 8px; font-size: 0.8rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
                       ${escapeHtml(displayGroupName)}
                     </span>
                   </td>
-                  <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; font-weight: 600;">
+                  <td data-label="هاتف الطالب" class="student-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; font-weight: 600;">
                     ${escapeHtml(studentPhone || '—')}
                   </td>
-                  <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; color: var(--centrly-text);">
+                  <td data-label="هاتف ولي الأمر" class="student-parent-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; color: var(--centrly-text);">
                     ${escapeHtml(parentPhone || '—')}
                   </td>
-                  <td>
+                  <td data-label="الرسوم والخصم" class="student-fees">
                     ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride || s.fee_override ? `<span class="badge badge-warning">خصم: ${escapeHtml(s.feeOverride || s.fee_override)} ج.م</span>` : '<span style="color:var(--centrly-text); font-size:0.85rem;">أساسي</span>')}
                   </td>
-                  <td>
+                  <td data-label="روابط المتابعة" class="student-links">
                     <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 165px;">
-                      <!-- Password Badge -->
-                      ${portalPassword ? `
-                        <div style="font-size: 0.72rem; color: #1e3a8a; font-weight: 800; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; padding: 0.2rem 0.45rem; display: flex; align-items: center; justify-content: space-between;">
-                          <span style="color: #1e40af; font-size: 0.7rem;">كلمة المرور:</span>
-                          <span style="font-family: monospace; color: #1e3a8a; font-weight: 800; letter-spacing: 1.5px; font-size: 0.78rem;">${escapeHtml(portalPassword)}</span>
-                        </div>
-                      ` : ''}
-
-                      <!-- Parent Link Row -->
-                      <button type="button" class="btn btn-secondary btn-sm" style="min-height:48px;margin-bottom:8px" onclick="window.centrlyApp.sendFamilyAccess('${escapeHtml(s.id)}',this)" title="إرسال بيانات الأسرة مباشرة لرقم ولي الأمر؛ كلمة المرور لا تظهر للمدرس">إرسال حساب الأسرة</button>
+                      <!-- Repeated sharing is manual; credentials are not displayed in the roster. -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
                         <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; width: 35px;">الأمر:</span>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رسالة واتساب كاملة لولي الأمر جاهزة للإرسال اليدوي" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem;">
@@ -377,7 +369,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td data-label="إجراءات" class="student-actions">
                     <div style="display: flex; gap: 0.35rem;">
                       <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openParentNoteModal('${escapeHtml(s.id)}', '${escapeHtml(s.name)}')" title="إرسال ملاحظة خاصة لولي الأمر عبر الواتساب" style="display: flex; align-items: center; gap: 0.3rem;">
                         ${getIcon('note', 14)}
@@ -602,6 +594,7 @@ export function registerStudentsActions(app) {
       });
 
       const studentId = res.student?.id;
+      if(studentId)trackProductEvent('student_added');
       if (studentId && groupId) {
         await request(`/groups/${groupId}/students`, {
           method: 'POST',

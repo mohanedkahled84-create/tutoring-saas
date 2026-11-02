@@ -205,8 +205,8 @@ export class SupabaseAuthRepository implements IAuthRepository {
     // Creates auth.users (with hash & email unconfirmed), auth.identities, public.tenants, and public.users in 1 transaction
     try {
       const { data: directData, error: directErr } = await this.adminClient.rpc(
-        "register_tenant_owner_direct",
-        {
+        data.education_stages?'register_teacher_with_basics':"register_tenant_owner_direct",
+        data.education_stages?{p_data:{email:data.email.trim().toLowerCase(),password:data.password,full_name:data.full_name || '',phone:data.phone || '',tenant_name:data.tenant_name,subject:data.subject,education_stages:data.education_stages,other_stage:data.other_stage || ''},p_trial_ends_at:trialEndsAt}:{
           p_email: data.email.trim().toLowerCase(),
           p_password: data.password,
           p_full_name: data.full_name || "",
@@ -275,6 +275,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
           (err as Error & { code?: string }).code = "USER_ALREADY_EXISTS";
           throw err;
         }
+        if(data.education_stages)throw Object.assign(new Error('تعذر إنشاء الحساب؛ حاول مجددًا'),{code:'REGISTRATION_UNAVAILABLE'});
         if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
           throw new Error(errMsg || "فشل إنشاء الحساب. يرجى التأكد من البيانات والمحاولة مجدداً.");
         }

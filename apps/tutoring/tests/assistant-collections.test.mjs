@@ -20,7 +20,8 @@ test('owner receipt amounts respect optional number masking without an extra pas
 });
 test('collection access is closed by default and never offers assistant edit/delete authority',()=>{
  assert.equal(validateAssistantAccess({}).permissions['collections.view'],undefined);
- assert.deepEqual([...assistantCatalog.find(p=>p.key==='collections').actions],['view','create']);
+ assert.ok(assistantCatalog.find(p=>p.key==='students').actions.includes('collect'));
+ assert.ok(!assistantCatalog.some(p=>p.key==='collections'),'collection authority belongs to the existing student page');
  assert.throws(()=>validateAssistantAccess({permissions:{'collections.create':true}}));assert.throws(()=>validateAssistantAccess({permissions:{'collections.view':true,'collections.edit':true}}));
 });
 test('receipt history escapes personal text and exposes void controls only to the owner',()=>{

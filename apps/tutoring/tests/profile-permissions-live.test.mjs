@@ -55,7 +55,13 @@ test('LIVE: profile permissions, self-only helpers and current admin/assistant/p
   const portalCode=String(Date.now()),portalPassword='839162';
   const parentPhone='010'+String(Math.floor(Math.random()*1e8)).padStart(8,'0'),studentPhone='011'+String(Math.floor(Math.random()*1e8)).padStart(8,'0');
   const student=ok(await admin.from('students').insert({tenant_id:otherTenant,name:'isolated-profile-queue-student',parent_phone:parentPhone,student_phone:studentPhone,code:portalCode,student_code:portalCode,portal_password:portalPassword}).select('id').single());
-  ok(await admin.from('meta_portal_dispatch_queue').insert({id:queueId,tenant_id:'default',student_id:student.id,recipient_type:'parent',recipient_phone:'201000000000',template_name:'audit-test',language_code:'ar',parameters:[],scheduled_date:new Date().toISOString().slice(0,10),status:'pending'}));
+  // New enqueue validation rejects invalid/global ownership. Model a legacy
+  // global row after a valid service-only insert, so the RLS regression still
+  // checks an existing hidden record rather than an empty result.
+  const invalid=await admin.from('meta_portal_dispatch_queue').insert({id:queueId,tenant_id:'default',student_id:student.id,recipient_type:'parent',recipient_phone:'201000000000',template_name:'audit-test'});
+  assert.equal(invalid.error?.message,'ONBOARDING_STUDENT_NOT_FOUND');
+  ok(await admin.from('meta_portal_dispatch_queue').insert({id:queueId,tenant_id:otherTenant,student_id:student.id,recipient_type:'parent',recipient_phone:'20'+parentPhone.slice(1),template_name:'audit-test',language_code:'ar',parameters:[],scheduled_date:new Date().toISOString().slice(0,10),status:'pending'}));
+  ok(await admin.from('meta_portal_dispatch_queue').update({tenant_id:'default'}).eq('id',queueId));
   const ownStudent=ok(await admin.from('students').insert({tenant_id:tenant,name:'isolated-profile-own-queue-student',parent_phone:'01000000000',code:'1001',student_code:'1001'}).select('id').single());
   ok(await admin.from('meta_portal_dispatch_queue').insert({id:ownQueueId,tenant_id:tenant,student_id:ownStudent.id,recipient_type:'parent',recipient_phone:'201000000000',template_name:'audit-test',language_code:'ar',parameters:[],scheduled_date:new Date().toISOString().slice(0,10),status:'pending'}));
   try {

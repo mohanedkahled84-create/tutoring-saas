@@ -1,6 +1,7 @@
 import { assistantPay } from "../utils/assistantPay.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import {renderTeacherActions} from './TeacherActionsPanel.js';
 
 /**
  * Centrly Teacher Dashboard
@@ -173,6 +174,7 @@ export function renderTeacherDashboard(
         </div>
       </div>
 
+      ${renderTeacherActions(data)}
       <!-- Hero Financial Highlights: Actual Realized vs Estimated Projected -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
         

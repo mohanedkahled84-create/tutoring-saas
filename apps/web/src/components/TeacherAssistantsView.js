@@ -2,7 +2,7 @@ import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
 import { renderAssistantPayFields, updateAssistantPayFields, readAssistantPayFields } from "./AssistantPayFields.js";
-import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js?v=5";
+import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js?v=6";
 import { registerAssistantActivityActions } from "./AssistantActivityView.js?v=4";
 import { assistantInvitationStatus } from "../utils/assistantInvitation.js";
 import {registerFollowupOwnerActions} from './FollowupReports.js';

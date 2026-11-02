@@ -10,6 +10,7 @@ import {
   ResendVerificationDTO,
   IAuthRepository,
 } from "./types.js";
+import {registrationBasics} from './registrationBasics.js';
 import { validatePasswordStrength } from "../../shared/middleware/auth.js";
 
 const loginAttempts = new Map<string, { count: number; lockedUntil?: number }>();
@@ -134,6 +135,7 @@ export class AuthService {
   ): Promise<SignupResult> {
     const normalizedDto: SignupDTO = {
       ...dto,
+      ...registrationBasics(dto),
       email: dto.email ? dto.email.trim().toLowerCase() : "",
       password: dto.password ? dto.password.trim() : "",
       tenant_name: dto.tenant_name ? dto.tenant_name.trim() : "",

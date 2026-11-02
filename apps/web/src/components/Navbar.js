@@ -26,7 +26,7 @@ export function renderNavbar(user, activeSessionSummary = null) {
     displayName = `أ. ${displayName}`;
   }
 
-  const roleName = isAdmin ? 'المدير والمؤسس (Centrly HQ)' : (user?.role === 'assistant' ? 'مساعد' : (user?.role === 'center_owner' || user?.account_type === 'center' ? 'مسؤول السنتر' : 'مدرس'));
+  const roleName = user?.delegated_actor ? `مساعد: ${user.delegated_actor.name}` : isAdmin ? 'المدير والمؤسس (Centrly HQ)' : (user?.role === 'assistant' ? 'مساعد' : (user?.role === 'center_owner' || user?.account_type === 'center' ? 'مسؤول السنتر' : 'مدرس'));
 
   // Clean avatar letter - omit title prefix so "أ. مهند" gives avatar "م"
   const cleanNameForAvatar = displayName.replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim();
@@ -55,7 +55,7 @@ export function renderNavbar(user, activeSessionSummary = null) {
       <div class="topbar-actions" style="display: flex; align-items: center; gap: 0.65rem; flex-shrink: 0;">
         <div class="topbar-user-info" style="text-align: left;">
           <div class="topbar-user-name" style="font-weight: 700; font-size: 0.875rem; white-space: nowrap;">${escapeHtml(displayName)}</div>
-          <div class="topbar-user-role" style="font-size: 0.72rem; color: var(--centrly-text); white-space: nowrap;">${roleName}</div>
+          <div class="topbar-user-role" style="font-size: 0.72rem; color: var(--centrly-text); white-space: nowrap;">${escapeHtml(roleName)}</div>
         </div>
         <div class="topbar-avatar" style="width: 38px; height: 38px; border-radius: 6px; background-color: #0f172a; color: #ffffff; font-size: 0.82rem; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">
           ${escapeHtml(avatarLetter)}

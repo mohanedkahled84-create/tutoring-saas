@@ -866,7 +866,7 @@ export function registerStudentCardsActions(app) {
             onclick="window.centrlyApp.dispatchCardsFileDirect()"
           >
             ${getIcon('whatsapp', 18, '#ffffff')}
-            <span>إرسال الملف مباشرة عبر واتساب المنظومة</span>
+            <span>تنزيل الكشف وفتح واتساب</span>
           </button>
 
           <button 
@@ -926,24 +926,12 @@ export function registerStudentCardsActions(app) {
     this.showToast('تم تحميل ملف كشف الكروت بنجاح (Excel / CSV)!', 'success');
   }
 
-  app.dispatchCardsFileDirect = async function() {
-    const students = this._pendingCardsStudents || this.students || [];
-    const userTitle = this.user?.name || (this.user?.account_type === 'center' ? 'سنتر تعليمي' : 'مدرس المادة');
-    try {
-      const summaryMsg = `السلام عليكم، تم إصدار كشف طلب كروت الطلاب لمنظومة (${userTitle}) بإجمالي (${students.length}) طالب وجاهز للمراجعة والتنفيذ.`;
-      await request('/whatsapp/test', {
-        method: 'POST',
-        body: JSON.stringify({ phone: '01123671177', message: summaryMsg }),
-      }).catch(() => null);
-
-      this.downloadCardsCsvFile();
-      this.closeModal();
-      this.showToast(`تم إرسال إشعار الكشف وتنزيل ملف الكروت بنجاح!`, 'success');
-    } catch (err) {
-      this.showToast(`تم تجهيز وتنزيل الملف، وتعذر الاتصال الآلي المباشر: ${err.message}`, 'info');
-      this.downloadCardsCsvFile();
-    }
-  }
+  app.dispatchCardsFileDirect = function() {
+    this.openCardsWhatsAppChat();
+    this.downloadCardsCsvFile();
+    this.closeModal();
+    this.showToast('تم فتح واتساب وتنزيل الكشف. أرفق الملف في المحادثة واضغط إرسال.', 'info');
+  };
 
   app.openCardsWhatsAppChat = function() {
     const students = this._pendingCardsStudents || this.students || [];

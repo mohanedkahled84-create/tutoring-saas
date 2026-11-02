@@ -17,7 +17,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   async list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]> {
     let q = this.client
       .from("students")
-      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at, group_students(group_id, groups(id, name))")
+      .select("id, tenant_id, code, student_code, name, group_id, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at, group_students(group_id, groups(id, name))")
       .order("created_at", { ascending: false });
 
     if (tenantId) {
@@ -36,7 +36,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       // Fallback to direct select if relational join fails
       let fallbackQuery = this.client
         .from("students")
-        .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
+        .select("id, tenant_id, code, student_code, name, group_id, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
         .order("created_at", { ascending: false });
       if (tenantId) fallbackQuery = fallbackQuery.eq("tenant_id", tenantId);
       if (query?.trim()) {

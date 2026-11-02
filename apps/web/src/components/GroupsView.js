@@ -2,6 +2,7 @@ import { request } from "../services/api.js";
 import { normalizeDigits } from "../utils/normalizeDigits.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
+import {trackProductEvent} from '../services/productFunnel.js';
 
 /**
  * Centrly Groups Management Component (DEV-89)
@@ -55,7 +56,7 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
             <circle class="spinner-head" cx="25" cy="25" r="20" fill="none" stroke="url(#centrlySleekGradient)" stroke-width="3.5" />
           </svg>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem;">
           ${[1, 2, 3].map(() => `
             <div class="skeleton-card" style="min-height: 240px; justify-content: space-between;">
               <div>
@@ -85,7 +86,7 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
         </div>
       ` : groupList.length > 0 ? `
         <!-- Groups Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem;">
           ${groupList.map(g => {
             // Determine billing display label
             let billingLabel = 'نسبة مئوية';
@@ -757,6 +758,7 @@ export function registerGroupsActions(app) {
 
       this.closeModal();
       this.showToast(`تم إنشاء المجموعة (${name}) بنجاح!`, 'success');
+      trackProductEvent('group_created');
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
       if (feedback) {

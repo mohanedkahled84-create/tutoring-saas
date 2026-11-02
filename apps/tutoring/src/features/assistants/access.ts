@@ -16,20 +16,9 @@ import {collectionInput,collectionQuery,voidCollectionInput} from './collectionS
 import {loadAssistantActivity} from './activity.js';
 import {enrichAssistantPage} from './pageDetails.js';
 
-export const assistantCatalog = [
- { key:'groups', label:'مجاميعي الدراسية', actions:['view','create','edit'] },
- { key:'students', label:'دليل طلابي', actions:['view','create','edit'] },
- { key:'sessions', label:'جدول الحصص والتقويم', actions:['view'] },
- { key:'attendance', label:'بدء حصة ورصد الحضور', actions:['view','edit'] },
- { key:'homework', label:'مراجعة وتصحيح الواجبات', actions:['view','edit'] },
- { key:'materials', label:'المذكرات والماتريال', actions:['view','create','edit'] },
- { key:'quizzes', label:'رصد درجات الكويزات يدوياً', actions:['view','create','edit'] },
- { key:'grades', label:'رصد درجات الكويزات يدوياً', actions:['view','edit'] },
- { key:'collections', label:'سجل التحصيل', actions:['view','create'] },
- { key:'reports', label:'الدرجات ولوحة الشرف', actions:['view'] },
- { key:'messages', label:'متابعة الطلاب وواتساب', actions:['view','send'] },
-] as const;
-const allowed = new Set(assistantCatalog.flatMap(p => p.actions.map(action => `${p.key}.${action}`)));
+import {assistantCatalog,legacyAssistantActions} from './catalog.js';
+export {assistantCatalog} from './catalog.js';
+const allowed=new Set<string>([...assistantCatalog.flatMap(p=>p.actions.map(action=>`${p.key}.${action}`)),...legacyAssistantActions]);
 const fault = (status:number,message:string) => Object.assign(new Error(message), {status});
 export function validateAssistantAccess(input:any) {
  const permissions = z.record(z.string(),z.boolean()).parse(input.permissions ?? {});
@@ -160,7 +149,7 @@ assistantAccessRouter.post('/logout',async(req,res)=>{
 });
 assistantAccessRouter.get('/data/:resource',async(req,res)=>{
  try {
-  if(!assistantCatalog.some(p=>p.key===req.params.resource)) throw fault(403,'صفحة غير مسموحة');
+  if(!assistantCatalog.some(p=>p.key===req.params.resource) && !['grades','collections','messages'].includes(req.params.resource)) throw fault(403,'صفحة غير مسموحة');
   if(req.params.resource==='collections'){res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_collections',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'view',p_data:collectionQuery.parse(req.query)}));return;}
   if(['reports','messages'].includes(req.params.resource)){res.json(await assistantRpc(getServiceSupabaseClient(),'assistant_followup',{p_token_hash:familyHash(token(req)),p_origin:origin(req),p_action:'view',p_data:followupQuery.parse(req.query)}));return;}
   const data=req.params.resource==='grades' ? (req.query.quiz_id?{quiz_id:z.uuid().parse(req.query.quiz_id)}:{}) : req.query.session_id?{session_id:z.uuid().parse(req.query.session_id)}:{};

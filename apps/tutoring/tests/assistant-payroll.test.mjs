@@ -137,5 +137,5 @@ test('permission page names match teacher navigation, with distinct quiz setup a
  const {teacherPageTitles}=await import('../../web/src/utils/teacherPageTitles.js');const {renderSidebar}=await import('../../web/src/components/Sidebar.js');const {assistantPages,renderAssistantAccessFields}=await import('../../web/src/components/AssistantAccessFields.js');
  const sidebar=renderSidebar('sessions',{role:'teacher'});for(const key of ['groups','students','sessions','attendance','homework','materials','quizzes','grades','reports'])assert.ok(sidebar.includes(teacherPageTitles[key]),key);
  for(const [key,label] of assistantPages)assert.equal(label,teacherPageTitles[key]);
- const html=renderAssistantAccessFields('test');assert.match(html,/إعداد الكويز/);assert.match(html,/درجات الطلاب/);
+ const html=renderAssistantAccessFields('test');assert.match(html,/إعداد الكويز/);assert.match(html,/رصد درجات الكويزات/);
 });

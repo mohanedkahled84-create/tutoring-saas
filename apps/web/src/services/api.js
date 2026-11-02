@@ -157,6 +157,7 @@ export async function performSilentRefresh(force = false) {
 }
 
 export async function request(endpoint, options = {}) {
+  if (typeof window !== 'undefined' && window.__CENTRLY_DELEGATED_REQUEST__) return window.__CENTRLY_DELEGATED_REQUEST__(endpoint, options);
   let body = options.body;
   if (body && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof Blob)) {
     body = JSON.stringify(body);
