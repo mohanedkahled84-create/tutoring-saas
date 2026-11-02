@@ -8,9 +8,15 @@ test('LIVE: Akedly OTP maps private transactions to current invitation, limits a
  if(!requireIsolatedSupabaseProject(t))return;
  const {serviceClient:db,anonClient}=createIsolatedSupabaseClients(),tenant=randomUUID(),origin='https://centerly-eg.com';
  const {config}=await import('../dist/shared/config/index.js'),{akedlyGateway}=await import('../dist/shared/utils/akedlyOtp.js'),{familyHash,familyToken}=await import('../dist/shared/utils/parentFamily.js');
- const before={...config.phoneOtp},gateway={...akedlyGateway};Object.assign(config.phoneOtp,{provider:'akedly',apiKey:'isolated-fake',pipelineId:'a'.repeat(24),dailyLimit:50});let server;
+ const before={...config.phoneOtp},gateway={...akedlyGateway};let server;
  const ok=r=>{assert.equal(r.error,null,r.error?.message);return r.data;};
  t.after(async()=>{Object.assign(config.phoneOtp,before);Object.assign(akedlyGateway,gateway);if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}ok(await db.from('tenants').delete().eq('id',tenant));});
+ // The isolated database's global budget intentionally persists across CI runs.
+ // Reserve headroom for this fake-provider fixture without clearing shared history
+ // or changing the production limit. Per-invitation/verification caps below remain real.
+ const budget=ok(await db.from('phone_otp_daily_budget').select('used').eq('day',new Date().toISOString().slice(0,10)).maybeSingle());
+ const fixtureLimit=Number(budget?.used||0)+25;assert.ok(fixtureLimit<=5000,'Isolated OTP fixture has exhausted the database hard ceiling');
+ Object.assign(config.phoneOtp,{provider:'akedly',apiKey:'isolated-fake',pipelineId:'a'.repeat(24),dailyLimit:fixtureLimit});
  ok(await db.from('tenants').insert({id:tenant,name:'isolated Akedly teacher'}));
  const nonce=familyToken(),phone='2010'+String(Math.floor(Math.random()*1e8)).padStart(8,'0');
  const invite=ok(await db.rpc('assistant_invite',{p_tenant:tenant,p_assistant:null,p_teacher:null,p_phone:phone,p_nonce_hash:familyHash(nonce),p_permissions:{},p_all_groups:false,p_group_ids:[],p_pay:{salary_model:'monthly',salary:100,pay_start_date:'2026-11-01'}}));

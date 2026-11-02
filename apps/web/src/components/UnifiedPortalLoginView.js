@@ -50,12 +50,14 @@ export function renderUnifiedPortalLoginView(errorMessage = '', initialIdentifie
   let currentRole = 'parent';
 
   if (typeof window !== 'undefined') {
+    currentRole = localStorage.getItem('centrly_portal_entry_role') === 'student' ? 'student' : 'parent';
     const params = new URLSearchParams(window.location.search);
     if (!presetIdentifier) {
       presetIdentifier = params.get('phone') || params.get('user') || params.get('identifier') || '';
     }
     const roleParam = params.get('role');
-    if (roleParam === 'student' || window.__teacherSubdomain) {
+    if (roleParam === 'parent') currentRole = 'parent';
+    else if (roleParam === 'student' || window.__teacherSubdomain) {
       currentRole = 'student';
     }
   }
@@ -376,7 +378,8 @@ export function registerUnifiedPortalActions(app) {
     const appEl = this.getAppEl();
     if (appEl) {
       const parentEntry = this._portalPresentation || getParentBranding();
-      const isParent = this._parentPortalToken || localStorage.getItem('centrly_portal_entry_role') === 'parent';
+      const explicitStudent = new URLSearchParams(window.location.search).get('role') === 'student';
+      const isParent = !explicitStudent && (this._parentPortalToken || localStorage.getItem('centrly_portal_entry_role') === 'parent');
       appEl.innerHTML = isParent ? renderParentPortalLogin(errorMessage, parentEntry) : renderUnifiedPortalLoginView(errorMessage);
     }
     if (window.history?.replaceState && (window.location.pathname !== '/portal' || window.location.search || window.location.hash)) {
