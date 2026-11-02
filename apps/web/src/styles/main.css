@@ -1151,3 +1151,26 @@ select.form-input, select.form-select, select.form-control {
   .btn { min-height: 44px; }
   input.form-input, input.form-control, select.form-select { min-height: 44px; }
 }
+
+/* One roster and one set of controls: readable student cards on phones. */
+@media (max-width: 640px) {
+  #studentsTableCard { border: 0 !important; background: transparent; overflow: visible !important; }
+  #studentsTableContainer { overflow: visible !important; }
+  #studentsTable.students-responsive-table { display: block; width: 100%; min-width: 0 !important; border: 0; }
+  #studentsTable thead { position: absolute; inline-size: 1px; block-size: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  #studentsTable tbody { display: grid; gap: 1rem; width: 100%; }
+  #studentsTable tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; min-width: 0; padding: 1rem; border: 1px solid var(--centrly-line); border-radius: var(--radius-lg); background: var(--centrly-surface, #fff); box-shadow: 0 1px 2px #0f172a05; }
+  #studentsTable tbody td { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: .3rem; min-width: 0; max-width: none !important; padding: 0; border: 0; white-space: normal; overflow-wrap: anywhere; font-size: .9rem !important; }
+  #studentsTable tbody td[data-label]::before { content: attr(data-label); color: var(--centrly-text); font: 600 .7rem/1.6 Cairo, sans-serif; direction: rtl; }
+  #studentsTable tbody .student-name { grid-column: 1 / -1; grid-row: 1; font-size: 1.05rem !important; color: var(--centrly-ink, #0f172a); }
+  #studentsTable tbody .student-name::before { display: none; }
+  #studentsTable .student-group .badge { max-width: 100% !important; white-space: normal !important; }
+  #studentsTable .student-links, #studentsTable .student-actions, #studentsTable td[colspan] { grid-column: 1 / -1; width: 100%; }
+  #studentsTable .student-links { padding-block-start: .75rem; border-block-start: 1px solid var(--centrly-line); }
+  #studentsTable .student-links > div { width: 100%; min-width: 0 !important; }
+  #studentsTable .student-links > div > div { flex-wrap: wrap; gap: .5rem !important; }
+  #studentsTable .student-actions > div { display: flex; flex-wrap: wrap; gap: .5rem !important; width: 100%; }
+  #studentsTable .btn, #studentsTable a.btn { min-height: 44px; min-width: 44px; padding: .45rem .6rem !important; font-size: .8rem !important; }
+  #studentsTable .student-actions button:first-child { flex: 1; justify-content: center; }
+  #studentsStickyScrollBar, #studentsStickyScrollTrack { display: none !important; }
+}

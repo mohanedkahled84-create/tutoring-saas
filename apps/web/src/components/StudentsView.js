@@ -204,17 +204,17 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
       <!-- Students Table -->
       <div class="card" id="studentsTableCard" style="margin: 0; padding: 0; border: 1px solid var(--centrly-line); position: relative; border-radius: var(--radius-lg); overflow: hidden;">
         <div id="studentsTableContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch;" onscroll="window.centrlyApp && window.centrlyApp.syncStudentsTableScroll('table')">
-          <table class="data-table" id="studentsTable" style="margin: 0;">
+          <table class="data-table students-responsive-table" id="studentsTable" style="margin: 0;">
             <thead>
               <tr>
-                <th>كود الطالب</th>
-                <th>اسم الطالب</th>
-                <th>المجموعة</th>
-                <th>هاتف الطالب *</th>
-                <th>هاتف ولي الأمر *</th>
-                <th>الرسوم والخصم</th>
-                <th>رابط المتابعة</th>
-                <th>إجراءات</th>
+                <th scope="col">كود الطالب</th>
+                <th scope="col">اسم الطالب</th>
+                <th scope="col">المجموعة</th>
+                <th scope="col">هاتف الطالب *</th>
+                <th scope="col">هاتف ولي الأمر *</th>
+                <th scope="col">الرسوم والخصم</th>
+                <th scope="col">رابط المتابعة</th>
+                <th scope="col">إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -296,23 +296,23 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
 
                 return `
                 <tr data-code="${escapeHtml(s.code || s.student_code || '')}" data-name="${escapeHtml(s.name || s.full_name || '')}" data-phone="${escapeHtml(studentPhone || '')}" data-parent-phone="${escapeHtml(parentPhone || '')}" data-group="${escapeHtml(displayGroupName)}" data-group-id="${escapeHtml(sGroupId)}" style="${isRowVisible ? '' : 'display: none;'}">
-                  <td style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>
-                  <td style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(s.name || s.full_name || '—')}</td>
-                  <td style="max-width: 150px;">
+                  <td data-label="كود الطالب" class="student-code" style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>
+                  <td data-label="اسم الطالب" class="student-name" style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(s.name || s.full_name || '—')}</td>
+                  <td data-label="المجموعة" class="student-group" style="max-width: 150px;">
                     <span class="badge badge-blue" title="${escapeHtml(displayGroupName)}" style="font-weight: 700; display: inline-block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; padding: 0.3rem 0.65rem; border-radius: 8px; font-size: 0.8rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
                       ${escapeHtml(displayGroupName)}
                     </span>
                   </td>
-                  <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; font-weight: 600;">
+                  <td data-label="هاتف الطالب" class="student-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; font-weight: 600;">
                     ${escapeHtml(studentPhone || '—')}
                   </td>
-                  <td dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; color: var(--centrly-text);">
+                  <td data-label="هاتف ولي الأمر" class="student-parent-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; color: var(--centrly-text);">
                     ${escapeHtml(parentPhone || '—')}
                   </td>
-                  <td>
+                  <td data-label="الرسوم والخصم" class="student-fees">
                     ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride || s.fee_override ? `<span class="badge badge-warning">خصم: ${escapeHtml(s.feeOverride || s.fee_override)} ج.م</span>` : '<span style="color:var(--centrly-text); font-size:0.85rem;">أساسي</span>')}
                   </td>
-                  <td>
+                  <td data-label="روابط المتابعة" class="student-links">
                     <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 165px;">
                       <!-- Repeated sharing is manual; credentials are not displayed in the roster. -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
@@ -368,7 +368,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td data-label="إجراءات" class="student-actions">
                     <div style="display: flex; gap: 0.35rem;">
                       <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openParentNoteModal('${escapeHtml(s.id)}', '${escapeHtml(s.name)}')" title="إرسال ملاحظة خاصة لولي الأمر عبر الواتساب" style="display: flex; align-items: center; gap: 0.3rem;">
                         ${getIcon('note', 14)}
