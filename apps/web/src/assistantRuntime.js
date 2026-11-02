@@ -3,7 +3,7 @@ import {assistantCan,assistantCanNavigate,routeResources} from './utils/assistan
 
 // Reuse the teacher application and its actions; only authentication,
 // navigation rights and storage lifetime differ for delegated accounts.
-export async function mountAssistantWorkspace({root,token,onLogout,onExpired}){
+export async function mountAssistantWorkspace({root,token,workspace,onReady,onLogout,onExpired}){
  const nativeFetch=window.fetch.bind(window);
  const base=API_BASE_URL.replace(/\/$/,'');
  const call=async(endpoint,options={},page='sessions')=>{
@@ -16,6 +16,8 @@ export async function mountAssistantWorkspace({root,token,onLogout,onExpired}){
  const contextResponse=await call('/context');
  const context=await contextResponse.json();
  if(!contextResponse.ok)throw Object.assign(new Error(context.error?.message || 'تعذر فتح مساحة العمل'),{status:contextResponse.status});
+ if(context.user?.tenant_id!==workspace)throw Object.assign(new Error('هذه الجلسة تخص مدرسًا آخر؛ افتح رابط الحساب الصحيح'),{status:401});
+ onReady?.(context);
  let app,observer,disposed=false;
  const permissions=context.permissions || {};
  const dispose=()=>{

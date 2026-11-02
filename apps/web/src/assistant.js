@@ -58,7 +58,7 @@ async function openWorkspace(){
   const closing=api('/logout',{});stopTeacherWorkspace?.();stopTeacherWorkspace=null;
   remember(null);auth();try{await closing;}catch{notice('تم الخروج من هذا الجهاز.');}
  };
- try{stopTeacherWorkspace=await mountAssistantWorkspace({root:main,token:session,onLogout:logout,onExpired:()=>{stopTeacherWorkspace?.();stopTeacherWorkspace=null;remember(null);auth('انتهت الجلسة؛ سجّل الدخول مجددًا');}});}
+ try{stopTeacherWorkspace=await mountAssistantWorkspace({root:main,token:session,workspace,onReady:context=>brand(context.user.tenant_name || context.user.full_name),onLogout:logout,onExpired:()=>{stopTeacherWorkspace?.();stopTeacherWorkspace=null;remember(null);auth('انتهت الجلسة؛ سجّل الدخول مجددًا');}});}
  catch(error){document.body.className='assistant-auth';throw error;}
 }
 async function boot(){
