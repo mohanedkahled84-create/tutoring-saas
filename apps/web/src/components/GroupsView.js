@@ -55,7 +55,7 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
             <circle class="spinner-head" cx="25" cy="25" r="20" fill="none" stroke="url(#centrlySleekGradient)" stroke-width="3.5" />
           </svg>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem;">
           ${[1, 2, 3].map(() => `
             <div class="skeleton-card" style="min-height: 240px; justify-content: space-between;">
               <div>
@@ -85,7 +85,7 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
         </div>
       ` : groupList.length > 0 ? `
         <!-- Groups Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem;">
           ${groupList.map(g => {
             // Determine billing display label
             let billingLabel = 'نسبة مئوية';

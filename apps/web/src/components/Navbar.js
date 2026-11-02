@@ -26,7 +26,7 @@ export function renderNavbar(user, activeSessionSummary = null) {
     displayName = `أ. ${displayName}`;
   }
 
-  const roleName = isAdmin ? 'المدير والمؤسس (Centrly HQ)' : (user?.role === 'assistant' ? 'مساعد' : (user?.role === 'center_owner' || user?.account_type === 'center' ? 'مسؤول السنتر' : 'مدرس'));
+  const roleName = user?.delegated_actor ? `مساعد: ${user.delegated_actor.name}` : isAdmin ? 'المدير والمؤسس (Centrly HQ)' : (user?.role === 'assistant' ? 'مساعد' : (user?.role === 'center_owner' || user?.account_type === 'center' ? 'مسؤول السنتر' : 'مدرس'));
 
   // Clean avatar letter - omit title prefix so "أ. مهند" gives avatar "م"
   const cleanNameForAvatar = displayName.replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim();

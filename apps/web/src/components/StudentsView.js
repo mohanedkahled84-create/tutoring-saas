@@ -314,16 +314,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                   </td>
                   <td>
                     <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 165px;">
-                      <!-- Password Badge -->
-                      ${portalPassword ? `
-                        <div style="font-size: 0.72rem; color: #1e3a8a; font-weight: 800; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; padding: 0.2rem 0.45rem; display: flex; align-items: center; justify-content: space-between;">
-                          <span style="color: #1e40af; font-size: 0.7rem;">كلمة المرور:</span>
-                          <span style="font-family: monospace; color: #1e3a8a; font-weight: 800; letter-spacing: 1.5px; font-size: 0.78rem;">${escapeHtml(portalPassword)}</span>
-                        </div>
-                      ` : ''}
-
-                      <!-- Parent Link Row -->
-                      <button type="button" class="btn btn-secondary btn-sm" style="min-height:48px;margin-bottom:8px" onclick="window.centrlyApp.sendFamilyAccess('${escapeHtml(s.id)}',this)" title="إرسال بيانات الأسرة مباشرة لرقم ولي الأمر؛ كلمة المرور لا تظهر للمدرس">إرسال حساب الأسرة</button>
+                      <!-- Repeated sharing is manual; credentials are not displayed in the roster. -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
                         <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; width: 35px;">الأمر:</span>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رسالة واتساب كاملة لولي الأمر جاهزة للإرسال اليدوي" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem;">

@@ -82,7 +82,7 @@ export function registerPortalDispatchActions(app) {
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1rem;" dir="rtl">
         <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.85rem; font-size: 0.85rem; color: #92400e; line-height: 1.6;">
-          <strong>الإرسال المباشر لـ ${recipientTitle}:</strong> واتساب السيرفر الآلي غير متصل حالياً. تم تجهيز نص الرسالة بالكامل لـ <b>${escapeHtml(studentName)}</b> لتتمكن من إرسالها فوراً بنقرة واحدة عبر واتساب لضمان وصولها!
+          <strong>الإرسال المباشر لـ ${recipientTitle}:</strong> تم تجهيز نص الرسالة لـ <b>${escapeHtml(studentName)}</b> لتتمكن من إرسالها فوراً بنقرة واحدة عبر واتساب لضمان وصولها!
         </div>
 
         <div class="form-group">
@@ -107,7 +107,7 @@ export function registerPortalDispatchActions(app) {
             onclick="window.centrlyApp.onDirectWhatsAppModalClicked()"
           >
             ${getIcon('whatsapp', 18, '#ffffff')}
-            <span>فتح واتساب وإرسال الرابط الآن</span>
+            <span>فتح واتساب</span>
           </a>
         </div>
       </div>
@@ -139,7 +139,7 @@ export function registerPortalDispatchActions(app) {
     }
     setTimeout(() => {
       this.closeModal();
-      this.showToast('تم فتح واتساب وتحديث حالة التقرير إلى تم التسليم!', 'success');
+      this.showToast('تم فتح واتساب؛ راجع الرسالة واضغط إرسال.', 'info');
     }, 800);
   }
 
@@ -242,22 +242,17 @@ export function registerPortalDispatchActions(app) {
     }, 150);
   }
 
+  app.parentSharingMessage = async function(studentId) {
+    const student=(this.students || []).find(s=>s.id===studentId);
+    if(!student)throw new Error('الطالب غير متاح');
+    const links=await request(`/students/${encodeURIComponent(studentId)}/parent-link`);
+    if(!links.family_url)throw new Error('تعذر تجهيز رابط المتابعة');
+    return `متابعة الطالب: ${student.name || 'الطالب'}\nمع ${this.user?.full_name || this.user?.name || 'المدرس'}\nرابط حساب الأسرة:\n${links.family_url}\nرقم الدخول: ${student.parent_phone || student.parentPhone || ''}\nاستخدم كلمة مرور حساب الأسرة التي وصلتك من قبل.`;
+  };
   app.copyParentLink = async function(studentId) {
-    const student = (this.students || []).find(s => s.id === studentId);
-    const parentPhone = student?.parent_phone || student?.parentPhone || 'رقم ولي الأمر';
-    const studentName = student?.name || student?.full_name || 'الطالب';
-    const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
-    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-    const portalUrl = `${canonicalOrigin}/portal?role=parent`;
-    const rawTeacher = this.user?.name || 'المعلم';
-    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
-      ? rawTeacher
-      : `مستر ${rawTeacher}`;
-
-    const textToCopy = `أهلاً بحضرتك ولي أمر الطالب (${studentName})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح!\n\nيسعدنا تزويدكم ببيانات بوابة المتابعة مع ${teacherName}:\n\n*رابط بوابة المتابعة:*\n${portalUrl}\n\n*اسم الدخول (رقم هاتفك):* ${parentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنكم في أي وقت:*\n- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.\n- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.\n- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.\n\n*تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.\n\nمع خالص تمنياتنا للطالب (${studentName}) بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
-
-    await this.copyToClipboard(textToCopy, `تم نسخ رسالة واتساب الكاملة لولي أمر (${studentName}) بنجاح!`, 'رسالة واتساب ولي الأمر');
-  }
+    try{await this.copyToClipboard(await this.parentSharingMessage(studentId),'تم نسخ رابط متابعة ولي الأمر','رابط المتابعة');}
+    catch(error){this.showToast(error.message,'warning');}
+  };
 
   app.previewParentPortal = async function(studentId) {
     const student = (this.students || []).find(s => s.id === studentId);
@@ -293,55 +288,19 @@ export function registerPortalDispatchActions(app) {
   }
 
   app.sendSingleParentLink = async function(studentId) {
-    const student = (this.students || []).find(s => s.id === studentId);
-    const parentPhone = student?.parentPhone || student?.parent_phone;
-    if (!parentPhone) {
-      this.showToast('رقم هاتف ولي الأمر غير مسجل لهذا الطالب.', 'warning');
-      return;
-    }
-
-    const studentName = student?.name || student?.full_name || 'الطالب';
-    let cleanPhone = (parentPhone || '').replace(/[\s\-\+\(\)]/g, '');
-    if (cleanPhone.startsWith('00')) cleanPhone = cleanPhone.slice(2);
-    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
-      cleanPhone = '20' + cleanPhone.slice(1);
-    }
-
-    if (!cleanPhone || cleanPhone.length < 9) {
-      this.showToast(`رقم هاتف ولي الأمر غير صالح للطالب "${studentName}". يرجى تعديل بيانات الطالب والتأكد من صحة الرقم أولاً.`, 'danger');
-      return;
-    }
-
-    const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
-    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-    const portalUrl = `${canonicalOrigin}/portal`;
-    const rawTeacher = this.user?.name || 'المعلم';
-    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
-      ? rawTeacher
-      : `مستر ${rawTeacher}`;
-
-    const msg = `أهلاً بحضرتك ولي أمر الطالب (${studentName})، نتمنى له عاماً دراسياً حافلاً بالتفوق والنجاح!\n\nيسعدنا تزويدكم ببيانات بوابة المتابعة مع ${teacherName}:\n\n*رابط بوابة المتابعة:*\n${portalUrl}\n\n*اسم الدخول (رقم هاتفك):* ${parentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنكم في أي وقت:*\n- متابعة تسجيل الحضور والغياب فور دخول الطالب الحصة.\n- درجات الكويزات والامتحانات الدورية وتقييمات المعلم.\n- متابعة الواجبات المنزلية والالتزام بتسليمها وملاحظات المعلم.\n\n*تنبيه هام:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تقارير الحصص والدرجات باستمرار دون انقطاع.\n\nمع خالص تمنياتنا للطالب (${studentName}) بدوام التفوق والنجاح.\nمع تحيات: ${teacherName}`;
-
-    // Open WhatsApp Web/App directly
-    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, '_blank');
-
-    const now = new Date().toISOString();
-    if (student) {
-      student.parent_portal_sent_at = now;
-    }
-
-    // Persist sent timestamp to database
-    request(`/students/${studentId}`, {
-      method: 'PATCH',
-      body: { parent_portal_sent_at: now },
-    }).catch(() => {});
-
-    this.showToast(`تم فتح محادثة واتساب لولي أمر (${studentName}) بنجاح! 💬`, 'success');
-    if (this.currentRoute === 'students') {
-      this.renderMainContent();
-    }
-  }
+    const student=(this.students || []).find(s=>s.id===studentId);
+    const phone=normalizeDigits(student?.parent_phone || student?.parentPhone || '').replace(/[^0-9]/g,'');
+    if(!phone){this.showToast('رقم ولي الأمر غير مسجل','warning');return;}
+    // Open during the user gesture, then populate after resolving teacher identity.
+    const popup=window.open('about:blank','_blank');
+    if(popup)popup.opener=null;
+    try{
+      const text=await this.parentSharingMessage(studentId),number=phone.startsWith('01')?'20'+phone.slice(1):phone.replace(/^00/,'');
+      const url=`https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+      if(popup)popup.location=url;else this.showDirectWhatsAppFallbackModal(student?.name || 'الطالب',phone,text,null,'parent');
+      this.showToast('تم تجهيز رابط المتابعة لفتحه في واتساب','info');
+    }catch(error){popup?.close();this.showToast(error.message,'warning');}
+  };
 
   app.sendSingleStudentLink = async function(studentId) {
     const student = (this.students || []).find(s => s.id === studentId);
@@ -376,17 +335,6 @@ export function registerPortalDispatchActions(app) {
     // Open WhatsApp Web/App directly
     const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
     window.open(waUrl, '_blank');
-
-    const now = new Date().toISOString();
-    if (student) {
-      student.student_portal_sent_at = now;
-    }
-
-    // Persist sent timestamp to database
-    request(`/students/${studentId}`, {
-      method: 'PATCH',
-      body: { student_portal_sent_at: now },
-    }).catch(() => {});
 
     this.showToast(`تم فتح محادثة واتساب للطالب (${studentName}) بنجاح! 💬`, 'success');
     if (this.currentRoute === 'students') {

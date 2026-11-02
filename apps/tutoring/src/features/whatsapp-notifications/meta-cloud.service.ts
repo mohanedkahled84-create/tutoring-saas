@@ -208,11 +208,12 @@ export class MetaCloudService {
 
     // 3. Persist all in queue database
     const enqueued = await this.repository.enqueueItems([...immediateItems, ...queuedItems]);
+    if(!enqueued.length)return {total_students:students.length,total_messages:0,sent_today:0,queued_tomorrow:0,daily_limit:this.dailyLimit,remaining_today:remainingQuota,is_template_pending:false,message:'تم استخدام الإرسال الأول لهذه الأرقام؛ إعادة الإرسال من نافذة واتساب فقط.'};
 
     // 4. Check Meta Template status
     const statuses = await this.gateway.getTemplateStatuses();
-    const isStudentPending = statuses["centerly"] === "PENDING";
-    const isParentPending = statuses["centerly_student"] === "PENDING";
+    const isStudentPending = statuses["centerly"] !== "APPROVED";
+    const isParentPending = statuses["centerly_student"] !== "APPROVED";
     const isTemplatePending = isStudentPending || isParentPending;
 
     // 5. If templates are pending review, keep as pending and inform user
@@ -236,7 +237,7 @@ export class MetaCloudService {
 
     const remainingAfterDispatch = Math.max(0, remainingQuota - immediateEnqueued.length);
     const sentCount = immediateEnqueued.length;
-    const queuedCount = queuedItems.length;
+    const queuedCount = enqueued.filter(it=>it.scheduled_date!==today).length;
 
     let userMessage = "";
     if (sentCount > 0 && queuedCount === 0) {
@@ -269,6 +270,7 @@ export class MetaCloudService {
       if (!item.id) continue;
 
       try {
+        if(!await this.repository.claimOnboardingSend(item.id))continue;
         const sendRes: MetaTemplateSendResult = await this.gateway.sendTemplate({
           to: item.recipient_phone,
           templateName: item.template_name,
@@ -286,7 +288,7 @@ export class MetaCloudService {
           await this.repository.updateStudentPortalSentAt(item.student_id, item.recipient_type, nowIso);
         } else {
           await this.repository.updateItemStatus(item.id, {
-            status: sendRes.isPendingApproval ? "pending" : "failed",
+            status: "failed",
             error_message: sendRes.error || "Meta dispatch failure",
           });
         }
@@ -329,6 +331,7 @@ export class MetaCloudService {
       if (!item.id) continue;
 
       try {
+        if(!await this.repository.claimOnboardingSend(item.id))continue;
         const res = await this.gateway.sendTemplate({
           to: item.recipient_phone,
           templateName: item.template_name,
@@ -347,7 +350,7 @@ export class MetaCloudService {
         } else {
           failed++;
           await this.repository.updateItemStatus(item.id, {
-            status: res.isPendingApproval ? "pending" : "failed",
+            status: "failed",
             error_message: res.error || "Meta error",
           });
         }
