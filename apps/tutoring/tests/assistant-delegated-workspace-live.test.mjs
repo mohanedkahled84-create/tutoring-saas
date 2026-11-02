@@ -17,7 +17,7 @@ test('LIVE: actual teacher controllers with opaque assistant session enforce ten
  const shared=ok(await db.from('students').insert({tenant_id:tenant,group_id:groups[1].id,name:'shared student with hidden primary group',parent_phone:'201012345678'}).select().single());
  ok(await db.from('group_students').insert({tenant_id:tenant,group_id:groups[0].id,student_id:shared.id}));
  const staff=ok(await db.from('assistants').insert({tenant_id:tenant,name:'isolated assistant',phone:'201055555555',status:'active'}).select().single());
- const permissions={'students.view':true,'students.edit':true,'groups.view':true,'attendance.view':true,'attendance.create':true,'attendance.edit':true,'materials.view':true,'materials.create':true,'materials.edit':true,'video-lessons.view':true,'video-lessons.create':true,'online-quizzes.view':true,'online-quizzes.create':true};
+ const permissions={'students.view':true,'students.edit':true,'students.collect':true,'groups.view':true,'attendance.view':true,'attendance.create':true,'attendance.edit':true,'materials.view':true,'materials.create':true,'materials.edit':true,'video-lessons.view':true,'video-lessons.create':true,'online-quizzes.view':true,'online-quizzes.create':true};
  ok(await db.from('assistant_accounts').insert({assistant_id:staff.id,tenant_id:tenant,phone:staff.phone,password_hash:'isolated-no-login-hash',permissions,group_ids:[groups[0].id]}));
  const {familyToken,familyHash}=await import('../dist/shared/utils/parentFamily.js');const token=familyToken(),origin='https://centerly-eg.com';
  ok(await db.from('assistant_sessions').insert({token_hash:familyHash(token),assistant_id:staff.id,origin,credential_version:1}));
@@ -40,6 +40,8 @@ test('LIVE: actual teacher controllers with opaque assistant session enforce ten
  const hiddenEdit=await request('/materials/'+materials[1].id,'PATCH',{title:'must not edit'},'materials');assert.notEqual(hiddenEdit.status,200);assert.equal(ok(await db.from('study_materials').select('title').eq('id',materials[1].id).single()).title,'unassigned PDF');
  const quiz=await request('/quizzes/rich','POST',{group_id:groups[0].id,quiz_number:8,title:'delegated online quiz',exam_mode:'online',questions:[{id:'q1',type:'mcq',question:'isolated',options:['A','B'],correct_answer:'A',points:1}]},'online-quizzes');assert.equal(quiz.status,200,await quiz.clone().text());
  const spoof=await request('/materials','POST',{title:'mode spoof',type:'paper_exam',group_id:groups[0].id,url:'https://example.com/paper'},'materials');assert.equal(spoof.status,403);
+ const receiptRequest=randomUUID();const receipt=await request('/assistants/collections','POST',{group_id:groups[0].id,student_id:students[0].id,request_id:receiptRequest,amount:1,payment_method:'cash',note:'isolated synthetic receipt'},'students');assert.equal(receipt.status,201,await receipt.clone().text());
+ const savedReceipt=ok(await db.from('student_collections').select('assistant_id,actor_user_id,actor_name').eq('tenant_id',tenant).eq('request_id',receiptRequest).single());assert.equal(savedReceipt.assistant_id,staff.id);assert.equal(savedReceipt.actor_user_id,null);assert.equal(savedReceipt.actor_name,staff.name);
  ok(await db.from('assistant_accounts').update({permissions:{'students.view':true}}).eq('assistant_id',staff.id));
  assert.equal((await request('/students/'+students[0].id,'PUT',{notes:'revoked'})).status,403);
  ok(await db.from('assistants').update({status:'inactive'}).eq('id',staff.id));assert.equal((await request('/context')).status,401);

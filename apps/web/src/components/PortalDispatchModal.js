@@ -255,12 +255,10 @@ export function registerPortalDispatchActions(app) {
   };
 
   app.previewParentPortal = async function(studentId) {
-    const student = (this.students || []).find(s => s.id === studentId);
-    const phone = student?.parent_phone || student?.parentPhone || '';
-    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-    const url = `${canonicalOrigin}/portal?role=parent&preview=true${phone ? `&phone=${encodeURIComponent(phone)}` : ''}`;
-    window.open(url, '_blank');
-  }
+    const popup=window.open('about:blank','_blank');if(popup)popup.opener=null;
+    try{const links=await request(`/students/${encodeURIComponent(studentId)}/parent-link`);if(!links.family_url)throw new Error('تعذر فتح البوابة');if(popup)popup.location=links.family_url;else this.showToast('اسمح بفتح نافذة البوابة من المتصفح','info');}
+    catch(error){popup?.close();this.showToast(error.message,'warning');}
+  };
 
   app.studentSharingMessage = async function(studentId) {
     const student=(this.students || []).find(s=>s.id===studentId);
@@ -276,12 +274,10 @@ export function registerPortalDispatchActions(app) {
   };
 
   app.previewStudentPortal = async function(studentId) {
-    const student = (this.students || []).find(s => s.id === studentId);
-    const phone = student?.student_phone || student?.studentPhone || '';
-    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-    const url = `${canonicalOrigin}/portal?role=student&preview=true${phone ? `&phone=${encodeURIComponent(phone)}` : ''}`;
-    window.open(url, '_blank');
-  }
+    const popup=window.open('about:blank','_blank');if(popup)popup.opener=null;
+    try{const links=await request(`/students/${encodeURIComponent(studentId)}/parent-link`);if(!links.student_login_url)throw new Error('تعذر فتح البوابة');if(popup)popup.location=links.student_login_url;else this.showToast('اسمح بفتح نافذة البوابة من المتصفح','info');}
+    catch(error){popup?.close();this.showToast(error.message,'warning');}
+  };
 
   app.sendSingleParentLink = async function(studentId) {
     const student=(this.students || []).find(s=>s.id===studentId);

@@ -24,7 +24,7 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
   if(root==='settings' && !tail || root==='billing' && tail==='status')return `${resource}.view`;
   if(root==='assistants' && !tail)return require(page==='dashboard'?'dashboard':'assistants');
   if(root==='assistants' && ['access-catalog','activity'].includes(tail))return require('assistants');
-  if(root==='assistants' && tail==='followup')return require('reports');
+  if(root==='assistants' && tail==='followup')return require(page==='risk-watchlist'?'risk-watchlist':'reports');
   if(root==='assistants' && /^collections/.test(tail))return require('collections');
   if(root==='reports' && tail==='monthly')return require(page==='dashboard'?'dashboard':'reports');
   if(root==='reports' && tail==='action-summary')return require('dashboard');
@@ -83,7 +83,7 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
  if(root==='platform' && tail.startsWith('video-views/'))return require('video-lessons','edit');
  if(root==='settings' && !tail)return require('settings','edit');
  if(root==='assistants'){
-  if(tail==='followup/prepare')return require('reports','send');
+  if(tail==='followup/prepare')return require(page==='risk-watchlist'?'risk-watchlist':'reports','send');
   if(tail==='collections')return require('collections','create');
   if(/^collections\//.test(tail))throw denied();
   if(tail==='invitations')return require('assistants','create');

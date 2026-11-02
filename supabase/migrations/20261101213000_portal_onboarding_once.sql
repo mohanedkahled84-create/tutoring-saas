@@ -25,15 +25,26 @@ order by t.id,q.recipient_type,case when q.recipient_type='parent' then public.p
  case when q.status='sent' then 0 when q.status='failed' or coalesce(q.attempts,0)>0 then 1 else 2 end,q.created_at,q.id
 on conflict do nothing;
 insert into public.portal_onboarding_deliveries(tenant_id,recipient_type,recipient_key,send_started_at)
-select distinct tenant_id,'parent',public.parent_family_phone(parent_phone),parent_portal_sent_at from public.students
-where parent_portal_sent_at is not null and public.parent_family_phone(parent_phone) is not null on conflict do nothing;
+select tenant_id,'parent',public.parent_family_phone(parent_phone),min(parent_portal_sent_at) from public.students
+where parent_portal_sent_at is not null and public.parent_family_phone(parent_phone) is not null group by tenant_id,public.parent_family_phone(parent_phone)
+on conflict(tenant_id,recipient_type,recipient_key) do update set send_started_at=coalesce(portal_onboarding_deliveries.send_started_at,excluded.send_started_at);
 insert into public.portal_onboarding_deliveries(tenant_id,recipient_type,recipient_key,send_started_at)
-select tenant_id,'student',id::text,student_portal_sent_at from public.students where student_portal_sent_at is not null on conflict do nothing;
+select tenant_id,'student',id::text,student_portal_sent_at from public.students where student_portal_sent_at is not null
+on conflict(tenant_id,recipient_type,recipient_key) do update set send_started_at=coalesce(portal_onboarding_deliveries.send_started_at,excluded.send_started_at);
 insert into public.portal_onboarding_deliveries(tenant_id,recipient_type,recipient_key,send_started_at)
-select distinct s.tenant_id,'parent',public.parent_family_phone(s.parent_phone),i.created_at
+select s.tenant_id,'parent',public.parent_family_phone(s.parent_phone),min(i.created_at)
 from public.students s join public.whatsapp_inbox i on i.student_id=s.id and i.tenant_id=s.tenant_id
 where i.direction='outbound' and i.message_body='[رد آلي على طلب بيانات الدخول عبر Meta]'
- and public.parent_family_phone(i.phone)=public.parent_family_phone(s.parent_phone) on conflict do nothing;
+ and public.parent_family_phone(i.phone)=public.parent_family_phone(s.parent_phone) group by s.tenant_id,public.parent_family_phone(s.parent_phone)
+on conflict(tenant_id,recipient_type,recipient_key) do update set send_started_at=coalesce(portal_onboarding_deliveries.send_started_at,excluded.send_started_at);
+
+-- Keep the old queue history, but do not advertise suppressed duplicates as
+-- outstanding work or let an old worker send them during the rollout.
+update public.meta_portal_dispatch_queue q set status='failed',error_message='تم استخدام الإرسال الأول؛ المشاركة التالية من نافذة واتساب فقط'
+where q.status in ('pending','queued') and exists(select 1 from public.portal_onboarding_deliveries d
+ where d.tenant_id::text=q.tenant_id and d.recipient_type=q.recipient_type
+ and d.recipient_key=case when q.recipient_type='parent' then public.parent_family_phone(q.recipient_phone) else q.student_id::text end
+ and (d.queue_id is distinct from q.id or d.send_started_at is not null));
 
 create function public.portal_onboarding_enqueue_once() returns trigger
 language plpgsql security invoker set search_path='' as $$

@@ -9,6 +9,7 @@ import {assistantRpc} from './access.js';
 import {createDelegatedDatabase,redactDelegatedData} from './delegatedDatabase.js';
 import {delegatedCapability} from './delegatedPolicy.js';
 import {assistantCatalog,normalizeAssistantPermissions} from './catalog.js';
+import {safeAssistantChanges} from './activity.js';
 import {groupsRouter} from '../groups/index.js';
 import {studentsRouter,importRouter} from '../students/index.js';
 import {sessionsRouter} from '../sessions/index.js';
@@ -101,10 +102,14 @@ delegatedWorkspaceRouter.use(async(req:AuthenticatedRequest,res,next)=>{
   req.supabase=guarded;req.services=undefined;req.token=undefined;
   // Teacher routes return their normal shape, with credentials removed at
   // both the database transport and response boundary.
-  const json=res.json.bind(res);res.json=(body:any)=>json(redactDelegatedData(body,context));
-  if(!['GET','HEAD'].includes(req.method))res.once('finish',()=>{
+  let savedRecord:any;
+  const json=res.json.bind(res);res.json=(body:any)=>{savedRecord=body?.student || body?.group || body?.material || body?.session || body?.quiz;return json(redactDelegatedData(body,context));};
+  // Collection operations already write their assistant-attributed audit in
+  // the same SQL transaction as the receipt; avoid a duplicate entry here.
+  if(!['GET','HEAD'].includes(req.method) && !route.startsWith('/assistants/collections'))res.once('finish',()=>{
    if(res.statusCode<200 || res.statusCode>=300)return;
-   void raw.from('assistant_access_audit').insert({tenant_id:identity.tenant_id,assistant_id:identity.assistant_id,action:`workspace.${capability}`,actor_name:identity.name,changes:{method:req.method,path:route}}).then(()=>{},()=>{});
+   const target=savedRecord?.id || route.split('/')[2],targetId=/^[a-f0-9-]{36}$/i.test(target || '')?target:null;
+   void raw.from('assistant_access_audit').insert({tenant_id:identity.tenant_id,assistant_id:identity.assistant_id,action:capability,target_id:targetId,target_name:savedRecord?.name || savedRecord?.title || null,actor_name:identity.name,changes:safeAssistantChanges(capability,{after:{...req.body,...savedRecord}})}).then(()=>{},()=>{});
   });
   delegatedClientScope.run(guarded,()=>controllers(req,res,next));
  }catch(error){
