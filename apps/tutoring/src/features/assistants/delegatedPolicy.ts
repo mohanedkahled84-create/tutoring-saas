@@ -27,6 +27,7 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
   if(root==='assistants' && tail==='followup')return require('reports');
   if(root==='assistants' && /^collections/.test(tail))return require('collections');
   if(root==='reports' && tail==='monthly')return require(page==='dashboard'?'dashboard':'reports');
+  if(root==='reports' && tail==='action-summary')return require('dashboard');
   if(root==='at-risk' && (!tail || tail==='watchlist'))return require(page==='dashboard'?'dashboard':'risk-watchlist');
   if(root==='homework' && tail==='submissions')return require('homework');
   if(root==='materials' && !tail)return require(page==='platform-builder'?'platform-builder':page==='video-lessons'?'video-lessons':'materials');

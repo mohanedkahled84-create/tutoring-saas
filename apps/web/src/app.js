@@ -1145,6 +1145,21 @@ export class CentrlyApp {
     return this.navigate(route);
   }
 
+  async retryDashboardActions() {
+    if(this.actionSummaryLoading || !this.dashboardData) return;
+    this.actionSummaryLoading=true;
+    try {
+      this.dashboardData.actionSummary=await request('/reports/action-summary');
+      this.dashboardData.actionSummaryError=false;
+    } catch {
+      this.dashboardData.actionSummaryError=true;
+      this.showToast('تعذر تحميل الإجراءات المطلوبة؛ حاول مجددًا', 'warning');
+    } finally {
+      this.actionSummaryLoading=false;
+      this.renderMainContent();
+    }
+  }
+
   async retryRoute(route) {
     if (this.routeErrors) this.routeErrors[route] = null;
     this.renderMainContent();
@@ -1583,13 +1598,14 @@ export class CentrlyApp {
         case 'dashboard': {
           const currentMonth = new Date().getMonth() + 1;
           const currentYear = new Date().getFullYear();
-          const [studRes, grpRes, riskRes, repRes, astRes, actEarnRes] = await Promise.all([
+          const [studRes, grpRes, riskRes, repRes, astRes, actEarnRes, actionSummary] = await Promise.all([
             request('/students'),
             request('/groups'),
             request('/at-risk'),
             request(`/reports/monthly?month=${currentMonth}&year=${currentYear}`),
             request('/assistants'),
             request(`/sessions/actual-earnings?month=${currentMonth}&year=${currentYear}`),
+            request('/reports/action-summary').catch(()=>null),
           ]);
           const students = Array.isArray(studRes) ? studRes : (studRes.students || []);
           const groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
@@ -1653,6 +1669,9 @@ export class CentrlyApp {
           await this.loadCoupons();
 
           this.dashboardData = {
+            actionSummary,
+            actionSummaryError:!actionSummary,
+            students,
             stats: {
               totalStudents: students.length,
               activeGroups: groups.length,

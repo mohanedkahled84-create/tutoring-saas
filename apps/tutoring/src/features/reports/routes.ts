@@ -1,9 +1,15 @@
 import { Router, Response } from "express";
+import {teacherActionSummary} from './actionSummary.js';
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServices } from "../../composition.js";
 import { ReportsService } from "./service.js";
 
 export const reportsRouter = Router();
+reportsRouter.get('/action-summary',async(req:AuthenticatedRequest,res:Response)=>{
+ if(!req.user?.tenant_id || !req.supabase){res.status(403).json({error:{code:'FORBIDDEN',message:'حساب المدرس غير متاح'}});return;}
+ try{res.json(await teacherActionSummary(req.supabase,req.user.tenant_id));}
+ catch{res.status(503).json({error:{code:'ACTION_SUMMARY_UNAVAILABLE',message:'تعذر تحميل الإجراءات المطلوبة؛ حاول مجددًا'}});}
+});
 
 function resolveReportsService(req: AuthenticatedRequest): ReportsService {
   const services = getServices(req);
