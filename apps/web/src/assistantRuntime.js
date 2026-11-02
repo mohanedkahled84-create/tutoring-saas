@@ -52,7 +52,7 @@ export async function mountAssistantWorkspace({root,token,onLogout,onExpired}){
   return nativeFetch(input,init);
  };
  try{
-  const {CentrlyApp}=await import('./app.js?v=9.35.0');
+  const {CentrlyApp}=await import('./app.js?v=9.36.0');
   const delegation={user:context.user,actor:context.actor,permissions,isActive:()=>!disposed,canNavigate:route=>!disposed && assistantCanNavigate(permissions,route)};
   app=new CentrlyApp(delegation);window.centrlyApp=app;
   app.user.delegated_actor=context.actor;
@@ -69,11 +69,16 @@ export async function mountAssistantWorkspace({root,token,onLogout,onExpired}){
   const lockControls=()=>{
    if(disposed)return;
    const resources=routeResources[app.currentRoute] || [];
-   for(const el of root.querySelectorAll('button[onclick],input[onchange],select[onchange]')){
+   const allowed=action=>action==='grade'?assistantCan(permissions,'quizzes','grade') || resources.some(resource=>assistantCan(permissions,resource,'grade')):resources.some(resource=>assistantCan(permissions,resource,action));
+   for(const form of root.querySelectorAll('form[onsubmit]')){
+    const code=form.getAttribute('onsubmit'),ownerOnly=/SettingsChangePassword|SettingsForgotPassword/.test(code),action=delegatedUiAction(code);
+    if(ownerOnly || action && !allowed(action))for(const control of form.querySelectorAll('input,select,textarea,button[type=submit]')){control.disabled=true;control.setAttribute('aria-disabled','true');control.title=ownerOnly?'خاص بحساب المدرس':'غير متاح ضمن صلاحياتك';}
+   }
+   for(const el of root.querySelectorAll('button[onclick],a[onclick],input[onchange],select[onchange]')){
     if(el.closest('.app-sidebar') || el.closest('.app-topbar'))continue;
     const code=el.getAttribute('onclick') || el.getAttribute('onchange') || '';
-    const action=delegatedUiAction(code);
-    if(action && !resources.some(resource=>assistantCan(permissions,resource,action))){el.disabled=true;el.setAttribute('aria-disabled','true');el.title='غير متاح ضمن صلاحياتك';}
+    const action=delegatedUiAction(code),ownerOnly=/TeacherPhoneVerification|SettingsForgotPassword|switchSettingsTab\('security'\)/.test(code);
+    if(ownerOnly || action && !allowed(action)){el.disabled=true;el.setAttribute('aria-disabled','true');el.title=ownerOnly?'خاص بحساب المدرس':'غير متاح ضمن صلاحياتك';if(el.tagName==='A'){el.removeAttribute('href');el.removeAttribute('onclick');el.setAttribute('tabindex','-1');}}
    }
   };
   observer=new MutationObserver(lockControls);observer.observe(root,{childList:true,subtree:true});
@@ -84,10 +89,11 @@ export async function mountAssistantWorkspace({root,token,onLogout,onExpired}){
 }
 
 export function delegatedUiAction(code){
+ if(/sendSingle(?:Parent|Student)Link|copy(?:Parent|Student)Link|preview(?:Parent|Student)Portal|openBatchPortalLinksModal|openParentNoteModal|handleSendParentNote|resendSingleMessage/.test(code))return 'send';
  if(/(?:delete|Delete|Purge)/.test(code))return 'delete';
  if(/(?:dispatch|Dispatch|sendParent|SendParent|sendStudent|SendStudent|prepareFollowup|SendIndividualReport|BulkSendReports)/.test(code))return 'send';
  if(/(?:grade|Grade|Score|score|OmrScanReview)/.test(code) && !/(?:load|Load|filter|Filter|select|Select|open.*Breakdown)/.test(code))return 'grade';
  if(/(?:create|Create|addNew|AddNew|openAdd|openNew|startSession|StartSession|startGroup|StartGroup|AddMaterial|AddHomework|AddVideo|AddTeacherAssistant|ImportStudents)/.test(code))return 'create';
- if(/(?:save|Save|edit|Edit|approve|Approve|reject|Reject|endActive|EndSession|reschedule|Reschedule|cancelSession|CancelSession|markAttendance|scanStudent|StudentScan)/.test(code))return 'edit';
+ if(/(?:save|Save|edit|Edit|updateStudent|UpdateStudent|approve|Approve|reject|Reject|endActive|EndSession|reschedule|Reschedule|cancelSession|CancelSession|markAttendance|scanStudent|StudentScan)/.test(code))return 'edit';
  return null;
 }

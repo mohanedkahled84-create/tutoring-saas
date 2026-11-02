@@ -41,3 +41,8 @@ test('session status is read from the authorized roster, never invented by the U
 test('metadata failures stop the page without exposing database errors',async()=>{
  const db={from:()=>({select:()=>({in:async()=>({data:null,error:{message:'private SQL details'}})})})};await assert.rejects(()=>enrichAssistantPage(db,'homework',{rows:[{id:'allowed'}]}),error=>error.status===503 && !error.message.includes('private'));
 });
+
+test('delegated actor text remains escaped in the teacher navbar',()=>{
+ const html=renderNavbar({role:'owner',name:'teacher',delegated_actor:{name:'<img src=x onerror=alert(1)>'}});
+ assert.ok(!html.includes('<img src=x'));assert.ok(html.includes('&lt;img'));
+});

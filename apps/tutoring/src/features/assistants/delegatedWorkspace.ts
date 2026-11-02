@@ -95,7 +95,7 @@ delegatedWorkspaceRouter.use(async(req:AuthenticatedRequest,res,next)=>{
    }
   }
   const capability=delegatedCapability({method:req.method,path:route,page,body:req.body,permissions,savedType,isNew});
-  const context={tokenHash:hash,origin,capability,ownerId:owner.id,tenantId:identity.tenant_id,permissions};
+  const context={tokenHash:hash,origin,capability,ownerId:owner.id,tenantId:identity.tenant_id,permissions,groupIds:(identity.groups || []).map((group:any)=>group.id)};
   const guarded=createDelegatedDatabase(context);
   req.user={...owner,name:owner.full_name,teacher_id:staff.teacher_id,assistant_id:identity.assistant_id} as UserContext;
   req.supabase=guarded;req.services=undefined;req.token=undefined;

@@ -2,7 +2,7 @@ import {createClient,type SupabaseClient} from '@supabase/supabase-js';
 import {config} from '../../shared/config/index.js';
 
 export const delegatedTables=new Set(['groups','students','group_students','enrollments','sessions','attendance','quizzes','quiz_scores','study_materials','homework_submissions','message_logs','whatsapp_inbox','tenant_platform_settings','tenants','users','teachers','assistants','assistant_accounts','assistant_invitations','activity_logs','assistant_access_audit','payment_proofs','message_templates','whatsapp_connections','meta_portal_dispatch_queue','student_collections','rooms','teacher_payouts']);
-export interface DelegatedDatabaseContext{tokenHash:string;origin:string;capability:string;ownerId:string;tenantId:string;permissions:Record<string,boolean>}
+export interface DelegatedDatabaseContext{tokenHash:string;origin:string;capability:string;ownerId:string;tenantId:string;permissions:Record<string,boolean>;groupIds?:string[]}
 const fail=()=>Object.assign(new Error('هذه العملية خارج صلاحياتك أو مجموعاتك'),{status:403});
 export function delegatedSelect(select:string){
  return select.replace(/(^|[,\s(])(?:(\w+):)?(\w+)(![\w]+)?(?=\()/g,(whole,prefix,alias,table,hint)=>delegatedTables.has(table)?`${prefix}${alias || table}:assistant_delegated_${table}${hint || ''}`:whole);
@@ -14,7 +14,7 @@ export function redactDelegatedData(value:any,context:DelegatedDatabaseContext):
  if(!context.permissions['students.send']){hidden.add('portal_password');hidden.add('parent_portal_token');hidden.add('student_portal_token');}
  if(!context.permissions['dashboard.view'])for(const key of ['financials','actualEarnings','teacher_profit','net_profit','monthly_rev','center_cut_percentage','fixed_per_student_amount','fixed_rent_amount'])hidden.add(key);
  if(!context.permissions['dashboard.view'] && !context.permissions['assistants.view'])for(const key of ['salary','salary_amount','payroll','expected_pay','monthly_salary'])hidden.add(key);
- return Object.fromEntries(Object.entries(value).filter(([key])=>!hidden.has(key)).map(([key,item])=>[key,redactDelegatedData(item,context)]));
+ return Object.fromEntries(Object.entries(value).filter(([key])=>!hidden.has(key)).map(([key,item])=>[key,key==='group_id' && typeof item==='string' && context.groupIds && !context.groupIds.includes(item)?null:key==='group_ids' && Array.isArray(item) && context.groupIds?item.filter(id=>context.groupIds!.includes(id)):redactDelegatedData(item,context)]));
 }
 export function createDelegatedFetch(context:DelegatedDatabaseContext,fetcher:typeof fetch=fetch):typeof fetch{
  const origin=new URL(config.supabaseUrl).origin;

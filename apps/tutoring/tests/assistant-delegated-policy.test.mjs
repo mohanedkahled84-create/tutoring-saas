@@ -40,6 +40,7 @@ test('delegated transport rewrites tables and embedded relations, rejects arbitr
  await assert.rejects(guard(base+'/rest/v1/students',{headers:{'accept-profile':'auth'}}),e=>e.status===403);
  await assert.rejects(guard(base+'/storage/v1/object/public/homework-submissions/foreign/file'),e=>e.status===403);
  assert.deepEqual(redactDelegatedData({access_token:'x',nested:{password_cipher:'x',name:'safe'}},context),{nested:{name:'safe'}});
+ assert.deepEqual(redactDelegatedData({group_id:'private-group',group_ids:['allowed','private-group']},{...context,groupIds:['allowed']}),{group_id:null,group_ids:['allowed']});
  assert.equal(delegatedSelect('id,group:groups!group_id(name),students(id)'), 'id,group:assistant_delegated_groups!group_id(name),students:assistant_delegated_students(id)');
 });
 test('concurrent assistant requests cannot share a database client or contaminate owner requests',async()=>{
