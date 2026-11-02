@@ -2,10 +2,10 @@ import {hasAssistantCapability,assistantCatalog} from './catalog.js';
 
 const denied=()=>Object.assign(new Error('هذه العملية خارج صلاحياتك'),{status:403});
 const pageResource=(route:string)=>assistantCatalog.find(page=>page.route===route)?.key;
-export type DelegatedPolicyInput={method:string;path:string;page:string;body?:any;permissions:Record<string,boolean>;savedType?:string};
+export type DelegatedPolicyInput={method:string;path:string;page:string;body?:any;permissions:Record<string,boolean>;savedType?:string;isNew?:boolean};
 // The browser page is only a hint for read dependencies. Every requested page
 // and write capability is checked independently; a page header never grants rights.
-export function delegatedCapability({method,path,page,body={},permissions:p,savedType}:DelegatedPolicyInput):string{
+export function delegatedCapability({method,path,page,body={},permissions:p,savedType,isNew}:DelegatedPolicyInput):string{
  const resource=pageResource(page);if(!resource || !hasAssistantCapability(p,resource))throw denied();
  const read=['GET','HEAD'].includes(method),parts=path.split('?')[0].split('/').filter(Boolean),root=parts[0],tail=parts.slice(1).join('/');
  const require=(key:string,action='view')=>{if(!hasAssistantCapability(p,key,action))throw denied();return `${key}.${action}`;};
@@ -62,6 +62,7 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
  if(root==='materials'){
   // Existing rows are classified from the database, never from the request body.
   const type=savedType || (!tail?body.type:undefined);if(!type)throw denied();
+  if(!['pdf','video','link'].includes(type))throw denied();
   return require(type==='video'?'video-lessons':'materials',action);
  }
  if(root==='quizzes'){
@@ -70,10 +71,10 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
   if(tail==='submissions/grade-essay')return require('online-quizzes','grade');
   if(tail==='omr-scan')return require('paper-exams','grade');
   if(tail==='rich'){
-   const type=savedType || (!body.id && !body.quiz_id?body.exam_mode:undefined);
+   const type=savedType || (isNew || !body.id && !body.quiz_id?body.exam_mode:undefined);
    if(!type)throw denied();
    const key=['paper','paper_quiz','paper_exam'].includes(type)?'paper-exams':'online-quizzes';
-   return require(key,body.action?.startsWith('delete')?'delete':body.id || body.quiz_id?'edit':'create');
+   return require(key,body.action?.startsWith('delete')?'delete':isNew?'create':body.id || body.quiz_id?'edit':'create');
   }
   if(tail==='upload-image')return require(page==='paper-exams'?'paper-exams':'online-quizzes',body.id?'edit':'create');
   if(!tail)return require('quizzes',body.id?'edit':'create');

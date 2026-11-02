@@ -74,14 +74,27 @@ delegatedWorkspaceRouter.use(async(req:AuthenticatedRequest,res,next)=>{
    res.json({user:{...owner,name:owner.full_name,role:owner.role,tenant_name:identity.teacher_name,teacher_id:staff.teacher_id},actor:{id:identity.assistant_id,name:identity.name},permissions,all_groups:identity.all_groups,group_ids:identity.group_ids,pages:assistantCatalog});return;
   }
   const page=req.get('X-Assistant-Page') || '',route=req.path;
-  let savedType:string|undefined;
+  let savedType:string|undefined,isNew:boolean|undefined;
   if(!['GET','HEAD'].includes(req.method) && (route.startsWith('/materials/') || route==='/quizzes/rich' && (req.body?.id || req.body?.quiz_id))){
    const id=route.startsWith('/materials/')?route.split('/')[2]:req.body.id || req.body.quiz_id;
-   if(!/^[a-f0-9-]{36}$/i.test(id))throw fault(400,'السجل غير صالح');
-   const {data:row,error}=await raw.from('study_materials').select('type').eq('id',id).eq('tenant_id',identity.tenant_id).maybeSingle();
-   if(error || !row)throw fault(403,'هذا المحتوى غير متاح');savedType=row.type;
+   if(!/^[a-z0-9_-]{1,100}$/i.test(id))throw fault(400,'السجل غير صالح');
+   let row:any=null;
+   if(/^[a-f0-9-]{36}$/i.test(id)){
+    const result=await raw.from('study_materials').select('type,questions').eq('id',id).eq('tenant_id',identity.tenant_id).maybeSingle();if(result.error)throw fault(503,'تعذر قراءة المحتوى');row=result.data;
+   }
+   if(!row && route==='/quizzes/rich'){
+    const drafts=await raw.from('whatsapp_inbox').select('message_body').eq('tenant_id',identity.tenant_id).like('phone','QUIZ_DEF_%').limit(1000);
+    if(drafts.error)throw fault(503,'تعذر قراءة الاختبار');
+    for(const draft of drafts.data || []){try{const value=JSON.parse(draft.message_body);if(value.id===id){row={type:value.exam_mode==='paper'?'paper_exam':'online_quiz',questions:draft.message_body};break;}}catch{}}
+   }
+   if(!row){if(route.startsWith('/materials/') || req.body?.action)throw fault(403,'هذا المحتوى غير متاح');isNew=true;}
+   else{
+    let mode;try{mode=JSON.parse(row.questions || '{}').exam_mode;}catch{}
+    savedType=row.type==='online_quiz' && mode==='paper'?'paper_exam':row.type;
+    if(route==='/quizzes/rich' && req.body.exam_mode && (req.body.exam_mode==='paper')!==['paper_quiz','paper_exam'].includes(savedType!))throw fault(403,'لا يمكن تغيير نوع الاختبار من هذا المسار');
+   }
   }
-  const capability=delegatedCapability({method:req.method,path:route,page,body:req.body,permissions,savedType});
+  const capability=delegatedCapability({method:req.method,path:route,page,body:req.body,permissions,savedType,isNew});
   const context={tokenHash:hash,origin,capability,ownerId:owner.id,tenantId:identity.tenant_id,permissions};
   const guarded=createDelegatedDatabase(context);
   req.user={...owner,name:owner.full_name,teacher_id:staff.teacher_id,assistant_id:identity.assistant_id} as UserContext;

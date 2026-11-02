@@ -1,6 +1,16 @@
 -- Delegated teacher controllers use private, automatically updatable views.
 -- Every query rechecks the opaque session, current permissions and group scope.
 -- No owner JWT or service credential is ever returned to the assistant.
+create function public.assistant_delegated_material_kind(r jsonb) returns text
+language plpgsql immutable security invoker set search_path='' as $$
+declare q jsonb;
+begin
+ if r->>'type'='online_quiz' then
+  begin q:=(r->>'questions')::jsonb;exception when others then q:='{}';end;
+  return case when q->>'exam_mode'='paper' then 'paper-exams' else 'online-quizzes' end;
+ end if;
+ return case when r->>'type' in ('paper_quiz','paper_exam') then 'paper-exams' when r->>'type'='video' then 'video-lessons' else 'materials' end;
+end;$$;
 create function public.assistant_delegated_context() returns jsonb
 language plpgsql stable security invoker set search_path='' as $$
 declare h jsonb:=coalesce(nullif(current_setting('request.headers',true),''),'{}')::jsonb;
@@ -43,12 +53,14 @@ language sql stable security invoker set search_path='' as $$
 $$;
 create function public.assistant_delegated_inbox(p_row jsonb) returns boolean
 language plpgsql stable security invoker set search_path='' as $$
-declare c jsonb:=public.assistant_delegated_context();b jsonb;v_group text;v_student text;v_id text;
+declare c jsonb:=public.assistant_delegated_context();b jsonb;v_group text;v_student text;v_id text;v_material text;
 begin
- if p_row->>'student_id' is not null then return public.assistant_delegated_student((p_row->>'student_id')::uuid);end if;
  begin b:=(p_row->>'message_body')::jsonb;exception when others then b:='{}';end;
- v_student:=coalesce(b->>'student_id',b->'student'->>'id');
- if v_student~'^[0-9a-fA-F-]{36}$' then return public.assistant_delegated_student(v_student::uuid);end if;
+ v_student:=coalesce(p_row->>'student_id',b->>'student_id',b->'student'->>'id');
+ if v_student~'^[0-9a-fA-F-]{36}$' and not public.assistant_delegated_student(v_student::uuid) then return false;end if;
+ v_material:=coalesce(b->>'material_id',b->>'quiz_id');
+ if v_material~'^[0-9a-fA-F-]{36}$' and not exists(select 1 from public.study_materials m where m.id=v_material::uuid and m.tenant_id::text=c->>'tenant_id' and public.assistant_delegated_group(m.group_id)) and not exists(select 1 from public.quizzes q where q.id=v_material::uuid and q.tenant_id::text=c->>'tenant_id' and public.assistant_delegated_group(q.group_id)) then return false;end if;
+ if (p_row->>'phone') like 'QUIZ_DEF_%' and c->>'resource' in ('online-quizzes','paper-exams') and (case when b->>'exam_mode'='paper' then 'paper-exams' else 'online-quizzes' end)<>c->>'resource' then return false;end if;
  v_group:=coalesce(b->>'group_id',b->'quiz'->>'group_id');
  if v_group~'^[0-9a-fA-F-]{36}$' then return public.assistant_delegated_group(v_group::uuid);end if;
  if jsonb_typeof(b->'group_ids')='array' then
@@ -57,8 +69,9 @@ begin
     if current_setting('request.method',true) in ('GET','HEAD') then return true;end if;
    elsif current_setting('request.method',true) not in ('GET','HEAD') then return false;end if;
   end loop;
-  return jsonb_array_length(b->'group_ids')>0;
+  return current_setting('request.method',true) not in ('GET','HEAD') and jsonb_array_length(b->'group_ids')>0;
  end if;
+ if v_student~'^[0-9a-fA-F-]{36}$' then return true;end if;
  -- Shared definitions without a student/group are tenant-wide operations.
  return (c->>'all_groups')::boolean;
 exception when invalid_text_representation then return false;
@@ -66,7 +79,7 @@ end;$$;
 
 create function public.assistant_delegated_row(p_table text,r jsonb) returns boolean
 language plpgsql stable security invoker set search_path='' as $$
-declare c jsonb:=public.assistant_delegated_context();v_resource text:=c->>'resource';v_action text:=c->>'action';v_write boolean:=coalesce(current_setting('request.method',true),'GET') not in ('GET','HEAD');v_allowed boolean:=false;
+declare c jsonb:=public.assistant_delegated_context();v_resource text:=c->>'resource';v_action text:=c->>'action';v_write boolean:=coalesce(current_setting('request.method',true),'GET') not in ('GET','HEAD');v_allowed boolean:=false;v_material_kind text;
 begin
  if (case when p_table='tenants' then r->>'id' else r->>'tenant_id' end) is distinct from c->>'tenant_id' then return false;end if;
  if v_write then
@@ -76,8 +89,8 @@ begin
    when 'group_students','enrollments' then v_allowed:=v_resource in ('groups','students') and v_action in ('create','edit','delete');
    when 'sessions' then v_allowed:=v_resource in ('attendance','sessions') and v_action in ('create','edit','delete');
    when 'attendance' then v_allowed:=v_resource='attendance' and v_action in ('create','edit');
-   when 'quizzes' then v_allowed:=v_resource='quizzes' and v_action in ('create','edit','delete');
-   when 'quiz_scores' then v_allowed:=(v_resource='grades' and v_action='edit') or (v_resource='quizzes' and v_action='grade');
+   when 'quizzes' then v_allowed:=v_resource in ('quizzes','online-quizzes','paper-exams') and v_action in ('create','edit','delete');
+   when 'quiz_scores' then v_allowed:=(v_resource='grades' and v_action='edit') or (v_resource in ('quizzes','online-quizzes','paper-exams') and v_action='grade');
    when 'study_materials' then v_allowed:=v_resource in ('materials','video-lessons','online-quizzes','paper-exams') and v_action in ('create','edit','delete');
    when 'homework_submissions' then v_allowed:=v_resource='homework' and v_action='edit';
    when 'whatsapp_inbox' then v_allowed:=v_resource in ('online-quizzes','paper-exams','video-lessons') and v_action in ('create','edit','delete','grade');
@@ -95,9 +108,11 @@ begin
  elsif p_table in ('payment_proofs','whatsapp_connections','message_templates') and v_resource<>'settings' then return false;
  end if;
  if p_table='study_materials' then
-  if r->>'type'='online_quiz' and not coalesce((c->'permissions'->>'online-quizzes.view')::boolean,false) then return false;end if;
-  if r->>'type' in ('paper_quiz','paper_exam') and not coalesce((c->'permissions'->>'paper-exams.view')::boolean,false) then return false;end if;
-  if v_write and ((v_resource='online-quizzes' and r->>'type'<>'online_quiz') or (v_resource='paper-exams' and r->>'type' not in ('paper_quiz','paper_exam')) or (v_resource='video-lessons' and r->>'type'<>'video')) then return false;end if;
+  if v_write and v_resource='materials' and r->>'type' not in ('pdf','link') then return false;end if;
+  if not v_write and ((v_resource='video-lessons' and r->>'type'<>'video') or (v_resource='materials' and r->>'type' not in ('pdf','link'))) then return false;end if;
+  v_material_kind:=public.assistant_delegated_material_kind(r);
+  if v_material_kind in ('online-quizzes','paper-exams') and not coalesce((c->'permissions'->>(v_material_kind||'.view'))::boolean,false) then return false;end if;
+  if v_write and v_resource<>v_material_kind then return false;end if;
  end if;
  case p_table
   when 'groups' then return ((c->>'all_groups')::boolean or (c->'group_ids')?(r->>'id')) and (c->>'teacher_id' is null or r->>'teacher_id' is null or r->>'teacher_id'=c->>'teacher_id');
@@ -125,6 +140,6 @@ do $$declare t text;begin
   execute format('grant all on public.%I to service_role','assistant_delegated_'||t);
  end loop;
 end;$$;
-revoke execute on function public.assistant_delegated_context(),public.assistant_delegated_group(uuid),public.assistant_delegated_student(uuid),public.assistant_delegated_inbox(jsonb),public.assistant_delegated_row(text,jsonb) from public,anon,authenticated;
-grant execute on function public.assistant_delegated_context(),public.assistant_delegated_group(uuid),public.assistant_delegated_student(uuid),public.assistant_delegated_inbox(jsonb),public.assistant_delegated_row(text,jsonb) to service_role;
+revoke execute on function public.assistant_delegated_context(),public.assistant_delegated_group(uuid),public.assistant_delegated_student(uuid),public.assistant_delegated_inbox(jsonb),public.assistant_delegated_row(text,jsonb),public.assistant_delegated_material_kind(jsonb) from public,anon,authenticated;
+grant execute on function public.assistant_delegated_context(),public.assistant_delegated_group(uuid),public.assistant_delegated_student(uuid),public.assistant_delegated_inbox(jsonb),public.assistant_delegated_row(text,jsonb),public.assistant_delegated_material_kind(jsonb) to service_role;
 notify pgrst,'reload schema';
