@@ -9,6 +9,7 @@ import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
 import { homeworkSubmissionRateLimiter } from "../../shared/middleware/rateLimit.js";
 
 import { HOMEWORK_BUCKET, HOMEWORK_MAX_BYTES, homeworkObject, ownsHomeworkObject, signHomeworkFile } from "./files.js";
+import {materialMatchesGroups} from '../materials/targets.js';
 
 export const homeworkRouter = Router();
 export const publicHomeworkRouter = Router();
@@ -68,10 +69,12 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
     }
 
     // 2. Verify material belongs to same tenant AND is explicitly designated as homework (C-05)
-    const { data: isTargetValid } = await supabase.rpc("verify_homework_target", {
-      p_material_id: material_id,
-      p_tenant_id: tenantId,
+    const { data: isTargetValid, error: targetError } = await supabase.rpc("homework_target_allowed", {
+      p_material: material_id,
+      p_tenant: tenantId,
+      p_student: studentId,
     });
+    if(targetError)throw targetError;
 
     if (!isTargetValid) {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "الواجب غير موجود أو لا ينتمي لنفس المعلم" } });
@@ -152,46 +155,31 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       return;
     }
 
-    // 4. Upsert submission record via secure RPC (with studentId fallback) or direct upsert
+    // The server has verified this identity. One database operation rechecks
+    // targeting while locking the assignment; never bypass a rejected RPC.
     const fallbackFilename = file_name || (file_data?.startsWith("data:image/") ? "homework.jpg" : "homework.pdf");
     let submission: any = null;
     let submitErr: any = null;
 
-    const rpcRes = await supabase.rpc("submit_homework_portal", {
-      p_portal_token: token,
-      p_material_id: material_id,
-      p_file_url: file_url,
+    const rpcRes = await supabase.rpc("submit_verified_homework", {
+      p_student: studentId,
+      p_tenant: tenantId,
+      p_material: material_id,
+      p_file_url: incomingObject!.path,
       p_file_name: fallbackFilename,
-      p_student_id: studentId,
+      p_file_size: file_size || null,
     });
-
-    if (rpcRes.error || !rpcRes.data) {
-      logger.warn(`[Homework] submit_homework_portal RPC returned error (${rpcRes.error?.message}), executing direct upsert`);
-      const directRes = await supabase
-        .from("homework_submissions")
-        .upsert(
-          {
-            tenant_id: tenantId,
-            material_id: material_id,
-            student_id: studentId,
-            file_url: file_url,
-            file_name: fallbackFilename,
-            file_size: file_size || null,
-            status: "pending",
-            submitted_at: new Date().toISOString(),
-          },
-          { onConflict: "material_id,student_id" }
-        )
-        .select()
-        .maybeSingle();
-
-      submission = directRes.data;
-      submitErr = directRes.error;
-    } else {
-      submission = rpcRes.data;
-    }
+    submission=rpcRes.data;submitErr=rpcRes.error;
 
     if (submitErr || !submission) {
+      // On a connection failure the write may have committed. Never delete a
+      // potentially referenced file or retry that unknown-outcome submission.
+      if(file_data && incomingObject && ['42501','23514','22023'].includes(submitErr?.code)){
+        await supabase.storage.from(incomingObject.bucket).remove([incomingObject.path]);
+      }
+      if(submitErr?.code==='42501'){
+        res.status(403).json({error:{code:'FORBIDDEN',message:'الواجب لم يعد متاحًا لمجموعتك'}});return;
+      }
       logger.error(`[Homework] Submit error: ${submitErr?.message || "Failed to persist submission"}`);
       res.status(500).json({ error: { code: "DB_ERROR", message: "فشل حفظ بيانات الواجب" } });
       return;
@@ -202,7 +190,7 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       const { error: cleanupError } = await supabase.storage.from(previousObject.bucket).remove([previousObject.path]);
       if (cleanupError) logger.warn("[Homework] Previous file cleanup failed; replacement remains saved");
     }
-    submission.file_url = await signHomeworkFile(supabase, file_url, tenantId!, material_id, studentId!);
+    submission.file_url = await signHomeworkFile(supabase, incomingObject!.path, tenantId!, material_id, studentId!);
     res.setHeader("Cache-Control", "private, no-store");
     res.json({ success: true, submission });
   } catch (err) {
@@ -230,14 +218,10 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
     // 1. Fetch all active homework assignments for this teacher/tenant
     let materialsQuery = supabase
       .from("study_materials")
-      .select("id, title, description, group_id, due_date, created_at, book_name, pages, questions, url")
+      .select("id, title, description, group_id, group_ids, due_date, created_at, book_name, pages, questions, url")
       .eq("tenant_id", tenantId)
       .eq("is_homework", true)
       .order("created_at", { ascending: false });
-
-    if (requestedGroupId && requestedGroupId !== "all") {
-      materialsQuery = materialsQuery.or(`group_id.eq.${requestedGroupId},group_id.is.null`);
-    }
 
     const { data: homeworkList, error: hwErr } = await materialsQuery;
     if (hwErr) {
@@ -245,7 +229,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
       return;
     }
 
-    const assignments: any[] = homeworkList || [];
+    const assignments: any[] = (homeworkList || []).filter((m:any)=>!requestedGroupId || requestedGroupId==='all' || materialMatchesGroups(m,[requestedGroupId]));
     if (assignments.length === 0) {
       res.json({
         assignments: [],
@@ -283,16 +267,16 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
       .eq("tenant_id", tenantId);
 
     const studentMap = new Map<string, any>((allTenantStudents || []).map((s: any) => [s.id, s]));
+    const {data:memberships,error:membershipError}=await supabase.from('group_students').select('student_id,group_id').eq('tenant_id',tenantId);
+    if(membershipError)throw membershipError;
+    const studentGroups=new Map<string,Set<string>>();
+    for(const student of allTenantStudents || [])studentGroups.set(student.id,new Set(student.group_id?[student.group_id]:[]));
+    for(const membership of memberships || [])studentGroups.get(membership.student_id)?.add(membership.group_id);
 
     // Eligible students for this homework (group-filtered if assignment has group_id)
     const eligibleStudents: any[] = (allTenantStudents || []).filter((s: any) => {
-      if (currentHomework.group_id) {
-        return s.group_id === currentHomework.group_id;
-      }
-      if (requestedGroupId && requestedGroupId !== "all") {
-        return s.group_id === requestedGroupId;
-      }
-      return true;
+      const groups=studentGroups.get(s.id) || new Set<string>();
+      return materialMatchesGroups(currentHomework,groups) && (!requestedGroupId || requestedGroupId==='all' || groups.has(requestedGroupId));
     });
 
     // Missing students: enrolled but not in submittedStudentsMap
@@ -309,7 +293,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
       }));
 
     // Formatted submitted students list
-    const submitted = await Promise.all((submissions || []).map(async (sub: any) => {
+    const submitted = await Promise.all((submissions || []).filter((sub:any)=>!requestedGroupId || requestedGroupId==='all' || studentGroups.get(sub.student_id)?.has(requestedGroupId)).map(async (sub: any) => {
       const student = studentMap.get(sub.student_id) || sub.students || {};
       return {
         id: sub.id,

@@ -3,6 +3,8 @@ import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServiceSupabaseClient, supabasePublic } from "../../supabase.js";
 import { config } from "../../shared/config/index.js";
 import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
+import {materialGroupsSchema,materialMatchesGroups,normalizeMaterialGroups} from './targets.js';
+import {z} from 'zod';
 
 export const materialsRouter = Router();
 
@@ -25,6 +27,7 @@ materialsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promi
   }
 
   const groupId = req.query.group_id as string | undefined;
+  if(groupId && !z.string().uuid().safeParse(groupId).success){res.status(400).json({error:{code:'BAD_REQUEST',message:'المجموعة غير صالحة'}});return;}
 
   try {
     const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
@@ -34,14 +37,10 @@ materialsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promi
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
 
-    if (groupId) {
-      query = query.or(`group_id.eq.${groupId},group_id.is.null`);
-    }
-
     const { data, error } = await query;
     if (error) throw error;
 
-    const materials = (data || []).map((m: any) => ({
+    const materials = (data || []).filter((m:any)=>!groupId || materialMatchesGroups(m,[groupId])).map((m: any) => ({
       ...m,
       url: normalizeMaterialUrl(m.url),
     }));
@@ -61,6 +60,9 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
   }
 
   const { title, description, type, url, group_id, is_homework, due_date, book_name, pages, questions, file_data, file_name } = req.body;
+  const targetInput=materialGroupsSchema.safeParse({group_id,group_ids:req.body.group_ids});
+  if(!targetInput.success){res.status(400).json({error:{code:'BAD_REQUEST',message:'اختر مجموعة أو أكثر من مجموعاتك',details:targetInput.error.issues}});return;}
+  const targets=normalizeMaterialGroups(targetInput.data);
 
   if (!title) {
     res.status(400).json({ error: { code: "BAD_REQUEST", message: "عنوان المذكرة أو الواجب مطلوب" } });
@@ -76,6 +78,10 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
   try {
     const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
     let finalUrl = url ? url.trim() : "";
+    if(targets.group_ids){
+      const {data:groups,error}=await supabase.from('groups').select('id').eq('tenant_id',tenantId).in('id',targets.group_ids);
+      if(error || groups?.length!==targets.group_ids.length){res.status(403).json({error:{code:'FORBIDDEN',message:'اختر مجموعات مسموحًا لك بإسناد المحتوى إليها'}});return;}
+    }
 
     // If file_data (base64) provided, validate magic bytes and upload securely (C-05)
     if (file_data) {
@@ -135,7 +141,7 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
         description: description ? description.trim() : null,
         type: type || "pdf",
         url: finalUrl,
-        group_id: group_id || null,
+        ...targets,
         is_homework: Boolean(is_homework),
         due_date: due_date || null,
         book_name: book_name ? book_name.trim() : null,
@@ -164,6 +170,9 @@ materialsRouter.patch("/:id", async (req: AuthenticatedRequest, res: Response): 
   }
 
   const { title, description, url, group_id, book_name, pages, questions } = req.body;
+  const changesTargets=group_id!==undefined || req.body.group_ids!==undefined;
+  const targetInput=materialGroupsSchema.safeParse({group_id,group_ids:req.body.group_ids});
+  if(changesTargets && !targetInput.success){res.status(400).json({error:{code:'BAD_REQUEST',message:'المجموعات المختارة غير صالحة'}});return;}
 
   try {
     const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
@@ -172,7 +181,7 @@ materialsRouter.patch("/:id", async (req: AuthenticatedRequest, res: Response): 
     if (title !== undefined) updatePayload.title = title.trim();
     if (description !== undefined) updatePayload.description = description ? description.trim() : null;
     if (url !== undefined) updatePayload.url = normalizeMaterialUrl(url.trim());
-    if (group_id !== undefined) updatePayload.group_id = group_id || null;
+    if (changesTargets && targetInput.success) Object.assign(updatePayload,normalizeMaterialGroups(targetInput.data));
     if (book_name !== undefined) updatePayload.book_name = book_name ? book_name.trim() : null;
     if (pages !== undefined) updatePayload.pages = pages ? pages.trim() : null;
     if (questions !== undefined) updatePayload.questions = questions ? questions.trim() : null;
@@ -185,6 +194,7 @@ materialsRouter.patch("/:id", async (req: AuthenticatedRequest, res: Response): 
       .select()
       .single();
 
+    if(error?.message?.includes('GROUP_HAS_SUBMISSIONS')){res.status(409).json({error:{code:'HAS_SUBMISSIONS',message:'لا يمكن إزالة مجموعة لها تسليمات. احتفظ بالمجموعة للحفاظ على سجل الطلاب.'}});return;}
     if (error) throw error;
 
     res.json({ success: true, material: data });

@@ -1,6 +1,7 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
+import {renderMaterialGroupPicker,readMaterialGroupPicker,registerMaterialGroupPicker,materialInGroup,materialGroupLabel} from './MaterialGroupPicker.js';
 
 /**
  * Centrly Teacher Study Materials & Homework Component
@@ -29,7 +30,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
   // Filter if selectedGroupId is provided
   const filtered = selectedGroupId === 'all' 
     ? materialList 
-    : materialList.filter(m => !m.group_id || m.group_id === selectedGroupId);
+    : materialList.filter(m => materialInGroup(m,selectedGroupId));
 
   const totalMaterials = materialList.length;
   const homeworkCount = materialList.filter(m => m.is_homework).length;
@@ -145,7 +146,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
             <tbody>
               ${filtered.length > 0 ? filtered.map(m => {
                 const grp = groups.find(g => g.id === m.group_id);
-                const groupName = grp ? grp.name : 'جميع المجموعات (عام)';
+                const groupName = materialGroupLabel(m,groups);
 
                 const isPdf = m.type === 'pdf';
                 const isVideo = m.type === 'video';
@@ -227,6 +228,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
                       `)}
                     </td>
                     <td>
+                      <button class="btn btn-secondary" style="min-height:44px;margin-bottom:.35rem" onclick="window.centrlyApp.openMaterialGroupAssignment('${escapeHtml(m.id)}')">إسناد لمجموعات أخرى</button>
                       <button class="btn btn-sm btn-danger" onclick="window.centrlyApp.deleteMaterial('${m.id}', '${escapeHtml(m.title)}')" title="حذف المذكرة">
                         ${getIcon('delete', 14)}
                       </button>
@@ -252,6 +254,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
 }
 
 export function registerMaterialsActions(app) {
+  registerMaterialGroupPicker(app);
   app.filterMaterialsByGroup = function(groupId) {
     this.materialsGroupId = groupId;
     this.renderMainContent();
@@ -271,11 +274,7 @@ export function registerMaterialsActions(app) {
 
         <div class="modal-form-grid">
           <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">المجموعة المستهدفة</label>
-            <select id="modalMatGroupId" class="form-select">
-              <option value="">جميع المجموعات (متاح للكل)</option>
-              ${groupOptions}
-            </select>
+            ${renderMaterialGroupPicker('modalMatGroups',this.groups || [],this.materialsGroupId && this.materialsGroupId!=='all'?[this.materialsGroupId]:null)}
           </div>
 
           <div class="form-group">
@@ -498,7 +497,8 @@ export function registerMaterialsActions(app) {
   app.handleAddMaterialSubmit = async function(e) {
     e.preventDefault();
     const title = document.getElementById('modalMatTitle')?.value.trim();
-    const group_id = document.getElementById('modalMatGroupId')?.value || null;
+    let targets;
+    try{targets=readMaterialGroupPicker('modalMatGroups');}catch(error){this.showToast(error.message,'error');return;}
     const type = document.getElementById('modalMatType')?.value || 'pdf';
     const description = document.getElementById('modalMatDescription')?.value.trim();
     const submitBtn = document.getElementById('btnPublishMaterial');
@@ -566,7 +566,7 @@ export function registerMaterialsActions(app) {
         method: 'POST',
         body: {
           title,
-          group_id,
+          ...targets,
           type,
           url,
           file_data,

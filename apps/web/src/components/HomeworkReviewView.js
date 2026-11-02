@@ -1,6 +1,7 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
+import {renderMaterialGroupPicker,readMaterialGroupPicker,registerMaterialGroupPicker,materialGroupLabel} from './MaterialGroupPicker.js';
 
 /**
  * Centrly Homework Review & Grading Component (DEV-HOMEWORK)
@@ -193,6 +194,8 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                 <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">
                   ${escapeHtml(currentHomework.title)}
                 </h3>
+                <span>${escapeHtml(materialGroupLabel(currentHomework,groups))}</span>
+                <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openMaterialGroupAssignment('${escapeHtml(currentHomework.id)}')">إسناد لمجموعات أخرى</button>
                 ${currentHomework.due_date ? `
                   <span style="font-size: 0.75rem; color: #b45309; background: #fffbeb; padding: 0.2rem 0.55rem; border-radius: 0.35rem; border: 1px solid #fde68a; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
                     ${getIcon('clock', 13, '#b45309')}
@@ -667,6 +670,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
 }
 
 export function registerHomeworkActions(app) {
+  registerMaterialGroupPicker(app);
   app.refreshHomeworkReview = async function() {
     await this.loadRouteData('homework');
     this.renderMainContent();
@@ -815,11 +819,7 @@ export function registerHomeworkActions(app) {
         <!-- Target Group & Due Date -->
         <div class="modal-form-grid">
           <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">المجموعة المستهدفة</label>
-            <select id="modalHwGroupId" class="form-select">
-              <option value="">جميع المجموعات (متاح للكل)</option>
-              ${groupOptions}
-            </select>
+            ${renderMaterialGroupPicker('modalHwGroups',this.groups || [],this.homeworkState?.selectedGroupId && this.homeworkState.selectedGroupId!=='all'?[this.homeworkState.selectedGroupId]:null)}
           </div>
 
           <div class="form-group">
@@ -1011,7 +1011,8 @@ export function registerHomeworkActions(app) {
     e.preventDefault();
     const mode = this._currentHwMode || 'text';
     const title = document.getElementById('modalHwTitle')?.value.trim();
-    const group_id = document.getElementById('modalHwGroupId')?.value || null;
+    let targets;
+    try{targets=readMaterialGroupPicker('modalHwGroups');}catch(error){this.showToast(error.message,'error');return;}
     const due_date = document.getElementById('modalHwDueDate')?.value || null;
     const submitBtn = document.getElementById('btnPublishHomework');
 
@@ -1078,7 +1079,7 @@ export function registerHomeworkActions(app) {
         method: 'POST',
         body: {
           title,
-          group_id,
+          ...targets,
           type: 'pdf',
           url,
           file_data,
