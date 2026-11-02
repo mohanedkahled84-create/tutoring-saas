@@ -35,6 +35,7 @@ export interface BatchPortalDispatchResult {
   total_students: number;
   total_messages: number;
   sent_today: number;
+  scheduled_today?: number;
   queued_tomorrow: number;
   daily_limit: number;
   remaining_today: number;
@@ -241,9 +242,9 @@ export class MetaCloudService {
 
     let userMessage = "";
     if (sentCount > 0 && queuedCount === 0) {
-      userMessage = `تم بنجاح إرسال روابط المنصة لـ (${sentCount}) رسالة عبر واتساب سنترلي الرسمي!`;
+      userMessage = `تم تجهيز (${sentCount}) رسالة ترحيب للإرسال عبر واتساب سنترلي. تظهر حالة الإرسال الفعلية بعد المعالجة.`;
     } else if (sentCount > 0 && queuedCount > 0) {
-      userMessage = `تم بنجاح إرسال (${sentCount}) رسالة اليوم عبر رقم سنترلي الرسمي. وتم جدولة (${queuedCount}) رسالة تلقائياً للغد نظراً لاكتمال الكوتا اليومية (${this.dailyLimit} رسالة).`;
+      userMessage = `تم تجهيز (${sentCount}) رسالة للإرسال اليوم وجدولة (${queuedCount}) رسالة للغد ضمن حد الإرسال اليومي (${this.dailyLimit} رسالة).`;
     } else {
       userMessage = `اكتملت حصة الإرسال اليومية (${this.dailyLimit}/${this.dailyLimit}). تم جدولة إرسال الـ (${queuedCount}) رسالة بالكامل للغد تلقائياً.`;
     }
@@ -251,7 +252,8 @@ export class MetaCloudService {
     return {
       total_students: students.length,
       total_messages: enqueued.length,
-      sent_today: sentCount,
+      sent_today: 0,
+      scheduled_today: sentCount,
       queued_tomorrow: queuedCount,
       daily_limit: this.dailyLimit,
       remaining_today: remainingAfterDispatch,
@@ -265,9 +267,10 @@ export class MetaCloudService {
    */
   private async executeBatchAsync(items: MetaQueueItem[], pacingDelayMs: number): Promise<void> {
     const nowIso = new Date().toISOString();
+    const statuses=await this.gateway.getTemplateStatuses();
 
     for (const item of items) {
-      if (!item.id) continue;
+      if (!item.id || statuses[item.template_name]!=='APPROVED') continue;
 
       try {
         if(!await this.repository.claimOnboardingSend(item.id))continue;
@@ -324,11 +327,12 @@ export class MetaCloudService {
     }
 
     let sent = 0;
+    const statuses=await this.gateway.getTemplateStatuses();
     let failed = 0;
     const nowIso = new Date().toISOString();
 
     for (const item of pendingItems) {
-      if (!item.id) continue;
+      if (!item.id || statuses[item.template_name]!=='APPROVED') continue;
 
       try {
         if(!await this.repository.claimOnboardingSend(item.id))continue;

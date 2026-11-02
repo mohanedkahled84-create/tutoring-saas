@@ -575,6 +575,7 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
         total: metaResult.total_students,
         total_messages: metaResult.total_messages,
         sent_today: metaResult.sent_today,
+        scheduled_today:metaResult.scheduled_today || 0,
         queued_tomorrow: metaResult.queued_tomorrow,
         daily_limit: metaResult.daily_limit,
         remaining_today: metaResult.remaining_today,

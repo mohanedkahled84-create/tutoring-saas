@@ -50,7 +50,7 @@ export async function notifyMetaFamily(db:SupabaseClient,tenantId:string,student
  if(platform.error)throw familyError(503,'تعذر تجهيز رسالة ولي الأمر');
  if(!await familyRpc(db,'portal_onboarding_claim_parent',{p_tenant_id:tenantId,p_student_id:studentId,p_phone:phone}))throw familyError(409,'تم استخدام الإرسال الأول لولي الأمر؛ إعادة الإرسال من نافذة واتساب فقط');
  const sent=await gateway.notify(phone,[familyNamesText(names),platform.data?.subject_title || 'المادة الدراسية',teacherName || 'المعلم'],`CENTRLY_FAMILY:${student.id}:${tenantId}`);
- if(!sent)throw familyError(502,'لم تؤكد Meta إرسال الرسالة؛ حاول مجددًا لاحقًا');
+ if(!sent)throw familyError(502,'لم يتأكد الإرسال من Meta؛ إعادة المشاركة من نافذة واتساب فقط');
  return {success:true,message:'تم إرسال رسالة المتابعة لولي الأمر؛ يضغط زر الرسالة لاستلام بيانات حساب الأسرة'};
 }
 export function credentialAction(message:any):boolean {

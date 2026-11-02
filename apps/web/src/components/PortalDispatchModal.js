@@ -262,22 +262,18 @@ export function registerPortalDispatchActions(app) {
     window.open(url, '_blank');
   }
 
+  app.studentSharingMessage = async function(studentId) {
+    const student=(this.students || []).find(s=>s.id===studentId);
+    if(!student)throw new Error('الطالب غير متاح');
+    const links=await request(`/students/${encodeURIComponent(studentId)}/parent-link`);
+    if(!links.student_login_url)throw new Error('تعذر تجهيز رابط الطالب');
+    const password=student.portal_password || student.portalPassword;
+    return `بوابة الطالب: ${student.name || 'الطالب'}\nمع ${this.user?.full_name || this.user?.name || 'المدرس'}\nرابط الدخول:\n${links.student_login_url}\nاسم الدخول: ${student.student_phone || student.studentPhone || student.code || student.student_code || ''}\n${password?'كلمة المرور: '+password:'استخدم كلمة المرور التي وصلتك من قبل.'}`;
+  };
   app.copyStudentLink = async function(studentId) {
-    const student = (this.students || []).find(s => s.id === studentId);
-    const studentPhone = student?.student_phone || student?.studentPhone || 'رقم الطالب';
-    const studentName = student?.name || student?.full_name || 'الطالب';
-    const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
-    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-    const portalUrl = `${canonicalOrigin}/portal?role=student`;
-    const rawTeacher = this.user?.name || 'المعلم';
-    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
-      ? rawTeacher
-      : `مستر ${rawTeacher}`;
-
-    const textToCopy = `أهلاً بك يا (${studentName})، نتمنى لك كل التوفيق والتميز دائماً!\n\nتم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع ${teacherName}:\n\n*رابط بوابتك التعليمية:*\n${portalUrl}\n\n*اسم الدخول (رقم هاتفك):* ${studentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\n*تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والواجبات أولاً بأول.\n\nمع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
-
-    await this.copyToClipboard(textToCopy, `تم نسخ رسالة واتساب الكاملة للطالب (${studentName}) بنجاح!`, 'رسالة واتساب الطالب');
-  }
+    try{await this.copyToClipboard(await this.studentSharingMessage(studentId),'تم نسخ رابط الطالب','رابط الطالب');}
+    catch(error){this.showToast(error.message,'warning');}
+  };
 
   app.previewStudentPortal = async function(studentId) {
     const student = (this.students || []).find(s => s.id === studentId);
@@ -297,50 +293,23 @@ export function registerPortalDispatchActions(app) {
     try{
       const text=await this.parentSharingMessage(studentId),number=phone.startsWith('01')?'20'+phone.slice(1):phone.replace(/^00/,'');
       const url=`https://wa.me/${number}?text=${encodeURIComponent(text)}`;
-      if(popup)popup.location=url;else this.showDirectWhatsAppFallbackModal(student?.name || 'الطالب',phone,text,null,'parent');
+      if(popup)popup.location=url;else this.openDirectWhatsAppFallbackModal(student?.name || 'الطالب',phone,text,null,'parent');
       this.showToast('تم تجهيز رابط المتابعة لفتحه في واتساب','info');
     }catch(error){popup?.close();this.showToast(error.message,'warning');}
   };
 
   app.sendSingleStudentLink = async function(studentId) {
-    const student = (this.students || []).find(s => s.id === studentId);
-    const studentPhone = student?.studentPhone || student?.student_phone;
-    if (!studentPhone) {
-      this.showToast('رقم هاتف الطالب غير مسجل لهذا الطالب.', 'warning');
-      return;
-    }
-
-    const studentName = student?.name || student?.full_name || 'الطالب';
-    let cleanPhone = (studentPhone || '').replace(/[\s\-\+\(\)]/g, '');
-    if (cleanPhone.startsWith('00')) cleanPhone = cleanPhone.slice(2);
-    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
-      cleanPhone = '20' + cleanPhone.slice(1);
-    }
-
-    if (!cleanPhone || cleanPhone.length < 9) {
-      this.showToast(`رقم هاتف الطالب غير صالح للطالب "${studentName}". يرجى تعديل بيانات الطالب والتأكد من صحة الرقم أولاً.`, 'danger');
-      return;
-    }
-
-    const pass = student?.portal_password || student?.portalPassword || (student?.code ? String(student.code).padStart(6, '0') : '123456');
-    const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
-    const studentUrl = `${canonicalOrigin}/portal`;
-    const rawTeacher = this.user?.name || 'المعلم';
-    const teacherName = rawTeacher.startsWith('مستر') || rawTeacher.startsWith('أ.') || rawTeacher.startsWith('أستاذ')
-      ? rawTeacher
-      : `مستر ${rawTeacher}`;
-
-    const msg = `أهلاً بك يا (${studentName})، نتمنى لك كل التوفيق والتميز دائماً!\n\nتم تفعيل بوابتك التعليمية الرسمية لمتابعة دروسك مع ${teacherName}:\n\n*رابط بوابتك التعليمية:*\n${studentUrl}\n\n*اسم الدخول (رقم هاتفك):* ${studentPhone}\n*كلمة المرور:* ${pass}\n\n*من خلال هذه البوابة يمكنك في أي وقت:*\n- تحميل المذكرات وملازم الشرح وملفات الـ PDF.\n- معرفة الواجبات المنزلية المطلوبة ومواعيد تسليمها.\n- رفع حلول الواجبات وملفات الـ PDF مباشرة ومتابعة اعتمادها.\n- الاطلاع على درجات الكويزات وسجل حضورك.\n\n*تنبيه:* يرجى *حفظ وتسجيل هذا الرقم في جهات اتصالك أولاً* حتى يصبح الرابط أزرق وقابلاً للضغط، ولتصلك تنبيهات الحصص والواجبات أولاً بأول.\n\nمع أطيب التمنيات لك بدوام التفوق والتميز دائماً.\nمع تحيات: ${teacherName}`;
-
-    // Open WhatsApp Web/App directly
-    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, '_blank');
-
-    this.showToast(`تم فتح محادثة واتساب للطالب (${studentName}) بنجاح! 💬`, 'success');
-    if (this.currentRoute === 'students') {
-      this.renderMainContent();
-    }
-  }
+    const student=(this.students || []).find(s=>s.id===studentId);
+    const phone=normalizeDigits(student?.student_phone || student?.studentPhone || '').replace(/[^0-9]/g,'');
+    if(!phone){this.showToast('رقم الطالب غير مسجل','warning');return;}
+    const popup=window.open('about:blank','_blank');if(popup)popup.opener=null;
+    try{
+      const text=await this.studentSharingMessage(studentId),number=phone.startsWith('01')?'20'+phone.slice(1):phone.replace(/^00/,'');
+      const url=`https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+      if(popup)popup.location=url;else this.openDirectWhatsAppFallbackModal(student?.name || 'الطالب',phone,text,null,'student');
+      this.showToast('تم تجهيز رابط الطالب لفتحه في واتساب','info');
+    }catch(error){popup?.close();this.showToast(error.message,'warning');}
+  };
 
   app.openBatchParentLinksModal = function() {
     this.openBatchPortalLinksModal();

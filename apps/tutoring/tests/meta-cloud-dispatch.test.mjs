@@ -59,7 +59,8 @@ test("DEV-META.2: dispatchBatchPortalLinks sends immediately when within 250 quo
 
   assert.equal(result.total_students, 2);
   assert.equal(result.total_messages, 4); // 2 students + 2 parents
-  assert.equal(result.sent_today, 4);
+  assert.equal(result.sent_today, 0);
+  assert.equal(result.scheduled_today, 4);
   assert.equal(result.queued_tomorrow, 0);
   assert.equal(result.daily_limit, 250);
   assert.equal(result.remaining_today, 246);
@@ -91,7 +92,8 @@ test("DEV-META.3: Multi-tenant FIFO quota splits overflow to tomorrow when >250 
   });
 
   assert.equal(result.total_messages, 6);
-  assert.equal(result.sent_today, 5); // Consumes remaining 5
+  assert.equal(result.sent_today, 0);
+  assert.equal(result.scheduled_today, 5); // Consumes remaining 5
   assert.equal(result.queued_tomorrow, 1); // 1 spilled to tomorrow
   assert.equal(result.remaining_today, 0);
   assert.ok(result.message.includes("جدولة"));
@@ -119,4 +121,15 @@ test("DEV-META.4: Gracefully queues items when Meta templates are pending review
   assert.equal(result.sent_today, 0);
   assert.equal(result.queued_tomorrow, 2);
   assert.ok(result.message.includes("Pending") || result.message.includes("المراجعة"));
+});
+
+test('scheduled welcomes wait for approval and concurrent workers claim each message once',async()=>{
+ const repo=new FakeMetaPortalQueueRepository(),gateway=new FakeMetaCloudGateway(),service=new MetaCloudService(repo,gateway,250);
+ gateway.simulatePending=true;
+ await service.dispatchBatchPortalLinks({tenant_id:'once-tenant',teacher_name:'معلم',subject_name:'مادة',students:[{student_id:'once-student',student_name:'طالب',student_phone:'01011111111',parent_phone:'01022222222'}],pacingDelayMs:0});
+ await service.processScheduledQueue();assert.equal(gateway.sentMessages.length,0);
+ gateway.simulatePending=false;
+ await Promise.all([service.processScheduledQueue(),service.processScheduledQueue()]);assert.equal(gateway.sentMessages.length,2);
+ const duplicate=await service.dispatchBatchPortalLinks({tenant_id:'once-tenant',teacher_name:'معلم',subject_name:'مادة',students:[{student_id:'once-student',student_name:'طالب',student_phone:'01011111111',parent_phone:'01022222222'}],pacingDelayMs:0});
+ assert.equal(duplicate.total_messages,0);assert.equal(gateway.sentMessages.length,2);
 });
