@@ -273,7 +273,7 @@ export class MetaCloudService {
       if (!item.id || statuses[item.template_name]!=='APPROVED') continue;
 
       try {
-        if(!await this.repository.claimOnboardingSend(item.id))continue;
+        if(!await this.repository.claimOnboardingSend(item.id,this.dailyLimit))continue;
         const sendRes: MetaTemplateSendResult = await this.gateway.sendTemplate({
           to: item.recipient_phone,
           templateName: item.template_name,
@@ -335,7 +335,7 @@ export class MetaCloudService {
       if (!item.id || statuses[item.template_name]!=='APPROVED') continue;
 
       try {
-        if(!await this.repository.claimOnboardingSend(item.id))continue;
+        if(!await this.repository.claimOnboardingSend(item.id,this.dailyLimit))continue;
         const res = await this.gateway.sendTemplate({
           to: item.recipient_phone,
           templateName: item.template_name,

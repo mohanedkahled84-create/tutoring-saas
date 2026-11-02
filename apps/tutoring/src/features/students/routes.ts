@@ -28,7 +28,7 @@ studentsRouter.use(requireStudentTenant);
 // Legacy cached clients may not bypass the one-time official welcome by
 // switching to an old Evolution/provider endpoint. Repeated sharing is manual.
 studentsRouter.use((req,res,next)=>{
- if(req.method==='POST' && (/^\/[^/]+\/send-(parent|student)-link\/?$/.test(req.path) || req.path==='/batch-send-parent-links')){res.status(409).json({error:{code:'MANUAL_WHATSAPP_ONLY',message:'إعادة إرسال رابط المتابعة من نافذة واتساب فقط'}});return;}
+ if(req.method==='POST' && (/^\/[^/]+\/(?:send-(parent|student)-link|send-family-access)\/?$/.test(req.path) || req.path==='/batch-send-parent-links')){res.status(409).json({error:{code:'MANUAL_WHATSAPP_ONLY',message:'إعادة إرسال رابط المتابعة من نافذة واتساب فقط'}});return;}
  if(req.method==='POST' && req.path==='/batch-send-dual-portal-links' && req.body?.provider && req.body.provider!=='meta'){res.status(409).json({error:{code:'MANUAL_WHATSAPP_ONLY',message:'الإرسال الأول للجدد عبر Meta فقط؛ الإرسال التالي من نافذة واتساب'}});return;}
  next();
 });

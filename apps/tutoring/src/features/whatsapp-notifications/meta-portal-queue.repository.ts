@@ -33,7 +33,7 @@ export interface IMetaPortalQueueRepository {
   getTodaySentCount(): Promise<number>;
   getTenantStats(tenantId: string): Promise<{ sentToday: number; pendingQueue: number; totalSent: number }>;
   enqueueItems(items: MetaQueueItem[]): Promise<MetaQueueItem[]>;
-  claimOnboardingSend(id:string):Promise<boolean>;
+  claimOnboardingSend(id:string,dailyLimit?:number):Promise<boolean>;
   getPendingItemsForDate(date: string, limit?: number): Promise<MetaQueueItem[]>;
   updateItemStatus(
     id: string,
@@ -48,7 +48,7 @@ export interface IMetaPortalQueueRepository {
 }
 
 export class SupabaseMetaPortalQueueRepository implements IMetaPortalQueueRepository {
-  async claimOnboardingSend(id:string):Promise<boolean>{const {data,error}=await this.db.rpc('portal_onboarding_claim_queue',{p_queue_id:id});if(error)throw new Error('تعذر تأكيد الإرسال الأول');return data===true;}
+  async claimOnboardingSend(id:string,dailyLimit=250):Promise<boolean>{const {data,error}=await this.db.rpc('portal_onboarding_claim_queue_limited',{p_queue_id:id,p_daily_limit:dailyLimit});if(error)throw new Error('تعذر تأكيد الإرسال الأول');return data===true;}
   constructor(
     private readonly client: SupabaseClient,
     private readonly privilegedClient?: SupabaseClient
