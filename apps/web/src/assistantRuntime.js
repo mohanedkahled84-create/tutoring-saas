@@ -95,7 +95,7 @@ export function delegatedUiAction(code){
  if(/openCollectionLedger/.test(code))return 'collect';
  if(/prepareAssistantInvitation|sendAssistantReinvitation/.test(code))return 'create';
  if(/getAssistantRegistrationLink/.test(code))return 'edit';
- if(/sendSingle(?:Parent|Student)Link|copy(?:Parent|Student)Link|preview(?:Parent|Student)Portal|openBatchPortalLinksModal|openParentNoteModal|handleSendParentNote|resendSingleMessage/.test(code))return 'send';
+ if(/(?:toggle|copy)StudentPassword|sendSingle(?:Parent|Student)Link|copy(?:Parent|Student)Link|preview(?:Parent|Student)Portal|openBatchPortalLinksModal|openParentNoteModal|handleSendParentNote|resendSingleMessage/.test(code))return 'send';
  if(/(?:delete|Delete|Purge)/.test(code))return 'delete';
  if(/(?:dispatch|Dispatch|sendParent|SendParent|sendStudent|SendStudent|prepareFollowup|SendIndividualReport|BulkSendReports)/.test(code))return 'send';
  if(/(?:grade|Grade|Score|score|OmrScanReview)/.test(code) && !/(?:load|Load|filter|Filter|select|Select|open.*Breakdown)/.test(code))return 'grade';

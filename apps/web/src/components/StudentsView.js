@@ -269,7 +269,8 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                 const canonicalOrigin = typeof window !== 'undefined' ? (window.location.origin || 'https://centerly-eg.com') : 'https://centerly-eg.com';
                 const parentPortalUrl = `${canonicalOrigin}/portal?role=parent`;
                 const studentPortalUrl = `${canonicalOrigin}/portal?role=student`;
-                const portalPassword = s.portal_password || s.portalPassword || (s.code ? String(s.code).padStart(6, '0') : '');
+                const portalPassword = s.portal_password || s.portalPassword;
+                const canViewPassword = !appObj?.delegation || appObj.delegation.permissions?.['students.send'] === true;
 
                 let isRowVisible = true;
                 if (activeGroupFilter) {
@@ -315,7 +316,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                   </td>
                   <td data-label="روابط المتابعة" class="student-links">
                     <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 165px;">
-                      <!-- Repeated sharing is manual; credentials are not displayed in the roster. -->
+                      <!-- Repeated sharing is manual; the password stays masked until requested. -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
                         <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; width: 35px;">الأمر:</span>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رسالة واتساب كاملة لولي الأمر جاهزة للإرسال اليدوي" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem;">
@@ -347,6 +348,15 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                         </a>
                       </div>
 
+                      ${portalPassword && canViewPassword ? `<div class="student-password" data-student-id="${escapeHtml(s.id)}">
+                        <span class="student-password-label">كلمة مرور الطالب</span>
+                        <div class="student-password-controls">
+                          <button type="button" class="student-password-toggle" aria-label="إظهار كلمة مرور الطالب" aria-pressed="false" onclick="window.centrlyApp.toggleStudentPassword(this)">
+                            <span class="student-password-value" dir="ltr">••••••</span><span class="student-password-icon" aria-hidden="true">${getIcon('eye',16)}</span>
+                          </button>
+                          <button type="button" class="student-password-copy" aria-label="نسخ كلمة مرور الطالب" title="نسخ كلمة المرور" onclick="window.centrlyApp.copyStudentPassword(this)">${getIcon('copy',16)}</button>
+                        </div>
+                      </div>` : ''}
                       <div style="font-size: 0.65rem; display: flex; flex-direction: column; gap: 0.15rem; margin-top: 0.1rem;">
                         ${s.parent_portal_sent_at ? `
                           <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="تم إرسال رابط ولي الأمر مسبقاً">
@@ -409,6 +419,24 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
 }
 
 export function registerStudentsActions(app) {
+  const passwordFor = (owner, button) => {
+    if(owner.delegation && owner.delegation.permissions?.['students.send'] !== true)return '';
+    const id=button.closest('.student-password')?.dataset.studentId;
+    const student=(owner.students || []).find(s=>String(s.id)===id);
+    return String(student?.portal_password || student?.portalPassword || '');
+  };
+  app.toggleStudentPassword = function(button) {
+    const password=passwordFor(this,button);if(!password)return;
+    const visible=button.getAttribute('aria-pressed')!=='true';
+    button.querySelector('.student-password-value').textContent=visible?password:'••••••';
+    button.querySelector('.student-password-icon').innerHTML=getIcon(visible?'eyeOff':'eye',16);
+    button.setAttribute('aria-pressed',String(visible));
+    button.setAttribute('aria-label',visible?'إخفاء كلمة مرور الطالب':'إظهار كلمة مرور الطالب');
+  };
+  app.copyStudentPassword = async function(button) {
+    const password=passwordFor(this,button);if(!password)return;
+    await this.copyToClipboard(password,'تم نسخ كلمة مرور الطالب','كلمة مرور الطالب');
+  };
   app.openAddStudentModal = function() {
     const studentLimit = this.billingState?.students_limit || 300;
     const currentCount = (this.students || []).length;

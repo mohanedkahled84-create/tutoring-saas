@@ -1152,6 +1152,17 @@ select.form-input, select.form-select, select.form-control {
   input.form-input, input.form-control, select.form-select { min-height: 44px; }
 }
 
+.student-password { display: flex; flex-direction: column; gap: .35rem; margin-block: .35rem; max-width: 100%; }
+.student-password-label { font-size: .75rem; font-weight: 600; color: var(--centrly-text); }
+.student-password-controls { display: flex; align-items: center; gap: .5rem; max-width: 100%; width: 196px; }
+.student-password-toggle, .student-password-copy { min-height: 44px; border: 1px solid var(--centrly-line); border-radius: 10px; background: var(--centrly-surface, #fff); color: var(--centrly-ink); cursor: pointer; }
+.student-password-toggle { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex: 1; min-width: 0; padding: .5rem .65rem; }
+.student-password-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 .85rem/1.5 monospace; letter-spacing: .06em; }
+.student-password-icon, .student-password-copy { display: grid; place-items: center; flex-shrink: 0; }
+.student-password-copy { width: 44px; padding: .5rem; }
+.student-password-toggle:hover, .student-password-copy:hover { background: var(--centrly-bg, #f8fafc); }
+.student-password-toggle:focus-visible, .student-password-copy:focus-visible { outline: 2px solid var(--centrly-blue-700); outline-offset: 2px; }
+
 /* One roster and one set of controls: readable student cards on phones. */
 @media (max-width: 640px) {
   #studentsTableCard { border: 0 !important; background: transparent; overflow: visible !important; }
