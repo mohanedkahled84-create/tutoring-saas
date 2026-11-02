@@ -69,7 +69,7 @@ export async function mountAssistantWorkspace({root,token,onLogout,onExpired}){
   const lockControls=()=>{
    if(disposed)return;
    const resources=routeResources[app.currentRoute] || [];
-   const allowed=action=>action==='grade'?assistantCan(permissions,'quizzes','grade') || resources.some(resource=>assistantCan(permissions,resource,'grade')):resources.some(resource=>assistantCan(permissions,resource,action));
+   const allowed=action=>action==='collect'?assistantCan(permissions,'students','collect') || assistantCan(permissions,'collections'):action==='grade'?assistantCan(permissions,'quizzes','grade') || resources.some(resource=>assistantCan(permissions,resource,'grade')):action==='send' && app.currentRoute==='sessions'?assistantCan(permissions,'reports','send') || assistantCan(permissions,'messages','send'):resources.some(resource=>assistantCan(permissions,resource,action));
    for(const form of root.querySelectorAll('form[onsubmit]')){
     const code=form.getAttribute('onsubmit'),ownerOnly=/SettingsChangePassword|SettingsForgotPassword/.test(code),action=delegatedUiAction(code);
     if(ownerOnly || action && !allowed(action))for(const control of form.querySelectorAll('input,select,textarea,button[type=submit]')){control.disabled=true;control.setAttribute('aria-disabled','true');control.title=ownerOnly?'خاص بحساب المدرس':'غير متاح ضمن صلاحياتك';}
@@ -89,6 +89,10 @@ export async function mountAssistantWorkspace({root,token,onLogout,onExpired}){
 }
 
 export function delegatedUiAction(code){
+ if(/dispatchCardsFileDirect|downloadCardsCsvFile|downloadSelectedCardsDataExcel|confirmBatchPrint|openBatchPrintModal/.test(code))return 'create';
+ if(/openCollectionLedger/.test(code))return 'collect';
+ if(/prepareAssistantInvitation|sendAssistantReinvitation/.test(code))return 'create';
+ if(/getAssistantRegistrationLink/.test(code))return 'edit';
  if(/sendSingle(?:Parent|Student)Link|copy(?:Parent|Student)Link|preview(?:Parent|Student)Portal|openBatchPortalLinksModal|openParentNoteModal|handleSendParentNote|resendSingleMessage/.test(code))return 'send';
  if(/(?:delete|Delete|Purge)/.test(code))return 'delete';
  if(/(?:dispatch|Dispatch|sendParent|SendParent|sendStudent|SendStudent|prepareFollowup|SendIndividualReport|BulkSendReports)/.test(code))return 'send';

@@ -19,4 +19,4 @@ All database calls during a delegated request, including service client factorie
 - Transactional SQL checks cover private views, check options, upsert, RPC denial and first-welcome claims without sending messages.
 - Browser checks cover 17 pages and session start at widths 320, 390, 768 and 1440, read-only navigation and isolation from cached owner credentials.
 
-Deployment requires the four migrations before the delegated frontend is promoted. The previous frontend/backend can be restored; the receipt history is retained to prevent duplicate welcomes.
+Deployment requires the delegation/onboarding migrations before the delegated frontend is promoted. The previous frontend/backend can be restored; the receipt history is retained to prevent duplicate welcomes.
