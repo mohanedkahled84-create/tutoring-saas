@@ -1191,3 +1191,11 @@ select.form-input, select.form-select, select.form-control {
 .teacher-action-count { font-size: 1.5rem; font-weight: 800; }
 .teacher-actions-error { font-size: .8rem; color: #9a3412; line-height: 1.8; }
 @media (max-width: 640px) { .teacher-actions { padding: 1rem; } .teacher-actions-grid { grid-template-columns: 1fr; } }
+
+.signup-stages { border: 1px solid var(--centrly-line); border-radius: 10px; padding: .75rem; margin: 0 0 1rem; min-width: 0; }
+.signup-stages legend { padding-inline: .3rem; font-size: .85rem; font-weight: 700; }
+.signup-stages p { color: var(--centrly-text); font-size: .75rem; margin: 0 0 .5rem; }
+.signup-stage-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.signup-stage-options label { display: flex; gap: .5rem; align-items: center; min-height: 44px; border: 1px solid var(--centrly-line); border-radius: 8px; padding: .5rem; font-size: .85rem; cursor: pointer; }
+.signup-stage-options label:has(input:checked) { border-color: #334155; background: #f1f5f9; }
+#signupOtherStageField:not([hidden]) { margin-top: .75rem; }

@@ -21,6 +21,9 @@ export interface LoginResult {
 }
 
 export interface SignupDTO {
+  registration_version?:number;
+  education_stages?:string[];
+  other_stage?:string;
   email: string;
   password: string;
   full_name?: string;

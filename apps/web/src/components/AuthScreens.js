@@ -71,6 +71,16 @@ export function renderAuthScreens() {
               <label class="form-label" for="signupName">اسم المدرس *</label>
               <input type="text" id="signupName" class="form-input" placeholder="اسم المدرس بالكامل" required>
             </div>
+            <div class="form-group">
+              <label class="form-label" for="signupSubject">المادة التي تدرّسها *</label>
+              <input type="text" id="signupSubject" class="form-input" placeholder="مثال: الفيزياء" required maxlength="100" autocomplete="off">
+            </div>
+            <fieldset class="signup-stages">
+              <legend>المرحلة الدراسية *</legend>
+              <p>يمكنك اختيار أكثر من مرحلة.</p>
+              <div class="signup-stage-options">${[['primary','ابتدائي'],['preparatory','إعدادي'],['secondary','ثانوي'],['other','غير ذلك']].map(([value,label],i)=>`<label><input type="checkbox" name="signupStage" value="${value}" ${i===0?'id="signupFirstStage" required':''} onchange="window.centrlyApp.updateSignupStages()"><span>${label}</span></label>`).join('')}</div>
+              <div id="signupOtherStageField" hidden><label class="form-label" for="signupOtherStage">وضّح المرحلة</label><input id="signupOtherStage" class="form-input" type="text" maxlength="100" disabled></div>
+            </fieldset>
           </div>
 
           <div class="form-group">
@@ -279,6 +289,12 @@ export function renderEmailVerificationScreen({ email = '', note = '' } = {}) {
  * Register Authentication & Account Lifecycle Actions (DEV-89)
  */
 export function registerAuthActions(app) {
+  app.updateSignupStages=function(){
+    const chosen=[...document.querySelectorAll('input[name="signupStage"]:checked')].map(input=>input.value);
+    const first=document.getElementById('signupFirstStage');if(first)first.required=!chosen.length;
+    const other=chosen.includes('other'),field=document.getElementById('signupOtherStageField'),input=document.getElementById('signupOtherStage');
+    if(field)field.hidden=!other;if(input){input.disabled=!other;input.required=other;}
+  };
   app.openAccountDashboard = async function() {
     this.resetTenantState();
     const isAdmin=this.user?.role==='admin';
@@ -747,6 +763,12 @@ export function registerAuthActions(app) {
     const ownerName = document.getElementById('signupCenterOwnerName')?.value?.trim() || '';
     const centerName = document.getElementById('signupCenterName')?.value?.trim() || '';
     const subject = document.getElementById('signupSubject')?.value?.trim() || '';
+    const education_stages=[...document.querySelectorAll('input[name="signupStage"]:checked')].map(input=>input.value);
+    const other_stage=education_stages.includes('other')?(document.getElementById('signupOtherStage')?.value?.trim() || ''):'';
+    if(!subject || !education_stages.length || (education_stages.includes('other') && !other_stage)){
+      if(btn){btn.disabled=false;btn.innerHTML=origHtml;}
+      this.showAuthAlert('اكتب المادة واختر المرحلة الدراسية، ووضّح المرحلة لو اخترت غير ذلك.');return;
+    }
 
     this.signupFormData = {
       accountType,
@@ -758,6 +780,7 @@ export function registerAuthActions(app) {
       phone,
       contact_phone: contactPhone,
       subject,
+      education_stages,other_stage,
       password,
       passwordConfirm,
     };
@@ -777,6 +800,7 @@ export function registerAuthActions(app) {
         contact_phone: contactPhone,
         subject,
         account_type: accountType,
+        registration_version:2,education_stages,other_stage,
       });
 
       if (res.requires_verification) {
@@ -885,6 +909,9 @@ export function registerAuthActions(app) {
         if (nameInput && data.name) nameInput.value = data.name;
         const subjectInput = document.getElementById('signupSubject');
         if (subjectInput && data.subject) subjectInput.value = data.subject;
+        for(const checkbox of document.querySelectorAll('input[name="signupStage"]'))checkbox.checked=(data.education_stages || []).includes(checkbox.value);
+        const otherStage=document.getElementById('signupOtherStage');if(otherStage)otherStage.value=data.other_stage || '';
+        this.updateSignupStages();
       }
 
       const emailInput = document.getElementById('signupEmail');
