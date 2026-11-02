@@ -1,12 +1,12 @@
 import { registerCameraScannerActions } from './components/CameraScannerModal.js?v=1.0.0';
-import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=1.0.0';
+import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=1.1.0';
 import { registerStudentImportActions } from './components/StudentImportModal.js?v=1.0.0';
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=2.0.0';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.6.0';
 import { renderTeacherCalendar, registerTeacherCalendarActions } from './components/TeacherCalendar.js';
-import { renderSessionsView, registerSessionsActions } from './components/SessionsView.js?v=2.0.0';
-import { renderStudentsView, registerStudentsActions } from './components/StudentsView.js?v=4.8.17';
-import { renderGroupsView, registerGroupsActions } from './components/GroupsView.js?v=4.8.12';
+import { renderSessionsView, registerSessionsActions } from './components/SessionsView.js?v=2.1.0';
+import { renderStudentsView, registerStudentsActions } from './components/StudentsView.js?v=4.8.18';
+import { renderGroupsView, registerGroupsActions } from './components/GroupsView.js?v=4.8.13';
 import { renderMessageLogsView, registerMessageLogsActions } from './components/MessageLogsView.js';
 import { renderHomeworkReviewView, registerHomeworkActions } from './components/HomeworkReviewView.js?v=4.0.3';
 import { renderCenterOwnerDashboard, registerCenterOwnerActions } from './components/CenterOwnerDashboard.js?v=4.8.1';

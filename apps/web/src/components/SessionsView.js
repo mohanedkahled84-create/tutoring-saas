@@ -1187,14 +1187,14 @@ export function registerSessionsActions(app) {
 
   app.restoreSessionState = function restoreSessionState() {
     try {
-      const saved = localStorage.getItem('centrly_active_session_state');
+      const saved = localStorage.getItem(this.getStorageKey?.('centrly_active_session_state') || 'centrly_active_session_state');
       if (saved) {
         const parsed = JSON.parse(saved);
         const todayStr = new Date().toISOString().split('T')[0];
         // If it is from a previous date, or dummy session named 'حصة اليوم', or has no group id, purge it immediately
         if (!parsed || (parsed.session_date && parsed.session_date !== todayStr) || parsed?.group?.name === 'حصة اليوم' || !parsed?.group?.id || (Array.isArray(parsed?.attendanceList) && parsed.attendanceList.length === 0 && !parsed.group?.id)) {
-          localStorage.removeItem('centrly_active_session_state');
-          localStorage.removeItem('centrly_active_session_id');
+          localStorage.removeItem(this.getStorageKey?.('centrly_active_session_state') || 'centrly_active_session_state');
+          localStorage.removeItem(this.getStorageKey?.('centrly_active_session_id') || 'centrly_active_session_id');
           this.sessionState = {
             id: null,
             status: 'scheduled',
@@ -1235,7 +1235,7 @@ export function registerSessionsActions(app) {
 
   app.getOfflineAttendanceQueue = function getOfflineAttendanceQueue() {
     try {
-      const data = localStorage.getItem('centrly_offline_attendance_queue');
+      const data = localStorage.getItem(this.getStorageKey?.('centrly_offline_attendance_queue') || 'centrly_offline_attendance_queue');
       return data ? JSON.parse(data) : [];
     } catch (_) {
       return [];
@@ -1245,9 +1245,9 @@ export function registerSessionsActions(app) {
   app.saveOfflineAttendanceQueue = function saveOfflineAttendanceQueue(queue) {
     try {
       if (!queue || queue.length === 0) {
-        localStorage.removeItem('centrly_offline_attendance_queue');
+        localStorage.removeItem(this.getStorageKey?.('centrly_offline_attendance_queue') || 'centrly_offline_attendance_queue');
       } else {
-        localStorage.setItem('centrly_offline_attendance_queue', JSON.stringify(queue));
+        localStorage.setItem(this.getStorageKey?.('centrly_offline_attendance_queue') || 'centrly_offline_attendance_queue', JSON.stringify(queue));
       }
     } catch (e) {
       console.warn('Failed to save offline attendance queue:', e);
@@ -1343,11 +1343,11 @@ export function registerSessionsActions(app) {
   app.persistSessionState = function persistSessionState() {
     try {
       if (this.sessionState && this.sessionState.id && this.sessionState.status === 'in_progress') {
-        localStorage.setItem('centrly_active_session_state', JSON.stringify(this.sessionState));
-        localStorage.setItem('centrly_active_session_id', this.sessionState.id);
+        localStorage.setItem(this.getStorageKey?.('centrly_active_session_state') || 'centrly_active_session_state', JSON.stringify(this.sessionState));
+        localStorage.setItem(this.getStorageKey?.('centrly_active_session_id') || 'centrly_active_session_id', this.sessionState.id);
       } else {
-        localStorage.removeItem('centrly_active_session_state');
-        localStorage.removeItem('centrly_active_session_id');
+        localStorage.removeItem(this.getStorageKey?.('centrly_active_session_state') || 'centrly_active_session_state');
+        localStorage.removeItem(this.getStorageKey?.('centrly_active_session_id') || 'centrly_active_session_id');
       }
     } catch (e) {
       console.warn('Failed to persist session state:', e);
@@ -1395,8 +1395,8 @@ export function registerSessionsActions(app) {
             attendanceList: [],
             financials: { totalRevenue: 0, attendeeCount: 0, absentCount: 0, exemptCount: 0, makeupCount: 0 },
           };
-          localStorage.removeItem('centrly_active_session_state');
-          localStorage.removeItem('centrly_active_session_id');
+          localStorage.removeItem(this.getStorageKey?.('centrly_active_session_state') || 'centrly_active_session_state');
+          localStorage.removeItem(this.getStorageKey?.('centrly_active_session_id') || 'centrly_active_session_id');
         }
         this.stopLiveSessionSync();
         this.updateNavbarBadge();
@@ -1443,7 +1443,7 @@ export function registerSessionsActions(app) {
         }
       });
       try {
-        const savedStateStr = localStorage.getItem('centrly_active_session_state');
+        const savedStateStr = localStorage.getItem(this.getStorageKey?.('centrly_active_session_state') || 'centrly_active_session_state');
         if (savedStateStr) {
           const parsedSaved = JSON.parse(savedStateStr);
           if (parsedSaved && parsedSaved.id === sessionId && Array.isArray(parsedSaved.attendanceList)) {
@@ -1865,8 +1865,8 @@ export function registerSessionsActions(app) {
         makeupCount: 0,
       },
     };
-    localStorage.removeItem('centrly_active_session_state');
-    localStorage.removeItem('centrly_active_session_id');
+    localStorage.removeItem(this.getStorageKey?.('centrly_active_session_state') || 'centrly_active_session_state');
+    localStorage.removeItem(this.getStorageKey?.('centrly_active_session_id') || 'centrly_active_session_id');
     this.stopLiveSessionSync();
     this.updateNavbarBadge();
     this.showToast('تم إغلاق الحصة بنجاح، يمكنك الآن بدء حصة جديدة.', 'info');
@@ -2704,6 +2704,7 @@ export function registerSessionsActions(app) {
           serverSession = createRes.session;
         }
       } catch (err) {
+        if (this.delegation) { this.showToast(err.message || 'تعذر بدء الحصة؛ حاول مجددًا', 'warning'); return; }
         console.warn('Server session creation failed, continuing with local fallback:', err);
       }
     }

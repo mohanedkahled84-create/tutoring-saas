@@ -10,10 +10,11 @@ const secret='isolated-meta-signature-test-not-real',phone='201012345678';
 const signature=raw=>'sha256='+createHmac('sha256',secret).update(raw).digest('hex');
 const message=(extra={})=>({id:'wamid.fixture',from:phone,timestamp:String(Math.floor(Date.now()/1000)),type:'button',button:{text:'الحصول على اسم المستخدم وكلمه السر',payload:'CENTRLY_FAMILY:own:tenant'},...extra});
 function fixture(records=[{id:'own',tenant_id:'tenant',name:'ابن',parent_match:true}]){
- const buckets=new Map(),calls=[],inbox=[];let saved;
+ const buckets=new Map(),welcomes=new Set(),calls=[],inbox=[];let saved;
  const db={rpc:async(name,args)=>{
   calls.push({name,args});
   if(name==='parent_family_limit'){const n=(buckets.get(args.p_key)||0)+1;buckets.set(args.p_key,n);return {data:n<=args.p_max,error:null};}
+  if(name==='portal_onboarding_claim_parent'){const key=args.p_tenant_id+':'+args.p_phone,first=!welcomes.has(key);welcomes.add(key);return {data:first,error:null};}
   if(name==='meta_portal_phone_records')return {data:records,error:null};
   if(name==='portal_tenant_context')return {data:{platform:{subdomain:'teacher',is_active:true},bound_subdomain:'teacher'},error:null};
   if(name==='parent_family_delivery'){saved ||= {phone:args.p_phone,password_cipher:args.p_cipher};return {data:saved,error:null};}
@@ -107,4 +108,14 @@ test('all webhook aliases reject forged requests before processing and accept si
   }
   config.meta.appSecret='';assert.equal((await fetch(base+'/meta/webhook',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,503);
  }finally{config.meta.appSecret=original;server.closeAllConnections();await new Promise(r=>server.close(r));}
+});
+
+test('one first welcome per teacher and parent phone, including siblings and ambiguous sends',async()=>{
+ const f=fixture();await notifyMetaFamily(f.db,'tenant','own','معلم',f.gateway,true);
+ await assert.rejects(notifyMetaFamily(f.db,'tenant','sibling','معلم',f.gateway,true),e=>e.status===409);
+ assert.equal(f.notices.length,1);
+ const g=fixture();g.gateway.notify=async()=>{g.notices.push('attempted');return false;};
+ await assert.rejects(notifyMetaFamily(g.db,'tenant','own','معلم',g.gateway,true),e=>e.status===502);
+ await assert.rejects(notifyMetaFamily(g.db,'tenant','own','معلم',g.gateway,true),e=>e.status===409);
+ assert.equal(g.notices.length,1,'uncertain provider results cannot consume another paid message');
 });

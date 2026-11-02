@@ -33,6 +33,7 @@ export interface IMetaPortalQueueRepository {
   getTodaySentCount(): Promise<number>;
   getTenantStats(tenantId: string): Promise<{ sentToday: number; pendingQueue: number; totalSent: number }>;
   enqueueItems(items: MetaQueueItem[]): Promise<MetaQueueItem[]>;
+  claimOnboardingSend(id:string):Promise<boolean>;
   getPendingItemsForDate(date: string, limit?: number): Promise<MetaQueueItem[]>;
   updateItemStatus(
     id: string,
@@ -47,6 +48,7 @@ export interface IMetaPortalQueueRepository {
 }
 
 export class SupabaseMetaPortalQueueRepository implements IMetaPortalQueueRepository {
+  async claimOnboardingSend(id:string):Promise<boolean>{const {data,error}=await this.db.rpc('portal_onboarding_claim_queue',{p_queue_id:id});if(error)throw new Error('تعذر تأكيد الإرسال الأول');return data===true;}
   constructor(
     private readonly client: SupabaseClient,
     private readonly privilegedClient?: SupabaseClient
@@ -143,13 +145,7 @@ export class SupabaseMetaPortalQueueRepository implements IMetaPortalQueueReposi
 
   async getPendingItemsForDate(date: string, limit = 100): Promise<MetaQueueItem[]> {
     try {
-      const { data, error } = await this.db
-        .from("meta_portal_dispatch_queue")
-        .select("*")
-        .eq("scheduled_date", date)
-        .in("status", ["pending", "queued"])
-        .order("created_at", { ascending: true })
-        .limit(limit);
+      const {data,error}=await this.db.rpc('portal_onboarding_pending',{p_date:date,p_limit:limit});
 
       if (error) return [];
       return (data || []) as MetaQueueItem[];
@@ -198,6 +194,8 @@ export class SupabaseMetaPortalQueueRepository implements IMetaPortalQueueReposi
 
 export class FakeMetaPortalQueueRepository implements IMetaPortalQueueRepository {
   public items: MetaQueueItem[] = [];
+  private claimed=new Set<string>();
+  async claimOnboardingSend(id:string):Promise<boolean>{if(this.claimed.has(id))return false;this.claimed.add(id);return true;}
 
   async getTodaySentCount(): Promise<number> {
     const today = new Date().toISOString().slice(0, 10);
@@ -218,7 +216,10 @@ export class FakeMetaPortalQueueRepository implements IMetaPortalQueueRepository
   }
 
   async enqueueItems(items: MetaQueueItem[]): Promise<MetaQueueItem[]> {
-    const created = items.map((it, idx) => ({
+    const key=(it:MetaQueueItem)=>`${it.tenant_id}:${it.recipient_type}:${it.recipient_type==='parent'?it.recipient_phone:it.student_id}`;
+    const known=new Set(this.items.map(key));
+    const firstOnly=items.filter(it=>{const value=key(it);if(known.has(value))return false;known.add(value);return true;});
+    const created = firstOnly.map((it, idx) => ({
       ...it,
       id: it.id || `queue-item-${Date.now()}-${idx}`,
       created_at: it.created_at || new Date().toISOString(),

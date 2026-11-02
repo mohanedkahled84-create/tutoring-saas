@@ -2,7 +2,7 @@ import { assistantPay } from "./utils/assistantPay.js";
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
 import { renderSidebar } from './components/Sidebar.js?v=5.4.0';
-import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.2.0';
+import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.3.0';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.9.22';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
 import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=8.1.0';
@@ -14,14 +14,15 @@ import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
 
 let renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView;
 
-class CentrlyApp {
+export class CentrlyApp {
   isPlatformAdmin(user = this.user) {
     if (!user) return false;
     return user.role === 'admin';
   }
 
-  constructor() {
-    this.user = authService.getUser();
+  constructor(delegation = null) {
+    this.delegation = delegation;
+    this.user = delegation?.user || authService.getUser();
     const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
     this.currentRoute = isAdmin ? 'admin-dashboard' : (isCenter ? 'center-dashboard' : 'dashboard');
@@ -133,7 +134,7 @@ class CentrlyApp {
     this.dataLoadedState = {};
     this.settingsState = { activeTab: 'profile', barcodeAudio: true };
     this.currentTheme = 'light';
-    this.restoreCachedData();
+    if (!delegation) this.restoreCachedData();
     this.initTheme();
     registerOnboardingActions(this);
     registerAuthActions(this);
@@ -144,7 +145,7 @@ class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=1.11.0').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=1.12.0').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
@@ -194,10 +195,15 @@ class CentrlyApp {
   }
 
   getCachePrefix() {
+    if (this.delegation) return null;
     const user = this.user || authService.getUser();
     if (!user || !user.id) return null;
     const tenantId = user.tenant_id || user.id;
     return `centrly_cache_${tenantId}_`;
+  }
+
+  getStorageKey(key) {
+    return this.delegation ? `centrly:assistant:${this.user.tenant_id}:${this.delegation.actor.id}:${key}` : key;
   }
 
   purgeLegacyCaches() {
@@ -983,6 +989,7 @@ class CentrlyApp {
   }
 
   getAppEl() {
+    if (this.delegation?.isActive && !this.delegation.isActive()) return null;
     const splash = document.getElementById('centrlyInitialSplash');
     if (splash) splash.remove();
     let appEl = document.getElementById('app');
@@ -1040,6 +1047,10 @@ class CentrlyApp {
   }
 
   async navigate(route) {
+    if (this.delegation && !this.delegation.canNavigate(route)) {
+      this.showToast('هذه الصفحة غير متاحة ضمن صلاحياتك', 'warning');
+      return;
+    }
     unlockAudio();
     this.stopWhatsAppStatusPolling();
     // Automatically stop OMR camera and release hardware sensor whenever navigating away from paper_scanner
@@ -1097,10 +1108,12 @@ class CentrlyApp {
     }
     this.currentRoute = route;
     try {
-      localStorage.setItem('centrly_current_route', route);
-      sessionStorage.setItem('centrly_current_route', route);
+      if (!this.delegation) {
+        localStorage.setItem('centrly_current_route', route);
+        sessionStorage.setItem('centrly_current_route', route);
+      }
       if (window.history && window.history.replaceState) {
-        const cleanUrl = route && !['dashboard', 'admin-dashboard'].includes(route)
+        const cleanUrl = this.delegation ? `/assistant?workspace=${encodeURIComponent(this.user.tenant_id)}&route=${encodeURIComponent(route)}` : route && !['dashboard', 'admin-dashboard'].includes(route)
           ? `/?route=${encodeURIComponent(route)}`
           : '/';
         window.history.replaceState(null, '', cleanUrl);
@@ -1139,6 +1152,7 @@ class CentrlyApp {
   }
 
   async loadRouteData(route, retried = false) {
+    if (this.delegation && !this.delegation.canNavigate(route)) return;
     if (this.routeErrors) this.routeErrors[route] = null;
     try {
       await this.ensureWorkspaceModules();
@@ -1460,7 +1474,7 @@ class CentrlyApp {
               }
             } catch (_) {}
           }
-          if (this.quizzesState.selectedGroupId) {
+          if (route === 'quizzes' && this.quizzesState.selectedGroupId) {
             if (this.syncActiveGroupQuizzes) {
               this.syncActiveGroupQuizzes(this.quizzesState.selectedGroupId);
             }
@@ -1815,8 +1829,8 @@ class CentrlyApp {
               attendanceList: [],
               financials: { totalRevenue: 0, attendeeCount: 0, absentCount: 0, exemptCount: 0, makeupCount: 0 },
             };
-            localStorage.removeItem('centrly_active_session_state');
-            localStorage.removeItem('centrly_active_session_id');
+            localStorage.removeItem(this.getStorageKey?.('centrly_active_session_state') || 'centrly_active_session_state');
+            localStorage.removeItem(this.getStorageKey?.('centrly_active_session_id') || 'centrly_active_session_id');
             this.stopLiveSessionSync();
           }
 
@@ -1869,8 +1883,8 @@ class CentrlyApp {
           this.materialsGroupId = this.materialsGroupId || 'all';
           this.saveCache('materials', this.materials);
           try {
-            localStorage.setItem('centrly_materials', JSON.stringify(this.materials));
-            localStorage.setItem('centrly_platform_content', JSON.stringify(this.materials));
+            localStorage.setItem(this.getStorageKey('centrly_materials'), JSON.stringify(this.materials));
+            localStorage.setItem(this.getStorageKey('centrly_platform_content'), JSON.stringify(this.materials));
           } catch (_) {}
           this.saveCache('groups', this.groups);
           this.renderMainContent();
@@ -1888,8 +1902,8 @@ class CentrlyApp {
           this.videoLessonsGroupId = this.videoLessonsGroupId || 'all';
           this.saveCache('materials', this.materials);
           try {
-            localStorage.setItem('centrly_materials', JSON.stringify(this.materials));
-            localStorage.setItem('centrly_platform_content', JSON.stringify(this.materials));
+            localStorage.setItem(this.getStorageKey('centrly_materials'), JSON.stringify(this.materials));
+            localStorage.setItem(this.getStorageKey('centrly_platform_content'), JSON.stringify(this.materials));
           } catch (_) {}
           this.saveCache('groups', this.groups);
           this.saveCache('students', this.students);
@@ -1929,7 +1943,7 @@ class CentrlyApp {
           if (finalSettings && finalSettings.theme_preset) {
             try {
               localStorage.setItem('portal_theme', finalSettings.theme_preset);
-              localStorage.setItem('centrly_platform_settings', JSON.stringify(finalSettings));
+              localStorage.setItem(this.getStorageKey('centrly_platform_settings'), JSON.stringify(finalSettings));
             } catch (_) {}
           }
 
@@ -1980,8 +1994,8 @@ class CentrlyApp {
             missing: submissionsData.missing || [],
           };
           try {
-            localStorage.setItem('centrly_materials', JSON.stringify(materialsList));
-            localStorage.setItem('centrly_platform_content', JSON.stringify(materialsList));
+            localStorage.setItem(this.getStorageKey('centrly_materials'), JSON.stringify(materialsList));
+            localStorage.setItem(this.getStorageKey('centrly_platform_content'), JSON.stringify(materialsList));
           } catch (_) {}
           this.renderMainContent();
           break;
@@ -2029,6 +2043,7 @@ class CentrlyApp {
   }
 
   renderApp(force = false) {
+    if (this.delegation?.isActive && !this.delegation.isActive()) return;
     if (!this.workspaceReady) {
       const target = this.getAppEl();
       if (target) target.innerHTML = this.renderRouteLoading();
@@ -2066,7 +2081,7 @@ class CentrlyApp {
 
     const html = `
       <div class="app-container">
-        ${renderSidebar(this.currentRoute, this.user, { hasPin: this.hasSecurityPin, isUnlocked: this.isFinancialUnlocked })}
+        ${renderSidebar(this.currentRoute, this.user, { hasPin: this.hasSecurityPin, isUnlocked: this.isFinancialUnlocked }, this.delegation)}
         <div class="app-main">
           ${renderNavbar(this.user, this.getActiveSessionSummary())}
           <main class="content-body" id="mainContent">
@@ -2082,6 +2097,7 @@ class CentrlyApp {
   }
 
   renderMainContent() {
+    if (this.delegation?.isActive && !this.delegation.isActive()) return;
     const el = document.getElementById('mainContent');
     if (el) el.innerHTML = this.getContentHtml(this.currentRoute);
     if (this.currentRoute === 'students') {
@@ -2111,6 +2127,7 @@ class CentrlyApp {
   }
 
   getContentHtml(route) {
+    if (this.delegation && !this.delegation.canNavigate(route)) return '<section class="card"><h1>هذه الصفحة غير متاحة ضمن صلاحياتك</h1></section>';
     if (this.routeErrors && this.routeErrors[route]) {
       const isAuthErr = this.routeErrors[route].includes('الجلسة') || this.routeErrors[route].includes('token');
       return `
@@ -2581,6 +2598,7 @@ class CentrlyApp {
   }
 }
 
+if (!window.__CENTRLY_ASSISTANT_RUNTIME__) {
 window.centrlyApp = new CentrlyApp();
 window.togglePasswordVisibility = (inputId, btnEl, event) => {
   if (window.centrlyApp) {
@@ -2598,4 +2616,5 @@ if (document.readyState === 'loading') {
   });
 } else {
   window.centrlyApp.init();
+}
 }

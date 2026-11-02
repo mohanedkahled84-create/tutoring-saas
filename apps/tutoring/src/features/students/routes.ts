@@ -12,6 +12,7 @@ import { supabasePublic } from "../../supabase.js";
 import {getServiceSupabaseClient} from '../../supabase.js';
 import {notifyMetaFamily,configuredMetaFamilyGateway} from '../../shared/utils/metaFamily.js';
 import {authRateLimiter} from '../../shared/middleware/rateLimit.js';
+import {currentPortalDestination} from '../../shared/utils/portalDestination.js';
 
 export const studentsRouter = Router();
 export const importRouter = Router();
@@ -24,6 +25,13 @@ const requireStudentTenant = (req: AuthenticatedRequest, res: Response, next: ()
   next();
 };
 studentsRouter.use(requireStudentTenant);
+// Legacy cached clients may not bypass the one-time official welcome by
+// switching to an old Evolution/provider endpoint. Repeated sharing is manual.
+studentsRouter.use((req,res,next)=>{
+ if(req.method==='POST' && (/^\/[^/]+\/send-(parent|student)-link\/?$/.test(req.path) || req.path==='/batch-send-parent-links')){res.status(409).json({error:{code:'MANUAL_WHATSAPP_ONLY',message:'إعادة إرسال رابط المتابعة من نافذة واتساب فقط'}});return;}
+ if(req.method==='POST' && req.path==='/batch-send-dual-portal-links' && req.body?.provider && req.body.provider!=='meta'){res.status(409).json({error:{code:'MANUAL_WHATSAPP_ONLY',message:'الإرسال الأول للجدد عبر Meta فقط؛ الإرسال التالي من نافذة واتساب'}});return;}
+ next();
+});
 importRouter.use(requireStudentTenant);
 
 studentsRouter.post('/:id/send-family-access',authRateLimiter,async(req:AuthenticatedRequest,res:Response):Promise<void>=>{
@@ -31,7 +39,7 @@ studentsRouter.post('/:id/send-family-access',authRateLimiter,async(req:Authenti
   res.setHeader('Cache-Control','private, no-store');
   const result=await notifyMetaFamily(getServiceSupabaseClient(),req.user!.tenant_id!,req.params.id,req.user?.full_name || req.user?.name || 'المعلم',configuredMetaFamilyGateway());
   res.json(result);
- }catch(error:any){const status=[400,429,502,503].includes(error?.status)?error.status:503;res.status(status).json({error:{code:'FAMILY_DELIVERY_FAILED',message:error?.status?error.message:'تعذر إرسال بيانات حساب الأسرة'}});}
+ }catch(error:any){const status=[400,409,429,502,503].includes(error?.status)?error.status:503;res.status(status).json({error:{code:'FAMILY_DELIVERY_FAILED',message:error?.status?error.message:'تعذر إرسال بيانات حساب الأسرة'}});}
 });
 
 // GET /api/students - List all students for current tenant
@@ -156,6 +164,7 @@ studentsRouter.get("/:id/parent-link", async (req: AuthenticatedRequest, res: Re
     const shortParentUrl = buildShortPortalUrl(studentId, "parent", canonicalOrigin);
     const shortStudentUrl = buildShortPortalUrl(studentId, "student", canonicalOrigin);
     const portalUrl = `/parent-portal?token=${token}`;
+    const destination=await currentPortalDestination(getServiceSupabaseClient(),tenantId!);
 
     res.json({
       student_id: studentId,
@@ -164,6 +173,8 @@ studentsRouter.get("/:id/parent-link", async (req: AuthenticatedRequest, res: Re
       full_url: shortParentUrl,
       short_parent_url: shortParentUrl,
       short_student_url: shortStudentUrl,
+      family_url: destination.origin+'/family',
+      student_login_url: destination.origin+'/portal?role=student',
       parent_portal_sent_at: student.parent_portal_sent_at || null,
       student_portal_sent_at: student.student_portal_sent_at || null,
       expires_in_days: 365,
@@ -573,136 +584,7 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
       return;
     }
 
-    // Fallback: Legacy Evolution API dispatch (Strict cap: 24 students max per batch/day)
-    targetStudents = targetStudents.slice(0, 24);
-
-    const studentsPayload = targetStudents.map((s) => {
-      let token = s.parent_portal_token;
-      if (!token) {
-        token = generateParentPortalToken(s.id, tenantId || "default", 365);
-      }
-      let portalPassword = s.portal_password;
-      if (!portalPassword) {
-        portalPassword = Math.floor(100000 + Math.random() * 900000).toString();
-      }
-      return {
-        student_id: s.id,
-        student_name: s.name,
-        student_phone: s.student_phone || undefined,
-        parent_phone: s.parent_phone || undefined,
-        portal_password: portalPassword,
-        subject_name: subjectName,
-        student_portal_url: `${canonicalOrigin}/portal`,
-        parent_portal_url: `${canonicalOrigin}/portal`,
-        token,
-      };
-    });
-
-    const whatsAppService = getServices(req).whatsapp;
-
-    // In automated tests or if explicitly requested with low pacing, run synchronously
-    const isTestOrImmediate = pacing_delay_ms !== undefined && pacing_delay_ms <= 2000;
-
-    if (isTestOrImmediate) {
-      const batchRes = await whatsAppService.batchSendDualPortalLinks({
-        tenant_id: tenantId || "default",
-        teacher_id: teacher_id || req.user?.id || null,
-        teacher_name: teacher_name || (req.user as any)?.name,
-        subject_name: subjectName,
-        students: studentsPayload,
-        pacingDelayMs: pacing_delay_ms,
-        parentDelayMs: parent_delay_ms,
-        typingDurationMs: typing_duration_ms,
-        maxStudentsPerBatch: Math.max(200, studentsPayload.length),
-        onStudentSent: async (studentId) => {
-          const now = new Date().toISOString();
-          const item = studentsPayload.find((p) => p.student_id === studentId);
-          const updates: Record<string, any> = { student_portal_sent_at: now };
-          if (item?.token) updates.parent_portal_token = item.token;
-          if (item?.portal_password) updates.portal_password = item.portal_password;
-          await studentsService.updateStudent(studentId, updates).catch(() => {});
-        },
-        onParentSent: async (studentId) => {
-          const now = new Date().toISOString();
-          await studentsService.updateStudent(studentId, { parent_portal_sent_at: now }).catch(() => {});
-        },
-      });
-
-      const now = new Date().toISOString();
-      for (const r of batchRes.results) {
-        const item = studentsPayload.find((p) => p.student_id === r.student_id);
-        const updates: Record<string, any> = {};
-        if (r.student_sent) updates.student_portal_sent_at = now;
-        if (r.parent_sent) updates.parent_portal_sent_at = now;
-        if (item?.token) updates.parent_portal_token = item.token;
-        if (item?.portal_password) updates.portal_password = item.portal_password;
-        if (Object.keys(updates).length > 0) {
-          await studentsService.updateStudent(r.student_id, updates).catch(() => {});
-        }
-      }
-
-      res.json({
-        total: batchRes.total,
-        students_processed: batchRes.students_processed,
-        student_messages_sent: batchRes.student_messages_sent,
-        parent_messages_sent: batchRes.parent_messages_sent,
-        failed_count: batchRes.failed_count,
-        results: batchRes.results,
-      });
-      return;
-    }
-
-    // In production queue: respond immediately to prevent HTTP timeout, and process safely in background
-    setImmediate(async () => {
-      try {
-        const batchRes = await whatsAppService.batchSendDualPortalLinks({
-          tenant_id: tenantId || "default",
-          teacher_id: teacher_id || req.user?.id || null,
-          teacher_name: teacher_name || (req.user as any)?.name,
-          subject_name: subjectName,
-          students: studentsPayload,
-          pacingDelayMs: pacing_delay_ms,
-          parentDelayMs: parent_delay_ms,
-          typingDurationMs: typing_duration_ms,
-          maxStudentsPerBatch: Math.max(200, studentsPayload.length),
-          onStudentSent: async (studentId) => {
-            const now = new Date().toISOString();
-            const item = studentsPayload.find((p) => p.student_id === studentId);
-            const updates: Record<string, any> = { student_portal_sent_at: now };
-            if (item?.token) updates.parent_portal_token = item.token;
-            if (item?.portal_password) updates.portal_password = item.portal_password;
-            await studentsService.updateStudent(studentId, updates).catch(() => {});
-          },
-          onParentSent: async (studentId) => {
-            const now = new Date().toISOString();
-            await studentsService.updateStudent(studentId, { parent_portal_sent_at: now }).catch(() => {});
-          },
-        });
-
-        const now = new Date().toISOString();
-        for (const r of batchRes.results) {
-          const item = studentsPayload.find((p) => p.student_id === r.student_id);
-          const updates: Record<string, any> = {};
-          if (r.student_sent) updates.student_portal_sent_at = now;
-          if (r.parent_sent) updates.parent_portal_sent_at = now;
-          if (item?.token) updates.parent_portal_token = item.token;
-          if (item?.portal_password) updates.portal_password = item.portal_password;
-          if (Object.keys(updates).length > 0) {
-            await studentsService.updateStudent(r.student_id, updates).catch(() => {});
-          }
-        }
-      } catch (e) {
-        console.error("[DualPortalBatch] Background dispatch error:", e);
-      }
-    });
-
-    res.json({
-      status: "scheduled",
-      message: `تم بدء جدولة إرسال الروابط لـ (${targetStudents.length}) طالباً بأمان: يُرسل للطالب أولاً ثم لولي الأمر بعد 15 دقيقة مع محاكاة كتابة لمدة 5 دقائق وصياغة متغيرة تلقائياً لحماية رقمك.`,
-      total: targetStudents.length,
-      capped_to: targetStudents.length,
-      students: targetStudents.map((s) => ({ id: s.id, name: s.name })),
-    });
+    res.status(503).json({error:{code:'ONBOARDING_UNAVAILABLE',message:'الإرسال الأول غير متاح الآن؛ استخدم نافذة واتساب للمشاركة اليدوية'}});
   } catch (err: unknown) {
     res.status(500).json({
       error: { code: "INTERNAL_ERROR", message: (err as Error).message },

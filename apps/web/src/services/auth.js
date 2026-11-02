@@ -2,6 +2,7 @@ import { request, API_BASE_URL, performSilentRefresh, isJwtExpired } from './api
 
 export const authService = {
   getUser() {
+    if (typeof window !== 'undefined' && window.__CENTRLY_ASSISTANT_RUNTIME__) return window.__CENTRLY_ASSISTANT_RUNTIME__.user || null;
     try {
       let parsed = null;
       const local = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_user') : null;
@@ -27,6 +28,7 @@ export const authService = {
   },
 
   setUser(user) {
+    if (typeof window !== 'undefined' && window.__CENTRLY_ASSISTANT_RUNTIME__) { window.__CENTRLY_ASSISTANT_RUNTIME__.user=user; return; }
     try {
       if (user) {
         const str = JSON.stringify(user);
@@ -37,6 +39,7 @@ export const authService = {
   },
 
   getToken() {
+    if (typeof window !== 'undefined' && window.__CENTRLY_ASSISTANT_RUNTIME__) return null;
     try {
       const local = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_token') : null;
       if (local) {
@@ -59,6 +62,7 @@ export const authService = {
   },
 
   getRefreshToken() {
+    if (typeof window !== 'undefined' && window.__CENTRLY_ASSISTANT_RUNTIME__) return null;
     try {
       const local = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_refresh_token') : null;
       if (local) {
@@ -81,6 +85,7 @@ export const authService = {
   },
 
   setSession(user, token, refreshToken) {
+    if (typeof window !== 'undefined' && window.__CENTRLY_ASSISTANT_RUNTIME__) return;
     try {
       const existingRefresh = this.getRefreshToken();
       const effectiveRefresh = refreshToken || existingRefresh;
@@ -101,6 +106,7 @@ export const authService = {
   },
 
   clearSession() {
+    if (typeof window !== 'undefined' && window.__CENTRLY_ASSISTANT_RUNTIME__) { window.__CENTRLY_ASSISTANT_RUNTIME__.onExpired?.(); return; }
     try {
       const specificKeys = [
         'centrly_token',

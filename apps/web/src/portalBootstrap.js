@@ -53,7 +53,7 @@ async function start() {
         } catch { /* The full portal handles expired sessions and retry feedback. */ }
       }
     }
-    await import('./app.js?v=9.34.0'); return;
+    await import('./app.js?v=9.35.0'); return;
   }
   const root = document.getElementById('app');
   if (!root.querySelector('.portal-opening')) window.renderPortalOpening(root);
@@ -69,7 +69,7 @@ async function start() {
     window.__centrlyPortalArrival = { token: link.token, role, origin: location.origin, presentation: app._portalPresentation, initial_data:link.initial_data };
     history.replaceState(null, '', '/portal-entry');
     if (role === 'parent') await mountParent();
-    else await import('./app.js?v=9.34.0');
+    else await import('./app.js?v=9.35.0');
   } catch (error) {
     root.innerHTML = '<div role="alert" style="padding:3rem;text-align:center"><p></p><button type="button" style="min-height:44px">إعادة المحاولة</button></div>';
     root.querySelector('p').textContent = error.message || 'تعذر الاتصال. حاول مجددًا.';
