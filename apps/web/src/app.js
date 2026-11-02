@@ -3,10 +3,10 @@ import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
 import { renderSidebar } from './components/Sidebar.js?v=5.4.0';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5.3.0';
-import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.10.0';
+import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.11.0';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
 import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=8.1.0';
-import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.9.0';
+import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.10.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
@@ -557,6 +557,7 @@ export class CentrlyApp {
   }
 
   async init() {
+    if(['terms','privacy'].includes(new URLSearchParams(location.search).get('policy'))){this.renderLanding();return;}
     this.setupModalKeyboardShortcuts();
 
     // Prevent accidental mouse wheel number changes across all number inputs

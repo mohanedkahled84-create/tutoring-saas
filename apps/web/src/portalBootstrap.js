@@ -38,7 +38,7 @@ async function start() {
     // The existing student loader paints its cache before checking the live destination.
     // No teacher authentication or landing modules are needed for this entry.
     if(portalPath || params.get('view')==='portal' || params.get('portal')==='login' || params.has('token')){await mountStudent();return;}
-    await import('./app.js?v=9.36.2'); return;
+    await import('./app.js?v=9.37.0'); return;
   }
   const root = document.getElementById('app');
   if (!root.querySelector('.portal-opening')) window.renderPortalOpening(root);

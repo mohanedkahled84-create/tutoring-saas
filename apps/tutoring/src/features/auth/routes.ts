@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {googleAuthRouter} from './google.js';
 import {getServiceSupabaseClient} from '../../supabase.js';
 import {trustedPortalOrigin} from '../../shared/utils/portalDestination.js';
 import {checkedOtpResult,otpRpc,requestPhoneOtp,teacherOtpVerify,teacherOtpRequest,phoneOtpInfo,preparePhoneOtp,verifyPhoneOtp} from '../../shared/utils/phoneOtp.js';
@@ -11,6 +12,7 @@ import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { dispatchAdminAlertWebhook } from "../admin-ops/index.js";
 
 export const authRouter = Router();
+authRouter.use('/google',googleAuthRouter);
 
 // POST /api/auth/login - Rate-limited, brute-force protected login
 authRouter.post("/login", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
