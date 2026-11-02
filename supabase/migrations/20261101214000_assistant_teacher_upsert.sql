@@ -19,6 +19,8 @@ begin
    execute format('select to_jsonb(source) from public.%I source where %s limit 1',v_view,v_where) into v_visible using r;
    if v_visible is null then raise exception 'FORBIDDEN';end if;
    if p_ignore then v_output:=v_output||jsonb_build_array(v_visible);continue;end if;
+   if c->>'action'='create' and exists(select 1 from jsonb_each(r) incoming where incoming.key not in ('id','assistant_id') and v_existing->incoming.key is distinct from incoming.value)
+    and not coalesce((c->'permissions'->>((c->>'resource')||'.edit'))::boolean,false) then raise exception 'FORBIDDEN';end if;
    select string_agg(format('%1$I=(jsonb_populate_record(null::public.%2$I,$1)).%1$I',k,p_table),',') into v_set from jsonb_object_keys(r) k where k not in ('id','assistant_id');
    if v_set is null then v_result:=v_visible;else
     execute format('update public.%I source set %s where %s returning to_jsonb(source)',v_view,v_set,v_where) into v_result using r;

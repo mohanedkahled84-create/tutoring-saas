@@ -26,6 +26,10 @@ export function createDelegatedFetch(context:DelegatedDatabaseContext,fetcher:ty
   let body:any=method==='GET' || method==='HEAD'?undefined:url.pathname.startsWith('/storage/')?await request.arrayBuffer():await request.text();
   if(rest){
    const table=decodeURIComponent(rest[1]);if(!delegatedTables.has(table))throw fail();
+   // Some teacher POST controllers internally update an existing record.
+   // That write must recheck edit rights in Postgres, even when the outer
+   // endpoint began as a create operation.
+   if(['PATCH','PUT'].includes(method) && context.capability.endsWith('.create'))headers.set('x-assistant-capability',context.capability.replace(/\.create$/,'.edit'));
    if(table==='users' && body){const rows=JSON.parse(body);for(const row of Array.isArray(rows)?rows:[rows])if(Object.keys(row).some(key=>!['full_name','phone','subject'].includes(key)))throw fail();}
    if(table==='tenants' && body){const rows=JSON.parse(body);for(const row of Array.isArray(rows)?rows:[rows])if(Object.keys(row).some(key=>!['name','settings','settings_json','workflow_settings','subject','phone','contact_phone'].includes(key)))throw fail();}
    url.pathname='/rest/v1/assistant_delegated_'+table;

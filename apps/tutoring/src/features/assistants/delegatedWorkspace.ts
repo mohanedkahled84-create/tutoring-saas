@@ -103,7 +103,16 @@ delegatedWorkspaceRouter.use(async(req:AuthenticatedRequest,res,next)=>{
   // Teacher routes return their normal shape, with credentials removed at
   // both the database transport and response boundary.
   let savedRecord:any;
-  const json=res.json.bind(res);res.json=(body:any)=>{savedRecord=body?.student || body?.group || body?.material || body?.session || body?.quiz;return json(redactDelegatedData(body,context));};
+  const json=res.json.bind(res);res.json=(body:any)=>{
+   savedRecord=body?.student || body?.group || body?.material || body?.session || body?.quiz;
+   if(res.statusCode>=400){
+    const details=JSON.stringify(body?.error || '');
+    if(/UNAUTHORIZED/.test(details)){res.status(401);body={error:{code:'UNAUTHORIZED',message:'انتهت الجلسة أو تم إيقاف الحساب؛ سجّل الدخول مجددًا'}};}
+    else if(/FORBIDDEN|violates check option|خارج صلاحياتك/.test(details)){res.status(403);body={error:{code:'FORBIDDEN',message:'هذه العملية خارج صلاحياتك أو مجموعاتك'}};}
+    else if(res.statusCode>=500){res.status(503);body={error:{code:'WORKSPACE_UNAVAILABLE',message:'تعذر إتمام العملية الآن؛ حاول مجددًا'}};}
+   }
+   return json(redactDelegatedData(body,context));
+  };
   // Collection operations already write their assistant-attributed audit in
   // the same SQL transaction as the receipt; avoid a duplicate entry here.
   if(!['GET','HEAD'].includes(req.method) && !route.startsWith('/assistants/collections'))res.once('finish',()=>{
