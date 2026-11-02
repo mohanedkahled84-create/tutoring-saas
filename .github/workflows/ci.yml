@@ -33,6 +33,7 @@ jobs:
         working-directory: apps/tutoring
         run: |
           npm run build:parent-entry -- --check
+          node ../../scripts/build-student-entry.cjs --check
           node ../../scripts/build-phone-shield.cjs --check
 
       - name: Verify TypeScript Compilation

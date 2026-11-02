@@ -1,4 +1,4 @@
-import { portalRequest, adoptVerifiedPortalSession, portalCache } from './utils/portalSession.js';
+import { portalRequest, adoptVerifiedPortalSession } from './utils/portalSession.js';
 import { preparePortalDestination } from './utils/portalDestination.js';
 
 // Resolve shared links before importing the dashboard, landing page and staff authentication modules.
@@ -7,10 +7,12 @@ async function start() {
   const match = location.pathname.match(/^\/([ps])\/([a-zA-Z0-9_-]+)$/i) || location.pathname.match(/^\/([ps])([ps]?[a-f0-9]{8})$/i);
   const code = match?.[2] || params.get('s') || params.get('p');
   const type = match?.[1]?.toLowerCase() || (params.has('s') ? 's' : 'p');
-  const isParentEntry=location.pathname==='/family' || (code && type==='p') || location.pathname==='/portal-entry' || params.get('role')==='parent' || localStorage.getItem('centrly_portal_role')==='parent' || localStorage.getItem('centrly_portal_entry_role')==='parent';
+  const explicitStudent=params.get('role')==='student' || (code && type==='s') || params.get('portal')==='student';
+  const isParentEntry=location.pathname==='/family' || (code && type==='p') || (!explicitStudent && (location.pathname==='/portal-entry' || params.get('role')==='parent' || localStorage.getItem('centrly_portal_role')==='parent' || localStorage.getItem('centrly_portal_entry_role')==='parent'));
   const parentModule=isParentEntry ? import('./parentPortal.js') : null;
   parentModule?.catch(()=>{}); // Show the normal retry UI if a module download fails.
   const mountParent = async error => (await (parentModule || import('./parentPortal.js'))).mountParentPortal(error);
+  const mountStudent = async () => (await import('./studentPortalEntry.js?v=1')).mountStudentPortal();
   if(location.pathname==='/family'){await mountParent();return;}
   if(location.pathname==='/portal-entry' && new URLSearchParams(location.hash.slice(1)).has('family')){await mountParent();return;}
   // Consume cross-origin entry before downloading staff authentication and dashboards.
@@ -33,27 +35,10 @@ async function start() {
     if (portalPath && !params.has('token') && params.get('role') !== 'student' && (params.get('role') === 'parent' || savedRole === 'parent' || (!savedRole && (entryRole === 'parent' || (location.pathname === '/portal-entry' && /^[a-z0-9-]+\.centerly-eg\.com$/.test(location.hostname) && !location.hostname.startsWith('www.')))))) {
       await mountParent(); return;
     }
-    // Returning portal users do not need to download the staff/landing SPA just to change origin.
-    const token = localStorage.getItem('centrly_portal_token'), role = localStorage.getItem('centrly_portal_role');
-    if (/^\/portal\/?$/.test(location.pathname) && !location.search && !location.hash && token &&
-        ['student','parent'].includes(role) && !localStorage.getItem('centrly_explicit_logout')) {
-      const cached = await portalCache.read(token, role);
-      // Any saved basic dashboard, including stale data, must paint before a network wait.
-      if (!cached) {
-        try {
-          const app = {};
-          const activeRequest = async (...args) => {
-            const result = await portalRequest(...args);
-            if (localStorage.getItem('centrly_portal_token') !== token || localStorage.getItem('centrly_portal_role') !== role)
-              throw new Error('تغير الحساب أثناء الدخول');
-            return result;
-          };
-          if (await preparePortalDestination(app, token, role, activeRequest)) return;
-          window.__centrlyPortalArrival = { token, role, origin: location.origin, presentation: app._portalPresentation };
-        } catch { /* The full portal handles expired sessions and retry feedback. */ }
-      }
-    }
-    await import('./app.js?v=9.36.0'); return;
+    // The existing student loader paints its cache before checking the live destination.
+    // No teacher authentication or landing modules are needed for this entry.
+    if(portalPath || params.get('view')==='portal' || params.get('portal')==='login' || params.has('token')){await mountStudent();return;}
+    await import('./app.js?v=9.36.1'); return;
   }
   const root = document.getElementById('app');
   if (!root.querySelector('.portal-opening')) window.renderPortalOpening(root);
@@ -69,7 +54,7 @@ async function start() {
     window.__centrlyPortalArrival = { token: link.token, role, origin: location.origin, presentation: app._portalPresentation, initial_data:link.initial_data };
     history.replaceState(null, '', '/portal-entry');
     if (role === 'parent') await mountParent();
-    else await import('./app.js?v=9.36.0');
+    else await mountStudent();
   } catch (error) {
     root.innerHTML = '<div role="alert" style="padding:3rem;text-align:center"><p></p><button type="button" style="min-height:44px">إعادة المحاولة</button></div>';
     root.querySelector('p').textContent = error.message || 'تعذر الاتصال. حاول مجددًا.';
