@@ -33,5 +33,12 @@ test('LIVE: support requests belong to their teacher, admins can reply, retries 
  ok(await db.from('groups').insert({tenant_id:tenants[0],name:'fixture group'}));
  assert.equal((await (await request('/settings/startup-progress')).json()).steps.find(s=>s.id==='group').done,true);
  assert.equal((await (await request('/settings/startup-progress',1)).json()).steps.find(s=>s.id==='group').done,false);
+ assert.equal(progress.steps.find(s=>s.id==='links').done,false);assert.equal(progress.steps.some(s=>s.id==='platform'),false);
+ const group=ok(await db.from('groups').select('id').eq('tenant_id',tenants[0]).single());
+ ok(await db.from('students').insert({tenant_id:tenants[0],group_id:group.id,name:'fixture credentials',student_code:randomUUID().slice(0,8),parent_phone:'201000000001',portal_password:'isolated-fixture-only'}));
+ assert.equal((await (await request('/settings/startup-progress')).json()).steps.find(s=>s.id==='links').done,true);
+ ok(await db.from('tenants').update({subscription_tier:'pro',subscription_status:'active'}).eq('id',tenants[0]));
+ const entitled=await (await request('/settings/startup-progress')).json();assert.equal(entitled.steps.find(s=>s.id==='platform').done,false);
+
  assert.ok((await anonClient.rpc('support_operation',{p_user:users[0].id,p_action:'list',p_data:{}})).error);
 });

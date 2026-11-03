@@ -1,3 +1,5 @@
+import {renderSourceAnnouncementButton} from './AnnouncementsView.js';
+import {portalCairoClock} from '../utils/portalClock.js';
 import {trackProductEvent} from '../services/productFunnel.js';
 import { request, API_BASE_URL } from "../services/api.js";
 import { normalizeDigits } from "../utils/normalizeDigits.js";
@@ -20,16 +22,20 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
   if (!hasActiveSession) {
     const arabicDayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const now = new Date();
-    const todayArabic = arabicDayNames[now.getDay()];
-    const todayFormatted = now.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const availableGroups = groups || [];
+    const todayArabic = arabicDayNames[new Date(portalCairoClock().date+'T12:00:00Z').getUTCDay()];
+    const todayFormatted = now.toLocaleDateString('ar-EG', { timeZone:'Africa/Cairo', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const today=portalCairoClock().date,records=sessionState.scheduleRecords || [];
+    const excluded=new Set(records.filter(row=>row.session_date===today && !row.is_extra && (row.status==='cancelled' || row.status==='rescheduled' && row.rescheduled_to_date!==today)).map(row=>row.group_id));
+    const availableGroups = (groups || []).map(group=>({...group,unavailable_today:excluded.has(group.id),saved_session_id:records.find(row=>row.group_id===group.id && !row.is_extra && row.session_date===today && row.status==='scheduled')?.id || null}));
+    const exceptions=records.filter(row=>row.status!=='ended' && (row.is_extra || ['cancelled','rescheduled'].includes(row.status)));
+    const overdueGroup=sessionState.overdueGroup && !excluded.has(sessionState.overdueGroup.id)?sessionState.overdueGroup:null;
 
     const todayGroups = [];
     const otherGroups = [];
 
     availableGroups.forEach(g => {
       const gDay = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || '';
-      if (gDay.includes(todayArabic)) {
+      if (gDay.includes(todayArabic) && !g.unavailable_today) {
         todayGroups.push(g);
       } else {
         otherGroups.push(g);
@@ -97,8 +103,10 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
           </div>
         </div>
 
+        ${exceptions.length?`<section class="card" style="margin:0;display:grid;gap:.75rem"><h3 style="font-size:1.1rem">تعديلات الجدول والحصص الإضافية</h3>${exceptions.map(row=>{const group=groups.find(g=>g.id===row.group_id);const date=row.rescheduled_to_date || row.session_date;return `<article style="border:1px solid var(--centrly-line);border-radius:12px;padding:.8rem;display:grid;gap:.6rem"><strong>${escapeHtml(group?.name || row.group_name || 'الحصة')}</strong><span>${row.status==='cancelled'?'ملغاة':row.status==='rescheduled'?'موعد بديل':'حصة إضافية'} · <bdi>${escapeHtml(date)} ${escapeHtml(row.rescheduled_to_time || row.session_time || '')}</bdi></span><div style="display:flex;gap:.5rem;flex-wrap:wrap">${row.status!=='cancelled' && date===today?`<button class="btn btn-primary" style="min-height:44px" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(row.group_id)}',null,'${escapeHtml(row.id)}')">بدء هذه الحصة</button>`:''}${renderSourceAnnouncementButton('session',row.id)}${row.status!=='cancelled'?`<button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openRescheduleModal('${escapeHtml(row.id)}')">تعديل الموعد</button><button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openCancelSessionModal('${escapeHtml(row.id)}')">إلغاء الحصة</button>`:''}</div></article>`;}).join('')}</section>`:''}
+
         <!-- Overdue Sessions Alert if any group had an elapsed scheduled time -->
-        ${sessionState.overdueGroup ? `
+        ${overdueGroup ? `
           <div class="card" style="margin: 0; border: 1px solid #f59e0b; background: #fffbeb;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
               <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -106,21 +114,21 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 <div>
                   <div style="font-weight: 800; color: #92400e; font-size: 0.95rem;">حصة متأخرة عن موعدها - في انتظار قرارك</div>
                   <div style="font-size: 0.825rem; color: #b45309; margin-top: 0.2rem;">
-                    المجموعة: <b>${escapeHtml(sessionState.overdueGroup.name)}</b> • الموعد المحدد: ${escapeHtml(sessionState.overdueGroup.session_time || 'اليوم')}
+                    المجموعة: <b>${escapeHtml(overdueGroup.name)}</b> • الموعد المحدد: ${escapeHtml(overdueGroup.session_time || 'اليوم')}
                   </div>
                 </div>
               </div>
 
               <div style="display: flex; gap: 0.4rem;">
-                <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(sessionState.overdueGroup.id)}')">
+                <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(overdueGroup.id)}')">
                   ${getIcon('sessions', 14)}
                   <span>بدء الحصة الآن</span>
                 </button>
-                <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openRescheduleModal('${escapeHtml(sessionState.overdueGroup.id)}')">
+                <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openRescheduleModal('${escapeHtml(overdueGroup.id)}')">
                   ${getIcon('clock', 14)}
                   <span>تأجيل</span>
                 </button>
-                <button class="btn btn-secondary btn-sm" style="color: var(--centrly-danger);" onclick="window.centrlyApp.openCancelSessionModal('${escapeHtml(sessionState.overdueGroup.id)}')">
+                <button class="btn btn-secondary btn-sm" style="color: var(--centrly-danger);" onclick="window.centrlyApp.openCancelSessionModal('${escapeHtml(overdueGroup.id)}')">
                   ${getIcon('close', 14)}
                   <span>إلغاء</span>
                 </button>
@@ -168,7 +176,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                     </div>
                   </div>
 
-                  <button class="btn btn-primary" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 800; padding: 0.6rem; font-size: 0.9rem;">
+                  <button class="btn btn-primary" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}',null,${g.saved_session_id?`'${escapeHtml(g.saved_session_id)}'`:'null'})" ${g.unavailable_today?'disabled title="الحصة ملغاة أو موعدها متغير اليوم"':''} style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 800; padding: 0.6rem; font-size: 0.9rem;">
                     ${getIcon('sessions', 16)}
                     <span>بدء تسجيل الحضور الآن</span>
                   </button>
@@ -228,7 +236,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                       </div>
                     </div>
 
-                    <button class="btn btn-secondary" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 700; padding: 0.55rem; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700);">
+                    <button class="btn btn-secondary" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(g.id)}',null,${g.saved_session_id?`'${escapeHtml(g.saved_session_id)}'`:'null'})" ${g.unavailable_today?'disabled title="الحصة ملغاة أو موعدها متغير اليوم"':''} style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 700; padding: 0.55rem; border-color: var(--centrly-blue-700); color: var(--centrly-blue-700);">
                       ${getIcon('sessions', 16)}
                       <span>بدء تسجيل الحضور لهذه الحصة</span>
                     </button>
@@ -534,8 +542,10 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                 } else if (isFailed) {
                   const errorTooltip = a.deliveryError ? ` title="${escapeHtml(a.deliveryError)}"` : ' title="تعذر إرسال الإشعار لولي الأمر عبر واتساب"';
                   deliveryBadge = `<span class="badge badge-danger" style="display: inline-flex; align-items: center; gap: 0.25rem; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 700;"${errorTooltip}>${getIcon('close', 12, '#b91c1c')}<span>لم يتم التسليم</span></span>`;
+                } else if (a.deliveryStatus === 'manual_opened') {
+                  deliveryBadge='<span class="badge badge-secondary">تم فتح واتساب</span>';
                 } else if (a.deliveryStatus === 'delivered' || (a.sent && a.deliveryStatus !== 'failed' && a.wa_status !== 'failed')) {
-                  deliveryBadge = '<span class="badge badge-success" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + getIcon('check', 12) + '<span>تم التسليم</span></span>';
+                  deliveryBadge = '<span class="badge badge-success" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + getIcon('check', 12) + '<span>مسجل كمرسل سابقًا</span></span>';
                 } else if (a.deliveryStatus === 'sending') {
                   deliveryBadge = '<span class="badge badge-warning" style="display: inline-flex; align-items: center; gap: 0.25rem;">' + getIcon('clock', 12) + '<span>قيد الإرسال</span></span>';
                 }
@@ -569,7 +579,7 @@ export function renderSessionsView(sessionState = {}, user = {}, groups = []) {
                         ${getIcon('note', 12)}
                         <span>${(a.comment && a.comment !== 'حصة تعويضية' && !a.comment.startsWith('حصة تعويضية')) ? 'تعديل' : 'ملاحظة'}</span>
                       </button>
-                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${escapeHtml(a.student_id || a.id)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}')" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem; color: ${isFailed ? '#b91c1c' : '#15803d'}; font-weight: 700; ${isFailed ? 'border-color: #fca5a5; background: #fff5f5;' : ''}" title="إرسال إشعار فوري لولي الأمر عبر واتساب">
+                      <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.resendSingleMessage('${escapeHtml(a.student_id || a.id)}', '${escapeHtml(a.name).replace(/'/g, "\\'")}')" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem; color: ${isFailed ? '#b91c1c' : '#15803d'}; font-weight: 700; ${isFailed ? 'border-color: #fca5a5; background: #fff5f5;' : ''}" title="فتح رسالة ولي الأمر في واتساب">
                         ${getIcon('whatsapp', 14, isFailed ? '#b91c1c' : '#15803d')}
                         <span>${isFailed ? 'إعادة إرسال' : 'إرسال'}</span>
                       </button>
@@ -1757,7 +1767,7 @@ export function registerSessionsActions(app) {
           هل تود إنهاء الحصة الآن وتثبيت كشف الحضور؟
         </div>
         <p style="font-size: 0.875rem; color: var(--centrly-text); margin: 0 0 1rem 0;">
-          قبل إغلاق الحصة، يمكنك مراجعة وتدوين ملاحظات الطلاب لتُرسل تلقائياً في تقارير ورسائل أولياء الأمور عبر واتساب.
+          قبل إغلاق الحصة، يمكنك مراجعة وتدوين ملاحظات الطلاب لإرفاقها برسائل المتابعة عند فتح واتساب بنفسك.
         </p>
       </div>
     `;
@@ -2061,7 +2071,7 @@ export function registerSessionsActions(app) {
     }
     const arabicDayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const now = new Date();
-    const todayArabic = arabicDayNames[now.getDay()];
+    const todayArabic = arabicDayNames[new Date(portalCairoClock().date+'T12:00:00Z').getUTCDay()];
     const allGroups = this.groups || [];
     const otherGroups = allGroups.filter(g => {
       const gDay = g.day_of_week || (arabicDayNames.find(d => g.schedule && g.schedule.includes(d))) || '';
@@ -2154,9 +2164,9 @@ export function registerSessionsActions(app) {
 
   app.openCancelSessionModal = function openCancelSessionModal(idOrGroupId) {
     const bodyHtml = `
-      <form id="cancelSessionForm" onsubmit="window.centrlyApp.handleCancelSessionSubmit(event, '${escapeHtml(idOrGroupId)}')">
+      <form id="cancelSessionForm" onsubmit="window.centrlyApp.handleCancelSessionSubmit(event, '${escapeHtml(idOrGroupId)}')"><label class="form-label">تاريخ الحصة<input type="date" id="scheduleOriginalDate" class="form-input" value="${escapeHtml(this.sessionState?.id===idOrGroupId?String(this.sessionState.session_date || portalCairoClock().date).slice(0,10):portalCairoClock().date)}" required></label>
         <div class="form-group">
-          <label class="form-label" style="font-weight: 700;">سبب الإلغاء (يُرسل في إشعار الواتساب لأولياء الأمور)</label>
+          <label class="form-label" style="font-weight: 700;">سبب الإلغاء (ملاحظة داخلية)</label>
           <textarea id="cancelReasonInput" class="form-textarea" rows="3" placeholder="سبب إلغاء الحصة بالتفصيل" required></textarea>
         </div>
       </form>
@@ -2168,31 +2178,42 @@ export function registerSessionsActions(app) {
     this.showModal('إلغاء الحصة', bodyHtml, footerHtml);
   }
 
-  app.handleCancelSessionSubmit = async function handleCancelSessionSubmit(e, id) {
-    e.preventDefault();
-    const reason = document.getElementById('cancelReasonInput')?.value;
-    this.closeModal();
-    if (this.sessionState.id) {
-      this.sessionState.status = 'cancelled';
-      this.sessionState.cancellation_reason = reason;
-      this.renderMainContent();
-    }
-    this.showToast('تم إلغاء الحصة وسيتم إخطار أولياء الأمور تلقائياً', 'info');
-  }
+  app.showSavedScheduleNotice = function(result){
+    const session=result.session;
+    this.showModal('تم حفظ الحصة',`<div style="display:grid;gap:1rem"><p>التغيير محفوظ في الجدول. لم تُرسل أي رسالة تلقائيًا.</p>${renderSourceAnnouncementButton('session',session.id,this)}<p style="font-size:.85rem">راجع المسودة واختر الطلاب أو أولياء الأمور قبل النشر أو الإرسال.</p></div>`,'<button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.closeModal()">متابعة الجدول</button>');
+  };
+  app.saveSessionScheduleChange = async function(event,id,action){
+    event.preventDefault();const control=event.submitter;if(control?.disabled)return;
+    const clean=String(id).replace(/^(?:rec-|sess-|group-)/,'');
+    if(this.sessionState?.id===clean && ((this.sessionState.attendanceList || []).some(row=>row.attended || row.comment || row.quiz_score!=null) || (this.getOfflineAttendanceQueue?.() || []).some(row=>row.session_id===clean))){this.showToast('فيه رصد حضور محفوظ أو منتظر المزامنة؛ زامنه واحتفظ بسجل الحصة','warning');return;}
+    const identity=[this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':');
+    const body={action,id:clean,is_group:(this.groups || []).some(group=>group.id===clean),session_date:document.getElementById('scheduleOriginalDate')?.value || portalCairoClock().date,
+      ...(action==='cancel'?{reason:document.getElementById('cancelReasonInput')?.value || ''}:{new_date:document.getElementById('rescheduleNewDate')?.value,new_time:document.getElementById('rescheduleNewTime')?.value,reason:document.getElementById('rescheduleReason')?.value || ''})};
+    if(control)control.disabled=true;
+    try{
+      const result=await request('/sessions/schedule-change',{method:'POST',body});
+      if([this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':')!==identity)return;
+      if(!result.session?.id)throw new Error('تعذر تأكيد حفظ الحصة؛ حاول مجددًا');
+      if(this.sessionState?.id===result.session.id){this.stopLiveSessionSync?.();this.sessionState={id:null,status:'scheduled',group:null,attendanceList:[],financials:{totalRevenue:0,attendeeCount:0,absentCount:0,exemptCount:0,makeupCount:0}};this.persistSessionState();}
+      this.closeModal();await this.loadRouteData('sessions');this.showSavedScheduleNotice(result);
+    }catch(error){if([this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':')===identity)this.showToast(error.message || 'تعذر حفظ التغيير؛ حاول مجددًا','error');}
+    finally{if(control?.isConnected)control.disabled=false;}
+  };
+  app.handleCancelSessionSubmit = function(event,id){return this.saveSessionScheduleChange(event,id,'cancel');};
 
   app.openRescheduleModal = function openRescheduleModal(idOrGroupId) {
     const bodyHtml = `
-      <form id="rescheduleSessionForm" onsubmit="window.centrlyApp.handleRescheduleSessionSubmit(event, '${escapeHtml(idOrGroupId)}')">
+      <form id="rescheduleSessionForm" onsubmit="window.centrlyApp.handleRescheduleSessionSubmit(event, '${escapeHtml(idOrGroupId)}')"><label class="form-label">تاريخ الحصة الأصلي<input type="date" id="scheduleOriginalDate" class="form-input" value="${escapeHtml(this.sessionState?.id===idOrGroupId?String(this.sessionState.session_date || portalCairoClock().date).slice(0,10):portalCairoClock().date)}" required></label>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">الموعد البديل الجديد *</label>
           <input type="date" id="rescheduleNewDate" class="form-input" required>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">الوقت الجديد *</label>
-          <input type="text" id="rescheduleNewTime" class="form-input" placeholder="05:00 م - 07:00 م" required>
+          <input type="time" id="rescheduleNewTime" class="form-input" required>
         </div>
         <div class="form-group">
-          <label class="form-label" style="font-weight: 700;">ملاحظة لولي الأمر</label>
+          <label class="form-label" style="font-weight: 700;">ملاحظة داخلية</label>
           <input type="text" id="rescheduleReason" class="form-input" placeholder="سبب تأجيل الحصة بالتفصيل">
         </div>
       </form>
@@ -2204,25 +2225,14 @@ export function registerSessionsActions(app) {
     this.showModal('تأجيل موعد الحصة', bodyHtml, footerHtml);
   }
 
-  app.handleRescheduleSessionSubmit = async function handleRescheduleSessionSubmit(e, id) {
-    e.preventDefault();
-    const newDate = document.getElementById('rescheduleNewDate')?.value;
-    const newTime = document.getElementById('rescheduleNewTime')?.value;
-    this.closeModal();
-    if (this.sessionState.id) {
-      this.sessionState.status = 'rescheduled';
-      this.sessionState.rescheduled_to_date = `${newDate} (${newTime})`;
-      this.renderMainContent();
-    }
-    this.showToast(`تم تأجيل الحصة إلى ${newDate} بنجاح وإرسال التنبيه`, 'info');
-  }
+  app.handleRescheduleSessionSubmit = function(event,id){return this.saveSessionScheduleChange(event,id,'reschedule');};
 
   app.openParentNoteModal = function openParentNoteModal(studentId, studentName = 'الطالب') {
     const bodyHtml = `
       <form id="parentNoteForm" onsubmit="window.centrlyApp.handleSendParentNote(event, '${escapeHtml(studentId)}')">
         <div class="form-group">
           <label class="form-label" style="font-weight: 700;">الملاحظة الموجهة لولي أمر (${escapeHtml(studentName)}) *</label>
-          <textarea id="parentNoteText" class="form-textarea" rows="4" placeholder="اكتب الملاحظة هنا... سيتم إرسالها فوراً عبر الواتساب لولي الأمر" required></textarea>
+          <textarea id="parentNoteText" class="form-textarea" rows="4" placeholder="اكتب الملاحظة؛ ستفتح رسالة جاهزة في واتساب لمراجعتها وإرسالها" required></textarea>
         </div>
         <div id="parentNoteFeedback" style="display: none; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem;"></div>
       </form>
@@ -2275,86 +2285,7 @@ export function registerSessionsActions(app) {
     }).catch(() => {});
   }
 
-  app.retryFailedWhatsAppMessages = async function retryFailedWhatsAppMessages() {
-    const failedList = this.sessionState.attendanceList.filter(a => !a.is_makeup && (a.deliveryStatus === 'failed' || a.wa_status === 'failed' || a.deliveryStatus === 'not_delivered'));
-    if (failedList.length === 0) {
-      this.showToast('لا توجد رسائل لم يتم تسليمها لإعادة إرسالها.', 'info');
-      return;
-    }
-    failedList.forEach(a => a.deliveryStatus = 'sending');
-    this.renderMainContent();
-
-    try {
-      const syncRecords = (this.sessionState.attendanceList || [])
-        .filter(a => a.student_id)
-        .map(a => ({
-          student_id: a.student_id,
-          attended: Boolean(a.attended),
-          comment: a.comment || null,
-          homework_status: (a.homework && a.homework !== 'none') ? a.homework : null,
-          is_makeup: Boolean(a.is_makeup),
-          quiz_score: (a.quiz_score !== undefined && a.quiz_score !== null && a.quiz_score !== '') ? Number(a.quiz_score) : null,
-          sent: Boolean(a.sent && a.deliveryStatus === 'delivered'),
-        }));
-
-      const res = await request(`/sessions/${this.sessionState.id}/send-messages`, {
-        method: 'POST',
-        body: {
-          include_all_present: true,
-          records: syncRecords,
-        },
-      });
-
-      let retriedDelivered = 0;
-      let retriedFailed = 0;
-
-      if (res && Array.isArray(res.results)) {
-        const resultsMap = new Map();
-        res.results.forEach(r => {
-          if (r.student_id) resultsMap.set(String(r.student_id), r);
-        });
-
-        failedList.forEach(a => {
-          const r = resultsMap.get(String(a.student_id || a.id));
-          if (r && (r.status === 'dispatched' || r.status === 'sent')) {
-            a.sent = true;
-            a.deliveryStatus = 'delivered';
-            a.deliveryError = null;
-            retriedDelivered++;
-          } else {
-            a.sent = false;
-            a.deliveryStatus = 'failed';
-            a.deliveryError = r?.reason || 'لم يتم التسليم';
-            retriedFailed++;
-          }
-        });
-      } else {
-        failedList.forEach(a => {
-          a.sent = false;
-          a.deliveryStatus = 'failed';
-          a.deliveryError = 'تعذر تأكيد التسليم';
-          retriedFailed++;
-        });
-      }
-
-      this.persistSessionState();
-      this.renderMainContent();
-
-      if (retriedDelivered > 0) {
-        this.showToast(`تم تسليم (${retriedDelivered}) رسائل بنجاح`, 'success');
-      } else {
-        this.showToast(`لم يتم تسليم الرسائل. يمكنك استخدام زر الإرسال المباشر لكل طالب.`, 'danger');
-      }
-    } catch (err) {
-      failedList.forEach(a => {
-        a.deliveryStatus = 'failed';
-        a.deliveryError = err.message || 'فشل الاتصال بالخادم';
-      });
-      this.persistSessionState();
-      this.renderMainContent();
-      this.showToast(`فشل إعادة الإرسال: ${err.message || 'خطأ في الشبكة'}`, 'danger');
-    }
-  }
+  app.retryFailedWhatsAppMessages = function(){return this.dispatchSessionWhatsAppMessages();};
 
   app.openEditSessionModal = function openEditSessionModal() {
     if (!this.sessionState.id) return;
@@ -2411,9 +2342,10 @@ export function registerSessionsActions(app) {
 
   // Functional Extra Session Modal
   app.openScheduleSessionModal = function openScheduleSessionModal(defaultGroupId = null) {
+    this._extraSessionRequestId=crypto.randomUUID();
     const cleanDefaultId = defaultGroupId ? String(defaultGroupId).replace(/^rec-/, '') : null;
-    const groupOptions = (this.groups || []).map(g => `<option value="${g.id}" ${cleanDefaultId === g.id ? 'selected' : ''}>${g.name}</option>`).join('');
-    const todayIso = new Date().toISOString().slice(0, 10);
+    const groupOptions = (this.groups || []).map(g => `<option value="${escapeHtml(g.id)}" ${cleanDefaultId === g.id ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join('');
+    const todayIso = portalCairoClock().date;
     const bodyHtml = `
       <form id="scheduleSessionForm" onsubmit="window.centrlyApp.handleCreateExtraSession(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -2428,7 +2360,7 @@ export function registerSessionsActions(app) {
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">موعد بداية الحصة *</label>
-          <input type="text" id="extraSessionTime" list="commonSessionTimes" class="form-input" value="04:00 م" placeholder="مثال: 04:00 م" required>
+          <input type="time" id="extraSessionTime" class="form-input" value="16:00" required>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">موضوع الحصة / الملاحظات *</label>
@@ -2458,19 +2390,22 @@ export function registerSessionsActions(app) {
     const topic = document.getElementById('extraSessionTopic').value;
 
     try {
-      await request('/sessions/extra', {
+      const identity=[this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':');
+      const result=await request('/sessions/extra', {
         method: 'POST',
         body: {
           group_id,
           session_date,
           session_time,
           topic,
-          notify_parents: true,
+          notify_parents: false,
+          request_id: this._extraSessionRequestId,
         },
       });
+      if([this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':')!==identity)return;
       this.closeModal();
-      this.showToast('تم جدولة الحصة الإضافية بنجاح وإرسال إشعارات لأولياء الأمور!', 'success');
       await this.loadRouteData(this.currentRoute);
+      this.showSavedScheduleNotice(result);
     } catch (err) {
       if (submitBtn) {
         submitBtn.disabled = false;
@@ -2480,147 +2415,12 @@ export function registerSessionsActions(app) {
     }
   }
 
-  app.dispatchSessionWhatsAppMessages = function dispatchSessionWhatsAppMessages() {
-    if (!this.sessionState.id) {
-      this.showToast('لا توجد حصة محددة لإرسال الرسائل.', 'info');
-      return;
-    }
-    if (this.sessionState.isDispatchingWhatsApp) {
-      this.showToast('الإرسال جارٍ بالفعل حالياً بفواصل الأمان. يرجى الانتظار لحين اكتمال إرسال الدفعة.', 'warning');
-      return;
-    }
-    const eligibleStudents = (this.sessionState.attendanceList || []).filter(
-      a => !a.is_makeup && a.comment !== 'حصة تعويضية'
-    );
-    const countEligible = eligibleStudents.length;
-    if (countEligible === 0) {
-      this.showToast('لا يوجد طلاب لإرسال إشعارات الحصة لهم.', 'info');
-      return;
-    }
+  app.dispatchSessionWhatsAppMessages = function(){
+    if(this.delegation && !(this.delegation.permissions?.['reports.view'] && this.delegation.permissions?.['reports.send'])){this.showToast('تحتاج صلاحية عرض تقارير الطلاب وإرسالها لفتح رسائل المتابعة','warning');return;}
+    const date=String(this.sessionState.session_date || portalCairoClock().date).slice(0,10);
+    this.openFollowupReports({group_id:this.sessionState.group?.id || this.sessionState.group_id || '',from:date,to:date});
+  };
 
-    this.showConfirmModal({
-      title: 'إرسال إشعارات الحصة لأولياء الأمور عبر واتساب',
-      message: `سيتم إرسال (${countEligible}) رسالة لأولياء الأمور لإشعارهم بتقرير الحصة بفواصل زمنية منظمة لضمان وصول الرسائل بسلاسة. هل ترغب في المتابعة؟`,
-      confirmText: `إرسال الإشعارات الآن (${countEligible} رسالة)`,
-      cancelText: 'إلغاء',
-      isDanger: false,
-      onConfirm: async () => {
-        if (this.sessionState.isDispatchingWhatsApp) return;
-        this.sessionState.isDispatchingWhatsApp = true;
-        try {
-          this.showToast('جارٍ إرسال إشعارات الحصة عبر واتساب...', 'info');
-
-          // 1. First: Guarantee all attendance records (attended + absent) are synced to the backend
-          const syncRecords = (this.sessionState.attendanceList || [])
-            .filter(a => a.student_id)
-            .map(a => ({
-              student_id: a.student_id,
-              attended: Boolean(a.attended),
-              comment: a.comment || null,
-              homework_status: (a.homework && a.homework !== 'none') ? a.homework : null,
-              is_makeup: Boolean(a.is_makeup),
-              quiz_score: (a.quiz_score !== undefined && a.quiz_score !== null && a.quiz_score !== '') ? Number(a.quiz_score) : null,
-              sent: Boolean(a.sent && a.deliveryStatus === 'delivered'),
-            }));
-
-          // Mark status as 'sending' in UI immediately
-          this.sessionState.attendanceList.forEach(a => {
-            if (!a.is_makeup && a.comment !== 'حصة تعويضية') {
-              a.deliveryStatus = 'sending';
-            }
-          });
-          this.renderMainContent();
-
-          const res = await request(`/sessions/${this.sessionState.id}/send-messages`, {
-            method: 'POST',
-            body: { 
-              include_all_present: true,
-              records: syncRecords,
-            },
-          });
-
-          // 2. Process exact per-student results from the server
-          let deliveredCount = 0;
-          let failedCount = 0;
-
-          if (res && Array.isArray(res.results)) {
-            const resultsMap = new Map();
-            res.results.forEach(r => {
-              if (r.student_id) resultsMap.set(String(r.student_id), r);
-            });
-
-            this.sessionState.attendanceList.forEach(a => {
-              if (a.is_makeup || a.comment === 'حصة تعويضية') return;
-
-              const r = resultsMap.get(String(a.student_id || a.id));
-              if (r) {
-                if (r.status === 'dispatched' || r.status === 'sent') {
-                  a.sent = true;
-                  a.deliveryStatus = 'delivered';
-                  a.deliveryError = null;
-                  deliveredCount++;
-                } else if (r.status === 'already_sent') {
-                  a.sent = true;
-                  a.deliveryStatus = 'delivered';
-                  deliveredCount++;
-                } else if (r.status === 'failed') {
-                  a.sent = false;
-                  a.deliveryStatus = 'failed';
-                  a.deliveryError = r.reason || 'لم يتم التسليم';
-                  failedCount++;
-                } else if (r.status === 'skipped') {
-                  a.sent = false;
-                  a.deliveryStatus = 'failed';
-                  a.deliveryError = r.reason || 'تم التخطي';
-                  failedCount++;
-                }
-              } else {
-                a.sent = false;
-                a.deliveryStatus = 'failed';
-                a.deliveryError = 'لم يتم العثور على تقرير إرسال للطالب';
-                failedCount++;
-              }
-            });
-          } else {
-            this.sessionState.attendanceList.forEach(a => {
-              if (!a.is_makeup && a.comment !== 'حصة تعويضية') {
-                a.sent = false;
-                a.deliveryStatus = 'failed';
-                a.deliveryError = 'تعذر تأكيد التسليم من الخادم';
-                failedCount++;
-              }
-            });
-          }
-
-          this.persistSessionState();
-          this.renderMainContent();
-
-          if (failedCount > 0 && deliveredCount === 0) {
-            this.showToast(`تعذر تسليم الإشعارات (${failedCount} طالب لم يتم التسليم لهم). يرجى التحقق من اتصال الواتساب أو استخدام زر الإرسال المباشر.`, 'danger');
-          } else if (failedCount > 0) {
-            this.showToast(`تم تسليم (${deliveredCount}) رسالة بنجاح، و (${failedCount}) طالب لم يتم التسليم لهم.`, 'warning');
-          } else {
-            this.showToast(`تم إرسال كافة إشعارات الحصة (${deliveredCount} رسالة) بنجاح عبر واتساب!`, 'success');
-          }
-        } catch (err) {
-          this.sessionState.attendanceList.forEach(a => {
-            if (!a.is_makeup && a.comment !== 'حصة تعويضية') {
-              a.sent = false;
-              a.deliveryStatus = 'failed';
-              a.deliveryError = err.message || 'فشل الاتصال بالخادم';
-            }
-          });
-          this.persistSessionState();
-          this.renderMainContent();
-          this.showToast(`فشل إرسال رسائل الواتساب: ${err.message || 'لم يتم التسليم'}`, 'danger');
-        } finally {
-          this.sessionState.isDispatchingWhatsApp = false;
-        }
-      }
-    });
-  }
-
-  // ==========================================================================
   app.downloadBarcodeSheet = async function downloadBarcodeSheet(groupId) {
     const targetGroupId = groupId || (this.groups && this.groups[0]?.id);
     if (!targetGroupId) {
@@ -2657,7 +2457,10 @@ export function registerSessionsActions(app) {
     this.showToast(`إيصال الحصة: إجمالي النقدية ${rev} ج.م | الحاضرون: ${att} | الغياب: ${abs}`, 'info');
   }
 
-  app.startSessionForGroup = async function startSessionForGroup(gId, customRoom = null) {
+  app.startSessionForGroup = async function startSessionForGroup(gId, customRoom = null, savedSessionId = null) {
+    if(this._startingSession)return;this._startingSession=true;
+    const identity=[this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':');
+    try{
     const cleanId = String(gId).replace(/^rec-/, '');
     const grp = (this.groups || []).find(g => g.id === cleanId);
     const assignedRoom = (customRoom !== null && customRoom !== undefined && customRoom !== '')
@@ -2665,50 +2468,15 @@ export function registerSessionsActions(app) {
       : (grp?.room || grp?.room_name || '');
     this.showToast('جاري بدء وتجهيز الحصة...', 'info');
 
-    let serverSession = null;
-
-    // 1. Check if there is already an in_progress session on the server for this group FOR TODAY
-    const todayStr = new Date().toISOString().split('T')[0];
-    try {
-      const activeRes = await request('/sessions?status=in_progress').catch(() => null);
-      const activeList = Array.isArray(activeRes) ? activeRes : (activeRes?.sessions || []);
-      const existing = activeList.find(s => s.group_id === cleanId && s.session_date === todayStr);
-      if (existing) {
-        await this.syncAndResumeServerSession(existing.id);
-        this.navigate('sessions');
-        return;
-      }
-    } catch (err) {
-      console.warn('Check active sessions error:', err);
-    }
-
-    // 2. If no existing session, create a real session on server
-    if (!serverSession) {
-      try {
-        let nextNum = 1;
-        const pastRes = await request(`/sessions?group_id=${cleanId}`).catch(() => null);
-        const pastList = Array.isArray(pastRes) ? pastRes : (pastRes?.sessions || []);
-        if (pastList.length > 0) {
-          const maxNum = Math.max(...pastList.map(s => Number(s.session_number) || 0));
-          nextNum = maxNum + 1;
-        }
-        const createRes = await request('/sessions', {
-          method: 'POST',
-          body: {
-            group_id: cleanId,
-            session_number: nextNum,
-            session_date: todayStr,
-            ...(assignedRoom ? { room: assignedRoom } : {}),
-          },
-        });
-        if (createRes && createRes.session) {
-          serverSession = createRes.session;
-        }
-      } catch (err) {
-        if (this.delegation) { this.showToast(err.message || 'تعذر بدء الحصة؛ حاول مجددًا', 'warning'); return; }
-        console.warn('Server session creation failed, continuing with local fallback:', err);
-      }
-    }
+    let serverSession=null;
+    const todayStr=portalCairoClock().date;
+    try{
+      const response=await request('/sessions/start',{method:'POST',body:{group_id:cleanId,...(savedSessionId?{session_id:savedSessionId}:{})}});
+      serverSession=response.session;
+      if(!serverSession?.id || serverSession.status!=='in_progress')throw new Error('تعذر تأكيد بدء الحصة');
+      const details=await request('/sessions/'+serverSession.id);
+      if((details.attendance || []).length){await this.syncAndResumeServerSession(serverSession.id);this.navigate('sessions');return;}
+    }catch(error){this.showToast(error.message || 'تعذر بدء الحصة؛ حاول مجددًا','error');return;}
 
     // Fetch group students to pre-populate roster as "غائب" (absent)
     let groupStudents = (this.students || []).filter(s => s.group_id === cleanId || (Array.isArray(s.group_ids) && s.group_ids.includes(cleanId)));
@@ -2747,7 +2515,8 @@ export function registerSessionsActions(app) {
       sent: false,
     }));
 
-    const sessionId = serverSession ? serverSession.id : `sess-${cleanId}`;
+    if([this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':')!==identity)return;
+    const sessionId = serverSession.id;
     if(serverSession?.id)trackProductEvent('session_started');
     this.sessionState = {
       id: sessionId,
@@ -2770,6 +2539,7 @@ export function registerSessionsActions(app) {
     this.startLiveSessionSync();
     this.updateNavbarBadge();
     this.navigate('sessions');
+    }finally{this._startingSession=false;}
   }
 
 }

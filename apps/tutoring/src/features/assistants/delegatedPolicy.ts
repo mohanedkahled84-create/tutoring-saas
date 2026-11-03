@@ -11,7 +11,7 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
  const require=(key:string,action='view')=>{if(!hasAssistantCapability(p,key,action))throw denied();return `${key}.${action}`;};
  if(root==='announcements'){
   if(read)return require('announcements');
-  if(tail==='type-requests' || !tail)return require('announcements','create');
+  if(tail==='type-requests' || tail==='source' || !tail)return require('announcements','create');
   if(/\/(preview|consent|enqueue|retry|cancel)$/.test(tail))return require('announcements','send');
   if(/\/archive$/.test(tail))return require('announcements','delete');
   if(method==='PUT' || /\/publish$/.test(tail))return require('announcements','edit');
@@ -67,7 +67,7 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
   if(/quiz-scores/.test(tail))return require('quizzes','grade');
   if(/receipt$/.test(tail))return require('dashboard');
   if(/attendance|scan|\/end$/.test(tail))return require('attendance','edit');
-  if(!tail)return hasAssistantCapability(p,'attendance','create')?require('attendance','create'):require('sessions','create');
+  if(!tail || tail==='start')return hasAssistantCapability(p,'attendance','create')?require('attendance','create'):require('sessions','create');
   return require('sessions',tail==='extra'?'create':'edit');
  }
  if(root==='homework' && /submissions\/[a-f0-9-]+\/review$/.test(tail))return require('homework','edit');

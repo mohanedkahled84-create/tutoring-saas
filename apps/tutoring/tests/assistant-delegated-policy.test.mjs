@@ -53,7 +53,7 @@ test('announcements have independent view, creation, publishing and paid send ri
  const view={'announcements.view':true};
  assert.equal(policy('GET','/announcements','announcements',view),'announcements.view');
  assert.equal(policy('GET','/groups','announcements',view),'announcements.view');
- for(const path of ['/announcements/type-requests','/announcements/fixture/preview','/announcements/fixture/publish','/announcements/fixture/consent','/announcements/fixture/enqueue','/announcements/fixture/retry','/announcements/fixture/cancel','/announcements/fixture/archive'])assert.throws(()=>policy('POST',path,'announcements',view),e=>e.status===403);
+ for(const path of ['/announcements/source','/announcements/type-requests','/announcements/fixture/preview','/announcements/fixture/publish','/announcements/fixture/consent','/announcements/fixture/enqueue','/announcements/fixture/retry','/announcements/fixture/cancel','/announcements/fixture/archive'])assert.throws(()=>policy('POST',path,'announcements',view),e=>e.status===403);
  assert.throws(()=>policy('POST','/announcements/fixture/enqueue','reports',{'reports.view':true,'reports.send':true}),e=>e.status===403);
  assert.equal(policy('POST','/announcements/fixture/enqueue','announcements',{...view,'announcements.send':true}),'announcements.send');
  assert.throws(()=>policy('POST','/announcements/fixture/publish','announcements',{...view,'announcements.send':true}),e=>e.status===403);

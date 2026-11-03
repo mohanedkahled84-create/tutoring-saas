@@ -1,3 +1,4 @@
+import {changeSavedSchedule,registerSavedScheduleRoutes} from './schedule.js';
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import {
@@ -16,6 +17,7 @@ import { SessionModel } from "./types.js";
 import { attendanceRouter } from "../attendance/routes.js";
 
 export const sessionsRouter = Router();
+registerSavedScheduleRoutes(sessionsRouter);
 
 function resolveSessionsService(req: AuthenticatedRequest): SessionsService {
   const services = getServices(req);
@@ -78,109 +80,21 @@ sessionsRouter.post("/:id/end", async (req: AuthenticatedRequest, res: Response)
   }
 });
 
-function requireTeacherOrAdmin(req: AuthenticatedRequest, res: Response): boolean {
-  if (req.user?.role === "assistant") {
-    res.status(403).json({
-      error: {
-        code: "FORBIDDEN",
-        message: "Assistants are not permitted to manage session scheduling",
-      },
-    });
-    return false;
-  }
-  return true;
-}
+// Saved schedule changes never dispatch notifications automatically.
+sessionsRouter.post('/:id/cancel',validateBody(cancelSessionSchema),async(req:AuthenticatedRequest,res)=>{
+ await changeSavedSchedule(req,res,'cancel',{...req.body,id:req.params.id,is_group:false});
+});
 
-// POST /api/sessions/:id/cancel - Cancel a session and notify parents
-sessionsRouter.post(
-  "/:id/cancel",
-  validateBody(cancelSessionSchema),
-  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    if (!requireTeacherOrAdmin(req, res)) return;
+// Saved schedule changes never dispatch notifications automatically.
+sessionsRouter.post('/:id/reschedule',validateBody(rescheduleSessionSchema),async(req:AuthenticatedRequest,res)=>{
+ await changeSavedSchedule(req,res,'reschedule',{...req.body,id:req.params.id,is_group:false});
+});
 
-    const tenantId = req.user?.tenant_id;
-    const { id: sessionId } = req.params;
+// An extra session is saved atomically with its selected time.
+sessionsRouter.post('/extra',validateBody(extraSessionSchema),async(req:AuthenticatedRequest,res)=>{
+ await changeSavedSchedule(req,res,'extra',req.body,201);
+});
 
-    if (!tenantId && req.user?.role !== "admin") {
-      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
-      return;
-    }
-
-    try {
-      const service = resolveSessionsService(req);
-      const result = await service.cancelSession(tenantId || "", sessionId, req.body);
-      res.status(200).json(result);
-    } catch (err: unknown) {
-      const errorMsg = (err as Error).message;
-      if (errorMsg === "SESSION_NOT_FOUND") {
-        res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found" } });
-        return;
-      }
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to cancel session", details: errorMsg },
-      });
-    }
-  }
-);
-
-// POST /api/sessions/:id/reschedule - Reschedule a session and notify parents
-sessionsRouter.post(
-  "/:id/reschedule",
-  validateBody(rescheduleSessionSchema),
-  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    if (!requireTeacherOrAdmin(req, res)) return;
-
-    const tenantId = req.user?.tenant_id;
-    const { id: sessionId } = req.params;
-
-    if (!tenantId && req.user?.role !== "admin") {
-      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
-      return;
-    }
-
-    try {
-      const service = resolveSessionsService(req);
-      const result = await service.rescheduleSession(tenantId || "", sessionId, req.body);
-      res.status(200).json(result);
-    } catch (err: unknown) {
-      const errorMsg = (err as Error).message;
-      if (errorMsg === "SESSION_NOT_FOUND") {
-        res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found" } });
-        return;
-      }
-      res.status(500).json({
-        error: { code: "INTERNAL_ERROR", message: "Failed to reschedule session", details: errorMsg },
-      });
-    }
-  }
-);
-
-// POST /api/sessions/extra - Create an extra session and notify parents
-sessionsRouter.post(
-  "/extra",
-  validateBody(extraSessionSchema),
-  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    if (!requireTeacherOrAdmin(req, res)) return;
-
-    const tenantId = req.user?.tenant_id;
-    if (!tenantId && req.user?.role !== "admin") {
-      res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
-      return;
-    }
-
-    try {
-      const service = resolveSessionsService(req);
-      const result = await service.createExtraSession(tenantId || "", req.body);
-      res.status(201).json(result);
-    } catch (err: unknown) {
-      res.status(400).json({
-        error: { code: "BAD_REQUEST", message: (err as Error).message },
-      });
-    }
-  }
-);
-
-// DEV-56: Teacher Calendar Range Query (Daily / Weekly / Monthly)
 sessionsRouter.get(
   "/calendar",
   requireFeatureFlag("teacherCalendar"),
@@ -384,19 +298,21 @@ sessionsRouter.post(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id;
     const { id: sessionId } = req.params;
-    const { recipient_phone, recipient_type = "teacher", send_via_whatsapp = true } = req.body;
+    const { recipient_phone, recipient_type = "teacher", send_via_whatsapp = false } = req.body;
 
     if (!tenantId && req.user?.role !== "admin") {
       res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
       return;
     }
 
+    if(send_via_whatsapp){res.status(409).json({error:{code:'MANUAL_WHATSAPP_ONLY',message:'شارك الإيصال من نافذة واتساب بعد مراجعته؛ لا يُرسل تلقائيًا من المنصة'}});return;}
+
     try {
       const service = resolveSessionsService(req);
       const result = await service.generateReceipt(tenantId || "", sessionId, {
         recipient_phone,
         recipient_type,
-        send_via_whatsapp,
+        send_via_whatsapp: false,
       });
 
       res.status(200).json(result);
@@ -413,76 +329,9 @@ sessionsRouter.post(
   }
 );
 
-// DEV-NOTIF.1: POST /api/sessions/:id/notify-students - Dispatch WhatsApp alerts directly to students
-sessionsRouter.post(
-  "/:id/notify-students",
-  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const tenantId = req.user?.tenant_id || "default";
-    const { id: sessionId } = req.params;
-    const {
-      event_type,
-      group_id,
-      group_name,
-      date,
-      time,
-      reason,
-      topic,
-      teacher_id,
-      teacher_name,
-      pacing_delay_ms,
-    } = req.body;
-
-    try {
-      const services = getServices(req);
-      const whatsAppService = services.whatsapp;
-      const studentsService = services.students;
-
-      const targetGroupId =
-        group_id ||
-        (sessionId.startsWith("group-") ? sessionId.replace("group-", "") : undefined);
-      const students = await studentsService.listStudents(tenantId, undefined, targetGroupId);
-
-      const items = students
-        .filter((s) => s.student_phone || s.parent_phone)
-        .map((s) => ({
-          recipient_id: s.id,
-          recipient_name: s.name,
-          phone: s.student_phone || s.parent_phone || "",
-        }));
-
-      const resolvedTeacherId =
-        teacher_id ||
-        req.user?.teacher_id ||
-        (req.user?.role === "teacher" ? req.user?.id : "default");
-
-      const result = await whatsAppService.batchSendCustomNotification(
-        tenantId,
-        items,
-        {
-          event_type: event_type || "general",
-          group_name,
-          date,
-          time,
-          reason,
-          topic,
-          teacher_id: resolvedTeacherId,
-          teacher_name,
-          pacingDelayMs: pacing_delay_ms,
-        }
-      );
-
-      res.status(200).json(result);
-    } catch (err: unknown) {
-      res.status(500).json({
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "Failed to dispatch student notifications",
-          details: (err as Error).message,
-        },
-      });
-    }
-  }
-);
+// Retired unreviewed bulk-send path. Teachers use the explicit announcement
+// preview/consent/allowance workflow, or open WhatsApp manually.
+sessionsRouter.post('/:id/notify-students',(_req,res)=>{res.status(410).json({error:{code:'ANNOUNCEMENT_REVIEW_REQUIRED',message:'افتح مسودة الرسائل والإعلانات لمراجعة النص واختيار المستلمين قبل الإرسال'}});});
 
 // Mount attendance router sub-routes (/scan, /attendance, /attendance/batch-sync, /delivery-status)
 sessionsRouter.use("/", attendanceRouter);

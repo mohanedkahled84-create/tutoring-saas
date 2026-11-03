@@ -1,3 +1,4 @@
+import {portalCairoClock} from './utils/portalClock.js';
 import { assistantPay } from "./utils/assistantPay.js";
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
@@ -1807,14 +1808,16 @@ export class CentrlyApp {
           break;
         }
         case 'sessions': {
-          const [grpRes, studRes] = await Promise.all([
+          const date=portalCairoClock().date;
+          const [grpRes, studRes, scheduleRes] = await Promise.all([
             (!this.groups || this.groups.length === 0) ? request('/groups') : Promise.resolve(this.groups),
             (!this.students || this.students.length === 0) ? request('/students') : Promise.resolve(this.students),
+            request('/sessions?from='+date+'&to='+new Date(Date.parse(date+'T12:00:00Z')+90*86400000).toISOString().slice(0,10)),
           ]);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || this.groups || []);
           this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
 
-          const todayStr = new Date().toISOString().split('T')[0];
+          const todayStr = date;
           // If the active session has ended, or is stale (not in_progress) from an old date, clean it up
           if (this.sessionState?.id && this.sessionState.status !== 'in_progress' && (this.sessionState.session_date && this.sessionState.session_date !== todayStr)) {
             this.sessionState = {
@@ -1849,6 +1852,7 @@ export class CentrlyApp {
             this.startLiveSessionSync();
           }
 
+          this.sessionState.scheduleRecords=Array.isArray(scheduleRes)?scheduleRes:scheduleRes.sessions || [];
           this.renderMainContent();
           this.updateNavbarBadge();
           if (this.sessionState?.status === 'in_progress') {

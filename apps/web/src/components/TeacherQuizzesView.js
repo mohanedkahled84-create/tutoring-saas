@@ -1,3 +1,4 @@
+import {renderSourceAnnouncementButton} from './AnnouncementsView.js';
 import {teacherQuizCache,quizActor} from '../utils/teacherQuizCache.js';
 
 function playBarcodeBeep() {
@@ -1084,6 +1085,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
                     >
                       <span>كشف الدرجات</span>
                     </button>
+                    ${renderSourceAnnouncementButton('material',rq.id)}
                     <button 
                       type="button" 
                       style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fffdfa; color: #b45309; border-radius: 5px; border: 1px solid #fde68a; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
@@ -4216,6 +4218,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                     >
                       ${getIcon('edit', 12)}
                     </button>
+                    ${renderSourceAnnouncementButton('material',rq.id)}
                     <button 
                       type="button" 
                       style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fffdfa; color: #b45309; border-radius: 5px; border: 1px solid #fde68a; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"

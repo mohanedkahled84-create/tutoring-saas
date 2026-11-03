@@ -1,3 +1,4 @@
+import {renderSourceAnnouncementButton} from './AnnouncementsView.js';
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
@@ -228,6 +229,7 @@ export function renderMaterialsView(materials = [], groups = [], selectedGroupId
                       `)}
                     </td>
                     <td>
+                      ${renderSourceAnnouncementButton('material',m.id)}
                       <button class="btn btn-secondary" style="min-height:44px;margin-bottom:.35rem" onclick="window.centrlyApp.openMaterialGroupAssignment('${escapeHtml(m.id)}')">إسناد لمجموعات أخرى</button>
                       <button class="btn btn-secondary" style="min-height:44px;margin-bottom:.35rem" onclick="window.centrlyApp.openMaterialCopy('${escapeHtml(m.id)}')">نسخة جديدة للمجموعات الحالية</button>
                       <button class="btn btn-sm btn-danger" onclick="window.centrlyApp.deleteMaterial('${m.id}', '${escapeHtml(m.title)}')" title="حذف المذكرة">

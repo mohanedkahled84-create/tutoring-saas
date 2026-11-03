@@ -1,3 +1,4 @@
+import {renderSourceAnnouncementButton} from './AnnouncementsView.js';
 import { isUserPro } from "../utils/proGating.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
@@ -451,6 +452,7 @@ export function renderVideoLessonsView(
                         ${getIcon('eye', 14)}
                         <span>معاينة</span>
                       </button>
+                      ${renderSourceAnnouncementButton('material',video.id)}
                       <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.deleteVideoLesson('${escapeHtml(video.id)}')" style="color: #dc2626;" title="حذف الفيديو">
                         ${getIcon('delete', 14, '#dc2626')}
                       </button>

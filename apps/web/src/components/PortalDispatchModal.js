@@ -16,8 +16,10 @@ export function registerPortalDispatchActions(app) {
     finally{if(button){button.disabled=false;button.removeAttribute('aria-busy');}}
   };
   app.resendSingleMessage = function(studentId, studentName) {
+    if(this.delegation && !(this.delegation.permissions?.['reports.view'] && this.delegation.permissions?.['reports.send'])){this.showToast('تحتاج صلاحية تقارير الطلاب وإرسالها لفتح رسالة المتابعة','warning');return;}
     const row = (this.sessionState.attendanceList || []).find(a => a.student_id === studentId || a.id === studentId);
     const student = (this.students || []).find(s => s.id === studentId) || {};
+    if(!row){this.openFollowupReports({student_id:studentId,group_id:student.group_id || '',q:studentName || ''});return;}
     const parentPhone = row?.parent_phone || student.parent_phone || row?.phone || '';
 
     // Block sending if no valid parent phone is registered
@@ -52,8 +54,8 @@ export function registerPortalDispatchActions(app) {
     const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(previewText)}`;
     window.open(waUrl, '_blank');
     if (row) {
-      row.sent = true;
-      row.deliveryStatus = 'delivered';
+      row.sent = false;
+      row.deliveryStatus = 'manual_opened';
       this.persistSessionState();
     }
     this.showToast(`تم فتح محادثة واتساب لولي أمر (${studentName}) بنجاح! 💬`, 'success');
@@ -82,7 +84,7 @@ export function registerPortalDispatchActions(app) {
     const bodyHtml = `
       <div style="display: flex; flex-direction: column; gap: 1rem;" dir="rtl">
         <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 0.85rem; font-size: 0.85rem; color: #92400e; line-height: 1.6;">
-          <strong>الإرسال المباشر لـ ${recipientTitle}:</strong> تم تجهيز نص الرسالة لـ <b>${escapeHtml(studentName)}</b> لتتمكن من إرسالها فوراً بنقرة واحدة عبر واتساب لضمان وصولها!
+          <strong>الإرسال المباشر لـ ${recipientTitle}:</strong> تم تجهيز نص الرسالة لـ <b>${escapeHtml(studentName)}</b> لمراجعتها وإرسالها بنفسك من واتساب. فتح النافذة لا يؤكد إرسال الرسالة أو وصولها.
         </div>
 
         <div class="form-group">
@@ -133,10 +135,7 @@ export function registerPortalDispatchActions(app) {
   }
 
   app.onDirectWhatsAppModalClicked = function() {
-    if (this._pendingDirectOnDelivered) {
-      this._pendingDirectOnDelivered();
-      this._pendingDirectOnDelivered = null;
-    }
+    this._pendingDirectOnDelivered = null;
     setTimeout(() => {
       this.closeModal();
       this.showToast('تم فتح واتساب؛ راجع الرسالة واضغط إرسال.', 'info');
