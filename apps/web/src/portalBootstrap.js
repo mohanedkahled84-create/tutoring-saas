@@ -12,7 +12,7 @@ async function start() {
   const parentModule=isParentEntry ? import('./parentPortal.js') : null;
   parentModule?.catch(()=>{}); // Show the normal retry UI if a module download fails.
   const mountParent = async error => (await (parentModule || import('./parentPortal.js'))).mountParentPortal(error);
-  const mountStudent = async () => (await import('./studentPortalEntry.js?v=1')).mountStudentPortal();
+  const mountStudent = async () => (await import('./studentPortalEntry.js?v=9.38.0')).mountStudentPortal();
   if(location.pathname==='/family'){await mountParent();return;}
   if(location.pathname==='/portal-entry' && new URLSearchParams(location.hash.slice(1)).has('family')){await mountParent();return;}
   // Consume cross-origin entry before downloading staff authentication and dashboards.
@@ -38,7 +38,7 @@ async function start() {
     // The existing student loader paints its cache before checking the live destination.
     // No teacher authentication or landing modules are needed for this entry.
     if(portalPath || params.get('view')==='portal' || params.get('portal')==='login' || params.has('token')){await mountStudent();return;}
-    await import('./app.js?v=9.37.0'); return;
+    await import('./app.js?v=9.38.0'); return;
   }
   const root = document.getElementById('app');
   if (!root.querySelector('.portal-opening')) window.renderPortalOpening(root);
