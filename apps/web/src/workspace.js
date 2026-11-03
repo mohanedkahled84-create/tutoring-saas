@@ -2,6 +2,10 @@ import { registerCameraScannerActions } from './components/CameraScannerModal.js
 import {registerClassroomLifecycle} from './components/ClassroomLifecycle.js';
 import {registerAcademicYears} from './components/AcademicYears.js';
 import {registerStartupChecklist} from './components/StartupChecklist.js';
+import {renderAnnouncementAdminView,registerAnnouncementAdminActions} from './components/AnnouncementAdminView.js';
+export {renderAnnouncementAdminView};
+import {renderAnnouncementsView,registerAnnouncementsActions} from './components/AnnouncementsView.js';
+export {renderAnnouncementsView};
 import {renderSupportView,registerSupportActions} from './components/SupportView.js';
 export {renderSupportView};
 import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=1.1.0';
@@ -45,6 +49,8 @@ export function registerWorkspaceActions(app) {
   registerAcademicYears(app);
   registerStartupChecklist(app);
   registerSupportActions(app);
+  registerAnnouncementsActions(app);
+  registerAnnouncementAdminActions(app);
   registerMaterialsActions(app);
   registerVideoLessonsActions(app);
   registerTeacherPlatformActions(app);

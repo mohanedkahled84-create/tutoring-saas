@@ -1,7 +1,7 @@
 // UI capabilities mirror the server's existing per-resource permissions.
 // They never replace the assistant API's tenant/group/action checks.
 export const routeResources = {
- sessions:['attendance'], calendar:['sessions'], students:['students'], groups:['groups'],
+ announcements:['announcements'], sessions:['attendance'], calendar:['sessions'], students:['students'], groups:['groups'],
  homework:['homework'], materials:['materials'], quizzes:['grades','quizzes'],
  reports:['reports','messages'], collections:['collections'], messages:['messages'],
  'online-quizzes':['online-quizzes'], 'paper-exams':['paper-exams'], 'platform-builder':['platform-builder'],

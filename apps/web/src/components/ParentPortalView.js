@@ -11,6 +11,7 @@ export function parentPortalSnapshot(data) {
     summary:pick(data.summary,['total_sessions','attended_count','absent_count','attendance_rate','quiz_average_percentage']),
     teacher_phone:data.teacher_phone, contact_phone:data.contact_phone,
     preferences:data.preferences,
+    announcements:list(data.announcements,['id','title','body','published_at','expires_at']),
     upcoming_sessions:list(data.upcoming_sessions,['session_date','start_time','end_time','group_name']),
     sessions:list(data.sessions,['session_number','session_date','attended','homework_status','comment']),
     quizzes:list(data.quizzes,['title','score','max_score','date','tier','note']),

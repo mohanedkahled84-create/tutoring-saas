@@ -12,6 +12,7 @@ export function parentMonitorPayload(data:any) {
     student:pick(data.student,['id','tenant_id','name','student_code','group_name','teacher_name','subject_name','teacher_phone']),
     teacher_phone:data.teacher_phone,
     preferences:resolvePortalPreferences(data.preferences),
+    announcements:(data.announcements || []).map((row:any)=>pick(row,['id','title','body','published_at','expires_at'])),
     upcoming_sessions:(data.upcoming_sessions || []).map((row:any)=>pick(row,['session_date','start_time','end_time','group_name'])),
     summary:pick(data.summary,['total_sessions','attended_count','absent_count','attendance_rate','quiz_average_percentage',...(data.preferences?.show_parent_rank===true?['student_rank','group_size','rank_period']:[])]),
     sessions:(data.sessions || []).map((row:any)=>pick(row,['session_number','session_date','attended','homework_status','comment'])),
@@ -53,6 +54,7 @@ export async function loadPortalAccount(supabase:SupabaseClient,token:string,mon
     const rankResult = !showRank ? Promise.resolve(null) : supabase.rpc("get_portal_monthly_group_rank", {
       p_student_id: context.id, p_tenant_id: context.tenant_id,
     }).abortSignal(AbortSignal.timeout(2500)).then(({ data, error }) => !error ? data : null, () => null);
+    const announcementsResult=!preferences.show_announcements?Promise.resolve([]):supabase.rpc('portal_announcements',{p_student:context.id,p_tenant:context.tenant_id,p_role:monitorOnly?'parent':'student'}).abortSignal(AbortSignal.timeout(2500)).then(({data,error})=>!error && Array.isArray(data)?data:[],()=>[]);
     const leaderboardResult=monitorOnly || !preferences.show_student_leaderboard?Promise.resolve(null):supabase.rpc('get_portal_group_leaderboard',{p_student_id:context.id,p_tenant_id:context.tenant_id}).abortSignal(AbortSignal.timeout(2500)).then(({data,error})=>!error?data:null,()=>null);
 
     if (!monitorOnly && portalData && Array.isArray(portalData.materials)) {
@@ -111,6 +113,7 @@ export async function loadPortalAccount(supabase:SupabaseClient,token:string,mon
         submission_url: await signHomeworkFile(supabase, material.submission_url, fileTenantId!, material.id, fileStudentId),
       })));
     }
+    portalData.announcements=await announcementsResult;
     const rank = await rankResult;
     const leaderboard=await leaderboardResult;
     if(leaderboard && !monitorOnly)portalData.leaderboard=leaderboard;else delete portalData.leaderboard;

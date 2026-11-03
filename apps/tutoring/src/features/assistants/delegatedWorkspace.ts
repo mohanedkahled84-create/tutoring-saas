@@ -10,6 +10,7 @@ import {createDelegatedDatabase,redactDelegatedData} from './delegatedDatabase.j
 import {delegatedCapability} from './delegatedPolicy.js';
 import {assistantCatalog,normalizeAssistantPermissions} from './catalog.js';
 import {safeAssistantChanges} from './activity.js';
+import {announcementsRouter} from '../announcements/routes.js';
 import {groupsRouter} from '../groups/index.js';
 import {studentsRouter,importRouter} from '../students/index.js';
 import {sessionsRouter} from '../sessions/index.js';
@@ -26,6 +27,7 @@ import {templatesRouter,whatsappRouter} from '../whatsapp-notifications/index.js
 
 const fault=(status:number,message:string)=>Object.assign(new Error(message),{status});
 const controllers=Router();
+controllers.use('/announcements',announcementsRouter);
 controllers.use('/groups',groupsRouter,importRouter);
 controllers.use('/students',studentsRouter);
 controllers.use('/sessions',sessionsRouter);

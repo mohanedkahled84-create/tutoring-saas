@@ -9,11 +9,19 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
  const resource=pageResource(page);if(!resource || !hasAssistantCapability(p,resource))throw denied();
  const read=['GET','HEAD'].includes(method),parts=path.split('?')[0].split('/').filter(Boolean),root=parts[0],tail=parts.slice(1).join('/');
  const require=(key:string,action='view')=>{if(!hasAssistantCapability(p,key,action))throw denied();return `${key}.${action}`;};
+ if(root==='announcements'){
+  if(read)return require('announcements');
+  if(tail==='type-requests' || !tail)return require('announcements','create');
+  if(/\/(preview|consent|enqueue|retry|cancel)$/.test(tail))return require('announcements','send');
+  if(/\/archive$/.test(tail))return require('announcements','delete');
+  if(method==='PUT' || /\/publish$/.test(tail))return require('announcements','edit');
+  throw denied();
+ }
  if(read){
   if(root==='students' && (tail==='archived' || /^[a-f0-9-]{36}\/history$/.test(tail)))return require('students');
   if(root==='groups' && tail==='archived')return require('groups');
   if(['groups','students'].includes(root)){
-   const dependencies=root==='groups'?['attendance','homework','materials','online-quizzes','paper-exams','quizzes','platform-builder','video-lessons','students','groups','assistants','sessions','student-cards','dashboard','reports','risk-watchlist']:['attendance','homework','online-quizzes','paper-exams','quizzes','platform-builder','video-lessons','students','groups','student-cards','dashboard','reports','risk-watchlist'];
+   const dependencies=root==='groups'?['announcements','attendance','homework','materials','online-quizzes','paper-exams','quizzes','platform-builder','video-lessons','students','groups','assistants','sessions','student-cards','dashboard','reports','risk-watchlist']:['attendance','homework','online-quizzes','paper-exams','quizzes','platform-builder','video-lessons','students','groups','student-cards','dashboard','reports','risk-watchlist'];
    if(!dependencies.includes(resource))throw denied();
    if(root==='students' && /\/parent-link$/.test(path))return require('students','send');
    return `${resource}.view`;

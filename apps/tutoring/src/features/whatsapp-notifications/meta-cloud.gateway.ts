@@ -9,11 +9,12 @@
  * ============================================================================
  */
 
-import {approvedUtilityTemplate} from '../../shared/utils/metaTemplatePolicy.js';
+import {approvedUtilityTemplate,type ExpectedTemplate} from '../../shared/utils/metaTemplatePolicy.js';
 import {metaTemplateParameters} from '../../shared/utils/metaTemplateParameters.js';
 
 export interface MetaTemplateSendResult {
   success: boolean;
+  outcome?:'not_sent'|'accepted'|'unknown';
   messageId?: string;
   error?: string;
   errorCode?: number;
@@ -26,6 +27,7 @@ export interface IMetaCloudGateway {
     templateName: string;
     languageCode?: string;
     bodyParameters: string[];
+    expected?:ExpectedTemplate;
   }): Promise<MetaTemplateSendResult>;
 
   getTemplateStatuses(): Promise<Record<string, "APPROVED" | "PENDING" | "REJECTED" | "UNKNOWN">>;
@@ -46,18 +48,21 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
     templateName: string;
     languageCode?: string;
     bodyParameters: string[];
+    expected?:ExpectedTemplate;
   }): Promise<MetaTemplateSendResult> {
     if (!this.phoneNumberId || !this.accessToken) {
       return {
         success: false,
+        outcome:'not_sent',
         error: "Meta Cloud API credentials are not configured",
       };
     }
 
     const cleanTo = params.to.replace(/\D/g, "");
     const languageCode = params.languageCode || "en";
-    if(!await approvedUtilityTemplate({baseUrl:this.baseUrl,accessToken:this.accessToken,wabaId:this.wabaId,name:params.templateName,language:languageCode})){
-      return {success:false,error:'Template must be approved as UTILITY; marketing, other categories and unverified templates are blocked'};
+    if(params.expected && params.bodyParameters.length!==params.expected.parameterCount)return {success:false,outcome:'not_sent',error:'Template parameter count does not match the approved contract'};
+    if(!await approvedUtilityTemplate({baseUrl:this.baseUrl,accessToken:this.accessToken,wabaId:this.wabaId,name:params.templateName,language:languageCode,expected:params.expected})){
+      return {success:false,outcome:'not_sent',error:'Template must be approved as UTILITY; marketing, other categories and unverified templates are blocked'};
     }
 
     const payload = {
@@ -90,6 +95,7 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
+        signal:AbortSignal.timeout(15000),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -104,6 +110,7 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
 
         return {
           success: false,
+          outcome:response.status>=400 && response.status<500 && errorObj.code!==undefined?'not_sent':'unknown',
           error: errorMsg,
           errorCode,
           isPendingApproval: isPending,
@@ -111,13 +118,16 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
       }
 
       const messageId = (data as any)?.messages?.[0]?.id;
+      if(typeof messageId!=='string' || !messageId.startsWith('wamid.'))return {success:false,outcome:'unknown',error:'Meta did not return a confirmed message identifier'};
       return {
         success: true,
+        outcome:'accepted',
         messageId,
       };
     } catch (err: any) {
       return {
         success: false,
+        outcome:'unknown',
         error: err.message || "Failed to dispatch message to Meta Cloud API",
       };
     }

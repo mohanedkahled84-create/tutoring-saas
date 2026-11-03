@@ -14,6 +14,8 @@ import {
   internalRouter,
 } from "./shared/index.js";
 import { authRouter } from "./features/auth/index.js";
+import {announcementAdminRouter} from './features/announcements/adminRoutes.js';
+import {announcementsRouter} from './features/announcements/routes.js';
 import {supportRouter} from './features/auth/supportRoutes.js';
 import { adminRouter } from "./features/admin-ops/index.js";
 import { groupsRouter } from "./features/groups/index.js";
@@ -144,6 +146,8 @@ export function createApp(): Express {
 
   // DEV-AUTH.2: Admin endpoints (strictly requires role === 'admin')
   app.use("/api/admin", authenticateUser, adminRouter);
+  app.use('/api/announcement-admin',authenticateUser,announcementAdminRouter);
+  app.use('/api/announcements',authenticateUser,announcementsRouter);
   app.use('/api/support',authenticateUser,supportRouter);
 
   // Tenant-scoped User API routes (requires valid token & tenant context)

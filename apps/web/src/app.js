@@ -12,7 +12,7 @@ import { escapeHtml } from './utils/escapeHtml.js';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
 import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
 
-let renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView;
+let renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView;
 
 export class CentrlyApp {
   isPlatformAdmin(user = this.user) {
@@ -146,7 +146,7 @@ export class CentrlyApp {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
       this.workspaceModulesPromise = import('./workspace.js?v=1.13.1').then(module => {
-        ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView } = module);
+        ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
       }).catch(error => {
@@ -226,6 +226,8 @@ export class CentrlyApp {
 
   resetTenantState() {
     if(typeof document!=='undefined')this.closeModal();
+    this.announcementAdminData=null;this._announcementAdminBusy=false;this._announcementReviewId=null;this._announcementDefinitionSeed=null;
+    this.announcementsData=null;this._announcement=null;this._announcementPreview=null;this._announcementTypeRequestId=null;this._announcementBusy=false;
     this.supportData=null;this._supportTicketId=null;this._supportRequestId=null;this._supportReplyId=null;
     this.settingsState={activeTab:'profile',barcodeAudio:true};this._academicYears=null;this._academicYearDraft=null;this._groupAssignmentMaterial=null;this._materialCopyId=null;this._studentTransfer=null;this._classroomArchive=null;
     this.students = [];
@@ -832,7 +834,7 @@ export class CentrlyApp {
     const validTeacherRoutes = [
       'sessions', 'video-lessons', 'platform-builder', 'online-quizzes', 'paper-exams', 'quizzes', 'homework', 'materials',
       'students', 'groups', 'assistants', 'calendar', 'student-cards',
-      'dashboard', 'reports', 'risk-watchlist', 'settings', 'billing', 'whatsapp'
+      'dashboard', 'reports', 'risk-watchlist', 'settings', 'billing', 'whatsapp', 'announcements', 'support'
     ];
     const validCenterRoutes = [
       'center-sessions', 'center-dashboard', 'center-rooms',
@@ -1079,7 +1081,7 @@ export class CentrlyApp {
 
     const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-    const dedicatedAdminOnlyRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'admin-support', 'coupons'];
+    const dedicatedAdminOnlyRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'admin-support', 'announcement-admin', 'coupons'];
     if (!isAdmin && dedicatedAdminOnlyRoutes.includes(route)) {
       route = isCenter ? 'center-dashboard' : 'dashboard';
     }
@@ -1166,6 +1168,14 @@ export class CentrlyApp {
     try {
       await this.ensureWorkspaceModules();
       switch (route) {
+        case 'announcement-admin': {
+          const actorId=this.user?.id,data=await request('/announcement-admin');if(this.user?.id===actorId){this.announcementAdminData={...data,actorId};this.renderMainContent();}break;
+        }
+        case 'announcements': {
+          const actorId=this.user?.id,assistantId=this.delegation?.actor?.id || this.delegation?.assistant_id;
+          const [data,groups]=await Promise.all([request('/announcements'),request('/groups')]);
+          if(this.user?.id===actorId && (this.delegation?.actor?.id || this.delegation?.assistant_id)===assistantId){this.announcementsData={...data,actorId};this.groups=groups.groups || [];this.renderMainContent();}break;
+        }
         case 'support':
         case 'admin-support': {
           const actorId=this.user?.id,data=await request('/support');if(this.user?.id===actorId){this.supportData={...data,actorId};this.renderMainContent();}break;
@@ -2144,6 +2154,10 @@ export class CentrlyApp {
     }
 
     switch (route) {
+      case 'announcement-admin':
+        return renderAnnouncementAdminView(this.announcementAdminData?.actorId===this.user?.id?this.announcementAdminData:{});
+      case 'announcements':
+        return renderAnnouncementsView(this.announcementsData?.actorId===this.user?.id?this.announcementsData:{},this);
       case 'support':
       case 'admin-support':
         return renderSupportView(this.supportData?.actorId===this.user?.id?this.supportData:{},this.user);

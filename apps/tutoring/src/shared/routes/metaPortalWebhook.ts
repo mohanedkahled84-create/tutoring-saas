@@ -1,3 +1,4 @@
+import {processAnnouncementWebhook} from '../../features/announcements/worker.js';
 import type {Request,Response} from 'express';
 import {config} from '../config/index.js';
 import {getServiceSupabaseClient} from '../../supabase.js';
@@ -11,16 +12,18 @@ export async function metaPortalWebhook(req:Request,res:Response):Promise<void>{
  if(!verifyMetaSignature((req as Request & {rawMetaBody?:Buffer}).rawMetaBody,req.headers['x-hub-signature-256'])){res.status(401).json({error:'Invalid Meta signature'});return;}
  if(req.body?.object!=='whatsapp_business_account' || !Array.isArray(req.body.entry)){res.status(400).json({error:'Invalid Meta event'});return;}
  try{
-  const messages=[];
+  const messages=[],values=[];
   for(const entry of req.body.entry){
    if(String(entry?.id)!==config.meta.wabaId)continue;
    for(const change of Array.isArray(entry?.changes)?entry.changes:[]){
     const value=change?.value;
     if(change?.field!=='messages' || value?.messaging_product!=='whatsapp' || String(value?.metadata?.phone_number_id)!==config.meta.phoneNumberId)continue;
+    values.push(value);
     if(Array.isArray(value.messages))messages.push(...value.messages);
    }
   }
   const db=getServiceSupabaseClient(),gateway=metaWebhookRuntime.gateway();
+  for(const value of values)await processAnnouncementWebhook(db,value);
   await Promise.all(messages.map(message=>processMetaPortalMessage(db,message,gateway)));
   res.status(200).send('EVENT_RECEIVED');
  }catch{
