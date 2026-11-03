@@ -544,3 +544,17 @@ authRouter.post('/phone/request',authenticateUser,async(req:AuthenticatedRequest
 authRouter.post('/phone/verify',authenticateUser,async(req:AuthenticatedRequest,res)=>{
  try{const input=teacherOtpVerify.parse(req.body),{db,args}=teacherPhoneContext(req);res.set('Cache-Control','no-store').json(await verifyPhoneOtp(db,'teacher',(action,data={})=>otpRpc(db,'teacher_phone_verification',{...args,p_action:action,p_data:data}),{subject:args.p_user,origin:args.p_origin!},input.challenge_id,input.code));}catch(error){phoneFailure(res,error);}
 });
+
+// Separate, purpose-bound OTP: a candidate number never replaces the saved one before proof.
+authRouter.post('/phone/change/begin',authenticateUser,authRateLimiter,async(req:AuthenticatedRequest,res)=>{
+ try{const input=z.object({phone:z.string().min(7).max(25)}).strict().parse(req.body),{db,args}=teacherPhoneContext(req);const info=checkedOtpResult(await otpRpc(db,'teacher_phone_change',{...args,p_action:'begin',p_data:input}));res.set('Cache-Control','no-store').json({...info,...await phoneOtpInfo()});}catch(error){phoneFailure(res,error);}
+});
+authRouter.post('/phone/change/challenge',authenticateUser,async(req:AuthenticatedRequest,res)=>{
+ try{z.object({}).strict().parse(req.body);const {db,args}=teacherPhoneContext(req);res.set('Cache-Control','no-store').json(await preparePhoneOtp(db,'teacher-change',req.ip || '',(action,data={})=>otpRpc(db,'teacher_phone_change',{...args,p_action:action,p_data:data}),{subject:args.p_user,origin:args.p_origin!}));}catch(error){phoneFailure(res,error);}
+});
+authRouter.post('/phone/change/request',authenticateUser,async(req:AuthenticatedRequest,res)=>{
+ try{const input=teacherOtpRequest.parse(req.body),{db,args}=teacherPhoneContext(req);res.set('Cache-Control','no-store').json(await requestPhoneOtp(db,'teacher-change',req.ip || '',(action,data={})=>otpRpc(db,'teacher_phone_change',{...args,p_action:action,p_data:data}),{subject:args.p_user,origin:args.p_origin!},input.proof));}catch(error){phoneFailure(res,error);}
+});
+authRouter.post('/phone/change/verify',authenticateUser,async(req:AuthenticatedRequest,res)=>{
+ try{const input=teacherOtpVerify.parse(req.body),{db,args}=teacherPhoneContext(req);const info=checkedOtpResult(await otpRpc(db,'teacher_phone_change',{...args,p_action:'info',p_data:{}}));if(info.verified && info.challenge_id===input.challenge_id){res.set('Cache-Control','no-store').json(info);return;}res.set('Cache-Control','no-store').json(await verifyPhoneOtp(db,'teacher-change',(action,data={})=>otpRpc(db,'teacher_phone_change',{...args,p_action:action,p_data:data}),{subject:args.p_user,origin:args.p_origin!},input.challenge_id,input.code));}catch(error){phoneFailure(res,error);}
+});

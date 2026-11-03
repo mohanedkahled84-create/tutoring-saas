@@ -9,6 +9,7 @@ import {
   ResendVerificationDTO,
   IAuthRepository,
   TenantSettings,
+  TeacherProfileInput,
   ITenantsRepository,
   UserPinSecurityData,
 } from "./types.js";
@@ -825,6 +826,13 @@ export class SupabaseTenantsRepository implements ITenantsRepository {
     private readonly client: SupabaseClient,
     private readonly adminClient?: SupabaseClient
   ) {}
+
+  async saveTeacherProfile(userId:string,tenantId:string,profile:TeacherProfileInput):Promise<Record<string,unknown>> {
+    if(!this.adminClient)throw new Error('PROFILE_UNAVAILABLE');
+    const {data,error}=await this.adminClient.rpc('save_teacher_profile',{p_user:userId,p_tenant:tenantId,p_assistant:null,p_data:profile});
+    if(error)throw error;
+    return data;
+  }
 
   async getTenantSettings(tenantId: string): Promise<TenantSettings | null> {
     const { data, error } = await this.client

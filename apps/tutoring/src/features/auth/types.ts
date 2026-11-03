@@ -117,7 +117,10 @@ export interface UserPinSecurityData {
   locked_until: string | null;
 }
 
+export interface TeacherProfileInput {teacher_name:string;subject:string;phone:string;contact_phone:string;}
+
 export interface ITenantsRepository {
+  saveTeacherProfile?(userId:string,tenantId:string,data:TeacherProfileInput):Promise<Record<string,unknown>>;
   getTenantSettings(tenantId: string): Promise<TenantSettings | null>;
   updateTenantSettings(tenantId: string, settings: TenantSettings): Promise<TenantSettings>;
   getUserPin?(userId: string): Promise<string | null>;

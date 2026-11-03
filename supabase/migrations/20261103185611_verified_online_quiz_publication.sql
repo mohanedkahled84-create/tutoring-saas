@@ -1,3 +1,42 @@
+create or replace function public.portal_quiz_mark_model(payload jsonb,p_answers jsonb) returns jsonb
+language plpgsql immutable security invoker set search_path='' as $$
+declare questions jsonb:=payload->'questions';question jsonb;answer jsonb;options jsonb;position integer:=0;key text;points numeric;correct_index integer;raw_correct text;score numeric:=0;max_points numeric:=0;mcq_points numeric:=0;essay boolean:=false;
+begin
+ if jsonb_typeof(p_answers) is distinct from 'object' or pg_column_size(p_answers)>200000 then raise exception 'INVALID_ANSWERS' using errcode='22023';end if;
+ if jsonb_typeof(questions) is distinct from 'array' or jsonb_array_length(questions) not between 1 and 500 then raise exception 'QUIZ_INVALID_DEFINITION' using errcode='23514';end if;
+ if (select count(distinct coalesce(nullif(q.value->>'id',''),(q.n-1)::text)) from jsonb_array_elements(questions) with ordinality q(value,n))<>jsonb_array_length(questions) then raise exception 'QUIZ_INVALID_DEFINITION' using errcode='23514';end if;
+ if exists(select 1 from jsonb_each(p_answers) a where jsonb_typeof(a.value) not in ('string','number','null') or length(a.key)>100 or length(a.value::text)>10002 or not exists(select 1 from jsonb_array_elements(questions) with ordinality q(value,n) where a.key=coalesce(nullif(q.value->>'id',''),(q.n-1)::text) or a.key=(q.n-1)::text)) then raise exception 'INVALID_ANSWERS' using errcode='22023';end if;
+ for question in select value from jsonb_array_elements(questions) loop
+  points:=coalesce(nullif(question->>'points','')::numeric,1);
+  if points<0 or points>10000 or points='NaN'::numeric then raise exception 'QUIZ_INVALID_DEFINITION' using errcode='23514';end if;
+  max_points:=max_points+points;key:=coalesce(nullif(question->>'id',''),position::text);answer:=coalesce(p_answers->key,p_answers->position::text);
+  if question->>'type'='essay' then essay:=true;
+  else
+   options:=coalesce(question->'options',question->'choices');
+   if jsonb_typeof(options) is distinct from 'array' or jsonb_array_length(options) not between 2 and 100 or exists(select 1 from jsonb_array_elements(options) o where jsonb_typeof(o)<>'string' or length(btrim(o#>>'{}')) not between 1 and 10000) then raise exception 'QUIZ_INVALID_DEFINITION' using errcode='23514';end if;
+   raw_correct:=coalesce(question->>'correct_index',question->>'correct',question->>'correct_answer');correct_index:=null;
+   if raw_correct ~ '^[0-9]{1,2}$' then correct_index:=raw_correct::integer;
+   elsif raw_correct is not null then
+    if (select count(*) from jsonb_array_elements_text(options) o where o=raw_correct)=1 then
+     select ordinality::integer-1 into correct_index from jsonb_array_elements_text(options) with ordinality where value=raw_correct;
+    elsif raw_correct ~ '^[A-Za-z]$' then correct_index:=ascii(upper(raw_correct))-ascii('A');
+    elsif raw_correct=any(array['أ','ا','ب','ج','د','هـ','و']) then correct_index:=case when raw_correct='ا' then 0 else array_position(array['أ','ب','ج','د','هـ','و'],raw_correct)-1 end;
+    end if;
+   end if;
+   if correct_index is null or correct_index<0 or jsonb_typeof(options) is distinct from 'array' or correct_index>=jsonb_array_length(options) then raise exception 'QUIZ_INVALID_DEFINITION' using errcode='23514';end if;
+   mcq_points:=mcq_points+points;
+   if answer is not null and answer<>'null'::jsonb and coalesce(answer#>>'{}','')<>'' then
+    if (answer#>>'{}') !~ '^[0-9]{1,2}$' or (answer#>>'{}')::integer>=jsonb_array_length(options) then raise exception 'INVALID_ANSWERS' using errcode='22023';end if;
+    if (answer#>>'{}')::integer=correct_index then score:=score+points;end if;
+   end if;
+  end if;
+  position:=position+1;
+ end loop;
+ if max_points<=0 then raise exception 'QUIZ_INVALID_DEFINITION' using errcode='23514';end if;
+
+ return jsonb_build_object('score',case when not essay then score else null end,'mcq_score',score,'max_score',max_points,'total_mcq_points',mcq_points,'has_essay',essay,'is_graded',not essay);
+end;$$;
+
 -- Publish selected groups atomically, independently of manual quiz numbering.
 create function public.publish_online_quiz(p_tenant uuid,p_user uuid,p_assistant uuid,p_data jsonb)
 returns jsonb language plpgsql security invoker set search_path='' as $$

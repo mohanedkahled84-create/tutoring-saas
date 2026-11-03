@@ -22,7 +22,7 @@ export function phoneOtpHash(purpose:string,challenge:string,code:string,key=con
 export function checkedOtpResult(result:any){
  if(!result || result.error){
   const code=result?.error;
-  const errors:Record<string,[number,string]>={EXPIRED:[410,'رابط الدعوة انتهى أو اتلغى. اطلب رابط تسجيل جديدًا من المدرس.'],WAIT:[429,`انتظر ${Number(result?.retry_after)||60} ثانية قبل طلب كود جديد`],ATTEMPTS:[429,'وصلت للحد الأقصى للمحاولات. اطلب كودًا جديدًا بعد انتهاء الانتظار.'],CODE_EXPIRED:[410,'انتهت صلاحية الكود. اطلب كودًا جديدًا.'],CODE_USED:[410,'تم استخدام الكود. اطلب كودًا جديدًا لو لم يكتمل التسجيل.'],NO_PHONE:[400,'احفظ رقم واتساب صحيحًا في بيانات الحساب أولًا.'],NOT_SENT:[400,'اطلب كود تأكيد على واتساب أولًا.']};
+  const errors:Record<string,[number,string]>={PHONE_CHANGE_EXPIRED:[410,'انتهت خطوة تغيير الرقم أو تغيّر الحساب. افتح حفظ البيانات من جديد.'],PHONE_ALREADY_EXISTS:[409,'الرقم الجديد مرتبط بحساب آخر. استخدم رقمك أو تواصل مع الدعم.'],EXPIRED:[410,'رابط الدعوة انتهى أو اتلغى. اطلب رابط تسجيل جديدًا من المدرس.'],WAIT:[429,`انتظر ${Number(result?.retry_after)||60} ثانية قبل طلب كود جديد`],ATTEMPTS:[429,'وصلت للحد الأقصى للمحاولات. اطلب كودًا جديدًا بعد انتهاء الانتظار.'],CODE_EXPIRED:[410,'انتهت صلاحية الكود. اطلب كودًا جديدًا.'],CODE_USED:[410,'تم استخدام الكود. اطلب كودًا جديدًا لو لم يكتمل التسجيل.'],NO_PHONE:[400,'احفظ رقم واتساب صحيحًا في بيانات الحساب أولًا.'],NOT_SENT:[400,'اطلب كود تأكيد على واتساب أولًا.']};
   const [status,message]=errors[code] || [400,'كود التأكيد غير صحيح. راجعه وحاول مرة أخرى.'];throw fault(status,message);
  }
  return result;

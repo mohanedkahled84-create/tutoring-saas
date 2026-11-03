@@ -323,48 +323,28 @@ export function registerTeacherSettingsActions(app) {
   };
 
   app.handleSaveTeacherProfile = async function(e) {
-    if (e) e.preventDefault();
-    const name = document.getElementById('settingsTeacherName')?.value?.trim();
-    const subject = document.getElementById('settingsSubject')?.value?.trim() || '';
-    const phone = normalizeDigits(document.getElementById('settingsPhone')?.value?.trim() || '');
-    const contactPhone = normalizeDigits(document.getElementById('settingsContactPhone')?.value?.trim() || '');
-    const btn = document.getElementById('saveProfileBtn');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<span>جارٍ الحفظ...</span>';
-    }
-
-    try {
-      await request('/settings', {
-        method: 'PUT',
-        body: JSON.stringify({
-          teacher_name: name,
-          subject,
-          phone,
-          contact_phone: contactPhone || phone,
-        }),
-      });
-
-      if (this.user) {
-        if (name) {
-          this.user.name = name;
-          this.user.full_name = name;
-        }
-        this.user.subject = subject;
-        this.user.phone = phone;
-        this.user.contact_phone = contactPhone || phone;
-        authService.setUser(this.user);
-      }
-      this.showToast('تم حفظ بيانات الملف الشخصي بنجاح', 'success');
-      this.renderApp();
-    } catch (err) {
-      this.showToast(err.message || 'تعذر حفظ البيانات', 'danger');
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<span>حفظ التعديلات</span>';
-      }
-    }
+    e?.preventDefault();
+    if(this.delegation){this.showToast('بيانات هوية الحساب يغيّرها المدرس نفسه','warning');return;}
+    const actor=[this.user?.id,this.user?.tenant_id].join(':'),sameActor=()=>actor===[this.user?.id,this.user?.tenant_id].join(':');
+    const body={teacher_name:document.getElementById('settingsTeacherName')?.value?.trim(),subject:document.getElementById('settingsSubject')?.value?.trim() || '',phone:normalizeDigits(document.getElementById('settingsPhone')?.value || ''),contact_phone:normalizeDigits(document.getElementById('settingsContactPhone')?.value || '')};
+    body.contact_phone ||= body.phone;
+    const canonical=value=>{let phone=normalizeDigits(value || '').replace(/[\s()+.\-]/g,'').replace(/^00/,'');return /^01[0125]\d{8}$/.test(phone)?'2'+phone:phone;};
+    const button=document.getElementById('saveProfileBtn');
+    const save=async()=>{
+      if(!sameActor())return;
+      if(button){button.disabled=true;button.textContent='جارٍ الحفظ…';}
+      try{const result=await request('/settings/profile',{method:'POST',body});if(!sameActor())return;if(!result?.success || !result.user)throw Error('تعذر تأكيد حفظ البيانات');this.user={...this.user,...result.user};authService.setUser(this.user);this.showToast('تم حفظ بيانات الملف الشخصي','success');this.renderApp();}
+      catch(error){if(sameActor())this.showToast(error.message || 'تعذر حفظ البيانات','danger');}
+      finally{if(button?.isConnected){button.disabled=false;button.textContent='حفظ التعديلات';}}
+    };
+    if(canonical(body.phone)===canonical(this.user?.phone)){await save();return;}
+    if(button){button.disabled=true;button.textContent='جارٍ تجهيز تأكيد الرقم…';}
+    try{
+      const info=await request('/auth/phone/change/begin',{method:'POST',body:{phone:body.phone}});if(!sameActor())return;
+      this.showModal('تأكيد الرقم الجديد','<p>رقم حسابك الحالي يفضل محفوظ لحد ما تأكد الرقم الجديد. لو قفلت الخطوة دي، الرقم مش هيتغير.</p><div id="teacher-phone-change"></div>','');
+      mountPhoneVerification(document.getElementById('teacher-phone-change'),{info:{...info,is_phone_change:true},requestChallenge:()=>request('/auth/phone/change/challenge',{method:'POST',body:{}}),requestCode:(proof={})=>request('/auth/phone/change/request',{method:'POST',body:proof}),verifyCode:data=>request('/auth/phone/change/verify',{method:'POST',body:data}),onVerified:async result=>{if(!sameActor())return;this.user.phone=result.phone;authService.setUser(this.user);this.closeModal();await save();}});
+    }catch(error){if(sameActor())this.showToast(error.message || 'تعذر تجهيز تأكيد الرقم','danger');}
+    finally{if(button?.isConnected){button.disabled=false;button.textContent='حفظ التعديلات';}}
   };
 
   app.handleSettingsChangePassword = async function(e) {
