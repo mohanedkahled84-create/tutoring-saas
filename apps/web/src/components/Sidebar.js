@@ -13,6 +13,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
         { id: 'admin-dashboard', title: 'لوحة الإحصائيات والأرباح', icon: 'dashboard' },
         { id: 'admin-proofs', title: 'مراجعة إيصالات الدفع', icon: 'billing' },
         { id: 'admin-tenants', title: 'المشتركين والمعلمين والسناتر', icon: 'teachers' },
+        { id: 'admin-support', title: 'طلبات دعم المشتركين', icon: 'info' },
         { id: 'whatsapp-inbox', title: 'محادثات الواتساب وحاسبة الأرباح', icon: 'whatsapp' },
         { id: 'admin-outreach', title: 'حملات التواصل (Outreach)', icon: 'whatsapp' },
         { id: 'coupons', title: 'أكواد الخصم والكوبونات', icon: 'billing' },
@@ -63,6 +64,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       routes: [
         { id: 'settings', title: 'الإعدادات', icon: 'gear' },
         { id: 'billing', title: 'الاشتراك', icon: 'billing' },
+        { id: 'support', title: 'الدعم والمساعدة', icon: 'info' },
         { id: 'activity-logs', title: 'تسويات المدرسين والماليات', icon: 'billing' },
       ],
     },
@@ -125,6 +127,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       routes: [
         { id: 'settings', title: 'الإعدادات', icon: 'gear' },
         { id: 'billing', title: 'الاشتراك', icon: 'billing' },
+        { id: 'support', title: 'الدعم والمساعدة', icon: 'info' },
       ],
     },
   ];

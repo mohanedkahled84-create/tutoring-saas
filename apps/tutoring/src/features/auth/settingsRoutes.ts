@@ -7,9 +7,11 @@ import { getServices } from "../../composition.js";
 import { supabasePublic, getScopedSupabaseClient } from "../../supabase.js";
 import {registerAcademicYears} from '../students/academicYears.js';
 import {portalPreferencesSchema,resolvePortalPreferences} from '../../shared/utils/portalPreferences.js';
+import {registerStartupChecklist} from './startupChecklist.js';
 
 export const settingsRouter = Router();
 registerAcademicYears(settingsRouter);
+registerStartupChecklist(settingsRouter);
 
 export function normalizeDigits(str: unknown): string {
   if (!str && str !== 0) return "";

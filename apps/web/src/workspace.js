@@ -1,6 +1,9 @@
 import { registerCameraScannerActions } from './components/CameraScannerModal.js?v=1.0.0';
 import {registerClassroomLifecycle} from './components/ClassroomLifecycle.js';
 import {registerAcademicYears} from './components/AcademicYears.js';
+import {registerStartupChecklist} from './components/StartupChecklist.js';
+import {renderSupportView,registerSupportActions} from './components/SupportView.js';
+export {renderSupportView};
 import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=1.1.0';
 import { registerStudentImportActions } from './components/StudentImportModal.js?v=1.0.0';
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=2.0.0';
@@ -40,6 +43,8 @@ export { renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, rend
 export function registerWorkspaceActions(app) {
   registerClassroomLifecycle(app);
   registerAcademicYears(app);
+  registerStartupChecklist(app);
+  registerSupportActions(app);
   registerMaterialsActions(app);
   registerVideoLessonsActions(app);
   registerTeacherPlatformActions(app);

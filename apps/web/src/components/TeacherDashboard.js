@@ -174,6 +174,7 @@ export function renderTeacherDashboard(
         </div>
       </div>
 
+      ${!(typeof window!=='undefined' && window.centrlyApp?.delegation)?'<section class="card" style="margin:0;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap"><div><h3>ابدأ على راحتك</h3><p>خطوات اختيارية لتنظيم حسابك، وتتحدث من بياناتك الفعلية.</p></div><button type="button" class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openStartupChecklist()">قائمة البداية</button></section>':''}
       ${renderTeacherActions(data)}
       <!-- Hero Financial Highlights: Actual Realized vs Estimated Projected -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">

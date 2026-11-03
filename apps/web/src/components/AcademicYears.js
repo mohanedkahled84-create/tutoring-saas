@@ -5,10 +5,11 @@ const dateLabel=value=>value?new Date(value+'T12:00:00').toLocaleDateString('ar-
 const button=(text,action)=>`<button type="button" class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.${action}">${text}</button>`;
 export function registerAcademicYears(app){
  app.openAcademicYears=async function(){
+  const actor=this.user?.id;
   if(this.delegation){this.showToast('إدارة السنة متاحة لصاحب حساب المدرس','info');return;}
   this.showModal('السنة الدراسية','<p role="status">جار تحميل السنوات…</p>');
   try{
-   const {result}=await request('/settings/academic-years');this._academicYears=result;this._academicYearDraft=null;
+   const {result}=await request('/settings/academic-years');if(this.user?.id!==actor || window.centrlyApp!==this)return;this._academicYears=result;this._academicYearDraft=null;
    const active=result.active;
    this.showModal('السنة الدراسية',`<div style="display:grid;gap:1rem"><section><h3>${active?e(active.name):'ابدأ تنظيم السنة الحالية'}</h3><p>${active?`${dateLabel(active.starts_on)} — ${dateLabel(active.ends_on)}`:'سجّل اسم السنة وتواريخها لربط مجموعاتك ومحتواك الحالي بها.'}</p><p>إنهاء السنة يحفظ سجل المجموعات والحضور والدرجات والتسليمات. الأرصدة والتحصيل لا يتغيران، ولا يتم تصفير أي مستحقات.</p>${active?`<p>${Number(result.groups.length)} مجموعة نشطة · ${Number(result.students.length)} طالبًا</p>${result.ongoing_sessions?'<p role="status">أنه الحصص الجارية أولًا قبل الانتقال لسنة جديدة.</p>':''}`:''}${button(active?'إنهاء السنة وبدء سنة جديدة':'تسجيل السنة الحالية',"editAcademicYear()")}</section><section><h3>أرشيف السنوات</h3>${result.years.filter(y=>y.status==='closed').map(y=>`<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.75rem;padding:.75rem 0;border-top:1px solid var(--centrly-line)"><strong>${e(y.name)}</strong>${button('فتح الأرشيف',`openAcademicYearArchive('${e(y.id)}')`)}</div>`).join('') || '<p>لا توجد سنوات منتهية بعد.</p>'}</section></div>`);
   }catch(error){this.showModal('تعذر تحميل السنوات',`<p role="alert">${e(error.message)}</p>`,button('حاول مجددًا','openAcademicYears()'));}

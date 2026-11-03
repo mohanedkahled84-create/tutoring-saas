@@ -83,8 +83,8 @@ BEGIN
 
     -- Update parent_portal_token if needed
     IF FOUND AND p_token IS NOT NULL AND length(p_token) > 0 THEN
-      UPDATE students 
-      SET parent_portal_token = p_token 
+      UPDATE students
+      SET parent_portal_token = p_token
       WHERE id = v_student.id AND (parent_portal_token IS NULL OR parent_portal_token = '');
     END IF;
   ELSE
@@ -125,13 +125,13 @@ BEGIN
 
   -- Priority 3: user with role owner/teacher in public.users (clean personal name)
   IF v_teacher_name IS NULL OR v_teacher_name = '' THEN
-    SELECT u.full_name INTO v_teacher_name 
-    FROM public.users u 
-    WHERE u.tenant_id = v_student.tenant_id 
-      AND u.role IN ('owner', 'teacher') 
-      AND u.full_name IS NOT NULL 
+    SELECT u.full_name INTO v_teacher_name
+    FROM public.users u
+    WHERE u.tenant_id = v_student.tenant_id
+      AND u.role IN ('owner', 'teacher')
+      AND u.full_name IS NOT NULL
       AND u.full_name != ''
-    ORDER BY u.created_at ASC 
+    ORDER BY u.created_at ASC
     LIMIT 1;
   END IF;
 
@@ -143,30 +143,30 @@ BEGIN
 
   -- Resolve subject name fallback if group had none
   IF v_subject_name IS NULL OR v_subject_name = '' THEN
-    SELECT u.subject INTO v_subject_name 
-    FROM public.users u 
-    WHERE u.tenant_id = v_student.tenant_id 
-      AND u.subject IS NOT NULL 
+    SELECT u.subject INTO v_subject_name
+    FROM public.users u
+    WHERE u.tenant_id = v_student.tenant_id
+      AND u.subject IS NOT NULL
       AND u.subject != ''
     LIMIT 1;
   END IF;
 
   IF v_subject_name IS NULL OR v_subject_name = '' THEN
-    SELECT tn.settings->>'subject' INTO v_subject_name 
-    FROM tenants tn 
+    SELECT tn.settings->>'subject' INTO v_subject_name
+    FROM tenants tn
     WHERE tn.id = v_student.tenant_id;
   END IF;
 
   -- 3. Fetch attendance history
   SELECT json_agg(t) INTO v_attendance
   FROM (
-    SELECT 
+    SELECT
       a.id,
       a.attended,
       a.comment,
-      CASE 
-        WHEN a.attended = false THEN NULL 
-        ELSE a.homework_status 
+      CASE
+        WHEN a.attended = false THEN NULL
+        ELSE a.homework_status
       END AS homework_status,
       a.created_at,
       COALESCE(s.session_number, 1) AS session_number,
@@ -179,7 +179,7 @@ BEGIN
   ) t;
 
   -- Attendance stats
-  SELECT 
+  SELECT
     COUNT(*)::int AS total,
     COUNT(*) FILTER (WHERE a.attended = true)::int AS attended_count,
     COUNT(*) FILTER (WHERE a.attended = false)::int AS absent_count,
@@ -192,7 +192,7 @@ BEGIN
   -- 4. Fetch Quizzes & scores
   SELECT json_agg(q_row) INTO v_quizzes
   FROM (
-    SELECT 
+    SELECT
       qs.id,
       qs.quiz_id,
       COALESCE(q.title, CASE WHEN qs.quiz_number IS NOT NULL THEN CONCAT('كويز ', qs.quiz_number::text) ELSE 'امتحان' END) AS title,
@@ -202,7 +202,7 @@ BEGIN
       qs.note,
       qs.note AS notes,
       ROUND((qs.score / NULLIF(COALESCE(qs.max_score, q.max_score, 20), 0) * 100)::numeric, 1) AS percentage,
-      CASE 
+      CASE
         WHEN (qs.score / NULLIF(COALESCE(qs.max_score, q.max_score, 20), 0) * 100) >= 85 THEN 'ممتاز'
         WHEN (qs.score / NULLIF(COALESCE(qs.max_score, q.max_score, 20), 0) * 100) >= 75 THEN 'جيد جداً'
         WHEN (qs.score / NULLIF(COALESCE(qs.max_score, q.max_score, 20), 0) * 100) >= 60 THEN 'جيد'
@@ -216,7 +216,7 @@ BEGIN
   ) q_row;
 
   -- Quiz stats
-  SELECT 
+  SELECT
     COUNT(*)::int AS total_quizzes,
     ROUND(AVG(qs.score / NULLIF(COALESCE(qs.max_score, q.max_score, 20), 0) * 100)::numeric, 1) AS avg_score
   INTO v_quiz_stats
@@ -227,7 +227,7 @@ BEGIN
   -- 5. Fetch Study Materials & Homework with student's submission status + book details
   SELECT json_agg(m_row) INTO v_materials
   FROM (
-    SELECT 
+    SELECT
       m.id,
       m.title,
       m.description,
@@ -269,7 +269,7 @@ BEGIN
       'total_sessions', COALESCE(v_attendance_stats.total, 0),
       'attended_count', COALESCE(v_attendance_stats.attended_count, 0),
       'absent_count', COALESCE(v_attendance_stats.absent_count, 0),
-      'attendance_rate', CASE WHEN COALESCE(v_attendance_stats.total, 0) > 0 
+      'attendance_rate', CASE WHEN COALESCE(v_attendance_stats.total, 0) > 0
         THEN CONCAT(ROUND((v_attendance_stats.attended_count::numeric / v_attendance_stats.total::numeric) * 100)::text, '%')
         ELSE '100%' END,
       'homework_done_count', COALESCE((
