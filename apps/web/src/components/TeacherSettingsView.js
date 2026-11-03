@@ -1,7 +1,7 @@
 import {mountPhoneVerification} from './PhoneVerification.js?v=2';
+import {renderPortalPreferencesSettings,registerPortalPreferencesSettings} from './PortalPreferencesSettings.js';
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
-import { renderBillingView } from './BillingView.js?v=3.8.0';
 import { request } from '../services/api.js';
 import { authService } from '../services/auth.js';
 import { normalizeDigits } from '../utils/normalizeDigits.js';
@@ -33,7 +33,7 @@ function formatArabicDate(dateStr) {
 export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, whatsapp = {}, securityState = { hasPin: false, isUnlocked: true }) {
   let activeTab = state?.activeTab || 'profile';
   if (activeTab === 'appearance') activeTab = 'profile';
-  const displayName = (user?.full_name || user?.name || '').replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim() || 'محمد خالد';
+  const displayName = (user?.full_name || user?.name || '').replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim();
   const email = user?.email || '';
   const phone = user?.phone || '';
   const contactPhone = user?.contact_phone || user?.whatsapp_phone || billing?.settings?.contact_phone || phone;
@@ -70,11 +70,11 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
               <span>${getIcon('gear', 24, '#fcd34d')}</span>
                 <h2 style="margin: 0; font-size: 1.4rem; font-weight: 900; color: #fff;">
-                  الإعدادات والاشتراك
+                  الإعدادات
                 </h2>
             </div>
             <p style="font-size: 0.875rem; color: #cbd5e1; margin: 0;">
-              تعديل بيانات المعلم، إدارة باقة الاشتراك، والأمان وكلمة المرور.
+              بيانات المعلم، تجربة الطالب وولي الأمر، وأمان الحساب.
             </p>
           </div>
 
@@ -98,11 +98,11 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           <span>الملف الشخصي والمادة</span>
         </button>
 
-        <button type="button" onclick="window.centrlyApp.switchSettingsTab('subscription')"
-          class="btn ${activeTab === 'subscription' ? 'btn-primary' : 'btn-secondary'}"
+        <button type="button" onclick="window.centrlyApp.switchSettingsTab('portal')"
+          class="btn ${activeTab === 'portal' ? 'btn-primary' : 'btn-secondary'}"
           style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
           ${getIcon('billing', 16)}
-          <span>الباقة والاشتراكات</span>
+          <span>الطالب وولي الأمر</span>
         </button>
 
         <button type="button" onclick="window.centrlyApp.switchSettingsTab('security')"
@@ -125,7 +125,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           </p>
 
           <form onsubmit="window.centrlyApp.handleSaveTeacherProfile(event)">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,280px), 1fr)); gap: 1.25rem;">
               
               <div class="form-group">
                 <label class="form-label" style="font-weight: 700;">اسم المعلم الشائع (كما يظهر للطلاب)</label>
@@ -168,9 +168,8 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
         </div>
       </div>
 
-      <!-- ================= TAB 3: SUBSCRIPTION ================= -->
-      <div id="settingsTabSubscription" style="display: ${activeTab === 'subscription' ? 'block' : 'none'};">
-        ${renderBillingView(billing, user)}
+      <div id="settingsTabPortal" style="display: ${activeTab === 'portal' ? 'block' : 'none'};">
+        ${renderPortalPreferencesSettings(state)}
       </div>
 
       <!-- ================= TAB 4: SECURITY ================= -->
@@ -197,7 +196,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
 
             <div id="settingsPasswordAlert" style="display: none; padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; font-size: 0.85rem;"></div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1.25rem; align-items: stretch;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,310px), 1fr)); gap: 1.25rem; align-items: stretch;">
               
               <!-- Option 1: Change using Old Password -->
               <div style="background: var(--centrly-surface); border: 1.5px solid var(--centrly-line); border-radius: 14px; padding: 1.35rem; display: flex; flex-direction: column; justify-content: space-between;">
@@ -306,6 +305,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
 }
 
 export function registerTeacherSettingsActions(app) {
+  registerPortalPreferencesSettings(app);
   app.openTeacherPhoneVerification = async function() {
     try {
       const info=await request('/auth/phone/info',{method:'POST',body:{}});

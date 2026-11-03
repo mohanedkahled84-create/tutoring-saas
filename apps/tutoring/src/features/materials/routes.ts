@@ -60,6 +60,8 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
   }
 
   const { title, description, type, url, group_id, is_homework, due_date, book_name, pages, questions, file_data, file_name } = req.body;
+  const late=z.boolean().nullable().optional().safeParse(req.body.allow_late_submission);
+  if(!late.success){res.status(400).json({error:{message:'اختيار التسليم المتأخر غير صالح'}});return;}
   const targetInput=materialGroupsSchema.safeParse({group_id,group_ids:req.body.group_ids});
   if(!targetInput.success){res.status(400).json({error:{code:'BAD_REQUEST',message:'اختر مجموعة أو أكثر من مجموعاتك',details:targetInput.error.issues}});return;}
   const targets=normalizeMaterialGroups(targetInput.data);
@@ -144,6 +146,7 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
         ...targets,
         is_homework: Boolean(is_homework),
         due_date: due_date || null,
+        allow_late_submission:late.data ?? null,
         book_name: book_name ? book_name.trim() : null,
         pages: pages ? pages.trim() : null,
         questions: questions ? questions.trim() : null,
@@ -183,7 +186,7 @@ materialsRouter.post('/:id/copy',async(req:AuthenticatedRequest,res:Response):Pr
   }
   if(result.error)throw result.error;
   res.status(201).json({material:result.data,success:true});
- }catch(error:any){res.status(error?.code==='42501'?403:error?.code==='23514'?409:503).json({error:{message:error?.code==='42501'?'اختر مجموعات مسموحًا لك بإسناد المحتوى إليها':error?.code==='23514'?'اختر مجموعات نشطة من السنة الحالية':'تعذر إنشاء النسخة. راجع قائمة المحتوى قبل المحاولة مجددًا'}});}
+ }catch(error:any){const denied=['42501','44000'].includes(error?.code) || /FORBIDDEN|violates check option/.test(error?.message || '');res.status(denied?403:error?.code==='23514'?409:503).json({error:{message:denied?'اختر مجموعات مسموحًا لك بإسناد المحتوى إليها':error?.code==='23514'?'اختر مجموعات نشطة من السنة الحالية':'تعذر إنشاء النسخة. راجع قائمة المحتوى قبل المحاولة مجددًا'}});}
 });
 
 // PATCH /api/materials/:id - Update study material metadata / exceptions
@@ -197,6 +200,8 @@ materialsRouter.patch("/:id", async (req: AuthenticatedRequest, res: Response): 
   }
 
   const { title, description, url, group_id, book_name, pages, questions } = req.body;
+  const policy=z.object({allow_late_submission:z.boolean().nullable().optional(),due_date:z.iso.date().nullable().optional()}).safeParse(req.body);
+  if(!policy.success){res.status(400).json({error:{message:'راجع موعد التسليم واختيار التسليم المتأخر'}});return;}
   const changesTargets=group_id!==undefined || req.body.group_ids!==undefined;
   const targetInput=materialGroupsSchema.safeParse({group_id,group_ids:req.body.group_ids});
   if(changesTargets && !targetInput.success){res.status(400).json({error:{code:'BAD_REQUEST',message:'المجموعات المختارة غير صالحة'}});return;}
@@ -204,6 +209,7 @@ materialsRouter.patch("/:id", async (req: AuthenticatedRequest, res: Response): 
   try {
     const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
     const updatePayload: Record<string, any> = {};
+    Object.assign(updatePayload,policy.data);
 
     if (title !== undefined) updatePayload.title = title.trim();
     if (description !== undefined) updatePayload.description = description ? description.trim() : null;

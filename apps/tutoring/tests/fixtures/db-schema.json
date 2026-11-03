@@ -18,7 +18,7 @@
   "sessions": ["id", "tenant_id", "group_id", "session_number", "session_date", "created_at", "teacher_id", "room_id", "start_time", "end_time", "status", "ended_at", "is_extra", "rescheduled_to_date", "rescheduled_to_time", "cancellation_reason", "extra_topic"],
   "short_links": ["code", "tenant_id", "student_id", "portal_type", "token", "created_at"],
   "students": ["id", "tenant_id", "name", "parent_phone", "student_phone", "notes", "created_at", "fee_override", "exempt", "student_code", "code", "group_id", "parent_portal_token", "parent_portal_sent_at", "student_portal_sent_at", "portal_password", "archived_at"],
-  "study_materials": ["id", "tenant_id", "teacher_id", "group_id", "title", "description", "type", "url", "is_homework", "due_date", "created_at", "book_name", "pages", "questions", "group_ids", "academic_year_id", "source_material_id"],
+  "study_materials": ["id", "tenant_id", "teacher_id", "group_id", "title", "description", "type", "url", "is_homework", "due_date", "created_at", "book_name", "pages", "questions", "group_ids", "academic_year_id", "source_material_id", "allow_late_submission"],
   "teacher_payouts": ["id", "tenant_id", "teacher_id", "period", "total_revenue", "teacher_cut", "center_cut", "status", "paid_at", "paid_by", "notes", "created_at", "updated_at"],
   "teachers": ["id", "tenant_id", "user_id", "name", "phone", "subjects", "revenue_model", "revenue_value", "status", "invite_token", "created_at", "updated_at"],
   "telemetry_events": ["id", "tenant_id", "event_name", "properties", "session_id", "page_path", "created_at"],

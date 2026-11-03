@@ -91,6 +91,7 @@ export async function mountAssistantWorkspace({root,token,workspace,onReady,onLo
 }
 
 export function delegatedUiAction(code){
+ if(/openHomeworkDeadline|saveHomeworkDeadline/.test(code))return 'edit';
  if(/openMaterialCopy|saveMaterialCopy/.test(code))return 'create';
  if(/archiveClassroomRecord|confirmClassroomArchive|restoreClassroomRecord|confirmStudentRestore|openStudentTransfer|saveStudentTransfer|openMaterialGroupAssignment|saveMaterialGroupAssignment/.test(code))return 'edit';
  if(/dispatchCardsFileDirect|downloadCardsCsvFile|downloadSelectedCardsDataExcel|confirmBatchPrint|openBatchPrintModal/.test(code))return 'create';

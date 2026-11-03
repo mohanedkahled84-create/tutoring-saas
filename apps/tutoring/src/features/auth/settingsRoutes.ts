@@ -6,6 +6,7 @@ import { requireCenterOwnerOrAdmin } from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
 import { supabasePublic, getScopedSupabaseClient } from "../../supabase.js";
 import {registerAcademicYears} from '../students/academicYears.js';
+import {portalPreferencesSchema,resolvePortalPreferences} from '../../shared/utils/portalPreferences.js';
 
 export const settingsRouter = Router();
 registerAcademicYears(settingsRouter);
@@ -32,6 +33,7 @@ const updateSettingsSchema = z.object({
   subject: z.string().optional(),
   phone: z.string().optional(),
   contact_phone: z.string().optional(),
+  portal_preferences:portalPreferencesSchema.optional(),
 });
 
 // GET /api/settings - Get tenant workflow settings
@@ -56,6 +58,7 @@ settingsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
       settings: {
         ...DEFAULT_TENANT_SETTINGS,
         ...(settings || {}),
+        portal_preferences:resolvePortalPreferences((settings as any)?.portal_preferences),
         contact_phone: resolvedContactPhone,
         subject: req.user?.subject || (settings as any)?.subject || "",
       },
@@ -69,8 +72,7 @@ settingsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
       },
     });
   } catch (_err: unknown) {
-    // Return default settings gracefully on failure
-    res.json({ settings: DEFAULT_TENANT_SETTINGS });
+    res.status(503).json({error:{code:'SETTINGS_UNAVAILABLE',message:'تعذر تحميل الإعدادات؛ حاول مجددًا'}});
   }
 });
 
@@ -102,6 +104,7 @@ settingsRouter.put(
         ...DEFAULT_TENANT_SETTINGS,
         ...(existingSettings || {}),
         ...req.body,
+        portal_preferences:resolvePortalPreferences({...((existingSettings as any)?.portal_preferences || {}),...(req.body.portal_preferences || {})}),
       };
 
       if (req.body.contact_phone !== undefined) {

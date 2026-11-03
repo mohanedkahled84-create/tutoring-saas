@@ -1,4 +1,5 @@
 import { escapeHtml as esc } from '../utils/escapeHtml.js';
+import {renderPortalHomeSummary} from './PortalHomeSummary.js';
 import { getIcon } from '../utils/icons.js';
 
 // Keep only the fields needed by a read-only parent dashboard in the device cache.
@@ -9,6 +10,8 @@ export function parentPortalSnapshot(data) {
     student:pick(data.student,['id','tenant_id','name','student_code','group_name','teacher_name','subject_name','teacher_phone','contact_phone']),
     summary:pick(data.summary,['total_sessions','attended_count','absent_count','attendance_rate','quiz_average_percentage']),
     teacher_phone:data.teacher_phone, contact_phone:data.contact_phone,
+    preferences:data.preferences,
+    upcoming_sessions:list(data.upcoming_sessions,['session_date','start_time','end_time','group_name']),
     sessions:list(data.sessions,['session_number','session_date','attended','homework_status','comment']),
     quizzes:list(data.quizzes,['title','score','max_score','date','tier','note']),
     materials:list((data.materials || []).filter(h => h && (h.is_homework || h.type === 'homework')),['title','type','is_homework','submission_status','submitted_at','due_date']),
@@ -68,6 +71,7 @@ export function renderParentPortalView(data = {}, activeTab = 'attendance') {
   </style><main class="pp" aria-label="متابعة ولي الأمر"><div class="pp-wrap">
     <header class="pp-top"><span class="pp-brand"><span class="pp-mark">سـ</span> ${esc(presentation?.display_title || 'سنترلي')}<br><small>متابعة ولي الأمر</small></span><div class="pp-actions"><button class="pp-button" id="parent-refresh-data-btn" type="button" aria-label="تحديث بيانات المتابعة" title="تحديث بيانات المتابعة" onclick="window.centrlyApp.reloadParentPortal()">${getIcon('refresh',20,'currentColor')}</button><button class="pp-button" type="button" onclick="window.centrlyApp.handlePortalLogout()">خروج</button></div></header>
     <section class="pp-hero" aria-labelledby="pp-student"><p class="pp-eyebrow">متابعة ابنك، في مكان واحد</p><h1 id="pp-student">${esc(s.name)}</h1><p class="pp-subtitle">${esc(s.teacher_name || presentation?.display_title || 'متابعة الطالب')}${s.subject_name ? ` · ${esc(s.subject_name)}` : ''}</p><div class="pp-row"><span class="pp-subtitle">${esc(s.group_name || '')}</span>${s.student_code ? `<small>كود الطالب <b class="pp-code">${esc(s.student_code)}</b></small>` : ''}</div><p id="parent-sync-status" class="pp-sync" role="status" aria-live="polite"></p></section>
+    ${renderPortalHomeSummary(data,'parent')}
     <section class="pp-summary" aria-label="ملخص المتابعة">${metric('الحضور',summary.total_sessions ? summary.attendance_rate : '—',summary.total_sessions ? `${summary.attended_count ?? 0} من ${summary.total_sessions} حصص` : 'لا توجد حصص مسجلة')}${metric('الغياب',summary.total_sessions ? summary.absent_count ?? 0 : '—')}${metric('واجبات تم تسليمها',`${completed} / ${homework.length}`)}${metric('متوسط الدرجات',quizzes.length ? summary.quiz_average_percentage ?? '—' : '—')}</section>
     <nav class="pp-nav" role="tablist" aria-label="أقسام المتابعة" onkeydown="window.parentPortalTabKey(event)">${tabs.map(([id,label])=>`<button type="button" role="tab" id="tab-btn-${id}" aria-controls="tab-content-${id}" aria-selected="${id===tab}" tabindex="${id===tab?'0':'-1'}" onclick="window.switchParentPortalTab('${id}')">${label}</button>`).join('')}</nav>
     <section class="pp-panel" id="tab-content-attendance" role="tabpanel" aria-labelledby="tab-btn-attendance" ${tab==='attendance'?'':'hidden'}><h2>سجل الحضور</h2>${sessions.length ? sessions.map(s=>`<article class="pp-card"><div class="pp-row"><h3>حصة ${esc(s.session_number ?? '')}</h3>${pill(s.attended?'حاضر':'غائب',s.attended?'good':'attention')}</div><small>${esc(dateLabel(s.session_date))}</small>${s.attended && ['done','partial','missing'].includes(s.homework_status)?`<p class="pp-subtitle">الواجب: ${s.homework_status==='done'?'تم التسليم بالكامل':s.homework_status==='partial'?'تسليم جزئي':'لم يُسلّم'}</p>`:''}${s.comment?`<p class="pp-note">ملاحظة المعلم: ${esc(s.comment)}</p>`:''}</article>`).join(''):empty('لا توجد حصص مسجلة حتى الآن.')}</section>

@@ -60,4 +60,12 @@ test('LIVE: portal rank is monthly, group-scoped, tied fairly, private and token
   const monitorResponse=await fetch(`http://127.0.0.1:${server.address().port}/api/public/parent-portal?token=${generateParentPortalToken(ids[0],tenant)}&view=parent&student_id=${ids[1]}&tenant_id=${other}`);
   assert.equal(monitorResponse.status,200);const monitor=await monitorResponse.json();assert.equal(monitor.student.id,ids[0]);assert.equal(monitor.summary.student_rank,undefined);assert.ok(!JSON.stringify(monitor).includes(questionText));assert.ok(monitor.materials.every(m=>!m.questions&&!m.url&&!m.submission_url));assert.equal(monitor.summary.attendance_rate,payload.summary.attendance_rate);
   assert.equal(material.questions.questions[0].text,questionText);assert.equal(material.questions.questions[0].correct_index,undefined);
+  ok(await db.from('tenants').update({settings:{portal_preferences:{show_student_rank:false,show_parent_rank:true,show_teacher_contact:false}}}).eq('id',tenant));
+  const hiddenRank=await (await fetch(`http://127.0.0.1:${server.address().port}/api/public/parent-portal?token=${generateParentPortalToken(ids[0],tenant)}`)).json();
+  assert.equal(hiddenRank.summary.student_rank,undefined);assert.equal(hiddenRank.preferences.show_student_rank,false);assert.equal(hiddenRank.teacher_phone,undefined);assert.equal(hiddenRank.student.teacher_phone,undefined);
+  const parentRank=await (await fetch(`http://127.0.0.1:${server.address().port}/api/public/parent-portal?token=${generateParentPortalToken(ids[0],tenant)}&view=parent`)).json();
+  assert.equal(parentRank.summary.student_rank,1);assert.ok(!JSON.stringify(parentRank).includes('rank-1'),'Parent sees no other pupil names');
+  ok(await db.from('tenants').update({settings:{portal_preferences:{show_student_rank:false,show_student_leaderboard:true}}}).eq('id',tenant));
+  const board=await (await fetch(`http://127.0.0.1:${server.address().port}/api/public/parent-portal?token=${generateParentPortalToken(ids[0],tenant)}`)).json();
+  assert.ok(board.leaderboard.entries.length>=2);assert.ok(board.leaderboard.entries.every(row=>['rank-0','rank-1'].includes(row.name)));assert.ok(board.leaderboard.entries.every(row=>Object.keys(row).sort().join(',')==='name,position'));assert.equal(board.summary.student_rank,undefined);
 });

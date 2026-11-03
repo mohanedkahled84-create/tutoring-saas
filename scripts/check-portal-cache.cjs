@@ -76,7 +76,7 @@ const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'
   await page.reload({waitUntil:'domcontentloaded'});await page.locator(marker).waitFor();
   assert.ok((await page.locator('body').innerText()).includes('طالب الاختبار أ'));
   await page.waitForTimeout(250);assert.deepEqual(calls,[],'Fresh reopen must not make any API request');
-  if(advanced){assert.equal(await page.locator('#studentRankCard').isVisible(),true);assert.ok(!(await page.locator('body').innerText()).includes('غير محسوب'));}
+  if(advanced){assert.equal(await page.locator('#studentRankCard').isVisible(),false);assert.ok(!(await page.locator('body').innerText()).includes('غير محسوب'));}
   record('warm reopen from cache with zero API calls');results.at(-1).renderMs=Date.now()-started;
   async function age(){await page.evaluate(()=>{const k='centrly_portal_snapshot_v1:student',r=JSON.parse(localStorage.getItem(k));r.savedAt=Date.now()-180001;localStorage.setItem(k,JSON.stringify(r));});}
   calls=[];await age();mode='held';current=data('طالب الاختبار أ المحدث',true);

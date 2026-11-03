@@ -1073,16 +1073,6 @@ export class CentrlyApp {
     if (typeof this.closeCameraModal === 'function') {
       try { this.closeCameraModal(); } catch (_) {}
     }
-    // Unify WhatsApp & Billing directly inside the master Settings Hub
-    if (route === 'whatsapp') {
-      this.settingsState = this.settingsState || {};
-      this.settingsState.activeTab = 'whatsapp';
-      route = 'settings';
-    } else if (route === 'billing') {
-      this.settingsState = this.settingsState || {};
-      this.settingsState.activeTab = 'subscription';
-      route = 'settings';
-    }
 
     const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
@@ -1734,45 +1724,10 @@ export class CentrlyApp {
           break;
         }
         case 'settings': {
-          try {
-            const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
-            const [billingRes, quotaRes, statusRes, tplRes, meRes] = await Promise.all([
-              request('/billing/status'),
-              request('/whatsapp/quota'),
-              request(`/whatsapp/status${teacherParam}`),
-              request('/templates'),
-              request('/auth/me'),
-            ]);
-            if (meRes?.user) {
-              this.user = { ...this.user, ...meRes.user };
-              authService.setUser(this.user);
-            }
-            if (billingRes) {
-              this.billingState = billingRes;
-              this.saveCache('billingState', this.billingState);
-            }
-            let qrRes = null;
-            if (statusRes?.status !== 'connected') {
-              try {
-                qrRes = await request(`/whatsapp/qr${teacherParam}`);
-              } catch (err) {
-                console.warn('Initial QR load failed:', err);
-              }
-            }
-            this.whatsappState = {
-              role: this.user?.role,
-              quota: quotaRes || {},
-              status: statusRes?.status || 'disconnected',
-              phone_number: statusRes?.phone_number || '',
-              qr_base64: qrRes?.qr_base64 || null,
-              pairing_code: qrRes?.pairing_code || null,
-              templates: tplRes?.templates || [],
-            };
-          } catch (err) { throw err; }
+          const [settingsRes,meRes]=await Promise.all([request('/settings'),request('/auth/me')]);
+          if(meRes?.user){this.user={...this.user,...meRes.user};authService.setUser(this.user);}
+          this.settingsState.portalPreferences=settingsRes.settings?.portal_preferences;
           this.renderMainContent();
-          if (this.whatsappState?.status !== 'connected' && this.settingsState?.activeTab === 'whatsapp') {
-            this.startWhatsAppStatusPolling('settings');
-          }
           break;
         }
         case 'whatsapp': {

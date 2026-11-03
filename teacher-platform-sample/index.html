@@ -13,6 +13,8 @@
     }));
     // The body attaches the visible error handler after parsing.
     window.__centrlyStudentSession.catch(() => {});
+    window.__centrlyPortalHome = import('/apps/web/src/components/PortalHomeSummary.js');
+    window.__centrlyPortalHome.catch(() => {});
   </script>
 
   <meta charset="UTF-8">
@@ -2447,6 +2449,7 @@
 
         </div>
 
+        <div id="portalHomeSummary"></div>
         <!-- بطاقات المؤشرات الثلاثية الحية (3 Golden KPIs) -->
 
         <div class="kpi-grid">
@@ -4065,7 +4068,10 @@
 
       // حساب وتحديث ترتيب الطالب على المجموعة ديناميكياً
 
-      renderStudentRank(portalData.summary?.student_rank, portalData.summary?.group_size);
+      if(portalData.preferences?.show_student_rank!==false && Object.hasOwn(portalData.summary || {},'student_rank'))renderStudentRank(portalData.summary?.student_rank, portalData.summary?.group_size);
+      else document.getElementById('studentRankCard').style.display='none';
+      window._portalHomePayload=portalData;
+      window.__centrlyPortalHome.then(({renderPortalHomeSummary})=>{if(window._portalHomePayload===portalData)document.getElementById('portalHomeSummary').innerHTML=renderPortalHomeSummary(portalData,'student',{showRank:false,showContact:true});}).catch(()=>{});
 
       platformContent = Array.from(map.values());
       renderAllPanels();

@@ -197,6 +197,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                 <span>${escapeHtml(materialGroupLabel(currentHomework,groups))}</span>
                 <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openMaterialGroupAssignment('${escapeHtml(currentHomework.id)}')">إسناد لمجموعات أخرى</button>
                 <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openMaterialCopy('${escapeHtml(currentHomework.id)}')">نسخة جديدة للمجموعات الحالية</button>
+                <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openHomeworkDeadline('${escapeHtml(currentHomework.id)}')">موعد وسياسة التسليم</button>
                 ${currentHomework.due_date ? `
                   <span style="font-size: 0.75rem; color: #b45309; background: #fffbeb; padding: 0.2rem 0.55rem; border-radius: 0.35rem; border: 1px solid #fde68a; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
                     ${getIcon('clock', 13, '#b45309')}
@@ -826,6 +827,8 @@ export function registerHomeworkActions(app) {
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">آخر موعد لتسليم الواجب</label>
             <input type="date" id="modalHwDueDate" class="form-input" value="${nextWeek}">
+            <label class="form-label" for="modalHwLate" style="margin-top:.75rem">التسليم بعد الموعد</label>
+            <select id="modalHwLate" class="form-select" style="min-height:44px"><option value="default">حسب إعدادات الحساب</option><option value="allow">قبول التسليم المتأخر</option><option value="close">إغلاق التسليم بعد الموعد</option></select>
           </div>
         </div>
 
@@ -1088,6 +1091,7 @@ export function registerHomeworkActions(app) {
           description: description || null,
           is_homework: true,
           due_date,
+          allow_late_submission:document.getElementById('modalHwLate')?.value==='allow'?true:document.getElementById('modalHwLate')?.value==='close'?false:null,
           book_name: null,
           pages: null,
           questions: null,

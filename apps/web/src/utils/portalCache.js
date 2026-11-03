@@ -47,11 +47,16 @@ export function createPortalCache({storage, clock = Date.now, hash = sessionHash
       const age = clock() - record.savedAt;
       if (generation !== revision(role) || !active(token, role) || age < 0 || age > PORTAL_MAX_AGE_MS || !record.data?.student?.id || !record.data.student.tenant_id || !matchesSession(token, record.data)) return null;
       const data = copy(record.data);
+      // Cached cohorts/ranks never override the teacher's current privacy choices.
+      const needsRankPolicy=data.preferences?.show_student_rank===true || data.preferences?.show_parent_rank===true || data.preferences?.show_student_leaderboard===true;
+      delete data.leaderboard;
+      if(data.summary)for(const key of ['student_rank','group_size','rank_period'])delete data.summary[key];
+      if(data.preferences)data.preferences={...data.preferences,show_student_rank:false,show_parent_rank:false,show_student_leaderboard:false};
       // Signed download URLs may expire before the rest of the saved dashboard.
       if (age > 30 * 60 * 1000) for (const material of data.materials || []) {
         if (String(material.submission_url || '').includes('/object/sign/')) material.submission_url = null;
       }
-      return {data, savedAt:record.savedAt, fresh:age < PORTAL_FRESH_MS};
+      return {data, savedAt:record.savedAt, fresh:age < PORTAL_FRESH_MS && !needsRankPolicy};
     } catch { return null; }
   }
   async function write(token, data, role = 'student', {savedAt = clock(), generation = revision(role)} = {}) {

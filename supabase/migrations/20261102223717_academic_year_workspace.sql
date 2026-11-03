@@ -584,7 +584,7 @@ notify pgrst,'reload schema';
 
 create or replace function public.homework_target_allowed(p_student uuid,p_tenant uuid,p_material uuid)
 returns boolean language sql stable security invoker set search_path='' as $$
- select exists(select 1 from public.study_materials m join public.students st on st.id=p_student and st.tenant_id=p_tenant where m.id=p_material and m.tenant_id=p_tenant and m.is_homework and st.archived_at is null and public.portal_material_in_current_year(m,p_tenant) and public.material_targets_student(m,p_student,p_tenant) and exists(select 1 from public.groups g where g.tenant_id=p_tenant and public.portal_group_in_current_year(g.id,p_tenant) and (g.id=st.group_id or exists(select 1 from public.group_students gs where gs.tenant_id=p_tenant and gs.student_id=st.id and gs.group_id=g.id)) and (case when m.group_ids is not null then g.id=any(m.group_ids) else m.group_id is null or m.group_id=g.id end)))
+ select exists(select 1 from public.study_materials m join public.students st on st.id=p_student and st.tenant_id=p_tenant where m.id=p_material and m.tenant_id=p_tenant and m.is_homework and st.archived_at is null and public.portal_material_in_current_year(m,p_tenant) and public.material_targets_student(m,p_student,p_tenant) and ((m.group_ids is null and m.group_id is null) or exists(select 1 from public.groups g where g.tenant_id=p_tenant and public.portal_group_in_current_year(g.id,p_tenant) and (g.id=st.group_id or exists(select 1 from public.group_students gs where gs.tenant_id=p_tenant and gs.student_id=st.id and gs.group_id=g.id)) and (case when m.group_ids is not null then g.id=any(m.group_ids) else m.group_id=g.id end))))
 $$;
 notify pgrst,'reload schema';
 notify pgrst,'reload schema';

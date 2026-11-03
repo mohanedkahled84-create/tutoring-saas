@@ -27,4 +27,13 @@ test('LIVE: multiple material groups enforce portal visibility, cross-tenant rej
  assert.ok((await db.from('study_materials').update({group_ids:[groups[2].id]}).eq('id',material.id)).error,'assignment removal must not revoke submitted work');
  assert.ok((await anonClient.rpc('homework_target_allowed',{p_student:students[0].id,p_tenant:tenant,p_material:material.id})).error);
  assert.ok((await anonClient.rpc('submit_verified_homework',args)).error);
+ ok(await db.from('tenants').update({settings:{portal_preferences:{accept_late_homework:false}}}).eq('id',tenant));
+ ok(await db.from('study_materials').update({due_date:'2020-01-01'}).eq('id',material.id));
+ const savedBefore=ok(await db.from('homework_submissions').select('*').eq('id',first.id).single());
+ assert.equal(ok(await db.rpc('homework_accepts_submission',{p_material:material.id,p_tenant:tenant})),false);
+ const closed=await db.rpc('submit_verified_homework',args);assert.equal(closed.error?.code,'23514');assert.match(closed.error?.message || '',/HOMEWORK_CLOSED/);
+ assert.deepEqual(ok(await db.from('homework_submissions').select('*').eq('id',first.id).single()),savedBefore,'closed retries must preserve the prior submission');
+ ok(await db.from('study_materials').update({allow_late_submission:true}).eq('id',material.id));
+ assert.equal(ok(await db.rpc('homework_accepts_submission',{p_material:material.id,p_tenant:tenant})),true);
+ ok(await db.rpc('submit_verified_homework',args));
 });

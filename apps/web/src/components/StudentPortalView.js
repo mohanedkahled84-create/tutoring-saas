@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
+import {renderPortalHomeSummary} from './PortalHomeSummary.js';
 import { getIcon } from "../utils/icons.js";
 import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js";
 import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=6.5.0";
@@ -160,7 +161,7 @@ export function renderStudentStudyMaterialCard(m, student = {}, homeworkMaterial
         }
         return `
           <div>
-            <a href="${escapeHtml(resolvedMatUrl)}" target="_blank" rel="noopener noreferrer" 
+            <a href="${escapeHtml(resolvedMatUrl)}" target="_blank" rel="noopener noreferrer"
               style="display: inline-flex; align-items: center; gap: 0.35rem; background: #1d4ed8; color: #ffffff; padding: 0.45rem 0.85rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.8rem; font-weight: 800; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
               ${getIcon(isPdf ? 'download' : 'link', 13, '#ffffff')}
               <span>${isPdf ? 'تحميل / فتح المذكرة' : 'فتح الرابط'}</span>
@@ -245,8 +246,10 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
 
   const now = new Date();
   const isHomeworkFinished = (m) => {
+    if(m.can_submit===false)return true;
     // 1. Approved homeworks are finished and approved
     if (m.submission_status === 'approved') return true;
+    if(m.can_submit===true)return false;
     // 2. Rejected/Revision requested needs student action -> Active
     if (m.submission_status === 'rejected') return false;
     // 3. Pending review -> submitted, awaiting teacher feedback -> Active
@@ -339,6 +342,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
           </p>
         </div>
 
+        ${renderPortalHomeSummary(portalData)}
         <!-- Teacher Direct WhatsApp Contact Card -->
         ${teacherWaUrl ? `
           <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; border-radius: 1rem; padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);">
@@ -355,7 +359,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                 </div>
               </div>
             </div>
-            <a href="${teacherWaUrl}" target="_blank" rel="noopener noreferrer" 
+            <a href="${teacherWaUrl}" target="_blank" rel="noopener noreferrer"
               style="background: #10b981; color: #ffffff; text-decoration: none; padding: 0.55rem 0.95rem; border-radius: 0.65rem; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; flex-shrink: 0; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); transition: transform 0.15s ease;"
               onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
               ${getIcon('whatsapp', 15, '#ffffff')}
@@ -578,7 +582,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
               </p>
               <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 0.6rem; padding: 0.65rem 0.85rem; font-size: 0.8rem; color: #1e293b; line-height: 1.8;">
                 <b>1.</b> افتح أداة: 
-                <a href="https://www.ilovepdf.com/jpg_to_pdf" target="_blank" rel="noopener noreferrer" 
+                <a href="https://www.ilovepdf.com/jpg_to_pdf" target="_blank" rel="noopener noreferrer"
                   style="color: #1d4ed8; font-weight: 800; text-decoration: underline; margin: 0 0.25rem;">
                   موقع iLovePDF المجاني (تحويل صور JPG إلى PDF)
                 </a>
@@ -679,7 +683,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                           const resolvedHwUrl = resolveSafeMaterialUrl(m.url);
                           return (resolvedHwUrl && resolvedHwUrl !== '#') ? `
                             <div style="margin-top: 0.6rem;">
-                              <a href="${escapeHtml(resolvedHwUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" 
+                              <a href="${escapeHtml(resolvedHwUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm"
                                 style="display: inline-flex; align-items: center; gap: 0.4rem; background: #2563eb; color: #ffffff; font-weight: 800; text-decoration: none; padding: 0.45rem 0.85rem; border-radius: 0.5rem; font-size: 0.825rem; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
                                 ${getIcon(isPdf ? 'file' : (isVideo ? 'video' : 'link'), 14, '#ffffff')}
                                 <span>فتح / تحميل ملف الواجب المرفق (PDF / الرابط)</span>
@@ -758,7 +762,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                         `}
 
                         <!-- File Upload Trigger (PDF or Images) -->
-                        ${m.can_submit===false?'<p role="status">هذا التسليم محفوظ من تكليف سابق، ولا يستقبل رفع ملفات جديدة.</p>':`<div>
+                        ${m.can_submit===false?'<p role="status">هذا التكليف لا يستقبل رفع ملفات جديدة. تسليمك السابق محفوظ.</p>':`<div>
                           <input type="file" id="hw-file-input-${escapeHtml(m.id)}" accept="application/pdf,image/*,.pdf,.jpg,.jpeg,.png,.webp,.heic" style="display: none;" 
                             onchange="window.centrlyApp && window.centrlyApp.handleStudentHomeworkUpload ? window.centrlyApp.handleStudentHomeworkUpload('${escapeHtml(m.id)}', this.files[0]) : null">
                           

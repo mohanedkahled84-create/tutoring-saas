@@ -80,6 +80,9 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       res.status(404).json({ error: { code: "NOT_FOUND", message: "الواجب غير موجود أو لا ينتمي لنفس المعلم" } });
       return;
     }
+    const policy=await supabase.rpc('homework_accepts_submission',{p_material:material_id,p_tenant:tenantId});
+    if(policy.error)throw policy.error;
+    if(!policy.data){res.status(409).json({error:{code:'HOMEWORK_CLOSED',message:'انتهى موعد التسليم، والمعلم أغلق استقبال التسليمات المتأخرة'}});return;}
 
     // Keep the previous file until the replacement upload AND DB write succeed.
     const { data: priorSub, error: priorError } = await supabase
@@ -180,6 +183,7 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       if(submitErr?.code==='42501'){
         res.status(403).json({error:{code:'FORBIDDEN',message:'الواجب لم يعد متاحًا لمجموعتك'}});return;
       }
+      if(submitErr?.message?.includes('HOMEWORK_CLOSED')){res.status(409).json({error:{code:'HOMEWORK_CLOSED',message:'انتهى موعد التسليم، والمعلم أغلق استقبال التسليمات المتأخرة'}});return;}
       logger.error(`[Homework] Submit error: ${submitErr?.message || "Failed to persist submission"}`);
       res.status(500).json({ error: { code: "DB_ERROR", message: "فشل حفظ بيانات الواجب" } });
       return;
@@ -218,7 +222,7 @@ homeworkRouter.get("/submissions", async (req: AuthenticatedRequest, res: Respon
     // 1. Fetch all active homework assignments for this teacher/tenant
     let materialsQuery = supabase
       .from("study_materials")
-      .select("id, title, description, group_id, group_ids, due_date, created_at, book_name, pages, questions, url")
+      .select("id, title, description, group_id, group_ids, due_date, allow_late_submission, academic_year_id, created_at, book_name, pages, questions, url")
       .eq("tenant_id", tenantId)
       .eq("is_homework", true)
       .order("created_at", { ascending: false });

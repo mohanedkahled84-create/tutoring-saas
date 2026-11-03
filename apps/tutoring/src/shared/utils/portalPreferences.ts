@@ -1,0 +1,4 @@
+import {z} from 'zod';
+export const portalPreferenceDefaults={show_student_rank:true,show_parent_rank:false,show_student_leaderboard:false,show_upcoming_sessions:true,show_announcements:true,show_teacher_contact:true,accept_late_homework:true,welcome_message:''};
+export const portalPreferencesSchema=z.object({show_student_rank:z.boolean().optional(),show_parent_rank:z.boolean().optional(),show_student_leaderboard:z.boolean().optional(),show_upcoming_sessions:z.boolean().optional(),show_announcements:z.boolean().optional(),show_teacher_contact:z.boolean().optional(),accept_late_homework:z.boolean().optional(),welcome_message:z.string().trim().max(500).optional()}).strict();
+export function resolvePortalPreferences(input:unknown){const parsed=portalPreferencesSchema.safeParse(input || {});return {...portalPreferenceDefaults,...(parsed.success?parsed.data:{})};}

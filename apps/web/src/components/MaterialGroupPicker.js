@@ -33,6 +33,14 @@ export function readMaterialGroupPicker(prefix) {
 }
 
 export function registerMaterialGroupPicker(app) {
+  app.openHomeworkDeadline=function(id){
+    const row=[...(this.materials || []),...(this.homeworkState?.assignments || [])].find(m=>m.id===id);if(!row)return;this._homeworkDeadlineId=id;
+    this.showModal('موعد وسياسة التسليم',`<form id="homeworkDeadlineForm" onsubmit="window.centrlyApp.saveHomeworkDeadline(event)" style="display:grid;gap:1rem"><p>${e(row.title)}</p><label>آخر موعد<input id="homeworkDeadlineDate" type="date" class="form-input" value="${e(row.due_date || '')}"></label><label>التسليم بعد الموعد<select class="form-select" id="homeworkDeadlineLate" style="min-height:44px"><option value="default" ${row.allow_late_submission==null?'selected':''}>حسب إعدادات الحساب</option><option value="allow" ${row.allow_late_submission===true?'selected':''}>قبول التسليم المتأخر</option><option value="close" ${row.allow_late_submission===false?'selected':''}>إغلاق التسليم بعد الموعد</option></select></label><p>وقت الإغلاق هو نهاية اليوم بتوقيت القاهرة. التسليمات السابقة تظل محفوظة.</p></form>`,`<button type="submit" form="homeworkDeadlineForm" class="btn btn-primary" style="min-height:44px">حفظ موعد وسياسة التسليم</button>`);
+  };
+  app.saveHomeworkDeadline=async function(event){
+    event.preventDefault();const id=this._homeworkDeadlineId;if(!id)return;const button=event.submitter;button.disabled=true;const late=document.getElementById('homeworkDeadlineLate').value;
+    try{await request('/materials/'+encodeURIComponent(id),{method:'PATCH',body:{due_date:document.getElementById('homeworkDeadlineDate').value || null,allow_late_submission:late==='default'?null:late==='allow'}});this._homeworkDeadlineId=null;this.closeModal();await this.loadRouteData('homework');this.showToast('تم حفظ الموعد وسياسة التسليم','success');}catch(error){this.showToast(error.message,'error');if(button.isConnected)button.disabled=false;}
+  };
   app.openMaterialCopy=function(id){
     const row=[...(this.materials || []),...(this.homeworkState?.assignments || [])].find(m=>m.id===id);
     if(!row)return;

@@ -4,6 +4,13 @@ import {readFile} from 'node:fs/promises';
 const source = await readFile(new URL('../../web/src/utils/portalCache.js', import.meta.url), 'utf8');
 const {createPortalCache, PORTAL_CACHE_PREFIX, PORTAL_FRESH_MS, PORTAL_MAX_AGE_MS} = await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const payload = name => ({student:{id:'student-a',tenant_id:'tenant-a',name},summary:{attendance_rate:'80%'},materials:[{id:'hw',title:'واجب قديم',submission_url:'https://files.test/storage/v1/object/sign/homework-submissions/file?token=private'}]});
+test('cached ranking never reveals a cohort after the teacher changes visibility; policy refresh runs in the background',async()=>{
+ const {cache}=setup();
+ await cache.write('session-a',{...payload('محفوظ'),preferences:{show_student_rank:true,show_student_leaderboard:true},summary:{student_rank:1,group_size:20},leaderboard:{entries:[{name:'PRIVATE-PEER',position:1}]}});
+ const shown=[];let calls=0;
+ const result=await cache.load('session-a',{request:async()=>{calls++;return {...payload('مباشر'),preferences:{show_student_rank:false,show_student_leaderboard:false}};},onData:value=>shown.push(value)});
+ assert.equal(calls,1);assert.equal(shown[0].student.name,'محفوظ');assert.equal(shown[0].summary.student_rank,undefined);assert.equal(shown[0].leaderboard,undefined);assert.ok(!JSON.stringify(shown).includes('PRIVATE-PEER'));assert.equal(result.cached,false);
+});
 function setup() {
   const records = new Map([['centrly_portal_token','session-a'],['centrly_portal_role','student']]);
   const storage = {getItem:key=>records.get(key)??null,setItem:(key,value)=>records.set(key,value),removeItem:key=>records.delete(key)};

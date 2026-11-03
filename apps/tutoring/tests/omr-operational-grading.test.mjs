@@ -1151,19 +1151,15 @@ test("CASE 16 - Student Homework Redo Workflow: Requested redo moves assignment 
     "getHwStatus must explicitly detect rejected submission status"
   );
 
-  // 2. Verify active homework includes both unsubmitted and rejected assignments
-  assert.ok(
-    indexHtml.includes("const activeHomework = homework.filter(h => {") &&
-    indexHtml.includes("return s === 'unsubmitted' || s === 'rejected';"),
-    "Active homework list must include assignments requiring redo (rejected)"
-  );
-
-  // 3. Verify archived homework only contains approved or pending submissions
-  assert.ok(
-    indexHtml.includes("const archivedHomework = homework.filter(h => {") &&
-    indexHtml.includes("return s === 'approved' || s === 'pending';"),
-    "Archived homework must only contain approved or pending submissions"
-  );
+  // Run the actual UI filters: closed historical work cannot request another upload.
+  const rows=[{id:'redo',submission_status:'rejected'},{id:'new',submission_status:'unsubmitted'},{id:'review',submission_status:'pending'},{id:'approved',submission_status:'approved'},{id:'old-redo',submission_status:'rejected',can_submit:false}];
+  const filter=name=>{
+    const body=indexHtml.match(new RegExp('const '+name+' = homework\\.filter\\(h => \\{([\\s\\S]*?)\\}\\);'))?.[1];
+    assert.ok(body,'UI filter must exist');
+    return rows.filter(new Function('getHwStatus','return h=>{'+body+'}')(h=>h.submission_status)).map(h=>h.id);
+  };
+  assert.deepEqual(filter('activeHomework'),['redo','new']);
+  assert.deepEqual(filter('archivedHomework'),['review','approved','old-redo']);
 
   // 4. Verify teacher feedback banner and redo badge are rendered for rejected assignments
   assert.ok(
