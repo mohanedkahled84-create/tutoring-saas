@@ -1096,7 +1096,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
                       type="button" 
                       style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fef2f2; color: #dc2626; border-radius: 5px; border: 1px solid #fecaca; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
                       onclick="window.centrlyApp.deleteOnlineExam('${escapeHtml(rq.id)}')"
-                      title="حذف هذا الامتحان نهائياً"
+                      title="إزالة من المنشور مع حفظ الإجابات والدرجات"
                     >
                       ${getIcon('trash', 11, '#dc2626')}
                       <span>حذف</span>
@@ -4238,7 +4238,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                       type="button" 
                       style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fef2f2; color: #dc2626; border-radius: 5px; border: 1px solid #fecaca; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
                       onclick="window.centrlyApp.deleteOnlineExam('${escapeHtml(rq.id)}')"
-                      title="حذف هذا الامتحان نهائياً"
+                      title="إزالة من المنشور مع حفظ الإجابات والدرجات"
                     >
                       ${getIcon('trash', 11, '#dc2626')}
                       <span>حذف</span>
@@ -6601,94 +6601,33 @@ export function registerTeacherQuizzesActions(app) {
     this.renderMainContent();
   };
 
-  app.archiveOnlineExam = function(quizId) {
-    const q = (this.quizzesState.richQuizzes || []).find(x => x.id === quizId);
-    if (!q) {
-      this.showToast('لم يتم العثور على الامتحان المطلوب', 'warning');
-      return;
-    }
-    const examTitle = q.title ? `«${q.title}»` : 'هذا الامتحان';
-
-    this.showConfirmModal({
-      title: 'أرشفة الامتحان ونقله للمسودات',
-      message: `هل تريد نقل امتحان ${examTitle} إلى الأرشيف والمسودات؟\n(سيتم إخفاؤه عن الطلاب وعن الامتحانات المنشورة، مع إمكانية استعادته وتعديله متى شئت).`,
-      confirmText: 'نقل للأرشيف',
-      cancelText: 'إلغاء',
-      isDanger: false,
-      onConfirm: async () => {
-        // 1. Remove from richQuizzes
-        this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
-
-        // 2. Add to examDrafts
-        const draftItem = {
-          ...q,
-          id: q.id || `draft_online_${Date.now()}`,
-          is_archived: true,
-          is_draft: true,
-          status: 'draft',
-          archived_at: new Date().toISOString()
-        };
-        if (!Array.isArray(this.quizzesState.examDrafts)) this.quizzesState.examDrafts = [];
-        this.quizzesState.examDrafts.unshift(draftItem);
-
-        try {
-          localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
-          localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
-        } catch (_) {}
-
-        // 3. Call serverless API
-        request('/quizzes/rich', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'archive_quiz',
-            id: q.id,
-            group_id: q.group_id,
-            quiz_number: q.quiz_number,
-            exam_mode: q.exam_mode || (this.quizzesState.activeSubTab === 'paper_builder' ? 'paper' : 'online'),
-            quiz: draftItem
-          })
-        }).catch(() => {});
-
-        this.showToast('تم نقل الامتحان إلى الأرشيف والمسودات بنجاح.', 'success');
-        this.renderMainContent();
-      }
-    });
+  app.persistQuizArchive = async function(quizId, action) {
+    if(this._quizArchiveBusy)return;
+    const quiz=(this.quizzesState.richQuizzes || []).find(row=>row.id===quizId);
+    if(!quiz){this.showToast('لم يتم العثور على الامتحان المطلوب','warning');return;}
+    const actor=[this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':');
+    this._quizArchiveBusy=true;
+    try {
+      const result=await request('/quizzes/rich',{method:'POST',body:{action,id:quizId,exam_mode:quiz.exam_mode || 'online'}});
+      if([this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':')!==actor)return;
+      if(!result.success || !result.history_preserved)throw new Error('تعذر تأكيد الأرشفة؛ حدّث القائمة وحاول مجددًا');
+      this.quizzesState.richQuizzes=(this.quizzesState.richQuizzes || []).filter(row=>row.id!==quizId);
+      if(!Array.isArray(this.quizzesState.examDrafts))this.quizzesState.examDrafts=[];
+      if(!this.quizzesState.examDrafts.some(row=>row.id===quizId))this.quizzesState.examDrafts.unshift({...quiz,is_archived:true,is_draft:true,status:'draft'});
+      try{localStorage.removeItem('centrly_cached_rich_quizzes');localStorage.removeItem('centrly_quiz_drafts');}catch(_){}
+      this.showToast('تمت الأرشفة مع الاحتفاظ بالإجابات والدرجات','success');
+      this.renderMainContent();
+    } catch(error) {
+      if([this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':')===actor)this.showToast(error.message || 'تعذر أرشفة الامتحان؛ حاول مجددًا','error');
+    } finally {this._quizArchiveBusy=false;}
   };
-
+  app.archiveOnlineExam = function(quizId) {
+    this.showConfirmModal({title:'أرشفة الامتحان',message:'سيختفي الامتحان من المنشور للطلاب، وتظل الإجابات والدرجات محفوظة في حسابك.',confirmText:'أرشفة الامتحان',cancelText:'إلغاء',isDanger:false,onConfirm:()=>this.persistQuizArchive(quizId,'archive_quiz')});
+  };
+  // Compatibility for existing delete-capability buttons: published history is
+  // preserved even when a caller uses the retired delete_quiz action.
   app.deleteOnlineExam = function(quizId) {
-    const q = (this.quizzesState.richQuizzes || []).find(x => x.id === quizId);
-    const examTitle = q?.title ? `«${q.title}»` : 'هذا الامتحان';
-
-    this.showConfirmModal({
-      title: 'حذف الامتحان نهائياً',
-      message: `هل أنت متأكد من حذف امتحان ${examTitle} نهائياً؟\nتحذير: سيتم حذف هذا الامتحان نهائياً ولن يظهر للطلاب مرة أخرى.`,
-      confirmText: 'حذف الامتحان نهائياً',
-      cancelText: 'إلغاء التراجع',
-      isDanger: true,
-      onConfirm: async () => {
-        this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
-
-        try {
-          localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
-        } catch (_) {}
-
-        request('/quizzes/rich', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'delete_quiz',
-            id: quizId,
-            group_id: q?.group_id,
-            quiz_number: q?.quiz_number,
-            exam_mode: q?.exam_mode || (this.quizzesState.activeSubTab === 'paper_builder' ? 'paper' : 'online')
-          })
-        }).catch(() => {});
-
-        this.showToast('تم حذف الامتحان نهائياً بنجاح.', 'success');
-        this.renderMainContent();
-      }
-    });
+    this.showConfirmModal({title:'إزالة الامتحان من المنشور',message:'سننقل الامتحان للأرشيف مع الاحتفاظ بإجابات الطلاب ودرجاتهم.',confirmText:'إزالة من المنشور',cancelText:'إلغاء',isDanger:false,onConfirm:()=>this.persistQuizArchive(quizId,'delete_quiz')});
   };
 
   // Grading Tab Actions

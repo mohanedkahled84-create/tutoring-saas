@@ -55,7 +55,7 @@ export function mergeLegacyQuizRows(
     const isDraft = Boolean(legacyQuiz.is_draft || row.status === "draft" || String(row.phone).includes("DRAFT"));
     if (isDraft) {
       const draft: any = { ...legacyQuiz, is_draft: true, is_archived: true };
-      if (!drafts.some((existing: any) => existing.id === draft.id)) drafts.push(draft);
+      if (!drafts.some((existing: any) => existing.id === draft.id || existing.legacy_quiz_ref === draft.id)) drafts.push(draft);
       continue;
     }
 
@@ -405,6 +405,8 @@ quizzesRouter.get(
         return {
           id: row.id,
           legacy_quiz_ref: payload.legacy_quiz_ref || null,
+          is_archived: Boolean(payload.is_archived),
+          is_draft: Boolean(payload.is_draft),
           title: row.title,
           subject: row.description || payload.subject || "الفيزياء",
           group_id: row.group_id,
@@ -426,6 +428,13 @@ quizzesRouter.get(
         .filter((draft) => typeof draft.id === "string" && Array.isArray(draft.questions))
         .map((draft) => ({ ...draft, is_draft: true, is_archived: true }));
 
+      for (let i=richQuizzes.length-1;i>=0;i--) {
+        const quiz=richQuizzes[i];
+        if(quiz.is_archived || quiz.is_draft){
+          if(!drafts.some(row=>row.id===quiz.id))drafts.push({...quiz,is_draft:true,is_archived:true});
+          richQuizzes.splice(i,1);
+        }
+      }
       mergeLegacyQuizRows(legacyRows || [], allowedGroupIds, groupId, richQuizzes, drafts);
 
       res.status(200).json({ success: true, quizzes: richQuizzes, drafts });
@@ -467,36 +476,16 @@ quizzesRouter.post(
 
     if (action === "delete_quiz" || action === "archive_quiz") {
       const id = typeof req.body?.id === "string" ? req.body.id : "";
-      const quizToArchive = parseQuizPayload(req.body?.quiz ?? req.body);
+      if (!req.user?.id || !req.user.tenant_id || !id) { res.status(400).json({error:{message:"حدد الامتحان المطلوب"}}); return; }
       try {
-        if (action === "archive_quiz") {
-          await saveTenantQuizDraft(supabase, tenantId, {
-            ...quizToArchive,
-            id: id || quizToArchive.id,
-            is_draft: true,
-            is_archived: true,
-            status: "draft",
-            archived_at: new Date().toISOString(),
-          });
-        }
-
-        if (id && id.length > 20) {
-          const { error } = await supabase
-            .from("study_materials")
-            .delete()
-            .eq("id", id)
-            .eq("tenant_id", tenantId)
-            .eq("type", "online_quiz");
-          if (error) throw error;
-        }
-
-        res.status(200).json({
-          success: true,
-          message: action === "archive_quiz" ? "Quiz archived successfully" : "Quiz deleted successfully",
+        const {data,error}=await supabase.rpc('archive_quiz_definition',{
+          p_tenant:req.user.tenant_id,p_user:req.user.id,p_assistant:req.user.assistant_id || null,
+          p_reference:id,p_delete:action==='delete_quiz',
         });
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Failed to update quiz";
-        res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+        if(error)throw error;
+        res.status(200).json({...data,message:"تمت أرشفة الامتحان مع الاحتفاظ بالإجابات والدرجات"});
+      } catch(err:any) {
+        res.status(err.code==='42501'?403:err.code==='P0002'?404:409).json({error:{code:'QUIZ_ARCHIVE_UNAVAILABLE',message:"تعذر أرشفة الامتحان؛ حدّث القائمة وحاول مجددًا"}});
       }
       return;
     }

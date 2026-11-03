@@ -58,7 +58,10 @@ export async function loadPortalAccount(supabase:SupabaseClient,token:string,mon
     const leaderboardResult=monitorOnly || !preferences.show_student_leaderboard?Promise.resolve(null):supabase.rpc('get_portal_group_leaderboard',{p_student_id:context.id,p_tenant_id:context.tenant_id}).abortSignal(AbortSignal.timeout(2500)).then(({data,error})=>!error?data:null,()=>null);
 
     if (!monitorOnly && portalData && Array.isArray(portalData.materials)) {
-      portalData.materials = portalData.materials.map((m: any) => {
+      portalData.materials = portalData.materials.filter((m:any)=>{
+        if(m.type!=='online_quiz')return true;
+        try{const payload=typeof m.questions==='string'?JSON.parse(m.questions):m.questions;return !payload?.is_archived && !payload?.is_draft;}catch{return false;}
+      }).map((m: any) => {
         let questions = m.questions;
         if (m.type === "online_quiz" && questions) {
           try {
