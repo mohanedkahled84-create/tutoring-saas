@@ -69,16 +69,16 @@ const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'
    await page.setViewportSize({width:390,height:844});
   }
   assert.ok((await page.locator('body').innerText()).includes('طالب الاختبار أ'));
-  assert.ok(await page.evaluate(()=>!!localStorage.getItem('centrly_portal_snapshot_v1:student')));record('cold verified response saved');
+  assert.ok(await page.evaluate(()=>!!localStorage.getItem('centrly_portal_snapshot_v2:student')));record('cold verified response saved');
   if(advanced)await page.waitForFunction(()=>!!localStorage.getItem('centrly_platform_settings_saved_at'));
-  const snapshotA=await page.evaluate(()=>localStorage.getItem('centrly_portal_snapshot_v1:student'));
+  const snapshotA=await page.evaluate(()=>localStorage.getItem('centrly_portal_snapshot_v2:student'));
   calls=[];mode='offline';const started=Date.now();
   await page.reload({waitUntil:'domcontentloaded'});await page.locator(marker).waitFor();
   assert.ok((await page.locator('body').innerText()).includes('طالب الاختبار أ'));
   await page.waitForTimeout(250);assert.deepEqual(calls,[],'Fresh reopen must not make any API request');
   if(advanced){assert.equal(await page.locator('#studentRankCard').isVisible(),false);assert.ok(!(await page.locator('body').innerText()).includes('غير محسوب'));}
   record('warm reopen from cache with zero API calls');results.at(-1).renderMs=Date.now()-started;
-  async function age(){await page.evaluate(()=>{const k='centrly_portal_snapshot_v1:student',r=JSON.parse(localStorage.getItem(k));r.savedAt=Date.now()-180001;localStorage.setItem(k,JSON.stringify(r));});}
+  async function age(){await page.evaluate(()=>{const k='centrly_portal_snapshot_v2:student',r=JSON.parse(localStorage.getItem(k));r.savedAt=Date.now()-180001;localStorage.setItem(k,JSON.stringify(r));});}
   calls=[];await age();mode='held';current=data('طالب الاختبار أ المحدث',true);
   await page.reload({waitUntil:'domcontentloaded'});await page.locator(marker).waitFor();
   assert.ok((await page.locator('body').textContent()).includes('واجب الحركة المحفوظ'));
@@ -96,11 +96,11 @@ const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'
   assert.equal(calls.filter(p=>p==='/api/public/parent-portal').length,1);record('manual refresh bypasses freshness');
   calls=[];await age();mode='unauthorized';
   await page.reload({waitUntil:'domcontentloaded'});
-  await page.waitForFunction(()=>!localStorage.getItem('centrly_portal_snapshot_v1:student'));
+  await page.waitForFunction(()=>!localStorage.getItem('centrly_portal_snapshot_v2:student'));
   if(advanced)await page.waitForURL(origin+'/login');
   else await page.waitForFunction(()=>document.getElementById('portalRole'));
   assert.ok(!(await page.locator('body').innerText()).includes('طالب الاختبار أ'));record('unauthorized clears snapshot and private view');
-  await page.evaluate(snapshot=>{localStorage.setItem('centrly_portal_snapshot_v1:student',snapshot);localStorage.setItem('centrly_portal_token','session-b');localStorage.setItem('centrly_portal_role','student');},snapshotA);
+  await page.evaluate(snapshot=>{localStorage.setItem('centrly_portal_snapshot_v2:student',snapshot);localStorage.setItem('centrly_portal_token','session-b');localStorage.setItem('centrly_portal_role','student');},snapshotA);
   mode='held';current=data('طالب الاختبار ب',true);calls=[];
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await waitHeld();
@@ -109,7 +109,7 @@ const data=(name,updated=false)=>({student:{id:name.includes('ب')?'student-b':'
   await page.waitForFunction(()=>document.body.innerText.includes('طالب الاختبار ب'));record('account switch does not show previous account');
   if(advanced){await page.evaluate(()=>logoutStudent());await page.waitForURL(url=>url.origin===origin&&url.pathname==='/login');}
   else await page.evaluate(()=>window.centrlyApp.handlePortalLogout());
-  assert.equal(await page.evaluate(()=>localStorage.getItem('centrly_portal_snapshot_v1:student')),null);record('logout removes snapshot');
+  assert.equal(await page.evaluate(()=>localStorage.getItem('centrly_portal_snapshot_v2:student')),null);record('logout removes snapshot');
   assert.deepEqual(errors,[]);await context.close();
  }}finally{await browser.close();if(process.env.PORTAL_CACHE_RESULTS_PATH)fs.writeFileSync(process.env.PORTAL_CACHE_RESULTS_PATH,JSON.stringify({scope:'Actual HTML and modules, fixture API including offline/held/401 responses, mobile viewport; no production data or screenshots',results},null,2));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

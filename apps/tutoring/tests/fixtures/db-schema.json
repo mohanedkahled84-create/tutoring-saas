@@ -15,7 +15,7 @@
   "quiz_scores": ["id", "tenant_id", "session_id", "student_id", "score", "max_score", "idempotency_key", "created_at", "updated_at", "quiz_id", "group_id", "quiz_number", "note", "delivery_status", "material_id"],
   "quizzes": ["id", "tenant_id", "group_id", "quiz_number", "title", "max_score", "quiz_date", "is_skipped", "created_at", "updated_at"],
   "rooms": ["id", "tenant_id", "name", "capacity", "created_at", "hourly_rate"],
-  "sessions": ["id", "tenant_id", "group_id", "session_number", "session_date", "created_at", "teacher_id", "room_id", "start_time", "end_time", "status", "ended_at", "is_extra", "rescheduled_to_date", "rescheduled_to_time", "cancellation_reason", "extra_topic"],
+  "sessions": ["id", "tenant_id", "group_id", "session_number", "session_date", "created_at", "teacher_id", "room_id", "start_time", "end_time", "status", "ended_at", "is_extra", "rescheduled_to_date", "rescheduled_to_time", "cancellation_reason", "extra_topic", "session_time", "original_session_date", "actual_started_at"],
   "short_links": ["code", "tenant_id", "student_id", "portal_type", "token", "created_at"],
   "students": ["id", "tenant_id", "name", "parent_phone", "student_phone", "notes", "created_at", "fee_override", "exempt", "student_code", "code", "group_id", "parent_portal_token", "parent_portal_sent_at", "student_portal_sent_at", "portal_password", "archived_at"],
   "study_materials": ["id", "tenant_id", "teacher_id", "group_id", "title", "description", "type", "url", "is_homework", "due_date", "created_at", "book_name", "pages", "questions", "group_ids", "academic_year_id", "source_material_id", "allow_late_submission"],

@@ -121,7 +121,7 @@ sessionsRouter.get(
       const sessions = await service.getCalendarSessions(tenantId || "", from, to);
       res.json({ sessions, count: sessions.length });
     } catch (err: unknown) {
-      res.status(500).json({
+      res.status((err as Error).message === "INVALID_CALENDAR_RANGE" ? 400 : 503).json({
         error: {
           code: "INTERNAL_ERROR",
           message: "Failed to fetch calendar sessions",

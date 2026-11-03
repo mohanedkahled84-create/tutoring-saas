@@ -1,4 +1,4 @@
-export const PORTAL_CACHE_PREFIX = 'centrly_portal_snapshot_v1:';
+export const PORTAL_CACHE_PREFIX = 'centrly_portal_snapshot_v2:';
 export const PORTAL_FRESH_MS = 2 * 60 * 1000;
 export const PORTAL_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -25,6 +25,8 @@ function matchesSession(token, data) {
 
 // This is a cache of a successful token-scoped API response, never a source of authorization.
 export function createPortalCache({storage, clock = Date.now, hash = sessionHash} = {}) {
+  // Retire old raw-question snapshots without clearing login or an open attempt.
+  try {for(const target of storage?[storage]:[globalThis.localStorage,globalThis.sessionStorage])for(const role of ['student','parent'])target?.removeItem('centrly_portal_snapshot_v1:'+role);} catch {}
   const flights = new Map();
   const revisions = new Map();
   const revision = role => revisions.get(role) || 0;
@@ -43,7 +45,7 @@ export function createPortalCache({storage, clock = Date.now, hash = sessionHash
     if (!token || !active(token, role) || sessionExpired(token, clock())) return null;
     try {
       const record = JSON.parse(store().getItem(PORTAL_CACHE_PREFIX + role) || 'null');
-      if (!record || record.version !== 1 || record.role !== role || !Number.isFinite(record.savedAt) || record.session !== await hash(token, role)) return null;
+      if (!record || record.version !== 2 || record.role !== role || !Number.isFinite(record.savedAt) || record.session !== await hash(token, role)) return null;
       const age = clock() - record.savedAt;
       if (generation !== revision(role) || !active(token, role) || age < 0 || age > PORTAL_MAX_AGE_MS || !record.data?.student?.id || !record.data.student.tenant_id || !matchesSession(token, record.data)) return null;
       const data = copy(record.data);
@@ -64,7 +66,13 @@ export function createPortalCache({storage, clock = Date.now, hash = sessionHash
     if (!data?.student?.id || !data.student.tenant_id || !matchesSession(token, data) || !active(token, role) || sessionExpired(token, clock())) return;
     if (!Number.isFinite(savedAt) || savedAt > clock() || clock() - savedAt > PORTAL_MAX_AGE_MS) return;
     try {
-      const record = {version:1, role, session:await hash(token, role), savedAt, data};
+      const safeData=copy(data);
+      for(const material of safeData.materials || [])if(['online_quiz','paper_quiz','paper_exam'].includes(material.type)) {
+        let model=material.questions;try{if(typeof model==='string')model=JSON.parse(model);}catch{model={};}
+        const metadata={};for(const key of ['id','subject','quiz_number','legacy_quiz_ref','exam_mode','available_date','available_time','available_until','start_time','end_time','duration_minutes','time_limit_minutes','is_draft','is_archived','status','question_count','max_score'])if(model?.[key]!==undefined)metadata[key]=model[key];
+        metadata.questions=[];material.questions=metadata;
+      }
+      const record = {version:2, role, session:await hash(token, role), savedAt, data:safeData};
       if (generation !== revision(role) || !active(token, role)) return;
       const encoded = JSON.stringify(record);
       if (encoded.length <= 1500000) store().setItem(PORTAL_CACHE_PREFIX + role, encoded);

@@ -1268,7 +1268,7 @@ export class CentrlyApp {
             request(`/sessions/calendar?from=${range.from}&to=${range.to}`),
             request('/groups'),
           ]);
-          if (weekOffset !== (Number(this.calendarState.weekOffset) || 0)) break;
+          if (weekOffset !== (Number(this.calendarState.weekOffset) || 0) || JSON.stringify(range)!==JSON.stringify(this.getCalendarRequestRange())) break;
           const rawSessions = Array.isArray(calRes) ? calRes : (calRes.sessions || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           
@@ -1317,57 +1317,15 @@ export class CentrlyApp {
             });
           });
 
-          // 2. Extra sessions (حصص إضافية)
-          const extraSessions = rawSessions
-            .filter(s => s.is_extra)
-            .map(s => {
-              const rawGrp = s.groups;
-              const groupObj = Array.isArray(rawGrp) ? rawGrp[0] : (rawGrp || {});
-              const grp = this.groups.find(g => g.id === s.group_id) || groupObj;
-              const d = s.session_date ? new Date(s.session_date + 'T00:00:00') : new Date();
-              const dayName = jsDayToDayName[d.getDay()] || 'السبت';
-              return {
-                id: s.id,
-                group_id: s.group_id,
-                group_name: grp.name || s.group_name || 'حصة عامة',
-                center_name: grp.center_name || s.center_name || 'سنتر تعليمي',
-                day_name: dayName,
-                time: s.session_time || s.time || '04:00 م - 06:00 م',
-                date: s.session_date || s.date,
-                is_extra: true,
-                extra_topic: s.extra_topic || s.topic || '',
-                status: 'extra',
-              };
-            });
-
-          // 3. Rescheduled sessions (مواعيد بديلة / مؤجلة)
-          const rescheduledSessions = rawSessions
-            .filter(s => s.status === 'rescheduled' || s.rescheduled_to_date)
-            .map(s => {
-              const rawGrp = s.groups;
-              const groupObj = Array.isArray(rawGrp) ? rawGrp[0] : (rawGrp || {});
-              const grp = this.groups.find(g => g.id === s.group_id) || groupObj;
-              const targetDate = s.rescheduled_to_date || s.session_date;
-              const d = targetDate ? new Date(targetDate + 'T00:00:00') : new Date();
-              const dayName = jsDayToDayName[d.getDay()] || 'السبت';
-              return {
-                id: s.id,
-                group_id: s.group_id,
-                group_name: grp.name || s.group_name || 'حصة عامة',
-                center_name: grp.center_name || s.center_name || 'سنتر تعليمي',
-                day_name: dayName,
-                time: s.rescheduled_to_time || s.session_time || s.time || '04:00 م - 06:00 م',
-                date: targetDate,
-                rescheduled_to_date: s.rescheduled_to_date,
-                rescheduled_to_time: s.rescheduled_to_time,
-                cancellation_reason: s.cancellation_reason,
-                status: 'rescheduled',
-              };
-            });
-
-          this.calendarSessions = [...recurringGroupSessions, ...extraSessions, ...rescheduledSessions];
-          this.calendarState.sessions = this.calendarSessions;
-          this.calendarState.groups = this.groups;
+          // One card per saved session; preserve the actual state and effective date.
+          const savedSessions=rawSessions.map(saved=>{
+            const group=this.groups.find(g=>g.id===saved.group_id) || (Array.isArray(saved.groups)?saved.groups[0]:saved.groups) || {};
+            const date=saved.rescheduled_to_date || saved.session_date;
+            return {...saved,group_name:group.name || saved.group_name || 'حصة',center_name:group.center_name || saved.center_name || '',date,original_session_date:saved.original_session_date || saved.session_date,day_name:jsDayToDayName[new Date(date+'T12:00:00').getDay()],time:saved.rescheduled_to_time || saved.session_time || group.session_time || 'وقت غير محدد'};
+          });
+          this.calendarSessions=[...recurringGroupSessions,...savedSessions];
+          this.calendarState.sessions=this.calendarSessions;
+          this.calendarState.groups=this.groups;
           this.renderMainContent();
           break;
         }

@@ -29,6 +29,7 @@ test('LIVE: assistant essay approval is atomic, scoped and isolated from same-nu
  assert.equal((await post(submissions[1].id)).status,403);
  const response=await post(submissions[0].id);assert.equal(response.status,200,await response.clone().text());assert.equal((await response.json()).final_score,5);
  const scores=ok(await db.from('quiz_scores').select('score,material_id').eq('tenant_id',tenant));assert.equal(scores.length,2);assert.equal(scores.find(s=>s.material_id===null).score,9);assert.equal(scores.find(s=>s.material_id===materials[0].id).score,5);
+ const listing=await fetch(`http://127.0.0.1:${server.address().port}/api/assistant-access/workspace-api/quizzes/submissions`,{headers:{Origin:origin,Authorization:'Bearer '+token,'X-Assistant-Page':'online-quizzes'}});assert.equal(listing.status,200,await listing.clone().text());const listed=(await listing.json()).submissions;assert.ok(listed.some(row=>row.material_id===materials[0].id && row.score===5));assert.ok(!listed.some(row=>row.material_id===materials[1].id));
  ok(await db.from('assistant_accounts').update({permissions:{'online-quizzes.view':true}}).eq('assistant_id',staff.id));assert.equal((await post(submissions[0].id)).status,403);
  assert.ok((await anonClient.rpc('grade_portal_quiz_essay',{p_tenant:tenant,p_user:owner.id,p_assistant:null,p_submission:submissions[0].id,p_scores:{essay:5}})).error);
 });

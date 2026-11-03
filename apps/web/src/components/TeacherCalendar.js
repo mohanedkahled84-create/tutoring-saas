@@ -1,6 +1,6 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
-import { calendarDateKey, calendarWeekRange } from '../utils/calendarDateRange.js';
+import { calendarDateKey, calendarWeekRange, calendarMonthRange, calendarToday, calendarSessionOnDate } from '../utils/calendarDateRange.js';
 
 /**
  * Centrly Teacher Calendar (DEV-89)
@@ -10,7 +10,7 @@ import { calendarDateKey, calendarWeekRange } from '../utils/calendarDateRange.j
 
 export function renderTeacherCalendar(data = {}) {
   const currentView = data.view || 'week';
-  const currentDateLabel = data.dateLabel || 'أسبوع 6 سبتمبر - 12 سبتمبر 2026';
+  const currentDateLabel = data.dateLabel || 'جدول الحصص';
   const filterGroup = data.selectedGroup || 'all';
 
   const rawSessions = data.sessions || [];
@@ -33,17 +33,17 @@ export function renderTeacherCalendar(data = {}) {
   const scheduledCount = sessions.filter((s) => s.status === 'scheduled').length;
   const completedCount = sessions.filter((s) => s.status === 'ended').length;
   const cancelledCount = sessions.filter((s) => s.status === 'cancelled').length;
-  const rescheduledCount = sessions.filter((s) => s.status === 'rescheduled' || s.rescheduled_to_date).length;
+  const rescheduledCount = sessions.filter((s) => s.status === 'rescheduled').length;
   const extraCount = sessions.filter((s) => s.is_extra).length;
 
   function renderStatusBadge(session) {
     if (session.is_recurring) {
       return '<span class="badge badge-primary" style="font-size:0.75rem; background:#e0f2fe; color:#0284c7; border: 1px solid #bae6fd;">موعد أسبوعي ثابت</span>';
     }
-    if (session.is_extra) {
+    if (session.is_extra && !['cancelled','ended','in_progress','rescheduled'].includes(session.status)) {
       return '<span class="badge" style="background:#ede9fe; color:#7c3aed; font-size:0.75rem; border: 1px solid #ddd6fe;">حصة إضافية</span>';
     }
-    if (session.status === 'rescheduled' || session.rescheduled_to_date) {
+    if (session.status === 'rescheduled') {
       return '<span class="badge badge-warning" style="font-size:0.75rem;">موعد بديل / مؤجل</span>';
     }
     if (session.status === 'in_progress') {
@@ -93,7 +93,7 @@ export function renderTeacherCalendar(data = {}) {
     }
 
     // 2. Extra session (حصة إضافية)
-    if (session.is_extra) {
+    if (session.is_extra && !['cancelled','ended','in_progress','rescheduled'].includes(session.status)) {
       return `
         <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid #7c3aed; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 0.5rem; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
@@ -132,7 +132,7 @@ export function renderTeacherCalendar(data = {}) {
     }
 
     // 3. Rescheduled session (موعد بديل / مؤجل)
-    if (session.status === 'rescheduled' || session.rescheduled_to_date) {
+    if (session.status === 'rescheduled') {
       return `
         <div class="card" style="margin: 0; padding: 1rem; border-right: 4px solid var(--centrly-warning); background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 0.5rem; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
@@ -225,7 +225,7 @@ export function renderTeacherCalendar(data = {}) {
     if (Array.isArray(data.customWeekDays) && data.customWeekDays.length === 7) {
       return data.customWeekDays;
     }
-    let anchor = new Date();
+    let anchor = calendarToday();
     if (data.weekOffset === undefined) {
       const firstDatedSession = sessions.find((s) => s.date && /^\d{4}-\d{2}-\d{2}$/.test(s.date));
       if (firstDatedSession) {
@@ -254,12 +254,12 @@ export function renderTeacherCalendar(data = {}) {
       { key: 'الجمعة', label: 'الجمعة' },
     ];
 
-    const todayIso = calendarDateKey(new Date());
+    const todayIso = calendarDateKey(calendarToday());
 
     return dayLabels.map((dl, idx) => {
       const d = new Date(sat);
       d.setDate(sat.getDate() + idx);
-      const iso = d.toISOString().slice(0, 10);
+      const iso = calendarDateKey(d);
       const isToday = iso === todayIso;
       return {
         key: dl.key,
@@ -360,9 +360,10 @@ export function renderTeacherCalendar(data = {}) {
                 5: 'الجمعة',
                 6: 'السبت',
               };
-              const todayDayName = jsDayToDayName[new Date().getDay()] || 'السبت';
+              const todayDayName = jsDayToDayName[calendarToday().getDay()] || 'السبت';
               const selectedDayKey = data.selectedDayName || (sessions.some(s => s.day_name === todayDayName) ? todayDayName : (sessions[0]?.day_name || todayDayName));
-              const daySessions = sessions.filter((s) => s.day_name === selectedDayKey || (s.date && s.date.includes(selectedDayKey)));
+              const selectedDate=weekDays.find(day=>day.key===selectedDayKey)?.iso || calendarDateKey(calendarToday());
+              const daySessions = sessions.filter(s=>calendarSessionOnDate(s,selectedDate,sessions));
 
               return `
                 <!-- DAILY VIEW -->
@@ -398,26 +399,29 @@ export function renderTeacherCalendar(data = {}) {
           : currentView === 'month'
           ? (() => {
               const weekDaysHeader = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
-              // In Sept 2026: Sept 1 was Tuesday (index 3 in weekDaysHeader)
-              const firstDayOffset = 3; 
+              const range=calendarMonthRange(data.monthOffset);
+              const first=new Date(range.from+'T12:00:00');
+              const firstDayOffset=(first.getDay()+1)%7;
+              const daysInMonth=Number(range.to.slice(-2));
+              const monthLabel=new Intl.DateTimeFormat('ar-EG',{month:'long',year:'numeric'}).format(first);
 
               return `
                 <!-- MONTHLY VIEW -->
                 <div class="card" style="margin: 0;">
                   <h3 style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: var(--centrly-ink);">
-                    تقويم الشهر (سبتمبر 2026)
+                    تقويم الشهر (${escapeHtml(monthLabel)})
                   </h3>
                   <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; text-align: center;">
                     ${weekDaysHeader
                       .map((d) => `<div style="font-weight: 800; font-size: 0.85rem; padding: 0.5rem; background: var(--centrly-bg); border-radius: 6px;">${d}</div>`)
                       .join('')}
                     ${Array.from({ length: firstDayOffset }, () => `<div style="min-height: 80px; background: transparent;"></div>`).join('')}
-                    ${Array.from({ length: 30 }, (_, i) => {
+                    ${Array.from({ length: daysInMonth }, (_, i) => {
                       const dayNum = i + 1;
                       const dayOfWeekIndex = (i + firstDayOffset) % 7;
                       const dayArabicName = weekDaysHeader[dayOfWeekIndex];
-                      const dateStr = `2026-09-${String(dayNum).padStart(2, '0')}`;
-                      const daySessions = sessions.filter((s) => s.date === dateStr || s.session_date === dateStr || s.day_name === dayArabicName);
+                      const dateStr = `${range.from.slice(0,7)}-${String(dayNum).padStart(2, '0')}`;
+                      const daySessions = sessions.filter(s=>calendarSessionOnDate(s,dateStr,sessions));
 
                       return `
                         <div style="min-height: 85px; border: 1px solid var(--centrly-line); border-radius: 6px; padding: 0.4rem; text-align: right; background: ${daySessions.length > 0 ? '#f8fafc' : '#fff'};">
@@ -430,8 +434,8 @@ export function renderTeacherCalendar(data = {}) {
                               .map(
                                 (s) => `
                               <div style="font-size: 0.72rem; padding: 0.2rem 0.35rem; border-radius: 4px; background: ${
-                                s.is_extra ? '#f3e8ff; color: #7c3aed;' : s.status === 'cancelled' ? '#fee2e2; color: #b91c1c;' : '#e0f2fe; color: #0369a1;'
-                              }; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; cursor: pointer;" title="${escapeHtml(s.group_name)} (${escapeHtml(s.time)})" onclick="window.centrlyApp.startSessionForGroup('${escapeHtml(s.group_id || s.id)}')">
+                                s.status === 'cancelled' ? '#fee2e2; color: #b91c1c;' : s.is_extra ? '#f3e8ff; color: #7c3aed;' : '#e0f2fe; color: #0369a1;'
+                              }; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; cursor: pointer;" title="${escapeHtml(s.group_name)} (${escapeHtml(s.time)}) · ${s.status==='cancelled'?'ملغاة':s.status==='ended'?'منتهية':s.status==='rescheduled'?'موعد بديل':'موعد الحصة'}" onclick="window.centrlyApp.navigate('sessions')">
                                 ${escapeHtml(s.time.split(' ')[0])} ${escapeHtml(s.group_name.substring(0, 10))}..
                               </div>
                             `
@@ -450,16 +454,7 @@ export function renderTeacherCalendar(data = {}) {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
           ${weekDays
             .map((wd) => {
-              const daySessions = sessions.filter((s) => {
-                if (s.is_recurring) return s.day_name === wd.key;
-                if (s.date && /^\d{4}-\d{2}-\d{2}$/.test(s.date)) {
-                  if (data.weekOffset !== undefined) {
-                    return s.date === wd.iso;
-                  }
-                  return s.date === wd.iso || s.day_name === wd.key;
-                }
-                return s.day_name === wd.key || (s.date && s.date.includes(wd.date));
-              });
+              const daySessions = sessions.filter(s=>calendarSessionOnDate(s,wd.iso,sessions));
               return `
               <div class="card" style="margin: 0; background: ${wd.isToday ? '#f0f9ff' : '#fafbfc'}; border-top: 3px solid ${wd.isToday ? 'var(--centrly-blue-700)' : '#cbd5e1'};">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--centrly-line); padding-bottom: 0.5rem;">
@@ -490,11 +485,14 @@ export function renderTeacherCalendar(data = {}) {
 
 export function registerTeacherCalendarActions(app) {
   app.getCalendarRequestRange = function() {
-    return calendarWeekRange(this.calendarState.weekOffset);
+    return this.calendarState.view==='month'?calendarMonthRange(this.calendarState.monthOffset):calendarWeekRange(this.calendarState.weekOffset,calendarToday());
   };
   app.switchCalendarView = function(view) {
+    if(!['day','week','month'].includes(view))return;
     this.calendarState.view = view;
+    this.updateCalendarDateLabel();
     this.renderMainContent();
+    return this.loadRouteData('calendar');
   }
 
   app.selectCalendarDay = function(dayKey) {
@@ -504,7 +502,8 @@ export function registerTeacherCalendarActions(app) {
 
   app.updateCalendarDateLabel = function() {
     const offset = Number(this.calendarState.weekOffset) || 0;
-    const now = new Date();
+    const now = calendarToday();
+    if(this.calendarState.view==='month'){const range=calendarMonthRange(this.calendarState.monthOffset);this.calendarState.dateLabel=new Intl.DateTimeFormat('ar-EG',{month:'long',year:'numeric'}).format(new Date(range.from+'T12:00:00'));return;}
     const dayOfWeek = now.getDay();
     const daysSinceSat = (dayOfWeek + 1) % 7;
     const sat = new Date(now);
@@ -523,14 +522,16 @@ export function registerTeacherCalendarActions(app) {
   }
 
   app.calendarPrev = function() {
-    this.calendarState.weekOffset = (this.calendarState.weekOffset || 0) - 1;
+    const key=this.calendarState.view==='month'?'monthOffset':'weekOffset';
+    this.calendarState[key]=(Number(this.calendarState[key]) || 0)-1;
     this.updateCalendarDateLabel();
     this.renderMainContent();
     return this.loadRouteData('calendar');
   }
 
   app.calendarNext = function() {
-    this.calendarState.weekOffset = (this.calendarState.weekOffset || 0) + 1;
+    const key=this.calendarState.view==='month'?'monthOffset':'weekOffset';
+    this.calendarState[key]=(Number(this.calendarState[key]) || 0)+1;
     this.updateCalendarDateLabel();
     this.renderMainContent();
     return this.loadRouteData('calendar');
@@ -538,6 +539,7 @@ export function registerTeacherCalendarActions(app) {
 
   app.calendarToday = function() {
     this.calendarState.weekOffset = 0;
+    this.calendarState.monthOffset = 0;
     const jsDayToDayName = {
       0: 'الأحد',
       1: 'الإثنين',
@@ -547,7 +549,7 @@ export function registerTeacherCalendarActions(app) {
       5: 'الجمعة',
       6: 'السبت',
     };
-    this.calendarState.selectedDayName = jsDayToDayName[new Date().getDay()] || 'السبت';
+    this.calendarState.selectedDayName = jsDayToDayName[calendarToday().getDay()] || 'السبت';
     this.updateCalendarDateLabel();
     this.renderMainContent();
     this.showToast('عرض جدول اليوم الحالي', 'info');
