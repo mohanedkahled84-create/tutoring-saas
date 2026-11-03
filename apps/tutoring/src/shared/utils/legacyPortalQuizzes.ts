@@ -19,6 +19,19 @@ export function stripQuizAnswers(value: unknown): unknown {
   );
 }
 
+// The account payload lists exams without releasing their question text.
+// A verified start request releases the saved model after schedule checks.
+export function quizListingDefinition(value:unknown):Record<string,unknown> {
+ const source=value && typeof value==='object' && !Array.isArray(value)?value as Record<string,any>:{};
+ const keys=['id','quiz_number','subject','time_limit_minutes','available_date','start_time','end_time','exam_mode','legacy_quiz_ref'];
+ return {...Object.fromEntries(keys.filter(key=>source[key]!==undefined).map(key=>[key,source[key]])),question_count:Array.isArray(source.questions)?source.questions.length:0,max_score:Array.isArray(source.questions)?source.questions.reduce((sum:number,q:any)=>sum+(Number.isFinite(Number(q.points ?? 1))?Number(q.points ?? 1):0),0):0,questions:[]};
+}
+
+export function quizStartedDefinition(value:unknown):Record<string,unknown> {
+ const source=value && typeof value==='object' && !Array.isArray(value)?value as Record<string,any>:{};
+ return {...quizListingDefinition(source),questions:(Array.isArray(source.questions)?source.questions:[]).map((q:any)=>Object.fromEntries(['id','type','text','options','choices','points','image_url'].filter(key=>q?.[key]!==undefined).map(key=>[key,q[key]])))};
+}
+
 export function mergeLegacyPortalQuizzes(
   portalData: Record<string, any>,
   rows: Array<Record<string, any>>,
@@ -90,7 +103,7 @@ export function mergeLegacyPortalQuizzes(
       type: "online_quiz",
       is_homework: false,
       group_id: groupId,
-      questions: { ...quiz, questions: safeQuestions },
+      questions: quizListingDefinition(quiz),
       created_date: String(quiz.available_date || row.created_at || "").slice(0, 10),
       due_date: quiz.available_date || null,
       submission_status: submission?.status || "unsubmitted",

@@ -13,6 +13,7 @@ test('teacher exam cache isolates account/workspace, retires unowned legacy reco
   const delegated={...owner,delegation:{actor:{id:'assistant'},permissions:{'online-quizzes.view':true}}};teacherQuizCache(delegated).setItem(key,'assistant data');assert.equal(teacherQuizCache(delegated).getItem(key),null);assert.equal(teacherQuizCache({}).getItem(key),null);
   const actor=quizActor(delegated);delegated.delegation.permissions={};assert.notEqual(quizActor(delegated),actor);assert.equal(teacherQuizCache(owner).getItem(key),'private exam A');
   teacherQuizCache(owner).removeItem(key);assert.equal(teacherQuizCache(owner).getItem(key),null);
+  local.setItem('centrly_token','fixture-remembered-staff-session');teacherQuizCache(owner).setItem(key,'remembered-owner-only');assert.equal(teacherQuizCache(owner).getItem(key),'remembered-owner-only');assert.equal(teacherQuizCache(other).getItem(key),null);assert.equal(teacherQuizCache({...owner,user:{...owner.user,assistant_id:'helper'}}).getItem(key),null);local.removeItem('centrly_token');
   Object.defineProperty(globalThis,'sessionStorage',{get(){throw Error('storage unavailable');},configurable:true});assert.equal(teacherQuizCache(owner).getItem(key),null);assert.doesNotThrow(()=>teacherQuizCache(owner).setItem(key,'data'));
  }finally{for(const [key,descriptor] of [['localStorage',originalLocal],['sessionStorage',originalSession]]){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}}
 });

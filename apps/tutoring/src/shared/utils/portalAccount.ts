@@ -2,7 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {verifyParentPortalToken} from './tokens.js';
 import {verifiedPortalStudent} from './portalDestination.js';
 import {normalizeMaterialUrl} from '../../features/materials/routes.js';
-import {mergeLegacyPortalQuizzes, stripQuizAnswers as removeQuizAnswerKeys} from './legacyPortalQuizzes.js';
+import {mergeLegacyPortalQuizzes, quizListingDefinition} from './legacyPortalQuizzes.js';
 import {signHomeworkFile} from '../../features/homework/files.js';
 import {resolvePortalPreferences} from './portalPreferences.js';
 
@@ -66,7 +66,7 @@ export async function loadPortalAccount(supabase:SupabaseClient,token:string,mon
         if (m.type === "online_quiz" && questions) {
           try {
             const parsed = typeof questions === "string" ? JSON.parse(questions) : questions;
-            const sanitized = removeQuizAnswerKeys(parsed);
+            const sanitized = quizListingDefinition(parsed);
             questions = typeof m.questions === "string" ? JSON.stringify(sanitized) : sanitized;
           } catch {
             questions = null;

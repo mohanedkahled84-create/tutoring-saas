@@ -7,6 +7,7 @@ import {createMetaPortalWorker} from './features/whatsapp-notifications/meta-por
 
 import {createAccountDeletionWorker} from './features/auth/accountDeletionWorker.js';
 import {createAnnouncementWorker} from './features/announcements/worker.js';
+import {createQuizAttemptWorker} from './shared/routes/quizAttemptWorker.js';
 
 const server = app.listen(config.port, () => {
   console.log(`[Tutoring SaaS Backend] Server running on port ${config.port}`);
@@ -18,6 +19,9 @@ server.headersTimeout = 120000; // 2 minutes
 server.keepAliveTimeout = 65000; // 65 seconds
 
 if(config.nodeEnv==='production' && config.supabaseServiceRoleKey){
+ const quizzes=createQuizAttemptWorker(getServiceSupabaseClient(),()=>console.warn('[Quiz attempts] Finalization deferred.'));
+ const quizInterval=setInterval(()=>void quizzes.tick(),20_000);quizInterval.unref();
+ server.once('close',()=>{quizzes.stop();clearInterval(quizInterval);});
  const deletion=createAccountDeletionWorker(getServiceSupabaseClient(),()=>console.warn('[Account cleanup] Will retry.'));
  const deletionInterval=setInterval(()=>void deletion.tick(),30_000);deletionInterval.unref();
  server.once('close',()=>{deletion.stop();clearInterval(deletionInterval);});

@@ -684,7 +684,8 @@ quizzesRouter.post(
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to save rich quiz";
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+      const attempted=message.includes('QUIZ_HAS_ATTEMPTS_COPY_INSTEAD');
+      res.status(attempted?409:500).json({error:{code:attempted?'QUIZ_HAS_ATTEMPTS':'INTERNAL_ERROR',message:attempted?'بدأ الطلاب حل هذا الامتحان؛ احتفظ به كسجل وأنشئ امتحانًا جديدًا لتغيير الأسئلة أو التصحيح':message}});
     }
   }
 );

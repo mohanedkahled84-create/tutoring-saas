@@ -47,7 +47,9 @@ test("legacy portal quiz recovery is group-scoped, hides answers, and restores t
   assert.deepEqual(portalData.materials.map((material) => material.id), ["already-there", "legacy-1"]);
   assert.equal(portalData.materials[1].submission_status, "approved");
   assert.equal(portalData.materials[1].teacher_feedback.includes("final_score"), true);
-  assert.equal("correct_index" in portalData.materials[1].questions.questions[0], false);
+  assert.deepEqual(portalData.materials[1].questions.questions, []);
+  assert.equal(portalData.materials[1].questions.question_count,1);
+  assert.ok(!JSON.stringify(portalData.materials[1]).includes("2 + 2?"));
   assert.equal(portalData.quizzes[0].score, 8);
   assert.equal(portalData.quizzes[0].max_score, 10);
 });
