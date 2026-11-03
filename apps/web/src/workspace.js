@@ -1,4 +1,6 @@
 import { registerCameraScannerActions } from './components/CameraScannerModal.js?v=1.0.0';
+import {registerClassroomLifecycle} from './components/ClassroomLifecycle.js';
+import {registerAcademicYears} from './components/AcademicYears.js';
 import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=1.1.0';
 import { registerStudentImportActions } from './components/StudentImportModal.js?v=1.0.0';
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=2.0.0';
@@ -36,6 +38,8 @@ import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from
 export { renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView };
 
 export function registerWorkspaceActions(app) {
+  registerClassroomLifecycle(app);
+  registerAcademicYears(app);
   registerMaterialsActions(app);
   registerVideoLessonsActions(app);
   registerTeacherPlatformActions(app);

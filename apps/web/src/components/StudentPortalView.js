@@ -758,7 +758,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                         `}
 
                         <!-- File Upload Trigger (PDF or Images) -->
-                        <div>
+                        ${m.can_submit===false?'<p role="status">هذا التسليم محفوظ من تكليف سابق، ولا يستقبل رفع ملفات جديدة.</p>':`<div>
                           <input type="file" id="hw-file-input-${escapeHtml(m.id)}" accept="application/pdf,image/*,.pdf,.jpg,.jpeg,.png,.webp,.heic" style="display: none;" 
                             onchange="window.centrlyApp && window.centrlyApp.handleStudentHomeworkUpload ? window.centrlyApp.handleStudentHomeworkUpload('${escapeHtml(m.id)}', this.files[0]) : null">
                           
@@ -767,7 +767,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                             ${getIcon('upload', 14, '#ffffff')}
                             <span>${isRejected ? 'رفع حل الواجب الجديد (إعادة التسليم)' : (isPending ? 'تعديل / رفع نسخة أحدث' : 'رفع حل الواجب (PDF أو صورة)')}</span>
                           </button>
-                        </div>
+                        </div>`}
                       </div>
 
                     </div>

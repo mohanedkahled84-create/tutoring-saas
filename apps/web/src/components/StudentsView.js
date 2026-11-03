@@ -174,6 +174,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
               ${getIcon('download', 14)}
               <span>استيراد Excel</span>
             </button>
+            <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openClassroomArchive('students')">أرشيف الطلاب</button>
           </div>
         </div>
 
@@ -381,6 +382,9 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                   </td>
                   <td data-label="إجراءات" class="student-actions">
                     <div style="display: flex; gap: 0.35rem;">
+                      <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openStudentTransfer('${escapeHtml(s.id)}')">نقل</button>
+                      <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openStudentClassroomHistory('${escapeHtml(s.id)}')">السجل</button>
+                      <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.archiveClassroomRecord('students','${escapeHtml(s.id)}')">أرشفة</button>
                       <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.openParentNoteModal('${escapeHtml(s.id)}', '${escapeHtml(s.name)}')" title="إرسال ملاحظة خاصة لولي الأمر عبر الواتساب" style="display: flex; align-items: center; gap: 0.3rem;">
                         ${getIcon('note', 14)}
                         <span>ملاحظة</span>

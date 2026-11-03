@@ -47,13 +47,12 @@ function parsePostgrestSelect(raw) {
       depth--;
       if (depth === 0) {
         if (currentJoinTable) {
+          const nested = parsePostgrestSelect(current);
           joins.push({
-            table: currentJoinTable.split("!")[0].split(":")[0].trim().toLowerCase(),
-            columns: current
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
+            table: currentJoinTable.split("!")[0].split(":").at(-1).trim().toLowerCase(),
+            columns: nested.topColumns,
           });
+          joins.push(...nested.joins);
         }
         current = "";
         currentJoinTable = "";
@@ -74,6 +73,13 @@ function parsePostgrestSelect(raw) {
   }
   return { topColumns, joins };
 }
+
+test('Schema select parser validates nested relation columns against their own tables',()=>{
+ const result=parsePostgrestSelect('id,group_students(group_id,primary:groups(id,name,archived_at))');
+ assert.deepEqual(result,{topColumns:['id'],joins:[{table:'group_students',columns:['group_id']},{table:'groups',columns:['id','name','archived_at']}]});
+ const malformed=parsePostgrestSelect('group_students(groups(nonexistent_column))');
+ assert.equal(loadCanonicalSchema().get(malformed.joins[1].table).has(malformed.joins[1].columns[0]),false);
+});
 
 /**
  * Scans all typescript source files for .from("table").select("cols") queries.

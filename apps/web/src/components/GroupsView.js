@@ -38,6 +38,7 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
             ${getIcon('add', 14, '#ffffff')}
             <span>مجموعة جديدة</span>
           </button>
+          <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openClassroomArchive('groups')">أرشيف المجموعات</button>
         </div>
       </div>
 
@@ -198,6 +199,7 @@ export function renderGroupsView(groups = [], user = {}, isLoading = false, hasL
 
                 <!-- Group Edit & Delete Actions -->
                 <div style="display: flex; gap: 0.35rem; margin-top: 0.25rem;">
+                  <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.archiveClassroomRecord('groups','${escapeHtml(g.id)}')">أرشفة</button>
                   <button class="btn btn-secondary btn-sm" style="flex: 1; font-size: 0.75rem; padding: 0.25rem 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem;" onclick="window.centrlyApp.openEditGroupModal('${escapeHtml(g.id)}')" title="تعديل بيانات المجموعة والمواعيد">
                     ${getIcon('edit', 12)}
                     <span>تعديل المجموعة</span>

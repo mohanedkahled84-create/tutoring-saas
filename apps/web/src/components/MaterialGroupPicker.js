@@ -9,10 +9,12 @@ export function materialGroupLabel(row,groups=[]) {
 }
 
 export function renderMaterialGroupPicker(prefix,groups=[],selected=null) {
+  const restricted=typeof window!=='undefined' && window.centrlyApp?.delegation && !window.centrlyApp.delegation.all_groups;
+  if(restricted && selected===null)selected=groups.map(g=>g.id);
   const all=selected===null,ids=new Set(selected || []);
   return `<fieldset id="${prefix}" style="border:1px solid var(--centrly-border,#dce3ec);border-radius:12px;padding:.75rem;min-width:0">
     <legend style="font-weight:800;padding:0 .3rem">المجموعات المستهدفة</legend>
-    <label style="display:flex;align-items:center;gap:.6rem;min-height:44px"><input type="checkbox" data-target-all ${all?'checked':''} onchange="window.centrlyApp.updateMaterialGroupPicker('${prefix}')">كل المجموعات، بما فيها المجموعات المضافة لاحقًا</label>
+    <label style="display:${restricted?'none':'flex'};align-items:center;gap:.6rem;min-height:44px"><input type="checkbox" data-target-all ${all?'checked':''} ${restricted?'disabled':''} onchange="window.centrlyApp.updateMaterialGroupPicker('${prefix}')">كل مجموعات السنة الحالية، بما فيها المجموعات المضافة لاحقًا</label>
     <label style="display:block;font-size:.85rem;margin-top:.35rem" for="${prefix}Search">ابحث عن مجموعة</label>
     <input id="${prefix}Search" type="search" class="form-input" style="min-height:44px;width:100%;margin:.35rem 0" placeholder="اسم المجموعة" oninput="window.centrlyApp.updateMaterialGroupPicker('${prefix}')">
     <div style="max-height:220px;overflow:auto;overscroll-behavior:contain" data-target-list>
@@ -31,6 +33,20 @@ export function readMaterialGroupPicker(prefix) {
 }
 
 export function registerMaterialGroupPicker(app) {
+  app.openMaterialCopy=function(id){
+    const row=[...(this.materials || []),...(this.homeworkState?.assignments || [])].find(m=>m.id===id);
+    if(!row)return;
+    this._materialCopyId=id;
+    this._materialCopyRequestId=crypto.randomUUID();
+    this.showModal('إعادة استخدام المحتوى',`<form id="materialCopyForm" onsubmit="window.centrlyApp.saveMaterialCopy(event)" style="display:grid;gap:1rem"><p>نسخة بتكليف مستقل للمجموعات الحالية، بدون رفع الملف ثانية. التسليمات والدرجات السابقة تظل مرتبطة بالأصل.</p><label>عنوان النسخة<input id="materialCopyTitle" class="form-input" value="${e(row.title)}" maxlength="250" required></label>${row.is_homework?'<label>موعد تسليم النسخة الجديدة<input id="materialCopyDue" type="date" class="form-input"></label>':''}${renderMaterialGroupPicker('materialCopyGroups',this.groups || [],[])}</form>`,`<button class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button><button type="submit" form="materialCopyForm" class="btn btn-primary" style="min-height:44px">إنشاء النسخة</button>`);
+  };
+  app.saveMaterialCopy=async function(event){
+    event.preventDefault();const id=this._materialCopyId;if(!id)return;
+    let target;try{target=readMaterialGroupPicker('materialCopyGroups');}catch(error){this.showToast(error.message,'error');return;}
+    const control=event.submitter;if(control)control.disabled=true;
+    try{await request('/materials/'+encodeURIComponent(id)+'/copy',{method:'POST',body:{request_id:this._materialCopyRequestId,title:document.getElementById('materialCopyTitle').value.trim(),due_date:document.getElementById('materialCopyDue')?.value || null,...target}});this._materialCopyId=null;this.closeModal();this.showToast('تم إنشاء نسخة مستقلة بدون تكرار رفع الملف','success');await this.loadRouteData(this.currentRoute==='homework'?'homework':'materials');}
+    catch(error){this.showToast(error.message || 'راجع قائمة المحتوى قبل إعادة المحاولة','error');if(control?.isConnected)control.disabled=false;}
+  };
   app.openMaterialGroupAssignment=function(id){
     const row=[...(this.materials || []),...(this.homeworkState?.assignments || [])].find(m=>m.id===id);
     if(!row){this.showToast('أعد تحميل قائمة المحتوى ثم حاول مجددًا','error');return;}

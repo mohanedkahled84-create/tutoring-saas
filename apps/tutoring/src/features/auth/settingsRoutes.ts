@@ -5,8 +5,10 @@ import { validateBody } from "../../shared/middleware/validation.js";
 import { requireCenterOwnerOrAdmin } from "../../shared/middleware/auth.js";
 import { getServices } from "../../composition.js";
 import { supabasePublic, getScopedSupabaseClient } from "../../supabase.js";
+import {registerAcademicYears} from '../students/academicYears.js';
 
 export const settingsRouter = Router();
+registerAcademicYears(settingsRouter);
 
 export function normalizeDigits(str: unknown): string {
   if (!str && str !== 0) return "";

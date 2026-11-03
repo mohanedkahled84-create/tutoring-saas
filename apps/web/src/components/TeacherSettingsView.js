@@ -87,6 +87,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
         </div>
       </div>
 
+      ${!window.centrlyApp?.delegation?`<section class="card" style="margin:0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem"><div><h3>السنة الدراسية والأرشيف</h3><p>تنظيم السنة الحالية، ونقل المجموعات والطلاب مع حفظ تاريخهم.</p></div><button type="button" class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openAcademicYears()">إدارة السنوات</button></section>`:''}
       <!-- Settings Navigation Tabs -->
       <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--centrly-line); padding-bottom: 0.65rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
         

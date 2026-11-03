@@ -15,7 +15,7 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
   async list(tenantId?: string): Promise<Group[]> {
     let query = this.client
       .from("groups")
-      .select("id, tenant_id, name, price, session_price, sessions_per_week, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name, group_students(student_id)")
+      .select("id, tenant_id, name, price, session_price, sessions_per_week, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name, archived_at, group_students(student_id, students(archived_at))")
       .order("name", { ascending: true });
 
     if (tenantId) {
@@ -25,18 +25,20 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
     const { data, error } = await query;
     if (error) {
       // Fallback without join if relational embed fails
-      const fallback = await this.client
+      let fallbackQuery = this.client
         .from("groups")
-        .select("id, tenant_id, name, price, session_price, sessions_per_week, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name")
+        .select("id, tenant_id, name, price, session_price, sessions_per_week, billing_model, center_cut_percentage, fixed_per_student_amount, fixed_rent_amount, teacher_cut_percentage, center_name, teacher_id, room_id, day_of_week, session_time, schedule, created_at, parent_group_id, is_section, section_name, archived_at")
         .order("name", { ascending: true });
+      if(tenantId)fallbackQuery=fallbackQuery.eq('tenant_id',tenantId);
+      const fallback=await fallbackQuery;
       if (fallback.error) {
         throw new Error(fallback.error.message);
       }
-      return (fallback.data as Group[]) || [];
+      return ((fallback.data as Array<Group & {archived_at?:string|null}>) || []).filter(row=>!row.archived_at);
     }
-    return ((data as any[]) || []).map((g) => {
+    return ((data as any[]) || []).filter(g=>!g.archived_at).map((g) => {
       const gs = g.group_students;
-      const count = Array.isArray(gs) ? gs.length : 0;
+      const count = Array.isArray(gs) ? gs.filter(row=>!row.students?.archived_at).length : 0;
       return {
         ...g,
         students_count: count,
@@ -146,7 +148,7 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
   async getEnrolledStudents(groupId: string): Promise<EnrolledStudent[]> {
     const { data: enrollments, error } = await this.client
       .from("group_students")
-      .select("id, student_id, students(id, name, parent_phone, student_phone, student_code, fee_override, exempt)")
+      .select("id, student_id, students(id, name, parent_phone, student_phone, student_code, fee_override, exempt, archived_at)")
       .eq("group_id", groupId);
 
     if (error) {
@@ -159,7 +161,7 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
 
     return rawEnrollments
       .map((e) => e.students)
-      .filter((s): s is EnrolledStudent => Boolean(s));
+      .filter((s): s is EnrolledStudent => Boolean(s) && !(s as any).archived_at);
   }
 
   async enrollStudent(
@@ -167,14 +169,6 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
     groupId: string,
     studentId: string
   ): Promise<{ id: string; group_id: string; student_id: string }> {
-    // Enforce 1 student = 1 group: Remove student from any previous group first
-    try {
-      await this.client
-        .from("group_students")
-        .delete()
-        .eq("student_id", studentId);
-    } catch (_) {}
-
     const { data, error } = await this.client
       .from("group_students")
       .insert({

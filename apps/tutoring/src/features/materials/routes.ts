@@ -159,6 +159,33 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
   }
 });
 
+// Copy content into a fresh assignment. Never copy submissions or trust a client URL.
+materialsRouter.post('/:id/copy',async(req:AuthenticatedRequest,res:Response):Promise<void>=>{
+ const tenant=req.user?.tenant_id;
+ const schema=z.object({request_id:z.string().uuid(),title:z.string().trim().min(1).max(250),due_date:z.iso.date().nullable().optional(),group_id:z.string().uuid().nullable().optional(),group_ids:z.array(z.string().uuid()).min(1).max(200).nullable().optional()}).strict();
+ const parsed=schema.safeParse(req.body),id=z.string().uuid().safeParse(req.params.id);
+ if(!tenant){res.status(403).json({error:{message:'حساب المدرس غير متاح'}});return;}
+ if(!parsed.success || !id.success){res.status(400).json({error:{message:'راجع عنوان المحتوى والمجموعات وموعد التسليم'}});return;}
+ const targets=materialGroupsSchema.safeParse(parsed.data);
+ if(!targets.success){res.status(400).json({error:{message:'راجع المجموعات المختارة'}});return;}
+ try{
+  const db=getServiceSupabaseClient();
+  const source=await db.from('study_materials').select('*').eq('id',id.data).eq('tenant_id',tenant).maybeSingle();
+  if(source.error)throw source.error;
+  if(!source.data){res.status(404).json({error:{message:'المحتوى غير متاح'}});return;}
+  const row=source.data;
+  if(!['pdf','link','video'].includes(row.type) || row.book_name==='approved_homework'){res.status(409).json({error:{message:'أنشئ نسخة من صفحة الاختبار أو الفيديو المرتبط بواجب لاختيار شروطه الجديدة'}});return;}
+  const target=normalizeMaterialGroups(targets.data);
+  const result=await db.from('study_materials').insert({id:parsed.data.request_id,source_material_id:row.id,tenant_id:tenant,teacher_id:req.user?.id,title:parsed.data.title,description:row.description,type:row.type,url:row.url,is_homework:row.is_homework,due_date:row.is_homework?parsed.data.due_date || null:null,book_name:row.book_name,pages:row.pages,questions:row.questions,...target}).select().single();
+  if(result.error?.code==='23505'){
+   const saved=await db.from('study_materials').select('*').eq('id',parsed.data.request_id).eq('tenant_id',tenant).maybeSingle();
+   if(!saved.error && saved.data?.source_material_id===row.id){res.json({material:saved.data,success:true,unchanged:true});return;}
+  }
+  if(result.error)throw result.error;
+  res.status(201).json({material:result.data,success:true});
+ }catch(error:any){res.status(error?.code==='42501'?403:error?.code==='23514'?409:503).json({error:{message:error?.code==='42501'?'اختر مجموعات مسموحًا لك بإسناد المحتوى إليها':error?.code==='23514'?'اختر مجموعات نشطة من السنة الحالية':'تعذر إنشاء النسخة. راجع قائمة المحتوى قبل المحاولة مجددًا'}});}
+});
+
 // PATCH /api/materials/:id - Update study material metadata / exceptions
 materialsRouter.patch("/:id", async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const tenantId = req.user?.tenant_id;
@@ -195,6 +222,7 @@ materialsRouter.patch("/:id", async (req: AuthenticatedRequest, res: Response): 
       .single();
 
     if(error?.message?.includes('GROUP_HAS_SUBMISSIONS')){res.status(409).json({error:{code:'HAS_SUBMISSIONS',message:'لا يمكن إزالة مجموعة لها تسليمات. احتفظ بالمجموعة للحفاظ على سجل الطلاب.'}});return;}
+    if(error?.message?.includes('COPY_TO_NEW_YEAR')){res.status(409).json({error:{code:'COPY_TO_NEW_YEAR',message:'المحتوى مرتبط بسنة سابقة؛ استخدم نسخة جديدة للمجموعات الحالية للحفاظ على التسليمات القديمة'}});return;}
     if (error) throw error;
 
     res.json({ success: true, material: data });

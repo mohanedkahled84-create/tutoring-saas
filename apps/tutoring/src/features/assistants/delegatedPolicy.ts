@@ -10,6 +10,8 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
  const read=['GET','HEAD'].includes(method),parts=path.split('?')[0].split('/').filter(Boolean),root=parts[0],tail=parts.slice(1).join('/');
  const require=(key:string,action='view')=>{if(!hasAssistantCapability(p,key,action))throw denied();return `${key}.${action}`;};
  if(read){
+  if(root==='students' && (tail==='archived' || /^[a-f0-9-]{36}\/history$/.test(tail)))return require('students');
+  if(root==='groups' && tail==='archived')return require('groups');
   if(['groups','students'].includes(root)){
    const dependencies=root==='groups'?['attendance','homework','materials','online-quizzes','paper-exams','quizzes','platform-builder','video-lessons','students','groups','assistants','sessions','student-cards','dashboard','reports','risk-watchlist']:['attendance','homework','online-quizzes','paper-exams','quizzes','platform-builder','video-lessons','students','groups','student-cards','dashboard','reports','risk-watchlist'];
    if(!dependencies.includes(resource))throw denied();
@@ -41,10 +43,12 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
  }
  const action=method==='DELETE'?'delete':method==='POST'?'create':'edit';
  if(root==='groups'){
+  if(/^[a-f0-9-]{36}\/(archive|restore)$/.test(tail))return require('groups','edit');
   if(/students/.test(tail))return require('groups','edit');
   return require('groups',action);
  }
  if(root==='students'){
+  if(/^[a-f0-9-]{36}\/(archive|restore|transfer)$/.test(tail))return require('students','edit');
   if(tail==='batch-send-dual-portal-links')return require('students','send');
   if(/send|notify|public-register/.test(tail))throw denied();
   if(!tail || /^[a-f0-9-]{36}$/.test(tail))return require('students',action);

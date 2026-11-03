@@ -13,6 +13,7 @@ import {getServiceSupabaseClient} from '../../supabase.js';
 import {notifyMetaFamily,configuredMetaFamilyGateway} from '../../shared/utils/metaFamily.js';
 import {authRateLimiter} from '../../shared/middleware/rateLimit.js';
 import {currentPortalDestination} from '../../shared/utils/portalDestination.js';
+import {registerStudentLifecycle} from './lifecycle.js';
 
 export const studentsRouter = Router();
 export const importRouter = Router();
@@ -25,6 +26,7 @@ const requireStudentTenant = (req: AuthenticatedRequest, res: Response, next: ()
   next();
 };
 studentsRouter.use(requireStudentTenant);
+registerStudentLifecycle(studentsRouter);
 // Legacy cached clients may not bypass the one-time official welcome by
 // switching to an old Evolution/provider endpoint. Repeated sharing is manual.
 studentsRouter.use((req,res,next)=>{

@@ -55,7 +55,7 @@ export async function mountAssistantWorkspace({root,token,workspace,onReady,onLo
  };
  try{
   const {CentrlyApp}=await import('./app.js?v=9.36.0');
-  const delegation={user:context.user,actor:context.actor,permissions,isActive:()=>!disposed,canNavigate:route=>!disposed && assistantCanNavigate(permissions,route)};
+  const delegation={user:context.user,actor:context.actor,permissions,all_groups:context.all_groups,isActive:()=>!disposed,canNavigate:route=>!disposed && assistantCanNavigate(permissions,route)};
   app=new CentrlyApp(delegation);window.centrlyApp=app;
   app.user.delegated_actor=context.actor;
   await app.ensureWorkspaceModules();
@@ -91,6 +91,8 @@ export async function mountAssistantWorkspace({root,token,workspace,onReady,onLo
 }
 
 export function delegatedUiAction(code){
+ if(/openMaterialCopy|saveMaterialCopy/.test(code))return 'create';
+ if(/archiveClassroomRecord|confirmClassroomArchive|restoreClassroomRecord|confirmStudentRestore|openStudentTransfer|saveStudentTransfer|openMaterialGroupAssignment|saveMaterialGroupAssignment/.test(code))return 'edit';
  if(/dispatchCardsFileDirect|downloadCardsCsvFile|downloadSelectedCardsDataExcel|confirmBatchPrint|openBatchPrintModal/.test(code))return 'create';
  if(/openCollectionLedger/.test(code))return 'collect';
  if(/prepareAssistantInvitation|sendAssistantReinvitation/.test(code))return 'create';

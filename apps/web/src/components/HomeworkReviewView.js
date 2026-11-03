@@ -196,6 +196,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                 </h3>
                 <span>${escapeHtml(materialGroupLabel(currentHomework,groups))}</span>
                 <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openMaterialGroupAssignment('${escapeHtml(currentHomework.id)}')">إسناد لمجموعات أخرى</button>
+                <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openMaterialCopy('${escapeHtml(currentHomework.id)}')">نسخة جديدة للمجموعات الحالية</button>
                 ${currentHomework.due_date ? `
                   <span style="font-size: 0.75rem; color: #b45309; background: #fffbeb; padding: 0.2rem 0.55rem; border-radius: 0.35rem; border: 1px solid #fde68a; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
                     ${getIcon('clock', 13, '#b45309')}
