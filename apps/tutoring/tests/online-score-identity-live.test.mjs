@@ -7,7 +7,7 @@ test('LIVE: assistant essay approval is atomic, scoped and isolated from same-nu
  if(!requireIsolatedSupabaseProject(t))return;
  const {serviceClient:db,anonClient}=createIsolatedSupabaseClients(),tenant=randomUUID();let owner,server;
  const ok=r=>{assert.equal(r.error,null,r.error?.message);return r.data;};
- t.after(async()=>{if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}ok(await db.from('tenants').delete().eq('id',tenant));if(owner)await db.auth.admin.deleteUser(owner.id);});
+ t.after(async()=>{if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}ok(await db.from('homework_submissions').delete().eq('tenant_id',tenant));ok(await db.from('portal_quiz_attempts').delete().eq('tenant_id',tenant));ok(await db.from('study_materials').delete().eq('tenant_id',tenant));ok(await db.from('tenants').delete().eq('id',tenant));if(owner)await db.auth.admin.deleteUser(owner.id);});
  ok(await db.from('tenants').insert({id:tenant,name:'isolated grades'}));
  owner=ok(await db.auth.admin.createUser({email:`grades-${randomUUID()}@isolated.invalid`,password:'isolated-fixture-password-2026',email_confirm:true})).user;
  ok(await db.from('users').upsert({id:owner.id,tenant_id:tenant,email:owner.email,role:'owner',full_name:'fixture'}));
