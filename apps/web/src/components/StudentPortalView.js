@@ -1,5 +1,6 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import {renderPortalHomeSummary} from './PortalHomeSummary.js';
+import {portalCairoClock} from '../utils/portalClock.js';
 import { getIcon } from "../utils/icons.js";
 import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js";
 import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=6.5.0";
@@ -939,8 +940,9 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                   const qCount = parsedQ.questions?.length || 0;
                   const timeLimit = parsedQ.time_limit_minutes || 20;
 
-                  const todayStr = new Date().toISOString().slice(0, 10);
-                  const nowTimeStr = new Date().toTimeString().slice(0, 5);
+                  const cairoClock=portalCairoClock();
+                  const todayStr = cairoClock.date;
+                  const nowTimeStr = cairoClock.time;
 
                   let isAvailable = true;
                   let availabilityMsg = '';

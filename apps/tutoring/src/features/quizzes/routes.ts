@@ -60,7 +60,7 @@ export function mergeLegacyQuizRows(
     }
 
     const alreadyLoaded = richQuizzes.some((quiz: any) =>
-      quiz.id === legacyQuiz.id || (
+      quiz.id === legacyQuiz.id || String(quiz.legacy_quiz_ref || '') === String(legacyQuiz.id) || (
         String(quiz.group_id) === legacyGroupId &&
         Number(quiz.quiz_number) === Number(legacyQuiz.quiz_number) &&
         (quiz.exam_mode || "online") === (legacyQuiz.exam_mode || "online")
@@ -404,6 +404,7 @@ quizzesRouter.get(
 
         return {
           id: row.id,
+          legacy_quiz_ref: payload.legacy_quiz_ref || null,
           title: row.title,
           subject: row.description || payload.subject || "الفيزياء",
           group_id: row.group_id,

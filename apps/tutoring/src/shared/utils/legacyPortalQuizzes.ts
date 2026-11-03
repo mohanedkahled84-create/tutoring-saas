@@ -28,6 +28,8 @@ export function mergeLegacyPortalQuizzes(
 ): void {
   const materials = Array.isArray(portalData.materials) ? portalData.materials : [];
   const existingIds = new Set(materials.map((material: any) => String(material.id)));
+  for(const material of materials){try{const saved=typeof material.questions==='string'?JSON.parse(material.questions):material.questions;if(saved?.legacy_quiz_ref)existingIds.add(String(saved.legacy_quiz_ref));}catch{}}
+
   const submissionByMaterial = new Map(
     submissions.map((submission) => [
       String(submission.material_id || submission.quiz_id),

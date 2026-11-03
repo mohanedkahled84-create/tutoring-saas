@@ -839,22 +839,10 @@ test("CASE 11 - Secure Online Exam: Screen Departure Warning, Auto-Withdrawal on
     "Must persist online submission in runtime memory map"
   );
 
-  // 3. Verify public routes fallback for virtual quiz IDs
-  const publicTsPath = path.resolve(__dirname, '../src/shared/routes/public.ts');
-  const publicTs = fs.readFileSync(publicTsPath, 'utf8');
+  // Public submit authorization and grading are covered by behavioral HTTP and
+  // isolated-database tests; source-string checks must not require unsafe
+  // client-provided questions as a fallback.
 
-  assert.ok(
-    publicTs.includes('QUIZ_DEF_%'),
-    "Public quiz submit must fall back to legacy/virtual quiz definitions in whatsapp_inbox"
-  );
-  assert.ok(
-    publicTs.includes('quiz-online-') || publicTs.includes('req.body?.questions'),
-    "Public quiz submit must fall back to request body questions or virtual quiz payload"
-  );
-  assert.ok(
-    publicTs.includes('is_withdrawn: Boolean(is_withdrawn)'),
-    "Public quiz submit must properly record is_withdrawn status and reason"
-  );
 });
 
 test("CASE 12 - Real-Time Quiz Tab Title Update: live typing reflects in top tab bar and persists correctly", async () => {
