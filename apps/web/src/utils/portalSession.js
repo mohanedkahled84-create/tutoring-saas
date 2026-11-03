@@ -91,6 +91,7 @@ export async function resolveStudentSession() {
   }
   const incoming = new URLSearchParams(location.search).get('token');
   if (incoming) { savePortalSession(incoming, 'student'); return incoming; }
-  if (localStorage.getItem('centrly_portal_role') && localStorage.getItem('centrly_portal_role') !== 'student') return null;
-  return localStorage.getItem('centrly_portal_token');
+  const storage=localStorage.getItem('centrly_portal_token')?localStorage:sessionStorage;
+  if(storage.getItem('centrly_portal_role') && storage.getItem('centrly_portal_role')!=='student')return null;
+  return storage.getItem('centrly_portal_token');
 }

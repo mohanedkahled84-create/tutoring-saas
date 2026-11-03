@@ -821,24 +821,9 @@ test("CASE 11 - Secure Online Exam: Screen Departure Warning, Auto-Withdrawal on
     "Must remove any code disabling anti-cheat security measures"
   );
 
-  // 2. Verify resilient multi-tier submission in submitAndFinishExam
-  assert.ok(
-    indexHtml.includes('isSubmittingExam = true;'),
-    "Must guard against race conditions during exam submission"
-  );
-  assert.ok(
-    indexHtml.includes('submitPayload') && indexHtml.includes('questions: Array.isArray(currentActiveQuiz.questions)'),
-    "Must include full exam questions and metadata in submission payload"
-  );
-  assert.ok(
-    indexHtml.includes('Tier 3: Guaranteed Local Grading Fallback'),
-    "Must include guaranteed local grading fallback so online exams never fail or leave 0 score"
-  );
-  assert.ok(
-    indexHtml.includes('window._studentOnlineSubmissionsMap.set(materialId, submissionRecord)'),
-    "Must persist online submission in runtime memory map"
-  );
-
+  // Submission behavior, provider failures and authoritative grading are tested
+  // by the HTTP/SQL suites and the real-page browser journey. Do not require
+  // client question keys or fake local success as a resilience mechanism.
   // Public submit authorization and grading are covered by behavioral HTTP and
   // isolated-database tests; source-string checks must not require unsafe
   // client-provided questions as a fallback.

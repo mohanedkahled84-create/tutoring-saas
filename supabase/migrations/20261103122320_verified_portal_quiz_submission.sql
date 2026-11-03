@@ -2,7 +2,7 @@
 -- Public callers cannot fabricate a quiz, choose a group or replace a result.
 create function public.submit_portal_quiz_verified(p_student uuid,p_tenant uuid,p_reference text,p_answers jsonb,p_withdrawn boolean default false,p_reason text default null,p_elapsed integer default 0)
 returns jsonb language plpgsql security invoker set search_path='' as $$
-declare student public.students;material public.study_materials;legacy record;payload jsonb;questions jsonb;question jsonb;answer jsonb;
+declare student public.students;material public.study_materials;legacy record;payload jsonb;questions jsonb;question jsonb;answer jsonb;options jsonb;
  submission public.homework_submissions;result jsonb;notes jsonb;material_id uuid;group_id uuid;reference_id uuid;
  score numeric:=0;max_points numeric:=0;mcq_points numeric:=0;points numeric;correct_index integer;position integer:=0;essay boolean:=false;quiz_number integer;key text;saved_count integer;
  cairo_now timestamp:=now() at time zone 'Africa/Cairo';
@@ -56,18 +56,19 @@ begin
   or nullif(payload->>'end_time','') is not null and cairo_now::time>(payload->>'end_time')::time then raise exception 'QUIZ_OUTSIDE_SCHEDULE' using errcode='23514';end if;
  quiz_number:=coalesce(nullif(payload->>'quiz_number','')::integer,1);
  if quiz_number not between 1 and 10000 then raise exception 'QUIZ_INVALID_DEFINITION' using errcode='23514';end if;
- if exists(select 1 from jsonb_each(p_answers) a where jsonb_typeof(a.value) not in ('string','number','null') or length(a.key)>100 or length(a.value::text)>10002 or not exists(select 1 from jsonb_array_elements(questions) with ordinality q(value,n) where a.key=coalesce(nullif(q.value->>'id',''),(q.n-1)::text))) then raise exception 'INVALID_ANSWERS' using errcode='22023';end if;
+ if exists(select 1 from jsonb_each(p_answers) a where jsonb_typeof(a.value) not in ('string','number','null') or length(a.key)>100 or length(a.value::text)>10002 or not exists(select 1 from jsonb_array_elements(questions) with ordinality q(value,n) where a.key=coalesce(nullif(q.value->>'id',''),(q.n-1)::text) or a.key=(q.n-1)::text)) then raise exception 'INVALID_ANSWERS' using errcode='22023';end if;
  for question in select value from jsonb_array_elements(questions) loop
   points:=coalesce(nullif(question->>'points','')::numeric,1);
   if points<0 or points>10000 or points='NaN'::numeric then raise exception 'QUIZ_INVALID_DEFINITION' using errcode='23514';end if;
-  max_points:=max_points+points;key:=coalesce(nullif(question->>'id',''),position::text);answer:=p_answers->key;
+  max_points:=max_points+points;key:=coalesce(nullif(question->>'id',''),position::text);answer:=coalesce(p_answers->key,p_answers->position::text);
   if question->>'type'='essay' then essay:=true;
   else
+   options:=coalesce(question->'options',question->'choices');
    correct_index:=coalesce(question->>'correct_index',question->>'correct')::integer;
-   if correct_index is null or correct_index<0 or jsonb_typeof(question->'options') is distinct from 'array' or correct_index>=jsonb_array_length(question->'options') then raise exception 'QUIZ_INVALID_DEFINITION' using errcode='23514';end if;
+   if correct_index is null or correct_index<0 or jsonb_typeof(options) is distinct from 'array' or correct_index>=jsonb_array_length(options) then raise exception 'QUIZ_INVALID_DEFINITION' using errcode='23514';end if;
    mcq_points:=mcq_points+points;
    if answer is not null and answer<>'null'::jsonb and coalesce(answer#>>'{}','')<>'' then
-    if (answer#>>'{}') !~ '^[0-9]{1,2}$' or (answer#>>'{}')::integer>=jsonb_array_length(question->'options') then raise exception 'INVALID_ANSWERS' using errcode='22023';end if;
+    if (answer#>>'{}') !~ '^[0-9]{1,2}$' or (answer#>>'{}')::integer>=jsonb_array_length(options) then raise exception 'INVALID_ANSWERS' using errcode='22023';end if;
     if (answer#>>'{}')::integer=correct_index then score:=score+points;end if;
    end if;
   end if;

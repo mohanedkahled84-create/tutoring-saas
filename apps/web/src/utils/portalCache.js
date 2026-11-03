@@ -29,7 +29,7 @@ export function createPortalCache({storage, clock = Date.now, hash = sessionHash
   const revisions = new Map();
   const revision = role => revisions.get(role) || 0;
   const invalidated = () => Object.assign(new Error('تغيرت البيانات أثناء التحديث'), {code:'PORTAL_CACHE_INVALIDATED'});
-  const store = () => storage || globalThis.localStorage;
+  const store = () => {if(storage)return storage;try{if(!globalThis.localStorage.getItem('centrly_portal_token') && globalThis.sessionStorage?.getItem('centrly_portal_token'))return globalThis.sessionStorage;}catch{}return globalThis.localStorage;};
   function active(token, role) {
     try {
       const current = store().getItem('centrly_portal_token');
