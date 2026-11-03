@@ -7708,6 +7708,8 @@ export function registerTeacherQuizzesActions(app) {
       console.warn('[Centrly OMR] Server sync failed:', err);
     }
 
+    Object.assign(scanData,{status: serverSuccess ? 'approved' : 'draft_unapproved'});
+
     // Step 2: Set strict synchronization flags
     if (serverSuccess) {
       scanData.sync_status = 'synced';
