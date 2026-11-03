@@ -341,7 +341,7 @@ export function registerTeacherSettingsActions(app) {
     if(button){button.disabled=true;button.textContent='جارٍ تجهيز تأكيد الرقم…';}
     try{
       const info=await request('/auth/phone/change/begin',{method:'POST',body:{phone:body.phone}});if(!sameActor())return;
-      this.showModal('تأكيد الرقم الجديد','<p>رقم حسابك الحالي يفضل محفوظ لحد ما تأكد الرقم الجديد. لو قفلت الخطوة دي، الرقم مش هيتغير.</p><div id="teacher-phone-change"></div>','');
+      this.showModal('تأكيد الرقم الجديد','<p>رقم حسابك الحالي يفضل محفوظ لحد ما تأكد الرقم الجديد. لو قفلت قبل تأكيد الكود، رقمك الحالي يفضل زي ما هو.</p><div id="teacher-phone-change"></div>','');
       mountPhoneVerification(document.getElementById('teacher-phone-change'),{info:{...info,is_phone_change:true},requestChallenge:()=>request('/auth/phone/change/challenge',{method:'POST',body:{}}),requestCode:(proof={})=>request('/auth/phone/change/request',{method:'POST',body:proof}),verifyCode:data=>request('/auth/phone/change/verify',{method:'POST',body:data}),onVerified:async result=>{if(!sameActor())return;this.user.phone=result.phone;authService.setUser(this.user);this.closeModal();await save();}});
     }catch(error){if(sameActor())this.showToast(error.message || 'تعذر تجهيز تأكيد الرقم','danger');}
     finally{if(button?.isConnected){button.disabled=false;button.textContent='حفظ التعديلات';}}
