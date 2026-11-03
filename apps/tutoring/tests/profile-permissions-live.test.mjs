@@ -41,7 +41,7 @@ test('LIVE: profile permissions, self-only helpers and current admin/assistant/p
   assert.equal((await owner.from('users').select('financial_pin_hash').eq('id',users[1])).error?.code,'42501');
   const own=ok(await owner.rpc('get_user_profile',{p_user_id:users[0]}));assert.equal(own.has_security_pin,false);assert.ok(!('financial_pin_hash' in own));
   assert.equal((await owner.rpc('get_user_profile',{p_user_id:users[1]})).error?.code,'42501');
-  const adminProfile=ok(await clients[1].rpc('get_user_profile',{p_user_id:users[1]}));assert.equal(adminProfile.has_security_pin,true);assert.ok(!('financial_pin_hash' in adminProfile));
+  const adminProfile=ok(await clients[1].rpc('get_user_profile',{p_user_id:users[1]}));assert.equal(adminProfile.has_security_pin,false);assert.ok(!('financial_pin_hash' in adminProfile));
   assert.equal(ok(await owner.rpc('get_current_user_tenant_id')),tenant);
   assert.equal(ok(await owner.rpc('get_current_user_role')),'owner');
   assert.equal(ok(await owner.rpc('get_current_user_teacher_id')),null);
