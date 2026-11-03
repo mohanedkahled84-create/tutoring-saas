@@ -1,3 +1,4 @@
+import {renderAccountDeletion,registerAccountDeletion} from './AccountDeletion.js';
 import {mountPhoneVerification} from './PhoneVerification.js?v=2';
 import {renderPortalPreferencesSettings,registerPortalPreferencesSettings} from './PortalPreferencesSettings.js';
 import { getIcon } from '../utils/icons.js';
@@ -300,12 +301,14 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
         </div>
       </div>
 
+      ${renderAccountDeletion(user)}
     </div>
   `;
 }
 
 export function registerTeacherSettingsActions(app) {
   registerPortalPreferencesSettings(app);
+  registerAccountDeletion(app);
   app.openTeacherPhoneVerification = async function() {
     try {
       const info=await request('/auth/phone/info',{method:'POST',body:{}});

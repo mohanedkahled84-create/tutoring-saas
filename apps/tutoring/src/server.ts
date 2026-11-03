@@ -5,6 +5,7 @@ import {getServiceSupabaseClient} from './supabase.js';
 import {MetaCloudService,HttpMetaCloudGateway,SupabaseMetaPortalQueueRepository} from './features/whatsapp-notifications/index.js';
 import {createMetaPortalWorker} from './features/whatsapp-notifications/meta-portal-worker.js';
 
+import {createAccountDeletionWorker} from './features/auth/accountDeletionWorker.js';
 import {createAnnouncementWorker} from './features/announcements/worker.js';
 
 const server = app.listen(config.port, () => {
@@ -15,6 +16,12 @@ const server = app.listen(config.port, () => {
 server.requestTimeout = 900000; // 15 minutes (matches Railway proxy max stream limit)
 server.headersTimeout = 120000; // 2 minutes
 server.keepAliveTimeout = 65000; // 65 seconds
+
+if(config.nodeEnv==='production' && config.supabaseServiceRoleKey){
+ const deletion=createAccountDeletionWorker(getServiceSupabaseClient(),()=>console.warn('[Account cleanup] Will retry.'));
+ const deletionInterval=setInterval(()=>void deletion.tick(),30_000);deletionInterval.unref();
+ server.once('close',()=>{deletion.stop();clearInterval(deletionInterval);});
+}
 
 if(config.nodeEnv==='production' && config.meta.accessToken && config.meta.phoneNumberId && config.meta.wabaId && config.supabaseServiceRoleKey){
  const announcements=createAnnouncementWorker(getServiceSupabaseClient(),new HttpMetaCloudGateway(config.meta.phoneNumberId,config.meta.accessToken,config.meta.wabaId),()=>console.warn('[Announcements] Processing deferred.'));

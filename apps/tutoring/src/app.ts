@@ -14,6 +14,7 @@ import {
   internalRouter,
 } from "./shared/index.js";
 import { authRouter } from "./features/auth/index.js";
+import {accountDeletionRouter} from './features/auth/accountDeletion.js';
 import {announcementAdminRouter} from './features/announcements/adminRoutes.js';
 import {announcementsRouter} from './features/announcements/routes.js';
 import {supportRouter} from './features/auth/supportRoutes.js';
@@ -146,6 +147,7 @@ export function createApp(): Express {
 
   // DEV-AUTH.2: Admin endpoints (strictly requires role === 'admin')
   app.use("/api/admin", authenticateUser, adminRouter);
+  app.use('/api/account-deletion',accountDeletionRouter);
   app.use('/api/announcement-admin',authenticateUser,announcementAdminRouter);
   app.use('/api/announcements',authenticateUser,announcementsRouter);
   app.use('/api/support',authenticateUser,supportRouter);

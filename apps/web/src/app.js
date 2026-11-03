@@ -225,6 +225,7 @@ export class CentrlyApp {
   }
 
   resetTenantState() {
+    this._stopDeletionVerification?.();this._stopDeletionVerification=null;this._deletionIntent=null;this._deletionReceipt=null;
     if(typeof document!=='undefined')this.closeModal();
     this.announcementAdminData=null;this._announcementAdminBusy=false;this._announcementReviewId=null;this._announcementDefinitionSeed=null;
     this.announcementsData=null;this._announcement=null;this._announcementPreview=null;this._announcementTypeRequestId=null;this._announcementBusy=false;
