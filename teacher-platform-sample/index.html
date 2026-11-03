@@ -4232,7 +4232,7 @@
 
       const unsubmittedHw = homework.filter(h => {
         const s = getHwStatus(h);
-        return s === 'unsubmitted' || s === 'rejected';
+        return h.can_submit !== false && (s === 'unsubmitted' || s === 'rejected');
       });
 
       const pendingQuizzes = quizzes.filter(qz => {
@@ -4963,12 +4963,12 @@
 
       const activeHomework = homework.filter(h => {
         const s = getHwStatus(h);
-        return s === 'unsubmitted' || s === 'rejected';
+        return h.can_submit !== false && (s === 'unsubmitted' || s === 'rejected');
       });
 
       const archivedHomework = homework.filter(h => {
         const s = getHwStatus(h);
-        return s === 'approved' || s === 'pending';
+        return h.can_submit === false || s === 'approved' || s === 'pending';
       });
 
       if (countActiveEl) {
@@ -5074,8 +5074,8 @@
         archivedHomework.forEach(hw => {
           const isApproved = hw.submission_status === 'approved';
           const isRejected = hw.submission_status === 'rejected';
-          const statusTitle = isApproved 
-            ? 'تم الاعتماد بنجاح • الدرجة: 10 من 10' 
+          const statusTitle = hw.can_submit === false ? 'تكليف محفوظ • لا يستقبل تسليمات جديدة' : isApproved 
+            ? 'تم الاعتماد بنجاح' 
             : (isRejected 
               ? 'طلب المستر إعادة حل هذا الواجب • مطلوب إعادة التسليم' 
               : 'تم تسليم كشكول الحل • قيد مراجعة واعتماد المستر');
@@ -5109,7 +5109,7 @@
                   </a>
                 ` : ''}
                 <span class="kpi-badge ${isApproved ? 'badge-success' : 'badge-warning'}" style="font-size: 0.72rem; padding: 4px 9px; ${isRejected ? 'background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;' : ''}">
-                  ${isApproved ? 'معتمد (10 / 10)' : (isRejected ? 'طلب إعادة ⚠️' : 'قيد المراجعة')}
+                  ${hw.can_submit === false ? 'محفوظ' : isApproved ? 'معتمد' : (isRejected ? 'طلب إعادة ⚠️' : 'قيد المراجعة')}
                 </span>
               </div>
             </div>
@@ -5123,6 +5123,7 @@
     // رفع الواجب الفعلي لقاعدة البيانات عبر Backend Railway
 
     function triggerHwUpload(hwId) {
+      if (platformContent.find(hw => hw.id === hwId)?.can_submit === false) { showPortalToast('هذا التكليف لا يستقبل تسليمات جديدة', 'warning'); return; }
 
       const fileInput = document.getElementById('file_input_' + hwId);
 
@@ -5131,6 +5132,7 @@
     }
 
     async function handleHwFileSelected(event, hwId) {
+      if (platformContent.find(hw => hw.id === hwId)?.can_submit === false) { event.target.value=''; showPortalToast('هذا التكليف لا يستقبل تسليمات جديدة', 'warning'); return; }
 
       const file = event.target.files && event.target.files[0];
 
