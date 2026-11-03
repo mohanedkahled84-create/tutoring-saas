@@ -1,4 +1,5 @@
 import {renderSourceAnnouncementButton} from './AnnouncementsView.js';
+import {assistantCanNavigate} from '../utils/assistantWorkspacePolicy.js';
 import {teacherQuizCache,quizActor} from '../utils/teacherQuizCache.js';
 
 function playBarcodeBeep() {
@@ -69,9 +70,6 @@ export function formatQuizTabDisplayTitle(quizNum, rawTitle) {
 
 export function renderTeacherQuizzesView(state = {}, groups = [], students = [], isLoading = false, hasLoaded = true, currentUser = null, currentRoute = 'online-quizzes') {
     const user = currentUser || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
-  const userEmail = (user?.email || '').toLowerCase();
-  const isAdmin = user?.role === 'admin';
-  const isPro = isUserPro(user);
 
   // تحديد الوجهة والتبويب النشط بهدوء ووضوح
   let effectiveRoute = currentRoute || (typeof window !== 'undefined' ? window.centrlyApp?.currentRoute : '') || 'online-quizzes';
@@ -2103,7 +2101,7 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
           const totalMcq = Number(sub.total_mcq_points || 0);
           const studentGroup = (groups || []).find(g => String(g.id).trim() === String(sub.group_id).trim());
           const groupBadge = studentGroup ? `<span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">${escapeHtml(studentGroup.name)}</span>` : '';
-          const defaultEssayPoints = essayQuestions.reduce((sum, eq) => sum + Number(eq.points || 4), 0);
+          const defaultEssayPoints = essayQuestions.reduce((sum, eq) => sum + Number(eq.points ?? 1), 0);
           const maxScore = Number(sub.max_score || (totalMcq + defaultEssayPoints) || 20);
           const initialFinalScore = (sub.final_score !== undefined && sub.final_score !== null)
             ? Number(sub.final_score)
@@ -2207,7 +2205,7 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                     sub.answers?.[eqIdx] || 
                     'لم يكتب إجابة';
 
-                  const fieldKey = eq.id || String(eqIdx);
+                  const fieldKey = eq.id || String(Math.max(0, questions.indexOf(eq)));
 
                   return `
                     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
@@ -2250,15 +2248,15 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                             type="number" 
                             id="essay_pts_${sub.id}_${fieldKey}" 
                             min="0" 
-                            max="${eq.points || 4}" 
+                            max="${eq.points ?? 1}"
                             step="0.5" 
-                            value="${eq.points || 4}" 
-                            oninput="const m = Number(this.max || ${eq.points || 4}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0) this.value = 0; window.centrlyApp.recalcManualFinalScore?.('${sub.id}', ${mcqScore});"
-                            onblur="const m = Number(this.max || ${eq.points || 4}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0 || this.value === '') this.value = 0; window.centrlyApp.recalcManualFinalScore?.('${sub.id}', ${mcqScore});"
+                            value="${eq.points ?? 1}"
+                            oninput="const m = Number(this.max || ${eq.points ?? 1}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0) this.value = 0; window.centrlyApp.recalcManualFinalScore?.('${sub.id}', ${mcqScore});"
+                            onblur="const m = Number(this.max || ${eq.points ?? 1}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0 || this.value === '') this.value = 0; window.centrlyApp.recalcManualFinalScore?.('${sub.id}', ${mcqScore});"
                             class="form-input" 
                             style="width: 65px; height: 30px; text-align: center; font-weight: 800; font-size: 0.88rem; border: 1px solid #cbd5e1; border-radius: 4px;"
                           />
-                          <span style="font-size: 0.76rem; font-weight: 600; color: #64748b;">من ${eq.points || 4} درجات</span>
+                          <span style="font-size: 0.76rem; font-weight: 600; color: #64748b;">من ${eq.points ?? 1} درجات</span>
                         </div>
                       </div>
 
@@ -3157,7 +3155,7 @@ function renderModelAnswerSheetHtml(targetQuiz, requestedModel = 'all', isPrint 
           <div style="${useGrid ? 'display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.65rem;' : 'display: flex; flex-direction: column; gap: 0.65rem;'}">
             ${essayQuestions.map((eq, eIdx) => {
               const eqNum = mcqQuestions.length + eIdx + 1;
-              const eqPts = Number(eq.points || 4);
+              const eqPts = Number(eq.points ?? 1);
               return `
                 <div style="border: 1.5px solid #000000; border-radius: 4px; padding: 0.55rem 0.75rem; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between;">
                   <div>
@@ -5892,22 +5890,9 @@ export function registerTeacherQuizzesActions(app) {
 
   // Subtab switcher
   app.switchQuizSubTab = async function(tabName, gradingMode) {
-    const user = this.user || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
-    const userEmail = (user?.email || '').toLowerCase();
-    const isAdmin = user?.role === 'admin';
-    const isOmarMohamadi = 
-      user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' || 
-      userEmail === 'mohanedabdulhalim@gmail.com' ||
-      userEmail.includes('omar') ||
-      userEmail.includes('mohamadi') ||
-      (user?.name || '').includes('عمر') ||
-      (user?.teacher_name || '').includes('عمر') ||
-      (user?.tenant_name || '').includes('عمر') ||
-      isAdmin;
-
-    if (!isOmarMohamadi && tabName !== 'roster') {
-      return;
-    }
+    const routes={roster:'quizzes',online_builder:'online-quizzes',online_grading:'online-quizzes',paper_builder:'paper-exams',paper_scanner:'paper-exams',paper_results:'paper-exams'};
+    const route=routes[tabName];
+    if (!route || this.delegation && !assistantCanNavigate(this.delegation.permissions,route)) return;
 
     if (this.quizzesState.activeSubTab === 'online_builder' && this.quizzesState.onlineViewMode === 'wizard' && this.checkHasUnsavedExam('online')) {
       this.promptUnsavedExamExit('online', () => this.switchQuizSubTab(tabName, gradingMode));
@@ -6604,9 +6589,9 @@ export function registerTeacherQuizzesActions(app) {
     const essayScores = {};
     let adjustedExceeded = false;
     essayQuestions.forEach((eq, eqIdx) => {
-      const fieldKey = eq.id || String(eqIdx);
+      const fieldKey = eq.id || String(Math.max(0, questions.indexOf(eq)));
       const inp = document.getElementById(`essay_pts_${sub.id}_${fieldKey}`);
-      const maxPts = Number(eq.points || 4);
+      const maxPts = Number(eq.points ?? 1);
       let val = Number(inp?.value ?? maxPts);
       if (val > maxPts) {
         val = maxPts;

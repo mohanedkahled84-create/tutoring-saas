@@ -6,7 +6,6 @@ import { getIcon } from "../utils/icons.js";
 import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js";
 import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=6.5.0";
 import { openVideoPlayerModal } from "./VideoLessonsView.js";
-import { isMohanedKhaledStudent } from "../utils/proGating.js";
 import { request } from "../services/api.js";
 
 /**
@@ -194,7 +193,6 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
   }
 
   const student = portalData.student;
-  const isMohaned = isMohanedKhaledStudent(student);
   const studentKey = (student.id || student.student_code || student.code || student.student_phone || '').toString().trim();
   if (typeof window !== 'undefined') {
     window._centrlyCurrentStudent = student;

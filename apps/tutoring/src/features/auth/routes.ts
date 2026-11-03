@@ -496,6 +496,9 @@ authRouter.post("/change-password", authenticateUser, authRateLimiter, async (re
       return;
     }
     const msg = err instanceof Error ? err.message : "Failed to change password";
+    if (msg.includes("CURRENT_PASSWORD_REQUIRED")) {
+      res.status(400).json({error:{code:"CURRENT_PASSWORD_REQUIRED",message:"اكتب كلمة المرور الحالية أو استخدم رابط تعيين كلمة المرور من بريدك"}});return;
+    }
     if (msg.includes("CURRENT_PASSWORD_INCORRECT") || msg.includes("Invalid login credentials")) {
       res.status(400).json({ error: { code: "CURRENT_PASSWORD_INCORRECT", message: "كلمة المرور الحالية غير صحيحة" } });
       return;

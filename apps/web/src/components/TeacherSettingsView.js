@@ -189,7 +189,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                     إدارة وأمان كلمة المرور
                   </h3>
                   <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.2rem 0 0 0;">
-                    تغيير كلمة المرور باشتراط كلمة المرور القديمة، أو طلب رابط استعادة فوري عبر بريدك الإلكتروني في حال نسيتها.
+                    غيّر كلمة مرورك الحالية، أو عيّن كلمة مرور عبر بريدك لو بتدخل باستخدام Google.
                   </p>
                 </div>
               </div>
@@ -266,12 +266,12 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                   <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
                     <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #f59e0b; color: #fff; font-size: 0.8rem; font-weight: 800;">2</span>
                     <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--centrly-ink);">
-                      نسيت كلمة المرور القديمة؟
+                      تعيين أو استعادة كلمة المرور
                     </h4>
                   </div>
 
                   <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0 0 1rem 0; line-height: 1.6;">
-                    إذا كنت لا تتذكر كلمة المرور الحالية، يمكنك إرسال رابط تأكيد وتعيين فوري إلى بريدك الإلكتروني المسجل:
+                    لو بتدخل باستخدام Google أو نسيت كلمة المرور، ابعت رابط تعيين إلى بريدك المسجل. مش محتاج كلمة مرور قديمة:
                   </p>
 
                   <div style="background: #fff; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.6rem 0.85rem; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
