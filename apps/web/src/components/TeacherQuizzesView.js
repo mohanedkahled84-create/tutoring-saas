@@ -1,3 +1,4 @@
+import {teacherQuizCache,quizActor} from '../utils/teacherQuizCache.js';
 
 function playBarcodeBeep() {
   try {
@@ -3213,16 +3214,6 @@ function renderModelAnswerSheetHtml(targetQuiz, requestedModel = 'all', isPrint 
 function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quizzes = [], currentQuiz = null, groupStudents = [], students = []) {
   // Load scanned results list from state or localStorage
   let scannedList = Array.isArray(state.scannedResultsList) ? [...state.scannedResultsList] : [];
-  if (scannedList.length === 0) {
-    try {
-      const cached = localStorage.getItem('centrly_paper_scanned_results');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) scannedList = parsed;
-      }
-    } catch (_) {}
-  }
-
   // Automatic desktop server sync if local list is empty
   if (scannedList.length === 0 && !state.isLoadingSubmissions && typeof window !== 'undefined' && window.centrlyApp && typeof window.centrlyApp.loadOnlineSubmissions === 'function') {
     const qState = window.centrlyApp.quizzesState || {};
@@ -5585,7 +5576,7 @@ export function registerTeacherQuizzesActions(app) {
 
   // Initialize scanned results cache
   try {
-    const cachedScans = localStorage.getItem('centrly_paper_scanned_results');
+    const cachedScans = teacherQuizCache(app).getItem('centrly_paper_scanned_results');
     if (cachedScans) {
       app.quizzesState.scannedResultsList = JSON.parse(cachedScans);
     }
@@ -5596,7 +5587,7 @@ export function registerTeacherQuizzesActions(app) {
 
   // Initialize drafts cache
   try {
-    const cachedDrafts = localStorage.getItem('centrly_quiz_drafts');
+    const cachedDrafts = teacherQuizCache(app).getItem('centrly_quiz_drafts');
     if (cachedDrafts) {
       app.quizzesState.examDrafts = JSON.parse(cachedDrafts);
     }
@@ -5607,7 +5598,7 @@ export function registerTeacherQuizzesActions(app) {
 
   // Initialize rich quizzes cache for instant UI rendering (0ms load time)
   try {
-    const cachedQuizzes = localStorage.getItem('centrly_cached_rich_quizzes');
+    const cachedQuizzes = teacherQuizCache(app).getItem('centrly_cached_rich_quizzes');
     if (cachedQuizzes) {
       app.quizzesState.richQuizzes = JSON.parse(cachedQuizzes);
     }
@@ -5768,8 +5759,8 @@ export function registerTeacherQuizzesActions(app) {
     this.quizzesState.examDrafts.unshift(draftObject);
 
     try {
-      localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
-      localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
+      teacherQuizCache(this).setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+      teacherQuizCache(this).setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
     } catch (_) {}
 
     request('/quizzes/rich', {
@@ -5870,7 +5861,7 @@ export function registerTeacherQuizzesActions(app) {
         if (Array.isArray(this.quizzesState.examDrafts)) {
           this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftId);
           try {
-            localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+            teacherQuizCache(this).setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
           } catch (_) {}
         }
 
@@ -5991,6 +5982,7 @@ export function registerTeacherQuizzesActions(app) {
 
   // Rich quizzes loader
   app.loadRichQuizzes = async function() {
+    const actor=quizActor(this);
     const hasQuizzes = Array.isArray(this.quizzesState.richQuizzes) && this.quizzesState.richQuizzes.length > 0;
     if (!hasQuizzes) {
       this.quizzesState.isLoadingRichQuizzes = true;
@@ -5999,10 +5991,11 @@ export function registerTeacherQuizzesActions(app) {
       const gid = this.quizzesState.selectedGroupId;
       const qParam = gid ? `?group_id=${encodeURIComponent(gid)}` : '';
       const res = await request(`/quizzes/rich${qParam}`);
+      if(quizActor(this)!==actor)return;
       if (res?.success && Array.isArray(res.quizzes)) {
         this.quizzesState.richQuizzes = res.quizzes;
         try {
-          localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(res.quizzes));
+          teacherQuizCache(this).setItem('centrly_cached_rich_quizzes', JSON.stringify(res.quizzes));
         } catch (_) {}
       }
       if (res?.success && Array.isArray(res.drafts)) {
@@ -6016,7 +6009,7 @@ export function registerTeacherQuizzesActions(app) {
         }
         this.quizzesState.examDrafts = combined;
         try {
-          localStorage.setItem('centrly_quiz_drafts', JSON.stringify(combined));
+          teacherQuizCache(this).setItem('centrly_quiz_drafts', JSON.stringify(combined));
         } catch (_) {}
       }
       if (typeof this.reconcileQuizzesFromSubmissions === 'function') {
@@ -6049,25 +6042,27 @@ export function registerTeacherQuizzesActions(app) {
           }
         });
         try {
-          localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+          teacherQuizCache(this).setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
         } catch (_) {}
       }
     } catch (err) {
       console.warn('[Centrly] Could not load rich quizzes:', err);
     } finally {
-      this.quizzesState.isLoadingRichQuizzes = false;
-      this.renderMainContent();
+      if(quizActor(this)===actor){this.quizzesState.isLoadingRichQuizzes = false;
+      this.renderMainContent();}
     }
   };
 
   // Online exam submissions loader (Both Pending Essay & Graded MCQ)
   app.loadOnlineSubmissions = async function() {
+    const actor=quizActor(this);
     this.quizzesState.isLoadingSubmissions = true;
     try {
       const [allRes, pendingRes] = await Promise.allSettled([
         request('/quizzes/submissions'),
         request('/quizzes/submissions/pending')
       ]);
+      if(quizActor(this)!==actor)return;
       const allData = allRes.status === 'fulfilled' && allRes.value?.success && Array.isArray(allRes.value.submissions)
         ? allRes.value.submissions
         : [];
@@ -6161,70 +6156,15 @@ export function registerTeacherQuizzesActions(app) {
         }
       });
       try {
-        localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+        teacherQuizCache(this).setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
       } catch (_) {}
 
-      // Resilient local test submissions fallback (detects exams submitted in the browser)
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('centrly_submission_')) {
-            const raw = localStorage.getItem(key);
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (parsed) {
-                const isGraded = parsed.status === 'graded' || parsed.status === 'approved' || parsed.is_graded === true;
-                const subObj = {
-                  id: `local_${parsed.quiz_id}_${parsed.student_code || '1006'}`,
-                  material_id: parsed.quiz_id,
-                  quiz_id: parsed.quiz_id,
-                  quiz_title: parsed.quiz_title || 'كويز إلكتروني',
-                  quiz_number: parsed.quiz_number || 1,
-                  group_id: parsed.group_id || null,
-                  student_code: parsed.student_code || '1006',
-                  student_name: parsed.student_name || 'طالب',
-                  status: isGraded ? 'approved' : 'pending',
-                  is_graded: isGraded,
-                  mcq_score: parsed.mcq_score || 0,
-                  essay_score: parsed.essay_score || 0,
-                  total_mcq_points: parsed.total_mcq_points || 0,
-                  total_score: parsed.score || parsed.total_score || (Number(parsed.mcq_score || 0) + Number(parsed.essay_score || 0)),
-                  score: parsed.score || parsed.total_score || (Number(parsed.mcq_score || 0) + Number(parsed.essay_score || 0)),
-                  final_score: parsed.score || parsed.total_score || (Number(parsed.mcq_score || 0) + Number(parsed.essay_score || 0)),
-                  max_score: parsed.max_score || 10,
-                  questions: parsed.questions || [],
-                  answers: parsed.answers || {},
-                  essay_answers: parsed.essay_answers || {},
-                  submitted_at: parsed.submitted_at || new Date().toISOString()
-                };
-
-                if (isGraded) {
-                  const alreadyGraded = this.quizzesState.onlineSubmissions.some(
-                    s => (String(s.quiz_id) === String(subObj.quiz_id) || String(s.material_id) === String(subObj.material_id)) &&
-                         String(s.student_code) === String(subObj.student_code)
-                  );
-                  if (!alreadyGraded) {
-                    this.quizzesState.onlineSubmissions.unshift(subObj);
-                  }
-                } else {
-                  const alreadyPending = this.quizzesState.pendingSubmissions.some(
-                    s => (String(s.quiz_id) === String(subObj.quiz_id) || String(s.material_id) === String(subObj.material_id)) &&
-                         String(s.student_code) === String(subObj.student_code)
-                  );
-                  if (!alreadyPending) {
-                    this.quizzesState.pendingSubmissions.unshift(subObj);
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch (_) {}
+      // Student-code-only browser records are not teacher grading evidence.
     } catch (err) {
       console.warn('[Centrly] Could not load online submissions:', err);
     } finally {
-      this.quizzesState.isLoadingSubmissions = false;
-      this.renderMainContent();
+      if(quizActor(this)===actor){this.quizzesState.isLoadingSubmissions = false;
+      this.renderMainContent();}
     }
   };
 
@@ -6548,7 +6488,7 @@ export function registerTeacherQuizzesActions(app) {
         if (Array.isArray(this.quizzesState.examDrafts)) {
           this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftToDelete);
           try {
-            localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+            teacherQuizCache(this).setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
           } catch (_) {}
         }
         request('/quizzes/rich', {
@@ -6614,7 +6554,7 @@ export function registerTeacherQuizzesActions(app) {
       this.quizzesState.richQuizzes=(this.quizzesState.richQuizzes || []).filter(row=>row.id!==quizId);
       if(!Array.isArray(this.quizzesState.examDrafts))this.quizzesState.examDrafts=[];
       if(!this.quizzesState.examDrafts.some(row=>row.id===quizId))this.quizzesState.examDrafts.unshift({...quiz,is_archived:true,is_draft:true,status:'draft'});
-      try{localStorage.removeItem('centrly_cached_rich_quizzes');localStorage.removeItem('centrly_quiz_drafts');}catch(_){}
+      try{teacherQuizCache(this).removeItem('centrly_cached_rich_quizzes');teacherQuizCache(this).removeItem('centrly_quiz_drafts');}catch(_){}
       this.showToast('تمت الأرشفة مع الاحتفاظ بالإجابات والدرجات','success');
       this.renderMainContent();
     } catch(error) {
@@ -6750,23 +6690,6 @@ export function registerTeacherQuizzesActions(app) {
         } else {
           this.quizzesState.onlineSubmissions.unshift(updatedSub);
         }
-
-        // Also update local storage if present
-        try {
-          const sCode = sub.student_code || studentId;
-          const qId = sub.material_id || sub.quiz_id;
-          const subKey = `centrly_submission_${sCode}_${qId}`;
-          const raw = localStorage.getItem(subKey);
-          const p = raw ? JSON.parse(raw) : {};
-          p.status = 'graded';
-          p.is_graded = true;
-          p.essay_score = totalEssay;
-          p.essay_scores = essayScores;
-          p.score = finalCalculated;
-          p.total_score = finalCalculated;
-          p.final_score = finalCalculated;
-          localStorage.setItem(subKey, JSON.stringify(p));
-        } catch (_) {}
 
         // Switch to 'graded' view mode if no more pending submissions left
         if ((this.quizzesState.pendingSubmissions || []).length === 0) {
@@ -7223,7 +7146,7 @@ export function registerTeacherQuizzesActions(app) {
         if (Array.isArray(this.quizzesState.examDrafts)) {
           this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftToDelete);
           try {
-            localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+            teacherQuizCache(this).setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
           } catch (_) {}
         }
         request('/quizzes/rich', {
@@ -7495,7 +7418,7 @@ export function registerTeacherQuizzesActions(app) {
   app.clearOmrScannedList = function() {
     this.quizzesState.scannedResultsList = [];
     try {
-      localStorage.removeItem('centrly_paper_scanned_results');
+      teacherQuizCache(this).removeItem('centrly_paper_scanned_results');
     } catch (_) {}
     this.renderMainContent();
     this.showToast('تم تفريغ سجل جلسة التصحيح', 'info');
@@ -7505,7 +7428,7 @@ export function registerTeacherQuizzesActions(app) {
     if (!Array.isArray(this.quizzesState.scannedResultsList)) return;
     this.quizzesState.scannedResultsList = this.quizzesState.scannedResultsList.filter(s => String(s.id) !== String(scanId));
     try {
-      localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+      teacherQuizCache(this).setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
     } catch (_) {}
     this.renderMainContent();
     this.showToast('تم حذف نتيجة ورقة الطالب بنجاح', 'success');
@@ -7516,7 +7439,7 @@ export function registerTeacherQuizzesActions(app) {
     let item = list.find(s => String(s.id) === String(scanId) || String(s.student_code) === String(scanId));
     if (!item) {
       try {
-        const cached = JSON.parse(localStorage.getItem('centrly_paper_scanned_results') || '[]');
+        const cached = JSON.parse(teacherQuizCache(this).getItem('centrly_paper_scanned_results') || '[]');
         item = cached.find(s => String(s.id) === String(scanId) || String(s.student_code) === String(scanId));
       } catch (_) {}
     }
@@ -7821,33 +7744,7 @@ export function registerTeacherQuizzesActions(app) {
 
     // Step 4: Persist to localStorage with explicit sync status
     try {
-      localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
-    } catch (_) {}
-
-    const localSub = {
-      id: scanData.id,
-      material_id: examTargetId,
-      quiz_id: examTargetId,
-      quiz_title: scanData.exam_title || `امتحان ورقي ${qNum}`,
-      quiz_number: qNum,
-      group_id: scanData.group_id || this.quizzesState.selectedGroupId,
-      student_code: scanData.student_code,
-      student_name: scanData.student_name,
-      score: scanData.score,
-      total_score: scanData.score,
-      max_score: scanData.max_score,
-      percentage: scanData.percentage,
-      is_graded: serverSuccess,
-      status: serverSuccess ? 'approved' : 'draft_unapproved',
-      sync_status: scanData.sync_status,
-      server_confirmed: scanData.server_confirmed,
-      exam_mode: 'paper',
-      model: scanData.model,
-      breakdown: scanData.breakdown,
-      submitted_at: new Date().toISOString()
-    };
-    try {
-      localStorage.setItem(`centrly_submission_${scanData.student_code}_${examTargetId}`, JSON.stringify(localSub));
+      teacherQuizCache(this).setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
     } catch (_) {}
 
     // Step 5: Inform user with accurate status toast
