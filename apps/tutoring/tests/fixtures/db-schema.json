@@ -12,7 +12,7 @@
   "message_logs": ["id", "tenant_id", "student_id", "group_id", "session_id", "message_type", "recipient_type", "recipient_phone", "status", "error_detail", "idempotency_key", "created_at", "teacher_id"],
   "message_templates": ["id", "tenant_id", "template_type", "variants", "is_active", "created_at", "updated_at"],
   "payment_proofs": ["id", "tenant_id", "submitted_by", "amount", "payment_method", "reference_number", "proof_image_url", "status", "admin_notes", "reviewed_by", "reviewed_at", "created_at"],
-  "quiz_scores": ["id", "tenant_id", "session_id", "student_id", "score", "max_score", "idempotency_key", "created_at", "updated_at", "quiz_id", "group_id", "quiz_number", "note", "delivery_status"],
+  "quiz_scores": ["id", "tenant_id", "session_id", "student_id", "score", "max_score", "idempotency_key", "created_at", "updated_at", "quiz_id", "group_id", "quiz_number", "note", "delivery_status", "material_id"],
   "quizzes": ["id", "tenant_id", "group_id", "quiz_number", "title", "max_score", "quiz_date", "is_skipped", "created_at", "updated_at"],
   "rooms": ["id", "tenant_id", "name", "capacity", "created_at", "hourly_rate"],
   "sessions": ["id", "tenant_id", "group_id", "session_number", "session_date", "created_at", "teacher_id", "room_id", "start_time", "end_time", "status", "ended_at", "is_extra", "rescheduled_to_date", "rescheduled_to_time", "cancellation_reason", "extra_topic"],

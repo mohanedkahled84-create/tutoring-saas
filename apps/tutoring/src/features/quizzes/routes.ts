@@ -7,6 +7,8 @@ import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
 import { getStealthModelQuestions } from "./stealthModels.js";
 import { gradeOmrSubmission, normalizeModelLetter } from "./omrGrader.js";
 
+import {gradeQuizEssay} from "./essayGrade.js";
+
 export const quizzesRouter = Router();
 
 function parseQuizPayload(value: unknown): Record<string, unknown> {
@@ -950,7 +952,7 @@ quizzesRouter.get(
       try {
         const { data: scoreRows } = await supabase
           .from("quiz_scores")
-          .select("id, tenant_id, group_id, quiz_id, quiz_number, student_id, score, max_score, note, updated_at")
+          .select("id, tenant_id, group_id, quiz_id, material_id, quiz_number, student_id, score, max_score, note, updated_at")
           .eq("tenant_id", tenantId)
           .order("updated_at", { ascending: false })
           .limit(500);
@@ -969,7 +971,7 @@ quizzesRouter.get(
           }
 
           const missingMaterialIds = scoreRows
-            .map((r: any) => r.quiz_id)
+            .map((r: any) => r.material_id)
             .filter((mid: string) => mid && !materialMap.has(mid));
 
           if (missingMaterialIds.length > 0) {
@@ -982,13 +984,13 @@ quizzesRouter.get(
 
           for (const sRow of scoreRows) {
             const student = studentMap.get(sRow.student_id) || {};
-            const material = materialMap.get(sRow.quiz_id) || {};
+            const material = materialMap.get(sRow.material_id) || {};
             const sCode = (student as any).student_code || (student as any).code || "—";
-            const sMaterialId = sRow.quiz_id || `paper_quiz_${sRow.quiz_number}`;
+            const sMaterialId = sRow.material_id || sRow.quiz_id || `paper_quiz_${sRow.group_id}_${sRow.quiz_number}`;
 
             const alreadyExists = results.some((r: any) =>
               (r.student_id === sRow.student_id || String(r.student_code) === String(sCode)) &&
-              (String(r.material_id) === String(sMaterialId) || Number(r.quiz_number) === Number(sRow.quiz_number))
+              (String(r.material_id) === String(sMaterialId) || !sRow.material_id && !r.material_id && String(r.group_id) === String(sRow.group_id) && Number(r.quiz_number) === Number(sRow.quiz_number))
             );
 
             if (!alreadyExists) {
@@ -1149,110 +1151,7 @@ quizzesRouter.get(
 );
 
 // DEV-QUIZ.RICH-5: POST /api/quizzes/submissions/grade-essay - Manually grade essay questions
-quizzesRouter.post(
-  "/submissions/grade-essay",
-  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const tenantId = req.user?.tenant_id || "default";
-    const {
-      submission_id,
-      student_id,
-      quiz_number,
-      group_id,
-      essay_scores,
-      notes,
-      final_score,
-      max_score,
-    } = req.body;
-
-    if (!submission_id || !student_id || quiz_number === undefined) {
-      res.status(400).json({
-        error: { code: "BAD_REQUEST", message: "submission_id, student_id and quiz_number are required" },
-      });
-      return;
-    }
-
-    try {
-      const services = getServices(req);
-      const quizzesService = services.quizzes;
-      const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
-
-      const { data: sub, error: subErr } = await supabase
-        .from("homework_submissions")
-        .select("*")
-        .eq("id", submission_id)
-        .eq("tenant_id", tenantId)
-        .single();
-
-      if (subErr || !sub) {
-        res.status(404).json({ error: { code: "NOT_FOUND", message: "Submission not found" } });
-        return;
-      }
-
-      let parsedNotes: any = {};
-      try {
-        parsedNotes = typeof sub.teacher_notes === "string" ? JSON.parse(sub.teacher_notes) : (sub.teacher_notes || {});
-      } catch (_) {
-        parsedNotes = {};
-      }
-
-      const mcqScore = Number(parsedNotes.mcq_score || 0);
-      let essayTotal = 0;
-      if (essay_scores && typeof essay_scores === "object") {
-        for (const pts of Object.values(essay_scores)) {
-          essayTotal += Number(pts || 0);
-        }
-      }
-
-      const finalScore = (final_score !== undefined && final_score !== null && !isNaN(Number(final_score)))
-        ? Number(final_score)
-        : (mcqScore + essayTotal);
-      const resolvedMaxScore = (max_score !== undefined && max_score !== null && !isNaN(Number(max_score)))
-        ? Number(max_score)
-        : (parsedNotes.max_score || 20);
-      const resolvedGroupId = group_id || parsedNotes.group_id || "default-group";
-      const qNum = Number(quiz_number);
-
-      await quizzesService.saveScores(tenantId, {
-        group_id: resolvedGroupId,
-        quiz_number: qNum,
-        quiz_title: `كويز ${qNum}`,
-        max_score: resolvedMaxScore,
-        scores: {
-          [student_id]: finalScore,
-        },
-        notes: {
-          [student_id]: notes || `تم تصحيح المقالي: مقالي (${essayTotal}) + اختياري (${mcqScore})`,
-        },
-      });
-
-      parsedNotes.essay_scores = essay_scores;
-      parsedNotes.final_score = finalScore;
-      parsedNotes.max_score = resolvedMaxScore;
-      parsedNotes.teacher_comment = notes || "";
-      parsedNotes.graded_at = new Date().toISOString();
-
-      await supabase
-        .from("homework_submissions")
-        .update({
-          status: "approved",
-          teacher_notes: JSON.stringify(parsedNotes),
-        })
-        .eq("id", submission_id);
-
-      res.status(200).json({
-        success: true,
-        final_score: finalScore,
-        max_score: resolvedMaxScore,
-        mcq_score: mcqScore,
-        essay_score: essayTotal,
-        message: "تم اعتماد وتثبيت درجة الطالب بنجاح",
-      });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to grade essay";
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
-    }
-  }
-);
+quizzesRouter.post("/submissions/grade-essay",gradeQuizEssay);
 
 // DEV-QUIZ.RICH-6: POST /api/quizzes/omr-scan - Record Bubble Sheet scan score
 quizzesRouter.post(
