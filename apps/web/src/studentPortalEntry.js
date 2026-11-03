@@ -897,7 +897,7 @@ var L=typeof window<"u"&&window.location.hostname||"",He=L==="localhost"||L==="1
                         `}
 
                         <!-- File Upload Trigger (PDF or Images) -->
-                        <div>
+                        ${u.can_submit===!1?'<p role="status">هذا التسليم محفوظ من تكليف سابق، ولا يستقبل رفع ملفات جديدة.</p>':`<div>
                           <input type="file" id="hw-file-input-${f(u.id)}" accept="application/pdf,image/*,.pdf,.jpg,.jpeg,.png,.webp,.heic" style="display: none;" 
                             onchange="window.centrlyApp && window.centrlyApp.handleStudentHomeworkUpload ? window.centrlyApp.handleStudentHomeworkUpload('${f(u.id)}', this.files[0]) : null">
                           
@@ -906,7 +906,7 @@ var L=typeof window<"u"&&window.location.hostname||"",He=L==="localhost"||L==="1
                             ${h("upload",14,"#ffffff")}
                             <span>${A?"رفع حل الواجب الجديد (إعادة التسليم)":C?"تعديل / رفع نسخة أحدث":"رفع حل الواجب (PDF أو صورة)"}</span>
                           </button>
-                        </div>
+                        </div>`}
                       </div>
 
                     </div>
