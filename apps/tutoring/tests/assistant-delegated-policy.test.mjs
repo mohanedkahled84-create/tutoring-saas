@@ -58,3 +58,8 @@ test('announcements have independent view, creation, publishing and paid send ri
  assert.equal(policy('POST','/announcements/fixture/enqueue','announcements',{...view,'announcements.send':true}),'announcements.send');
  assert.throws(()=>policy('POST','/announcements/fixture/publish','announcements',{...view,'announcements.send':true}),e=>e.status===403);
 });
+
+test('atomic online publication delegates view context and lets the private operation recheck create/edit per saved target',()=>{
+ assert.equal(delegatedCapability({method:'POST',path:'/quizzes/publish-online',page:'online-quizzes',permissions:{'online-quizzes.view':true}}),'online-quizzes.view');
+ assert.throws(()=>delegatedCapability({method:'POST',path:'/quizzes/publish-online',page:'online-quizzes',permissions:{'paper-exams.view':true}}));
+});

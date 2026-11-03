@@ -8,6 +8,6 @@ test('a session-only student can reopen and cache the portal without promoting t
  globalThis.localStorage=storage();globalThis.sessionStorage=storage();globalThis.location={hash:'',search:'',origin:'https://centerly-eg.com'};
  t.after(()=>Object.assign(globalThis,previous));sessionStorage.setItem('centrly_portal_token','session-fixture');sessionStorage.setItem('centrly_portal_role','student');
  assert.equal(await resolveStudentSession(),'session-fixture');const cache=createPortalCache({hash:async()=> 'fixture-hash'});
- await cache.write('session-fixture',{student:{id:'student',tenant_id:'tenant'},summary:{}},'student');assert.equal((await cache.read('session-fixture','student')).data.student.id,'student');assert.equal(localStorage.getItem('centrly_portal_token'),null);assert.equal(localStorage.getItem('centrly_portal_snapshot_v1:student'),null);
+ await cache.write('session-fixture',{student:{id:'student',tenant_id:'tenant'},summary:{}},'student');assert.equal((await cache.read('session-fixture','student')).data.student.id,'student');assert.equal(localStorage.getItem('centrly_portal_token'),null);assert.equal(localStorage.getItem('centrly_portal_snapshot_v2:student'),null);
  localStorage.setItem('centrly_portal_token','another-parent-session');localStorage.setItem('centrly_portal_role','parent');assert.equal(await resolveStudentSession(),null);assert.equal(await cache.read('session-fixture','student'),null);
 });

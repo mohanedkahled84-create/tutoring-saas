@@ -18,6 +18,7 @@ test('LIVE: delegated schedule changes persist before source drafts, retain actu
  ok(await db.from('assistant_accounts').insert({assistant_id:staff.id,tenant_id:tenant,phone:staff.phone,password_hash:'fixture-no-login',permissions,group_ids:[groups[0].id]}));
  const {familyHash,familyToken}=await import('../dist/shared/utils/parentFamily.js'),token=familyToken(),origin='https://centerly-eg.com';
  ok(await db.from('assistant_sessions').insert({token_hash:familyHash(token),assistant_id:staff.id,origin,credential_version:1}));
+ const {config}=await import('../dist/shared/config/index.js');const oldCalendar=config.features.teacherCalendar;config.features.teacherCalendar=true;t.after(()=>{config.features.teacherCalendar=oldCalendar;});
  const {createApp}=await import('../dist/app.js');server=createApp().listen(0,'127.0.0.1');await once(server,'listening');
  const base=`http://127.0.0.1:${server.address().port}/api/assistant-access/workspace-api`,post=(path,body,page='calendar')=>fetch(base+path,{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+token,'X-Assistant-Page':page,'Content-Type':'application/json'},body:JSON.stringify(body)});
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),tomorrow=new Date(Date.parse(today+'T12:00:00Z')+86400000).toISOString().slice(0,10);

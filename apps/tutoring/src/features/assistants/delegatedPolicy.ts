@@ -78,6 +78,7 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
   return require(type==='video'?'video-lessons':'materials',action);
  }
  if(root==='quizzes'){
+  if(tail==='publish-online')return require('online-quizzes');
   if(tail==='dispatch-scores')throw denied();
   if(tail==='scores')return require('quizzes','grade');
   if(tail==='submissions/grade-essay')return require('online-quizzes','grade');

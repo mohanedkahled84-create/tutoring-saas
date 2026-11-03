@@ -7,9 +7,11 @@ import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
 import { getStealthModelQuestions } from "./stealthModels.js";
 import { gradeOmrSubmission, normalizeModelLetter } from "./omrGrader.js";
 
+import {publishOnlineQuiz} from "./publication.js";
 import {gradeQuizEssay} from "./essayGrade.js";
 
 export const quizzesRouter = Router();
+quizzesRouter.post("/publish-online",(req:AuthenticatedRequest,res)=>publishOnlineQuiz(req,res));
 
 function parseQuizPayload(value: unknown): Record<string, unknown> {
   if (typeof value === "string") {
@@ -519,6 +521,8 @@ quizzesRouter.post(
       }
       return;
     }
+
+    if (exam_mode !== 'paper') {await publishOnlineQuiz(req,res,true);return;}
 
     if (!group_id || quiz_number === undefined) {
       res.status(400).json({

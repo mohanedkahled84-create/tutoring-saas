@@ -6389,113 +6389,29 @@ export function registerTeacherQuizzesActions(app) {
 
   // Save Online Exam Definition
   app.saveOnlineExamNow = async function() {
-    if (!isUserPro(this.user)) {
-      alert('ميزة إنشاء ونشر الامتحانات الإلكترونية متاحة فقط لمشتركي باقة PRO. اضغط حسناً للانتقال لصفحة الاشتراك والترقية.');
-      if (this.navigateTo) this.navigateTo('settings');
-      return;
-    }
-    const qz = this.quizzesState.activeOnlineQuiz;
-    const currentGid = this.quizzesState.selectedGroupId;
-    const targetGroupId = qz?.target_group_id || qz?.group_id || currentGid;
-
-    if (!targetGroupId) {
-      this.showToast('يرجى اختيار المجموعة الدراسية أولاً', 'warning');
-      return;
-    }
-
-    const questions = qz?.questions || [];
-    if (questions.length === 0) {
-      this.showToast('يرجى إضافة سؤال واحد على الأقل للامتحان', 'warning');
-      return;
-    }
-
+    if (!isUserPro(this.user)) {this.showToast('نشر الامتحانات غير متاح في اشتراكك الحالي', 'warning');return;}
+    const state=this.quizzesState,qz=state.activeOnlineQuiz,actor=quizActor(this);
+    if(state.isPublishingOnline || !qz)return;
+    const source=Array.isArray(qz.target_group_ids) && qz.target_group_ids.length?qz.target_group_ids:qz.target_group_id==='all'?(this.groups || []).map(g=>g.id):[qz.target_group_id || qz.group_id || state.selectedGroupId];
+    const groups=[...new Set(source.filter(Boolean))];
+    if(!groups.length || groups.some(id=>!(this.groups || []).some(g=>g.id===id))){this.showToast('اختر المجموعات الدراسية أولًا','warning');return;}
+    if(!qz.questions?.length){this.showToast('أضف سؤالًا واحدًا على الأقل للامتحان','warning');return;}
+    const isUuid=id=>/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id || '');
+    qz._publicationIds ||= {};
+    const targets=groups.map(group_id=>({group_id,id:qz._publicationIds[group_id] ||= groups.length===1 && isUuid(qz.id) && !qz.is_draft?qz.id:crypto.randomUUID()}));
+    const definition=Object.fromEntries(['quiz_number','title','subject','time_limit_minutes','available_date','start_time','end_time','questions'].filter(key=>qz[key]!==undefined).map(key=>[key,qz[key]]));
+    state.isPublishingOnline=true;
     try {
-      this.showToast('جاري حفظ ونشر الامتحان الإلكتروني...', 'info');
-
-      let targetGroupIds = [];
-      if (Array.isArray(qz?.target_group_ids) && qz.target_group_ids.length > 0) {
-        targetGroupIds = qz.target_group_ids;
-      } else if (targetGroupId === 'all' && Array.isArray(this.groups)) {
-        targetGroupIds = this.groups.map(g => g.id);
-      } else if (targetGroupId && targetGroupId !== 'multiple') {
-        targetGroupIds = [targetGroupId];
-      } else if (currentGid) {
-        targetGroupIds = [currentGid];
-      }
-
-      for (const gid of targetGroupIds) {
-        const payload = {
-          id: (targetGroupIds.length === 1 && qz?.id && !String(qz.id).startsWith('draft_')) ? qz.id : null,
-          group_id: gid,
-          quiz_number: qz.quiz_number,
-          title: qz.title,
-          subject: qz.subject,
-          time_limit_minutes: qz.time_limit_minutes,
-          available_date: qz.available_date,
-          start_time: qz.start_time,
-          end_time: qz.end_time,
-          exam_mode: 'online',
-          is_draft: false,
-          is_archived: false,
-          status: 'published',
-          questions
-        };
-
-        const res = await request('/quizzes/rich', { method: 'POST', body: payload });
-        if (!res?.success) throw new Error(res?.error?.message || 'فشل حفظ الامتحان');
-      }
-
-      // Optimistically insert into richQuizzes so it appears immediately!
-      if (!Array.isArray(this.quizzesState.richQuizzes)) {
-        this.quizzesState.richQuizzes = [];
-      }
-      for (const gid of targetGroupIds) {
-        const optimisticQuiz = {
-          id: (targetGroupIds.length === 1 && qz?.id) ? qz.id : `online_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-          group_id: gid,
-          quiz_number: qz.quiz_number,
-          title: qz.title,
-          subject: qz.subject,
-          time_limit_minutes: qz.time_limit_minutes,
-          available_date: qz.available_date,
-          start_time: qz.start_time,
-          end_time: qz.end_time,
-          exam_mode: 'online',
-          questions,
-          created_at: new Date().toISOString()
-        };
-        this.quizzesState.richQuizzes = this.quizzesState.richQuizzes.filter(
-          q => !(q.id === optimisticQuiz.id || (String(q.group_id).trim() === String(gid).trim() && Number(q.quiz_number) === Number(qz.quiz_number) && (q.exam_mode || 'online') === 'online'))
-        );
-        this.quizzesState.richQuizzes.unshift(optimisticQuiz);
-      }
-
-      // If resumed from a draft, clean up from archive
-      const draftToDelete = qz?._sourceDraftId || (String(qz?.id).startsWith('draft_') ? qz.id : null);
-      if (draftToDelete) {
-        if (Array.isArray(this.quizzesState.examDrafts)) {
-          this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftToDelete);
-          try {
-            teacherQuizCache(this).setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
-          } catch (_) {}
-        }
-        request('/quizzes/rich', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete_draft', id: draftToDelete })
-        }).catch(() => {});
-      }
-
-      this.showToast(`تم حفظ ونشر امتحان (${qz.title}) بنجاح!`, 'success');
-      this.quizzesState.onlineViewMode = 'list';
-      this.quizzesState.onlineListTab = 'published';
-      this.renderMainContent();
-      await this.loadRichQuizzes();
-      if (currentGid) await this.loadQuizzesForGroup(currentGid);
-      this.renderMainContent();
-    } catch (err) {
-      this.showToast(`فشل حفظ الامتحان: ${err.message || 'خطأ في الخادم'}`, 'danger');
-    }
+      this.showToast('جارٍ حفظ ونشر الامتحان للمجموعات المحددة…','info');
+      const response=await request('/quizzes/publish-online',{method:'POST',body:{definition,targets}});
+      if(quizActor(this)!==actor)return;
+      if(!response?.success || !Array.isArray(response.quizzes) || response.quizzes.length!==targets.length || response.quizzes.some(saved=>!targets.some(target=>target.id===saved.id && target.group_id===saved.group_id)))throw Error('تعذر تأكيد النشر لكل المجموعات');
+      state.richQuizzes=[...response.quizzes,...(state.richQuizzes || []).filter(old=>!response.quizzes.some(saved=>saved.id===old.id))];
+      const draftId=qz._sourceDraftId || (String(qz.id).startsWith('draft_')?qz.id:null);
+      if(draftId)try{await request('/quizzes/rich',{method:'POST',body:{action:'delete_draft',id:draftId}});if(quizActor(this)!==actor)return;state.examDrafts=(state.examDrafts || []).filter(d=>d.id!==draftId);teacherQuizCache(this).setItem('centrly_quiz_drafts',JSON.stringify(state.examDrafts));}catch{this.showToast('تم النشر؛ المسودة القديمة ما زالت محفوظة لحين تحديث القائمة','warning');}
+      state.onlineViewMode='list';state.onlineListTab='published';this.renderMainContent();this.showToast(`تم نشر الامتحان في ${targets.length} مجموعة`,'success');
+    }catch(error){if(quizActor(this)===actor)this.showToast(`تعذر نشر الامتحان: ${error.message || 'حاول مجددًا'}`,'danger');}
+    finally{state.isPublishingOnline=false;}
   };
 
   app.editOnlineExamWizard = function(quizId) {
