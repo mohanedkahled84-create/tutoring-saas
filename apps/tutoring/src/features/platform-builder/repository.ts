@@ -195,37 +195,10 @@ export class SupabasePlatformBuilderRepository implements IPlatformBuilderReposi
     };
   }
 
-  async getPublicMaterials(tenantId: string): Promise<any[]> {
-    const { data, error } = await this.queryClient
-      .from("study_materials")
-      .select("id, title, description, type, url, group_id, is_homework, due_date, book_name, pages, questions, created_at")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      throw error;
-    }
-
-    let items = (data || []) as any[];
-
-    try {
-      const { data: quizzesData } = await this.queryClient
-        .from("quizzes")
-        .select("id, title, quiz_number, max_score, quiz_date, is_skipped, group_id, created_at")
-        .eq("tenant_id", tenantId)
-        .order("quiz_number", { ascending: false });
-      if (quizzesData && quizzesData.length > 0) {
-        const mappedQuizzes = quizzesData.map((q: any) => ({
-          ...q,
-          type: "quiz",
-          is_quiz: true,
-          title: q.title || `كويز ${q.quiz_number}`,
-        }));
-        items = [...items, ...mappedQuizzes];
-      }
-    } catch (_) {}
-
-    return items;
+  async getPublicMaterials(_tenantId: string): Promise<any[]> {
+    // Never query private content with the privileged client for an anonymous
+    // visitor. The verified portal owns material access and answer redaction.
+    return [];
   }
 
   async recordVideoView(tenantId: string, data: VideoViewLogDto): Promise<void> {
