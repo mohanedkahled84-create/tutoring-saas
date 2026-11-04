@@ -792,11 +792,11 @@ quizzesRouter.get(
         .order("submitted_at", { ascending: false });
 
       if (statusFilter === "pending") {
-        query = query.eq("status", "needs_grading");
+        query = query.in("status", ["pending", "needs_grading"]);
       } else if (statusFilter === "graded") {
         query = query.eq("status", "approved");
       } else {
-        query = query.in("status", ["needs_grading", "approved"]);
+        query = query.in("status", ["pending", "needs_grading", "approved"]);
       }
 
       const { data: subs, error: subsError } = await query;
@@ -867,8 +867,8 @@ quizzesRouter.get(
             ? Number(parsedNotes.final_score)
             : (isGraded ? Number(parsedNotes.mcq_score || 0) : null);
 
-          const sCode = (student as any).student_code || parsedNotes.student_code || (String(sub.student_id) === "9da3aae0-97df-47a6-82e9-06c6139f63e5" ? "1006" : "—");
-          const sName = (student as any).name || parsedNotes.student_name || (sCode === "1006" ? "مهند خالد" : "طالب");
+          const sCode = (student as any).student_code || parsedNotes.student_code || "—";
+          const sName = (student as any).name || parsedNotes.student_name || "طالب";
 
           return {
             id: sub.id,
@@ -910,10 +910,15 @@ quizzesRouter.get(
           .limit(1000);
 
         if (Array.isArray(legacySubRows)) {
+          const {data:ownedGroups,error:ownedGroupsError}=await supabase.from('groups').select('id').eq('tenant_id',tenantId);
+          const ownedGroupIds=new Set((ownedGroups || []).map((group:any)=>String(group.id)));
           for (const row of legacySubRows) {
             try {
               const parsed = typeof row.message_body === "string" ? JSON.parse(row.message_body) : row.message_body;
               if (parsed && (parsed.quiz_id || parsed.material_id)) {
+                if(row.tenant_id!==tenantId && (ownedGroupsError || !ownedGroupIds.has(String(parsed.group_id))))continue;
+                if(groupId && String(parsed.group_id)!==String(groupId))continue;
+                const legacyGraded=parsed.is_graded===true || row.status==='approved' && parsed.is_graded!==false;
                 const subId = parsed.id || parsed.submission_id || (row as any).id;
                 const alreadyExists = results.some((r: any) =>
                   r.id === subId || (String(r.student_code) === String(parsed.student_code) && String(r.material_id) === String(parsed.quiz_id || parsed.material_id))
@@ -933,8 +938,8 @@ quizzesRouter.get(
                     group_id: parsed.group_id || null,
                     model: parsed.model || "نموذج أ",
                     exam_mode: parsed.exam_mode || (Array.isArray(parsed.breakdown) && parsed.breakdown.length > 0 ? "paper" : "online"),
-                    status: parsed.status || "approved",
-                    is_graded: true,
+                    status: legacyGraded?'approved':'pending',
+                    is_graded: legacyGraded,
                     has_essay: Boolean(parsed.has_essay),
                     score: parsed.total_score !== undefined ? parsed.total_score : (parsed.score || 0),
                     total_score: parsed.total_score !== undefined ? parsed.total_score : (parsed.score || 0),
@@ -991,6 +996,7 @@ quizzesRouter.get(
 
           for (const sRow of scoreRows) {
             const student = studentMap.get(sRow.student_id) || {};
+            if(groupId && String(sRow.group_id || (student as any).group_id)!==String(groupId))continue;
             const material = materialMap.get(sRow.material_id) || {};
             const sCode = (student as any).student_code || (student as any).code || "—";
             const sMaterialId = sRow.material_id || sRow.quiz_id || `paper_quiz_${sRow.group_id}_${sRow.quiz_number}`;
@@ -1046,6 +1052,8 @@ quizzesRouter.get(
         console.warn("[Quizzes] Could not reconcile quiz_scores into submissions:", scoreErr);
       }
 
+      results=results.filter((row:any)=>statusFilter==='pending'?!row.is_graded:statusFilter==='graded'?row.is_graded:true);
+      res.set('Cache-Control','private,no-store');
       res.status(200).json({ success: true, submissions: (req as any).commercialLimits && !(req as any).commercialLimits.legacy && !(req as any).commercialLimits.teaching_platform ? results.filter((r:any)=>r.exam_mode==='paper') : results });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch online submissions";
@@ -1073,11 +1081,12 @@ quizzesRouter.get(
           material_id,
           status,
           file_url,
+          file_name,
           teacher_notes,
           submitted_at
         `)
         .eq("tenant_id", tenantId)
-        .eq("status", "pending")
+        .in("status", ["pending", "needs_grading"])
         .order("submitted_at", { ascending: false });
 
       if (subsError) throw subsError;
@@ -1097,7 +1106,7 @@ quizzesRouter.get(
 
       const { data: materialsData } = await supabase
         .from("study_materials")
-        .select("id, title, description, questions, group_id")
+        .select("id, title, description, questions, group_id, type")
         .in("id", materialIds);
 
       const studentMap = new Map((studentsData || []).map((s: any) => [s.id, s]));
@@ -1105,6 +1114,8 @@ quizzesRouter.get(
 
       const results = subs
         .filter((sub: any) => {
+          const material=materialMap.get(sub.material_id);
+          if(material?.type!=='online_quiz' && !String(sub.file_name || '').startsWith('online_quiz_'))return false;
           if (!groupId) return true;
           const s = studentMap.get(sub.student_id);
           const m = materialMap.get(sub.material_id);
@@ -1127,8 +1138,8 @@ quizzesRouter.get(
             materialQuestions = {};
           }
 
-          const sCode = (student as any).student_code || parsedNotes.student_code || (String(sub.student_id) === "9da3aae0-97df-47a6-82e9-06c6139f63e5" ? "1006" : "—");
-          const sName = (student as any).name || parsedNotes.student_name || (sCode === "1006" ? "مهند خالد" : "طالب");
+          const sCode = (student as any).student_code || parsedNotes.student_code || "—";
+          const sName = (student as any).name || parsedNotes.student_name || "طالب";
 
           return {
             id: sub.id,
