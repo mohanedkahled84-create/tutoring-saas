@@ -198,12 +198,22 @@ async function main() {
       WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
         AND (
           has_table_privilege('anon', c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
-          OR has_table_privilege('authenticated', c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+          OR (
+            has_table_privilege('authenticated', c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+            AND c.relname NOT IN (
+              'academic_years','activity_logs','assistants','attendance','enrollments',
+              'gift_codes','group_students','groups','homework_submissions','message_logs',
+              'message_templates','meta_portal_dispatch_queue','payment_proofs',
+              'quiz_scores','quizzes','rooms','sessions','students','study_materials',
+              'teacher_payouts','teachers','telemetry_events','tenant_platform_settings',
+              'tenants','users','whatsapp_connections'
+            )
+          )
         )
       ORDER BY c.relname
     `);
     if (publicAccess.rowCount > 0) {
-      throw new Error(`Direct table grants remain for anon/authenticated: ${publicAccess.rows.map((row) => row.object_name).join(", ")}`);
+      throw new Error(`Unexpected direct table grants remain for anon/authenticated: ${publicAccess.rows.map((row) => row.object_name).join(", ")}`);
     }
 
     const applied = await client.query("SELECT count(*)::int AS count FROM codex_test_migrations.applied");

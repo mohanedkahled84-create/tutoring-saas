@@ -13,7 +13,7 @@ test('LIVE: new teacher -> paid plans -> targeted work -> student result -> assi
  const email=`release-journey-${randomUUID()}@isolated.invalid`,password='Isolated-Journey-2026!';
  const phone='010'+String(randomInt(10000000,99999999)),parentPhone='2011'+String(randomInt(10000000,99999999));
  const origin='https://centerly-eg.com',users=[];
- let server,tenant,ownerToken,adminToken,verificationCode;
+ let server,tenant,foreignTenant,ownerToken,adminToken,verificationCode;
  const {defaultEmailVerificationService}=await import('../dist/features/auth/emailService.js');
  const {config}=await import('../dist/shared/config/index.js');
  const originalMail=defaultEmailVerificationService.sendVerificationEmail,originalWebhook=config.n8nAdminAlertWebhookUrl;
@@ -31,6 +31,7 @@ test('LIVE: new teacher -> paid plans -> targeted work -> student result -> assi
    for(const table of ['homework_submissions','portal_quiz_attempts','study_materials'])ok(await db.from(table).delete().eq('tenant_id',tenant));
    ok(await db.from('tenants').delete().eq('id',tenant));
   }
+  if(foreignTenant)ok(await db.from('tenants').delete().eq('id',foreignTenant));
   ok(await db.from('email_verifications').delete().eq('email',email));
   ok(await db.from('message_logs').delete().eq('idempotency_key','founder_alert:'+email));
   for(const id of users)ok(await db.auth.admin.deleteUser(id));
@@ -78,6 +79,10 @@ test('LIVE: new teacher -> paid plans -> targeted work -> student result -> assi
   }
   assert.equal((await request('/students',{name:'تكرار غير مسموح',parent_phone:parentPhone,student_phone:students[0].student_phone})).status,409);
   assert.equal(ok(await db.from('students').select('id').eq('tenant_id',tenant)).length,3);
+  foreignTenant=randomUUID();ok(await db.from('tenants').insert({id:foreignTenant,name:'isolated outside account'}));
+  const hidden=ok(await db.from('groups').insert({tenant_id:foreignTenant,name:'must stay hidden'}).select().single());
+  assert.equal((await request('/groups/'+hidden.id)).status,404);
+  const visible=await json(await request('/groups'));assert.equal(visible.groups.length,3);assert.ok(!visible.groups.some(g=>g.id===hidden.id));
  });
  await t.test('one homework targets two groups and preserves student submission',async()=>{
   homework=(await json(await request('/materials',{title:'واجب للمجموعتين',type:'pdf',is_homework:true,group_ids:groups.slice(0,2).map(g=>g.id)}),201)).material;
