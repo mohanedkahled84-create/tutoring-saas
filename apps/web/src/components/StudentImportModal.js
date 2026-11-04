@@ -229,7 +229,8 @@ export function registerStudentImportActions(app) {
 
   app.openImportModal = function(initialGroupId = null) {
     const studentLimit = this.billingState?.students_limit || 300;
-    const currentCount = (this.students || []).length;
+    const currentCount = this.billingState?.students_count ?? (this.students || []).filter(s=>!s.archived_at).length;
+    if (currentCount >= studentLimit && /^(basic|pro|max)_v1$/.test(this.billingState?.subscription_tier || '')) { this.showQuotaBlockedModal(currentCount,studentLimit); return; }
     if (currentCount >= studentLimit) {
       const storageKey = 'centrly_quota_exceeded_timestamp';
       let reachedTimestamp = null;

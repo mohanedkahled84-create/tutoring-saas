@@ -4,15 +4,16 @@ import {notifyAssistantInvitation,assistantInvitationTemplate} from '../dist/fea
 import {assistantRequest} from '../../web/src/services/assistantClient.js';
 import {assistantInvitationStatus} from '../../web/src/utils/assistantInvitation.js';
 
+const budgetPolicy={reserve:async()=>({allowed:true,id:'fixture-budget'}),settle:async()=>{}};
 const meta={appSecret:'test-only',accessToken:'test-token',wabaId:'test-waba',phoneNumberId:'test-phone'};
 test('assistant invitation sends only the requested approved Utility copy with one teacher variable',async t=>{
  const calls=[];const previous=globalThis.fetch;t.after(()=>{globalThis.fetch=previous;});
  globalThis.fetch=async(url,options)=>{calls.push({url,options});return Response.json(calls.length===1?{data:[{name:assistantInvitationTemplate,status:'APPROVED',category:'UTILITY',language:'ar'}]}:{messages:[{id:'test-id'}]});};
- assert.equal(await notifyAssistantInvitation(meta,'201011111111','عمر المحمدي','x'.repeat(43)),'sent');
+ assert.equal(await notifyAssistantInvitation(meta,'201011111111','عمر المحمدي','x'.repeat(43),budgetPolicy),'sent');
  assert.equal(calls.length,2);const message=JSON.parse(calls[1].options.body);
  assert.equal(message.template.name,'centerly_assistant_account_added_v1');assert.equal(message.to,'201011111111');
  assert.deepEqual(message.template.components[0].parameters,[{type:'text',text:'عمر المحمدي'}]);
- assert.equal(message.template.components[1].parameters[0].payload,'CENTRLY_ASSISTANT:'+'x'.repeat(43));
+ assert.equal(message.template.components[1].parameters[0].payload,'CENTRLY_ASSISTANT:'+'x'.repeat(43),budgetPolicy);
  assert.ok(!calls[1].options.body.includes('AST-'));
 });
 
@@ -25,17 +26,17 @@ test('pending, rejected, Marketing, wrong language and failed metadata checks ne
   {status:'APPROVED',category:'UTILITY',language:'en'},
  ]){
   let calls=0;globalThis.fetch=async()=>{calls++;return Response.json({data:[{name:assistantInvitationTemplate,...template}]});};
-  assert.equal(await notifyAssistantInvitation(meta,'201011111111','teacher','x'.repeat(43)),'blocked');assert.equal(calls,1);
+  assert.equal(await notifyAssistantInvitation(meta,'201011111111','teacher','x'.repeat(43),budgetPolicy),'blocked');assert.equal(calls,1);
  }
- globalThis.fetch=async()=>{throw new Error('offline');};assert.equal(await notifyAssistantInvitation(meta,'201011111111','teacher','x'.repeat(43)),'blocked');
- globalThis.fetch=async()=>{throw new Error('must not query without signed webhook configuration');};assert.equal(await notifyAssistantInvitation({...meta,appSecret:''},'201011111111','teacher','x'.repeat(43)),'blocked');
+ globalThis.fetch=async()=>{throw new Error('offline');};assert.equal(await notifyAssistantInvitation(meta,'201011111111','teacher','x'.repeat(43),budgetPolicy),'blocked');
+ globalThis.fetch=async()=>{throw new Error('must not query without signed webhook configuration');};assert.equal(await notifyAssistantInvitation({...meta,appSecret:''},'201011111111','teacher','x'.repeat(43),budgetPolicy),'blocked');
 });
 
 test('Meta message failures never report a sent invitation',async t=>{
  const previous=globalThis.fetch;t.after(()=>{globalThis.fetch=previous;});
  for(const reply of [Response.json({error:{message:'test failure'}},{status:400}),Response.json({})]){
   let calls=0;globalThis.fetch=async()=>++calls===1?Response.json({data:[{name:assistantInvitationTemplate,status:'APPROVED',category:'UTILITY',language:'ar'}]}):reply;
-  assert.equal(await notifyAssistantInvitation(meta,'201011111111','teacher','x'.repeat(43)),'failed');
+  assert.equal(await notifyAssistantInvitation(meta,'201011111111','teacher','x'.repeat(43),budgetPolicy),'failed');
  }
 });
 

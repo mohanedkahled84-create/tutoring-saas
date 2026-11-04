@@ -5,6 +5,7 @@ import {familyError,familyPhone,familyHash,familyRpc,deliverFamilyAccess,familyN
 import {approvedUtilityTemplate} from './metaTemplatePolicy.js';
 import {metaTemplateParameters} from './metaTemplateParameters.js';
 import {confirmAssistantMessage} from '../../features/assistants/access.js';
+import {reserveMetaBudget,settleMetaBudget} from './metaDispatchBudget.js';
 
 export interface MetaFamilyGateway {
  notify(phone:string,parameters:string[],payload:string):Promise<boolean>;
@@ -16,18 +17,21 @@ export function verifyMetaSignature(raw:unknown,signature:unknown,secret=config.
  const received=Buffer.from(signature.slice(7),'hex'),expected=createHmac('sha256',secret).update(raw).digest();
  return received.length===expected.length && timingSafeEqual(received,expected);
 }
-export function configuredMetaFamilyGateway():MetaFamilyGateway {
+export function configuredMetaFamilyGateway(budgetPolicy={reserve:reserveMetaBudget,settle:settleMetaBudget}):MetaFamilyGateway {
  const approved=(name:string,language:string)=>approvedUtilityTemplate({baseUrl:'https://graph.facebook.com/v22.0',accessToken:config.meta.accessToken,wabaId:config.meta.wabaId,name,language});
  const send=async(phone:string,message:Record<string,unknown>)=>{
   if(!config.meta.accessToken || !config.meta.phoneNumberId)return false;
+  const budget=await budgetPolicy.reserve(phone);if(!budget.allowed)return false;
   try{
    const response=await fetch(`https://graph.facebook.com/v22.0/${config.meta.phoneNumberId}/messages`,{method:'POST',headers:{Authorization:`Bearer ${config.meta.accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',recipient_type:'individual',to:phone,...message}),signal:AbortSignal.timeout(8000)});
    const result:any=await response.json().catch(()=>null);
+   await budgetPolicy.settle(budget.id,response.ok && typeof result?.messages?.[0]?.id==='string'?'accepted':response.status>=400 && response.status<500?'not_sent':'unknown');
    return response.ok && typeof result?.messages?.[0]?.id==='string';
-  }catch{return false;}
+  }catch{await budgetPolicy.settle(budget.id,'unknown');return false;}
  };
  return {
   notify:async(phone,parameters,payload)=>{
+   if(!/^201[0125]\d{8}$/.test(phone))return false;
    // Never send a pending, marketing, authentication or unverified template.
    if(!await approved('centerly_student','en'))return false;
    return send(phone,{type:'template',template:{name:'centerly_student',language:{code:'en'},components:[{type:'body',parameters:metaTemplateParameters('centerly_student',parameters).map(text=>({type:'text',text}))},{type:'button',sub_type:'quick_reply',index:'0',parameters:[{type:'payload',payload}]}]}});

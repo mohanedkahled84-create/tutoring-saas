@@ -72,7 +72,7 @@ export async function requireActiveSubscription(
             error: {
               code: "TRIAL_EXPIRED",
               message:
-                "Your 14-day free trial has expired. Please submit payment proof to activate your subscription.",
+                "Your 7-day free trial has expired. Please submit payment proof to activate your subscription.",
               trial_ended_at: trialEnds.toISOString(),
               in_grace_period: now <= graceEnds,
             },

@@ -81,6 +81,8 @@ studentsRouter.post(
         return;
       }
       const rawMsg = err instanceof Error ? err.message : "Failed to create student";
+      if(rawMsg.includes('STUDENT_LIMIT_REACHED')){res.status(409).json({error:{code:'STUDENT_LIMIT_REACHED',message:'وصلت لسعة الطلاب؛ أضف مقاعد من صفحة الاشتراك أو أرشف الطلاب غير النشطين'}});return;}
+      if(rawMsg.startsWith('DUPLICATE_STUDENT_PHONE:')){res.status(409).json({error:{code:'DUPLICATE_STUDENT_PHONE',message:rawMsg.replace('DUPLICATE_STUDENT_PHONE: ',''),existing_student:(err as any).existingStudent || null}});return;}
       if (rawMsg.startsWith("DUPLICATE_STUDENT_CODE:")) {
         res.status(409).json({ error: { code: "DUPLICATE_STUDENT_CODE", message: rawMsg.replace("DUPLICATE_STUDENT_CODE: ", "") } });
         return;
@@ -129,6 +131,8 @@ studentsRouter.put(
       res.json({ student });
     } catch (err: unknown) {
       const rawMsg = err instanceof Error ? err.message : "Failed to update student";
+      if(rawMsg.includes('STUDENT_LIMIT_REACHED')){res.status(409).json({error:{code:'STUDENT_LIMIT_REACHED',message:'وصلت لسعة الطلاب؛ أضف مقاعد من صفحة الاشتراك أو أرشف الطلاب غير النشطين'}});return;}
+      if(rawMsg.startsWith('DUPLICATE_STUDENT_PHONE:')){res.status(409).json({error:{code:'DUPLICATE_STUDENT_PHONE',message:rawMsg.replace('DUPLICATE_STUDENT_PHONE: ','')}});return;}
       if (rawMsg.startsWith("DUPLICATE_STUDENT_CODE:")) {
         res.status(409).json({ error: { code: "DUPLICATE_STUDENT_CODE", message: rawMsg.replace("DUPLICATE_STUDENT_CODE: ", "") } });
         return;

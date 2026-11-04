@@ -13,6 +13,8 @@ test('OTP hash binds purpose and challenge; schemas reject replacement phone and
 });
 
 test('only approved Arabic Authentication template can send; same OTP in body and copy button; no retries',async t=>{
+ t.mock.method(phoneOtpGateway.budget,'reserve',async()=>({allowed:true,id:'fixture-budget'}));
+ t.mock.method(phoneOtpGateway.budget,'settle',async()=>{});
  const originalFetch=global.fetch,originalMeta={...config.meta};Object.assign(config.meta,{accessToken:'test',wabaId:'fake-waba',phoneNumberId:'fake-phone'});
  t.after(()=>{global.fetch=originalFetch;Object.assign(config.meta,originalMeta);});
  let template={name:phoneVerificationTemplate,status:'APPROVED',language:'ar',category:'AUTHENTICATION'},sends=0,lastPayload,status=200;

@@ -17,6 +17,11 @@ import {metaPortalWebhook} from './metaPortalWebhook.js';
 
 export const publicRouter = Router();
 publicRouter.use('/family',parentFamilyRouter);
+publicRouter.get('/plans',async(_req,res)=>{
+  const result=await getServiceSupabaseClient().from('subscription_plans').select('*').eq('enabled',true).order('rank');
+  if(result.error){res.status(503).json({error:{code:'PLANS_UNAVAILABLE',message:'تعذر قراءة الباقات الآن'}});return;}
+  res.set('Cache-Control','public,max-age=60').json({plans:result.data});
+});
 
 publicRouter.post("/portal/destination", authRateLimiter, async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "private, no-store");

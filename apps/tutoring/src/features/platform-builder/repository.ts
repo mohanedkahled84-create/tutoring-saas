@@ -176,6 +176,12 @@ export class SupabasePlatformBuilderRepository implements IPlatformBuilderReposi
     const status = (data?.subscription_status || "").toLowerCase();
     const settings = data?.settings || {};
 
+    if (settings.commercial_plan_id || ['basic_v1','pro_v1','max_v1'].includes(tier)) {
+      const resolved=await this.queryClient.rpc('commercial_limits',{p_tenant:tenantId});
+      if(resolved.error)throw resolved.error;
+      return {subscription_tier:resolved.data.plan_id,subscription_status:status,is_pro:resolved.data.teaching_platform,is_active:resolved.data.active};
+    }
+
     const isExplicitPro =
       tier === "pro" ||
       tier === "growth" ||

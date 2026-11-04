@@ -153,7 +153,7 @@ export class AuthService {
       throw err;
     }
 
-    const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    const trialEnds = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const result = await this.repo.createTenantWithOwner(normalizedDto, trialEnds);
 
     if (onNewSignup) {

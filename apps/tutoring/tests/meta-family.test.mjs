@@ -70,7 +70,7 @@ test('delayed ordinary messages remain in the inbox without assigning an ambiguo
 test('Meta transport sends a quick reply payload; provider failures cannot report sent',async()=>{
  const original=globalThis.fetch,token=config.meta.accessToken;config.meta.accessToken='isolated-token';const captured=[];
  try{globalThis.fetch=async(url,options)=>{if(!options.body)return {ok:true,json:async()=>({data:[{name:'centerly_student',status:'APPROVED',language:'en',category:'UTILITY'}]})};captured.push(JSON.parse(options.body));return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};};
-  const gateway=configuredMetaFamilyGateway();assert.equal(await gateway.notify(phone,['ابن','مادة','معلم'],'CENTRLY_FAMILY:id:tenant'),true);
+  const gateway=configuredMetaFamilyGateway({reserve:async()=>({allowed:true,id:'fixture-budget'}),settle:async()=>{}});assert.equal(await gateway.notify(phone,['ابن','مادة','معلم'],'CENTRLY_FAMILY:id:tenant'),true);
   assert.equal(captured[0].template.name,'centerly_student');assert.equal(captured[0].template.language.code,'en');assert.equal(captured[0].template.components[1].parameters[0].payload,'CENTRLY_FAMILY:id:tenant');
   globalThis.fetch=async()=>({ok:false,json:async()=>({error:{message:'private provider detail'}})});assert.equal(await gateway.reply(phone,'fixture response'),false);
  }finally{globalThis.fetch=original;config.meta.accessToken=token;}
@@ -79,7 +79,7 @@ test('family uses only the existing approved parent template and its three origi
  const original=globalThis.fetch,token=config.meta.accessToken;config.meta.accessToken='isolated-token';let sent;const lookups=[];
  try{
   globalThis.fetch=async(url,options)=>{if(options.body){sent=JSON.parse(options.body);return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};}lookups.push(new URL(url).searchParams.get('name'));return {ok:true,json:async()=>({data:[{name:'centerly_student',language:'en',status:'APPROVED',category:'UTILITY'},{name:'unused_new_template',language:'ar',status:'APPROVED',category:'UTILITY'}]})};};
-  assert.equal(await configuredMetaFamilyGateway().notify(phone,['أحمد، منى','الفيزياء','مستر مستر معلم'],'CENTRLY_FAMILY:id:tenant'),true);
+  assert.equal(await configuredMetaFamilyGateway({reserve:async()=>({allowed:true,id:'fixture-budget'}),settle:async()=>{}}).notify(phone,['أحمد، منى','الفيزياء','مستر مستر معلم'],'CENTRLY_FAMILY:id:tenant'),true);
   assert.deepEqual(lookups,['centerly_student']);assert.equal(sent.template.name,'centerly_student');assert.deepEqual(sent.template.components[0].parameters.map(p=>p.text),['أحمد، منى','الفيزياء','معلم']);
  }finally{globalThis.fetch=original;config.meta.accessToken=token;}
 });
@@ -91,10 +91,10 @@ test('family notification rejects even approved marketing templates and stops if
     if(options.body){posts.push(JSON.parse(options.body));return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};}
     const name=new URL(url).searchParams.get('name');return {ok:true,json:async()=>({data:[{name,language:name==='centerly_student'?'en':'ar',status:'APPROVED',category:name==='centerly_student'?fallbackCategory:'MARKETING'}]})};
    };
-   assert.equal(await configuredMetaFamilyGateway().notify(phone,['ابن','معلم','https://teacher.centerly-eg.com/family'],'CENTRLY_FAMILY:id:tenant'),fallbackCategory==='UTILITY');
+   assert.equal(await configuredMetaFamilyGateway({reserve:async()=>({allowed:true,id:'fixture-budget'}),settle:async()=>{}}).notify(phone,['ابن','معلم','https://teacher.centerly-eg.com/family'],'CENTRLY_FAMILY:id:tenant'),fallbackCategory==='UTILITY');
    assert.equal(posts.length,fallbackCategory==='UTILITY'?1:0);if(posts.length)assert.equal(posts[0].template.name,'centerly_student');
   }
-  globalThis.fetch=async()=>{throw Error('Metadata unavailable');};assert.equal(await configuredMetaFamilyGateway().notify(phone,['ابن','معلم','رابط'],'payload'),false);
+  globalThis.fetch=async()=>{throw Error('Metadata unavailable');};assert.equal(await configuredMetaFamilyGateway({reserve:async()=>({allowed:true,id:'fixture-budget'}),settle:async()=>{}}).notify(phone,['ابن','معلم','رابط'],'payload'),false);
  }finally{globalThis.fetch=original;config.meta.accessToken=token;}
 });
 test('all webhook aliases reject forged requests before processing and accept signed status events',{timeout:20000},async()=>{

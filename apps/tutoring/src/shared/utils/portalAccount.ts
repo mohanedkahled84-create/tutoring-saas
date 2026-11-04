@@ -47,6 +47,8 @@ export async function loadPortalAccount(supabase:SupabaseClient,token:string,mon
     if (!context || context.id !== portalData.student?.id) {
       throw Object.assign(new Error('رابط المتابعة غير صالح'),{status:401});
     }
+    if(context.commercial && !context.commercial.readable)throw Object.assign(new Error('المتابعة غير متاحة حاليًا؛ تواصل مع المدرس'),{status:401});
+    if(context.commercial && !context.commercial.teaching_platform && Array.isArray(portalData.materials))portalData.materials=portalData.materials.filter((m:any)=>m.type!=='video' && m.type!=='online_quiz');
     portalData.student.tenant_id = context.tenant_id;
     // Run the small aggregate alongside material enrichment, not after it.
     const preferences=resolvePortalPreferences(portalData.preferences);portalData.preferences=preferences;

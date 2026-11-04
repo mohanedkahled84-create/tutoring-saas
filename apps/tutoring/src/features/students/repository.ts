@@ -8,6 +8,15 @@ import {
 import { generateParentPortalToken } from "../../shared/utils/tokens.js";
 
 export class SupabaseStudentsRepository implements IStudentsRepository {
+  async findByPhone(tenantId:string|undefined,phone:string):Promise<Student|null>{
+    if(!tenantId)return null;
+    let canonical=phone.replace(/[٠-٩]/g,d=>String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g,d=>String(d.charCodeAt(0)-1776)).replace(/\D/g,'').replace(/^00/,'');
+    if(/^01[0125]\d{8}$/.test(canonical))canonical='2'+canonical;
+    if(/^1[0125]\d{8}$/.test(canonical))canonical='20'+canonical;
+    const {data,error}=await this.client.from('students').select('id,tenant_id,name,student_phone,parent_phone,student_code,code,group_id,archived_at').eq('tenant_id',tenantId).eq('student_phone_canonical',canonical).order('created_at').limit(1).maybeSingle();
+    if(error)throw new Error(error.message);
+    return data as Student|null;
+  }
   constructor(
     private readonly client: SupabaseClient,
     private readonly privilegedClient?: SupabaseClient,

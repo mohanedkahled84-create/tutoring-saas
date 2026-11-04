@@ -443,7 +443,8 @@ export function registerStudentsActions(app) {
   };
   app.openAddStudentModal = function() {
     const studentLimit = this.billingState?.students_limit || 300;
-    const currentCount = (this.students || []).length;
+    const currentCount = this.billingState?.students_count ?? (this.students || []).filter(s=>!s.archived_at).length;
+    if (currentCount >= studentLimit && /^(basic|pro|max)_v1$/.test(this.billingState?.subscription_tier || '')) { this.showQuotaBlockedModal(currentCount,studentLimit); return; }
     if (currentCount >= studentLimit) {
       const storageKey = 'centrly_quota_exceeded_timestamp';
       let reachedTimestamp = null;
@@ -638,6 +639,11 @@ export function registerStudentsActions(app) {
       this.showToast(`تمت إضافة الطالب (${name}) بنجاح! والكود التلقائي: ${res.student?.code || res.student?.student_code || 'تم التعيين'}`, 'success');
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
+      const existing=err?.data?.error?.existing_student;
+      if(err.code==='DUPLICATE_STUDENT_PHONE' && existing?.id){
+        this.showModal('الطالب مسجل بالفعل',`<p>الطالب ${escapeHtml(existing.name)} مسجل عندك بالفعل. ${existing.archived_at?'استعد سجله من الأرشيف أولًا.':'يمكنك إضافة نفس سجله إلى مجموعة أخرى بدون استهلاك مقعد جديد.'}</p>${groupId && !existing.archived_at?`<button class="btn btn-primary" style="min-height:44px" onclick="window.centrlyApp.enrollExistingPhoneStudent('${escapeHtml(existing.id)}','${escapeHtml(groupId)}')">إضافته إلى المجموعة المحددة</button>`:''}`);
+        return;
+      }
       if (feedback) {
         feedback.style.display = 'block';
         feedback.style.backgroundColor = 'var(--centrly-danger-light)';
@@ -651,6 +657,9 @@ export function registerStudentsActions(app) {
     }
   }
 
+  app.enrollExistingPhoneStudent=async function(studentId,groupId){
+    try{await request(`/groups/${encodeURIComponent(groupId)}/students`,{method:'POST',body:{student_id:studentId}});this.closeModal();this.showToast('تمت إضافة الطالب الموجود إلى المجموعة','success');await this.loadRouteData(this.currentRoute);}catch(error){this.showToast(error.message,'error');}
+  };
   app.handleStudentModalGroupChange = function(selectEl) {
     if (selectEl.value === '__NEW_GROUP__') {
       this.toggleQuickAddGroupInSingleStudent(true);

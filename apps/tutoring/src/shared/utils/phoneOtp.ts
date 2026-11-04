@@ -1,3 +1,4 @@
+import {reserveMetaBudget,settleMetaBudget} from './metaDispatchBudget.js';
 import {createHmac,randomInt,randomUUID} from 'node:crypto';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {z} from 'zod';
@@ -31,13 +32,15 @@ export async function otpRpc(db:SupabaseClient,name:string,args:Record<string,un
  const {data,error}=await db.rpc(name,args);if(error)throw fault(error.message.includes('UNAUTHORIZED')?401:error.message.includes('FORBIDDEN')?403:503,error.message.includes('UNAUTHORIZED')?'الحساب غير متاح؛ سجّل الدخول مجددًا':'تعذر تأكيد الرقم الآن. حاول لاحقًا.');return data;
 }
 export const phoneOtpGateway={
+ budget:{reserve:reserveMetaBudget,settle:settleMetaBudget},
  ready:async()=>{
   if(!config.meta.accessToken || !config.meta.wabaId || !config.meta.phoneNumberId)return false;
   try{const r=await fetch(`https://graph.facebook.com/v22.0/${config.meta.wabaId}/message_templates?name=${phoneVerificationTemplate}&fields=name,status,language,category`,{headers:{Authorization:`Bearer ${config.meta.accessToken}`},signal:AbortSignal.timeout(3000)});const body:any=await r.json();return r.ok && Array.isArray(body?.data) && body.data.some((t:any)=>t.name===phoneVerificationTemplate && t.status==='APPROVED' && t.language==='ar' && t.category==='AUTHENTICATION');}catch{return false;}
  },
  send:async(phone:string,code:string):Promise<'sent'|'failed'|'uncertain'>=>{
   if(!/^[1-9]\d{7,14}$/.test(phone) || !/^\d{6}$/.test(code) || !await phoneOtpGateway.ready())return 'failed';
-  try{const r=await fetch(`https://graph.facebook.com/v22.0/${config.meta.phoneNumberId}/messages`,{method:'POST',headers:{Authorization:`Bearer ${config.meta.accessToken}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(8000),body:JSON.stringify({messaging_product:'whatsapp',to:phone,type:'template',template:{name:phoneVerificationTemplate,language:{code:'ar'},components:[{type:'body',parameters:[{type:'text',text:code}]},{type:'button',sub_type:'url',index:'0',parameters:[{type:'text',text:code}]}]}})});const body:any=await r.json().catch(()=>null);if(r.ok && typeof body?.messages?.[0]?.id==='string')return 'sent';return r.status>=400 && r.status<500?'failed':'uncertain';}catch{return 'uncertain';}
+  const budget=await phoneOtpGateway.budget.reserve(phone);if(!budget.allowed)return 'failed';
+  try{const r=await fetch(`https://graph.facebook.com/v22.0/${config.meta.phoneNumberId}/messages`,{method:'POST',headers:{Authorization:`Bearer ${config.meta.accessToken}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(8000),body:JSON.stringify({messaging_product:'whatsapp',to:phone,type:'template',template:{name:phoneVerificationTemplate,language:{code:'ar'},components:[{type:'body',parameters:[{type:'text',text:code}]},{type:'button',sub_type:'url',index:'0',parameters:[{type:'text',text:code}]}]}})});const body:any=await r.json().catch(()=>null);await phoneOtpGateway.budget.settle(budget.id,r.ok && typeof body?.messages?.[0]?.id==='string'?'accepted':r.status>=400 && r.status<500?'not_sent':'unknown');if(r.ok && typeof body?.messages?.[0]?.id==='string')return 'sent';return r.status>=400 && r.status<500?'failed':'uncertain';}catch{await phoneOtpGateway.budget.settle(budget.id,'unknown');return 'uncertain';}
  },
 };
 export async function phoneOtpInfo(){return {otp_provider:usesAkedly()?'akedly':'meta',otp_channel:usesAkedly()?'sms':'whatsapp',otp_available:usesAkedly()?akedlyConfigured():await phoneOtpGateway.ready()};}

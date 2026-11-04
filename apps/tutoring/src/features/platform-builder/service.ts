@@ -111,6 +111,8 @@ export class PlatformBuilderService {
     if (!settings || !settings.is_active) {
       return null;
     }
+    const plan=await this.repository.getTenantPlan(settings.tenant_id);
+    if(['basic_v1','pro_v1','max_v1'].includes(plan.subscription_tier || '') && (!plan.is_pro || !plan.is_active))return null;
     return settings;
   }
 

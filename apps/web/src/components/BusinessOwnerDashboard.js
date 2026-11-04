@@ -287,7 +287,7 @@ export function renderBusinessOwnerDashboard(data = {}) {
                   إيصالات تحويل معلقة بانتظار الاعتماد المباشر (${pendingProofs.length})
                 </h3>
                 <p style="font-size: 0.78rem; color: #b45309; margin: 0.15rem 0 0;">
-                  قام المشتركون بتحويل الرسوم، يمكنك مراجعة الاسكرين شوت واعتماد الاشتراك فوراً من نفس الشاشة.
+                  راجع إيصال التحويل ومطابقته بالطلب قبل الاعتماد. طلبات الباقات والمحفظة تطبق تفاصيل الطلب المعتمد.
                 </p>
               </div>
             </div>
@@ -345,13 +345,13 @@ export function renderBusinessOwnerDashboard(data = {}) {
                   <div style="display: flex; gap: 0.4rem; border-top: 1px solid #f1f5f9; padding-top: 0.65rem;">
                     <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.handleApproveProof('${proof.id}', 30)" style="flex: 1; font-weight: 800; font-size: 0.78rem; background: #2563eb; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;">
                       ${getIcon('check', 12)}
-                      <span>اعتماد 30 يوم</span>
+                      <span>اعتماد الطلب</span>
                     </button>
 
-                    <button class="btn btn-sm" onclick="window.centrlyApp.handleApproveProof('${proof.id}', 365)" style="flex: 1; font-weight: 800; font-size: 0.78rem; background: #059669; color: #fff; border: none; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;">
+                    ${!String(proof.admin_notes || '').startsWith('[order:') ? `<button class="btn btn-sm" onclick="window.centrlyApp.handleApproveProof('${proof.id}', 365)" style="flex: 1; font-weight: 800; font-size: 0.78rem; background: #059669; color: #fff; border: none; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;">
                       ${getIcon('check', 12)}
                       <span>سنة (خصم 20%)</span>
-                    </button>
+                    </button>` : ''}
 
                     <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.handleRejectProofPrompt('${proof.id}')" style="font-weight: 700; font-size: 0.75rem; color: #dc2626; border-color: #fca5a5;">
                       رفض
@@ -634,12 +634,12 @@ export function registerBusinessOwnerActions(app) {
         <div style="margin-bottom: 0.75rem;">${getIcon('checkCircle', 40, '#10b981')}</div>
         <h4 style="margin: 0 0 0.5rem; color: #0f172a; font-weight: 800;">تأكيد اعتماد الإيصال</h4>
         <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.5;">
-          هل أنت متأكد من اعتماد هذا الإيصال وتفعيل الاشتراك لهذا المشترك لمدة <strong>${extendDays} يوماً</strong>؟
+          هل راجعت التحويل؟ سيُنفذ طلب الدفع المرتبط بالإيصال، سواء اشتراك أو إضافة سعة أو شحن محفظة. الإيصالات القديمة فقط تُطبق عليها مدة <strong>${extendDays} يومًا</strong>.
         </p>
         <div style="display: flex; gap: 0.75rem; justify-content: center;">
           <button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إلغاء</button>
           <button type="button" class="btn btn-primary" style="background: #10b981; border-color: #10b981; font-weight: 800;" onclick="window.centrlyApp.confirmApproveProof('${proofId}', ${extendDays})">
-            اعتماد وتفعيل الاشتراك
+            اعتماد طلب الدفع
           </button>
         </div>
       </div>
@@ -650,13 +650,13 @@ export function registerBusinessOwnerActions(app) {
   app.confirmApproveProof = async function(proofId, extendDays = 30) {
     this.closeModal();
     try {
-      await request(`/admin/payment-proofs/${proofId}/approve`, {
+      const result=await request(`/admin/payment-proofs/${proofId}/approve`, {
         method: 'POST',
         body: JSON.stringify({ extend_days: extendDays }),
       });
 
       this.closeProofFullscreenModal();
-      this.showToast(`تم اعتماد الإيصال بنجاح وتفعيل الاشتراك لمدة ${extendDays} يوماً!`, 'success');
+      this.showToast(result.message || 'تم اعتماد طلب الدفع بنجاح', 'success');
       
       await Promise.all([
         this.loadRouteData('admin-proofs'),

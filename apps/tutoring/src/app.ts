@@ -25,6 +25,8 @@ import { sessionsRouter } from "./features/sessions/index.js";
 import { riskRouter } from "./features/risk-watchlist/index.js";
 import { injectServices } from "./composition.js";
 import { billingRouter } from "./features/billing/index.js";
+import { commercialBillingRouter } from './features/billing/commercialRoutes.js';
+import {requireCommercialAccess} from './shared/middleware/commercialAccess.js';
 import { paymentWebhookRouter } from "./features/billing/webhookRoutes.js";
 import { activityLogsRouter } from "./features/activity-log/index.js";
 import { templatesRouter, whatsappRouter } from "./features/whatsapp-notifications/index.js";
@@ -149,29 +151,30 @@ export function createApp(): Express {
   app.use("/api/admin", authenticateUser, adminRouter);
   app.use('/api/account-deletion',accountDeletionRouter);
   app.use('/api/announcement-admin',authenticateUser,announcementAdminRouter);
-  app.use('/api/announcements',authenticateUser,announcementsRouter);
+  app.use('/api/announcements',authenticateUser,requireCommercialAccess,announcementsRouter);
   app.use('/api/support',authenticateUser,supportRouter);
 
   // Tenant-scoped User API routes (requires valid token & tenant context)
-  app.use("/api/students", authenticateUser, studentsRouter);
-  app.use("/api/groups", authenticateUser, groupsRouter);
-  app.use("/api/groups", authenticateUser, importRouter);
-  app.use("/api/sessions", authenticateUser, sessionsRouter);
-  app.use("/api/at-risk", authenticateUser, riskRouter);
+  app.use("/api/students", authenticateUser, requireCommercialAccess, studentsRouter);
+  app.use("/api/groups", authenticateUser, requireCommercialAccess, groupsRouter);
+  app.use("/api/groups", authenticateUser, requireCommercialAccess, importRouter);
+  app.use("/api/sessions", authenticateUser, requireCommercialAccess, sessionsRouter);
+  app.use("/api/at-risk", authenticateUser, requireCommercialAccess, riskRouter);
+  app.use('/api/billing/commercial', authenticateUser, commercialBillingRouter);
   app.use("/api/billing", authenticateUser, billingRouter);
-  app.use("/api/activity-logs", authenticateUser, activityLogsRouter);
-  app.use("/api/templates", authenticateUser, templatesRouter);
-  app.use("/api/whatsapp", authenticateUser, whatsappRouter);
-  app.use("/api/settings", authenticateUser, settingsRouter);
-  app.use("/api/business-dashboard", authenticateUser, businessDashboardRouter);
+  app.use("/api/activity-logs", authenticateUser, requireCommercialAccess, activityLogsRouter);
+  app.use("/api/templates", authenticateUser, requireCommercialAccess, templatesRouter);
+  app.use("/api/whatsapp", authenticateUser, requireCommercialAccess, whatsappRouter);
+  app.use("/api/settings", authenticateUser, requireCommercialAccess, settingsRouter);
+  app.use("/api/business-dashboard", authenticateUser, requireCommercialAccess, businessDashboardRouter);
   app.use("/api/telemetry", telemetryRouter);
   app.use("/api/centers", centersRouter);
-  app.use("/api/reports", authenticateUser, reportsRouter);
-  app.use("/api/quizzes", authenticateUser, quizzesRouter);
-  app.use("/api/materials", authenticateUser, materialsRouter);
-  app.use("/api/assistants", authenticateUser, assistantsRouter);
-  app.use("/api/homework", authenticateUser, homeworkRouter);
-  app.use("/api/platform", authenticateUser, platformRouter);
+  app.use("/api/reports", authenticateUser, requireCommercialAccess, reportsRouter);
+  app.use("/api/quizzes", authenticateUser, requireCommercialAccess, quizzesRouter);
+  app.use("/api/materials", authenticateUser, requireCommercialAccess, materialsRouter);
+  app.use("/api/assistants", authenticateUser, requireCommercialAccess, assistantsRouter);
+  app.use("/api/homework", authenticateUser, requireCommercialAccess, homeworkRouter);
+  app.use("/api/platform", authenticateUser, requireCommercialAccess, platformRouter);
 
   // DEV-WPA.1: Protected Internal Automation routes (shared-secret auth)
   app.use("/internal", authenticateInternalSecret, internalRouter);

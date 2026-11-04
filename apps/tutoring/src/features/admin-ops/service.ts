@@ -34,6 +34,9 @@ export class AdminOpsService {
       throw new Error("PROOF_NOT_FOUND");
     }
 
+    const commercial=this.repo.resolveCommercialProof && await this.repo.resolveCommercialProof(proofId,adminId,'approve');
+    if(commercial)return {message:'تم اعتماد طلب الدفع وفق نوعه وسعره المحفوظ',subscription_ends_at:commercial.subscription_ends_at || '',tenant:commercial};
+
     const tenant = await this.repo.getTenant(proof.tenant_id);
     const now = new Date();
     let currentEnds = tenant?.subscription_ends_at ? new Date(tenant.subscription_ends_at) : now;
@@ -101,6 +104,9 @@ export class AdminOpsService {
     if (!proof) {
       throw new Error("PROOF_NOT_FOUND");
     }
+
+    const commercial=this.repo.resolveCommercialProof && await this.repo.resolveCommercialProof(proofId,adminId,'reject');
+    if(commercial)return {message:'تم رفض طلب الدفع؛ الاشتراك الحالي والرصيد السابق محفوظان'};
 
     await this.repo.rejectPaymentProof(
       proofId,

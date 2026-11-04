@@ -13,7 +13,7 @@ test('announcement templates must retain the exact approved body, identifier and
 });
 
 test('central Meta queue sends only live approved UTILITY templates and never trusts a stale classification',async()=>{
- const original=globalThis.fetch,gateway=new HttpMetaCloudGateway('fixture-phone','fixture-token','fixture-waba');
+ const original=globalThis.fetch,gateway=new HttpMetaCloudGateway('fixture-phone','fixture-token','fixture-waba',{reserve:async()=>({allowed:true,id:'fixture-budget'}),settle:async()=>{}});
  let template={name:'centerly',language:'en',status:'APPROVED',category:'UTILITY'},posts=0,reads=0;
  try{
   globalThis.fetch=async(url,options)=>{
@@ -33,7 +33,7 @@ test('central Meta queue sends only live approved UTILITY templates and never tr
 });
 
 test('Meta dispatch distinguishes a confirmed rejection from an uncertain network or acknowledgement outcome',async()=>{
- const original=globalThis.fetch,gateway=new HttpMetaCloudGateway('fixture-phone','fixture-token','fixture-waba');
+ const original=globalThis.fetch,gateway=new HttpMetaCloudGateway('fixture-phone','fixture-token','fixture-waba',{reserve:async()=>({allowed:true,id:'fixture-budget'}),settle:async()=>{}});
  const metadata={data:[{name:'fixture',language:'ar',status:'APPROVED',category:'UTILITY'}]};
  const send=()=>gateway.sendTemplate({to:'201000000000',templateName:'fixture',languageCode:'ar',bodyParameters:[]});
  try{
@@ -46,4 +46,11 @@ test('Meta dispatch distinguishes a confirmed rejection from an uncertain networ
   globalThis.fetch=async(_url,options)=>options.method==='POST'?{ok:true,status:200,json:async()=>({messages:[{id:'wamid.fixture'}]})}:{ok:true,json:async()=>metadata};
   assert.equal((await send()).outcome,'accepted');
  }finally{globalThis.fetch=original;}
+});
+
+test('one-EGP official sending cannot silently charge a foreign destination',async()=>{
+ let reservations=0;
+ const gateway=new HttpMetaCloudGateway('fixture-phone','fixture-token','fixture-waba',{reserve:async()=>{reservations++;throw Error('must not reserve');},settle:async()=>{}});
+ const result=await gateway.sendTemplate({to:'14155550123',templateName:'fixture',bodyParameters:[]});
+ assert.equal(result.success,false);assert.equal(result.outcome,'not_sent');assert.equal(reservations,0);
 });

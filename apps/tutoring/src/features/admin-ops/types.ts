@@ -9,6 +9,7 @@ export interface AdminTenantSummary {
   full_name?: string;
   students_count?: number;
   students_limit?: number;
+  commercial?: {recurring_piasters:number;students:number;plan_id:string}|null;
   plan_name?: string;
   subscription_tier?: string;
   settings?: Record<string, any>;
@@ -94,6 +95,7 @@ export interface CriticalErrorAlertResult {
 }
 
 export interface IAdminOpsRepository {
+  resolveCommercialProof?(proofId:string,adminId:string,action:'approve'|'reject'):Promise<AdminTenantSummary|null>;
   listAllTenants(): Promise<AdminTenantSummary[]>;
   getOverviewCounts(): Promise<AdminOverviewMetrics>;
   listPaymentProofs(status?: string): Promise<PaymentProofAdminItem[]>;

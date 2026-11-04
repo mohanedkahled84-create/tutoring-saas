@@ -45,6 +45,11 @@ export class StudentsService {
       throw new Error("NO_TENANT_CONTEXT");
     }
 
+    if(data.student_phone && this.repo.findByPhone){
+      const existing=await this.repo.findByPhone(tenantId,data.student_phone);
+      if(existing)throw Object.assign(new Error('DUPLICATE_STUDENT_PHONE: الطالب مسجل بالفعل؛ يمكنك إضافته إلى مجموعة أخرى'),{existingStudent:{id:existing.id,name:existing.name,group_id:existing.group_id,archived_at:(existing as any).archived_at}});
+    }
+
     let codeToUse = normalizeDigits(data.student_code || data.code || "").trim();
     if (codeToUse) {
       // Validate uniqueness for manually specified code
@@ -84,6 +89,7 @@ export class StudentsService {
       return student;
     } catch (err: any) {
       const msg = err?.message || "";
+      if(msg.includes('DUPLICATE_STUDENT_PHONE'))throw new Error('DUPLICATE_STUDENT_PHONE: رقم الطالب مسجل بالفعل لدى هذا المدرس');
       if (err?.code === "23505" || msg.includes("idx_students_tenant_code_unique") || msg.includes("idx_students_tenant_student_code_unique") || msg.includes("duplicate key value")) {
         throw new Error(`DUPLICATE_STUDENT_CODE: كود الطالب (${codeToUse}) مسجل بالفعل في المنصة. لا يمكن تكرار الأكواد.`);
       }
@@ -92,6 +98,11 @@ export class StudentsService {
   }
 
   async updateStudent(id: string, data: UpdateStudentDTO): Promise<Student | null> {
+    if(data.student_phone && this.repo.findByPhone){
+      const current=await this.repo.findById(id);
+      const existing=current && await this.repo.findByPhone(current.tenant_id,data.student_phone);
+      if(existing && existing.id!==id)throw new Error('DUPLICATE_STUDENT_PHONE: رقم الطالب مسجل بالفعل لطالب آخر لدى هذا المدرس');
+    }
     const rawCode = data.code !== undefined ? data.code : (data.student_code !== undefined ? data.student_code : undefined);
     if (rawCode !== undefined && rawCode !== null) {
       const newCode = normalizeDigits(rawCode).trim();
@@ -111,6 +122,7 @@ export class StudentsService {
       return await this.repo.update(id, data);
     } catch (err: any) {
       const msg = err?.message || "";
+      if(msg.includes('DUPLICATE_STUDENT_PHONE'))throw new Error('DUPLICATE_STUDENT_PHONE: رقم الطالب مسجل بالفعل لدى هذا المدرس');
       if (err?.code === "23505" || msg.includes("idx_students_tenant_code_unique") || msg.includes("idx_students_tenant_student_code_unique") || msg.includes("duplicate key value")) {
         throw new Error(`DUPLICATE_STUDENT_CODE: كود الطالب مسجل بالفعل في المنصة لطالب آخر.`);
       }
@@ -226,6 +238,11 @@ export class StudentsService {
             "رقم الطالب غير صالح - يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ومكون من 11 رقماً",
         });
         continue;
+      }
+
+      if(studentPhone && this.repo.findByPhone){
+        const existing=await this.repo.findByPhone(tenantId,studentPhone);
+        if(existing){errors.push({row:rowNum,name,error:'رقم الطالب مسجل بالفعل للطالب '+existing.name+'؛ أضف سجله الحالي إلى المجموعة بدل إنشاء طالب جديد'});continue;}
       }
 
       // Ensure unique code: validate if code provided, or auto-assign non-colliding serial

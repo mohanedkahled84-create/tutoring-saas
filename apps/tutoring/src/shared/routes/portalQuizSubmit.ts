@@ -24,6 +24,7 @@ export function registerPortalQuizSubmission(router:Router){
   try{
    const db=getServiceSupabaseClient(),student=await verifiedPortalStudent(db,(parsed.data as any).token);
    if(!student){res.status(401).json({error:{code:'UNAUTHORIZED',message:'سجّل الدخول مجددًا لاستكمال الامتحان'}});return;}
+   if(student.commercial && (!student.commercial.active || !student.commercial.teaching_platform)){res.status(403).json({error:{code:'LEARNING_UNAVAILABLE',message:'الامتحان غير متاح حاليًا؛ تواصل مع المدرس'}});return;}
    (req as any).quizContext={db,student,data:parsed.data};next();
   }catch(error){failure(res,error);}
  },progress,async(req:Request,res:Response)=>{

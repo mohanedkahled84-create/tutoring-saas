@@ -1,3 +1,4 @@
+import {checkCommercialStorage} from '../../shared/utils/commercialStorage.js';
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
@@ -68,6 +69,9 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
       tenantId = student.tenant_id;
     }
 
+    const entitlement=await supabase.rpc('commercial_limits',{p_tenant:tenantId});
+    if(entitlement.error)throw entitlement.error;
+    if(!entitlement.data?.legacy && (!entitlement.data?.active || !entitlement.data?.teaching_platform)){res.status(403).json({error:{code:'LEARNING_UNAVAILABLE',message:'تسليم الواجب غير متاح حاليًا؛ تواصل مع المدرس'}});return;}
     // 2. Verify material belongs to same tenant AND is explicitly designated as homework (C-05)
     const { data: isTargetValid, error: targetError } = await supabase.rpc("homework_target_allowed", {
       p_material: material_id,
@@ -129,6 +133,7 @@ publicHomeworkRouter.post("/submit", homeworkSubmissionRateLimiter, async (req: 
         res.status(400).json({ error: { code: "INVALID_FILE", message: "الملف مرفوض: " + (validation.error || "نوع غير مدعوم") } });
         return;
       }
+      if(!await checkCommercialStorage(supabase,tenantId!,fileBuffer.length,res))return;
       const storagePath = `${tenantId}/${material_id}/${studentId}_${Date.now()}_${validation.sanitizedFilename}`;
 
       const { error: uploadError } = await supabase.storage

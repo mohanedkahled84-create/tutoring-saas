@@ -7,7 +7,7 @@ import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.11.0';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
 import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=8.1.0';
-import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.10.0';
+import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.11.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
@@ -146,7 +146,7 @@ export class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=1.13.1').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=1.14.0').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
@@ -452,6 +452,7 @@ export class CentrlyApp {
     // 3. Expected Next Month Normalized MRR (Restores regular plan prices after discounts)
     let expectedNextMonthMrr = 0;
     tenants.filter(t => t.subscription_status === 'active').forEach(t => {
+      if (t.commercial) { expectedNextMonthMrr += Number(t.commercial.recurring_piasters || 0) / 100; return; }
       const tier = (t.subscription_tier || '').toLowerCase();
       const limit = Number(t.students_limit || t.settings?.students_limit || 0);
       const planName = (t.plan_name || t.settings?.plan_name || '').toLowerCase();
@@ -1160,6 +1161,7 @@ export class CentrlyApp {
 
   async retryRoute(route) {
     if (this.routeErrors) this.routeErrors[route] = null;
+    if (this.commercialRouteBlocks) delete this.commercialRouteBlocks[route];
     this.renderMainContent();
     await this.loadRouteData(route);
   }
@@ -1167,6 +1169,7 @@ export class CentrlyApp {
   async loadRouteData(route, retried = false) {
     if (this.delegation && !this.delegation.canNavigate(route)) return;
     if (this.routeErrors) this.routeErrors[route] = null;
+    if (this.commercialRouteBlocks) delete this.commercialRouteBlocks[route];
     try {
       await this.ensureWorkspaceModules();
       switch (route) {
@@ -1694,8 +1697,9 @@ export class CentrlyApp {
           break;
         }
         case 'billing': {
-          const billingRes = await request('/billing/status');
-          this.billingState = billingRes;
+          const [commercial, catalog] = await Promise.all([request('/billing/commercial'),request('/billing/commercial/catalog')]);
+          const l=commercial.limits;
+          this.billingState = {subscription_status:l.is_trial?'trial':l.active?'active':'expired',is_paid_active:l.active && !l.is_trial,subscription_tier:l.plan_id,students_count:commercial.students_used,students_limit:l.students,subscription_ends_at:l.paid_until || l.period_end,days_remaining:Math.max(0,Math.ceil((Date.parse(l.paid_until || l.period_end)-Date.now())/86400000)),commercial:{...commercial,catalog}};
           this.saveCache('billingState', this.billingState);
           this.renderMainContent();
           break;
@@ -1849,7 +1853,7 @@ export class CentrlyApp {
         }
         case 'video-lessons': {
           const [matRes, grpRes, stdRes] = await Promise.all([
-            request('/materials'),
+            request('/materials?type=video'),
             request('/groups'),
             request('/students'),
           ]);
@@ -1989,6 +1993,7 @@ export class CentrlyApp {
         }
       }
 
+      if (err.status === 402 || err.data?.error?.code?.startsWith('SUBSCRIPTION_') || err.data?.error?.code === 'PLAN_FEATURE_REQUIRED') { this.commercialRouteBlocks = {...this.commercialRouteBlocks, [route]:true}; }
       if (this.routeErrors) {
         const hasRefresh = Boolean(authService.getRefreshToken());
         this.routeErrors[route] = (isAuthErr && !hasRefresh)
@@ -2096,7 +2101,7 @@ export class CentrlyApp {
           <p style="color: var(--centrly-text); font-size: 0.9rem; margin: 0 0 1.25rem 0; line-height: 1.6;">
             ${escapeHtml(this.routeErrors[route])}
           </p>
-          ${isAuthErr ? `
+          ${this.commercialRouteBlocks?.[route] ? this.delegation ? '<p>راجع المدرس لتعديل الاشتراك.</p>' : `<button class="btn btn-primary" style="min-height:44px" onclick="window.centrlyApp.navigate('billing')">مراجعة الاشتراك والباقات</button>` : isAuthErr ? `
             <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.renderAuth('login')" style="font-weight: 700; padding: 0.5rem 1.5rem;">
               <span>تسجيل الدخول مجدداً</span>
             </button>

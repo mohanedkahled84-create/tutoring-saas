@@ -16,81 +16,37 @@ const paymentProofSchema = z.object({
   coupon_code: z.string().max(50).optional().nullable(),
 });
 
-test("BILLING-TRIAL: Trial status does NOT mark any paid plan as 'باقتك الحالية' or 'مفعّلة الآن'", () => {
-  const trialData = {
-    subscription_status: "trial",
-    trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-    students_count: 50,
-    students_limit: 750, // default limit on trial
-    days_remaining: 14,
-  };
-
-  const html = renderBillingView(trialData, { name: "مستر أحمد" });
-
-  // 1. Must NOT contain "باقتك الحالية"
-  assert.ok(
-    !html.includes("باقتك الحالية"),
-    "Trial user must NOT see 'باقتك الحالية' on any plan card"
-  );
-
-  // 2. Must NOT contain "مفعّلة الآن"
-  assert.ok(
-    !html.includes("مفعّلة الآن"),
-    "Trial user must NOT see 'مفعّلة الآن' on any plan card"
-  );
-
-  // 3. Must show "فترة تجريبية مجانية (كافة ميزات المنصة متاحة)"
-  assert.ok(
-    html.includes("فترة تجريبية مجانية (كافة ميزات المنصة متاحة)"),
-    "Top card must indicate trial without binding to a specific plan"
-  );
-
-  // 4. Middle plan (750) must display popular badge: "الأكثر طلباً للمعلمين"
-  assert.ok(
-    html.includes("الأكثر طلباً للمعلمين"),
-    "750 plan must show 'الأكثر طلباً للمعلمين' instead of 'باقتك الحالية'"
-  );
-
-  // 5. Button text should be "اشترك في باقة 750 طالب" not "تجديد باقتي الحالية"
-  assert.ok(
-    html.includes("اشترك في باقة 750 طالب"),
-    "Button text for 750 plan must invite subscription, not renewal"
-  );
-  assert.ok(
-    !html.includes("تجديد باقتي الحالية (باقة 750 طالب)"),
-    "Must not say 'تجديد باقتي الحالية' for trial user"
-  );
+const catalog = [
+ {id:'basic_v1',name:'Basic',rank:1,price_piasters:24900,reference_piasters:50000,students:100,storage_bytes:2e9,assistants:2,student_piasters:200,teaching_platform:false},
+ {id:'pro_v1',name:'Pro',rank:2,price_piasters:79900,reference_piasters:160000,students:300,storage_bytes:15e9,assistants:4,student_piasters:150,initial_gift_piasters:10000,teaching_platform:true},
+ {id:'max_v1',name:'Max',rank:3,price_piasters:99900,reference_piasters:200000,students:500,storage_bytes:30e9,assistants:8,student_piasters:100,initial_gift_piasters:15000,renewal_gift_piasters:10000,teaching_platform:true},
+];
+function billingFixture(isTrial=false,plan='pro_v1') {
+ const selected=catalog.find(p=>p.id===plan);
+ return {commercial:{catalog,limits:{...selected,plan_id:plan,is_trial:isTrial,active:true,period_end:new Date(Date.now()+7*86400000).toISOString(),recurring_piasters:selected.price_piasters},students_used:50,assistants_used:1,storage_bytes_used:1e9,addons:[],orders:[],ledger:[]}};
+}
+test('BILLING-TRIAL: seven-day trial never claims a paid plan is current or active',()=>{
+ const html=renderBillingView(billingFixture(true));
+ assert.ok(html.includes('تجربة مجانية ٧ أيام'));
+ assert.ok(!html.includes('باقتك الحالية'));
+ assert.ok(!html.includes('مفعّلة الآن'));
+ assert.ok(!html.includes('تجديد الاشتراك'));
+ assert.ok(html.includes("commercialPlan('basic_v1')"));
+ assert.ok(html.includes('اختيار الباقة'));
 });
-
-test("BILLING-ACTIVE: Active paid plan displays 'باقتك الحالية' and 'مفعّلة الآن' accurately", () => {
-  const activeData = {
-    subscription_status: "active",
-    subscription_ends_at: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString(),
-    students_count: 120,
-    students_limit: 750,
-    days_remaining: 25,
-    plan_name: "باقة 750 طالب",
-  };
-
-  const html = renderBillingView(activeData, { name: "مستر محمد" });
-
-  // 1. Must contain "باقتك الحالية"
-  assert.ok(
-    html.includes("باقتك الحالية"),
-    "Active user on 750 plan must see 'باقتك الحالية'"
-  );
-
-  // 2. Must contain "مفعّلة الآن"
-  assert.ok(
-    html.includes("مفعّلة الآن"),
-    "Active user on 750 plan must see 'مفعّلة الآن'"
-  );
-
-  // 3. Must contain renewal button
-  assert.ok(
-    html.includes("تجديد باقتي الحالية (باقة 750 طالب)"),
-    "Must offer renewal for current plan"
-  );
+test('BILLING-ACTIVE: paid plan alone is current and can be renewed',()=>{
+ for(const plan of catalog){
+  const html=renderBillingView(billingFixture(false,plan.id));
+  assert.equal((html.match(/باقتك الحالية/g)||[]).length,1);
+  assert.ok(html.includes('مفعّلة الآن'));
+  assert.equal((html.match(/تجديد الاشتراك/g)||[]).length,1);
+ }
+});
+test('BILLING: loading never renders obsolete plan prices or invented usage',()=>{
+ const html=renderBillingView({});
+ assert.ok(html.includes('جار قراءة الباقات'));
+ assert.ok(!html.includes('750'));
+ assert.ok(!html.includes('999'));
 });
 
 test("PAYMENT-PROOF-SCHEMA: Validates 0 amount for 100% coupon without requiring image proof", () => {

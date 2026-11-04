@@ -1,3 +1,4 @@
+import {requireCommercialAccess} from '../../shared/middleware/commercialAccess.js';
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import {
@@ -53,6 +54,7 @@ centersRouter.post("/invitations/accept", async (req: AuthenticatedRequest, res:
 centersRouter.get(
   "/teachers",
   authenticateUser,
+  requireCommercialAccess,
   requireCenterOwnerOrAdmin,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id;
@@ -75,6 +77,7 @@ centersRouter.get(
 centersRouter.post(
   "/teachers",
   authenticateUser,
+  requireCommercialAccess,
   requireCenterOwnerOrAdmin,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id;
@@ -97,6 +100,7 @@ centersRouter.post(
 centersRouter.post(
   "/teachers/:id/resend-invite",
   authenticateUser,
+  requireCommercialAccess,
   requireCenterOwnerOrAdmin,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id;
@@ -116,6 +120,7 @@ centersRouter.post(
 centersRouter.get(
   "/assistants",
   authenticateUser,
+  requireCommercialAccess,
   requireCenterOwnerOrAdmin,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id;
@@ -138,6 +143,7 @@ centersRouter.get(
 centersRouter.post(
   "/assistants",
   authenticateUser,
+  requireCommercialAccess,
   requireCenterOwnerOrAdmin,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id;
@@ -160,6 +166,7 @@ centersRouter.post(
 centersRouter.post(
   "/assistants/:id/resend-invite",
   authenticateUser,
+  requireCommercialAccess,
   requireCenterOwnerOrAdmin,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id;
@@ -204,6 +211,7 @@ centersRouter.get(
 centersRouter.post(
   "/rooms",
   authenticateUser,
+  requireCommercialAccess,
   requireCenterOwnerOrAdmin,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const tenantId = req.user?.tenant_id;
@@ -313,6 +321,7 @@ centersRouter.post(
 centersRouter.get(
   "/financials/rollup",
   authenticateUser,
+  requireCommercialAccess,
   requireCenterOwnerOrAdmin,
   requireFinancialAccess,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -364,6 +373,7 @@ centersRouter.get(
 centersRouter.post(
   "/financials/payouts",
   authenticateUser,
+  requireCommercialAccess,
   requireCenterOwnerOrAdmin,
   requireFinancialAccess,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {

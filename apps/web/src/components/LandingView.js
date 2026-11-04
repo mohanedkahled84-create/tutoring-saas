@@ -1,3 +1,4 @@
+import {renderPublicPricing,hydratePublicPricing} from './PublicPlans.js';
 import {trackProductEvent} from '../services/productFunnel.js';
 /**
  * Centrly SaaS Official Landing Page Component
@@ -231,7 +232,7 @@ export function renderLandingView() {
               style="background: var(--brand-gold); color: var(--brand-navy); font-family: 'Cairo', sans-serif; font-size: 0.875rem; font-weight: 800; padding: 0.5rem 1.25rem; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(231, 163, 48, 0.25); transition: all 0.2s;"
               onmouseover="this.style.backgroundColor='#dba024'; this.style.transform='translateY(-1px)';"
               onmouseout="this.style.backgroundColor='var(--brand-gold)'; this.style.transform='none';">
-              ابدأ مجاناً (14 يوماً)
+              ابدأ مجاناً (٧ أيام)
             </button>
           </div>
 
@@ -266,7 +267,7 @@ export function renderLandingView() {
               style="background: var(--brand-navy); border: none; color: #ffffff; font-family: 'Cairo', sans-serif; font-size: 1.05rem; font-weight: 800; padding: 0.85rem 2.25rem; border-radius: 12px; cursor: pointer; box-shadow: 0 8px 20px rgba(23, 45, 112, 0.18); transition: all 0.2s ease;"
               onmouseover="this.style.backgroundColor='var(--brand-blue)'; this.style.transform='translateY(-2px)';"
               onmouseout="this.style.backgroundColor='var(--brand-navy)'; this.style.transform='none';">
-              ابدأ تجربتك المجانية فوراً (14 يوماً)
+              ابدأ تجربتك المجانية فوراً (٧ أيام)
             </button>
 
             <button onclick="window.centrlyApp.renderAuth('login')" 
@@ -512,151 +513,7 @@ export function renderLandingView() {
       <!-- ================================================================= -->
       <!-- 4. CLEAN PRICING TIERS                                            -->
       <!-- ================================================================= -->
-      <section id="pricing" style="padding: 5rem 1.25rem; background: var(--brand-cream);">
-        <div style="max-width: 1100px; margin: 0 auto;">
-          
-          <div style="text-align: center; max-width: 700px; margin: 0 auto 3rem;">
-            <span style="color: var(--brand-green); font-weight: 800; font-size: 0.85rem; text-transform: uppercase;">تسعير عادل وشفاف</span>
-            <h2 style="font-size: clamp(1.6rem, 3vw, 2.3rem); font-weight: 900; color: var(--brand-navy); margin: 0.5rem 0 0.75rem;">
-              اختر الباقة المناسبة لسعة طلابك
-            </h2>
-            <p style="font-size: 1rem; color: var(--brand-text); margin: 0; line-height: 1.7;">
-              جميع الميزات المذكورة أعلاه متوفرة بالكامل في كل الباقات بلا استثناء. الاختلاف الوحيد هو عدد الطلاب!
-            </p>
-            <div style="display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; font-weight: 800; font-size: 0.875rem; padding: 0.4rem 1rem; border-radius: 9999px; border: 1.5px solid #a7f3d0; margin-top: 0.85rem;">
-              <span>🎉 وفر 20% كاملة عند اختيار الاشتراك السنوي</span>
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1.75rem; align-items: stretch;">
-            
-            <!-- Plan 1: 300 Students -->
-            <div class="pricing-card" style="background: var(--brand-surface); border: 1.5px solid var(--brand-line); border-radius: 18px; padding: 2.25rem 1.75rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s;">
-              <div>
-                <div style="font-size: 1.2rem; font-weight: 800; color: var(--brand-navy);">باقة 300 طالب</div>
-                <div style="font-size: 0.85rem; color: var(--brand-muted); margin-top: 0.25rem;">للبدايات والمجموعات الفردية</div>
-                
-                <div style="margin: 1.5rem 0; display: flex; align-items: baseline; gap: 0.35rem;">
-                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-navy);">499</span>
-                  <span style="font-size: 0.95rem; font-weight: 700; color: var(--brand-muted);">جنيه / شهرياً</span>
-                </div>
-
-                <div style="background: var(--brand-pale); color: var(--brand-blue); font-size: 0.875rem; font-weight: 800; padding: 0.5rem 0.75rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
-                  سعة حتى 300 طالب مسجل
-                </div>
-
-                <div style="border-top: 1px solid var(--brand-line); padding-top: 1.25rem; font-size: 0.875rem; color: var(--brand-text); line-height: 1.8;">
-                  <div style="display: flex; align-items: center; gap: 6px; color: var(--brand-green); font-weight: 700; margin-bottom: 0.5rem;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span>تشمل جميع ميزات المنظومة بالكامل</span>
-                  </div>
-                  <div style="color: var(--brand-muted); font-size: 0.8rem;">
-                    تتضمن مسح الباركود، إشعارات الواتساب، الكروت، الكويزات، وبوابة المتابعة مع دعم فني مستمر.
-                  </div>
-                </div>
-              </div>
-
-              <div style="margin-top: 2rem;">
-                <button onclick="window.centrlyApp.renderAuth('signup')" 
-                  style="width: 100%; background: var(--brand-cream); border: 1.5px solid var(--brand-line); color: var(--brand-navy); font-family: 'Cairo', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.75rem; border-radius: 10px; cursor: pointer; transition: all 0.2s;"
-                  onmouseover="this.style.backgroundColor='var(--brand-navy)'; this.style.borderColor='var(--brand-navy)'; this.style.color='#ffffff';"
-                  onmouseout="this.style.backgroundColor='var(--brand-cream)'; this.style.borderColor='var(--brand-line)'; this.style.color='var(--brand-navy)';">
-                  ابدأ باقة الـ 300 طالب (تجربة 14 يوماً)
-                </button>
-              </div>
-            </div>
-
-            <!-- Plan 2: 750 Students (Prominent) -->
-            <div class="pricing-card" style="background: var(--brand-surface); border: 2px solid var(--brand-blue); border-radius: 18px; padding: 2.25rem 1.75rem; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 8px 24px rgba(41, 73, 186, 0.08); transition: all 0.2s;">
-              <div style="position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: var(--brand-blue); color: #ffffff; font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.85rem; border-radius: 9999px;">
-                الأكثر طلباً للمعلمين
-              </div>
-
-              <div>
-                <div style="font-size: 1.25rem; font-weight: 800; color: var(--brand-blue);">باقة 750 طالب</div>
-                <div style="font-size: 0.85rem; color: var(--brand-muted); margin-top: 0.25rem;">للمجموعات الكبيرة وأصحاب الفرق</div>
-                
-                <div style="margin: 1.5rem 0; display: flex; align-items: baseline; gap: 0.35rem;">
-                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-blue);">899</span>
-                  <span style="font-size: 0.95rem; font-weight: 700; color: var(--brand-muted);">جنيه / شهرياً</span>
-                </div>
-
-                <div style="background: var(--brand-green-light); color: var(--brand-green); font-size: 0.875rem; font-weight: 800; padding: 0.5rem 0.75rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
-                  سعة حتى 750 طالب مسجل
-                </div>
-
-                <div style="border-top: 1px solid var(--brand-line); padding-top: 1.25rem; font-size: 0.875rem; color: var(--brand-text); line-height: 1.8;">
-                  <div style="display: flex; align-items: center; gap: 6px; color: var(--brand-green); font-weight: 700; margin-bottom: 0.5rem;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span>تشمل جميع ميزات المنظومة بالكامل</span>
-                  </div>
-                  <div style="color: var(--brand-muted); font-size: 0.8rem;">
-                    تتضمن مسح الباركود، إشعارات الواتساب، الكروت، الكويزات، وبوابة المتابعة مع دعم فني مستمر.
-                  </div>
-                </div>
-              </div>
-
-              <div style="margin-top: 2rem;">
-                <button onclick="window.centrlyApp.renderAuth('signup')" 
-                  style="width: 100%; background: var(--brand-blue); border: none; color: #ffffff; font-family: 'Cairo', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.8rem; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 12px rgba(41, 73, 186, 0.25); transition: all 0.2s;"
-                  onmouseover="this.style.backgroundColor='var(--brand-navy)';"
-                  onmouseout="this.style.backgroundColor='var(--brand-blue)';">
-                  ابدأ باقة الـ 750 طالب (تجربة 14 يوماً)
-                </button>
-              </div>
-            </div>
-
-            <!-- Plan 3: 1500 Students -->
-            <div class="pricing-card" style="background: var(--brand-surface); border: 1.5px solid var(--brand-line); border-radius: 18px; padding: 2.25rem 1.75rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s;">
-              <div>
-                <div style="font-size: 1.2rem; font-weight: 800; color: var(--brand-navy);">باقة 1500 طالب</div>
-                <div style="font-size: 0.85rem; color: var(--brand-muted); margin-top: 0.25rem;">للسناتر والمراكز التعليمية</div>
-                
-                <div style="margin: 1.5rem 0; display: flex; align-items: baseline; gap: 0.35rem;">
-                  <span style="font-size: 2.75rem; font-weight: 900; color: var(--brand-navy);">1,399</span>
-                  <span style="font-size: 0.95rem; font-weight: 700; color: var(--brand-muted);">جنيه / شهرياً</span>
-                </div>
-
-                <div style="background: var(--brand-pale); color: var(--brand-navy); font-size: 0.875rem; font-weight: 800; padding: 0.5rem 0.75rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem;">
-                  سعة حتى 1500 طالب مسجل
-                </div>
-
-                <div style="border-top: 1px solid var(--brand-line); padding-top: 1.25rem; font-size: 0.875rem; color: var(--brand-text); line-height: 1.8;">
-                  <div style="display: flex; align-items: center; gap: 6px; color: var(--brand-green); font-weight: 700; margin-bottom: 0.5rem;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span>تشمل جميع ميزات المنظومة بالكامل</span>
-                  </div>
-                  <div style="color: var(--brand-muted); font-size: 0.8rem;">
-                    تتضمن مسح الباركود، إشعارات الواتساب، الكروت، الكويزات، وبوابة المتابعة مع دعم فني مستمر.
-                  </div>
-                </div>
-              </div>
-
-              <div style="margin-top: 2rem;">
-                <button onclick="window.centrlyApp.renderAuth('signup')" 
-                  style="width: 100%; background: var(--brand-cream); border: 1.5px solid var(--brand-line); color: var(--brand-navy); font-family: 'Cairo', sans-serif; font-size: 0.95rem; font-weight: 800; padding: 0.75rem; border-radius: 10px; cursor: pointer; transition: all 0.2s;"
-                  onmouseover="this.style.backgroundColor='var(--brand-navy)'; this.style.borderColor='var(--brand-navy)'; this.style.color='#ffffff';"
-                  onmouseout="this.style.backgroundColor='var(--brand-cream)'; this.style.borderColor='var(--brand-line)'; this.style.color='var(--brand-navy)';">
-                  ابدأ باقة الـ 1500 طالب (تجربة 14 يوماً)
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Enterprise Callout -->
-          <div style="margin-top: 2rem; background: var(--brand-surface); border: 1.5px dashed var(--brand-line); border-radius: 14px; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <div style="font-size: 0.95rem; font-weight: 800; color: var(--brand-navy);">لديك أكثر من 1500 طالب أو عدة فروع لسنترك؟</div>
-              <div style="font-size: 0.8rem; color: var(--brand-text); margin-top: 0.2rem;">نوفر باقات مخصصة للأعداد الكبرى بسيرفرات خاصة مع دعم مباشر.</div>
-            </div>
-            <a href="https://wa.me/201123671177?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%D8%8C%20%D8%B9%D8%A7%D9%8A%D8%B2%20%D8%A3%D8%B9%D9%85%D9%84%20%D9%85%D8%AC%D9%85%D9%88%D8%B9%D8%A9%20%D9%81%D9%88%D9%82%201500%20%D8%B7%D8%A7%D9%84%D8%A8%20%D9%88%D9%85%D8%AD%D8%AA%D8%A7%D8%AC%20%D8%A3%D8%B9%D8%B1%D9%81%20%D8%A7%D9%84%D8%AA%D9%81%D8%A7%D8%B5%D9%8A%D9%84%20%D9%88%D8%A7%D9%84%D8%A3%D8%B3%D8%B9%D8%A7%D8%B1." target="_blank" rel="noopener noreferrer" style="background: var(--brand-navy); color: #ffffff; text-decoration: none; font-family: 'Cairo', sans-serif; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--brand-navy-light)';" onmouseout="this.style.backgroundColor='var(--brand-navy)';">
-              <span>طلب التفاصيل</span>
-            </a>
-          </div>
-
-        </div>
-      </section>
+      ${renderPublicPricing()}
 
             <!-- ================================================================= -->
       <!-- 4.5. FREQUENTLY ASKED QUESTIONS (FAQ) ACCORDION                   -->
@@ -715,11 +572,11 @@ export function renderLandingView() {
             <!-- Question 4 -->
             <div class="faq-item" id="faqItem4">
               <button type="button" class="faq-question" onclick="window.centrlyApp.toggleFaq(4)">
-                <span>ماذا يحدث بعد انتهاء فترة الـ 14 يوماً المجانية؟</span>
+                <span>ماذا يحدث بعد انتهاء فترة الـ ٧ أيام المجانية؟</span>
                 <svg id="faqIcon4" class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
               <div class="faq-answer" id="faqAnswer4">
-                يمكنك اختيار الترقية إلى الباقة الأنسب لعدد طلابك (300، 750، أو 1500 طالب) ومتابعة العمل بكامل بياناتك السابقة دون أي فقد، ولن يتم خصم أي مبالغ تلقائياً حيث لا نطلب بيانات بطاقة ائتمانية للتسجيل في التجربة.
+                يمكنك اختيار الترقية إلى الباقة الأنسب لشغلك (Basic أو Pro أو Max) ومتابعة العمل بكامل بياناتك السابقة دون أي فقد، ولن يتم خصم أي مبالغ تلقائياً حيث لا نطلب بيانات بطاقة ائتمانية للتسجيل في التجربة.
               </div>
             </div>
 
@@ -798,7 +655,7 @@ export function renderLandingView() {
       <!-- ================================================================= -->
       <div class="mobile-sticky-cta">
         <button onclick="window.centrlyApp.renderAuth('signup')" style="flex: 1; background: var(--brand-gold); color: var(--brand-navy); border: none; font-family: 'Cairo', sans-serif; font-size: 0.9rem; font-weight: 800; padding: 0.75rem 0.5rem; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(231, 163, 48, 0.25);">
-          ابدأ مجاناً (14 يوماً)
+          ابدأ مجاناً (٧ أيام)
         </button>
         <a href="https://wa.me/201123671177?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D9%88%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D8%B3%D9%86%D8%AA%D8%B1%D9%84%D9%8A" target="_blank" rel="noopener noreferrer" style="background: #16a34a; color: #ffffff; padding: 0.75rem 1rem; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;" title="تواصل واتساب">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
@@ -867,6 +724,7 @@ export function registerLandingActions(app) {
     const appEl = this.getAppEl();
     if (appEl) {
       appEl.innerHTML = renderLandingView();
+      void hydratePublicPricing();
     }
     this.initCookieConsent();
     const policy=new URLSearchParams(location.search).get('policy');

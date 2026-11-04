@@ -1,3 +1,4 @@
+import {checkCommercialStorage} from '../../shared/utils/commercialStorage.js';
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServices } from "../../composition.js";
@@ -441,7 +442,8 @@ quizzesRouter.get(
       }
       mergeLegacyQuizRows(legacyRows || [], allowedGroupIds, groupId, richQuizzes, drafts);
 
-      res.status(200).json({ success: true, quizzes: richQuizzes, drafts });
+      const limits=(req as any).commercialLimits,basic=limits && !limits.legacy && !limits.teaching_platform;
+      res.status(200).json({ success: true, quizzes: basic?richQuizzes.filter(q=>q.exam_mode==='paper'):richQuizzes, drafts:basic?drafts.filter(q=>q.exam_mode==='paper'):drafts });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch rich quizzes";
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
@@ -732,6 +734,7 @@ quizzesRouter.post(
         return;
       }
 
+      if(!await checkCommercialStorage(supabase,tenantId,fileBuffer.length,res))return;
       const storagePath = `quizzes/${tenantId}/${Date.now()}_${validation.sanitizedFilename}`;
       const { error: uploadError } = await supabase.storage
         .from("homework-submissions")
@@ -1043,7 +1046,7 @@ quizzesRouter.get(
         console.warn("[Quizzes] Could not reconcile quiz_scores into submissions:", scoreErr);
       }
 
-      res.status(200).json({ success: true, submissions: results });
+      res.status(200).json({ success: true, submissions: (req as any).commercialLimits && !(req as any).commercialLimits.legacy && !(req as any).commercialLimits.teaching_platform ? results.filter((r:any)=>r.exam_mode==='paper') : results });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch online submissions";
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
@@ -1146,7 +1149,7 @@ quizzesRouter.get(
           };
         });
 
-      res.status(200).json({ success: true, submissions: results });
+      res.status(200).json({ success: true, submissions: (req as any).commercialLimits && !(req as any).commercialLimits.legacy && !(req as any).commercialLimits.teaching_platform ? results.filter((r:any)=>r.exam_mode==='paper') : results });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch pending submissions";
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
@@ -1546,6 +1549,7 @@ quizzesRouter.post(
         if (matches && matches.length === 3) {
           const contentType = matches[1];
           const buffer = Buffer.from(matches[2], "base64");
+          if(!await checkCommercialStorage(supabase,tenantId,buffer.length,res))return;
           const ext = contentType.split("/")[1] || "jpg";
           const path = `${tenantId}/quizzes/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
@@ -1572,15 +1576,9 @@ quizzesRouter.post(
         }
       }
 
-      res.status(200).json({
-        success: true,
-        url: image_data,
-      });
+      res.status(503).json({error:{code:'STORAGE_ERROR',message:'تعذر حفظ صورة السؤال؛ حاول مجددًا'}});
     } catch (_) {
-      res.status(200).json({
-        success: true,
-        url: image_data,
-      });
+      res.status(503).json({error:{code:'STORAGE_ERROR',message:'تعذر حفظ صورة السؤال؛ حاول مجددًا'}});
     }
   }
 );

@@ -11,6 +11,7 @@
 
 import {approvedUtilityTemplate,type ExpectedTemplate} from '../../shared/utils/metaTemplatePolicy.js';
 import {metaTemplateParameters} from '../../shared/utils/metaTemplateParameters.js';
+import {reserveMetaBudget,settleMetaBudget,type MetaBudgetContext} from '../../shared/utils/metaDispatchBudget.js';
 
 export interface MetaTemplateSendResult {
   success: boolean;
@@ -19,6 +20,8 @@ export interface MetaTemplateSendResult {
   error?: string;
   errorCode?: number;
   isPendingApproval?: boolean;
+  deferred?:boolean;
+  retryAt?:string|null;
 }
 
 export interface IMetaCloudGateway {
@@ -28,6 +31,7 @@ export interface IMetaCloudGateway {
     languageCode?: string;
     bodyParameters: string[];
     expected?:ExpectedTemplate;
+    budget?:MetaBudgetContext;
   }): Promise<MetaTemplateSendResult>;
 
   getTemplateStatuses(): Promise<Record<string, "APPROVED" | "PENDING" | "REJECTED" | "UNKNOWN">>;
@@ -40,7 +44,8 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
   constructor(
     private readonly phoneNumberId?: string,
     private readonly accessToken?: string,
-    private readonly wabaId?: string
+    private readonly wabaId?: string,
+    private readonly budgetPolicy={reserve:reserveMetaBudget,settle:settleMetaBudget}
   ) {}
 
   async sendTemplate(params: {
@@ -49,6 +54,7 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
     languageCode?: string;
     bodyParameters: string[];
     expected?:ExpectedTemplate;
+    budget?:MetaBudgetContext;
   }): Promise<MetaTemplateSendResult> {
     if (!this.phoneNumberId || !this.accessToken) {
       return {
@@ -59,6 +65,7 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
     }
 
     const cleanTo = params.to.replace(/\D/g, "");
+    if(!/^201[0125]\d{8}$/.test(cleanTo))return {success:false,outcome:'not_sent',error:'الإرسال الرسمي بالسعر الحالي للأرقام المصرية فقط؛ استخدم فتح واتساب للأرقام الأخرى'};
     const languageCode = params.languageCode || "en";
     if(params.expected && params.bodyParameters.length!==params.expected.parameterCount)return {success:false,outcome:'not_sent',error:'Template parameter count does not match the approved contract'};
     if(!await approvedUtilityTemplate({baseUrl:this.baseUrl,accessToken:this.accessToken,wabaId:this.wabaId,name:params.templateName,language:languageCode,expected:params.expected})){
@@ -87,6 +94,8 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
       },
     };
 
+    const budget=await this.budgetPolicy.reserve(cleanTo,params.budget);
+    if(!budget.allowed)return {success:false,outcome:'not_sent',deferred:true,retryAt:budget.nextAt,error:'الإرسال مجدول على دفعات؛ حاول لاحقًا'};
     try {
       const response = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
         method: "POST",
@@ -107,6 +116,7 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
 
         // Code 100 often indicates template is pending approval or parameter mismatch
         const isPending = errorCode === 100 || (errorObj.error_data?.details || "").includes("template");
+        await this.budgetPolicy.settle(budget.id,response.status>=400 && response.status<500 && errorObj.code!==undefined?'not_sent':'unknown');
 
         return {
           success: false,
@@ -119,12 +129,14 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
 
       const messageId = (data as any)?.messages?.[0]?.id;
       if(typeof messageId!=='string' || !messageId.startsWith('wamid.'))return {success:false,outcome:'unknown',error:'Meta did not return a confirmed message identifier'};
+      await this.budgetPolicy.settle(budget.id,'accepted');
       return {
         success: true,
         outcome:'accepted',
         messageId,
       };
     } catch (err: any) {
+      await this.budgetPolicy.settle(budget.id,'unknown');
       return {
         success: false,
         outcome:'unknown',

@@ -59,21 +59,9 @@ export class SupabaseMetaPortalQueueRepository implements IMetaPortalQueueReposi
   }
 
   async getTodaySentCount(): Promise<number> {
-    const today = new Date().toISOString().slice(0, 10);
-    try {
-      const { count, error } = await this.db
-        .from("meta_portal_dispatch_queue")
-        .select("id", { count: "exact", head: true })
-        .eq("scheduled_date", today)
-        .eq("status", "sent");
-
-      if (error) {
-        return 0;
-      }
-      return count || 0;
-    } catch {
-      return 0;
-    }
+    const {data,error}=await this.db.rpc('meta_budget_usage');
+    if(error)throw new Error('تعذر التحقق من سعة الإرسال');
+    return Number(data)||0;
   }
 
   async getTenantStats(tenantId: string): Promise<{ sentToday: number; pendingQueue: number; totalSent: number }> {
@@ -145,7 +133,7 @@ export class SupabaseMetaPortalQueueRepository implements IMetaPortalQueueReposi
 
   async getPendingItemsForDate(date: string, limit = 100): Promise<MetaQueueItem[]> {
     try {
-      const {data,error}=await this.db.rpc('portal_onboarding_pending',{p_date:date,p_limit:limit});
+      const {data,error}=await this.db.rpc('meta_pending_fair',{p_limit:limit});
 
       if (error) return [];
       return (data || []) as MetaQueueItem[];

@@ -15,7 +15,7 @@ test("DEV-68: AuthService - Password policy enforces security requirements", () 
   assert.equal(service.validatePassword("StrongPass#123").valid, true);
 });
 
-test("DEV-68: AuthService - Signup establishes 14-day trial and calls founder alert callback with OTP", async () => {
+test("DEV-68: AuthService - Signup establishes 7-day trial and calls founder alert callback with OTP", async () => {
   const repo = new FakeAuthRepository();
   const service = new AuthService(repo);
 
@@ -41,6 +41,7 @@ test("DEV-68: AuthService - Signup establishes 14-day trial and calls founder al
   assert.equal(result.user.email, "teacher@test.com");
   assert.equal(result.tenant.subscription_status, "trial");
   assert.ok(result.tenant.trial_ends_at);
+  assert.ok(Math.abs(Date.parse(result.tenant.trial_ends_at)-Date.now()-7*86400000)<10000);
   assert.equal(alertCalled, true);
   assert.equal(alertRecipient, "teacher@test.com");
   assert.equal(receivedOtp, "123456");

@@ -17,7 +17,7 @@ export function createAnnouncementWorker(db:SupabaseClient,gateway:IMetaCloudGat
      const type=announcementTypeSchema.safeParse(job.template);
      if(!type.success || !Array.isArray(job.parameters) || job.parameters.length!==type.data.fields.length || job.parameters.some((p:unknown)=>typeof p!=='string'))result={outcome:'not_sent',errorCode:'INVALID_TEMPLATE_CONTRACT'};
      else{
-      try{result=await gateway.sendTemplate({to:job.to,templateName:type.data.name,languageCode:'ar',bodyParameters:job.parameters,expected:{id:type.data.id,body:type.data.body,parameterCount:type.data.fields.length}});}
+      try{result=await gateway.sendTemplate({to:job.to,templateName:type.data.name,languageCode:'ar',bodyParameters:job.parameters,budget:{tenantId:job.tenant_id,dispatchId:job.attempt_id,reserved:true},expected:{id:type.data.id,body:type.data.body,parameterCount:type.data.fields.length}});}
       catch{result={outcome:'unknown',errorCode:'TRANSPORT_UNKNOWN'};}
      }
      // A database failure after transport is intentionally left for the lease

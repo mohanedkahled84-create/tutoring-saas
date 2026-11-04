@@ -1,3 +1,4 @@
+import {checkCommercialStorage} from '../../shared/utils/commercialStorage.js';
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServiceSupabaseClient, supabasePublic } from "../../supabase.js";
@@ -40,7 +41,8 @@ materialsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promi
     const { data, error } = await query;
     if (error) throw error;
 
-    const materials = (data || []).filter((m:any)=>!groupId || materialMatchesGroups(m,[groupId])).map((m: any) => ({
+    const limits=(req as any).commercialLimits;
+    const materials = (data || []).filter((m:any)=>!limits || limits.legacy || limits.teaching_platform || !['video','online_quiz'].includes(m.type)).filter((m:any)=>!groupId || materialMatchesGroups(m,[groupId])).map((m: any) => ({
       ...m,
       url: normalizeMaterialUrl(m.url),
     }));
@@ -112,6 +114,7 @@ materialsRouter.post("/", async (req: AuthenticatedRequest, res: Response): Prom
         return;
       }
 
+      if(!await checkCommercialStorage(supabase,tenantId!,fileBuffer.length,res))return;
       const storagePath = `materials/${tenantId}/${Date.now()}_${validation.sanitizedFilename}`;
 
       const { error: uploadError } = await supabase.storage
