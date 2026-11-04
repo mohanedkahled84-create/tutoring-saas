@@ -1622,7 +1622,7 @@ export function registerSessionsActions(app) {
 
     this._sessionSyncInterval = setInterval(() => {
       this.pollLiveSessionUpdates();
-    }, 4000);
+    }, 10000);
 
     if (!this._visibilityListenerAttached) {
       this._visibilityListenerAttached = true;
@@ -1651,12 +1651,21 @@ export function registerSessionsActions(app) {
     if (!sid || String(sid).startsWith('sess-') || this.sessionState.status !== 'in_progress') {
       return;
     }
+    // Hidden/offline tabs must not download a whole attendance sheet forever.
+    // Focus and visibility events already trigger a refresh when returning.
+    if (document.visibilityState === 'hidden' || navigator.onLine === false || this._sessionPollInFlight) return;
+    const now = Date.now();
+    if (this._sessionPollId === sid && now - (this._sessionPollAt || 0) < 3000) return;
+    this._sessionPollId = sid;
+    this._sessionPollAt = now;
+    this._sessionPollInFlight = true;
+    try {
     if (this.getOfflineAttendanceQueue().length > 0) {
       await this.flushOfflineAttendanceQueue();
     }
-    try {
       const res = await request(`/sessions/${sid}`).catch(() => null);
-      if (!res) return;
+      // A slow response from the previous session must not touch the new roster.
+      if (!res || this.sessionState?.id !== sid || this.sessionState.status !== 'in_progress') return;
 
       const serverStatus = res.session?.status || res.status;
       if (serverStatus === 'ended' || serverStatus === 'cancelled') {
@@ -1746,7 +1755,7 @@ export function registerSessionsActions(app) {
           }
         }
       }
-    } catch (_) {}
+    } catch (_) {} finally { this._sessionPollInFlight = false; }
   }
 
   // Session Finalization & Note Choice (DEV-Feedback)

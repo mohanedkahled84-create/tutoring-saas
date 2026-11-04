@@ -14,13 +14,18 @@ import {loadPortalAccount} from "../utils/portalAccount.js";
 import {parentFamilyRouter} from './parentFamily.js';
 import {registerPortalQuizSubmission} from './portalQuizSubmit.js';
 import {metaPortalWebhook} from './metaPortalWebhook.js';
+import {publicCatalogCache} from '../utils/publicCatalogCache.js';
 
 export const publicRouter = Router();
 publicRouter.use('/family',parentFamilyRouter);
-publicRouter.get('/plans',async(_req,res)=>{
+const readPublicPlans=publicCatalogCache(async()=>{
   const result=await getServiceSupabaseClient().from('subscription_plans').select('*').eq('enabled',true).order('rank');
-  if(result.error){res.status(503).json({error:{code:'PLANS_UNAVAILABLE',message:'تعذر قراءة الباقات الآن'}});return;}
-  res.set('Cache-Control','public,max-age=60').json({plans:result.data});
+  if(result.error)throw result.error;
+  return result.data;
+});
+publicRouter.get('/plans',async(_req,res)=>{
+  try {res.set('Cache-Control','public,max-age=60').json({plans:await readPublicPlans()});}
+  catch {res.set('Cache-Control','no-store').status(503).json({error:{code:'PLANS_UNAVAILABLE',message:'تعذر قراءة الباقات الآن'}});}
 });
 
 publicRouter.post("/portal/destination", authRateLimiter, async (req: Request, res: Response) => {

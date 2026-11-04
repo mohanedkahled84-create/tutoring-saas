@@ -13,7 +13,7 @@ import { registerStudentImportActions } from './components/StudentImportModal.js
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=2.0.0';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=2.6.0';
 import { renderTeacherCalendar, registerTeacherCalendarActions } from './components/TeacherCalendar.js';
-import { renderSessionsView, registerSessionsActions } from './components/SessionsView.js?v=2.2.0';
+import { renderSessionsView, registerSessionsActions } from './components/SessionsView.js?v=2.2.1';
 import { renderStudentsView, registerStudentsActions } from './components/StudentsView.js?v=4.9.0';
 import { renderGroupsView, registerGroupsActions } from './components/GroupsView.js?v=4.8.13';
 import { renderMessageLogsView, registerMessageLogsActions } from './components/MessageLogsView.js';
