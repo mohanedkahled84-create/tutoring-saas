@@ -1,8 +1,8 @@
-import { request } from "../services/api.js?v=9.41.0";
-import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.41.0";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.41.0";
-import { getIcon } from "../utils/icons.js?v=9.41.0";
-import {trackProductEvent} from '../services/productFunnel.js?v=9.41.0';
+import { request } from "../services/api.js?v=9.42.0";
+import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.42.0";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.42.0";
+import { getIcon } from "../utils/icons.js?v=9.42.0";
+import {trackProductEvent} from '../services/productFunnel.js?v=9.42.0';
 
 /**
  * Centrly Groups Management Component (DEV-89)

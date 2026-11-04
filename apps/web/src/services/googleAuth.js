@@ -1,5 +1,5 @@
-import {API_BASE_URL} from './api.js?v=9.41.0';
-import {escapeHtml} from '../utils/escapeHtml.js?v=9.41.0';
+import {API_BASE_URL} from './api.js?v=9.42.0';
+import {escapeHtml} from '../utils/escapeHtml.js?v=9.42.0';
 
 const PKCE='centrly_google_pkce_v1',PENDING='centrly_google_pending_v1',MAX_AGE=15*60*1000;
 const stages=[['primary','ابتدائي'],['preparatory','إعدادي'],['secondary','ثانوي'],['other','غير ذلك']];
@@ -36,7 +36,7 @@ export function renderGoogleProfile(profile={}){
 function readSaved(key){try{const value=JSON.parse(sessionStorage.getItem(key) || 'null');if(value && value.createdAt<=Date.now() && Date.now()-value.createdAt<MAX_AGE)return value;}catch{}sessionStorage.removeItem(key);return null;}
 async function finish(pending){
  if(pending.profile?.requires_profile || !pending.profile?.user?.id)throw Error('كمّل بيانات حسابك أولًا.');
- const {authService}=await import('./auth.js?v=9.41.0');
+ const {authService}=await import('./auth.js?v=9.42.0');
  // Changing teacher identities must clear the previous teacher/portal snapshots.
  authService.clearSession();authService.setSession(pending.profile.user,pending.session.access_token,pending.session.refresh_token);
  sessionStorage.removeItem(PKCE);sessionStorage.removeItem(PENDING);location.replace('/');

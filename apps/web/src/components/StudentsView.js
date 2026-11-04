@@ -1,9 +1,9 @@
-import { request } from "../services/api.js?v=9.41.0";
-import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.41.0";
-import { renderStudentSearchBar } from "./StudentSearchBar.js?v=9.41.0";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.41.0";
-import { getIcon } from "../utils/icons.js?v=9.41.0";
-import {trackProductEvent} from '../services/productFunnel.js?v=9.41.0';
+import { request } from "../services/api.js?v=9.42.0";
+import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.42.0";
+import { renderStudentSearchBar } from "./StudentSearchBar.js?v=9.42.0";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.42.0";
+import { getIcon } from "../utils/icons.js?v=9.42.0";
+import {trackProductEvent} from '../services/productFunnel.js?v=9.42.0';
 
 /**
  * Centrly Students Directory Component (DEV-89)
@@ -77,7 +77,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
               <div>
                 <div style="font-weight: 800; color: #991b1b; font-size: 0.95rem;">تم إيقاف إضافة طلاب جدد مؤقتاً (استنفاد المقاعد وانتهاء مهلة السماح)</div>
                 <div style="font-size: 0.825rem; color: #b91c1c; margin-top: 0.2rem;">
-                  لقد استهلكت كامل سعة باقتك (${currentCount} من ${studentLimit} طالب) وانتهت فترة السماح المحددة بـ 3 أيام. لمتابعة تسجيل طلاب جدد، يرجى الترقية إلى باقة 750 أو 1500 طالب.
+                  لقد استهلكت كامل سعة باقتك (${currentCount} من ${studentLimit} طالب) وانتهت فترة السماح المحددة بـ 3 أيام. لمتابعة تسجيل طلاب جدد، راجع الباقات أو أضف مقاعد طلاب من صفحة الاشتراك.
                 </div>
               </div>
             </div>
@@ -204,25 +204,22 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
       </div>
 
       <!-- Students Table -->
-      <div class="card" id="studentsTableCard" style="margin: 0; padding: 0; border: 1px solid var(--centrly-line); position: relative; border-radius: var(--radius-lg); overflow: hidden;">
-        <div id="studentsTableContainer" style="overflow-x: auto; -webkit-overflow-scrolling: touch;" onscroll="window.centrlyApp && window.centrlyApp.syncStudentsTableScroll('table')">
+      <div class="card" id="studentsTableCard" style="margin: 0; padding: 0; border: 1px solid var(--centrly-line); position: relative; border-radius: var(--radius-lg);">
+        <div id="studentsTableContainer" class="compact-roster-container">
           <table class="data-table students-responsive-table" id="studentsTable" style="margin: 0;">
             <thead>
               <tr>
                 <th scope="col">كود الطالب</th>
                 <th scope="col">اسم الطالب</th>
                 <th scope="col">المجموعة</th>
-                <th scope="col">هاتف الطالب *</th>
-                <th scope="col">هاتف ولي الأمر *</th>
-                <th scope="col">الرسوم والخصم</th>
-                <th scope="col">رابط المتابعة</th>
-                <th scope="col">إجراءات</th>
+                                <th scope="col">الرسوم والخصم</th>
+                <th scope="col">التفاصيل والإجراءات</th>
               </tr>
             </thead>
             <tbody>
               ${((isLoading || !hasLoaded) && studentList.length === 0) ? `
                 <tr>
-                  <td colspan="8" style="text-align: center; padding: 2rem 1rem; background: #ffffff; border-bottom: 1px solid #e2e8f0;">
+                  <td colspan="5" style="text-align: center; padding: 2rem 1rem; background: #ffffff; border-bottom: 1px solid #e2e8f0;">
                     <div style="display: flex; align-items: center; justify-content: center;">
                       <svg class="centrly-sleek-spinner" viewBox="0 0 50 50" style="width: 36px; height: 36px;">
                         <defs>
@@ -238,29 +235,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                     </div>
                   </td>
                 </tr>
-                ${[1, 2, 3, 4, 5].map(() => `
-                  <tr class="skeleton-row">
-                    <td><span class="skeleton-box" style="width: 55px; height: 18px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 140px; height: 18px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 85px; height: 20px; border-radius: 12px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 100px; height: 18px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 100px; height: 18px;"></span></td>
-                    <td><span class="skeleton-box" style="width: 60px; height: 18px;"></span></td>
-                    <td>
-                      <div style="display: flex; gap: 0.35rem;">
-                        <span class="skeleton-box" style="width: 50px; height: 22px; border-radius: 4px;"></span>
-                        <span class="skeleton-box" style="width: 50px; height: 22px; border-radius: 4px;"></span>
-                      </div>
-                    </td>
-                    <td>
-                      <div style="display: flex; gap: 0.35rem;">
-                        <span class="skeleton-box" style="width: 30px; height: 26px; border-radius: 6px;"></span>
-                        <span class="skeleton-box" style="width: 30px; height: 26px; border-radius: 6px;"></span>
-                        <span class="skeleton-box" style="width: 30px; height: 26px; border-radius: 6px;"></span>
-                      </div>
-                    </td>
-                  </tr>
-                `).join('')}
+                ${[1,2,3,4,5].map(()=>`<tr class="skeleton-row">${[1,2,3,4,5].map(()=>'<td><span class="skeleton-box" style="width:70%;height:18px"></span></td>').join('')}</tr>`).join('')}
               ` : studentList.length > 0 ? studentList.map(s => {
                 const matchedGroup = (groups || []).find(g => g.id === s.group_id || g.id === s.groupId);
                 const displayGroupName = s.groupName || s.group_name || matchedGroup?.name || 'مجموعة عامة';
@@ -299,23 +274,23 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
 
                 return `
                 <tr data-code="${escapeHtml(s.code || s.student_code || '')}" data-name="${escapeHtml(s.name || s.full_name || '')}" data-phone="${escapeHtml(studentPhone || '')}" data-parent-phone="${escapeHtml(parentPhone || '')}" data-group="${escapeHtml(displayGroupName)}" data-group-id="${escapeHtml(sGroupId)}" style="${isRowVisible ? '' : 'display: none;'}">
-                  <td data-label="كود الطالب" class="student-code" style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}</td>
+                  <td data-label="كود الطالب" class="student-code" style="font-family: monospace; font-weight: 700; color: var(--centrly-blue-800);">${escapeHtml(s.code || s.student_code || '—')}<small class="roster-code">كود الطالب</small></td>
                   <td data-label="اسم الطالب" class="student-name" style="font-weight: 700; font-size: 0.95rem;">${escapeHtml(s.name || s.full_name || '—')}</td>
                   <td data-label="المجموعة" class="student-group" style="max-width: 150px;">
                     <span class="badge badge-blue" title="${escapeHtml(displayGroupName)}" style="font-weight: 700; display: inline-block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; padding: 0.3rem 0.65rem; border-radius: 8px; font-size: 0.8rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
                       ${escapeHtml(displayGroupName)}
                     </span>
                   </td>
-                  <td data-label="هاتف الطالب" class="student-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; font-weight: 600;">
-                    ${escapeHtml(studentPhone || '—')}
-                  </td>
-                  <td data-label="هاتف ولي الأمر" class="student-parent-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; color: var(--centrly-text);">
-                    ${escapeHtml(parentPhone || '—')}
-                  </td>
                   <td data-label="الرسوم والخصم" class="student-fees">
                     ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride || s.fee_override ? `<span class="badge badge-warning">خصم: ${escapeHtml(s.feeOverride || s.fee_override)} ج.م</span>` : '<span style="color:var(--centrly-text); font-size:0.85rem;">أساسي</span>')}
                   </td>
-                  <td data-label="روابط المتابعة" class="student-links">
+                  <td class="roster-details-cell"><details class="roster-details"><summary>التفاصيل والإجراءات</summary><div class="roster-detail-panel">                  <div data-label="هاتف الطالب" class="student-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; font-weight: 600;">
+                    ${escapeHtml(studentPhone || '—')}
+                  </div>
+                  <div data-label="هاتف ولي الأمر" class="student-parent-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; color: var(--centrly-text);">
+                    ${escapeHtml(parentPhone || '—')}
+                  </div>
+                  <div data-label="روابط المتابعة" class="student-links">
                     <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 165px;">
                       <!-- Repeated sharing is manual; the password stays masked until requested. -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
@@ -379,8 +354,8 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                         ` : ''}
                       </div>
                     </div>
-                  </td>
-                  <td data-label="إجراءات" class="student-actions">
+                  </div>
+                  <div data-label="إجراءات" class="student-actions">
                     <div style="display: flex; gap: 0.35rem;">
                       <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openStudentTransfer('${escapeHtml(s.id)}')">نقل</button>
                       <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openStudentClassroomHistory('${escapeHtml(s.id)}')">السجل</button>
@@ -396,12 +371,13 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                         ${getIcon('close', 14)}
                       </button>
                     </div>
-                  </td>
+                  </div>
+</div></details></td>
                 </tr>
                 `;
               }).join('') : `
                 <tr>
-                  <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                  <td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
                     لا يوجد طلاب مسجلون حتى الآن. اضغط على "طالب جديد" لبدء الإضافة.
                   </td>
                 </tr>
@@ -411,12 +387,6 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
         </div>
       </div>
 
-      <!-- Floating Horizontal Scrollbar (Fixed to viewport bottom whenever students table is in view) -->
-      <div id="studentsStickyScrollWrap" style="display: none; position: fixed; bottom: 0; z-index: 50; background: #ffffff; border: 1px solid #cbd5e1; border-bottom: none; box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.08); padding: 5px 8px; border-radius: 8px 8px 0 0; box-sizing: border-box;">
-        <div id="studentsStickyScrollTrack" style="width: 100%; overflow-x: auto; overflow-y: hidden; height: 14px;" onscroll="window.centrlyApp && window.centrlyApp.syncStudentsTableScroll('bar')">
-          <div id="studentsStickyScrollDummy" style="height: 1px; width: 1200px;"></div>
-        </div>
-      </div>
 
     </div>
   `;
@@ -1082,91 +1052,7 @@ export function registerStudentsActions(app) {
     }
   }
 
-  app.syncStudentsTableScroll = function(source) {
-    if (this._isSyncingTableScroll) return;
-    const tableContainer = document.getElementById('studentsTableContainer');
-    const scrollTrack = document.getElementById('studentsStickyScrollTrack');
-    if (!tableContainer || !scrollTrack) return;
-
-    this._isSyncingTableScroll = true;
-    try {
-      if (source === 'table') {
-        scrollTrack.scrollLeft = tableContainer.scrollLeft;
-      } else if (source === 'bar') {
-        tableContainer.scrollLeft = scrollTrack.scrollLeft;
-      }
-    } finally {
-      requestAnimationFrame(() => {
-        this._isSyncingTableScroll = false;
-      });
-    }
-  }
-
-  app.updateStudentsFloatingScrollbar = function() {
-    const container = document.getElementById('studentsTableContainer');
-    const floatingWrap = document.getElementById('studentsStickyScrollWrap');
-    const dummy = document.getElementById('studentsStickyScrollDummy');
-    const scrollTrack = document.getElementById('studentsStickyScrollTrack');
-    if (!container || !floatingWrap || !dummy || !scrollTrack) return;
-
-    const isOverflowing = container.scrollWidth > (container.clientWidth + 2);
-    if (!isOverflowing) {
-      floatingWrap.style.display = 'none';
-      return;
-    }
-
-    dummy.style.width = `${container.scrollWidth}px`;
-
-    const rect = container.getBoundingClientRect();
-    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-
-    const isTableInView = rect.top < (windowHeight - 20) && rect.bottom > 60;
-
-    if (isTableInView) {
-      const left = Math.max(0, rect.left);
-      const width = Math.min(rect.width, (window.innerWidth || document.documentElement.clientWidth) - left);
-      floatingWrap.style.display = 'block';
-      floatingWrap.style.left = `${left}px`;
-      floatingWrap.style.width = `${width}px`;
-      if (!this._isSyncingTableScroll) {
-        scrollTrack.scrollLeft = container.scrollLeft;
-      }
-    } else {
-      floatingWrap.style.display = 'none';
-    }
-  }
-
-  app.initStudentsTableScrollSync = function() {
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        this.updateStudentsFloatingScrollbar();
-
-        const container = document.getElementById('studentsTableContainer');
-        if (container && window.ResizeObserver && !this._studentsResizeObserver) {
-          this._studentsResizeObserver = new ResizeObserver(() => {
-            if (this.currentRoute === 'students') {
-              this.updateStudentsFloatingScrollbar();
-            }
-          });
-          this._studentsResizeObserver.observe(container);
-        }
-
-        if (!this._hasStudentsScrollListener) {
-          this._hasStudentsScrollListener = true;
-          window.addEventListener('scroll', () => {
-            if (this.currentRoute === 'students') {
-              this.updateStudentsFloatingScrollbar();
-            }
-          }, { passive: true });
-          window.addEventListener('resize', () => {
-            if (this.currentRoute === 'students') {
-              this.updateStudentsFloatingScrollbar();
-            }
-          }, { passive: true });
-        }
-      }, 60);
-    });
-  }
-
-
+  app.syncStudentsTableScroll = function() {};
+  app.updateStudentsFloatingScrollbar = function() {};
+  app.initStudentsTableScrollSync = function() {};
 }

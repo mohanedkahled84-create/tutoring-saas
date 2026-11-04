@@ -1,12 +1,12 @@
-import {request} from '../services/api.js?v=9.41.0';
-import {authService} from '../services/auth.js?v=9.41.0';
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.41.0';
-import {mountPhoneVerification} from './PhoneVerification.js?v=9.41.0';
+import {request} from '../services/api.js?v=9.42.0';
+import {authService} from '../services/auth.js?v=9.42.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.42.0';
+import {mountPhoneVerification} from './PhoneVerification.js?v=9.42.0';
 const receiptToken=()=>btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const identity=app=>app.user?.id+':'+app.user?.tenant_id;
 export function renderAccountDeletion(user={}){
  if(window.centrlyApp?.delegation || user.assistant_id || !['owner','teacher','center_owner'].includes(user.role))return '';
- return `<section class="card" style="margin:0;border-color:#fecaca"><h2 style="font-size:1.15rem">بيانات الحساب وحذفه</h2><p style="line-height:1.8">حمّل نسخة من بياناتك، أو احذف حسابك ومساحة العمل نهائيًا. حذف الحساب يمسح بيانات الطلاب والمجموعات والمحتوى ويفصل حسابات فريقك.</p><div style="display:flex;gap:.75rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.exportAccountData(this)">تنزيل نسخة من بياناتي</button><button type="button" class="btn btn-secondary" style="min-height:44px;color:#b42332;border-color:#fecaca" onclick="window.centrlyApp.openAccountDeletion()">حذف الحساب</button></div></section>`;
+ return `<section class="card account-danger-zone"><h2 style="font-size:1.15rem">بيانات الحساب وحذفه</h2><p style="line-height:1.8">حمّل نسخة من بياناتك، أو احذف حسابك ومساحة العمل نهائيًا. حذف الحساب يمسح بيانات الطلاب والمجموعات والمحتوى ويفصل حسابات فريقك.</p><div style="display:flex;gap:.75rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.exportAccountData(this)">تنزيل نسخة من بياناتي</button><button type="button" class="btn btn-secondary" style="min-height:44px;background:#b42332;color:white;border-color:#b42332" onclick="window.centrlyApp.openAccountDeletion()">حذف الحساب</button></div></section>`;
 }
 export function registerAccountDeletion(app){
  app.exportAccountData=async function(button){if(button)button.disabled=true;const owner=identity(this);try{const data=await request('/account-deletion/export');if(identity(this)!==owner)return;const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='centerly-account-data.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);this.showToast('تم تجهيز نسخة بياناتك للتنزيل','success');}catch(error){if(identity(this)===owner)this.showToast(error.message,'error');}finally{if(button?.isConnected)button.disabled=false;}};

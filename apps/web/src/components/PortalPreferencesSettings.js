@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.41.0';
-import {request} from '../services/api.js?v=9.41.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.42.0';
+import {request} from '../services/api.js?v=9.42.0';
 const options=[['show_student_rank','إظهار ترتيب الطالب في منصته','يرى الطالب ترتيبه داخل مجموعته فقط.'],['show_student_leaderboard','إظهار لوحة ترتيب المجموعة للطلاب','تعرض أسماء أصحاب المراكز الأولى عند تفعيلها.'],['show_parent_rank','إظهار ترتيب الابن لولي الأمر','يرى ولي الأمر ترتيب ابنه فقط؛ لا تظهر أسماء أو درجات زملائه.'],['show_upcoming_sessions','إظهار مواعيد الحصص القادمة','تظهر المواعيد المسجلة على الصفحة الرئيسية.'],['show_announcements','إظهار إعلانات المدرس في الرئيسية','تظهر التنبيهات الدراسية المنشورة للطالب.'],['show_teacher_contact','إظهار التواصل مع المدرس','إظهار رقم التواصل وزر واتساب في البوابات.'],['accept_late_homework','قبول التسليم بعد موعد الواجب','يُعلّم التسليم المتأخر؛ يمكنك تغيير الاختيار لواجب بعينه.']];
 export function renderPortalPreferencesSettings(state={}){
  const preferences=state.portalPreferences;
