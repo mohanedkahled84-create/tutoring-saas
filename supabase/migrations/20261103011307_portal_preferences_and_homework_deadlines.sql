@@ -26,7 +26,7 @@ $$;
 revoke all on function public.homework_accepts_submission(uuid,uuid) from public,anon,authenticated;
 grant execute on function public.homework_accepts_submission(uuid,uuid) to service_role;
 
-create or replace function public.submit_homework_portal(p_portal_token text,p_material_id uuid,p_file_url text,p_file_name text)
+create or replace function public.submit_homework_portal(p_portal_token text,p_material_id uuid,p_file_url text,p_file_name text DEFAULT NULL)
 returns jsonb language sql security invoker set search_path='' as $$
  select public.submit_homework_portal(p_portal_token,p_material_id,p_file_url,p_file_name,null::uuid)
 $$;
@@ -316,7 +316,7 @@ begin
  return to_jsonb(result);
 end;$function$;
 
-CREATE OR REPLACE FUNCTION public.submit_homework_portal(p_portal_token text, p_material_id uuid, p_file_url text, p_file_name text, p_student_id uuid)
+CREATE OR REPLACE FUNCTION public.submit_homework_portal(p_portal_token text, p_material_id uuid, p_file_url text, p_file_name text, p_student_id uuid DEFAULT NULL)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
