@@ -821,40 +821,13 @@ test("CASE 11 - Secure Online Exam: Screen Departure Warning, Auto-Withdrawal on
     "Must remove any code disabling anti-cheat security measures"
   );
 
-  // 2. Verify resilient multi-tier submission in submitAndFinishExam
-  assert.ok(
-    indexHtml.includes('isSubmittingExam = true;'),
-    "Must guard against race conditions during exam submission"
-  );
-  assert.ok(
-    indexHtml.includes('submitPayload') && indexHtml.includes('questions: Array.isArray(currentActiveQuiz.questions)'),
-    "Must include full exam questions and metadata in submission payload"
-  );
-  assert.ok(
-    indexHtml.includes('Tier 3: Guaranteed Local Grading Fallback'),
-    "Must include guaranteed local grading fallback so online exams never fail or leave 0 score"
-  );
-  assert.ok(
-    indexHtml.includes('window._studentOnlineSubmissionsMap.set(materialId, submissionRecord)'),
-    "Must persist online submission in runtime memory map"
-  );
+  // Submission behavior, provider failures and authoritative grading are tested
+  // by the HTTP/SQL suites and the real-page browser journey. Do not require
+  // client question keys or fake local success as a resilience mechanism.
+  // Public submit authorization and grading are covered by behavioral HTTP and
+  // isolated-database tests; source-string checks must not require unsafe
+  // client-provided questions as a fallback.
 
-  // 3. Verify public routes fallback for virtual quiz IDs
-  const publicTsPath = path.resolve(__dirname, '../src/shared/routes/public.ts');
-  const publicTs = fs.readFileSync(publicTsPath, 'utf8');
-
-  assert.ok(
-    publicTs.includes('QUIZ_DEF_%'),
-    "Public quiz submit must fall back to legacy/virtual quiz definitions in whatsapp_inbox"
-  );
-  assert.ok(
-    publicTs.includes('quiz-online-') || publicTs.includes('req.body?.questions'),
-    "Public quiz submit must fall back to request body questions or virtual quiz payload"
-  );
-  assert.ok(
-    publicTs.includes('is_withdrawn: Boolean(is_withdrawn)'),
-    "Public quiz submit must properly record is_withdrawn status and reason"
-  );
 });
 
 test("CASE 12 - Real-Time Quiz Tab Title Update: live typing reflects in top tab bar and persists correctly", async () => {
@@ -1151,19 +1124,15 @@ test("CASE 16 - Student Homework Redo Workflow: Requested redo moves assignment 
     "getHwStatus must explicitly detect rejected submission status"
   );
 
-  // 2. Verify active homework includes both unsubmitted and rejected assignments
-  assert.ok(
-    indexHtml.includes("const activeHomework = homework.filter(h => {") &&
-    indexHtml.includes("return s === 'unsubmitted' || s === 'rejected';"),
-    "Active homework list must include assignments requiring redo (rejected)"
-  );
-
-  // 3. Verify archived homework only contains approved or pending submissions
-  assert.ok(
-    indexHtml.includes("const archivedHomework = homework.filter(h => {") &&
-    indexHtml.includes("return s === 'approved' || s === 'pending';"),
-    "Archived homework must only contain approved or pending submissions"
-  );
+  // Run the actual UI filters: closed historical work cannot request another upload.
+  const rows=[{id:'redo',submission_status:'rejected'},{id:'new',submission_status:'unsubmitted'},{id:'review',submission_status:'pending'},{id:'approved',submission_status:'approved'},{id:'old-redo',submission_status:'rejected',can_submit:false}];
+  const filter=name=>{
+    const body=indexHtml.match(new RegExp('const '+name+' = homework\\.filter\\(h => \\{([\\s\\S]*?)\\}\\);'))?.[1];
+    assert.ok(body,'UI filter must exist');
+    return rows.filter(new Function('getHwStatus','return h=>{'+body+'}')(h=>h.submission_status)).map(h=>h.id);
+  };
+  assert.deepEqual(filter('activeHomework'),['redo','new']);
+  assert.deepEqual(filter('archivedHomework'),['review','approved','old-redo']);
 
   // 4. Verify teacher feedback banner and redo badge are rendered for rejected assignments
   assert.ok(

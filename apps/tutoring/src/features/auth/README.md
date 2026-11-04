@@ -1,7 +1,7 @@
 # Auth Feature (`features/auth`)
 
 ## Overview
-The `auth` feature encapsulates user authentication, tenant registration with 14-day trials, brute-force lockout safeguards, and secure password recovery.
+The `auth` feature encapsulates user authentication, tenant registration with 7-day trials, brute-force lockout safeguards, and secure password recovery.
 
 ## Architectural Boundaries (Clean Architecture)
 - **`types.ts`**: Authentication models (`LoginDTO`, `LoginResult`, `SignupDTO`, `SignupResult`, `ResetPasswordDTO`) and `IAuthRepository` contract.

@@ -9,9 +9,19 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
  const resource=pageResource(page);if(!resource || !hasAssistantCapability(p,resource))throw denied();
  const read=['GET','HEAD'].includes(method),parts=path.split('?')[0].split('/').filter(Boolean),root=parts[0],tail=parts.slice(1).join('/');
  const require=(key:string,action='view')=>{if(!hasAssistantCapability(p,key,action))throw denied();return `${key}.${action}`;};
+ if(root==='announcements'){
+  if(read)return require('announcements');
+  if(tail==='type-requests' || tail==='source' || !tail)return require('announcements','create');
+  if(/\/(preview|consent|enqueue|retry|cancel)$/.test(tail))return require('announcements','send');
+  if(/\/archive$/.test(tail))return require('announcements','delete');
+  if(method==='PUT' || /\/publish$/.test(tail))return require('announcements','edit');
+  throw denied();
+ }
  if(read){
+  if(root==='students' && (tail==='archived' || /^[a-f0-9-]{36}\/history$/.test(tail)))return require('students');
+  if(root==='groups' && tail==='archived')return require('groups');
   if(['groups','students'].includes(root)){
-   const dependencies=root==='groups'?['attendance','homework','materials','online-quizzes','paper-exams','quizzes','platform-builder','video-lessons','students','groups','assistants','sessions','student-cards','dashboard','reports','risk-watchlist']:['attendance','homework','online-quizzes','paper-exams','quizzes','platform-builder','video-lessons','students','groups','student-cards','dashboard','reports','risk-watchlist'];
+   const dependencies=root==='groups'?['announcements','attendance','homework','materials','online-quizzes','paper-exams','quizzes','platform-builder','video-lessons','students','groups','assistants','sessions','student-cards','dashboard','reports','risk-watchlist']:['attendance','homework','online-quizzes','paper-exams','quizzes','platform-builder','video-lessons','students','groups','student-cards','dashboard','reports','risk-watchlist'];
    if(!dependencies.includes(resource))throw denied();
    if(root==='students' && /\/parent-link$/.test(path))return require('students','send');
    return `${resource}.view`;
@@ -41,10 +51,12 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
  }
  const action=method==='DELETE'?'delete':method==='POST'?'create':'edit';
  if(root==='groups'){
+  if(/^[a-f0-9-]{36}\/(archive|restore)$/.test(tail))return require('groups','edit');
   if(/students/.test(tail))return require('groups','edit');
   return require('groups',action);
  }
  if(root==='students'){
+  if(/^[a-f0-9-]{36}\/(archive|restore|transfer)$/.test(tail))return require('students','edit');
   if(tail==='batch-send-dual-portal-links')return require('students','send');
   if(/send|notify|public-register/.test(tail))throw denied();
   if(!tail || /^[a-f0-9-]{36}$/.test(tail))return require('students',action);
@@ -55,7 +67,7 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
   if(/quiz-scores/.test(tail))return require('quizzes','grade');
   if(/receipt$/.test(tail))return require('dashboard');
   if(/attendance|scan|\/end$/.test(tail))return require('attendance','edit');
-  if(!tail)return hasAssistantCapability(p,'attendance','create')?require('attendance','create'):require('sessions','create');
+  if(!tail || tail==='start')return hasAssistantCapability(p,'attendance','create')?require('attendance','create'):require('sessions','create');
   return require('sessions',tail==='extra'?'create':'edit');
  }
  if(root==='homework' && /submissions\/[a-f0-9-]+\/review$/.test(tail))return require('homework','edit');
@@ -66,6 +78,7 @@ export function delegatedCapability({method,path,page,body={},permissions:p,save
   return require(type==='video'?'video-lessons':'materials',action);
  }
  if(root==='quizzes'){
+  if(tail==='publish-online')return require('online-quizzes');
   if(tail==='dispatch-scores')throw denied();
   if(tail==='scores')return require('quizzes','grade');
   if(tail==='submissions/grade-essay')return require('online-quizzes','grade');

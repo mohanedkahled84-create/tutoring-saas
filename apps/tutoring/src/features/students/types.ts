@@ -94,6 +94,7 @@ export interface PortalLoginResult {
 }
 
 export interface IStudentsRepository {
+  findByPhone?(tenantId:string|undefined,phone:string):Promise<Student|null>;
   list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]>;
   findById(id: string, tenantId?: string): Promise<Student | null>;
   findByCode(tenantId: string | undefined, code: string): Promise<Student | null>;

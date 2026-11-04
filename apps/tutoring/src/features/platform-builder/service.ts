@@ -111,19 +111,14 @@ export class PlatformBuilderService {
     if (!settings || !settings.is_active) {
       return null;
     }
+    const plan=await this.repository.getTenantPlan(settings.tenant_id);
+    if(['basic_v1','pro_v1','max_v1'].includes(plan.subscription_tier || '') && (!plan.is_pro || !plan.is_active))return null;
     return settings;
   }
 
-  /**
-   * Retrieves public study materials, videos, and homework for student portal
-   */
-  async getPublicMaterials(subdomain: string): Promise<any[]> {
-    if (!subdomain) return [];
-    const settings = await this.getPublicSettings(subdomain);
-    if (!settings || !settings.tenant_id) {
-      return [];
-    }
-    return await this.repository.getPublicMaterials(settings.tenant_id);
+  /** Private learning content is never part of the anonymous platform API. */
+  async getPublicMaterials(_subdomain: string): Promise<any[]> {
+    return [];
   }
 
   /**

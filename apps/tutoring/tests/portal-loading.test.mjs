@@ -78,7 +78,7 @@ test('server-verified renewal retains only the same identity snapshot and preser
   const first=token('student-a'),next=token('student-a',10),other=token('student-b',20);
   session.savePortalSession(first,'student');
   await session.portalCache.write(first,{student:{id:'student-a',tenant_id:'tenant-a',name:'محفوظ'},materials:[]});
-  const key='centrly_portal_snapshot_v1:student',record=JSON.parse(records.get(key));record.savedAt=Date.now()-180000;records.set(key,JSON.stringify(record));
+  const key='centrly_portal_snapshot_v2:student',record=JSON.parse(records.get(key));record.savedAt=Date.now()-180000;records.set(key,JSON.stringify(record));
   await session.adoptVerifiedPortalSession(next,'student');
   const retained=await session.portalCache.read(next);assert.equal(retained.data.student.name,'محفوظ');assert.equal(retained.savedAt,record.savedAt);assert.equal(retained.fresh,false);
   await session.adoptVerifiedPortalSession(other,'student');assert.equal(await session.portalCache.read(other),null);assert.equal(records.has(key),false);

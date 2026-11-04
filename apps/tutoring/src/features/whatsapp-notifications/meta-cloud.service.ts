@@ -36,7 +36,8 @@ export interface BatchPortalDispatchResult {
   total_messages: number;
   sent_today: number;
   scheduled_today?: number;
-  queued_tomorrow: number;
+  queued_tomorrow: number; // Compatibility alias: queued, not a promised calendar date.
+  queued_pending?:number;
   daily_limit: number;
   remaining_today: number;
   is_template_pending: boolean;
@@ -135,9 +136,7 @@ export class MetaCloudService {
     // 1. Build flat list of message items (one for student, one for parent)
     const itemsToEnqueue: MetaQueueItem[] = [];
     const today = new Date().toISOString().slice(0, 10);
-    const tomorrowDate = new Date();
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-    const tomorrow = tomorrowDate.toISOString().slice(0, 10);
+
 
     for (const s of students) {
       const sPhone = this.normalizeForMeta(s.student_phone);
@@ -201,7 +200,7 @@ export class MetaCloudService {
         item.status = "pending";
         immediateItems.push(item);
       } else {
-        item.scheduled_date = tomorrow;
+        item.scheduled_date = today; // Rolling-window gate decides the actual dispatch time.
         item.status = "queued";
         queuedItems.push(item);
       }
@@ -224,11 +223,11 @@ export class MetaCloudService {
         total_students: students.length,
         total_messages: enqueued.length,
         sent_today: 0,
-        queued_tomorrow: queuedCount,
+        queued_tomorrow: queuedCount, queued_pending:queuedCount,
         daily_limit: this.dailyLimit,
         remaining_today: remainingQuota,
         is_template_pending: true,
-        message: `تم حفظ (${enqueued.length}) رسالة بنجاح في طابور سنترلي الرسمي. القوالب قيد المراجعة حالياً من ميتا (Pending) وسيتم إرسالها للطلاب وأولياء الأمور تلقائياً فور اعتماد فيسبوك.`,
+        message: `تم حفظ (${enqueued.length}) رسالة في قائمة الانتظار. قالب الرسالة قيد المراجعة؛ يبدأ الإرسال بعد اعتماده وتوفر سعة الإرسال.`,
       };
     }
 
@@ -238,15 +237,15 @@ export class MetaCloudService {
 
     const remainingAfterDispatch = Math.max(0, remainingQuota - immediateEnqueued.length);
     const sentCount = immediateEnqueued.length;
-    const queuedCount = enqueued.filter(it=>it.scheduled_date!==today).length;
+    const queuedCount = enqueued.filter(it=>it.status==='queued').length;
 
     let userMessage = "";
     if (sentCount > 0 && queuedCount === 0) {
       userMessage = `تم تجهيز (${sentCount}) رسالة ترحيب للإرسال عبر واتساب سنترلي. تظهر حالة الإرسال الفعلية بعد المعالجة.`;
     } else if (sentCount > 0 && queuedCount > 0) {
-      userMessage = `تم تجهيز (${sentCount}) رسالة للإرسال اليوم وجدولة (${queuedCount}) رسالة للغد ضمن حد الإرسال اليومي (${this.dailyLimit} رسالة).`;
+      userMessage = `تم تجهيز (${sentCount}) رسالة وجدولة (${queuedCount}) رسالة لاستكمال الإرسال تلقائيًا على دفعات. تظهر حالة الإرسال الفعلية بعد المعالجة.`;
     } else {
-      userMessage = `اكتملت حصة الإرسال اليومية (${this.dailyLimit}/${this.dailyLimit}). تم جدولة إرسال الـ (${queuedCount}) رسالة بالكامل للغد تلقائياً.`;
+      userMessage = `تمت جدولة (${queuedCount}) رسالة لاستكمال الإرسال تلقائيًا عند توفر السعة. لن تُرسل الرسالة نفسها مرتين.`;
     }
 
     return {
@@ -254,7 +253,7 @@ export class MetaCloudService {
       total_messages: enqueued.length,
       sent_today: 0,
       scheduled_today: sentCount,
-      queued_tomorrow: queuedCount,
+      queued_tomorrow: queuedCount, queued_pending:queuedCount,
       daily_limit: this.dailyLimit,
       remaining_today: remainingAfterDispatch,
       is_template_pending: false,
@@ -275,6 +274,7 @@ export class MetaCloudService {
       try {
         if(!await this.repository.claimOnboardingSend(item.id,this.dailyLimit))continue;
         const sendRes: MetaTemplateSendResult = await this.gateway.sendTemplate({
+          budget:{tenantId:item.tenant_id,dispatchId:item.id,reserved:true},
           to: item.recipient_phone,
           templateName: item.template_name,
           languageCode: item.language_code || "en",
@@ -337,6 +337,7 @@ export class MetaCloudService {
       try {
         if(!await this.repository.claimOnboardingSend(item.id,this.dailyLimit))continue;
         const res = await this.gateway.sendTemplate({
+          budget:{tenantId:item.tenant_id,dispatchId:item.id,reserved:true},
           to: item.recipient_phone,
           templateName: item.template_name,
           languageCode: item.language_code || "en",

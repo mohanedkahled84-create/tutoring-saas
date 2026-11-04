@@ -45,55 +45,5 @@ export function isUserPro(user = null, plan = null) {
     return true;
   }
 
-  // Omar Mohamadi canary
-  if (isOmarMohamadiAccount(user)) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Checks if the user is Mr. Omar El-Mohammadi or Admin/Tester
- */
-export function isOmarMohamadiAccount(user = null) {
-  if (!user && typeof window !== "undefined") {
-    user = window.centrlyApp?.user;
-  }
-  if (!user) return false;
-  if (user.role === "admin" || user.is_superadmin) return true;
-  const email = (user.email || "").toLowerCase();
-  const name = (user.name || user.teacher_name || user.tenant_name || "").toLowerCase();
-  const adminEmails = [
-    "mohanedkahled84@gmail.com",
-    "mohanedkhaled84@gmail.com",
-    "mohanedkhaled2367@gmail.com",
-    "teacher@centrly.app",
-    "mohanedabdulhalim@gmail.com",
-  ];
-  if (adminEmails.includes(email)) return true;
-  if (
-    email.includes("omar") ||
-    email.includes("mohamadi") ||
-    name.includes("عمر") ||
-    name.includes("محمدي")
-  ) {
-    return true;
-  }
-  if (user.tenant_id === "0c67b644-ae42-49e8-975f-85b9d0af0e1b") return true;
-  return false;
-}
-
-/**
- * Checks if the student is Mohaned Khaled (Test student)
- */
-export function isMohanedKhaledStudent(student = null) {
-  if (!student) return false;
-  const name = (student.name || "").toLowerCase();
-  const phone = String(student.student_phone || student.phone || student.parent_phone || "");
-  const code = String(student.student_code || student.code || "");
-  if (name.includes("مهند") || name.includes("mohaned")) return true;
-  if (phone.includes("01123671177") || phone.includes("1123671177")) return true;
-  if (code === "1001" || code.includes("1001")) return true;
   return false;
 }

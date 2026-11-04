@@ -192,7 +192,7 @@ authRouter.post("/refresh", async (req: Request, res: Response): Promise<void> =
   }
 });
 
-// DEV-SA.1 & DEV-SL.1: POST /api/auth/signup - Teacher registration with 14-day trial & founder alert
+// DEV-SA.1 & DEV-SL.1: POST /api/auth/signup - Teacher registration with 7-day trial & founder alert
 authRouter.post("/signup", authRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const { email, password, full_name, tenant_name, phone, contact_phone, subject, governorate, account_type, registration_version, education_stages, other_stage } = req.body;
 
@@ -496,6 +496,9 @@ authRouter.post("/change-password", authenticateUser, authRateLimiter, async (re
       return;
     }
     const msg = err instanceof Error ? err.message : "Failed to change password";
+    if (msg.includes("CURRENT_PASSWORD_REQUIRED")) {
+      res.status(400).json({error:{code:"CURRENT_PASSWORD_REQUIRED",message:"اكتب كلمة المرور الحالية أو استخدم رابط تعيين كلمة المرور من بريدك"}});return;
+    }
     if (msg.includes("CURRENT_PASSWORD_INCORRECT") || msg.includes("Invalid login credentials")) {
       res.status(400).json({ error: { code: "CURRENT_PASSWORD_INCORRECT", message: "كلمة المرور الحالية غير صحيحة" } });
       return;
@@ -540,4 +543,18 @@ authRouter.post('/phone/request',authenticateUser,async(req:AuthenticatedRequest
 });
 authRouter.post('/phone/verify',authenticateUser,async(req:AuthenticatedRequest,res)=>{
  try{const input=teacherOtpVerify.parse(req.body),{db,args}=teacherPhoneContext(req);res.set('Cache-Control','no-store').json(await verifyPhoneOtp(db,'teacher',(action,data={})=>otpRpc(db,'teacher_phone_verification',{...args,p_action:action,p_data:data}),{subject:args.p_user,origin:args.p_origin!},input.challenge_id,input.code));}catch(error){phoneFailure(res,error);}
+});
+
+// Separate, purpose-bound OTP: a candidate number never replaces the saved one before proof.
+authRouter.post('/phone/change/begin',authenticateUser,authRateLimiter,async(req:AuthenticatedRequest,res)=>{
+ try{const input=z.object({phone:z.string().min(7).max(25)}).strict().parse(req.body),{db,args}=teacherPhoneContext(req);const info=checkedOtpResult(await otpRpc(db,'teacher_phone_change',{...args,p_action:'begin',p_data:input}));res.set('Cache-Control','no-store').json({...info,...await phoneOtpInfo()});}catch(error){phoneFailure(res,error);}
+});
+authRouter.post('/phone/change/challenge',authenticateUser,async(req:AuthenticatedRequest,res)=>{
+ try{z.object({}).strict().parse(req.body);const {db,args}=teacherPhoneContext(req);res.set('Cache-Control','no-store').json(await preparePhoneOtp(db,'teacher-change',req.ip || '',(action,data={})=>otpRpc(db,'teacher_phone_change',{...args,p_action:action,p_data:data}),{subject:args.p_user,origin:args.p_origin!}));}catch(error){phoneFailure(res,error);}
+});
+authRouter.post('/phone/change/request',authenticateUser,async(req:AuthenticatedRequest,res)=>{
+ try{const input=teacherOtpRequest.parse(req.body),{db,args}=teacherPhoneContext(req);res.set('Cache-Control','no-store').json(await requestPhoneOtp(db,'teacher-change',req.ip || '',(action,data={})=>otpRpc(db,'teacher_phone_change',{...args,p_action:action,p_data:data}),{subject:args.p_user,origin:args.p_origin!},input.proof));}catch(error){phoneFailure(res,error);}
+});
+authRouter.post('/phone/change/verify',authenticateUser,async(req:AuthenticatedRequest,res)=>{
+ try{const input=teacherOtpVerify.parse(req.body),{db,args}=teacherPhoneContext(req);const info=checkedOtpResult(await otpRpc(db,'teacher_phone_change',{...args,p_action:'info',p_data:{}}));if(info.verified && info.challenge_id===input.challenge_id){res.set('Cache-Control','no-store').json(info);return;}res.set('Cache-Control','no-store').json(await verifyPhoneOtp(db,'teacher-change',(action,data={})=>otpRpc(db,'teacher_phone_change',{...args,p_action:action,p_data:data}),{subject:args.p_user,origin:args.p_origin!},input.challenge_id,input.code));}catch(error){phoneFailure(res,error);}
 });

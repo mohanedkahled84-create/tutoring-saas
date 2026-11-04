@@ -1,0 +1,16 @@
+import {escapeHtml as e} from '../utils/escapeHtml.js';
+import {request} from '../services/api.js';
+const options=[['show_student_rank','إظهار ترتيب الطالب في منصته','يرى الطالب ترتيبه داخل مجموعته فقط.'],['show_student_leaderboard','إظهار لوحة ترتيب المجموعة للطلاب','تعرض أسماء أصحاب المراكز الأولى عند تفعيلها.'],['show_parent_rank','إظهار ترتيب الابن لولي الأمر','يرى ولي الأمر ترتيب ابنه فقط؛ لا تظهر أسماء أو درجات زملائه.'],['show_upcoming_sessions','إظهار مواعيد الحصص القادمة','تظهر المواعيد المسجلة على الصفحة الرئيسية.'],['show_announcements','إظهار إعلانات المدرس في الرئيسية','تظهر التنبيهات الدراسية المنشورة للطالب.'],['show_teacher_contact','إظهار التواصل مع المدرس','إظهار رقم التواصل وزر واتساب في البوابات.'],['accept_late_homework','قبول التسليم بعد موعد الواجب','يُعلّم التسليم المتأخر؛ يمكنك تغيير الاختيار لواجب بعينه.']];
+export function renderPortalPreferencesSettings(state={}){
+ const preferences=state.portalPreferences;
+ if(!preferences)return '<section class="card"><p role="status">جار تحميل إعدادات البوابات…</p><button class="btn btn-secondary" onclick="window.centrlyApp.loadRouteData(\'settings\')">إعادة التحميل</button></section>';
+ return `<section class="card" style="margin:0"><h3>تجربة الطالب وولي الأمر</h3><p>تُطبق الاختيارات بعد الحفظ على بوابات المتابعة والمنصة بهوية المدرس.</p><form onsubmit="window.centrlyApp.savePortalPreferences(event)" style="display:grid;gap:1rem">${options.map(([key,title,description])=>`<label style="display:flex;align-items:flex-start;gap:.75rem;min-height:44px;padding:.75rem 0;border-bottom:1px solid var(--centrly-line)"><input data-portal-setting="${key}" type="checkbox" ${preferences[key]?'checked':''} style="margin-top:.35rem;min-width:20px;min-height:20px"><span><strong>${title}</strong><small style="display:block;line-height:1.7">${description}</small></span></label>`).join('')}<label for="portalWelcomeMessage">رسالة ترحيب مخصصة</label><textarea id="portalWelcomeMessage" class="form-input" rows="3" maxlength="500" placeholder="رسالة قصيرة تظهر لطلابك">${e(preferences.welcome_message || '')}</textarea><button class="btn btn-primary" type="submit" style="min-height:44px;justify-self:start">حفظ إعدادات البوابات</button><p id="portalPreferencesStatus" role="status" aria-live="polite"></p></form></section>`;
+}
+export function registerPortalPreferencesSettings(app){
+ app.savePortalPreferences=async function(event){
+  event.preventDefault();const button=event.submitter;button.disabled=true;
+  const preferences=Object.fromEntries(options.map(([key])=>[key,Boolean(document.querySelector(`[data-portal-setting="${key}"]`)?.checked)]));preferences.welcome_message=document.getElementById('portalWelcomeMessage').value.trim();
+  try{const result=await request('/settings',{method:'PUT',body:{portal_preferences:preferences}});this.settingsState.portalPreferences=result.settings.portal_preferences;document.getElementById('portalPreferencesStatus').textContent='تم الحفظ وتطبيق الاختيارات';this.showToast('تم حفظ إعدادات البوابات','success');}
+  catch(error){document.getElementById('portalPreferencesStatus').textContent=error.message || 'تعذر الحفظ؛ حاول مجددًا';this.showToast(error.message,'error');}finally{if(button.isConnected)button.disabled=false;}
+ };
+}

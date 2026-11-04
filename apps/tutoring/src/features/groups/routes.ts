@@ -10,8 +10,10 @@ import {
 } from "../../shared/middleware/validation.js";
 import { requireTeacherOrCenterOwner } from "../../shared/middleware/auth.js";
 import { generateBarcodeSheetPdf } from "../students/index.js";
+import {registerGroupLifecycle} from '../students/lifecycle.js';
 
 export const groupsRouter = Router();
+registerGroupLifecycle(groupsRouter);
 
 // GET /api/groups - List all groups for current tenant
 groupsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promise<void> => {

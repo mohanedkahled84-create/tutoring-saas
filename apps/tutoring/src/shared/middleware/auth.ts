@@ -92,7 +92,9 @@ export async function authenticateUser(
     if (!userRecord && !userRowNotFound) {
       const { data: directProfile, error: userError } = await userClient
         .from("users")
-        .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, phone, subject")
+        .select("id, tenant_id, role, email, teacher_id, assistant_id, full_name, phone, subject, tenants!inner(status,deleted_at)")
+        .eq("tenants.status", "active")
+        .is("tenants.deleted_at", null)
         .eq("id", userId)
         .single();
 

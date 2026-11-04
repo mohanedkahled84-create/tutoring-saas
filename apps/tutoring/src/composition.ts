@@ -144,7 +144,7 @@ export function createCompositionRoot(client?: SupabaseClient, tenantId?: string
       new HttpMetaCloudGateway(config.meta.phoneNumberId, config.meta.accessToken, config.meta.wabaId),
       config.meta.dailyLimit
     ),
-    billing: new BillingService(new SupabaseBillingRepository(effectiveClient)),
+    billing: new BillingService(new SupabaseBillingRepository(effectiveClient,privilegedClient)),
     students: new StudentsService(new SupabaseStudentsRepository(effectiveClient, privilegedClient, tenantId)),
     groups: new GroupsService(new SupabaseGroupsRepository(effectiveClient)),
     auth: new AuthService(new SupabaseAuthRepository(effectiveClient, adminClient)),

@@ -1,0 +1,43 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {requireIsolatedSupabaseProject,createIsolatedSupabaseClients} from './helpers/live-supabase.mjs';
+
+test('LIVE: academic rollover carries selected students, preserves records and isolates the active portal year',{timeout:120000},async t=>{
+ if(!requireIsolatedSupabaseProject(t))return;
+ const {serviceClient:db,anonClient}=createIsolatedSupabaseClients(),tenant=randomUUID();let owner;
+ const ok=r=>{assert.equal(r.error,null,r.error?.message);return r.data;};
+ t.after(async()=>{
+  for(const table of ['homework_submissions','study_materials','attendance','sessions','students','groups','academic_years'])ok(await db.from(table).delete().eq('tenant_id',tenant));
+  ok(await db.from('tenants').delete().eq('id',tenant));if(owner)ok(await db.auth.admin.deleteUser(owner.id));
+ });
+ ok(await db.from('tenants').insert({id:tenant,name:'isolated year teacher'}));
+ owner=ok(await db.auth.admin.createUser({email:`year-${randomUUID()}@isolated.invalid`,password:'isolated-fixture-password-2026',email_confirm:true})).user;
+ ok(await db.from('users').upsert({id:owner.id,email:owner.email,tenant_id:tenant,role:'owner',full_name:'isolated owner'}));
+ const groups=ok(await db.from('groups').insert(['carry','archive'].map(name=>({tenant_id:tenant,name}))).select());
+ const students=ok(await db.from('students').insert(groups.map(g=>({tenant_id:tenant,name:g.name+' student',group_id:g.id,parent_phone:'201000000000',parent_portal_token:randomUUID()}))).select());
+ const old=ok(await db.from('study_materials').insert({tenant_id:tenant,title:'old assignment',type:'pdf',is_homework:true,group_id:groups[0].id,url:'https://example.invalid/file.pdf'}).select().single());
+ const session=ok(await db.from('sessions').insert({tenant_id:tenant,group_id:groups[0].id,status:'ended',session_date:'2025-10-01',session_number:1}).select().single());
+ const attendance=ok(await db.from('attendance').insert({tenant_id:tenant,student_id:students[0].id,session_id:session.id,attended:true,idempotency_key:randomUUID()}).select().single());
+ const year=ok(await db.rpc('academic_year_operation',{p_tenant:tenant,p_user:owner.id,p_action:'start',p_data:{name:'2025/26',starts_on:'2025-09-01',ends_on:'2026-08-31'}})).year;
+ assert.equal(ok(await db.rpc('homework_target_allowed',{p_student:students[0].id,p_tenant:tenant,p_material:old.id})),true);
+ const data={name:'2026/27',starts_on:'2026-09-01',ends_on:'2027-08-31',expected_year_id:year.id,confirmed:true,group_ids:[groups[0].id,groups[0].id],student_ids:[students[0].id,students[0].id]};
+ ok(await db.from('sessions').update({status:'in_progress'}).eq('id',session.id));
+ assert.match((await db.rpc('academic_year_operation',{p_tenant:tenant,p_user:owner.id,p_action:'rollover',p_data:data})).error?.message || '',/ACTIVE_SESSION/);
+ ok(await db.from('sessions').update({status:'ended'}).eq('id',session.id));
+ const moved=ok(await db.rpc('academic_year_operation',{p_tenant:tenant,p_user:owner.id,p_action:'rollover',p_data:data}));
+ const newGroup=moved.group_map[groups[0].id];assert.ok(newGroup);assert.equal(moved.carried_students,1);
+ assert.equal(ok(await db.from('groups').select('id').eq('academic_year_id',moved.year.id)).length,1);
+ assert.equal(ok(await db.from('students').select('group_id,archived_at').eq('id',students[0].id).single()).group_id,newGroup);
+ assert.ok(ok(await db.from('students').select('archived_at').eq('id',students[1].id).single()).archived_at);
+ assert.deepEqual(ok(await db.from('attendance').select('*').eq('id',attendance.id).single()),attendance);
+ assert.equal(ok(await db.rpc('homework_target_allowed',{p_student:students[0].id,p_tenant:tenant,p_material:old.id})),false);
+ const portal=ok(await db.rpc('get_parent_portal_payload',{p_token:students[0].parent_portal_token}));
+ assert.equal(portal.materials.some(m=>m.id===old.id),false);assert.equal(portal.sessions.length,0);
+ const archive=ok(await db.rpc('academic_year_operation',{p_tenant:tenant,p_user:owner.id,p_action:'archive',p_data:{year_id:year.id}}));assert.equal(archive.students.length,2);assert.equal(archive.attendance_count,1);
+ assert.match((await db.rpc('classroom_operation',{p_tenant:tenant,p_user:owner.id,p_assistant:null,p_action:'restore_group',p_data:{id:groups[0].id}})).error?.message || '',/YEAR_CLOSED/);
+ assert.match((await db.rpc('classroom_operation',{p_tenant:tenant,p_user:owner.id,p_assistant:null,p_action:'restore_student',p_data:{id:students[1].id}})).error?.message || '',/ACTIVE_GROUP_REQUIRED/);
+ ok(await db.rpc('classroom_operation',{p_tenant:tenant,p_user:owner.id,p_assistant:null,p_action:'restore_student',p_data:{id:students[1].id,group_id:newGroup}}));
+ assert.equal(ok(await db.from('students').select('archived_at,group_id').eq('id',students[1].id).single()).group_id,newGroup);
+ assert.ok((await anonClient.rpc('academic_year_operation',{p_tenant:tenant,p_user:owner.id,p_action:'view',p_data:{}})).error);
+});

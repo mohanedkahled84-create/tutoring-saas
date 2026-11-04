@@ -16,7 +16,8 @@ export const assistantCatalog = [
  {key:'dashboard',route:'dashboard',label:'لوحة المعلم والأرباح',actions:['view']},
  {key:'reports',route:'reports',label:'الدرجات ولوحة الشرف',actions:['view','send']},
  {key:'risk-watchlist',route:'risk-watchlist',label:'مؤشرات الخطر والإنذارات',actions:['view','send']},
- {key:'settings',route:'settings',label:'الإعدادات والاشتراك',actions:['view','edit']},
+ {key:'announcements',route:'announcements',label:'الرسائل والإعلانات',actions:['view','create','edit','send','delete']},
+ {key:'settings',route:'settings',label:'الإعدادات',actions:['view','edit']},
 ] as const;
 export const legacyAssistantActions=['grades.view','grades.edit','collections.view','collections.create','messages.view','messages.send'];
 export function normalizeAssistantPermissions(input:Record<string,boolean>){

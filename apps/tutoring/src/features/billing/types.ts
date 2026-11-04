@@ -97,6 +97,7 @@ export interface UpdateGiftCodeInput {
 }
 
 export interface IBillingRepository {
+  getCommercialLimits?(tenantId: string): Promise<Record<string, any>>;
   createPaymentProof(
     tenantId: string,
     userId: string,

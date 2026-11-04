@@ -10,7 +10,7 @@ import {config} from '../dist/shared/config/index.js';
 const full=Object.fromEntries(assistantCatalog.flatMap(page=>page.actions.map(action=>[`${page.key}.${action}`,true])));
 const policy=(method,path,page,permissions=full,body={},savedType)=>delegatedCapability({method,path,page,permissions,body,savedType});
 test('all teacher pages have independent permission keys, with closed access by default',()=>{
- assert.equal(assistantCatalog.length,17);
+ assert.equal(assistantCatalog.length,18);
  for(const page of assistantCatalog){const endpoint=page.key==='settings'?'/settings':'/groups';assert.throws(()=>policy('GET',endpoint,page.route,{}),e=>e.status===403);assert.equal(policy('GET',endpoint,page.route,{[page.key+'.view']:true}),page.key+'.view');}
  assert.throws(()=>policy('GET','/students','settings',{'settings.view':true}),e=>e.status===403);
  assert.throws(()=>policy('GET','/students','assistants',{'assistants.view':true}),e=>e.status===403);
@@ -47,4 +47,19 @@ test('concurrent assistant requests cannot share a database client or contaminat
  const a={},b={};
  await Promise.all([delegatedClientScope.run(a,async()=>{await new Promise(r=>setTimeout(r,10));assert.equal(getServiceSupabaseClient(),a);}),delegatedClientScope.run(b,async()=>{await new Promise(r=>setTimeout(r,5));assert.equal(getServiceSupabaseClient(),b);})]);
  assert.notEqual(getServiceSupabaseClient(),a);assert.notEqual(getServiceSupabaseClient(),b);
+});
+
+test('announcements have independent view, creation, publishing and paid send rights',()=>{
+ const view={'announcements.view':true};
+ assert.equal(policy('GET','/announcements','announcements',view),'announcements.view');
+ assert.equal(policy('GET','/groups','announcements',view),'announcements.view');
+ for(const path of ['/announcements/source','/announcements/type-requests','/announcements/fixture/preview','/announcements/fixture/publish','/announcements/fixture/consent','/announcements/fixture/enqueue','/announcements/fixture/retry','/announcements/fixture/cancel','/announcements/fixture/archive'])assert.throws(()=>policy('POST',path,'announcements',view),e=>e.status===403);
+ assert.throws(()=>policy('POST','/announcements/fixture/enqueue','reports',{'reports.view':true,'reports.send':true}),e=>e.status===403);
+ assert.equal(policy('POST','/announcements/fixture/enqueue','announcements',{...view,'announcements.send':true}),'announcements.send');
+ assert.throws(()=>policy('POST','/announcements/fixture/publish','announcements',{...view,'announcements.send':true}),e=>e.status===403);
+});
+
+test('atomic online publication delegates view context and lets the private operation recheck create/edit per saved target',()=>{
+ assert.equal(delegatedCapability({method:'POST',path:'/quizzes/publish-online',page:'online-quizzes',permissions:{'online-quizzes.view':true}}),'online-quizzes.view');
+ assert.throws(()=>delegatedCapability({method:'POST',path:'/quizzes/publish-online',page:'online-quizzes',permissions:{'paper-exams.view':true}}));
 });

@@ -1,7 +1,8 @@
+import {renderAccountDeletion,registerAccountDeletion} from './AccountDeletion.js';
 import {mountPhoneVerification} from './PhoneVerification.js?v=2';
+import {renderPortalPreferencesSettings,registerPortalPreferencesSettings} from './PortalPreferencesSettings.js';
 import { getIcon } from '../utils/icons.js';
 import { escapeHtml } from '../utils/escapeHtml.js';
-import { renderBillingView } from './BillingView.js?v=3.8.0';
 import { request } from '../services/api.js';
 import { authService } from '../services/auth.js';
 import { normalizeDigits } from '../utils/normalizeDigits.js';
@@ -33,7 +34,7 @@ function formatArabicDate(dateStr) {
 export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, whatsapp = {}, securityState = { hasPin: false, isUnlocked: true }) {
   let activeTab = state?.activeTab || 'profile';
   if (activeTab === 'appearance') activeTab = 'profile';
-  const displayName = (user?.full_name || user?.name || '').replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim() || 'محمد خالد';
+  const displayName = (user?.full_name || user?.name || '').replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim();
   const email = user?.email || '';
   const phone = user?.phone || '';
   const contactPhone = user?.contact_phone || user?.whatsapp_phone || billing?.settings?.contact_phone || phone;
@@ -70,11 +71,11 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
               <span>${getIcon('gear', 24, '#fcd34d')}</span>
                 <h2 style="margin: 0; font-size: 1.4rem; font-weight: 900; color: #fff;">
-                  الإعدادات والاشتراك
+                  الإعدادات
                 </h2>
             </div>
             <p style="font-size: 0.875rem; color: #cbd5e1; margin: 0;">
-              تعديل بيانات المعلم، إدارة باقة الاشتراك، والأمان وكلمة المرور.
+              بيانات المعلم، تجربة الطالب وولي الأمر، وأمان الحساب.
             </p>
           </div>
 
@@ -87,6 +88,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
         </div>
       </div>
 
+      ${!window.centrlyApp?.delegation?`<section class="card" style="margin:0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem"><div><h3>السنة الدراسية والأرشيف</h3><p>تنظيم السنة الحالية، ونقل المجموعات والطلاب مع حفظ تاريخهم.</p></div><button type="button" class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openAcademicYears()">إدارة السنوات</button></section>`:''}
       <!-- Settings Navigation Tabs -->
       <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--centrly-line); padding-bottom: 0.65rem; overflow-x: auto; -webkit-overflow-scrolling: touch;">
         
@@ -97,11 +99,11 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           <span>الملف الشخصي والمادة</span>
         </button>
 
-        <button type="button" onclick="window.centrlyApp.switchSettingsTab('subscription')"
-          class="btn ${activeTab === 'subscription' ? 'btn-primary' : 'btn-secondary'}"
+        <button type="button" onclick="window.centrlyApp.switchSettingsTab('portal')"
+          class="btn ${activeTab === 'portal' ? 'btn-primary' : 'btn-secondary'}"
           style="font-weight: 800; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 1.15rem; border-radius: 10px; white-space: nowrap;">
           ${getIcon('billing', 16)}
-          <span>الباقة والاشتراكات</span>
+          <span>الطالب وولي الأمر</span>
         </button>
 
         <button type="button" onclick="window.centrlyApp.switchSettingsTab('security')"
@@ -124,7 +126,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
           </p>
 
           <form onsubmit="window.centrlyApp.handleSaveTeacherProfile(event)">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,280px), 1fr)); gap: 1.25rem;">
               
               <div class="form-group">
                 <label class="form-label" style="font-weight: 700;">اسم المعلم الشائع (كما يظهر للطلاب)</label>
@@ -167,9 +169,8 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
         </div>
       </div>
 
-      <!-- ================= TAB 3: SUBSCRIPTION ================= -->
-      <div id="settingsTabSubscription" style="display: ${activeTab === 'subscription' ? 'block' : 'none'};">
-        ${renderBillingView(billing, user)}
+      <div id="settingsTabPortal" style="display: ${activeTab === 'portal' ? 'block' : 'none'};">
+        ${renderPortalPreferencesSettings(state)}
       </div>
 
       <!-- ================= TAB 4: SECURITY ================= -->
@@ -188,7 +189,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                     إدارة وأمان كلمة المرور
                   </h3>
                   <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0.2rem 0 0 0;">
-                    تغيير كلمة المرور باشتراط كلمة المرور القديمة، أو طلب رابط استعادة فوري عبر بريدك الإلكتروني في حال نسيتها.
+                    غيّر كلمة مرورك الحالية، أو عيّن كلمة مرور عبر بريدك لو بتدخل باستخدام Google.
                   </p>
                 </div>
               </div>
@@ -196,7 +197,7 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
 
             <div id="settingsPasswordAlert" style="display: none; padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; font-size: 0.85rem;"></div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1.25rem; align-items: stretch;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,310px), 1fr)); gap: 1.25rem; align-items: stretch;">
               
               <!-- Option 1: Change using Old Password -->
               <div style="background: var(--centrly-surface); border: 1.5px solid var(--centrly-line); border-radius: 14px; padding: 1.35rem; display: flex; flex-direction: column; justify-content: space-between;">
@@ -265,12 +266,12 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
                   <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
                     <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #f59e0b; color: #fff; font-size: 0.8rem; font-weight: 800;">2</span>
                     <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--centrly-ink);">
-                      نسيت كلمة المرور القديمة؟
+                      تعيين أو استعادة كلمة المرور
                     </h4>
                   </div>
 
                   <p style="font-size: 0.825rem; color: var(--centrly-text); margin: 0 0 1rem 0; line-height: 1.6;">
-                    إذا كنت لا تتذكر كلمة المرور الحالية، يمكنك إرسال رابط تأكيد وتعيين فوري إلى بريدك الإلكتروني المسجل:
+                    لو بتدخل باستخدام Google أو نسيت كلمة المرور، ابعت رابط تعيين إلى بريدك المسجل. مش محتاج كلمة مرور قديمة:
                   </p>
 
                   <div style="background: #fff; border: 1px solid var(--centrly-line); border-radius: 8px; padding: 0.6rem 0.85rem; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -300,11 +301,14 @@ export function renderTeacherSettingsView(state = {}, user = {}, billing = {}, w
         </div>
       </div>
 
+      ${renderAccountDeletion(user)}
     </div>
   `;
 }
 
 export function registerTeacherSettingsActions(app) {
+  registerPortalPreferencesSettings(app);
+  registerAccountDeletion(app);
   app.openTeacherPhoneVerification = async function() {
     try {
       const info=await request('/auth/phone/info',{method:'POST',body:{}});
@@ -319,48 +323,28 @@ export function registerTeacherSettingsActions(app) {
   };
 
   app.handleSaveTeacherProfile = async function(e) {
-    if (e) e.preventDefault();
-    const name = document.getElementById('settingsTeacherName')?.value?.trim();
-    const subject = document.getElementById('settingsSubject')?.value?.trim() || '';
-    const phone = normalizeDigits(document.getElementById('settingsPhone')?.value?.trim() || '');
-    const contactPhone = normalizeDigits(document.getElementById('settingsContactPhone')?.value?.trim() || '');
-    const btn = document.getElementById('saveProfileBtn');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<span>جارٍ الحفظ...</span>';
-    }
-
-    try {
-      await request('/settings', {
-        method: 'PUT',
-        body: JSON.stringify({
-          teacher_name: name,
-          subject,
-          phone,
-          contact_phone: contactPhone || phone,
-        }),
-      });
-
-      if (this.user) {
-        if (name) {
-          this.user.name = name;
-          this.user.full_name = name;
-        }
-        this.user.subject = subject;
-        this.user.phone = phone;
-        this.user.contact_phone = contactPhone || phone;
-        authService.setUser(this.user);
-      }
-      this.showToast('تم حفظ بيانات الملف الشخصي بنجاح', 'success');
-      this.renderApp();
-    } catch (err) {
-      this.showToast(err.message || 'تعذر حفظ البيانات', 'danger');
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<span>حفظ التعديلات</span>';
-      }
-    }
+    e?.preventDefault();
+    if(this.delegation){this.showToast('بيانات هوية الحساب يغيّرها المدرس نفسه','warning');return;}
+    const actor=[this.user?.id,this.user?.tenant_id].join(':'),sameActor=()=>actor===[this.user?.id,this.user?.tenant_id].join(':');
+    const body={teacher_name:document.getElementById('settingsTeacherName')?.value?.trim(),subject:document.getElementById('settingsSubject')?.value?.trim() || '',phone:normalizeDigits(document.getElementById('settingsPhone')?.value || ''),contact_phone:normalizeDigits(document.getElementById('settingsContactPhone')?.value || '')};
+    body.contact_phone ||= body.phone;
+    const canonical=value=>{let phone=normalizeDigits(value || '').replace(/[\s()+.\-]/g,'').replace(/^00/,'');return /^01[0125]\d{8}$/.test(phone)?'2'+phone:phone;};
+    const button=document.getElementById('saveProfileBtn');
+    const save=async()=>{
+      if(!sameActor())return;
+      if(button){button.disabled=true;button.textContent='جارٍ الحفظ…';}
+      try{const result=await request('/settings/profile',{method:'POST',body});if(!sameActor())return;if(!result?.success || !result.user)throw Error('تعذر تأكيد حفظ البيانات');this.user={...this.user,...result.user};authService.setUser(this.user);this.showToast('تم حفظ بيانات الملف الشخصي','success');this.renderApp();}
+      catch(error){if(sameActor())this.showToast(error.message || 'تعذر حفظ البيانات','danger');}
+      finally{if(button?.isConnected){button.disabled=false;button.textContent='حفظ التعديلات';}}
+    };
+    if(canonical(body.phone)===canonical(this.user?.phone)){await save();return;}
+    if(button){button.disabled=true;button.textContent='جارٍ تجهيز تأكيد الرقم…';}
+    try{
+      const info=await request('/auth/phone/change/begin',{method:'POST',body:{phone:body.phone}});if(!sameActor())return;
+      this.showModal('تأكيد الرقم الجديد','<p>رقم حسابك الحالي يفضل محفوظ لحد ما تأكد الرقم الجديد. لو قفلت قبل تأكيد الكود، رقمك الحالي يفضل زي ما هو.</p><div id="teacher-phone-change"></div>','');
+      mountPhoneVerification(document.getElementById('teacher-phone-change'),{info:{...info,is_phone_change:true},requestChallenge:()=>request('/auth/phone/change/challenge',{method:'POST',body:{}}),requestCode:(proof={})=>request('/auth/phone/change/request',{method:'POST',body:proof}),verifyCode:data=>request('/auth/phone/change/verify',{method:'POST',body:data}),onVerified:async result=>{if(!sameActor())return;this.user.phone=result.phone;authService.setUser(this.user);this.closeModal();await save();}});
+    }catch(error){if(sameActor())this.showToast(error.message || 'تعذر تجهيز تأكيد الرقم','danger');}
+    finally{if(button?.isConnected){button.disabled=false;button.textContent='حفظ التعديلات';}}
   };
 
   app.handleSettingsChangePassword = async function(e) {

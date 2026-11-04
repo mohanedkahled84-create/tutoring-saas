@@ -12,7 +12,8 @@ export class SupabaseQuizzesRepository implements IQuizzesRepository {
       .order("quiz_number", { ascending: true });
 
     if (groupId) {
-      query = query.eq("group_id", groupId);
+      query = query.eq("group_id", groupId)
+      .is("material_id", null);
     }
 
     const { data, error } = await query;

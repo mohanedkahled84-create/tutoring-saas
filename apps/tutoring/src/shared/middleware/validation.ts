@@ -169,6 +169,7 @@ export const rescheduleSessionSchema = z.object({
 });
 
 export const extraSessionSchema = z.object({
+  request_id: z.string().uuid().optional(),
   group_id: z.string().uuid("group_id must be a valid UUID"),
   session_date: z
     .string()

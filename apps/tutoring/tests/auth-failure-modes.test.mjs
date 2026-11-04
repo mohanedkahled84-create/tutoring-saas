@@ -153,25 +153,10 @@ test("AUTH FAILURE MODES - 503 AUTH_BACKEND_ERROR when PostgREST / DB error occu
       return { data: null, error: { message: "function get_user_profile does not exist", code: "42883" } };
     },
     from(table) {
-      return {
-        select(cols) {
-          return {
-            eq(col, val) {
-              return {
-                async single() {
-                  return {
-                    data: null,
-                    error: {
-                      code: "42703",
-                      message: 'column users.financial_pin does not exist',
-                    },
-                  };
-                },
-              };
-            },
-          };
-        },
-      };
+      const builder={
+        select(){return builder;},eq(){return builder;},is(){return builder;},
+        async single(){return {data:null,error:{code:'42703',message:'column users.financial_pin does not exist'}};}
+      };return builder;
     },
   });
 

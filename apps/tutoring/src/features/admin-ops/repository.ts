@@ -12,6 +12,15 @@ import { getServiceSupabaseClient } from "../../supabase.js";
 export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
   constructor(private readonly client: SupabaseClient) {}
 
+  async resolveCommercialProof(proofId:string,adminId:string,action:'approve'|'reject'):Promise<AdminTenantSummary|null>{
+    const found=await this.client.from('subscription_orders').select('id,tenant_id').eq('proof_id',proofId).maybeSingle();
+    if(found.error)throw found.error;
+    if(!found.data)return null;
+    const result=await this.client.rpc('subscription_operation',{p_user:adminId,p_action:action,p_data:{id:found.data.id}});
+    if(result.error)throw result.error;
+    return this.getTenant(found.data.tenant_id);
+  }
+
   private mapTenantRow(row: Record<string, any>): AdminTenantSummary {
     const rawUsers = row.users;
     const usersList = Array.isArray(rawUsers) ? rawUsers : (rawUsers ? [rawUsers] : []);
@@ -41,9 +50,10 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
       name: row.name,
       status: row.status,
       subscription_status: row.subscription_status,
-      subscription_tier: row.subscription_tier || tier,
-      students_limit: limit,
-      plan_name: planName,
+      subscription_tier: row.commercial?.plan_id ?? row.subscription_tier ?? tier,
+      students_limit: row.commercial?.students ?? limit,
+      commercial: row.commercial || null,
+      plan_name: row.commercial?.name ?? planName,
       account_type: row.account_type || (ownerUser?.role === "center_owner" ? "center" : "teacher"),
       email: ownerUser?.email || undefined,
       phone: ownerUser?.phone || undefined,
@@ -65,7 +75,10 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
     if (error) {
       throw new Error(error.message);
     }
-    return ((data || []) as Record<string, any>[]).map((t) => this.mapTenantRow(t));
+    const commercial=await this.client.rpc('commercial_admin_summary');
+    if(commercial.error)throw commercial.error;
+    const byTenant=new Map((commercial.data || []).map((r:any)=>[r.tenant_id,r.limits]));
+    return ((data || []) as Record<string, any>[]).map((t) => this.mapTenantRow({...t,commercial:byTenant.get(t.id)}));
   }
 
   async getOverviewCounts(): Promise<AdminOverviewMetrics> {
@@ -185,14 +198,17 @@ export class SupabaseAdminOpsRepository implements IAdminOpsRepository {
   async getTenant(tenantId: string): Promise<AdminTenantSummary | null> {
     const { data, error } = await this.client
       .from("tenants")
-      .select("id, name, status, subscription_status, account_type, trial_ends_at, subscription_ends_at, deleted_at, created_at, users(email, phone, full_name, role), students(count)")
+      .select("id, name, status, subscription_status, subscription_tier, settings, account_type, trial_ends_at, subscription_ends_at, deleted_at, created_at, users(email, phone, full_name, role), students(count)")
       .eq("id", tenantId)
       .maybeSingle();
 
     if (error) {
       throw new Error(error.message);
     }
-    return data ? this.mapTenantRow(data as Record<string, any>) : null;
+    if(!data)return null;
+    const limits=await this.client.rpc('commercial_limits',{p_tenant:tenantId});
+    if(limits.error)throw limits.error;
+    return this.mapTenantRow({...data,commercial:limits.data?.legacy?null:limits.data});
   }
 
   async updateTenantSubscription(

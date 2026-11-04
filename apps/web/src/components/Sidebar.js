@@ -13,6 +13,8 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
         { id: 'admin-dashboard', title: 'لوحة الإحصائيات والأرباح', icon: 'dashboard' },
         { id: 'admin-proofs', title: 'مراجعة إيصالات الدفع', icon: 'billing' },
         { id: 'admin-tenants', title: 'المشتركين والمعلمين والسناتر', icon: 'teachers' },
+        { id: 'announcement-admin', title: 'قوالب وتنبيهات الدراسة', icon: 'whatsapp' },
+        { id: 'admin-support', title: 'طلبات دعم المشتركين', icon: 'info' },
         { id: 'whatsapp-inbox', title: 'محادثات الواتساب وحاسبة الأرباح', icon: 'whatsapp' },
         { id: 'admin-outreach', title: 'حملات التواصل (Outreach)', icon: 'whatsapp' },
         { id: 'coupons', title: 'أكواد الخصم والكوبونات', icon: 'billing' },
@@ -61,7 +63,9 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
     {
       category: 'الإدارة والماليات',
       routes: [
-        { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
+        { id: 'settings', title: 'الإعدادات', icon: 'gear' },
+        { id: 'billing', title: 'الاشتراك', icon: 'billing' },
+        { id: 'support', title: 'الدعم والمساعدة', icon: 'info' },
         { id: 'activity-logs', title: 'تسويات المدرسين والماليات', icon: 'billing' },
       ],
     },
@@ -74,6 +78,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
   // 4. Analytics & Financials (Earnings Dashboard, Reports, Risk Watchlist)
   // 5. Administration & Settings (Assistants, WhatsApp, Billing, Activity)
   const teacherDailyRoutes = [
+    { id: 'announcements', title: teacherPageTitles.announcements, icon: 'whatsapp' },
     { id: 'sessions', title: teacherPageTitles.attendance, icon: 'sessions' },
     { id: 'homework', title: teacherPageTitles.homework, icon: 'homework' },
     { id: 'materials', title: teacherPageTitles.materials, icon: 'materials' },
@@ -122,7 +127,9 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
     {
       category: 'الإعدادات والاشتراك',
       routes: [
-        { id: 'settings', title: 'الإعدادات والاشتراك', icon: 'gear' },
+        { id: 'settings', title: 'الإعدادات', icon: 'gear' },
+        { id: 'billing', title: 'الاشتراك', icon: 'billing' },
+        { id: 'support', title: 'الدعم والمساعدة', icon: 'info' },
       ],
     },
   ];

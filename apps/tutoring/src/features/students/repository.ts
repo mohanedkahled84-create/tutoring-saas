@@ -8,6 +8,15 @@ import {
 import { generateParentPortalToken } from "../../shared/utils/tokens.js";
 
 export class SupabaseStudentsRepository implements IStudentsRepository {
+  async findByPhone(tenantId:string|undefined,phone:string):Promise<Student|null>{
+    if(!tenantId)return null;
+    let canonical=phone.replace(/[٠-٩]/g,d=>String(d.charCodeAt(0)-1632)).replace(/[۰-۹]/g,d=>String(d.charCodeAt(0)-1776)).replace(/\D/g,'').replace(/^00/,'');
+    if(/^01[0125]\d{8}$/.test(canonical))canonical='2'+canonical;
+    if(/^1[0125]\d{8}$/.test(canonical))canonical='20'+canonical;
+    const {data,error}=await this.client.from('students').select('id,tenant_id,name,student_phone,parent_phone,student_code,code,group_id,archived_at').eq('tenant_id',tenantId).eq('student_phone_canonical',canonical).order('created_at').limit(1).maybeSingle();
+    if(error)throw new Error(error.message);
+    return data as Student|null;
+  }
   constructor(
     private readonly client: SupabaseClient,
     private readonly privilegedClient?: SupabaseClient,
@@ -17,7 +26,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   async list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]> {
     let q = this.client
       .from("students")
-      .select("id, tenant_id, code, student_code, name, group_id, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at, group_students(group_id, groups(id, name))")
+      .select("id, tenant_id, code, student_code, name, group_id, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at, archived_at, group_students(group_id, groups(id, name, archived_at))")
       .order("created_at", { ascending: false });
 
     if (tenantId) {
@@ -36,7 +45,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       // Fallback to direct select if relational join fails
       let fallbackQuery = this.client
         .from("students")
-        .select("id, tenant_id, code, student_code, name, group_id, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
+        .select("id, tenant_id, code, student_code, name, group_id, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at, archived_at")
         .order("created_at", { ascending: false });
       if (tenantId) fallbackQuery = fallbackQuery.eq("tenant_id", tenantId);
       if (query?.trim()) {
@@ -48,13 +57,13 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       if (fallback.error) {
         throw new Error(fallback.error.message);
       }
-      return (fallback.data as Student[]) || [];
+      return ((fallback.data as Array<Student & {archived_at?:string|null}>) || []).filter(row=>!row.archived_at);
     }
 
-    const mapped: Student[] = ((data as any[]) || []).map((s) => {
+    const mapped: Student[] = ((data as any[]) || []).filter(s=>!s.archived_at).map((s) => {
       const rawGs = s.group_students;
-      const gsList = Array.isArray(rawGs) ? rawGs : (rawGs ? [rawGs] : []);
-      const primaryGroup = gsList[0]?.groups;
+      const gsList = (Array.isArray(rawGs) ? rawGs : (rawGs ? [rawGs] : [])).filter((g:any)=>g.groups && !g.groups.archived_at);
+      const primaryGroup = (gsList.find((g:any)=>g.group_id===s.group_id) || gsList[0])?.groups;
       const allGroupIds = gsList.map((g: any) => g.group_id).filter(Boolean);
 
       const studentObj: Student = {
@@ -73,7 +82,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
         parent_portal_token: s.parent_portal_token,
         portal_password: s.portal_password,
         created_at: s.created_at,
-        group_id: s.group_id || (primaryGroup?.id ?? undefined),
+        group_id: primaryGroup?.id ?? s.group_id ?? undefined,
         group_name: primaryGroup?.name ?? undefined,
         group_ids: allGroupIds.length > 0 ? allGroupIds : (s.group_id ? [s.group_id] : []),
       };
@@ -229,28 +238,8 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       throw new Error(error.message);
     }
 
-    if (updated && data.group_id !== undefined) {
-      try {
-        const studentTenantId = (updated as any)?.tenant_id;
-        // Enforce 1 student = 1 group: Remove student from any previous group first
-        await this.client
-          .from("group_students")
-          .delete()
-          .eq("student_id", id);
-
-        if (data.group_id) {
-          await this.client
-            .from("group_students")
-            .insert({
-              tenant_id: studentTenantId,
-              student_id: id,
-              group_id: data.group_id,
-            });
-        }
-      } catch (err) {
-        console.error("[SupabaseStudentsRepository.update] Group enrollment sync error:", err);
-      }
-    }
+    // The database updates primary membership and its history atomically.
+    // Secondary memberships must not be removed by an ordinary profile edit.
 
     if (!updated) return null;
     const resStudent: Student = {

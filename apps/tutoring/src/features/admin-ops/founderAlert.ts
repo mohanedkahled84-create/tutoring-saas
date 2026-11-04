@@ -14,7 +14,7 @@ export function formatNewSignupMessage(payload: NewSignupAlertPayload): string {
     payload.subject ? `• *المادة:* ${payload.subject}` : null,
     payload.governorate ? `• *المحافظة:* ${payload.governorate}` : null,
     `• *تاريخ التسجيل:* ${signupTime}`,
-    `• *انتهاء التجربة:* ${payload.trial_ends_at || "14 يوماً"}`,
+    `• *انتهاء التجربة:* ${payload.trial_ends_at || "7 أيام"}`,
     "• *حالة الحساب:* تجربة مجانية (Trial)",
   ]
     .filter(Boolean)

@@ -46,6 +46,16 @@ export function createDelegatedFetch(context:DelegatedDatabaseContext,fetcher:ty
     const single=headers.get('accept')?.includes('vnd.pgrst.object');return new Response(JSON.stringify(redactDelegatedData(single?data[0]:data,context)),{status:201,headers:{'Content-Type':'application/json'}});
    }
   }else if(rpc){
+   if(decodeURIComponent(rpc[1])==='commercial_storage_check'){
+    const args=JSON.parse(body || '{}');
+    if(method!=='POST' || Object.keys(args).sort().join(',')!=='p_bytes,p_tenant' || args.p_tenant!==context.tenantId || !Number.isSafeInteger(args.p_bytes) || args.p_bytes<0 || args.p_bytes>25*1024*1024)throw fail();
+    return fetcher(url,{method,headers,body,signal:request.signal});
+   }
+   if(decodeURIComponent(rpc[1])==='commercial_limits'){
+    const args=JSON.parse(body || '{}');
+    if(method!=='POST' || Object.keys(args).length!==1 || args.p_tenant!==context.tenantId)throw fail();
+    return fetcher(url,{method,headers,body,signal:request.signal});
+   }
    if(method!=='POST')throw fail();
    const name=decodeURIComponent(rpc[1]);if(name.startsWith('assistant_delegated_'))throw fail();
    url.pathname='/rest/v1/rpc/assistant_delegated_rpc';url.search='';body=JSON.stringify({p_name:name,p_args:JSON.parse(body || '{}')});

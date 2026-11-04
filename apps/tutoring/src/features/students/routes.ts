@@ -13,6 +13,7 @@ import {getServiceSupabaseClient} from '../../supabase.js';
 import {notifyMetaFamily,configuredMetaFamilyGateway} from '../../shared/utils/metaFamily.js';
 import {authRateLimiter} from '../../shared/middleware/rateLimit.js';
 import {currentPortalDestination} from '../../shared/utils/portalDestination.js';
+import {registerStudentLifecycle} from './lifecycle.js';
 
 export const studentsRouter = Router();
 export const importRouter = Router();
@@ -25,6 +26,7 @@ const requireStudentTenant = (req: AuthenticatedRequest, res: Response, next: ()
   next();
 };
 studentsRouter.use(requireStudentTenant);
+registerStudentLifecycle(studentsRouter);
 // Legacy cached clients may not bypass the one-time official welcome by
 // switching to an old Evolution/provider endpoint. Repeated sharing is manual.
 studentsRouter.use((req,res,next)=>{
@@ -79,6 +81,8 @@ studentsRouter.post(
         return;
       }
       const rawMsg = err instanceof Error ? err.message : "Failed to create student";
+      if(rawMsg.includes('STUDENT_LIMIT_REACHED')){res.status(409).json({error:{code:'STUDENT_LIMIT_REACHED',message:'وصلت لسعة الطلاب؛ أضف مقاعد من صفحة الاشتراك أو أرشف الطلاب غير النشطين'}});return;}
+      if(rawMsg.startsWith('DUPLICATE_STUDENT_PHONE:')){res.status(409).json({error:{code:'DUPLICATE_STUDENT_PHONE',message:rawMsg.replace('DUPLICATE_STUDENT_PHONE: ',''),existing_student:(err as any).existingStudent || null}});return;}
       if (rawMsg.startsWith("DUPLICATE_STUDENT_CODE:")) {
         res.status(409).json({ error: { code: "DUPLICATE_STUDENT_CODE", message: rawMsg.replace("DUPLICATE_STUDENT_CODE: ", "") } });
         return;
@@ -127,6 +131,8 @@ studentsRouter.put(
       res.json({ student });
     } catch (err: unknown) {
       const rawMsg = err instanceof Error ? err.message : "Failed to update student";
+      if(rawMsg.includes('STUDENT_LIMIT_REACHED')){res.status(409).json({error:{code:'STUDENT_LIMIT_REACHED',message:'وصلت لسعة الطلاب؛ أضف مقاعد من صفحة الاشتراك أو أرشف الطلاب غير النشطين'}});return;}
+      if(rawMsg.startsWith('DUPLICATE_STUDENT_PHONE:')){res.status(409).json({error:{code:'DUPLICATE_STUDENT_PHONE',message:rawMsg.replace('DUPLICATE_STUDENT_PHONE: ','')}});return;}
       if (rawMsg.startsWith("DUPLICATE_STUDENT_CODE:")) {
         res.status(409).json({ error: { code: "DUPLICATE_STUDENT_CODE", message: rawMsg.replace("DUPLICATE_STUDENT_CODE: ", "") } });
         return;

@@ -1,4 +1,5 @@
 import {Router} from 'express';
+import {requireCommercialAccess} from '../../shared/middleware/commercialAccess.js';
 import type {AuthenticatedRequest,UserContext} from '../../shared/types/index.js';
 import {getServiceSupabaseClient} from '../../supabase.js';
 import {delegatedClientScope} from '../../shared/delegatedClient.js';
@@ -10,6 +11,7 @@ import {createDelegatedDatabase,redactDelegatedData} from './delegatedDatabase.j
 import {delegatedCapability} from './delegatedPolicy.js';
 import {assistantCatalog,normalizeAssistantPermissions} from './catalog.js';
 import {safeAssistantChanges} from './activity.js';
+import {announcementsRouter} from '../announcements/routes.js';
 import {groupsRouter} from '../groups/index.js';
 import {studentsRouter,importRouter} from '../students/index.js';
 import {sessionsRouter} from '../sessions/index.js';
@@ -26,6 +28,7 @@ import {templatesRouter,whatsappRouter} from '../whatsapp-notifications/index.js
 
 const fault=(status:number,message:string)=>Object.assign(new Error(message),{status});
 const controllers=Router();
+controllers.use('/announcements',announcementsRouter);
 controllers.use('/groups',groupsRouter,importRouter);
 controllers.use('/students',studentsRouter);
 controllers.use('/sessions',sessionsRouter);
@@ -120,7 +123,8 @@ delegatedWorkspaceRouter.use(async(req:AuthenticatedRequest,res,next)=>{
    const target=savedRecord?.id || route.split('/')[2],targetId=/^[a-f0-9-]{36}$/i.test(target || '')?target:null;
    void raw.from('assistant_access_audit').insert({tenant_id:identity.tenant_id,assistant_id:identity.assistant_id,action:capability,target_id:targetId,target_name:savedRecord?.name || savedRecord?.title || null,actor_name:identity.name,changes:safeAssistantChanges(capability,{after:{...req.body,...savedRecord}})}).then(()=>{},()=>{});
   });
-  delegatedClientScope.run(guarded,()=>controllers(req,res,next));
+  (req as any).commercialPath=route;
+  await requireCommercialAccess(req,res,()=>delegatedClientScope.run(guarded,()=>controllers(req,res,next)));
  }catch(error){
   const e=error as Error & {status?:number};
   res.status(e.status || 503).json({error:{code:e.status===401?'UNAUTHORIZED':e.status===403?'FORBIDDEN':'WORKSPACE_UNAVAILABLE',message:e.status?e.message:'تعذر فتح مساحة العمل؛ حاول مجددًا'}});

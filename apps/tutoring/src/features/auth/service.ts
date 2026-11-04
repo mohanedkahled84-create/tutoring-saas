@@ -153,7 +153,7 @@ export class AuthService {
       throw err;
     }
 
-    const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    const trialEnds = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const result = await this.repo.createTenantWithOwner(normalizedDto, trialEnds);
 
     if (onNewSignup) {
@@ -229,10 +229,11 @@ export class AuthService {
       throw err;
     }
 
+    if (!dto.current_password || !dto.email) throw new Error("CURRENT_PASSWORD_REQUIRED");
     if (typeof this.repo.changePassword === "function") {
       await this.repo.changePassword(dto.token, dto.email, dto.current_password || "", dto.new_password);
     } else {
-      await this.repo.resetPassword(dto.token, dto.new_password);
+      throw new Error("PASSWORD_VERIFICATION_UNAVAILABLE");
     }
   }
 }

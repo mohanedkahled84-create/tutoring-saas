@@ -71,7 +71,7 @@ test("DEV-META.2: dispatchBatchPortalLinks sends immediately when within 250 quo
   assert.equal(gateway.sentMessages.length, 4);
 });
 
-test("DEV-META.3: Multi-tenant FIFO quota splits overflow to tomorrow when >250 messages", async () => {
+test("DEV-META.3: Multi-tenant FIFO quota keeps overflow eligible without promising tomorrow", async () => {
   const repo = new FakeMetaPortalQueueRepository();
   const gateway = new FakeMetaCloudGateway();
   // Set small limit of 5 messages for clear test verification
@@ -94,9 +94,11 @@ test("DEV-META.3: Multi-tenant FIFO quota splits overflow to tomorrow when >250 
   assert.equal(result.total_messages, 6);
   assert.equal(result.sent_today, 0);
   assert.equal(result.scheduled_today, 5); // Consumes remaining 5
-  assert.equal(result.queued_tomorrow, 1); // 1 spilled to tomorrow
+  assert.equal(result.queued_tomorrow, 1); // waiting for rolling-window capacity
   assert.equal(result.remaining_today, 0);
   assert.ok(result.message.includes("جدولة"));
+  assert.ok(!result.message.includes("للغد"));
+  assert.ok(repo.items.every(item=>item.scheduled_date===new Date().toISOString().slice(0,10)));
 });
 
 test("DEV-META.4: Gracefully queues items when Meta templates are pending review", async () => {

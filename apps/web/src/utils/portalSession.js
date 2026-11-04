@@ -42,7 +42,7 @@ export function savePortalSession(token, role) {
     portalCache.clear('student');
     portalCache.clear('parent');
     for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('centrly_cached_') || key.startsWith('centrly_portal_snapshot_v1:') || ['portal_student', 'portal_student_code', 'centrly_platform_content', 'centrly_materials'].includes(key)) localStorage.removeItem(key);
+      if (key.startsWith('centrly_cached_') || key.startsWith('centrly_portal_snapshot_') || ['portal_student', 'portal_student_code', 'centrly_platform_content', 'centrly_materials'].includes(key)) localStorage.removeItem(key);
     }
   }
   localStorage.removeItem('centrly_explicit_logout');
@@ -91,6 +91,7 @@ export async function resolveStudentSession() {
   }
   const incoming = new URLSearchParams(location.search).get('token');
   if (incoming) { savePortalSession(incoming, 'student'); return incoming; }
-  if (localStorage.getItem('centrly_portal_role') && localStorage.getItem('centrly_portal_role') !== 'student') return null;
-  return localStorage.getItem('centrly_portal_token');
+  const storage=localStorage.getItem('centrly_portal_token')?localStorage:sessionStorage;
+  if(storage.getItem('centrly_portal_role') && storage.getItem('centrly_portal_role')!=='student')return null;
+  return storage.getItem('centrly_portal_token');
 }

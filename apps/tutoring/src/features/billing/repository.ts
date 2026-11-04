@@ -10,7 +10,13 @@ import {
 } from "./types.js";
 
 export class SupabaseBillingRepository implements IBillingRepository {
-  constructor(private readonly supabase: SupabaseClient) {}
+  constructor(private readonly supabase: SupabaseClient,private readonly privileged?:SupabaseClient) {}
+
+  async getCommercialLimits(tenantId:string):Promise<Record<string,any>> {
+    const {data,error}=await (this.privileged || this.supabase).rpc('commercial_limits',{p_tenant:tenantId});
+    if(error)throw error;
+    return data;
+  }
 
   async createPaymentProof(
     tenantId: string,
@@ -122,7 +128,7 @@ export class SupabaseBillingRepository implements IBillingRepository {
       const { count, error } = await this.supabase
         .from("students")
         .select("id", { count: "exact", head: true })
-        .eq("tenant_id", tenantId);
+        .eq("tenant_id", tenantId).is('archived_at',null);
 
       if (error || typeof count !== "number") {
         return 0;

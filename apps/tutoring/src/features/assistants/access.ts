@@ -36,6 +36,7 @@ export async function assistantRpc(db:SupabaseClient,name:string,args:Record<str
  if (error) {
   if (error.message.includes('UNAUTHORIZED')) throw fault(401,'انتهت الجلسة أو تم إيقاف الحساب؛ سجّل الدخول مجددًا');
   if (error.message.includes('FORBIDDEN')) throw fault(403,'هذه العملية خارج صلاحياتك أو مجموعاتك');
+  if (error.message.includes('ASSISTANT_LIMIT_REACHED')) throw fault(409,'وصلت لسعة المساعدين؛ أضف مساعدًا من صفحة الاشتراك أو أوقف حسابًا غير مستخدم');
   if (error.message.includes('NOT_FOUND')) throw fault(404,'الحساب غير موجود');
   if (error.message.includes('LEGACY_STAFF_LOGIN')) throw fault(409,'هذا السجل مرتبط بدخول مساعد قديم؛ يلزم نقل الدخول القديم قبل تفعيل الصلاحيات الجديدة');
   if (error.message.includes('IDEMPOTENCY_CONFLICT')) throw fault(409,'هذه المحاولة مسجلة ببيانات مختلفة؛ حدّث السجل قبل إنشاء عملية جديدة');
@@ -252,10 +253,10 @@ assistantManagementRouter.post('/invitations',async(req:AuthenticatedRequest,res
   const nonce=familyToken();
   const invitation=await assistantRpc(db,'assistant_invite',{p_tenant:tenant,p_assistant:id,p_teacher:teacher,p_phone:phone,p_nonce_hash:familyHash(nonce),p_permissions:access.permissions,p_all_groups:access.all_groups,p_group_ids:access.group_ids,p_pay:pay});
   const {data:tenantInfo}=await db.from('tenants').select('name').eq('id',tenant).single();
-  const delivery=await notifyAssistantInvitation(config.meta,phone,tenantInfo?.name || 'المعلم',nonce);
+  const delivery=(req as any).commercialLimits?.is_trial ? 'blocked' : await notifyAssistantInvitation(config.meta,phone,tenantInfo?.name || 'المعلم',nonce);
   const {error}=await db.from('assistant_invitations').update({delivery_status:delivery}).eq('id',invitation.invitation_id).eq('tenant_id',tenant);
   if(error) throw error;
-  res.status(201).json({...invitation,phone,...registrationLinks(tenant!,phone,nonce),delivery_status:delivery,message:delivery==='sent'?'تم إرسال الدعوة إلى واتساب':delivery==='blocked'?'تم حفظ الدعوة. إرسال واتساب متوقف لحين اعتماد قالب Utility':'تم حفظ الدعوة، لكن Meta لم تؤكد الإرسال'});
+  res.status(201).json({...invitation,phone,...registrationLinks(tenant!,phone,nonce),delivery_status:delivery,message:delivery==='sent'?'تم إرسال الدعوة إلى واتساب':delivery==='blocked'?'تم حفظ الدعوة. الإرسال الرسمي غير متاح الآن؛ يمكنك استخدام فتح واتساب لإرسال الرابط':'تم حفظ الدعوة، لكن Meta لم تؤكد الإرسال'});
  }catch(error){sendError(res,error);}
 });
 assistantManagementRouter.put('/:id/access',async(req:AuthenticatedRequest,res)=>{

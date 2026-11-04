@@ -145,7 +145,7 @@ test("PlatformBuilderService - verified administrator override allows publishing
   assert.equal(saved.is_active, true);
 });
 
-test("PlatformBuilderService - getPublicMaterials returns teacher study materials", async () => {
+test("PlatformBuilderService - anonymous platform does not expose private teacher study materials", async () => {
   const repo = new FakePlatformBuilderRepository();
   const service = new PlatformBuilderService(repo);
 
@@ -174,9 +174,7 @@ test("PlatformBuilderService - getPublicMaterials returns teacher study material
   ]);
 
   const materials = await service.getPublicMaterials("mr-content");
-  assert.equal(materials.length, 2);
-  assert.equal(materials[0].title, "محاضرة 1");
-  assert.equal(materials[1].is_homework, true);
+  assert.deepEqual(materials, []);
 });
 
 test("PlatformBuilderService - Real video view logging and retrieval", async () => {

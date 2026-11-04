@@ -176,6 +176,12 @@ export class SupabasePlatformBuilderRepository implements IPlatformBuilderReposi
     const status = (data?.subscription_status || "").toLowerCase();
     const settings = data?.settings || {};
 
+    if (settings.commercial_plan_id || ['basic_v1','pro_v1','max_v1'].includes(tier)) {
+      const resolved=await this.queryClient.rpc('commercial_limits',{p_tenant:tenantId});
+      if(resolved.error)throw resolved.error;
+      return {subscription_tier:resolved.data.plan_id,subscription_status:status,is_pro:resolved.data.teaching_platform,is_active:resolved.data.active};
+    }
+
     const isExplicitPro =
       tier === "pro" ||
       tier === "growth" ||
@@ -195,37 +201,10 @@ export class SupabasePlatformBuilderRepository implements IPlatformBuilderReposi
     };
   }
 
-  async getPublicMaterials(tenantId: string): Promise<any[]> {
-    const { data, error } = await this.queryClient
-      .from("study_materials")
-      .select("id, title, description, type, url, group_id, is_homework, due_date, book_name, pages, questions, created_at")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      throw error;
-    }
-
-    let items = (data || []) as any[];
-
-    try {
-      const { data: quizzesData } = await this.queryClient
-        .from("quizzes")
-        .select("id, title, quiz_number, max_score, quiz_date, is_skipped, group_id, created_at")
-        .eq("tenant_id", tenantId)
-        .order("quiz_number", { ascending: false });
-      if (quizzesData && quizzesData.length > 0) {
-        const mappedQuizzes = quizzesData.map((q: any) => ({
-          ...q,
-          type: "quiz",
-          is_quiz: true,
-          title: q.title || `كويز ${q.quiz_number}`,
-        }));
-        items = [...items, ...mappedQuizzes];
-      }
-    } catch (_) {}
-
-    return items;
+  async getPublicMaterials(_tenantId: string): Promise<any[]> {
+    // Never query private content with the privileged client for an anonymous
+    // visitor. The verified portal owns material access and answer redaction.
+    return [];
   }
 
   async recordVideoView(tenantId: string, data: VideoViewLogDto): Promise<void> {

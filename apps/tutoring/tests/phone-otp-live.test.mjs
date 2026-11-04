@@ -60,7 +60,7 @@ test('LIVE: locked invitation phone, OTP attempts/resend/claim, no legacy bypass
  const teacherChallenge=randomUUID(),teacherHash=familyHash('teacher-code');ok(await teacher('request',{challenge_id:teacherChallenge,code_hash:teacherHash}));ok(await teacher('delivery',{challenge_id:teacherChallenge,status:'uncertain'}));
  assert.equal(ok(await teacher('verify',{challenge_id:teacherChallenge,code_hash:teacherHash})).verified,true);
  assert.equal(ok(await teacher('info')).verified,true);
- ok(await db.from('users').update({phone:'201122222222'}).eq('id',user));assert.equal(ok(await teacher('info')).verified,false,'changing stored phone invalidates verification');
+ assert.equal((await db.from('users').update({phone:'201122222222'}).eq('id',user)).error?.code,'23514','a confirmed account number requires a new OTP transaction');assert.equal(ok(await teacher('info')).verified,true,'rejected changes retain the old verified identity');
  for(const [name,args] of [['assistant_registration',{p_nonce_hash:familyHash(nonce),p_origin:origin,p_action:'info',p_data:{}}],['assistant_registration_claim',{p_claim_hash:familyHash(proof.ticket),p_origin:origin}],['teacher_phone_verification',{p_user:user,p_tenant:tenant,p_origin:origin,p_action:'info',p_data:{}}],['phone_otp_reserve',{p_limit:5}]])assert.equal((await anonClient.rpc(name,args)).error?.code,'42501');
  for(const table of ['assistant_phone_verifications','teacher_phone_verifications','phone_otp_daily_budget'])assert.equal((await anonClient.from(table).select('*').limit(1)).error?.code,'42501');
 });

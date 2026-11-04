@@ -1,3 +1,6 @@
+import {renderSourceAnnouncementButton} from './AnnouncementsView.js';
+import {assistantCanNavigate} from '../utils/assistantWorkspacePolicy.js';
+import {teacherQuizCache,quizActor} from '../utils/teacherQuizCache.js';
 
 function playBarcodeBeep() {
   try {
@@ -67,9 +70,6 @@ export function formatQuizTabDisplayTitle(quizNum, rawTitle) {
 
 export function renderTeacherQuizzesView(state = {}, groups = [], students = [], isLoading = false, hasLoaded = true, currentUser = null, currentRoute = 'online-quizzes') {
     const user = currentUser || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
-  const userEmail = (user?.email || '').toLowerCase();
-  const isAdmin = user?.role === 'admin';
-  const isPro = isUserPro(user);
 
   // تحديد الوجهة والتبويب النشط بهدوء ووضوح
   let effectiveRoute = currentRoute || (typeof window !== 'undefined' ? window.centrlyApp?.currentRoute : '') || 'online-quizzes';
@@ -1083,6 +1083,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
                     >
                       <span>كشف الدرجات</span>
                     </button>
+                    ${renderSourceAnnouncementButton('material',rq.id)}
                     <button 
                       type="button" 
                       style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fffdfa; color: #b45309; border-radius: 5px; border: 1px solid #fde68a; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
@@ -1096,7 +1097,7 @@ function renderOnlineBuilderTab(state, groups, activeGroup, quizzes, currentQuiz
                       type="button" 
                       style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fef2f2; color: #dc2626; border-radius: 5px; border: 1px solid #fecaca; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
                       onclick="window.centrlyApp.deleteOnlineExam('${escapeHtml(rq.id)}')"
-                      title="حذف هذا الامتحان نهائياً"
+                      title="إزالة من المنشور مع حفظ الإجابات والدرجات"
                     >
                       ${getIcon('trash', 11, '#dc2626')}
                       <span>حذف</span>
@@ -2100,7 +2101,7 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
           const totalMcq = Number(sub.total_mcq_points || 0);
           const studentGroup = (groups || []).find(g => String(g.id).trim() === String(sub.group_id).trim());
           const groupBadge = studentGroup ? `<span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">${escapeHtml(studentGroup.name)}</span>` : '';
-          const defaultEssayPoints = essayQuestions.reduce((sum, eq) => sum + Number(eq.points || 4), 0);
+          const defaultEssayPoints = essayQuestions.reduce((sum, eq) => sum + Number(eq.points ?? 1), 0);
           const maxScore = Number(sub.max_score || (totalMcq + defaultEssayPoints) || 20);
           const initialFinalScore = (sub.final_score !== undefined && sub.final_score !== null)
             ? Number(sub.final_score)
@@ -2204,7 +2205,7 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                     sub.answers?.[eqIdx] || 
                     'لم يكتب إجابة';
 
-                  const fieldKey = eq.id || String(eqIdx);
+                  const fieldKey = eq.id || String(Math.max(0, questions.indexOf(eq)));
 
                   return `
                     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
@@ -2247,15 +2248,15 @@ function renderOnlineGradingTab(state, groups, activeGroup, pendingSubmissions, 
                             type="number" 
                             id="essay_pts_${sub.id}_${fieldKey}" 
                             min="0" 
-                            max="${eq.points || 4}" 
+                            max="${eq.points ?? 1}"
                             step="0.5" 
-                            value="${eq.points || 4}" 
-                            oninput="const m = Number(this.max || ${eq.points || 4}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0) this.value = 0; window.centrlyApp.recalcManualFinalScore?.('${sub.id}', ${mcqScore});"
-                            onblur="const m = Number(this.max || ${eq.points || 4}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0 || this.value === '') this.value = 0; window.centrlyApp.recalcManualFinalScore?.('${sub.id}', ${mcqScore});"
+                            value="${eq.points ?? 1}"
+                            oninput="const m = Number(this.max || ${eq.points ?? 1}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0) this.value = 0; window.centrlyApp.recalcManualFinalScore?.('${sub.id}', ${mcqScore});"
+                            onblur="const m = Number(this.max || ${eq.points ?? 1}); if (Number(this.value) > m) this.value = m; if (Number(this.value) < 0 || this.value === '') this.value = 0; window.centrlyApp.recalcManualFinalScore?.('${sub.id}', ${mcqScore});"
                             class="form-input" 
                             style="width: 65px; height: 30px; text-align: center; font-weight: 800; font-size: 0.88rem; border: 1px solid #cbd5e1; border-radius: 4px;"
                           />
-                          <span style="font-size: 0.76rem; font-weight: 600; color: #64748b;">من ${eq.points || 4} درجات</span>
+                          <span style="font-size: 0.76rem; font-weight: 600; color: #64748b;">من ${eq.points ?? 1} درجات</span>
                         </div>
                       </div>
 
@@ -3154,7 +3155,7 @@ function renderModelAnswerSheetHtml(targetQuiz, requestedModel = 'all', isPrint 
           <div style="${useGrid ? 'display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.65rem;' : 'display: flex; flex-direction: column; gap: 0.65rem;'}">
             ${essayQuestions.map((eq, eIdx) => {
               const eqNum = mcqQuestions.length + eIdx + 1;
-              const eqPts = Number(eq.points || 4);
+              const eqPts = Number(eq.points ?? 1);
               return `
                 <div style="border: 1.5px solid #000000; border-radius: 4px; padding: 0.55rem 0.75rem; background: #ffffff; display: flex; flex-direction: column; justify-content: space-between;">
                   <div>
@@ -3213,16 +3214,6 @@ function renderModelAnswerSheetHtml(targetQuiz, requestedModel = 'all', isPrint 
 function renderPaperResultsTab(state = {}, groups = [], activeGroup = null, quizzes = [], currentQuiz = null, groupStudents = [], students = []) {
   // Load scanned results list from state or localStorage
   let scannedList = Array.isArray(state.scannedResultsList) ? [...state.scannedResultsList] : [];
-  if (scannedList.length === 0) {
-    try {
-      const cached = localStorage.getItem('centrly_paper_scanned_results');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) scannedList = parsed;
-      }
-    } catch (_) {}
-  }
-
   // Automatic desktop server sync if local list is empty
   if (scannedList.length === 0 && !state.isLoadingSubmissions && typeof window !== 'undefined' && window.centrlyApp && typeof window.centrlyApp.loadOnlineSubmissions === 'function') {
     const qState = window.centrlyApp.quizzesState || {};
@@ -4225,6 +4216,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                     >
                       ${getIcon('edit', 12)}
                     </button>
+                    ${renderSourceAnnouncementButton('material',rq.id)}
                     <button 
                       type="button" 
                       style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fffdfa; color: #b45309; border-radius: 5px; border: 1px solid #fde68a; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
@@ -4238,7 +4230,7 @@ function renderPaperBuilderTab(state, groups, activeGroup, quizzes, currentQuiz)
                       type="button" 
                       style="height: 30px; font-size: 0.74rem; font-weight: 600; background: #fef2f2; color: #dc2626; border-radius: 5px; border: 1px solid #fecaca; cursor: pointer; padding: 0 8px; display: inline-flex; align-items: center; gap: 3px;"
                       onclick="window.centrlyApp.deleteOnlineExam('${escapeHtml(rq.id)}')"
-                      title="حذف هذا الامتحان نهائياً"
+                      title="إزالة من المنشور مع حفظ الإجابات والدرجات"
                     >
                       ${getIcon('trash', 11, '#dc2626')}
                       <span>حذف</span>
@@ -5585,7 +5577,7 @@ export function registerTeacherQuizzesActions(app) {
 
   // Initialize scanned results cache
   try {
-    const cachedScans = localStorage.getItem('centrly_paper_scanned_results');
+    const cachedScans = teacherQuizCache(app).getItem('centrly_paper_scanned_results');
     if (cachedScans) {
       app.quizzesState.scannedResultsList = JSON.parse(cachedScans);
     }
@@ -5596,7 +5588,7 @@ export function registerTeacherQuizzesActions(app) {
 
   // Initialize drafts cache
   try {
-    const cachedDrafts = localStorage.getItem('centrly_quiz_drafts');
+    const cachedDrafts = teacherQuizCache(app).getItem('centrly_quiz_drafts');
     if (cachedDrafts) {
       app.quizzesState.examDrafts = JSON.parse(cachedDrafts);
     }
@@ -5607,7 +5599,7 @@ export function registerTeacherQuizzesActions(app) {
 
   // Initialize rich quizzes cache for instant UI rendering (0ms load time)
   try {
-    const cachedQuizzes = localStorage.getItem('centrly_cached_rich_quizzes');
+    const cachedQuizzes = teacherQuizCache(app).getItem('centrly_cached_rich_quizzes');
     if (cachedQuizzes) {
       app.quizzesState.richQuizzes = JSON.parse(cachedQuizzes);
     }
@@ -5768,8 +5760,8 @@ export function registerTeacherQuizzesActions(app) {
     this.quizzesState.examDrafts.unshift(draftObject);
 
     try {
-      localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
-      localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
+      teacherQuizCache(this).setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+      teacherQuizCache(this).setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
     } catch (_) {}
 
     request('/quizzes/rich', {
@@ -5870,7 +5862,7 @@ export function registerTeacherQuizzesActions(app) {
         if (Array.isArray(this.quizzesState.examDrafts)) {
           this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftId);
           try {
-            localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+            teacherQuizCache(this).setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
           } catch (_) {}
         }
 
@@ -5898,22 +5890,9 @@ export function registerTeacherQuizzesActions(app) {
 
   // Subtab switcher
   app.switchQuizSubTab = async function(tabName, gradingMode) {
-    const user = this.user || (typeof window !== 'undefined' ? window.centrlyApp?.user : null);
-    const userEmail = (user?.email || '').toLowerCase();
-    const isAdmin = user?.role === 'admin';
-    const isOmarMohamadi = 
-      user?.tenant_id === '0c67b644-ae42-49e8-975f-85b9d0af0e1b' || 
-      userEmail === 'mohanedabdulhalim@gmail.com' ||
-      userEmail.includes('omar') ||
-      userEmail.includes('mohamadi') ||
-      (user?.name || '').includes('عمر') ||
-      (user?.teacher_name || '').includes('عمر') ||
-      (user?.tenant_name || '').includes('عمر') ||
-      isAdmin;
-
-    if (!isOmarMohamadi && tabName !== 'roster') {
-      return;
-    }
+    const routes={roster:'quizzes',online_builder:'online-quizzes',online_grading:'online-quizzes',paper_builder:'paper-exams',paper_scanner:'paper-exams',paper_results:'paper-exams'};
+    const route=routes[tabName];
+    if (!route || this.delegation && !assistantCanNavigate(this.delegation.permissions,route)) return;
 
     if (this.quizzesState.activeSubTab === 'online_builder' && this.quizzesState.onlineViewMode === 'wizard' && this.checkHasUnsavedExam('online')) {
       this.promptUnsavedExamExit('online', () => this.switchQuizSubTab(tabName, gradingMode));
@@ -5991,6 +5970,7 @@ export function registerTeacherQuizzesActions(app) {
 
   // Rich quizzes loader
   app.loadRichQuizzes = async function() {
+    const actor=quizActor(this);
     const hasQuizzes = Array.isArray(this.quizzesState.richQuizzes) && this.quizzesState.richQuizzes.length > 0;
     if (!hasQuizzes) {
       this.quizzesState.isLoadingRichQuizzes = true;
@@ -5999,10 +5979,11 @@ export function registerTeacherQuizzesActions(app) {
       const gid = this.quizzesState.selectedGroupId;
       const qParam = gid ? `?group_id=${encodeURIComponent(gid)}` : '';
       const res = await request(`/quizzes/rich${qParam}`);
+      if(quizActor(this)!==actor)return;
       if (res?.success && Array.isArray(res.quizzes)) {
         this.quizzesState.richQuizzes = res.quizzes;
         try {
-          localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(res.quizzes));
+          teacherQuizCache(this).setItem('centrly_cached_rich_quizzes', JSON.stringify(res.quizzes));
         } catch (_) {}
       }
       if (res?.success && Array.isArray(res.drafts)) {
@@ -6016,7 +5997,7 @@ export function registerTeacherQuizzesActions(app) {
         }
         this.quizzesState.examDrafts = combined;
         try {
-          localStorage.setItem('centrly_quiz_drafts', JSON.stringify(combined));
+          teacherQuizCache(this).setItem('centrly_quiz_drafts', JSON.stringify(combined));
         } catch (_) {}
       }
       if (typeof this.reconcileQuizzesFromSubmissions === 'function') {
@@ -6049,25 +6030,27 @@ export function registerTeacherQuizzesActions(app) {
           }
         });
         try {
-          localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+          teacherQuizCache(this).setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
         } catch (_) {}
       }
     } catch (err) {
       console.warn('[Centrly] Could not load rich quizzes:', err);
     } finally {
-      this.quizzesState.isLoadingRichQuizzes = false;
-      this.renderMainContent();
+      if(quizActor(this)===actor){this.quizzesState.isLoadingRichQuizzes = false;
+      this.renderMainContent();}
     }
   };
 
   // Online exam submissions loader (Both Pending Essay & Graded MCQ)
   app.loadOnlineSubmissions = async function() {
+    const actor=quizActor(this);
     this.quizzesState.isLoadingSubmissions = true;
     try {
       const [allRes, pendingRes] = await Promise.allSettled([
         request('/quizzes/submissions'),
         request('/quizzes/submissions/pending')
       ]);
+      if(quizActor(this)!==actor)return;
       const allData = allRes.status === 'fulfilled' && allRes.value?.success && Array.isArray(allRes.value.submissions)
         ? allRes.value.submissions
         : [];
@@ -6161,70 +6144,15 @@ export function registerTeacherQuizzesActions(app) {
         }
       });
       try {
-        localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+        teacherQuizCache(this).setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
       } catch (_) {}
 
-      // Resilient local test submissions fallback (detects exams submitted in the browser)
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('centrly_submission_')) {
-            const raw = localStorage.getItem(key);
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (parsed) {
-                const isGraded = parsed.status === 'graded' || parsed.status === 'approved' || parsed.is_graded === true;
-                const subObj = {
-                  id: `local_${parsed.quiz_id}_${parsed.student_code || '1006'}`,
-                  material_id: parsed.quiz_id,
-                  quiz_id: parsed.quiz_id,
-                  quiz_title: parsed.quiz_title || 'كويز إلكتروني',
-                  quiz_number: parsed.quiz_number || 1,
-                  group_id: parsed.group_id || null,
-                  student_code: parsed.student_code || '1006',
-                  student_name: parsed.student_name || 'طالب',
-                  status: isGraded ? 'approved' : 'pending',
-                  is_graded: isGraded,
-                  mcq_score: parsed.mcq_score || 0,
-                  essay_score: parsed.essay_score || 0,
-                  total_mcq_points: parsed.total_mcq_points || 0,
-                  total_score: parsed.score || parsed.total_score || (Number(parsed.mcq_score || 0) + Number(parsed.essay_score || 0)),
-                  score: parsed.score || parsed.total_score || (Number(parsed.mcq_score || 0) + Number(parsed.essay_score || 0)),
-                  final_score: parsed.score || parsed.total_score || (Number(parsed.mcq_score || 0) + Number(parsed.essay_score || 0)),
-                  max_score: parsed.max_score || 10,
-                  questions: parsed.questions || [],
-                  answers: parsed.answers || {},
-                  essay_answers: parsed.essay_answers || {},
-                  submitted_at: parsed.submitted_at || new Date().toISOString()
-                };
-
-                if (isGraded) {
-                  const alreadyGraded = this.quizzesState.onlineSubmissions.some(
-                    s => (String(s.quiz_id) === String(subObj.quiz_id) || String(s.material_id) === String(subObj.material_id)) &&
-                         String(s.student_code) === String(subObj.student_code)
-                  );
-                  if (!alreadyGraded) {
-                    this.quizzesState.onlineSubmissions.unshift(subObj);
-                  }
-                } else {
-                  const alreadyPending = this.quizzesState.pendingSubmissions.some(
-                    s => (String(s.quiz_id) === String(subObj.quiz_id) || String(s.material_id) === String(subObj.material_id)) &&
-                         String(s.student_code) === String(subObj.student_code)
-                  );
-                  if (!alreadyPending) {
-                    this.quizzesState.pendingSubmissions.unshift(subObj);
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch (_) {}
+      // Student-code-only browser records are not teacher grading evidence.
     } catch (err) {
       console.warn('[Centrly] Could not load online submissions:', err);
     } finally {
-      this.quizzesState.isLoadingSubmissions = false;
-      this.renderMainContent();
+      if(quizActor(this)===actor){this.quizzesState.isLoadingSubmissions = false;
+      this.renderMainContent();}
     }
   };
 
@@ -6461,113 +6389,29 @@ export function registerTeacherQuizzesActions(app) {
 
   // Save Online Exam Definition
   app.saveOnlineExamNow = async function() {
-    if (!isUserPro(this.user)) {
-      alert('ميزة إنشاء ونشر الامتحانات الإلكترونية متاحة فقط لمشتركي باقة PRO. اضغط حسناً للانتقال لصفحة الاشتراك والترقية.');
-      if (this.navigateTo) this.navigateTo('settings');
-      return;
-    }
-    const qz = this.quizzesState.activeOnlineQuiz;
-    const currentGid = this.quizzesState.selectedGroupId;
-    const targetGroupId = qz?.target_group_id || qz?.group_id || currentGid;
-
-    if (!targetGroupId) {
-      this.showToast('يرجى اختيار المجموعة الدراسية أولاً', 'warning');
-      return;
-    }
-
-    const questions = qz?.questions || [];
-    if (questions.length === 0) {
-      this.showToast('يرجى إضافة سؤال واحد على الأقل للامتحان', 'warning');
-      return;
-    }
-
+    if (!isUserPro(this.user)) {this.showToast('نشر الامتحانات غير متاح في اشتراكك الحالي', 'warning');return;}
+    const state=this.quizzesState,qz=state.activeOnlineQuiz,actor=quizActor(this);
+    if(state.isPublishingOnline || !qz)return;
+    const source=Array.isArray(qz.target_group_ids) && qz.target_group_ids.length?qz.target_group_ids:qz.target_group_id==='all'?(this.groups || []).map(g=>g.id):[qz.target_group_id || qz.group_id || state.selectedGroupId];
+    const groups=[...new Set(source.filter(Boolean))];
+    if(!groups.length || groups.some(id=>!(this.groups || []).some(g=>g.id===id))){this.showToast('اختر المجموعات الدراسية أولًا','warning');return;}
+    if(!qz.questions?.length){this.showToast('أضف سؤالًا واحدًا على الأقل للامتحان','warning');return;}
+    const isUuid=id=>/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id || '');
+    qz._publicationIds ||= {};
+    const targets=groups.map(group_id=>({group_id,id:qz._publicationIds[group_id] ||= groups.length===1 && isUuid(qz.id) && !qz.is_draft?qz.id:crypto.randomUUID()}));
+    const definition=Object.fromEntries(['quiz_number','title','subject','time_limit_minutes','available_date','start_time','end_time','questions'].filter(key=>qz[key]!==undefined).map(key=>[key,qz[key]]));
+    state.isPublishingOnline=true;
     try {
-      this.showToast('جاري حفظ ونشر الامتحان الإلكتروني...', 'info');
-
-      let targetGroupIds = [];
-      if (Array.isArray(qz?.target_group_ids) && qz.target_group_ids.length > 0) {
-        targetGroupIds = qz.target_group_ids;
-      } else if (targetGroupId === 'all' && Array.isArray(this.groups)) {
-        targetGroupIds = this.groups.map(g => g.id);
-      } else if (targetGroupId && targetGroupId !== 'multiple') {
-        targetGroupIds = [targetGroupId];
-      } else if (currentGid) {
-        targetGroupIds = [currentGid];
-      }
-
-      for (const gid of targetGroupIds) {
-        const payload = {
-          id: (targetGroupIds.length === 1 && qz?.id && !String(qz.id).startsWith('draft_')) ? qz.id : null,
-          group_id: gid,
-          quiz_number: qz.quiz_number,
-          title: qz.title,
-          subject: qz.subject,
-          time_limit_minutes: qz.time_limit_minutes,
-          available_date: qz.available_date,
-          start_time: qz.start_time,
-          end_time: qz.end_time,
-          exam_mode: 'online',
-          is_draft: false,
-          is_archived: false,
-          status: 'published',
-          questions
-        };
-
-        const res = await request('/quizzes/rich', { method: 'POST', body: payload });
-        if (!res?.success) throw new Error(res?.error?.message || 'فشل حفظ الامتحان');
-      }
-
-      // Optimistically insert into richQuizzes so it appears immediately!
-      if (!Array.isArray(this.quizzesState.richQuizzes)) {
-        this.quizzesState.richQuizzes = [];
-      }
-      for (const gid of targetGroupIds) {
-        const optimisticQuiz = {
-          id: (targetGroupIds.length === 1 && qz?.id) ? qz.id : `online_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-          group_id: gid,
-          quiz_number: qz.quiz_number,
-          title: qz.title,
-          subject: qz.subject,
-          time_limit_minutes: qz.time_limit_minutes,
-          available_date: qz.available_date,
-          start_time: qz.start_time,
-          end_time: qz.end_time,
-          exam_mode: 'online',
-          questions,
-          created_at: new Date().toISOString()
-        };
-        this.quizzesState.richQuizzes = this.quizzesState.richQuizzes.filter(
-          q => !(q.id === optimisticQuiz.id || (String(q.group_id).trim() === String(gid).trim() && Number(q.quiz_number) === Number(qz.quiz_number) && (q.exam_mode || 'online') === 'online'))
-        );
-        this.quizzesState.richQuizzes.unshift(optimisticQuiz);
-      }
-
-      // If resumed from a draft, clean up from archive
-      const draftToDelete = qz?._sourceDraftId || (String(qz?.id).startsWith('draft_') ? qz.id : null);
-      if (draftToDelete) {
-        if (Array.isArray(this.quizzesState.examDrafts)) {
-          this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftToDelete);
-          try {
-            localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
-          } catch (_) {}
-        }
-        request('/quizzes/rich', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete_draft', id: draftToDelete })
-        }).catch(() => {});
-      }
-
-      this.showToast(`تم حفظ ونشر امتحان (${qz.title}) بنجاح!`, 'success');
-      this.quizzesState.onlineViewMode = 'list';
-      this.quizzesState.onlineListTab = 'published';
-      this.renderMainContent();
-      await this.loadRichQuizzes();
-      if (currentGid) await this.loadQuizzesForGroup(currentGid);
-      this.renderMainContent();
-    } catch (err) {
-      this.showToast(`فشل حفظ الامتحان: ${err.message || 'خطأ في الخادم'}`, 'danger');
-    }
+      this.showToast('جارٍ حفظ ونشر الامتحان للمجموعات المحددة…','info');
+      const response=await request('/quizzes/publish-online',{method:'POST',body:{definition,targets}});
+      if(quizActor(this)!==actor)return;
+      if(!response?.success || !Array.isArray(response.quizzes) || response.quizzes.length!==targets.length || response.quizzes.some(saved=>!targets.some(target=>target.id===saved.id && target.group_id===saved.group_id)))throw Error('تعذر تأكيد النشر لكل المجموعات');
+      state.richQuizzes=[...response.quizzes,...(state.richQuizzes || []).filter(old=>!response.quizzes.some(saved=>saved.id===old.id))];
+      const draftId=qz._sourceDraftId || (String(qz.id).startsWith('draft_')?qz.id:null);
+      if(draftId)try{await request('/quizzes/rich',{method:'POST',body:{action:'delete_draft',id:draftId}});if(quizActor(this)!==actor)return;state.examDrafts=(state.examDrafts || []).filter(d=>d.id!==draftId);teacherQuizCache(this).setItem('centrly_quiz_drafts',JSON.stringify(state.examDrafts));}catch{this.showToast('تم النشر؛ المسودة القديمة ما زالت محفوظة لحين تحديث القائمة','warning');}
+      state.onlineViewMode='list';state.onlineListTab='published';this.renderMainContent();this.showToast(`تم نشر الامتحان في ${targets.length} مجموعة`,'success');
+    }catch(error){if(quizActor(this)===actor)this.showToast(`تعذر نشر الامتحان: ${error.message || 'حاول مجددًا'}`,'danger');}
+    finally{state.isPublishingOnline=false;}
   };
 
   app.editOnlineExamWizard = function(quizId) {
@@ -6601,94 +6445,33 @@ export function registerTeacherQuizzesActions(app) {
     this.renderMainContent();
   };
 
-  app.archiveOnlineExam = function(quizId) {
-    const q = (this.quizzesState.richQuizzes || []).find(x => x.id === quizId);
-    if (!q) {
-      this.showToast('لم يتم العثور على الامتحان المطلوب', 'warning');
-      return;
-    }
-    const examTitle = q.title ? `«${q.title}»` : 'هذا الامتحان';
-
-    this.showConfirmModal({
-      title: 'أرشفة الامتحان ونقله للمسودات',
-      message: `هل تريد نقل امتحان ${examTitle} إلى الأرشيف والمسودات؟\n(سيتم إخفاؤه عن الطلاب وعن الامتحانات المنشورة، مع إمكانية استعادته وتعديله متى شئت).`,
-      confirmText: 'نقل للأرشيف',
-      cancelText: 'إلغاء',
-      isDanger: false,
-      onConfirm: async () => {
-        // 1. Remove from richQuizzes
-        this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
-
-        // 2. Add to examDrafts
-        const draftItem = {
-          ...q,
-          id: q.id || `draft_online_${Date.now()}`,
-          is_archived: true,
-          is_draft: true,
-          status: 'draft',
-          archived_at: new Date().toISOString()
-        };
-        if (!Array.isArray(this.quizzesState.examDrafts)) this.quizzesState.examDrafts = [];
-        this.quizzesState.examDrafts.unshift(draftItem);
-
-        try {
-          localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
-          localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
-        } catch (_) {}
-
-        // 3. Call serverless API
-        request('/quizzes/rich', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'archive_quiz',
-            id: q.id,
-            group_id: q.group_id,
-            quiz_number: q.quiz_number,
-            exam_mode: q.exam_mode || (this.quizzesState.activeSubTab === 'paper_builder' ? 'paper' : 'online'),
-            quiz: draftItem
-          })
-        }).catch(() => {});
-
-        this.showToast('تم نقل الامتحان إلى الأرشيف والمسودات بنجاح.', 'success');
-        this.renderMainContent();
-      }
-    });
+  app.persistQuizArchive = async function(quizId, action) {
+    if(this._quizArchiveBusy)return;
+    const quiz=(this.quizzesState.richQuizzes || []).find(row=>row.id===quizId);
+    if(!quiz){this.showToast('لم يتم العثور على الامتحان المطلوب','warning');return;}
+    const actor=[this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':');
+    this._quizArchiveBusy=true;
+    try {
+      const result=await request('/quizzes/rich',{method:'POST',body:{action,id:quizId,exam_mode:quiz.exam_mode || 'online'}});
+      if([this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':')!==actor)return;
+      if(!result.success || !result.history_preserved)throw new Error('تعذر تأكيد الأرشفة؛ حدّث القائمة وحاول مجددًا');
+      this.quizzesState.richQuizzes=(this.quizzesState.richQuizzes || []).filter(row=>row.id!==quizId);
+      if(!Array.isArray(this.quizzesState.examDrafts))this.quizzesState.examDrafts=[];
+      if(!this.quizzesState.examDrafts.some(row=>row.id===quizId))this.quizzesState.examDrafts.unshift({...quiz,is_archived:true,is_draft:true,status:'draft'});
+      try{teacherQuizCache(this).removeItem('centrly_cached_rich_quizzes');teacherQuizCache(this).removeItem('centrly_quiz_drafts');}catch(_){}
+      this.showToast('تمت الأرشفة مع الاحتفاظ بالإجابات والدرجات','success');
+      this.renderMainContent();
+    } catch(error) {
+      if([this.user?.id,this.user?.tenant_id,this.delegation?.actor?.id || ''].join(':')===actor)this.showToast(error.message || 'تعذر أرشفة الامتحان؛ حاول مجددًا','error');
+    } finally {this._quizArchiveBusy=false;}
   };
-
+  app.archiveOnlineExam = function(quizId) {
+    this.showConfirmModal({title:'أرشفة الامتحان',message:'سيختفي الامتحان من المنشور للطلاب، وتظل الإجابات والدرجات محفوظة في حسابك.',confirmText:'أرشفة الامتحان',cancelText:'إلغاء',isDanger:false,onConfirm:()=>this.persistQuizArchive(quizId,'archive_quiz')});
+  };
+  // Compatibility for existing delete-capability buttons: published history is
+  // preserved even when a caller uses the retired delete_quiz action.
   app.deleteOnlineExam = function(quizId) {
-    const q = (this.quizzesState.richQuizzes || []).find(x => x.id === quizId);
-    const examTitle = q?.title ? `«${q.title}»` : 'هذا الامتحان';
-
-    this.showConfirmModal({
-      title: 'حذف الامتحان نهائياً',
-      message: `هل أنت متأكد من حذف امتحان ${examTitle} نهائياً؟\nتحذير: سيتم حذف هذا الامتحان نهائياً ولن يظهر للطلاب مرة أخرى.`,
-      confirmText: 'حذف الامتحان نهائياً',
-      cancelText: 'إلغاء التراجع',
-      isDanger: true,
-      onConfirm: async () => {
-        this.quizzesState.richQuizzes = (this.quizzesState.richQuizzes || []).filter(x => x.id !== quizId);
-
-        try {
-          localStorage.setItem('centrly_cached_rich_quizzes', JSON.stringify(this.quizzesState.richQuizzes));
-        } catch (_) {}
-
-        request('/quizzes/rich', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'delete_quiz',
-            id: quizId,
-            group_id: q?.group_id,
-            quiz_number: q?.quiz_number,
-            exam_mode: q?.exam_mode || (this.quizzesState.activeSubTab === 'paper_builder' ? 'paper' : 'online')
-          })
-        }).catch(() => {});
-
-        this.showToast('تم حذف الامتحان نهائياً بنجاح.', 'success');
-        this.renderMainContent();
-      }
-    });
+    this.showConfirmModal({title:'إزالة الامتحان من المنشور',message:'سننقل الامتحان للأرشيف مع الاحتفاظ بإجابات الطلاب ودرجاتهم.',confirmText:'إزالة من المنشور',cancelText:'إلغاء',isDanger:false,onConfirm:()=>this.persistQuizArchive(quizId,'delete_quiz')});
   };
 
   // Grading Tab Actions
@@ -6722,9 +6505,9 @@ export function registerTeacherQuizzesActions(app) {
     const essayScores = {};
     let adjustedExceeded = false;
     essayQuestions.forEach((eq, eqIdx) => {
-      const fieldKey = eq.id || String(eqIdx);
+      const fieldKey = eq.id || String(Math.max(0, questions.indexOf(eq)));
       const inp = document.getElementById(`essay_pts_${sub.id}_${fieldKey}`);
-      const maxPts = Number(eq.points || 4);
+      const maxPts = Number(eq.points ?? 1);
       let val = Number(inp?.value ?? maxPts);
       if (val > maxPts) {
         val = maxPts;
@@ -6811,23 +6594,6 @@ export function registerTeacherQuizzesActions(app) {
         } else {
           this.quizzesState.onlineSubmissions.unshift(updatedSub);
         }
-
-        // Also update local storage if present
-        try {
-          const sCode = sub.student_code || studentId;
-          const qId = sub.material_id || sub.quiz_id;
-          const subKey = `centrly_submission_${sCode}_${qId}`;
-          const raw = localStorage.getItem(subKey);
-          const p = raw ? JSON.parse(raw) : {};
-          p.status = 'graded';
-          p.is_graded = true;
-          p.essay_score = totalEssay;
-          p.essay_scores = essayScores;
-          p.score = finalCalculated;
-          p.total_score = finalCalculated;
-          p.final_score = finalCalculated;
-          localStorage.setItem(subKey, JSON.stringify(p));
-        } catch (_) {}
 
         // Switch to 'graded' view mode if no more pending submissions left
         if ((this.quizzesState.pendingSubmissions || []).length === 0) {
@@ -7284,7 +7050,7 @@ export function registerTeacherQuizzesActions(app) {
         if (Array.isArray(this.quizzesState.examDrafts)) {
           this.quizzesState.examDrafts = this.quizzesState.examDrafts.filter(d => d.id !== draftToDelete);
           try {
-            localStorage.setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
+            teacherQuizCache(this).setItem('centrly_quiz_drafts', JSON.stringify(this.quizzesState.examDrafts));
           } catch (_) {}
         }
         request('/quizzes/rich', {
@@ -7556,7 +7322,7 @@ export function registerTeacherQuizzesActions(app) {
   app.clearOmrScannedList = function() {
     this.quizzesState.scannedResultsList = [];
     try {
-      localStorage.removeItem('centrly_paper_scanned_results');
+      teacherQuizCache(this).removeItem('centrly_paper_scanned_results');
     } catch (_) {}
     this.renderMainContent();
     this.showToast('تم تفريغ سجل جلسة التصحيح', 'info');
@@ -7566,7 +7332,7 @@ export function registerTeacherQuizzesActions(app) {
     if (!Array.isArray(this.quizzesState.scannedResultsList)) return;
     this.quizzesState.scannedResultsList = this.quizzesState.scannedResultsList.filter(s => String(s.id) !== String(scanId));
     try {
-      localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
+      teacherQuizCache(this).setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
     } catch (_) {}
     this.renderMainContent();
     this.showToast('تم حذف نتيجة ورقة الطالب بنجاح', 'success');
@@ -7577,7 +7343,7 @@ export function registerTeacherQuizzesActions(app) {
     let item = list.find(s => String(s.id) === String(scanId) || String(s.student_code) === String(scanId));
     if (!item) {
       try {
-        const cached = JSON.parse(localStorage.getItem('centrly_paper_scanned_results') || '[]');
+        const cached = JSON.parse(teacherQuizCache(this).getItem('centrly_paper_scanned_results') || '[]');
         item = cached.find(s => String(s.id) === String(scanId) || String(s.student_code) === String(scanId));
       } catch (_) {}
     }
@@ -7846,6 +7612,8 @@ export function registerTeacherQuizzesActions(app) {
       console.warn('[Centrly OMR] Server sync failed:', err);
     }
 
+    Object.assign(scanData,{status: serverSuccess ? 'approved' : 'draft_unapproved'});
+
     // Step 2: Set strict synchronization flags
     if (serverSuccess) {
       scanData.sync_status = 'synced';
@@ -7882,33 +7650,7 @@ export function registerTeacherQuizzesActions(app) {
 
     // Step 4: Persist to localStorage with explicit sync status
     try {
-      localStorage.setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
-    } catch (_) {}
-
-    const localSub = {
-      id: scanData.id,
-      material_id: examTargetId,
-      quiz_id: examTargetId,
-      quiz_title: scanData.exam_title || `امتحان ورقي ${qNum}`,
-      quiz_number: qNum,
-      group_id: scanData.group_id || this.quizzesState.selectedGroupId,
-      student_code: scanData.student_code,
-      student_name: scanData.student_name,
-      score: scanData.score,
-      total_score: scanData.score,
-      max_score: scanData.max_score,
-      percentage: scanData.percentage,
-      is_graded: serverSuccess,
-      status: serverSuccess ? 'approved' : 'draft_unapproved',
-      sync_status: scanData.sync_status,
-      server_confirmed: scanData.server_confirmed,
-      exam_mode: 'paper',
-      model: scanData.model,
-      breakdown: scanData.breakdown,
-      submitted_at: new Date().toISOString()
-    };
-    try {
-      localStorage.setItem(`centrly_submission_${scanData.student_code}_${examTargetId}`, JSON.stringify(localSub));
+      teacherQuizCache(this).setItem('centrly_paper_scanned_results', JSON.stringify(this.quizzesState.scannedResultsList));
     } catch (_) {}
 
     // Step 5: Inform user with accurate status toast

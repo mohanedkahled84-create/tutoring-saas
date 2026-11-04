@@ -150,6 +150,7 @@ test("DEV-SL.3: AdminOpsService - listPaymentProofs filters by status or returns
 
 test("DEV-SL.3: SupabaseAdminOpsRepository - listAllTenants maps owner user details (email, phone, account_type) and student counts", async () => {
   const mockClient = {
+    rpc: async(name)=>({data:name==='commercial_admin_summary'?[{tenant_id:'tenant-7b8b30e0',limits:{students:321,name:'Pro',plan_id:'pro_v1',recurring_piasters:83050}}]:{legacy:true},error:null}),
     from: (table) => {
       if (table === "tenants") {
         return {
@@ -203,10 +204,12 @@ test("DEV-SL.3: SupabaseAdminOpsRepository - listAllTenants maps owner user deta
   assert.equal(t.phone, "01123671177");
   assert.equal(t.full_name, "مهند خالد");
   assert.equal(t.students_count, 24);
+  assert.equal(t.students_limit,321);assert.equal(t.plan_name,'Pro');assert.equal(t.subscription_tier,'pro_v1');
 });
 
 test("DEV-SL.3: SupabaseAdminOpsRepository - getTenant maps single tenant owner contact info correctly", async () => {
   const mockClient = {
+    rpc: async(name)=>({data:name==='commercial_admin_summary'?[]:{legacy:true},error:null}),
     from: (table) => {
       if (table === "tenants") {
         return {

@@ -1,6 +1,7 @@
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { getIcon } from "../utils/icons.js";
 import { request } from "../services/api.js";
+import {renderMaterialGroupPicker,readMaterialGroupPicker,registerMaterialGroupPicker,materialGroupLabel} from './MaterialGroupPicker.js';
 
 /**
  * Centrly Homework Review & Grading Component (DEV-HOMEWORK)
@@ -193,6 +194,10 @@ export function renderHomeworkReviewView(homeworkState = {}) {
                 <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">
                   ${escapeHtml(currentHomework.title)}
                 </h3>
+                <span>${escapeHtml(materialGroupLabel(currentHomework,groups))}</span>
+                <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openMaterialGroupAssignment('${escapeHtml(currentHomework.id)}')">إسناد لمجموعات أخرى</button>
+                <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openMaterialCopy('${escapeHtml(currentHomework.id)}')">نسخة جديدة للمجموعات الحالية</button>
+                <button class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openHomeworkDeadline('${escapeHtml(currentHomework.id)}')">موعد وسياسة التسليم</button>
                 ${currentHomework.due_date ? `
                   <span style="font-size: 0.75rem; color: #b45309; background: #fffbeb; padding: 0.2rem 0.55rem; border-radius: 0.35rem; border: 1px solid #fde68a; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
                     ${getIcon('clock', 13, '#b45309')}
@@ -667,6 +672,7 @@ export function renderHomeworkReviewView(homeworkState = {}) {
 }
 
 export function registerHomeworkActions(app) {
+  registerMaterialGroupPicker(app);
   app.refreshHomeworkReview = async function() {
     await this.loadRouteData('homework');
     this.renderMainContent();
@@ -815,16 +821,14 @@ export function registerHomeworkActions(app) {
         <!-- Target Group & Due Date -->
         <div class="modal-form-grid">
           <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">المجموعة المستهدفة</label>
-            <select id="modalHwGroupId" class="form-select">
-              <option value="">جميع المجموعات (متاح للكل)</option>
-              ${groupOptions}
-            </select>
+            ${renderMaterialGroupPicker('modalHwGroups',this.groups || [],this.homeworkState?.selectedGroupId && this.homeworkState.selectedGroupId!=='all'?[this.homeworkState.selectedGroupId]:null)}
           </div>
 
           <div class="form-group">
             <label class="form-label" style="font-weight: 700;">آخر موعد لتسليم الواجب</label>
             <input type="date" id="modalHwDueDate" class="form-input" value="${nextWeek}">
+            <label class="form-label" for="modalHwLate" style="margin-top:.75rem">التسليم بعد الموعد</label>
+            <select id="modalHwLate" class="form-select" style="min-height:44px"><option value="default">حسب إعدادات الحساب</option><option value="allow">قبول التسليم المتأخر</option><option value="close">إغلاق التسليم بعد الموعد</option></select>
           </div>
         </div>
 
@@ -1011,7 +1015,8 @@ export function registerHomeworkActions(app) {
     e.preventDefault();
     const mode = this._currentHwMode || 'text';
     const title = document.getElementById('modalHwTitle')?.value.trim();
-    const group_id = document.getElementById('modalHwGroupId')?.value || null;
+    let targets;
+    try{targets=readMaterialGroupPicker('modalHwGroups');}catch(error){this.showToast(error.message,'error');return;}
     const due_date = document.getElementById('modalHwDueDate')?.value || null;
     const submitBtn = document.getElementById('btnPublishHomework');
 
@@ -1078,7 +1083,7 @@ export function registerHomeworkActions(app) {
         method: 'POST',
         body: {
           title,
-          group_id,
+          ...targets,
           type: 'pdf',
           url,
           file_data,
@@ -1086,6 +1091,7 @@ export function registerHomeworkActions(app) {
           description: description || null,
           is_homework: true,
           due_date,
+          allow_late_submission:document.getElementById('modalHwLate')?.value==='allow'?true:document.getElementById('modalHwLate')?.value==='close'?false:null,
           book_name: null,
           pages: null,
           questions: null,

@@ -1,3 +1,4 @@
+import {portalCairoClock} from './utils/portalClock.js';
 import { assistantPay } from "./utils/assistantPay.js";
 import { authService } from './services/auth.js?v=4.9.26';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=4.9.27';
@@ -6,13 +7,13 @@ import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=5
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=4.11.0';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js';
 import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=8.1.0';
-import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.10.0';
+import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=4.11.0';
 import { getIcon } from './utils/icons.js';
 import { escapeHtml } from './utils/escapeHtml.js';
 import { playBeep, unlockAudio } from './utils/beepAudio.js';
 import { normalizeDigits } from './utils/normalizeDigits.js?v=4.8.5';
 
-let renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView;
+let renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView;
 
 export class CentrlyApp {
   isPlatformAdmin(user = this.user) {
@@ -145,8 +146,8 @@ export class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=1.13.2').then(module => {
-        ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView } = module);
+      this.workspaceModulesPromise = import('./workspace.js?v=1.14.0').then(module => {
+        ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
       }).catch(error => {
@@ -225,6 +226,12 @@ export class CentrlyApp {
   }
 
   resetTenantState() {
+    this._stopDeletionVerification?.();this._stopDeletionVerification=null;this._deletionIntent=null;this._deletionReceipt=null;
+    if(typeof document!=='undefined')this.closeModal();
+    this.announcementAdminData=null;this._announcementAdminBusy=false;this._announcementReviewId=null;this._announcementDefinitionSeed=null;
+    this.announcementsData=null;this._announcement=null;this._announcementPreview=null;this._announcementTypeRequestId=null;this._announcementBusy=false;
+    this.supportData=null;this._supportTicketId=null;this._supportRequestId=null;this._supportReplyId=null;
+    this.settingsState={activeTab:'profile',barcodeAudio:true};this._academicYears=null;this._academicYearDraft=null;this._groupAssignmentMaterial=null;this._materialCopyId=null;this._studentTransfer=null;this._classroomArchive=null;
     this.students = [];
     this.groups = [];
     this.dashboardData = null;
@@ -445,6 +452,7 @@ export class CentrlyApp {
     // 3. Expected Next Month Normalized MRR (Restores regular plan prices after discounts)
     let expectedNextMonthMrr = 0;
     tenants.filter(t => t.subscription_status === 'active').forEach(t => {
+      if (t.commercial) { expectedNextMonthMrr += Number(t.commercial.recurring_piasters || 0) / 100; return; }
       const tier = (t.subscription_tier || '').toLowerCase();
       const limit = Number(t.students_limit || t.settings?.students_limit || 0);
       const planName = (t.plan_name || t.settings?.plan_name || '').toLowerCase();
@@ -829,7 +837,7 @@ export class CentrlyApp {
     const validTeacherRoutes = [
       'sessions', 'video-lessons', 'platform-builder', 'online-quizzes', 'paper-exams', 'quizzes', 'homework', 'materials',
       'students', 'groups', 'assistants', 'calendar', 'student-cards',
-      'dashboard', 'reports', 'risk-watchlist', 'settings', 'billing', 'whatsapp'
+      'dashboard', 'reports', 'risk-watchlist', 'settings', 'billing', 'whatsapp', 'announcements', 'support'
     ];
     const validCenterRoutes = [
       'center-sessions', 'center-dashboard', 'center-rooms',
@@ -1073,20 +1081,10 @@ export class CentrlyApp {
     if (typeof this.closeCameraModal === 'function') {
       try { this.closeCameraModal(); } catch (_) {}
     }
-    // Unify WhatsApp & Billing directly inside the master Settings Hub
-    if (route === 'whatsapp') {
-      this.settingsState = this.settingsState || {};
-      this.settingsState.activeTab = 'whatsapp';
-      route = 'settings';
-    } else if (route === 'billing') {
-      this.settingsState = this.settingsState || {};
-      this.settingsState.activeTab = 'subscription';
-      route = 'settings';
-    }
 
     const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
-    const dedicatedAdminOnlyRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'coupons'];
+    const dedicatedAdminOnlyRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'admin-support', 'announcement-admin', 'coupons'];
     if (!isAdmin && dedicatedAdminOnlyRoutes.includes(route)) {
       route = isCenter ? 'center-dashboard' : 'dashboard';
     }
@@ -1163,6 +1161,7 @@ export class CentrlyApp {
 
   async retryRoute(route) {
     if (this.routeErrors) this.routeErrors[route] = null;
+    if (this.commercialRouteBlocks) delete this.commercialRouteBlocks[route];
     this.renderMainContent();
     await this.loadRouteData(route);
   }
@@ -1170,9 +1169,22 @@ export class CentrlyApp {
   async loadRouteData(route, retried = false) {
     if (this.delegation && !this.delegation.canNavigate(route)) return;
     if (this.routeErrors) this.routeErrors[route] = null;
+    if (this.commercialRouteBlocks) delete this.commercialRouteBlocks[route];
     try {
       await this.ensureWorkspaceModules();
       switch (route) {
+        case 'announcement-admin': {
+          const actorId=this.user?.id,data=await request('/announcement-admin');if(this.user?.id===actorId){this.announcementAdminData={...data,actorId};this.renderMainContent();}break;
+        }
+        case 'announcements': {
+          const actorId=this.user?.id,assistantId=this.delegation?.actor?.id || this.delegation?.assistant_id;
+          const [data,groups]=await Promise.all([request('/announcements'),request('/groups')]);
+          if(this.user?.id===actorId && (this.delegation?.actor?.id || this.delegation?.assistant_id)===assistantId){this.announcementsData={...data,actorId};this.groups=groups.groups || [];this.renderMainContent();}break;
+        }
+        case 'support':
+        case 'admin-support': {
+          const actorId=this.user?.id,data=await request('/support');if(this.user?.id===actorId){this.supportData={...data,actorId};this.renderMainContent();}break;
+        }
         case 'admin-dashboard': {
           try {
             const [ovRes, proofsRes, tenantsRes] = await Promise.all([
@@ -1259,7 +1271,7 @@ export class CentrlyApp {
             request(`/sessions/calendar?from=${range.from}&to=${range.to}`),
             request('/groups'),
           ]);
-          if (weekOffset !== (Number(this.calendarState.weekOffset) || 0)) break;
+          if (weekOffset !== (Number(this.calendarState.weekOffset) || 0) || JSON.stringify(range)!==JSON.stringify(this.getCalendarRequestRange())) break;
           const rawSessions = Array.isArray(calRes) ? calRes : (calRes.sessions || []);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
           
@@ -1308,57 +1320,15 @@ export class CentrlyApp {
             });
           });
 
-          // 2. Extra sessions (حصص إضافية)
-          const extraSessions = rawSessions
-            .filter(s => s.is_extra)
-            .map(s => {
-              const rawGrp = s.groups;
-              const groupObj = Array.isArray(rawGrp) ? rawGrp[0] : (rawGrp || {});
-              const grp = this.groups.find(g => g.id === s.group_id) || groupObj;
-              const d = s.session_date ? new Date(s.session_date + 'T00:00:00') : new Date();
-              const dayName = jsDayToDayName[d.getDay()] || 'السبت';
-              return {
-                id: s.id,
-                group_id: s.group_id,
-                group_name: grp.name || s.group_name || 'حصة عامة',
-                center_name: grp.center_name || s.center_name || 'سنتر تعليمي',
-                day_name: dayName,
-                time: s.session_time || s.time || '04:00 م - 06:00 م',
-                date: s.session_date || s.date,
-                is_extra: true,
-                extra_topic: s.extra_topic || s.topic || '',
-                status: 'extra',
-              };
-            });
-
-          // 3. Rescheduled sessions (مواعيد بديلة / مؤجلة)
-          const rescheduledSessions = rawSessions
-            .filter(s => s.status === 'rescheduled' || s.rescheduled_to_date)
-            .map(s => {
-              const rawGrp = s.groups;
-              const groupObj = Array.isArray(rawGrp) ? rawGrp[0] : (rawGrp || {});
-              const grp = this.groups.find(g => g.id === s.group_id) || groupObj;
-              const targetDate = s.rescheduled_to_date || s.session_date;
-              const d = targetDate ? new Date(targetDate + 'T00:00:00') : new Date();
-              const dayName = jsDayToDayName[d.getDay()] || 'السبت';
-              return {
-                id: s.id,
-                group_id: s.group_id,
-                group_name: grp.name || s.group_name || 'حصة عامة',
-                center_name: grp.center_name || s.center_name || 'سنتر تعليمي',
-                day_name: dayName,
-                time: s.rescheduled_to_time || s.session_time || s.time || '04:00 م - 06:00 م',
-                date: targetDate,
-                rescheduled_to_date: s.rescheduled_to_date,
-                rescheduled_to_time: s.rescheduled_to_time,
-                cancellation_reason: s.cancellation_reason,
-                status: 'rescheduled',
-              };
-            });
-
-          this.calendarSessions = [...recurringGroupSessions, ...extraSessions, ...rescheduledSessions];
-          this.calendarState.sessions = this.calendarSessions;
-          this.calendarState.groups = this.groups;
+          // One card per saved session; preserve the actual state and effective date.
+          const savedSessions=rawSessions.map(saved=>{
+            const group=this.groups.find(g=>g.id===saved.group_id) || (Array.isArray(saved.groups)?saved.groups[0]:saved.groups) || {};
+            const date=saved.rescheduled_to_date || saved.session_date;
+            return {...saved,group_name:group.name || saved.group_name || 'حصة',center_name:group.center_name || saved.center_name || '',date,original_session_date:saved.original_session_date || saved.session_date,day_name:jsDayToDayName[new Date(date+'T12:00:00').getDay()],time:saved.rescheduled_to_time || saved.session_time || group.session_time || 'وقت غير محدد'};
+          });
+          this.calendarSessions=[...recurringGroupSessions,...savedSessions];
+          this.calendarState.sessions=this.calendarSessions;
+          this.calendarState.groups=this.groups;
           this.renderMainContent();
           break;
         }
@@ -1727,52 +1697,20 @@ export class CentrlyApp {
           break;
         }
         case 'billing': {
-          const billingRes = await request('/billing/status');
-          this.billingState = billingRes;
+          const [commercial, catalog] = await Promise.all([request('/billing/commercial'),request('/billing/commercial/catalog')]);
+          const l=commercial.limits;
+          this.billingState = {subscription_status:l.is_trial?'trial':l.active?'active':'expired',is_paid_active:l.active && !l.is_trial,subscription_tier:l.plan_id,students_count:commercial.students_used,students_limit:l.students,subscription_ends_at:l.paid_until || l.period_end,days_remaining:Math.max(0,Math.ceil((Date.parse(l.paid_until || l.period_end)-Date.now())/86400000)),commercial:{...commercial,catalog}};
           this.saveCache('billingState', this.billingState);
           this.renderMainContent();
           break;
         }
         case 'settings': {
-          try {
-            const teacherParam = this.user?.teacher_id ? `?teacher_id=${encodeURIComponent(this.user.teacher_id)}` : '';
-            const [billingRes, quotaRes, statusRes, tplRes, meRes] = await Promise.all([
-              request('/billing/status'),
-              request('/whatsapp/quota'),
-              request(`/whatsapp/status${teacherParam}`),
-              request('/templates'),
-              request('/auth/me'),
-            ]);
-            if (meRes?.user) {
-              this.user = { ...this.user, ...meRes.user };
-              authService.setUser(this.user);
-            }
-            if (billingRes) {
-              this.billingState = billingRes;
-              this.saveCache('billingState', this.billingState);
-            }
-            let qrRes = null;
-            if (statusRes?.status !== 'connected') {
-              try {
-                qrRes = await request(`/whatsapp/qr${teacherParam}`);
-              } catch (err) {
-                console.warn('Initial QR load failed:', err);
-              }
-            }
-            this.whatsappState = {
-              role: this.user?.role,
-              quota: quotaRes || {},
-              status: statusRes?.status || 'disconnected',
-              phone_number: statusRes?.phone_number || '',
-              qr_base64: qrRes?.qr_base64 || null,
-              pairing_code: qrRes?.pairing_code || null,
-              templates: tplRes?.templates || [],
-            };
-          } catch (err) { throw err; }
+          const actorId=this.user?.id;
+          const [settingsRes,meRes]=await Promise.all([request('/settings'),request('/auth/me')]);
+          if(this.user?.id!==actorId)break;
+          if(meRes?.user){this.user={...this.user,...meRes.user};authService.setUser(this.user);}
+          this.settingsState.portalPreferences=settingsRes.settings?.portal_preferences;
           this.renderMainContent();
-          if (this.whatsappState?.status !== 'connected' && this.settingsState?.activeTab === 'whatsapp') {
-            this.startWhatsAppStatusPolling('settings');
-          }
           break;
         }
         case 'whatsapp': {
@@ -1832,14 +1770,16 @@ export class CentrlyApp {
           break;
         }
         case 'sessions': {
-          const [grpRes, studRes] = await Promise.all([
+          const date=portalCairoClock().date;
+          const [grpRes, studRes, scheduleRes] = await Promise.all([
             (!this.groups || this.groups.length === 0) ? request('/groups') : Promise.resolve(this.groups),
             (!this.students || this.students.length === 0) ? request('/students') : Promise.resolve(this.students),
+            request('/sessions?from='+date+'&to='+new Date(Date.parse(date+'T12:00:00Z')+90*86400000).toISOString().slice(0,10)),
           ]);
           this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || this.groups || []);
           this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
 
-          const todayStr = new Date().toISOString().split('T')[0];
+          const todayStr = date;
           // If the active session has ended, or is stale (not in_progress) from an old date, clean it up
           if (this.sessionState?.id && this.sessionState.status !== 'in_progress' && (this.sessionState.session_date && this.sessionState.session_date !== todayStr)) {
             this.sessionState = {
@@ -1874,6 +1814,7 @@ export class CentrlyApp {
             this.startLiveSessionSync();
           }
 
+          this.sessionState.scheduleRecords=Array.isArray(scheduleRes)?scheduleRes:scheduleRes.sessions || [];
           this.renderMainContent();
           this.updateNavbarBadge();
           if (this.sessionState?.status === 'in_progress') {
@@ -1912,7 +1853,7 @@ export class CentrlyApp {
         }
         case 'video-lessons': {
           const [matRes, grpRes, stdRes] = await Promise.all([
-            request('/materials'),
+            request('/materials?type=video'),
             request('/groups'),
             request('/students'),
           ]);
@@ -2052,6 +1993,7 @@ export class CentrlyApp {
         }
       }
 
+      if (err.status === 402 || err.data?.error?.code?.startsWith('SUBSCRIPTION_') || err.data?.error?.code === 'PLAN_FEATURE_REQUIRED') { this.commercialRouteBlocks = {...this.commercialRouteBlocks, [route]:true}; }
       if (this.routeErrors) {
         const hasRefresh = Boolean(authService.getRefreshToken());
         this.routeErrors[route] = (isAuthErr && !hasRefresh)
@@ -2159,7 +2101,7 @@ export class CentrlyApp {
           <p style="color: var(--centrly-text); font-size: 0.9rem; margin: 0 0 1.25rem 0; line-height: 1.6;">
             ${escapeHtml(this.routeErrors[route])}
           </p>
-          ${isAuthErr ? `
+          ${this.commercialRouteBlocks?.[route] ? this.delegation ? '<p>راجع المدرس لتعديل الاشتراك.</p>' : `<button class="btn btn-primary" style="min-height:44px" onclick="window.centrlyApp.navigate('billing')">مراجعة الاشتراك والباقات</button>` : isAuthErr ? `
             <button class="btn btn-primary btn-sm" onclick="window.centrlyApp.renderAuth('login')" style="font-weight: 700; padding: 0.5rem 1.5rem;">
               <span>تسجيل الدخول مجدداً</span>
             </button>
@@ -2180,6 +2122,13 @@ export class CentrlyApp {
     }
 
     switch (route) {
+      case 'announcement-admin':
+        return renderAnnouncementAdminView(this.announcementAdminData?.actorId===this.user?.id?this.announcementAdminData:{});
+      case 'announcements':
+        return renderAnnouncementsView(this.announcementsData?.actorId===this.user?.id?this.announcementsData:{},this);
+      case 'support':
+      case 'admin-support':
+        return renderSupportView(this.supportData?.actorId===this.user?.id?this.supportData:{},this.user);
       case 'admin-dashboard':
         return renderBusinessOwnerDashboard(this.adminOverviewData || {});
       case 'admin-proofs':

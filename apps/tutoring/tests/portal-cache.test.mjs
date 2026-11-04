@@ -4,6 +4,13 @@ import {readFile} from 'node:fs/promises';
 const source = await readFile(new URL('../../web/src/utils/portalCache.js', import.meta.url), 'utf8');
 const {createPortalCache, PORTAL_CACHE_PREFIX, PORTAL_FRESH_MS, PORTAL_MAX_AGE_MS} = await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const payload = name => ({student:{id:'student-a',tenant_id:'tenant-a',name},summary:{attendance_rate:'80%'},materials:[{id:'hw',title:'واجب قديم',submission_url:'https://files.test/storage/v1/object/sign/homework-submissions/file?token=private'}]});
+test('cached ranking never reveals a cohort after the teacher changes visibility; policy refresh runs in the background',async()=>{
+ const {cache}=setup();
+ await cache.write('session-a',{...payload('محفوظ'),preferences:{show_student_rank:true,show_student_leaderboard:true},summary:{student_rank:1,group_size:20},leaderboard:{entries:[{name:'PRIVATE-PEER',position:1}]}});
+ const shown=[];let calls=0;
+ const result=await cache.load('session-a',{request:async()=>{calls++;return {...payload('مباشر'),preferences:{show_student_rank:false,show_student_leaderboard:false}};},onData:value=>shown.push(value)});
+ assert.equal(calls,1);assert.equal(shown[0].student.name,'محفوظ');assert.equal(shown[0].summary.student_rank,undefined);assert.equal(shown[0].leaderboard,undefined);assert.ok(!JSON.stringify(shown).includes('PRIVATE-PEER'));assert.equal(result.cached,false);
+});
 function setup() {
   const records = new Map([['centrly_portal_token','session-a'],['centrly_portal_role','student']]);
   const storage = {getItem:key=>records.get(key)??null,setItem:(key,value)=>records.set(key,value),removeItem:key=>records.delete(key)};
@@ -89,4 +96,12 @@ test('invalidating after a mutation prevents an older in-flight read from restor
   await began;cache.clear('student');resolve(payload('قبل التسليم'));
   await assert.rejects(pending,e=>e.code==='PORTAL_CACHE_INVALIDATED');assert.deepEqual(shown,[]);assert.equal(records.has(PORTAL_CACHE_PREFIX+'student'),false);
   await cache.load('session-a',{request:async()=>({...payload('بعد التسليم'),materials:[]})});assert.deepEqual((await cache.read('session-a')).data.materials,[]);
+});
+
+test('cache schema upgrade removes old question snapshots without logging out; new snapshots contain metadata only',async()=>{
+ const records=new Map([['centrly_portal_token','session-a'],['centrly_portal_role','student'],['centrly_portal_snapshot_v1:student','PRIVATE-OLD-KEY']]);
+ const storage={getItem:key=>records.get(key) ?? null,setItem:(key,value)=>records.set(key,value),removeItem:key=>records.delete(key)};
+ const cache=createPortalCache({storage});assert.equal(records.has('centrly_portal_snapshot_v1:student'),false);assert.equal(records.get('centrly_portal_token'),'session-a');
+ const data={...payload('student'),materials:[{id:'quiz',type:'online_quiz',questions:{subject:'math',quiz_number:1,time_limit_minutes:30,question_count:1,max_score:3,stealth_models:{correct:'PRIVATE-KEY'},questions:[{text:'PRIVATE-QUESTION',correct_index:1}]}}]};
+ await cache.write('session-a',data);const saved=records.get(PORTAL_CACHE_PREFIX+'student');assert.ok(saved);assert.ok(!saved.includes('PRIVATE-'));const quiz=JSON.parse(saved).data.materials[0].questions;assert.equal(quiz.question_count,1);assert.equal(quiz.time_limit_minutes,30);assert.equal(quiz.subject,'math');assert.deepEqual(quiz.questions,[]);assert.equal(data.materials[0].questions.questions.length,1,'Do not mutate an open attempt or caller model');
 });

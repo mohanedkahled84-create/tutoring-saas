@@ -1,3 +1,4 @@
+import {checkCommercialStorage} from '../../shared/utils/commercialStorage.js';
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServices } from "../../composition.js";
@@ -7,7 +8,11 @@ import { validateFileUpload } from "../../shared/utils/fileUploadValidator.js";
 import { getStealthModelQuestions } from "./stealthModels.js";
 import { gradeOmrSubmission, normalizeModelLetter } from "./omrGrader.js";
 
+import {publishOnlineQuiz} from "./publication.js";
+import {gradeQuizEssay} from "./essayGrade.js";
+
 export const quizzesRouter = Router();
+quizzesRouter.post("/publish-online",(req:AuthenticatedRequest,res)=>publishOnlineQuiz(req,res));
 
 function parseQuizPayload(value: unknown): Record<string, unknown> {
   if (typeof value === "string") {
@@ -55,12 +60,12 @@ export function mergeLegacyQuizRows(
     const isDraft = Boolean(legacyQuiz.is_draft || row.status === "draft" || String(row.phone).includes("DRAFT"));
     if (isDraft) {
       const draft: any = { ...legacyQuiz, is_draft: true, is_archived: true };
-      if (!drafts.some((existing: any) => existing.id === draft.id)) drafts.push(draft);
+      if (!drafts.some((existing: any) => existing.id === draft.id || existing.legacy_quiz_ref === draft.id)) drafts.push(draft);
       continue;
     }
 
     const alreadyLoaded = richQuizzes.some((quiz: any) =>
-      quiz.id === legacyQuiz.id || (
+      quiz.id === legacyQuiz.id || String(quiz.legacy_quiz_ref || '') === String(legacyQuiz.id) || (
         String(quiz.group_id) === legacyGroupId &&
         Number(quiz.quiz_number) === Number(legacyQuiz.quiz_number) &&
         (quiz.exam_mode || "online") === (legacyQuiz.exam_mode || "online")
@@ -404,6 +409,9 @@ quizzesRouter.get(
 
         return {
           id: row.id,
+          legacy_quiz_ref: payload.legacy_quiz_ref || null,
+          is_archived: Boolean(payload.is_archived),
+          is_draft: Boolean(payload.is_draft),
           title: row.title,
           subject: row.description || payload.subject || "الفيزياء",
           group_id: row.group_id,
@@ -425,9 +433,17 @@ quizzesRouter.get(
         .filter((draft) => typeof draft.id === "string" && Array.isArray(draft.questions))
         .map((draft) => ({ ...draft, is_draft: true, is_archived: true }));
 
+      for (let i=richQuizzes.length-1;i>=0;i--) {
+        const quiz=richQuizzes[i];
+        if(quiz.is_archived || quiz.is_draft){
+          if(!drafts.some(row=>row.id===quiz.id))drafts.push({...quiz,is_draft:true,is_archived:true});
+          richQuizzes.splice(i,1);
+        }
+      }
       mergeLegacyQuizRows(legacyRows || [], allowedGroupIds, groupId, richQuizzes, drafts);
 
-      res.status(200).json({ success: true, quizzes: richQuizzes, drafts });
+      const limits=(req as any).commercialLimits,basic=limits && !limits.legacy && !limits.teaching_platform;
+      res.status(200).json({ success: true, quizzes: basic?richQuizzes.filter(q=>q.exam_mode==='paper'):richQuizzes, drafts:basic?drafts.filter(q=>q.exam_mode==='paper'):drafts });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch rich quizzes";
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
@@ -466,36 +482,16 @@ quizzesRouter.post(
 
     if (action === "delete_quiz" || action === "archive_quiz") {
       const id = typeof req.body?.id === "string" ? req.body.id : "";
-      const quizToArchive = parseQuizPayload(req.body?.quiz ?? req.body);
+      if (!req.user?.id || !req.user.tenant_id || !id) { res.status(400).json({error:{message:"حدد الامتحان المطلوب"}}); return; }
       try {
-        if (action === "archive_quiz") {
-          await saveTenantQuizDraft(supabase, tenantId, {
-            ...quizToArchive,
-            id: id || quizToArchive.id,
-            is_draft: true,
-            is_archived: true,
-            status: "draft",
-            archived_at: new Date().toISOString(),
-          });
-        }
-
-        if (id && id.length > 20) {
-          const { error } = await supabase
-            .from("study_materials")
-            .delete()
-            .eq("id", id)
-            .eq("tenant_id", tenantId)
-            .eq("type", "online_quiz");
-          if (error) throw error;
-        }
-
-        res.status(200).json({
-          success: true,
-          message: action === "archive_quiz" ? "Quiz archived successfully" : "Quiz deleted successfully",
+        const {data,error}=await supabase.rpc('archive_quiz_definition',{
+          p_tenant:req.user.tenant_id,p_user:req.user.id,p_assistant:req.user.assistant_id || null,
+          p_reference:id,p_delete:action==='delete_quiz',
         });
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Failed to update quiz";
-        res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+        if(error)throw error;
+        res.status(200).json({...data,message:"تمت أرشفة الامتحان مع الاحتفاظ بالإجابات والدرجات"});
+      } catch(err:any) {
+        res.status(err.code==='42501'?403:err.code==='P0002'?404:409).json({error:{code:'QUIZ_ARCHIVE_UNAVAILABLE',message:"تعذر أرشفة الامتحان؛ حدّث القائمة وحاول مجددًا"}});
       }
       return;
     }
@@ -527,6 +523,8 @@ quizzesRouter.post(
       }
       return;
     }
+
+    if (exam_mode !== 'paper') {await publishOnlineQuiz(req,res,true);return;}
 
     if (!group_id || quiz_number === undefined) {
       res.status(400).json({
@@ -694,7 +692,8 @@ quizzesRouter.post(
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to save rich quiz";
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
+      const attempted=message.includes('QUIZ_HAS_ATTEMPTS_COPY_INSTEAD');
+      res.status(attempted?409:500).json({error:{code:attempted?'QUIZ_HAS_ATTEMPTS':'INTERNAL_ERROR',message:attempted?'بدأ الطلاب حل هذا الامتحان؛ احتفظ به كسجل وأنشئ امتحانًا جديدًا لتغيير الأسئلة أو التصحيح':message}});
     }
   }
 );
@@ -735,6 +734,7 @@ quizzesRouter.post(
         return;
       }
 
+      if(!await checkCommercialStorage(supabase,tenantId,fileBuffer.length,res))return;
       const storagePath = `quizzes/${tenantId}/${Date.now()}_${validation.sanitizedFilename}`;
       const { error: uploadError } = await supabase.storage
         .from("homework-submissions")
@@ -792,11 +792,11 @@ quizzesRouter.get(
         .order("submitted_at", { ascending: false });
 
       if (statusFilter === "pending") {
-        query = query.eq("status", "needs_grading");
+        query = query.in("status", ["pending", "needs_grading"]);
       } else if (statusFilter === "graded") {
         query = query.eq("status", "approved");
       } else {
-        query = query.in("status", ["needs_grading", "approved"]);
+        query = query.in("status", ["pending", "needs_grading", "approved"]);
       }
 
       const { data: subs, error: subsError } = await query;
@@ -867,8 +867,8 @@ quizzesRouter.get(
             ? Number(parsedNotes.final_score)
             : (isGraded ? Number(parsedNotes.mcq_score || 0) : null);
 
-          const sCode = (student as any).student_code || parsedNotes.student_code || (String(sub.student_id) === "9da3aae0-97df-47a6-82e9-06c6139f63e5" ? "1006" : "—");
-          const sName = (student as any).name || parsedNotes.student_name || (sCode === "1006" ? "مهند خالد" : "طالب");
+          const sCode = (student as any).student_code || parsedNotes.student_code || "—";
+          const sName = (student as any).name || parsedNotes.student_name || "طالب";
 
           return {
             id: sub.id,
@@ -910,10 +910,15 @@ quizzesRouter.get(
           .limit(1000);
 
         if (Array.isArray(legacySubRows)) {
+          const {data:ownedGroups,error:ownedGroupsError}=await supabase.from('groups').select('id').eq('tenant_id',tenantId);
+          const ownedGroupIds=new Set((ownedGroups || []).map((group:any)=>String(group.id)));
           for (const row of legacySubRows) {
             try {
               const parsed = typeof row.message_body === "string" ? JSON.parse(row.message_body) : row.message_body;
               if (parsed && (parsed.quiz_id || parsed.material_id)) {
+                if(row.tenant_id!==tenantId && (ownedGroupsError || !ownedGroupIds.has(String(parsed.group_id))))continue;
+                if(groupId && String(parsed.group_id)!==String(groupId))continue;
+                const legacyGraded=parsed.is_graded===true || row.status==='approved' && parsed.is_graded!==false;
                 const subId = parsed.id || parsed.submission_id || (row as any).id;
                 const alreadyExists = results.some((r: any) =>
                   r.id === subId || (String(r.student_code) === String(parsed.student_code) && String(r.material_id) === String(parsed.quiz_id || parsed.material_id))
@@ -933,8 +938,8 @@ quizzesRouter.get(
                     group_id: parsed.group_id || null,
                     model: parsed.model || "نموذج أ",
                     exam_mode: parsed.exam_mode || (Array.isArray(parsed.breakdown) && parsed.breakdown.length > 0 ? "paper" : "online"),
-                    status: parsed.status || "approved",
-                    is_graded: true,
+                    status: legacyGraded?'approved':'pending',
+                    is_graded: legacyGraded,
                     has_essay: Boolean(parsed.has_essay),
                     score: parsed.total_score !== undefined ? parsed.total_score : (parsed.score || 0),
                     total_score: parsed.total_score !== undefined ? parsed.total_score : (parsed.score || 0),
@@ -959,7 +964,7 @@ quizzesRouter.get(
       try {
         const { data: scoreRows } = await supabase
           .from("quiz_scores")
-          .select("id, tenant_id, group_id, quiz_id, quiz_number, student_id, score, max_score, note, updated_at")
+          .select("id, tenant_id, group_id, quiz_id, material_id, quiz_number, student_id, score, max_score, note, updated_at")
           .eq("tenant_id", tenantId)
           .order("updated_at", { ascending: false })
           .limit(500);
@@ -978,7 +983,7 @@ quizzesRouter.get(
           }
 
           const missingMaterialIds = scoreRows
-            .map((r: any) => r.quiz_id)
+            .map((r: any) => r.material_id)
             .filter((mid: string) => mid && !materialMap.has(mid));
 
           if (missingMaterialIds.length > 0) {
@@ -991,13 +996,14 @@ quizzesRouter.get(
 
           for (const sRow of scoreRows) {
             const student = studentMap.get(sRow.student_id) || {};
-            const material = materialMap.get(sRow.quiz_id) || {};
+            if(groupId && String(sRow.group_id || (student as any).group_id)!==String(groupId))continue;
+            const material = materialMap.get(sRow.material_id) || {};
             const sCode = (student as any).student_code || (student as any).code || "—";
-            const sMaterialId = sRow.quiz_id || `paper_quiz_${sRow.quiz_number}`;
+            const sMaterialId = sRow.material_id || sRow.quiz_id || `paper_quiz_${sRow.group_id}_${sRow.quiz_number}`;
 
             const alreadyExists = results.some((r: any) =>
               (r.student_id === sRow.student_id || String(r.student_code) === String(sCode)) &&
-              (String(r.material_id) === String(sMaterialId) || Number(r.quiz_number) === Number(sRow.quiz_number))
+              (String(r.material_id) === String(sMaterialId) || !sRow.material_id && !r.material_id && String(r.group_id) === String(sRow.group_id) && Number(r.quiz_number) === Number(sRow.quiz_number))
             );
 
             if (!alreadyExists) {
@@ -1046,7 +1052,9 @@ quizzesRouter.get(
         console.warn("[Quizzes] Could not reconcile quiz_scores into submissions:", scoreErr);
       }
 
-      res.status(200).json({ success: true, submissions: results });
+      results=results.filter((row:any)=>statusFilter==='pending'?!row.is_graded:statusFilter==='graded'?row.is_graded:true);
+      res.set('Cache-Control','private,no-store');
+      res.status(200).json({ success: true, submissions: (req as any).commercialLimits && !(req as any).commercialLimits.legacy && !(req as any).commercialLimits.teaching_platform ? results.filter((r:any)=>r.exam_mode==='paper') : results });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch online submissions";
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
@@ -1073,11 +1081,12 @@ quizzesRouter.get(
           material_id,
           status,
           file_url,
+          file_name,
           teacher_notes,
           submitted_at
         `)
         .eq("tenant_id", tenantId)
-        .eq("status", "pending")
+        .in("status", ["pending", "needs_grading"])
         .order("submitted_at", { ascending: false });
 
       if (subsError) throw subsError;
@@ -1097,7 +1106,7 @@ quizzesRouter.get(
 
       const { data: materialsData } = await supabase
         .from("study_materials")
-        .select("id, title, description, questions, group_id")
+        .select("id, title, description, questions, group_id, type")
         .in("id", materialIds);
 
       const studentMap = new Map((studentsData || []).map((s: any) => [s.id, s]));
@@ -1105,6 +1114,8 @@ quizzesRouter.get(
 
       const results = subs
         .filter((sub: any) => {
+          const material=materialMap.get(sub.material_id);
+          if(material?.type!=='online_quiz' && !String(sub.file_name || '').startsWith('online_quiz_'))return false;
           if (!groupId) return true;
           const s = studentMap.get(sub.student_id);
           const m = materialMap.get(sub.material_id);
@@ -1127,8 +1138,8 @@ quizzesRouter.get(
             materialQuestions = {};
           }
 
-          const sCode = (student as any).student_code || parsedNotes.student_code || (String(sub.student_id) === "9da3aae0-97df-47a6-82e9-06c6139f63e5" ? "1006" : "—");
-          const sName = (student as any).name || parsedNotes.student_name || (sCode === "1006" ? "مهند خالد" : "طالب");
+          const sCode = (student as any).student_code || parsedNotes.student_code || "—";
+          const sName = (student as any).name || parsedNotes.student_name || "طالب";
 
           return {
             id: sub.id,
@@ -1149,7 +1160,7 @@ quizzesRouter.get(
           };
         });
 
-      res.status(200).json({ success: true, submissions: results });
+      res.status(200).json({ success: true, submissions: (req as any).commercialLimits && !(req as any).commercialLimits.legacy && !(req as any).commercialLimits.teaching_platform ? results.filter((r:any)=>r.exam_mode==='paper') : results });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch pending submissions";
       res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
@@ -1158,110 +1169,7 @@ quizzesRouter.get(
 );
 
 // DEV-QUIZ.RICH-5: POST /api/quizzes/submissions/grade-essay - Manually grade essay questions
-quizzesRouter.post(
-  "/submissions/grade-essay",
-  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const tenantId = req.user?.tenant_id || "default";
-    const {
-      submission_id,
-      student_id,
-      quiz_number,
-      group_id,
-      essay_scores,
-      notes,
-      final_score,
-      max_score,
-    } = req.body;
-
-    if (!submission_id || !student_id || quiz_number === undefined) {
-      res.status(400).json({
-        error: { code: "BAD_REQUEST", message: "submission_id, student_id and quiz_number are required" },
-      });
-      return;
-    }
-
-    try {
-      const services = getServices(req);
-      const quizzesService = services.quizzes;
-      const supabase = (config.supabaseServiceRoleKey ? getServiceSupabaseClient() : req.supabase) || getServiceSupabaseClient();
-
-      const { data: sub, error: subErr } = await supabase
-        .from("homework_submissions")
-        .select("*")
-        .eq("id", submission_id)
-        .eq("tenant_id", tenantId)
-        .single();
-
-      if (subErr || !sub) {
-        res.status(404).json({ error: { code: "NOT_FOUND", message: "Submission not found" } });
-        return;
-      }
-
-      let parsedNotes: any = {};
-      try {
-        parsedNotes = typeof sub.teacher_notes === "string" ? JSON.parse(sub.teacher_notes) : (sub.teacher_notes || {});
-      } catch (_) {
-        parsedNotes = {};
-      }
-
-      const mcqScore = Number(parsedNotes.mcq_score || 0);
-      let essayTotal = 0;
-      if (essay_scores && typeof essay_scores === "object") {
-        for (const pts of Object.values(essay_scores)) {
-          essayTotal += Number(pts || 0);
-        }
-      }
-
-      const finalScore = (final_score !== undefined && final_score !== null && !isNaN(Number(final_score)))
-        ? Number(final_score)
-        : (mcqScore + essayTotal);
-      const resolvedMaxScore = (max_score !== undefined && max_score !== null && !isNaN(Number(max_score)))
-        ? Number(max_score)
-        : (parsedNotes.max_score || 20);
-      const resolvedGroupId = group_id || parsedNotes.group_id || "default-group";
-      const qNum = Number(quiz_number);
-
-      await quizzesService.saveScores(tenantId, {
-        group_id: resolvedGroupId,
-        quiz_number: qNum,
-        quiz_title: `كويز ${qNum}`,
-        max_score: resolvedMaxScore,
-        scores: {
-          [student_id]: finalScore,
-        },
-        notes: {
-          [student_id]: notes || `تم تصحيح المقالي: مقالي (${essayTotal}) + اختياري (${mcqScore})`,
-        },
-      });
-
-      parsedNotes.essay_scores = essay_scores;
-      parsedNotes.final_score = finalScore;
-      parsedNotes.max_score = resolvedMaxScore;
-      parsedNotes.teacher_comment = notes || "";
-      parsedNotes.graded_at = new Date().toISOString();
-
-      await supabase
-        .from("homework_submissions")
-        .update({
-          status: "approved",
-          teacher_notes: JSON.stringify(parsedNotes),
-        })
-        .eq("id", submission_id);
-
-      res.status(200).json({
-        success: true,
-        final_score: finalScore,
-        max_score: resolvedMaxScore,
-        mcq_score: mcqScore,
-        essay_score: essayTotal,
-        message: "تم اعتماد وتثبيت درجة الطالب بنجاح",
-      });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to grade essay";
-      res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
-    }
-  }
-);
+quizzesRouter.post("/submissions/grade-essay",gradeQuizEssay);
 
 // DEV-QUIZ.RICH-6: POST /api/quizzes/omr-scan - Record Bubble Sheet scan score
 quizzesRouter.post(
@@ -1652,6 +1560,7 @@ quizzesRouter.post(
         if (matches && matches.length === 3) {
           const contentType = matches[1];
           const buffer = Buffer.from(matches[2], "base64");
+          if(!await checkCommercialStorage(supabase,tenantId,buffer.length,res))return;
           const ext = contentType.split("/")[1] || "jpg";
           const path = `${tenantId}/quizzes/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
@@ -1678,15 +1587,9 @@ quizzesRouter.post(
         }
       }
 
-      res.status(200).json({
-        success: true,
-        url: image_data,
-      });
+      res.status(503).json({error:{code:'STORAGE_ERROR',message:'تعذر حفظ صورة السؤال؛ حاول مجددًا'}});
     } catch (_) {
-      res.status(200).json({
-        success: true,
-        url: image_data,
-      });
+      res.status(503).json({error:{code:'STORAGE_ERROR',message:'تعذر حفظ صورة السؤال؛ حاول مجددًا'}});
     }
   }
 );

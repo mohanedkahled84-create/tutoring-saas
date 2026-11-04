@@ -2,15 +2,19 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {verifyParentPortalToken} from './tokens.js';
 import {verifiedPortalStudent} from './portalDestination.js';
 import {normalizeMaterialUrl} from '../../features/materials/routes.js';
-import {mergeLegacyPortalQuizzes, stripQuizAnswers as removeQuizAnswerKeys} from './legacyPortalQuizzes.js';
+import {mergeLegacyPortalQuizzes, quizListingDefinition} from './legacyPortalQuizzes.js';
 import {signHomeworkFile} from '../../features/homework/files.js';
+import {resolvePortalPreferences} from './portalPreferences.js';
 
 export function parentMonitorPayload(data:any) {
   const pick=(value:any,keys:string[])=>Object.fromEntries(keys.filter(key=>value?.[key]!==undefined).map(key=>[key,value[key]]));
   return {
     student:pick(data.student,['id','tenant_id','name','student_code','group_name','teacher_name','subject_name','teacher_phone']),
     teacher_phone:data.teacher_phone,
-    summary:pick(data.summary,['total_sessions','attended_count','absent_count','attendance_rate','quiz_average_percentage']),
+    preferences:resolvePortalPreferences(data.preferences),
+    announcements:(data.announcements || []).map((row:any)=>pick(row,['id','title','body','published_at','expires_at'])),
+    upcoming_sessions:(data.upcoming_sessions || []).map((row:any)=>pick(row,['session_date','start_time','end_time','group_name'])),
+    summary:pick(data.summary,['total_sessions','attended_count','absent_count','attendance_rate','quiz_average_percentage',...(data.preferences?.show_parent_rank===true?['student_rank','group_size','rank_period']:[])]),
     sessions:(data.sessions || []).map((row:any)=>pick(row,['session_number','session_date','attended','homework_status','comment'])),
     quizzes:(data.quizzes || []).map((row:any)=>({...pick(row,['id','title','score','max_score','percentage','tier','note']),date:row.date || row.quiz_date || ''})),
     materials:(data.materials || []).filter((row:any)=>row.is_homework || row.type==='homework').map((row:any)=>pick(row,['id','title','type','is_homework','submission_status','submitted_at','due_date'])),
@@ -43,19 +47,28 @@ export async function loadPortalAccount(supabase:SupabaseClient,token:string,mon
     if (!context || context.id !== portalData.student?.id) {
       throw Object.assign(new Error('رابط المتابعة غير صالح'),{status:401});
     }
+    if(context.commercial && !context.commercial.readable)throw Object.assign(new Error('المتابعة غير متاحة حاليًا؛ تواصل مع المدرس'),{status:401});
+    if(context.commercial && !context.commercial.teaching_platform && Array.isArray(portalData.materials))portalData.materials=portalData.materials.filter((m:any)=>m.type!=='video' && m.type!=='online_quiz');
     portalData.student.tenant_id = context.tenant_id;
     // Run the small aggregate alongside material enrichment, not after it.
-    const rankResult = monitorOnly ? Promise.resolve(null) : supabase.rpc("get_portal_monthly_group_rank", {
+    const preferences=resolvePortalPreferences(portalData.preferences);portalData.preferences=preferences;
+    const showRank=monitorOnly?preferences.show_parent_rank:preferences.show_student_rank;
+    const rankResult = !showRank ? Promise.resolve(null) : supabase.rpc("get_portal_monthly_group_rank", {
       p_student_id: context.id, p_tenant_id: context.tenant_id,
     }).abortSignal(AbortSignal.timeout(2500)).then(({ data, error }) => !error ? data : null, () => null);
+    const announcementsResult=!preferences.show_announcements?Promise.resolve([]):supabase.rpc('portal_announcements',{p_student:context.id,p_tenant:context.tenant_id,p_role:monitorOnly?'parent':'student'}).abortSignal(AbortSignal.timeout(2500)).then(({data,error})=>!error && Array.isArray(data)?data:[],()=>[]);
+    const leaderboardResult=monitorOnly || !preferences.show_student_leaderboard?Promise.resolve(null):supabase.rpc('get_portal_group_leaderboard',{p_student_id:context.id,p_tenant_id:context.tenant_id}).abortSignal(AbortSignal.timeout(2500)).then(({data,error})=>!error?data:null,()=>null);
 
     if (!monitorOnly && portalData && Array.isArray(portalData.materials)) {
-      portalData.materials = portalData.materials.map((m: any) => {
+      portalData.materials = portalData.materials.filter((m:any)=>{
+        if(m.type!=='online_quiz')return true;
+        try{const payload=typeof m.questions==='string'?JSON.parse(m.questions):m.questions;return !payload?.is_archived && !payload?.is_draft;}catch{return false;}
+      }).map((m: any) => {
         let questions = m.questions;
         if (m.type === "online_quiz" && questions) {
           try {
             const parsed = typeof questions === "string" ? JSON.parse(questions) : questions;
-            const sanitized = removeQuizAnswerKeys(parsed);
+            const sanitized = quizListingDefinition(parsed);
             questions = typeof m.questions === "string" ? JSON.stringify(sanitized) : sanitized;
           } catch {
             questions = null;
@@ -105,7 +118,12 @@ export async function loadPortalAccount(supabase:SupabaseClient,token:string,mon
         submission_url: await signHomeworkFile(supabase, material.submission_url, fileTenantId!, material.id, fileStudentId),
       })));
     }
+    portalData.announcements=await announcementsResult;
     const rank = await rankResult;
+    const leaderboard=await leaderboardResult;
+    if(leaderboard && !monitorOnly)portalData.leaderboard=leaderboard;else delete portalData.leaderboard;
     if (rank && portalData.summary) Object.assign(portalData.summary, rank);
+    if(!showRank && portalData.summary)for(const key of ['student_rank','group_size','rank_period'])delete portalData.summary[key];
+    if(!preferences.show_teacher_contact){delete portalData.teacher_phone;if(portalData.student)for(const key of ['teacher_phone','contact_phone'])delete portalData.student[key];}
     return monitorOnly ? parentMonitorPayload(portalData) : portalData;
 }

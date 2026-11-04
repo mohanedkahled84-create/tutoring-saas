@@ -64,7 +64,7 @@
       try { role=localStorage.getItem('centrly_portal_role')||'';entryRole=localStorage.getItem('centrly_portal_entry_role')||''; } catch (_) {}
       var portal=/^\/portal(?:-entry)?\/?$/.test(path);
       window.__centrlyParentEntry=path==='/family'||/^\/p(?:\/|[a-f0-9])/i.test(path)||query.has('p')||path==='/portal-entry'||(portal&&(role==='parent'||(!role&&entryRole==='parent')||query.get('role')==='parent'));
-      var modules=window.__centrlyParentEntry?['parentPortalEntry.js?v=1']:['utils/portalCache.js','utils/portalSession.js','utils/portalDestination.js'];
+      var modules=window.__centrlyParentEntry?['parentPortalEntry.js?v=9.38.0']:['utils/portalCache.js','utils/portalSession.js','utils/portalDestination.js'];
       modules.forEach(function(name){var link=document.createElement('link');link.rel='modulepreload';link.href='/apps/web/src/'+name;document.head.appendChild(link);});
     })();
   </script>
@@ -146,7 +146,7 @@
     })();
   </script>
   <script type="module">
-    import(window.__centrlyParentEntry ? '/apps/web/src/parentPortalEntry.js?v=1' : '/apps/web/src/portalBootstrap.js?v=9.37.0');
+    import(window.__centrlyParentEntry ? '/apps/web/src/parentPortalEntry.js?v=9.38.0' : '/apps/web/src/portalBootstrap.js?v=9.38.0');
   </script>
 </body>
 </html>

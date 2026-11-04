@@ -20,10 +20,11 @@ test('LIVE: Akedly OTP maps private transactions to current invitation, limits a
  ok(await db.from('tenants').insert({id:tenant,name:'isolated Akedly teacher'}));
  const nonce=familyToken(),phone='2010'+String(Math.floor(Math.random()*1e8)).padStart(8,'0');
  const invite=ok(await db.rpc('assistant_invite',{p_tenant:tenant,p_assistant:null,p_teacher:null,p_phone:phone,p_nonce_hash:familyHash(nonce),p_permissions:{},p_all_groups:false,p_group_ids:[],p_pay:{salary_model:'monthly',salary:100,pay_start_date:'2026-11-01'}}));
+ const requestPrefix='isolated-request-'+randomUUID();
  let code,transaction,verifies=0,sends=0;
  akedlyGateway.challenge=async()=>({challengeRequired:false,turnstile:{required:false}});
- akedlyGateway.send=async(p,c)=>{assert.equal(p,phone);code=c;sends++;transaction='isolated-tx-'+randomUUID();return {transactionReqID:'isolated-request-'+sends,transactionID:transaction,channels:['sms'],expiresAt:new Date(Date.now()+180000).toISOString()};};
- akedlyGateway.verify=async(request,c)=>{verifies++;assert.equal(request,'isolated-request-'+sends);if(c!==code)throw Object.assign(new Error('wrong'),{status:400});return {verified:true,transactionID:transaction};};
+ akedlyGateway.send=async(p,c)=>{assert.equal(p,phone);code=c;sends++;transaction='isolated-tx-'+randomUUID();return {transactionReqID:requestPrefix+'-'+sends,transactionID:transaction,channels:['sms'],expiresAt:new Date(Date.now()+180000).toISOString()};};
+ akedlyGateway.verify=async(request,c)=>{verifies++;assert.equal(request,requestPrefix+'-'+sends);if(c!==code)throw Object.assign(new Error('wrong'),{status:400});return {verified:true,transactionID:transaction};};
  const {app}=await import('../dist/app.js');server=app.listen(0);await once(server,'listening');const base=`http://127.0.0.1:${server.address().port}/api/assistant-access`;
  // Persistent IP buckets survive CI runs; each fixture needs its own client IP.
  // trust proxy=1 makes this the client identity while transport remains localhost.

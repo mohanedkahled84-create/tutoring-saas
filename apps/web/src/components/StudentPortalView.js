@@ -1,9 +1,11 @@
+import {openQuizAttempt} from '../utils/quizAttemptClient.js';
 import { escapeHtml } from "../utils/escapeHtml.js";
+import {renderPortalHomeSummary} from './PortalHomeSummary.js';
+import {portalCairoClock} from '../utils/portalClock.js';
 import { getIcon } from "../utils/icons.js";
 import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js";
 import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=6.5.0";
 import { openVideoPlayerModal } from "./VideoLessonsView.js";
-import { isMohanedKhaledStudent } from "../utils/proGating.js";
 import { request } from "../services/api.js";
 
 /**
@@ -160,7 +162,7 @@ export function renderStudentStudyMaterialCard(m, student = {}, homeworkMaterial
         }
         return `
           <div>
-            <a href="${escapeHtml(resolvedMatUrl)}" target="_blank" rel="noopener noreferrer" 
+            <a href="${escapeHtml(resolvedMatUrl)}" target="_blank" rel="noopener noreferrer"
               style="display: inline-flex; align-items: center; gap: 0.35rem; background: #1d4ed8; color: #ffffff; padding: 0.45rem 0.85rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.8rem; font-weight: 800; box-shadow: 0 1px 3px rgba(29,78,216,0.2);">
               ${getIcon(isPdf ? 'download' : 'link', 13, '#ffffff')}
               <span>${isPdf ? 'تحميل / فتح المذكرة' : 'فتح الرابط'}</span>
@@ -191,7 +193,6 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
   }
 
   const student = portalData.student;
-  const isMohaned = isMohanedKhaledStudent(student);
   const studentKey = (student.id || student.student_code || student.code || student.student_phone || '').toString().trim();
   if (typeof window !== 'undefined') {
     window._centrlyCurrentStudent = student;
@@ -227,10 +228,12 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
 
   if (typeof window !== 'undefined') {
     window.__portalMaterials = materials;
-    window.__portalToken = portalData.token || (typeof location !== 'undefined' ? new URLSearchParams(location.search).get('token') : '');
+    let savedToken='';
+    try{const store=localStorage.getItem('centrly_portal_token')?localStorage:sessionStorage;const role=store.getItem('centrly_portal_role');if(!role || role==='student')savedToken=store.getItem('centrly_portal_token') || '';}catch(_){}
+    window.__portalToken = portalData.token || (typeof location !== 'undefined' ? new URLSearchParams(location.search).get('token') : '') || savedToken;
   }
 
-  const teacherPhone = student.teacher_phone || portalData.teacher_phone || student.contact_phone || portalData.contact_phone || '01010979708';
+  const teacherPhone = student.teacher_phone || portalData.teacher_phone || student.contact_phone || portalData.contact_phone || '';
   let cleanTeacherPhone = teacherPhone ? teacherPhone.replace(/[^\d+]/g, '') : '';
   if (cleanTeacherPhone.startsWith('+')) {
     cleanTeacherPhone = cleanTeacherPhone.substring(1);
@@ -245,8 +248,10 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
 
   const now = new Date();
   const isHomeworkFinished = (m) => {
+    if(m.can_submit===false)return true;
     // 1. Approved homeworks are finished and approved
     if (m.submission_status === 'approved') return true;
+    if(m.can_submit===true)return false;
     // 2. Rejected/Revision requested needs student action -> Active
     if (m.submission_status === 'rejected') return false;
     // 3. Pending review -> submitted, awaiting teacher feedback -> Active
@@ -339,6 +344,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
           </p>
         </div>
 
+        ${renderPortalHomeSummary(portalData)}
         <!-- Teacher Direct WhatsApp Contact Card -->
         ${teacherWaUrl ? `
           <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; border-radius: 1rem; padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);">
@@ -355,7 +361,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                 </div>
               </div>
             </div>
-            <a href="${teacherWaUrl}" target="_blank" rel="noopener noreferrer" 
+            <a href="${teacherWaUrl}" target="_blank" rel="noopener noreferrer"
               style="background: #10b981; color: #ffffff; text-decoration: none; padding: 0.55rem 0.95rem; border-radius: 0.65rem; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; flex-shrink: 0; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); transition: transform 0.15s ease;"
               onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
               ${getIcon('whatsapp', 15, '#ffffff')}
@@ -578,7 +584,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
               </p>
               <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 0.6rem; padding: 0.65rem 0.85rem; font-size: 0.8rem; color: #1e293b; line-height: 1.8;">
                 <b>1.</b> افتح أداة: 
-                <a href="https://www.ilovepdf.com/jpg_to_pdf" target="_blank" rel="noopener noreferrer" 
+                <a href="https://www.ilovepdf.com/jpg_to_pdf" target="_blank" rel="noopener noreferrer"
                   style="color: #1d4ed8; font-weight: 800; text-decoration: underline; margin: 0 0.25rem;">
                   موقع iLovePDF المجاني (تحويل صور JPG إلى PDF)
                 </a>
@@ -679,7 +685,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                           const resolvedHwUrl = resolveSafeMaterialUrl(m.url);
                           return (resolvedHwUrl && resolvedHwUrl !== '#') ? `
                             <div style="margin-top: 0.6rem;">
-                              <a href="${escapeHtml(resolvedHwUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" 
+                              <a href="${escapeHtml(resolvedHwUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm"
                                 style="display: inline-flex; align-items: center; gap: 0.4rem; background: #2563eb; color: #ffffff; font-weight: 800; text-decoration: none; padding: 0.45rem 0.85rem; border-radius: 0.5rem; font-size: 0.825rem; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
                                 ${getIcon(isPdf ? 'file' : (isVideo ? 'video' : 'link'), 14, '#ffffff')}
                                 <span>فتح / تحميل ملف الواجب المرفق (PDF / الرابط)</span>
@@ -758,8 +764,8 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                         `}
 
                         <!-- File Upload Trigger (PDF or Images) -->
-                        <div>
-                          <input type="file" id="hw-file-input-${escapeHtml(m.id)}" accept="application/pdf,image/*,.pdf,.jpg,.jpeg,.png,.webp,.heic" style="display: none;" 
+                        ${m.can_submit===false?'<p role="status">هذا التكليف لا يستقبل رفع ملفات جديدة. تسليمك السابق محفوظ.</p>':`<div>
+                          <input type="file" id="hw-file-input-${escapeHtml(m.id)}" accept="application/pdf,image/*,.pdf,.jpg,.jpeg,.png,.webp,.heic" style="display: none;"
                             onchange="window.centrlyApp && window.centrlyApp.handleStudentHomeworkUpload ? window.centrlyApp.handleStudentHomeworkUpload('${escapeHtml(m.id)}', this.files[0]) : null">
                           
                           <button type="button" onclick="document.getElementById('hw-file-input-${escapeHtml(m.id)}').click()" id="hw-upload-btn-${escapeHtml(m.id)}"
@@ -767,7 +773,7 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                             ${getIcon('upload', 14, '#ffffff')}
                             <span>${isRejected ? 'رفع حل الواجب الجديد (إعادة التسليم)' : (isPending ? 'تعديل / رفع نسخة أحدث' : 'رفع حل الواجب (PDF أو صورة)')}</span>
                           </button>
-                        </div>
+                        </div>`}
                       </div>
 
                     </div>
@@ -932,11 +938,12 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
                   try {
                     parsedQ = typeof oq.questions === 'string' ? JSON.parse(oq.questions) : (oq.questions || {});
                   } catch (_) {}
-                  const qCount = parsedQ.questions?.length || 0;
+                  const qCount = parsedQ.question_count || parsedQ.questions?.length || 0;
                   const timeLimit = parsedQ.time_limit_minutes || 20;
 
-                  const todayStr = new Date().toISOString().slice(0, 10);
-                  const nowTimeStr = new Date().toTimeString().slice(0, 5);
+                  const cairoClock=portalCairoClock();
+                  const todayStr = cairoClock.date;
+                  const nowTimeStr = cairoClock.time;
 
                   let isAvailable = true;
                   let availabilityMsg = '';
@@ -1227,32 +1234,27 @@ if (typeof window !== 'undefined') {
   // ========================================================================
   // INTERACTIVE STUDENT ONLINE EXAM RUNNER
   // ========================================================================
-  window.startStudentOnlineExam = function(materialId) {
+  window.startStudentOnlineExam = async function(materialId) {
+    if(window.__examOpening)return;window.__examOpening=true;
     const materials = window.__portalMaterials || [];
     const mat = materials.find(m => m.id === materialId);
-    if (!mat) return;
+    if (!mat){window.__examOpening=false;return;}
 
-    let parsed = {};
+    let attempt;
     try {
-      parsed = typeof mat.questions === 'string' ? JSON.parse(mat.questions) : (mat.questions || {});
-    } catch (_) {}
-
-    const questions = parsed.questions || [];
-    if (questions.length === 0) {
-      alert('هذا الامتحان لا يحتوي على أسئلة بعد');
-      return;
-    }
-
+      const token=window.__portalToken || new URLSearchParams(location.search).get('token');
+      attempt=await openQuizAttempt((action,body)=>request('/public/quizzes/'+action,{method:'POST',body}),token,materialId,(status,message)=>{
+        if(window.__currentExam?.attempt!==attempt)return;const el=document.getElementById('examSaveStatus');if(el)el.textContent=status==='saved'?'إجاباتك محفوظة':status==='saving'?'جار حفظ إجاباتك…':status==='submitted'?'تم تسليم المحاولة':message || 'تعذر الحفظ؛ حافظ على اتصال الإنترنت';
+      });
+    } catch(error){alert(error.message);return;} finally{window.__examOpening=false;}
+    if(attempt.submitted){alert(attempt.submitted.message || 'هذا الامتحان مسلّم بالفعل');return;}
+    window.__currentExam?.attempt?.dispose();
+    if(window.__currentExam?.timerInterval)clearInterval(window.__currentExam.timerInterval);
+    const parsed=attempt.definition,questions=parsed.questions;
     window.__currentExam = {
-      materialId: mat.id,
-      title: mat.title,
-      subject: parsed.subject || 'الفيزياء',
-      timeLimitMinutes: parsed.time_limit_minutes || 20,
-      questions: questions,
-      currentIndex: 0,
-      answers: {},
-      timeRemaining: (parsed.time_limit_minutes || 20) * 60,
-      timerInterval: null
+      materialId: attempt.materialId,title:mat.title,subject:parsed.subject || '',
+      timeLimitMinutes:parsed.time_limit_minutes || 20,questions,currentIndex:0,
+      answers:attempt.answers,timeRemaining:attempt.remaining(),timerInterval:null,attempt
     };
 
     let modalEl = document.getElementById('studentExamModalOverlay');
@@ -1271,7 +1273,7 @@ if (typeof window !== 'undefined') {
 
     if (window.__currentExam.timerInterval) clearInterval(window.__currentExam.timerInterval);
     window.__currentExam.timerInterval = setInterval(() => {
-      window.__currentExam.timeRemaining--;
+      window.__currentExam.timeRemaining=window.__currentExam.attempt.remaining();
       const timerDisplay = document.getElementById('examTimerCountdown');
       if (timerDisplay) {
         const mins = Math.max(0, Math.floor(window.__currentExam.timeRemaining / 60));
@@ -1307,6 +1309,8 @@ if (typeof window !== 'undefined') {
     const formattedTimer = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 
     modalEl.innerHTML = `
+      <div style="display:grid;gap:.75rem;width:100%;max-width:680px;margin:auto">
+      ${exam.submissionFailed?'<div dir="rtl" role="alert" style="background:#fff7ed;color:#9a3412;padding:1rem;border-radius:12px">لم يتأكد التسليم. إجاباتك باقية ومثبتة هنا.<button class="btn btn-primary" style="min-height:44px;margin:.5rem" onclick="window.submitStudentOnlineExam(true)">إعادة محاولة التسليم</button></div>':''}
       <div dir="rtl" style="background: #ffffff; border-radius: 16px; max-width: 680px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.3); overflow: hidden; border: 1px solid #e2e8f0; margin: auto; display: flex; flex-direction: column;">
         
         <!-- Header Strip -->
@@ -1325,6 +1329,7 @@ if (typeof window !== 'undefined') {
           </div>
         </div>
 
+        <p id="examSaveStatus" role="status" style="margin:.5rem 1.25rem;font-size:.8rem">إجاباتك تتحفظ أثناء الحل. حافظ على اتصال الإنترنت.</p>
         <!-- Question Body Card -->
         <div style="padding: 1.5rem; flex: 1;">
           
@@ -1435,15 +1440,16 @@ if (typeof window !== 'undefined') {
 
         </div>
 
-      </div>
+      </div></div>
     `;
+    if(exam.submissionFailed){modalEl.querySelectorAll("textarea").forEach(el=>el.readOnly=true);modalEl.querySelectorAll("[onclick*=selectExamChoice]").forEach(el=>el.style.pointerEvents="none");}
   };
 
   window.selectExamChoice = function(choiceIdx) {
     const exam = window.__currentExam;
     if (!exam) return;
     const q = exam.questions[exam.currentIndex];
-    exam.answers[q.id] = choiceIdx;
+    if(!exam.attempt.setAnswer(q.id,choiceIdx))return;
     window.renderStudentExamRunner();
   };
 
@@ -1451,7 +1457,7 @@ if (typeof window !== 'undefined') {
     const exam = window.__currentExam;
     if (!exam) return;
     const q = exam.questions[exam.currentIndex];
-    exam.answers[q.id] = text;
+    exam.attempt.setAnswer(q.id,text);
   };
 
   window.nextExamQuestion = function() {
@@ -1477,7 +1483,7 @@ if (typeof window !== 'undefined') {
 
   window.submitStudentOnlineExam = async function(isAuto) {
     const exam = window.__currentExam;
-    if (!exam) return;
+    if (!exam || exam.submitting) return;
 
     if (!isAuto) {
       const answeredCount = Object.keys(exam.answers).filter(k => exam.answers[k] !== undefined && exam.answers[k] !== '').length;
@@ -1493,20 +1499,13 @@ if (typeof window !== 'undefined') {
       }
     }
 
+    exam.submitting=true;
     if (exam.timerInterval) clearInterval(exam.timerInterval);
 
     const token = window.__portalToken || (typeof location !== 'undefined' ? new URLSearchParams(location.search).get('token') : '');
 
     try {
-      const data = await request('/public/quizzes/submit', {
-        method: 'POST',
-        body: {
-          token: token,
-          material_id: exam.materialId,
-          answers: exam.answers,
-          elapsed_seconds: (exam.timeLimitMinutes * 60) - exam.timeRemaining
-        }
-      });
+      const data = await exam.attempt.submit();
       const modalEl = document.getElementById('studentExamModalOverlay');
 
       if (data?.success) {
@@ -1545,8 +1544,9 @@ if (typeof window !== 'undefined') {
         alert(data?.error?.message || 'حدث خطأ أثناء تسليم الامتحان');
       }
     } catch (err) {
+      exam.submissionFailed=true;window.renderStudentExamRunner();
       alert(err?.message || 'تعذر إرسال الإجابات، يرجى التحقق من اتصال الإنترنت');
-    }
+    } finally {exam.submitting=false;}
   };
 }
 

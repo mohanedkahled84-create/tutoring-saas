@@ -667,7 +667,8 @@ test("DEV-56: renderTeacherCalendar generates Arabic RTL calendar with all view 
 
   // 4. Monthly view
   const monthHtml = renderTeacherCalendar({ view: "month", sessions: sampleSessions });
-  assert.ok(monthHtml.includes("تقويم الشهر (سبتمبر 2026)"));
+  const monthLabel=new Intl.DateTimeFormat('ar-EG',{timeZone:'Africa/Cairo',month:'long',year:'numeric'}).format(new Date());
+  assert.ok(monthHtml.includes(`تقويم الشهر (${monthLabel})`));
   assert.ok(monthHtml.includes("السبت"));
 });
 

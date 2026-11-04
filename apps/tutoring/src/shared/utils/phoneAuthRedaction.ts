@@ -10,7 +10,7 @@ export function redactPhoneAuthTelemetry<T>(value:T):T {
    return text;
   }
   if(Array.isArray(item))return item.map(visit);
-  if(item && typeof item==='object')return Object.fromEntries(Object.entries(item).map(([key,entry])=>[key,/^(?:APIKey|api_key|AKEDLY_API_KEY|otp|code|password|turnstileToken|challengeToken|ticket|invitation|proof)$/i.test(key)?'[Filtered]':visit(entry)]));
+  if(item && typeof item==='object')return Object.fromEntries(Object.entries(item).map(([key,entry])=>[key,/^(?:APIKey|api_key|AKEDLY_API_KEY|otp|code|password|turnstileToken|challengeToken|ticket|deletion_token|receipt_token|authorization_hash|receipt_hash|invitation|proof)$/i.test(key)?'[Filtered]':visit(entry)]));
   return item;
  };
  return visit(value);

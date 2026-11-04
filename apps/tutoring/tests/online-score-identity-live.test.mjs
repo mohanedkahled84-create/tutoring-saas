@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {once} from 'node:events';
+import {requireIsolatedSupabaseProject,createIsolatedSupabaseClients} from './helpers/live-supabase.mjs';
+test('LIVE: assistant essay approval is atomic, scoped and isolated from same-number online/manual results',{timeout:120000},async t=>{
+ if(!requireIsolatedSupabaseProject(t))return;
+ const {serviceClient:db,anonClient}=createIsolatedSupabaseClients(),tenant=randomUUID();let owner,server;
+ const ok=r=>{assert.equal(r.error,null,r.error?.message);return r.data;};
+ t.after(async()=>{if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}ok(await db.from('homework_submissions').delete().eq('tenant_id',tenant));ok(await db.from('portal_quiz_attempts').delete().eq('tenant_id',tenant));ok(await db.from('study_materials').delete().eq('tenant_id',tenant));ok(await db.from('tenants').delete().eq('id',tenant));if(owner)await db.auth.admin.deleteUser(owner.id);});
+ ok(await db.from('tenants').insert({id:tenant,name:'isolated grades'}));
+ owner=ok(await db.auth.admin.createUser({email:`grades-${randomUUID()}@isolated.invalid`,password:'isolated-fixture-password-2026',email_confirm:true})).user;
+ ok(await db.from('users').upsert({id:owner.id,tenant_id:tenant,email:owner.email,role:'owner',full_name:'fixture'}));
+ const groups=ok(await db.from('groups').insert([{tenant_id:tenant,name:'allowed'},{tenant_id:tenant,name:'outside'}]).select());
+ const students=ok(await db.from('students').insert(groups.map((g,i)=>({tenant_id:tenant,group_id:g.id,name:'fixture '+i,parent_phone:'201000000001'}))).select());
+ const questions=[{id:'q',points:2,options:['A','B'],correct_index:0},{id:'essay',type:'essay',points:5}];
+ const materials=ok(await db.from('study_materials').insert(groups.map(g=>({tenant_id:tenant,group_id:g.id,title:'saved exam',type:'online_quiz',questions:JSON.stringify({quiz_number:1,questions})}))).select());
+ const submissions=[];for(let i=0;i<2;i++){ok(await db.rpc('portal_quiz_start',{p_student:students[i].id,p_tenant:tenant,p_reference:materials[i].id}));ok(await db.rpc('submit_portal_quiz_verified',{p_student:students[i].id,p_tenant:tenant,p_reference:materials[i].id,p_answers:{q:0,essay:'answer'}}));submissions.push(ok(await db.from('homework_submissions').select('id').eq('tenant_id',tenant).eq('material_id',materials[i].id).single()));}
+ ok(await db.from('quiz_scores').insert({tenant_id:tenant,student_id:students[0].id,group_id:groups[0].id,quiz_number:1,score:9,max_score:10,idempotency_key:`${tenant}:${groups[0].id}:${students[0].id}:quiz-1`}));
+ const staff=ok(await db.from('assistants').insert({tenant_id:tenant,name:'fixture assistant',phone:'201000000002',status:'active'}).select().single());
+ const permissions={'online-quizzes.view':true,'online-quizzes.grade':true};
+ ok(await db.from('assistant_accounts').insert({assistant_id:staff.id,tenant_id:tenant,phone:staff.phone,password_hash:'fixture-no-login',permissions,group_ids:[groups[0].id]}));
+ const {familyHash,familyToken}=await import('../dist/shared/utils/parentFamily.js'),token=familyToken(),origin='https://centerly-eg.com';
+ ok(await db.from('assistant_sessions').insert({token_hash:familyHash(token),assistant_id:staff.id,origin,credential_version:1}));
+ const {createApp}=await import('../dist/app.js');server=createApp().listen(0,'127.0.0.1');await once(server,'listening');
+ const post=(id,scores={essay:3})=>fetch(`http://127.0.0.1:${server.address().port}/api/assistant-access/workspace-api/quizzes/submissions/grade-essay`,{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+token,'X-Assistant-Page':'online-quizzes','Content-Type':'application/json'},body:JSON.stringify({submission_id:id,essay_scores:scores,student_id:students[1].id,group_id:groups[1].id,quiz_number:999})});
+ assert.equal((await post(submissions[0].id,{essay:99})).status,409);
+ assert.equal(ok(await db.from('homework_submissions').select('status').eq('id',submissions[0].id).single()).status,'pending');
+ assert.equal((await post(submissions[1].id)).status,403);
+ const response=await post(submissions[0].id);assert.equal(response.status,200,await response.clone().text());assert.equal((await response.json()).final_score,5);
+ const scores=ok(await db.from('quiz_scores').select('score,material_id').eq('tenant_id',tenant));assert.equal(scores.length,2);assert.equal(scores.find(s=>s.material_id===null).score,9);assert.equal(scores.find(s=>s.material_id===materials[0].id).score,5);
+ const listing=await fetch(`http://127.0.0.1:${server.address().port}/api/assistant-access/workspace-api/quizzes/submissions`,{headers:{Origin:origin,Authorization:'Bearer '+token,'X-Assistant-Page':'online-quizzes'}});assert.equal(listing.status,200,await listing.clone().text());const listed=(await listing.json()).submissions;assert.ok(listed.some(row=>row.material_id===materials[0].id && row.score===5));assert.ok(!listed.some(row=>row.material_id===materials[1].id));
+ ok(await db.from('assistant_accounts').update({permissions:{'online-quizzes.view':true}}).eq('assistant_id',staff.id));assert.equal((await post(submissions[0].id)).status,403);
+ assert.ok((await anonClient.rpc('grade_portal_quiz_essay',{p_tenant:tenant,p_user:owner.id,p_assistant:null,p_submission:submissions[0].id,p_scores:{essay:5}})).error);
+});

@@ -13,6 +13,8 @@
     }));
     // The body attaches the visible error handler after parsing.
     window.__centrlyStudentSession.catch(() => {});
+    window.__centrlyPortalHome = import('/apps/web/src/components/PortalHomeSummary.js');
+    window.__centrlyPortalHome.catch(() => {});
   </script>
 
   <meta charset="UTF-8">
@@ -2447,6 +2449,7 @@
 
         </div>
 
+        <div id="portalHomeSummary"></div>
         <!-- بطاقات المؤشرات الثلاثية الحية (3 Golden KPIs) -->
 
         <div class="kpi-grid">
@@ -2981,49 +2984,9 @@
 
       }
 
-      // استرجاع تسليمات الكويزات المسجلة محلياً في الذاكرة فورياً
-
-      if (!window._studentOnlineSubmissionsMap) window._studentOnlineSubmissionsMap = new Map();
-
-      try {
-
-        for (let i = 0; i < localStorage.length; i++) {
-
-          const key = localStorage.key(i);
-
-          if (key && key.startsWith(`centrly_submission_${sCode}_`)) {
-
-            const sub = JSON.parse(localStorage.getItem(key) || '{}');
-
-            if (sub && (sub.quiz_id || sub.material_id)) {
-
-              window._studentOnlineSubmissionsMap.set(sub.quiz_id || sub.material_id, sub);
-
-              if (sub.quiz_number) window._studentOnlineSubmissionsMap.set(`quiz_num_${sub.quiz_number}`, sub);
-
-            }
-
-          }
-
-        }
-
-      } catch (_) {}
-
-      // تصيير فوري لدرجات الكويزات المعتمدة المحفوظة (حتى لا تظهر فارغة في أي لحظة)
-
-      try {
-
-        const cachedScores = JSON.parse(localStorage.getItem(`centrly_cached_recorded_${sCode}`) || '[]');
-
-        if (Array.isArray(cachedScores) && cachedScores.length > 0) {
-
-          window._studentAllRecordedQuizzes = cachedScores;
-
-          renderRecordedScores(cachedScores);
-
-        }
-
-      } catch (_) {}
+      try{for(const key of Object.keys(localStorage))if(key.startsWith('centrly_submission_') || key.startsWith('centrly_cached_recorded_'))localStorage.removeItem(key);}catch{}
+      // Portal snapshots are already bound to the verified token and tenant.
+      // A student_code-only browser record is never an authoritative result.
 
     }
 
@@ -3650,6 +3613,7 @@
           localStorage.removeItem('centrly_portal_token');
           localStorage.removeItem('centrly_portal_role');
           localStorage.removeItem('centrly_portal_snapshot_v1:student');
+          localStorage.removeItem('centrly_portal_snapshot_v2:student');
           localStorage.removeItem('portal_student');
           sessionStorage.removeItem('centrly_portal_token');
           sessionStorage.removeItem('centrly_portal_role');
@@ -3735,12 +3699,6 @@
       const session = await window.__centrlyStudentSession;
       let token = session.token;
       if (!token) { window.location.replace('/login'); return; }
-
-      if (token && !localStorage.getItem('centrly_portal_token')) {
-
-        localStorage.setItem('centrly_portal_token', token);
-
-      }
 
       const result = await session.cache.load(token, {
         request: session.request, force: options.force === true,
@@ -3878,13 +3836,13 @@
             quiz_number: Number(payload.quiz_number) || 1,
             subject: material.description || payload.subject || 'الفيزياء',
             time_limit_minutes: Number(payload.time_limit_minutes) || 20,
-            available_date: payload.available_date || material.created_date || '',
+            available_date: payload.available_date || null,
             start_time: payload.start_time || null,
             end_time: payload.end_time || null,
             exam_mode: payload.exam_mode || 'online',
             questions,
             stealth_models: payload.stealth_models || null,
-            max_score: questions.reduce((sum, item) => sum + Number(item.points || 1), 0) || 10,
+            max_score: Number(payload.max_score) || questions.reduce((sum, item) => sum + Number(item.points || 1), 0) || 10,
           };
         })
         .filter(quiz => quiz.exam_mode !== 'paper' && !/تجريبي|trial|test/i.test(`${quiz.title || ''} ${quiz.id || ''}`));
@@ -3916,7 +3874,7 @@
         };
         window._studentOnlineSubmissionsMap.set(material.id, submission);
         window._studentOnlineSubmissionsMap.set(`quiz_num_${submission.quiz_number}`, submission);
-        try { localStorage.setItem(`centrly_submission_${currentStudentCode}_${material.id}`, JSON.stringify(submission)); } catch (_) {}
+
       }
 
       // 1.7 جلب ومزامنة سجل مشاهدات الفيديو للطالب لضمان استبعاد المحاضرات التي تم حضورها بالفعل
@@ -4039,11 +3997,7 @@
 
       window._studentAllRecordedQuizzes = allRecorded;
 
-      try {
 
-        localStorage.setItem(`centrly_cached_recorded_${currentStudentCode}`, JSON.stringify(allRecorded));
-
-      } catch (_) {}
 
       renderRecordedScores(allRecorded);
 
@@ -4065,7 +4019,10 @@
 
       // حساب وتحديث ترتيب الطالب على المجموعة ديناميكياً
 
-      renderStudentRank(portalData.summary?.student_rank, portalData.summary?.group_size);
+      if(portalData.preferences?.show_student_rank!==false && Object.hasOwn(portalData.summary || {},'student_rank'))renderStudentRank(portalData.summary?.student_rank, portalData.summary?.group_size);
+      else document.getElementById('studentRankCard').style.display='none';
+      window._portalHomePayload=portalData;
+      window.__centrlyPortalHome.then(({renderPortalHomeSummary})=>{if(window._portalHomePayload===portalData)document.getElementById('portalHomeSummary').innerHTML=renderPortalHomeSummary(portalData,'student',{showRank:false,showContact:true});}).catch(()=>{});
 
       platformContent = Array.from(map.values());
       renderAllPanels();
@@ -4232,7 +4189,7 @@
 
       const unsubmittedHw = homework.filter(h => {
         const s = getHwStatus(h);
-        return s === 'unsubmitted' || s === 'rejected';
+        return h.can_submit !== false && (s === 'unsubmitted' || s === 'rejected');
       });
 
       const pendingQuizzes = quizzes.filter(qz => {
@@ -4259,21 +4216,7 @@
 
         if (subFromMap) return false;
 
-        const subKey = `centrly_submission_${currentStudent.code || ''}_${qz.id}`;
 
-        try {
-
-          const s = localStorage.getItem(subKey);
-
-          if (s) {
-
-            const parsed = JSON.parse(s);
-
-            if (parsed && (parsed.status === 'pending' || parsed.status === 'approved' || parsed.status === 'graded')) return false;
-
-          }
-
-        } catch (_) {}
 
         return true;
 
@@ -4963,12 +4906,12 @@
 
       const activeHomework = homework.filter(h => {
         const s = getHwStatus(h);
-        return s === 'unsubmitted' || s === 'rejected';
+        return h.can_submit !== false && (s === 'unsubmitted' || s === 'rejected');
       });
 
       const archivedHomework = homework.filter(h => {
         const s = getHwStatus(h);
-        return s === 'approved' || s === 'pending';
+        return h.can_submit === false || s === 'approved' || s === 'pending';
       });
 
       if (countActiveEl) {
@@ -5074,8 +5017,8 @@
         archivedHomework.forEach(hw => {
           const isApproved = hw.submission_status === 'approved';
           const isRejected = hw.submission_status === 'rejected';
-          const statusTitle = isApproved 
-            ? 'تم الاعتماد بنجاح • الدرجة: 10 من 10' 
+          const statusTitle = hw.can_submit === false ? 'تكليف محفوظ • لا يستقبل تسليمات جديدة' : isApproved 
+            ? 'تم الاعتماد بنجاح' 
             : (isRejected 
               ? 'طلب المستر إعادة حل هذا الواجب • مطلوب إعادة التسليم' 
               : 'تم تسليم كشكول الحل • قيد مراجعة واعتماد المستر');
@@ -5109,7 +5052,7 @@
                   </a>
                 ` : ''}
                 <span class="kpi-badge ${isApproved ? 'badge-success' : 'badge-warning'}" style="font-size: 0.72rem; padding: 4px 9px; ${isRejected ? 'background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;' : ''}">
-                  ${isApproved ? 'معتمد (10 / 10)' : (isRejected ? 'طلب إعادة ⚠️' : 'قيد المراجعة')}
+                  ${hw.can_submit === false ? 'محفوظ' : isApproved ? 'معتمد' : (isRejected ? 'طلب إعادة ⚠️' : 'قيد المراجعة')}
                 </span>
               </div>
             </div>
@@ -5123,6 +5066,7 @@
     // رفع الواجب الفعلي لقاعدة البيانات عبر Backend Railway
 
     function triggerHwUpload(hwId) {
+      if (platformContent.find(hw => hw.id === hwId)?.can_submit === false) { showPortalToast('هذا التكليف لا يستقبل تسليمات جديدة', 'warning'); return; }
 
       const fileInput = document.getElementById('file_input_' + hwId);
 
@@ -5131,6 +5075,7 @@
     }
 
     async function handleHwFileSelected(event, hwId) {
+      if (platformContent.find(hw => hw.id === hwId)?.can_submit === false) { event.target.value=''; showPortalToast('هذا التكليف لا يستقبل تسليمات جديدة', 'warning'); return; }
 
       const file = event.target.files && event.target.files[0];
 
@@ -5252,7 +5197,7 @@
 
         updateProgress(45, 'جارٍ الاتصال بقاعدة البيانات وبدء الرفع...');
 
-        const token = localStorage.getItem('centrly_portal_token') || '';
+        const token = (await window.__centrlyStudentSession)?.token || sessionStorage.getItem('centrly_portal_token') || localStorage.getItem('centrly_portal_token') || '';
         const payload = {
           token: token,
           material_id: hwId,
@@ -5449,21 +5394,11 @@
 
         const studentCode = currentStudent.code || '';
 
-        const subKey = `centrly_submission_${studentCode}_${qz.id}`;
+
 
         let sub = window._studentOnlineSubmissionsMap?.get(qz.id) || null;
 
-        if (!sub) {
 
-          try {
-
-            const s = localStorage.getItem(subKey);
-
-            if (s) sub = JSON.parse(s);
-
-          } catch (_) {}
-
-        }
 
         const isGraded = sub && (sub.status === 'approved' || sub.status === 'graded' || sub.is_graded === true);
 
@@ -5549,17 +5484,7 @@
 
       let sub = window._studentOnlineSubmissionsMap?.get(quizId) || null;
 
-      if (!sub) {
 
-        try {
-
-          const s = localStorage.getItem(`centrly_submission_${studentCode}_${quizId}`);
-
-          if (s) sub = JSON.parse(s);
-
-        } catch (_) {}
-
-      }
 
       if (!sub && window._studentOnlineSubmissionsMap) {
 
@@ -5727,7 +5652,12 @@
 
     let currentExamEssayAnswers = {};
 
-    function startSecureExam(quizId, quizTitle) {
+    let currentQuizAttempt=null;
+    async function quizAttemptTransport(action,body){
+      const response=await fetch('https://tutoring-backend-production-c8dd.up.railway.app/api/public/quizzes/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});
+      const result=await response.json();if(!response.ok){const error=new Error(result.error?.message || 'تعذر حفظ الإجابات؛ حاول مجددًا');error.status=response.status;error.code=result.error?.code;throw error;}return result;
+    }
+    async function startSecureExam(quizId, quizTitle) {
 
       const targetQz = platformContent.find(m => m.id === quizId) || null;
 
@@ -5741,21 +5671,11 @@
 
       // التحقق مما إذا كان الطالب قد سلّم هذا الامتحان مسبقاً
 
-      const subKey = `centrly_submission_${currentStudent.code || ''}_${targetQz.id}`;
+
 
       let existingSub = window._studentOnlineSubmissionsMap?.get(targetQz.id) || null;
 
-      if (!existingSub) {
 
-        try {
-
-          const existingSubStr = localStorage.getItem(subKey);
-
-          if (existingSubStr) existingSub = JSON.parse(existingSubStr);
-
-        } catch (_) {}
-
-      }
 
       if (existingSub) {
 
@@ -5781,17 +5701,31 @@
 
       }
 
-      currentActiveQuiz = targetQz;
+      if(startSecureExam.busy)return;startSecureExam.busy=true;
+      let attempt;
+      try{
+        const {openQuizAttempt}=await import('/apps/web/src/utils/quizAttemptClient.js');
+        const token=(await window.__centrlyStudentSession)?.token || sessionStorage.getItem('centrly_portal_token') || localStorage.getItem('centrly_portal_token');
+        attempt=await openQuizAttempt(quizAttemptTransport,token,targetQz.id,(status,message)=>{if(currentQuizAttempt!==attempt)return;const el=document.getElementById('examSaveStatus');if(el)el.textContent=status==='saved'?'إجاباتك محفوظة':status==='saving'?'جار حفظ إجاباتك…':status==='submitted'?'تم تسليم المحاولة':message || 'تعذر الحفظ؛ حافظ على اتصال الإنترنت';});
+      }catch(error){showPortalToast(error.message,'error');return;}finally{startSecureExam.busy=false;}
+      currentQuizAttempt?.dispose?.();currentQuizAttempt=attempt;
+      currentActiveQuiz = {...targetQz,...attempt.definition};isSubmittingExam=false;
+      currentExamAnswers=attempt.answers || {};currentExamEssayAnswers={};
+      if(attempt.submitted){await submitAndFinishExam(false,attempt.submitted);return;}
+      currentActiveQuiz.questions=attempt.definition.questions;
+      currentActiveQuiz.id=attempt.materialId;
+      currentExamAnswers=attempt.answers;
+      currentExamEssayAnswers={};
+      Object.assign(targetQz,{id:attempt.materialId,questions:attempt.definition.questions});
 
-      currentExamAnswers = {};
 
-      currentExamEssayAnswers = {};
+
 
       const overlay = document.getElementById('secureExamOverlay');
 
       if (overlay) overlay.classList.add('active');
 
-      remainingSeconds = (Number(targetQz.time_limit_minutes) || 20) * 60;
+      remainingSeconds = attempt.remaining();
 
       const titleEl = document.querySelector('.exam-topbar h3');
 
@@ -5801,7 +5735,7 @@
 
       if (examBody && Array.isArray(targetQz.questions) && targetQz.questions.length > 0) {
 
-        let qHtml = `
+        let qHtml = `<p id="examSaveStatus" role="status" style="font-size:.82rem">إجاباتك تتحفظ أثناء الحل. حافظ على اتصال الإنترنت.</p>
 
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 0.88rem; color: #334155; font-weight: 700;">
 
@@ -5837,7 +5771,7 @@
 
                   ${(q.choices || q.options || []).filter(c => c && String(c).trim()).map((choice, cIdx) => `
 
-                    <div class="exam-choice" onclick="selectChoice(this, ${idx}, ${cIdx})" style="padding: 12px 18px; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 0.92rem; font-weight: 700; color: #0f172a; background: #ffffff;">
+                    <div class="exam-choice ${currentExamAnswers[q.id]!=null && String(currentExamAnswers[q.id])===String(cIdx)?'selected':''}" onclick="selectChoice(this, ${idx}, ${cIdx})" style="padding: 12px 18px; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 0.92rem; font-weight: 700; color: #0f172a; background: #ffffff;">
 
                       ${String.fromCharCode(0x0623 + cIdx)}) ${escapeHtml(choice)}
 
@@ -5849,7 +5783,7 @@
 
               ` : `
 
-                <textarea style="width: 100%; height: 95px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 0.88rem; outline: none; margin-top: 8px; font-family: inherit;" placeholder="اكتب خطوات الحل أو الإجابة المقالية بالتفصيل هنا..." oninput="recordEssayAnswer(${idx}, this.value)"></textarea>
+                <textarea style="width: 100%; height: 95px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 0.88rem; outline: none; margin-top: 8px; font-family: inherit;" placeholder="اكتب خطوات الحل أو الإجابة المقالية بالتفصيل هنا..." oninput="recordEssayAnswer(${idx}, this.value)">${escapeHtml(currentExamAnswers[q.id] || '')}</textarea>
 
                 <div style="margin-top: 10px;">
 
@@ -5895,7 +5829,7 @@
 
         if (remainingSeconds > 0) {
 
-          remainingSeconds--;
+          remainingSeconds=currentQuizAttempt.remaining();
 
           updateExamClock();
 
@@ -5950,6 +5884,7 @@
     }
 
     function selectChoice(el, qIdx, cIdx) {
+      if(!currentQuizAttempt?.setAnswer(currentActiveQuiz.questions[qIdx].id,cIdx))return;
 
       const parent = el.parentElement;
 
@@ -5973,16 +5908,11 @@
 
       el.style.color = '#1e40af';
 
-      currentExamAnswers[qIdx] = cIdx;
-      if (currentActiveQuiz && Array.isArray(currentActiveQuiz.questions) && currentActiveQuiz.questions[qIdx] && currentActiveQuiz.questions[qIdx].id) {
-        currentExamAnswers[currentActiveQuiz.questions[qIdx].id] = cIdx;
-      }
-
     }
 
     function recordEssayAnswer(qIdx, text) {
 
-      currentExamEssayAnswers[qIdx] = text;
+      const id=currentActiveQuiz?.questions[qIdx]?.id;if(id!==undefined && currentQuizAttempt?.setAnswer(id,text))currentExamEssayAnswers[id]=text;
 
     }
 
@@ -6014,108 +5944,37 @@
 
     }
 
-    async function submitAndFinishExam(isWithdrawn = false) {
+    async function submitAndFinishExam(isWithdrawn = false, confirmedResult=null) {
+      if (submitAndFinishExam.busy || !currentActiveQuiz) return;
+      submitAndFinishExam.busy = true;
       isSubmittingExam = true;
-      exitSecureExam();
-      if (!currentActiveQuiz) return;
-
-      const token = localStorage.getItem('centrly_portal_token');
-      if (!token) {
-        showPortalToast('انتهت صلاحية الجلسة. سجّل الدخول مرة أخرى لتسليم الامتحان.', 'error');
-        window.location.assign('/portal');
-        return;
-      }
-
+      if(examTimerInterval)clearInterval(examTimerInterval);
+      document.querySelectorAll('#secureExamOverlay .exam-choice').forEach(node=>node.style.pointerEvents='none');
+      document.querySelectorAll('#secureExamOverlay textarea').forEach(node=>node.readOnly=true);
+      const submitButtons=[...document.querySelectorAll('#secureExamOverlay button[onclick*=submitAndFinishExam]')];
+      submitButtons.forEach(node=>{node.disabled=true;node.textContent='جار حفظ الإجابات…';});
+      const token = (await window.__centrlyStudentSession)?.token || sessionStorage.getItem('centrly_portal_token') || localStorage.getItem('centrly_portal_token');
       const studentCode = String(currentStudent.code || currentStudent.student_code || '').trim();
       const studentName = currentStudent.name || currentStudent.student_name || 'طالب';
       const quizNumber = Number(currentActiveQuiz.quiz_number) || 1;
       const materialId = currentActiveQuiz.id || currentActiveQuiz.material_id;
-      const withdrawalReason = isWithdrawn
-        ? 'تم سحب ورقة الامتحان تلقائياً بسبب تكرار مغادرة نافذة الامتحان'
-        : null;
-
-      const submitPayload = {
-        token,
-        material_id: materialId,
-        quiz_id: materialId,
-        quiz_title: currentActiveQuiz.title,
-        quiz_number: quizNumber,
-        student_code: studentCode,
-        student_name: studentName,
-        group_id: currentActiveQuiz.group_id || null,
-        questions: Array.isArray(currentActiveQuiz.questions) ? currentActiveQuiz.questions : [],
-        answers: currentExamAnswers,
-        essay_answers: currentExamEssayAnswers,
-        elapsed_seconds: (Number(currentActiveQuiz.time_limit_minutes || 20) * 60) - remainingSeconds,
-        is_withdrawn: Boolean(isWithdrawn),
-        withdrawal_reason: withdrawalReason,
-      };
-
-      let result = null;
-
-      // Tier 1: Railway Backend Submission
+      const withdrawalReason = isWithdrawn ? 'تم سحب ورقة الامتحان تلقائيًا بسبب تكرار مغادرة النافذة' : null;
+      let result;
       try {
-        const response = await fetch('https://tutoring-backend-production-c8dd.up.railway.app/api/public/quizzes/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(submitPayload),
-        });
-        const resJson = await response.json().catch(() => ({}));
-        if (response.ok && resJson.success) {
-          result = resJson;
-          (await window.__centrlyStudentSession).cache.clear('student');
-        }
-      } catch (_) {}
-
-      // Tier 2: Vercel Serverless / Local Endpoint Fallback
-      if (!result) {
-        try {
-          const fbRes = await fetch('/api/quizzes/submit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(submitPayload),
-          });
-          const fbJson = await fbRes.json().catch(() => ({}));
-          if (fbRes.ok && fbJson.success) {
-            result = fbJson;
-            (await window.__centrlyStudentSession).cache.clear('student');
-          }
-        } catch (_) {}
+        if(!token)throw new Error('انتهت صلاحية الجلسة؛ احتفظ بإجاباتك وسجل الدخول مجددًا');
+        result=confirmedResult || await currentQuizAttempt.submit({is_withdrawn:Boolean(isWithdrawn),withdrawal_reason:withdrawalReason});
+        if(result.success!==true)throw new Error('لم يتأكد استلام إجاباتك. حاول مجددًا');
+      } catch(error) {
+        isSubmittingExam=false;submitAndFinishExam.busy=false;
+        submitButtons.forEach(node=>{node.disabled=false;node.textContent='إعادة محاولة التسليم';});
+        let notice=document.getElementById('examSubmissionStatus');if(!notice){notice=document.createElement('p');notice.id='examSubmissionStatus';notice.setAttribute('role','alert');document.querySelector('#secureExamOverlay .exam-body')?.prepend(notice);}notice.textContent='لم يتأكد استلام الامتحان. إجاباتك باقية هنا؛ حاول التسليم مجددًا.';
+        // Keep the exam and answers open. A local estimate is never a recorded grade.
+        showPortalToast(error?.message || 'تعذر الاتصال. إجاباتك باقية هنا؛ حاول التسليم مجددًا', 'error');
+        return;
       }
-
-      // Tier 3: Guaranteed Local Grading Fallback (No student ever loses their work)
-      if (!result) {
-        let calcScore = 0;
-        let calcMax = 0;
-        let hasEssayQ = false;
-        (currentActiveQuiz.questions || []).forEach((q, idx) => {
-          const pts = Number(q.points || 1);
-          calcMax += pts;
-          if (q.type === 'essay') {
-            hasEssayQ = true;
-          } else {
-            const cIdx = Number(q.correct_index !== undefined ? q.correct_index : (q.correct !== undefined ? q.correct : 0));
-            const ans = currentExamAnswers[idx] ?? currentExamAnswers[q.id];
-            if (ans !== undefined && Number(ans) === cIdx) {
-              calcScore += pts;
-            }
-          }
-        });
-        const maxFinal = calcMax || Number(currentActiveQuiz.max_score) || 10;
-        result = {
-          success: true,
-          is_graded: !hasEssayQ,
-          has_essay: hasEssayQ,
-          score: !hasEssayQ ? calcScore : null,
-          mcq_score: calcScore,
-          max_score: maxFinal,
-          message: isWithdrawn
-            ? `⚠️ تم سحب ورقة الامتحان لتكرار مغادرة الشاشة. درجتك المسجلة حتى لحظة السحب: ${calcScore} من ${maxFinal}`
-            : (!hasEssayQ
-                ? `أحسنت! تم تسليم وتصحيح الامتحان تلقائياً: ${calcScore} من ${maxFinal}`
-                : 'تم استلام إجاباتك بنجاح! يتضمن الامتحان أسئلة مقالية (قيد التصحيح والاعتماد من المعلم).')
-        };
-      }
+      exitSecureExam();
+      submitAndFinishExam.busy=false;
+      try{(await window.__centrlyStudentSession).cache.clear('student');}catch{}
 
       const finalMaxScore = Number(result.max_score || currentActiveQuiz.max_score || 10);
       const submissionRecord = {
@@ -6139,9 +5998,7 @@
         answers: { ...currentExamAnswers, ...currentExamEssayAnswers },
       };
 
-      try {
-        localStorage.setItem(`centrly_submission_${studentCode}_${materialId}`, JSON.stringify(submissionRecord));
-      } catch (_) {}
+
 
       if (!window._studentOnlineSubmissionsMap) window._studentOnlineSubmissionsMap = new Map();
       window._studentOnlineSubmissionsMap.set(materialId, submissionRecord);
@@ -6809,7 +6666,9 @@
       try {
 
         localStorage.removeItem('centrly_portal_snapshot_v1:student');
+          localStorage.removeItem('centrly_portal_snapshot_v2:student');
         localStorage.removeItem('centrly_portal_snapshot_v1:parent');
+        localStorage.removeItem('centrly_portal_snapshot_v2:parent');
         localStorage.removeItem('portal_student');
 
         localStorage.removeItem('portal_student_code');

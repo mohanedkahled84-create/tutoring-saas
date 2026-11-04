@@ -3,6 +3,8 @@ import { Request, Response } from "express";
 
 // DEV-APISEC.1: Global rate limiter (1000 requests per 15 minutes per IP)
 export const globalRateLimiter = rateLimit({
+  // Verified exam progress has dedicated IP ingress and per-student limits.
+  skip: req => req.method==='POST' && /^\/public\/quizzes\/(?:start|save|submit)$/.test(req.path),
   windowMs: 15 * 60 * 1000,
   max: 1000,
   standardHeaders: true,

@@ -64,6 +64,8 @@ export class BillingService {
     userId: string,
     input: PaymentProofInput
   ): Promise<PaymentProofRecord> {
+    const tenant=await this.repository.getTenantBilling(tenantId);
+    if((tenant?.settings?.commercial_plan_id || ['basic_v1','pro_v1','max_v1'].includes(tenant?.subscription_tier || '')))throw new Error('أنشئ طلب دفع من صفحة الاشتراكات أو المحفظة قبل إرسال الإيصال');
     const proof = await this.repository.createPaymentProof(tenantId, userId, input);
     await this.repository.updateTenantSubscriptionStatus(tenantId, "pending_verification");
     return proof;
@@ -78,15 +80,25 @@ export class BillingService {
       throw new Error("TENANT_NOT_FOUND");
     }
 
-    const proofs = await this.repository.getPaymentProofs(tenantId);
+    const modern=!!(tenant.settings?.commercial_plan_id || ['basic_v1','pro_v1','max_v1'].includes(tenant.subscription_tier || ''));
+    const [proofs,studentCount,limits]=await Promise.all([
+      this.repository.getPaymentProofs(tenantId),
+      this.repository.getStudentCount?this.repository.getStudentCount(tenantId):Promise.resolve(0),
+      modern && this.repository.getCommercialLimits?this.repository.getCommercialLimits(tenantId):Promise.resolve(null),
+    ]);
     const daysRemaining = calculateDaysRemaining(
       tenant.subscription_status,
       tenant.trial_ends_at,
       tenant.subscription_ends_at
     );
-    const studentCount = this.repository.getStudentCount
-      ? await this.repository.getStudentCount(tenantId)
-      : 0;
+    if (limits) {
+      if(!limits.legacy) return {
+        subscription_status:limits.active ? tenant.subscription_status : 'expired',original_status:tenant.subscription_status,
+        is_paid_active:limits.active && tenant.subscription_status==='active',trial_ends_at:tenant.trial_ends_at,
+        subscription_ends_at:limits.paid_until || limits.period_end,days_remaining:calculateDaysRemaining(tenant.subscription_status,tenant.trial_ends_at,limits.paid_until || limits.period_end),
+        payment_proofs:proofs,students_count:studentCount,students_limit:limits.students,plan_name:limits.name,subscription_tier:limits.plan_id,
+      };
+    }
 
     // Resolve dynamic student capacity and plan name
     let studentsLimit = 300;
@@ -224,7 +236,7 @@ export class BillingService {
             : [
                 `مساء الخير يا مستر ${teacherDisplayName}.`,
                 ``,
-                `حابب افكر حضرتك ان النهاردة بتنتهي الـ 14 يوم تجربة مجانية على المنصة.`,
+                `حابب افكر حضرتك ان النهاردة بتنتهي الـ 7 أيام تجربة مجانية على المنصة.`,
                 `لو حابب تستمر معانا، جهزت لحضرتك كود خصم خاص 20% وهو CENTR20 وتقدر تجدد من هنا:`,
                 `https://centerly-eg.com/?view=pricing`,
                 ``,

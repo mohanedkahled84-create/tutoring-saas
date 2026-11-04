@@ -12,10 +12,21 @@ import { verifiedPortalStudent, portalDestinationFromContext, createPortalHandof
 
 import {loadPortalAccount} from "../utils/portalAccount.js";
 import {parentFamilyRouter} from './parentFamily.js';
+import {registerPortalQuizSubmission} from './portalQuizSubmit.js';
 import {metaPortalWebhook} from './metaPortalWebhook.js';
+import {publicCatalogCache} from '../utils/publicCatalogCache.js';
 
 export const publicRouter = Router();
 publicRouter.use('/family',parentFamilyRouter);
+const readPublicPlans=publicCatalogCache(async()=>{
+  const result=await getServiceSupabaseClient().from('subscription_plans').select('*').eq('enabled',true).order('rank');
+  if(result.error)throw result.error;
+  return result.data;
+});
+publicRouter.get('/plans',async(_req,res)=>{
+  try {res.set('Cache-Control','public,max-age=60').json({plans:await readPublicPlans()});}
+  catch {res.set('Cache-Control','no-store').status(503).json({error:{code:'PLANS_UNAVAILABLE',message:'تعذر قراءة الباقات الآن'}});}
+});
 
 publicRouter.post("/portal/destination", authRateLimiter, async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "private, no-store");
@@ -378,232 +389,5 @@ publicRouter.get("/meta/webhook", (req: Request, res: Response): void => {
 
 publicRouter.post("/meta/webhook", metaPortalWebhook);
 
-// DEV-QUIZ.PORTAL: POST /api/public/quizzes/submit - Submit online quiz from student portal
-publicRouter.post("/quizzes/submit", async (req: Request, res: Response): Promise<void> => {
-  const { token, material_id, answers, essay_answers, elapsed_seconds, is_withdrawn, withdrawal_reason } = req.body;
-  if (!token || !material_id) {
-    res.status(400).json({ error: { code: "BAD_REQUEST", message: "Token and material_id are required" } });
-    return;
-  }
-
-  const supabase = getServiceSupabaseClient();
-  const verified = verifyParentPortalToken(token);
-  let studentId = verified?.student_id || null;
-  let tenantId = verified?.tenant_id || null;
-
-  if (!studentId || !tenantId) {
-    const { data: sRow } = await supabase
-      .from("students")
-      .select("id, tenant_id, name, group_id")
-      .eq("parent_portal_token", token)
-      .maybeSingle();
-
-    if (sRow) {
-      studentId = sRow.id;
-      tenantId = sRow.tenant_id;
-    }
-  }
-
-  if (!studentId || !tenantId) {
-    res.status(401).json({ error: { code: "UNAUTHORIZED", message: "جلسة المتابعة غير صالحة أو منتهية الصلاحية" } });
-    return;
-  }
-
-  try {
-    let material: any = null;
-    const { data: dbMat } = await supabase
-      .from("study_materials")
-      .select("*")
-      .eq("id", material_id)
-      .eq("tenant_id", tenantId)
-      .maybeSingle();
-
-    material = dbMat;
-
-    // 1. Fallback: Search whatsapp_inbox for legacy or seeded QUIZ_DEF_ rows
-    if (!material) {
-      const { data: legacyRows } = await supabase
-        .from("whatsapp_inbox")
-        .select("id, message_body, phone")
-        .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
-        .like("phone", "QUIZ_DEF_%");
-
-      for (const lRow of legacyRows || []) {
-        try {
-          const p = typeof lRow.message_body === "string" ? JSON.parse(lRow.message_body) : lRow.message_body;
-          if (
-            String(p.id) === String(material_id) ||
-            String(lRow.id) === String(material_id) ||
-            (p.quiz_number && String(material_id).endsWith(`-${p.quiz_number}`)) ||
-            (p.quiz_number && String(material_id).includes("quiz-online-") && String(material_id).endsWith(`-${p.quiz_number}`))
-          ) {
-            material = {
-              id: material_id,
-              tenant_id: tenantId,
-              group_id: p.group_id || null,
-              title: p.title || `كويز ${p.quiz_number || 1}`,
-              questions: JSON.stringify(p),
-            };
-            break;
-          }
-        } catch (_) {}
-      }
-    }
-
-    // 2. Fallback: Check if client provided questions or rich quiz payload in request body
-    if (!material && (Array.isArray(req.body?.questions) || String(material_id).startsWith("quiz-online-"))) {
-      const qList = Array.isArray(req.body?.questions) && req.body.questions.length > 0
-        ? req.body.questions
-        : [];
-      const qNum = Number(req.body?.quiz_number || 5);
-      const qTitle = req.body?.quiz_title || `كويز أونلاين ${qNum}`;
-      material = {
-        id: material_id,
-        tenant_id: tenantId,
-        group_id: req.body?.group_id || null,
-        title: qTitle,
-        questions: JSON.stringify({
-          id: material_id,
-          title: qTitle,
-          quiz_number: qNum,
-          questions: qList,
-        }),
-      };
-    }
-
-    if (!material) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "الامتحان غير موجود" } });
-      return;
-    }
-
-    // Persist to study_materials so future queries or foreign keys succeed
-    if (!dbMat && material) {
-      try {
-        await supabase.from("study_materials").upsert({
-          id: material_id,
-          tenant_id: tenantId,
-          group_id: material.group_id,
-          title: material.title || "كويز أونلاين",
-          type: "online_quiz",
-          questions: typeof material.questions === "string" ? material.questions : JSON.stringify(material.questions || {}),
-          created_at: new Date().toISOString(),
-        }, { onConflict: "id" });
-      } catch (_) {}
-    }
-
-    let payload: any = {};
-    try {
-      payload = typeof material.questions === "string" ? JSON.parse(material.questions) : (material.questions || {});
-    } catch (_) {
-      payload = {};
-    }
-
-    const questionsList: any[] = Array.isArray(payload.questions) && payload.questions.length > 0
-      ? payload.questions
-      : (Array.isArray(req.body?.questions) ? req.body.questions : []);
-    const qNum = Number(payload.quiz_number || req.body?.quiz_number || 1);
-    const studentAnswers = { ...(answers || {}), ...(essay_answers || {}) };
-
-    let mcqScore = 0;
-    let totalMcqPoints = 0;
-    let totalMaxScore = 0;
-    let hasEssay = false;
-
-    questionsList.forEach((q: any, idx: number) => {
-      const qPts = Number(q.points || 1);
-      totalMaxScore += qPts;
-      const qAns = studentAnswers[q.id] ?? studentAnswers[idx] ?? studentAnswers[idx + 1];
-
-      if (q.type === "essay") {
-        hasEssay = true;
-      } else {
-        totalMcqPoints += qPts;
-        const correctIdx = Number(q.correct_index !== undefined ? q.correct_index : (q.correct !== undefined ? q.correct : 0));
-        const isCorrect = qAns !== undefined && Number(qAns) === correctIdx;
-        if (isCorrect) {
-          mcqScore += qPts;
-        }
-      }
-    });
-
-    const isGraded = !hasEssay;
-    const finalScore = isGraded ? mcqScore : null;
-
-    const submissionNotes = {
-      material_id,
-      quiz_number: qNum,
-      group_id: material.group_id,
-      student_code: req.body?.student_code || (studentId === "9da3aae0-97df-47a6-82e9-06c6139f63e5" ? "1006" : null),
-      student_name: req.body?.student_name || ((req.body?.student_code === "1006" || studentId === "9da3aae0-97df-47a6-82e9-06c6139f63e5") ? "مهند خالد" : null),
-      answers: studentAnswers,
-      mcq_score: mcqScore,
-      total_mcq_points: totalMcqPoints,
-      max_score: totalMaxScore,
-      elapsed_seconds: elapsed_seconds || 0,
-      is_withdrawn: Boolean(is_withdrawn),
-      withdrawal_reason: typeof withdrawal_reason === "string" ? withdrawal_reason.slice(0, 500) : null,
-      has_essay: hasEssay,
-      is_graded: isGraded,
-      final_score: finalScore,
-    };
-
-    const statusVal = isGraded ? "approved" : "pending";
-
-    const { error: submissionError } = await supabase
-      .from("homework_submissions")
-      .upsert(
-        {
-          tenant_id: tenantId,
-          material_id: material_id,
-          student_id: studentId,
-          file_name: `online_quiz_${qNum}.json`,
-          file_url: null,
-          status: statusVal,
-          teacher_notes: JSON.stringify(submissionNotes),
-          submitted_at: new Date().toISOString(),
-        },
-        { onConflict: "material_id,student_id" }
-      );
-    if (submissionError) throw submissionError;
-
-    if (isGraded) {
-      const idempotencyKey = `${tenantId}:${material.group_id || "default"}:${studentId}:quiz-${qNum}`;
-      const { error: scoreError } = await supabase.from("quiz_scores").upsert(
-        {
-          tenant_id: tenantId,
-          group_id: material.group_id,
-          quiz_number: qNum,
-          student_id: studentId,
-          score: mcqScore,
-          max_score: totalMaxScore,
-          note: is_withdrawn ? "تم سحب الورقة تلقائياً لمغادرة الشاشة" : "تصحيح إلكتروني تلقائي 100%",
-          idempotency_key: idempotencyKey,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "idempotency_key" }
-      );
-      if (scoreError) throw scoreError;
-    }
-
-    res.status(200).json({
-      success: true,
-      is_graded: isGraded,
-      has_essay: hasEssay,
-      is_withdrawn: Boolean(is_withdrawn),
-      score: isGraded ? mcqScore : undefined,
-      max_score: totalMaxScore,
-      mcq_score: mcqScore,
-      total_mcq_points: totalMcqPoints,
-      message: isGraded
-        ? (is_withdrawn
-            ? `⚠️ تم سحب ورقة الامتحان لمغادرة الشاشة، ودرجتك حتى لحظة السحب: (${mcqScore} من ${totalMaxScore})`
-            : `أحسنت! تم تصحيح الامتحان تلقائياً ودرجتك هي: (${mcqScore} من ${totalMaxScore})`)
-        : (is_withdrawn
-            ? "⚠️ تم سحب ورقة الامتحان تلقائياً لمغادرة الشاشة. إجاباتك مسجلة وبانتظار اعتماد المعلم."
-            : "تم تسليم الامتحان بنجاح! سيتم إعلان درجتك النهائية فور مراجعة وتصحيح الأسئلة المقالية بالعين من المعلم."),
-    });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Failed to submit quiz";
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message } });
-  }
-});
+// Quiz definitions, scope and marking are checked atomically from saved data.
+registerPortalQuizSubmission(publicRouter);

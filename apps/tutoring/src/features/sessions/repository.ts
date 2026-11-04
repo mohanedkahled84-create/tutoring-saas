@@ -359,19 +359,20 @@ export class SupabaseSessionsRepository implements ISessionsRepository {
     fromDate: string,
     toDate: string
   ): Promise<SessionModel[]> {
+    const validDate=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value+'T12:00:00Z')) && new Date(value+'T12:00:00Z').toISOString().slice(0,10)===value;
+    if(!validDate(fromDate) || !validDate(toDate) || fromDate>toDate || Date.parse(toDate)-Date.parse(fromDate)>366*86400000)throw new Error('INVALID_CALENDAR_RANGE');
     const { data, error } = await this.supabase
       .from("sessions")
       .select(
-        "id, tenant_id, group_id, session_number, session_date, status, is_extra, extra_topic, rescheduled_to_date, rescheduled_to_time, cancellation_reason, created_at, groups(id, name, center_name, price)"
+        "id, tenant_id, group_id, session_number, session_date, original_session_date, session_time, status, is_extra, extra_topic, rescheduled_to_date, rescheduled_to_time, cancellation_reason, created_at, groups(id, name, center_name, price)"
       )
       .eq("tenant_id", tenantId)
-      .gte("session_date", fromDate)
-      .lte("session_date", toDate)
+      .or(`and(session_date.gte.${fromDate},session_date.lte.${toDate}),and(rescheduled_to_date.gte.${fromDate},rescheduled_to_date.lte.${toDate}),and(original_session_date.gte.${fromDate},original_session_date.lte.${toDate})`)
       .order("session_date", { ascending: true })
       .order("session_number", { ascending: true });
 
     if (error || !data) {
-      return [];
+      throw new Error(error?.message || "CALENDAR_UNAVAILABLE");
     }
 
     return data as unknown as SessionModel[];
