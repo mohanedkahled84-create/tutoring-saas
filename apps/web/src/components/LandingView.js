@@ -318,7 +318,7 @@ export function renderLandingView() {
           <div style="text-align: center; max-width: 750px; margin: 0 auto 2.5rem;">
             <span style="color: var(--brand-blue); font-weight: 800; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">منظومة شاملة ومتكاملة</span>
             <h2 style="font-size: clamp(1.6rem, 3vw, 2.3rem); font-weight: 900; color: var(--brand-navy); margin: 0.5rem 0 0.75rem;">
-              جميع ميزات سنترلي متوفرة بالكامل لكل مشترك
+              أدوات سنترلي لتنظيم شغلك ومتابعة طلابك
             </h2>
             <p style="font-size: 1rem; color: var(--brand-text); margin: 0; line-height: 1.7;">
               نظام شامل لإدارة شؤون الحصص والمجموعات بدون الحاجة لأي برامج إضافية أو تعقيدات.
