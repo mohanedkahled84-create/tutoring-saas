@@ -38,7 +38,7 @@ test('LIVE: new teacher -> paid plans -> targeted work -> student result -> assi
  });
  const {createApp}=await import('../dist/app.js');server=createApp().listen(0,'127.0.0.1');await once(server,'listening');
  const base=`http://127.0.0.1:${server.address().port}/api`;
- const request=(path,body,token=ownerToken)=>fetch(base+path,{method:body===undefined?'GET':'POST',headers:{Origin:origin,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+ const request=(path,body,token=ownerToken)=>fetch(base+path,{method:body===undefined?'GET':'POST',headers:{Origin:origin,'Content-Type':'application/json',...(path.startsWith('/assistant-access/workspace-api')?{'X-Assistant-Page':'students'}:{}),...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body)});
  const json=async(response,status=200)=>{const body=await response.text();assert.equal(response.status,status,body);return JSON.parse(body);};
 
  await t.test('registration requires teaching basics and verification before login',async()=>{

@@ -11,7 +11,7 @@ test('release keys invalidate both direct and nested module dependencies consist
  assert.equal(stampModules(stamped,'9.40.0'),stamped);
 });
 test('deployed workspace and homework editor use the same release as the app shell',()=>{
- const root=new URL('../../web/',import.meta.url),version=readFileSync(new URL('index.html',root),'utf8').match(/app\.js\?v=([^"']+)/)[1];
+ const root=new URL('../../web/',import.meta.url),version=readFileSync(new URL('index.html',root),'utf8').match(/parentPortalEntry\.js\?v=([^"']+)/)[1];
  for(const file of ['src/app.js','src/workspace.js','src/components/HomeworkReviewView.js','src/components/MaterialsView.js']){
   const source=readFileSync(new URL(file,root),'utf8');
   for(const match of source.matchAll(/(?:from\s*|import\(\s*)['"](\.{1,2}\/[^'"?]+\.js)(?:\?v=([^'"]+))?['"]/g))assert.equal(match[2],version,`${file}: ${match[1]} must invalidate with the release`);

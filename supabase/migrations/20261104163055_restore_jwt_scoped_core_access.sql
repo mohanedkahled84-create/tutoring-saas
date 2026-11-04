@@ -5,7 +5,7 @@
 do $$
 declare name text;
 begin
- foreach name in array array['groups','group_students','students'] loop
+ foreach name in array array['groups','group_students','students','enrollments'] loop
   if not exists (select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
     where n.nspname='public' and c.relname=name and c.relrowsecurity)
     or not exists (select 1 from pg_policies where schemaname='public' and tablename=name) then
@@ -16,3 +16,5 @@ end $$;
 
 grant select,insert,update,delete on public.groups,public.group_students to authenticated;
 grant select,update on public.students to authenticated;
+-- The students RLS expression references enrollments even for an owner.
+grant select on public.enrollments to authenticated;

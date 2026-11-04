@@ -1,7 +1,7 @@
-import { request } from '../services/api.js?v=9.40.0';
-import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.40.0';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.40.0';
-import { getIcon } from '../utils/icons.js?v=9.40.0';
+import { request } from '../services/api.js?v=9.41.0';
+import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.41.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.41.0';
+import { getIcon } from '../utils/icons.js?v=9.41.0';
 
 /**
  * Centrly Student Excel / CSV Import Engine

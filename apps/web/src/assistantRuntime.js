@@ -1,5 +1,5 @@
-import {API_BASE_URL} from './services/api.js?v=9.40.0';
-import {assistantCan,assistantCanNavigate,routeResources} from './utils/assistantWorkspacePolicy.js?v=9.40.0';
+import {API_BASE_URL} from './services/api.js?v=9.41.0';
+import {assistantCan,assistantCanNavigate,routeResources} from './utils/assistantWorkspacePolicy.js?v=9.41.0';
 
 // Reuse the teacher application and its actions; only authentication,
 // navigation rights and storage lifetime differ for delegated accounts.
@@ -54,7 +54,7 @@ export async function mountAssistantWorkspace({root,token,workspace,onReady,onLo
   return nativeFetch(input,init);
  };
  try{
-  const {CentrlyApp}=await import('./app.js?v=9.40.0');
+  const {CentrlyApp}=await import('./app.js?v=9.41.0');
   const delegation={user:context.user,actor:context.actor,permissions,all_groups:context.all_groups,isActive:()=>!disposed,canNavigate:route=>!disposed && assistantCanNavigate(permissions,route)};
   app=new CentrlyApp(delegation);window.centrlyApp=app;
   app.user.delegated_actor=context.actor;

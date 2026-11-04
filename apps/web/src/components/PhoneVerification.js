@@ -1,5 +1,5 @@
-import {preparePhoneProof} from '../utils/phoneProof.js?v=9.40.0';
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.40.0';
+import {preparePhoneProof} from '../utils/phoneProof.js?v=9.41.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.41.0';
 
 // Codes, challenges and verification tickets live only in this mounted view.
 export function mountPhoneVerification(host,{info,requestCode,requestChallenge,verifyCode,onVerified}) {
