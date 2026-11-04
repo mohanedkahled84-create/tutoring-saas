@@ -1,14 +1,20 @@
-name: CI & Live Security Test Suite
+name: CI & Security Test Suite
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+
+# A superseded run must not keep consuming the shared test project's egress.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    name: Backend Test Suite & Live Security Audit
+    name: Backend Tests (live security on main/manual runs)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -40,7 +46,16 @@ jobs:
         working-directory: apps/tutoring
         run: npm run build
 
+      - name: Run local tests without external network on pull requests
+        if: github.event_name == 'pull_request'
+        working-directory: apps/tutoring
+        run: |
+          set -o pipefail
+          npm run test:local | tee /tmp/centrly-test-results.tap
+          grep -Eq '^# skipped 0$' /tmp/centrly-test-results.tap
+
       - name: Run Backend Tests & Live Security Audit
+        if: github.event_name != 'pull_request'
         working-directory: apps/tutoring
         env:
           SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}

@@ -54,7 +54,7 @@ export async function mountAssistantWorkspace({root,token,workspace,onReady,onLo
   return nativeFetch(input,init);
  };
  try{
-  const {CentrlyApp}=await import('./app.js?v=9.36.0');
+  const {CentrlyApp}=await import('./app.js?v=9.37.1');
   const delegation={user:context.user,actor:context.actor,permissions,isActive:()=>!disposed,canNavigate:route=>!disposed && assistantCanNavigate(permissions,route)};
   app=new CentrlyApp(delegation);window.centrlyApp=app;
   app.user.delegated_actor=context.actor;
