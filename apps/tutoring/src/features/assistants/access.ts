@@ -253,7 +253,7 @@ assistantManagementRouter.post('/invitations',async(req:AuthenticatedRequest,res
   const nonce=familyToken();
   const invitation=await assistantRpc(db,'assistant_invite',{p_tenant:tenant,p_assistant:id,p_teacher:teacher,p_phone:phone,p_nonce_hash:familyHash(nonce),p_permissions:access.permissions,p_all_groups:access.all_groups,p_group_ids:access.group_ids,p_pay:pay});
   const {data:tenantInfo}=await db.from('tenants').select('name').eq('id',tenant).single();
-  const delivery=await notifyAssistantInvitation(config.meta,phone,tenantInfo?.name || 'المعلم',nonce);
+  const delivery=(req as any).commercialLimits?.is_trial ? 'blocked' : await notifyAssistantInvitation(config.meta,phone,tenantInfo?.name || 'المعلم',nonce);
   const {error}=await db.from('assistant_invitations').update({delivery_status:delivery}).eq('id',invitation.invitation_id).eq('tenant_id',tenant);
   if(error) throw error;
   res.status(201).json({...invitation,phone,...registrationLinks(tenant!,phone,nonce),delivery_status:delivery,message:delivery==='sent'?'تم إرسال الدعوة إلى واتساب':delivery==='blocked'?'تم حفظ الدعوة. الإرسال الرسمي غير متاح الآن؛ يمكنك استخدام فتح واتساب لإرسال الرابط':'تم حفظ الدعوة، لكن Meta لم تؤكد الإرسال'});

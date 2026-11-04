@@ -2,13 +2,13 @@ import { request } from '../services/api.js';
 import { escapeHtml as e } from '../utils/escapeHtml.js';
 
 const money = p => (Number(p || 0) / 100).toLocaleString('ar-EG', { maximumFractionDigits: 2 }) + ' ج.م';
-const number = n => Number(n || 0).toLocaleString('ar-EG');
+const number = n => Number(n || 0).toLocaleString('ar-EG',Number(n)>0 && Number(n)<1?{maximumSignificantDigits:3}:{maximumFractionDigits:2});
 const date = value => value ? new Date(value).toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' }) : '—';
 const action = (label, call, primary = false) => `<button type="button" class="btn ${primary ? 'btn-primary' : 'btn-secondary'}" style="min-height:44px" onclick="window.centrlyApp.${call}">${label}</button>`;
 const names = { subscribe: 'اشتراك', renew: 'تجديد', upgrade: 'ترقية', students: 'مقاعد طلاب', assistants: 'مساعدون', storage: 'مساحة ملفات', wallet: 'شحن محفظة' };
 const states = { quoted: 'في انتظار بيانات الدفع', submitted: 'قيد مراجعة الدفع', approved: 'تم الاعتماد', rejected: 'مرفوض', cancelled: 'ملغي' };
 function meter(label, used, limit, suffix = '') {
-  if (!Number.isFinite(Number(used)) || !Number.isFinite(Number(limit))) return `<article class="card commercial-meter"><h3>${label}</h3><p>تعذر قراءة الاستخدام حاليًا؛ أعد التحديث.</p></article>`;
+  if (used == null || limit == null || !Number.isFinite(Number(used)) || !Number.isFinite(Number(limit))) return `<article class="card commercial-meter"><h3>${label}</h3><p>تعذر قراءة الاستخدام حاليًا؛ أعد التحديث.</p></article>`;
   const pct = Math.min(100, Math.max(0, Number(used) / Math.max(1, Number(limit)) * 100));
   return `<article class="card commercial-meter"><h3>${label}</h3><strong>${number(used)} <small>من ${number(limit)} ${suffix}</small></strong><div role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="${Number(limit)}" aria-valuenow="${Number(used)}" style="height:7px;border-radius:99px;background:var(--centrly-soft);margin:1rem 0;overflow:hidden"><div style="width:${pct}%;height:100%;background:${pct >= 90 ? '#b45309' : 'var(--centrly-blue-700)'}"></div></div><p>المتبقي: ${number(Math.max(0, Number(limit) - Number(used)))} ${suffix}</p></article>`;
 }
@@ -19,7 +19,7 @@ export function renderCommercialWallet(wallet, compact = false) {
 export function renderCommercialBillingView(data = {}) {
   const c = data.commercial;
   if (!c) return `<section class="card" dir="rtl"><h1>اشتراكك واستخدامك</h1><p role="status">جار قراءة الباقات والاستخدام…</p>${action('إعادة المحاولة', "loadRouteData('billing')")}</section>`;
-  const l = c.limits, catalog = c.catalog || [], current = !l.is_trial && catalog.find(p => p.id === l.plan_id), usedGB = c.storage_bytes_used == null ? null : Math.round(c.storage_bytes_used / 1e9 * 100) / 100;
+  const l = c.limits, catalog = c.catalog || [], current = !l.is_trial && catalog.find(p => p.id === l.plan_id), usedGB = c.storage_bytes_used == null ? null : c.storage_bytes_used / 1e9;
   return `<div class="commercial-billing" dir="rtl"><style>
     .commercial-billing{display:grid;gap:1rem;min-width:0}.commercial-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}.commercial-billing .card{margin:0;min-width:0}.commercial-meter h3{font-size:1rem}.commercial-meter strong{font-size:1.6rem}.commercial-meter small{font-size:.85rem;font-weight:400}.commercial-order{padding:.9rem 0;border-bottom:1px solid var(--centrly-line);overflow-wrap:anywhere}.commercial-plan{display:flex;flex-direction:column;gap:.7rem}.commercial-plan ul{padding-inline-start:1.2rem;line-height:2}.commercial-plan button{margin-top:auto}.commercial-billing p{line-height:1.8}.commercial-billing input,.commercial-billing select{min-height:44px}@media(max-width:800px){.commercial-grid{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){.commercial-billing *{scroll-behavior:auto}}
   </style><section class="card" style="background:var(--centrly-ink);color:white"><div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap"><div><p>مساحة واضحة لنمو شغلك</p><h1 style="font-size:1.8rem;color:inherit">${l.is_trial ? 'تجربة مجانية ٧ أيام' : current ? e(current.name) : 'اشتراكك في سنترلي'}</h1><p>${l.is_trial ? 'تجربة سارية' : l.active ? 'مفعّلة الآن' : 'راجع الاشتراك للتفعيل'} · نهاية الدورة ${date(l.period_end)}</p>${l.legacy ? '<p>حسابك على خطة سابقة. سعتها محفوظة حتى تختار خطة جديدة وتراجع استخدامها.</p>' : `<p>التكلفة الدورية الحالية ${money(l.recurring_piasters)}</p>`}</div>${action('تحديث الاستخدام', "loadRouteData('billing')")}</div></section>

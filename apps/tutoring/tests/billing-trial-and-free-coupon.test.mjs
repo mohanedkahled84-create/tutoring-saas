@@ -105,3 +105,10 @@ test("ADMIN-PROOFS-VIEW: Renders coupon badge, discount details, and 0 amount fo
   assert.ok(html.includes("مجاني بالكامل"), "Card must display celebration free badge");
 });
 
+
+test('BILLING: small stored files are visible and missing usage is never reported as zero',()=>{
+ const fixture=billingFixture(false);fixture.commercial.storage_bytes_used=1e6;
+ assert.ok(renderBillingView(fixture).includes('٠٫٠٠١'));
+ fixture.commercial.storage_bytes_used=null;
+ assert.ok(renderBillingView(fixture).includes('تعذر قراءة الاستخدام'));
+});
