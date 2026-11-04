@@ -197,6 +197,15 @@ begin
   if p.id is null then raise exception 'INVALID_PLAN' using errcode='22023';end if;
   select coalesce(jsonb_object_agg(kind,quantity),'{}') into v_addons from public.subscription_addons where tenant_id=v_tenant and (v_kind not in ('subscribe','renew') or not cancel_on_renew);
   if v_kind in ('students','assistants','storage','upgrade') then v_addons:=coalesce(v_limits->'addons','{}');end if;
+  if v_kind='subscribe' then
+   -- A trial/legacy teacher may already exceed a new base tier. Quote the
+   -- minimum required capacity explicitly instead of forcing data removal.
+   v_addons:=v_addons||jsonb_build_object(
+    'students',greatest(coalesce((v_addons->>'students')::integer,0),(select count(*)::integer from public.students where tenant_id=v_tenant and archived_at is null)-p.students,0),
+    'assistants',greatest(coalesce((v_addons->>'assistants')::integer,0),(select count(*)::integer from public.assistants where tenant_id=v_tenant and coalesce(status,'active') not in ('inactive','revoked','deleted'))-p.assistants,0),
+    'storage',greatest(coalesce((v_addons->>'storage')::integer,0),ceil(greatest(0,public.commercial_storage_usage(v_tenant)-p.storage_bytes)::numeric/5000000000)::integer)
+   );
+  end if;
   if v_kind='wallet' then
    v_amount:=v_quantity;
    if v_amount not between 5000 and 10000000 then raise exception 'MINIMUM_TOPUP_50' using errcode='22023';end if;

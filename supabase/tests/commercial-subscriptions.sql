@@ -126,6 +126,16 @@ begin
  if(r->>'allowed')::boolean then raise exception 'GLOBAL_BUDGET_EXCEEDED';end if;
  if r->>'next_at' is null then raise exception 'NO_CAPACITY_ESTIMATE';end if;
 end$$;
+-- Initial checkout can fit an existing trial roster without deleting students.
+do $$declare tenant uuid:=gen_random_uuid();owner_id uuid:=gen_random_uuid();r jsonb;begin
+ insert into public.tenants(id,name) values(tenant,'isolated checkout capacity fixture');
+ insert into auth.users(id,email) values(owner_id,owner_id||'@fixture.invalid');
+ insert into public.users(id,tenant_id,role,email) values(owner_id,tenant,'owner',owner_id||'@fixture.invalid');
+ insert into public.students(tenant_id,name,student_code,parent_phone) select tenant,'fixture '||n,'capacity-'||n,'01099999444' from generate_series(1,101) n;
+ r:=public.subscription_operation(owner_id,'quote',jsonb_build_object('id',gen_random_uuid(),'kind','subscribe','plan_id','basic_v1'));
+ if(r->>'amount_piasters')::integer<>25100 or (r->'snapshot'->'addons'->>'students')::integer<>1 then raise exception 'EXISTING_ROSTER_CHECKOUT_CAPACITY';end if;
+end$$;
+
 -- Parent deletion must not be blocked by a child trigger looking up a vanished tenant.
 do $$declare tenant uuid:=gen_random_uuid();begin
  insert into public.tenants(id,name) values(tenant,'isolated cascade regression');

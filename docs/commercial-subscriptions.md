@@ -20,7 +20,7 @@ All plans include management, multiple-group assignments, reuse, paper exams, ma
 - Existing accounts retain their recorded legacy plan until an explicit approved commercial order. No amount-based automatic migration.
 - Quotes last 15 minutes. InstaPay/Vodafone Cash proofs await admin approval. Browser prices cannot set the amount. A proof can settle an order only once. A rejected topup cannot deactivate a subscription.
 - Current-period modifications do not alter already-paid future periods. The billing UI lists these periods. Scheduled cancellation/downgrade applies to the first unpaid renewal. An addon cancellation can be undone before renewing.
-- Usage is checked before a quote and again at approval. Pending quotes become stale after subscription changes; they require review, never a silent price change.
+- Initial checkout explicitly quotes the minimum addons needed to retain an existing trial/legacy roster and files. The customer reviews their quantities and total before payment. Usage is checked before a quote and again at approval. Pending quotes become stale after subscription changes; they require review, never a silent price change.
 - Seven days after expiry are read/export only; after that, renew to access business data. Support, authentication and checkout remain available. Inactivity reminders and automatic account deletion are deliberately deferred.
 
 ## Wallet and official sends
@@ -49,7 +49,8 @@ Commercial tables/RPCs are service-only. Actor and admin roles are rechecked in 
 - Local network-isolated backend tests, including HTTP quote/proof validation and trial/grace/feature decisions.
 - `supabase/tests/commercial-subscriptions.sql`: isolated-project rollback tests for prices, gift/hold idempotency, parent phone reuse, cross-tenant denial, 60-piaster minimum, early renewal, cancellation, paper versus online access and authenticated SQL privileges.
 - `node scripts/commercial-browser-check.cjs`: local simulated-payment journeys at 320/390/768/1440px. The script requires Playwright and a local Chrome installation. These journeys are not a real provider payment test.
-- Parent entry bundle freshness and whitespace checks.
+- Parent/student entry bundle freshness and whitespace checks.
+- The live commercial suite uses authenticated checkout and tiny disabled test-plan quotas to verify concurrent student/assistant and Storage limits without real payments or provider messages.
 - All nine migrations were replayed from their pre-feature state inside one rollback-only transaction on the isolated project.
 
 Before production activation: pass repository CI/live security checks, verify the current provider rolling-window usage and seed a conservative starting budget for pre-existing sends, apply migrations and deploy the matching backend/frontend, then perform authenticated smoke checks. Do not report a provider delivery or a production deployment from local fixture results. Existing legacy phone conflicts require review, not automatic deletion or merging.
