@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 
 const cacheSource = await readFile(new URL('../../web/src/utils/portalCache.js', import.meta.url), 'utf8');
 const cacheUrl = 'data:text/javascript;base64,' + Buffer.from(cacheSource).toString('base64');
-const source = (await readFile(new URL('../../web/src/utils/portalSession.js', import.meta.url), 'utf8')).replaceAll("'./portalCache.js'", JSON.stringify(cacheUrl));
+const source = (await readFile(new URL('../../web/src/utils/portalSession.js', import.meta.url), 'utf8')).replace(/['"]\.\/portalCache\.js(?:\?v=[^'"]+)?['"]/g, JSON.stringify(cacheUrl));
 const session = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 
 test('valid portal requests survive the former five-second cutoff', async t => {

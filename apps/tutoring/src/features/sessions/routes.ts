@@ -173,8 +173,11 @@ sessionsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
 
   try {
     const service = resolveSessionsService(req);
-    const from = (req.query.from as string) || "2020-01-01";
-    const to = (req.query.to as string) || "2030-12-31";
+    // The calendar repository accepts at most a year. The old ten-year default
+    // made the normal active-session startup request fail before querying DB.
+    const year=new Intl.DateTimeFormat('en',{timeZone:'Africa/Cairo',year:'numeric'}).format(new Date());
+    const from = (req.query.from as string) || `${year}-01-01`;
+    const to = (req.query.to as string) || `${year}-12-31`;
     let sessions = await service.getCalendarSessions(tenantId || "", from, to);
     if (req.query.status) {
       sessions = sessions.filter((s: SessionModel) => s.status === req.query.status);
@@ -184,7 +187,7 @@ sessionsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
     }
     res.json({ sessions, count: sessions.length });
   } catch (err: unknown) {
-    res.status(500).json({
+    res.status((err as Error).message==='INVALID_CALENDAR_RANGE'?400:500).json({
       error: { code: "INTERNAL_ERROR", message: "Failed to list sessions", details: (err as Error).message },
     });
   }

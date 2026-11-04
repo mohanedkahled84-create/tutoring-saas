@@ -1,5 +1,5 @@
-import { getIcon } from '../utils/icons.js';
-import { escapeHtml } from '../utils/escapeHtml.js';
+import { getIcon } from '../utils/icons.js?v=9.40.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.40.0';
 
 /**
  * Centrly Superadmin - Tenants Management View

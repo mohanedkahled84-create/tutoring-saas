@@ -1,6 +1,6 @@
-import { escapeHtml } from '../utils/escapeHtml.js';
-import { getIcon } from '../utils/icons.js';
-import { playBeep, unlockAudio } from '../utils/beepAudio.js';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.40.0';
+import { getIcon } from '../utils/icons.js?v=9.40.0';
+import { playBeep, unlockAudio } from '../utils/beepAudio.js?v=9.40.0';
 
 /**
  * Camera Scanner & Audio Feedback Suite (DEV-SCAN)

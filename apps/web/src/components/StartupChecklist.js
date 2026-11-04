@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js';
-import {request} from '../services/api.js';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.40.0';
+import {request} from '../services/api.js?v=9.40.0';
 const routes=new Set(['settings','groups','students','materials','sessions','platform-builder']);
 export function renderStartupChecklist(steps=[]){
  const done=steps.filter(step=>step.done).length;

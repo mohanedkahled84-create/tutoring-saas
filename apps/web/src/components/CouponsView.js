@@ -1,6 +1,6 @@
-import { getIcon } from '../utils/icons.js';
-import { escapeHtml } from '../utils/escapeHtml.js';
-import { request } from '../services/api.js';
+import { getIcon } from '../utils/icons.js?v=9.40.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.40.0';
+import { request } from '../services/api.js?v=9.40.0';
 
 /**
  * Centrly Promo & Discount Codes Management View

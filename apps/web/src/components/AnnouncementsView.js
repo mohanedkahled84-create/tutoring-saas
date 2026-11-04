@@ -1,6 +1,6 @@
-import {renderCommercialWallet} from './CommercialBillingView.js';
-import {escapeHtml as e} from '../utils/escapeHtml.js';
-import {request} from '../services/api.js';
+import {renderCommercialWallet} from './CommercialBillingView.js?v=9.40.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.40.0';
+import {request} from '../services/api.js?v=9.40.0';
 const statuses={draft:'مسودة',published:'منشور',archived:'مؤرشف',queued:'في الانتظار',sending:'جار الإرسال',sent:'تم الإرسال',delivered:'تم التسليم',read:'تمت القراءة',failed:'لم يصل',unknown:'نتيجة غير مؤكدة',skipped:'لم يُرسل'};
 const requestStates={submitted:'وصل طلبك',reviewing:'قيد المراجعة',meta_pending:'بانتظار اعتماد واتساب',available:'متاح',rejected:'يحتاج تعديلًا'};
 const automatic=new Set(['teacher','group','portal','contact']);

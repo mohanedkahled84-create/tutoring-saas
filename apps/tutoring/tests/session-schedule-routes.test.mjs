@@ -3,6 +3,13 @@ import assert from 'node:assert/strict';
 import express from 'express';
 import {sessionsRouter} from '../dist/features/sessions/routes.js';
 import {delegatedClientScope} from '../dist/shared/delegatedClient.js';
+
+test('default active-session listing uses a valid yearly range rather than a rejected ten-year query',async t=>{
+ let dates;
+ const app=express();app.use((req,_res,next)=>{req.user={id:'owner',tenant_id:'tenant',role:'owner'};req.services={sessions:{getCalendarSessions:async(_tenant,from,to)=>{assert.ok(Date.parse(to)-Date.parse(from)<=366*86400000);dates=[from,to];return [{id:'active',status:'in_progress'}];}}};next();});app.use('/sessions',sessionsRouter);
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));t.after(()=>{server.closeAllConnections();server.close();});
+ const response=await fetch(`http://127.0.0.1:${server.address().port}/sessions?status=in_progress`);assert.equal(response.status,200);assert.equal((await response.json()).sessions[0].id,'active');assert.match(dates[0],/-01-01$/);assert.match(dates[1],/-12-31$/);
+});
 test('schedule routes save with trusted actor, never dispatch implicitly, and refuse the retired bulk-send path',async t=>{
  const calls=[];let failure=null;const id='10000000-0000-4000-8000-000000000001';
  const db={rpc:async(name,args)=>{calls.push([name,args]);return failure?{error:failure}:{data:{session:{id,status:'scheduled'},notifications_dispatched:0}};},from(){throw Error('Schedule writes must use the atomic private operation');}};

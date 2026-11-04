@@ -1,14 +1,14 @@
-import { request, API_BASE_URL } from '../services/api.js';
-import { registerParentPortalActions } from '../parentPortal.js';
-import {clearFamilyForOtherLogin} from '../utils/portalSession.js';
-import { renderParentPortalLogin, getParentBranding, saveParentBranding } from './ParentPortalLoginView.js';
-import { renderStudentPortalView } from './StudentPortalView.js';
-import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js';
-import { getIcon } from '../utils/icons.js';
-import { escapeHtml } from '../utils/escapeHtml.js';
-import { normalizeDigits } from '../utils/normalizeDigits.js';
-import { preparePortalDestination } from '../utils/portalDestination.js';
-import { portalCache, portalRequest } from '../utils/portalSession.js';
+import { request, API_BASE_URL } from '../services/api.js?v=9.40.0';
+import { registerParentPortalActions } from '../parentPortal.js?v=9.40.0';
+import {clearFamilyForOtherLogin} from '../utils/portalSession.js?v=9.40.0';
+import { renderParentPortalLogin, getParentBranding, saveParentBranding } from './ParentPortalLoginView.js?v=9.40.0';
+import { renderStudentPortalView } from './StudentPortalView.js?v=9.40.0';
+import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js?v=9.40.0';
+import { getIcon } from '../utils/icons.js?v=9.40.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.40.0';
+import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.40.0';
+import { preparePortalDestination } from '../utils/portalDestination.js?v=9.40.0';
+import { portalCache, portalRequest } from '../utils/portalSession.js?v=9.40.0';
 
 function showPortalPending(app) {
   const root = app.getAppEl();

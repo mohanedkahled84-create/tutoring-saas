@@ -1,7 +1,7 @@
-import { assistantPay } from "../utils/assistantPay.js";
-import { escapeHtml } from "../utils/escapeHtml.js";
-import { getIcon } from "../utils/icons.js";
-import {renderTeacherActions} from './TeacherActionsPanel.js';
+import { assistantPay } from "../utils/assistantPay.js?v=9.40.0";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.40.0";
+import { getIcon } from "../utils/icons.js?v=9.40.0";
+import {renderTeacherActions} from './TeacherActionsPanel.js?v=9.40.0';
 
 /**
  * Centrly Teacher Dashboard

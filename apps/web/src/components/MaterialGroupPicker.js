@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js';
-import {request} from '../services/api.js';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.40.0';
+import {request} from '../services/api.js?v=9.40.0';
 
 export const materialTargets = row => Array.isArray(row.group_ids) ? row.group_ids : row.group_id ? [row.group_id] : null;
 export const materialInGroup = (row,id) => materialTargets(row)===null || materialTargets(row).includes(id);
