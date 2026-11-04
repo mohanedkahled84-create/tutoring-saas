@@ -1140,15 +1140,12 @@ select.form-input, select.form-select, select.form-control {
 #studentsTable th:last-child { width:27%; }
 #studentsTable .student-group .badge { max-width:100%!important; white-space:normal!important; overflow:visible!important; }
 .roster-code { display:block; font:400 .7rem Cairo,sans-serif; color:var(--centrly-text); }
-.roster-details summary { min-height:44px; cursor:pointer; font-weight:700; color:var(--centrly-ink); padding:.5rem; border:1px solid var(--centrly-line); border-radius:8px; }
-.roster-details[open] summary { background:var(--centrly-soft); }
 .roster-detail-panel { display:grid; gap:.75rem; padding:.75rem 0; }
 .roster-detail-panel > div[data-label]::before { content:attr(data-label); display:block; font-size:.75rem; color:var(--centrly-text); margin-bottom:.35rem; }
 #studentsTable .student-links > div { min-width:0!important; }
 #studentsTable .student-links > div > div, #studentsTable .student-actions > div { flex-wrap:wrap; gap:.5rem!important; }
 #studentsTable .btn { min-height:44px; min-width:44px; font-size:.8rem!important; padding:.4rem .55rem!important; }
 #studentsTable .student-links a { min-width:44px; }
-.roster-details summary:focus-visible { outline:2px solid var(--centrly-ink); outline-offset:3px; }
 @media(max-width:800px) {
  #studentsTable, #studentsTable tbody { display:block; }
  #studentsTable thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
@@ -1241,3 +1238,24 @@ select.form-input, select.form-select, select.form-control {
 @media(max-width:1050px) and (min-width:801px) { .commercial-billing .commercial-grid { grid-template-columns:1fr; } }
 
 .commercial-addon-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; margin-top:1rem; }.commercial-addon-grid article { padding:1rem; background:var(--centrly-soft,#f8fafc); border:1px solid var(--centrly-line); border-radius:10px; min-width:0; display:flex; flex-direction:column; gap:.5rem; }.commercial-addon-grid h3 { font-size:.95rem; margin:0; }.commercial-addon-grid p { font-size:.8rem; margin:0 0 .5rem; }.commercial-addon-grid button { margin-top:auto; }@media(max-width:800px){.commercial-addon-grid{grid-template-columns:1fr;}}
+
+/* Student details live in a dialog, keeping every roster row compact. */
+.roster-open-details { min-height:44px; width:100%; white-space:normal; }
+.student-fees strong,.student-fees small { display:block; }.student-fees small { margin-top:.2rem; color:var(--centrly-text); font-size:.75rem; }
+.student-detail-identity { display:grid; gap:.35rem; padding-bottom:1rem; border-bottom:1px solid var(--centrly-line); }
+.student-detail-identity strong { font-size:1.1rem; }.student-detail-identity span { color:var(--centrly-text); }
+.student-detail-dialog .roster-detail-panel { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; padding:1rem 0 0; }
+.student-detail-dialog .roster-detail-panel > div { min-width:0; padding:.75rem; background:var(--centrly-soft,#f8fafc); border:1px solid var(--centrly-line); border-radius:10px; }
+.student-detail-dialog [data-label]::before { font:700 .85rem/1.7 Cairo,sans-serif; direction:rtl; }
+.student-detail-dialog .student-links,.student-detail-dialog .student-actions { grid-column:1/-1; }
+.student-detail-dialog .student-links > div { min-width:0!important; gap:.75rem!important; }
+.student-detail-dialog .student-links > div > div,.student-detail-dialog .student-actions > div { flex-wrap:wrap; gap:.5rem!important; }
+.student-detail-dialog .student-links span { font-size:.8rem!important; }
+.student-detail-dialog .btn,.student-detail-dialog a.btn { min-height:44px; min-width:44px; padding:.5rem .7rem!important; font-size:.85rem!important; }
+.student-detail-dialog .student-password { margin-block:.5rem; }
+.student-discount-field { padding:1rem; margin-block:1rem; background:var(--centrly-soft,#f8fafc); border:1px solid var(--centrly-line); border-radius:10px; }
+.student-discount-field label { display:block; }.student-discount-field input { min-height:44px; }.student-discount-field p { margin:.5rem 0; font-weight:700; line-height:1.8; }.student-discount-field small { font-size:.8rem; color:var(--centrly-text); line-height:1.8; }
+@media(max-width:480px){.student-detail-dialog .roster-detail-panel{grid-template-columns:1fr;}.student-detail-dialog .roster-detail-panel>div{grid-column:1;}}
+
+@media(min-width:641px){.student-detail-dialog .student-links>div{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;}.student-detail-dialog .student-links>div>.student-password{grid-column:2;grid-row:1/span 2;}.student-detail-dialog .student-links>div>div:last-child{grid-column:1/-1;}}
+.student-detail-dialog .student-links>div>div>span:first-child{width:auto!important;min-width:3rem;}

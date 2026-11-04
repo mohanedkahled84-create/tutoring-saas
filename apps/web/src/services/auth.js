@@ -1,4 +1,4 @@
-import { request, API_BASE_URL, performSilentRefresh, isJwtExpired } from './api.js?v=9.42.0';
+import { request, API_BASE_URL, performSilentRefresh, isJwtExpired } from './api.js?v=9.43.0';
 
 export const authService = {
   getUser() {

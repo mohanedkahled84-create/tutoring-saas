@@ -1,6 +1,6 @@
-import { request } from "../services/api.js?v=9.42.0";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.42.0";
-import { getIcon } from "../utils/icons.js?v=9.42.0";
+import { request } from "../services/api.js?v=9.43.0";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.43.0";
+import { getIcon } from "../utils/icons.js?v=9.43.0";
 
 /**
  * Centrly Center Owner Dashboard (DEV-79)

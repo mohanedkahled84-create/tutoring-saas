@@ -1,4 +1,4 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.42.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.43.0';
 export function renderPortalHomeSummary(data={},role='student',{showRank=true,showContact=false}={}){
  const prefs=data.preferences || {},summary=data.summary || {},sections=[];
  const card=(title,content)=>`<section style="border:1px solid var(--centrly-line,#e2e8f0);border-radius:16px;background:var(--centrly-surface,#fff);padding:18px;color:var(--centrly-ink,#0f172a);min-width:0;overflow-wrap:anywhere"><h3 style="font-size:1rem;margin:0 0 .6rem">${title}</h3>${content}</section>`;
