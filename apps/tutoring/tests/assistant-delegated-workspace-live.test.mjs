@@ -13,7 +13,7 @@ test('LIVE: actual teacher controllers with opaque assistant session enforce ten
  owner=ok(await db.auth.admin.createUser({email:`delegated-${randomUUID()}@isolated.invalid`,password:'isolated-fixture-password-2026',email_confirm:true})).user;
  ok(await db.from('users').upsert({id:owner.id,email:owner.email,role:'owner',tenant_id:tenant,full_name:'isolated teacher'}));
  const groups=ok(await db.from('groups').insert([{tenant_id:tenant,name:'allowed'},{tenant_id:tenant,name:'unassigned'},{tenant_id:foreign,name:'foreign'}]).select());
- const students=ok(await db.from('students').insert(groups.map((g,i)=>({tenant_id:g.tenant_id,group_id:g.id,name:`isolated student ${i}`,parent_phone:'201012345678',student_phone:'201011111111',portal_password:'private-student-password'}))).select());
+ const students=ok(await db.from('students').insert(groups.map((g,i)=>({tenant_id:g.tenant_id,group_id:g.id,name:`isolated student ${i}`,parent_phone:'201012345678',student_phone:i===1?'201011111112':'201011111111',portal_password:'private-student-password'}))).select());
  const shared=ok(await db.from('students').insert({tenant_id:tenant,group_id:groups[1].id,name:'shared student with hidden primary group',parent_phone:'201012345678'}).select().single());
  ok(await db.from('group_students').insert({tenant_id:tenant,group_id:groups[0].id,student_id:shared.id}));
  const staff=ok(await db.from('assistants').insert({tenant_id:tenant,name:'isolated assistant',phone:'201055555555',status:'active'}).select().single());

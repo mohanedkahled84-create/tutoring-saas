@@ -9,7 +9,7 @@ test('LIVE: support requests belong to their teacher, admins can reply, retries 
  const {serviceClient:db,anonClient}=createIsolatedSupabaseClients(),tenants=[randomUUID(),randomUUID()],users=[],tokens=[];let server;
  const ok=r=>{assert.equal(r.error,null,r.error?.message);return r.data;};
  t.after(async()=>{if(server){server.closeAllConnections();await new Promise(r=>server.close(r));}for(const tenant of tenants)ok(await db.from('tenants').delete().eq('id',tenant));for(const user of users)ok(await db.auth.admin.deleteUser(user.id));});
- ok(await db.from('tenants').insert(tenants.map(id=>({id,name:'isolated support fixture'}))));
+ ok(await db.from('tenants').insert(tenants.map(id=>({id,name:'isolated support fixture',subscription_status:'active',subscription_tier:'starter'}))));
  for(let i=0;i<3;i++){
   const email=`support-${randomUUID()}@isolated.invalid`,password='isolated-fixture-password-2026';
   const user=ok(await db.auth.admin.createUser({email,password,email_confirm:true})).user;users.push(user);

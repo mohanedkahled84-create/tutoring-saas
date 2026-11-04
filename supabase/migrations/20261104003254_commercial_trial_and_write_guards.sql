@@ -27,6 +27,8 @@ declare row_data jsonb;tenant uuid;lim jsonb;v_mode text;
 begin
  row_data:=case when tg_op='DELETE' then to_jsonb(old) else to_jsonb(new) end;
  tenant:=nullif(row_data->>'tenant_id','')::uuid;
+ -- ON DELETE CASCADE runs after the parent row is no longer visible.
+ if tg_op='DELETE' and not exists(select 1 from public.tenants where id=tenant) then return old;end if;
  if tenant is not null and exists(select 1 from public.commercial_subscriptions where tenant_id=tenant) then
   -- Owner-confirmed account deletion has its own drain-and-cleanup workflow.
   if exists(select 1 from public.tenants where id=tenant and deleted_at is not null) then

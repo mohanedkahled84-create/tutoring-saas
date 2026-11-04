@@ -126,6 +126,14 @@ begin
  if(r->>'allowed')::boolean then raise exception 'GLOBAL_BUDGET_EXCEEDED';end if;
  if r->>'next_at' is null then raise exception 'NO_CAPACITY_ESTIMATE';end if;
 end$$;
+-- Parent deletion must not be blocked by a child trigger looking up a vanished tenant.
+do $$declare tenant uuid:=gen_random_uuid();begin
+ insert into public.tenants(id,name) values(tenant,'isolated cascade regression');
+ insert into public.students(tenant_id,name,student_code,parent_phone) values(tenant,'fixture','cascade-fixture','01099999444');
+ delete from public.tenants where id=tenant;
+ if exists(select 1 from public.students where tenant_id=tenant) then raise exception 'CASCADE_INCOMPLETE';end if;
+end$$;
+
 -- Exercise actual authenticated SQL privileges, rather than only calling as postgres.
 do $$declare tenant uuid:=gen_random_uuid();owner_id uuid:=gen_random_uuid();begin
  insert into public.tenants(id,name) values(tenant,'commercial RLS fixture');

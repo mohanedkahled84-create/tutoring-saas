@@ -27,7 +27,7 @@ test('LIVE: owner export, fresh OTP deletion, old-session lockout and actual iso
  const denied=await fetch(root+'/students',{headers:{Authorization:'Bearer '+jwt}});assert.notEqual(denied.status,200);
  const direct=await anonClient.from('students').select('id').eq('tenant_id',tenant);assert.ok(direct.error || direct.data.length===0);
  const status=await request('/status',{receipt_token:receipt},false);assert.equal(status.status,200);assert.equal((await status.json()).status,'processing');
- ok(await db.from('account_deletion_jobs').update({execute_after:new Date(Date.now()-1000).toISOString()}).eq('id',intent.id));let cleanupErrors=0;await createAccountDeletionWorker(db,()=>cleanupErrors++).tick();assert.equal(cleanupErrors,0);
+ ok(await db.from('account_deletion_jobs').update({execute_after:new Date(Date.now()-1000).toISOString()}).eq('id',intent.id));let cleanupErrors=0;const worker=createAccountDeletionWorker(db,()=>cleanupErrors++);for(let batch=0;batch<20;batch++){await worker.tick();const state=ok(await db.from('account_deletion_jobs').select('state').eq('id',intent.id).single());if(state.state==='done')break;}assert.equal(cleanupErrors,0);
  assert.equal(ok(await db.from('tenants').select('id').eq('id',tenant)).length,0);assert.equal(ok(await db.from('tenants').select('id').eq('id',otherTenant)).length,1);
  assert.equal(ok(await db.storage.from('homework-private').list(tenant)).length,0);assert.equal(ok(await db.storage.from('homework-private').list(otherTenant)).length,1);
  assert.ok((await db.auth.admin.getUserById(owner.id)).error);assert.equal((await (await request('/status',{receipt_token:receipt},false)).json()).status,'done');
