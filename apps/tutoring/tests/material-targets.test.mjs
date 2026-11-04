@@ -18,8 +18,8 @@ test('Group picker makes all-future-groups explicit, escapes names and shares fi
  const groups=[{id:a,name:'<img src=x onerror=alert(1)>'},{id:b,name:'مجموعة الثلاثاء'}];
  const markup=renderMaterialGroupPicker('fixturePicker',groups,[a,b]);
  assert.ok(!markup.includes('<img src=x'));assert.ok(markup.includes('&lt;img'));
- assert.ok(markup.includes('min-height:44px'));assert.ok(markup.includes('aria-live="polite"'));
- assert.ok(markup.includes('المجموعات المضافة لاحقًا'));
+ assert.ok(markup.includes('material-group-picker')); assert.ok(markup.includes('aria-live="polite"'));
+ assert.ok(markup.includes('المضافة لاحقًا'));
  assert.equal(materialInGroup({group_ids:[a,b],group_id:a},b),true);
  assert.equal(materialInGroup({group_ids:[a,b],group_id:a},c),false);
  assert.equal(materialGroupLabel({group_ids:[b]},groups),'مجموعة الثلاثاء');

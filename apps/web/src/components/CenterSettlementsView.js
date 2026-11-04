@@ -1,5 +1,5 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.41.0";
-import { getIcon } from "../utils/icons.js?v=9.41.0";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.42.0";
+import { getIcon } from "../utils/icons.js?v=9.42.0";
 
 /**
  * Centrly Teacher Settlements & Financials Component (Notion DEV-72)

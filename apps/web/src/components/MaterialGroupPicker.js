@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.41.0';
-import {request} from '../services/api.js?v=9.41.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.42.0';
+import {request} from '../services/api.js?v=9.42.0';
 
 export const materialTargets = row => Array.isArray(row.group_ids) ? row.group_ids : row.group_id ? [row.group_id] : null;
 export const materialInGroup = (row,id) => materialTargets(row)===null || materialTargets(row).includes(id);
@@ -12,14 +12,19 @@ export function renderMaterialGroupPicker(prefix,groups=[],selected=null) {
   const restricted=typeof window!=='undefined' && window.centrlyApp?.delegation && !window.centrlyApp.delegation.all_groups;
   if(restricted && selected===null)selected=groups.map(g=>g.id);
   const all=selected===null,ids=new Set(selected || []);
-  return `<fieldset id="${prefix}" style="border:1px solid var(--centrly-border,#dce3ec);border-radius:12px;padding:.75rem;min-width:0">
-    <legend style="font-weight:800;padding:0 .3rem">المجموعات المستهدفة</legend>
-    <label style="display:${restricted?'none':'flex'};align-items:center;gap:.6rem;min-height:44px"><input type="checkbox" data-target-all ${all?'checked':''} ${restricted?'disabled':''} onchange="window.centrlyApp.updateMaterialGroupPicker('${prefix}')">كل مجموعات السنة الحالية، بما فيها المجموعات المضافة لاحقًا</label>
-    <label style="display:block;font-size:.85rem;margin-top:.35rem" for="${prefix}Search">ابحث عن مجموعة</label>
-    <input id="${prefix}Search" type="search" class="form-input" style="min-height:44px;width:100%;margin:.35rem 0" placeholder="اسم المجموعة" oninput="window.centrlyApp.updateMaterialGroupPicker('${prefix}')">
-    <div style="max-height:220px;overflow:auto;overscroll-behavior:contain" data-target-list>
-      ${groups.map(g=>`<label data-target-row style="display:flex;align-items:center;gap:.6rem;min-height:44px;overflow-wrap:anywhere"><input type="checkbox" data-target-group value="${e(g.id)}" ${ids.has(g.id)?'checked':''} ${all?'disabled':''} onchange="window.centrlyApp.updateMaterialGroupPicker('${prefix}')"><span>${e(g.name)}</span></label>`).join('') || '<p>أضف مجموعة من صفحة مجاميعي الدراسية أولًا.</p>'}
-    </div><p data-target-summary aria-live="polite" style="font-size:.85rem;margin:.5rem 0 0;color:var(--centrly-text)">${all?'المحتوى متاح لكل مجموعاتك':`تم اختيار ${ids.size} مجموعة`}</p>
+  return `<fieldset id="${prefix}" class="material-group-picker">
+    <legend>المجموعات المستهدفة</legend>
+    <details onkeydown="if(event.key==='Escape'){this.open=false;this.querySelector('summary').focus()}">
+      <summary><span data-target-summary aria-live="polite">${all?'كل المجموعات':`تم اختيار ${ids.size} مجموعة`}</span><span aria-hidden="true">⌄</span></summary>
+      <div class="material-group-panel">
+        <label for="${prefix}Search">ابحث عن مجموعة</label>
+        <input id="${prefix}Search" type="search" class="form-input" placeholder="اسم المجموعة" oninput="window.centrlyApp.updateMaterialGroupPicker('${prefix}')">
+        <div class="material-group-options" data-target-list>
+        ${groups.map(g=>`<label data-target-row><input type="checkbox" data-target-group value="${e(g.id)}" ${ids.has(g.id)?'checked':''} onchange="window.centrlyApp.updateMaterialGroupPicker('${prefix}',this)"><span>${e(g.name)}</span></label>`).join('') || '<p>أضف مجموعة من صفحة مجاميعي الدراسية أولًا.</p>'}
+        <p data-target-empty hidden>مفيش مجموعات مطابقة للبحث.</p></div>
+        <label class="material-group-all" ${restricted?'hidden':''}><input type="checkbox" data-target-all ${all?'checked':''} ${restricted?'disabled':''} onchange="window.centrlyApp.updateMaterialGroupPicker('${prefix}',this)"><span>كل المجموعات<small>يشمل مجموعات السنة الحالية والمضافة لاحقًا</small></span></label>
+      </div>
+    </details>
   </fieldset>`;
 }
 
@@ -72,13 +77,19 @@ export function registerMaterialGroupPicker(app) {
     try{await request('/materials/'+encodeURIComponent(saved.id),{method:'PATCH',body:target});this._groupAssignmentMaterial=null;this.closeModal();this.showToast('تم إسناد المحتوى للمجموعات مع حفظ التسليمات السابقة','success');await this.loadRouteData(this.currentRoute==='homework'?'homework':'materials');}
     catch(error){this.showToast(error.message || 'تعذر حفظ المجموعات','error');if(button?.isConnected)button.disabled=false;}
   };
-  app.updateMaterialGroupPicker=prefix=>{
+  app.updateMaterialGroupPicker=(prefix,changed)=>{
     const root=document.getElementById(prefix);if(!root)return;
-    const all=root.querySelector('[data-target-all]').checked,search=root.querySelector('input[type=search]').value.trim().toLocaleLowerCase('ar');
+    const allControl=root.querySelector('[data-target-all]');
+    if(changed?.matches('[data-target-group]'))allControl.checked=false;
+    if(changed===allControl && allControl.checked)for(const input of root.querySelectorAll('[data-target-group]'))input.checked=false;
+    const all=allControl.checked,search=root.querySelector('input[type=search]').value.trim().toLocaleLowerCase('ar');
+    let visible=0;
     for(const row of root.querySelectorAll('[data-target-row]')){
-      row.querySelector('input').disabled=all;
-      row.style.display=row.textContent.toLocaleLowerCase('ar').includes(search)?'flex':'none';
+      row.hidden=!row.textContent.toLocaleLowerCase('ar').includes(search);
+      if(!row.hidden)visible++;
     }
-    root.querySelector('[data-target-summary]').textContent=all?'المحتوى متاح لكل مجموعاتك':`تم اختيار ${root.querySelectorAll('[data-target-group]:checked').length} مجموعة`;
+    root.querySelector('[data-target-empty]').hidden=visible>0;
+    const chosen=[...root.querySelectorAll('[data-target-group]:checked')];
+    root.querySelector('[data-target-summary]').textContent=all?'كل المجموعات':chosen.length?chosen.length===1?chosen[0].closest('label').textContent.trim():`تم اختيار ${chosen.length} مجموعات`:'اختار المجموعات';
   };
 }
