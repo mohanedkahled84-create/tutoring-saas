@@ -1,5 +1,5 @@
-import {renderPublicPricing,hydratePublicPricing} from './PublicPlans.js?v=9.42.0';
-import {trackProductEvent} from '../services/productFunnel.js?v=9.42.0';
+import {renderPublicPricing,hydratePublicPricing} from './PublicPlans.js?v=9.43.0';
+import {trackProductEvent} from '../services/productFunnel.js?v=9.43.0';
 /**
  * Centrly SaaS Official Landing Page Component
  * Strictly adhering to official Brand Identity:
@@ -12,7 +12,7 @@ import {trackProductEvent} from '../services/productFunnel.js?v=9.42.0';
  * - STRICTLY ZERO EMOJIS across the entire page (clean vector SVGs only)
  */
 
-import { CENTRLY_LOGO_BASE64 } from '../utils/logoBase64.js?v=9.42.0';
+import { CENTRLY_LOGO_BASE64 } from '../utils/logoBase64.js?v=9.43.0';
 
 export function renderLandingView() {
   return `
@@ -713,7 +713,7 @@ export function renderLandingView() {
 export function registerLandingActions(app) {
   app.loadProductWalkthrough=async function(){
     const target=document.getElementById('product-walkthrough');if(!target)return;
-    try{const module=await import('./ProductWalkthrough.js?v=9.42.0');if(!target.isConnected)return;module.registerWalkthroughActions(this);target.innerHTML=module.renderProductWalkthrough(this.landingDemoState);}
+    try{const module=await import('./ProductWalkthrough.js?v=9.43.0');if(!target.isConnected)return;module.registerWalkthroughActions(this);target.innerHTML=module.renderProductWalkthrough(this.landingDemoState);}
     catch{if(target.isConnected)target.innerHTML='<p style="padding:1rem">تعذر تحميل المثال. <button class="btn btn-secondary" onclick="window.centrlyApp.loadProductWalkthrough()">إعادة المحاولة</button></p>';}
   };
   // Official Landing / Welcome Page

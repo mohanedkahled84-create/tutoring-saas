@@ -1,4 +1,4 @@
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.42.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.43.0';
 
 const days = [[6, 'السبت'], [0, 'الأحد'], [1, 'الاثنين'], [2, 'الثلاثاء'], [3, 'الأربعاء'], [4, 'الخميس'], [5, 'الجمعة']];
 const labels = { monthly: 'المرتب الشهري الثابت (ج.م)', per_session: 'أجر الحصة الواحدة (ج.م)', per_day: 'أجر اليوم الواحد (ج.م)' };

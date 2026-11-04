@@ -1,6 +1,6 @@
-import {teacherPageTitles} from '../utils/teacherPageTitles.js?v=9.42.0';
-import { getIcon } from '../utils/icons.js?v=9.42.0';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.42.0';
+import {teacherPageTitles} from '../utils/teacherPageTitles.js?v=9.43.0';
+import { getIcon } from '../utils/icons.js?v=9.43.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.43.0';
 
 export function renderSidebar(currentRoute = 'sessions', user = {}, securityState = { hasPin: false, isUnlocked: true }, accessState = null) {
   const isAdmin = user?.role === 'admin';

@@ -1,9 +1,10 @@
-import { request } from "../services/api.js?v=9.42.0";
-import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.42.0";
-import { renderStudentSearchBar } from "./StudentSearchBar.js?v=9.42.0";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.42.0";
-import { getIcon } from "../utils/icons.js?v=9.42.0";
-import {trackProductEvent} from '../services/productFunnel.js?v=9.42.0';
+import {studentDiscount} from '../utils/studentDiscount.js?v=9.43.0';
+import { request } from "../services/api.js?v=9.43.0";
+import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.43.0";
+import { renderStudentSearchBar } from "./StudentSearchBar.js?v=9.43.0";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.43.0";
+import { getIcon } from "../utils/icons.js?v=9.43.0";
+import {trackProductEvent} from '../services/productFunnel.js?v=9.43.0';
 
 /**
  * Centrly Students Directory Component (DEV-89)
@@ -282,9 +283,37 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                     </span>
                   </td>
                   <td data-label="الرسوم والخصم" class="student-fees">
-                    ${s.exempt ? '<span class="badge badge-success">منحة / معفي</span>' : (s.feeOverride || s.fee_override ? `<span class="badge badge-warning">خصم: ${escapeHtml(s.feeOverride || s.fee_override)} ج.م</span>` : '<span style="color:var(--centrly-text); font-size:0.85rem;">أساسي</span>')}
+                    ${studentFeeLabel(s,matchedGroup)}
                   </td>
-                  <td class="roster-details-cell"><details class="roster-details"><summary>التفاصيل والإجراءات</summary><div class="roster-detail-panel">                  <div data-label="هاتف الطالب" class="student-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; font-weight: 600;">
+                  <td class="roster-details-cell"><button type="button" class="btn btn-secondary roster-open-details" aria-haspopup="dialog" onclick="window.centrlyApp.openStudentDetails('${escapeHtml(s.id)}')">التفاصيل والإجراءات</button></td>
+                </tr>
+                `;
+              }).join('') : `
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
+                    لا يوجد طلاب مسجلون حتى الآن. اضغط على "طالب جديد" لبدء الإضافة.
+                  </td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+
+    </div>
+  `;
+}
+
+
+export function renderStudentDetails(s,groups=[],appObj={}) {
+ const studentPhone=s.studentPhone || s.student_phone,parentPhone=s.parentPhone || s.parent_phone;
+ const canonicalOrigin=typeof window!=='undefined'?window.location.origin:'https://centerly-eg.com';
+ const parentPortalUrl=canonicalOrigin+'/portal?role=parent',studentPortalUrl=canonicalOrigin+'/portal?role=student';
+ const portalPassword=s.portal_password || s.portalPassword;
+ const canViewPassword=!appObj.delegation || appObj.delegation.permissions?.['students.send']===true;
+ const group=groups.find(g=>g.id===(s.group_id || s.groupId));
+ return `<div class="student-detail-dialog" role="region" aria-label="تفاصيل الطالب"><div class="student-detail-identity"><strong>${escapeHtml(s.name || s.full_name || '')}</strong><span>${escapeHtml(s.code || s.student_code || '—')} · ${escapeHtml(s.groupName || s.group_name || group?.name || 'بدون مجموعة')}</span></div><div class="roster-detail-panel">                  <div data-label="هاتف الطالب" class="student-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; font-weight: 600;">
                     ${escapeHtml(studentPhone || '—')}
                   </div>
                   <div data-label="هاتف ولي الأمر" class="student-parent-phone" dir="ltr" style="text-align: right; font-family: monospace; font-size: 0.85rem; color: var(--centrly-text);">
@@ -294,7 +323,7 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                     <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 165px;">
                       <!-- Repeated sharing is manual; the password stays masked until requested. -->
                       <div style="display: flex; align-items: center; gap: 0.2rem;">
-                        <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; width: 35px;">الأمر:</span>
+                        <span style="font-size: 0.65rem; color: #64748b; font-weight: 700; width: 35px;">ولي الأمر:</span>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.copyParentLink('${escapeHtml(s.id)}')" title="نسخ رسالة واتساب كاملة لولي الأمر جاهزة للإرسال اليدوي" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem;">
                           ${getIcon('copy', 12)}
                           <span>نسخ</span>
@@ -372,27 +401,49 @@ export function renderStudentsView(students = [], groups = [], isLoading = false
                       </button>
                     </div>
                   </div>
-</div></details></td>
-                </tr>
-                `;
-              }).join('') : `
-                <tr>
-                  <td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--centrly-text);">
-                    لا يوجد طلاب مسجلون حتى الآن. اضغط على "طالب جديد" لبدء الإضافة.
-                  </td>
-                </tr>
-              `}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-
-    </div>
-  `;
+</div></div>`;
+}
+function discountField(prefix) {
+ return `<section class="student-discount-field"><label class="form-label" for="${prefix}Discount">خصم الحصة بالجنيه <small>(اختياري)</small></label><input id="${prefix}Discount" class="form-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" aria-describedby="${prefix}DiscountPreview" oninput="this.dataset.changed='true';window.centrlyApp.updateStudentDiscount('${prefix}')"><p id="${prefix}DiscountPreview" aria-live="polite"></p><small>يُحفظ كسعر حصة خاص للطالب، ويُستخدم في حساب رسومه. صفر يلغي الخصم.</small></section>`;
+}
+function studentFeeLabel(student,group) {
+ const fee=Object.hasOwn(student,'fee_override')?student.fee_override:student.feeOverride;
+ if(student.exempt)return '<span class="badge badge-success">معفي</span>';
+ if(fee==null)return '<span>السعر الأساسي</span>';
+ const discount=group?.price!=null?Number(group.price)-Number(fee):0;
+ return `<strong>${escapeHtml(fee)} ج.م / حصة</strong>${discount>0?`<small>خصم ${Math.round(discount*100)/100} ج.م</small>`:'<small>سعر خاص</small>'}`;
 }
 
 export function registerStudentsActions(app) {
+  app.openStudentDetails=function(id) {
+    const student=(this.students || []).find(s=>s.id===id);if(!student)return;
+    this.showModal('تفاصيل الطالب',renderStudentDetails(student,this.groups || [],this),'<button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>','720px');
+    const dialog=document.querySelector('#centrlyCustomModal .modal-dialog');if(dialog){dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-label','تفاصيل الطالب');const close=dialog.querySelector('button');close?.setAttribute('aria-label','إغلاق تفاصيل الطالب');close?.focus();}
+  };
+  app.studentDiscountPayload=function(prefix) {
+    const input=document.getElementById(prefix+'Discount');
+    if(prefix==='editStudent' && input?.dataset.changed!=='true')return {};
+    const group=(this.groups || []).find(g=>g.id===document.getElementById(prefix==='newStudent'?'newStudentGroup':'editStudentGroup')?.value);
+    if(!group && !Number(input?.value || 0))return {fee_override:null,exempt:false};
+    if(!group || group.price==null)throw Error('اختر مجموعة بسعر معروف قبل تطبيق الخصم');
+    const {fee_override,exempt}=studentDiscount(group.price,input?.value);
+    return {fee_override,exempt};
+  };
+  app.updateStudentDiscount=function(prefix) {
+    const input=document.getElementById(prefix+'Discount'),preview=document.getElementById(prefix+'DiscountPreview');if(!input || !preview)return;
+    const group=(this.groups || []).find(g=>g.id===document.getElementById(prefix==='newStudent'?'newStudentGroup':'editStudentGroup')?.value);
+    const original=prefix==='editStudent'?(this.students || []).find(s=>s.id===this._discountStudentId):null;
+    if(original && input.dataset.changed!=='true') {
+      const fee=original.exempt?0:Object.hasOwn(original,'fee_override')?original.fee_override:original.feeOverride;
+      input.value=fee!=null && group?.price!=null?Math.max(0,Math.round((Number(group.price)-Number(fee))*100)/100):'';
+      if(fee!=null){preview.textContent=`سعر الحصة المحفوظ: ${fee} ج.م. لن يتغير إلا عند تعديل الخصم.`;return;}
+    }
+    try {
+      if(!group || group.price==null){preview.textContent='اختر المجموعة لعرض سعر الحصة والخصم.';return;}
+      const result=studentDiscount(group.price,input.value);input.setCustomValidity('');
+      preview.textContent=`سعر الحصة ${Number(group.price)} − الخصم ${result.discount} = المطلوب ${result.fee} ج.م`;
+    }catch(error){input.setCustomValidity(error.message);preview.textContent=error.message;}
+  };
   const passwordFor = (owner, button) => {
     if(owner.delegation && owner.delegation.permissions?.['students.send'] !== true)return '';
     const id=button.closest('.student-password')?.dataset.studentId;
@@ -464,7 +515,7 @@ export function registerStudentsActions(app) {
               <span>إضافة مجموعة جديدة</span>
             </button>
           </div>
-          <select id="newStudentGroup" class="form-input" required onchange="window.centrlyApp.handleStudentModalGroupChange(this)">
+          <select id="newStudentGroup" class="form-input" required onchange="window.centrlyApp.handleStudentModalGroupChange(this);window.centrlyApp.updateStudentDiscount('newStudent')">
             ${groupOptions}
           </select>
           <div id="quickGroupCreatorSingleStudent" style="display: none; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem;">
@@ -509,6 +560,7 @@ export function registerStudentsActions(app) {
             </div>
           </div>
         </div>
+        ${discountField('newStudent')}
         <div id="addStudentFeedback" style="display: none; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem; line-height: 1.4;"></div>
       </form>
     `;
@@ -519,6 +571,7 @@ export function registerStudentsActions(app) {
       </button>
     `;
     this.showModal('إضافة طالب جديد', bodyHtml, footerHtml);
+    this.updateStudentDiscount('newStudent');
   }
 
   app.handleCreateStudent = async function(e) {
@@ -582,6 +635,7 @@ export function registerStudentsActions(app) {
       }
     }
 
+    let pricing;try{pricing=this.studentDiscountPayload('newStudent');}catch(error){this.showToast(error.message,'error');return;}
     saveBtn.disabled = true;
     saveBtn.textContent = 'جاري الإضافة...';
 
@@ -593,6 +647,7 @@ export function registerStudentsActions(app) {
           parent_phone: cleanParentPhone,
           student_phone: cleanStudentPhone,
           code: rawCode || undefined,
+          ...pricing,
         },
       });
 
@@ -714,6 +769,7 @@ export function registerStudentsActions(app) {
       if (selStudent) {
         selStudent.innerHTML = this.renderGroupOptionsForImport(newGroup.id);
         selStudent.value = newGroup.id;
+        this.updateStudentDiscount('newStudent');
       }
 
       this.toggleQuickAddGroupInSingleStudent(false);
@@ -769,11 +825,12 @@ export function registerStudentsActions(app) {
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">المجموعة الأساسية</label>
-          <select id="editStudentGroup" class="form-input">
+          <select id="editStudentGroup" class="form-input" onchange="window.centrlyApp.updateStudentDiscount('editStudent')">
             <option value="" ${!currentGroupId ? 'selected' : ''}>-- عام (بدون مجموعة محددة) --</option>
             ${groupOptions}
           </select>
         </div>
+        ${discountField('editStudent')}
         <div id="editStudentFeedback" style="display: none; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem; line-height: 1.4;"></div>
       </form>
     `;
@@ -785,7 +842,9 @@ export function registerStudentsActions(app) {
       </button>
     `;
 
+    this._discountStudentId=studentId;
     this.showModal(`تعديل بيانات الطالب: ${escapeHtml(currentName || student.name)}`, bodyHtml, footerHtml);
+    this.updateStudentDiscount('editStudent');
   }
 
   app.saveStudentEdit = async function(e, studentId) {
@@ -852,6 +911,7 @@ export function registerStudentsActions(app) {
       return;
     }
 
+    let pricing;try{pricing=this.studentDiscountPayload('editStudent');}catch(error){this.showToast(error.message,'error');return;}
     if (saveBtn) {
       saveBtn.disabled = true;
       saveBtn.textContent = 'جاري الحفظ...';
@@ -866,6 +926,7 @@ export function registerStudentsActions(app) {
           student_phone: cleanStudentPhone,
           group_id: targetGroupId,
           code,
+          ...pricing,
         },
       });
 
