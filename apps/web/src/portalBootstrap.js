@@ -12,7 +12,7 @@ async function start() {
   const parentModule=isParentEntry ? import('./parentPortal.js') : null;
   parentModule?.catch(()=>{}); // Show the normal retry UI if a module download fails.
   const mountParent = async error => (await (parentModule || import('./parentPortal.js'))).mountParentPortal(error);
-  const mountStudent = async () => (await import('./studentPortalEntry.js?v=9.38.0')).mountStudentPortal();
+  const mountStudent = async () => (await import('./studentPortalEntry.js?v=9.39.0')).mountStudentPortal();
   if(location.pathname==='/family'){await mountParent();return;}
   if(location.pathname==='/portal-entry' && new URLSearchParams(location.hash.slice(1)).has('family')){await mountParent();return;}
   // Consume cross-origin entry before downloading staff authentication and dashboards.
