@@ -15,7 +15,7 @@ function meter(label, used, limit, suffix = '') {
 }
 export function renderCommercialWallet(wallet) {
   if (!wallet) return '';
-  return `<details class="commercial-wallet"><summary><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 8V5H5a2 2 0 0 0 0 4h16v11H5a2 2 0 0 1-2-2V7"/><path d="M21 12h-5v5h5"/></svg><span>المحفظة</span><strong>${money(Number(wallet.paid_piasters)+Number(wallet.gift_piasters))}</strong></summary><div class="wallet-panel"><h2>محفظة الرسائل</h2><dl><div><dt>الرصيد المشحون</dt><dd>${money(wallet.paid_piasters)}</dd></div><div><dt>الهدية المتاحة</dt><dd>${money(wallet.gift_piasters)}</dd></div><div><dt>محجوز للإرسال</dt><dd>${money(wallet.held_piasters)}</dd></div></dl><p>الرسالة ${money(wallet.message_piasters)} لكل رقم مصري. فتح واتساب يدويًا لا يخصم رصيدًا. الهدية لا تترحل، والرصيد المشحون يظل محفوظًا.</p>${action('شحن المحفظة',"commercialAdd('wallet')",true)} ${action('الحركات وطلبات الشحن', 'commercialWalletHistory()')}</div></details>`;
+  return `<button type="button" class="btn btn-secondary commercial-wallet" onclick="window.centrlyApp.commercialOpenWallet()" aria-haspopup="dialog"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 8V5H5a2 2 0 0 0 0 4h16v11H5a2 2 0 0 1-2-2V7"/><path d="M21 12h-5v5h5"/></svg><span>المحفظة</span><strong>${money(Number(wallet.paid_piasters)+Number(wallet.gift_piasters))}</strong></button>`;
 }
 
 export function renderCommercialBillingView(data = {}) {
@@ -36,6 +36,12 @@ export function renderCommercialBillingView(data = {}) {
 export function registerCommercialBillingActions(app) {
   const actor = () => app.user?.id;
   const fail = error => app.showToast(error.message || 'تعذر إتمام الطلب', 'error');
+  app.commercialOpenWallet = function() {
+    if(this.delegation)return;
+    const wallet=this.announcementsData?.wallet;
+    if(!wallet)return;
+    this.showModal('محفظة الرسائل',`<div class="wallet-details"><h2>محفظة الرسائل</h2><dl><div><dt>الرصيد المشحون</dt><dd>${money(wallet.paid_piasters)}</dd></div><div><dt>الهدية المتاحة</dt><dd>${money(wallet.gift_piasters)}</dd></div><div><dt>محجوز للإرسال</dt><dd>${money(wallet.held_piasters)}</dd></div></dl><p>الرسالة ${money(wallet.message_piasters)} لكل رقم مصري. فتح واتساب يدويًا لا يخصم رصيدًا. الهدية لا تترحل، والرصيد المشحون يظل محفوظًا.</p>${action('شحن المحفظة',"commercialAdd('wallet')",true)} ${action('الحركات وطلبات الشحن', 'commercialWalletHistory()')}</div>`);
+  };
   app.commercialWalletHistory = async function() {
     if(this.delegation)return;
     const identity=actor();
