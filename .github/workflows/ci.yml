@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Isolated verification scope
+        type: choice
+        default: full
+        options:
+          - full
+          - release-journey
 
 # A superseded run must not keep consuming the shared test project's egress.
 concurrency:
@@ -75,7 +83,11 @@ jobs:
           NODE_ENV: test
         run: |
           set -o pipefail
-          npm test | tee /tmp/centrly-test-results.tap
+          if [ "${{ inputs.suite }}" = "release-journey" ]; then
+            node --test tests/release-journey-live.test.mjs | tee /tmp/centrly-test-results.tap
+          else
+            npm test | tee /tmp/centrly-test-results.tap
+          fi
           grep -Eq '^# skipped 0$' /tmp/centrly-test-results.tap
 
       - name: Verify No Raw SQL Interpolation
