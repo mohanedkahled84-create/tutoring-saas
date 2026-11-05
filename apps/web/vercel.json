@@ -8,6 +8,20 @@
   "outputDirectory": ".",
   "routes": [
     {
+      "src": "/portal/?$",
+      "has": [{ "type": "host", "value": "mr-omar.centerly-eg.com" }],
+      "missing": [
+        { "type": "query", "key": "role" },
+        { "type": "query", "key": "token" },
+        { "type": "query", "key": "s" },
+        { "type": "query", "key": "p" },
+        { "type": "query", "key": "portal" },
+        { "type": "query", "key": "view" }
+      ],
+      "status": 307,
+      "headers": { "Location": "/portal?role=parent", "Cache-Control": "no-store" }
+    },
+    {
       "src": "/(.*)",
       "has": [
         {
