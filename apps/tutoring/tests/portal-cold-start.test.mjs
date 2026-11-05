@@ -54,6 +54,7 @@ test('parent session restore keeps the explicit route and recovers if the sessio
       read: async () => null,
       load: async () => { throw Object.assign(new Error('changed'), { code: 'PORTAL_SESSION_CHANGED' }); },
     },
+    portalRequest: async () => { throw new Error("unexpected request"); },
     preparePortalDestination: async () => false,
   };
   const app = { getAppEl: () => root, renderPortalLogin: message => { app.message = message; } };
