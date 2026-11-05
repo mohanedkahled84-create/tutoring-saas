@@ -1,5 +1,5 @@
-import { getIcon } from '../utils/icons.js?v=9.43.0';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.43.0';
+import { getIcon } from '../utils/icons.js?v=9.44.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.44.0';
 
 export function renderNavbar(user, activeSessionSummary = null) {
   const isAdmin = user?.role === 'admin';

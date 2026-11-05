@@ -1,8 +1,8 @@
-import { assistantPay } from "../utils/assistantPay.js?v=9.43.0";
-import { request } from "../services/api.js?v=9.43.0";
-import { renderStudentSearchBar } from "./StudentSearchBar.js?v=9.43.0";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.43.0";
-import { getIcon } from "../utils/icons.js?v=9.43.0";
+import { assistantPay } from "../utils/assistantPay.js?v=9.44.0";
+import { request } from "../services/api.js?v=9.44.0";
+import { renderStudentSearchBar } from "./StudentSearchBar.js?v=9.44.0";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.44.0";
+import { getIcon } from "../utils/icons.js?v=9.44.0";
 
 /**
  * Centrly Teacher Reports & Monthly Performance View (DEV-89 & DEV-72)

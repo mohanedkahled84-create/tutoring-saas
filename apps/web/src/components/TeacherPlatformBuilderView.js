@@ -1,6 +1,6 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.43.0";
-import { getIcon } from "../utils/icons.js?v=9.43.0";
-import { request, API_BASE_URL } from "../services/api.js?v=9.43.0";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.44.0";
+import { getIcon } from "../utils/icons.js?v=9.44.0";
+import { request, API_BASE_URL } from "../services/api.js?v=9.44.0";
 
 /**
  * Centrly White-Label Platform Builder & Student Engagement Hub
