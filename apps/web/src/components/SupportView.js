@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.44.0';
-import {request} from '../services/api.js?v=9.44.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.45.0';
+import {request} from '../services/api.js?v=9.45.0';
 const states={open:'مفتوح',in_progress:'قيد المتابعة',waiting_user:'بانتظار ردك',resolved:'تم الحل'};
 const categories={account:'الحساب والدخول',attendance:'الحضور والحصص',homework:'الواجبات والمحتوى',messages:'الرسائل والإعلانات',subscription:'الاشتراك',other:'استفسار آخر'};
 const stamp=value=>new Date(value).toLocaleString('ar-EG',{timeZone:'Africa/Cairo',dateStyle:'medium',timeStyle:'short'});

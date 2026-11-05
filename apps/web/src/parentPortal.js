@@ -1,9 +1,9 @@
-import {renderParentPortalView, parentPortalSnapshot} from './components/ParentPortalView.js?v=9.44.0';
-import {renderParentPortalLogin, getParentBranding, saveParentBranding} from './components/ParentPortalLoginView.js?v=9.44.0';
-import {portalCache, portalRequest, adoptVerifiedPortalSession} from './utils/portalSession.js?v=9.44.0';
-import {preparePortalDestination} from './utils/portalDestination.js?v=9.44.0';
-import {normalizeDigits} from './utils/normalizeDigits.js?v=9.44.0';
-import {registerFamilyActions,savedFamilyToken,redeemFamilyEntry} from './parentFamily.js?v=9.44.0';
+import {renderParentPortalView, parentPortalSnapshot} from './components/ParentPortalView.js?v=9.45.0';
+import {renderParentPortalLogin, getParentBranding, saveParentBranding} from './components/ParentPortalLoginView.js?v=9.45.0';
+import {portalCache, portalRequest, adoptVerifiedPortalSession} from './utils/portalSession.js?v=9.45.0';
+import {preparePortalDestination} from './utils/portalDestination.js?v=9.45.0';
+import {normalizeDigits} from './utils/normalizeDigits.js?v=9.45.0';
+import {registerFamilyActions,savedFamilyToken,redeemFamilyEntry} from './parentFamily.js?v=9.45.0';
 function showPortalPending(app) { const root=app.getAppEl(); if(root) window.renderPortalOpening(root); }
 export function registerParentPortalActions(app) {
   app.setParentFamilyMode=function(value) {
@@ -22,8 +22,9 @@ export function registerParentPortalActions(app) {
         sessionStorage.setItem('centrly_portal_token', token);
         sessionStorage.setItem('centrly_portal_role', 'parent');
       }
-      if (window.history && window.history.replaceState && (window.location.pathname !== '/portal' || window.location.search || window.location.hash)) {
-        window.history.replaceState(null, '', window.location.pathname === '/portal-entry' ? '/portal-entry' : '/portal');
+      const entryPath = window.location.pathname === '/portal-entry' ? '/portal-entry' : '/portal?role=parent';
+      if (window.location.pathname + window.location.search + window.location.hash !== entryPath) {
+        window.history.replaceState(null, '', entryPath);
       }
     } catch (_) {}
 
@@ -66,8 +67,12 @@ export function registerParentPortalActions(app) {
       status(!!result.error);
       return !result.error;
     } catch (err) {
-      if (err?.code === 'PORTAL_CACHE_INVALIDATED') return false;
-      if (err?.code === 'PORTAL_SESSION_CHANGED') return false;
+      if (err?.code === 'PORTAL_CACHE_INVALIDATED' || err?.code === 'PORTAL_SESSION_CHANGED') {
+        if (this._parentPortalToken === token && this.getAppEl()?.querySelector('.portal-opening')) {
+          this.renderPortalLogin('تغيّرت جلسة المتابعة. سجّل الدخول مجددًا.');
+        }
+        return false;
+      }
       if (err?.status === 401 || err?.status === 403) {
         portalCache.clear('parent');
         try {
@@ -93,7 +98,7 @@ export function registerParentPortalActions(app) {
     this._parentPortalRefreshing = true;
     try {
       if(savedFamilyToken())return await this.loadFamilyPortal({force:true});
-      if (!this._parentPortalToken) { window.location.reload(); return false; }
+      if (!this._parentPortalToken) { this.renderPortalLogin(); return false; }
       return await this.loadParentPortal(this._parentPortalToken, {force:true});
     } finally {
       this._parentPortalRefreshing = false;
