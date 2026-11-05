@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.44.0';
-import {request} from '../services/api.js?v=9.44.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.45.0';
+import {request} from '../services/api.js?v=9.45.0';
 const states={submitted:'طلب جديد',reviewing:'قيد المراجعة',meta_pending:'بانتظار Meta',available:'متاح',rejected:'يحتاج تعديلًا'};
 const typeLabels={text:'نص قصير للحدث',date:'تاريخ',datetime:'موعد وتوقيت',choice:'اختيارات محددة',teacher:'اسم المدرس من الحساب',group:'المجموعة من الحساب',portal:'رابط البوابة من الحساب',contact:'رقم المدرس من الحساب'};
 const button=(text,call)=>`<button type="button" class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.${call}">${text}</button>`;
