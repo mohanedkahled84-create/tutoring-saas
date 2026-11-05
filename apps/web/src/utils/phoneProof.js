@@ -1,6 +1,6 @@
 export async function preparePhoneProof(requestChallenge,isCurrent=()=>true){
  const challenge=await requestChallenge();if(!isCurrent())throw new Error('تم إغلاق تأكيد الرقم');
- const {AkedlyShield,getTurnstileToken}=await import('./phoneShieldBundle.js?v=9.43.0');
+ const {AkedlyShield,getTurnstileToken}=await import('./phoneShieldBundle.js?v=9.44.0');
  let nonce;
  if(challenge.challengeRequired){
   const solver=new AkedlyShield({useWorker:true});let timer;

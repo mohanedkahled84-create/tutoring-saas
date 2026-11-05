@@ -1,4 +1,4 @@
-import { getIcon } from "../utils/icons.js?v=9.43.0";
+import { getIcon } from "../utils/icons.js?v=9.44.0";
 
 /**
  * Centrly Interactive Coachmark Tour (v6.0.0)

@@ -13,10 +13,17 @@ test('cold HTML installs the opening renderer before the independent portal entr
  assert.doesNotMatch(scripts[renderer].attrs,/async|defer|module/);
  assert.match(scripts[entry].attrs,/type="module"/);
  assert.ok(!scripts.some(s=>/\/app\.js/.test(s.src)),'public entries must not eagerly initialize the teacher SPA');
- const root={innerHTML:''},window={};
- vm.runInNewContext(opening,{window,document:{getElementById:id=>id==='app'?root:null}});
+ let timeout;
+ const root={innerHTML:'',querySelector(selector){return selector==='button'?{addEventListener(){}}:this.innerHTML.includes('aria-busy="true"');}},window={};
+ vm.runInNewContext(opening,{window,setTimeout:fn=>{timeout=fn;},clearTimeout(){},document:{getElementById:id=>id==='app'?root:null}});
  assert.equal(typeof window.renderPortalOpening,'function');assert.match(root.innerHTML,/role="status"/);assert.match(root.innerHTML,/prefers-reduced-motion/);
  root.innerHTML='';window.renderPortalOpening(root);assert.match(root.innerHTML,/portal-opening-mark/);
+ assert.match(root.innerHTML,/src="\/favicon-192x192\.png"/);
+ timeout();
+ assert.match(root.innerHTML,/إعادة المحاولة/);
+ root.innerHTML='<form>login</form>';
+ timeout();
+ assert.equal(root.innerHTML,'<form>login</form>');
  assert.doesNotThrow(()=>window.renderPortalOpening(null));
 });
 

@@ -1,7 +1,7 @@
-import {request} from '../services/api.js?v=9.43.0';
-import {authService} from '../services/auth.js?v=9.43.0';
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.43.0';
-import {mountPhoneVerification} from './PhoneVerification.js?v=9.43.0';
+import {request} from '../services/api.js?v=9.44.0';
+import {authService} from '../services/auth.js?v=9.44.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.44.0';
+import {mountPhoneVerification} from './PhoneVerification.js?v=9.44.0';
 const receiptToken=()=>btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const identity=app=>app.user?.id+':'+app.user?.tenant_id;
 export function renderAccountDeletion(user={}){
