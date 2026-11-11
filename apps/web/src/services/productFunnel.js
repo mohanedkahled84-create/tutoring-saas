@@ -1,5 +1,5 @@
-import {API_BASE_URL} from './api.js?v=9.44.0';
-import {authService} from './auth.js?v=9.44.0';
+import {API_BASE_URL} from './api.js?v=9.45.0';
+import {authService} from './auth.js?v=9.45.0';
 
 const paths={landing_view:'/',signup_open:'/signup',signup_complete:'/signup',group_created:'/workspace',student_added:'/workspace',session_started:'/workspace'};
 export function funnelPayload(event,session){

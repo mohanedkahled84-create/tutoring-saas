@@ -1,13 +1,13 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.44.0";
-import { getIcon } from "../utils/icons.js?v=9.44.0";
-import { request } from "../services/api.js?v=9.44.0";
-import { renderAssistantPayFields, updateAssistantPayFields, readAssistantPayFields } from "./AssistantPayFields.js?v=9.44.0";
-import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js?v=9.44.0";
-import { registerAssistantActivityActions } from "./AssistantActivityView.js?v=9.44.0";
-import { assistantInvitationStatus } from "../utils/assistantInvitation.js?v=9.44.0";
-import {registerFollowupOwnerActions} from './FollowupReports.js?v=9.44.0';
-import {registerCollectionOwnerActions} from "./CollectionLedger.js?v=9.44.0";
-import { assistantPay } from "../utils/assistantPay.js?v=9.44.0";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.45.0";
+import { getIcon } from "../utils/icons.js?v=9.45.0";
+import { request } from "../services/api.js?v=9.45.0";
+import { renderAssistantPayFields, updateAssistantPayFields, readAssistantPayFields } from "./AssistantPayFields.js?v=9.45.0";
+import { renderAssistantAccessFields, readAssistantAccessFields } from "./AssistantAccessFields.js?v=9.45.0";
+import { registerAssistantActivityActions } from "./AssistantActivityView.js?v=9.45.0";
+import { assistantInvitationStatus } from "../utils/assistantInvitation.js?v=9.45.0";
+import {registerFollowupOwnerActions} from './FollowupReports.js?v=9.45.0';
+import {registerCollectionOwnerActions} from "./CollectionLedger.js?v=9.45.0";
+import { assistantPay } from "../utils/assistantPay.js?v=9.45.0";
 
 /**
  * Centrly Teacher Assistants Management Component

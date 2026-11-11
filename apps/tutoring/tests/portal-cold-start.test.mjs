@@ -38,3 +38,29 @@ test('cold family route mounts the family-aware parent entry without teacher or 
  await vm.runInNewContext(executable,context);
  assert.deepEqual(mounts,['parent']);assert.equal(loads.length,1);assert.match(loads[0],/\/parentPortal\.js/);
 });
+
+test('parent session restore keeps the explicit route and recovers if the session changes while opening', async () => {
+  const source = await readFile(new URL('../../web/src/parentPortal.js', import.meta.url), 'utf8');
+  const executable = source.replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
+  const location = { pathname: '/portal', search: '?role=parent', hash: '' };
+  const replacements = [];
+  const history = { replaceState: (_state, _title, path) => replacements.push(path) };
+  const root = { querySelector: selector => selector === '.portal-opening' };
+  const storage = { setItem() {} };
+  const context = {
+    window: { location, history, renderPortalOpening() {} },
+    localStorage: storage, sessionStorage: storage,
+    portalCache: {
+      read: async () => null,
+      load: async () => { throw Object.assign(new Error('changed'), { code: 'PORTAL_SESSION_CHANGED' }); },
+    },
+    portalRequest: async () => { throw new Error("unexpected request"); },
+    preparePortalDestination: async () => false,
+  };
+  const app = { getAppEl: () => root, renderPortalLogin: message => { app.message = message; } };
+  vm.runInNewContext(executable, context);
+  context.registerParentPortalActions(app);
+  assert.equal(await app.loadParentPortal('fixture-token'), false);
+  assert.deepEqual(replacements, []);
+  assert.match(app.message, /سجّل الدخول مجددًا/);
+});
