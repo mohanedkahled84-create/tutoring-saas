@@ -1,5 +1,5 @@
-import { request } from '../services/api.js?v=9.45.0';
-import { escapeHtml as e } from '../utils/escapeHtml.js?v=9.45.0';
+import { request } from '../services/api.js?v=9.46.0';
+import { escapeHtml as e } from '../utils/escapeHtml.js?v=9.46.0';
 
 const money = p => (Number(p || 0) / 100).toLocaleString('ar-EG', { maximumFractionDigits: 2 }) + ' ج.م';
 const number = n => Number(n || 0).toLocaleString('ar-EG',Number(n)>0 && Number(n)<1?{maximumSignificantDigits:3}:{maximumFractionDigits:2});

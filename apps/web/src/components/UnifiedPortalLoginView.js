@@ -1,14 +1,14 @@
-import { request, API_BASE_URL } from '../services/api.js?v=9.45.0';
-import { registerParentPortalActions } from '../parentPortal.js?v=9.45.0';
-import {clearFamilyForOtherLogin} from '../utils/portalSession.js?v=9.45.0';
-import { renderParentPortalLogin, getParentBranding, saveParentBranding } from './ParentPortalLoginView.js?v=9.45.0';
-import { renderStudentPortalView } from './StudentPortalView.js?v=9.45.0';
-import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js?v=9.45.0';
-import { getIcon } from '../utils/icons.js?v=9.45.0';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.45.0';
-import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.45.0';
-import { preparePortalDestination } from '../utils/portalDestination.js?v=9.45.0';
-import { portalCache, portalRequest } from '../utils/portalSession.js?v=9.45.0';
+import { request, API_BASE_URL } from '../services/api.js?v=9.46.0';
+import { registerParentPortalActions } from '../parentPortal.js?v=9.46.0';
+import {clearFamilyForOtherLogin} from '../utils/portalSession.js?v=9.46.0';
+import { renderParentPortalLogin, getParentBranding, saveParentBranding } from './ParentPortalLoginView.js?v=9.46.0';
+import { renderStudentPortalView } from './StudentPortalView.js?v=9.46.0';
+import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js?v=9.46.0';
+import { getIcon } from '../utils/icons.js?v=9.46.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.46.0';
+import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.46.0';
+import { preparePortalDestination } from '../utils/portalDestination.js?v=9.46.0';
+import { portalCache, portalRequest } from '../utils/portalSession.js?v=9.46.0';
 
 function showPortalPending(app) {
   const root = app.getAppEl();
@@ -248,7 +248,7 @@ export function registerUnifiedPortalActions(app) {
         sessionStorage.setItem('centrly_portal_role', 'student');
       }
       if (window.history && window.history.replaceState && (window.location.pathname !== '/portal' || window.location.search || window.location.hash)) {
-        window.history.replaceState(null, '', window.location.pathname === '/portal-entry' ? '/portal-entry' : '/portal');
+        window.history.replaceState(null, '', window.location.pathname === '/portal-entry' ? '/portal-entry' : '/portal?role=student');
       }
     } catch (_) {}
 
@@ -332,7 +332,7 @@ export function registerUnifiedPortalActions(app) {
       return !result.error;
     } catch (err) {
       if (err?.code === 'PORTAL_CACHE_INVALIDATED') return false;
-      if (err?.code === 'PORTAL_SESSION_CHANGED') { showPortalPending(this); window.location.reload(); return false; }
+      if (err?.code === 'PORTAL_SESSION_CHANGED') { this.renderPortalLogin('تغيّرت جلسة المتابعة. سجّل الدخول مجددًا.'); return false; }
       const msg = err?.message || '';
       const isExpired = (err?.status === 401 || err?.status === 403 || msg.includes('غير صالح') || msg.includes('منتهي') || msg.includes('UNAUTHORIZED')) &&
                         !msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('Failed to execute');
@@ -496,7 +496,7 @@ export function registerUnifiedPortalActions(app) {
 
         try {
           if (window.history && window.history.replaceState) {
-            window.history.replaceState(null, '', '/portal');
+            window.history.replaceState(null, '', '/portal?role=' + targetRole);
           }
         } catch (_) {}
 
