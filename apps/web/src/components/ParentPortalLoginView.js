@@ -1,4 +1,4 @@
-import {escapeHtml as esc} from '../utils/escapeHtml.js?v=9.45.0';
+import {escapeHtml as esc} from '../utils/escapeHtml.js?v=9.46.0';
 const BRAND_KEY='centrly_parent_public_brand_v1';
 export function getParentBranding() {
   try { const record=JSON.parse(localStorage.getItem(BRAND_KEY));return record?.origin===location.origin ? record.presentation : null; } catch { return null; }

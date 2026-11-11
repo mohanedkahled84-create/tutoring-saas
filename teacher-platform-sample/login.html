@@ -455,7 +455,8 @@
         const savedCode = localStorage.getItem('portal_student_code');
         const token = localStorage.getItem('centrly_portal_token');
 
-        if (savedStudent || savedCode) {
+        const role = localStorage.getItem('centrly_portal_role');
+        if (!urlParams.has('reauth') && token && (!role || role === 'student') && (savedStudent || savedCode)) {
           let code = savedCode;
           if (!code && savedStudent) {
             try {

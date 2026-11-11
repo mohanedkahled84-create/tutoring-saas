@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.45.0';
-import {request as ownerRequest} from '../services/api.js?v=9.45.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.46.0';
+import {request as ownerRequest} from '../services/api.js?v=9.46.0';
 
 // Prepared text is transient: no local storage, delivery state or provider call.
 export function mountFollowupReports(host,{groups=[],allowSend=false,request,onFailure=()=>{},initial={}}){

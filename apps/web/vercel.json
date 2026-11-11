@@ -19,7 +19,7 @@
         { "type": "query", "key": "view" }
       ],
       "status": 307,
-      "headers": { "Location": "/portal?role=parent", "Cache-Control": "no-store" }
+      "headers": { "Location": "/login", "Cache-Control": "no-store" }
     },
     {
       "src": "/(.*)",
@@ -151,6 +151,10 @@
       "continue": true
     },
     { "src": "/assistant(?:/.*)?", "dest": "/assistant.html" },
+    { "src": "/dashboard/?$", "has": [{ "type": "host", "value": "mr-omar.centerly-eg.com" }], "dest": "/teacher-platform-sample/index.html" },
+    { "src": "/login/?$", "has": [{ "type": "host", "value": "mr-omar.centerly-eg.com" }], "dest": "/teacher-platform-sample/login.html" },
+    { "src": "/teacher_cutout.png", "dest": "/teacher-platform-sample/teacher_cutout.png" },
+    { "src": "/apps/web/src/(.*)", "dest": "/src/$1" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
