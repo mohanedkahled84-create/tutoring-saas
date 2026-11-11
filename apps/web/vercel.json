@@ -19,7 +19,7 @@
         { "type": "query", "key": "view" }
       ],
       "status": 307,
-      "headers": { "Location": "/portal?role=parent", "Cache-Control": "no-store" }
+      "headers": { "Location": "/login", "Cache-Control": "no-store" }
     },
     {
       "src": "/(.*)",

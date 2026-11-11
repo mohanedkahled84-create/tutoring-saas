@@ -3619,7 +3619,7 @@
           sessionStorage.removeItem('centrly_portal_role');
         }
         document.body.replaceChildren();
-        window.location.replace(error.code === 'PORTAL_SESSION_CHANGED' ? '/dashboard' : '/login');
+        window.location.replace('/login');
         return;
       }
       let notice = document.getElementById('portalLoadError');
