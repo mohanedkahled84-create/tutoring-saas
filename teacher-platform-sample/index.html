@@ -3619,7 +3619,7 @@
           sessionStorage.removeItem('centrly_portal_role');
         }
         document.body.replaceChildren();
-        window.location.replace('/login');
+        window.location.replace('/login?reauth=1');
         return;
       }
       let notice = document.getElementById('portalLoadError');
