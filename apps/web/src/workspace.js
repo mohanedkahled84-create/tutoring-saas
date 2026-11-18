@@ -1,7 +1,7 @@
 import { registerCameraScannerActions } from './components/CameraScannerModal.js?v=9.46.0';
 import {registerClassroomLifecycle} from './components/ClassroomLifecycle.js?v=9.46.0';
 import {registerAcademicYears} from './components/AcademicYears.js?v=9.46.0';
-import {registerStartupChecklist} from './components/StartupChecklist.js?v=9.46.0';
+import {registerStartupChecklist} from './components/StartupChecklist.js?v=9.92.0';
 import {renderAnnouncementAdminView,registerAnnouncementAdminActions} from './components/AnnouncementAdminView.js?v=9.46.0';
 export {renderAnnouncementAdminView};
 import {renderAnnouncementsView,registerAnnouncementsActions} from './components/AnnouncementsView.js?v=9.46.0';
@@ -11,7 +11,7 @@ export {renderSupportView};
 import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=9.46.0';
 import { registerStudentImportActions } from './components/StudentImportModal.js?v=9.46.0';
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=9.46.0';
-import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=9.46.0';
+import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=9.92.0';
 import { renderTeacherCalendar, registerTeacherCalendarActions } from './components/TeacherCalendar.js?v=9.46.0';
 import { renderSessionsView, registerSessionsActions } from './components/SessionsView.js?v=9.46.0';
 import { renderStudentsView, registerStudentsActions } from './components/StudentsView.js?v=9.46.0';

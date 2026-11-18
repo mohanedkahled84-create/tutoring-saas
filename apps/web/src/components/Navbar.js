@@ -1,8 +1,11 @@
-import { getIcon } from '../utils/icons.js?v=9.46.0';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.46.0';
+import { renderLanguageButton } from '../utils/language.js?v=9.92.0';
+import { getIcon } from '../utils/icons.js?v=9.92.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.92.0';
+import { getLocale } from '../utils/locale.js?v=9.92.0';
 
 export function renderNavbar(user, activeSessionSummary = null) {
   const isAdmin = user?.role === 'admin';
+  const en = getLocale() === 'en';
 
   // Resolve raw name prioritizing full_name, name, teacher_name
   let rawName = (user?.full_name || user?.name || user?.teacher_name || '').trim();
@@ -11,22 +14,22 @@ export function renderNavbar(user, activeSessionSummary = null) {
   // If no name is set, or if it matches the email prefix (e.g. mohanedkahled84)
   if (!rawName || rawName === emailPrefix) {
     if (isAdmin) {
-      rawName = 'إدارة المنظومة';
+      rawName = en ? 'Platform administration' : 'إدارة المنظومة';
     } else if (user?.tenant_name) {
       const cleanTenant = user.tenant_name.replace(/\s*-\s*منظومة تعليمية.*/, '').trim();
-      rawName = cleanTenant || 'أستاذ المادة';
+      rawName = cleanTenant || (en ? 'Teacher' : 'أستاذ المادة');
     } else {
-      rawName = 'أستاذ المادة';
+      rawName = en ? 'Teacher' : 'أستاذ المادة';
     }
   }
 
   const isTeacher = !isAdmin && user?.role !== 'assistant' && user?.role !== 'center_owner' && user?.account_type !== 'center';
   let displayName = rawName;
-  if (isTeacher && !displayName.startsWith('أ.') && !displayName.startsWith('أستاذ') && !displayName.startsWith('مستر') && !displayName.startsWith('د.') && displayName !== 'أستاذ المادة') {
+  if (!en && isTeacher && !displayName.startsWith('أ.') && !displayName.startsWith('أستاذ') && !displayName.startsWith('مستر') && !displayName.startsWith('د.') && displayName !== 'أستاذ المادة') {
     displayName = `أ. ${displayName}`;
   }
 
-  const roleName = user?.delegated_actor ? `مساعد: ${user.delegated_actor.name}` : isAdmin ? 'المدير والمؤسس (Centrly HQ)' : (user?.role === 'assistant' ? 'مساعد' : (user?.role === 'center_owner' || user?.account_type === 'center' ? 'مسؤول السنتر' : 'مدرس'));
+  const roleName = user?.delegated_actor ? `${en?'Assistant':'مساعد'}: ${user.delegated_actor.name}` : isAdmin ? (en?'Founder (Centrly HQ)':'المدير والمؤسس (Centrly HQ)') : (user?.role === 'assistant' ? (en?'Assistant':'مساعد') : (user?.role === 'center_owner' || user?.account_type === 'center' ? (en?'Center manager':'مسؤول السنتر') : (en?'Teacher':'مدرس')));
 
   // Clean avatar letter - omit title prefix so "أ. مهند" gives avatar "م"
   const cleanNameForAvatar = displayName.replace(/^(أ\.\s*|مستر\s*|د\.\s*|أستاذ\s*)/, '').trim();
@@ -40,12 +43,12 @@ export function renderNavbar(user, activeSessionSummary = null) {
           id="sidebarToggle" 
           onclick="window.centrlyApp.toggleSidebar()" 
           style="align-items: center; justify-content: center; padding: 0.45rem 0.65rem; flex-shrink: 0; min-width: 38px; height: 38px;"
-          aria-label="القائمة الرئيسية"
-          title="القائمة الرئيسية"
+          aria-label="${en?'Main menu':'القائمة الرئيسية'}"
+          title="${en?'Main menu':'القائمة الرئيسية'}"
         >
           ${getIcon('menu', 20)}
         </button>
-        ${isAdmin ? '<span class="badge topbar-admin-badge" style="background: #1e293b; color: #f8fafc; font-weight: 700; border: 1px solid #334155; flex-shrink: 0;">لوحة المؤسس (Centrly HQ)</span>' : ''}
+        ${isAdmin ? `<span class="badge topbar-admin-badge" style="background: #1e293b; color: #f8fafc; font-weight: 700; border: 1px solid #334155; flex-shrink: 0;">${en?'Founder dashboard (Centrly HQ)':'لوحة المؤسس (Centrly HQ)'}</span>` : ''}
 
         <div id="navLiveSessionBadgeContainer" style="display: inline-flex; align-items: center; min-width: 0;">
           ${(activeSessionSummary && !isAdmin) ? renderNavLiveBadgeHtml(activeSessionSummary) : ''}
@@ -53,8 +56,9 @@ export function renderNavbar(user, activeSessionSummary = null) {
       </div>
 
       <div class="topbar-actions" style="display: flex; align-items: center; gap: 0.65rem; flex-shrink: 0;">
-        <div class="topbar-user-info" style="text-align: left;">
-          <div class="topbar-user-name" style="font-weight: 700; font-size: 0.875rem; white-space: nowrap;">${escapeHtml(displayName)}</div>
+        ${renderLanguageButton()}
+        <div class="topbar-user-info" style="text-align: end;">
+          <div class="topbar-user-name" style="font-weight: 700; font-size: 0.875rem; white-space: nowrap;"><bdi>${escapeHtml(displayName)}</bdi></div>
           <div class="topbar-user-role" style="font-size: 0.72rem; color: var(--centrly-text); white-space: nowrap;">${escapeHtml(roleName)}</div>
         </div>
         <div class="topbar-avatar" style="width: 38px; height: 38px; border-radius: 6px; background-color: #0f172a; color: #ffffff; font-size: 0.82rem; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">
@@ -67,7 +71,8 @@ export function renderNavbar(user, activeSessionSummary = null) {
 
 export function renderNavLiveBadgeHtml(activeSessionSummary) {
   if (!activeSessionSummary) return '';
-  const groupName = escapeHtml(activeSessionSummary.groupName || 'حصة جارية');
+  const en=getLocale()==='en';
+  const groupName = escapeHtml(activeSessionSummary.groupName || (en?'Active class':'حصة جارية'));
   const count = activeSessionSummary.attendeeCount || 0;
 
   return `
@@ -75,11 +80,11 @@ export function renderNavLiveBadgeHtml(activeSessionSummary) {
       type="button" 
       onclick="window.centrlyApp.navigate('sessions')" 
       class="btn btn-sm nav-live-session-btn"
-      title="حصة نشطة حالياً: ${groupName} (${count} حضور) - اضغط للمتابعة ورصد الحضور"
+      title="${en?'Active class':'حصة نشطة حالياً'}: ${groupName} (${count} ${en?'present':'حضور'})"
     >
       <span class="nav-live-dot"></span>
-      <span class="nav-live-text-desktop">حصة جارية: <b>${groupName}</b> (${count} حضور)</span>
-      <span class="nav-live-text-mobile">حصة جارية (${count})</span>
+      <span class="nav-live-text-desktop">${en?'Active class':'حصة جارية'}: <bdi><b>${groupName}</b></bdi> (${count} ${en?'present':'حضور'})</span>
+      <span class="nav-live-text-mobile">${en?'Active class':'حصة جارية'} (${count})</span>
     </button>
   `;
 }

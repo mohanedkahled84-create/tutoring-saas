@@ -1,8 +1,24 @@
-import {teacherPageTitles} from '../utils/teacherPageTitles.js?v=9.46.0';
-import { getIcon } from '../utils/icons.js?v=9.46.0';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.46.0';
+import {teacherPageTitles} from '../utils/teacherPageTitles.js?v=9.92.0';
+import { getIcon } from '../utils/icons.js?v=9.92.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.92.0';
+import {getLocale,translate,translateSidebarRoute} from '../utils/locale.js?v=9.92.0';
 
 export function renderSidebar(currentRoute = 'sessions', user = {}, securityState = { hasPin: false, isUnlocked: true }, accessState = null) {
+  const locale=getLocale(), t=key=>translate(key,locale);
+  const sectionKeys={'إدارة المنظومة (Centrly HQ)':'section.admin','منصتي والتعليم الذكي (تجربة المعلم PRO)':'section.smart','الرقابة والأمان العام':'section.security','تشغيل السنتر والقاعات':'section.centerOps','المدرسين وفريق العمل والطلاب':'section.centerTeam','الإدارة والماليات':'section.centerAdmin','العمليات اليومية للحصة':'section.daily','منظومة الكويزات والامتحانات':'section.quizzes','منصتي والتعليم الذكي (PRO)':'section.platform','إدارة الطلاب والمجاميع وفريق العمل':'section.roster','الأرباح والتقارير الأكاديمية':'section.reports','الإعدادات والاشتراك':'section.settings','متابعة الطلاب والتحصيل':'section.followup'};
+  const compactTitles = {groups:'المجموعات',students:'الطلاب',sessions:'الحضور',homework:'الواجبات',materials:'المذكرات',quizzes:'درجات الكويزات','online-quizzes':'الكويزات الإلكترونية','paper-exams':'الامتحانات الورقية','platform-builder':'منصتي','video-lessons':'الفيديوهات',assistants:'المساعدون',dashboard:'لوحة المدرس'};
+  const compactEnglishTitles = {
+    'admin-dashboard':'Overview', 'admin-proofs':'Payment receipts', 'admin-tenants':'Teachers & centers',
+    'announcement-admin':'Message templates', 'admin-support':'Support requests', 'whatsapp-inbox':'WhatsApp inbox',
+    'admin-outreach':'Outreach', coupons:'Coupons', 'platform-builder':'My platform',
+    'video-lessons':'Lesson videos', quizzes:'Quiz grades', announcements:'Messages', sessions:'Attendance',
+    homework:'Homework', materials:'Materials', 'activity-logs':'Activity log',
+    'center-sessions':'Live classes', 'center-dashboard':'Center overview', 'center-rooms':'Rooms & labs',
+    'center-teachers':'Teachers', 'center-assistants':'Assistants', groups:'Groups', students:'Students',
+    calendar:'Class schedule', 'student-cards':'Student cards', settings:'Settings', billing:'Subscription',
+    support:'Help & support', 'online-quizzes':'Online quizzes', 'paper-exams':'Paper exams',
+    assistants:'Assistants', dashboard:'Dashboard', reports:'Reports', 'risk-watchlist':'Risk alerts',
+  };
   const isAdmin = user?.role === 'admin';
   const isCenterOwner = user?.role === 'center_owner' || user?.account_type === 'center';
   // Dedicated Executive Superadmin HQ Navigation (100% separate for the platform owner)
@@ -150,11 +166,11 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
         </div>
         <div style="flex: 1; min-width: 0;">
           <div class="brand-name" style="font-size: 1.02rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 4px;">
-            <span>سنترلي</span>
-            <span style="font-size: 0.72rem; font-weight: 600; color: #64748b;">| Centrly</span>
+            <span>${locale==='en'?'Centerly':'سنترلي'}</span>
+            ${locale==='en'?'':'<span style="font-size: 0.72rem; font-weight: 600; color: #64748b;">| Centrly</span>'}
           </div>
           <div class="brand-tagline" style="font-size: 0.68rem; color: #64748b; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            ${isAdmin ? 'لوحة الإدارة المركزية' : (isCenterOwner ? 'منظومة إدارة السنتر' : 'المنظومة الذكية لإدارة الحصص')}
+            ${escapeHtml(t(isAdmin ? 'brand.admin' : (isCenterOwner ? 'brand.center' : 'brand.teacher')))}
           </div>
         </div>
         <button class="mobile-close-btn" onclick="window.centrlyApp.toggleSidebar()" style="display: none; background: transparent; border: none; cursor: pointer; color: var(--centrly-text); padding: 0.25rem;">
@@ -166,7 +182,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
         ${sections.map((sec, secIdx) => `
           <div class="sidebar-section" style="${secIdx > 0 ? 'margin-top: 0.85rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;' : ''}">
             <div style="font-size: 0.68rem; font-weight: 800; color: #94a3b8; padding: 0.3rem 0.6rem; display: flex; align-items: center; justify-content: space-between; letter-spacing: 0.02em;">
-              <span>${escapeHtml(sec.category)}</span>
+              <span>${escapeHtml(sectionKeys[sec.category] ? t(sectionKeys[sec.category]) : sec.category)}</span>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 2px;">
@@ -174,16 +190,16 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
                 const isLocked = accessState?.canNavigate ? !accessState.canNavigate(r.id) : false;
                 const isActive = !isLocked && currentRoute === r.id;
                 return `
-                  <button type="button" data-route="${r.id}" class="nav-link ${isActive ? 'active' : ''} ${isLocked?'nav-locked':''}" ${isLocked?'disabled aria-disabled="true" title="غير متاح ضمن صلاحياتك"':`onclick="window.centrlyApp.navigate('${r.id}')"`} ${isActive?'aria-current="page"':''}
-                    style="position: relative; display: flex; align-items: center; gap: 0.65rem; border-radius: 6px; padding: 0.48rem 0.7rem; border: none; width: 100%; cursor: pointer; text-align: right; transition: all 0.12s ease;">
+                  <button type="button" data-route="${r.id}" aria-label="${escapeHtml(translateSidebarRoute(r.id,r.title,locale))}" class="nav-link ${isActive ? 'active' : ''} ${isLocked?'nav-locked':''}" ${isLocked?`disabled aria-disabled="true" title="${escapeHtml(t('nav.locked'))}"`:`onclick="window.centrlyApp.navigate('${r.id}')"`} ${isActive?'aria-current="page"':''}
+                    style="position: relative; display: flex; align-items: center; gap: 0.65rem; border-radius: 6px; padding: 0.48rem 0.7rem; border: none; width: 100%; cursor: pointer; text-align: start; transition: all 0.12s ease;">
                     <span class="nav-icon" style="display: inline-flex; align-items: center; justify-content: center;">
                       ${getIcon(r.icon, 16, 'currentColor')}
                     </span>
                     <span class="nav-title" style="font-size: 0.82rem; flex: 1; display: flex; align-items: center; justify-content: space-between;">
-                      <span>${escapeHtml(r.title)}</span>
-                      ${isLocked?`<span class="nav-lock" aria-label="مقفول">${getIcon('lock',14)}</span>`:''}
+                      <span>${escapeHtml(locale==='en' ? (compactEnglishTitles[r.id] || translateSidebarRoute(r.id,r.title,locale)) : (compactTitles[r.id] || r.title))}</span>
+                      ${isLocked?`<span class="nav-lock" aria-label="${escapeHtml(t('nav.lockedBadge'))}">${getIcon('lock',14)}</span>`:''}
                       ${r.isPro ? `<span style="background: ${isActive ? '#1e293b' : '#fef3c7'}; color: ${isActive ? '#fde68a' : '#b45309'}; border: 1px solid ${isActive ? '#334155' : '#fde68a'}; font-size: 0.62rem; font-weight: 800; padding: 1px 5px; border-radius: 4px; letter-spacing: 0.5px;">PRO</span>` : ''}
-                      ${r.badge ? `<span style="background: ${isActive ? '#1e293b' : '#f1f5f9'}; color: ${isActive ? '#f8fafc' : '#64748b'}; border: 1px solid ${isActive ? '#334155' : '#e2e8f0'}; font-size: 0.62rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">${escapeHtml(r.badge)}</span>` : ''}
+                      ${r.badge ? `<span style="background: ${isActive ? '#1e293b' : '#f1f5f9'}; color: ${isActive ? '#f8fafc' : '#64748b'}; border: 1px solid ${isActive ? '#334155' : '#e2e8f0'}; font-size: 0.62rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">${escapeHtml(locale==='en' && r.badge==='قريباً'?'Coming soon':r.badge)}</span>` : ''}
                     </span>
                   </button>
                 `;
@@ -196,7 +212,7 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       <div class="sidebar-footer" style="padding: 0.85rem 1rem; border-top: 1px solid var(--centrly-line); flex-shrink: 0; background: var(--centrly-white);">
         <button class="btn btn-secondary btn-sm" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onclick="window.centrlyApp.promptLogout()">
           ${getIcon('close', 16)}
-          <span>تسجيل الخروج</span>
+          <span>${escapeHtml(t('nav.logout'))}</span>
         </button>
       </div>
     </aside>

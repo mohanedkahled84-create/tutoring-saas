@@ -1,9 +1,10 @@
+import {applyLocale,getLocale} from './utils/locale.js?v=9.92.0';
 import {portalCairoClock} from './utils/portalClock.js?v=9.46.0';
 import { assistantPay } from "./utils/assistantPay.js?v=9.46.0";
 import { authService } from './services/auth.js?v=9.46.0';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=9.46.0';
-import { renderSidebar } from './components/Sidebar.js?v=9.46.0';
-import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.46.0';
+import { renderSidebar } from './components/Sidebar.js?v=9.92.0';
+import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.92.0';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=9.46.0';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js?v=9.46.0';
 import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.46.0';
@@ -146,7 +147,7 @@ export class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=9.46.0').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=9.92.0').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
@@ -2005,6 +2006,7 @@ export class CentrlyApp {
   }
 
   renderApp(force = false) {
+    applyLocale();
     if (this.delegation?.isActive && !this.delegation.isActive()) return;
     if (!this.workspaceReady) {
       const target = this.getAppEl();
@@ -2285,7 +2287,7 @@ export class CentrlyApp {
     modalEl.id = 'centrlyCustomModal';
     modalEl.className = 'modal-overlay';
     modalEl.innerHTML = `
-      <div class="modal-dialog" dir="rtl"${customMaxWidth ? ` style="max-width: ${customMaxWidth};"` : ''}>
+      <div class="modal-dialog" dir="${getLocale()==='en'?'ltr':'rtl'}"${customMaxWidth ? ` style="max-width: ${customMaxWidth};"` : ''}>
         <div class="modal-header">
           <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--centrly-ink);">${title}</h3>
           <button class="btn btn-secondary btn-sm" onclick="window.centrlyApp.closeModal()" style="padding: 0.35rem 0.55rem; border: none; cursor: pointer; display: flex; align-items: center;">${getIcon('close', 16, '#64748b')}</button>
@@ -2526,7 +2528,7 @@ export class CentrlyApp {
       overflow-y: auto;
     `;
     modalEl.innerHTML = `
-      <div class="modal-dialog" dir="rtl" style="background: #ffffff; border-radius: 14px; max-width: 440px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--centrly-line); margin: auto; max-height: calc(100vh - 2rem); display: flex; flex-direction: column;">
+      <div class="modal-dialog" dir="${getLocale()==='en'?'ltr':'rtl'}" style="background: #ffffff; border-radius: 14px; max-width: 440px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--centrly-line); margin: auto; max-height: calc(100vh - 2rem); display: flex; flex-direction: column;">
         <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--centrly-line); display: flex; justify-content: space-between; align-items: center;">
           <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: ${isDanger ? 'var(--centrly-danger)' : 'var(--centrly-ink)'};">
             ${escapeHtml(title)}
