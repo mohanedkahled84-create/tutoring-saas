@@ -1993,7 +1993,7 @@ export class CentrlyApp {
         }
       }
 
-      if (err.status === 402 || err.data?.error?.code?.startsWith('SUBSCRIPTION_') || err.data?.error?.code === 'PLAN_FEATURE_REQUIRED') { this.commercialRouteBlocks = {...this.commercialRouteBlocks, [route]:true}; }
+      if (err.status === 402 || err.data?.error?.code?.startsWith('SUBSCRIPTION_') || err.data?.error?.code === 'PLAN_FEATURE_REQUIRED') { this.commercialRouteBlocks = {...this.commercialRouteBlocks, [route]:err.data?.error?.code || true}; }
       if (this.routeErrors) {
         const hasRefresh = Boolean(authService.getRefreshToken());
         this.routeErrors[route] = (isAuthErr && !hasRefresh)
@@ -2090,6 +2090,14 @@ export class CentrlyApp {
 
   getContentHtml(route) {
     if (this.delegation && !this.delegation.canNavigate(route)) return '<section class="card"><h1>هذه الصفحة غير متاحة ضمن صلاحياتك</h1></section>';
+    if (this.commercialRouteBlocks?.[route]==='PLAN_FEATURE_REQUIRED' && ['platform-builder','video-lessons'].includes(route)) {
+      const platform=route==='platform-builder';
+      return `<section class="card" dir="rtl" style="padding:1.5rem;display:grid;gap:1rem">
+        <div><span class="badge">Pro</span><h1>${platform?'منصتك التعليمية':'فيديوهات الشرح والحل'}</h1><p>الميزة متاحة في باقتي Pro وMax. فعّلها بترقية اشتراكك.</p></div>
+        ${platform?'<a href="https://mr-omar.centerly-eg.com/" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height:44px;width:fit-content">شوف مثال لمنصة مدرس</a>':''}
+        ${this.delegation?'<p>راجع المدرس لتعديل الاشتراك.</p>':'<button type="button" class="btn btn-primary" style="min-height:44px;width:fit-content" onclick="window.centrlyApp.navigate(\'billing\')">عرض الباقات</button>'}
+      </section>`;
+    }
     if (this.routeErrors && this.routeErrors[route]) {
       const isAuthErr = this.routeErrors[route].includes('الجلسة') || this.routeErrors[route].includes('token');
       return `
