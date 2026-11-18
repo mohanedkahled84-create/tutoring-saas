@@ -41,3 +41,17 @@ test('a saved class can be picked before choosing a group, including a two-day t
     { id: 'class', groupId: 'group', topic: 'Physics', datetime: '2026-11-18T18:30' },
   ]);
 });
+
+
+test('a new group with no recorded classes offers its upcoming timetable', () => {
+  const group = { id: 'group', name: 'Physics', day_of_week: 'السبت، الثلاثاء', session_time: '16:00 / 18:00' };
+  const first = announcementClasses([], [group], '2026-11-21');
+  assert.equal(first.length, 8);
+  assert.equal(first[0].datetime, '2026-11-21T16:00');
+  assert.equal(first[1].datetime, '2026-11-24T18:00');
+  const saved = { id: 'saved', group_id: 'group', session_date: '2026-11-21', session_time: '17:00' };
+  const merged = announcementClasses([saved], [group], '2026-11-21');
+  assert.equal(merged.length, 8);
+  assert.equal(merged[0].id, 'saved');
+  assert.equal(merged[0].datetime, '2026-11-21T17:00');
+});

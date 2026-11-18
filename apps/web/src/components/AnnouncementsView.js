@@ -18,15 +18,17 @@ const catalogEnglish={
  'فيديو شرح':'Lesson video','مذكرة':'Study material','ملف تدريبي':'Practice file','إضافية':'Additional','تعويضية':'Make-up'
 };
 const catalogText=value=>localize(value,catalogEnglish[value] || value);
+const weekdays=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const normalizeDay=day=>day?.trim().replace(/[أإآ]/g,'ا');
+const groupDaysFor=group=>String(group?.day_of_week || '').split(/[،,]/).map(normalizeDay);
 function savedSessionTime(row,groups){
  const group=groups.find(g=>g.id===row.group_id);
  // Multiple weekly times cannot be safely guessed from a date alone.
- const weekdayNames=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
  const date=row.rescheduled_to_date || row.session_date;
- const day=weekdayNames[new Date(date+'T12:00:00Z').getUTCDay()];
- const groupDays=String(group?.day_of_week || '').split('،').map(value=>value.trim());
+ const day=weekdays[new Date(date+'T12:00:00Z').getUTCDay()];
+ const groupDays=groupDaysFor(group);
  const groupTimes=String(group?.session_time || '').split('/').map(value=>value.trim());
- const groupTime=groupTimes.length===1?groupTimes[0]:groupTimes[groupDays.indexOf(day)];
+ const groupTime=groupTimes.length===1?groupTimes[0]:groupTimes[groupDays.indexOf(normalizeDay(day))];
  const candidates=[row.rescheduled_to_time,row.session_time,row.start_time,groupTime];
  for(const candidate of candidates){
   const text=String(candidate || '').trim().replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)).toLowerCase();
@@ -38,14 +40,34 @@ function savedSessionTime(row,groups){
  return null;
 }
 const classTime={class_cancelled:'cancelled_time',class_rescheduled:'old_time',class_reminder:'event_time'};
-export function announcementClasses(rows,groups){
- return rows.flatMap(row=>{
+export function announcementClasses(rows,groups,today){
+ const saved=rows.flatMap(row=>{
   const group=groups.find(group=>group.id===row.group_id && !group.archived_at);
   const date=row.rescheduled_to_date || row.session_date;
   const time=savedSessionTime(row,groups);
   if(!row.id || !group || !time || !/^\d{4}-\d{2}-\d{2}$/.test(date || ''))return [];
   return [{id:row.id,groupId:group.id,topic:row.extra_topic || group.name,datetime:date+'T'+time}];
  });
+ if(!today)return saved;
+ const start=Date.parse(today+'T12:00:00Z');
+ const occupied=new Set(rows.filter(row=>!row.is_extra).flatMap(row=>[
+  row.group_id+'|'+row.session_date,
+  row.group_id+'|'+row.rescheduled_to_date,
+ ]));
+ const scheduled=[];
+ for(const group of groups.filter(group=>!group.archived_at)){
+  const days=groupDaysFor(group);
+  for(let offset=0;offset<28;offset++){
+   const slot=new Date(start+offset*86400000);
+   if(!days.includes(normalizeDay(weekdays[slot.getUTCDay()])))continue;
+   const date=slot.toISOString().slice(0,10);
+   const key=group.id+'|'+date;
+   if(occupied.has(key))continue;
+   const time=savedSessionTime({group_id:group.id,session_date:date},[group]);
+   if(time)scheduled.push({id:'schedule:'+key,groupId:group.id,topic:group.name,datetime:date+'T'+time});
+  }
+ }
+ return [...saved,...scheduled].sort((a,b)=>a.datetime.localeCompare(b.datetime));
 }
 const automatic=new Set(['teacher','group','portal','contact']);
 const actor=app=>[app.user?.id,app.delegation?.actor?.id || app.delegation?.assistant_id || '',app.user?.tenant_id].join(':');
@@ -127,12 +149,12 @@ export function registerAnnouncementsActions(app){
    const range=days=>new Date(Date.parse(today+'T12:00:00Z')+days*86400000).toISOString().slice(0,10);
    const [{sessions},groupData]=await Promise.all([request('/sessions?from='+range(-90)+'&to='+range(90)),request('/groups')]);
    if(actor(this)!==identity || !select.isConnected)return;
-   const rows=announcementClasses(sessions || [],Array.isArray(groupData)?groupData:groupData.groups || []);
-   select.options[0].textContent=localize('اختر من الحصص المحفوظة','Select a saved class');
+   const rows=announcementClasses(sessions || [],Array.isArray(groupData)?groupData:groupData.groups || [],today);
+   select.options[0].textContent=localize('اختر حصة من الجدول','Select a scheduled class');
    for(const row of rows)select.add(new Option(row.topic+' · '+row.datetime.replace('T',' '),row.id));
    const saved=rows.find(row=>row.topic===topic?.value && row.datetime===time?.value);
    if(saved)select.value=saved.id;
-   if(!rows.length)status.textContent=localize('لا توجد حصص محفوظة بموعد واضح في الفترة الحالية.','No saved classes with a clear scheduled time are available.');
+   if(!rows.length)status.textContent=localize('لا توجد حصص بموعد واضح. راجع أيام ومواعيد الحصص في جدول المجموعة.','No classes have a scheduled time. Check the days and times in the group timetable.');
    select.addEventListener('change',()=>{
     const selected=rows.find(row=>row.id===select.value);
     if(topic)topic.value=selected?.topic || '';
