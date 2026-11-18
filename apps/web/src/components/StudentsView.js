@@ -534,18 +534,22 @@ export function registerStudentsActions(app) {
                 <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">سعر الحصة (ج.م) *</label>
                 <input type="number" id="quickGroupPriceStudent" class="form-input" value="50" min="0" step="5" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
               </div>
-              <div>
-                <label style="font-weight: 700; font-size: 0.75rem; color: #1e293b; display: block; margin-bottom: 0.15rem;">يوم الحصة الأسبوعي</label>
-                <select id="quickGroupDayStudent" class="form-input" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
-                  <option value="السبت">السبت</option>
-                  <option value="الأحد">الأحد</option>
-                  <option value="الإثنين">الإثنين</option>
-                  <option value="الثلاثاء">الثلاثاء</option>
-                  <option value="الأربعاء">الأربعاء</option>
-                  <option value="الخميس">الخميس</option>
-                  <option value="الجمعة">الجمعة</option>
-                </select>
-              </div>
+              <fieldset style="grid-column:1/-1;border:0;padding:0;min-width:0">
+                <legend>مواعيد الحصص الأسبوعية</legend>
+                ${[1, 2].map(slot => `
+                  <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem">
+                    <label>اليوم ${slot}
+                      <select class="form-input" data-quick-group-day>
+                        ${slot === 2 ? '<option value="">حصة واحدة في الأسبوع</option>' : ''}
+                        ${['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'].map(day => `<option>${day}</option>`).join('')}
+                      </select>
+                    </label>
+                    <label>ميعاد الحصة ${slot}
+                      <input type="time" class="form-input" value="16:00" data-quick-group-time>
+                    </label>
+                  </div>
+                `).join('')}
+              </fieldset>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 0.35rem; margin-top: 0.6rem;">
               <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="window.centrlyApp.cancelQuickAddGroupInSingleStudent()">إلغاء</button>
@@ -700,7 +704,7 @@ export function registerStudentsActions(app) {
     const nameInput = document.getElementById('quickGroupNameStudent');
     const centerInput = document.getElementById('quickGroupCenterStudent');
     const priceInput = document.getElementById('quickGroupPriceStudent');
-    const dayInput = document.getElementById('quickGroupDayStudent');
+    const editor = document.getElementById('quickGroupCreatorSingleStudent');
     const saveBtn = document.getElementById('btnSaveQuickGroupStudent');
 
     const name = nameInput?.value?.trim();
@@ -712,9 +716,25 @@ export function registerStudentsActions(app) {
 
     const center_name = centerInput?.value?.trim() || undefined;
     const price = Number(priceInput?.value) || 0;
-    const day_of_week = dayInput?.value || 'السبت';
-    const session_time = '04:00 م';
-    const schedule = `${day_of_week} • ${session_time}`;
+    const times = [...editor.querySelectorAll('[data-quick-group-time]')];
+    const slots = [...editor.querySelectorAll('[data-quick-group-day]')]
+      .map((day, index) => ({ day: day.value, time: times[index] }))
+      .filter(slot => slot.day);
+    if (new Set(slots.map(slot => slot.day)).size !== slots.length) {
+      this.showToast('اختر يومين مختلفين للحصتين', 'warning');
+      return;
+    }
+    const missingTime = slots.find(slot => !slot.time.value);
+    if (missingTime) {
+      this.showToast('حدد ميعاد كل حصة', 'warning');
+      missingTime.time.focus();
+      return;
+    }
+    const day_of_week = slots.map(slot => slot.day).join('، ');
+    const session_time = slots.map(slot => slot.time.value).join(' / ');
+    const schedule = slots.length === 1
+      ? day_of_week + ' • ' + session_time
+      : slots.map(slot => slot.day + ' (' + slot.time.value + ')').join(' • ');
 
     if (saveBtn) {
       saveBtn.disabled = true;
@@ -731,7 +751,7 @@ export function registerStudentsActions(app) {
           session_price: price,
           day_of_week,
           session_time,
-          sessions_per_week: 1,
+          sessions_per_week: slots.length,
           billing_model: 'percentage',
           center_cut_percentage: 20,
           schedule,
