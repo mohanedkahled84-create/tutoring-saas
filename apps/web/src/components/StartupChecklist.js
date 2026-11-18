@@ -14,3 +14,28 @@ export function registerStartupChecklist(app){
  };
  app.openStartupStep=function(route){if(!routes.has(route))return;this.closeModal();this.navigate(route);};
 }
+
+if (globalThis.customElements && !customElements.get('centrly-startup-progress')) {
+ customElements.define('centrly-startup-progress', class extends HTMLElement {
+  async connectedCallback() {
+   const app=window.centrlyApp;
+   if (!app?.user?.id || app.delegation) return;
+   const owner=[app.user.id,app.user.tenant_id].join(':');
+   const key='centrly_startup_hidden:'+owner;
+   if (localStorage.getItem(key)==='1') return;
+   this.innerHTML='<div class="skeleton" style="height:2rem;border-radius:8px" role="status" aria-label="جار قراءة تقدمك"></div>';
+   try {
+    const {steps}=await request('/settings/startup-progress');
+    if (!this.isConnected || window.centrlyApp!==app || app.delegation || [app.user?.id,app.user?.tenant_id].join(':')!==owner) return;
+    this.innerHTML='<button type="button" class="btn btn-secondary" style="min-height:44px" data-dismiss-startup>إخفاء الخطوات</button>'+renderStartupChecklist(steps);
+    this.querySelector('[data-dismiss-startup]').addEventListener('click',()=>{
+     localStorage.setItem(key,'1');
+     this.replaceChildren();
+     this.previousElementSibling?.focus();
+    });
+   } catch {
+    if (this.isConnected) this.textContent='تعذر عرض التقدم. افتح قائمة البداية للمحاولة مجددًا.';
+   }
+  }
+ });
+}
