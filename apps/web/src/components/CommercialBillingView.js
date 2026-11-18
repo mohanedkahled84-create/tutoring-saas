@@ -1,3 +1,4 @@
+import {localize} from '../utils/language.js?v=9.92.0';
 import { request } from '../services/api.js?v=9.46.0';
 import { escapeHtml as e } from '../utils/escapeHtml.js?v=9.46.0';
 
@@ -15,7 +16,7 @@ function meter(label, used, limit, suffix = '') {
 }
 export function renderCommercialWallet(wallet) {
   if (!wallet) return '';
-  return `<button type="button" class="btn btn-secondary commercial-wallet" onclick="window.centrlyApp.commercialOpenWallet()" aria-haspopup="dialog"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 8V5H5a2 2 0 0 0 0 4h16v11H5a2 2 0 0 1-2-2V7"/><path d="M21 12h-5v5h5"/></svg><span>المحفظة</span><strong>${money(Number(wallet.paid_piasters)+Number(wallet.gift_piasters))}</strong></button>`;
+  return `<button type="button" class="btn btn-secondary commercial-wallet" onclick="window.centrlyApp.commercialOpenWallet()" aria-haspopup="dialog"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 8V5H5a2 2 0 0 0 0 4h16v11H5a2 2 0 0 1-2-2V7"/><path d="M21 12h-5v5h5"/></svg><span>${localize('المحفظة','Wallet')}</span><strong>${((Number(wallet.paid_piasters)+Number(wallet.gift_piasters))/100).toLocaleString(localize('ar-EG','en-EG'),{maximumFractionDigits:2})}${localize(' ج.م',' EGP')}</strong></button>`;
 }
 
 export function renderCommercialBillingView(data = {}) {
@@ -40,7 +41,8 @@ export function registerCommercialBillingActions(app) {
     if(this.delegation)return;
     const wallet=this.announcementsData?.wallet;
     if(!wallet)return;
-    this.showModal('محفظة الرسائل',`<div class="wallet-details"><h2>محفظة الرسائل</h2><dl><div><dt>الرصيد المشحون</dt><dd>${money(wallet.paid_piasters)}</dd></div><div><dt>الهدية المتاحة</dt><dd>${money(wallet.gift_piasters)}</dd></div><div><dt>محجوز للإرسال</dt><dd>${money(wallet.held_piasters)}</dd></div></dl><p>الرسالة ${money(wallet.message_piasters)} لكل رقم مصري. فتح واتساب يدويًا لا يخصم رصيدًا. الهدية لا تترحل، والرصيد المشحون يظل محفوظًا.</p>${action('شحن المحفظة',"commercialAdd('wallet')",true)} ${action('الحركات وطلبات الشحن', 'commercialWalletHistory()')}</div>`);
+    const walletAmount=value=>(Number(value || 0)/100).toLocaleString(localize('ar-EG','en-EG'),{maximumFractionDigits:2})+localize(' ج.م',' EGP');
+    this.showModal(localize('محفظة الرسائل','Message wallet'),`<div class="wallet-details"><h2>${localize('محفظة الرسائل','Message wallet')}</h2><dl><div><dt>${localize('الرصيد المشحون','Paid balance')}</dt><dd>${walletAmount(wallet.paid_piasters)}</dd></div><div><dt>${localize('الهدية المتاحة','Gift balance')}</dt><dd>${walletAmount(wallet.gift_piasters)}</dd></div><div><dt>${localize('محجوز للإرسال','Reserved for sending')}</dt><dd>${walletAmount(wallet.held_piasters)}</dd></div></dl><p>${localize('السعر لكل رقم مصري','Price per Egyptian number')}: ${walletAmount(wallet.message_piasters)}. ${localize('فتح واتساب يدويًا لا يخصم رصيدًا. الهدية لا تترحل، والرصيد المشحون يظل محفوظًا.','Opening WhatsApp manually is free. Gift credit does not roll over. Paid credit stays in your wallet.')}</p>${action(localize('شحن المحفظة','Top up wallet'),"commercialAdd('wallet')",true)} ${action(localize('الحركات وطلبات الشحن','Transactions and top-up requests'), 'commercialWalletHistory()')}</div>`);
   };
   app.commercialWalletHistory = async function() {
     if(this.delegation)return;
