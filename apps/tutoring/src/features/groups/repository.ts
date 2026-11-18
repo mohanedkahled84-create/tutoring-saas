@@ -179,9 +179,17 @@ export class SupabaseGroupsRepository implements IGroupsRepository {
       .select()
       .single();
 
-    if (error) {
-      throw new Error(error.message);
+    if (error?.code === "23505" && tenantId) {
+      const existing = await this.client
+        .from("group_students")
+        .select("id,group_id,student_id")
+        .eq("tenant_id", tenantId)
+        .eq("group_id", groupId)
+        .eq("student_id", studentId)
+        .maybeSingle();
+      if (!existing.error && existing.data) return existing.data;
     }
+    if (error) throw new Error(error.message);
 
     // Keep students.group_id in sync
     try {
