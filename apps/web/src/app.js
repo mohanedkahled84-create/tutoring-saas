@@ -2094,10 +2094,21 @@ export class CentrlyApp {
     if (this.delegation && !this.delegation.canNavigate(route)) return '<section class="card"><h1>هذه الصفحة غير متاحة ضمن صلاحياتك</h1></section>';
     if (this.commercialRouteBlocks?.[route]==='PLAN_FEATURE_REQUIRED' && ['platform-builder','video-lessons'].includes(route)) {
       const platform=route==='platform-builder';
-      return `<section class="card" dir="rtl" style="padding:1.5rem;display:grid;gap:1rem">
-        <div><span class="badge">Pro</span><h1>${platform?'منصتك التعليمية':'فيديوهات الشرح والحل'}</h1><p>الميزة متاحة في باقتي Pro وMax. فعّلها بترقية اشتراكك.</p></div>
-        ${platform?'<a href="https://mr-omar.centerly-eg.com/" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="min-height:44px;width:fit-content">شوف مثال لمنصة مدرس</a>':''}
-        ${this.delegation?'<p>راجع المدرس لتعديل الاشتراك.</p>':'<button type="button" class="btn btn-primary" style="min-height:44px;width:fit-content" onclick="window.centrlyApp.navigate(\'billing\')">عرض الباقات</button>'}
+      const en=getLocale()==='en';
+      return `<section class="card" dir="${en?'ltr':'rtl'}" style="padding:1.5rem;display:grid;gap:1rem">
+        <div><span class="badge">Pro</span><h1>${platform?(en?'Your teaching platform':'منصتك التعليمية'):(en?'Lesson videos':'فيديوهات الشرح والحل')}</h1><p>${en?'Available with Pro or Max. Upgrade to activate this feature.':'الميزة متاحة في باقتي Pro وMax. فعّلها بترقية اشتراكك.'}</p></div>
+        ${platform?`<figure style="margin:0;width:100%;max-width:800px;border:1px solid #dbe4f1;border-radius:16px;overflow:hidden;background:#f4f7fc">
+          <figcaption style="padding:.65rem 1rem;background:#fff;font-weight:700">${en?'Student portal preview':'معاينة بوابة الطالب'}</figcaption>
+          <div style="margin:1rem;padding:clamp(1rem,3vw,2rem);border-radius:12px;background:#172554;color:#fff">
+            <strong>${en?'Physics · Grade 12':'فيزياء · الصف الثالث الثانوي'}</strong>
+            <h2 style="color:#fff;margin:.5rem 0">${en?'Welcome to your student portal':'أهلًا بيك في منصتك الدراسية'}</h2>
+            <p style="margin:0;color:#dbeafe">${en?'Lessons, assignments, and progress in one place.':'تابع الشرح والواجبات وتقدمك الدراسي من مكان واحد.'}</p>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:.75rem;padding:0 1rem 1rem">
+            ${(en?['Study materials','Lesson videos','Quizzes']:['المذكرات والواجبات','فيديوهات الشرح','الامتحانات']).map(label=>`<div style="padding:1rem;border:1px solid #dbe4f1;border-radius:10px;background:#fff;color:#172554;font-weight:700">${label}</div>`).join('')}
+          </div>
+        </figure>`:''}
+        ${this.delegation?`<p>${en?'Ask the teacher to update the subscription.':'راجع المدرس لتعديل الاشتراك.'}</p>`:`<button type="button" class="btn btn-primary" style="min-height:44px;width:fit-content" onclick="window.centrlyApp.navigate('billing')">${en?'View plans':'عرض الباقات'}</button>`}
       </section>`;
     }
     if (this.routeErrors && this.routeErrors[route]) {
