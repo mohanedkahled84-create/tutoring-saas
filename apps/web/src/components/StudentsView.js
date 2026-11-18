@@ -330,7 +330,7 @@ export function renderStudentDetails(s,groups=[],appObj={}) {
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendSingleParentLink('${escapeHtml(s.id)}')" title="إرسال رابط المتابعة لولي الأمر عبر واتساب" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; color: #059669; border-color: rgba(5, 150, 105, 0.3);">
                           ${getIcon('whatsapp', 12)}
-                          <span>إرسال</span>
+                          <span>فتح واتساب</span>
                         </button>
                         <a class="btn btn-secondary btn-sm" href="${parentPortalUrl}" onclick="if (window.centrlyApp && window.centrlyApp.previewParentPortal) { window.centrlyApp.previewParentPortal('${escapeHtml(s.id)}'); return false; }" target="_blank" rel="noopener noreferrer" title="معاينة بوابة ولي الأمر" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: var(--centrly-blue-700); text-decoration: none;">
                           ${getIcon('link', 12)}
@@ -344,9 +344,9 @@ export function renderStudentDetails(s,groups=[],appObj={}) {
                           ${getIcon('copy', 12)}
                           <span>نسخ</span>
                         </button>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendSingleStudentLink('${escapeHtml(s.id)}')" title="إرسال رابط البوابة للطالب عبر واتساب" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; color: #1d4ed8; border-color: rgba(29, 78, 216, 0.3);">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.centrlyApp.sendSingleStudentLink('${escapeHtml(s.id)}')" title="فتح رسالة رابط الطالب في واتساب" style="padding: 0.15rem 0.4rem; font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; color: #1d4ed8; border-color: rgba(29, 78, 216, 0.3);">
                           ${getIcon('whatsapp', 12)}
-                          <span>إرسال</span>
+                          <span>فتح واتساب</span>
                         </button>
                         <a class="btn btn-secondary btn-sm" href="${studentPortalUrl}" onclick="if (window.centrlyApp && window.centrlyApp.previewStudentPortal) { window.centrlyApp.previewStudentPortal('${escapeHtml(s.id)}'); return false; }" target="_blank" rel="noopener noreferrer" title="معاينة بوابة الطالب (رفع الواجبات والماتريال)" style="padding: 0.15rem 0.35rem; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; color: #1d4ed8; text-decoration: none;">
                           ${getIcon('link', 12)}
@@ -364,21 +364,21 @@ export function renderStudentDetails(s,groups=[],appObj={}) {
                       </div>` : ''}
                       <div style="font-size: 0.65rem; display: flex; flex-direction: column; gap: 0.15rem; margin-top: 0.1rem;">
                         ${s.parent_portal_sent_at ? `
-                          <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="تم إرسال رابط ولي الأمر مسبقاً">
+                          <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="وصول الرابط لولي الأمر غير مؤكد">
                             <span style="display:inline-block; width:5px; height:5px; background:#059669; border-radius:50%;"></span>
-                            تم الإرسال لولي الأمر
+                            سُجّلت محاولة مشاركة رابط ولي الأمر
                           </span>
                         ` : ''}
                         ${s.student_portal_sent_at ? `
-                          <span style="color: #2563eb; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="تم إرسال رابط بوابة الطالب مسبقاً">
+                          <span style="color: #2563eb; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="وصول الرابط للطالب غير مؤكد">
                             <span style="display:inline-block; width:5px; height:5px; background:#2563eb; border-radius:50%;"></span>
-                            تم الإرسال للطالب
+                            سُجّلت محاولة مشاركة رابط الطالب
                           </span>
                         ` : ''}
                         ${(!s.parent_portal_sent_at && !s.student_portal_sent_at) ? `
                           <span style="color: #94a3b8; font-weight: 600; display: inline-flex; align-items: center; gap: 0.2rem;">
                             <span style="display:inline-block; width:5px; height:5px; background:#cbd5e1; border-radius:50%;"></span>
-                            جديد (لم يُرسل بعد)
+                            لا يوجد تأكيد لإرسال الروابط
                           </span>
                         ` : ''}
                       </div>

@@ -80,3 +80,20 @@ test('WhatsApp confirmation stays disabled when the selected recipients exceed t
     else globalThis.document = original;
   }
 });
+
+
+test('selecting a group selects each matching number once and skips opted-out recipients', () => {
+  const inputs = [0, 1, 2].map(index => ({ dataset: { annRecipient: index }, disabled: index === 2 }));
+  const original = globalThis.document;
+  globalThis.document = { querySelectorAll: selector => selector.includes('group') ? [{ value: 'g' }] : inputs };
+  try {
+    const app = { _announcementPreview: { rows: [{ group_ids: ['g', 'h'] }, { group_ids: ['h'] }, { group_ids: ['g'] }] } };
+    registerAnnouncementsActions(app);
+    app.updateAnnouncementTotal = () => {};
+    app.selectAnnouncementGroups();
+    assert.deepEqual(inputs.map(input => input.checked), [true, false, false]);
+  } finally {
+    if (original === undefined) delete globalThis.document;
+    else globalThis.document = original;
+  }
+});

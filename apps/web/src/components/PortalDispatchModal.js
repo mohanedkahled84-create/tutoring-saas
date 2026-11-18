@@ -289,7 +289,7 @@ export function registerPortalDispatchActions(app) {
       const text=await this.parentSharingMessage(studentId),number=phone.startsWith('01')?'20'+phone.slice(1):phone.replace(/^00/,'');
       const url=`https://wa.me/${number}?text=${encodeURIComponent(text)}`;
       if(popup)popup.location=url;else this.openDirectWhatsAppFallbackModal(student?.name || 'الطالب',phone,text,null,'parent');
-      this.showToast('تم تجهيز رابط المتابعة لفتحه في واتساب','info');
+      this.showToast('اضغط إرسال داخل واتساب لإرسال رابط المتابعة','info');
     }catch(error){popup?.close();this.showToast(error.message,'warning');}
   };
 
@@ -302,7 +302,7 @@ export function registerPortalDispatchActions(app) {
       const text=await this.studentSharingMessage(studentId),number=phone.startsWith('01')?'20'+phone.slice(1):phone.replace(/^00/,'');
       const url=`https://wa.me/${number}?text=${encodeURIComponent(text)}`;
       if(popup)popup.location=url;else this.openDirectWhatsAppFallbackModal(student?.name || 'الطالب',phone,text,null,'student');
-      this.showToast('تم تجهيز رابط الطالب لفتحه في واتساب','info');
+      this.showToast('اضغط إرسال داخل واتساب لإرسال رابط الطالب','info');
     }catch(error){popup?.close();this.showToast(error.message,'warning');}
   };
 
@@ -660,18 +660,9 @@ export function registerPortalDispatchActions(app) {
 
       this.closeModal();
 
-      // Update local student records
-      const now = new Date().toISOString();
-      (this.students || []).forEach(s => {
-        if (selectedIds.includes(s.id)) {
-          s.parent_portal_sent_at = now;
-          s.student_portal_sent_at = now;
-        }
-      });
-
       this.showToast(
-        res.message || `تم بنجاح إرسال الروابط لـ (${selectedIds.length}) طالباً!`,
-        res.is_template_pending ? 'info' : 'success'
+        res.message || 'راجع حالة إرسال الروابط في سجل الرسائل.',
+        'info'
       );
 
       if (this.currentRoute === 'students') {
