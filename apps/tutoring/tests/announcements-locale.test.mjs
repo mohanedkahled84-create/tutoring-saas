@@ -20,6 +20,8 @@ test('announcement navigation, wallet, and composer follow the selected language
       assert.match(page, locale === 'en' ? /Messages and announcements/ : /الرسائل والإعلانات/);
       assert.match(page, locale === 'en' ? /Wallet/ : /المحفظة/);
       assert.match(app.modal, locale === 'en' ? /Save draft/ : /حفظ المسودة/);
+      assert.match(app.modal, /value="whatsapp"/);
+      assert.match(app.modal, /value="publish"/);
       if (locale === 'en') assert.doesNotMatch(page + app.modal, /\p{Script=Arabic}/u);
     }
   } finally {
@@ -54,4 +56,27 @@ test('a new group with no recorded classes offers its upcoming timetable', () =>
   assert.equal(merged.length, 8);
   assert.equal(merged[0].id, 'saved');
   assert.equal(merged[0].datetime, '2026-11-21T17:00');
+});
+
+
+test('WhatsApp confirmation stays disabled when the selected recipients exceed the wallet capacity', () => {
+  const total = { dataset: { sendEnabled: 'true' } };
+  const confirm = { disabled: false };
+  const original = globalThis.document;
+  globalThis.document = {
+    getElementById: () => total,
+    querySelectorAll: selector => selector.includes(':checked') ? [{}] : [confirm],
+  };
+  try {
+    const app = { _announcementPreview: { allowance: { remaining: 0, unit_cost_egp: 1 } } };
+    registerAnnouncementsActions(app);
+    app.updateAnnouncementTotal();
+    assert.equal(confirm.disabled, true);
+    app._announcementPreview.allowance.remaining = 1;
+    app.updateAnnouncementTotal();
+    assert.equal(confirm.disabled, false);
+  } finally {
+    if (original === undefined) delete globalThis.document;
+    else globalThis.document = original;
+  }
 });
