@@ -16,7 +16,7 @@ const quote = z.object({
 const proof = z.object({
   payment_method: z.enum(['instapay', 'vodafone_cash']),
   reference: z.string().trim().min(3).max(100),
-  proof_image_url: z.string().max(3000000).optional(),
+  proof_image_url: z.string().min(1).max(3000000),
 }).strict();
 const errors: Record<string, string> = {
   WALLET_INSUFFICIENT: 'رصيد الرسائل غير كافٍ؛ اشحن المحفظة أولًا',
@@ -59,7 +59,7 @@ commercialBillingRouter.post('/orders', (req: AuthenticatedRequest, res) => {
 });
 commercialBillingRouter.post('/orders/:id/submit', (req: AuthenticatedRequest, res) => {
   const parsed = proof.safeParse(req.body);
-  if (!uuid.safeParse(req.params.id).success || !parsed.success) { res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'راجع رقم العملية وطريقة الدفع' } }); return; }
+  if (!uuid.safeParse(req.params.id).success || !parsed.success) { res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'راجع رقم العملية وطريقة الدفع وأرفق صورة الإيصال' } }); return; }
   if(parsed.data.proof_image_url){
     const match=parsed.data.proof_image_url.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
     const checked=match && validateFileUpload({buffer:Buffer.from(match[2],'base64'),originalFilename:'receipt.'+({'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[match[1]] || 'png'),declaredMimeType:match[1],maxSizeBytes:2*1024*1024});

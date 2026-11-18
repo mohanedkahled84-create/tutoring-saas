@@ -15,7 +15,8 @@ test('commercial HTTP flow uses authenticated actor and validates quotes, receip
   let res=await send('/orders',{id,kind:'subscribe',plan_id:'basic_v1',amount_piasters:1});assert.equal(res.status,400);assert.equal(calls.length,0);
   res=await send('/orders',{id,kind:'subscribe',plan_id:'basic_v1'});assert.equal(res.status,200);assert.equal((await res.json()).amount_piasters,24900);assert.equal(calls.at(-1).args.p_user,user.id);assert.ok(res.headers.get('cache-control').includes('no-store'));
   res=await send(`/orders/${id}/submit`,{payment_method:'instapay',reference:'fixture-ref',proof_image_url:'https://untrusted.invalid/x.png'});assert.equal(res.status,400);assert.equal(calls.length,1);
-  res=await send(`/orders/${id}/submit`,{payment_method:'instapay',reference:'fixture-ref'});assert.equal(res.status,200);assert.equal(calls.at(-1).args.p_action,'submit');
+  res=await send(`/orders/${id}/submit`,{payment_method:'instapay',reference:'fixture-ref'});assert.equal(res.status,400);
+  res=await send(`/orders/${id}/submit`,{payment_method:'instapay',reference:'fixture-ref',proof_image_url:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6X0JwAAAABJRU5ErkJggg=='});assert.equal(res.status,200);assert.equal(calls.at(-1).args.p_action,'submit');
   user={...user,assistant_id:'assistant'};const count=calls.length;res=await send('/');assert.equal(res.status,403);assert.equal(calls.length,count);
   user={...user,assistant_id:null};reply={data:null,error:{code:'23514',message:'SUBSCRIPTION_CHANGED'}};res=await send(`/admin/orders/${id}/approve`,{});assert.equal(res.status,409);assert.equal((await res.json()).error.code,'SUBSCRIPTION_CHANGED');
   reply={data:null,error:{code:'42501',message:'FORBIDDEN'}};res=await send(`/admin/orders/${id}/approve`,{});assert.equal(res.status,403);
