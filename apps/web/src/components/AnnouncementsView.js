@@ -18,6 +18,35 @@ const catalogEnglish={
  'فيديو شرح':'Lesson video','مذكرة':'Study material','ملف تدريبي':'Practice file','إضافية':'Additional','تعويضية':'Make-up'
 };
 const catalogText=value=>localize(value,catalogEnglish[value] || value);
+function savedSessionTime(row,groups){
+ const group=groups.find(g=>g.id===row.group_id);
+ // Multiple weekly times cannot be safely guessed from a date alone.
+ const weekdayNames=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+ const date=row.rescheduled_to_date || row.session_date;
+ const day=weekdayNames[new Date(date+'T12:00:00Z').getUTCDay()];
+ const groupDays=String(group?.day_of_week || '').split('،').map(value=>value.trim());
+ const groupTimes=String(group?.session_time || '').split('/').map(value=>value.trim());
+ const groupTime=groupTimes.length===1?groupTimes[0]:groupTimes[groupDays.indexOf(day)];
+ const candidates=[row.rescheduled_to_time,row.session_time,row.start_time,groupTime];
+ for(const candidate of candidates){
+  const text=String(candidate || '').trim().replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)).toLowerCase();
+  const match=text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(ص|م|am|pm)?$/);if(!match)continue;
+  let hour=Number(match[1]);const minute=Number(match[2]);if(minute>59)continue;
+  if(match[3]){if(hour<1 || hour>12)continue;hour=hour%12+(['م','pm'].includes(match[3])?12:0);}else if(hour>23)continue;
+  return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+ }
+ return null;
+}
+const classTime={class_cancelled:'cancelled_time',class_rescheduled:'old_time',class_reminder:'event_time'};
+export function announcementClasses(rows,groups){
+ return rows.flatMap(row=>{
+  const group=groups.find(group=>group.id===row.group_id && !group.archived_at);
+  const date=row.rescheduled_to_date || row.session_date;
+  const time=savedSessionTime(row,groups);
+  if(!row.id || !group || !time || !/^\d{4}-\d{2}-\d{2}$/.test(date || ''))return [];
+  return [{id:row.id,groupId:group.id,topic:row.extra_topic || group.name,datetime:date+'T'+time}];
+ });
+}
 const automatic=new Set(['teacher','group','portal','contact']);
 const actor=app=>[app.user?.id,app.delegation?.actor?.id || app.delegation?.assistant_id || '',app.user?.tenant_id].join(':');
 const can=(app,action)=>!app.delegation || app.delegation.permissions?.['announcements.'+action]===true;
@@ -73,10 +102,59 @@ export function registerAnnouncementsActions(app){
    const data=id?await request('/announcements/'+encodeURIComponent(id)):{announcement:{id:crypto.randomUUID(),title:'',type_key:this.announcementsData?.catalog?.[0]?.key || null,group_ids:[],recipient_roles:['student','parent'],values:{},publish_on_portal:true,status:'draft',...(seed || {})},deliveries:[]};
    if(actor(this)!==identity || window.centrlyApp!==this)return;
    this._announcement=data.announcement;const ann=data.announcement,types=this.announcementsData?.catalog || [],editable=can(this,id?'edit':'create'),type=types.find(t=>t.key===ann.type_key);
-   this.showModal(id?localize("إعلان مجموعاتك","Group announcement"):localize("إعلان جديد","New announcement"),`<div style="display:grid;gap:1rem">${ann.source_event_id?'<p>'+ localize("هذه المسودة مرتبطة بحصة أو محتوى محفوظ. التفاصيل المرتبطة تُعدّل من المصدر أولًا، ولا تُرسل أي رسالة بمجرد الحفظ.","This draft is linked to a saved class or material. Edit linked details at the source. Saving does not send any messages.") +'</p>':''}<form id="announcementForm" novalidate onsubmit="window.centrlyApp.saveAnnouncement(event)" style="display:grid;gap:1rem;min-width:0"><style>#announcementForm [aria-invalid=true]{outline:2px solid var(--centrly-danger,#b91c1c);outline-offset:2px}</style><fieldset ${editable?'':'disabled'} style="display:grid;gap:1rem;min-width:0;border:0;padding:0"><label>${localize("عنوان الإعلان","Announcement title")}<input id="annTitle" class="form-input" maxlength="160" value="${e(ann.title)}" required></label><label>${localize("نوع الرسالة","Message type")}<select ${ann.source_event_id?'disabled':''} id="annType" class="form-select" style="min-height:44px" onchange="window.centrlyApp.changeAnnouncementType(this.value)"><option value="">${localize('إعلان مخصص داخل المنصة وواتساب اليدوي','Custom announcement for the portal and manual WhatsApp')}</option>${types.map(t=>`<option value="${e(t.key)}" ${ann.type_key===t.key?'selected':''}>${e(catalogText(t.title))}</option>`).join('')}</select></label><div id="annFields" style="display:grid;gap:1rem">${fields(type,ann.values,ann.source_values || {})}</div><label>${localize('نص مخصص للنشر وواتساب اليدوي فقط','Custom text for the portal and manual WhatsApp')}<textarea id="annManual" class="form-input" rows="3" maxlength="4000">${e(ann.manual_body || '')}</textarea></label><p style="font-size:.85rem;line-height:1.8">${localize('الإرسال الرسمي يستخدم نص النوع المعتمد والحقول المحددة. النص المخصص يُستخدم داخل المنصة وواتساب اليدوي.','Official sending uses the approved template. Custom text is used in the portal and for manual WhatsApp.')}</p><fieldset style="border:1px solid var(--centrly-line);border-radius:12px;min-width:0"><legend>${localize("المجموعات","Groups")}</legend><div style="max-height:200px;overflow:auto">${(this.groups || []).filter(g=>(!g.archived_at || ann.group_ids.includes(g.id)) && (!ann.source_event_id || !Array.isArray(ann.source_group_ids) || ann.source_group_ids.includes(g.id))).map(g=>`<label style="display:flex;gap:.5rem;align-items:center;min-height:44px"><input name="annGroup" type="checkbox" value="${e(g.id)}" ${ann.group_ids.includes(g.id)?'checked':''}>${e(g.name)}</label>`).join('') || '<p>'+ localize("أضف مجموعة أولًا من مجاميعي الدراسية.","Add a group first.") +'</p>'}</div></fieldset><fieldset style="border:0;padding:0"><legend>${localize("من سيشاهد الإعلان؟","Who can see this announcement?")}</legend>${[['student',localize("الطلاب","Students")],['parent',localize("أولياء الأمور","Parents")]].map(([role,label])=>`<label style="display:inline-flex;gap:.5rem;align-items:center;min-height:44px;margin-inline-end:1rem"><input name="annRole" type="checkbox" value="${role}" ${ann.recipient_roles.includes(role)?'checked':''}>${label}</label>`).join('')}</fieldset><label style="display:flex;gap:.5rem;align-items:center;min-height:44px"><input id="annPortal" type="checkbox" ${ann.publish_on_portal?'checked':''}>${localize("يظهر في بوابة الطالب وولي الأمر بعد النشر","Show in student and parent portals after publication")}</label><label>${localize('ينتهي ظهوره في المنصة يوم','Hide from the portal on')} <input id="annExpiry" type="date" class="form-input" value="${e(ann.expires_at?new Date(ann.expires_at).toLocaleDateString('en-CA',{timeZone:'Africa/Cairo'}):'')}"></label></fieldset>${editable&&ann.status==='draft'?'<button type="submit" value="publish" class="btn btn-primary" style="min-height:44px">'+ localize("نشر","Publish") +'</button><button type="submit" value="draft" class="btn btn-secondary" style="min-height:44px">'+ localize("حفظ المسودة","Save draft") +'</button>':editable?'<button type="submit" class="btn btn-primary" style="min-height:44px">'+ localize("حفظ التعديلات","Save changes") +'</button>':''}</form>${id?`<section style="display:flex;flex-wrap:wrap;gap:.5rem">${ann.status==='published' && can(this,'send')?button(localize("معاينة المستلمين والإرسال","Review recipients and send"),'previewAnnouncement()',true):''}${can(this,'send')?button(localize("إلغاء الرسائل المنتظرة","Cancel queued messages"),"announcementAction('cancel')") :''}${ann.status!=='archived' && can(this,'delete')?button(localize("أرشفة الإعلان","Archive announcement"),"announcementAction('archive')") :''}</section><section><h3 style="font-size:1rem">${localize("متابعة الإرسال","Delivery status")}</h3><p>${localize("الحالة غير المؤكدة لا يعاد إرسالها تلقائيًا. الرسائل المرسلة تظل في السجل عند إلغاء المنتظر.","Messages with an unconfirmed status are not retried automatically. Sent messages remain in the history when queued messages are cancelled.")}</p><div style="max-height:260px;overflow:auto">${data.deliveries.map(row=>`<p><bdi>${e(row.phone)}</bdi> · ${e(statuses()[row.status])} · ${row.attempts} ${localize('محاولة','attempts')}</p>`).join('') || '<p>'+ localize("لا توجد رسائل رسمية لهذا الإعلان بعد.","There are no official messages for this announcement yet.") +'</p>'}</div></section>`:''}</div>`);
+   this.showModal(id?localize("إعلان مجموعاتك","Group announcement"):localize("إعلان جديد","New announcement"),`<div style="display:grid;gap:1rem">${ann.source_event_id?'<p>'+ localize("هذه المسودة مرتبطة بحصة أو محتوى محفوظ. التفاصيل المرتبطة تُعدّل من المصدر أولًا، ولا تُرسل أي رسالة بمجرد الحفظ.","This draft is linked to a saved class or material. Edit linked details at the source. Saving does not send any messages.") +'</p>':''}<form id="announcementForm" novalidate onsubmit="window.centrlyApp.saveAnnouncement(event)" style="display:grid;gap:1rem;min-width:0"><style>#announcementForm [aria-invalid=true]{outline:2px solid var(--centrly-danger,#b91c1c);outline-offset:2px}</style><fieldset ${editable?'':'disabled'} style="display:grid;gap:1rem;min-width:0;border:0;padding:0"><label>${localize("عنوان الإعلان","Announcement title")}<input id="annTitle" class="form-input" maxlength="160" value="${e(ann.title)}" required></label><label>${localize("نوع الرسالة","Message type")}<select ${ann.source_event_id?'disabled':''} id="annType" class="form-select" style="min-height:44px" onchange="window.centrlyApp.changeAnnouncementType(this.value)"><option value="">${localize('إعلان مخصص داخل المنصة وواتساب اليدوي','Custom announcement for the portal and manual WhatsApp')}</option>${types.map(t=>`<option value="${e(t.key)}" ${ann.type_key===t.key?'selected':''}>${e(catalogText(t.title))}</option>`).join('')}</select></label><div id="annClassPicker"></div><div id="annFields" style="display:grid;gap:1rem">${fields(type,ann.values,ann.source_values || {})}</div><label>${localize('نص مخصص للنشر وواتساب اليدوي فقط','Custom text for the portal and manual WhatsApp')}<textarea id="annManual" class="form-input" rows="3" maxlength="4000">${e(ann.manual_body || '')}</textarea></label><p style="font-size:.85rem;line-height:1.8">${localize('الإرسال الرسمي يستخدم نص النوع المعتمد والحقول المحددة. النص المخصص يُستخدم داخل المنصة وواتساب اليدوي.','Official sending uses the approved template. Custom text is used in the portal and for manual WhatsApp.')}</p><fieldset style="border:1px solid var(--centrly-line);border-radius:12px;min-width:0"><legend>${localize("المجموعات","Groups")}</legend><div style="max-height:200px;overflow:auto">${(this.groups || []).filter(g=>(!g.archived_at || ann.group_ids.includes(g.id)) && (!ann.source_event_id || !Array.isArray(ann.source_group_ids) || ann.source_group_ids.includes(g.id))).map(g=>`<label style="display:flex;gap:.5rem;align-items:center;min-height:44px"><input name="annGroup" type="checkbox" value="${e(g.id)}" ${ann.group_ids.includes(g.id)?'checked':''}>${e(g.name)}</label>`).join('') || '<p>'+ localize("أضف مجموعة أولًا من مجاميعي الدراسية.","Add a group first.") +'</p>'}</div></fieldset><fieldset style="border:0;padding:0"><legend>${localize("من سيشاهد الإعلان؟","Who can see this announcement?")}</legend>${[['student',localize("الطلاب","Students")],['parent',localize("أولياء الأمور","Parents")]].map(([role,label])=>`<label style="display:inline-flex;gap:.5rem;align-items:center;min-height:44px;margin-inline-end:1rem"><input name="annRole" type="checkbox" value="${role}" ${ann.recipient_roles.includes(role)?'checked':''}>${label}</label>`).join('')}</fieldset><label style="display:flex;gap:.5rem;align-items:center;min-height:44px"><input id="annPortal" type="checkbox" ${ann.publish_on_portal?'checked':''}>${localize("يظهر في بوابة الطالب وولي الأمر بعد النشر","Show in student and parent portals after publication")}</label><label>${localize('ينتهي ظهوره في المنصة يوم','Hide from the portal on')} <input id="annExpiry" type="date" class="form-input" value="${e(ann.expires_at?new Date(ann.expires_at).toLocaleDateString('en-CA',{timeZone:'Africa/Cairo'}):'')}"></label></fieldset><div style="position:sticky;bottom:0;z-index:1;background:var(--centrly-surface,#fff);display:flex;flex-wrap:wrap;gap:.5rem;padding:.5rem 0">${editable&&ann.status==='draft'?'<button type="submit" value="publish" class="btn btn-primary" style="min-height:44px">'+ localize("نشر","Publish") +'</button><button type="submit" value="draft" class="btn btn-secondary" style="min-height:44px">'+ localize("حفظ المسودة","Save draft") +'</button>':editable?'<button type="submit" class="btn btn-primary" style="min-height:44px">'+ localize("حفظ التعديلات","Save changes") +'</button>':''}</div></form>${id?`<section style="display:flex;flex-wrap:wrap;gap:.5rem">${ann.status==='published' && can(this,'send')?button(localize("معاينة المستلمين والإرسال","Review recipients and send"),'previewAnnouncement()',true):''}${can(this,'send')?button(localize("إلغاء الرسائل المنتظرة","Cancel queued messages"),"announcementAction('cancel')") :''}${ann.status!=='archived' && can(this,'delete')?button(localize("أرشفة الإعلان","Archive announcement"),"announcementAction('archive')") :''}</section><section><h3 style="font-size:1rem">${localize("متابعة الإرسال","Delivery status")}</h3><p>${localize("الحالة غير المؤكدة لا يعاد إرسالها تلقائيًا. الرسائل المرسلة تظل في السجل عند إلغاء المنتظر.","Messages with an unconfirmed status are not retried automatically. Sent messages remain in the history when queued messages are cancelled.")}</p><div style="max-height:260px;overflow:auto">${data.deliveries.map(row=>`<p><bdi>${e(row.phone)}</bdi> · ${e(statuses()[row.status])} · ${row.attempts} ${localize('محاولة','attempts')}</p>`).join('') || '<p>'+ localize("لا توجد رسائل رسمية لهذا الإعلان بعد.","There are no official messages for this announcement yet.") +'</p>'}</div></section>`:''}</div>`);
+   if(typeof document!=='undefined')void this.setupAnnouncementClasses();
   }catch(error){if(actor(this)===identity)this.showToast(error.message,'error');}
  };
- app.changeAnnouncementType=function(key){document.getElementById('annFields').innerHTML=fields(this.announcementsData?.catalog?.find(t=>t.key===key));};
+ app.changeAnnouncementType=function(key){
+  document.getElementById('annFields').innerHTML=fields(this.announcementsData?.catalog?.find(t=>t.key===key));
+  void this.setupAnnouncementClasses();
+ };
+ app.setupAnnouncementClasses=async function(){
+  const holder=document.getElementById('annClassPicker'),form=holder?.closest('form');
+  if(!form)return;
+  holder.replaceChildren();
+  const timeField=classTime[form.querySelector('#annType').value],ann=this._announcement;
+  if(!timeField || ann.source_event_id || ann.status!=='draft')return;
+  const topic=form.querySelector('[data-ann-field="topic"]');
+  const time=form.querySelector('[data-ann-field="'+timeField+'"]');
+  for(const input of [topic,time])if(input)input.closest('label').style.display='none';
+  holder.innerHTML=`<label style="display:grid;gap:.4rem">${localize('اختر الحصة','Choose a class')}<select id="annClass" class="form-select" required><option value="">${localize('جار تحميل الحصص','Loading classes')}</option></select></label><p role="status"></p>`;
+  const select=holder.querySelector('select'),status=holder.querySelector('p');
+  const identity=actor(this);
+  try{
+   const today=new Date().toLocaleDateString('en-CA',{timeZone:'Africa/Cairo'});
+   const range=days=>new Date(Date.parse(today+'T12:00:00Z')+days*86400000).toISOString().slice(0,10);
+   const [{sessions},groupData]=await Promise.all([request('/sessions?from='+range(-90)+'&to='+range(90)),request('/groups')]);
+   if(actor(this)!==identity || !select.isConnected)return;
+   const rows=announcementClasses(sessions || [],Array.isArray(groupData)?groupData:groupData.groups || []);
+   select.options[0].textContent=localize('اختر من الحصص المحفوظة','Select a saved class');
+   for(const row of rows)select.add(new Option(row.topic+' · '+row.datetime.replace('T',' '),row.id));
+   const saved=rows.find(row=>row.topic===topic?.value && row.datetime===time?.value);
+   if(saved)select.value=saved.id;
+   if(!rows.length)status.textContent=localize('لا توجد حصص محفوظة بموعد واضح في الفترة الحالية.','No saved classes with a clear scheduled time are available.');
+   select.addEventListener('change',()=>{
+    const selected=rows.find(row=>row.id===select.value);
+    if(topic)topic.value=selected?.topic || '';
+    if(time)time.value=selected?.datetime || '';
+    if(selected){
+     for(const checkbox of form.querySelectorAll('[name=annGroup]'))checkbox.checked=checkbox.value===selected.groupId;
+     const title=form.querySelector('#annTitle');
+     if(!title.value.trim())title.value=localize('حصة','Class')+' · '+selected.topic;
+    }
+    select.removeAttribute('aria-invalid');
+   });
+  }catch{
+   if(!select.isConnected)return;
+   select.options[0].textContent=localize('تعذر تحميل الحصص','Could not load classes');
+   const retry=document.createElement('button');
+   retry.type='button';
+   retry.className='btn btn-secondary';
+   retry.textContent=localize('إعادة المحاولة','Retry');
+   retry.onclick=()=>void this.setupAnnouncementClasses();
+   status.replaceChildren(retry);
+  }
+ };
  app.saveAnnouncement=async function(event){
   event.preventDefault();const ann=this._announcement,control=event.submitter,identity=actor(this),form=event.currentTarget;
   if(this._announcementBusy)return;
@@ -90,7 +168,9 @@ export function registerAnnouncementsActions(app){
    const title=form.querySelector('#annTitle');
    const invalid=[];
    if(!title.value.trim())invalid.push(title);
-   if(publish)invalid.push(...[...form.querySelectorAll('[data-ann-field]:required:not(:disabled)')].filter(field=>!field.value.trim()));
+   const lesson=form.querySelector('#annClass');
+   if(publish && lesson && !lesson.value)invalid.push(lesson);
+   if(publish)invalid.push(...[...form.querySelectorAll('[data-ann-field]:required:not(:disabled)')].filter(field=>field.closest('label').style.display!=='none' && !field.value.trim()));
    if(!groups.length)invalid.push(...form.querySelectorAll('[name=annGroup]'));
    if(!roles.length)invalid.push(...form.querySelectorAll('[name=annRole]'));
    if(invalid.length || !groups.length || !roles.length){

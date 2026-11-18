@@ -147,7 +147,7 @@ export class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=9.92.2').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=9.92.3').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;

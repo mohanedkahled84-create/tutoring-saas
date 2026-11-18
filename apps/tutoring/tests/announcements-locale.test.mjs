@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { renderAnnouncementsView, registerAnnouncementsActions } from '../../web/src/components/AnnouncementsView.js';
+import { announcementClasses, renderAnnouncementsView, registerAnnouncementsActions } from '../../web/src/components/AnnouncementsView.js';
 
 test('announcement navigation, wallet, and composer follow the selected language', async () => {
   let language = 'en';
@@ -28,4 +28,16 @@ test('announcement navigation, wallet, and composer follow the selected language
       else delete globalThis[key];
     }
   }
+});
+
+
+test('a saved class can be picked before choosing a group, including a two-day timetable', () => {
+  const groups = [{ id: 'group', name: 'Physics', day_of_week: 'الأحد، الأربعاء', session_time: '04:00 م / 06:30 م' }];
+  const rows = [
+    { id: 'class', group_id: 'group', session_date: '2026-11-18' },
+    { id: 'unknown', group_id: 'another-group', session_date: '2026-11-18' },
+  ];
+  assert.deepEqual(announcementClasses(rows, groups), [
+    { id: 'class', groupId: 'group', topic: 'Physics', datetime: '2026-11-18T18:30' },
+  ]);
 });
