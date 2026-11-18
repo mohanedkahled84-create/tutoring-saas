@@ -489,8 +489,8 @@ export function registerStudentsActions(app) {
     const bodyHtml = `
       <form id="addStudentModalForm" onsubmit="window.centrlyApp.handleCreateStudent(event)">
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">اسم الطالب رباعي *</label>
-          <input type="text" id="newStudentName" class="form-input" placeholder="اسم الطالب بالكامل" required>
+          <label class="form-label" style="font-weight: 700;">اسم الطالب *</label>
+          <input type="text" id="newStudentName" class="form-input" placeholder="اسم الطالب" required>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي *</label>
@@ -501,11 +501,6 @@ export function registerStudentsActions(app) {
           <label class="form-label" style="font-weight: 700;">رقم هاتف ولي الأمر (واتساب) *</label>
           <input type="tel" id="newStudentPhone" class="form-input" placeholder="" dir="ltr" required>
           <small style="color: var(--centrly-text); font-size: 0.75rem;">رقم مصري مكون من 11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015</small>
-        </div>
-        <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">كود الطالب (اختياري)</label>
-          <input type="text" id="newStudentCode" class="form-input" placeholder="اتركه فارغاً للتوليد التلقائي (مثال: 1025)" dir="ltr">
-          <small style="color: var(--centrly-text); font-size: 0.75rem;">يمكنك كتابة كود مخصص للطالب أو تركه فارغاً ليقوم النظام بتوليد كود تسلسلي فريد تلقائياً.</small>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
@@ -579,7 +574,6 @@ export function registerStudentsActions(app) {
     const name = document.getElementById('newStudentName').value.trim();
     const parent_phone = document.getElementById('newStudentPhone').value.trim();
     const student_phone = document.getElementById('newStudentOwnPhone')?.value.trim() || '';
-    const rawCode = document.getElementById('newStudentCode')?.value.trim();
     const groupId = document.getElementById('newStudentGroup').value;
     const feedback = document.getElementById('addStudentFeedback');
     const saveBtn = document.getElementById('btnSaveStudent');
@@ -617,24 +611,6 @@ export function registerStudentsActions(app) {
       return;
     }
 
-    // Client-side uniqueness check if a custom code is entered
-    if (rawCode) {
-      const duplicateStudent = (this.students || []).find(s => {
-        const c1 = (s.code || '').trim();
-        const c2 = (s.student_code || s.studentCode || '').trim();
-        return c1 === rawCode || c2 === rawCode;
-      });
-      if (duplicateStudent) {
-        if (feedback) {
-          feedback.style.display = 'block';
-          feedback.style.backgroundColor = 'var(--centrly-danger-light)';
-          feedback.style.color = 'var(--centrly-danger)';
-          feedback.textContent = `كود الطالب (${rawCode}) مسجل بالفعل للطالب "${duplicateStudent.name}". لا يمكن تكرار الأكواد.`;
-        }
-        return;
-      }
-    }
-
     let pricing;try{pricing=this.studentDiscountPayload('newStudent');}catch(error){this.showToast(error.message,'error');return;}
     saveBtn.disabled = true;
     saveBtn.textContent = 'جاري الإضافة...';
@@ -646,18 +622,24 @@ export function registerStudentsActions(app) {
           name,
           parent_phone: cleanParentPhone,
           student_phone: cleanStudentPhone,
-          code: rawCode || undefined,
           ...pricing,
         },
       });
 
       const studentId = res.student?.id;
       if(studentId)trackProductEvent('student_added');
-      if (studentId && groupId) {
-        await request(`/groups/${groupId}/students`, {
+      if (!studentId) throw new Error('تعذر تأكيد حفظ الطالب. حدّث القائمة قبل المحاولة مجددًا.');
+      try {
+        await request('/groups/' + encodeURIComponent(groupId) + '/students', {
           method: 'POST',
           body: { student_id: studentId },
-        }).catch(err => console.warn('Enrollment note:', err));
+        });
+      } catch {
+        this.showModal('الطالب محفوظ ولم يتأكد ربطه بالمجموعة', `
+          <p>تم حفظ سجل الطالب. يمكنك إعادة محاولة ربطه بالمجموعة من نفس السجل.</p>
+          <button type="button" class="btn btn-primary" onclick="window.centrlyApp.enrollExistingPhoneStudent('${escapeHtml(studentId)}','${escapeHtml(groupId)}')">إعادة محاولة الربط</button>
+        `);
+        return;
       }
 
       this.closeModal();
@@ -798,20 +780,14 @@ export function registerStudentsActions(app) {
     `).join('');
 
     const currentName = student.name || student.full_name || '';
-    const currentCode = student.code || student.student_code || student.studentCode || '';
     const currentStudentPhone = student.student_phone || student.studentPhone || '';
     const currentParentPhone = student.parent_phone || student.parentPhone || '';
 
     const bodyHtml = `
       <form id="editStudentModalForm" onsubmit="window.centrlyApp.saveStudentEdit(event, '${escapeHtml(studentId)}')">
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">اسم الطالب الرباعي *</label>
+          <label class="form-label" style="font-weight: 700;">اسم الطالب *</label>
           <input type="text" id="editStudentName" class="form-input" value="${escapeHtml(currentName)}" required>
-        </div>
-        <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label class="form-label" style="font-weight: 700;">كود الطالب *</label>
-          <input type="text" id="editStudentCode" class="form-input" value="${escapeHtml(currentCode)}" placeholder="مثال: 1025" dir="ltr" required>
-          <small style="color: var(--centrly-text); font-size: 0.75rem;">كود الطالب التعريفي في المنصة والباركود (يجب أن يكون فريداً وغير مكرر)</small>
         </div>
         <div class="form-group" style="margin-bottom: 0.85rem;">
           <label class="form-label" style="font-weight: 700;">رقم هاتف الطالب الشخصي *</label>
@@ -854,39 +830,12 @@ export function registerStudentsActions(app) {
       this.studentsGroupFilter = currentGroupFilter;
     }
     const name = document.getElementById('editStudentName')?.value.trim();
-    const code = document.getElementById('editStudentCode')?.value.trim();
     const parent_phone = document.getElementById('editStudentPhone')?.value.trim();
     const student_phone = document.getElementById('editStudentOwnPhone')?.value.trim() || '';
     const rawGroupId = document.getElementById('editStudentGroup')?.value;
     const targetGroupId = rawGroupId && rawGroupId.trim().length > 0 ? rawGroupId.trim() : null;
     const feedback = document.getElementById('editStudentFeedback');
     const saveBtn = document.getElementById('btnUpdateStudent');
-
-    if (!code) {
-      if (feedback) {
-        feedback.style.display = 'block';
-        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
-        feedback.style.color = 'var(--centrly-danger)';
-        feedback.textContent = 'كود الطالب إلزامي ولا يمكن تركه فارغاً.';
-      }
-      return;
-    }
-
-    const duplicateStudent = (this.students || []).find(s => {
-      if (s.id === studentId) return false;
-      const c1 = (s.code || '').trim();
-      const c2 = (s.student_code || s.studentCode || '').trim();
-      return c1 === code || c2 === code;
-    });
-    if (duplicateStudent) {
-      if (feedback) {
-        feedback.style.display = 'block';
-        feedback.style.backgroundColor = 'var(--centrly-danger-light)';
-        feedback.style.color = 'var(--centrly-danger)';
-        feedback.textContent = `كود الطالب (${code}) مسجل بالفعل للطالب "${duplicateStudent.name}". لا يمكن تكرار الأكواد.`;
-      }
-      return;
-    }
 
     const egyptianPhoneRegex = /^01[0125][0-9]{8}$/;
     const cleanParentPhone = parent_phone.replace(/[\s\-().]/g, '');
@@ -925,7 +874,6 @@ export function registerStudentsActions(app) {
           parent_phone: cleanParentPhone,
           student_phone: cleanStudentPhone,
           group_id: targetGroupId,
-          code,
           ...pricing,
         },
       });
@@ -942,9 +890,6 @@ export function registerStudentsActions(app) {
             ...this.students[studentIndex],
             ...(updatedStudent && typeof updatedStudent === 'object' ? updatedStudent : {}),
             name,
-            code,
-            student_code: code,
-            studentCode: code,
             parent_phone: cleanParentPhone,
             parentPhone: cleanParentPhone,
             student_phone: cleanStudentPhone,
