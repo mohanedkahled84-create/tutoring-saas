@@ -489,27 +489,23 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
     return;
   }
 
-  // Enforce subscription gating: official Meta WhatsApp links dispatch is strictly for paid active subscriptions
-  if (req.user?.role !== "admin" && tenantId) {
-    const db = req.supabase || supabasePublic;
-    const { data: tenant } = await db
-      .from("tenants")
-      .select("id, subscription_status, status, subscription_ends_at, trial_ends_at")
-      .eq("id", tenantId)
-      .maybeSingle();
-
-    const isPaidActive =
-      tenant?.subscription_status === "active" ||
-      tenant?.status === "active" ||
-      (Boolean(tenant?.subscription_ends_at) && new Date(tenant!.subscription_ends_at).getTime() > Date.now());
-
-    if (!isPaidActive) {
-      res.status(403).json({
-        error: {
-          code: "SUBSCRIPTION_REQUIRED",
-          message: "خاصية إرسال الروابط عبر واتساب ميتا الرسمي متاحة حصرياً للباقات المدفوعة. يرجى تفعيل اشتراكك للاستفادة من الميزة.",
-        },
-      });
+  // Match the worker's eligibility check before reserving first-send slots.
+  if (tenantId) {
+    const {data: eligible, error} = await getServiceSupabaseClient().rpc(
+      'meta_tenant_dispatchable', {p_tenant: tenantId}
+    );
+    if (error) {
+      res.status(503).json({error:{
+        code:'DISPATCH_ELIGIBILITY_UNAVAILABLE',
+        message:'تعذر التحقق من إتاحة إرسال الروابط. حاول مرة أخرى.',
+      }});
+      return;
+    }
+    if (eligible !== true) {
+      res.status(403).json({error:{
+        code:'SUBSCRIPTION_REQUIRED',
+        message:'إرسال الروابط تلقائيًا متاح للباقات المدفوعة النشطة. افتح واتساب من تفاصيل الطالب لإرسال الرابط يدويًا.',
+      }});
       return;
     }
   }
