@@ -646,13 +646,18 @@ export function registerStudentsActions(app) {
         return;
       }
 
+      const group = (this.groups || []).find(item => item.id === groupId);
+      const student = {...res.student, group_id:groupId, group_ids:[groupId], group_name:group?.name};
+      this.students = [student, ...(this.students || []).filter(item => item.id !== studentId)];
+      this.saveCache('students', this.students);
       this.closeModal();
+      if (this.currentRoute === 'students') this.renderMainContent();
       this.showToast(`تمت إضافة الطالب (${name}) بنجاح! والكود التلقائي: ${res.student?.code || res.student?.student_code || 'تم التعيين'}`, 'success');
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
       const existing=err?.data?.error?.existing_student;
       if(err.code==='DUPLICATE_STUDENT_PHONE' && existing?.id){
-        this.showModal('الطالب مسجل بالفعل',`<p>الطالب ${escapeHtml(existing.name)} مسجل عندك بالفعل. ${existing.archived_at?'استعد سجله من الأرشيف أولًا.':'يمكنك إضافة نفس سجله إلى مجموعة أخرى بدون استهلاك مقعد جديد.'}</p>${groupId && !existing.archived_at?`<button class="btn btn-primary" style="min-height:44px" onclick="window.centrlyApp.enrollExistingPhoneStudent('${escapeHtml(existing.id)}','${escapeHtml(groupId)}')">إضافته إلى المجموعة المحددة</button>`:''}`);
+        this.showModal('الطالب مسجل بالفعل',`<p>رقم موبايل الطالب مسجل بالفعل باسم ${escapeHtml(existing.name)} في حسابك. ${existing.archived_at?'استعد سجله من الأرشيف أولًا.':'يمكنك إضافة نفس سجله إلى مجموعة أخرى بدون استهلاك مقعد جديد.'}</p>${groupId && !existing.archived_at?`<button class="btn btn-primary" style="min-height:44px" onclick="window.centrlyApp.enrollExistingPhoneStudent('${escapeHtml(existing.id)}','${escapeHtml(groupId)}')">إضافته إلى المجموعة المحددة</button>`:''}`);
         return;
       }
       if (feedback) {

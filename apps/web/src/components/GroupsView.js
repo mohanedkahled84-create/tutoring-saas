@@ -736,7 +736,7 @@ export function registerGroupsActions(app) {
     }
 
     try {
-      await request('/groups', {
+      const result = await request('/groups', {
         method: 'POST',
         body: {
           name,
@@ -758,7 +758,13 @@ export function registerGroupsActions(app) {
         },
       });
 
+      const group = result?.group;
+      if (group?.id) {
+        this.groups = [group, ...(this.groups || []).filter(item => item.id !== group.id)];
+        this.saveCache('groups', this.groups);
+      }
       this.closeModal();
+      if (group?.id && this.currentRoute === 'groups') this.renderMainContent();
       this.showToast(`تم إنشاء المجموعة (${name}) بنجاح!`, 'success');
       trackProductEvent('group_created');
       await this.loadRouteData(this.currentRoute);
