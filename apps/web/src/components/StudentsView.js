@@ -536,11 +536,16 @@ export function registerStudentsActions(app) {
               </div>
               <fieldset style="grid-column:1/-1;border:0;padding:0;min-width:0">
                 <legend>مواعيد الحصص الأسبوعية</legend>
+                <label>عدد الحصص في الأسبوع
+                  <select id="quickGroupFrequency" class="form-input" onchange="window.centrlyApp.updateQuickGroupFrequency(this)">
+                    <option value="1">حصة واحدة</option><option value="2">حصتان</option>
+                  </select>
+                </label>
                 ${[1, 2].map(slot => `
-                  <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem">
+                  <div data-quick-group-slot="${slot}" ${slot === 2 ? 'hidden' : ''} style="flex-wrap:wrap;gap:.5rem;margin-top:.5rem">
                     <label>اليوم ${slot}
                       <select class="form-input" data-quick-group-day>
-                        ${slot === 2 ? '<option value="">حصة واحدة في الأسبوع</option>' : ''}
+                        ${slot === 2 ? '<option value="">اختر اليوم</option>' : ''}
                         ${['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'].map(day => `<option>${day}</option>`).join('')}
                       </select>
                     </label>
@@ -705,6 +710,11 @@ export function registerStudentsActions(app) {
     this.toggleQuickAddGroupInSingleStudent(false);
   }
 
+  app.updateQuickGroupFrequency = function(select) {
+    const secondSlot = document.querySelector('[data-quick-group-slot="2"]');
+    if (secondSlot) secondSlot.hidden = select.value !== '2';
+  };
+
   app.executeQuickCreateGroupForSingleStudent = async function() {
     const nameInput = document.getElementById('quickGroupNameStudent');
     const centerInput = document.getElementById('quickGroupCenterStudent');
@@ -723,8 +733,12 @@ export function registerStudentsActions(app) {
     const price = Number(priceInput?.value) || 0;
     const times = [...editor.querySelectorAll('[data-quick-group-time]')];
     const slots = [...editor.querySelectorAll('[data-quick-group-day]')]
-      .map((day, index) => ({ day: day.value, time: times[index] }))
-      .filter(slot => slot.day);
+      .slice(0, Number(document.getElementById('quickGroupFrequency').value))
+      .map((day, index) => ({ day: day.value, time: times[index] }));
+    if (slots.some(slot => !slot.day)) {
+      this.showToast('اختر يوم كل حصة', 'warning');
+      return;
+    }
     if (new Set(slots.map(slot => slot.day)).size !== slots.length) {
       this.showToast('اختر يومين مختلفين للحصتين', 'warning');
       return;
