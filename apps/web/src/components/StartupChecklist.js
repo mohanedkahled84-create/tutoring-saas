@@ -28,27 +28,29 @@ export function registerStartupChecklist(app){
 
 if (globalThis.customElements && !customElements.get('centrly-startup-progress')) {
  customElements.define('centrly-startup-progress', class extends HTMLElement {
-  async connectedCallback() {
+  connectedCallback() { this.refresh(); }
+  async refresh() {
+   const generation=this._generation=(this._generation || 0)+1;
    const app=window.centrlyApp;
    if(!app?.user?.id || app.delegation || app.user.role==='admin')return;
    const owner=[app.user.id,app.user.tenant_id].join(':');
    const key='centrly_startup_hidden:'+owner, collapsedKey='centrly_startup_collapsed:'+owner;
    try{if(localStorage.getItem(key)==='1')return;}catch{}
    const en=getLocale()==='en';
-   this.innerHTML='<aside class="startup-float" aria-label="'+(en?'Getting started':'خطوات البداية')+'"><div role="status" class="skeleton-box" style="height:48px"></div></aside>';
+   if(!this.firstElementChild)this.innerHTML='<aside class="startup-float" aria-label="'+(en?'Getting started':'خطوات البداية')+'"><div role="status" class="skeleton-box" style="height:48px"></div></aside>';
    try{
     const {steps}=await request('/settings/startup-progress');
     if(!Array.isArray(steps))throw new Error('Invalid steps');
-    if(!this.isConnected || window.centrlyApp!==app || [app.user?.id,app.user?.tenant_id].join(':')!==owner)return;
+    if(!this.isConnected || this._generation!==generation || window.centrlyApp!==app || [app.user?.id,app.user?.tenant_id].join(':')!==owner)return;
     const done=steps.filter(step=>step.done).length;
     this.innerHTML=`<aside class="startup-float"><header><strong>${en?'Getting started':'خطوات البداية'} · ${done}/${steps.length}</strong><div><button type="button" data-collapse aria-expanded="true">${en?'Minimize':'تصغير'}</button><button type="button" data-dismiss aria-label="${en?'Hide checklist':'إخفاء الخطوات'}">×</button></div></header><div class="startup-float-body"><progress max="${steps.length || 1}" value="${done}" aria-label="${en?'Getting started progress':'تقدم خطوات البداية'}"></progress><ul>${steps.map(step=>`<li><button type="button" data-route="${e(routes.has(step.route)?step.route:'')}" ${routes.has(step.route)?'':'disabled'}><span aria-hidden="true">${step.done?'✓':'○'}</span><span ${step.done?'class="is-done"':''}>${e(en?(startupStepEnglish[step.id] || step.title):step.title)}</span></button></li>`).join('')}</ul></div></aside>`;
     const body=this.querySelector('.startup-float-body'),toggle=this.querySelector('[data-collapse]');
     const collapse=value=>{body.hidden=value;toggle.setAttribute('aria-expanded',String(!value));toggle.textContent=value?(en?'Show':'عرض'):(en?'Minimize':'تصغير');};
     try{collapse(localStorage.getItem(collapsedKey)==='1');}catch{collapse(false);}
     toggle.addEventListener('click',()=>{const value=!body.hidden;collapse(value);try{localStorage.setItem(collapsedKey,value?'1':'0');}catch{}});
-    this.querySelector('[data-dismiss]').addEventListener('click',()=>{try{localStorage.setItem(key,'1');}catch{}this.replaceChildren();});
+    this.querySelector('[data-dismiss]').addEventListener('click',()=>{this._generation++;try{localStorage.setItem(key,'1');}catch{}this.replaceChildren();});
     this.querySelectorAll('[data-route]').forEach(button=>button.addEventListener('click',()=>{if(routes.has(button.dataset.route))app.navigate(button.dataset.route);}));
-   }catch{if(this.isConnected)this.replaceChildren();}
+   }catch{if(this.isConnected && this._generation===generation && this.querySelector('.skeleton-box'))this.replaceChildren();}
   }
  });
 }
