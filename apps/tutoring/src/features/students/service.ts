@@ -47,7 +47,7 @@ export class StudentsService {
 
     if(data.student_phone && this.repo.findByPhone){
       const existing=await this.repo.findByPhone(tenantId,data.student_phone);
-      if(existing)throw Object.assign(new Error('DUPLICATE_STUDENT_PHONE: الطالب مسجل بالفعل؛ يمكنك إضافته إلى مجموعة أخرى'),{existingStudent:{id:existing.id,name:existing.name,group_id:existing.group_id,archived_at:(existing as any).archived_at}});
+      if(existing)throw Object.assign(new Error('DUPLICATE_STUDENT_PHONE: الطالب مسجل بالفعل؛ يمكنك إضافته إلى مجموعة أخرى'),{existingStudent:{id:existing.id,name:existing.name,group_id:existing.group_id,group_ids:existing.group_ids || [],archived_at:(existing as any).archived_at}});
     }
 
     let codeToUse = normalizeDigits(data.student_code || data.code || "").trim();

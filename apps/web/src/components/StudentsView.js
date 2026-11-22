@@ -663,7 +663,7 @@ export function registerStudentsActions(app) {
       const existing=err?.data?.error?.existing_student;
       if(err.code==='DUPLICATE_STUDENT_PHONE' && existing?.id && feedback){
         const cached=(this.students || []).find(student=>student.id===existing.id);
-        const memberships=[...new Set([existing.group_id,cached?.group_id,...(cached?.group_ids || [])].filter(Boolean))];
+        const memberships=[...new Set([existing.group_id,...(existing.group_ids || []),cached?.group_id,...(cached?.group_ids || [])].filter(Boolean))];
         const names=memberships.map(id=>(this.groups || []).find(group=>group.id===id)?.name).filter(Boolean);
         const same=memberships.includes(groupId);
         feedback.style.display='block';
