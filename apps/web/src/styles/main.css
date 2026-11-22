@@ -1373,3 +1373,14 @@ html[dir="rtl"] body { direction: rtl; }
 .route-skeleton-hero { display:grid; gap:.8rem; min-height:160px; padding:1.5rem; }
 .route-skeleton-assistant { min-height:160px; display:grid; gap:.75rem; padding:1rem; }
 .route-skeleton-day { min-height:130px; display:grid; gap:.75rem; padding:1rem; }
+
+.nav-link .nav-pro-badge, .nav-link.active .nav-pro-badge {
+  background: #fff0c2;
+  color: #785000 !important;
+  border: 1px solid #e4b85c;
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .5px;
+}
