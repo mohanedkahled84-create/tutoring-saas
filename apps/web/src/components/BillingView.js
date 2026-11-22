@@ -1,4 +1,4 @@
-import {renderCommercialBillingView,registerCommercialBillingActions} from './CommercialBillingView.js?v=9.46.0';
+import {renderCommercialBillingView,registerCommercialBillingActions} from './CommercialBillingView.js?v=9.92.8';
 import {escapeHtml} from '../utils/escapeHtml.js?v=9.46.0';
 export function renderBillingView(data={},user={}) { return renderCommercialBillingView(data,user); }
 export function registerBillingActions(app){

@@ -21,7 +21,7 @@ import { renderHomeworkReviewView, registerHomeworkActions } from './components/
 import { renderCenterOwnerDashboard, registerCenterOwnerActions } from './components/CenterOwnerDashboard.js?v=9.46.0';
 import { renderStudentReportsView, registerStudentReportsActions } from './components/StudentReportsView.js?v=9.46.0';
 import { renderRiskWatchlistView, registerRiskWatchlistActions } from './components/RiskWatchlistView.js?v=9.46.0';
-import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=9.46.0';
+import { renderBillingView, registerBillingActions } from './components/BillingView.js?v=9.92.8';
 import { renderWhatsAppSettingsView, registerWhatsAppSettingsActions } from './components/WhatsAppSettingsView.js?v=9.46.0';
 import { renderStudentCardsView, registerStudentCardsActions } from './components/StudentCardsView.js?v=9.46.0';
 import { renderTeacherQuizzesView, registerTeacherQuizzesActions } from './components/TeacherQuizzesView.js?v=9.46.0';
