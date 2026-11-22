@@ -8,7 +8,7 @@ import {renderAnnouncementsView,registerAnnouncementsActions} from './components
 export {renderAnnouncementsView};
 import {renderSupportView,registerSupportActions} from './components/SupportView.js?v=9.46.0';
 export {renderSupportView};
-import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=9.92.7';
+import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=9.92.13';
 import { registerStudentImportActions } from './components/StudentImportModal.js?v=9.46.0';
 import { registerSecurityPinActions } from './components/SecurityPinManager.js?v=9.46.0';
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=9.92.0';

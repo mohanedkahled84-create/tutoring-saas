@@ -342,7 +342,7 @@ export function registerPortalDispatchActions(app) {
         <div style="padding: 1.75rem 1rem; text-align: center; color: #64748b; background: #fff; border: 1.5px dashed #cbd5e1; border-radius: 0.5rem;">
           <div style="font-size: 1.8rem; margin-bottom: 0.35rem;">🎉</div>
           <div style="font-weight: 700; color: #1e293b; font-size: 0.92rem; margin-bottom: 0.2rem;">لا يوجد طلاب جدد غير مرسل لهم في هذه المجموعة</div>
-          <div style="font-size: 0.8rem; color: #64748b;">تم إرسال روابط المنصة والمتابعة لجميع طلاب هذه المجموعة مسبقاً، أو لا توجد أرقام هواتف مسجلة.</div>
+          <div style="font-size: 0.8rem; color: #64748b;">لا توجد روابط جديدة متاحة للإرسال التلقائي أو لا توجد أرقام مسجلة. لإعادة المشاركة، افتح تفاصيل الطالب وأرسل من واتساب.</div>
         </div>
       `;
     }
@@ -455,7 +455,7 @@ export function registerPortalDispatchActions(app) {
             <span>ماذا تحصل عند الترقية للباقة المدفوعة؟</span>
           </div>
           <ul style="margin: 0; padding-right: 1.2rem; font-size: 0.825rem; color: #334155; display: flex; flex-direction: column; gap: 0.45rem; list-style-type: disc;">
-            <li>إرسال فوري لبيانات الدخول (اسم المستخدم وكلمة السر) لجميع الطلاب وأولياء الأمور بنقرة واحدة.</li>
+            <li>تجهيز روابط الطلاب وأولياء الأمور للإرسال عبر واتساب، مع ظهور حالة المعالجة عند توفرها.</li>
             <li>وصول دائم غير محدود لجميع مميزات المنصة والمتابعة وبوابات الطلاب.</li>
             <li>ردود آلية ذكية وبوابات متابعة حية لدرجات الكويزات، تقارير الحضور والغياب، وملاحظاتك المباشرة.</li>
             <li>تحميل ملازم وملفات الشرح ورفع حلول الواجبات فورياً.</li>
@@ -496,7 +496,7 @@ export function registerPortalDispatchActions(app) {
     const allUnsentStudents = this.getUnsentPortalStudents('ALL');
 
     if (allUnsentStudents.length === 0) {
-      this.showToast('جميع الطلاب المسجلين تم إرسال روابط المنصة والمتابعة لهم مسبقاً.', 'info');
+      this.showToast('لا توجد روابط جديدة متاحة للإرسال التلقائي. لإعادة المحاولة، افتح تفاصيل الطالب واضغط إرسال، ثم أكّد الإرسال داخل واتساب.', 'info');
       return;
     }
 
