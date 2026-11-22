@@ -89,6 +89,9 @@ export function renderAnnouncementsView(data={},app={}){
 function fields(type,values={},locked={}){
  return (type?.fields || []).filter(field=>!automatic.has(field.type)).map(field=>`<label style="display:grid;gap:.4rem">${e(catalogText(field.label))}${field.type==='choice'?`<select class="form-select" style="min-height:44px" data-ann-field="${e(field.key)}" ${Object.hasOwn(locked,field.key)?'disabled':''} required><option value="">${localize('اختر','Select')}</option>${field.options.map(v=>`<option value="${e(v)}" ${values[field.key]===v?'selected':''}>${e(catalogText(v))}</option>`).join('')}</select>`:`<input class="form-input" style="min-height:44px" data-ann-field="${e(field.key)}" type="${field.type==='date'?'date':field.type==='datetime'?'datetime-local':'text'}" maxlength="160" value="${e(values[field.key] || '')}" ${Object.hasOwn(locked,field.key)?'readonly':''} required>`}</label>`).join('');
 }
+export function announcementChannels(portal, whatsapp) {
+ return {publish_on_portal:Boolean(portal), review_whatsapp:Boolean(whatsapp), selected:Boolean(portal || whatsapp)};
+}
 export function registerAnnouncementsActions(app){
  app.openAnnouncementSessionPicker=async function(){
   if(!can(this,'create'))return;
@@ -181,7 +184,8 @@ export function registerAnnouncementsActions(app){
   event.preventDefault();const ann=this._announcement,control=event.submitter,identity=actor(this),form=event.currentTarget;
   if(this._announcementBusy)return;
   const publish=control?.value==='publish' && ann.status==='draft';
-  const reviewWhatsApp=publish && Boolean(form.querySelector('#annWhatsApp')?.checked);
+  const channels=announcementChannels(form.querySelector('#annPortal').checked,form.querySelector('#annWhatsApp')?.checked);
+  const reviewWhatsApp=publish && channels.review_whatsapp;
   this._announcementBusy=true;
   const controls=[...form.querySelectorAll('button[type=submit]')];
   controls.forEach(button=>button.disabled=true);
@@ -194,7 +198,7 @@ export function registerAnnouncementsActions(app){
    const title=form.querySelector('#annTitle');
    const invalid=[];
    if(!title.value.trim())invalid.push(title);
-   if(publish && !form.querySelector('#annPortal').checked && !reviewWhatsApp){
+   if(publish && !channels.selected){
     invalid.push(form.querySelector('#annPortal'));
    }
    const lesson=form.querySelector('#annClass');
@@ -209,7 +213,7 @@ export function registerAnnouncementsActions(app){
     first?.scrollIntoView({block:'center'});
     throw new Error(localize("راجع الحقول المحددة واختر مجموعة ومستلمين للإعلان","Check the highlighted fields and select a group and recipients."));
    }
-   const body={id:ann.id,...(ann.source_event_id?{source_event_id:ann.source_event_id}:{}),title:document.getElementById('annTitle').value.trim(),type_key:document.getElementById('annType').value || null,group_ids:groups,recipient_roles:roles,values:Object.fromEntries([...document.querySelectorAll('[data-ann-field]')].map(el=>[el.dataset.annField,el.value.trim()])),manual_body:document.getElementById('annManual').value.trim() || null,publish_on_portal:form.querySelector('#annPortal').checked,expires_at:expiry?cairoAnnouncementExpiry(expiry):null,...(ann.revision?{expected_revision:ann.revision}:{})};
+   const body={id:ann.id,...(ann.source_event_id?{source_event_id:ann.source_event_id}:{}),title:document.getElementById('annTitle').value.trim(),type_key:document.getElementById('annType').value || null,group_ids:groups,recipient_roles:roles,values:Object.fromEntries([...document.querySelectorAll('[data-ann-field]')].map(el=>[el.dataset.annField,el.value.trim()])),manual_body:document.getElementById('annManual').value.trim() || null,publish_on_portal:channels.publish_on_portal,expires_at:expiry?cairoAnnouncementExpiry(expiry):null,...(ann.revision?{expected_revision:ann.revision}:{})};
    await request('/announcements'+(ann.revision?'/'+ann.id:''),{method:ann.revision?'PUT':'POST',body});
    if(actor(this)!==identity)return;
    const saved=await request('/announcements/'+encodeURIComponent(ann.id));

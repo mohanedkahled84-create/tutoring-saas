@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { announcementClasses, renderAnnouncementsView, registerAnnouncementsActions } from '../../web/src/components/AnnouncementsView.js';
+import { announcementChannels, announcementClasses, renderAnnouncementsView, registerAnnouncementsActions } from '../../web/src/components/AnnouncementsView.js';
 
 test('announcement navigation, wallet, and composer follow the selected language', async () => {
   let language = 'en';
@@ -96,4 +96,12 @@ test('selecting a group selects each matching number once and skips opted-out re
     if (original === undefined) delete globalThis.document;
     else globalThis.document = original;
   }
+});
+
+
+test('announcement channels keep portal and WhatsApp selections independent', () => {
+  assert.deepEqual(announcementChannels(true, false), {publish_on_portal:true, review_whatsapp:false, selected:true});
+  assert.deepEqual(announcementChannels(false, true), {publish_on_portal:false, review_whatsapp:true, selected:true});
+  assert.deepEqual(announcementChannels(true, true), {publish_on_portal:true, review_whatsapp:true, selected:true});
+  assert.equal(announcementChannels(false, false).selected, false);
 });
