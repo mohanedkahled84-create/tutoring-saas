@@ -1384,3 +1384,8 @@ html[dir="rtl"] body { direction: rtl; }
   font-weight: 800;
   letter-spacing: .5px;
 }
+
+.receipt-upload { position:relative; display:flex; align-items:center; justify-content:center; gap:.6rem; min-height:64px; padding:1rem; border:1px dashed #7893bb; border-radius:12px; background:#f1f6ff; color:#172554; cursor:pointer; }
+.receipt-upload input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.receipt-upload:focus-within { outline:3px solid #2563eb; outline-offset:2px; }
+.receipt-upload span { font-size:1.5rem; line-height:1; }
