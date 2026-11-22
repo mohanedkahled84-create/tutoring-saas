@@ -661,8 +661,30 @@ export function registerStudentsActions(app) {
       await this.loadRouteData(this.currentRoute);
     } catch (err) {
       const existing=err?.data?.error?.existing_student;
-      if(err.code==='DUPLICATE_STUDENT_PHONE' && existing?.id){
-        this.showModal('الطالب مسجل بالفعل',`<p>رقم موبايل الطالب مسجل بالفعل باسم ${escapeHtml(existing.name)} في حسابك. ${existing.archived_at?'استعد سجله من الأرشيف أولًا.':'يمكنك إضافة نفس سجله إلى مجموعة أخرى بدون استهلاك مقعد جديد.'}</p>${groupId && !existing.archived_at?`<button class="btn btn-primary" style="min-height:44px" onclick="window.centrlyApp.enrollExistingPhoneStudent('${escapeHtml(existing.id)}','${escapeHtml(groupId)}')">إضافته إلى المجموعة المحددة</button>`:''}`);
+      if(err.code==='DUPLICATE_STUDENT_PHONE' && existing?.id && feedback){
+        const cached=(this.students || []).find(student=>student.id===existing.id);
+        const memberships=[...new Set([existing.group_id,cached?.group_id,...(cached?.group_ids || [])].filter(Boolean))];
+        const names=memberships.map(id=>(this.groups || []).find(group=>group.id===id)?.name).filter(Boolean);
+        const same=memberships.includes(groupId);
+        feedback.style.display='block';
+        feedback.style.backgroundColor='var(--centrly-danger-light)';
+        feedback.style.color='var(--centrly-danger)';
+        feedback.setAttribute('role','alert');
+        feedback.innerHTML=`<p>${escapeHtml(existing.name)} ${same?'موجود بالفعل في المجموعة المحددة.':'مسجل بالفعل'+(names.length?' في '+escapeHtml(names.join('، ')):'.')}</p>${existing.archived_at?'<p>استعد سجله من الأرشيف أولًا.</p>':!same && existing.group_id?'<button type="button" class="btn btn-secondary" data-transfer-existing>نقل الطالب للمجموعة المحددة</button>':''}<button type="button" class="btn btn-secondary" data-return-student>العودة لتعديل البيانات</button>`;
+        feedback.querySelector('[data-return-student]').addEventListener('click',()=>{feedback.style.display='none';document.getElementById('newStudentName')?.focus();});
+        feedback.querySelector('[data-transfer-existing]')?.addEventListener('click',async event=>{
+          const button=event.currentTarget;
+          button.disabled=true;
+          try{
+            await request('/students/'+encodeURIComponent(existing.id)+'/transfer',{method:'POST',body:{from_group_id:existing.group_id,group_id:groupId}});
+            this.closeModal();
+            this.showToast('تم نقل الطالب مع حفظ تاريخه','success');
+            await this.loadRouteData(this.currentRoute);
+          }catch(error){this.showToast(error.message || 'تعذر نقل الطالب','error');if(button.isConnected)button.disabled=false;}
+        });
+        saveBtn.disabled=false;
+        saveBtn.textContent='إضافة الطالب';
+        feedback.scrollIntoView({block:'nearest'});
         return;
       }
       if (feedback) {
