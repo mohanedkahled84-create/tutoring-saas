@@ -6,7 +6,7 @@ import {renderAnnouncementAdminView,registerAnnouncementAdminActions} from './co
 export {renderAnnouncementAdminView};
 import {renderAnnouncementsView,registerAnnouncementsActions} from './components/AnnouncementsView.js?v=9.92.12';
 export {renderAnnouncementsView};
-import {renderSupportView,registerSupportActions} from './components/SupportView.js?v=9.46.0';
+import {renderSupportView,registerSupportActions} from './components/SupportView.js?v=9.92.14';
 export {renderSupportView};
 import { registerPortalDispatchActions } from './components/PortalDispatchModal.js?v=9.92.13';
 import { registerStudentImportActions } from './components/StudentImportModal.js?v=9.46.0';

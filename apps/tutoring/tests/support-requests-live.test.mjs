@@ -27,6 +27,7 @@ test('LIVE: support requests belong to their teacher, admins can reply, retries 
  const adminList=await (await request('/support',2)).json();assert.ok(adminList.tickets.some(row=>row.id===id && row.teacher_phone==='201000000000'));
  const reply={request_id:randomUUID(),body:'fixture admin answer'};
  assert.equal((await request('/support/'+id+'/reply',2,'POST',reply)).status,200);assert.equal((await request('/support/'+id+'/reply',2,'POST',reply)).status,200);
+ const ownerList=await (await request('/support')).json();assert.equal(ownerList.tickets[0].latest_admin_reply.body,reply.body);assert.equal((await (await request('/support',1)).json()).tickets.length,0);
  const thread=await (await request('/support/'+id)).json();assert.equal(thread.replies.length,1);assert.equal(thread.replies[0].body,reply.body);assert.equal(thread.replies[0].author_role,'admin');assert.equal(thread.ticket.status,'waiting_user');
  assert.equal((await request('/support/'+id+'/status',0,'POST',{status:'resolved'})).status,403);assert.equal((await request('/support/'+id+'/status',2,'POST',{status:'resolved'})).status,200);
  const progress=await (await request('/settings/startup-progress')).json();assert.equal(progress.steps.find(s=>s.id==='group').done,false);

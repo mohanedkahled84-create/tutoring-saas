@@ -12,3 +12,8 @@ test('support requests escape teacher details and only use a configured valid Wh
  const admin=renderSupportView(data,{role:'admin'});assert.ok(admin.includes('201000000000'));assert.ok(!admin.includes('<b>teacher</b>'));assert.ok(!admin.includes('طلب مساعدة جديد'));
  assert.ok(!renderSupportView({contact_phone:'javascript:alert(1)'},{role:'owner'}).includes('wa.me/'));
 });
+
+test('teachers see escaped support replies directly in their request list',()=>{
+ const html=renderSupportView({tickets:[{id:'fixture',title:'Help',category:'other',status:'resolved',updated_at:'2026-11-03T00:00:00Z',latest_admin_reply:{body:'<b>reply</b>'}}]},{role:'owner'});
+ assert.ok(html.includes('رد فريق الدعم:'));assert.ok(html.includes('&lt;b&gt;reply&lt;/b&gt;'));assert.ok(!html.includes('<b>reply</b>'));
+});
