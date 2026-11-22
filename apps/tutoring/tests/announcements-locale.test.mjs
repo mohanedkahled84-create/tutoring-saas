@@ -20,7 +20,7 @@ test('announcement navigation, wallet, and composer follow the selected language
       assert.match(page, locale === 'en' ? /Messages and announcements/ : /الرسائل والإعلانات/);
       assert.match(page, locale === 'en' ? /Wallet/ : /المحفظة/);
       assert.match(app.modal, locale === 'en' ? /Save draft/ : /حفظ المسودة/);
-      assert.match(app.modal, /value="whatsapp"/);
+      assert.match(app.modal, /id="annWhatsApp"/);
       assert.match(app.modal, /value="publish"/);
       if (locale === 'en') assert.doesNotMatch(page + app.modal, /\p{Script=Arabic}/u);
     }
