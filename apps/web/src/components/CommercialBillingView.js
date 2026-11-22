@@ -112,12 +112,15 @@ export function registerCommercialBillingActions(app) {
       document.getElementById('commercialReceiptFile').focus();
       return;
     }
+    const originalButtonContent = button.innerHTML;
     button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.innerHTML = '<span>جارٍ تسجيل الدفع للمراجعة…</span><progress aria-label="جارٍ تسجيل الدفع" style="display:block;width:100%;height:4px;margin-top:6px"></progress>';
     try {
       await request('/billing/commercial/orders/' + order.id + '/submit', { method: 'POST', body: { payment_method: document.getElementById('commercialMethod').value, reference: document.getElementById('commercialReference').value.trim(), proof_image_url: this._commercialReceipt } });
       if (actor() !== identity) return;
       this.closeModal(); this.showToast('تم تسجيل الدفع للمراجعة؛ لم يتغير رصيدك أو باقتك بعد', 'success'); this._commercialOrder = null; this._commercialReceipt = null; await this.loadRouteData(this.currentRoute==='announcements'?'announcements':'billing');
-    } catch (error) { if (actor() === identity) { const label = document.getElementById('commercialProofError'); if (label) { label.textContent = error.message; label.tabIndex = -1; label.focus(); } button.disabled = false; } }
+    } catch (error) { if (actor() === identity) { const label = document.getElementById('commercialProofError'); if (label) { label.textContent = error.message; label.tabIndex = -1; label.focus(); } button.disabled = false; button.removeAttribute('aria-busy'); button.innerHTML = originalButtonContent; } }
   };
   app.commercialResumeAddon = async function(kind) {try{await request('/billing/commercial/resume-addon',{method:'POST',body:{kind}});await this.loadRouteData('billing');}catch(error){fail(error);}};
   app.commercialCancelAddon = async function (kind) { try { await request('/billing/commercial/cancel-addon', { method: 'POST', body: { kind } }); await this.loadRouteData('billing'); } catch (error) { fail(error); } };
