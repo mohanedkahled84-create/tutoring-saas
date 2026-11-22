@@ -1,3 +1,4 @@
+import {getLocale} from '../utils/locale.js?v=9.46.0';
 import {studentDiscount} from '../utils/studentDiscount.js?v=9.46.0';
 import { request } from "../services/api.js?v=9.46.0";
 import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.46.0";
@@ -362,26 +363,7 @@ export function renderStudentDetails(s,groups=[],appObj={}) {
                           <button type="button" class="student-password-copy" aria-label="نسخ كلمة مرور الطالب" title="نسخ كلمة المرور" onclick="window.centrlyApp.copyStudentPassword(this)">${getIcon('copy',16)}</button>
                         </div>
                       </div>` : ''}
-                      <div style="font-size: 0.65rem; display: flex; flex-direction: column; gap: 0.15rem; margin-top: 0.1rem;">
-                        ${s.parent_portal_sent_at ? `
-                          <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="وصول الرابط لولي الأمر غير مؤكد">
-                            <span style="display:inline-block; width:5px; height:5px; background:#059669; border-radius:50%;"></span>
-                            سُجّلت محاولة مشاركة رابط ولي الأمر
-                          </span>
-                        ` : ''}
-                        ${s.student_portal_sent_at ? `
-                          <span style="color: #2563eb; font-weight: 700; display: inline-flex; align-items: center; gap: 0.2rem;" title="وصول الرابط للطالب غير مؤكد">
-                            <span style="display:inline-block; width:5px; height:5px; background:#2563eb; border-radius:50%;"></span>
-                            سُجّلت محاولة مشاركة رابط الطالب
-                          </span>
-                        ` : ''}
-                        ${(!s.parent_portal_sent_at && !s.student_portal_sent_at) ? `
-                          <span style="color: #94a3b8; font-weight: 600; display: inline-flex; align-items: center; gap: 0.2rem;">
-                            <span style="display:inline-block; width:5px; height:5px; background:#cbd5e1; border-radius:50%;"></span>
-                            لا يوجد تأكيد لإرسال الروابط
-                          </span>
-                        ` : ''}
-                      </div>
+                      <div class="portal-delivery-status" role="status" aria-live="polite" aria-busy="true" style="font-size:.75rem;margin-top:.35rem"><span class="skeleton-box" style="display:block;width:180px;height:1em"></span></div>
                     </div>
                   </div>
                   <div data-label="إجراءات" class="student-actions">
@@ -419,6 +401,15 @@ export function registerStudentsActions(app) {
     const student=(this.students || []).find(s=>s.id===id);if(!student)return;
     this.showModal('تفاصيل الطالب',renderStudentDetails(student,this.groups || [],this),'<button type="button" class="btn btn-secondary" onclick="window.centrlyApp.closeModal()">إغلاق</button>','720px');
     const dialog=document.querySelector('#centrlyCustomModal .modal-dialog');if(dialog){dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-label','تفاصيل الطالب');const close=dialog.querySelector('button');close?.setAttribute('aria-label','إغلاق تفاصيل الطالب');close?.focus();}
+    const status=document.querySelector('#centrlyCustomModal .portal-delivery-status'),en=getLocale()==='en';
+    if(status)request('/students/'+encodeURIComponent(id)+'/portal-delivery').then(result=>{
+      if(!status.isConnected)return;
+      const labels=en?{accepted:'Accepted by WhatsApp; delivery unconfirmed',sent:'Sent by WhatsApp; delivery unconfirmed',delivered:'Delivered',read:'Read',failed:'Delivery failed',pending:'Awaiting processing',queued:'Queued'}:{accepted:'قبِل واتساب الطلب؛ الوصول غير مؤكد',sent:'أرسل واتساب الرسالة؛ الوصول غير مؤكد',delivered:'وصلت الرسالة',read:'تمت قراءة الرسالة',failed:'فشل تسليم الرسالة',pending:'في انتظار المعالجة',queued:'في قائمة الانتظار'};
+      const rows=Array.isArray(result.deliveries)?result.deliveries:[];
+      status.textContent=rows.length?rows.map(row=>(row.recipient_type==='parent'?(en?'Parent':'ولي الأمر'):(en?'Student':'الطالب'))+': '+(labels[row.status] || (en?'Status unconfirmed':'الحالة غير مؤكدة'))).join(' · '):(en?'No official delivery confirmation. Manual sharing is not tracked.':'لا يوجد تأكيد لتسليم رسمي. المشاركة اليدوية لا تُتبع هنا.');
+      status.removeAttribute('aria-busy');
+    }).catch(()=>{if(status.isConnected){status.textContent=en?'Delivery status is unavailable.':'تعذر تحميل حالة التسليم.';status.removeAttribute('aria-busy');}});
+
   };
   app.studentDiscountPayload=function(prefix) {
     const input=document.getElementById(prefix+'Discount');

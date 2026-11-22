@@ -63,6 +63,25 @@ studentsRouter.get("/", async (req: AuthenticatedRequest, res: Response): Promis
   }
 });
 
+// Only return the latest official onboarding attempt for this tenant and student.
+studentsRouter.get('/:id/portal-delivery', async (req:AuthenticatedRequest,res:Response):Promise<void>=>{
+ res.setHeader('Cache-Control','private, no-store');
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(req.params.id)){res.status(400).json({error:{message:'الطالب غير صالح'}});return;}
+ try{
+  const db=getServiceSupabaseClient();
+  const queue=await db.from('meta_portal_dispatch_queue').select('recipient_type,status,meta_message_id,created_at').eq('tenant_id',req.user!.tenant_id!).eq('student_id',req.params.id).order('created_at',{ascending:false}).limit(20);
+  if(queue.error)throw queue.error;
+  const latest=new Map<string,any>();
+  for(const row of queue.data || [])if(['student','parent'].includes(row.recipient_type) && !latest.has(row.recipient_type))latest.set(row.recipient_type,row);
+  const ids=[...latest.values()].map(row=>row.meta_message_id).filter(Boolean);
+  const received=ids.length?await db.from('portal_delivery_receipts').select('message_id,delivery_status').in('message_id',ids):{data:[],error:null};
+  if(received.error)throw received.error;
+  const receipts=new Map((received.data || []).map(row=>[row.message_id,row.delivery_status]));
+  const deliveries=[...latest.values()].map(row=>({recipient_type:row.recipient_type,status:receipts.get(row.meta_message_id) || (row.status==='sent'?'accepted':row.status),created_at:row.created_at}));
+  res.json({deliveries});
+ }catch{res.status(503).json({error:{message:'تعذر تحميل حالة إرسال الروابط'}});}
+});
+
 // POST /api/students - Create a new student (validated with Zod)
 studentsRouter.post(
   "/",

@@ -1,3 +1,4 @@
+import {processPortalDeliveryWebhook} from '../../features/whatsapp-notifications/portal-delivery-webhook.js';
 import {processAnnouncementWebhook} from '../../features/announcements/worker.js';
 import type {Request,Response} from 'express';
 import {config} from '../config/index.js';
@@ -23,7 +24,7 @@ export async function metaPortalWebhook(req:Request,res:Response):Promise<void>{
    }
   }
   const db=getServiceSupabaseClient(),gateway=metaWebhookRuntime.gateway();
-  for(const value of values)await processAnnouncementWebhook(db,value);
+  for(const value of values){await processAnnouncementWebhook(db,value);await processPortalDeliveryWebhook(db,value);}
   await Promise.all(messages.map(message=>processMetaPortalMessage(db,message,gateway)));
   res.status(200).send('EVENT_RECEIVED');
  }catch{
