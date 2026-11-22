@@ -4,7 +4,7 @@ import {registerAcademicYears} from './components/AcademicYears.js?v=9.46.0';
 import {registerStartupChecklist} from './components/StartupChecklist.js?v=9.92.15';
 import {renderAnnouncementAdminView,registerAnnouncementAdminActions} from './components/AnnouncementAdminView.js?v=9.46.0';
 export {renderAnnouncementAdminView};
-import {renderAnnouncementsView,registerAnnouncementsActions} from './components/AnnouncementsView.js?v=9.92.17';
+import {renderAnnouncementsView,registerAnnouncementsActions} from './components/AnnouncementsView.js?v=9.92.18';
 export {renderAnnouncementsView};
 import {renderSupportView,registerSupportActions} from './components/SupportView.js?v=9.92.14';
 export {renderSupportView};

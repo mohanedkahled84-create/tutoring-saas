@@ -24,3 +24,17 @@ test('publish saves the selected channels and opens review only for WhatsApp', a
     }
   } finally {globalThis.window=oldWindow;globalThis.document=oldDocument;}
 });
+
+test('one confirmation records consent before queueing and blocks duplicate submissions', async () => {
+ const oldWindow=globalThis.window,oldDocument=globalThis.document,calls=[];let release;
+ try{
+  const check={checked:true},choice={dataset:{annRecipient:'0'}},button={disabled:false,isConnected:true};
+  globalThis.document={getElementById:id=>id==='annSendConfirmed'?check:null,querySelectorAll:selector=>selector==='[data-ann-recipient]:checked'?[choice]:selector==='[data-ann-confirm-send]'?[button]:[]};
+  const app={user:{id:'user',tenant_id:'tenant'},_announcement:{id:'ann'},_announcementPreview:{preview_id:'preview',announcement:{revision:2},allowance:{remaining:1,unit_cost_egp:1},rows:[{phone:'201000000000'}]},loadRouteData:async()=>{},showToast(){}};
+  globalThis.window={centrlyApp:app,__CENTRLY_DELEGATED_REQUEST__:async (url,options)=>{calls.push({url,options});if(url.endsWith('/consent'))await new Promise(r=>release=r);return {};}};
+  registerAnnouncementsActions(app);app.openAnnouncement=async()=>{};
+  const first=app.sendAnnouncement('enqueue');await Promise.resolve();await app.sendAnnouncement('enqueue');assert.equal(calls.length,1);release();await first;
+  assert.deepEqual(calls.map(call=>call.url),['/announcements/ann/consent','/announcements/ann/enqueue']);assert.equal(calls[0].options.body.confirmed,true);
+  check.checked=false;await app.sendAnnouncement('enqueue');assert.equal(calls.length,2);
+ }finally{globalThis.window=oldWindow;globalThis.document=oldDocument;}
+});
