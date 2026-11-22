@@ -1389,3 +1389,15 @@ html[dir="rtl"] body { direction: rtl; }
 .receipt-upload input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
 .receipt-upload:focus-within { outline:3px solid #2563eb; outline-offset:2px; }
 .receipt-upload span { font-size:1.5rem; line-height:1; }
+
+.startup-float { position:fixed; inset-inline-end:18px; bottom:18px; z-index:90; width:min(340px,calc(100vw - 36px)); max-height:min(55vh,480px); overflow:auto; background:#fff; color:#172554; border:1px solid #cbd5e1; border-radius:16px; box-shadow:0 12px 36px #0f172a30; padding:12px; }
+.startup-float header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.startup-float header div { display:flex; gap:4px; }
+.startup-float button { font:inherit; color:inherit; background:transparent; border:0; cursor:pointer; padding:8px; }
+.startup-float button:focus-visible { outline:3px solid #2563eb; border-radius:6px; }
+.startup-float-body progress { width:100%; accent-color:#2563eb; }
+.startup-float-body ul { list-style:none; padding:0; margin:.5rem 0 0; }
+.startup-float-body li button { display:flex; align-items:start; text-align:start; gap:.5rem; width:100%; }
+.startup-float-body .is-done { text-decoration:line-through; color:#64748b; }
+.startup-float-body[hidden] { display:none; }
+@media (prefers-reduced-motion:no-preference) { .startup-float { transition:width .2s ease, box-shadow .2s ease; } }

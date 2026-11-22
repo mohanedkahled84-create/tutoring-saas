@@ -584,7 +584,6 @@ export function renderTeacherDashboard(
           </div>
         </div>
 
-      ${!(typeof window!=='undefined' && window.centrlyApp?.delegation)?'<section class="card" style="margin:0;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap"><div><h3>ابدأ على راحتك</h3><p>خطوات اختيارية لتنظيم حسابك، وتتحدث من بياناتك الفعلية.</p></div><button type="button" class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.openStartupChecklist()">قائمة البداية</button><centrly-startup-progress style="flex-basis:100%"></centrly-startup-progress></section>':''}
     </div>
   `;
 }

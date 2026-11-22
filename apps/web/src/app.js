@@ -2046,6 +2046,7 @@ export class CentrlyApp {
     const html = `
       <div class="app-container">
         ${renderSidebar(this.currentRoute, this.user, { hasPin: this.hasSecurityPin, isUnlocked: this.isFinancialUnlocked }, this.delegation)}
+        ${!this.delegation && this.user?.role !== 'admin' ? '<centrly-startup-progress></centrly-startup-progress>' : ''}
         <div class="app-main">
           ${renderNavbar(this.user, this.getActiveSessionSummary())}
           <main class="content-body" id="mainContent">
