@@ -14,7 +14,7 @@ import { registerSecurityPinActions } from './components/SecurityPinManager.js?v
 import { renderTeacherDashboard } from './components/TeacherDashboard.js?v=9.92.0';
 import { renderTeacherCalendar, registerTeacherCalendarActions } from './components/TeacherCalendar.js?v=9.46.0';
 import { renderSessionsView, registerSessionsActions } from './components/SessionsView.js?v=9.46.0';
-import { renderStudentsView, registerStudentsActions } from './components/StudentsView.js?v=9.92.9';
+import { renderStudentsView, registerStudentsActions } from './components/StudentsView.js?v=9.92.10';
 import { renderGroupsView, registerGroupsActions } from './components/GroupsView.js?v=9.92.1';
 import { renderMessageLogsView, registerMessageLogsActions } from './components/MessageLogsView.js?v=9.46.0';
 import { renderHomeworkReviewView, registerHomeworkActions } from './components/HomeworkReviewView.js?v=9.46.0';
