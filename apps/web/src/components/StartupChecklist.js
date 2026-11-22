@@ -16,6 +16,12 @@ export function registerStartupChecklist(app){
   const stillCurrent=()=>loadingModal?.isConnected && document.getElementById('centrlyCustomModal')===loadingModal && !this.delegation && [this.user?.id,this.user?.tenant_id].join(':')===owner;
   try{const {steps}=await request('/settings/startup-progress');if(!stillCurrent())return;if(!Array.isArray(steps))throw new Error('تعذر قراءة التقدم');this.showModal(msg.title,renderStartupChecklist(steps,locale));}catch(error){if(!stillCurrent())return;this.showModal(msg.error,`<p role="alert">${e(msg.error)}</p>`,`<button class="btn btn-secondary" onclick="window.centrlyApp.openStartupChecklist()">${e(msg.retry)}</button>`);}
  };
+ app.restoreStartupChecklist=function(){
+  const owner=[this.user?.id,this.user?.tenant_id].join(':');
+  try{localStorage.removeItem('centrly_startup_hidden:'+owner);}catch{}
+  const current=document.querySelector('centrly-startup-progress');
+  if(current)current.replaceWith(document.createElement('centrly-startup-progress'));
+ };
  app.openStartupStep=function(route){if(!routes.has(route))return;this.closeModal();this.navigate(route);};
 }
 
