@@ -1,14 +1,14 @@
-import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.92.37';
+import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.92.38';
 import {applyLocale,getLocale} from './utils/locale.js?v=9.92.0';
 import {portalCairoClock} from './utils/portalClock.js?v=9.46.0';
 import { assistantPay } from "./utils/assistantPay.js?v=9.46.0";
 import { authService } from './services/auth.js?v=9.46.0';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=9.46.0';
-import { renderSidebar } from './components/Sidebar.js?v=9.92.37';
+import { renderSidebar } from './components/Sidebar.js?v=9.92.38';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.92.0';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=9.46.0';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js?v=9.46.0';
-import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.92.37';
+import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.92.38';
 import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=9.46.0';
 import { getIcon } from './utils/icons.js?v=9.46.0';
 import { escapeHtml } from './utils/escapeHtml.js?v=9.46.0';
@@ -150,7 +150,7 @@ export class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=9.92.37').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=9.92.38').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
@@ -2092,16 +2092,9 @@ export class CentrlyApp {
       const en=getLocale()==='en';
       return `<section class="card" dir="${en?'ltr':'rtl'}" style="padding:1.5rem;display:grid;gap:1rem">
         <div><span class="badge">Pro</span><h1>${platform?(en?'Your teaching platform':'منصتك التعليمية'):(en?'Lesson videos':'فيديوهات الشرح والحل')}</h1><p>${en?'Available with Pro or Max. Upgrade to activate this feature.':'الميزة متاحة في باقتي Pro وMax. فعّلها بترقية اشتراكك.'}</p></div>
-        ${platform?`<figure style="margin:0;width:100%;max-width:800px;border:1px solid #dbe4f1;border-radius:16px;overflow:hidden;background:#f4f7fc">
-          <figcaption style="padding:.65rem 1rem;background:#fff;font-weight:700">${en?'Student portal preview':'معاينة بوابة الطالب'}</figcaption>
-          <div style="margin:1rem;padding:clamp(1rem,3vw,2rem);border-radius:12px;background:#172554;color:#fff">
-            <strong>${en?'Physics · Grade 12':'فيزياء · الصف الثالث الثانوي'}</strong>
-            <h2 style="color:#fff;margin:.5rem 0">${en?'Welcome to your student portal':'أهلًا بيك في منصتك الدراسية'}</h2>
-            <p style="margin:0;color:#dbeafe">${en?'Lessons, assignments, and progress in one place.':'تابع الشرح والواجبات وتقدمك الدراسي من مكان واحد.'}</p>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:.75rem;padding:0 1rem 1rem">
-            ${(en?['Study materials','Lesson videos','Quizzes']:['المذكرات والواجبات','فيديوهات الشرح','الامتحانات']).map(label=>`<div style="padding:1rem;border:1px solid #dbe4f1;border-radius:10px;background:#fff;color:#172554;font-weight:700">${label}</div>`).join('')}
-          </div>
+        ${platform?`<figure style="margin:0;width:100%;max-width:1000px;border:1px solid #dbe4f1;border-radius:16px;overflow:hidden;background:#f4f7fc">
+          <figcaption style="padding:.75rem 1rem;background:#fff;font-weight:700">${en?'Example of the student portal · sample data':'مثال لشكل بوابة الطالب · بيانات توضيحية'}</figcaption>
+          <img src="/assets/student-platform-preview.svg?v=9.92.38" alt="${en?'Example student portal with navigation, assignments and progress':'مثال لواجهة الطالب يعرض القائمة والواجبات والتقدم الدراسي'}" style="display:block;width:100%;height:auto">
         </figure>`:''}
         ${this.delegation?`<p>${en?'Ask the teacher to update the subscription.':'راجع المدرس لتعديل الاشتراك.'}</p>`:`<button type="button" class="btn btn-primary" style="min-height:44px;width:fit-content" onclick="window.centrlyApp.navigate('billing')">${en?'View plans':'عرض الباقات'}</button>`}
       </section>`;
