@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {HttpMetaCloudGateway} from '../dist/features/whatsapp-notifications/meta-cloud.gateway.js';
-import {matchesUtilityTemplate} from '../dist/shared/utils/metaTemplatePolicy.js';
+import {matchesUtilityTemplate,approvedUtilityTemplate} from '../dist/shared/utils/metaTemplatePolicy.js';
 
 test('announcement templates must retain the exact approved body, identifier and parameter mapping',()=>{
  const expected={id:'template-fixture',body:'موعد حصة {{1}} مع {{2}}',parameterCount:2};
@@ -18,7 +18,7 @@ test('central Meta queue sends only live approved UTILITY templates and never tr
  try{
   globalThis.fetch=async(url,options)=>{
    if(options.method==='POST'){posts++;return {ok:true,json:async()=>({messages:[{id:'wamid.fixture'}]})};}
-   reads++;assert.match(url,/fields=name,status,language,category/);return {ok:true,json:async()=>({data:[template]})};
+   reads++;assert.equal(new URL(url).searchParams.get('fields'),'name,status,language,category');return {ok:true,json:async()=>({data:[template]})};
   };
   const send=()=>gateway.sendTemplate({to:'201012345678',templateName:'centerly',languageCode:'en',bodyParameters:['طالب']});
   assert.equal((await send()).success,true);assert.equal(posts,1);
@@ -53,4 +53,24 @@ test('one-EGP official sending cannot silently charge a foreign destination',asy
  const gateway=new HttpMetaCloudGateway('fixture-phone','fixture-token','fixture-waba',{reserve:async()=>{reservations++;throw Error('must not reserve');},settle:async()=>{}});
  const result=await gateway.sendTemplate({to:'14155550123',templateName:'fixture',bodyParameters:[]});
  assert.equal(result.success,false);assert.equal(result.outcome,'not_sent');assert.equal(reservations,0);
+});
+
+
+test('approval lookup follows metadata pages and fails closed on repeated cursors',async()=>{
+ const original=globalThis.fetch;let calls=0;const options={baseUrl:'https://graph.facebook.com/v22.0',wabaId:'fixture',accessToken:'fixture',name:'centerly',language:'en'};
+ try{
+  globalThis.fetch=async url=>{calls++;if(calls===1)return {ok:true,json:async()=>({data:[{name:'other'}],paging:{next:'present',cursors:{after:'cursor-1'}}})};assert.equal(new URL(url).searchParams.get('after'),'cursor-1');return {ok:true,json:async()=>({data:[{name:'centerly',language:'en',status:'APPROVED',category:'UTILITY'}]})};};
+  assert.equal(await approvedUtilityTemplate(options),true);assert.equal(calls,2);
+  calls=0;globalThis.fetch=async()=>{calls++;return {ok:true,json:async()=>({data:[],paging:{next:'present',cursors:{after:'same'}}})};};
+  assert.equal(await approvedUtilityTemplate(options),false);assert.equal(calls,2);
+ }finally{globalThis.fetch=original;}
+});
+
+test('welcome template status lookup handles pagination and the correct language',async()=>{
+ const original=globalThis.fetch;let calls=0;
+ try{
+  globalThis.fetch=async url=>{calls++;return calls===1?{ok:true,json:async()=>({data:[{name:'centerly',language:'ar',status:'REJECTED'}],paging:{next:'present',cursors:{after:'second'}}})}:{ok:true,json:async()=>({data:[{name:'centerly',language:'en',status:'APPROVED'},{name:'centerly_student',language:'en',status:'PENDING'}]})};};
+  const statuses=await new HttpMetaCloudGateway('phone','token','waba').getTemplateStatuses();
+  assert.deepEqual(statuses,{centerly:'APPROVED',centerly_student:'PENDING'});assert.equal(calls,2);
+ }finally{globalThis.fetch=original;}
 });

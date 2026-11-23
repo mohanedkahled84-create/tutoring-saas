@@ -156,25 +156,21 @@ export class HttpMetaCloudGateway implements IMetaCloudGateway {
     }
 
     try {
-      const url = `${this.baseUrl}/${this.wabaId}/message_templates?fields=name,status`;
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-        },
-      });
-
-      if (!res.ok) {
-        return this.templateStatusCache?.data || {};
-      }
-
-      const json = await res.json().catch(() => ({}));
-      const list = (json as any)?.data || [];
       const map: Record<string, "APPROVED" | "PENDING" | "REJECTED" | "UNKNOWN"> = {};
-
-      for (const item of list) {
-        if (item.name && item.status) {
-          map[item.name] = item.status;
-        }
+      let after: string | undefined;
+      for (let page=0;page<10;page++) {
+        const url=new URL(`${this.baseUrl}/${this.wabaId}/message_templates`);
+        url.searchParams.set('fields','name,status,language');url.searchParams.set('limit','100');
+        if(after)url.searchParams.set('after',after);
+        const res=await fetch(url.toString(),{headers:{Authorization:`Bearer ${this.accessToken}`},signal:AbortSignal.timeout(3000)});
+        if(!res.ok)return this.templateStatusCache?.data || {};
+        const json:any=await res.json();
+        if(!Array.isArray(json?.data))return this.templateStatusCache?.data || {};
+        for(const item of json.data) if(item.language==='en' && ['centerly','centerly_student'].includes(item.name) && ['APPROVED','PENDING','REJECTED'].includes(item.status)) map[item.name]=item.status;
+        const cursor=json?.paging?.cursors?.after;
+        if(!json?.paging?.next)break;
+        if(typeof cursor!=='string' || !cursor || cursor===after)return this.templateStatusCache?.data || {};
+        after=cursor;
       }
 
       this.templateStatusCache = {

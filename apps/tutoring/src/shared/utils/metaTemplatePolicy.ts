@@ -12,10 +12,19 @@ export async function approvedUtilityTemplate(options:{baseUrl:string;accessToke
  if(!options.accessToken || !options.wabaId)return false;
  try {
   const fields=options.expected?'name,status,language,category,id,components':'name,status,language,category';
-  const response=await fetch(`${options.baseUrl}/${options.wabaId}/message_templates?name=${encodeURIComponent(options.name)}&fields=${fields}`,{
-   headers:{Authorization:`Bearer ${options.accessToken}`},signal:AbortSignal.timeout(3000),
-  });
-  const result:any=await response.json();
-  return response.ok && Array.isArray(result?.data) && result.data.some((template:any)=>matchesUtilityTemplate(template,options));
+  let after:string | undefined;
+  for(let page=0;page<10;page++){
+   const url=new URL(`${options.baseUrl}/${options.wabaId}/message_templates`);
+   url.searchParams.set('name',options.name);url.searchParams.set('fields',fields);url.searchParams.set('limit','100');
+   if(after)url.searchParams.set('after',after);
+   const response=await fetch(url.toString(),{headers:{Authorization:`Bearer ${options.accessToken}`},signal:AbortSignal.timeout(3000)});
+   const result:any=await response.json();
+   if(!response.ok || !Array.isArray(result?.data))return false;
+   if(result.data.some((template:any)=>matchesUtilityTemplate(template,options)))return true;
+   const cursor=result?.paging?.cursors?.after;
+   if(!result?.paging?.next || typeof cursor!=='string' || !cursor || cursor===after)return false;
+   after=cursor;
+  }
+  return false;
  }catch{return false;}
 }
