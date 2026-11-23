@@ -1,6 +1,6 @@
 import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.46.0';
 import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.46.0';
-import {renderStudentAttendancePassHtml} from '../utils/studentBarcodeCard.js?v=9.46.0';
+import {renderStudentAttendancePassHtml} from '../utils/studentBarcodeCard.js?v=9.92.19';
 import {getIcon} from '../utils/icons.js?v=9.46.0';
 
 const tabs=[['attendance','الحضور'],['grades','الدرجات'],['materials','الواجب والمذكرات'],['card','بطاقة الطالب']];

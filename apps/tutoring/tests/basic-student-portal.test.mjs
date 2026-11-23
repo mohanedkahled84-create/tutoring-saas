@@ -35,3 +35,9 @@ test('pro and legacy accounts retain their learning material entitlement',async(
   assert.equal(data.features.teaching_platform,true);assert.equal(data.materials[0].type,'video');
  }
 });
+
+test('barcode controls safely embed names containing HTML entities',()=>{
+ const html=renderBasicStudentPortal({student:{name:'Test &quot; name',student_code:'1234'}});
+ assert.ok(html.includes('Test &amp;quot; name'));
+ assert.ok(!html.includes('Test &quot; name'));
+});

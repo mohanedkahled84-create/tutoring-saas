@@ -121,7 +121,7 @@ export function renderStudentBarcodeCardHtml(student = {}, options = {}) {
   // High-contrast Code 128 barcode for instant scanner readability
   const barcodeSvg = generateBarcode128Svg(studentCode, { height: 40, unitWidth: 2.0 });
   const cardId = "student-card-" + Math.random().toString(36).substring(2, 9);
-  const studentJsonAttr = JSON.stringify(student).replace(/"/g, "&quot;");
+  const studentJsonAttr = escapeHtml(JSON.stringify(student));
 
   return `
     <div class="student-id-card-wrapper" style="direction: rtl; font-family: 'Cairo', system-ui, -apple-system, sans-serif; width: 100%; max-width: 440px; margin: 0 auto;">
@@ -251,7 +251,7 @@ export function renderStudentAttendancePassHtml(student = {}, options = {}) {
 
   // High-contrast Code 128 barcode for instant scanner readability
   const barcodeSvg = generateBarcode128Svg(studentCode, { height: 50, unitWidth: 2.2 });
-  const studentJsonAttr = JSON.stringify(student).replace(/"/g, "&quot;");
+  const studentJsonAttr = escapeHtml(JSON.stringify(student));
 
   return `
     <div class="student-attendance-pass" style="direction: rtl; font-family: 'Cairo', system-ui, -apple-system, sans-serif; width: 100%; max-width: 420px; margin: 0 auto; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 1.25rem 1.25rem 1rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); box-sizing: border-box;">
@@ -582,7 +582,7 @@ export function openFullscreenBarcodeModal(student = {}) {
   if (existing) existing.remove();
 
   const barcodeSvg = generateBarcode128Svg(studentCode, { height: 110, unitWidth: 3.2 });
-  const studentJsonAttr = JSON.stringify(student).replace(/"/g, "&quot;");
+  const studentJsonAttr = escapeHtml(JSON.stringify(student));
 
   const modal = document.createElement("div");
   modal.id = modalId;
