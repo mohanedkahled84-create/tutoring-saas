@@ -131,7 +131,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                     : null);
 
       const maxScore = Number(notes.max_score || sub.max_score || 10);
-      const quizTitle = notes.title || sub.quiz_title || notes.quiz_title || (notes.quiz_number ? `كويز ${notes.quiz_number}` : (sub.quiz_number ? `كويز ${sub.quiz_number}` : 'كويز أونلاين'));
+      const quizTitle = notes.title || sub.quiz_title || notes.quiz_title || (notes.quiz_number ? t(`كويز ${notes.quiz_number}`,`Quiz ${notes.quiz_number}`) : (sub.quiz_number ? t(`كويز ${sub.quiz_number}`,`Quiz ${sub.quiz_number}`) : t('كويز أونلاين','Online quiz')));
 
       if (!isGraded && hasEssay) {
         return {
@@ -148,48 +148,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
           score,
           maxScore,
           pct,
-          tier: pct >= 85 ? 'ممتاز' : (pct >= 75 ? 'جيد جداً' : (pct >= 60 ? 'جيد' : 'يحتاج متابعة')),
+          tier: pct >= 85 ? t('ممتاز','Excellent') : (pct >= 75 ? t('جيد جداً','Very good') : (pct >= 60 ? t('جيد','Good') : t('يحتاج متابعة','Needs attention'))),
           status: 'graded'
         };
       }
     }
-
-    // 2. فحص كاش تسليمات كويزات الأونلاين المحفوظة محلياً أثناء الاختبار
-    try {
-      if (typeof localStorage !== 'undefined') {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith(`centrly_submission_${sCode}_`)) {
-            const raw = localStorage.getItem(key);
-            if (raw) {
-              const data = JSON.parse(raw);
-              if (data.has_essay && !data.is_graded && data.status !== 'approved') {
-                return { title: data.title || data.quiz_title || 'كويز أونلاين', status: 'pending_grading', displayText: 'قيد التصحيح' };
-              }
-              const localScore = (data.final_score !== undefined && data.final_score !== null)
-                ? Number(data.final_score)
-                : (data.total_score !== undefined && data.total_score !== null)
-                  ? Number(data.total_score)
-                  : (data.score !== undefined && data.score !== null)
-                    ? Number(data.score)
-                    : null;
-              if (localScore !== null && !isNaN(localScore)) {
-                const max = Number(data.max_score || 10);
-                const pct = Math.round((localScore / max) * 100);
-                return {
-                  title: data.title || data.quiz_title || 'كويز أونلاين',
-                  score: localScore,
-                  maxScore: max,
-                  pct,
-                  tier: pct >= 85 ? 'ممتاز' : (pct >= 75 ? 'جيد جداً' : (pct >= 60 ? 'جيد' : 'يحتاج متابعة')),
-                  status: 'graded'
-                };
-              }
-            }
-          }
-        }
-      }
-    } catch (_) {}
 
     return null;
   }
@@ -288,7 +251,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
             <tbody id="trackingTableBody">
               ${trackingStudents.map(s => {
                 const sCode = String(s.student_code || s.code || '').trim();
-                const sName = s.name || 'طالب';
+                const sName = s.name || t('طالب','Student');
                 const sCenter = s.center_name || s.center || '—';
                 const sGroup = s.group_name || s.group || '';
                 const sPhone = s.student_phone || s.phone || s.parent_phone || '';
@@ -320,7 +283,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                     <td style="padding: 10px 14px; vertical-align: middle;">
                       <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 0.71rem; color: #15803d; font-weight: 600; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 2px 7px; border-radius: 4px;">
-                          ${t('مفعل','Active')}
+                          ${sCode && sPass ? t('مفعل','Active') : t('بيانات الدخول غير مكتملة','Login details incomplete')}
                         </span>
                         <span style="font-size: 0.74rem; color: #475569; font-family: monospace;">
                           ${t('كلمة السر:','Password:')} <strong>${escapeHtml(sPass)}</strong>
@@ -376,7 +339,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
         <div class="mobile-tracking-cards">
           ${trackingStudents.map(s => {
             const sCode = String(s.student_code || s.code || '').trim();
-            const sName = s.name || 'طالب';
+            const sName = s.name || t('طالب','Student');
             const sCenter = s.center_name || s.center || '—';
             const sGroup = s.group_name || s.group || '';
             const sPhone = s.student_phone || s.phone || s.parent_phone || '';
@@ -408,7 +371,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                   </div>
 
                   <span style="font-size: 0.72rem; color: #15803d; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; flex-shrink: 0;">
-                    ${t('مفعل','Active')}
+                    ${sCode && sPass ? t('مفعل','Active') : t('بيانات الدخول غير مكتملة','Login details incomplete')}
                   </span>
                 </div>
 

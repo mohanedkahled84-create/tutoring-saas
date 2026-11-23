@@ -6,6 +6,18 @@ test('student preview never embeds parent access tokens',()=>{
  const html=renderTeacherPlatformBuilderView({plan:{is_pro:true},settings:{subdomain:'mr-omar',is_active:true},destination:{origin:'https://mr-omar.centerly-eg.com',presentation:{subdomain:'mr-omar'}}}, {},[{id:'id',name:'Student',code:'123',student_phone:'01012345678',portal_password:'123456',parent_portal_token:'secret-parent-token'}]);
  assert.doesNotMatch(html,/secret-parent-token/);assert.match(html,/https:\/\/mr-omar\.centerly-eg\.com\/login/);
 });
+test('platform dashboard localizes quiz results and does not read another account’s local submission cache',()=>{
+ const prior=globalThis.localStorage;
+ globalThis.localStorage={length:1,key:()=> 'centrly_submission_123_other',getItem:key=>key==='centrly_locale'?'en':JSON.stringify({score:10,max_score:10})};
+ try {
+  const settings={settings:{subdomain:'teacher',is_active:true,display_title:'School',subject_title:'Physics'},plan:{is_pro:true}};
+  const student={id:'student-id',name:'Student',code:'123',student_phone:'01012345678'};
+  const empty=renderTeacherPlatformBuilderView(settings,{},[student]);
+  assert.match(empty,/Not graded yet/);assert.match(empty,/Login details incomplete/);assert.doesNotMatch(empty,/>\s*Excellent\s*</);
+  const graded=renderTeacherPlatformBuilderView({...settings,onlineSubmissions:[{student_id:'student-id',score:9,max_score:10,status:'graded'}]}, {},[student]);
+  assert.match(graded,/Excellent/);assert.match(graded,/Online quiz/);assert.doesNotMatch(graded,/>\s*ممتاز\s*</);
+ } finally {globalThis.localStorage=prior;}
+});
 test('production site includes the branded login and student dashboard used by its routes',()=>{
  const web=new URL('../../web/',import.meta.url),root=new URL('../../../',import.meta.url);
  for(const file of ['index.html','login.html','teacher_cutout.png'])assert.deepEqual(readFileSync(new URL('teacher-platform-sample/'+file,web)),readFileSync(new URL('teacher-platform-sample/'+file,root)));
