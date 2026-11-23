@@ -304,7 +304,8 @@ export class CentrlyApp {
       }
       const cachedPlatform = this.loadCache('platformBuilderState', null);
       if (cachedPlatform) {
-        this.platformBuilderState = cachedPlatform;
+        // A cached address is not proof that its domain is still verified.
+        this.platformBuilderState = {...cachedPlatform,destination:null};
       }
       const cachedGroups = this.loadCache('groups', null);
       if (cachedGroups && Array.isArray(cachedGroups) && cachedGroups.length > 0) {
