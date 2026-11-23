@@ -22,13 +22,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
     (settings.is_published === true || settings.is_active === true));
 
   const subdomain = settings.subdomain || "";
-  const displayTitle = (settings.display_title || '').trim() || (user.name ? `منصة ${user.name}` : "منصة الأستاذ");
+  const displayTitle = (settings.display_title || '').trim() || (user.name ? t(`منصة ${user.name}`,`${user.name}'s platform`) : t('منصة الأستاذ','Teacher platform'));
 
   let subjectTitle = (settings.subject_title || user.subject || '').trim();
-  if (!subjectTitle) subjectTitle = "المرحلة الثانوية";
+  if (!subjectTitle) subjectTitle = t('المرحلة الثانوية','Secondary education');
 
-  const headlineText = settings.headline_text || "بوابتك التعليمية الشاملة للتفوق والدرجة النهائية";
-  const subtitleText = settings.subtitle_text || "هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.";
+  const headlineText = settings.headline_text || t('بوابتك التعليمية الشاملة للتفوق والدرجة النهائية','Your learning platform for success');
+  const subtitleText = settings.subtitle_text || t('هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.','Find your assignments, quizzes, lessons, and materials here.');
   const themePreset = settings.theme_preset || "emerald";
   const cutoutAvatarUrl = settings.cutout_avatar_url || "";
 
@@ -195,7 +195,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   }
 
   return `
-    <div class="platform-builder-view" style="max-width: 1240px; margin: 0 auto; padding-bottom: 2.5rem; display: flex; flex-direction: column; gap: 0.65rem;" dir="rtl">
+    <div class="platform-builder-view" style="max-width: 1240px; margin: 0 auto; padding-bottom: 2.5rem; display: flex; flex-direction: column; gap: 0.65rem;" dir="${t('rtl','ltr')}">
 
       <!-- ======================================================== -->
       <!-- 1. شريط الهيدر الهادئ فائق البساطة (Calm Minimal Header) -->
@@ -210,18 +210,18 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 <h2 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a;">
                   ${escapeHtml(displayTitle)}
                 </h2>
-                <span style="font-size: 0.72rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px; font-weight: 600;">بوابة الطلاب</span>
+                <span style="font-size: 0.72rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 6px; border-radius: 4px; font-weight: 600;">${t('بوابة الطلاب','Student portal')}</span>
               </div>
               <p style="margin: 2px 0 0 0; font-size: 0.76rem; color: #64748b;">
-                ${escapeHtml(subjectTitle)} • ${totalStudents} طالب مسجل
+                ${escapeHtml(subjectTitle)} • ${totalStudents} ${t('طالب مسجل','students enrolled')}
               </p>
             </div>
 
             <!-- رابط المنصة المباشر بزر نسخ هادئ -->
             <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 8px; font-size: 0.74rem;">
-              <span style="color: #64748b; font-size: 0.72rem;">الرابط:</span>
+              <span style="color: #64748b; font-size: 0.72rem;">${t('الرابط:','Link:')}</span>
               <code style="direction: ltr; font-weight: 600; color: #1e293b; font-family: monospace;">${escapeHtml(livePlatformUrl)}</code>
-              <button type="button" onclick="window.teacherPlatformActions.copyPlatformLink(this, '${escapeHtml(livePlatformUrl)}')" title="نسخ الرابط" style="background: none; border: none; padding: 2px; cursor: pointer; color: #64748b; display: inline-flex; align-items: center;">
+              <button type="button" onclick="window.teacherPlatformActions.copyPlatformLink(this, '${escapeHtml(livePlatformUrl)}')" title="${t('نسخ الرابط','Copy link')}" style="background: none; border: none; padding: 2px; cursor: pointer; color: #64748b; display: inline-flex; align-items: center;">
                 ${getIcon('copy', 12)}
               </button>
             </div>
@@ -231,14 +231,14 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
             <a href="${escapeHtml(previewPlatformUrl)}" target="_blank" rel="noopener noreferrer"
               style="height: 30px; padding: 0 11px; font-size: 0.76rem; font-weight: 600; background: #0f172a; color: #ffffff; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
-              <span>معاينة المنصة</span>
+              <span>${t('معاينة المنصة','Preview platform')}</span>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
             </a>
 
             <button type="button" onclick="window.teacherPlatformActions.toggleEditSettings()"
               style="height: 30px; padding: 0 10px; font-size: 0.76rem; font-weight: 600; background: #ffffff; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
               ${getIcon('edit', 12, '#334155')}
-              <span id="toggleEditBtnText">تعديل الهوية</span>
+              <span id="toggleEditBtnText">${t('تعديل الهوية','Edit identity')}</span>
             </button>
           </div>
 
@@ -253,17 +253,17 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
 
           <div style="position: relative; flex: 1; min-width: 200px; max-width: 360px;">
-            <span style="position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex;">
+            <span style="position: absolute; inset-inline-end: 9px; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex;">
               ${getIcon('search', 13)}
             </span>
             <input type="text" id="platformStudentSearch"
-              placeholder="ابحث باسم الطالب، الكود، أو السنتر..."
+              placeholder="${t('ابحث باسم الطالب، الكود، أو السنتر...','Search by student, code, or center...')}"
               oninput="window.teacherPlatformActions.filterStudents(this.value)"
-              style="width: 100%; height: 30px; padding: 0 28px 0 8px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 0.78rem; font-family: inherit; background: #f8fafc; color: #1e293b;">
+              style="width: 100%; height: 30px; padding-inline: 8px 28px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 0.78rem; font-family: inherit; background: #f8fafc; color: #1e293b;">
           </div>
 
           <div style="font-size: 0.74rem; color: #64748b; font-weight: 600;" id="trackingVisibleCount">
-            عرض ${totalStudents} طالب
+            ${t('عرض','Showing')} ${totalStudents} ${t('طالب','students')}
           </div>
 
         </div>
@@ -276,13 +276,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
         <!-- Desktop Table View (>= 769px) -->
         <div class="desktop-tracking-table">
-          <table style="width: 100%; min-width: 680px; border-collapse: collapse; text-align: right; font-size: 0.82rem;">
+          <table style="width: 100%; min-width: 680px; border-collapse: collapse; text-align: start; font-size: 0.82rem;">
             <thead>
               <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 600; font-size: 0.73rem;">
-                <th style="padding: 9px 14px; width: 30%;">الطالب والسنتر</th>
-                <th style="padding: 9px 14px; width: 25%;">حساب دخول المنصة</th>
-                <th style="padding: 9px 14px; width: 25%;">آخر نتيجة كويز أونلاين</th>
-                <th style="padding: 9px 14px; width: 20%; text-align: center;">إجراء مباشر</th>
+                <th style="padding: 9px 14px; width: 30%;">${t('الطالب والسنتر','Student and center')}</th>
+                <th style="padding: 9px 14px; width: 25%;">${t('حساب دخول المنصة','Platform login')}</th>
+                <th style="padding: 9px 14px; width: 25%;">${t('آخر نتيجة كويز أونلاين','Latest online quiz')}</th>
+                <th style="padding: 9px 14px; width: 20%; text-align: center;">${t('إجراء مباشر','Action')}</th>
               </tr>
             </thead>
             <tbody id="trackingTableBody">
@@ -309,9 +309,9 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                     <td style="padding: 10px 14px; vertical-align: middle;">
                       <div style="font-weight: 700; font-size: 0.85rem; color: #0f172a;">${escapeHtml(sName)}</div>
                       <div style="font-size: 0.73rem; color: #64748b; margin-top: 1px;">
-                        <span>كود: <strong style="color: #334155; font-family: monospace;">${escapeHtml(sCode)}</strong></span>
+                        <span>${t('كود:','Code:')} <strong style="color: #334155; font-family: monospace;">${escapeHtml(sCode)}</strong></span>
                         <span>•</span>
-                        <span>سنتر ${escapeHtml(sCenter)}</span>
+                        <span>${t('سنتر','Center')} ${escapeHtml(sCenter)}</span>
                         ${sGroup ? `<span>• ${escapeHtml(sGroup)}</span>` : ''}
                       </div>
                     </td>
@@ -320,10 +320,10 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                     <td style="padding: 10px 14px; vertical-align: middle;">
                       <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 0.71rem; color: #15803d; font-weight: 600; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 2px 7px; border-radius: 4px;">
-                          مفعل
+                          ${t('مفعل','Active')}
                         </span>
                         <span style="font-size: 0.74rem; color: #475569; font-family: monospace;">
-                          كلمة السر: <strong>${escapeHtml(sPass)}</strong>
+                          ${t('كلمة السر:','Password:')} <strong>${escapeHtml(sPass)}</strong>
                         </span>
                       </div>
                     </td>
@@ -334,7 +334,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                         quiz.status === 'pending_grading' ? `
                           <div style="display: inline-flex; align-items: center; gap: 6px;">
                             <span style="font-size: 0.71rem; font-weight: 600; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 7px; border-radius: 4px;">
-                              قيد التصحيح
+                              ${t('قيد التصحيح','Awaiting grading')}
                             </span>
                             <span style="font-size: 0.72rem; color: #64748b;">${escapeHtml(quiz.title)}</span>
                           </div>
@@ -346,21 +346,21 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                           </div>
                         `
                       ) : `
-                        <span style="font-size: 0.74rem; color: #94a3b8;">لم يرصد بعد</span>
+                        <span style="font-size: 0.74rem; color: #94a3b8;">${t('لم يرصد بعد','Not graded yet')}</span>
                       `}
                     </td>
 
                     <!-- 4. إجراء مباشر -->
                     <td style="padding: 10px 14px; text-align: center; vertical-align: middle;">
                       <div style="display: inline-flex; align-items: center; gap: 5px;">
-                        <a href="${escapeHtml(waUrl)}" aria-disabled="${!sPhone || !sCode || !sPass}" onclick="if(this.getAttribute('aria-disabled')==='true'){event.preventDefault();window.centrlyApp?.showToast('بيانات الدخول غير مكتملة؛ راجع سجل الطالب أولًا','warning');}" target="_blank" rel="noopener noreferrer"
-                          style="height: 28px; padding: 0 9px; font-size: 0.73rem; font-weight: 600; background: #ffffff; color: #15803d; border: 1px solid #bbf7d0; border-radius: 5px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                        <a href="${escapeHtml(waUrl)}" aria-disabled="${!sPhone || !sCode || !sPass}" onclick="if(this.getAttribute('aria-disabled')==='true'){event.preventDefault();window.centrlyApp?.showToast('${t('بيانات الدخول غير مكتملة؛ راجع سجل الطالب أولًا','Login details are incomplete; check the student record.')}','warning');}" target="_blank" rel="noopener noreferrer"
+                          style="min-height: 36px; padding: 4px 9px; white-space: nowrap; font-size: 0.73rem; font-weight: 600; background: #ffffff; color: #15803d; border: 1px solid #bbf7d0; border-radius: 5px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                          <span>إرسال الحساب</span>
+                          <span>${t('إرسال الحساب','Open message')}</span>
                         </a>
                         <a href="${escapeHtml(studentDashboardUrl)}" target="_blank" rel="noopener noreferrer"
-                          style="height: 28px; padding: 0 8px; font-size: 0.73rem; font-weight: 500; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; text-decoration: none; display: inline-flex; align-items: center;">
-                          معاينة
+                          style="min-height: 36px; padding: 4px 8px; white-space: nowrap; font-size: 0.73rem; font-weight: 500; background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 5px; text-decoration: none; display: inline-flex; align-items: center;">
+                          ${t('معاينة','Preview')}
                         </a>
                       </div>
                     </td>
@@ -400,15 +400,15 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                       ${escapeHtml(sName)}
                     </div>
                     <div style="font-size: 0.74rem; color: #64748b; margin-top: 3px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
-                      <span style="font-family: monospace; font-weight: 800; color: #1e293b; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">كود: ${escapeHtml(sCode)}</span>
+                      <span style="font-family: monospace; font-weight: 800; color: #1e293b; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">${t('كود:','Code:')} ${escapeHtml(sCode)}</span>
                       <span>•</span>
-                      <span>سنتر ${escapeHtml(sCenter)}</span>
+                      <span>${t('سنتر','Center')} ${escapeHtml(sCenter)}</span>
                       ${sGroup ? `<span>• ${escapeHtml(sGroup)}</span>` : ''}
                     </div>
                   </div>
 
                   <span style="font-size: 0.72rem; color: #15803d; font-weight: 700; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; flex-shrink: 0;">
-                    مفعل
+                    ${t('مفعل','Active')}
                   </span>
                 </div>
 
@@ -416,19 +416,19 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem;">
 
                   <div style="border-left: 1px solid #e2e8f0; padding-left: 0.4rem;">
-                    <div style="font-size: 0.68rem; color: #64748b; font-weight: 700;">دخول المنصة:</div>
+                    <div style="font-size: 0.68rem; color: #64748b; font-weight: 700;">${t('دخول المنصة:','Platform login:')}</div>
                     <div style="font-size: 0.76rem; color: #0f172a; margin-top: 2px;">
-                      كلمة السر: <strong style="font-family: monospace; font-size: 0.85rem; color: #1e293b;">${escapeHtml(sPass)}</strong>
+                      ${t('كلمة السر:','Password:')} <strong style="font-family: monospace; font-size: 0.85rem; color: #1e293b;">${escapeHtml(sPass)}</strong>
                     </div>
                   </div>
 
                   <div style="padding-right: 0.2rem;">
-                    <div style="font-size: 0.68rem; color: #64748b; font-weight: 700;">آخر نتيجة كويز:</div>
+                    <div style="font-size: 0.68rem; color: #64748b; font-weight: 700;">${t('آخر نتيجة كويز:','Latest quiz:')}</div>
                     <div style="margin-top: 2px;">
                       ${quiz ? (
                         quiz.status === 'pending_grading' ? `
                           <div style="display: inline-flex; align-items: center; gap: 4px;">
-                            <span style="font-size: 0.68rem; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 1px 5px; border-radius: 3px;">قيد التصحيح</span>
+                            <span style="font-size: 0.68rem; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 1px 5px; border-radius: 3px;">${t('قيد التصحيح','Awaiting grading')}</span>
                             <span style="font-size: 0.7rem; color: #64748b;">${escapeHtml(quiz.title)}</span>
                           </div>
                         ` : `
@@ -439,7 +439,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                           </div>
                         `
                       ) : `
-                        <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">لم يرصد بعد</span>
+                        <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">${t('لم يرصد بعد','Not graded yet')}</span>
                       `}
                     </div>
                   </div>
@@ -448,14 +448,14 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
                 <!-- Bottom Row: Action Buttons -->
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                  <a href="${escapeHtml(waUrl)}" aria-disabled="${!sPhone || !sCode || !sPass}" onclick="if(this.getAttribute('aria-disabled')==='true'){event.preventDefault();window.centrlyApp?.showToast('بيانات الدخول غير مكتملة؛ راجع سجل الطالب أولًا','warning');}" target="_blank" rel="noopener noreferrer"
-                    style="flex: 1; height: 34px; padding: 0 10px; font-size: 0.76rem; font-weight: 700; background: #15803d; color: #ffffff; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 1px 2px rgba(21,128,61,0.15);">
+                  <a href="${escapeHtml(waUrl)}" aria-disabled="${!sPhone || !sCode || !sPass}" onclick="if(this.getAttribute('aria-disabled')==='true'){event.preventDefault();window.centrlyApp?.showToast('${t('بيانات الدخول غير مكتملة؛ راجع سجل الطالب أولًا','Login details are incomplete; check the student record.')}','warning');}" target="_blank" rel="noopener noreferrer"
+                    style="flex: 1; min-height: 40px; padding: 4px 10px; white-space: nowrap; font-size: 0.76rem; font-weight: 700; background: #15803d; color: #ffffff; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 1px 2px rgba(21,128,61,0.15);">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                    <span>إرسال الحساب واتساب</span>
+                    <span>${t('إرسال الحساب واتساب','Open WhatsApp')}</span>
                   </a>
                   <a href="${escapeHtml(studentDashboardUrl)}" target="_blank" rel="noopener noreferrer"
                     style="height: 34px; padding: 0 14px; font-size: 0.76rem; font-weight: 700; background: #ffffff; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center;">
-                    <span>معاينة</span>
+                    <span>${t('معاينة','Preview')}</span>
                   </a>
                 </div>
 
@@ -465,8 +465,8 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
         </div>
 
         <div id="trackingEmptySearch" style="display: none; padding: 24px; text-align: center; color: #64748b;">
-          <div style="font-size: 0.88rem; font-weight: 700; color: #0f172a; margin-bottom: 2px;">لا توجد نتائج مطابقة لبحثك</div>
-          <p style="font-size: 0.75rem; margin: 0;">تأكد من صحة اسم الطالب أو الكود وجرب البحث مرة أخرى.</p>
+          <div style="font-size: 0.88rem; font-weight: 700; color: #0f172a; margin-bottom: 2px;">${t('لا توجد نتائج مطابقة لبحثك','No matching results')}</div>
+          <p style="font-size: 0.75rem; margin: 0;">${t('تأكد من صحة اسم الطالب أو الكود وجرب البحث مرة أخرى.','Check the student name or code and try again.')}</p>
         </div>
 
       </div>
@@ -480,14 +480,14 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--centrly-line, #e2e8f0);">
             <div>
               <h3 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--centrly-ink, #182349);">
-                تخصيص هوية ومظهر المنصة التعليمية
+                ${t('تخصيص هوية ومظهر المنصة التعليمية','Customize platform identity')}
               </h3>
               <p style="font-size: 0.78rem; color: var(--centrly-text, #46516e); margin: 2px 0 0 0;">
-                تعديل الرابط المخصص، الألوان، الصورة المفرغة، والعناوين الترويجية لمنصتك.
+                ${t('تعديل الرابط المخصص، الألوان، الصورة المفرغة، والعناوين الترويجية لمنصتك.','Edit your custom address, colors, teacher image, and platform text.')}
               </p>
             </div>
             <button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.toggleEditSettings()" style="height: 30px; font-size: 0.75rem; font-weight: 700;">
-              إغلاق
+              ${t('إغلاق','Close')}
             </button>
           </div>
 
@@ -495,7 +495,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
             <!-- حجز الرابط المخصص -->
             <div>
-              <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">اسم الرابط (Subdomain)</label>
+              <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">${t('اسم الرابط (Subdomain)','Address (subdomain)')}</label>
               <div style="display: flex; align-items: center; direction: ltr; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; overflow: hidden; height: 38px;">
                 <span style="background: #e2e8f0; color: #475467; font-size: 0.8rem; font-weight: 800; padding: 0 8px; height: 100%; display: flex; align-items: center;">https://</span>
                 <input type="text" id="builderSubdomainInput" value="${escapeHtml(subdomain)}" placeholder="mr-omar"
@@ -508,23 +508,23 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
             <!-- الاسم المعروض -->
             <div>
-              <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">اسم المنصة الرسمي</label>
-              <input type="text" id="builderTitleInput" value="${escapeHtml(displayTitle)}" placeholder="مثال: منصة مستر عمر المحمدي"
+              <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">${t('اسم المنصة الرسمي','Official platform name')}</label>
+              <input type="text" id="builderTitleInput" value="${escapeHtml(displayTitle)}" placeholder="${t('مثال: منصة مستر عمر المحمدي','Example: Your learning platform')}"
                 style="width: 100%; height: 38px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; font-size: 0.82rem;"
                 oninput="window.teacherPlatformActions.updatePreviewText('title', this.value)">
             </div>
 
             <!-- المادة التخصصية -->
             <div>
-              <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">المادة التعليمية والتخصص</label>
-              <input type="text" id="builderSubjectInput" value="${escapeHtml(subjectTitle)}" placeholder="مثال: فيزياء الثانوية العامة"
+              <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">${t('المادة التعليمية والتخصص','Subject and specialty')}</label>
+              <input type="text" id="builderSubjectInput" value="${escapeHtml(subjectTitle)}" placeholder="${t('مثال: فيزياء الثانوية العامة','Example: Secondary physics')}"
                 style="width: 100%; height: 38px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; font-size: 0.82rem;"
                 oninput="window.teacherPlatformActions.updatePreviewText('subject', this.value)">
             </div>
 
             <!-- لوحة الألوان المعتمدة -->
             <div>
-              <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">اللون المعتمد لمنصتك</label>
+              <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">${t('اللون المعتمد لمنصتك','Platform color')}</label>
               <div style="display: flex; gap: 8px; align-items: center; padding-top: 2px;">
                 ${[
                   { id: 'navy', color: '#11204d', ring: '#2563eb' },
@@ -550,15 +550,15 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
             <!-- رفع الصورة المفرغة -->
             <div style="grid-column: 1 / -1;">
-              <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">الصورة المفرغة للمدرس (PNG Cutout)</label>
+              <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">${t('الصورة المفرغة للمدرس (PNG Cutout)','Teacher image (PNG cutout)')}</label>
               <div style="display: flex; gap: 8px;">
-                <input type="text" id="builderCutoutInput" value="${escapeHtml(cutoutAvatarUrl)}" placeholder="ارفع صورتك بالزر المجاور أو الصق رابط صورة PNG"
+                <input type="text" id="builderCutoutInput" value="${escapeHtml(cutoutAvatarUrl)}" placeholder="${t('ارفع صورتك بالزر المجاور أو الصق رابط صورة PNG','Upload an image or paste a PNG image URL')}"
                   style="flex: 1; height: 38px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; font-size: 0.82rem;"
                   oninput="window.teacherPlatformActions.updatePreviewAvatar(this.value)">
                 <button type="button" onclick="document.getElementById('builderCutoutFileUploader').click()"
                   style="background: var(--centrly-ink, #182349); color: #ffffff; border: none; border-radius: 6px; padding: 0 14px; font-size: 0.8rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                  <span>رفع صورة</span>
+                  <span>${t('رفع صورة','Upload image')}</span>
                 </button>
                 <input type="file" id="builderCutoutFileUploader" accept="image/png,image/jpeg,image/webp" style="display: none;" onchange="window.teacherPlatformActions.handleImageUpload(event)">
               </div>
@@ -571,7 +571,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
             <button type="button" id="btnPublishPlatform" onclick="window.teacherPlatformActions.savePlatformSettings()"
               style="background: var(--centrly-blue-700, #2949ba); color: #ffffff; border: none; height: 38px; padding: 0 22px; border-radius: 6px; font-size: 0.85rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(41,73,186,0.2);">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-              <span>تحديث وحفظ التعديلات</span>
+              <span>${t('تحديث وحفظ التعديلات','Save changes')}</span>
             </button>
           </div>
 
@@ -784,7 +784,7 @@ export function registerTeacherPlatformActions(appInstance) {
         if (match) visibleCount++;
       });
       const countEl = document.getElementById('trackingVisibleCount');
-      if (countEl) countEl.innerText = `عرض ${visibleCount} من أصل ${rows.length} طالب`;
+      if (countEl) countEl.innerText = t(`عرض ${visibleCount} من أصل ${rows.length} طالب`,`Showing ${visibleCount} of ${rows.length} students`);
       const emptyEl = document.getElementById('trackingEmptySearch');
       if (emptyEl) emptyEl.style.display = (visibleCount === 0 && rows.length > 0) ? 'block' : 'none';
     },
@@ -824,11 +824,11 @@ export function registerTeacherPlatformActions(appInstance) {
       const isHidden = window.getComputedStyle(section).display === 'none';
       if (isHidden) {
         section.style.display = 'flex';
-        if (btnText) btnText.innerText = 'إخفاء';
+        if (btnText) btnText.innerText = t('إخفاء','Hide');
         section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else {
         section.style.display = 'none';
-        if (btnText) btnText.innerText = 'تعديل الهوية';
+        if (btnText) btnText.innerText = t('تعديل الهوية','Edit identity');
       }
     },
 
