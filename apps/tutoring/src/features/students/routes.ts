@@ -585,7 +585,10 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
         }
         // Persist every selected account before scheduling any welcome messages.
         // A failed write must not produce an invitation to an unusable account.
-        await studentsService.updateStudent(s.id, { parent_portal_token: token, portal_password: portalPassword });
+        const saved = await studentsService.updateStudent(s.id, { parent_portal_token: token, portal_password: portalPassword });
+        if (!saved?.portal_password || !saved?.parent_portal_token) {
+          throw new Error('تعذر تجهيز بيانات حساب الطالب؛ لم تتم جدولة إرسال الروابط. حاول مرة أخرى.');
+        }
       }
 
       const metaResult = await services.metaCloud.dispatchBatchPortalLinks({
