@@ -226,7 +226,7 @@ assistantManagementRouter.post('/collections/:id/void',async(req:AuthenticatedRe
 function registrationLinks(tenant:string,phone:string,nonce:string){
  const url=`${portalOrigin()}/assistant?workspace=${tenant}#registration=${nonce}`;
  const message=`استكمل حسابك في فريق المدرس من الرابط:\n${url}\nرقم واتساب المسجل ثابت؛ أكّده بالكود ثم اكتب اسمك واختر كلمة مرور.`;
- return {registration_url:url,registration_whatsapp_url:`https://wa.me/${phone}?text=${encodeURIComponent(message)}`};
+ return {otp_channel:config.phoneOtp.provider==='akedly'?'sms':'whatsapp',registration_url:url,registration_whatsapp_url:`https://wa.me/${phone}?text=${encodeURIComponent(message)}`};
 }
 assistantManagementRouter.post('/:id/registration-link',async(req:AuthenticatedRequest,res)=>{
  try{const db=getServiceSupabaseClient(),id=z.uuid().parse(req.params.id),nonce=familyToken();await limit(db,`registration-link:${req.user!.tenant_id}:${id}`,5);const result=await assistantRpc(db,'assistant_registration_link',{p_tenant:req.user!.tenant_id,p_assistant:id,p_nonce_hash:familyHash(nonce)});res.json({...result,...registrationLinks(result.tenant_id,result.phone,nonce)});}catch(error){sendError(res,error);}
@@ -278,5 +278,5 @@ export async function confirmAssistantMessage(db:SupabaseClient,phone:string,pay
  const record=await assistantRpc(db,'assistant_confirm_invitation',{p_nonce_hash:familyHash(nonce),p_phone:phone,p_claim_hash:familyHash(ticket)});
  if(!record) return;
  const url=`${portalOrigin()}/assistant?workspace=${record.tenant_id}#registration=${nonce}`;
- if(!await reply(phone,`حسابك في فريق ${record.teacher_name}\n\nأكد رقمك بكود واتساب، ثم كمّل اسمك واختار كلمة مرور من هنا:\n${url}\n\nاستخدم رابطك الخاص ولا تشاركه مع أي شخص.`)) throw fault(502,'تعذر إرسال رابط استكمال الحساب');
+ if(!await reply(phone,`حسابك في فريق ${record.teacher_name}\n\nأكد رقمك بالكود اللي هيوصلك ${config.phoneOtp.provider==='akedly'?'في رسالة SMS':'على واتساب'}، ثم كمّل اسمك واختار كلمة مرور من هنا:\n${url}\n\nاستخدم رابطك الخاص ولا تشاركه مع أي شخص.`)) throw fault(502,'تعذر إرسال رابط استكمال الحساب');
 }

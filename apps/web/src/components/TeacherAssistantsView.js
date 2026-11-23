@@ -225,7 +225,7 @@ export function registerTeacherAssistantsActions(app) {
   registerFollowupOwnerActions(app);
   app.showAssistantRegistrationLink = function(result) {
     if(!result.registration_url)return;
-    this.showModal('رابط حساب المساعد',`<p>الرابط خاص بالرقم <span dir="ltr">${escapeHtml(result.phone || '')}</span>. يؤكد المساعد رقمه على واتساب ثم يكمل اسمه وكلمة مروره. أي رابط تسجيل سابق لم يعد صالحًا.</p><label for="assistant-registration-link">رابط التسجيل</label><input id="assistant-registration-link" class="form-input" dir="ltr" readonly value="${escapeHtml(result.registration_url)}" style="width:100%;min-height:48px"><p style="margin-top:1rem"><a class="btn btn-primary" style="min-height:44px" href="${escapeHtml(result.registration_whatsapp_url)}" target="_blank" rel="noopener noreferrer">فتح واتساب لإرسال الرابط</a></p>`,'');
+    this.showModal('رابط حساب المساعد',`<p>الرابط خاص بالرقم <span dir="ltr">${escapeHtml(result.phone || '')}</span>. يؤكد المساعد رقمه بكود ${result.otp_channel==='sms'?'يصل في رسالة SMS':result.otp_channel==='whatsapp'?'يصل على واتساب':'يصل على رقمه'}، ثم يكمل اسمه وكلمة مروره. أي رابط تسجيل سابق لم يعد صالحًا.</p><label for="assistant-registration-link">رابط التسجيل</label><input id="assistant-registration-link" class="form-input" dir="ltr" readonly value="${escapeHtml(result.registration_url)}" style="width:100%;min-height:48px"><p style="margin-top:1rem"><a class="btn btn-primary" style="min-height:44px" href="${escapeHtml(result.registration_whatsapp_url)}" target="_blank" rel="noopener noreferrer">فتح واتساب لإرسال الرابط</a></p>`,'');
     const input=document.getElementById('assistant-registration-link');if(input)input.onclick=()=>input.select();
   };
   app.getAssistantRegistrationLink = async function(id) {
