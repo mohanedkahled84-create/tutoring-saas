@@ -8,7 +8,8 @@ import {registerTeacherAssistantsActions,renderTeacherAssistantsView} from '../.
 
 test('new assistants default to no pages and no group data; catalog only exposes implemented actions',()=>{
  assert.deepEqual(validateAssistantAccess({}),{permissions:{},all_groups:false,group_ids:[]});
- assert.deepEqual(assistantPages.map(([key,label,actions])=>[key,label,actions]),assistantCatalog.map(p=>[p.key,p.label,[...p.actions]]));
+ assert.deepEqual(assistantPages.map(([key,label,actions])=>[key,label,actions]),assistantCatalog.filter(p=>p.key!=='paper-exams').map(p=>[p.key,p.label,[...p.actions]]));
+ assert.equal(assistantPages.some(([key])=>key==='paper-exams'),false);
  const html=renderAssistantAccessFields('test',[]);
  assert.doesNotMatch(html,/checked/);
  assert.match(html,/كل صفحة لها صلاحيات مستقلة/);
