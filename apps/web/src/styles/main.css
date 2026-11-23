@@ -1401,3 +1401,8 @@ html[dir="rtl"] body { direction: rtl; }
 .startup-float-body .is-done { text-decoration:line-through; color:#64748b; }
 .startup-float-body[hidden] { display:none; }
 @media (prefers-reduced-motion:no-preference) { .startup-float { transition:width .2s ease, box-shadow .2s ease; } }
+
+.startup-float-body li[hidden] { display:none; }
+.startup-step-completing { overflow:hidden; animation:startup-step-finished .35s ease .8s forwards; }
+@keyframes startup-step-finished { from { max-height:120px; opacity:1; } to { max-height:0; opacity:0; visibility:hidden; } }
+@media (prefers-reduced-motion:reduce) { .startup-step-completing { display:none; animation:none; } }

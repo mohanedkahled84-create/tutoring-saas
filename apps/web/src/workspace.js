@@ -1,7 +1,7 @@
 import { registerCameraScannerActions } from './components/CameraScannerModal.js?v=9.46.0';
 import {registerClassroomLifecycle} from './components/ClassroomLifecycle.js?v=9.46.0';
 import {registerAcademicYears} from './components/AcademicYears.js?v=9.46.0';
-import {registerStartupChecklist} from './components/StartupChecklist.js?v=9.92.15';
+import {registerStartupChecklist} from './components/StartupChecklist.js?v=9.92.39';
 import {renderAnnouncementAdminView,registerAnnouncementAdminActions} from './components/AnnouncementAdminView.js?v=9.46.0';
 export {renderAnnouncementAdminView};
 import {renderAnnouncementsView,registerAnnouncementsActions} from './components/AnnouncementsView.js?v=9.92.30';
