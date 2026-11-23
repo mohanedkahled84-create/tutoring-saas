@@ -1,14 +1,14 @@
-import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.92.30';
+import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.92.31';
 import {applyLocale,getLocale} from './utils/locale.js?v=9.92.0';
 import {portalCairoClock} from './utils/portalClock.js?v=9.46.0';
 import { assistantPay } from "./utils/assistantPay.js?v=9.46.0";
 import { authService } from './services/auth.js?v=9.46.0';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=9.46.0';
-import { renderSidebar } from './components/Sidebar.js?v=9.92.30';
+import { renderSidebar } from './components/Sidebar.js?v=9.92.31';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.92.0';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=9.46.0';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js?v=9.46.0';
-import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.92.30';
+import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.92.31';
 import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=9.46.0';
 import { getIcon } from './utils/icons.js?v=9.46.0';
 import { escapeHtml } from './utils/escapeHtml.js?v=9.46.0';
@@ -16,6 +16,8 @@ import { playBeep, unlockAudio } from './utils/beepAudio.js?v=9.46.0';
 import { normalizeDigits } from './utils/normalizeDigits.js?v=9.46.0';
 
 let renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView;
+
+export function mergePrefetchedBilling(previous, summary) { return {...(previous || {}),...summary,...(previous?.commercial ? {commercial:previous.commercial} : {})}; }
 
 export class CentrlyApp {
   isPlatformAdmin(user = this.user) {
@@ -148,7 +150,7 @@ export class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=9.92.30').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=9.92.31').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
@@ -369,6 +371,7 @@ export class CentrlyApp {
       case 'reports':
         return Boolean(this.reportsState?.leaderboard);
       case 'billing':
+        return Boolean(this.billingState?.commercial);
       case 'settings':
         return Boolean(this.billingState);
       case 'materials':
@@ -561,7 +564,7 @@ export class CentrlyApp {
         this.dataLoadedState['groups'] = true;
       }
       if (billingRes) {
-        this.billingState = billingRes;
+        this.billingState = mergePrefetchedBilling(this.billingState,billingRes);
         this.saveCache('billingState', this.billingState);
         this.dataLoadedState['billing'] = true;
       }
