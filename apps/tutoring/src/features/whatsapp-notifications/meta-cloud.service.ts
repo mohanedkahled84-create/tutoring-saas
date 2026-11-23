@@ -265,13 +265,13 @@ export class MetaCloudService {
         } else {
           await this.repository.updateItemStatus(item.id, {
             status: "failed",
-            error_message: sendRes.error || "Meta dispatch failure",
+            error_message: sendRes.outcome === 'not_sent' ? 'PORTAL_NOT_SENT' : 'PORTAL_OUTCOME_UNKNOWN',
           });
         }
       } catch (err: any) {
         await this.repository.updateItemStatus(item.id, {
           status: "failed",
-          error_message: err.message || "Unknown error during Meta dispatch",
+          error_message: 'PORTAL_OUTCOME_UNKNOWN',
         });
       }
 
@@ -329,14 +329,14 @@ export class MetaCloudService {
           failed++;
           await this.repository.updateItemStatus(item.id, {
             status: "failed",
-            error_message: res.error || "Meta error",
+            error_message: res.outcome === 'not_sent' ? 'PORTAL_NOT_SENT' : 'PORTAL_OUTCOME_UNKNOWN',
           });
         }
       } catch (err: any) {
         failed++;
         await this.repository.updateItemStatus(item.id, {
           status: "failed",
-          error_message: err.message || "Execution exception",
+          error_message: 'PORTAL_OUTCOME_UNKNOWN',
         });
       }
 

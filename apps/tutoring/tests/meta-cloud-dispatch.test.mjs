@@ -154,3 +154,14 @@ test('unused parent template does not delay student-only dispatch', async () => 
  assert.equal(result.is_template_pending,false);assert.equal(result.scheduled_today,1);
  await new Promise(r=>setTimeout(r,20));assert.equal(gateway.sentMessages.length,1);
 });
+
+test('uncertain sends and confirmed rejection stay distinct and are not retried',async()=>{
+ for(const [outcome,marker] of [['unknown','PORTAL_OUTCOME_UNKNOWN'],['not_sent','PORTAL_NOT_SENT']]){
+  const repo=new FakeMetaPortalQueueRepository(),gateway=new FakeMetaCloudGateway();let calls=0;
+  gateway.sendTemplate=async()=>{calls++;return {success:false,outcome,error:'provider error'};};
+  const service=new MetaCloudService(repo,gateway,250);
+  await service.dispatchBatchPortalLinks({tenant_id:'t-'+outcome,students:[{student_id:'s',student_name:'طالب',student_phone:'01011111111'}],pacingDelayMs:0});
+  await new Promise(r=>setTimeout(r,20));assert.equal(repo.items[0].status,'failed');assert.equal(repo.items[0].error_message,marker);
+  await service.processScheduledQueue();assert.equal(calls,1);
+ }
+});
