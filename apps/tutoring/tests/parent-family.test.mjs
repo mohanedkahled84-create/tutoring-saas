@@ -53,16 +53,21 @@ test('logout between directory and context reads expires the session instead of 
  await assert.rejects(()=>openFamilyAccount(db,'a'.repeat(43),'https://centerly-eg.com','own'),e=>e.status===401);
  assert.deepEqual(calls,['parent_family_directory','parent_family_context','parent_family_identity']);
 });
-test('a direct teacher login selects that teacher before another family teacher; explicit choices still win',async()=>{
+test('a direct teacher login selects that teacher and refuses another teacher’s child',async()=>{
  for(const explicit of [undefined,'first']){
   let selected;const db={rpc:async(name,args)=>{
    if(name==='parent_family_directory')return {data:{students:[{id:'first',tenant_id:'one'},{id:'local',tenant_id:'two',presentation:{subdomain:'teacher'}}]},error:null};
    if(name==='parent_family_context')selected=args.p_student_id;
    return {data:null,error:null};
   }};
-  await assert.rejects(()=>openFamilyAccount(db,'a'.repeat(43),'https://teacher.centerly-eg.com',explicit),e=>e.status===401);
-  assert.equal(selected,explicit || 'local');
+  await assert.rejects(()=>openFamilyAccount(db,'a'.repeat(43),'https://teacher.centerly-eg.com',explicit),e=>e.status===(explicit?403:401));
+  assert.equal(selected,explicit?undefined:'local');
  }
+});
+test('a teacher hostname with no family membership never returns another teacher’s directory',async()=>{
+ const db={rpc:async(name)=>{assert.equal(name,'parent_family_directory');return {data:{students:[{id:'other',tenant_id:'other',name:'Other child',presentation:{subdomain:'other'}}]},error:null};}};
+ const result=await openFamilyAccount(db,'a'.repeat(43),'https://teacher.centerly-eg.com');
+ assert.deepEqual(result.students,[]);assert.equal(result.selected_id,null);
 });
 test('family selectors are conditional and escape identities; they do not offer manual child linking',async()=>{
  const source=await readFile(new URL('../../web/src/parentFamily.js',import.meta.url),'utf8');

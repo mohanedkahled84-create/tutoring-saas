@@ -65,11 +65,12 @@ export async function openFamilyAccount(db:SupabaseClient,token:unknown,origin:s
  const directory=await familyRpc(db,'parent_family_directory',{p_token_hash:hash,p_origin:origin});
  if(!directory)throw familyError(401,'انتهت جلسة حساب الأسرة، سجّل الدخول مجددًا');
  // No guessed sibling identities and no client-provided tenant IDs.
- // A direct teacher link starts with that teacher, even when the family has other teachers.
+ // A teacher's hostname exposes only that teacher's family records.
  const preferred=directory.students.find((s:any)=>s.presentation?.subdomain && `https://${s.presentation.subdomain}.${new URL(portalOrigin()).hostname}`===origin);
- const selected=studentId ? directory.students.find((s:any)=>s.id===studentId) : preferred || directory.students[0];
+ const visible=origin===portalOrigin()?directory.students:directory.students.filter((s:any)=>preferred && s.tenant_id===preferred.tenant_id);
+ const selected=studentId ? visible.find((s:any)=>s.id===studentId) : preferred || visible[0];
  if(studentId && !selected)throw familyError(403,'هذه المتابعة غير مرتبطة بحساب الأسرة');
- const students=directory.students.map((s:any)=>({id:s.id,tenant_id:s.tenant_id,name:s.name,student_code:s.student_code,teacher_name:s.teacher_name}));
+ const students=visible.map((s:any)=>({id:s.id,tenant_id:s.tenant_id,name:s.name,student_code:s.student_code,teacher_name:s.teacher_name}));
  if(!selected)return {students,selected_id:null,expires_at:directory.expires_at};
  const context=await familyRpc(db,'parent_family_context',{p_token_hash:hash,p_origin:origin,p_student_id:selected.id});
  if(!context){
