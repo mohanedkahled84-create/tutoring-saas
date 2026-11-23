@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const source = await readFile(new URL('../../web/src/utils/portalCache.js', import.meta.url), 'utf8');
 const {createPortalCache, PORTAL_CACHE_PREFIX, PORTAL_FRESH_MS, PORTAL_MAX_AGE_MS} = await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
-const payload = name => ({student:{id:'student-a',tenant_id:'tenant-a',name},summary:{attendance_rate:'80%'},materials:[{id:'hw',title:'واجب قديم',submission_url:'https://files.test/storage/v1/object/sign/homework-submissions/file?token=private'}]});
+const payload = name => ({features:{teaching_platform:false},student:{id:'student-a',tenant_id:'tenant-a',name},summary:{attendance_rate:'80%'},materials:[{id:'hw',title:'واجب قديم',submission_url:'https://files.test/storage/v1/object/sign/homework-submissions/file?token=private'}]});
 test('cached ranking never reveals a cohort after the teacher changes visibility; policy refresh runs in the background',async()=>{
  const {cache}=setup();
  await cache.write('session-a',{...payload('محفوظ'),preferences:{show_student_rank:true,show_student_leaderboard:true},summary:{student_rank:1,group_size:20},leaderboard:{entries:[{name:'PRIVATE-PEER',position:1}]}});
@@ -24,6 +24,11 @@ test('fresh verified snapshots render without any new API request and do not sto
   await cache.load('session-a',{request:async()=>{calls++;throw Error('must not fetch');},onData:data=>{shown=data;}});
   assert.equal(calls,0);assert.equal(shown.student.name,'الطالب أ');
   const saved=records.get(PORTAL_CACHE_PREFIX+'student');assert.ok(!saved.includes('session-a'));assert.equal(JSON.parse(saved).session.length,64);
+});
+test('old student snapshots without entitlement metadata trigger a live refresh',async()=>{
+ const {cache}=setup(),old=payload('قديم');delete old.features;await cache.write('session-a',old);
+ let calls=0;const result=await cache.load('session-a',{request:async()=>{calls++;return payload('حديث');}});
+ assert.equal(calls,1);assert.equal(result.data.features.teaching_platform,false);
 });
 test('stale snapshots render before the network settles, then apply authoritative updates and deletions',async()=>{
   const {cache,advance}=setup();await cache.write('session-a',payload('قديم'));advance(PORTAL_FRESH_MS+1);

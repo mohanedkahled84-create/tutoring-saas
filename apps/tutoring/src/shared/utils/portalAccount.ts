@@ -109,6 +109,10 @@ export async function loadPortalAccount(supabase:SupabaseClient,token:string,mon
       } catch (_) {}
     }
 
+    // Re-apply after legacy quiz enrichment, which can append learning materials.
+    const teachingPlatform=context.commercial ? context.commercial.teaching_platform===true : true;
+    portalData.features={teaching_platform:teachingPlatform};
+    if(!teachingPlatform && Array.isArray(portalData.materials))portalData.materials=portalData.materials.filter((m:any)=>m.type!=='video' && m.type!=='online_quiz');
     const fileTenantId = context.tenant_id;
     const fileStudentId = context.id;
     if (portalData.summary?.total_sessions === 0) portalData.summary.attendance_rate = "لا توجد بيانات";

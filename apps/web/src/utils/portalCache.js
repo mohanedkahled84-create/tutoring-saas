@@ -50,7 +50,7 @@ export function createPortalCache({storage, clock = Date.now, hash = sessionHash
       if (generation !== revision(role) || !active(token, role) || age < 0 || age > PORTAL_MAX_AGE_MS || !record.data?.student?.id || !record.data.student.tenant_id || !matchesSession(token, record.data)) return null;
       const data = copy(record.data);
       // Cached cohorts/ranks never override the teacher's current privacy choices.
-      const needsRankPolicy=(data.announcements?.length>0) || data.preferences?.show_student_rank===true || data.preferences?.show_parent_rank===true || data.preferences?.show_student_leaderboard===true;
+      const needsRankPolicy=(role==='student' && typeof data.features?.teaching_platform!=='boolean') || (data.announcements?.length>0) || data.preferences?.show_student_rank===true || data.preferences?.show_parent_rank===true || data.preferences?.show_student_leaderboard===true;
       delete data.leaderboard;
       delete data.announcements;
       if(data.summary)for(const key of ['student_rank','group_size','rank_period'])delete data.summary[key];

@@ -14,7 +14,7 @@ const root=path.resolve(__dirname,'..'),types={'.html':'text/html','.js':'applic
     let data;
     if(u.pathname==='/api/public/portal/login')data={success:true,token:'fixture-student-token'};
     else if(u.pathname==='/api/public/portal/destination')data={origin:'https://centerly-eg.com',presentation:null};
-    else if(u.pathname==='/api/public/parent-portal'){reads++;data={student:{id:'student-entry-test',tenant_id:'teacher-test',name:'طالب فحص الدخول',student_code:'1001'},summary:{total_sessions:0},sessions:[],materials:[],quizzes:[]};}
+    else if(u.pathname==='/api/public/parent-portal'){reads++;data={student:{id:'student-entry-test',tenant_id:'teacher-test',name:'طالب فحص الدخول',student_code:'1001'},summary:{total_sessions:0},sessions:[],materials:[],quizzes:[],features:{teaching_platform:false}};}
     else throw Error('Unexpected API '+u.pathname);
     return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':'https://centerly-eg.com','Access-Control-Allow-Headers':'content-type','Access-Control-Allow-Methods':'GET, POST, OPTIONS'},body:JSON.stringify(data)});
    }
@@ -25,8 +25,8 @@ const root=path.resolve(__dirname,'..'),types={'.html':'text/html','.js':'applic
   await page.goto('https://centerly-eg.com/portal?role=student');await page.locator('#portalIdentifier').waitFor();
   assert.equal(await page.locator('#portalRole').inputValue(),'student','Explicit student entry wins over prior parent use');
   await page.locator('#portalPassword').fill('fixture-password');await page.locator('.password-toggle-btn').click();assert.equal(await page.locator('#portalPassword').getAttribute('type'),'text');await page.locator('.password-toggle-btn').click();
-  await page.locator('#portalIdentifier').fill('1001');await page.locator('#portalSubmitBtn').click();await page.locator('#portalCacheStatus').waitFor();assert.ok((await page.locator('body').innerText()).includes('طالب فحص الدخول'));
-  const firstReads=reads;await page.reload();await page.locator('#portalCacheStatus').waitFor();assert.equal(reads,firstReads,'Fresh snapshot avoids another account read');
+  await page.locator('#portalIdentifier').fill('1001');await page.locator('#portalSubmitBtn').click();await page.locator('#basic-sync-status').waitFor();assert.ok((await page.locator('body').innerText()).includes('طالب فحص الدخول'));
+  const firstReads=reads;await page.reload();await page.locator('#basic-sync-status').waitFor();assert.equal(reads,firstReads,'Fresh snapshot avoids another account read');
   assert.equal(await page.evaluate(()=>localStorage.getItem('centrly_token')),'owner-token-must-remain');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.evaluate(()=>window.centrlyApp.handlePortalLogout());await page.locator('#portalIdentifier').waitFor();assert.equal(await page.locator('#portalRole').inputValue(),'student');

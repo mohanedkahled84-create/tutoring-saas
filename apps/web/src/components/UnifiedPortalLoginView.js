@@ -1,3 +1,4 @@
+import {renderBasicStudentPortal} from './BasicStudentPortalView.js?v=9.92.19';
 import { request, API_BASE_URL } from '../services/api.js?v=9.46.0';
 import { registerParentPortalActions } from '../parentPortal.js?v=9.46.0';
 import {clearFamilyForOtherLogin} from '../utils/portalSession.js?v=9.46.0';
@@ -18,6 +19,8 @@ function showPortalPending(app) {
 function showPortalCacheStatus(app, savedAt, failed) {
   const root = app.getAppEl();
   if (!root) return;
+  const basicStatus=root.querySelector('#basic-sync-status');
+  if(basicStatus){basicStatus.textContent=failed?'تعذر التحديث؛ بياناتك المحفوظة متاحة':'';return;}
   let status = root.querySelector('#portalCacheStatus');
   if (!status) {
     status = document.createElement('div');
@@ -253,12 +256,13 @@ export function registerUnifiedPortalActions(app) {
     } catch (_) {}
 
     const renderSavedData = data => {
+      const basic=data.features?.teaching_platform!==true;
       // Online quiz definitions and scores are already scoped to this student by
       // the parent-portal API. Never load them through the legacy public quiz API.
       if (!Array.isArray(data.materials)) data.materials = [];
       if (!Array.isArray(data.quizzes)) data.quizzes = [];
       data.materials
-        .filter(material => material.type === 'online_quiz')
+        .filter(material => !basic && material.type === 'online_quiz')
         .forEach(material => {
           let payload = {};
           try {
@@ -286,7 +290,7 @@ export function registerUnifiedPortalActions(app) {
       if (appEl) {
         const savedTab = (typeof localStorage !== 'undefined' && localStorage.getItem('centrly_portal_student_tab')) ||
                          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('centrly_portal_student_tab')) || 'dashboard';
-        appEl.innerHTML = renderStudentPortalView(data, savedTab);
+        appEl.innerHTML = basic ? renderBasicStudentPortal(data, savedTab) : renderStudentPortalView(data, savedTab);
         const studentKey = (data && data.student && (data.student.id || data.student.student_code || data.student.code || data.student.student_phone)) ? String(data.student.id || data.student.student_code || data.student.code || data.student.student_phone).trim() : '';
         if (typeof window !== 'undefined' && studentKey) {
           window._centrlyCurrentStudentId = studentKey;
@@ -304,7 +308,7 @@ export function registerUnifiedPortalActions(app) {
           try { localStorage.setItem('centrly_portal_last_id', studentKey); } catch (_) {}
         }
         setTimeout(() => {
-          if (typeof window !== 'undefined' && window.openStudentPortalTour) {
+          if (!basic && typeof window !== 'undefined' && window.openStudentPortalTour) {
             window.openStudentPortalTour(false, studentKey);
           }
         }, 500);
