@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServices } from "../../composition.js";
 import {getServiceSupabaseClient} from "../../supabase.js";
 import {currentPortalDestination,portalOrigin} from "../../shared/utils/portalDestination.js";
+import {schedulePortalDomain} from '../../shared/utils/provisionPortalDomain.js';
 
 export const publicPlatformRouter = Router();
 export const platformRouter = Router();
@@ -140,6 +141,7 @@ platformRouter.get(
       const service = (services as any).platformBuilder;
       const isPlatformAdmin = isPlatformAdministrator(req);
       const data = await service.getTeacherSettings(tenantId, isPlatformAdmin);
+      schedulePortalDomain(getServiceSupabaseClient(),tenantId);
 
       res.status(200).json({
         success: true,
@@ -172,6 +174,7 @@ platformRouter.post(
       const service = (services as any).platformBuilder;
       const isPlatformAdmin = isPlatformAdministrator(req);
       const saved = await service.savePlatformSettings(tenantId, req.body, isPlatformAdmin);
+      schedulePortalDomain(getServiceSupabaseClient(),tenantId);
 
       res.status(200).json({
         success: true,
