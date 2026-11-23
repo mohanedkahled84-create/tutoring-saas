@@ -12,12 +12,12 @@ export function renderAssistantAccessFields(prefix,groups=[],access={}) {
   <legend style="font-weight:800;padding:0 .4rem">الصفحات والصلاحيات</legend>
   <p style="font-size:.875rem;line-height:1.7;margin:0 0 .75rem;color:var(--centrly-text)">فعّل الصفحات المطلوبة فقط، ثم اختر هل يستطيع المساعد العرض أم الإنشاء والتعديل أيضًا. كل صفحة لها صلاحيات مستقلة؛ امنح المساعد ما يحتاجه لشغله فقط.</p>
   <label style="display:block;margin-bottom:1rem">ابدأ بصلاحيات جاهزة
-  <select data-assistant-preset aria-label="قالب صلاحيات المساعد" style="width:100%;min-height:44px;margin-top:.4rem"><option value="">اختيار يدوي</option value="attendance">مساعد حضور</option><option value="teaching">مساعد تعليمي</option><option value="finance">مساعد تحصيل</option></select></label>
+  <select data-assistant-preset aria-label="قالب صلاحيات المساعد" style="width:100%;min-height:44px;margin-top:.4rem"><option value="">اختيار يدوي</option><option value="full">صلاحيات كاملة لكل المجموعات</option><option value="attendance">مساعد حضور</option><option value="teaching">مساعد تعليمي</option><option value="finance">مساعد تحصيل</option></select></label>
   ${assistantPages.map(([key,label,actions])=>`<div data-permission-page="${key}" style="display:flex;flex-wrap:wrap;gap:.25rem 1rem;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--centrly-border,#e2e8f0)"><div><strong>${label}</strong>${pageHints[key]?`<p style="font-size:.8rem;line-height:1.6;margin:.25rem 0;color:var(--centrly-text)">${pageHints[key]}</p>`:''}</div><div style="display:flex;flex-wrap:wrap;gap:.5rem">${actions.map(action=>`<label style="display:flex;align-items:center;gap:.35rem;min-height:44px"><input type="checkbox" name="${prefix}_Permission" value="${key}.${action}" ${p[`${key}.${action}`]===true?'checked':''}>${key==='collections' && action==='create'?'تسجيل تحصيل':key==='announcements' && action==='send'?'إرسال التنبيهات':actionLabels[action]}</label>`).join('')}</div></div>`).join('')}
   <p data-permission-feedback role="status" style="font-size:.8rem;line-height:1.6"></p>
   <p style="font-size:.8rem;line-height:1.6;color:var(--centrly-text)">فتح واتساب يجهّز الرسالة فقط؛ المساعد يرسلها بنفسه. صلاحية إدارة الفريق لا تسمح للمساعد بمنح صلاحيات أو مجموعات أكثر من المسموح له.</p>
  </fieldset>
- <fieldset style="border:1px solid var(--centrly-border,#e2e8f0);border-radius:12px;padding:1rem;min-width:0;margin:0 0 1rem">
+ <fieldset data-assistant-group-scope style="border:1px solid var(--centrly-border,#e2e8f0);border-radius:12px;padding:1rem;min-width:0;margin:0 0 1rem">
   <legend style="font-weight:800;padding:0 .4rem">نطاق المجموعات</legend>
   <label style="display:flex;align-items:center;gap:.5rem;min-height:44px"><input id="${prefix}_AllGroups" type="checkbox" ${access.all_groups?'checked':''}>كل المجموعات الحالية والجديدة</label>
   <p style="font-size:.8rem;line-height:1.6;color:var(--centrly-text)">أو اختر مجموعات محددة. لو لم تحدد أي مجموعة، لن تظهر بيانات مجموعات للمساعد. إنشاء مجموعة جديدة يحتاج السماح بكل المجموعات.</p>
@@ -39,9 +39,10 @@ if(typeof document!=='undefined' && !document.documentElement.hasAttribute('data
  document.addEventListener('change',event=>{
   if(event.target.matches?.('[data-assistant-preset]')){
    const sets={attendance:['attendance.view','attendance.create','attendance.edit','students.view','groups.view'],teaching:['attendance.view','homework.view','homework.edit','materials.view','materials.create','materials.edit','quizzes.view','quizzes.grade','reports.view','reports.send'],finance:['students.view','students.collect','groups.view']};
-   const chosen=sets[event.target.value];if(!chosen)return;
-   const fieldset=event.target.closest('[data-assistant-permissions]');for(const input of fieldset.querySelectorAll('input[type=checkbox]'))input.checked=chosen.includes(input.value);
-   fieldset.querySelector('[data-permission-feedback]').textContent='تم اختيار صلاحيات القالب. راجعها وحدد نطاق المجموعات قبل الحفظ.';return;
+   const full=event.target.value==='full',chosen=sets[event.target.value];if(!full && !chosen)return;
+   const fieldset=event.target.closest('[data-assistant-permissions]');for(const input of fieldset.querySelectorAll('input[type=checkbox]'))input.checked=full || chosen.includes(input.value);
+   if(full){const allGroups=fieldset.nextElementSibling?.querySelector('[id$="_AllGroups"]');if(allGroups)allGroups.checked=true;}
+   fieldset.querySelector('[data-permission-feedback]').textContent=full?'تم تحديد كل الصلاحيات وكل المجموعات. راجعها قبل الحفظ.':'تم اختيار صلاحيات القالب. راجعها وحدد نطاق المجموعات قبل الحفظ.';return;
   }
 
   const input=event.target;if(!input.matches?.('[data-assistant-permissions] input[type="checkbox"]'))return;

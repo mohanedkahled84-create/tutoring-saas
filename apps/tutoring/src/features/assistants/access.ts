@@ -256,7 +256,7 @@ assistantManagementRouter.post('/invitations',async(req:AuthenticatedRequest,res
   const delivery=(req as any).commercialLimits?.is_trial ? 'blocked' : await notifyAssistantInvitation(config.meta,phone,tenantInfo?.name || 'المعلم',nonce);
   const {error}=await db.from('assistant_invitations').update({delivery_status:delivery}).eq('id',invitation.invitation_id).eq('tenant_id',tenant);
   if(error) throw error;
-  res.status(201).json({...invitation,phone,...registrationLinks(tenant!,phone,nonce),delivery_status:delivery,message:delivery==='sent'?'تم إرسال الدعوة إلى واتساب':delivery==='blocked'?'تم حفظ الدعوة. الإرسال الرسمي غير متاح الآن؛ يمكنك استخدام فتح واتساب لإرسال الرابط':'تم حفظ الدعوة، لكن Meta لم تؤكد الإرسال'});
+  res.status(201).json({...invitation,phone,...registrationLinks(tenant!,phone,nonce),delivery_status:delivery,message:delivery==='sent'?'قبل واتساب طلب إرسال الدعوة، ولم يتأكد وصولها بعد':delivery==='blocked'?'تم حفظ الدعوة. الإرسال الرسمي غير متاح الآن؛ يمكنك استخدام فتح واتساب لإرسال الرابط':'تم حفظ الدعوة، لكن Meta لم تؤكد الإرسال'});
  }catch(error){sendError(res,error);}
 });
 assistantManagementRouter.put('/:id/access',async(req:AuthenticatedRequest,res)=>{

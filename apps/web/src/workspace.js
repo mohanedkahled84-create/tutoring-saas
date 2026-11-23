@@ -31,7 +31,7 @@ import { renderCenterAssistantsView } from './components/CenterAssistantsView.js
 import { renderCenterRoomsView } from './components/CenterRoomsView.js?v=9.46.0';
 import { renderCenterSettlementsView } from './components/CenterSettlementsView.js?v=9.46.0';
 import { renderMaterialsView, registerMaterialsActions } from './components/MaterialsView.js?v=9.46.0';
-import { renderTeacherAssistantsView, registerTeacherAssistantsActions } from './components/TeacherAssistantsView.js?v=9.46.0';
+import { renderTeacherAssistantsView, registerTeacherAssistantsActions } from './components/TeacherAssistantsView.js?v=9.92.21';
 import { renderBusinessOwnerDashboard, registerBusinessOwnerActions } from './components/BusinessOwnerDashboard.js?v=9.46.0';
 import { renderAdminPaymentProofsView } from './components/AdminPaymentProofsView.js?v=9.46.0';
 import { renderAdminTenantsView } from './components/AdminTenantsView.js?v=9.46.0';

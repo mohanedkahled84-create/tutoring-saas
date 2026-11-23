@@ -84,7 +84,7 @@ export async function requestPhoneOtp(db:SupabaseClient,purpose:string,ip:string
  const delivery=await phoneOtpGateway.send(created.phone,code);
  await operation('delivery',{challenge_id:challenge,status:delivery});
  if(delivery==='failed')throw fault(502,'تعذر إرسال كود واتساب. حاول بعد دقيقة.');
- return {challenge_id:challenge,phone:created.phone,expires_in:300,retry_after:60,delivery,message:delivery==='sent'?'تم إرسال كود التأكيد على واتساب.':'لم يصل تأكيد الإرسال. لو وصلك الكود اكتبه هنا، أو اطلب كودًا جديدًا بعد دقيقة.'};
+ return {challenge_id:challenge,phone:created.phone,expires_in:300,retry_after:60,delivery,message:delivery==='sent'?'قبل واتساب طلب إرسال كود التأكيد. اكتبه هنا عند وصوله.':'لم يصل تأكيد الإرسال. لو وصلك الكود اكتبه هنا، أو اطلب كودًا جديدًا بعد دقيقة.'};
 }
 
 export async function verifyPhoneOtp(db:SupabaseClient,purpose:string,operation:Operation,scope:Scope,challenge:string,code:string,claimHash?:string){
