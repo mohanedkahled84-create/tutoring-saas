@@ -35,6 +35,14 @@ export async function currentPortalDestination(db: SupabaseClient, tenantId: str
   if (error) throw error;
   return portalDestinationFromContext(data);
 }
+export async function portalLoginTenant(db: SupabaseClient, origin: unknown): Promise<string | undefined> {
+  if (!trustedPortalOrigin(origin) || origin === portalOrigin()) return undefined;
+  const subdomain = new URL(origin).hostname.split('.')[0];
+  const {data, error} = await db.from('portal_domain_bindings').select('tenant_id').eq('subdomain',subdomain).maybeSingle();
+  if (error) throw error;
+  if (!data?.tenant_id || (await currentPortalDestination(db,data.tenant_id)).origin !== origin) throw new Error('INVALID_CREDENTIALS');
+  return data.tenant_id;
+}
 export function portalDestinationFromContext(context: any) {
   const data = context?.platform;
   const sub = typeof data?.subdomain === "string" ? data.subdomain : "";

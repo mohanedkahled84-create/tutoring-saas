@@ -345,7 +345,7 @@ export class StudentsService {
   /**
    * DEV-PORTAL: Authenticate student or parent from unified /portal entry
    */
-  async authenticatePortalUser(dto: PortalLoginDTO): Promise<PortalLoginResult> {
+  async authenticatePortalUser(dto: PortalLoginDTO, tenantId?: string): Promise<PortalLoginResult> {
     const rawIdentifier = normalizeDigits(dto.identifier || "").trim();
     const rawPassword = normalizeDigits(dto.password || "").trim();
 
@@ -353,7 +353,7 @@ export class StudentsService {
       throw new Error("MISSING_CREDENTIALS");
     }
 
-    const student = await this.repo.findByIdentifier(rawIdentifier, rawPassword);
+    const student = await this.repo.findByIdentifier(rawIdentifier, rawPassword, tenantId);
     if (!student) {
       throw new Error("INVALID_CREDENTIALS");
     }

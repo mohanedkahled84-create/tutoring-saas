@@ -8,7 +8,7 @@ import { getServices } from "../../composition.js";
 import { AuthenticatedRequest } from "../types/index.js";
 import { authRateLimiter } from "../middleware/rateLimit.js";
 
-import { verifiedPortalStudent, portalDestinationFromContext, createPortalHandoff, consumePortalHandoff, trustedPortalOrigin } from "../utils/portalDestination.js";
+import { verifiedPortalStudent, portalDestinationFromContext, createPortalHandoff, consumePortalHandoff, trustedPortalOrigin, portalLoginTenant } from "../utils/portalDestination.js";
 
 import {loadPortalAccount} from "../utils/portalAccount.js";
 import {parentFamilyRouter} from './parentFamily.js';
@@ -300,7 +300,8 @@ publicRouter.post("/portal/login", authRateLimiter, async (req: Request, res: Re
 
   try {
     const studentsService = getServices(req as AuthenticatedRequest).students;
-    const result = await studentsService.authenticatePortalUser({ identifier, password, role });
+    const tenantId = await portalLoginTenant(getServiceSupabaseClient(),req.headers.origin);
+    const result = await studentsService.authenticatePortalUser({ identifier, password, role },tenantId);
     res.json(result);
   } catch (err: unknown) {
     if (err instanceof Error) {

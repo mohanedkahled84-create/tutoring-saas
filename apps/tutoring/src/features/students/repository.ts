@@ -146,7 +146,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
     return student;
   }
 
-  async findByIdentifier(identifier: string, password?: string): Promise<Student | null> {
+  async findByIdentifier(identifier: string, password?: string, tenantId?: string): Promise<Student | null> {
     const raw = identifier.trim();
     if (!raw) return null;
     const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, "");
@@ -155,7 +155,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
 
     // 1. Try secure RPC function (runs as SECURITY DEFINER to cleanly bypass RLS for public portal login)
     try {
-      if (typeof db.rpc === "function") {
+      if (!tenantId && typeof db.rpc === "function") {
         const { data: rpcData, error: rpcError } = await db.rpc("get_student_for_portal", {
           p_identifier: raw,
           p_password: password ? password.trim() : null,
@@ -178,6 +178,7 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
       .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
       .or(`code.eq.${raw},student_code.eq.${raw},parent_phone.eq.${cleanPhone},student_phone.eq.${cleanPhone}`);
 
+    if (tenantId) q = q.eq("tenant_id", tenantId);
     if (password) {
       q = q.eq("portal_password", password.trim());
     }
@@ -379,7 +380,7 @@ export class FakeStudentsRepository implements IStudentsRepository {
     return found ? { ...found } : null;
   }
 
-  async findByIdentifier(identifier: string, password?: string): Promise<Student | null> {
+  async findByIdentifier(identifier: string, password?: string, tenantId?: string): Promise<Student | null> {
     const raw = identifier.trim();
     if (!raw) return null;
     const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, "");
@@ -393,12 +394,13 @@ export class FakeStudentsRepository implements IStudentsRepository {
           s.student_code === raw ||
           (cleanPhone.length >= 6 && sParentPhone === cleanPhone) ||
           (cleanPhone.length >= 6 && sStudentPhone === cleanPhone);
-        return identMatch && s.portal_password === password.trim();
+        return (!tenantId || s.tenant_id === tenantId) && identMatch && s.portal_password === password.trim();
       });
       if (matchWithPass) return { ...matchWithPass };
     }
 
     const student = this.students.find((s) => {
+      if (tenantId && s.tenant_id !== tenantId) return false;
       const sParentPhone = (s.parent_phone || "").replace(/[\s\-\(\)\.]/g, "");
       const sStudentPhone = (s.student_phone || "").replace(/[\s\-\(\)\.]/g, "");
       return (
