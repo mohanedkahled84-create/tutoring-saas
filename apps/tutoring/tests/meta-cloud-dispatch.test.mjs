@@ -135,3 +135,22 @@ test('scheduled welcomes wait for approval and concurrent workers claim each mes
  const duplicate=await service.dispatchBatchPortalLinks({tenant_id:'once-tenant',teacher_name:'معلم',subject_name:'مادة',students:[{student_id:'once-student',student_name:'طالب',student_phone:'01011111111',parent_phone:'01022222222'}],pacingDelayMs:0});
  assert.equal(duplicate.total_messages,0);assert.equal(gateway.sentMessages.length,2);
 });
+
+
+test('pending parent template does not block approved student welcome', async () => {
+ const repo=new FakeMetaPortalQueueRepository(), gateway=new FakeMetaCloudGateway();
+ gateway.getTemplateStatuses=async()=>({centerly:'APPROVED',centerly_student:'PENDING'});
+ const service=new MetaCloudService(repo,gateway,250);
+ const result=await service.dispatchBatchPortalLinks({tenant_id:'mixed',students:[{student_id:'s',student_name:'طالب',student_phone:'01011111111',parent_phone:'01022222222'}],pacingDelayMs:0});
+ assert.equal(result.scheduled_today,1);assert.equal(result.queued_pending,1);assert.equal(result.is_template_pending,true);
+ await new Promise(r=>setTimeout(r,20));assert.deepEqual(gateway.sentMessages.map(m=>m.templateName),['centerly']);
+});
+
+test('unused parent template does not delay student-only dispatch', async () => {
+ const repo=new FakeMetaPortalQueueRepository(),gateway=new FakeMetaCloudGateway();
+ gateway.getTemplateStatuses=async()=>({centerly:'APPROVED',centerly_student:'PENDING'});
+ const service=new MetaCloudService(repo,gateway,250);
+ const result=await service.dispatchBatchPortalLinks({tenant_id:'student-only',students:[{student_id:'s',student_name:'طالب',student_phone:'01011111111'}],pacingDelayMs:0});
+ assert.equal(result.is_template_pending,false);assert.equal(result.scheduled_today,1);
+ await new Promise(r=>setTimeout(r,20));assert.equal(gateway.sentMessages.length,1);
+});

@@ -210,55 +210,28 @@ export class MetaCloudService {
     const enqueued = await this.repository.enqueueItems([...immediateItems, ...queuedItems]);
     if(!enqueued.length)return {total_students:students.length,total_messages:0,sent_today:0,queued_tomorrow:0,daily_limit:this.dailyLimit,remaining_today:remainingQuota,is_template_pending:false,message:'تم استخدام الإرسال الأول لهذه الأرقام؛ إعادة الإرسال من نافذة واتساب فقط.'};
 
-    // 4. Check Meta Template status
+    // Check only the template required by each recipient.
     const statuses = await this.gateway.getTemplateStatuses();
-    const isStudentPending = statuses["centerly"] !== "APPROVED";
-    const isParentPending = statuses["centerly_student"] !== "APPROVED";
-    const isTemplatePending = isStudentPending || isParentPending;
-
-    // 5. If templates are pending review, keep as pending and inform user
-    if (isTemplatePending) {
-      const queuedCount = enqueued.length;
-      return {
-        total_students: students.length,
-        total_messages: enqueued.length,
-        sent_today: 0,
-        queued_tomorrow: queuedCount, queued_pending:queuedCount,
-        daily_limit: this.dailyLimit,
-        remaining_today: remainingQuota,
-        is_template_pending: true,
-        message: `تم حفظ (${enqueued.length}) رسالة في قائمة الانتظار. قالب الرسالة قيد المراجعة؛ يبدأ الإرسال بعد اعتماده وتوفر سعة الإرسال.`,
-      };
-    }
-
-    // 6. Asynchronously execute immediate items with pacing
-    const immediateEnqueued = enqueued.filter((it) => it.scheduled_date === today && it.status === "pending");
-    this.executeBatchAsync(immediateEnqueued, pacingDelayMs).catch(() => {});
-
-    const remainingAfterDispatch = Math.max(0, remainingQuota - immediateEnqueued.length);
-    const sentCount = immediateEnqueued.length;
-    const queuedCount = enqueued.filter(it=>it.status==='queued').length;
-
-    let userMessage = "";
-    if (sentCount > 0 && queuedCount === 0) {
-      userMessage = `تم تجهيز (${sentCount}) رسالة ترحيب للإرسال عبر واتساب سنترلي. تظهر حالة الإرسال الفعلية بعد المعالجة.`;
-    } else if (sentCount > 0 && queuedCount > 0) {
-      userMessage = `تم تجهيز (${sentCount}) رسالة وجدولة (${queuedCount}) رسالة لاستكمال الإرسال تلقائيًا على دفعات. تظهر حالة الإرسال الفعلية بعد المعالجة.`;
+    const blocked = enqueued.filter(item => statuses[item.template_name] !== "APPROVED");
+    const ready = enqueued.filter(item => item.scheduled_date === today && item.status === "pending" && statuses[item.template_name] === "APPROVED");
+    if (ready.length) this.executeBatchAsync(ready, pacingDelayMs).catch(() => {});
+    const waiting = enqueued.length - ready.length;
+    let message: string;
+    if (blocked.length) {
+      message = ready.length
+        ? `تم تجهيز (${ready.length}) رسالة للإرسال. (${blocked.length}) رسالة تنتظر توفر قالبها المعتمد؛ راجع حالة كل رسالة بعد المعالجة.`
+        : `تم حفظ (${enqueued.length}) رسالة في قائمة الانتظار. بعض قوالب الرسائل غير متاحة أو قيد المراجعة؛ يبدأ الإرسال بعد اعتماد القالب وتوفر السعة.`;
+    } else if (ready.length && waiting) {
+      message = `تم تجهيز (${ready.length}) رسالة وجدولة (${waiting}) رسالة لاستكمال الإرسال تلقائيًا على دفعات. تظهر حالة الإرسال الفعلية بعد المعالجة.`;
+    } else if (ready.length) {
+      message = `تم تجهيز (${ready.length}) رسالة ترحيب للإرسال عبر واتساب سنترلي. تظهر حالة الإرسال الفعلية بعد المعالجة.`;
     } else {
-      userMessage = `تمت جدولة (${queuedCount}) رسالة لاستكمال الإرسال تلقائيًا عند توفر السعة. لن تُرسل الرسالة نفسها مرتين.`;
+      message = `تمت جدولة (${waiting}) رسالة لاستكمال الإرسال تلقائيًا عند توفر السعة. لن تُرسل الرسالة نفسها مرتين.`;
     }
-
-    return {
-      total_students: students.length,
-      total_messages: enqueued.length,
-      sent_today: 0,
-      scheduled_today: sentCount,
-      queued_tomorrow: queuedCount, queued_pending:queuedCount,
-      daily_limit: this.dailyLimit,
-      remaining_today: remainingAfterDispatch,
-      is_template_pending: false,
-      message: userMessage,
-    };
+    return {total_students:students.length,total_messages:enqueued.length,sent_today:0,
+      scheduled_today:ready.length,queued_tomorrow:waiting,queued_pending:waiting,
+      daily_limit:this.dailyLimit,remaining_today:Math.max(0,remainingQuota-ready.length),
+      is_template_pending:blocked.length>0,message};
   }
 
   /**
