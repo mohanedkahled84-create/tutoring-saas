@@ -1,4 +1,5 @@
 import {portalDeliveryStatus} from './portalDeliveryStatus.js';
+import {portalRecipientIds} from './portalRecipientSelection.js';
 import { Router, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServices } from "../../composition.js";
@@ -504,6 +505,12 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
   const tenantId = req.user?.tenant_id;
   const { student_ids, teacher_id, teacher_name, pacing_delay_ms, parent_delay_ms, typing_duration_ms, provider = "meta" } = req.body || {};
 
+  const selectedIds = portalRecipientIds(student_ids);
+  if (!selectedIds) {
+    res.status(400).json({error:{code:'STUDENTS_REQUIRED',message:'اختر طالبًا واحدًا على الأقل لإرسال الروابط.'}});
+    return;
+  }
+
   if (!tenantId && req.user?.role !== "admin") {
     res.status(403).json({ error: { code: "FORBIDDEN", message: "No active tenant context" } });
     return;
@@ -535,14 +542,10 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
     const studentsService = services.students;
     const allStudents = await studentsService.listStudents(tenantId || undefined);
 
-    // Target either explicitly passed IDs or unsent students
+    // Only the explicitly selected students may receive this batch.
     let targetStudents = (allStudents || []).filter((s) => {
       const hasAnyPhone = !!((s.student_phone && s.student_phone.trim()) || (s.parent_phone && s.parent_phone.trim()));
-      if (!hasAnyPhone) return false;
-      if (Array.isArray(student_ids) && student_ids.length > 0) {
-        return student_ids.includes(s.id);
-      }
-      return !s.parent_portal_sent_at || !s.student_portal_sent_at;
+      return hasAnyPhone && selectedIds.has(s.id);
     });
 
     if (targetStudents.length === 0) {
