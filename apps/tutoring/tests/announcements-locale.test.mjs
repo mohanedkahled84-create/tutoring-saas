@@ -64,11 +64,11 @@ test('WhatsApp confirmation stays disabled when the selected recipients exceed t
   const confirm = { disabled: false };
   const original = globalThis.document;
   globalThis.document = {
-    getElementById: () => total,
-    querySelectorAll: selector => selector.includes(':checked') ? [{}] : [confirm],
+    getElementById: id => id === 'annSendTotal' ? total : null,
+    querySelectorAll: selector => selector.includes(':checked') ? [{dataset:{annRecipient:'0'}}] : [confirm],
   };
   try {
-    const app = { _announcementPreview: { allowance: { remaining: 0, unit_cost_egp: 1 } } };
+    const app = { _announcementPreview: { rows:[{phone:'201000000001'}], allowance: { remaining: 0, unit_cost_egp: 1 } } };
     registerAnnouncementsActions(app);
     app.updateAnnouncementTotal();
     assert.equal(confirm.disabled, true);
