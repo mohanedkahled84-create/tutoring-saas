@@ -9,17 +9,43 @@
   "routes": [
     {
       "src": "/portal/?$",
-      "has": [{ "type": "host", "value": "mr-omar.centerly-eg.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "mr-omar.centerly-eg.com"
+        }
+      ],
       "missing": [
-        { "type": "query", "key": "role" },
-        { "type": "query", "key": "token" },
-        { "type": "query", "key": "s" },
-        { "type": "query", "key": "p" },
-        { "type": "query", "key": "portal" },
-        { "type": "query", "key": "view" }
+        {
+          "type": "query",
+          "key": "role"
+        },
+        {
+          "type": "query",
+          "key": "token"
+        },
+        {
+          "type": "query",
+          "key": "s"
+        },
+        {
+          "type": "query",
+          "key": "p"
+        },
+        {
+          "type": "query",
+          "key": "portal"
+        },
+        {
+          "type": "query",
+          "key": "view"
+        }
       ],
       "status": 307,
-      "headers": { "Location": "/login", "Cache-Control": "no-store" }
+      "headers": {
+        "Location": "/login",
+        "Cache-Control": "no-store"
+      }
     },
     {
       "src": "/(.*)",
@@ -150,12 +176,44 @@
       },
       "continue": true
     },
-    { "src": "/assistant(?:/.*)?", "dest": "/assistant.html" },
-    { "src": "/dashboard/?$", "has": [{ "type": "host", "value": "mr-omar.centerly-eg.com" }], "dest": "/teacher-platform-sample/index.html" },
-    { "src": "/login/?$", "has": [{ "type": "host", "value": "mr-omar.centerly-eg.com" }], "dest": "/teacher-platform-sample/login.html" },
-    { "src": "/teacher_cutout.png", "dest": "/teacher-platform-sample/teacher_cutout.png" },
-    { "src": "/apps/web/src/(.*)", "dest": "/src/$1" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    {
+      "src": "/assistant(?:/.*)?",
+      "dest": "/assistant.html"
+    },
+    {
+      "src": "/dashboard/?$",
+      "has": [
+        {
+          "type": "host",
+          "value": "^(?!www\\.|api\\.|admin\\.|app\\.|portal\\.)[a-z0-9-]+\\.centerly-eg\\.com$"
+        }
+      ],
+      "dest": "/teacher-platform-sample/index.html"
+    },
+    {
+      "src": "/login/?$",
+      "has": [
+        {
+          "type": "host",
+          "value": "^(?!www\\.|api\\.|admin\\.|app\\.|portal\\.)[a-z0-9-]+\\.centerly-eg\\.com$"
+        }
+      ],
+      "dest": "/teacher-platform-sample/login.html"
+    },
+    {
+      "src": "/teacher_cutout.png",
+      "dest": "/teacher-platform-sample/teacher_cutout.png"
+    },
+    {
+      "src": "/apps/web/src/(.*)",
+      "dest": "/src/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }

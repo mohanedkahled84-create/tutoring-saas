@@ -21,7 +21,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-  <title>منصة مستر عمر المحمدي — بوابة الطالب</title>
+  <title>المنصة التعليمية — بوابة الطالب</title>
 
   
 
@@ -2269,15 +2269,15 @@
 
         <div class="teacher-avatar-wrap">
 
-          <img src="teacher_cutout.png" alt="مستر عمر المحمدي">
+          <img alt="صورة المدرس" style="display:none">
 
         </div>
 
         <div class="teacher-titles">
 
-          <h2>مستر عمر المحمدي</h2>
+          <h2>منصتك التعليمية</h2>
 
-          <span class="domain-tag">mr-omar.com</span>
+          <span class="domain-tag"></span>
 
         </div>
 
@@ -2954,7 +2954,7 @@
 
       if (greetingSub) {
 
-        greetingSub.innerText = `مرحباً بك في منصتك التعليمية لمادة ${currentStudent.subject || currentStudent.subject_name || 'الفيزياء'} مع ${currentStudent.teacher || currentStudent.teacher_name || 'المدرس'}. تابع محاضراتك وواجباتك أولاً بأول.`;
+        greetingSub.innerText = `مرحباً بك في منصتك التعليمية لمادة ${currentStudent.subject || currentStudent.subject_name || 'المادة الدراسية'} مع ${currentStudent.teacher || currentStudent.teacher_name || 'المدرس'}. تابع محاضراتك وواجباتك أولاً بأول.`;
 
       }
 
@@ -3024,7 +3024,7 @@
 
             const domainEl = document.querySelector('.teacher-titles .domain-tag');
 
-            if (domainEl) domainEl.innerText = `${s.subdomain}.centrly.com`;
+            if (domainEl) domainEl.innerText = `${s.subdomain}.centerly-eg.com`;
 
           }
 
@@ -3032,7 +3032,7 @@
 
             const avatarImg = document.querySelector('.teacher-avatar-wrap img');
 
-            if (avatarImg) avatarImg.src = s.cutout_avatar_url;
+            if (avatarImg) { avatarImg.src = s.cutout_avatar_url; avatarImg.style.display = ''; }
 
           }
 
@@ -3134,7 +3134,7 @@
 
       }
 
-      return sub || 'mr-omar';
+      return sub || '';
 
     }
 

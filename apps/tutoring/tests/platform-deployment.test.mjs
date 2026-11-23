@@ -18,3 +18,12 @@ test('unverified platform address is never offered as a live login or preview',(
  assert.doesNotMatch(html,/https:\/\/pending-address\.centerly-eg\.com/);
  assert.match(html,/الرابط المخصص لم يتأكد تفعيله/);
 });
+
+test('branded student routes match teacher subdomains only',()=>{
+ const config=JSON.parse(readFileSync(new URL('../../web/vercel.json',import.meta.url),'utf8'));
+ for(const path of ['/teacher-platform-sample/index.html','/teacher-platform-sample/login.html']){
+  const route=config.routes.find(r=>r.dest===path),host=new RegExp(route.has[0].value);
+  assert.ok(host.test('mr-omar.centerly-eg.com'));assert.ok(host.test('new-teacher.centerly-eg.com'));
+  assert.ok(!host.test('centerly-eg.com'));assert.ok(!host.test('www.centerly-eg.com'));assert.ok(!host.test('api.centerly-eg.com'));
+ }
+});

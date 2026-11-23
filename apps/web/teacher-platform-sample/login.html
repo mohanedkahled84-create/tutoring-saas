@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>منصة مستر عمر المحمدي — البوابة الرسمية للطلاب</title>
+  <title>المنصة التعليمية — البوابة الرسمية للطلاب</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -491,8 +491,8 @@
     <div class="brand-group">
       <div class="brand-badge">ع</div>
       <div class="brand-meta">
-        <h2>منصة مستر عمر المحمدي</h2>
-        <span class="brand-subdomain">mr-omar.centerly-eg.com</span>
+        <h2>المنصة التعليمية</h2>
+        <span class="brand-subdomain"></span>
       </div>
     </div>
   </header>
@@ -507,7 +507,7 @@
 
       <!-- الحاوية المقصوصة: تسمح لرأس المدرس بالخروج من الأعلى وتقص جسمه من أسفل الدائرة -->
       <div class="popout-clipper">
-        <img src="teacher_cutout.png" alt="مستر عمر المحمدي" class="teacher-cutout-img">
+        <img alt="صورة المدرس" class="teacher-cutout-img" style="display:none">
       </div>
     </div>
 
@@ -519,7 +519,7 @@
       </h1>
 
       <p class="main-subtitle">
-        أهلاً بك يا بطل! هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة من مستر عمر المحمدي.
+        أهلاً بك يا بطل! هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة من مدرسك.
       </p>
 
       <!-- كارت تسجيل الدخول الموحد -->
@@ -618,7 +618,7 @@
           const cached = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
           if (cached.subdomain) sub = cached.subdomain;
         } catch (_) {}
-        if (!sub) sub = 'mr-omar';
+        if (!sub) return;
       }
 
       try {
@@ -708,7 +708,7 @@
       }
       if (s.cutout_avatar_url) {
         const img = document.querySelector('.teacher-cutout-img');
-        if (img) img.src = s.cutout_avatar_url;
+        if (img) { img.src = s.cutout_avatar_url; img.style.display = ''; }
       }
     }
 
