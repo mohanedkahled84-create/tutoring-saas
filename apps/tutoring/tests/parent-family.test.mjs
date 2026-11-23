@@ -68,10 +68,12 @@ test('family selectors are conditional and escape identities; they do not offer 
  const source=await readFile(new URL('../../web/src/parentFamily.js',import.meta.url),'utf8');
  const pure=source.slice(source.indexOf('export function familyGroups'),source.indexOf('function snapshot'));
  const {familyGroups,renderFamilySelectors}=new Function('esc',pure.replaceAll('export function','function')+';return {familyGroups,renderFamilySelectors};')(s=>String(s).replaceAll('<','&lt;').replaceAll('"','&quot;'));
- const one={id:'one',name:'أحمد',teacher_name:'معلم ١'},second={id:'two',name:'أحمد',teacher_name:'معلم ٢'},sibling={id:'three',name:'منى <script>',teacher_name:'معلم ١'};
- assert.equal(familyGroups([one,second,sibling]).length,2);
+ const one={id:'one',tenant_id:'teacher-1',name:'أحمد',teacher_name:'معلم ١'},second={id:'two',tenant_id:'teacher-2',name:'أحمد',teacher_name:'معلم ٢'},sibling={id:'three',tenant_id:'teacher-1',name:'منى <script>',teacher_name:'معلم ١'};
+ assert.equal(familyGroups([one,second,sibling]).length,2);assert.equal(familyGroups([one,second,sibling])[0].records.length,2);
  assert.ok(!renderFamilySelectors([one],'one').includes('<select'));
  const teachers=renderFamilySelectors([one,second],'two');assert.ok(!teachers.includes('id="family-child"'));assert.ok(teachers.includes('id="family-teacher"'));
  const siblings=renderFamilySelectors([one,sibling],'one');assert.ok(siblings.includes('id="family-child"'));assert.ok(!siblings.includes('id="family-teacher"'));assert.ok(!siblings.includes('<script>'));
+ const isolated=renderFamilySelectors([one,second,sibling],'two');assert.ok(isolated.includes('id="family-teacher"'));assert.ok(!isolated.includes('id="family-child"'));assert.ok(!isolated.includes('منى'));
+ const atFirst=renderFamilySelectors([one,second,sibling],'one');assert.ok(atFirst.includes('id="family-child"'));assert.ok(atFirst.includes('منى'));assert.ok(!atFirst.includes('value="two" selected'));
  assert.ok(!source.includes('إضافة ابن'));
 });

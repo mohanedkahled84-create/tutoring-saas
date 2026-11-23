@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServices } from "../../composition.js";
+import {getServiceSupabaseClient} from "../../supabase.js";
+import {currentPortalDestination,portalOrigin} from "../../shared/utils/portalDestination.js";
 
 export const publicPlatformRouter = Router();
 export const platformRouter = Router();
@@ -143,6 +145,7 @@ platformRouter.get(
         success: true,
         settings: data.settings,
         plan: data.plan,
+        destination: await currentPortalDestination(getServiceSupabaseClient(),tenantId).catch(()=>({origin:portalOrigin(),presentation:null})),
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch settings";
@@ -173,6 +176,7 @@ platformRouter.post(
       res.status(200).json({
         success: true,
         settings: saved,
+        destination: await currentPortalDestination(getServiceSupabaseClient(),tenantId).catch(()=>({origin:portalOrigin(),presentation:null})),
       });
     } catch (err: any) {
       const statusCode = err?.statusCode || 500;

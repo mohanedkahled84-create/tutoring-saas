@@ -23,7 +23,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
   const subdomain = settings.subdomain || "";
   const displayTitle = (settings.display_title || '').trim() || (user.name ? `منصة ${user.name}` : "منصة الأستاذ");
-  
+
   let subjectTitle = (settings.subject_title || user.subject || '').trim();
   if (!subjectTitle) subjectTitle = "المرحلة الثانوية";
 
@@ -34,9 +34,9 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
   // Official live URL (الرابط الرسمي على السابدومين الخاص بالمدرس)
   const officialSubdomain = subdomain || 'yourname';
-  const livePlatformUrl = `https://${officialSubdomain}.centerly-eg.com`;
-  const customSubdomainUrl = livePlatformUrl;
-  const internalPlatformPath = `/${officialSubdomain}`;
+  const domainVerified = Boolean(subdomain && state.destination?.origin === `https://${subdomain}.centerly-eg.com` && state.destination?.presentation?.subdomain === subdomain);
+  const livePlatformUrl = domainVerified ? `${state.destination.origin}/login` : 'https://centerly-eg.com/portal?role=student';
+  const previewPlatformUrl = domainVerified ? `${state.destination.origin}/dashboard` : livePlatformUrl;
 
   // Theme metadata
   const themesMeta = {
@@ -94,8 +94,8 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
       }
     }
 
-    const studentSubs = onlineSubs.filter(s => 
-      (sCode && String(s.student_code || '').trim() === sCode) || 
+    const studentSubs = onlineSubs.filter(s =>
+      (sCode && String(s.student_code || '').trim() === sCode) ||
       (sId && String(s.student_id || '').trim() === sId)
     );
 
@@ -115,7 +115,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
       const hasEssay = Boolean(notes.has_essay || sub.has_essay || (Array.isArray(sub.questions) && sub.questions.some(q => q.type === 'essay')));
       const isGraded = notes.is_graded === true || sub.is_graded === true || sub.status === 'approved' || sub.status === 'graded';
-      
+
       const score = (notes.final_score !== undefined && notes.final_score !== null)
         ? Number(notes.final_score)
         : (notes.total_score !== undefined && notes.total_score !== null)
@@ -196,13 +196,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
   return `
     <div class="platform-builder-view" style="max-width: 1240px; margin: 0 auto; padding-bottom: 2.5rem; display: flex; flex-direction: column; gap: 0.65rem;" dir="rtl">
-      
+
       <!-- ======================================================== -->
       <!-- 1. شريط الهيدر الهادئ فائق البساطة (Calm Minimal Header) -->
       <!-- ======================================================== -->
       <div class="card" style="margin: 0; padding: 0.85rem 1.15rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
-          
+
           <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
             <div>
               <div style="display: flex; align-items: center; gap: 6px;">
@@ -229,13 +229,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
           <!-- أزرار الإجراءات السريعة -->
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-            <a href="https://${officialSubdomain}.centerly-eg.com/dashboard" target="_blank" rel="noopener noreferrer" 
+            <a href="${escapeHtml(previewPlatformUrl)}" target="_blank" rel="noopener noreferrer"
               style="height: 30px; padding: 0 11px; font-size: 0.76rem; font-weight: 600; background: #0f172a; color: #ffffff; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
               <span>معاينة المنصة</span>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
             </a>
 
-            <button type="button" onclick="window.teacherPlatformActions.toggleEditSettings()" 
+            <button type="button" onclick="window.teacherPlatformActions.toggleEditSettings()"
               style="height: 30px; padding: 0 10px; font-size: 0.76rem; font-weight: 600; background: #ffffff; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
               ${getIcon('edit', 12, '#334155')}
               <span id="toggleEditBtnText">تعديل الهوية</span>
@@ -245,17 +245,18 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
         </div>
       </div>
 
+      ${!domainVerified?`<p role="status" style="margin:0;padding:.75rem 1rem;border:1px solid #fcd34d;border-radius:8px;background:#fffbeb;color:#78350f">${t('الرابط المخصص لم يتأكد تفعيله بعد. شارك رابط دخول سنترلي الظاهر أعلاه مؤقتًا؛ سيظهر الرابط المخصص بعد تأمينه.','The custom address is not verified yet. Share the Centerly sign-in link above for now; the custom address will appear after it is secured.')}</p>`:''}
       <!-- ======================================================== -->
       <!-- 2. شريط البحث والعدّاد الهادئ (Search Strip) -->
       <!-- ======================================================== -->
       <div class="card" style="margin: 0; padding: 0.5rem 0.85rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-          
+
           <div style="position: relative; flex: 1; min-width: 200px; max-width: 360px;">
             <span style="position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: #94a3b8; display: flex;">
               ${getIcon('search', 13)}
             </span>
-            <input type="text" id="platformStudentSearch" 
+            <input type="text" id="platformStudentSearch"
               placeholder="ابحث باسم الطالب، الكود، أو السنتر..."
               oninput="window.teacherPlatformActions.filterStudents(this.value)"
               style="width: 100%; height: 30px; padding: 0 28px 0 8px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 0.78rem; font-family: inherit; background: #f8fafc; color: #1e293b;">
@@ -272,7 +273,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
       <!-- 3. كشف حسابات ومتابعة الطلاب المتجاوب (Responsive Table & Mobile Cards) -->
       <!-- ======================================================== -->
       <div class="card" style="margin: 0; padding: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-        
+
         <!-- Desktop Table View (>= 769px) -->
         <div class="desktop-tracking-table">
           <table style="width: 100%; min-width: 680px; border-collapse: collapse; text-align: right; font-size: 0.82rem;">
@@ -299,11 +300,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 const cleanPhone = String(sPhone).replace(/\D/g, '').replace(/^2/, '').replace(/^0/, '');
                 const waText = `السلام عليكم يا ${sName}، بيانات دخولك لمنصة ${displayTitle}:\nكود الطالب: *${sCode}*\nكلمة المرور: *${sPass}*\nرابط المنصة:\n${livePlatformUrl}\nنتمنى لك دوام التوفيق والتميز!`;
                 const waUrl = sPhone && sCode && sPass ? `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}` : "#";
-                const studentDashboardUrl = `https://${officialSubdomain}.centerly-eg.com/login`;
+                const studentDashboardUrl = livePlatformUrl;
 
                 return `
                   <tr class="tracking-student-row" data-search="${escapeHtml(searchAttr)}" style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s ease;">
-                    
+
                     <!-- 1. الطالب والسنتر -->
                     <td style="padding: 10px 14px; vertical-align: middle;">
                       <div style="font-weight: 700; font-size: 0.85rem; color: #0f172a;">${escapeHtml(sName)}</div>
@@ -387,11 +388,11 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
             const cleanPhone = String(sPhone).replace(/\D/g, '').replace(/^2/, '').replace(/^0/, '');
             const waText = `السلام عليكم يا ${sName}، بيانات دخولك لمنصة ${displayTitle}:\nكود الطالب: *${sCode}*\nكلمة المرور: *${sPass}*\nرابط المنصة:\n${livePlatformUrl}\nنتمنى لك دوام التوفيق والتميز!`;
             const waUrl = sPhone && sCode && sPass ? `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}` : "#";
-            const studentDashboardUrl = `https://${officialSubdomain}.centerly-eg.com/login`;
+            const studentDashboardUrl = livePlatformUrl;
 
             return `
               <div class="tracking-student-row card" data-search="${escapeHtml(searchAttr)}" style="margin: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-                
+
                 <!-- Top Row: Student Name + Status Badge -->
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.55rem;">
                   <div>
@@ -413,7 +414,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
                 <!-- Middle Box: Password & Online Quiz Score -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem;">
-                  
+
                   <div style="border-left: 1px solid #e2e8f0; padding-left: 0.4rem;">
                     <div style="font-size: 0.68rem; color: #64748b; font-weight: 700;">دخول المنصة:</div>
                     <div style="font-size: 0.76rem; color: #0f172a; margin-top: 2px;">
@@ -474,7 +475,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
       <!-- 4. قسم تعديل الهوية والمظهر (Collapsible Settings Drawer) -->
       <!-- ======================================================== -->
       <div id="builderSettingsFormSection" style="display: ${isPublished ? 'none' : 'flex'}; flex-direction: column; gap: 16px; margin-top: 8px;">
-        
+
         <div class="card" style="margin: 0; padding: 1.25rem 1.5rem; background: var(--centrly-white, #ffffff); border: 1px solid var(--centrly-line, #e2e8f0); border-radius: 0.75rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--centrly-line, #e2e8f0);">
             <div>
@@ -491,13 +492,13 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px;">
-            
+
             <!-- حجز الرابط المخصص -->
             <div>
               <label style="display: block; font-size: 0.78rem; font-weight: 800; color: #334155; margin-bottom: 5px;">اسم الرابط (Subdomain)</label>
               <div style="display: flex; align-items: center; direction: ltr; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; overflow: hidden; height: 38px;">
                 <span style="background: #e2e8f0; color: #475467; font-size: 0.8rem; font-weight: 800; padding: 0 8px; height: 100%; display: flex; align-items: center;">https://</span>
-                <input type="text" id="builderSubdomainInput" value="${escapeHtml(subdomain)}" placeholder="mr-omar" 
+                <input type="text" id="builderSubdomainInput" value="${escapeHtml(subdomain)}" placeholder="mr-omar"
                   style="border: none; background: transparent; padding: 0 8px; font-size: 0.85rem; font-weight: 800; color: #0f172a; outline: none; flex: 1; text-align: left;"
                   oninput="window.teacherPlatformActions.handleSubdomainInput(this.value)">
                 <span style="background: #e2e8f0; color: #475467; font-size: 0.8rem; font-weight: 800; padding: 0 8px; height: 100%; display: flex; align-items: center;">.centerly-eg.com</span>
@@ -534,7 +535,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 ].map(th => {
                   const isSelected = themePreset === th.id;
                   return `
-                    <button type="button" class="builder-theme-btn ${isSelected ? 'active' : ''}" 
+                    <button type="button" class="builder-theme-btn ${isSelected ? 'active' : ''}"
                       data-theme="${th.id}"
                       onclick="window.teacherPlatformActions.selectTheme('${th.id}')"
                       style="width: 32px; height: 32px; border-radius: 50%; background: ${th.color}; border: 2.5px solid ${isSelected ? '#ffffff' : 'transparent'}; box-shadow: ${isSelected ? `0 0 0 2.5px ${th.ring}` : '0 1px 4px rgba(0,0,0,0.12)'}; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0;">
@@ -554,7 +555,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 <input type="text" id="builderCutoutInput" value="${escapeHtml(cutoutAvatarUrl)}" placeholder="ارفع صورتك بالزر المجاور أو الصق رابط صورة PNG"
                   style="flex: 1; height: 38px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; font-size: 0.82rem;"
                   oninput="window.teacherPlatformActions.updatePreviewAvatar(this.value)">
-                <button type="button" onclick="document.getElementById('builderCutoutFileUploader').click()" 
+                <button type="button" onclick="document.getElementById('builderCutoutFileUploader').click()"
                   style="background: var(--centrly-ink, #182349); color: #ffffff; border: none; border-radius: 6px; padding: 0 14px; font-size: 0.8rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                   <span>رفع صورة</span>
@@ -567,7 +568,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
 
           <!-- زر الحفظ -->
           <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
-            <button type="button" id="btnPublishPlatform" onclick="window.teacherPlatformActions.savePlatformSettings()" 
+            <button type="button" id="btnPublishPlatform" onclick="window.teacherPlatformActions.savePlatformSettings()"
               style="background: var(--centrly-blue-700, #2949ba); color: #ffffff; border: none; height: 38px; padding: 0 22px; border-radius: 6px; font-size: 0.85rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(41,73,186,0.2);">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
               <span>تحديث وحفظ التعديلات</span>
@@ -592,7 +593,7 @@ export function renderPlatformSetup(draft={},defaults={}) {
  <section data-platform-step="0" ${step===0?'':'hidden'}><h2>${t('ابدأ إنشاء منصتك','Start creating your platform')}</h2><p>${t('ستحتاج اسمًا للمنصة، تخصصك، واسم رابط إنجليزي. يمكنك إضافة صورة واختيار اللون.','You will need a platform name, subject, and an English web address. You can also add a photo and choose a color.')}</p><button type="button" class="btn btn-primary" style="min-height:44px" onclick="window.teacherPlatformActions.setupGo(1)">${t('ابدأ الآن','Get started')}</button></section>
  <section data-platform-step="1" ${step===1?'':'hidden'} style="display:${step===1?'grid':'none'};gap:1rem"><h2>${t('هوية المنصة والرابط','Platform identity and address')}</h2><label>${t('اسم المنصة','Platform name')}<input id="builderTitleInput" class="form-input" value="${value('title',defaults.displayTitle)}" maxlength="120" oninput="window.teacherPlatformActions.captureSetup()" required></label><label>${t('المادة والتخصص','Subject and specialty')}<input id="builderSubjectInput" class="form-input" value="${value('subject',defaults.subjectTitle)}" maxlength="120" oninput="window.teacherPlatformActions.captureSetup()" required></label><label>${t('اسم الرابط الإنجليزي','English address')}<div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;direction:ltr"><span>https://</span><input id="builderSubdomainInput" class="form-input" value="${value('subdomain')}" placeholder="your-name" style="flex:1;min-width:10rem" dir="ltr" maxlength="30" oninput="window.teacherPlatformActions.handleSubdomainInput(this.value);window.teacherPlatformActions.captureSetup()" required><span>.centerly-eg.com</span></div></label><div id="subdomainCheckFeedback" role="status"></div><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(0)">${t('السابق','Back')}</button><button type="button" class="btn btn-primary" onclick="window.teacherPlatformActions.setupGo(2)">${t('التالي','Next')}</button></div></section>
  <section data-platform-step="2" ${step===2?'':'hidden'} style="display:${step===2?'grid':'none'};gap:1rem"><h2>${t('المظهر والمحتوى','Appearance and content')}</h2><fieldset style="border:0;padding:0"><legend>${t('لون المنصة','Platform color')}</legend><div style="display:flex;gap:.75rem;flex-wrap:wrap">${themes.map(([id,color,label])=>`<button type="button" class="builder-theme-btn" data-theme="${id}" aria-label="${label}" aria-pressed="${theme===id}" onclick="window.teacherPlatformActions.selectTheme('${id}');window.teacherPlatformActions.captureSetup()" style="width:44px;height:44px;border-radius:50%;background:${color};border:3px solid white;box-shadow:${theme===id?'0 0 0 3px #2563eb':'0 0 0 1px #cbd5e1'}"><span class="theme-check-icon" style="display:${theme===id?'inline':'none'};color:white">✓</span></button>`).join('')}</div></fieldset><label>${t('عنوان الترحيب','Welcome headline')}<input id="builderHeadlineInput" class="form-input" value="${value('headline',defaults.headlineText)}" maxlength="180" oninput="window.teacherPlatformActions.captureSetup()"></label><label>${t('وصف المنصة','Platform description')}<textarea id="builderSubtitleInput" class="form-input" maxlength="500" oninput="window.teacherPlatformActions.captureSetup()">${value('subtitle',defaults.subtitleText)}</textarea></label><label>${t('رابط صورة المدرس (اختياري)','Teacher image URL (optional)')}<input id="builderCutoutInput" class="form-input" value="${value('avatar',defaults.cutoutAvatarUrl)}" oninput="window.teacherPlatformActions.captureSetup()"></label><label class="receipt-upload"><input id="builderCutoutFileUploader" type="file" accept="image/png,image/jpeg,image/webp" onchange="window.teacherPlatformActions.handleImageUpload(event)"><span aria-hidden="true">＋</span><strong>${t('اختيار صورة','Choose an image')}</strong></label><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(1)">${t('السابق','Back')}</button><button type="button" class="btn btn-primary" onclick="window.teacherPlatformActions.setupGo(3)">${t('مراجعة الإعدادات','Review settings')}</button></div></section>
- <section data-platform-step="3" ${step===3?'':'hidden'} style="display:${step===3?'grid':'none'};gap:1rem"><h2>${t('راجع قبل النشر','Review before publishing')}</h2><div id="platformSetupReview" style="overflow-wrap:anywhere;line-height:1.9"><p>${t('الاسم','Name')}: <strong>${value('title',defaults.displayTitle)}</strong></p><p>${t('المادة','Subject')}: ${value('subject',defaults.subjectTitle)}</p><p>${t('الرابط','Address')}: <bdi>https://${value('subdomain')}.centerly-eg.com</bdi></p><p>${t('عنوان الترحيب','Welcome headline')}: ${value('headline',defaults.headlineText)}</p><p>${t('الوصف','Description')}: ${value('subtitle',defaults.subtitleText)}</p><p>${t('اللون','Color')}: ${escapeHtml(theme)}</p></div><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(2)">${t('السابق','Back')}</button><button type="button" id="btnPublishPlatform" class="btn btn-primary" onclick="window.teacherPlatformActions.savePlatformSettings()">${t('نشر منصتي','Publish my platform')}</button></div></section>
+ <section data-platform-step="3" ${step===3?'':'hidden'} style="display:${step===3?'grid':'none'};gap:1rem"><h2>${t('راجع قبل النشر','Review before publishing')}</h2><p>${t('قد يحتاج الرابط المخصص إلى تفعيل HTTPS؛ ستجد رابط دخول سنترلي مؤقتًا بعد الحفظ.','The custom address may need HTTPS activation; a Centerly sign-in link will be available after saving.')}</p><div id="platformSetupReview" style="overflow-wrap:anywhere;line-height:1.9"><p>${t('الاسم','Name')}: <strong>${value('title',defaults.displayTitle)}</strong></p><p>${t('المادة','Subject')}: ${value('subject',defaults.subjectTitle)}</p><p>${t('اسم الرابط المطلوب','Requested address')}: <bdi>https://${value('subdomain')}.centerly-eg.com</bdi></p><p>${t('عنوان الترحيب','Welcome headline')}: ${value('headline',defaults.headlineText)}</p><p>${t('الوصف','Description')}: ${value('subtitle',defaults.subtitleText)}</p><p>${t('اللون','Color')}: ${escapeHtml(theme)}</p></div><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(2)">${t('السابق','Back')}</button><button type="button" id="btnPublishPlatform" class="btn btn-primary" onclick="window.teacherPlatformActions.savePlatformSettings()">${t('نشر منصتي','Publish my platform')}</button></div></section>
  </div></section>`;
 }
 
@@ -812,7 +813,7 @@ export function registerTeacherPlatformActions(appInstance) {
       if(progress)progress.textContent=step===0?t('ابدأ عندما تكون جاهزًا','Start when you are ready'):t('الخطوة','Step')+' '+step+' / 3';
       if(bar)bar.value=step;
       const review=document.getElementById('platformSetupReview');
-      if(review && step===3)review.innerHTML=`<p>${t('الاسم','Name')}: <strong>${escapeHtml(draft.title || '')}</strong></p><p>${t('المادة','Subject')}: ${escapeHtml(draft.subject || '')}</p><p>${t('الرابط','Address')}: <bdi>https://${escapeHtml(draft.subdomain || '')}.centerly-eg.com</bdi></p><p>${t('عنوان الترحيب','Welcome headline')}: ${escapeHtml(draft.headline || '')}</p><p>${t('الوصف','Description')}: ${escapeHtml(draft.subtitle || '')}</p><p>${t('اللون','Color')}: ${escapeHtml(draft.theme || 'emerald')}</p>`;
+      if(review && step===3)review.innerHTML=`<p>${t('الاسم','Name')}: <strong>${escapeHtml(draft.title || '')}</strong></p><p>${t('المادة','Subject')}: ${escapeHtml(draft.subject || '')}</p><p>${t('اسم الرابط المطلوب','Requested address')}: <bdi>https://${escapeHtml(draft.subdomain || '')}.centerly-eg.com</bdi></p><p>${t('عنوان الترحيب','Welcome headline')}: ${escapeHtml(draft.headline || '')}</p><p>${t('الوصف','Description')}: ${escapeHtml(draft.subtitle || '')}</p><p>${t('اللون','Color')}: ${escapeHtml(draft.theme || 'emerald')}</p>`;
     },
 
     toggleEditSettings() {
@@ -1021,12 +1022,13 @@ export function registerTeacherPlatformActions(appInstance) {
         localStorage.setItem('centrly_platform_published', 'true');
         localStorage.setItem('portal_theme', savedSettings.theme_preset);
 
-        notify(t('تم حفظ وتحديث إعدادات منصتك بنجاح!','Platform settings saved successfully.'), 'success');
+        notify(res.destination?.presentation ? t('تم حفظ إعدادات منصتك بنجاح!','Platform settings saved successfully.') : t('تم حفظ الإعدادات. الرابط المخصص يحتاج التفعيل؛ استخدم رابط دخول سنترلي مؤقتًا.','Settings saved. The custom address needs activation; use the Centerly sign-in link for now.'), 'success');
 
         if (appInstance && typeof appInstance.navigateTo === 'function') {
           appInstance.platformBuilderState = {
             ...appInstance.platformBuilderState,
             settings: savedSettings,
+            destination: res.destination || null,
             setupDraft: undefined,
           };
           appInstance.saveCache('platformBuilderState', appInstance.platformBuilderState);

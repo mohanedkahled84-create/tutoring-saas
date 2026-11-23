@@ -17,18 +17,20 @@ export function adoptFamilySession(token){
  }
  localStorage.setItem(TOKEN,token);
 }
-// Grouping is presentation only, inside an already authorized family directory.
-// Each teacher/student record keeps its own immutable ID and server access check.
+// Keep each teacher's roster separate, using the server-provided tenant ID.
 export function familyGroups(students=[]){
  const groups=new Map();
- for(const student of students){const name=String(student.name || 'الطالب').trim().replace(/\s+/g,' ');const key=name.normalize('NFC');
-  if(!groups.has(key))groups.set(key,{key,name,records:[]});groups.get(key).records.push(student);}
+ for(const student of students){
+  const key=String(student.tenant_id || student.id);
+  if(!groups.has(key))groups.set(key,{key,name:String(student.teacher_name || 'المعلم'),records:[]});
+  groups.get(key).records.push(student);
+ }
  return [...groups.values()];
 }
 export function renderFamilySelectors(students,selectedId){
- const groups=familyGroups(students),selected=groups.find(g=>g.records.some(s=>s.id===selectedId));
+ const groups=familyGroups(students),selected=groups.find(group=>group.records.some(student=>student.id===selectedId));
  if(!selected)return '';
- return `<section class="pp-card pp-family" aria-label="اختيار المتابعة"><style>.pp-family{gap:16px}.pp-family label{display:grid;gap:8px;font-weight:700}.pp-family select{width:100%;min-width:0;min-height:52px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#0f172a;font:inherit}.pp-family select:focus-visible{outline:3px solid #2563eb;outline-offset:3px}</style>${groups.length>1?`<label for="family-child">متابعة مين؟<select id="family-child" onchange="window.centrlyApp.selectFamilyStudent(this.value)">${groups.map(g=>`<option value="${esc(g.records[0].id)}" ${g===selected?'selected':''}>${esc(g.name)}</option>`).join('')}</select></label>`:''}${selected.records.length>1?`<label for="family-teacher">عند أي معلم؟<select id="family-teacher" onchange="window.centrlyApp.selectFamilyStudent(this.value)">${selected.records.map(s=>`<option value="${esc(s.id)}" ${s.id===selectedId?'selected':''}>${esc(s.teacher_name || 'المعلم')}${s.student_code?' · '+esc(s.student_code):''}</option>`).join('')}</select></label>`:''}${groups.length===1 && selected.records.length===1?'<p class="pp-subtitle">متابعة الأسرة</p>':''}</section>`;
+ return `<section class="pp-card pp-family" aria-label="اختيار المتابعة"><style>.pp-family{gap:16px}.pp-family label{display:grid;gap:8px;font-weight:700}.pp-family select{width:100%;min-width:0;min-height:52px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#0f172a;font:inherit}.pp-family select:focus-visible{outline:3px solid #2563eb;outline-offset:3px}</style>${groups.length>1?`<label for="family-teacher">اختر المدرس<select id="family-teacher" onchange="window.centrlyApp.selectFamilyStudent(this.value)">${groups.map(group=>`<option value="${esc(group.records[0].id)}" ${group===selected?'selected':''}>${esc(group.name)}</option>`).join('')}</select></label>`:''}${selected.records.length>1?`<label for="family-child">متابعة مين عند المدرس ده؟<select id="family-child" onchange="window.centrlyApp.selectFamilyStudent(this.value)">${selected.records.map(student=>`<option value="${esc(student.id)}" ${student.id===selectedId?'selected':''}>${esc(student.name || 'الطالب')}${student.student_code?' · '+esc(student.student_code):''}</option>`).join('')}</select></label>`:''}${groups.length===1 && selected.records.length===1?'<p class="pp-subtitle">متابعة الأسرة</p>':''}</section>`;
 }
 function snapshot(data){return {students:(data.students || []).map(s=>({id:s.id,tenant_id:s.tenant_id,name:s.name,teacher_name:s.teacher_name,student_code:s.student_code})),selected_id:data.selected_id,initial_data:data.initial_data?parentPortalSnapshot(data.initial_data):null,presentation:data.presentation,expires_at:data.expires_at};}
 export function registerFamilyActions(app){
