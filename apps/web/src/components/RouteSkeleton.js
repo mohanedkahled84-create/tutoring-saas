@@ -11,7 +11,8 @@ export function renderRouteSkeleton(route = '', en = false) {
   if (['dashboard','center-dashboard','admin-dashboard','reports','risk-watchlist'].includes(route)) content = metrics + rows(3);
   else if (['groups','assistants','center-assistants','center-rooms','center-teachers','materials','video-lessons','online-quizzes','paper-exams','billing','student-cards','coupons'].includes(route)) content = tabs + cards();
   else if (['calendar','sessions','center-sessions'].includes(route)) content = tabs + cards(3,'route-skeleton-day') + rows(2);
-  else if (['settings','whatsapp','platform-builder'].includes(route)) content = tabs + form;
+  else if (route === 'platform-builder') content = hero + rows();
+  else if (['settings','whatsapp'].includes(route)) content = tabs + form;
   else if (['announcements','support','admin-support','announcement-admin'].includes(route)) content = hero + rows(3);
   else content = tabs + rows();
   return `<section class="route-skeleton" role="status" aria-busy="true" aria-label="${en?'Loading page':'جار تحميل الصفحة'}"><div aria-hidden="true">${bar}${content}</div></section>`;
