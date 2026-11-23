@@ -6,7 +6,7 @@ const template=announcementTemplateSeeds[0];
 const job={attempt_id:'fixture-attempt',to:'201000000000',template,parameters:template.fields.map(()=> 'fixture')};
 test('worker sends once during overlapping ticks and settles the exact approved contract without logging private payloads',async()=>{
  const calls=[],sent=[];let waiting;
- const db={rpc:async(name,args)=>{calls.push([name,args]);return {data:args.p_action==='claim' && calls.length===1?job:null};}};
+ const db={rpc:async(name,args)=>{calls.push([name,args]);return {data:args.p_action==='claim' && calls.length===1?job:null};},from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:null,error:null})})})})};
  const gateway={sendTemplate:async value=>{sent.push(value);await new Promise(resolve=>waiting=resolve);return {outcome:'accepted',messageId:'wamid.fixture'};}};
  const worker=createAnnouncementWorker(db,gateway),first=worker.tick();await new Promise(r=>setTimeout(r,0));await worker.tick();assert.equal(sent.length,1);waiting();await first;
  assert.deepEqual(sent[0].expected,{id:template.id,body:template.body,parameterCount:template.fields.length});assert.equal(sent[0].languageCode,'ar');
@@ -27,4 +27,10 @@ test('signed webhook processing matches delivery message IDs and accepts only ex
  const calls=[],db={rpc:async(name,args)=>{calls.push([name,args]);return {data:{}};}};
  await processAnnouncementWebhook(db,{statuses:[{id:'wamid.fixture',status:'delivered'},{id:'wrong-id',status:'read'}],messages:[{id:'wamid.stop',from:'201000000000',timestamp:'1793664000',text:{body:'إيقاف التنبيهات'}},{id:'wamid.hello',from:'201000000000',timestamp:'1793664000',text:{body:'مرحبًا'}}]});
  assert.equal(calls.length,2);assert.equal(calls[0][1].p_data.message_id,'wamid.fixture');assert.equal(calls[1][1].p_blocked,true);
+});
+
+test('a provider receipt arriving before settlement is reconciled without resending',async()=>{
+ const calls=[],db={rpc:async(name,args)=>{calls.push(args);return {data:args.p_action==='claim' && calls.length===1?job:null};},from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{delivery_status:'delivered',error_code:null},error:null})})})})};
+ let sends=0;const worker=createAnnouncementWorker(db,{sendTemplate:async()=>{sends++;return {outcome:'accepted',messageId:'wamid.fixture'};}});await worker.tick();
+ assert.equal(sends,1);const settle=calls.findIndex(call=>call.p_action==='settle'),delivery=calls.findIndex(call=>call.p_action==='delivery');assert.ok(delivery>settle);assert.equal(calls[delivery].p_data.status,'delivered');
 });

@@ -23,6 +23,14 @@ export function createAnnouncementWorker(db:SupabaseClient,gateway:IMetaCloudGat
      // A database failure after transport is intentionally left for the lease
      // to become unknown. Calling transport a second time could duplicate SMS.
      await operation('settle',{attempt_id:job.attempt_id,outcome:result.outcome || 'unknown',message_id:'messageId' in result?result.messageId:null,error_code:result.errorCode==null?null:String(result.errorCode)});
+     // Webhooks can arrive before Meta's message id is committed to the attempt.
+     // Receipt storage happens before webhook delivery processing; reconcile here
+     // after settle to close the race without sending a second message.
+     if(result.outcome==='accepted' && 'messageId' in result && result.messageId){
+      const receipt=await db.from('portal_delivery_receipts').select('delivery_status,error_code').eq('message_id',result.messageId).maybeSingle();
+      if(receipt.error)throw receipt.error;
+      if(receipt.data)await operation('delivery',{message_id:result.messageId,status:receipt.data.delivery_status,error_code:receipt.data.error_code});
+     }
     }
    }catch{onError();}finally{busy=false;}
   },

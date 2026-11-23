@@ -24,7 +24,7 @@ export async function metaPortalWebhook(req:Request,res:Response):Promise<void>{
    }
   }
   const db=getServiceSupabaseClient(),gateway=metaWebhookRuntime.gateway();
-  for(const value of values){await processAnnouncementWebhook(db,value);await processPortalDeliveryWebhook(db,value);}
+  for(const value of values){await processPortalDeliveryWebhook(db,value);await processAnnouncementWebhook(db,value);}
   await Promise.all(messages.map(message=>processMetaPortalMessage(db,message,gateway)));
   res.status(200).send('EVENT_RECEIVED');
  }catch{
