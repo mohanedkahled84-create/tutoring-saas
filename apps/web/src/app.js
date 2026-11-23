@@ -1,14 +1,14 @@
-import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.92.27';
+import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.92.28';
 import {applyLocale,getLocale} from './utils/locale.js?v=9.92.0';
 import {portalCairoClock} from './utils/portalClock.js?v=9.46.0';
 import { assistantPay } from "./utils/assistantPay.js?v=9.46.0";
 import { authService } from './services/auth.js?v=9.46.0';
 import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=9.46.0';
-import { renderSidebar } from './components/Sidebar.js?v=9.92.27';
+import { renderSidebar } from './components/Sidebar.js?v=9.92.28';
 import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.92.0';
 import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=9.46.0';
 import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js?v=9.46.0';
-import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.92.27';
+import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.92.28';
 import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=9.46.0';
 import { getIcon } from './utils/icons.js?v=9.46.0';
 import { escapeHtml } from './utils/escapeHtml.js?v=9.46.0';
@@ -148,7 +148,7 @@ export class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=9.92.27').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=9.92.28').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
