@@ -77,6 +77,22 @@ export function renderSourceAnnouncementButton(kind,id,app=globalThis.window?.ce
  if(!['material','session'].includes(kind) || !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id || '') || !can(app || {},'create'))return '';
  return `<button type="button" class="btn btn-secondary" style="min-height:44px;max-width:100%;white-space:normal" onclick="window.centrlyApp.openSourceAnnouncement('${kind}','${e(id)}')">${localize('إبلاغ الطلاب وأولياء الأمور','Notify students and parents')}</button>`;
 }
+export function renderAnnouncementMessagePreview(rows=[],selectedPhones=[]) {
+ const chosen=new Set(selectedPhones), selected=rows.filter(row=>chosen.has(row.phone));
+ const examples=selected.length?selected:rows.slice(0,1), variants=new Map();
+ for(const row of examples){
+  const body=row.rendered_body || row.manual_body || '';
+  if(!body)continue;
+  if(!variants.has(body))variants.set(body,new Set());
+  for(const name of row.group_names || [])if(name)variants.get(body).add(name);
+ }
+ const items=[...variants.entries()];
+ if(!items.length)return `<p>${localize('لا توجد أرقام متاحة للمعاينة','No recipients available to preview')}</p>`;
+ const show=([body,groups])=>`<div>${groups.size?`<small>${e([...groups].join('، '))}</small>`:''}<p style="white-space:pre-wrap;overflow-wrap:anywhere">${e(body)}</p></div>`;
+ const note=selected.length?'':`<p>${localize('مثال للرسالة؛ اختر المجموعات لمراجعة الرسائل الموجهة لها.','Example message; choose groups to review the messages they will receive.')}</p>`;
+ const more=items.length>1?`<details><summary>${localize('صيغ أخرى للمجموعات المختارة','Other messages for the selected groups')} (${items.length-1})</summary>${items.slice(1).map(show).join('')}</details>`:'';
+ return note+show(items[0])+more;
+}
 export function cairoAnnouncementExpiry(value){
  const date=new Date(value+'T23:59:59Z');
  for(let i=0;i<3;i++){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(date).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));const shown=Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day),Number(parts.hour),Number(parts.minute),Number(parts.second));date.setTime(date.getTime()+Date.parse(value+'T23:59:59Z')-shown);}
@@ -262,7 +278,7 @@ export function registerAnnouncementsActions(app){
   const identity=actor(this);try{
    const preview=await request('/announcements/'+id+'/preview',{method:'POST',body:{}});if(actor(this)!==identity || window.centrlyApp!==this)return;this._announcementPreview=preview;this._announcement=preview.announcement;
    const type=this.announcementsData.catalog.find(t=>t.key===preview.announcement.type_key),enabled=type?.official_enabled && type?.provider_status==='APPROVED' && type?.provider_category==='UTILITY' && preview.allowance?.unit_cost_egp!=null && Boolean(preview.preview_id);
-   this.showModal(localize("معاينة الرسالة والمستلمين","Review message and recipients"),`<div style="display:grid;gap:1rem;min-width:0"><p>${preview.rows.length} ${localize('رقم بعد دمج الأرقام المتكررة.','unique numbers across the selected groups.')}</p><p>${enabled?`${localize('المتاح','Available')}: ${Number(preview.allowance.remaining)} ${localize('رسالة','messages')} · ${money(preview.allowance.unit_cost_egp)} ${localize('للرسالة','per message')}`:localize("الإرسال الرسمي غير متاح بعد؛ يمكنك فتح واتساب يدويًا لكل رقم.","Official sending is not available yet; you can open WhatsApp manually for each number.")}</p><section class="card" style="margin:0"><h3>${localize('معاينة الرسالة','Message preview')}</h3><p style="white-space:pre-wrap;overflow-wrap:anywhere">${e(preview.rows[0]?.rendered_body || preview.rows[0]?.manual_body || localize('لا توجد أرقام متاحة للمعاينة','No recipients available to preview'))}</p></section>
+   this.showModal(localize("معاينة الرسالة والمستلمين","Review message and recipients"),`<div style="display:grid;gap:1rem;min-width:0"><p>${preview.rows.length} ${localize('رقم بعد دمج الأرقام المتكررة.','unique numbers across the selected groups.')}</p><p>${enabled?`${localize('المتاح','Available')}: ${Number(preview.allowance.remaining)} ${localize('رسالة','messages')} · ${money(preview.allowance.unit_cost_egp)} ${localize('للرسالة','per message')}`:localize("الإرسال الرسمي غير متاح بعد؛ يمكنك فتح واتساب يدويًا لكل رقم.","Official sending is not available yet; you can open WhatsApp manually for each number.")}</p><section class="card" style="margin:0"><h3>${localize('معاينة الرسالة','Message preview')}</h3><div id="annPreviewBody" aria-live="polite">${renderAnnouncementMessagePreview(preview.rows)}</div></section>
    <fieldset style="display:grid;gap:.5rem;border:1px solid var(--centrly-line);border-radius:12px;padding:.75rem"><legend>${localize('اختر المجموعات','Choose groups')}</legend>${[...new Map(preview.rows.flatMap(row=>(row.group_ids || []).map((id,i)=>[id,row.group_names?.[i] || this.groups?.find(group=>group.id===id)?.name || localize('مجموعة','Group')]))).entries()].map(([id,name])=>`<label><input type="checkbox" data-ann-group value="${e(id)}" onchange="window.centrlyApp.selectAnnouncementGroups()"> ${e(name)}</label>`).join('')}</fieldset>
    <details><summary>${localize('تفاصيل المستلمين والموافقة','Recipient and consent details')}</summary><div style="display:grid;gap:.5rem;max-height:220px;overflow:auto">${preview.rows.map((row,i)=>`<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center"><label><input type="checkbox" data-ann-recipient="${i}" ${row.opted_out?'disabled':''} onchange="window.centrlyApp.updateAnnouncementTotal()"> <bdi>${e(row.phone)}</bdi> · ${row.recipient_role==='parent'?localize('ولي أمر','Parent'):localize('طالب','Student')}</label><small>${row.opted_out?localize('أوقف التنبيهات','Opted out'):row.consented?localize('الموافقة مسجلة','Consent recorded'):localize('الموافقة مطلوبة','Consent required')}</small>${!row.opted_out?`<a href="https://wa.me/${e(row.phone)}?text=${encodeURIComponent(row.manual_body || '')}" target="_blank" rel="noopener noreferrer">${localize('فتح واتساب يدويًا','Open WhatsApp manually')}</a>`:''}</div>`).join('')}</div></details><p id="annSendTotal" data-send-enabled="${Boolean(enabled)}" role="status" aria-live="polite"></p><label style="display:flex;align-items:center;gap:.5rem;min-height:44px"><input id="annSendConfirmed" type="checkbox">${localize("أؤكد موافقة المستلمين وراجعت الرسالة والتكلفة قبل الإرسال","I confirm recipient consent and have reviewed the message and cost")}</label><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="btn btn-primary" style="min-height:44px" ${enabled?'':'disabled'} data-ann-confirm-send onclick="window.centrlyApp.sendAnnouncement('enqueue')">${localize("تأكيد الإرسال الرسمي","Confirm official send")}</button><button class="btn btn-secondary" style="min-height:44px" ${enabled?'':'disabled'} data-ann-confirm-send onclick="window.centrlyApp.sendAnnouncement('retry')">${localize("إعادة محاولة ما فشل فقط","Retry failed messages")}</button></div></div>`);this.updateAnnouncementTotal();
   }catch(error){if(actor(this)===identity)this.showToast(error.message,'error');}
@@ -278,6 +294,8 @@ export function registerAnnouncementsActions(app){
  app.updateAnnouncementTotal=function(){
   const total=document.getElementById('annSendTotal');
   const count=document.querySelectorAll('[data-ann-recipient]:checked').length;
+  const messagePreview=document.getElementById('annPreviewBody');
+  if(messagePreview)messagePreview.innerHTML=renderAnnouncementMessagePreview(this._announcementPreview?.rows || [],this.selectedAnnouncementPhones());
   const allowance=this._announcementPreview?.allowance;
   const cost=allowance?.unit_cost_egp;
   const insufficient=cost!=null && count>Number(allowance.remaining);
