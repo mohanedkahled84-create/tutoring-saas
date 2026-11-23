@@ -583,7 +583,9 @@ studentsRouter.post("/batch-send-dual-portal-links", async (req: AuthenticatedRe
         if (!portalPassword) {
           portalPassword = Math.floor(100000 + Math.random() * 900000).toString();
         }
-        await studentsService.updateStudent(s.id, { parent_portal_token: token, portal_password: portalPassword }).catch(() => {});
+        // Persist every selected account before scheduling any welcome messages.
+        // A failed write must not produce an invitation to an unusable account.
+        await studentsService.updateStudent(s.id, { parent_portal_token: token, portal_password: portalPassword });
       }
 
       const metaResult = await services.metaCloud.dispatchBatchPortalLinks({
