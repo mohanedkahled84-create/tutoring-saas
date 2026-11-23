@@ -1,3 +1,4 @@
+import {localize as t} from '../utils/language.js?v=9.92.0';
 import { escapeHtml } from "../utils/escapeHtml.js?v=9.46.0";
 import { getIcon } from "../utils/icons.js?v=9.46.0";
 import { request, API_BASE_URL } from "../services/api.js?v=9.46.0";
@@ -45,6 +46,9 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
     purple: { name: 'بنفسجي إمبراطوري', color: '#581c87', ring: '#9333ea' },
     slate: { name: 'أسود كربوني', color: '#0f172a', ring: '#64748b' },
   };
+
+  // A teacher without a saved platform begins with setup, not the student dashboard.
+  if (isPro && !subdomain) return renderPlatformSetup(state.setupDraft || {}, {displayTitle,subjectTitle,headlineText,subtitleText,themePreset,cutoutAvatarUrl});
 
   // Resolve effective tracking students from real database
   let trackingStudents = Array.isArray(students) && students.length > 0 ? [...students] : [];
@@ -578,6 +582,20 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
   `;
 }
 
+export function renderPlatformSetup(draft={},defaults={}) {
+ const value=(key,fallback='')=>escapeHtml(draft[key] ?? fallback);
+ const theme=draft.theme || defaults.themePreset || 'emerald';
+ const step=Math.min(3,Math.max(0,Number(draft.step)||0));
+ const themes=[['navy','#11204d',t('كحلي','Navy')],['red','#b91c1c',t('أحمر','Red')],['emerald','#064e3b',t('زمردي','Emerald')],['purple','#581c87',t('بنفسجي','Purple')],['slate','#0f172a',t('داكن','Dark')]];
+ return `<section class="platform-setup" dir="${t('rtl','ltr')}" style="max-width:760px;margin:0 auto;display:grid;gap:1rem"><div class="card" style="margin:0;padding:clamp(1rem,4vw,2rem)"><p style="color:#64748b">${t('منصتك التعليمية','Your learning platform')}</p><h1>${t('أنشئ منصتك خطوة بخطوة','Create your platform step by step')}</h1><p>${t('جهّز اسم المنصة ورابطها ومظهرها، ثم راجع الإعدادات قبل نشرها.','Set up your platform name, address, and appearance, then review before publishing.')}</p><p id="platformSetupProgress" role="status" aria-live="polite">${step===0?t('ابدأ عندما تكون جاهزًا','Start when you are ready'):t('الخطوة','Step')+' '+step+' / 3'}</p><progress id="platformSetupProgressBar" max="3" value="${step}" style="width:100%"></progress></div>
+ <div class="card" style="margin:0;padding:clamp(1rem,4vw,2rem)">
+ <section data-platform-step="0" ${step===0?'':'hidden'}><h2>${t('ابدأ إنشاء منصتك','Start creating your platform')}</h2><p>${t('ستحتاج اسمًا للمنصة، تخصصك، واسم رابط إنجليزي. يمكنك إضافة صورة واختيار اللون.','You will need a platform name, subject, and an English web address. You can also add a photo and choose a color.')}</p><button type="button" class="btn btn-primary" style="min-height:44px" onclick="window.teacherPlatformActions.setupGo(1)">${t('ابدأ الآن','Get started')}</button></section>
+ <section data-platform-step="1" ${step===1?'':'hidden'} style="display:${step===1?'grid':'none'};gap:1rem"><h2>${t('هوية المنصة والرابط','Platform identity and address')}</h2><label>${t('اسم المنصة','Platform name')}<input id="builderTitleInput" class="form-input" value="${value('title',defaults.displayTitle)}" maxlength="120" oninput="window.teacherPlatformActions.captureSetup()" required></label><label>${t('المادة والتخصص','Subject and specialty')}<input id="builderSubjectInput" class="form-input" value="${value('subject',defaults.subjectTitle)}" maxlength="120" oninput="window.teacherPlatformActions.captureSetup()" required></label><label>${t('اسم الرابط الإنجليزي','English address')}<div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;direction:ltr"><span>https://</span><input id="builderSubdomainInput" class="form-input" value="${value('subdomain')}" placeholder="your-name" style="flex:1;min-width:10rem" dir="ltr" maxlength="30" oninput="window.teacherPlatformActions.handleSubdomainInput(this.value);window.teacherPlatformActions.captureSetup()" required><span>.centerly-eg.com</span></div></label><div id="subdomainCheckFeedback" role="status"></div><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(0)">${t('السابق','Back')}</button><button type="button" class="btn btn-primary" onclick="window.teacherPlatformActions.setupGo(2)">${t('التالي','Next')}</button></div></section>
+ <section data-platform-step="2" ${step===2?'':'hidden'} style="display:${step===2?'grid':'none'};gap:1rem"><h2>${t('المظهر والمحتوى','Appearance and content')}</h2><fieldset style="border:0;padding:0"><legend>${t('لون المنصة','Platform color')}</legend><div style="display:flex;gap:.75rem;flex-wrap:wrap">${themes.map(([id,color,label])=>`<button type="button" class="builder-theme-btn" data-theme="${id}" aria-label="${label}" aria-pressed="${theme===id}" onclick="window.teacherPlatformActions.selectTheme('${id}');window.teacherPlatformActions.captureSetup()" style="width:44px;height:44px;border-radius:50%;background:${color};border:3px solid white;box-shadow:${theme===id?'0 0 0 3px #2563eb':'0 0 0 1px #cbd5e1'}"><span class="theme-check-icon" style="display:${theme===id?'inline':'none'};color:white">✓</span></button>`).join('')}</div></fieldset><label>${t('عنوان الترحيب','Welcome headline')}<input id="builderHeadlineInput" class="form-input" value="${value('headline',defaults.headlineText)}" maxlength="180" oninput="window.teacherPlatformActions.captureSetup()"></label><label>${t('وصف المنصة','Platform description')}<textarea id="builderSubtitleInput" class="form-input" maxlength="500" oninput="window.teacherPlatformActions.captureSetup()">${value('subtitle',defaults.subtitleText)}</textarea></label><label>${t('رابط صورة المدرس (اختياري)','Teacher image URL (optional)')}<input id="builderCutoutInput" class="form-input" value="${value('avatar',defaults.cutoutAvatarUrl)}" oninput="window.teacherPlatformActions.captureSetup()"></label><label class="receipt-upload"><input id="builderCutoutFileUploader" type="file" accept="image/png,image/jpeg,image/webp" onchange="window.teacherPlatformActions.handleImageUpload(event)"><span aria-hidden="true">＋</span><strong>${t('اختيار صورة','Choose an image')}</strong></label><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(1)">${t('السابق','Back')}</button><button type="button" class="btn btn-primary" onclick="window.teacherPlatformActions.setupGo(3)">${t('مراجعة الإعدادات','Review settings')}</button></div></section>
+ <section data-platform-step="3" ${step===3?'':'hidden'} style="display:${step===3?'grid':'none'};gap:1rem"><h2>${t('راجع قبل النشر','Review before publishing')}</h2><div id="platformSetupReview" style="overflow-wrap:anywhere;line-height:1.9"><p>${t('الاسم','Name')}: <strong>${value('title',defaults.displayTitle)}</strong></p><p>${t('المادة','Subject')}: ${value('subject',defaults.subjectTitle)}</p><p>${t('الرابط','Address')}: <bdi>https://${value('subdomain')}.centerly-eg.com</bdi></p><p>${t('عنوان الترحيب','Welcome headline')}: ${value('headline',defaults.headlineText)}</p><p>${t('الوصف','Description')}: ${value('subtitle',defaults.subtitleText)}</p><p>${t('اللون','Color')}: ${escapeHtml(theme)}</p></div><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(2)">${t('السابق','Back')}</button><button type="button" id="btnPublishPlatform" class="btn btn-primary" onclick="window.teacherPlatformActions.savePlatformSettings()">${t('نشر منصتي','Publish my platform')}</button></div></section>
+ </div></section>`;
+}
+
 export function registerTeacherPlatformActions(appInstance) {
   let isSaving = false;
   let subdomainCheckTimer = null;
@@ -770,6 +788,33 @@ export function registerTeacherPlatformActions(appInstance) {
       if (emptyEl) emptyEl.style.display = (visibleCount === 0 && rows.length > 0) ? 'block' : 'none';
     },
 
+    captureSetup() {
+      if (!document.querySelector('.platform-setup')) return;
+      const state=appInstance?.platformBuilderState;if(!state)return;
+      const draft=state.setupDraft ||= {};
+      for(const [key,id] of [['title','builderTitleInput'],['subject','builderSubjectInput'],['subdomain','builderSubdomainInput'],['headline','builderHeadlineInput'],['subtitle','builderSubtitleInput'],['avatar','builderCutoutInput']]) {
+        const input=document.getElementById(id);if(input)draft[key]=input.value;
+      }
+      if(themeTenant===appInstance?.user?.tenant_id && currentTheme)draft.theme=currentTheme;
+    },
+    setupGo(step) {
+      this.captureSetup();
+      const draft=appInstance?.platformBuilderState?.setupDraft || {};
+      if(step>=2){
+        const sub=String(draft.subdomain || '').trim().toLowerCase();
+        if(!String(draft.title || '').trim() || !String(draft.subject || '').trim() || !/^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(sub)) {
+          notify(t('اكتب اسم المنصة والمادة ورابطًا صالحًا من ٣ إلى ٣٠ حرفًا إنجليزيًا أو رقمًا.','Enter a platform name, subject, and valid 3–30 character address.'),'error');return;
+        }
+      }
+      draft.step=step;
+      for(const el of document.querySelectorAll('[data-platform-step]')){const active=Number(el.dataset.platformStep)===step;el.hidden=!active;el.style.display=active?(step===0?'block':'grid'):'none';}
+      const progress=document.getElementById('platformSetupProgress'),bar=document.getElementById('platformSetupProgressBar');
+      if(progress)progress.textContent=step===0?t('ابدأ عندما تكون جاهزًا','Start when you are ready'):t('الخطوة','Step')+' '+step+' / 3';
+      if(bar)bar.value=step;
+      const review=document.getElementById('platformSetupReview');
+      if(review && step===3)review.innerHTML=`<p>${t('الاسم','Name')}: <strong>${escapeHtml(draft.title || '')}</strong></p><p>${t('المادة','Subject')}: ${escapeHtml(draft.subject || '')}</p><p>${t('الرابط','Address')}: <bdi>https://${escapeHtml(draft.subdomain || '')}.centerly-eg.com</bdi></p><p>${t('عنوان الترحيب','Welcome headline')}: ${escapeHtml(draft.headline || '')}</p><p>${t('الوصف','Description')}: ${escapeHtml(draft.subtitle || '')}</p><p>${t('اللون','Color')}: ${escapeHtml(draft.theme || 'emerald')}</p>`;
+    },
+
     toggleEditSettings() {
       const section = document.getElementById('builderSettingsFormSection');
       const btnText = document.getElementById('toggleEditBtnText');
@@ -840,10 +885,12 @@ export function registerTeacherPlatformActions(appInstance) {
           btn.style.borderColor = '#ffffff';
           btn.style.boxShadow = `0 0 0 2.5px ${themeColors[themeId]?.ring || '#2563eb'}`;
           if (icon) icon.style.display = 'inline-flex';
+          btn.setAttribute('aria-pressed','true');
         } else {
           btn.style.borderColor = 'transparent';
           btn.style.boxShadow = '0 1px 4px rgba(0,0,0,0.12)';
           if (icon) icon.style.display = 'none';
+          btn.setAttribute('aria-pressed','false');
         }
       });
 
@@ -873,6 +920,7 @@ export function registerTeacherPlatformActions(appInstance) {
         const base64 = uploadEvent.target.result;
         const input = document.getElementById('builderCutoutInput');
         if (input) input.value = base64;
+        this.captureSetup();
         notify('تم رفع الصورة بنجاح! احفظ التعديلات لتطبيقها.', 'success');
       };
       reader.onerror = () => {
@@ -889,29 +937,31 @@ export function registerTeacherPlatformActions(appInstance) {
       }
 
       const feedback = document.getElementById('subdomainCheckFeedback');
+      clearTimeout(subdomainCheckTimer);
       if (!clean) {
         if (feedback) feedback.innerHTML = '';
         return;
       }
 
       if (clean.length < 3) {
-        if (feedback) feedback.innerHTML = '<span style="color: #ef4444;">يجب ألا يقل اسم الرابط عن 3 أحرف</span>';
+        if (feedback) feedback.innerHTML = `<span style="color: #ef4444;">${t('يجب ألا يقل اسم الرابط عن 3 أحرف','Use at least 3 characters.')}</span>`;
         return;
       }
 
-      if (feedback) feedback.innerHTML = '<span style="color: #64748b;">جاري التحقق من التوفر...</span>';
+      if (feedback) feedback.innerHTML = `<span style="color: #64748b;">${t('جاري التحقق من التوفر...','Checking availability…')}</span>`;
 
-      clearTimeout(subdomainCheckTimer);
       subdomainCheckTimer = setTimeout(async () => {
         try {
           const res = await request(`/platform/check/${encodeURIComponent(clean)}`);
+          if (!input?.isConnected || input.value !== clean) return;
           if (res && res.available) {
-            if (feedback) feedback.innerHTML = '<span style="color: #10b981;">الرابط متاح للاستخدام</span>';
+            if (feedback) feedback.innerHTML = `<span style="color: #10b981;">${t('الرابط متاح للاستخدام','Address is available')}</span>`;
           } else {
-            if (feedback) feedback.innerHTML = '<span style="color: #ef4444;">هذا الرابط محجوز بالفعل، اختر اسماً آخر</span>';
+            if (feedback) feedback.innerHTML = `<span style="color: #ef4444;">${t('هذا الرابط محجوز بالفعل، اختر اسماً آخر','This address is taken; choose another.')}</span>`;
           }
         } catch (_) {
-          if (feedback) feedback.innerHTML = '<span style="color: #10b981;">الرابط متاح للاستخدام</span>';
+          if (!input?.isConnected || input.value !== clean) return;
+          if (feedback) feedback.innerHTML = `<span style="color: #b45309;">${t('تعذر التحقق الآن؛ سيُفحص الرابط عند الحفظ.','Could not check now; the address will be checked when saving.')}</span>`;
         }
       }, 400);
     },
@@ -937,9 +987,9 @@ export function registerTeacherPlatformActions(appInstance) {
         subdomain: rawSub,
         display_title: titleInput ? titleInput.value.trim() : '',
         subject_title: subjectInput ? subjectInput.value.trim() : '',
-        headline_text: previous.headline_text ?? 'بوابتك التعليمية الشاملة للتفوق والدرجة النهائية',
-        subtitle_text: previous.subtitle_text ?? 'هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.',
-        theme_preset: (themeTenant === appInstance?.user?.tenant_id ? currentTheme : null) || previous.theme_preset || 'emerald',
+        headline_text: document.getElementById('builderHeadlineInput')?.value.trim() ?? previous.headline_text ?? 'بوابتك التعليمية الشاملة للتفوق والدرجة النهائية',
+        subtitle_text: document.getElementById('builderSubtitleInput')?.value.trim() ?? previous.subtitle_text ?? 'هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة.',
+        theme_preset: (themeTenant === appInstance?.user?.tenant_id ? currentTheme : null) || appInstance?.platformBuilderState?.setupDraft?.theme || previous.theme_preset || 'emerald',
         cutout_avatar_url: cutoutInput ? cutoutInput.value.trim() : '',
         is_published: true,
         is_active: true
@@ -949,7 +999,7 @@ export function registerTeacherPlatformActions(appInstance) {
       const originalText = saveBtn ? saveBtn.innerHTML : '';
       if (saveBtn) {
         saveBtn.disabled = true;
-        saveBtn.innerHTML = '<span>جاري الحفظ...</span>';
+        saveBtn.innerHTML = `<span>${t('جاري الحفظ...','Saving…')}</span>`;
       }
 
       isSaving = true;
@@ -971,19 +1021,20 @@ export function registerTeacherPlatformActions(appInstance) {
         localStorage.setItem('centrly_platform_published', 'true');
         localStorage.setItem('portal_theme', savedSettings.theme_preset);
 
-        notify('تم حفظ وتحديث إعدادات منصتك بنجاح!', 'success');
+        notify(t('تم حفظ وتحديث إعدادات منصتك بنجاح!','Platform settings saved successfully.'), 'success');
 
         if (appInstance && typeof appInstance.navigateTo === 'function') {
           appInstance.platformBuilderState = {
             ...appInstance.platformBuilderState,
             settings: savedSettings,
+            setupDraft: undefined,
           };
           appInstance.saveCache('platformBuilderState', appInstance.platformBuilderState);
           appInstance.renderMainContent();
         }
       } catch (err) {
         console.error('Save platform error:', err);
-        notify('حدث خطأ أثناء حفظ الإعدادات، يرجى المحاولة لاحقاً', 'error');
+        notify(err?.message || t('حدث خطأ أثناء حفظ الإعدادات، يرجى المحاولة لاحقاً','Could not save settings. Please try again.'), 'error');
       } finally {
         isSaving = false;
         if (saveBtn) {
