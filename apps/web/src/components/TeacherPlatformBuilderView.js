@@ -299,7 +299,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
                 const cleanPhone = String(sPhone).replace(/\D/g, '').replace(/^2/, '').replace(/^0/, '');
                 const waText = `السلام عليكم يا ${sName}، بيانات دخولك لمنصة ${displayTitle}:\nكود الطالب: *${sCode}*\nكلمة المرور: *${sPass}*\nرابط المنصة:\n${livePlatformUrl}\nنتمنى لك دوام التوفيق والتميز!`;
                 const waUrl = sPhone && sCode && sPass ? `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}` : "#";
-                const studentDashboardUrl = `https://${officialSubdomain}.centerly-eg.com/dashboard?code=${encodeURIComponent(sCode)}${s.parent_portal_token ? `&token=${encodeURIComponent(s.parent_portal_token)}` : ''}`;
+                const studentDashboardUrl = `https://${officialSubdomain}.centerly-eg.com/login`;
 
                 return `
                   <tr class="tracking-student-row" data-search="${escapeHtml(searchAttr)}" style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s ease;">
@@ -387,7 +387,7 @@ export function renderTeacherPlatformBuilderView(state = {}, user = {}, students
             const cleanPhone = String(sPhone).replace(/\D/g, '').replace(/^2/, '').replace(/^0/, '');
             const waText = `السلام عليكم يا ${sName}، بيانات دخولك لمنصة ${displayTitle}:\nكود الطالب: *${sCode}*\nكلمة المرور: *${sPass}*\nرابط المنصة:\n${livePlatformUrl}\nنتمنى لك دوام التوفيق والتميز!`;
             const waUrl = sPhone && sCode && sPass ? `https://api.whatsapp.com/send?phone=20${cleanPhone}&text=${encodeURIComponent(waText)}` : "#";
-            const studentDashboardUrl = `https://${officialSubdomain}.centerly-eg.com/dashboard?code=${encodeURIComponent(sCode)}${s.parent_portal_token ? `&token=${encodeURIComponent(s.parent_portal_token)}` : ''}`;
+            const studentDashboardUrl = `https://${officialSubdomain}.centerly-eg.com/login`;
 
             return `
               <div class="tracking-student-row card" data-search="${escapeHtml(searchAttr)}" style="margin: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">

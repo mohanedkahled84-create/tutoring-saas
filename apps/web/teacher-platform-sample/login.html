@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>منصة مستر عمر المحمدي — البوابة الرسمية للطلاب</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Font CSS is optional for first paint; a slow font host must not hide the platform. -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Changa:wght@700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Changa:wght@700;800&display=swap" rel="stylesheet"></noscript>
+
+  <style>
+    /* المتغيرات اللونية الموحدة مع دعم التبديل المباشر */
+    :root {
+      /* الثيم الافتراضي: كحلي ملكي راقي */
+      --hero-bg: #11204d;
+      --circle-bg: radial-gradient(circle, #2563eb 0%, #0d173b 100%);
+      --circle-border: rgba(255, 255, 255, 0.25);
+      --btn-text: #11204d;
+      --accent-glow: rgba(37, 99, 235, 0.35);
+
+      --text-white: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.85);
+      --border-glass: rgba(255, 255, 255, 0.15);
+      --input-bg: rgba(0, 0, 0, 0.25);
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 24px;
+      --radius-full: 9999px;
+    }
+
+    /* الثيمات الموحدة الجاهزة للتجربة */
+    body.theme-red {
+      --hero-bg: #b91c1c; /* أحمر ناري قوي */
+      --circle-bg: radial-gradient(circle, #ef4444 0%, #7f1d1d 100%);
+      --circle-border: rgba(255, 255, 255, 0.3);
+      --btn-text: #b91c1c;
+      --accent-glow: rgba(239, 68, 68, 0.4);
+    }
+
+    body.theme-navy {
+      --hero-bg: #11204d; /* كحلي ملكي فاخر */
+      --circle-bg: radial-gradient(circle, #2563eb 0%, #0a1330 100%);
+      --circle-border: rgba(255, 255, 255, 0.25);
+      --btn-text: #11204d;
+      --accent-glow: rgba(37, 99, 235, 0.35);
+    }
+
+    body.theme-emerald {
+      --hero-bg: #064e3b; /* زمردي فاخر */
+      --circle-bg: radial-gradient(circle, #10b981 0%, #022c22 100%);
+      --circle-border: rgba(255, 255, 255, 0.25);
+      --btn-text: #064e3b;
+      --accent-glow: rgba(16, 185, 129, 0.35);
+    }
+
+    body.theme-purple {
+      --hero-bg: #581c87; /* بنفسجي إمبراطوري */
+      --circle-bg: radial-gradient(circle, #9333ea 0%, #2e1065 100%);
+      --circle-border: rgba(255, 255, 255, 0.25);
+      --btn-text: #581c87;
+      --accent-glow: rgba(147, 51, 234, 0.35);
+    }
+
+    body.theme-slate {
+      --hero-bg: #0f172a; /* أسود كربوني فخم */
+      --circle-bg: radial-gradient(circle, #334155 0%, #020617 100%);
+      --circle-border: rgba(255, 255, 255, 0.2);
+      --btn-text: #0f172a;
+      --accent-glow: rgba(148, 163, 184, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', system-ui, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--hero-bg);
+      color: var(--text-white);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+      transition: background-color 0.4s ease;
+    }
+
+    /* 1. الناف بار العلوي مع محاكي تغيير الألوان الموحدة */
+    .navbar {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 20px 28px 10px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 30;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: #ffffff;
+      color: var(--btn-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Changa', sans-serif;
+      font-weight: 800;
+      font-size: 1.3rem;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+      transition: color 0.4s ease;
+    }
+
+    .brand-meta h2 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .brand-subdomain {
+      font-size: 0.72rem;
+      color: rgba(255, 255, 255, 0.85);
+      direction: ltr;
+      display: inline-block;
+      font-weight: 700;
+    }
+
+    /* 2. منطقة الهيرو الرئيسية */
+    .hero-container {
+      width: 100%;
+      max-width: 1240px;
+      margin: auto;
+      padding: 10px 28px 40px 28px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      align-items: center;
+      gap: 50px;
+      position: relative;
+      z-index: 10;
+      flex: 1;
+    }
+
+    /* العمود الأيمن: تأثير "داخل وخارج من الفريم" (3D Pop-Out Avatar Effect) */
+    .popout-stage {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+      height: 530px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    /* 1. الدائرة الجرافيكية الكاملة بالخلف */
+    @keyframes circleEntrance {
+      0% {
+        opacity: 0;
+        transform: scale(0.92);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .circle-backdrop {
+      position: absolute;
+      bottom: 0;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: var(--circle-bg);
+      border: 4px solid var(--circle-border);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px var(--accent-glow);
+      z-index: 1;
+      animation: circleEntrance 1.4s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+      transition: background 0.4s ease, border-color 0.4s ease;
+    }
+
+    /* حلقة ديكورية متحدة المركز داخل الدائرة */
+    .circle-backdrop::before {
+      content: '';
+      position: absolute;
+      inset: 22px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255, 255, 255, 0.22);
+    }
+
+    /* 2. الحاوية السحرية التي تقص صورة المدرس من الأسفل وتسمح لرأسه بالخروج من الأعلى */
+    .popout-clipper {
+      position: relative;
+      width: 400px;
+      height: 530px; /* أطول من الدائرة بـ 130 بكسل */
+      border-radius: 0 0 200px 200px; /* نصف دائرة متطابقة تماماً من الأسفل، ومفتوحة من الأعلى */
+      overflow: hidden; /* يقص جسم المدرس عند حدود الدائرة السفلية */
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 2;
+    }
+
+    /* أنيميشن صعود المدرس بسلاسة وهدوء عند فتح الصفحة */
+    @keyframes teacherPopEntrance {
+      0% {
+        opacity: 0;
+        transform: translateY(60px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* صورة المدرس المفرغة: رأسها خارج من أعلى الدائرة وجسمها داخل أسفل الدائرة */
+    .teacher-cutout-img {
+      width: 100%;
+      max-height: 520px;
+      object-fit: contain;
+      object-position: bottom center;
+      filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.4));
+      animation: teacherPopEntrance 1.4s cubic-bezier(0.2, 0.85, 0.25, 1) forwards;
+      pointer-events: none;
+    }
+
+    /* أنيميشن دخول متناسق ومواكب لصندوق النصوص ونموذج الدخول */
+    @keyframes contentSlideEntrance {
+      0% {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* العمود الأيسر: النصوص ونموذج الدخول الموحد */
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      animation: contentSlideEntrance 1.3s cubic-bezier(0.2, 0.85, 0.25, 1) 0.15s both;
+    }
+
+    .main-title {
+      font-size: 2.3rem;
+      font-weight: 900;
+      line-height: 1.35;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+
+    .main-subtitle {
+      font-size: 1rem;
+      line-height: 1.65;
+      color: var(--text-muted);
+    }
+
+    /* كارت تسجيل الدخول الهادئ الموحد */
+    .auth-card {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    .auth-tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 8px 12px;
+      text-align: center;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 700;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .auth-tab.active {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%;
+      height: 44px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-sm);
+      padding: 0 14px;
+      color: #ffffff;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .form-input:focus {
+      border-color: #ffffff;
+    }
+
+    .form-select {
+      width: 100%;
+      height: 44px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-sm);
+      padding: 0 14px;
+      color: #ffffff;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    .form-select option {
+      background: #0f172a;
+      color: #ffffff;
+    }
+
+    /* الزر الأبيض البارز الكبير المستوحى من منصات كبار المدرسين */
+    .btn-main-action {
+      width: 100%;
+      height: 48px;
+      background: #ffffff;
+      color: var(--btn-text);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.98rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      transition: all 0.2s ease;
+    }
+
+    .btn-main-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      background: #f8fafc;
+    }
+
+    .help-link {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .help-link a {
+      color: #ffffff;
+      text-decoration: underline;
+      font-weight: 700;
+    }
+
+    /* تجاوب الشاشات الصغيرة */
+    @media (max-width: 992px) {
+      .hero-container {
+        grid-template-columns: 1fr;
+        gap: 30px;
+        text-align: center;
+      }
+      .popout-stage {
+        height: 430px;
+      }
+      .circle-backdrop {
+        width: 320px;
+        height: 320px;
+      }
+      .popout-clipper {
+        width: 320px;
+        height: 430px;
+        border-radius: 0 0 160px 160px;
+      }
+      .teacher-cutout-img {
+        max-height: 420px;
+      }
+      .main-title {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('portal_theme');
+        if (!t) {
+          var s = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
+          if (s.theme_preset) t = s.theme_preset;
+        }
+        if (t) document.documentElement.setAttribute('data-theme', t);
+      } catch (_) {}
+    })();
+  </script>
+  <script>
+    // تفعيل التذكر التلقائي لتسجيل الدخول (Remember Login Session)
+    (function checkAutoLogin() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const explicitLogout = urlParams.get('logout') === '1' || urlParams.get('action') === 'logout' || localStorage.getItem('centrly_explicit_logout') === '1';
+        if (explicitLogout) {
+          localStorage.removeItem('portal_student');
+          localStorage.removeItem('portal_student_code');
+          localStorage.removeItem('centrly_portal_token');
+          localStorage.removeItem('centrly_explicit_logout');
+          return;
+        }
+
+        const savedStudent = localStorage.getItem('portal_student');
+        const savedCode = localStorage.getItem('portal_student_code');
+        const token = localStorage.getItem('centrly_portal_token');
+
+        const role = localStorage.getItem('centrly_portal_role');
+        if (!urlParams.has('reauth') && token && (!role || role === 'student') && (savedStudent || savedCode)) {
+          let code = savedCode;
+          if (!code && savedStudent) {
+            try {
+              const parsed = JSON.parse(savedStudent);
+              code = parsed.code || parsed.student_code;
+            } catch (_) {}
+          }
+          if (code) {
+            const host = window.location.hostname;
+            const currentPath = window.location.pathname;
+            const isSub = host.includes('mr-omar') || (host.split('.').length > 2 && !host.includes('vercel.app') && !host.includes('localhost') && !host.includes('127.0.0.1'));
+            const isSample = currentPath.includes('/teacher-platform-sample/');
+            const dest = isSample ? 'index.html' : (isSub ? '/dashboard' : (currentPath.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard'));
+            const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+            window.location.replace(`${dest}?code=${encodeURIComponent(code)}${tokenParam}`);
+          }
+        }
+      } catch (_) {}
+    })();
+  </script>
+</head>
+<body class="theme-emerald">
+  <script>
+    try {
+      var t = localStorage.getItem('portal_theme') || (JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}').theme_preset) || 'emerald';
+      document.body.className = 'theme-' + t;
+    } catch (_) {}
+  </script>
+
+  <!-- 1. الناف بار العلوي مع محدد الألوان الموحدة للتجربة -->
+  <header class="navbar">
+    <div class="brand-group">
+      <div class="brand-badge">ع</div>
+      <div class="brand-meta">
+        <h2>منصة مستر عمر المحمدي</h2>
+        <span class="brand-subdomain">mr-omar.centerly-eg.com</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. منطقة الهيرو الرئيسية -->
+  <main class="hero-container">
+
+    <!-- العمود الأيمن: تأثير "داخل وخارج من الفريم" (Pop-Out) -->
+    <div class="popout-stage">
+      <!-- الدائرة الجرافيكية الكاملة خلف المدرس -->
+      <div class="circle-backdrop"></div>
+
+      <!-- الحاوية المقصوصة: تسمح لرأس المدرس بالخروج من الأعلى وتقص جسمه من أسفل الدائرة -->
+      <div class="popout-clipper">
+        <img src="teacher_cutout.png" alt="مستر عمر المحمدي" class="teacher-cutout-img">
+      </div>
+    </div>
+
+    <!-- العمود الأيسر: النصوص وكارت الدخول -->
+    <div class="hero-content">
+
+      <h1 class="main-title">
+        بوابتك التعليمية الشاملة للتفوق والدرجة النهائية.
+      </h1>
+
+      <p class="main-subtitle">
+        أهلاً بك يا بطل! هنا تجد كل ما تحتاجه من واجبات تفاعلية، امتحانات دورية، وشروحات ومذكرات معتمدة من مستر عمر المحمدي.
+      </p>
+
+      <!-- كارت تسجيل الدخول الموحد -->
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tabBtnLogin" onclick="setMode('login')">تسجيل دخول الطلاب</button>
+          <button class="auth-tab" id="tabBtnRegister" onclick="setMode('register')">إنشاء حساب طالب جديد</button>
+        </div>
+
+        <!-- 1. نموذج الدخول السريع -->
+        <form id="formLogin" onsubmit="submitForm(event)">
+          <div class="form-group">
+            <label class="form-label">رقم هاتف الطالب (أو كود الطالب)</label>
+            <input type="text" id="loginStudentCode" class="form-input" placeholder="أدخل رقم الموبايل أو كود الطالب" required autocomplete="username">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">كلمة المرور</label>
+            <input type="password" id="loginStudentPass" class="form-input" placeholder="أدخل كلمة المرور الخاصة بك" required autocomplete="current-password">
+          </div>
+
+          <button type="submit" class="btn-main-action">
+            <span>دخول إلى منصتي</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </form>
+
+        <!-- 2. نموذج طالب جديد -->
+        <form id="formRegister" style="display: none;" onsubmit="submitForm(event)">
+          <div class="form-group">
+            <label class="form-label">اسم الطالب ثلاثي</label>
+            <input type="text" class="form-input" placeholder="مثال: مهند خالد عبد الحليم" value="مهند خالد" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">رقم واتساب الطالب</label>
+            <input type="tel" class="form-input" placeholder="01123671177" value="01123671177" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">الصف الدراسي</label>
+            <select class="form-select">
+              <option>الصف الثالث الثانوي</option>
+              <option>الصف الثاني الثانوي</option>
+              <option>الصف الأول الثانوي</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-main-action">
+            <span>إنشاء الحساب والبدء</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </form>
+
+        <div class="help-link">
+          <span>تواجه صعوبة في تسجيل الدخول؟</span>
+          <a href="https://wa.me/201123671177" target="_blank">تواصل مع أسيستنت المستر عبر واتساب</a>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- شاشة حماية المنصة قبل اعتماد ونشر المعلم لها -->
+  <div id="unreleasedOverlay" style="display: none; position: fixed; inset: 0; background: #0b132b; z-index: 99999; align-items: center; justify-content: center; padding: 24px; text-align: center;">
+    <div style="max-width: 480px; width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px; padding: 36px 28px; backdrop-filter: blur(12px); box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+      <div style="width: 68px; height: 68px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 1.5px solid rgba(245, 158, 11, 0.35); color: #f59e0b; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px auto;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+      </div>
+      <h2 style="font-size: 1.35rem; font-weight: 900; color: #ffffff; margin-bottom: 8px;">المنصة قيد التجهيز من قبل المعلم</h2>
+      <p style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 22px;">
+        يقوم المعلم حالياً بضبط الهوية التعليمية وإعداد المحتوى والشروحات. سيتم فتح تسجيل الدخول لجميع الطلاب فور اعتماد ونشر المنصة.
+      </p>
+      <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.08); padding: 8px 16px; border-radius: 20px; font-size: 0.78rem; color: #94a3b8; font-weight: 700;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></span>
+        <span>يرجى التواصل مع معلمك لمعرفة موعد إطلاق المنصة</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // مزامنة إعدادات المنصة الحية حسب الرابط الفرعي (Subdomain)
+    async function hydratePlatformFromSubdomain() {
+      const params = new URLSearchParams(window.location.search);
+      let sub = params.get('subdomain');
+      if (!sub) {
+        const host = window.location.hostname;
+        const parts = host.split('.');
+        if (parts.length > 2 && !['localhost', '127', 'centrly', 'vercel'].some(k => host.includes(k))) {
+          sub = parts[0];
+        }
+      }
+      if (!sub) {
+        try {
+          const cached = JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}');
+          if (cached.subdomain) sub = cached.subdomain;
+        } catch (_) {}
+        if (!sub) sub = 'mr-omar';
+      }
+
+      try {
+        const saved = Number(localStorage.getItem('centrly_platform_settings_saved_at') || 0);
+        const cachedSettings = JSON.parse(localStorage.getItem('centrly_platform_settings') || 'null');
+        if (cachedSettings?.subdomain === sub && Date.now() - saved >= 0 && Date.now() - saved < 300000) {
+          applySettingsToDOM(cachedSettings);
+          checkPublishStatus(cachedSettings);
+          return;
+        }
+        const res = await fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(sub)}`).catch(() => null);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.settings) {
+            localStorage.setItem('centrly_platform_settings', JSON.stringify(data.settings));
+            localStorage.setItem('centrly_platform_settings_saved_at', String(Date.now()));
+            applySettingsToDOM(data.settings);
+            checkPublishStatus(data.settings);
+          } else {
+            checkPublishStatus(null);
+          }
+        } else {
+          // If public API returns 404 or fails, check cached settings
+          const cached = localStorage.getItem('centrly_platform_settings');
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              applySettingsToDOM(parsed);
+              checkPublishStatus(parsed);
+            } catch (_) {
+              checkPublishStatus(null);
+            }
+          } else {
+            checkPublishStatus(null);
+          }
+        }
+      } catch (e) {
+        console.warn('Could not fetch public settings, using fallback', e);
+        const cached = localStorage.getItem('centrly_platform_settings');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            applySettingsToDOM(parsed);
+            checkPublishStatus(parsed);
+          } catch (_) {
+            checkPublishStatus(null);
+          }
+        }
+      }
+    }
+
+    function checkPublishStatus(s) {
+      // Platform is active by default for students & teacher platforms
+      // Only show overlay if teacher explicitly set is_published to false AND is_active to false
+      const isExplicitlyDraft = Boolean(s && s.is_published === false && s.is_active === false);
+      const isPublished = !isExplicitlyDraft;
+      const overlay = document.getElementById('unreleasedOverlay');
+      if (overlay) {
+        overlay.style.display = isPublished ? 'none' : 'flex';
+      }
+    }
+
+    function applySettingsToDOM(s) {
+      if (!s) return;
+      if (s.theme_preset) {
+        document.body.className = 'theme-' + s.theme_preset;
+        localStorage.setItem('portal_theme', s.theme_preset);
+      }
+      if (s.display_title) {
+        document.title = `${s.display_title} — البوابة الرسمية للطلاب`;
+        const metaTitle = document.querySelector('.brand-meta h2');
+        if (metaTitle) metaTitle.innerText = s.display_title;
+        const badge = document.querySelector('.brand-badge');
+        if (badge && s.display_title.length > 0) badge.innerText = s.display_title.trim().replace('منصة', '').trim().charAt(0);
+      }
+      if (s.subdomain) {
+        const subEl = document.querySelector('.brand-subdomain');
+        if (subEl) subEl.innerText = `${s.subdomain}.centerly-eg.com`;
+      }
+      if (s.headline_text) {
+        const h = document.querySelector('.main-title');
+        if (h) h.innerText = s.headline_text;
+      }
+      if (s.subtitle_text) {
+        const sub = document.querySelector('.main-subtitle');
+        if (sub) sub.innerText = s.subtitle_text;
+      }
+      if (s.cutout_avatar_url) {
+        const img = document.querySelector('.teacher-cutout-img');
+        if (img) img.src = s.cutout_avatar_url;
+      }
+    }
+
+    hydratePlatformFromSubdomain();
+
+    // استرجاع اللون الموحد المعتمد لمنصة المعلم
+    const savedTheme = localStorage.getItem('portal_theme') || 'emerald';
+    document.body.className = 'theme-' + savedTheme;
+
+    function setMode(mode) {
+      const btnL = document.getElementById('tabBtnLogin');
+      const btnR = document.getElementById('tabBtnRegister');
+      const formL = document.getElementById('formLogin');
+      const formR = document.getElementById('formRegister');
+
+      if (mode === 'login') {
+        btnL.classList.add('active');
+        btnR.classList.remove('active');
+        formL.style.display = 'block';
+        formR.style.display = 'none';
+      } else {
+        btnR.classList.add('active');
+        btnL.classList.remove('active');
+        formL.style.display = 'none';
+        formR.style.display = 'block';
+      }
+    }
+
+    function showLoginToast(message, type = 'info') {
+      let toast = document.getElementById('loginToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'loginToast';
+        toast.style.cssText = 'position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: #0f172a; color: #ffffff; padding: 12px 24px; border-radius: 9999px; font-size: 0.88rem; font-weight: 700; display: flex; align-items: center; gap: 10px; box-shadow: 0 12px 30px -5px rgba(0,0,0,0.3); z-index: 99999; opacity: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none;';
+        document.body.appendChild(toast);
+      }
+      let icon = '';
+      if (type === 'success') {
+        toast.style.background = '#065f46';
+        icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+      } else if (type === 'error') {
+        toast.style.background = '#991b1b';
+        icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+      } else {
+        toast.style.background = '#0f172a';
+        icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+      }
+      toast.innerHTML = `${icon}<span>${escapeHtml(message)}</span>`;
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateX(-50%) translateY(0)';
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(100px)';
+      }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    async function submitForm(e) {
+      e.preventDefault();
+      
+      const identifierInput = document.getElementById('loginStudentCode')?.value?.trim();
+      const passwordInput = document.getElementById('loginStudentPass')?.value?.trim();
+      
+      if (!identifierInput || !passwordInput) {
+        showLoginToast('يرجى إدخال رقم الهاتف أو كود الطالب وكلمة المرور', 'error');
+        return;
+      }
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalBtnContent = submitBtn ? submitBtn.innerHTML : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>جاري التحقق والدخول...</span>';
+      }
+
+      try {
+        const res = await fetch('https://tutoring-backend-production-c8dd.up.railway.app/api/public/portal/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: identifierInput, password: passwordInput, role: 'student' })
+        });
+        const json = await res.json();
+        
+        if (res.ok && json && json.success && json.token) {
+          localStorage.removeItem('centrly_explicit_logout');
+          if (localStorage.getItem('centrly_portal_token') !== json.token || localStorage.getItem('centrly_portal_role') !== 'student') {
+            localStorage.removeItem('centrly_portal_snapshot_v1:student');
+            localStorage.removeItem('centrly_portal_snapshot_v1:parent');
+          }
+          localStorage.setItem('centrly_portal_token', json.token);
+          localStorage.setItem('centrly_portal_role', 'student');
+          sessionStorage.setItem('centrly_portal_token', json.token);
+          sessionStorage.setItem('centrly_portal_role', 'student');
+          if (json.student) {
+            localStorage.setItem('portal_student', JSON.stringify(json.student));
+            localStorage.setItem('portal_student_code', json.student.student_code || json.student.code || identifierInput);
+          }
+          const host = window.location.hostname;
+          const currentPath = window.location.pathname;
+          const isSub = host.includes('mr-omar') || (host.split('.').length > 2 && !host.includes('vercel.app') && !host.includes('localhost') && !host.includes('127.0.0.1'));
+          const isSample = currentPath.includes('/teacher-platform-sample/');
+          const dest = isSample ? 'index.html' : (isSub ? '/dashboard' : (currentPath.startsWith('/mr-omar') ? '/mr-omar/dashboard' : '/dashboard'));
+          window.location.href = dest;
+        } else {
+          const errMsg = json?.error?.message || 'رقم الهاتف أو كلمة المرور غير صحيحة';
+          showLoginToast(errMsg, 'error');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnContent;
+          }
+        }
+      } catch (err) {
+        console.error('Login request error:', err);
+        showLoginToast('تعذر الاتصال بالسيرفر، يرجى التأكد من اتصال الإنترنت والمحاولة مجدداً', 'error');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnContent;
+        }
+      }
+    }
+  </script>
+</body>
+</html>
