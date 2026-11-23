@@ -40,7 +40,7 @@ import { renderTeacherSettingsView, registerTeacherSettingsActions } from './com
 import { renderCouponsView, registerCouponsActions } from './components/CouponsView.js?v=9.46.0';
 import { renderWhatsAppCenterView, registerWhatsAppCenterActions } from './components/WhatsAppCenterView.js?v=9.46.0';
 import { renderVideoLessonsView, registerVideoLessonsActions } from './components/VideoLessonsView.js?v=9.46.0';
-import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=9.92.36';
+import { renderTeacherPlatformBuilderView, registerTeacherPlatformActions } from './components/TeacherPlatformBuilderView.js?v=9.92.40';
 
 export { renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView };
 

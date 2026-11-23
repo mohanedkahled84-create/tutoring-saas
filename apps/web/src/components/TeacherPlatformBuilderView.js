@@ -565,6 +565,33 @@ export function registerTeacherPlatformActions(appInstance) {
   let subdomainCheckTimer = null;
   let currentTheme = null;
   let themeTenant = null;
+  let destinationTimer = null;
+  let destinationWatchKey = null;
+  function watchDestination() {
+    if(appInstance.currentRoute!=='platform-builder')return;
+    const state=appInstance.platformBuilderState, sub=state?.settings?.subdomain;
+    if(!sub || state.settings.is_active!==true || state.destination?.presentation?.subdomain===sub)return;
+    const owner=[appInstance.user?.id,appInstance.user?.tenant_id].join(':'),key=owner+':'+sub;
+    if(destinationWatchKey===key)return;
+    clearTimeout(destinationTimer);destinationWatchKey=key;
+    let attempts=0;
+    const current=()=>destinationWatchKey===key && (!appInstance.currentRoute || appInstance.currentRoute==='platform-builder') && [appInstance.user?.id,appInstance.user?.tenant_id].join(':')===owner && appInstance.platformBuilderState?.settings?.subdomain===sub;
+    const tick=async()=>{
+      if(!current()){if(destinationWatchKey===key)destinationWatchKey=null;return;}
+      try {
+        const response=await request('/platform/settings');
+        if(!current())return;
+        if(response?.destination?.presentation?.subdomain===sub && response.destination.origin===`https://${sub}.centerly-eg.com`){
+          appInstance.platformBuilderState.destination=response.destination;
+          appInstance.saveCache('platformBuilderState',appInstance.platformBuilderState);
+          destinationWatchKey=null;appInstance.renderMainContent();return;
+        }
+      }catch { /* Keep the safe sign-in link visible and retry a bounded number of times. */ }
+      if(current() && ++attempts<12)destinationTimer=setTimeout(tick,15000);
+      else if(destinationWatchKey===key)destinationWatchKey=null;
+    };
+    destinationTimer=setTimeout(tick,15000);
+  }
 
   function notify(msg, type = 'success') {
     if (appInstance && typeof appInstance.showToast === 'function') {
@@ -583,6 +610,7 @@ export function registerTeacherPlatformActions(appInstance) {
   };
 
   window.teacherPlatformActions = {
+    watchDestination,
     showToast: notify,
 
     filterStudents(query) {
@@ -996,6 +1024,7 @@ export function registerTeacherPlatformActions(appInstance) {
           };
           appInstance.saveCache('platformBuilderState', appInstance.platformBuilderState);
           appInstance.renderMainContent();
+          watchDestination();
         }
       } catch (err) {
         console.error('Save platform error:', err);
