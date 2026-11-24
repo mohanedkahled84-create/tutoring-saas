@@ -1,27 +1,70 @@
-import { escapeHtml as e } from './utils/escapeHtml.js?v=9.96.0';
-import { API_BASE_URL } from './services/api.js?v=9.96.0';
-import {mountPhoneVerification} from './components/PhoneVerification.js?v=9.96.0';
-import { assistantRequest } from './services/assistantClient.js?v=9.96.0';
-import {getIcon} from './utils/icons.js?v=9.96.0';
+import { escapeHtml as e } from './utils/escapeHtml.js?v=9.97.0';
+import { API_BASE_URL } from './services/api.js?v=9.97.0';
+import {mountPhoneVerification} from './components/PhoneVerification.js?v=9.97.0';
+import { assistantRequest } from './services/assistantClient.js?v=9.97.0';
+import {getIcon} from './utils/icons.js?v=9.97.0';
 
 const main=document.getElementById('main'),actions=document.getElementById('account-actions'),dialog=document.getElementById('editor');
 const params=new URLSearchParams(location.search),workspace=params.get('workspace') || '';
 const fragments=new URLSearchParams(location.hash.slice(1));
-let invitation=fragments.get('invite'),registration=fragments.get('registration'),verifiedPhone='',stopVerification;
-if(invitation || registration) history.replaceState(null,'',`${location.pathname}?workspace=${encodeURIComponent(workspace)}`);
+let invitation=/^[\w-]{43}$/.test(fragments.get('invite') || '')?fragments.get('invite'):null;
+let registration=/^[\w-]{43}$/.test(fragments.get('registration') || '')?fragments.get('registration'):null;
+let verifiedPhone='',stopVerification;
 const key=`centrly:assistant:${workspace}`,pendingKey=key+':registration';
 let registrationOtp=null;
-if(invitation || registration)rememberPending();
-else try{const pending=JSON.parse(sessionStorage.getItem(pendingKey) || 'null');if(pending && pending.savedAt>Date.now()-86400000){invitation=/^[\w-]{43}$/.test(pending.invitation || '')?pending.invitation:null;registration=/^[\w-]{43}$/.test(pending.registration || '')?pending.registration:null;registrationOtp=pending.otp;}}catch{}
-function rememberPending(){try{if(invitation || registration)sessionStorage.setItem(pendingKey,JSON.stringify({invitation,registration,otp:registrationOtp,savedAt:Date.now()}));else sessionStorage.removeItem(pendingKey);}catch{}}
-let session;try{session=sessionStorage.getItem(key);}catch{}
+function readPending(){
+ for(const storage of [sessionStorage,localStorage]){
+  try{
+   const raw=storage.getItem(pendingKey);if(!raw)continue;
+   const pending=JSON.parse(raw);
+   if(pending && Number.isFinite(pending.savedAt) && pending.savedAt>Date.now()-86400000)return pending;
+  }catch{}
+ }
+ return null;
+}
+function rememberPending(){
+ const data=(invitation || registration)?JSON.stringify({invitation,registration,otp:registrationOtp,savedAt:Date.now()}):null;
+ for(const storage of [sessionStorage,localStorage]){
+  try{
+   if(data)storage.setItem(pendingKey,data);
+   else storage.removeItem(pendingKey);
+  }catch{}
+ }
+}
+function syncHash(){
+ try{
+  const targetHash=registration?`#registration=${encodeURIComponent(registration)}`:(invitation?`#invite=${encodeURIComponent(invitation)}`:'');
+  const currentHash=location.hash || '';
+  if(targetHash && currentHash!==targetHash){
+   history.replaceState(null,'',`${location.pathname}?workspace=${encodeURIComponent(workspace)}${targetHash}`);
+  }else if(!targetHash && currentHash){
+   history.replaceState(null,'',`${location.pathname}?workspace=${encodeURIComponent(workspace)}`);
+  }
+ }catch{}
+}
+const pending=readPending();
+if(pending){
+ if(!invitation && /^[\w-]{43}$/.test(pending.invitation || ''))invitation=pending.invitation;
+ if(!registration && /^[\w-]{43}$/.test(pending.registration || ''))registration=pending.registration;
+ if(!registrationOtp && pending.otp)registrationOtp=pending.otp;
+}
+if(invitation || registration){
+ rememberPending();
+ syncHash();
+}
+let session;
+try{session=sessionStorage.getItem(key) || localStorage.getItem(key);}catch{}
+if(invitation || registration){
+ session=null;
+ try{sessionStorage.removeItem(key);localStorage.removeItem(key);}catch{}
+}
 let identity,rows=[],activeSession,activeQuiz,gradeChoices=[],teacherName='حساب المدرس';
 let teacherView={};
 function notice(text){document.getElementById('notice').textContent=text;}
 function api(path,body) { return assistantRequest(API_BASE_URL,path,{body,token:session}); }
 function brand(name) { teacherName=name || teacherName;document.getElementById('workspace-name').textContent=teacherName; }
 let pageRequest=0,workspaceRequest=0,stopCollections;
-function remember(value){session=value;try{if(value)sessionStorage.setItem(key,value);else sessionStorage.removeItem(key);}catch{}}
+function remember(value){session=value;try{if(value){sessionStorage.setItem(key,value);localStorage.setItem(key,value);}else{sessionStorage.removeItem(key);localStorage.removeItem(key);}}catch{}}
 function can(page,action='view'){return identity?.permissions?.[`${page}.${action}`]===true;}
 function groupName(id){return identity.groups.find(g=>g.id===id)?.name || 'مجموعة محددة';}
 function auth(error='') {
@@ -37,8 +80,8 @@ function auth(error='') {
    const values=new FormData(form);
    const result=await api(accept?'/accept':'/login',accept?{ticket:invitation,name:values.get('name'),password:values.get('password')}:{workspace,phone:values.get('phone'),password:values.get('password')});
    if(result.workspace && result.workspace!==workspace)throw new Error('افتح رابط الدعوة الخاص بالمدرس المقصود');
-   invitation=null;registration=null;registrationOtp=null;rememberPending();verifiedPhone='';remember(result.token);await openWorkspace();
-  }catch(error){const target=document.getElementById('auth-error');if(target)target.textContent=error.message;if(accept && error.status===410){const retry=document.createElement('button');retry.type='button';retry.textContent='الرجوع لتسجيل الدخول';retry.onclick=()=>{invitation=null;registration=null;registrationOtp=null;rememberPending();auth();};target?.append(document.createElement('br'),retry);}button.disabled=false;button.textContent=label;}
+   invitation=null;registration=null;registrationOtp=null;rememberPending();syncHash();verifiedPhone='';remember(result.token);await openWorkspace();
+  }catch(error){const target=document.getElementById('auth-error');if(target)target.textContent=error.message;if(accept && error.status===410){const retry=document.createElement('button');retry.type='button';retry.textContent='الرجوع لتسجيل الدخول';retry.onclick=()=>{invitation=null;registration=null;registrationOtp=null;rememberPending();syncHash();auth();};target?.append(document.createElement('br'),retry);}button.disabled=false;button.textContent=label;}
  };
 }
 function authFrame(content){return `<div class="auth-layout"><aside class="auth-story"><div class="auth-brand"><img src="/favicon.png" alt="" width="42" height="42"><span>سنترلي <small>Centrly</small></span></div><div><span class="auth-story-label">مساحة المدرس</span><h2>${e(teacherName)}</h2><p>نفس المكان.<br>فريق واحد، وشغل منظم.</p></div><div class="auth-story-footer">${getIcon('shield',18)} دخول آمن لفريق العمل</div></aside><section class="auth-card">${content}</section></div>`;}
@@ -48,13 +91,13 @@ async function beginRegistration() {
  brand(info.teacher_name);actions.innerHTML='';
  document.body.className='assistant-auth';
  main.innerHTML=authFrame(`<span class="auth-kicker">دعوتك لفريق العمل</span><h1>${info.recovery?'نرجّع لك حسابك':'أهلًا بك في الفريق'}</h1><p class="muted">أكد رقمك، وبعدها أكمل حسابك وابدأ شغلك.</p><div class="auth-steps" aria-label="خطوات التسجيل"><span class="current">١ تأكيد الرقم</span><span>٢ بياناتك</span></div><div id="registration-verification"></div><p class="helper">لديك حساب بالفعل؟ <button id="back-to-login" type="button" class="text-button">تسجيل الدخول</button></p>`);
- document.getElementById('back-to-login').onclick=()=>{registration=null;invitation=null;registrationOtp=null;rememberPending();auth();};
- stopVerification=mountPhoneVerification(main.querySelector('#registration-verification'),{info,initialChallenge:registrationOtp,onChallengeChange:value=>{registrationOtp=value;rememberPending();},onStageChange:stage=>{const title=main.querySelector('.auth-card h1');if(title)title.textContent=stage==='otp'?'اكتب كود التأكيد':info.recovery?'نرجّع لك حسابك':'أهلًا بك في الفريق';const intro=main.querySelector('.auth-card>.muted');if(intro)intro.textContent=stage==='otp'?'تأكيد الكود هو الخطوة الأولى لإكمال حسابك.':'أكد رقمك، وبعدها أكمل حسابك وابدأ شغلك.';},requestChallenge:()=>api('/registration/challenge',{invitation:registration}),requestCode:(proof={})=>api('/registration/request',{invitation:registration,...proof}),verifyCode:fields=>api('/registration/verify',{invitation:registration,...fields}),onVerified:result=>{invitation=result.ticket;registration=null;registrationOtp=null;rememberPending();verifiedPhone=result.phone;auth();}});
+ document.getElementById('back-to-login').onclick=()=>{registration=null;invitation=null;registrationOtp=null;rememberPending();syncHash();auth();};
+ stopVerification=mountPhoneVerification(main.querySelector('#registration-verification'),{info,initialChallenge:registrationOtp,onChallengeChange:value=>{registrationOtp=value;rememberPending();},onStageChange:stage=>{const title=main.querySelector('.auth-card h1');if(title)title.textContent=stage==='otp'?'اكتب كود التأكيد':info.recovery?'نرجّع لك حسابك':'أهلًا بك في الفريق';const intro=main.querySelector('.auth-card>.muted');if(intro)intro.textContent=stage==='otp'?'تأكيد الكود هو الخطوة الأولى لإكمال حسابك.':'أكد رقمك، وبعدها أكمل حسابك وابدأ شغلك.';},requestChallenge:()=>api('/registration/challenge',{invitation:registration}),requestCode:(proof={})=>api('/registration/request',{invitation:registration,...proof}),verifyCode:fields=>api('/registration/verify',{invitation:registration,...fields}),onVerified:result=>{invitation=result.ticket;registration=null;registrationOtp=null;rememberPending();syncHash();verifiedPhone=result.phone;auth();}});
 }
 let stopTeacherWorkspace;
 async function openWorkspace(){
  const version=++workspaceRequest;
- const {mountAssistantWorkspace}=await import('./assistantRuntime.js?v=9.96.0');
+ const {mountAssistantWorkspace}=await import('./assistantRuntime.js?v=9.97.0');
  if(version!==workspaceRequest)return;
  document.body.className='assistant-workspace';
  actions.innerHTML='';
