@@ -1,4 +1,4 @@
-import { getLocale, applyLocale, setLocale } from './language.js?v=9.94.0';
+import { getLocale, applyLocale, setLocale } from './language.js?v=9.94.1';
 export { getLocale, applyLocale, setLocale };
 
 export const localeMessages = {

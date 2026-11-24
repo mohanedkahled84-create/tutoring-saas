@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.94.0';
-import {request} from '../services/api.js?v=9.94.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.94.1';
+import {request} from '../services/api.js?v=9.94.1';
 
 const dateLabel=value=>value?new Date(value+'T12:00:00').toLocaleDateString('ar-EG'):'';
 const button=(text,action)=>`<button type="button" class="btn btn-secondary" style="min-height:44px" onclick="window.centrlyApp.${action}">${text}</button>`;

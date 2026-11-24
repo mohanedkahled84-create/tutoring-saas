@@ -1,5 +1,5 @@
-import { escapeHtml } from "./escapeHtml.js?v=9.94.0";
-import { getIcon } from "./icons.js?v=9.94.0";
+import { escapeHtml } from "./escapeHtml.js?v=9.94.1";
+import { getIcon } from "./icons.js?v=9.94.1";
 
 // Standard ISO/IEC 15417 Code 128 (Subset B) Patterns
 const CODE128_PATTERNS = [

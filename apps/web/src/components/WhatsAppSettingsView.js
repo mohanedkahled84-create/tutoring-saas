@@ -1,6 +1,6 @@
-import { request } from "../services/api.js?v=9.94.0";
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.94.0';
-import { getIcon } from '../utils/icons.js?v=9.94.0';
+import { request } from "../services/api.js?v=9.94.1";
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.94.1';
+import { getIcon } from '../utils/icons.js?v=9.94.1';
 
 /**
  * Centrly WhatsApp Settings & Templates Workspace (DEV-65)
