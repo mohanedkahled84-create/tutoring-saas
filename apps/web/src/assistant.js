@@ -1,15 +1,19 @@
-import { escapeHtml as e } from './utils/escapeHtml.js?v=9.95.0';
-import { API_BASE_URL } from './services/api.js?v=9.95.0';
-import {mountPhoneVerification} from './components/PhoneVerification.js?v=9.95.0';
-import { assistantRequest } from './services/assistantClient.js?v=9.95.0';
-import {getIcon} from './utils/icons.js?v=9.95.0';
+import { escapeHtml as e } from './utils/escapeHtml.js?v=9.96.0';
+import { API_BASE_URL } from './services/api.js?v=9.96.0';
+import {mountPhoneVerification} from './components/PhoneVerification.js?v=9.96.0';
+import { assistantRequest } from './services/assistantClient.js?v=9.96.0';
+import {getIcon} from './utils/icons.js?v=9.96.0';
 
 const main=document.getElementById('main'),actions=document.getElementById('account-actions'),dialog=document.getElementById('editor');
 const params=new URLSearchParams(location.search),workspace=params.get('workspace') || '';
 const fragments=new URLSearchParams(location.hash.slice(1));
 let invitation=fragments.get('invite'),registration=fragments.get('registration'),verifiedPhone='',stopVerification;
 if(invitation || registration) history.replaceState(null,'',`${location.pathname}?workspace=${encodeURIComponent(workspace)}`);
-const key=`centrly:assistant:${workspace}`;
+const key=`centrly:assistant:${workspace}`,pendingKey=key+':registration';
+let registrationOtp=null;
+if(invitation || registration)rememberPending();
+else try{const pending=JSON.parse(sessionStorage.getItem(pendingKey) || 'null');if(pending && pending.savedAt>Date.now()-86400000){invitation=/^[\w-]{43}$/.test(pending.invitation || '')?pending.invitation:null;registration=/^[\w-]{43}$/.test(pending.registration || '')?pending.registration:null;registrationOtp=pending.otp;}}catch{}
+function rememberPending(){try{if(invitation || registration)sessionStorage.setItem(pendingKey,JSON.stringify({invitation,registration,otp:registrationOtp,savedAt:Date.now()}));else sessionStorage.removeItem(pendingKey);}catch{}}
 let session;try{session=sessionStorage.getItem(key);}catch{}
 let identity,rows=[],activeSession,activeQuiz,gradeChoices=[],teacherName='حساب المدرس';
 let teacherView={};
@@ -33,8 +37,8 @@ function auth(error='') {
    const values=new FormData(form);
    const result=await api(accept?'/accept':'/login',accept?{ticket:invitation,name:values.get('name'),password:values.get('password')}:{workspace,phone:values.get('phone'),password:values.get('password')});
    if(result.workspace && result.workspace!==workspace)throw new Error('افتح رابط الدعوة الخاص بالمدرس المقصود');
-   invitation=null;registration=null;verifiedPhone='';remember(result.token);await openWorkspace();
-  }catch(error){const target=document.getElementById('auth-error');if(target)target.textContent=error.message;if(accept && error.status===410){const retry=document.createElement('button');retry.type='button';retry.textContent='الرجوع لتسجيل الدخول';retry.onclick=()=>{invitation=null;auth();};target?.append(document.createElement('br'),retry);}button.disabled=false;button.textContent=label;}
+   invitation=null;registration=null;registrationOtp=null;rememberPending();verifiedPhone='';remember(result.token);await openWorkspace();
+  }catch(error){const target=document.getElementById('auth-error');if(target)target.textContent=error.message;if(accept && error.status===410){const retry=document.createElement('button');retry.type='button';retry.textContent='الرجوع لتسجيل الدخول';retry.onclick=()=>{invitation=null;registration=null;registrationOtp=null;rememberPending();auth();};target?.append(document.createElement('br'),retry);}button.disabled=false;button.textContent=label;}
  };
 }
 function authFrame(content){return `<div class="auth-layout"><aside class="auth-story"><div class="auth-brand"><img src="/favicon.png" alt="" width="42" height="42"><span>سنترلي <small>Centrly</small></span></div><div><span class="auth-story-label">مساحة المدرس</span><h2>${e(teacherName)}</h2><p>نفس المكان.<br>فريق واحد، وشغل منظم.</p></div><div class="auth-story-footer">${getIcon('shield',18)} دخول آمن لفريق العمل</div></aside><section class="auth-card">${content}</section></div>`;}
@@ -44,13 +48,13 @@ async function beginRegistration() {
  brand(info.teacher_name);actions.innerHTML='';
  document.body.className='assistant-auth';
  main.innerHTML=authFrame(`<span class="auth-kicker">دعوتك لفريق العمل</span><h1>${info.recovery?'نرجّع لك حسابك':'أهلًا بك في الفريق'}</h1><p class="muted">أكد رقمك، وبعدها أكمل حسابك وابدأ شغلك.</p><div class="auth-steps" aria-label="خطوات التسجيل"><span class="current">١ تأكيد الرقم</span><span>٢ بياناتك</span></div><div id="registration-verification"></div><p class="helper">لديك حساب بالفعل؟ <button id="back-to-login" type="button" class="text-button">تسجيل الدخول</button></p>`);
- document.getElementById('back-to-login').onclick=()=>{registration=null;invitation=null;auth();};
- stopVerification=mountPhoneVerification(main.querySelector('#registration-verification'),{info,onStageChange:stage=>{const title=main.querySelector('.auth-card h1');if(title)title.textContent=stage==='otp'?'اكتب كود التأكيد':info.recovery?'نرجّع لك حسابك':'أهلًا بك في الفريق';const intro=main.querySelector('.auth-card>.muted');if(intro)intro.textContent=stage==='otp'?'تأكيد الكود هو الخطوة الأولى لإكمال حسابك.':'أكد رقمك، وبعدها أكمل حسابك وابدأ شغلك.';},requestChallenge:()=>api('/registration/challenge',{invitation:registration}),requestCode:(proof={})=>api('/registration/request',{invitation:registration,...proof}),verifyCode:fields=>api('/registration/verify',{invitation:registration,...fields}),onVerified:result=>{invitation=result.ticket;verifiedPhone=result.phone;auth();}});
+ document.getElementById('back-to-login').onclick=()=>{registration=null;invitation=null;registrationOtp=null;rememberPending();auth();};
+ stopVerification=mountPhoneVerification(main.querySelector('#registration-verification'),{info,initialChallenge:registrationOtp,onChallengeChange:value=>{registrationOtp=value;rememberPending();},onStageChange:stage=>{const title=main.querySelector('.auth-card h1');if(title)title.textContent=stage==='otp'?'اكتب كود التأكيد':info.recovery?'نرجّع لك حسابك':'أهلًا بك في الفريق';const intro=main.querySelector('.auth-card>.muted');if(intro)intro.textContent=stage==='otp'?'تأكيد الكود هو الخطوة الأولى لإكمال حسابك.':'أكد رقمك، وبعدها أكمل حسابك وابدأ شغلك.';},requestChallenge:()=>api('/registration/challenge',{invitation:registration}),requestCode:(proof={})=>api('/registration/request',{invitation:registration,...proof}),verifyCode:fields=>api('/registration/verify',{invitation:registration,...fields}),onVerified:result=>{invitation=result.ticket;registration=null;registrationOtp=null;rememberPending();verifiedPhone=result.phone;auth();}});
 }
 let stopTeacherWorkspace;
 async function openWorkspace(){
  const version=++workspaceRequest;
- const {mountAssistantWorkspace}=await import('./assistantRuntime.js?v=9.95.0');
+ const {mountAssistantWorkspace}=await import('./assistantRuntime.js?v=9.96.0');
  if(version!==workspaceRequest)return;
  document.body.className='assistant-workspace';
  actions.innerHTML='';

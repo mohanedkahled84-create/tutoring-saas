@@ -24,6 +24,8 @@ async function providerCall(path:string,body?:Record<string,unknown>,ip?:string)
   const result:any=await r.json().catch(()=>null);
   if(!r.ok || result?.status!=='success'){
    const code=result?.code;
+   // Log only the bounded provider error code, never URLs, payloads or credentials.
+   console.warn(JSON.stringify({event:'phone_otp_provider_rejected',operation:path,httpStatus:r.status,providerCode:typeof code==='string' && /^[a-zA-Z0-9_:-]{1,80}$/.test(code)?code:'UNKNOWN'}));
    if(code==='INVALID_OTP')throw fault(400,'كود التأكيد غير صحيح');
    if(code==='TRANSACTION_EXPIRED')throw fault(410,'انتهت صلاحية الكود. اطلب كودًا جديدًا.');
    if(code==='ALREADY_VERIFIED')throw fault(410,'تم استخدام الكود. اطلب كودًا جديدًا لو لم يكتمل التسجيل.');
