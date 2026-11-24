@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="platform-loading">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -12,6 +12,10 @@
   <noscript><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Changa:wght@700;800&display=swap" rel="stylesheet"></noscript>
 
   <style>
+    .platform-loading .navbar,.platform-loading .hero-container{visibility:hidden}
+    #platformLoading{position:fixed;inset:0;display:grid;place-items:center;background:#11204d;color:white;z-index:99998;font:600 18px system-ui}
+    html:not(.platform-loading) #platformLoading{display:none}
+
     /* المتغيرات اللونية الموحدة مع دعم التبديل المباشر */
     :root {
       /* الثيم الافتراضي: كحلي ملكي راقي */
@@ -479,6 +483,7 @@
   </script>
 </head>
 <body class="theme-emerald">
+  <div id="platformLoading" role="status" aria-live="polite">جار تحميل المنصة…</div>
   <script>
     try {
       var t = localStorage.getItem('portal_theme') || (JSON.parse(localStorage.getItem('centrly_platform_settings') || '{}').theme_preset) || 'emerald';
@@ -592,13 +597,13 @@
       }
 
       try {
-        const res = await fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(sub)}`,{cache:'no-store'}).catch(() => null);
+        const res = await fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(sub)}`,{cache:'no-store',signal:AbortSignal.timeout(8000)}).catch(() => null);
         if (res?.ok) {
           const data = await res.json();
           if (data && data.settings) {
             localStorage.setItem('centrly_platform_settings', JSON.stringify(data.settings));
             localStorage.setItem('centrly_platform_settings_saved_at', String(Date.now()));
-            applySettingsToDOM(data.settings);
+            await applySettingsToDOM(data.settings);
             checkPublishStatus(data.settings);
           } else {
             checkPublishStatus(null);
@@ -609,7 +614,7 @@
           if (cached) {
             try {
               const parsed = JSON.parse(cached);
-              applySettingsToDOM(parsed);
+              await applySettingsToDOM(parsed);
               checkPublishStatus(parsed);
             } catch (_) {
               checkPublishStatus(null);
@@ -624,7 +629,7 @@
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
-            applySettingsToDOM(parsed);
+            await applySettingsToDOM(parsed);
             checkPublishStatus(parsed);
           } catch (_) {
             checkPublishStatus(null);
@@ -644,7 +649,7 @@
       }
     }
 
-    function applySettingsToDOM(s) {
+    async function applySettingsToDOM(s) {
       if (!s) return;
       if (s.theme_preset) {
         document.body.className = 'theme-' + s.theme_preset;
@@ -676,13 +681,24 @@
       hidePhoto();
       if(img && !s.cutout_avatar_url){img.onload=null;img.onerror=null;img.removeAttribute('src');img.style.display='none';}
       if (img && s.cutout_avatar_url) {
-        img.onload = () => { stage.hidden=false;stage.style.display='';img.style.display='';container.style.gridTemplateColumns='';container.style.maxWidth=''; };
-        img.onerror = hidePhoto;
-        img.src = s.cutout_avatar_url;
+        await new Promise(resolve=>{
+          const timer=setTimeout(()=>{img.onload=null;img.onerror=null;hidePhoto();resolve();},5000);
+          img.crossOrigin='anonymous';
+          img.onload=()=>{clearTimeout(timer);try{
+            if(!img.naturalWidth || img.naturalWidth>4096 || img.naturalHeight>4096)throw Error('invalid photo dimensions');
+            const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+            const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);
+            const pixels=ctx.getImageData(0,0,c.width,c.height).data;let clear=0,visible=0;
+            for(let i=3;i<pixels.length;i+=4){if(pixels[i]<=16)clear++;if(pixels[i]>0)visible++;}
+            if(!visible || clear<(pixels.length/4)*.05)throw Error('opaque photo');
+            stage.hidden=false;stage.style.display='';img.style.display='';container.style.gridTemplateColumns='';container.style.maxWidth='';
+          }catch{hidePhoto();}resolve();};
+          img.onerror=()=>{clearTimeout(timer);hidePhoto();resolve();};img.src=s.cutout_avatar_url;
+        });
       }
     }
 
-    hydratePlatformFromSubdomain();
+    hydratePlatformFromSubdomain().finally(()=>document.documentElement.classList.remove('platform-loading'));
 
     // استرجاع اللون الموحد المعتمد لمنصة المعلم
     const savedTheme = localStorage.getItem('portal_theme') || 'emerald';

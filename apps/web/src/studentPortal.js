@@ -1,4 +1,4 @@
-import {registerUnifiedPortalActions} from './components/UnifiedPortalLoginView.js?v=9.94.1';
+import {registerUnifiedPortalActions} from './components/UnifiedPortalLoginView.js?v=9.95.0';
 
 // Use the existing student renderers/actions without initializing a teacher account.
 export async function mountStudentPortal() {

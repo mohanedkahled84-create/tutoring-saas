@@ -1,7 +1,7 @@
-import {cyclePicker,priceMarkup,referencePrice} from '../utils/subscriptionPricing.js?v=9.94.1';
-import {localize} from '../utils/language.js?v=9.94.1';
-import { request } from '../services/api.js?v=9.94.1';
-import { escapeHtml as e } from '../utils/escapeHtml.js?v=9.94.1';
+import {cyclePicker,priceMarkup,referencePrice} from '../utils/subscriptionPricing.js?v=9.95.0';
+import {localize} from '../utils/language.js?v=9.95.0';
+import { request } from '../services/api.js?v=9.95.0';
+import { escapeHtml as e } from '../utils/escapeHtml.js?v=9.95.0';
 
 const money = p => (Number(p || 0) / 100).toLocaleString(localize('ar-EG','en-EG'), { maximumFractionDigits: 2 }) + localize(' ج.م',' EGP');
 const number = n => Number(n || 0).toLocaleString(localize('ar-EG','en-EG'),Number(n)>0 && Number(n)<1?{maximumSignificantDigits:3}:{maximumFractionDigits:2});

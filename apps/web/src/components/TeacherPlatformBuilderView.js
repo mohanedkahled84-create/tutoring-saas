@@ -1,8 +1,8 @@
-import {prepareTeacherCutout} from '../utils/teacherCutout.js?v=9.94.1';
-import {localize as t} from '../utils/language.js?v=9.94.1';
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.94.1";
-import { getIcon } from "../utils/icons.js?v=9.94.1";
-import { request, API_BASE_URL } from "../services/api.js?v=9.94.1";
+import {prepareTeacherCutout} from '../utils/teacherCutout.js?v=9.95.0';
+import {localize as t} from '../utils/language.js?v=9.95.0';
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.95.0";
+import { getIcon } from "../utils/icons.js?v=9.95.0";
+import { request, API_BASE_URL } from "../services/api.js?v=9.95.0";
 
 /**
  * Centrly White-Label Platform Builder & Student Engagement Hub
@@ -968,7 +968,7 @@ export function registerTeacherPlatformActions(appInstance) {
         is_active: true
       };
 
-      if(payload.cutout_avatar_url && payload.cutout_avatar_url!==previous.cutout_avatar_url){try{payload.cutout_avatar_url=await prepareTeacherCutout(payload.cutout_avatar_url);}catch(error){notify(error.message,'error');return;}}
+      if(payload.cutout_avatar_url){try{payload.cutout_avatar_url=await prepareTeacherCutout(payload.cutout_avatar_url);}catch(error){notify(error.message,'error');return;}}
       const saveBtn = document.getElementById('btnPublishPlatform');
       const originalText = saveBtn ? saveBtn.innerHTML : '';
       if (saveBtn) {

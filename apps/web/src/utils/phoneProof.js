@@ -1,7 +1,7 @@
 export async function preparePhoneProof(requestChallenge,isCurrent=()=>true,{turnstileHost,onProgress=()=>{}}={}){
  onProgress('جار تجهيز فحص الأمان…');
  const challenge=await requestChallenge();if(!isCurrent())throw new Error('تم إغلاق تأكيد الرقم');
- const {AkedlyShield,renderTurnstile}=await import('./phoneShieldBundle.js?v=9.94.1');
+ const {AkedlyShield,renderTurnstile}=await import('./phoneShieldBundle.js?v=9.95.0');
  let nonce;
  if(challenge.challengeRequired){
   onProgress('جار إكمال فحص الأمان…');
