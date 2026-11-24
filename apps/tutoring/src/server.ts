@@ -1,3 +1,4 @@
+import {createAnnouncementEmailWorker} from './features/announcements/emailWorker.js';
 import "./instrument.js";
 import { app } from "./app.js";
 import { config } from "./shared/config/index.js";
@@ -19,6 +20,7 @@ server.headersTimeout = 120000; // 2 minutes
 server.keepAliveTimeout = 65000; // 65 seconds
 
 if(config.nodeEnv==='production' && config.supabaseServiceRoleKey){
+ if(config.resendApiKey){const emailWorker=createAnnouncementEmailWorker(getServiceSupabaseClient());const emailInterval=setInterval(()=>void emailWorker.tick(),15000);emailInterval.unref();server.once('close',()=>{emailWorker.stop();clearInterval(emailInterval);});}
  const quizzes=createQuizAttemptWorker(getServiceSupabaseClient(),()=>console.warn('[Quiz attempts] Finalization deferred.'));
  const quizInterval=setInterval(()=>void quizzes.tick(),20_000);quizInterval.unref();
  server.once('close',()=>{quizzes.stop();clearInterval(quizInterval);});

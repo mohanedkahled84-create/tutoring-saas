@@ -51,7 +51,14 @@ announcementsRouter.post('/',async(req:AuthenticatedRequest,res)=>handle(req,res
 announcementsRouter.post('/source',async(req:AuthenticatedRequest,res)=>handle(req,res,async()=>{const data=z.object({kind:z.enum(['material','session']),id:uuid}).strict().safeParse(req.body);if(!data.success)throw inputError();return rpc(req,'announcement_operation','source',data.data);}));
 announcementsRouter.post('/type-requests',async(req:AuthenticatedRequest,res)=>handle(req,res,async()=>{const data=z.object({id:uuid,title:z.string().trim().min(1).max(100),description:z.string().trim().min(1).max(2000),sample_body:z.string().trim().min(1).max(1024),recipient_roles:z.array(z.enum(['parent','student'])).min(1).max(2)}).strict().safeParse(req.body);if(!data.success)throw inputError();return rpc(req,'announcement_operation','request_type',data.data);}));
 announcementsRouter.use('/:id',async(req,res,next)=>{if(!uuid.safeParse(req.params.id).success){res.status(400).json({error:{message:'الإعلان غير صالح'}});return;}next();});
-announcementsRouter.get('/:id',async(req:AuthenticatedRequest,res)=>handle(req,res,()=>rpc(req,'announcement_operation','view',{id:req.params.id})));
+announcementsRouter.get('/:id',async(req:AuthenticatedRequest,res)=>handle(req,res,async()=>{
+ const data=await rpc(req,'announcement_operation','view',{id:req.params.id});
+ if(req.user?.assistant_id)return data;
+ const result=await getServiceSupabaseClient().from('announcement_email_jobs').select('status').eq('tenant_id',req.user!.tenant_id).eq('announcement_id',req.params.id).eq('revision',data.announcement.revision);
+ if(result.error)throw result.error;
+ const email_delivery:Record<string,number>={};for(const job of result.data || [])email_delivery[job.status]=(email_delivery[job.status] || 0)+1;
+ return {...data,email_delivery};
+}));
 announcementsRouter.put('/:id',async(req:AuthenticatedRequest,res)=>handle(req,res,async()=>{const data=draft.safeParse({...req.body,id:req.params.id});if(!data.success || !data.data.expected_revision)throw inputError();return rpc(req,'announcement_operation','update',data.data);}));
 for(const action of ['publish','archive','consent'] as const)announcementsRouter.post('/:id/'+action,async(req:AuthenticatedRequest,res)=>handle(req,res,async()=>{
  const schema=action==='consent'?z.object({confirmed:z.literal(true),phones:z.array(z.string().regex(/^[1-9]\d{9,14}$/)).min(1).max(10000)}).strict():action==='publish'?z.object({expected_revision:z.number().int().positive()}).strict():z.object({}).strict();
@@ -68,4 +75,12 @@ announcementsRouter.post('/:id/preview',async(req:AuthenticatedRequest,res)=>han
 for(const action of ['enqueue','retry','cancel'] as const)announcementsRouter.post('/:id/'+action,async(req:AuthenticatedRequest,res)=>handle(req,res,async()=>{
  const schema=action==='cancel'?z.object({}).strict():z.object({preview_id:uuid,expected_revision:z.number().int().positive(),phones:z.array(z.string().regex(/^[1-9]\d{9,14}$/)).min(1).max(10000),unit_cost_egp:z.number().nonnegative()}).strict();
  const data=schema.safeParse(req.body);if(!data.success)throw inputError();return rpc(req,'announcement_queue',action,{id:req.params.id,...data.data});
+}));
+
+announcementsRouter.post('/:id/email',async(req:AuthenticatedRequest,res)=>handle(req,res,async()=>{
+ if(req.user?.assistant_id)throw Object.assign(new Error('FORBIDDEN'),{code:'42501'});
+ const input=z.object({expected_revision:z.number().int().positive()}).strict().safeParse(req.body);if(!input.success)throw inputError();
+ if(!process.env.RESEND_API_KEY)throw Object.assign(new Error('EMAIL_UNAVAILABLE'),{code:'EMAIL_UNAVAILABLE'});
+ await rpc(req,'announcement_operation','view',{id:req.params.id});
+ const result=await getServiceSupabaseClient().rpc('announcement_email_enqueue',{p_tenant:req.user!.tenant_id,p_user:req.user!.id,p_assistant:req.user!.assistant_id || null,p_id:req.params.id,p_revision:input.data.expected_revision});if(result.error)throw result.error;return result.data;
 }));

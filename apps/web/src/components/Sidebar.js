@@ -1,7 +1,7 @@
-import {teacherPageTitles} from '../utils/teacherPageTitles.js?v=9.92.0';
-import { getIcon } from '../utils/icons.js?v=9.92.0';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.92.0';
-import {getLocale,translate,translateSidebarRoute} from '../utils/locale.js?v=9.92.0';
+import {teacherPageTitles} from '../utils/teacherPageTitles.js?v=9.93.0';
+import { getIcon } from '../utils/icons.js?v=9.93.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.93.0';
+import {getLocale,translate,translateSidebarRoute} from '../utils/locale.js?v=9.93.0';
 
 export function renderSidebar(currentRoute = 'sessions', user = {}, securityState = { hasPin: false, isUnlocked: true }, accessState = null) {
   const locale=getLocale(), t=key=>translate(key,locale);
@@ -210,7 +210,6 @@ export function renderSidebar(currentRoute = 'sessions', user = {}, securityStat
       </nav>
 
       <div class="sidebar-footer" style="padding: 0.85rem 1rem; border-top: 1px solid var(--centrly-line); flex-shrink: 0; background: var(--centrly-white);">
-        ${!accessState && user?.role !== 'admin' ? `<button type="button" class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:.5rem" onclick="window.centrlyApp.restoreStartupChecklist()">${locale==='en'?'Show getting started':'إظهار خطوات البداية'}</button>` : ''}
         <button class="btn btn-secondary btn-sm" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onclick="window.centrlyApp.promptLogout()">
           ${getIcon('close', 16)}
           <span>${escapeHtml(t('nav.logout'))}</span>

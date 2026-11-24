@@ -79,7 +79,16 @@ export async function requestPhoneOtp(db:SupabaseClient,purpose:string,ip:string
    checkedOtpResult(await providerOperation('sent',{request_id:sent.transactionReqID,transaction_id:sent.transactionID,expires_at:new Date(expires).toISOString()}));
    await operation('delivery',{challenge_id:challenge,status:'sent'});
    return {challenge_id:challenge,phone:created.phone,expires_in:Math.max(1,Math.min(300,Math.floor((expires-Date.now())/1000))),retry_after:60,delivery:'accepted',message:'تم قبول طلب إرسال الكود عبر SMS. اكتبه هنا عندما يصلك.'};
-  }catch(error){await operation('delivery',{challenge_id:challenge,status:'uncertain'}).catch(()=>{});throw error;}
+  }catch(error){
+   // Reuse the same locally generated code so a delayed SMS cannot conflict.
+   if(await phoneOtpGateway.ready()){
+    checkedOtpResult(await providerOperation('whatsapp_fallback'));
+    const fallback=await phoneOtpGateway.send(created.phone,code);
+    await operation('delivery',{challenge_id:challenge,status:fallback});
+    if(fallback!=='failed')return {challenge_id:challenge,phone:created.phone,expires_in:300,retry_after:60,delivery:fallback,channel:'whatsapp',message:fallback==='sent'?'تعذر تأكيد SMS، فأُرسل نفس الكود عبر واتساب. اكتبه هنا.':'تعذر تأكيد SMS. جربنا واتساب؛ اكتب الكود هنا إن وصلك، أو أعد الطلب بعد دقيقة.'};
+   }
+   await operation('delivery',{challenge_id:challenge,status:'uncertain'}).catch(()=>{});throw error;
+  }
  }
  const delivery=await phoneOtpGateway.send(created.phone,code);
  await operation('delivery',{challenge_id:challenge,status:delivery});
@@ -93,7 +102,7 @@ export async function verifyPhoneOtp(db:SupabaseClient,purpose:string,operation:
   const info=checkedOtpResult(await operation('info'));
   const attempt=(action:string,data={})=>otpRpc(db,'phone_otp_provider_attempt',{p_challenge:challenge,p_purpose:purpose,p_subject:scope.subject,p_origin:scope.origin,p_phone:info.phone,p_action:action,p_data:data});
   const saved=checkedOtpResult(await attempt('check'));
-  if(saved.verified_code_hash!==hash){
+  if(saved.delivery_channel!=='whatsapp' && saved.verified_code_hash!==hash){
    let result;
    try{result=await akedlyGateway.verify(saved.request_id,code);}catch(error){
     if((error as any).status===400){checkedOtpResult(await operation('verify',{challenge_id:challenge,code_hash:phoneOtpHash('provider-rejected',challenge,randomUUID()),...(claimHash?{claim_hash:claimHash}:{})}));}

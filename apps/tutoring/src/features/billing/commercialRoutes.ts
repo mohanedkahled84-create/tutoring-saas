@@ -9,6 +9,7 @@ const uuid = z.string().uuid();
 const plan = z.enum(['basic_v1', 'pro_v1', 'max_v1']);
 const quote = z.object({
   id: uuid,
+  cycle_months: z.union([z.literal(1),z.literal(6),z.literal(12)]).optional(),
   kind: z.enum(['subscribe', 'renew', 'upgrade', 'students', 'assistants', 'storage', 'wallet']),
   plan_id: plan.optional(),
   quantity: z.number().int().min(1).max(10000000).optional(),

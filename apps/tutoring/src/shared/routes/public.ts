@@ -1,3 +1,4 @@
+import {studentEmailRouter} from './studentEmail.js';
 import { Router, Response, Request } from "express";
 import compression from "compression";
 import { constants as zlibConstants } from "node:zlib";
@@ -17,6 +18,7 @@ import {metaPortalWebhook} from './metaPortalWebhook.js';
 import {publicCatalogCache} from '../utils/publicCatalogCache.js';
 
 export const publicRouter = Router();
+publicRouter.use('/student-email',authRateLimiter,studentEmailRouter);
 publicRouter.use('/family',parentFamilyRouter);
 const readPublicPlans=publicCatalogCache(async()=>{
   const result=await getServiceSupabaseClient().from('subscription_plans').select('*').eq('enabled',true).order('rank');

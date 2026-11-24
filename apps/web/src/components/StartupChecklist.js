@@ -1,6 +1,6 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.92.0';
-import {request} from '../services/api.js?v=9.92.0';
-import {getLocale,startupMessages,startupStepEnglish} from '../utils/locale.js?v=9.92.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.93.0';
+import {request} from '../services/api.js?v=9.93.0';
+import {getLocale,startupMessages,startupStepEnglish} from '../utils/locale.js?v=9.93.0';
 const routes=new Set(['settings','groups','students','materials','sessions','platform-builder','support']);
 export function renderStartupChecklist(steps=[], locale=getLocale()){
  const done=steps.filter(step=>step.done).length, msg=startupMessages[locale] || startupMessages.ar;
@@ -48,7 +48,7 @@ if (globalThis.customElements && !customElements.get('centrly-startup-progress')
     app._startupStepSnapshot={owner,done:new Map(steps.map(step=>[step.id,Boolean(step.done)]))};
     this.innerHTML=`<aside class="startup-float"><header><strong>${en?'Getting started':'خطوات البداية'} · ${done}/${steps.length}</strong><div><button type="button" data-collapse aria-expanded="true">${en?'Minimize':'تصغير'}</button><button type="button" data-dismiss aria-label="${en?'Hide checklist':'إخفاء الخطوات'}">×</button></div></header><div class="startup-float-body"><progress max="${steps.length || 1}" value="${done}" aria-label="${en?'Getting started progress':'تقدم خطوات البداية'}"></progress><ul>${steps.map(step=>`<li ${step.done?(newlyDone.has(step.id)?'class="startup-step-completing" inert':'hidden'):''}><button type="button" data-route="${e(routes.has(step.route)?step.route:'')}" ${routes.has(step.route)?'':'disabled'}><span aria-hidden="true">${step.done?'✓':'○'}</span><span ${step.done?'class="is-done"':''}>${e(en?(startupStepEnglish[step.id] || step.title):step.title)}</span></button></li>`).join('')}</ul></div></aside>`;
     const body=this.querySelector('.startup-float-body'),toggle=this.querySelector('[data-collapse]');
-    const collapse=value=>{body.hidden=value;toggle.setAttribute('aria-expanded',String(!value));toggle.textContent=value?(en?'Show':'عرض'):(en?'Minimize':'تصغير');};
+    const collapse=value=>{body.hidden=value;toggle.setAttribute('aria-expanded',String(!value));toggle.innerHTML='<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="'+(value?'m6 9 6 6 6-6':'m6 15 6-6 6 6')+'"/></svg>';toggle.setAttribute('aria-label',value?(en?'Expand getting started':'عرض خطوات البداية'):(en?'Collapse getting started':'تصغير خطوات البداية'));toggle.style.minHeight='44px';toggle.style.minWidth='44px';};
     try{collapse(localStorage.getItem(collapsedKey)==='1');}catch{collapse(false);}
     toggle.addEventListener('click',()=>{const value=!body.hidden;collapse(value);try{localStorage.setItem(collapsedKey,value?'1':'0');}catch{}});
     this.querySelector('[data-dismiss]').addEventListener('click',()=>{this._generation++;try{localStorage.setItem(key,'1');}catch{}this.replaceChildren();});

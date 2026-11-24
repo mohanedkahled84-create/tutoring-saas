@@ -1,7 +1,8 @@
-import {localize as t} from '../utils/language.js?v=9.92.0';
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.46.0";
-import { getIcon } from "../utils/icons.js?v=9.46.0";
-import { request, API_BASE_URL } from "../services/api.js?v=9.46.0";
+import {prepareTeacherCutout} from '../utils/teacherCutout.js?v=9.93.0';
+import {localize as t} from '../utils/language.js?v=9.93.0';
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.93.0";
+import { getIcon } from "../utils/icons.js?v=9.93.0";
+import { request, API_BASE_URL } from "../services/api.js?v=9.93.0";
 
 /**
  * Centrly White-Label Platform Builder & Student Engagement Hub
@@ -555,7 +556,7 @@ export function renderPlatformSetup(draft={},defaults={}) {
  <div class="card" style="margin:0;padding:clamp(1rem,4vw,2rem)">
  <section data-platform-step="0" ${step===0?'':'hidden'}><h2>${t('ابدأ إنشاء منصتك','Start creating your platform')}</h2><p>${t('ستحتاج اسمًا للمنصة، تخصصك، واسم رابط إنجليزي. يمكنك إضافة صورة واختيار اللون.','You will need a platform name, subject, and an English web address. You can also add a photo and choose a color.')}</p><button type="button" class="btn btn-primary" style="min-height:44px" onclick="window.teacherPlatformActions.setupGo(1)">${t('ابدأ الآن','Get started')}</button></section>
  <section data-platform-step="1" ${step===1?'':'hidden'} style="display:${step===1?'grid':'none'};gap:1rem"><h2>${t('هوية المنصة والرابط','Platform identity and address')}</h2><label>${t('اسم المنصة','Platform name')}<input id="builderTitleInput" class="form-input" value="${value('title',defaults.displayTitle)}" maxlength="120" oninput="window.teacherPlatformActions.captureSetup()" required></label><label>${t('المادة والتخصص','Subject and specialty')}<input id="builderSubjectInput" class="form-input" value="${value('subject',defaults.subjectTitle)}" maxlength="120" oninput="window.teacherPlatformActions.captureSetup()" required></label><label>${t('اسم الرابط الإنجليزي','English address')}<div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;direction:ltr"><span>https://</span><input id="builderSubdomainInput" class="form-input" value="${value('subdomain')}" placeholder="your-name" style="flex:1;min-width:10rem" dir="ltr" maxlength="30" oninput="window.teacherPlatformActions.handleSubdomainInput(this.value);window.teacherPlatformActions.captureSetup()" required><span>.centerly-eg.com</span></div></label><div id="subdomainCheckFeedback" role="status"></div><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(0)">${t('السابق','Back')}</button><button type="button" class="btn btn-primary" onclick="window.teacherPlatformActions.setupGo(2)">${t('التالي','Next')}</button></div></section>
- <section data-platform-step="2" ${step===2?'':'hidden'} style="display:${step===2?'grid':'none'};gap:1rem"><h2>${t('المظهر والمحتوى','Appearance and content')}</h2><fieldset style="border:0;padding:0"><legend>${t('لون المنصة','Platform color')}</legend><div style="display:flex;gap:.75rem;flex-wrap:wrap">${themes.map(([id,color,label])=>`<button type="button" class="builder-theme-btn" data-theme="${id}" aria-label="${label}" aria-pressed="${theme===id}" onclick="window.teacherPlatformActions.selectTheme('${id}');window.teacherPlatformActions.captureSetup()" style="width:44px;height:44px;border-radius:50%;background:${color};border:3px solid white;box-shadow:${theme===id?'0 0 0 3px #2563eb':'0 0 0 1px #cbd5e1'}"><span class="theme-check-icon" style="display:${theme===id?'inline':'none'};color:white">✓</span></button>`).join('')}</div></fieldset><label>${t('عنوان الترحيب','Welcome headline')}<input id="builderHeadlineInput" class="form-input" value="${value('headline',defaults.headlineText)}" maxlength="180" oninput="window.teacherPlatformActions.captureSetup()"></label><label>${t('وصف المنصة','Platform description')}<textarea id="builderSubtitleInput" class="form-input" maxlength="500" oninput="window.teacherPlatformActions.captureSetup()">${value('subtitle',defaults.subtitleText)}</textarea></label><label>${t('رابط صورة المدرس (اختياري)','Teacher image URL (optional)')}<input id="builderCutoutInput" class="form-input" value="${value('avatar',defaults.cutoutAvatarUrl)}" oninput="window.teacherPlatformActions.captureSetup()"></label><label class="receipt-upload"><input id="builderCutoutFileUploader" type="file" accept="image/png,image/jpeg,image/webp" onchange="window.teacherPlatformActions.handleImageUpload(event)"><span aria-hidden="true">＋</span><strong>${t('اختيار صورة','Choose an image')}</strong></label><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(1)">${t('السابق','Back')}</button><button type="button" class="btn btn-primary" onclick="window.teacherPlatformActions.setupGo(3)">${t('مراجعة الإعدادات','Review settings')}</button></div></section>
+ <section data-platform-step="2" ${step===2?'':'hidden'} style="display:${step===2?'grid':'none'};gap:1rem"><h2>${t('المظهر والمحتوى','Appearance and content')}</h2><fieldset style="border:0;padding:0"><legend>${t('لون المنصة','Platform color')}</legend><div style="display:flex;gap:.75rem;flex-wrap:wrap">${themes.map(([id,color,label])=>`<button type="button" class="builder-theme-btn" data-theme="${id}" aria-label="${label}" aria-pressed="${theme===id}" onclick="window.teacherPlatformActions.selectTheme('${id}');window.teacherPlatformActions.captureSetup()" style="width:44px;height:44px;border-radius:50%;background:${color};border:3px solid white;box-shadow:${theme===id?'0 0 0 3px #2563eb':'0 0 0 1px #cbd5e1'}"><span class="theme-check-icon" style="display:${theme===id?'inline':'none'};color:white">✓</span></button>`).join('')}</div></fieldset><label>${t('عنوان الترحيب','Welcome headline')}<input id="builderHeadlineInput" class="form-input" value="${value('headline',defaults.headlineText)}" maxlength="180" oninput="window.teacherPlatformActions.captureSetup()"></label><label>${t('وصف المنصة','Platform description')}<textarea id="builderSubtitleInput" class="form-input" maxlength="500" oninput="window.teacherPlatformActions.captureSetup()">${value('subtitle',defaults.subtitleText)}</textarea></label><label>${t('صورة المدرس الشفافة (اختياري)','Transparent teacher image (optional)')}<input id="builderCutoutInput" class="form-input" value="${value('avatar',defaults.cutoutAvatarUrl)}" oninput="window.teacherPlatformActions.captureSetup()"></label><label class="receipt-upload"><input id="builderCutoutFileUploader" type="file" accept="image/png,image/jpeg,image/webp" onchange="window.teacherPlatformActions.handleImageUpload(event)"><span aria-hidden="true">＋</span><strong>${t('اختيار صورة','Choose an image')}</strong></label><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(1)">${t('السابق','Back')}</button><button type="button" class="btn btn-primary" onclick="window.teacherPlatformActions.setupGo(3)">${t('مراجعة الإعدادات','Review settings')}</button></div></section>
  <section data-platform-step="3" ${step===3?'':'hidden'} style="display:${step===3?'grid':'none'};gap:1rem"><h2>${t('راجع قبل النشر','Review before publishing')}</h2><p>${t('قد يحتاج الرابط المخصص إلى تفعيل HTTPS؛ ستجد رابط دخول سنترلي مؤقتًا بعد الحفظ.','The custom address may need HTTPS activation; a Centerly sign-in link will be available after saving.')}</p><div id="platformSetupReview" style="overflow-wrap:anywhere;line-height:1.9"><p>${t('الاسم','Name')}: <strong>${value('title',defaults.displayTitle)}</strong></p><p>${t('المادة','Subject')}: ${value('subject',defaults.subjectTitle)}</p><p>${t('اسم الرابط المطلوب','Requested address')}: <bdi>https://${value('subdomain')}.centerly-eg.com</bdi></p><p>${t('عنوان الترحيب','Welcome headline')}: ${value('headline',defaults.headlineText)}</p><p>${t('الوصف','Description')}: ${value('subtitle',defaults.subtitleText)}</p><p>${t('اللون','Color')}: ${escapeHtml(theme)}</p></div><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn-secondary" onclick="window.teacherPlatformActions.setupGo(2)">${t('السابق','Back')}</button><button type="button" id="btnPublishPlatform" class="btn btn-primary" onclick="window.teacherPlatformActions.savePlatformSettings()">${t('نشر منصتي','Publish my platform')}</button></div></section>
  </div></section>`;
 }
@@ -893,32 +894,12 @@ export function registerTeacherPlatformActions(appInstance) {
     updatePreviewText(field, val) {},
     updatePreviewAvatar(url) {},
 
-    handleImageUpload(e) {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-
-      if (!file.type.startsWith('image/')) {
-        notify('يرجى اختيار ملف صورة صالح (PNG, JPG, WEBP)', 'error');
-        return;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        notify('حجم الصورة كبير جداً، الحد الأقصى المسموح به 5 ميجابايت', 'error');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        const base64 = uploadEvent.target.result;
-        const input = document.getElementById('builderCutoutInput');
-        if (input) input.value = base64;
-        this.captureSetup();
-        notify('تم رفع الصورة بنجاح! احفظ التعديلات لتطبيقها.', 'success');
-      };
-      reader.onerror = () => {
-        notify('حدث خطأ أثناء قراءة ملف الصورة', 'error');
-      };
-      reader.readAsDataURL(file);
+    async handleImageUpload(e) {
+      const file=e.target.files?.[0];if(!file)return;
+      if(!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size>5*1024*1024){e.target.value='';notify(t('اختر صورة PNG أو JPG أو WebP حتى ٥ ميجابايت','Choose PNG, JPG or WebP up to 5 MB'),'error');return;}
+      const input=document.getElementById('builderCutoutInput'),url=URL.createObjectURL(file);e.target.disabled=true;
+      try{const png=await prepareTeacherCutout(url);if(!input?.isConnected)return;input.value=png;this.captureSetup();notify(t('الصورة شفافة وجاهزة بصيغة PNG. احفظ التعديلات.','Transparent PNG ready. Save your changes.'),'success');}
+      catch(error){notify(error.message,'error');e.target.value='';}finally{URL.revokeObjectURL(url);e.target.disabled=false;}
     },
 
     handleSubdomainInput(val) {
@@ -987,6 +968,7 @@ export function registerTeacherPlatformActions(appInstance) {
         is_active: true
       };
 
+      if(payload.cutout_avatar_url && payload.cutout_avatar_url!==previous.cutout_avatar_url){try{payload.cutout_avatar_url=await prepareTeacherCutout(payload.cutout_avatar_url);}catch(error){notify(error.message,'error');return;}}
       const saveBtn = document.getElementById('btnPublishPlatform');
       const originalText = saveBtn ? saveBtn.innerHTML : '';
       if (saveBtn) {

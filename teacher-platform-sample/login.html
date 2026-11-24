@@ -498,10 +498,10 @@
   </header>
 
   <!-- 2. منطقة الهيرو الرئيسية -->
-  <main class="hero-container">
+  <main class="hero-container" style="grid-template-columns:1fr;max-width:850px">
 
     <!-- العمود الأيمن: تأثير "داخل وخارج من الفريم" (Pop-Out) -->
-    <div class="popout-stage">
+    <div class="popout-stage" hidden style="display:none">
       <!-- الدائرة الجرافيكية الكاملة خلف المدرس -->
       <div class="circle-backdrop"></div>
 
@@ -524,10 +524,7 @@
 
       <!-- كارت تسجيل الدخول الموحد -->
       <div class="auth-card">
-        <div class="auth-tabs">
-          <button class="auth-tab active" id="tabBtnLogin" onclick="setMode('login')">تسجيل دخول الطلاب</button>
-          <button class="auth-tab" id="tabBtnRegister" onclick="setMode('register')">إنشاء حساب طالب جديد</button>
-        </div>
+        <h2 style="font-size:1.2rem;margin-bottom:1.5rem">تسجيل دخول الطلاب</h2>
 
         <!-- 1. نموذج الدخول السريع -->
         <form id="formLogin" onsubmit="submitForm(event)">
@@ -543,33 +540,6 @@
 
           <button type="submit" class="btn-main-action">
             <span>دخول إلى منصتي</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          </button>
-        </form>
-
-        <!-- 2. نموذج طالب جديد -->
-        <form id="formRegister" style="display: none;" onsubmit="submitForm(event)">
-          <div class="form-group">
-            <label class="form-label">اسم الطالب ثلاثي</label>
-            <input type="text" class="form-input" placeholder="مثال: مهند خالد عبد الحليم" value="مهند خالد" required>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">رقم واتساب الطالب</label>
-            <input type="tel" class="form-input" placeholder="01123671177" value="01123671177" required>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">الصف الدراسي</label>
-            <select class="form-select">
-              <option>الصف الثالث الثانوي</option>
-              <option>الصف الثاني الثانوي</option>
-              <option>الصف الأول الثانوي</option>
-            </select>
-          </div>
-
-          <button type="submit" class="btn-main-action">
-            <span>إنشاء الحساب والبدء</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           </button>
         </form>
@@ -630,7 +600,7 @@
           return;
         }
         const res = await fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(sub)}`).catch(() => null);
-        if (res.ok) {
+        if (res?.ok) {
           const data = await res.json();
           if (data && data.settings) {
             localStorage.setItem('centrly_platform_settings', JSON.stringify(data.settings));
@@ -706,9 +676,15 @@
         const sub = document.querySelector('.main-subtitle');
         if (sub) sub.innerText = s.subtitle_text;
       }
-      if (s.cutout_avatar_url) {
-        const img = document.querySelector('.teacher-cutout-img');
-        if (img) { img.src = s.cutout_avatar_url; img.style.display = ''; }
+      const stage = document.querySelector('.popout-stage');
+      const img = document.querySelector('.teacher-cutout-img');
+      const container=document.querySelector('.hero-container');
+      const hidePhoto = () => { if(stage){stage.hidden=true;stage.style.display='none';}if(container){container.style.gridTemplateColumns='1fr';container.style.maxWidth='850px';} };
+      hidePhoto();
+      if (img && s.cutout_avatar_url) {
+        img.onload = () => { stage.hidden=false;stage.style.display='';img.style.display='';container.style.gridTemplateColumns='';container.style.maxWidth=''; };
+        img.onerror = hidePhoto;
+        img.src = s.cutout_avatar_url;
       }
     }
 
@@ -717,25 +693,6 @@
     // استرجاع اللون الموحد المعتمد لمنصة المعلم
     const savedTheme = localStorage.getItem('portal_theme') || 'emerald';
     document.body.className = 'theme-' + savedTheme;
-
-    function setMode(mode) {
-      const btnL = document.getElementById('tabBtnLogin');
-      const btnR = document.getElementById('tabBtnRegister');
-      const formL = document.getElementById('formLogin');
-      const formR = document.getElementById('formRegister');
-
-      if (mode === 'login') {
-        btnL.classList.add('active');
-        btnR.classList.remove('active');
-        formL.style.display = 'block';
-        formR.style.display = 'none';
-      } else {
-        btnR.classList.add('active');
-        btnL.classList.remove('active');
-        formL.style.display = 'none';
-        formR.style.display = 'block';
-      }
-    }
 
     function showLoginToast(message, type = 'info') {
       let toast = document.getElementById('loginToast');

@@ -1150,7 +1150,7 @@ test("CASE 16 - Student Homework Redo Workflow: Requested redo moves assignment 
   );
 });
 
-test("CASE 17 - Paper Exams Clean 'قريباً' Freeze State: Minimalist card, no emojis, clear feature roadmap", () => {
+test("CASE 17 - Paper Exams Clean 'قريباً' Freeze State: Minimalist card, no emojis, clear feature roadmap", async () => {
   const sidebarJs = fs.readFileSync(path.resolve(__dirname, '../../web/src/components/Sidebar.js'), 'utf8');
   const teacherQuizzesJs = fs.readFileSync(path.resolve(__dirname, '../../web/src/components/TeacherQuizzesView.js'), 'utf8');
 
@@ -1159,10 +1159,15 @@ test("CASE 17 - Paper Exams Clean 'قريباً' Freeze State: Minimalist card, 
     sidebarJs.includes("{ id: 'paper-exams', title: 'الامتحانات الورقية وبابل شيت', icon: 'print', badge: 'قريباً' }"),
     "Sidebar must register paper-exams with badge 'قريباً'"
   );
-  assert.ok(
-    sidebarJs.includes("${r.badge ?") && sidebarJs.includes("escapeHtml(r.badge)"),
-    "Sidebar must render the badge text cleanly"
-  );
+  const {renderSidebar}=await import('../../web/src/components/Sidebar.js');
+  const previousStorage=globalThis.localStorage;
+  try {
+    let locale='ar';globalThis.localStorage={getItem:()=>locale};
+    const arabic=renderSidebar('sessions',{role:'owner'});
+    assert.match(arabic,/data-route="paper-exams"/);
+    assert.ok(arabic.includes('>قريباً</span>'),'Arabic sidebar displays its badge');
+    locale='en';assert.ok(renderSidebar('sessions',{role:'owner'}).includes('>Coming soon</span>'),'English sidebar displays its translated badge');
+  } finally {globalThis.localStorage=previousStorage;}
 
   // 2. TeacherQuizzesView clean freeze state
   assert.ok(

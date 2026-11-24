@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {config} from '../dist/shared/config/index.js';
 import {signSmsContext,readSmsContext,smsProof,akedlyGateway} from '../dist/shared/utils/akedlyOtp.js';
-import {preparePhoneOtp,requestPhoneOtp,verifyPhoneOtp,phoneOtpHash} from '../dist/shared/utils/phoneOtp.js';
+import {preparePhoneOtp,requestPhoneOtp,verifyPhoneOtp,phoneOtpHash,phoneOtpGateway} from '../dist/shared/utils/phoneOtp.js';
 import {redactPhoneAuthTelemetry} from '../dist/shared/utils/phoneAuthRedaction.js';
 
 const scope={subject:'private-invitation-hash',origin:'https://centerly-eg.com'},phone='201123671177',purpose='assistant';
@@ -55,4 +55,17 @@ test('OTP telemetry strips credentials in URLs, codes and account setup tokens',
  const raw=JSON.stringify(result);for(const value of ['my-secret','123456','private-nonce','private-context'])assert.ok(!raw.includes(value));assert.ok(raw.includes('pipelineID=public'));
  const body=JSON.stringify({code:'123456',proof:{context:'signed-private-context'},APIKey:'secret'});
  const encoded=redactPhoneAuthTelemetry({request:{data:body}});assert.ok(!JSON.stringify(encoded).includes('123456'));assert.ok(!JSON.stringify(encoded).includes('signed-private-context'));assert.ok(!JSON.stringify(encoded).includes('secret'));
+});
+
+test('SMS failure falls back to the same code on WhatsApp, and verification follows the stored server channel',async t=>{
+ setup(t);const oldSend=akedlyGateway.send,oldReady=phoneOtpGateway.ready,oldMetaSend=phoneOtpGateway.send;let savedCode,actions=[];
+ t.after(()=>{akedlyGateway.send=oldSend;phoneOtpGateway.ready=oldReady;phoneOtpGateway.send=oldMetaSend;});
+ const proof=signSmsContext({...scope,purpose,phone,pipeline:config.phoneOtp.pipelineId,expires:Date.now()+60000,challengeRequired:false});
+ akedlyGateway.send=async(_phone,code)=>{savedCode=code;throw new Error('SMS failed');};
+ phoneOtpGateway.ready=async()=>true;phoneOtpGateway.send=async(to,code)=>{assert.equal(to,phone);assert.equal(code,savedCode);return 'sent';};
+ const db={rpc:async(name,args)=>{if(name==='phone_otp_provider_attempt'){actions.push(args.p_action);return {data:args.p_action==='check'?{delivery_channel:'whatsapp'}:{success:true},error:null};}return {data:true,error:null};}};
+ const operation=async action=>action==='verify'?{success:true}:{phone};
+ const result=await requestPhoneOtp(db,purpose,'ip',operation,scope,{context:proof});assert.equal(result.channel,'whatsapp');assert.equal(result.code,undefined);assert.ok(actions.includes('whatsapp_fallback'));
+ const originalVerify=akedlyGateway.verify;t.after(()=>{akedlyGateway.verify=originalVerify;});akedlyGateway.verify=async()=>{throw Error('SMS verify must not run for WhatsApp fallback');};
+ assert.equal((await verifyPhoneOtp(db,purpose,operation,scope,result.challenge_id,savedCode)).success,true);
 });

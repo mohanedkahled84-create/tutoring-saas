@@ -1,8 +1,9 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.46.0';
-export function renderPortalHomeSummary(data={},role='student',{showRank=true,showContact=false}={}){
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.93.0';
+export function renderPortalHomeSummary(data={},role='student',{showRank=true,showContact=false,showWelcome=true}={}){
  const prefs=data.preferences || {},summary=data.summary || {},sections=[];
+ if(showWelcome && prefs.welcome_message)sections.push(`<section style="white-space:pre-wrap;line-height:1.8;padding:18px">${e(prefs.welcome_message)}</section>`);
  const card=(title,content)=>`<section style="border:1px solid var(--centrly-line,#e2e8f0);border-radius:16px;background:var(--centrly-surface,#fff);padding:18px;color:var(--centrly-ink,#0f172a);min-width:0;overflow-wrap:anywhere"><h3 style="font-size:1rem;margin:0 0 .6rem">${title}</h3>${content}</section>`;
- if(prefs.welcome_message)sections.push(card('رسالة المعلم',`<p style="white-space:pre-wrap;line-height:1.8;margin:0">${e(prefs.welcome_message)}</p>`));
+
  if(showRank && (role==='parent'?prefs.show_parent_rank===true:prefs.show_student_rank!==false) && Object.hasOwn(summary,'student_rank'))sections.push(card(role==='parent'?'ترتيب ابنك في المجموعة':'ترتيبك في المجموعة',`<p style="margin:0">${Number.isInteger(summary.student_rank) && summary.student_rank>0?`المركز ${Number(summary.student_rank)} من ${Number(summary.group_size)} طالبًا`:'يظهر الترتيب بعد رصد الحضور والدرجات'} · هذا الشهر</p>`));
  if(role==='student' && prefs.show_student_leaderboard===true && Array.isArray(data.leaderboard?.entries) && data.leaderboard.entries.length)sections.push(card('أوائل المجموعة هذا الشهر',`<ol style="list-style:none;padding:0;margin:0;display:grid;gap:.6rem">${data.leaderboard.entries.map(row=>`<li style="display:flex;gap:.75rem;align-items:center"><strong style="min-width:32px">${Number(row.position)}</strong><span>${e(row.name)}</span></li>`).join('')}</ol>`));
  if(prefs.show_upcoming_sessions!==false && data.upcoming_sessions?.length)sections.push(card('الحصص القادمة',data.upcoming_sessions.map(row=>`<p style="margin:.5rem 0">${e(row.group_name)} · ${e(row.session_date)} ${row.start_time?'· '+e(String(row.start_time).slice(0,5)):''}</p>`).join('')));

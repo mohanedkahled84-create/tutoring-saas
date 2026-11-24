@@ -17,8 +17,8 @@ test('cold HTML installs the opening renderer before the independent portal entr
  const root={innerHTML:'',querySelector(selector){return selector==='button'?{addEventListener(){}}:this.innerHTML.includes('aria-busy="true"');}},window={};
  vm.runInNewContext(opening,{window,setTimeout:fn=>{timeout=fn;},clearTimeout(){},document:{getElementById:id=>id==='app'?root:null}});
  assert.equal(typeof window.renderPortalOpening,'function');assert.match(root.innerHTML,/role="status"/);assert.match(root.innerHTML,/prefers-reduced-motion/);
- root.innerHTML='';window.renderPortalOpening(root);assert.match(root.innerHTML,/portal-opening-mark/);
- assert.match(root.innerHTML,/src="\/favicon-192x192\.png"/);
+ root.innerHTML='';window.renderPortalOpening(root);assert.match(root.innerHTML,/portal-opening-skeleton/);
+ assert.doesNotMatch(root.innerHTML,/<img|favicon|data:image/);
  timeout();
  assert.match(root.innerHTML,/إعادة المحاولة/);
  root.innerHTML='<form>login</form>';
