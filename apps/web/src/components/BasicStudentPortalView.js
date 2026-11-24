@@ -1,10 +1,10 @@
-import './StudentEmailSettings.js?v=9.93.0';
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.93.0';
-import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.93.0';
-import {renderStudentAttendancePassHtml} from '../utils/studentBarcodeCard.js?v=9.93.0';
-import {getIcon} from '../utils/icons.js?v=9.93.0';
+import './StudentEmailSettings.js?v=9.94.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.94.0';
+import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.94.0';
+import {renderStudentAttendancePassHtml} from '../utils/studentBarcodeCard.js?v=9.94.0';
+import {getIcon} from '../utils/icons.js?v=9.94.0';
 
-const tabs=[['attendance','الحضور'],['grades','الدرجات'],['materials','الواجب والمذكرات'],['card','بطاقة الطالب'],['email','البريد الإلكتروني']];
+const tabs=[['attendance','الحضور'],['grades','الدرجات'],['materials','الواجب والمذكرات'],['card','بطاقة الطالب']];
 const card=(title,body)=>`<article class="bs-card"><h3>${e(title)}</h3>${body}</article>`;
 const empty=text=>`<p class="bs-empty">${e(text)}</p>`;
 function safeUrl(value){if(typeof value!=='string' || !value.trim())return '';try{const url=new URL(value,typeof location==='undefined'?'https://centerly-eg.com':location.origin);return ['http:','https:'].includes(url.protocol)?url.href:'';}catch{return '';}}
@@ -29,7 +29,7 @@ export function renderBasicStudentPortal(data={},activeTab='attendance'){
  <section class="bs-panel" id="basic-panel-grades" role="tabpanel" aria-labelledby="basic-tab-grades" ${tab==='grades'?'':'hidden'}><h2>الدرجات والنتائج</h2>${quizzes.length?quizzes.map(q=>card(q.title || 'اختبار',`<div class="bs-row"><bdi class="bs-tag" dir="ltr">${e(q.score ?? '—')} / ${e(q.max_score ?? '—')}</bdi><small>${e(q.date || q.quiz_date || '')}</small></div>${q.note?`<p>ملاحظة المعلم: ${e(q.note)}</p>`:''}`)).join(''):empty('لم تُرصد درجات بعد.')}</section>
  <section class="bs-panel" id="basic-panel-materials" role="tabpanel" aria-labelledby="basic-tab-materials" ${tab==='materials'?'':'hidden'}><h2>الواجبات</h2>${homework.length?homework.map(assignment).join(''):empty('لا توجد واجبات حتى الآن.')}<h2>المذكرات</h2>${notes.length?notes.map(note).join(''):empty('لا توجد مذكرات حتى الآن.')}</section>
  <section class="bs-panel" id="basic-panel-card" role="tabpanel" aria-labelledby="basic-tab-card" ${tab==='card'?'':'hidden'}><h2>بطاقة الحضور</h2>${student.student_code || student.code?renderStudentAttendancePassHtml(student):empty('لم يُسجَّل كود حضور للطالب بعد.')}</section>
- <section id="basic-panel-email" class="bs-panel" ${tab==='email'?'':'hidden'}><student-email-settings></student-email-settings></section><footer class="bs-footer">${/^\d{10,15}$/.test(contact)?`<a class="bs-button" href="https://wa.me/${contact}" target="_blank" rel="noopener noreferrer">التواصل مع المعلم</a>`:''}<span>متابعتك الدراسية · سنترلي</span></footer>
+ <footer class="bs-footer">${/^\d{10,15}$/.test(contact)?`<a class="bs-button" href="https://wa.me/${contact}" target="_blank" rel="noopener noreferrer">التواصل مع المعلم</a>`:''}<span>متابعتك الدراسية · سنترلي</span></footer>
  </div></main>`;
 }
 if(typeof window!=='undefined'){

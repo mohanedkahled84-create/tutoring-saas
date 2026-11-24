@@ -1,8 +1,8 @@
-import { escapeHtml as e } from './utils/escapeHtml.js?v=9.93.0';
-import { API_BASE_URL } from './services/api.js?v=9.93.0';
-import {mountPhoneVerification} from './components/PhoneVerification.js?v=9.93.0';
-import { assistantRequest } from './services/assistantClient.js?v=9.93.0';
-import {getIcon} from './utils/icons.js?v=9.93.0';
+import { escapeHtml as e } from './utils/escapeHtml.js?v=9.94.0';
+import { API_BASE_URL } from './services/api.js?v=9.94.0';
+import {mountPhoneVerification} from './components/PhoneVerification.js?v=9.94.0';
+import { assistantRequest } from './services/assistantClient.js?v=9.94.0';
+import {getIcon} from './utils/icons.js?v=9.94.0';
 
 const main=document.getElementById('main'),actions=document.getElementById('account-actions'),dialog=document.getElementById('editor');
 const params=new URLSearchParams(location.search),workspace=params.get('workspace') || '';
@@ -45,12 +45,12 @@ async function beginRegistration() {
  document.body.className='assistant-auth';
  main.innerHTML=authFrame(`<span class="auth-kicker">دعوتك لفريق العمل</span><h1>${info.recovery?'نرجّع لك حسابك':'أهلًا بك في الفريق'}</h1><p class="muted">أكد رقمك، وبعدها أكمل حسابك وابدأ شغلك.</p><div class="auth-steps" aria-label="خطوات التسجيل"><span class="current">١ تأكيد الرقم</span><span>٢ بياناتك</span></div><div id="registration-verification"></div><p class="helper">لديك حساب بالفعل؟ <button id="back-to-login" type="button" class="text-button">تسجيل الدخول</button></p>`);
  document.getElementById('back-to-login').onclick=()=>{registration=null;invitation=null;auth();};
- stopVerification=mountPhoneVerification(main.querySelector('#registration-verification'),{info,requestChallenge:()=>api('/registration/challenge',{invitation:registration}),requestCode:(proof={})=>api('/registration/request',{invitation:registration,...proof}),verifyCode:fields=>api('/registration/verify',{invitation:registration,...fields}),onVerified:result=>{invitation=result.ticket;verifiedPhone=result.phone;auth();}});
+ stopVerification=mountPhoneVerification(main.querySelector('#registration-verification'),{info,onStageChange:stage=>{const title=main.querySelector('.auth-card h1');if(title)title.textContent=stage==='otp'?'اكتب كود التأكيد':info.recovery?'نرجّع لك حسابك':'أهلًا بك في الفريق';const intro=main.querySelector('.auth-card>.muted');if(intro)intro.textContent=stage==='otp'?'تأكيد الكود هو الخطوة الأولى لإكمال حسابك.':'أكد رقمك، وبعدها أكمل حسابك وابدأ شغلك.';},requestChallenge:()=>api('/registration/challenge',{invitation:registration}),requestCode:(proof={})=>api('/registration/request',{invitation:registration,...proof}),verifyCode:fields=>api('/registration/verify',{invitation:registration,...fields}),onVerified:result=>{invitation=result.ticket;verifiedPhone=result.phone;auth();}});
 }
 let stopTeacherWorkspace;
 async function openWorkspace(){
  const version=++workspaceRequest;
- const {mountAssistantWorkspace}=await import('./assistantRuntime.js?v=9.93.0');
+ const {mountAssistantWorkspace}=await import('./assistantRuntime.js?v=9.94.0');
  if(version!==workspaceRequest)return;
  document.body.className='assistant-workspace';
  actions.innerHTML='';

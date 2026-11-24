@@ -5,7 +5,8 @@ import {transparentPixels} from '../../web/src/utils/teacherCutout.js';
 test('approved period prices use the current monthly rate and reject other periods',()=>{
  assert.deepEqual(cyclePrice(79900,6),{before:479400,total:407490,months:6,discount:15});
  assert.deepEqual(cyclePrice(79900,12),{before:958800,total:719100,months:12,discount:25});
- assert.equal(cyclePrice(79900).before,95880);assert.equal(cyclePrice(79900).total,79900);
+ assert.equal(cyclePrice(79900).before,100000);assert.equal(cyclePrice(79900).total,79900);
+ assert.equal(cyclePrice(24900,1,'basic_v1').before,35000);assert.equal(cyclePrice(99900,1,'max_v1').before,125000);
  assert.throws(()=>cyclePrice(79900,3));
 });
 test('opaque PNG and fully empty images cannot masquerade as a teacher cutout',()=>{

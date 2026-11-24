@@ -592,14 +592,7 @@
       }
 
       try {
-        const saved = Number(localStorage.getItem('centrly_platform_settings_saved_at') || 0);
-        const cachedSettings = JSON.parse(localStorage.getItem('centrly_platform_settings') || 'null');
-        if (cachedSettings?.subdomain === sub && Date.now() - saved >= 0 && Date.now() - saved < 300000) {
-          applySettingsToDOM(cachedSettings);
-          checkPublishStatus(cachedSettings);
-          return;
-        }
-        const res = await fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(sub)}`).catch(() => null);
+        const res = await fetch(`https://tutoring-backend-production-c8dd.up.railway.app/api/platform/public/${encodeURIComponent(sub)}`,{cache:'no-store'}).catch(() => null);
         if (res?.ok) {
           const data = await res.json();
           if (data && data.settings) {
@@ -681,6 +674,7 @@
       const container=document.querySelector('.hero-container');
       const hidePhoto = () => { if(stage){stage.hidden=true;stage.style.display='none';}if(container){container.style.gridTemplateColumns='1fr';container.style.maxWidth='850px';} };
       hidePhoto();
+      if(img && !s.cutout_avatar_url){img.onload=null;img.onerror=null;img.removeAttribute('src');img.style.display='none';}
       if (img && s.cutout_avatar_url) {
         img.onload = () => { stage.hidden=false;stage.style.display='';img.style.display='';container.style.gridTemplateColumns='';container.style.maxWidth=''; };
         img.onerror = hidePhoto;

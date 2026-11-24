@@ -1,8 +1,8 @@
-import {prepareTeacherCutout} from '../utils/teacherCutout.js?v=9.93.0';
-import {localize as t} from '../utils/language.js?v=9.93.0';
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.93.0";
-import { getIcon } from "../utils/icons.js?v=9.93.0";
-import { request, API_BASE_URL } from "../services/api.js?v=9.93.0";
+import {prepareTeacherCutout} from '../utils/teacherCutout.js?v=9.94.0';
+import {localize as t} from '../utils/language.js?v=9.94.0';
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.94.0";
+import { getIcon } from "../utils/icons.js?v=9.94.0";
+import { request, API_BASE_URL } from "../services/api.js?v=9.94.0";
 
 /**
  * Centrly White-Label Platform Builder & Student Engagement Hub
@@ -991,6 +991,7 @@ export function registerTeacherPlatformActions(appInstance) {
         const activeTenantKey = appInstance?.user?.tenant_id || 'active';
         localStorage.setItem(`centrly_platform_settings_${activeTenantKey}`, JSON.stringify(savedSettings));
         localStorage.setItem('centrly_platform_settings', JSON.stringify(savedSettings));
+        localStorage.setItem('centrly_platform_settings_saved_at',String(Date.now()));
         localStorage.setItem(`centrly_platform_published_${activeTenantKey}`, 'true');
         localStorage.setItem('centrly_platform_published', 'true');
         localStorage.setItem('portal_theme', savedSettings.theme_preset);

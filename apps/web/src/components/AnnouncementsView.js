@@ -1,7 +1,7 @@
-import {localize} from '../utils/language.js?v=9.93.0';
-import {renderCommercialWallet} from './CommercialBillingView.js?v=9.93.0';
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.93.0';
-import {request} from '../services/api.js?v=9.93.0';
+import {localize} from '../utils/language.js?v=9.94.0';
+import {renderCommercialWallet} from './CommercialBillingView.js?v=9.94.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.94.0';
+import {request} from '../services/api.js?v=9.94.0';
 const statuses=()=>({draft:localize("مسودة", "Draft"),published:localize("منشور", "Published"),archived:localize("مؤرشف", "Archived"),queued:localize("في الانتظار", "Queued"),sending:localize("جار الإرسال", "Sending"),sent:localize("تم الإرسال", "Sent"),delivered:localize("تم التسليم", "Delivered"),read:localize("تمت القراءة", "Read"),failed:localize("لم يصل", "Failed"),unknown:localize("نتيجة غير مؤكدة", "Unconfirmed"),skipped:localize("لم يُرسل", "Not sent")});
 const requestStates=()=>({submitted:localize("وصل طلبك", "Request received"),reviewing:localize("قيد المراجعة", "Under review"),meta_pending:localize("بانتظار اعتماد واتساب", "Awaiting WhatsApp approval"),available:localize("متاح", "Available"),rejected:localize("يحتاج تعديلًا", "Changes needed")});
 // Translate only the system's known catalog labels; preserve administrator-authored text.

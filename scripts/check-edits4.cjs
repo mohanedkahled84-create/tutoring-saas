@@ -31,7 +31,7 @@ const root=path.resolve(__dirname,'..');
    window.host=document.createElement('div');document.body.append(host);
    mountPhoneVerification(host,{info:{phone:'201099999999'},requestCode:async()=>({challenge_id:'fixture',expires_in:300,retry_after:60,message:'Code sent'}),verifyCode:async()=>({}),onVerified:()=>{}});
   });
-  await page.locator('#phone-code').fill('123456');await page.locator('#request-phone-code').click();
+  assert.equal(await page.locator('#phone-code').isVisible(),false);await page.locator('#request-phone-code').click();
   await page.waitForFunction(()=>document.activeElement.id==='phone-code');assert.equal(await page.locator('#phone-code').isVisible(),true);
   const alpha=await page.evaluate(async()=>{
    const {prepareTeacherCutout}=await import('/apps/web/src/utils/teacherCutout.js');

@@ -19,6 +19,7 @@ export const platformRouter = Router();
 publicPlatformRouter.get(
   "/public/:subdomain",
   async (req: Request, res: Response): Promise<void> => {
+    res.setHeader('Cache-Control','no-store');
     const subdomain = req.params.subdomain;
     if (!subdomain) {
       res.status(400).json({ error: { code: "BAD_REQUEST", message: "Subdomain is required" } });

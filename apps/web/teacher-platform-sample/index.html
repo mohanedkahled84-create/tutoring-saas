@@ -3,7 +3,7 @@
 <html lang="ar" dir="rtl">
 
 <head>
-  <script type="module" src="/apps/web/src/components/StudentEmailSettings.js?v=9.93.0"></script>
+  <script type="module" src="/apps/web/src/components/StudentEmailSettings.js?v=9.94.0"></script>
   <link rel="preconnect" href="https://tutoring-backend-production-c8dd.up.railway.app" crossorigin>
   <link rel="modulepreload" href="/apps/web/src/utils/portalCache.js">
   <script>
@@ -14,7 +14,7 @@
     }));
     // The body attaches the visible error handler after parsing.
     window.__centrlyStudentSession.catch(() => {});
-    window.__centrlyPortalHome = import('/apps/web/src/components/PortalHomeSummary.js?v=9.93.0');
+    window.__centrlyPortalHome = import('/apps/web/src/components/PortalHomeSummary.js?v=9.94.0');
     window.__centrlyPortalHome.catch(() => {});
   </script>
 
@@ -2287,7 +2287,6 @@
       <!-- روابط السايد بار بأيقونات SVG دقيقة بدون إيموجي (مرتبة حسب الأولوية للطالب) -->
 
       <nav class="sidebar-menu">
-        <button class="menu-item" data-email-nav onclick="switchPanel('email',this)"><span class="menu-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span><span>البريد الإلكتروني</span></button>
 
         <!-- 1. الرئيسية ومتابعة المستوى -->
 
@@ -2419,7 +2418,6 @@
 
       <!-- ================= 1. الصفحة الرئيسية (HOME DASHBOARD) ================= -->
 
-      <section id="panel-email" class="panel"><student-email-settings></student-email-settings></section>
       <section id="panel-home" class="panel active">
         <student-email-settings prompt></student-email-settings>
 

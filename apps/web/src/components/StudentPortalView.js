@@ -1,12 +1,12 @@
-import {openQuizAttempt} from '../utils/quizAttemptClient.js?v=9.93.0';
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.93.0";
-import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.93.0';
-import {portalCairoClock} from '../utils/portalClock.js?v=9.93.0';
-import { getIcon } from "../utils/icons.js?v=9.93.0";
-import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js?v=9.93.0";
-import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=9.93.0";
-import { openVideoPlayerModal } from "./VideoLessonsView.js?v=9.93.0";
-import { request } from "../services/api.js?v=9.93.0";
+import {openQuizAttempt} from '../utils/quizAttemptClient.js?v=9.94.0';
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.94.0";
+import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.94.0';
+import {portalCairoClock} from '../utils/portalClock.js?v=9.94.0';
+import { getIcon } from "../utils/icons.js?v=9.94.0";
+import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js?v=9.94.0";
+import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=9.94.0";
+import { openVideoPlayerModal } from "./VideoLessonsView.js?v=9.94.0";
+import { request } from "../services/api.js?v=9.94.0";
 
 /**
  * Centrly Student Web Portal Component
@@ -1335,7 +1335,7 @@ if (typeof window !== 'undefined') {
           
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem; gap: 0.5rem;">
             <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; line-height: 1.6;">
-              <span style="color: #2563eb; font-weight: 900;">(${exam.currentIndex + 1})</span> 
+              <span style="color: #2563eb; font-weight: 900;">(${exam.currentIndex + 1})</span>
               ${escapeHtml(q.text || '')}
             </div>
             <span style="background: #eff6ff; color: #1e40af; font-size: 0.78rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; white-space: nowrap;">
