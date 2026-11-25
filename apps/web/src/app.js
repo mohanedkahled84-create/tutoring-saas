@@ -1,19 +1,19 @@
-import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.97.0';
-import {applyLocale,getLocale} from './utils/locale.js?v=9.97.0';
-import {portalCairoClock} from './utils/portalClock.js?v=9.97.0';
-import { assistantPay } from "./utils/assistantPay.js?v=9.97.0";
-import { authService } from './services/auth.js?v=9.97.0';
-import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=9.97.0';
-import { renderSidebar } from './components/Sidebar.js?v=9.97.0';
-import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.97.0';
-import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=9.97.0';
-import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js?v=9.97.0';
-import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.97.0';
-import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=9.97.0';
-import { getIcon } from './utils/icons.js?v=9.97.0';
-import { escapeHtml } from './utils/escapeHtml.js?v=9.97.0';
-import { playBeep, unlockAudio } from './utils/beepAudio.js?v=9.97.0';
-import { normalizeDigits } from './utils/normalizeDigits.js?v=9.97.0';
+import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.98.0';
+import {applyLocale,getLocale} from './utils/locale.js?v=9.98.0';
+import {portalCairoClock} from './utils/portalClock.js?v=9.98.0';
+import { assistantPay } from "./utils/assistantPay.js?v=9.98.0";
+import { authService } from './services/auth.js?v=9.98.0';
+import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=9.98.0';
+import { renderSidebar } from './components/Sidebar.js?v=9.98.0';
+import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.98.0';
+import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=9.98.0';
+import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js?v=9.98.0';
+import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.98.0';
+import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=9.98.0';
+import { getIcon } from './utils/icons.js?v=9.98.0';
+import { escapeHtml } from './utils/escapeHtml.js?v=9.98.0';
+import { playBeep, unlockAudio } from './utils/beepAudio.js?v=9.98.0';
+import { normalizeDigits } from './utils/normalizeDigits.js?v=9.98.0';
 
 let renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView;
 
@@ -150,7 +150,7 @@ export class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=9.97.0').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=9.98.0').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
@@ -279,7 +279,7 @@ export class CentrlyApp {
     try {
       const prefix = this.getCachePrefix();
       if (!prefix) return;
-      localStorage.setItem(`${prefix}${key}`, JSON.stringify(data));
+      localStorage.setItem(`${prefix}${key}`, JSON.stringify({ v: '9.98.0', ts: Date.now(), data }));
     } catch (_) {}
   }
 
@@ -288,7 +288,13 @@ export class CentrlyApp {
       const prefix = this.getCachePrefix();
       if (!prefix) return defaultValue;
       const raw = localStorage.getItem(`${prefix}${key}`);
-      return raw ? JSON.parse(raw) : defaultValue;
+      if (!raw) return defaultValue;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.v === '9.98.0' && Number.isFinite(parsed.ts) && (Date.now() - parsed.ts) < 2 * 60 * 60 * 1000) {
+        return parsed.data !== undefined ? parsed.data : defaultValue;
+      }
+      localStorage.removeItem(`${prefix}${key}`);
+      return defaultValue;
     } catch (_) {
       return defaultValue;
     }
@@ -324,7 +330,7 @@ export class CentrlyApp {
         this.adminOverviewData = cachedAdminOverview;
       }
       const cachedBilling = this.loadCache('billingState', null);
-      if (cachedBilling) {
+      if (cachedBilling && cachedBilling.commercial) {
         this.billingState = cachedBilling;
       }
       const cachedMaterials = this.loadCache('materials', null);
@@ -1499,7 +1505,7 @@ export class CentrlyApp {
             ]);
             this.students = Array.isArray(studRes) ? studRes : (studRes.students || []);
             this.groups = Array.isArray(grpRes) ? grpRes : (grpRes.groups || []);
-            if (billingRes) this.billingState = billingRes;
+            if (billingRes) this.billingState = mergePrefetchedBilling(this.billingState, billingRes);
             this.saveCache('students', this.students);
             this.saveCache('groups', this.groups);
             if (billingRes) this.saveCache('billingState', this.billingState);

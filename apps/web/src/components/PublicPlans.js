@@ -1,6 +1,6 @@
-import {cyclePicker,priceMarkup} from '../utils/subscriptionPricing.js?v=9.97.0';
-import {request} from '../services/api.js?v=9.97.0';
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.97.0';
+import {cyclePicker,priceMarkup} from '../utils/subscriptionPricing.js?v=9.98.0';
+import {request} from '../services/api.js?v=9.98.0';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.98.0';
 let cached=null,loadedAt=0;
 const money=n=>(Number(n)/100).toLocaleString('ar-EG',{maximumFractionDigits:2})+' ج.م';
 export function renderPublicPricing(){
