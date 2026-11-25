@@ -181,6 +181,14 @@
       "dest": "/assistant.html"
     },
     {
+      "src": "/auth/google/callback(?:/.*)?",
+      "headers": {
+        "Cache-Control": "private, no-store",
+        "Referrer-Policy": "no-referrer"
+      },
+      "dest": "/google-callback.html"
+    },
+    {
       "src": "/dashboard/?$",
       "has": [
         {

@@ -15,12 +15,13 @@ export async function startGoogleAuth(){
  const verifier=base64url(crypto.getRandomValues(new Uint8Array(64))),challenge=base64url(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier)));
  const {url}=await googleRequest('start',{challenge});
  if(new URL(url).protocol!=='https:')throw Error('تعذر بدء تسجيل جوجل بأمان.');
- sessionStorage.setItem(PKCE,JSON.stringify({verifier,createdAt:Date.now(),origin:location.origin}));
- sessionStorage.removeItem(PENDING);location.assign(url);
+ const payload=JSON.stringify({verifier,createdAt:Date.now(),origin:location.origin});
+ for(const storage of [sessionStorage,localStorage]){try{storage.setItem(PKCE,payload);storage.removeItem(PENDING);}catch{}}
+ location.assign(url);
 }
 export function renderGoogleProfile(profile={}){
  const selected=Array.isArray(profile.education_stages)?profile.education_stages:[];
- return `<header class="google-auth-heading"><img src="/apps/web/favicon-96x96.png" width="48" height="48" alt=""><h1>خلّينا نكمّل بياناتك</h1><p>خطوة بسيطة ونجهّز حسابك على سنترلي.</p></header>
+ return `<header class="google-auth-heading"><img src="/favicon-96x96.png" width="48" height="48" alt=""><h1>خلّينا نكمّل بياناتك</h1><p>خطوة بسيطة ونجهّز حسابك على سنترلي.</p></header>
  <div class="google-verified-email" dir="ltr">${escapeHtml(profile.email || '')}</div>
  <div id="googleProfileError" role="alert" tabindex="-1" hidden></div>
  <form id="googleProfileForm">
@@ -33,26 +34,40 @@ export function renderGoogleProfile(profile={}){
   <button class="btn btn-primary google-complete" type="submit">كمّل وادخل حسابك</button>
  </form><a class="google-back" href="/?view=login">العودة لتسجيل الدخول</a>`;
 }
-function readSaved(key){try{const value=JSON.parse(sessionStorage.getItem(key) || 'null');if(value && value.createdAt<=Date.now() && Date.now()-value.createdAt<MAX_AGE)return value;}catch{}sessionStorage.removeItem(key);return null;}
+function readSaved(key){
+ for(const storage of [sessionStorage,localStorage]){
+  try{
+   const raw=storage.getItem(key);if(!raw)continue;
+   const value=JSON.parse(raw);
+   if(value && Number.isFinite(value.createdAt) && value.createdAt<=Date.now() && Date.now()-value.createdAt<MAX_AGE)return value;
+  }catch{}
+ }
+ for(const storage of [sessionStorage,localStorage]){try{storage.removeItem(key);}catch{}}
+ return null;
+}
 async function finish(pending){
  if(pending.profile?.requires_profile || !pending.profile?.user?.id)throw Error('كمّل بيانات حسابك أولًا.');
  const {authService}=await import('./auth.js?v=9.97.0');
  // Changing teacher identities must clear the previous teacher/portal snapshots.
  authService.clearSession();authService.setSession(pending.profile.user,pending.session.access_token,pending.session.refresh_token);
- sessionStorage.removeItem(PKCE);sessionStorage.removeItem(PENDING);location.replace('/');
+ for(const storage of [sessionStorage,localStorage]){try{storage.removeItem(PKCE);storage.removeItem(PENDING);}catch{}}
+ location.replace('/');
 }
 export async function mountGoogleCallback(root=document.getElementById('googleAuthRoot')){
  const failure=message=>{root.innerHTML=`<header class="google-auth-heading"><h1>نرجع نجرّب تاني؟</h1><p>${escapeHtml(message)}</p></header><a class="btn btn-primary google-complete" href="/?view=login">العودة لتسجيل الدخول</a>`;};
  try{
   const incoming=window.__centrlyGoogleCallback || {},saved=readSaved(PKCE);
   let pending;
-  if(incoming.error){sessionStorage.removeItem(PKCE);sessionStorage.removeItem(PENDING);throw Error('تسجيل جوجل ما اكتملش. تقدر ترجع وتختار حسابك من جديد.');}
+  if(incoming.error){
+   for(const storage of [sessionStorage,localStorage]){try{storage.removeItem(PKCE);storage.removeItem(PENDING);}catch{}}
+   throw Error('تسجيل جوجل ما اكتملش. تقدر ترجع وتختار حسابك من جديد.');
+  }
   if(incoming.code){
    window.__centrlyGoogleCallback=null;
    if(!saved || saved.origin!==location.origin || !/^[A-Za-z0-9_-]{86}$/.test(saved.verifier))throw Error('افتح تسجيل جوجل من نفس الجهاز وابدأ من جديد.');
-   sessionStorage.removeItem(PKCE);
+   for(const storage of [sessionStorage,localStorage]){try{storage.removeItem(PKCE);}catch{}}
    pending={...await googleRequest('exchange',{code:incoming.code,verifier:saved.verifier}),createdAt:Date.now()};
-   sessionStorage.setItem(PENDING,JSON.stringify(pending));
+   for(const storage of [sessionStorage,localStorage]){try{storage.setItem(PENDING,JSON.stringify(pending));}catch{}}
   }else pending=readSaved(PENDING);
   if(!pending?.session?.access_token || !pending.profile)throw Error('انتهت مهلة تسجيل الدخول. ابدأ من جديد.');
   if(!pending.profile.requires_profile){await finish(pending);return;}
