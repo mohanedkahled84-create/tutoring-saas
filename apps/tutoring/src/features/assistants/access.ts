@@ -264,7 +264,8 @@ assistantManagementRouter.put('/:id/access',async(req:AuthenticatedRequest,res)=
   const db=getServiceSupabaseClient(),tenant=req.user!.tenant_id,id=z.uuid().parse(req.params.id),access=validateAssistantAccess(req.body);
   const {data:previous,error}=await db.from('assistants').select('salary_model,salary,work_weekdays,pay_start_date,status').eq('tenant_id',tenant).eq('id',id).maybeSingle();
   if(error || !previous) throw fault(404,'المساعد غير موجود');
-  const status=z.enum(['active','inactive','invited']).parse(req.body.status ?? previous.status);
+  let status=z.enum(['active','inactive','invited']).parse(req.body.status ?? previous.status);
+  if(previous.status==='active' && status==='invited') status='active';
   let pay;try{pay=validatePay(req.body,previous);}catch(error){throw fault(400,(error as Error).message);}
   const saved=await assistantRpc(db,'assistant_configure',{p_tenant:tenant,p_assistant:id,p_permissions:access.permissions,p_all_groups:access.all_groups,p_group_ids:access.group_ids,p_status:status,p_pay:pay});
   if(!saved) throw fault(404,'حساب المساعد غير موجود');

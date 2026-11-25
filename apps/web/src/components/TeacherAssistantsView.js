@@ -331,7 +331,7 @@ export function registerTeacherAssistantsActions(app) {
           <label for="modalEditTA_Status" class="form-label">حالة الوصول</label>
           <select id="modalEditTA_Status" class="form-select" style="min-height:44px;margin-bottom:1rem">
             <option value="active" ${assistant.status==='active'?'selected':''}>نشط</option>
-            <option value="invited" ${assistant.status==='invited'?'selected':''}>بانتظار قبول الدعوة</option>
+            ${assistant.status==='invited'?'<option value="invited" selected>بانتظار قبول الدعوة</option>':''}
             <option value="inactive" ${assistant.status==='inactive'?'selected':''}>إيقاف الوصول</option>
           </select>
           ${renderAssistantAccessFields('modalEditTA', this.groups || [], assistant.access)}
