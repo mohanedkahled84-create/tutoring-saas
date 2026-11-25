@@ -100,7 +100,16 @@ assistantAccessRouter.post('/login',async(req,res)=>{
   const {data:account,error}=await db.from('assistant_accounts').select('assistant_id,password_hash,credential_version').eq('tenant_id',tenant).eq('phone',normalized || 'invalid').maybeSingle();
   if(error) throw fault(503,'تعذر تسجيل الدخول');
   const ok=await bcrypt.compare(password,account?.password_hash || '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxqqF0OWxLj6MZfNJ6Ia8su4jqu');
-  if(!normalized || !ok || !account?.password_hash) throw fault(401,'راجع رقم واتساب وكلمة المرور الخاصة بهذا المدرس');
+  if(!normalized || !ok || !account?.password_hash) {
+   if (normalized) {
+    const { data: teacherUser } = await db.from('users').select('phone').eq('tenant_id', tenant).in('role', ['owner', 'teacher', 'center_owner']).maybeSingle();
+    const teacherPhone = familyPhone(teacherUser?.phone);
+    if (teacherPhone && normalized === teacherPhone) {
+     throw fault(401, 'هذا الرقم مسجل كحساب المدرس، وليس كمساعد. لتسجيل الدخول كمدرس توجّه إلى صفحة دخول المدرس.');
+    }
+   }
+   throw fault(401,'راجع رقم واتساب وكلمة المرور الخاصة بهذا المدرس');
+  }
   const session=familyToken();
   if(!await assistantRpc(db,'assistant_start_session',{p_assistant:account.assistant_id,p_hash:account.password_hash,p_version:account.credential_version,p_token_hash:familyHash(session),p_origin:pageOrigin})) throw fault(401,'الحساب غير متاح؛ راجع المدرس');
   res.json({token:session});

@@ -257,6 +257,41 @@ test("DEV-PORTAL: changePortalPassword updates password and verifies old vs new"
   assert.equal(newAuth.success, true);
 });
 
+test("DEV-PORTAL: parent login returns siblings with valid tokens when multiple children share parent_phone", async () => {
+  const repo = new FakeStudentsRepository();
+  const service = new StudentsService(repo);
+
+  const son1 = await service.createStudent("tenant-multi", {
+    name: "باسل خالد",
+    phone: "01011112222",
+    parent_phone: "01123671177",
+  });
+  const son2 = await service.createStudent("tenant-multi", {
+    name: "باسل امير",
+    phone: "01033334444",
+    parent_phone: "01123671177",
+  });
+
+  const auth = await service.authenticatePortalUser({
+    identifier: "01123671177",
+    password: son1.portal_password,
+    role: "parent",
+  }, "tenant-multi");
+
+  assert.equal(auth.success, true);
+  assert.equal(auth.role, "parent");
+  assert.ok(auth.students, "Must return siblings list");
+  assert.equal(auth.students.length, 2);
+  assert.ok(auth.students.some(s => s.name === "باسل خالد" && s.token));
+  assert.ok(auth.students.some(s => s.name === "باسل امير" && s.token));
+
+  // Son 2 token is valid for Son 2
+  const son2Item = auth.students.find(s => s.name === "باسل امير");
+  const verified = verifyParentPortalToken(son2Item.token);
+  assert.equal(verified.student_id, son2.id);
+  assert.equal(verified.tenant_id, "tenant-multi");
+});
+
 // ============================================================================
 // DEV-PORTAL: HTTP API Endpoints (/api/public/portal/login & change-password)
 // ============================================================================

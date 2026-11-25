@@ -1,6 +1,6 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.0";
-import { getIcon } from "../utils/icons.js?v=9.99.0";
-import { renderStudentBarcodeCardHtml, generateBarcode128Svg, cleanTeacherNameString } from "../utils/studentBarcodeCard.js?v=9.99.0";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.1";
+import { getIcon } from "../utils/icons.js?v=9.99.1";
+import { renderStudentBarcodeCardHtml, generateBarcode128Svg, cleanTeacherNameString } from "../utils/studentBarcodeCard.js?v=9.99.1";
 
 /**
  * Centrly Student Cards Printing Component (DEV-89)

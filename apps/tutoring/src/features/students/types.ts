@@ -91,10 +91,18 @@ export interface PortalLoginResult {
     tenant_id: string;
   };
   role: "parent" | "student";
+  students?: Array<{
+    id: string;
+    name: string;
+    code: string;
+    tenant_id: string;
+    token: string;
+  }>;
 }
 
 export interface IStudentsRepository {
   findByPhone?(tenantId:string|undefined,phone:string):Promise<Student|null>;
+  findByParentPhone?(parentPhone:string,tenantId?:string):Promise<Student[]>;
   list(tenantId?: string, query?: string, groupId?: string): Promise<Student[]>;
   findById(id: string, tenantId?: string): Promise<Student | null>;
   findByCode(tenantId: string | undefined, code: string): Promise<Student | null>;

@@ -1,6 +1,6 @@
-import { escapeHtml as esc } from '../utils/escapeHtml.js?v=9.99.0';
-import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.0';
-import { getIcon } from '../utils/icons.js?v=9.99.0';
+import { escapeHtml as esc } from '../utils/escapeHtml.js?v=9.99.1';
+import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.1';
+import { getIcon } from '../utils/icons.js?v=9.99.1';
 
 // Keep only the fields needed by a read-only parent dashboard in the device cache.
 export function parentPortalSnapshot(data) {
@@ -61,6 +61,16 @@ export function renderParentPortalView(data = {}, activeTab = 'attendance') {
   const contact = /^01\d{9}$/.test(phone) ? '2'+phone : phone;
   const tab = ['attendance','quizzes','homework'].includes(activeTab) ? activeTab : activeTab === 'materials' ? 'homework' : 'attendance';
   const tabs = [['attendance','الحضور'],['quizzes','الدرجات'],['homework','الواجبات']];
+  let siblingSwitcherHtml = '';
+  try {
+    const rawSiblings = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_parent_students') : null;
+    if (rawSiblings) {
+      const siblingsList = JSON.parse(rawSiblings);
+      if (Array.isArray(siblingsList) && siblingsList.length > 1) {
+        siblingSwitcherHtml = `<section class="pp-card pp-sibling-switcher" aria-label="اختيار الطالب" style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 2px 10px #0f172a04"><div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--ink)"><span>متابعة الأبناء (${siblingsList.length}):</span></div><div style="display:flex;gap:8px;flex-wrap:wrap">${siblingsList.map(item=>`<button type="button" class="pp-button" style="min-height:38px;padding:6px 14px;font-size:13px;border-radius:12px;font-weight:${item.id===s.id?'700':'500'};background:${item.id===s.id?'#0f172a':'#f8fafc'};color:${item.id===s.id?'#fff':'#0f172a'};border:1px solid ${item.id===s.id?'#0f172a':'#cbd5e1'}" onclick="window.centrlyApp && window.centrlyApp.switchParentChild ? window.centrlyApp.switchParentChild('${esc(item.id)}') : null">${esc(item.name)}${item.code?` (${esc(item.code)})`:''}</button>`).join('')}</div></section>`;
+      }
+    }
+  } catch (_) {}
   return `<style>
     .pp{--ink:#0f172a;--muted:#475569;--line:#e2e8f0;box-sizing:border-box;min-height:100dvh;background:#f6f8fb;color:var(--ink);font-family:inherit;font-size:16px;line-height:1.7;padding:16px 16px max(24px,env(safe-area-inset-bottom));direction:rtl}
     .pp *{box-sizing:border-box}.pp-wrap{max-width:780px;margin:auto;display:grid;gap:20px}.pp h1,.pp h2,.pp h3,.pp p{margin:0}.pp h1{font-size:26px;line-height:1.5}.pp h2{font-size:19px}.pp h3{font-size:16px}.pp small{font-size:13px;color:var(--muted)}.pp p,.pp h1,.pp h2,.pp h3,.pp span{overflow-wrap:anywhere}
@@ -71,6 +81,7 @@ export function renderParentPortalView(data = {}, activeTab = 'attendance') {
     @media(min-width:700px){.pp{padding:28px}.pp-summary{grid-template-columns:repeat(4,minmax(0,1fr))}.pp-hero{padding:28px}}@media(prefers-reduced-motion:reduce){.pp *{scroll-behavior:auto}}
   </style><main class="pp" aria-label="متابعة ولي الأمر"><div class="pp-wrap">
     <header class="pp-top"><span class="pp-brand"><span class="pp-mark">سـ</span> ${esc(presentation?.display_title || 'سنترلي')}<br><small>متابعة ولي الأمر</small></span><div class="pp-actions"><button class="pp-button" id="parent-refresh-data-btn" type="button" aria-label="تحديث بيانات المتابعة" title="تحديث بيانات المتابعة" onclick="window.centrlyApp.reloadParentPortal()">${getIcon('refresh',20,'currentColor')}</button><button class="pp-button" type="button" onclick="window.centrlyApp.handlePortalLogout()">خروج</button></div></header>
+    ${siblingSwitcherHtml}
     <section class="pp-hero" aria-labelledby="pp-student"><p class="pp-eyebrow">متابعة ابنك، في مكان واحد</p><h1 id="pp-student">${esc(s.name)}</h1><p class="pp-subtitle">${esc(s.teacher_name || presentation?.display_title || 'متابعة الطالب')}${s.subject_name ? ` · ${esc(s.subject_name)}` : ''}</p><div class="pp-row"><span class="pp-subtitle">${esc(s.group_name || '')}</span>${s.student_code ? `<small>كود الطالب <b class="pp-code">${esc(s.student_code)}</b></small>` : ''}</div><p id="parent-sync-status" class="pp-sync" role="status" aria-live="polite"></p></section>
     ${renderPortalHomeSummary(data,'parent')}
     <section class="pp-summary" aria-label="ملخص المتابعة">${metric('الحضور',summary.total_sessions ? summary.attendance_rate : '—',summary.total_sessions ? `${summary.attended_count ?? 0} من ${summary.total_sessions} حصص` : 'لا توجد حصص مسجلة')}${metric('الغياب',summary.total_sessions ? summary.absent_count ?? 0 : '—')}${metric('واجبات تم تسليمها',`${completed} / ${homework.length}`)}${metric('متوسط الدرجات',quizzes.length ? summary.quiz_average_percentage ?? '—' : '—')}</section>

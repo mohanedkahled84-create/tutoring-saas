@@ -1,7 +1,7 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.0";
-import { getIcon } from "../utils/icons.js?v=9.99.0";
-import { request } from "../services/api.js?v=9.99.0";
-import {renderMaterialGroupPicker,readMaterialGroupPicker,registerMaterialGroupPicker,materialGroupLabel} from './MaterialGroupPicker.js?v=9.99.0';
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.1";
+import { getIcon } from "../utils/icons.js?v=9.99.1";
+import { request } from "../services/api.js?v=9.99.1";
+import {renderMaterialGroupPicker,readMaterialGroupPicker,registerMaterialGroupPicker,materialGroupLabel} from './MaterialGroupPicker.js?v=9.99.1';
 
 /**
  * Centrly Homework Review & Grading Component (DEV-HOMEWORK)

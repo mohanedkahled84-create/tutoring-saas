@@ -1,5 +1,5 @@
-import {escapeHtml} from '../utils/escapeHtml.js?v=9.99.0';
-import {getIcon} from '../utils/icons.js?v=9.99.0';
+import {escapeHtml} from '../utils/escapeHtml.js?v=9.99.1';
+import {getIcon} from '../utils/icons.js?v=9.99.1';
 
 export function pendingAttendance(summary,students=[]){
  if(!summary)return null;

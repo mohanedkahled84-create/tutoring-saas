@@ -1,14 +1,27 @@
-import {renderParentPortalView, parentPortalSnapshot} from './components/ParentPortalView.js?v=9.99.0';
-import {renderParentPortalLogin, getParentBranding, saveParentBranding} from './components/ParentPortalLoginView.js?v=9.99.0';
-import {portalCache, portalRequest, adoptVerifiedPortalSession} from './utils/portalSession.js?v=9.99.0';
-import {preparePortalDestination} from './utils/portalDestination.js?v=9.99.0';
-import {normalizeDigits} from './utils/normalizeDigits.js?v=9.99.0';
-import {registerFamilyActions,savedFamilyToken,redeemFamilyEntry} from './parentFamily.js?v=9.99.0';
+import {renderParentPortalView, parentPortalSnapshot} from './components/ParentPortalView.js?v=9.99.1';
+import {renderParentPortalLogin, getParentBranding, saveParentBranding} from './components/ParentPortalLoginView.js?v=9.99.1';
+import {portalCache, portalRequest, adoptVerifiedPortalSession} from './utils/portalSession.js?v=9.99.1';
+import {preparePortalDestination} from './utils/portalDestination.js?v=9.99.1';
+import {normalizeDigits} from './utils/normalizeDigits.js?v=9.99.1';
+import {registerFamilyActions,savedFamilyToken,redeemFamilyEntry} from './parentFamily.js?v=9.99.1';
 function showPortalPending(app) { const root=app.getAppEl(); if(root) window.renderPortalOpening(root); }
 export function registerParentPortalActions(app) {
   app.setParentFamilyMode=function(value) {
     if(value && !this.loginFamily){location.assign('/portal-entry?role=parent&family=1');return;}
     this._familyMode=Boolean(value);this.renderPortalLogin();document.getElementById('portalIdentifier')?.focus();
+  };
+  app.switchParentChild = async function switchParentChild(studentId) {
+    try {
+      const stored = localStorage.getItem('centrly_parent_students');
+      if (!stored) return;
+      const students = JSON.parse(stored);
+      const target = students.find(s => s.id === studentId);
+      if (target && target.token) {
+        await this.loadParentPortal(target.token, { force: true });
+      }
+    } catch (e) {
+      console.error('switchParentChild error:', e);
+    }
   };
   app.loadParentPortal = async function loadParentPortal(token, options = {}) {
     window.__centrlyLoaded = true;
@@ -133,7 +146,7 @@ export async function mountParentPortal(errorMessage = '') {
       saveParentBranding(this._portalPresentation);
       portalCache.clear('parent'); portalCache.clear('student');
       for(const storage of [localStorage,sessionStorage]) {
-        for(const key of ['centrly_portal_token','centrly_portal_role','centrly_student_portal_token','centrly_portal_last_id']) storage.removeItem(key);
+        for(const key of ['centrly_portal_token','centrly_portal_role','centrly_student_portal_token','centrly_portal_last_id','centrly_parent_students']) storage.removeItem(key);
       }
       this._parentPortalToken=null;this._parentPortalRenderedToken=null;
       window.__centrlyPortalArrival=null;
@@ -151,6 +164,13 @@ export async function mountParentPortal(errorMessage = '') {
         const response=await portalRequest('/public/portal/login',{method:'POST',body:{identifier:normalizeDigits(form.elements.identifier.value).trim(),password:normalizeDigits(form.elements.password.value).trim(),role:'parent'}});
         if(!response?.success || !response.token) throw Error('تعذر تسجيل الدخول. راجع بياناتك وحاول مجددًا.');
         this.logoutFamily();this._familyMode=false;
+        if (response.students && response.students.length > 1) {
+          localStorage.setItem('centrly_parent_students', JSON.stringify(response.students));
+          sessionStorage.setItem('centrly_parent_students', JSON.stringify(response.students));
+        } else {
+          localStorage.removeItem('centrly_parent_students');
+          sessionStorage.removeItem('centrly_parent_students');
+        }
         await adoptVerifiedPortalSession(response.token,'parent');
         await this.loadParentPortal(response.token);
       } catch(error) {

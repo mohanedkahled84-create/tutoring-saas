@@ -1,8 +1,8 @@
-import { escapeHtml as e } from './utils/escapeHtml.js?v=9.99.0';
-import { API_BASE_URL } from './services/api.js?v=9.99.0';
-import {mountPhoneVerification} from './components/PhoneVerification.js?v=9.99.0';
-import { assistantRequest } from './services/assistantClient.js?v=9.99.0';
-import {getIcon} from './utils/icons.js?v=9.99.0';
+import { escapeHtml as e } from './utils/escapeHtml.js?v=9.99.1';
+import { API_BASE_URL } from './services/api.js?v=9.99.1';
+import {mountPhoneVerification} from './components/PhoneVerification.js?v=9.99.1';
+import { assistantRequest } from './services/assistantClient.js?v=9.99.1';
+import {getIcon} from './utils/icons.js?v=9.99.1';
 
 const main=document.getElementById('main'),actions=document.getElementById('account-actions'),dialog=document.getElementById('editor');
 const params=new URLSearchParams(location.search),workspace=params.get('workspace') || '';
@@ -72,7 +72,7 @@ function auth(error='') {
  window.centrlyApp=null;rows=[];teacherView={};activeSession=null;
  stopVerification?.();stopVerification=null;stopCollections?.();stopCollections=null;identity=null;gradeChoices=[];activeQuiz=null;pageRequest++;workspaceRequest++;dialog.close();actions.innerHTML='';notice('');
  const accept=!!invitation;
- main.innerHTML=authFrame(`<span class="auth-kicker">${accept?'الخطوة الأخيرة':'مرحبًا بعودتك'}</span><h1>${accept?'حسابك جاهز للانطلاق':'دخول فريق العمل'}</h1><p class="muted">${accept?'أضف اسمك واختر كلمة مرور لحسابك.':'كل شغلك مع المدرس، في مكان واحد.'}</p><form id="access-form">${accept?`<div class="verified-phone">${getIcon('check',16)}<span>تم تأكيد رقمك</span><bdi>${e(verifiedPhone)}</bdi><input id="registered-phone" type="hidden" value="${e(verifiedPhone)}" readonly></div>`:''}${accept?'<div class="field"><label for="full-name">الاسم بالكامل</label><input id="full-name" name="name" autocomplete="name" minlength="2" maxlength="100" placeholder="اكتب اسمك" required></div>':'<div class="field"><label for="phone">رقم الموبايل</label><input id="phone" name="phone" type="tel" dir="ltr" inputmode="tel" autocomplete="username" maxlength="48" placeholder="01xxxxxxxxx" required></div>'}<div class="field"><label for="password">كلمة المرور</label><div class="password-field"><input id="password" name="password" type="password" autocomplete="${accept?'new-password':'current-password'}" ${accept?'minlength="10"':''} maxlength="72" placeholder="${accept?'اختر كلمة مرور قوية':'أدخل كلمة المرور'}" required><button type="button" id="show-password" aria-label="إظهار كلمة المرور" aria-controls="password" aria-pressed="false">${getIcon('eye',18)}</button></div>${accept?'<p class="helper">١٠ أحرف على الأقل.</p>':''}</div><p class="error" id="auth-error" role="alert">${e(error)}</p><button class="primary auth-submit" type="submit">${accept?'إنشاء الحساب والدخول':'دخول حساب المدرس'} ${getIcon('arrowLeft',18)}</button></form><p class="auth-footnote">${getIcon('lock',14)}${accept?'حسابك خاص بك، والدخول حسب صلاحيات المدرس.':'أول مرة أو نسيت كلمة المرور؟ اطلب رابطًا جديدًا من المدرس.'}</p>`);
+ main.innerHTML=authFrame(`<span class="auth-kicker">${accept?'الخطوة الأخيرة':'مرحبًا بعودتك'}</span><h1>${accept?'حسابك جاهز للانطلاق':'دخول فريق العمل'}</h1><p class="muted">${accept?'أضف اسمك واختر كلمة مرور لحسابك.':'كل شغلك مع المدرس، في مكان واحد.'}</p><form id="access-form">${accept?`<div class="verified-phone">${getIcon('check',16)}<span>تم تأكيد رقمك</span><bdi>${e(verifiedPhone)}</bdi><input id="registered-phone" type="hidden" value="${e(verifiedPhone)}" readonly></div>`:''}${accept?'<div class="field"><label for="full-name">الاسم بالكامل</label><input id="full-name" name="name" autocomplete="name" minlength="2" maxlength="100" placeholder="اكتب اسمك" required></div>':'<div class="field"><label for="phone">رقم الموبايل</label><input id="phone" name="phone" type="tel" dir="ltr" inputmode="tel" autocomplete="username" maxlength="48" placeholder="01xxxxxxxxx" required></div>'}<div class="field"><label for="password">كلمة المرور</label><div class="password-field"><input id="password" name="password" type="password" autocomplete="${accept?'new-password':'current-password'}" ${accept?'minlength="10"':''} maxlength="72" placeholder="${accept?'اختر كلمة مرور قوية':'أدخل كلمة المرور'}" required><button type="button" id="show-password" aria-label="إظهار كلمة المرور" aria-controls="password" aria-pressed="false">${getIcon('eye',18)}</button></div>${accept?'<p class="helper">١٠ أحرف على الأقل.</p>':''}</div><p class="error" id="auth-error" role="alert">${e(error)}</p><button class="primary auth-submit" type="submit">${accept?'إنشاء الحساب والدخول':'دخول فريق العمل'} ${getIcon('arrowLeft',18)}</button></form><div class="teacher-login-hint" style="margin:14px 0 10px;text-align:center;font-size:14px;color:#64748b">هل أنت المدرس صاحب الحساب؟ <a href="/?view=login" style="color:#2563eb;font-weight:700;text-decoration:none">دخول حساب المدرس</a></div><p class="auth-footnote">${getIcon('lock',14)}${accept?'حسابك خاص بك، والدخول حسب صلاحيات المدرس.':'أول مرة أو نسيت كلمة المرور؟ اطلب رابطًا جديدًا من المدرس.'}</p>`);
  document.getElementById('show-password').onclick=event=>{const input=document.getElementById('password'),show=input.type==='password';input.type=show?'text':'password';event.currentTarget.setAttribute('aria-pressed',String(show));event.currentTarget.setAttribute('aria-label',show?'إخفاء كلمة المرور':'إظهار كلمة المرور');event.currentTarget.innerHTML=getIcon(show?'eyeOff':'eye',18);};
  document.getElementById('access-form').onsubmit=async event=>{
   event.preventDefault();const form=event.currentTarget,button=form.querySelector('[type=submit]');if(button.disabled)return;button.disabled=true;const label=button.textContent;button.textContent=accept?'جارٍ حفظ حسابك…':'جارٍ الدخول…';
@@ -97,7 +97,7 @@ async function beginRegistration() {
 let stopTeacherWorkspace;
 async function openWorkspace(){
  const version=++workspaceRequest;
- const {mountAssistantWorkspace}=await import('./assistantRuntime.js?v=9.99.0');
+ const {mountAssistantWorkspace}=await import('./assistantRuntime.js?v=9.99.1');
  if(version!==workspaceRequest)return;
  document.body.className='assistant-workspace';
  actions.innerHTML='';

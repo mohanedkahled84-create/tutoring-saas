@@ -1,15 +1,15 @@
-import {renderBasicStudentPortal} from './BasicStudentPortalView.js?v=9.99.0';
-import { request, API_BASE_URL } from '../services/api.js?v=9.99.0';
-import { registerParentPortalActions } from '../parentPortal.js?v=9.99.0';
-import {clearFamilyForOtherLogin} from '../utils/portalSession.js?v=9.99.0';
-import { renderParentPortalLogin, getParentBranding, saveParentBranding } from './ParentPortalLoginView.js?v=9.99.0';
-import { renderStudentPortalView } from './StudentPortalView.js?v=9.99.0';
-import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js?v=9.99.0';
-import { getIcon } from '../utils/icons.js?v=9.99.0';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.0';
-import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.0';
-import { preparePortalDestination } from '../utils/portalDestination.js?v=9.99.0';
-import { portalCache, portalRequest } from '../utils/portalSession.js?v=9.99.0';
+import {renderBasicStudentPortal} from './BasicStudentPortalView.js?v=9.99.1';
+import { request, API_BASE_URL } from '../services/api.js?v=9.99.1';
+import { registerParentPortalActions } from '../parentPortal.js?v=9.99.1';
+import {clearFamilyForOtherLogin} from '../utils/portalSession.js?v=9.99.1';
+import { renderParentPortalLogin, getParentBranding, saveParentBranding } from './ParentPortalLoginView.js?v=9.99.1';
+import { renderStudentPortalView } from './StudentPortalView.js?v=9.99.1';
+import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js?v=9.99.1';
+import { getIcon } from '../utils/icons.js?v=9.99.1';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.1';
+import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.1';
+import { preparePortalDestination } from '../utils/portalDestination.js?v=9.99.1';
+import { portalCache, portalRequest } from '../utils/portalSession.js?v=9.99.1';
 
 function showPortalPending(app) {
   const root = app.getAppEl();
@@ -494,6 +494,13 @@ export function registerUnifiedPortalActions(app) {
           localStorage.setItem('centrly_portal_role', targetRole);
           sessionStorage.setItem('centrly_portal_token', res.token);
           sessionStorage.setItem('centrly_portal_role', targetRole);
+          if (targetRole === 'parent' && res.students && res.students.length > 1) {
+            localStorage.setItem('centrly_parent_students', JSON.stringify(res.students));
+            sessionStorage.setItem('centrly_parent_students', JSON.stringify(res.students));
+          } else if (targetRole === 'student') {
+            localStorage.removeItem('centrly_parent_students');
+            sessionStorage.removeItem('centrly_parent_students');
+          }
         } catch (_) {}
 
         this.showToast('مرحباً بك! تم تسجيل الدخول بنجاح', 'success');
@@ -538,15 +545,31 @@ export function registerUnifiedPortalActions(app) {
     try {
       localStorage.removeItem('centrly_portal_token');
       localStorage.removeItem('centrly_portal_role');
+      localStorage.removeItem('centrly_parent_students');
       sessionStorage.removeItem('centrly_portal_token');
       sessionStorage.removeItem('centrly_portal_role');
       sessionStorage.removeItem('centrly_student_portal_token');
+      sessionStorage.removeItem('centrly_parent_students');
     } catch (_) {}
     this._parentPortalToken = null;
     this._parentPortalRenderedToken = null;
     this._studentPortalToken = null;
     this.showToast('تم تسجيل الخروج بنجاح', 'info');
     this.renderPortalLogin();
+  }
+
+  app.switchParentChild = async function switchParentChild(studentId) {
+    try {
+      const stored = localStorage.getItem('centrly_parent_students');
+      if (!stored) return;
+      const students = JSON.parse(stored);
+      const target = students.find(s => s.id === studentId);
+      if (target && target.token) {
+        await this.loadParentPortal(target.token, { force: true });
+      }
+    } catch (e) {
+      console.error('switchParentChild error:', e);
+    }
   }
 
   app.downloadStudentCardPng = function downloadStudentCardPng(student) {

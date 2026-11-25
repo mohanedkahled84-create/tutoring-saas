@@ -382,6 +382,22 @@ export class StudentsService {
 
     const token = generateParentPortalToken(student.id, student.tenant_id, 365);
 
+    let siblings: Array<{ id: string; name: string; code: string; tenant_id: string; token: string }> = [];
+    if (role === "parent" && cleanParentPhone && cleanParentPhone.length >= 6) {
+      try {
+        const allSiblings = this.repo.findByParentPhone ? await this.repo.findByParentPhone(cleanParentPhone, tenantId) : [];
+        if (allSiblings.length > 0) {
+          siblings = allSiblings.map((s) => ({
+            id: s.id,
+            name: s.name,
+            code: s.student_code || s.code || "",
+            tenant_id: s.tenant_id,
+            token: generateParentPortalToken(s.id, s.tenant_id, 365),
+          }));
+        }
+      } catch (_) {}
+    }
+
     return {
       success: true,
       token,
@@ -394,6 +410,7 @@ export class StudentsService {
         tenant_id: student.tenant_id,
       },
       role,
+      students: siblings.length > 0 ? siblings : undefined,
     };
   }
 
