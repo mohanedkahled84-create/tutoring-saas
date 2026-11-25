@@ -1,8 +1,8 @@
-import { assistantPay } from "../utils/assistantPay.js?v=9.99.2";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.2";
-import { getIcon } from "../utils/icons.js?v=9.99.2";
-import {renderTeacherActions} from './TeacherActionsPanel.js?v=9.99.2';
-import {getLocale} from '../utils/locale.js?v=9.99.2';
+import { assistantPay } from "../utils/assistantPay.js?v=9.99.3";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.3";
+import { getIcon } from "../utils/icons.js?v=9.99.3";
+import {renderTeacherActions} from './TeacherActionsPanel.js?v=9.99.3';
+import {getLocale} from '../utils/locale.js?v=9.99.3';
 
 /**
  * Centrly Teacher Dashboard

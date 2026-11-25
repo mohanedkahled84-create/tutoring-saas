@@ -1,4 +1,4 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.2';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.3';
 export function renderPortalHomeSummary(data={},role='student',{showRank=true,showContact=false,showWelcome=true}={}){
  const prefs=data.preferences || {},summary=data.summary || {},sections=[];
  if(showWelcome && prefs.welcome_message)sections.push(`<section style="white-space:pre-wrap;line-height:1.8;padding:18px">${e(prefs.welcome_message)}</section>`);

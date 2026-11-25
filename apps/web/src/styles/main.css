@@ -105,7 +105,7 @@
   cursor: pointer;
   border: none;
   width: 100%;
-  text-align: right;
+  text-align: start;
 }
 
 .nav-link .nav-icon {
@@ -493,7 +493,7 @@ button.password-toggle-btn:active {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  text-align: right;
+  text-align: start;
   font-size: 0.82rem;
   background-color: var(--centrly-white);
   border-radius: var(--radius-md);
@@ -1334,8 +1334,8 @@ html[dir="ltr"] .app-container { direction: ltr; }
   html[dir="ltr"] .app-sidebar { left: 0; right: auto; transform: translate3d(-105%,0,0); }
   html[dir="ltr"] .app-sidebar.open { transform: translate3d(0,0,0); }
 }
-html[dir="ltr"] body { direction: ltr; }
-html[dir="rtl"] body { direction: rtl; }
+html[dir="ltr"] body { direction: ltr; text-align: left; }
+html[dir="rtl"] body { direction: rtl; text-align: right; }
 /* Announcements */
 .announcements-intro {
   position: relative;
