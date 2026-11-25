@@ -1,5 +1,5 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.3";
-import { getIcon } from "../utils/icons.js?v=9.99.3";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.4";
+import { getIcon } from "../utils/icons.js?v=9.99.4";
 
 /**
  * Centrly Center Multi-Sessions & Smart Gate Component

@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {renderTeacherPlatformBuilderView} from '../../web/src/components/TeacherPlatformBuilderView.js';
+import {renderTeacherPlatformPreview} from '../../web/src/components/TeacherPlatformPreview.js';
 test('student preview never embeds parent access tokens',()=>{
  const html=renderTeacherPlatformBuilderView({plan:{is_pro:true},settings:{subdomain:'mr-omar',is_active:true},destination:{origin:'https://mr-omar.centerly-eg.com',presentation:{subdomain:'mr-omar'}}}, {},[{id:'id',name:'Student',code:'123',student_phone:'01012345678',portal_password:'123456',parent_portal_token:'secret-parent-token'}]);
  assert.doesNotMatch(html,/secret-parent-token/);assert.match(html,/https:\/\/mr-omar\.centerly-eg\.com\/login/);
@@ -38,4 +39,17 @@ test('branded student routes match teacher subdomains only',()=>{
   assert.ok(host.test('mr-omar.centerly-eg.com'));assert.ok(host.test('new-teacher.centerly-eg.com'));
   assert.ok(!host.test('centerly-eg.com'));assert.ok(!host.test('www.centerly-eg.com'));assert.ok(!host.test('api.centerly-eg.com'));
  }
+});
+
+test('locked platform preview shows side-by-side external login with teacher cutout and inside student dashboard',()=>{
+ const ar=renderTeacherPlatformPreview(false),en=renderTeacherPlatformPreview(true);
+ for(const html of [ar,en]){
+  assert.match(html,/data-preview-slide="0"/);
+  assert.match(html,/data-preview-slide="1"/);
+  assert.match(html,/src="\/teacher_cutout\.png"/);
+  assert.match(html,/ppv-track/);
+  assert.match(html,/ppv-dash-canvas/);
+ }
+ assert.match(ar,/تسجيل دخول الطلاب/);assert.match(ar,/نسبة الالتزام بالحضور/);
+ assert.match(en,/Student Sign In/);assert.match(en,/Video lessons/);
 });

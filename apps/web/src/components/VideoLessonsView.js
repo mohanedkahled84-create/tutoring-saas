@@ -1,8 +1,8 @@
-import {renderSourceAnnouncementButton} from './AnnouncementsView.js?v=9.99.3';
-import { isUserPro } from "../utils/proGating.js?v=9.99.3";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.3";
-import { getIcon } from "../utils/icons.js?v=9.99.3";
-import { request, API_BASE_URL } from "../services/api.js?v=9.99.3";
+import {renderSourceAnnouncementButton} from './AnnouncementsView.js?v=9.99.4';
+import { isUserPro } from "../utils/proGating.js?v=9.99.4";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.4";
+import { getIcon } from "../utils/icons.js?v=9.99.4";
+import { request, API_BASE_URL } from "../services/api.js?v=9.99.4";
 
 /**
  * Centrly Video Lessons Management View

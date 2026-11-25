@@ -1,5 +1,5 @@
-import {preparePhoneProof} from '../utils/phoneProof.js?v=9.99.3';
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.3';
+import {preparePhoneProof} from '../utils/phoneProof.js?v=9.99.4';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.4';
 // Keep challenge material within this mounted, disposable verification flow.
 export function mountPhoneVerification(host,{info,requestCode,requestChallenge,verifyCode,onVerified,onStageChange=()=>{},initialChallenge=null,onChallengeChange=()=>{}}){
  let disposed=false,busy=false,challenge=null,retryAt=0,expiresAt=0,stage='phone';
