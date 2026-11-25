@@ -257,7 +257,7 @@ test("DEV-PORTAL: changePortalPassword updates password and verifies old vs new"
   assert.equal(newAuth.success, true);
 });
 
-test("DEV-PORTAL: parent login returns siblings with valid tokens when multiple children share parent_phone", async () => {
+test("DEV-PORTAL: parent login returns siblings within same teacher with valid tokens when multiple children share parent_phone", async () => {
   const repo = new FakeStudentsRepository();
   const service = new StudentsService(repo);
 
@@ -271,12 +271,18 @@ test("DEV-PORTAL: parent login returns siblings with valid tokens when multiple 
     phone: "01033334444",
     parent_phone: "01123671177",
   });
+  // Unrelated teacher sharing same parent_phone must NEVER be exposed on root portal login
+  await service.createStudent("tenant-other", {
+    name: "طالب آخر",
+    phone: "01099991111",
+    parent_phone: "01123671177",
+  });
 
   const auth = await service.authenticatePortalUser({
     identifier: "01123671177",
     password: son1.portal_password,
     role: "parent",
-  }, "tenant-multi");
+  });
 
   assert.equal(auth.success, true);
   assert.equal(auth.role, "parent");
@@ -284,6 +290,7 @@ test("DEV-PORTAL: parent login returns siblings with valid tokens when multiple 
   assert.equal(auth.students.length, 2);
   assert.ok(auth.students.some(s => s.name === "باسل خالد" && s.token));
   assert.ok(auth.students.some(s => s.name === "باسل امير" && s.token));
+  assert.ok(!auth.students.some(s => s.tenant_id === "tenant-other"), "Must not leak siblings from other teachers");
 
   // Son 2 token is valid for Son 2
   const son2Item = auth.students.find(s => s.name === "باسل امير");

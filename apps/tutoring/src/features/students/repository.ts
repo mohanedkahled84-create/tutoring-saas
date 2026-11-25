@@ -194,18 +194,29 @@ export class SupabaseStudentsRepository implements IStudentsRepository {
   }
 
   async findByParentPhone(parentPhone: string, tenantId?: string): Promise<Student[]> {
-    const raw = parentPhone.trim();
-    if (!raw) return [];
-    const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, "");
+    const raw = (parentPhone || "")
+      .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632))
+      .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+      .trim();
+    const digits = raw.replace(/[^\d]/g, "");
+    if (digits.length < 6) return [];
     const db = this.privilegedClient || this.client;
-    const variants = new Set<string>([cleanPhone]);
-    if (cleanPhone.startsWith('20') && cleanPhone.length === 12) variants.add('0' + cleanPhone.slice(2));
-    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) variants.add('2' + cleanPhone);
-    const orFilter = Array.from(variants).map(v => `parent_phone.eq.${v}`).join(',');
+    const local = digits.startsWith("0020")
+      ? "0" + digits.slice(4)
+      : digits.startsWith("20") && digits.length === 12
+        ? "0" + digits.slice(2)
+        : digits;
+    const variants = new Set<string>([digits, local]);
+    if (local.startsWith("01") && local.length === 11) {
+      variants.add("2" + local);
+      variants.add("+2" + local);
+    }
+    const orFilter = Array.from(variants).map((v) => `parent_phone.eq.${v}`).join(",");
 
     let q = db
       .from("students")
-      .select("id, tenant_id, code, student_code, name, parent_phone, student_phone, fee_override, exempt, notes, parent_portal_sent_at, student_portal_sent_at, parent_portal_token, portal_password, created_at")
+      .select("id, tenant_id, code, student_code, name, parent_phone, created_at")
+      .is("archived_at", null)
       .or(orFilter);
     if (tenantId) q = q.eq("tenant_id", tenantId);
     const { data, error } = await q;

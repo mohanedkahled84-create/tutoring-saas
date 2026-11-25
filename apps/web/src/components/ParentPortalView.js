@@ -1,6 +1,6 @@
-import { escapeHtml as esc } from '../utils/escapeHtml.js?v=9.99.1';
-import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.1';
-import { getIcon } from '../utils/icons.js?v=9.99.1';
+import { escapeHtml as esc } from '../utils/escapeHtml.js?v=9.99.2';
+import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.2';
+import { getIcon } from '../utils/icons.js?v=9.99.2';
 
 // Keep only the fields needed by a read-only parent dashboard in the device cache.
 export function parentPortalSnapshot(data) {
@@ -63,7 +63,7 @@ export function renderParentPortalView(data = {}, activeTab = 'attendance') {
   const tabs = [['attendance','الحضور'],['quizzes','الدرجات'],['homework','الواجبات']];
   let siblingSwitcherHtml = '';
   try {
-    const rawSiblings = typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_parent_students') : null;
+    const rawSiblings = (typeof localStorage !== 'undefined' ? localStorage.getItem('centrly_parent_students') : null) || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('centrly_parent_students') : null);
     if (rawSiblings) {
       const siblingsList = JSON.parse(rawSiblings);
       if (Array.isArray(siblingsList) && siblingsList.length > 1) {

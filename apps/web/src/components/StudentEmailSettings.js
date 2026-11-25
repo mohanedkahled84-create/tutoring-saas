@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.1';
-import {portalRequest} from '../utils/portalSession.js?v=9.99.1';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.2';
+import {portalRequest} from '../utils/portalSession.js?v=9.99.2';
 const styles=`<style>
 student-email-settings{display:block;min-width:0;margin-block:0 18px;font:inherit}
 student-email-settings .se-banner{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 24px;border:1px solid #dbe5f5;border-radius:18px;background:linear-gradient(120deg,#f8fbff,#edf4ff);color:#152b55;box-sizing:border-box}

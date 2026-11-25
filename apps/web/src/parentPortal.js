@@ -1,9 +1,9 @@
-import {renderParentPortalView, parentPortalSnapshot} from './components/ParentPortalView.js?v=9.99.1';
-import {renderParentPortalLogin, getParentBranding, saveParentBranding} from './components/ParentPortalLoginView.js?v=9.99.1';
-import {portalCache, portalRequest, adoptVerifiedPortalSession} from './utils/portalSession.js?v=9.99.1';
-import {preparePortalDestination} from './utils/portalDestination.js?v=9.99.1';
-import {normalizeDigits} from './utils/normalizeDigits.js?v=9.99.1';
-import {registerFamilyActions,savedFamilyToken,redeemFamilyEntry} from './parentFamily.js?v=9.99.1';
+import {renderParentPortalView, parentPortalSnapshot} from './components/ParentPortalView.js?v=9.99.2';
+import {renderParentPortalLogin, getParentBranding, saveParentBranding} from './components/ParentPortalLoginView.js?v=9.99.2';
+import {portalCache, portalRequest, adoptVerifiedPortalSession} from './utils/portalSession.js?v=9.99.2';
+import {preparePortalDestination} from './utils/portalDestination.js?v=9.99.2';
+import {normalizeDigits} from './utils/normalizeDigits.js?v=9.99.2';
+import {registerFamilyActions,savedFamilyToken,redeemFamilyEntry} from './parentFamily.js?v=9.99.2';
 function showPortalPending(app) { const root=app.getAppEl(); if(root) window.renderPortalOpening(root); }
 export function registerParentPortalActions(app) {
   app.setParentFamilyMode=function(value) {
@@ -12,11 +12,12 @@ export function registerParentPortalActions(app) {
   };
   app.switchParentChild = async function switchParentChild(studentId) {
     try {
-      const stored = localStorage.getItem('centrly_parent_students');
+      const stored = localStorage.getItem('centrly_parent_students') || sessionStorage.getItem('centrly_parent_students');
       if (!stored) return;
       const students = JSON.parse(stored);
       const target = students.find(s => s.id === studentId);
       if (target && target.token) {
+        await adoptVerifiedPortalSession(target.token, 'parent');
         await this.loadParentPortal(target.token, { force: true });
       }
     } catch (e) {

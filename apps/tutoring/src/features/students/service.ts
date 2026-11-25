@@ -383,10 +383,21 @@ export class StudentsService {
     const token = generateParentPortalToken(student.id, student.tenant_id, 365);
 
     let siblings: Array<{ id: string; name: string; code: string; tenant_id: string; token: string }> = [];
-    if (role === "parent" && cleanParentPhone && cleanParentPhone.length >= 6) {
+    const normPhone = (value: string) => value.replace(/[^\d]/g, "").replace(/^0020|^20/, "0");
+    const normIdent = normPhone(cleanIdent);
+    const normStudent = normPhone(cleanStudentPhone);
+    const normParent = normPhone(cleanParentPhone);
+    const loggedInAsStudentPhoneOnly = Boolean(cleanStudentPhone) && normIdent === normStudent && normIdent !== normParent;
+    if (role === "parent" && cleanParentPhone && cleanParentPhone.length >= 6 && !loggedInAsStudentPhoneOnly) {
       try {
-        const allSiblings = this.repo.findByParentPhone ? await this.repo.findByParentPhone(cleanParentPhone, tenantId) : [];
+        const siblingTenantId = tenantId || student.tenant_id;
+        const allSiblings = this.repo.findByParentPhone ? await this.repo.findByParentPhone(cleanParentPhone, siblingTenantId) : [];
         if (allSiblings.length > 0) {
+          allSiblings.sort(
+            (a, b) =>
+              String(a.student_code || a.code || "").localeCompare(String(b.student_code || b.code || ""), undefined, { numeric: true }) ||
+              String(a.name || "").localeCompare(String(b.name || ""), "ar")
+          );
           siblings = allSiblings.map((s) => ({
             id: s.id,
             name: s.name,

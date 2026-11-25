@@ -1,11 +1,11 @@
-import {renderAccountDeletion,registerAccountDeletion} from './AccountDeletion.js?v=9.99.1';
-import {mountPhoneVerification} from './PhoneVerification.js?v=9.99.1';
-import {renderPortalPreferencesSettings,registerPortalPreferencesSettings} from './PortalPreferencesSettings.js?v=9.99.1';
-import { getIcon } from '../utils/icons.js?v=9.99.1';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.1';
-import { request } from '../services/api.js?v=9.99.1';
-import { authService } from '../services/auth.js?v=9.99.1';
-import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.1';
+import {renderAccountDeletion,registerAccountDeletion} from './AccountDeletion.js?v=9.99.2';
+import {mountPhoneVerification} from './PhoneVerification.js?v=9.99.2';
+import {renderPortalPreferencesSettings,registerPortalPreferencesSettings} from './PortalPreferencesSettings.js?v=9.99.2';
+import { getIcon } from '../utils/icons.js?v=9.99.2';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.2';
+import { request } from '../services/api.js?v=9.99.2';
+import { authService } from '../services/auth.js?v=9.99.2';
+import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.2';
 
 /**
  * Centrly Teacher Settings & Account Management View
