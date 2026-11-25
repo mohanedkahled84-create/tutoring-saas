@@ -1,8 +1,8 @@
-import {prepareTeacherCutout} from '../utils/teacherCutout.js?v=9.99.4';
-import {localize as t} from '../utils/language.js?v=9.99.4';
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.4";
-import { getIcon } from "../utils/icons.js?v=9.99.4";
-import { request, API_BASE_URL } from "../services/api.js?v=9.99.4";
+import {prepareTeacherCutout} from '../utils/teacherCutout.js?v=9.99.5';
+import {localize as t} from '../utils/language.js?v=9.99.5';
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.5";
+import { getIcon } from "../utils/icons.js?v=9.99.5";
+import { request, API_BASE_URL } from "../services/api.js?v=9.99.5";
 
 /**
  * Centrly White-Label Platform Builder & Student Engagement Hub

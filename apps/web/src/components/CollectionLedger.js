@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.4';
-import {request as ownerRequest} from '../services/api.js?v=9.99.4';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.5';
+import {request as ownerRequest} from '../services/api.js?v=9.99.5';
 
 export const collectionMethods=[['cash','نقدي'],['instapay','إنستاباي'],['vodafone_cash','فودافون كاش'],['bank_transfer','تحويل بنكي'],['other','أخرى']];
 const money=v=>`${Number(v).toLocaleString('ar-EG',{maximumFractionDigits:2})} ج.م`;

@@ -1,4 +1,4 @@
-import {localize as t} from './language.js?v=9.99.4';
+import {localize as t} from './language.js?v=9.99.5';
 // Validate decoded alpha, rather than trusting the extension or MIME label.
 export function transparentPixels(data){let clear=0,visible=0;for(let i=3;i<data.length;i+=4){if(data[i]<=16)clear++;if(data[i]>0)visible++;}return visible>0 && clear>=Math.max(1,(data.length/4)*.05);}
 export async function prepareTeacherCutout(source){

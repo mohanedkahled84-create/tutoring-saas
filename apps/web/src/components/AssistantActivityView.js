@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.4';
-import {request} from '../services/api.js?v=9.99.4';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.5';
+import {request} from '../services/api.js?v=9.99.5';
 
 const actions={
  'messages.prepare':'طلب معاينة رسالة واتساب (لا يؤكد الإرسال)',

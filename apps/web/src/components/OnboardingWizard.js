@@ -1,7 +1,7 @@
-import { request } from "../services/api.js?v=9.99.4";
-import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.99.4";
-import { getIcon } from "../utils/icons.js?v=9.99.4";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.4";
+import { request } from "../services/api.js?v=9.99.5";
+import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.99.5";
+import { getIcon } from "../utils/icons.js?v=9.99.5";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.5";
 
 /**
  * Centrly Onboarding Wizard (DEV-15 & DEV-38)

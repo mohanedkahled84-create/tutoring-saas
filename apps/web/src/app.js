@@ -1,21 +1,21 @@
-import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.99.4';
-import {applyLocale,getLocale} from './utils/locale.js?v=9.99.4';
-import {portalCairoClock} from './utils/portalClock.js?v=9.99.4';
-import { assistantPay } from "./utils/assistantPay.js?v=9.99.4";
-import { authService } from './services/auth.js?v=9.99.4';
-import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=9.99.4';
-import { renderSidebar } from './components/Sidebar.js?v=9.99.4';
-import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.99.4';
-import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=9.99.4';
-import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js?v=9.99.4';
-import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.99.4';
-import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=9.99.4';
-import { mountPhoneVerification } from './components/PhoneVerification.js?v=9.99.4';
-import { renderTeacherPlatformPreview, initTeacherPlatformPreviewCarousel } from './components/TeacherPlatformPreview.js?v=9.99.4';
-import { getIcon } from './utils/icons.js?v=9.99.4';
-import { escapeHtml } from './utils/escapeHtml.js?v=9.99.4';
-import { playBeep, unlockAudio } from './utils/beepAudio.js?v=9.99.4';
-import { normalizeDigits } from './utils/normalizeDigits.js?v=9.99.4';
+import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.99.5';
+import {applyLocale,getLocale} from './utils/locale.js?v=9.99.5';
+import {portalCairoClock} from './utils/portalClock.js?v=9.99.5';
+import { assistantPay } from "./utils/assistantPay.js?v=9.99.5";
+import { authService } from './services/auth.js?v=9.99.5';
+import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=9.99.5';
+import { renderSidebar } from './components/Sidebar.js?v=9.99.5';
+import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.99.5';
+import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=9.99.5';
+import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js?v=9.99.5';
+import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.99.5';
+import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=9.99.5';
+import { mountPhoneVerification } from './components/PhoneVerification.js?v=9.99.5';
+import { renderTeacherPlatformPreview, initTeacherPlatformPreviewCarousel } from './components/TeacherPlatformPreview.js?v=9.99.5';
+import { getIcon } from './utils/icons.js?v=9.99.5';
+import { escapeHtml } from './utils/escapeHtml.js?v=9.99.5';
+import { playBeep, unlockAudio } from './utils/beepAudio.js?v=9.99.5';
+import { normalizeDigits } from './utils/normalizeDigits.js?v=9.99.5';
 
 let renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView;
 
@@ -152,7 +152,7 @@ export class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=9.99.4').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=9.99.5').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;

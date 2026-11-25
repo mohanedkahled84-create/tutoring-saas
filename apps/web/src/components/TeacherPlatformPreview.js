@@ -1,4 +1,4 @@
-import { getIcon } from '../utils/icons.js?v=9.99.4';
+import { getIcon } from '../utils/icons.js?v=9.99.5';
 
 /**
  * Side-by-side platform preview for teachers on Starter/Basic/Trial plans.

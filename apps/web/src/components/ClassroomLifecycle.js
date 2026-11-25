@@ -1,5 +1,5 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.4';
-import {request} from '../services/api.js?v=9.99.4';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.5';
+import {request} from '../services/api.js?v=9.99.5';
 
 const names={students:'الطلاب',groups:'المجموعات'};
 export function registerClassroomLifecycle(app){

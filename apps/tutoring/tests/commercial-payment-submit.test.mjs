@@ -24,3 +24,30 @@ test('payment submission shows progress, blocks repeat clicks and preserves the 
   assert.equal(app._commercialReceipt,'data:image/png;base64,fixture');assert.ok(error.textContent);
  }finally{for(const [key,value] of Object.entries(saved))globalThis[key]=value;}
 });
+
+test('commercialClearReceipt removes attached image and restores upload box',async()=>{
+ const saved=Object.fromEntries(['document','localStorage','sessionStorage'].map(k=>[k,globalThis[k]]));
+ const fileInput={value:'receipt.png',required:false};
+ const uploadBox={hidden:true};
+ const preview={hidden:false};
+ const thumb={src:'data:image/png;base64,abc',removeAttribute(attr){if(attr==='src')delete this.src;}};
+ const nameEl={textContent:'receipt.png'};
+ const stateEl={textContent:'ready'};
+ const map={commercialReceiptFile:fileInput,commercialReceiptBox:uploadBox,commercialReceiptPreview:preview,commercialReceiptThumb:thumb,commercialReceiptName:nameEl,commercialReceiptState:stateEl};
+ globalThis.document={getElementById:id=>map[id]};
+ globalThis.localStorage={getItem:()=>'ar'};
+ globalThis.sessionStorage={getItem:()=>null};
+ const app={user:{id:'u1'},_commercialOrder:{id:'o1'},_commercialReceipt:'data:image/png;base64,abc',_commercialReceiptRead:{}};
+ try{
+  registerCommercialBillingActions(app);
+  app.commercialClearReceipt();
+  assert.equal(app._commercialReceipt,null);
+  assert.equal(app._commercialReceiptRead,null);
+  assert.equal(fileInput.value,'');
+  assert.equal(fileInput.required,true);
+  assert.equal(uploadBox.hidden,false);
+  assert.equal(preview.hidden,true);
+  assert.equal(thumb.src,undefined);
+  assert.equal(nameEl.textContent,'');
+ }finally{for(const [key,value] of Object.entries(saved))globalThis[key]=value;}
+});
