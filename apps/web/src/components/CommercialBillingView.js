@@ -1,8 +1,8 @@
-import {cyclePicker,priceMarkup,referencePrice} from '../utils/subscriptionPricing.js?v=9.98.0';
-import {localize} from '../utils/language.js?v=9.98.0';
-import { request } from '../services/api.js?v=9.98.0';
-import { escapeHtml as e } from '../utils/escapeHtml.js?v=9.98.0';
-import { renderRouteSkeleton } from './RouteSkeleton.js?v=9.98.0';
+import {cyclePicker,priceMarkup,referencePrice} from '../utils/subscriptionPricing.js?v=9.99.0';
+import {localize} from '../utils/language.js?v=9.99.0';
+import { request } from '../services/api.js?v=9.99.0';
+import { escapeHtml as e } from '../utils/escapeHtml.js?v=9.99.0';
+import { renderRouteSkeleton } from './RouteSkeleton.js?v=9.99.0';
 
 const money = p => (Number(p || 0) / 100).toLocaleString(localize('ar-EG','en-EG'), { maximumFractionDigits: 2 }) + localize(' ج.م',' EGP');
 const number = n => Number(n || 0).toLocaleString(localize('ar-EG','en-EG'),Number(n)>0 && Number(n)<1?{maximumSignificantDigits:3}:{maximumFractionDigits:2});
@@ -23,7 +23,7 @@ export function renderCommercialWallet(wallet) {
 
 export function renderCommercialBillingView(data = {}) {
   const c = data.commercial;
-  if (!c) return renderRouteSkeleton('billing', localize(false, true));
+  if (!c) return `<div class="visually-hidden" role="status" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">${localize('جار قراءة الباقات والاستخدام…','Loading plans and usage…')}</div>` + renderRouteSkeleton('billing', localize(false, true));
   const l = c.limits, catalog = c.catalog || [], current = !l.is_trial && catalog.find(p => p.id === l.plan_id), usedGB = c.storage_bytes_used == null ? null : c.storage_bytes_used / 1e9;
   const trialEnd = Date.parse(l.period_end || '');
   const trialDays = Number.isFinite(trialEnd) ? Math.max(0, Math.min(7, Math.ceil((trialEnd - Date.now()) / 86400000))) : null;

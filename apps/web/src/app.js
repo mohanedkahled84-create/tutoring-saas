@@ -1,19 +1,20 @@
-import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.98.0';
-import {applyLocale,getLocale} from './utils/locale.js?v=9.98.0';
-import {portalCairoClock} from './utils/portalClock.js?v=9.98.0';
-import { assistantPay } from "./utils/assistantPay.js?v=9.98.0";
-import { authService } from './services/auth.js?v=9.98.0';
-import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=9.98.0';
-import { renderSidebar } from './components/Sidebar.js?v=9.98.0';
-import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.98.0';
-import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=9.98.0';
-import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js?v=9.98.0';
-import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.98.0';
-import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=9.98.0';
-import { getIcon } from './utils/icons.js?v=9.98.0';
-import { escapeHtml } from './utils/escapeHtml.js?v=9.98.0';
-import { playBeep, unlockAudio } from './utils/beepAudio.js?v=9.98.0';
-import { normalizeDigits } from './utils/normalizeDigits.js?v=9.98.0';
+import {renderRouteSkeleton} from './components/RouteSkeleton.js?v=9.99.0';
+import {applyLocale,getLocale} from './utils/locale.js?v=9.99.0';
+import {portalCairoClock} from './utils/portalClock.js?v=9.99.0';
+import { assistantPay } from "./utils/assistantPay.js?v=9.99.0";
+import { authService } from './services/auth.js?v=9.99.0';
+import { request, API_BASE_URL, isJwtExpired } from './services/api.js?v=9.99.0';
+import { renderSidebar } from './components/Sidebar.js?v=9.99.0';
+import { renderNavbar, renderNavLiveBadgeHtml } from './components/Navbar.js?v=9.99.0';
+import { renderAuthScreens, renderEmailVerificationScreen, registerAuthActions } from './components/AuthScreens.js?v=9.99.0';
+import { renderOnboardingWizard, registerOnboardingActions } from './components/OnboardingWizard.js?v=9.99.0';
+import { renderUnifiedPortalLoginView, registerUnifiedPortalActions } from './components/UnifiedPortalLoginView.js?v=9.99.0';
+import { renderLandingView, registerLandingActions } from './components/LandingView.js?v=9.99.0';
+import { mountPhoneVerification } from './components/PhoneVerification.js?v=9.99.0';
+import { getIcon } from './utils/icons.js?v=9.99.0';
+import { escapeHtml } from './utils/escapeHtml.js?v=9.99.0';
+import { playBeep, unlockAudio } from './utils/beepAudio.js?v=9.99.0';
+import { normalizeDigits } from './utils/normalizeDigits.js?v=9.99.0';
 
 let renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView;
 
@@ -150,7 +151,7 @@ export class CentrlyApp {
   async ensureWorkspaceModules() {
     if (this.workspaceReady) return;
     if (!this.workspaceModulesPromise) {
-      this.workspaceModulesPromise = import('./workspace.js?v=9.98.0').then(module => {
+      this.workspaceModulesPromise = import('./workspace.js?v=9.99.0').then(module => {
         ({ renderTeacherDashboard, renderTeacherCalendar, renderSessionsView, renderStudentsView, renderGroupsView, renderMessageLogsView, renderHomeworkReviewView, renderCenterOwnerDashboard, renderStudentReportsView, renderRiskWatchlistView, renderBillingView, renderWhatsAppSettingsView, renderStudentCardsView, renderTeacherQuizzesView, renderCenterSessionsView, renderCenterTeachersView, renderCenterAssistantsView, renderCenterRoomsView, renderCenterSettlementsView, renderMaterialsView, renderTeacherAssistantsView, renderBusinessOwnerDashboard, renderAdminPaymentProofsView, renderAdminTenantsView, renderAdminOutreachView, renderTeacherSettingsView, renderCouponsView, renderWhatsAppCenterView, renderVideoLessonsView, renderTeacherPlatformBuilderView,renderSupportView,renderAnnouncementsView,renderAnnouncementAdminView } = module);
         module.registerWorkspaceActions(this);
         this.workspaceReady = true;
@@ -848,6 +849,13 @@ export class CentrlyApp {
 
     const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
+
+    // Mandatory Teacher Phone Verification Gate:
+    // Teachers and Center Owners must verify their phone number via SMS OTP before accessing the dashboard.
+    if (!isAdmin && !this.delegation && (this.user?.role === 'owner' || this.user?.role === 'teacher' || !this.user?.role)) {
+      const isVerified = await this.ensureTeacherPhoneVerified();
+      if (!isVerified) return;
+    }
     const validTeacherRoutes = [
       'sessions', 'video-lessons', 'platform-builder', 'online-quizzes', 'paper-exams', 'quizzes', 'homework', 'materials',
       'students', 'groups', 'assistants', 'calendar', 'student-cards',
@@ -1104,6 +1112,13 @@ export class CentrlyApp {
 
     const isAdmin = this.isPlatformAdmin(this.user);
     const isCenter = this.user?.role === 'center_owner' || this.user?.account_type === 'center';
+
+    // Mandatory Teacher Phone Verification Gate:
+    // Teachers and Center Owners must verify their phone number via SMS OTP before accessing the dashboard.
+    if (!isAdmin && !this.delegation && (this.user?.role === 'owner' || this.user?.role === 'teacher' || !this.user?.role)) {
+      const isVerified = await this.ensureTeacherPhoneVerified();
+      if (!isVerified) return;
+    }
     const dedicatedAdminOnlyRoutes = ['admin-dashboard', 'admin-proofs', 'admin-tenants', 'admin-outreach', 'admin-support', 'announcement-admin', 'coupons'];
     if (!isAdmin && dedicatedAdminOnlyRoutes.includes(route)) {
       route = isCenter ? 'center-dashboard' : 'dashboard';
@@ -2571,6 +2586,134 @@ export class CentrlyApp {
       modalEl.remove();
       if (onConfirm) await onConfirm();
     };
+  }
+
+  async ensureTeacherPhoneVerified() {
+    if (!this.user || this.delegation) return true;
+    const role = this.user.role || 'teacher';
+    if (!['owner', 'teacher'].includes(role) && this.user.account_type !== 'teacher') return true;
+
+    const cacheKey = 'centrly_phone_verified_' + this.user.id;
+    if (localStorage.getItem(cacheKey) === 'true') {
+      return true;
+    }
+
+    try {
+      const info = await request('/auth/phone/info', { method: 'POST', body: {} });
+      if (info?.verified) {
+        localStorage.setItem(cacheKey, 'true');
+        return true;
+      }
+      this.renderMandatoryPhoneVerification(info);
+      return false;
+    } catch (err) {
+      if (err?.status === 401) return true;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
+      console.warn('Teacher phone verification check:', err);
+      return true;
+    }
+  }
+
+  renderMandatoryPhoneVerification(info) {
+    window.__centrlyLoaded = true;
+    this.currentRoute = 'phone-verification';
+    const appEl = this.getAppEl();
+    if (!appEl) return;
+
+    appEl.innerHTML = `
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; padding: 1.5rem; font-family: 'Cairo', system-ui, -apple-system, sans-serif; direction: rtl;">
+        <div style="max-width: 460px; width: 100%; background: #ffffff; border-radius: 1.25rem; padding: 2.25rem 2rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03); border: 1px solid #e2e8f0; position: relative;">
+          
+          <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="margin: 0 auto 0.75rem; width: 56px; height: 56px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); border-radius: 1rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25); color: #fff; font-size: 1.5rem; font-weight: 900;">
+              سـ
+            </div>
+            <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; background: #eff6ff; color: #1d4ed8; margin-bottom: 0.5rem; border: 1px solid #dbeafe;">
+              خطوة إجبارية لتفعيل الحساب
+            </span>
+            <h1 style="font-size: 1.35rem; font-weight: 800; margin: 0 0 0.35rem 0; color: #0f172a;">
+              تأكيد رقم الموبايل
+            </h1>
+            <p style="font-size: 0.85rem; color: #64748b; margin: 0; line-height: 1.6;">
+              أهلاً بك <strong>${escapeHtml(this.user?.full_name || this.user?.name || 'يا أستاذنا')}</strong>! للحفاظ على أمان حسابك وتفعيل السنتر، أكّد ملكية رقم موبايلك عبر كود SMS.
+            </p>
+          </div>
+
+          <div id="mandatory-phone-verification-container" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1.25rem;"></div>
+
+          <div style="margin-top: 1rem; text-align: center;">
+            <button type="button" id="btnToggleChangePhone" onclick="const f=document.getElementById('mandatory-change-phone-form');if(f){f.style.display=f.style.display==='none'?'block':'none';}" style="background: none; border: none; color: #2563eb; font-size: 0.8rem; font-family: inherit; font-weight: 700; cursor: pointer; text-decoration: underline;">
+              الرقم به خطأ؟ اضغط لتعديله
+            </button>
+            <div id="mandatory-change-phone-form" style="display: none; margin-top: 0.75rem; background: #f1f5f9; padding: 0.85rem; border-radius: 0.75rem; border: 1px dashed #cbd5e1;">
+              <form onsubmit="window.centrlyApp && window.centrlyApp.handleChangePhoneInVerification ? window.centrlyApp.handleChangePhoneInVerification(event) : event.preventDefault()" style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="tel" id="mandatoryNewPhoneInput" placeholder="01xxxxxxxxx" dir="ltr" required style="flex: 1; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; font-family: inherit; font-size: 0.9rem;">
+                <button type="submit" class="btn btn-primary btn-sm" style="padding: 0.5rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">تأكيد وتغيير</button>
+              </form>
+            </div>
+          </div>
+
+          <div style="margin-top: 1.5rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; text-align: center;">
+            <button type="button" onclick="window.centrlyApp && window.centrlyApp.logout ? window.centrlyApp.logout() : (location.href='/?view=login')" 
+              style="background: none; border: none; color: #64748b; font-size: 0.8rem; font-family: inherit; font-weight: 600; cursor: pointer; text-decoration: underline;">
+              تسجيل الخروج أو استخدام حساب آخر
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const container = document.getElementById('mandatory-phone-verification-container');
+    if (!container) return;
+
+    mountPhoneVerification(container, {
+      info,
+      requestChallenge: () => request('/auth/phone/challenge', { method: 'POST', body: {} }),
+      requestCode: (proof = {}) => request('/auth/phone/request', { method: 'POST', body: proof }),
+      verifyCode: body => request('/auth/phone/verify', { method: 'POST', body }),
+      onVerified: async () => {
+        const cacheKey = 'centrly_phone_verified_' + this.user.id;
+        localStorage.setItem(cacheKey, 'true');
+        this.showToast('تم تأكيد رقم الموبايل بنجاح!', 'success');
+        setTimeout(() => {
+          this.init();
+        }, 500);
+      }
+    });
+  }
+
+  async handleChangePhoneInVerification(e) {
+    e?.preventDefault();
+    const input = document.getElementById('mandatoryNewPhoneInput');
+    const raw = normalizeDigits(input?.value || '').replace(/[\s()-]/g, '');
+    if (!/^01[0125]\d{8}$/.test(raw)) {
+      this.showToast('يرجى كتابة رقم موبايل مصري صحيح يبدأ بـ 01', 'warning');
+      return;
+    }
+    try {
+      const info = await request('/auth/phone/change/begin', { method: 'POST', body: { phone: raw } });
+      const container = document.getElementById('mandatory-phone-verification-container');
+      const changeForm = document.getElementById('mandatory-change-phone-form');
+      if (changeForm) changeForm.style.display = 'none';
+      if (container) {
+        mountPhoneVerification(container, {
+          info: { ...info, is_phone_change: true },
+          requestChallenge: () => request('/auth/phone/change/challenge', { method: 'POST', body: {} }),
+          requestCode: (proof = {}) => request('/auth/phone/change/request', { method: 'POST', body: proof }),
+          verifyCode: data => request('/auth/phone/change/verify', { method: 'POST', body: data }),
+          onVerified: async (result) => {
+            this.user.phone = result.phone;
+            authService.setUser(this.user);
+            const cacheKey = 'centrly_phone_verified_' + this.user.id;
+            localStorage.setItem(cacheKey, 'true');
+            this.showToast('تم تأكيد وتحديث رقم الموبايل بنجاح!', 'success');
+            setTimeout(() => this.init(), 500);
+          }
+        });
+      }
+    } catch (err) {
+      this.showToast(err.message || 'تعذر تغيير الرقم', 'danger');
+    }
   }
 
   promptLogout() {

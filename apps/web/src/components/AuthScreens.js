@@ -1,10 +1,10 @@
-import { authService } from '../services/auth.js?v=9.98.0';
-import { request } from '../services/api.js?v=9.98.0';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.98.0';
-import { getIcon } from '../utils/icons.js?v=9.98.0';
-import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.98.0';
-import {trackProductEvent} from '../services/productFunnel.js?v=9.98.0';
-import {enableGoogleButton,startGoogleAuth} from '../services/googleAuth.js?v=9.98.0';
+import { authService } from '../services/auth.js?v=9.99.0';
+import { request } from '../services/api.js?v=9.99.0';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.0';
+import { getIcon } from '../utils/icons.js?v=9.99.0';
+import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.0';
+import {trackProductEvent} from '../services/productFunnel.js?v=9.99.0';
+import {enableGoogleButton,startGoogleAuth} from '../services/googleAuth.js?v=9.99.0';
 
 export function renderAuthScreens() {
   return `
@@ -303,6 +303,10 @@ export function registerAuthActions(app) {
     this.resetTenantState();
     const isAdmin=this.user?.role==='admin';
     const isCenter=this.user?.role==='center_owner' || this.user?.account_type==='center';
+    if (!isAdmin && !this.delegation && (this.user?.role === 'owner' || this.user?.role === 'teacher' || !this.user?.role)) {
+      const isVerified = await this.ensureTeacherPhoneVerified();
+      if (!isVerified) return;
+    }
     this.currentRoute=isAdmin?'admin-dashboard':isCenter?'center-dashboard':'dashboard';
     for(const storage of [localStorage,sessionStorage]){
       storage.setItem('centrly_current_route',this.currentRoute);
