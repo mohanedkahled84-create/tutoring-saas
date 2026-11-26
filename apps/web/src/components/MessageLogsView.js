@@ -1,5 +1,5 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.9";
-import { getIcon } from "../utils/icons.js?v=9.99.9";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.10";
+import { getIcon } from "../utils/icons.js?v=9.99.10";
 
 /**
  * Centrly Message Logs & Delivery Status View (DEV-16 DEV-TDB.3 & DEV-ATN.3)

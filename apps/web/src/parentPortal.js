@@ -1,9 +1,9 @@
-import {renderParentPortalView, parentPortalSnapshot} from './components/ParentPortalView.js?v=9.99.9';
-import {renderParentPortalLogin, getParentBranding, saveParentBranding} from './components/ParentPortalLoginView.js?v=9.99.9';
-import {portalCache, portalRequest, adoptVerifiedPortalSession} from './utils/portalSession.js?v=9.99.9';
-import {preparePortalDestination} from './utils/portalDestination.js?v=9.99.9';
-import {normalizeDigits} from './utils/normalizeDigits.js?v=9.99.9';
-import {registerFamilyActions,savedFamilyToken,redeemFamilyEntry} from './parentFamily.js?v=9.99.9';
+import {renderParentPortalView, parentPortalSnapshot} from './components/ParentPortalView.js?v=9.99.10';
+import {renderParentPortalLogin, getParentBranding, saveParentBranding} from './components/ParentPortalLoginView.js?v=9.99.10';
+import {portalCache, portalRequest, adoptVerifiedPortalSession} from './utils/portalSession.js?v=9.99.10';
+import {preparePortalDestination} from './utils/portalDestination.js?v=9.99.10';
+import {normalizeDigits} from './utils/normalizeDigits.js?v=9.99.10';
+import {registerFamilyActions,savedFamilyToken,redeemFamilyEntry} from './parentFamily.js?v=9.99.10';
 function showPortalPending(app) { const root=app.getAppEl(); if(root) window.renderPortalOpening(root); }
 export function registerParentPortalActions(app) {
   app.setParentFamilyMode=function(value) {

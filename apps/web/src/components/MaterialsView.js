@@ -1,8 +1,8 @@
-import {renderSourceAnnouncementButton} from './AnnouncementsView.js?v=9.99.9';
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.9";
-import { getIcon } from "../utils/icons.js?v=9.99.9";
-import { request } from "../services/api.js?v=9.99.9";
-import {renderMaterialGroupPicker,readMaterialGroupPicker,registerMaterialGroupPicker,materialInGroup,materialGroupLabel} from './MaterialGroupPicker.js?v=9.99.9';
+import {renderSourceAnnouncementButton} from './AnnouncementsView.js?v=9.99.10';
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.10";
+import { getIcon } from "../utils/icons.js?v=9.99.10";
+import { request } from "../services/api.js?v=9.99.10";
+import {renderMaterialGroupPicker,readMaterialGroupPicker,registerMaterialGroupPicker,materialInGroup,materialGroupLabel} from './MaterialGroupPicker.js?v=9.99.10';
 
 /**
  * Centrly Teacher Study Materials & Homework Component

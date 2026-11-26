@@ -1,5 +1,5 @@
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.9';
-import { localize as t } from '../utils/language.js?v=9.99.9';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.10';
+import { localize as t } from '../utils/language.js?v=9.99.10';
 
 const getDays = () => [
   [6, t('السبت', 'Saturday')],

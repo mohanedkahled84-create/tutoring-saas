@@ -1,12 +1,12 @@
-import {openQuizAttempt} from '../utils/quizAttemptClient.js?v=9.99.9';
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.9";
-import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.9';
-import {portalCairoClock} from '../utils/portalClock.js?v=9.99.9';
-import { getIcon } from "../utils/icons.js?v=9.99.9";
-import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js?v=9.99.9";
-import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=9.99.9";
-import { openVideoPlayerModal } from "./VideoLessonsView.js?v=9.99.9";
-import { request } from "../services/api.js?v=9.99.9";
+import {openQuizAttempt} from '../utils/quizAttemptClient.js?v=9.99.10';
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.10";
+import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.10';
+import {portalCairoClock} from '../utils/portalClock.js?v=9.99.10';
+import { getIcon } from "../utils/icons.js?v=9.99.10";
+import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js?v=9.99.10";
+import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=9.99.10";
+import { openVideoPlayerModal } from "./VideoLessonsView.js?v=9.99.10";
+import { request } from "../services/api.js?v=9.99.10";
 
 /**
  * Centrly Student Web Portal Component
@@ -295,151 +295,144 @@ export function renderStudentPortalView(portalData = {}, activeTab = 'dashboard'
   });
 
   return `
-    <div style="min-height: 100vh; background-color: #f8fafc; padding: 1rem; font-family: system-ui, -apple-system, sans-serif; direction: rtl;">
-      <div style="max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;">
-        
-        <!-- Student Portal Header (Teacher White-Labeled) -->
-        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); border-radius: 1.25rem; padding: 1.5rem; box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15); color: #fff; text-align: center; position: relative; overflow: hidden;">
-          <!-- Subtle decorative circle -->
-          <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.08); border-radius: 50%;"></div>
-          
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; position: relative; z-index: 2;">
-            <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #10b981; font-weight: 700; background: rgba(255,255,255,0.95); padding: 0.25rem 0.6rem; border-radius: 9999px;">
-              <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%;"></span>
-              بوابة الطالب — ${escapeHtml(teacherNameStr)}
-            </span>
-            <div style="display: flex; gap: 0.4rem; align-items: center;">
-              <button onclick="window.openStudentPortalTour ? window.openStudentPortalTour(true) : null" 
-                style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35); border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="شرح أقسام المنصة">
-                ${getIcon('lightbulb', 13, '#fde047')}
-                <span>شرح المنصة</span>
-              </button>
-              <button onclick="window.centrlyApp && window.centrlyApp.reloadStudentPortal ? window.centrlyApp.reloadStudentPortal() : window.location.reload()" 
-                style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
-                ${getIcon('refresh', 13, '#ffffff')}
-                <span>تحديث</span>
-              </button>
-              <button onclick="window.centrlyApp && window.centrlyApp.handlePortalLogout ? window.centrlyApp.handlePortalLogout() : (window.location.href='/portal')" 
-                style="background: rgba(239,68,68,0.25); border: 1px solid rgba(239,68,68,0.4); border-radius: 0.5rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;" title="تسجيل الخروج">
-                ${getIcon('logout', 13, '#ffffff')}
-                <span>خروج</span>
-              </button>
-            </div>
-          </div>
+    <div style="box-sizing: border-box; min-height: 100dvh; background-color: #f6f8fb; color: #0f172a; padding: 16px 16px max(24px, env(safe-area-inset-bottom)); font: 16px/1.7 system-ui, -apple-system, sans-serif; direction: rtl;">
+      <div style="max-width: 780px; margin: auto; display: flex; flex-direction: column; gap: 18px;">
 
-          <div style="margin: 0 auto 0.5rem; width: 48px; height: 48px; background: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #1e3a8a; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-            ${getIcon('gradCap', 24, '#1e3a8a')}
+        <!-- Modern Minimal Portal Header -->
+        <header style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div style="font-weight: 800; font-size: 15px; line-height: 1.45;">
+            <span style="color: #1d4ed8;">سـ</span> سنترلي<br>
+            <small style="color: #475569; font-size: 13px; font-weight: 500;">بوابة الطالب · ${escapeHtml(teacherNameStr)}</small>
           </div>
-          <h1 style="font-size: 1.35rem; font-weight: 900; margin: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <button type="button" onclick="window.openStudentPortalTour ? window.openStudentPortalTour(true) : null"
+              style="font: inherit; min-height: 44px; padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 14px; background: #ffffff; color: #0f172a; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="شرح أقسام المنصة">
+              ${getIcon('lightbulb', 15, '#1d4ed8')}
+              <span>شرح المنصة</span>
+            </button>
+            <button type="button" onclick="window.centrlyApp && window.centrlyApp.reloadStudentPortal ? window.centrlyApp.reloadStudentPortal() : window.location.reload()"
+              style="font: inherit; min-height: 44px; padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 14px; background: #ffffff; color: #0f172a; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+              ${getIcon('refresh', 15, 'currentColor')}
+              <span>تحديث</span>
+            </button>
+            <button type="button" onclick="window.centrlyApp && window.centrlyApp.handlePortalLogout ? window.centrlyApp.handlePortalLogout() : (window.location.href='/portal')"
+              style="font: inherit; min-height: 44px; padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 14px; background: #ffffff; color: #0f172a; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="تسجيل الخروج">
+              ${getIcon('logout', 15, 'currentColor')}
+              <span>خروج</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- Clean White Hero Card (matches Centerly portal system) -->
+        <section style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 4px solid #1d4ed8; border-radius: 22px; padding: 24px; display: grid; gap: 10px; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03); text-align: start;">
+          <p style="margin: 0; color: #475569; font-size: 14px;">متابعتك الدراسية في مكان واحد</p>
+          <h1 style="margin: 0; font-size: 26px; line-height: 1.45; font-weight: 800; color: #0f172a;">
             أهلاً بك يا ${escapeHtml(student.name)}
           </h1>
-          
-          <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap;">
-            <span style="background: rgba(255,255,255,0.2); padding: 0.2rem 0.6rem; border-radius: 0.4rem; font-family: monospace; font-size: 0.8rem; font-weight: 700;">كود: ${escapeHtml(student.student_code)}</span>
-            ${student.group_name ? `<span style="background: rgba(245,158,11,0.3); border: 1px solid rgba(245,158,11,0.5); padding: 0.2rem 0.6rem; border-radius: 0.4rem; font-size: 0.8rem; font-weight: 700;">${escapeHtml(student.group_name)}</span>` : ''}
-          </div>
-          
-          <p style="font-size: 0.8rem; opacity: 0.9; margin: 0.5rem 0 0 0;">
-            الواجبات، الامتحانات الدورية، وفيديوهات الشرح والمتابعة
+          <p style="margin: 0; color: #475569; font-size: 15px;">
+            ${escapeHtml(teacherNameStr)}${student.subject_name ? ` · ${escapeHtml(student.subject_name)}` : ''}
           </p>
-        </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <span style="color: #475569; font-size: 15px;">${escapeHtml(student.group_name || '')}</span>
+            ${student.student_code ? `<small style="color: #475569; font-size: 13px;">كود الطالب <b style="direction: ltr; unicode-bidi: isolate; color: #0f172a;">${escapeHtml(student.student_code)}</b></small>` : ''}
+          </div>
+        </section>
 
         ${renderPortalHomeSummary(portalData)}
         <!-- Teacher Direct WhatsApp Contact Card -->
         ${teacherWaUrl ? `
-          <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; border-radius: 1rem; padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="width: 40px; height: 40px; border-radius: 50%; background: #10b981; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);">
-                ${getIcon('whatsapp', 22, '#ffffff')}
+          <section style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 40px; height: 40px; border-radius: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                ${getIcon('whatsapp', 20, '#16a34a')}
               </div>
               <div style="text-align: right;">
-                <div style="font-weight: 800; font-size: 0.9rem; color: #065f46;">
+                <div style="font-weight: 800; font-size: 15px; color: #0f172a;">
                   تواصل مباشر مع ${escapeHtml(teacherNameStr)}
                 </div>
-                <div style="font-size: 0.76rem; color: #047857; margin-top: 1px;">
-                  ${student.subject_name ? `${escapeHtml(student.subject_name)} • ` : ''}لأي استفسار في المنهج أو بخصوص الواجب والامتحانات
+                <div style="font-size: 13px; color: #475569; margin-top: 2px;">
+                  ${student.subject_name ? `${escapeHtml(student.subject_name)} · ` : ''}لأي استفسار في المنهج أو بخصوص الواجب والامتحانات
                 </div>
               </div>
             </div>
             <a href="${teacherWaUrl}" target="_blank" rel="noopener noreferrer"
-              style="background: #10b981; color: #ffffff; text-decoration: none; padding: 0.55rem 0.95rem; border-radius: 0.65rem; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.4rem; flex-shrink: 0; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); transition: transform 0.15s ease;"
-              onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-              ${getIcon('whatsapp', 15, '#ffffff')}
+              style="min-height: 44px; padding: 8px 16px; border: 1px solid #bbf7d0; border-radius: 14px; background: #f0fdf4; color: #166534; text-decoration: none; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;">
+              ${getIcon('whatsapp', 15, '#16a34a')}
               <span>مراسلة واتساب</span>
             </a>
-          </div>
+          </section>
         ` : ''}
 
         <!-- Navigation Bar (Dashboard, Materials, Exams, Videos, Attendance, Barcode) -->
-        <div style="display: flex; gap: 4px; background: #e2e8f0; padding: 4px; border-radius: 0.85rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+        <nav style="display: flex; gap: 6px; background: #e9eef5; padding: 6px; border-radius: 18px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('dashboard') : null" id="student-tab-btn-dashboard"
-            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'dashboard' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'dashboard' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'dashboard' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('dashboard', 14, activeTab === 'dashboard' ? '#1e3a8a' : '#64748b')}
+            style="font: inherit; min-height: 46px; padding: 8px 12px; border: none; border-radius: 13px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; flex: 1; min-width: 110px; background: ${activeTab === 'dashboard' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'dashboard' ? '#0f172a' : '#475569'}; box-shadow: ${activeTab === 'dashboard' ? '0 2px 6px rgba(15,23,42,0.08)' : 'none'};">
+            ${getIcon('dashboard', 14, 'currentColor')}
             <span>الرئيسية والمهام</span>
           </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('materials') : null" id="student-tab-btn-materials"
-            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'materials' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'materials' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('homework', 14, activeTab === 'materials' ? '#1e3a8a' : '#64748b')}
+            style="font: inherit; min-height: 46px; padding: 8px 12px; border: none; border-radius: 13px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; flex: 1; min-width: 110px; background: ${activeTab === 'materials' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'materials' ? '#0f172a' : '#475569'}; box-shadow: ${activeTab === 'materials' ? '0 2px 6px rgba(15,23,42,0.08)' : 'none'};">
+            ${getIcon('homework', 14, 'currentColor')}
             <span>الواجبات والمذكرات ${activeHomeworks.length > 0 ? `(${activeHomeworks.length})` : ''}</span>
           </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('exams') : null" id="student-tab-btn-exams"
-            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'exams' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'exams' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'exams' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('chart', 14, activeTab === 'exams' ? '#1e3a8a' : '#64748b')}
+            style="font: inherit; min-height: 46px; padding: 8px 12px; border: none; border-radius: 13px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; flex: 1; min-width: 100px; background: ${activeTab === 'exams' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'exams' ? '#0f172a' : '#475569'}; box-shadow: ${activeTab === 'exams' ? '0 2px 6px rgba(15,23,42,0.08)' : 'none'};">
+            ${getIcon('chart', 14, 'currentColor')}
             <span>الامتحانات ${onlineQuizzes.length > 0 ? `(${onlineQuizzes.length})` : ''}</span>
           </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('videos') : null" id="student-tab-btn-videos"
-            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'videos' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'videos' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'videos' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('video', 14, activeTab === 'videos' ? '#1e3a8a' : '#64748b')}
+            style="font: inherit; min-height: 46px; padding: 8px 12px; border: none; border-radius: 13px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; flex: 1; min-width: 110px; background: ${activeTab === 'videos' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'videos' ? '#0f172a' : '#475569'}; box-shadow: ${activeTab === 'videos' ? '0 2px 6px rgba(15,23,42,0.08)' : 'none'};">
+            ${getIcon('video', 14, 'currentColor')}
             <span>فيديوهات الشرح ${videoMaterials.length > 0 ? `(${videoMaterials.length})` : ''}</span>
           </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('attendance') : null" id="student-tab-btn-attendance"
-            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('calendar', 14, activeTab === 'attendance' ? '#1e3a8a' : '#64748b')}
+            style="font: inherit; min-height: 46px; padding: 8px 12px; border: none; border-radius: 13px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; flex: 1; min-width: 110px; background: ${activeTab === 'attendance' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'attendance' ? '#0f172a' : '#475569'}; box-shadow: ${activeTab === 'attendance' ? '0 2px 6px rgba(15,23,42,0.08)' : 'none'};">
+            ${getIcon('calendar', 14, 'currentColor')}
             <span>الحضور والغياب</span>
           </button>
 
           <button type="button" onclick="window.switchStudentPortalTab ? window.switchStudentPortalTab('card') : null" id="student-tab-btn-card"
-            style="padding: 0.65rem 0.65rem; border: none; border-radius: 0.65rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; white-space: nowrap; flex: 1; min-width: 90px; background: ${activeTab === 'card' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'card' ? '#1e3a8a' : '#64748b'}; box-shadow: ${activeTab === 'card' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'};">
-            ${getIcon('barcode', 14, activeTab === 'card' ? '#1e3a8a' : '#64748b')}
+            style="font: inherit; min-height: 46px; padding: 8px 12px; border: none; border-radius: 13px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; flex: 1; min-width: 110px; background: ${activeTab === 'card' ? '#ffffff' : 'transparent'}; color: ${activeTab === 'card' ? '#0f172a' : '#475569'}; box-shadow: ${activeTab === 'card' ? '0 2px 6px rgba(15,23,42,0.08)' : 'none'};">
+            ${getIcon('barcode', 14, 'currentColor')}
             <span>باركود الحضور</span>
           </button>
-        </div>
+        </nav>
 
         <!-- ================= TAB 1: DASHBOARD (الرئيسية والمهام) ================= -->
         <div id="student-tab-content-dashboard" style="display: ${activeTab === 'dashboard' ? 'flex' : 'none'}; flex-direction: column; gap: 1rem;">
           
-          <!-- 3 Golden KPIs -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
-            <div style="background: #ffffff; padding: 1rem 0.75rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">نسبة الحضور</div>
-              <div style="font-size: 1.55rem; font-weight: 900; color: #10b981; margin-top: 0.2rem;">
+          <!-- 3 Summary KPIs -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+            <div style="background: #ffffff; padding: 18px; border-radius: 18px; border: 1px solid #e2e8f0; display: grid; gap: 6px; text-align: start;">
+              <div style="font-size: 14px; color: #475569;">نسبة الحضور</div>
+              <div style="font-size: 24px; font-weight: 800; color: #0f172a;">
                 ${escapeHtml(summary.attendance_rate ?? 'لا توجد بيانات')}
               </div>
-              <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.2rem;">
+              <div style="font-size: 13px; color: #475569;">
                 ${escapeHtml(summary.attended_count || 0)} حاضر / ${escapeHtml(summary.total_sessions || 0)} حصة
               </div>
             </div>
 
-            <div style="background: #ffffff; padding: 1rem 0.75rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">متوسط الكويزات</div>
-              <div style="font-size: 1.55rem; font-weight: 900; color: #2563eb; margin-top: 0.2rem;">
+            <div style="background: #ffffff; padding: 18px; border-radius: 18px; border: 1px solid #e2e8f0; display: grid; gap: 6px; text-align: start;">
+              <div style="font-size: 14px; color: #475569;">متوسط الكويزات</div>
+              <div style="font-size: 24px; font-weight: 800; color: #0f172a;">
                 ${escapeHtml(summary.quiz_average_percentage || '—')}
               </div>
-              <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.2rem;">
+              <div style="font-size: 13px; color: #475569;">
                 ${quizzes.length > 0 ? `${quizzes.length} كويز مرصود` : 'لا توجد كويزات'}
               </div>
             </div>
 
-            <div style="background: #ffffff; padding: 1rem 0.75rem; border-radius: 0.85rem; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">الواجبات المسلّمة</div>
-              <div style="font-size: 1.55rem; font-weight: 900; color: ${activeHomeworks.length > 0 ? '#b45309' : '#059669'}; margin-top: 0.2rem;">
-                ${approvedHomeworks.length} <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">/ ${homeworkMaterials.length}</span>
+            <div style="background: #ffffff; padding: 18px; border-radius: 18px; border: 1px solid #e2e8f0; display: grid; gap: 6px; text-align: start;">
+              <div style="font-size: 14px; color: #475569;">الواجبات المسلّمة</div>
+              <div style="font-size: 24px; font-weight: 800; color: #0f172a;">
+                ${approvedHomeworks.length} <span style="font-size: 15px; font-weight: 600; color: #475569;">/ ${homeworkMaterials.length}</span>
               </div>
-              <div style="font-size: 0.72rem; color: ${activeHomeworks.length > 0 ? '#b45309' : '#059669'}; margin-top: 0.2rem; font-weight: 700;">
+              <div style="font-size: 13px; color: #475569;">
                 ${activeHomeworks.length > 0 ? `${activeHomeworks.length} مطلوب للتسليم` : 'كافة الواجبات معتمدة'}
               </div>
             </div>
@@ -1198,8 +1191,8 @@ if (typeof window !== 'undefined') {
       }
       if (btn) {
         btn.style.background = (t === tabName) ? '#ffffff' : 'transparent';
-        btn.style.color = (t === tabName) ? '#1e3a8a' : '#64748b';
-        btn.style.boxShadow = (t === tabName) ? '0 2px 6px rgba(0,0,0,0.08)' : 'none';
+        btn.style.color = (t === tabName) ? '#0f172a' : '#475569';
+        btn.style.boxShadow = (t === tabName) ? '0 2px 6px rgba(15,23,42,0.08)' : 'none';
       }
     });
   };

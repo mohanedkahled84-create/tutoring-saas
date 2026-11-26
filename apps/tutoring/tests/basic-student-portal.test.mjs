@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {renderBasicStudentPortal} from '../../web/src/components/BasicStudentPortalView.js';
+import {renderStudentPortalView} from '../../web/src/components/StudentPortalView.js';
 import {loadPortalAccount} from '../dist/shared/utils/portalAccount.js';
 import {generateParentPortalToken} from '../dist/shared/utils/tokens.js';
 
@@ -40,4 +41,15 @@ test('barcode controls safely embed names containing HTML entities',()=>{
  const html=renderBasicStudentPortal({student:{name:'Test &quot; name',student_code:'1234'}});
  assert.ok(html.includes('Test &amp;quot; name'));
  assert.ok(!html.includes('Test &quot; name'));
+});
+
+test('pro student portal fallback uses clean modern header and keeps pro tabs without retired blue card',()=>{
+ const html=renderStudentPortalView({student:{id:'s1',name:'طالب برو',student_code:'1002',teacher_name:'المعلم'},summary:{total_sessions:0},sessions:[],quizzes:[],materials:[],features:{teaching_platform:true}});
+ assert.doesNotMatch(html,/بوابة الطالب —/);
+ assert.doesNotMatch(html,/box-shadow:\s*0 4px 20px rgba\(37,\s*99,\s*235/);
+ assert.match(html,/background-color:\s*#f6f8fb/);
+ assert.match(html,/border-top:\s*4px solid #1d4ed8/);
+ assert.ok(html.includes('فيديوهات الشرح'));
+ assert.ok(html.includes('الامتحانات'));
+ assert.ok(html.includes('باركود الحضور'));
 });

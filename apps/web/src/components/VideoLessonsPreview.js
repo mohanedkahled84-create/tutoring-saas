@@ -1,5 +1,5 @@
-import { getIcon } from '../utils/icons.js?v=9.99.9';
-import { PREVIEW_CAROUSEL_CSS } from './TeacherPlatformPreview.js?v=9.99.9';
+import { getIcon } from '../utils/icons.js?v=9.99.10';
+import { PREVIEW_CAROUSEL_CSS } from './TeacherPlatformPreview.js?v=9.99.10';
 
 /**
  * Side-by-side YouTube & Video Lessons preview for teachers on Basic/Trial plans.

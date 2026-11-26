@@ -1,12 +1,12 @@
-import {trackProductEvent} from '../services/productFunnel.js?v=9.99.9';
-import {renderApprovedLandingView as renderLandingView} from './ApprovedLandingView.js?v=9.99.9';
-import {mountApprovedLandingView} from './ApprovedLandingActions.js?v=9.99.9';
+import {trackProductEvent} from '../services/productFunnel.js?v=9.99.10';
+import {renderApprovedLandingView as renderLandingView} from './ApprovedLandingView.js?v=9.99.10';
+import {mountApprovedLandingView} from './ApprovedLandingActions.js?v=9.99.10';
 export {renderLandingView};
 
 export function registerLandingActions(app) {
   app.loadProductWalkthrough=async function(){
     const target=document.getElementById('product-walkthrough');if(!target)return;
-    try{const module=await import('./ProductWalkthrough.js?v=9.99.9');if(!target.isConnected)return;module.registerWalkthroughActions(this);target.innerHTML=module.renderProductWalkthrough(this.landingDemoState);}
+    try{const module=await import('./ProductWalkthrough.js?v=9.99.10');if(!target.isConnected)return;module.registerWalkthroughActions(this);target.innerHTML=module.renderProductWalkthrough(this.landingDemoState);}
     catch{if(target.isConnected)target.innerHTML='<p style="padding:1rem">تعذر تحميل المثال. <button class="btn btn-secondary" onclick="window.centrlyApp.loadProductWalkthrough()">إعادة المحاولة</button></p>';}
   };
   // Official Landing / Welcome Page

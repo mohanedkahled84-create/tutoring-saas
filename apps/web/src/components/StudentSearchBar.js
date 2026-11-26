@@ -1,4 +1,4 @@
-import { getIcon } from "../utils/icons.js?v=9.99.9";
+import { getIcon } from "../utils/icons.js?v=9.99.10";
 
 /**
  * Universal Student Search Bar Component (DEV-80)

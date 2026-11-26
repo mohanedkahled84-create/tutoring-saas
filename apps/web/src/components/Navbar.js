@@ -1,7 +1,7 @@
-import { renderLanguageButton } from '../utils/language.js?v=9.99.9';
-import { getIcon } from '../utils/icons.js?v=9.99.9';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.9';
-import { getLocale } from '../utils/locale.js?v=9.99.9';
+import { renderLanguageButton } from '../utils/language.js?v=9.99.10';
+import { getIcon } from '../utils/icons.js?v=9.99.10';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.10';
+import { getLocale } from '../utils/locale.js?v=9.99.10';
 
 export function renderNavbar(user, activeSessionSummary = null) {
   const isAdmin = user?.role === 'admin';

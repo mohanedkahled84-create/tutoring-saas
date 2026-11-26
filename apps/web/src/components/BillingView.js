@@ -1,6 +1,6 @@
-import {localize} from '../utils/language.js?v=9.99.9';
-import {renderCommercialBillingView,registerCommercialBillingActions} from './CommercialBillingView.js?v=9.99.9';
-import {escapeHtml} from '../utils/escapeHtml.js?v=9.99.9';
+import {localize} from '../utils/language.js?v=9.99.10';
+import {renderCommercialBillingView,registerCommercialBillingActions} from './CommercialBillingView.js?v=9.99.10';
+import {escapeHtml} from '../utils/escapeHtml.js?v=9.99.10';
 export function renderBillingView(data={},user={}) { return renderCommercialBillingView(data,user); }
 export function registerBillingActions(app){
  registerCommercialBillingActions(app);

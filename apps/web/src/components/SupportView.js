@@ -1,6 +1,6 @@
-import {localize as t} from '../utils/language.js?v=9.99.9';
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.9';
-import {request} from '../services/api.js?v=9.99.9';
+import {localize as t} from '../utils/language.js?v=9.99.10';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.10';
+import {request} from '../services/api.js?v=9.99.10';
 const states=()=>({open:t('مفتوح','Open'),in_progress:t('قيد المتابعة','In progress'),waiting_user:t('بانتظار ردك','Waiting for your reply'),resolved:t('تم الحل','Resolved')});
 const categories=()=>({account:t('الحساب والدخول','Account and sign-in'),attendance:t('الحضور والحصص','Attendance and classes'),homework:t('الواجبات والمحتوى','Homework and materials'),messages:t('الرسائل والإعلانات','Messages and announcements'),subscription:t('الاشتراك','Subscription'),other:t('استفسار آخر','Other question')});
 const stamp=value=>new Date(value).toLocaleString(t('ar-EG','en-GB'),{timeZone:'Africa/Cairo',dateStyle:'medium',timeStyle:'short'});

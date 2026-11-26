@@ -1,5 +1,5 @@
-import {localize as t} from './language.js?v=9.99.9';
-import {escapeHtml as e} from './escapeHtml.js?v=9.99.9';
+import {localize as t} from './language.js?v=9.99.10';
+import {escapeHtml as e} from './escapeHtml.js?v=9.99.10';
 
 export const CUTOUT_SUPPORT_WHATSAPP_URL = 'https://wa.me/201123671177?text=' + encodeURIComponent('مرحبًا، أواجه مشكلة في تجهيز الصورة الشفافة (PNG) لصفحة منصتي على سنترلي وأحتاج مساعدة.');
 

@@ -1,6 +1,6 @@
-import {request} from '../services/api.js?v=9.99.9';
-import {escapeHtml as escape} from '../utils/escapeHtml.js?v=9.99.9';
-import {cyclePrice} from '../utils/subscriptionPricing.js?v=9.99.9';
+import {request} from '../services/api.js?v=9.99.10';
+import {escapeHtml as escape} from '../utils/escapeHtml.js?v=9.99.10';
+import {cyclePrice} from '../utils/subscriptionPricing.js?v=9.99.10';
 
 const ASSETS='/assets/home/v1/';
 const features={

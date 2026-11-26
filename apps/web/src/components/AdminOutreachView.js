@@ -1,5 +1,5 @@
-import { getIcon } from '../utils/icons.js?v=9.99.9';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.9';
+import { getIcon } from '../utils/icons.js?v=9.99.10';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.10';
 
 /**
  * Centrly Superadmin - Outreach & Cold WhatsApp Campaign HQ

@@ -1,6 +1,6 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.9';
-import {request} from '../services/api.js?v=9.99.9';
-import {localize as t} from '../utils/language.js?v=9.99.9';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.10';
+import {request} from '../services/api.js?v=9.99.10';
+import {localize as t} from '../utils/language.js?v=9.99.10';
 
 const getActions = () => ({
  'messages.prepare': t('طلب معاينة رسالة واتساب (لا يؤكد الإرسال)', 'WhatsApp message preview requested (does not confirm delivery)'),

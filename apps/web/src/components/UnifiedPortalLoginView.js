@@ -1,15 +1,15 @@
-import {renderBasicStudentPortal} from './BasicStudentPortalView.js?v=9.99.9';
-import { request, API_BASE_URL } from '../services/api.js?v=9.99.9';
-import { registerParentPortalActions } from '../parentPortal.js?v=9.99.9';
-import {clearFamilyForOtherLogin} from '../utils/portalSession.js?v=9.99.9';
-import { renderParentPortalLogin, getParentBranding, saveParentBranding } from './ParentPortalLoginView.js?v=9.99.9';
-import { renderStudentPortalView } from './StudentPortalView.js?v=9.99.9';
-import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js?v=9.99.9';
-import { getIcon } from '../utils/icons.js?v=9.99.9';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.9';
-import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.9';
-import { preparePortalDestination } from '../utils/portalDestination.js?v=9.99.9';
-import { portalCache, portalRequest } from '../utils/portalSession.js?v=9.99.9';
+import {renderBasicStudentPortal} from './BasicStudentPortalView.js?v=9.99.10';
+import { request, API_BASE_URL } from '../services/api.js?v=9.99.10';
+import { registerParentPortalActions } from '../parentPortal.js?v=9.99.10';
+import {clearFamilyForOtherLogin} from '../utils/portalSession.js?v=9.99.10';
+import { renderParentPortalLogin, getParentBranding, saveParentBranding } from './ParentPortalLoginView.js?v=9.99.10';
+import { renderStudentPortalView } from './StudentPortalView.js?v=9.99.10';
+import { downloadStudentCardAsPng, openFullscreenBarcodeModal } from '../utils/studentBarcodeCard.js?v=9.99.10';
+import { getIcon } from '../utils/icons.js?v=9.99.10';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.10';
+import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.10';
+import { preparePortalDestination } from '../utils/portalDestination.js?v=9.99.10';
+import { portalCache, portalRequest } from '../utils/portalSession.js?v=9.99.10';
 
 function showPortalPending(app) {
   const root = app.getAppEl();
