@@ -260,6 +260,10 @@
   ],
   "rewrites": [
     {
+      "source": "/assets/home/:path*",
+      "destination": "/apps/web/assets/home/:path*"
+    },
+    {
       "source": "/auth/google/callback",
       "destination": "/apps/web/google-callback.html"
     },

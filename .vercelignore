@@ -17,3 +17,6 @@ sample_exam_images/
 *.wav
 *.zip
 *.tar.gz
+
+# Approved homepage video asset (other generated videos remain excluded).
+!apps/web/assets/home/v1/product-film.mp4
