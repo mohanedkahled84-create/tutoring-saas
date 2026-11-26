@@ -1,11 +1,11 @@
-import {getLocale} from '../utils/locale.js?v=9.99.7';
-import {studentDiscount} from '../utils/studentDiscount.js?v=9.99.7';
-import { request } from "../services/api.js?v=9.99.7";
-import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.99.7";
-import { renderStudentSearchBar } from "./StudentSearchBar.js?v=9.99.7";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.7";
-import { getIcon } from "../utils/icons.js?v=9.99.7";
-import {trackProductEvent} from '../services/productFunnel.js?v=9.99.7';
+import {getLocale} from '../utils/locale.js?v=9.99.8';
+import {studentDiscount} from '../utils/studentDiscount.js?v=9.99.8';
+import { request } from "../services/api.js?v=9.99.8";
+import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.99.8";
+import { renderStudentSearchBar } from "./StudentSearchBar.js?v=9.99.8";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.8";
+import { getIcon } from "../utils/icons.js?v=9.99.8";
+import {trackProductEvent} from '../services/productFunnel.js?v=9.99.8';
 
 /**
  * Centrly Students Directory Component (DEV-89)

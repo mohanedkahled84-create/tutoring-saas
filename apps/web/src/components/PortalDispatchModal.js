@@ -1,7 +1,7 @@
-import { request } from '../services/api.js?v=9.99.7';
-import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.7';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.7';
-import { getIcon } from '../utils/icons.js?v=9.99.7';
+import { request } from '../services/api.js?v=9.99.8';
+import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.8';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.8';
+import { getIcon } from '../utils/icons.js?v=9.99.8';
 
 /**
  * Centrly Portal Link Dispatch & Batch Sharing Module

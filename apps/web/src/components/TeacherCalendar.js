@@ -1,6 +1,6 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.7";
-import { getIcon } from "../utils/icons.js?v=9.99.7";
-import { calendarDateKey, calendarWeekRange, calendarMonthRange, calendarToday, calendarSessionOnDate } from '../utils/calendarDateRange.js?v=9.99.7';
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.8";
+import { getIcon } from "../utils/icons.js?v=9.99.8";
+import { calendarDateKey, calendarWeekRange, calendarMonthRange, calendarToday, calendarSessionOnDate } from '../utils/calendarDateRange.js?v=9.99.8';
 
 /**
  * Centrly Teacher Calendar (DEV-89)

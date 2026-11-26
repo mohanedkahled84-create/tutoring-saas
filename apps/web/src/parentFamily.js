@@ -1,7 +1,7 @@
-import {renderParentPortalView,parentPortalSnapshot} from './components/ParentPortalView.js?v=9.99.7';
-import {saveParentBranding} from './components/ParentPortalLoginView.js?v=9.99.7';
-import {portalRequest,portalCache} from './utils/portalSession.js?v=9.99.7';
-import {escapeHtml as esc} from './utils/escapeHtml.js?v=9.99.7';
+import {renderParentPortalView,parentPortalSnapshot} from './components/ParentPortalView.js?v=9.99.8';
+import {saveParentBranding} from './components/ParentPortalLoginView.js?v=9.99.8';
+import {portalRequest,portalCache} from './utils/portalSession.js?v=9.99.8';
+import {escapeHtml as esc} from './utils/escapeHtml.js?v=9.99.8';
 
 const TOKEN='centrly_family_token_v1',CACHE='centrly_family_snapshot_v1',SELECTED='centrly_family_selected_v1';
 const request=(path,body)=>portalRequest('/public/family/'+path,{method:'POST',body});

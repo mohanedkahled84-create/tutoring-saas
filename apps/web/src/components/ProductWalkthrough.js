@@ -1,4 +1,4 @@
-import {getIcon} from '../utils/icons.js?v=9.99.7';
+import {getIcon} from '../utils/icons.js?v=9.99.8';
 const roles=[['teacher','المدرس'],['assistant','المساعد'],['parent','ولي الأمر']];
 export function renderProductWalkthrough(state={}){
  const active=roles.some(([key])=>key===state.role)?state.role:'teacher',attended=!!state.attended;
