@@ -1,15 +1,11 @@
-import { getIcon } from '../utils/icons.js?v=9.99.6';
+import { getIcon } from '../utils/icons.js?v=9.99.7';
 
 /**
  * Side-by-side platform preview for teachers on Starter/Basic/Trial plans.
  * Slide 1 showcases the branded external login page (with teacher portrait cutout),
  * Slide 2 peeks beside it and auto-scrolls smoothly to reveal the student dashboard.
  */
-export function renderTeacherPlatformPreview(en = false) {
-  const dir = en ? 'ltr' : 'rtl';
-  return `
-  <div class="ppv-showcase" data-platform-preview dir="${dir}">
-    <style>
+export const PREVIEW_CAROUSEL_CSS = `
       .ppv-showcase{display:grid;gap:12px;width:100%;max-width:1040px;min-width:0}
       .ppv-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
       .ppv-pills{display:flex;gap:8px;flex-wrap:wrap;min-width:0}
@@ -27,6 +23,15 @@ export function renderTeacherPlatformPreview(en = false) {
       .ppv-slide-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
       .ppv-slide-title{font-size:.84rem;font-weight:800;color:#0f172a}
       .ppv-url{font-size:.74rem;font-weight:700;color:#065f46;background:#ecfdf5;border:1px solid #a7f3d0;padding:3px 10px;border-radius:999px;direction:ltr;unicode-bidi:isolate}
+      @media(max-width:760px){.ppv-slide{flex:0 0 90%}}
+`;
+
+export function renderTeacherPlatformPreview(en = false) {
+  const dir = en ? 'ltr' : 'rtl';
+  return `
+  <div class="ppv-showcase" data-platform-preview data-preview-carousel dir="${dir}">
+    <style>
+      ${PREVIEW_CAROUSEL_CSS}
 
       /* Slide 1: Branded External Login + Teacher Pop-Out Cutout */
       .ppv-login-canvas{flex:1;background:linear-gradient(135deg,#064e3b 0%,#022c22 100%);color:#fff;padding:18px 22px 22px;display:flex;flex-direction:column;gap:16px;position:relative;overflow:hidden}
@@ -225,8 +230,13 @@ export function renderTeacherPlatformPreview(en = false) {
  * Attaches smooth auto-scroll & pill navigation to the rendered platform preview showcase.
  */
 export function initTeacherPlatformPreviewCarousel() {
-  const root = document.querySelector('[data-platform-preview]');
-  if (!root) return;
+  const roots = document.querySelectorAll('[data-preview-carousel], [data-platform-preview]');
+  for (const root of roots) initSinglePreviewCarousel(root);
+}
+
+function initSinglePreviewCarousel(root) {
+  if (!root || root.dataset.carouselBound) return;
+  root.dataset.carouselBound = 'true';
   const track = root.querySelector('.ppv-track');
   const slides = [...root.querySelectorAll('[data-preview-slide]')];
   const pills = [...root.querySelectorAll('[data-preview-target]')];

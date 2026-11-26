@@ -1,7 +1,7 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.6";
-import { getIcon } from "../utils/icons.js?v=9.99.6";
-import { request } from "../services/api.js?v=9.99.6";
-import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.99.6";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.7";
+import { getIcon } from "../utils/icons.js?v=9.99.7";
+import { request } from "../services/api.js?v=9.99.7";
+import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.99.7";
 
 /**
  * Centrly Business Owner & Founder Executive Command Center (HQ)

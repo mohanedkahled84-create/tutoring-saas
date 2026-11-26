@@ -1,6 +1,6 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.6";
-import { getIcon } from "../utils/icons.js?v=9.99.6";
-import { localize as t } from "../utils/language.js?v=9.99.6";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.7";
+import { getIcon } from "../utils/icons.js?v=9.99.7";
+import { localize as t } from "../utils/language.js?v=9.99.7";
 
 /**
  * Centrly Center Assistants Management Component

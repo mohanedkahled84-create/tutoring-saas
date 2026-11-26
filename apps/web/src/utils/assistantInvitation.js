@@ -1,4 +1,4 @@
-import { localize as t } from './language.js?v=9.99.6';
+import { localize as t } from './language.js?v=9.99.7';
 
 export function assistantInvitationStatus(assistant, now = Date.now()) {
  if (!assistant.access) return t('سجل قديم — لم يُربط بحساب مستقل', 'Legacy record — not linked to an independent account');

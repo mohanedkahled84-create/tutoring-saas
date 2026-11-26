@@ -1,4 +1,4 @@
-import {localize as t} from './language.js?v=9.99.6';
+import {localize as t} from './language.js?v=9.99.7';
 export const billingCycles=[{months:1,discount:0},{months:6,discount:15},{months:12,discount:25}];
 const money=value=>(value/100).toLocaleString(t('ar-EG','en-EG'),{maximumFractionDigits:2})+t(' ج.م',' EGP');
 export function referencePrice(monthly,planId){return ({basic_v1:35000,pro_v1:100000,max_v1:125000})[planId] || ({24900:35000,79900:100000,99900:125000})[monthly] || Math.round(monthly*1.2);}

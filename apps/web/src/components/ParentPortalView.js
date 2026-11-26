@@ -1,6 +1,6 @@
-import { escapeHtml as esc } from '../utils/escapeHtml.js?v=9.99.6';
-import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.6';
-import { getIcon } from '../utils/icons.js?v=9.99.6';
+import { escapeHtml as esc } from '../utils/escapeHtml.js?v=9.99.7';
+import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.7';
+import { getIcon } from '../utils/icons.js?v=9.99.7';
 
 // Keep only the fields needed by a read-only parent dashboard in the device cache.
 export function parentPortalSnapshot(data) {

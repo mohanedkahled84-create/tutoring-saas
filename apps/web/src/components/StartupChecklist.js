@@ -1,6 +1,6 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.6';
-import {request} from '../services/api.js?v=9.99.6';
-import {getLocale,startupMessages,startupStepEnglish} from '../utils/locale.js?v=9.99.6';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.7';
+import {request} from '../services/api.js?v=9.99.7';
+import {getLocale,startupMessages,startupStepEnglish} from '../utils/locale.js?v=9.99.7';
 const routes=new Set(['settings','groups','students','materials','sessions','platform-builder','support']);
 export function renderStartupChecklist(steps=[], locale=getLocale()){
  const done=steps.filter(step=>step.done).length, msg=startupMessages[locale] || startupMessages.ar;
