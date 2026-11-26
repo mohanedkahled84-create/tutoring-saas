@@ -1,8 +1,8 @@
-import './StudentEmailSettings.js?v=9.99.8';
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.8';
-import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.8';
-import {renderStudentAttendancePassHtml} from '../utils/studentBarcodeCard.js?v=9.99.8';
-import {getIcon} from '../utils/icons.js?v=9.99.8';
+import './StudentEmailSettings.js?v=9.99.9';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.9';
+import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.9';
+import {renderStudentAttendancePassHtml} from '../utils/studentBarcodeCard.js?v=9.99.9';
+import {getIcon} from '../utils/icons.js?v=9.99.9';
 
 const tabs=[['attendance','الحضور'],['grades','الدرجات'],['materials','الواجب والمذكرات'],['card','بطاقة الطالب']];
 const card=(title,body)=>`<article class="bs-card"><h3>${e(title)}</h3>${body}</article>`;

@@ -1,12 +1,12 @@
-import {openQuizAttempt} from '../utils/quizAttemptClient.js?v=9.99.8';
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.8";
-import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.8';
-import {portalCairoClock} from '../utils/portalClock.js?v=9.99.8';
-import { getIcon } from "../utils/icons.js?v=9.99.8";
-import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js?v=9.99.8";
-import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=9.99.8";
-import { openVideoPlayerModal } from "./VideoLessonsView.js?v=9.99.8";
-import { request } from "../services/api.js?v=9.99.8";
+import {openQuizAttempt} from '../utils/quizAttemptClient.js?v=9.99.9';
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.9";
+import {renderPortalHomeSummary} from './PortalHomeSummary.js?v=9.99.9';
+import {portalCairoClock} from '../utils/portalClock.js?v=9.99.9';
+import { getIcon } from "../utils/icons.js?v=9.99.9";
+import { renderStudentBarcodeCardHtml, renderStudentAttendancePassHtml } from "../utils/studentBarcodeCard.js?v=9.99.9";
+import { renderStudentPortalTourHtml } from "./PortalTourModal.js?v=9.99.9";
+import { openVideoPlayerModal } from "./VideoLessonsView.js?v=9.99.9";
+import { request } from "../services/api.js?v=9.99.9";
 
 /**
  * Centrly Student Web Portal Component

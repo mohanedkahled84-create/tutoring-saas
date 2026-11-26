@@ -1,6 +1,6 @@
-import {renderSourceAnnouncementButton} from './AnnouncementsView.js?v=9.99.8';
-import {assistantCanNavigate} from '../utils/assistantWorkspacePolicy.js?v=9.99.8';
-import {teacherQuizCache,quizActor} from '../utils/teacherQuizCache.js?v=9.99.8';
+import {renderSourceAnnouncementButton} from './AnnouncementsView.js?v=9.99.9';
+import {assistantCanNavigate} from '../utils/assistantWorkspacePolicy.js?v=9.99.9';
+import {teacherQuizCache,quizActor} from '../utils/teacherQuizCache.js?v=9.99.9';
 
 function playBarcodeBeep() {
   try {
@@ -35,10 +35,10 @@ function playBarcodeBeep() {
   } catch (_) {}
 }
 
-import { isUserPro } from "../utils/proGating.js?v=9.99.8";
-import { request } from "../services/api.js?v=9.99.8";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.8";
-import { getIcon } from "../utils/icons.js?v=9.99.8";
+import { isUserPro } from "../utils/proGating.js?v=9.99.9";
+import { request } from "../services/api.js?v=9.99.9";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.9";
+import { getIcon } from "../utils/icons.js?v=9.99.9";
 
 export function formatQuizTabDisplayTitle(quizNum, rawTitle) {
   const num = Number(quizNum) || 1;

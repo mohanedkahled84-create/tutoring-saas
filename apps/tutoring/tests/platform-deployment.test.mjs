@@ -67,3 +67,9 @@ test('locked video-lessons preview shows side-by-side protected YouTube player a
  assert.match(ar,/فيديو يوتيوب غير مدرج/);assert.match(ar,/مشروط باعتماد: واجب المحاضرة ٣/);
  assert.match(en,/Unlisted YouTube/);assert.match(en,/Live Watch Tracker/);
 });
+
+test('builder save flow shows automatic activation copy and fast destination polling',()=>{
+ const builder=readFileSync(new URL('../../web/src/components/TeacherPlatformBuilderView.js',import.meta.url),'utf8');
+ assert.match(builder,/جاري حفظ وتأمين الرابط/);
+ assert.match(builder,/setTimeout\(tick,4000\)/);
+});

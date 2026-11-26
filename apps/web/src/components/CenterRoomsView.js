@@ -1,5 +1,5 @@
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.8";
-import { getIcon } from "../utils/icons.js?v=9.99.8";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.9";
+import { getIcon } from "../utils/icons.js?v=9.99.9";
 
 /**
  * Centrly Center Rooms Management Component

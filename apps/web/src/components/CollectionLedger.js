@@ -1,6 +1,6 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.8';
-import {request as ownerRequest} from '../services/api.js?v=9.99.8';
-import {localize as t} from '../utils/language.js?v=9.99.8';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.9';
+import {request as ownerRequest} from '../services/api.js?v=9.99.9';
+import {localize as t} from '../utils/language.js?v=9.99.9';
 
 export const collectionMethods=[['cash','نقدي'],['instapay','إنستاباي'],['vodafone_cash','فودافون كاش'],['bank_transfer','تحويل بنكي'],['other','أخرى']];
 const getCollectionMethods=()=>[['cash',t('نقدي','Cash')],['instapay',t('إنستاباي','InstaPay')],['vodafone_cash',t('فودافون كاش','Vodafone Cash')],['bank_transfer',t('تحويل بنكي','Bank transfer')],['other',t('أخرى','Other')]];

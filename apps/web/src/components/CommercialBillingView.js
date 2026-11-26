@@ -1,8 +1,8 @@
-import {cyclePicker,priceMarkup,referencePrice} from '../utils/subscriptionPricing.js?v=9.99.8';
-import {localize} from '../utils/language.js?v=9.99.8';
-import { request } from '../services/api.js?v=9.99.8';
-import { escapeHtml as e } from '../utils/escapeHtml.js?v=9.99.8';
-import { renderRouteSkeleton } from './RouteSkeleton.js?v=9.99.8';
+import {cyclePicker,priceMarkup,referencePrice} from '../utils/subscriptionPricing.js?v=9.99.9';
+import {localize} from '../utils/language.js?v=9.99.9';
+import { request } from '../services/api.js?v=9.99.9';
+import { escapeHtml as e } from '../utils/escapeHtml.js?v=9.99.9';
+import { renderRouteSkeleton } from './RouteSkeleton.js?v=9.99.9';
 
 const money = p => (Number(p || 0) / 100).toLocaleString(localize('ar-EG','en-EG'), { maximumFractionDigits: 2 }) + localize(' ج.م',' EGP');
 const number = n => Number(n || 0).toLocaleString(localize('ar-EG','en-EG'),Number(n)>0 && Number(n)<1?{maximumSignificantDigits:3}:{maximumFractionDigits:2});

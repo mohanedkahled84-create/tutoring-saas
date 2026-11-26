@@ -1,4 +1,4 @@
-import { localize as t } from './language.js?v=9.99.8';
+import { localize as t } from './language.js?v=9.99.9';
 
 /** Financial views consume the same server calculation, including its selected month. */
 export function assistantPay(assistant, period) {

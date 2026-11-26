@@ -10,6 +10,7 @@ import { ReportsService } from '../dist/features/reports/service.js';
 import { homeworkObject, ownsHomeworkObject, signHomeworkFile, HOMEWORK_MAX_BYTES } from '../dist/features/homework/files.js';
 import { config } from '../dist/shared/config/index.js';
 import { renderTeacherPlatformBuilderView } from '../../web/src/components/TeacherPlatformBuilderView.js';
+import { CUTOUT_SUPPORT_WHATSAPP_URL } from '../../web/src/utils/teacherCutout.js';
 import { renderSidebar } from '../../web/src/components/Sidebar.js';
 import { renderStudentReportsView } from '../../web/src/components/StudentReportsView.js';
 import { renderAuthScreens } from '../../web/src/components/AuthScreens.js';
@@ -128,7 +129,7 @@ test('report averages exclude unrecorded students while retaining recorded zero'
 
 test('builder renders saved branding without local cache or injected demo students', () => {
   const html = renderTeacherPlatformBuilderView({settings:{theme_preset:'purple',subject_title:'خبير اللغة الإنجليزية',display_title:'My Teacher'},plan:{is_pro:true}}, {tenant_id:'tenant-a',name:'مدرس جديد'}, []);
-  assert.match(html,/خبير اللغة الإنجليزية/); assert.doesNotMatch(html,/مهند خالد|01123671177/);
+  assert.match(html,/خبير اللغة الإنجليزية/); assert.doesNotMatch(html.replaceAll(CUTOUT_SUPPORT_WHATSAPP_URL,''),/مهند خالد|01123671177/);
   assert.doesNotThrow(()=>renderTeacherPlatformBuilderView({}, {tenant_id:'tenant-b',name:'مدرس آخر'}, []));
 });
 test('ordinary teachers can discover platform routes and no-data reports render honestly', () => {

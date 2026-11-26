@@ -1,8 +1,8 @@
-import { escapeHtml as e } from './utils/escapeHtml.js?v=9.99.8';
-import { API_BASE_URL } from './services/api.js?v=9.99.8';
-import {mountPhoneVerification} from './components/PhoneVerification.js?v=9.99.8';
-import { assistantRequest } from './services/assistantClient.js?v=9.99.8';
-import {getIcon} from './utils/icons.js?v=9.99.8';
+import { escapeHtml as e } from './utils/escapeHtml.js?v=9.99.9';
+import { API_BASE_URL } from './services/api.js?v=9.99.9';
+import {mountPhoneVerification} from './components/PhoneVerification.js?v=9.99.9';
+import { assistantRequest } from './services/assistantClient.js?v=9.99.9';
+import {getIcon} from './utils/icons.js?v=9.99.9';
 
 const main=document.getElementById('main'),actions=document.getElementById('account-actions'),dialog=document.getElementById('editor');
 const params=new URLSearchParams(location.search),workspace=params.get('workspace') || '';
@@ -97,7 +97,7 @@ async function beginRegistration() {
 let stopTeacherWorkspace;
 async function openWorkspace(){
  const version=++workspaceRequest;
- const {mountAssistantWorkspace}=await import('./assistantRuntime.js?v=9.99.8');
+ const {mountAssistantWorkspace}=await import('./assistantRuntime.js?v=9.99.9');
  if(version!==workspaceRequest)return;
  document.body.className='assistant-workspace';
  actions.innerHTML='';

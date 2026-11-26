@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from "../../shared/types/index.js";
 import { getServices } from "../../composition.js";
 import {getServiceSupabaseClient} from "../../supabase.js";
 import {currentPortalDestination,portalOrigin} from "../../shared/utils/portalDestination.js";
-import {schedulePortalDomain} from '../../shared/utils/provisionPortalDomain.js';
+import {ensurePortalDomainReady} from '../../shared/utils/provisionPortalDomain.js';
 
 export const publicPlatformRouter = Router();
 export const platformRouter = Router();
@@ -142,13 +142,18 @@ platformRouter.get(
       const service = (services as any).platformBuilder;
       const isPlatformAdmin = isPlatformAdministrator(req);
       const data = await service.getTeacherSettings(tenantId, isPlatformAdmin);
-      schedulePortalDomain(getServiceSupabaseClient(),tenantId);
+      const db = getServiceSupabaseClient();
+      let destination = await currentPortalDestination(db, tenantId).catch(() => ({ origin: portalOrigin(), presentation: null }));
+      if (data.settings?.is_active === true && data.settings?.subdomain && destination.presentation?.subdomain !== data.settings.subdomain) {
+        await ensurePortalDomainReady(db, tenantId, { maxWaitMs: 2500, intervalMs: 1000 }).catch(() => false);
+        destination = await currentPortalDestination(db, tenantId).catch(() => destination);
+      }
 
       res.status(200).json({
         success: true,
         settings: data.settings,
         plan: data.plan,
-        destination: await currentPortalDestination(getServiceSupabaseClient(),tenantId).catch(()=>({origin:portalOrigin(),presentation:null})),
+        destination,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch settings";
@@ -175,12 +180,15 @@ platformRouter.post(
       const service = (services as any).platformBuilder;
       const isPlatformAdmin = isPlatformAdministrator(req);
       const saved = await service.savePlatformSettings(tenantId, req.body, isPlatformAdmin);
-      schedulePortalDomain(getServiceSupabaseClient(),tenantId);
+      const db = getServiceSupabaseClient();
+      if (saved?.is_active === true && saved?.subdomain) {
+        await ensurePortalDomainReady(db, tenantId, { maxWaitMs: 20000, intervalMs: 1500 }).catch(() => false);
+      }
 
       res.status(200).json({
         success: true,
         settings: saved,
-        destination: await currentPortalDestination(getServiceSupabaseClient(),tenantId).catch(()=>({origin:portalOrigin(),presentation:null})),
+        destination: await currentPortalDestination(db, tenantId).catch(() => ({ origin: portalOrigin(), presentation: null })),
       });
     } catch (err: any) {
       const statusCode = err?.statusCode || 500;
