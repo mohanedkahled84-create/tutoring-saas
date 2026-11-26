@@ -1,13 +1,13 @@
-import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.5';
-import {getIcon} from '../utils/icons.js?v=9.99.5';
+import {escapeHtml as e} from '../utils/escapeHtml.js?v=9.99.6';
+import {getIcon} from '../utils/icons.js?v=9.99.6';
 
 // Use the teacher's actual renderers with scoped data. Never register the
 // teacher action handlers: those use owner endpoints and owner credentials.
 const loaders={
- groups:()=>import('./GroupsView.js?v=9.99.5'), students:()=>import('./StudentsView.js?v=9.99.5'),
- attendance:()=>import('./SessionsView.js?v=9.99.5'), sessions:()=>import('./TeacherCalendar.js?v=9.99.5'),
- materials:()=>import('./MaterialsView.js?v=9.99.5'), homework:()=>import('./HomeworkReviewView.js?v=9.99.5'),
- quizzes:()=>import('./TeacherQuizzesView.js?v=9.99.5'), grades:()=>import('./TeacherQuizzesView.js?v=9.99.5'),
+ groups:()=>import('./GroupsView.js?v=9.99.6'), students:()=>import('./StudentsView.js?v=9.99.6'),
+ attendance:()=>import('./SessionsView.js?v=9.99.6'), sessions:()=>import('./TeacherCalendar.js?v=9.99.6'),
+ materials:()=>import('./MaterialsView.js?v=9.99.6'), homework:()=>import('./HomeworkReviewView.js?v=9.99.6'),
+ quizzes:()=>import('./TeacherQuizzesView.js?v=9.99.6'), grades:()=>import('./TeacherQuizzesView.js?v=9.99.6'),
 };
 export async function teacherPageHtml(resource,rows,identity,options={}) {
  const module=await loaders[resource]?.();

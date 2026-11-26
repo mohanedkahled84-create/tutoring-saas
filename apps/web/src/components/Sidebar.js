@@ -1,7 +1,7 @@
-import {teacherPageTitles} from '../utils/teacherPageTitles.js?v=9.99.5';
-import { getIcon } from '../utils/icons.js?v=9.99.5';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.5';
-import {getLocale,translate,translateSidebarRoute} from '../utils/locale.js?v=9.99.5';
+import {teacherPageTitles} from '../utils/teacherPageTitles.js?v=9.99.6';
+import { getIcon } from '../utils/icons.js?v=9.99.6';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.6';
+import {getLocale,translate,translateSidebarRoute} from '../utils/locale.js?v=9.99.6';
 
 export function renderSidebar(currentRoute = 'sessions', user = {}, securityState = { hasPin: false, isUnlocked: true }, accessState = null) {
   const locale=getLocale(), t=key=>translate(key,locale);

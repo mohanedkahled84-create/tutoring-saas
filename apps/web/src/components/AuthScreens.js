@@ -1,10 +1,10 @@
-import { authService } from '../services/auth.js?v=9.99.5';
-import { request } from '../services/api.js?v=9.99.5';
-import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.5';
-import { getIcon } from '../utils/icons.js?v=9.99.5';
-import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.5';
-import {trackProductEvent} from '../services/productFunnel.js?v=9.99.5';
-import {enableGoogleButton,startGoogleAuth} from '../services/googleAuth.js?v=9.99.5';
+import { authService } from '../services/auth.js?v=9.99.6';
+import { request } from '../services/api.js?v=9.99.6';
+import { escapeHtml } from '../utils/escapeHtml.js?v=9.99.6';
+import { getIcon } from '../utils/icons.js?v=9.99.6';
+import { normalizeDigits } from '../utils/normalizeDigits.js?v=9.99.6';
+import {trackProductEvent} from '../services/productFunnel.js?v=9.99.6';
+import {enableGoogleButton,startGoogleAuth} from '../services/googleAuth.js?v=9.99.6';
 
 export function renderAuthScreens() {
   return `

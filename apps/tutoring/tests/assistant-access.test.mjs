@@ -55,3 +55,41 @@ test('manual assistant records remain available without enabling WhatsApp accoun
  assert.equal(modal.title,'إضافة سجل مساعد');assert.match(modal.body,/data-record-only="true"/);assert.match(modal.body,/id="modalTA_Name"/);assert.match(modal.body,/لا ينشئ حساب دخول/);assert.ok(!modal.body.includes('modalTA_Permission'));assert.match(modal.footer,/حفظ السجل/);
  app.openAddTeacherAssistantModal();assert.match(modal.body,/data-record-only="false"/);assert.ok(!modal.body.includes('id="modalTA_Name"'));assert.match(modal.body,/modalTA_Permission/);
 });
+
+test('assistants page, fields, utilities and modals render in English with dir="ltr" when locale is en',async(t)=>{
+ const {assistantPay}=await import('../../web/src/utils/assistantPay.js');
+ const {assistantInvitationStatus}=await import('../../web/src/utils/assistantInvitation.js');
+ const {renderAssistantPayFields}=await import('../../web/src/components/AssistantPayFields.js');
+ const {renderAssistantActivity}=await import('../../web/src/components/AssistantActivityView.js');
+ const {renderCollectionRows}=await import('../../web/src/components/CollectionLedger.js');
+ const {renderCenterAssistantsView}=await import('../../web/src/components/CenterAssistantsView.js');
+ const prevStorage=globalThis.localStorage;
+ t.after(()=>{if(prevStorage===undefined)delete globalThis.localStorage;else globalThis.localStorage=prevStorage;});
+ globalThis.localStorage={getItem:k=>k==='centrly_locale'?'en':null};
+
+ const row={id:'10000000-0000-4000-8000-000000000001',name:'Mona',phone:'01011111111',status:'active',salary_model:'per_day',salary:200,pay_start_date:'2026-11-01',work_weekdays:[6,1],access:{permissions:{'students.view':true},all_groups:true,group_ids:[]},payroll:{month:11,year:2026,amount:1600,units:8}};
+ const html=renderTeacherAssistantsView([row],[]);
+ assert.match(html,/dir="ltr"/);
+ assert.match(html,/Assistants Management/);
+ assert.match(html,/Assistants directory \(1\)/);
+ assert.match(html,/Invite assistant/);
+ assert.match(html,/Per day — Auto/);
+ assert.match(html,/8 scheduled work days — auto-calculated for month/);
+ assert.match(html,/Independent account/);
+
+ assert.match(assistantPay(row).basis,/scheduled work days/);
+ assert.match(assistantInvitationStatus({access:{},status:'inactive'}),/Access suspended/);
+ assert.match(renderAssistantAccessFields('enTest',[]),/Pages & permissions/);
+ assert.match(renderAssistantPayFields('enPay',row),/Weekly work schedule/);
+ assert.match(renderAssistantActivity([{actor_type:'owner',action:'attendance.edit',created_at:'2026-11-01T00:00:00Z',changes:{before:{attended:true},after:{attended:false}}}]),/Before:.*Present/);
+ assert.match(renderCollectionRows([{id:'rc-1',student_name:'Ali',actor_name:'Mona',amount:100,payment_method:'cash',collected_at:'2026-11-01T00:00:00Z',status:'active'}],true),/Void receipt/);
+ assert.match(renderCenterAssistantsView([row],[]),/Assistants & Staff Directory/);
+
+ let shown;
+ const app={groups:[],showModal:(title,body,footer)=>{shown={title,body,footer};},teacherAssistants:[row]};
+ registerTeacherAssistantsActions(app);
+ app.openAddTeacherAssistantModal();
+ assert.equal(shown.title,'Invite an assistant to your team');
+ assert.match(shown.body,/dir="ltr"/);
+ assert.match(shown.footer,/Save & send invite/);
+});

@@ -1,12 +1,12 @@
-import {renderSourceAnnouncementButton} from './AnnouncementsView.js?v=9.99.5';
-import {portalCairoClock} from '../utils/portalClock.js?v=9.99.5';
-import {trackProductEvent} from '../services/productFunnel.js?v=9.99.5';
-import { request, API_BASE_URL } from "../services/api.js?v=9.99.5";
-import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.99.5";
-import { renderNavLiveBadgeHtml } from "./Navbar.js?v=9.99.5";
-import { generateBarcode128Svg } from "../utils/studentBarcodeCard.js?v=9.99.5";
-import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.5";
-import { getIcon } from "../utils/icons.js?v=9.99.5";
+import {renderSourceAnnouncementButton} from './AnnouncementsView.js?v=9.99.6';
+import {portalCairoClock} from '../utils/portalClock.js?v=9.99.6';
+import {trackProductEvent} from '../services/productFunnel.js?v=9.99.6';
+import { request, API_BASE_URL } from "../services/api.js?v=9.99.6";
+import { normalizeDigits } from "../utils/normalizeDigits.js?v=9.99.6";
+import { renderNavLiveBadgeHtml } from "./Navbar.js?v=9.99.6";
+import { generateBarcode128Svg } from "../utils/studentBarcodeCard.js?v=9.99.6";
+import { escapeHtml } from "../utils/escapeHtml.js?v=9.99.6";
+import { getIcon } from "../utils/icons.js?v=9.99.6";
 
 /**
  * Centrly Sessions & Assistant Board Component (DEV-89)
